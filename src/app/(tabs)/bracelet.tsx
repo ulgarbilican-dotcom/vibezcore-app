@@ -8,26 +8,20 @@
    For now the tab shows the ETALAGE. The 7-step story is taken verbatim from
    the existing web app (operator-approved content). Marked [OPERATOR] because
    operator finalises all marketing copy.
+
+   Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout, wordmark in hero.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { Brand, BrandFonts } from '@/constants/theme';
 import { Link } from 'expo-router';
 import {
+    Image,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
-
-const C = {
-  bg: '#0a0a0a',
-  card: '#0d0d0d',
-  border: '#1a1a1a',
-  text: '#ffffff',
-  dim: 'rgba(255,255,255,0.5)',
-  faint: 'rgba(255,255,255,0.32)',
-  accent: '#3a8fff',
-};
 
 /* [OPERATOR] — verbatim from web app index.html (approved). Operator
    finalises wording / science language before launch. */
@@ -97,9 +91,13 @@ export default function BraceletScreen() {
               ⚡ KICKSTARTER — 1 AUGUST 2026
             </Text>
           </View>
-          <Text style={s.heroTitle}>
-            VIBEZCORE{'\n'}Smart Bead Bracelet
-          </Text>
+          <Image
+            source={require('../../../assets/vibezcore_wordmark.png')}
+            style={s.heroWordmark}
+            resizeMode="contain"
+            accessibilityLabel="VIBEZCORE"
+          />
+          <Text style={s.heroTitle}>Smart Bead Bracelet</Text>
           <Text style={s.heroSub}>
             5 haptic modes. One clear outcome.{'\n'}
             You in control of your own state.
@@ -155,7 +153,7 @@ export default function BraceletScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: Brand.bg },
   scroll: { padding: 16, paddingBottom: 48 },
   hero: { paddingVertical: 28, alignItems: 'center' },
   ksBadge: {
@@ -168,108 +166,132 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   ksBadgeText: {
-    color: C.accent,
+    color: Brand.accent,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
   },
+  heroWordmark: {
+    width: 240,
+    height: 40,
+    marginBottom: 8,
+  },
   heroTitle: {
-    color: C.text,
-    fontSize: 30,
-    fontWeight: '800',
+    color: Brand.text,
+    fontSize: 24,
+    fontFamily: BrandFonts.extrabold,
     textAlign: 'center',
     letterSpacing: -0.5,
-    lineHeight: 36,
+    lineHeight: 30,
   },
   heroSub: {
-    color: C.dim,
+    color: Brand.textDim,
     fontSize: 14,
+    fontFamily: BrandFonts.regular,
     textAlign: 'center',
     marginTop: 14,
     lineHeight: 21,
   },
   previewBtn: {
-    backgroundColor: C.accent,
+    backgroundColor: Brand.accent,
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginBottom: 22,
   },
-  previewBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  previewBtnText: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+  },
   card: {
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: 18,
     marginBottom: 12,
   },
   cardNum: {
-    color: C.faint,
+    color: Brand.textDim,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     letterSpacing: 2,
     marginBottom: 6,
+    opacity: 0.7,
   },
   cardH: {
-    color: C.text,
+    color: Brand.text,
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.3,
     marginBottom: 10,
   },
   cardBody: {
-    color: C.dim,
+    color: Brand.textDim,
     fontSize: 13,
+    fontFamily: BrandFonts.regular,
     lineHeight: 22,
-    borderLeftColor: '#1e1e1e',
+    borderLeftColor: Brand.border,
     borderLeftWidth: 2,
     paddingLeft: 12,
     marginBottom: 14,
   },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: C.border,
+    backgroundColor: 'rgba(244,244,244,0.04)',
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 5,
     paddingHorizontal: 10,
   },
-  tagText: { color: C.faint, fontSize: 11, fontWeight: '600' },
+  tagText: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+  },
   registerBox: {
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: 18,
     marginTop: 10,
   },
   registerH: {
-    color: C.text,
+    color: Brand.text,
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     marginBottom: 8,
   },
-  registerBody: { color: C.dim, fontSize: 13, lineHeight: 21, marginBottom: 16 },
+  registerBody: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 21,
+    marginBottom: 16,
+  },
   registerBtnDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: C.border,
+    backgroundColor: 'rgba(244,244,244,0.05)',
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   registerBtnDisabledText: {
-    color: C.faint,
+    color: Brand.textDim,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: BrandFonts.semibold,
   },
   footNote: {
-    color: 'rgba(255,255,255,0.25)',
+    color: Brand.textDim,
     fontSize: 10,
+    fontFamily: BrandFonts.regular,
     textAlign: 'center',
     marginTop: 22,
     fontStyle: 'italic',
+    opacity: 0.6,
   },
 });

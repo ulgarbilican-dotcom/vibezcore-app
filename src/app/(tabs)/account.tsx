@@ -5,11 +5,16 @@
    account; an account is only needed for full audio or (later) bracelet
    activation. Hooks the EXISTING proven auth.ts (unchanged backend).
    Login + signup both present (bracelet will require an account — §1/§2).
+
+   Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout, wordmark in
+   signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { Brand, BrandFonts } from '@/constants/theme';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -24,17 +29,6 @@ import {
     login,
     signup,
 } from '../../services/auth';
-
-const C = {
-  bg: '#0a0a0a',
-  card: '#0d0d0d',
-  border: '#1a1a1a',
-  text: '#ffffff',
-  dim: 'rgba(255,255,255,0.5)',
-  faint: 'rgba(255,255,255,0.32)',
-  accent: '#3a8fff',
-  bad: '#FF453A',
-};
 
 type Mode = 'login' | 'signup';
 
@@ -88,7 +82,7 @@ export default function AccountScreen() {
   if (loading) {
     return (
       <View style={[s.root, s.center]}>
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={Brand.text} />
       </View>
     );
   }
@@ -98,7 +92,7 @@ export default function AccountScreen() {
     return (
       <View style={s.root}>
         <ScrollView contentContainerStyle={s.scroll}>
-          <Text style={s.title}>Account</Text>
+          <Text style={s.screenTitle}>Account</Text>
           <View style={s.card}>
             <Text style={s.label}>Signed in as</Text>
             <Text style={s.email}>{email}</Text>
@@ -134,7 +128,12 @@ export default function AccountScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.title}>VIBEZCORE</Text>
+        <Image
+          source={require('../../../assets/vibezcore_wordmark.png')}
+          style={s.wordmark}
+          resizeMode="contain"
+          accessibilityLabel="VIBEZCORE"
+        />
         <Text style={s.subtitle}>
           {mode === 'login' ? 'Welcome back.' : 'Create your account.'}
         </Text>
@@ -184,7 +183,7 @@ export default function AccountScreen() {
           value={emailInput}
           onChangeText={setEmailInput}
           placeholder="you@example.com"
-          placeholderTextColor={C.faint}
+          placeholderTextColor={Brand.textDim}
           autoCapitalize="none"
           keyboardType="email-address"
           autoCorrect={false}
@@ -197,7 +196,7 @@ export default function AccountScreen() {
             value={pwInput}
             onChangeText={setPwInput}
             placeholder="••••••••"
-            placeholderTextColor={C.faint}
+            placeholderTextColor={Brand.textDim}
             secureTextEntry={!showPw}
             autoCapitalize="none"
           />
@@ -217,7 +216,7 @@ export default function AccountScreen() {
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Brand.text} />
           ) : (
             <Text style={s.primaryBtnText}>
               {mode === 'login' ? 'Sign in' : 'Create account'}
@@ -235,27 +234,39 @@ export default function AccountScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: Brand.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: 48 },
-  title: {
-    color: C.text,
+  wordmark: {
+    width: 200,
+    height: 34,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  screenTitle: {
+    color: Brand.text,
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     letterSpacing: 1,
     marginTop: 12,
   },
   subtitle: {
-    color: C.text,
+    color: Brand.text,
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     marginTop: 8,
   },
-  optional: { color: C.dim, fontSize: 13, marginTop: 8, lineHeight: 20 },
+  optional: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    marginTop: 8,
+    lineHeight: 20,
+  },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 10,
     padding: 4,
@@ -268,73 +279,106 @@ const s = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 7,
   },
-  toggleActive: { backgroundColor: 'rgba(255,255,255,0.07)' },
-  toggleText: { color: C.dim, fontSize: 14, fontWeight: '600' },
-  toggleTextActive: { color: C.text },
+  toggleActive: { backgroundColor: 'rgba(244,244,244,0.07)' },
+  toggleText: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+  },
+  toggleTextActive: { color: Brand.text },
   inputLabel: {
-    color: C.dim,
+    color: Brand.textDim,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: BrandFonts.semibold,
     marginBottom: 6,
     marginTop: 12,
   },
   input: {
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    color: C.text,
+    color: Brand.text,
+    fontFamily: BrandFonts.regular,
     fontSize: 15,
   },
   pwWrap: { position: 'relative', justifyContent: 'center' },
   pwInput: { paddingRight: 64 },
   pwToggle: { position: 'absolute', right: 12, padding: 6 },
-  pwToggleText: { color: C.accent, fontSize: 13, fontWeight: '600' },
-  msg: { color: C.bad, fontSize: 13, marginTop: 14 },
+  pwToggleText: {
+    color: Brand.accent,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+  },
+  msg: {
+    color: Brand.error,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    marginTop: 14,
+  },
   primaryBtn: {
-    backgroundColor: C.accent,
+    backgroundColor: Brand.accent,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 22,
   },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  primaryBtnText: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+  },
   btnDisabled: { opacity: 0.5 },
   card: {
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: 18,
     marginTop: 14,
   },
   label: {
-    color: C.faint,
+    color: Brand.textDim,
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginBottom: 8,
   },
-  email: { color: C.text, fontSize: 16, fontWeight: '700' },
-  dimText: { color: C.dim, fontSize: 13, lineHeight: 21 },
+  email: {
+    color: Brand.text,
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+  },
+  dimText: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 21,
+  },
   signOut: {
-    borderColor: 'rgba(255,69,58,0.4)',
+    borderColor: 'rgba(239,68,68,0.4)',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 22,
   },
-  signOutText: { color: C.bad, fontSize: 14, fontWeight: '700' },
+  signOutText: {
+    color: Brand.error,
+    fontSize: 14,
+    fontFamily: BrandFonts.bold,
+  },
   legal: {
-    color: 'rgba(255,255,255,0.25)',
+    color: Brand.textDim,
     fontSize: 10,
+    fontFamily: BrandFonts.regular,
     textAlign: 'center',
     marginTop: 24,
     fontStyle: 'italic',
     lineHeight: 16,
+    opacity: 0.6,
   },
 });

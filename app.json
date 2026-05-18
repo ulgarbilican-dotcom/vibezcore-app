@@ -4,11 +4,11 @@
     "slug": "vibezcore-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/vibezcore_icon.png",
     "scheme": "vibezcoreapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/vibezcore_icon.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0a0a0a",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76

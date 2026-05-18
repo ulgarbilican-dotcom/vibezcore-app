@@ -63,3 +63,31 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+/* ────────────────────────────────────────────────────────────────────────────
+   VIBEZCORE MERK-ANKER — bindend (zie docs/MERK_ANKER.md §2 en §1).
+   Bron: webapp sign-in.html / app.vibezcore.com. Niet wijzigen zonder
+   operator-goedkeuring. App-schermen gebruiken `Brand` en `BrandFonts`;
+   de oudere `Colors` / `Fonts` blijven voor legacy-template-componenten.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+export const Brand = {
+  bg: '#0a0a0a',
+  accent: '#3a8fff',
+  accentHover: '#2a7fee',
+  success: '#4ade80',
+  error: '#ef4444',
+  panel: '#1e1e1e',
+  border: '#2a2a2a',
+  text: '#f4f4f4',
+  textDim: '#8a8a8a',
+} as const;
+
+export const BrandFonts = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  extrabold: 'Inter_800ExtraBold',
+  black: 'Inter_900Black',
+} as const;

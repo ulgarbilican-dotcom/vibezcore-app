@@ -6,8 +6,13 @@
    not change. Shows ONLY what spec §11.3/§11.5 allows: mode name, bounded
    duration, and during a session: remaining time, battery, BLE status, stop.
    No PPS / burst_ms / amplitude / RTP anywhere (spec §11.5).
+
+   Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout. Mode-kleuren
+   blijven uit `getModeMeta` (CLAUDE.md §5), state-indicatoren gebruiken
+   Brand.success / Brand.error.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { Brand, BrandFonts } from '@/constants/theme';
 import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -29,17 +34,9 @@ import {
 } from '../services/ble-contract';
 import { getBracelet, getSimHooks } from '../services/bracelet';
 
-const C = {
-  bg: '#0a0a0a',
-  card: '#0d0d0d',
-  border: '#1a1a1a',
-  text: '#ffffff',
-  dim: 'rgba(255,255,255,0.5)',
-  faint: 'rgba(255,255,255,0.32)',
-  ok: '#30D158',
-  warn: '#FF9F0A',
-  bad: '#FF453A',
-};
+/* MERK_ANKER §2 levert geen "warn" kleur. Voor de battery-warn drempel
+   (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
+const WARN = '#FF9F0A';
 
 const POLL_MS = 5000; // spec §8.3/§11.4 — app polls status every 5s
 
@@ -138,12 +135,12 @@ export default function BraceletControl() {
   const battery = status?.batteryPercent ?? null;
   const batteryColor =
     battery == null
-      ? C.faint
+      ? Brand.textDim
       : battery < 5
-      ? C.bad
+      ? Brand.error
       : battery < 20
-      ? C.warn
-      : C.ok;
+      ? WARN
+      : Brand.success;
 
   return (
     <View style={st.root}>
@@ -170,7 +167,7 @@ export default function BraceletControl() {
             disabled={busy}
           >
             {busy ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={Brand.text} />
             ) : (
               <Text style={st.primaryBtnText}>Connect bracelet</Text>
             )}
@@ -189,7 +186,9 @@ export default function BraceletControl() {
               </View>
               <View style={st.statusCell}>
                 <Text style={st.statusLabel}>Connection</Text>
-                <Text style={[st.statusValue, { color: C.ok }]}>Live</Text>
+                <Text style={[st.statusValue, { color: Brand.success }]}>
+                  Live
+                </Text>
               </View>
               <View style={st.statusCell}>
                 <Text style={st.statusLabel}>State</Text>
@@ -244,7 +243,7 @@ export default function BraceletControl() {
                         st.modeCard,
                         active && {
                           borderColor: m.color,
-                          backgroundColor: 'rgba(255,255,255,0.03)',
+                          backgroundColor: 'rgba(244,244,244,0.03)',
                         },
                       ]}
                       onPress={() => setSelectedMode(m.mode)}
@@ -304,7 +303,7 @@ export default function BraceletControl() {
                   disabled={busy}
                 >
                   {busy ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={Brand.text} />
                   ) : (
                     <Text style={st.primaryBtnText}>Start session</Text>
                   )}
@@ -358,29 +357,39 @@ export default function BraceletControl() {
 }
 
 const st = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: Brand.bg },
   scroll: { padding: 16, paddingBottom: 48 },
   title: {
-    color: C.text,
+    color: Brand.text,
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.5,
     marginTop: 12,
   },
-  subtitle: { color: C.dim, fontSize: 13, marginTop: 4, marginBottom: 22 },
+  subtitle: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    marginTop: 4,
+    marginBottom: 22,
+  },
   primaryBtn: {
-    backgroundColor: '#3a8fff',
+    backgroundColor: Brand.accent,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 18,
   },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  primaryBtnText: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+  },
   btnDisabled: { opacity: 0.5 },
   statusStrip: {
     flexDirection: 'row',
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -388,17 +397,21 @@ const st = StyleSheet.create({
   },
   statusCell: { flex: 1, alignItems: 'center' },
   statusLabel: {
-    color: C.faint,
+    color: Brand.textDim,
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: BrandFonts.semibold,
     letterSpacing: 0.5,
     marginBottom: 5,
   },
-  statusValue: { color: C.text, fontSize: 15, fontWeight: '700' },
+  statusValue: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+  },
   sectionLabel: {
-    color: C.dim,
+    color: Brand.textDim,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     letterSpacing: 1,
     marginTop: 14,
     marginBottom: 10,
@@ -407,8 +420,8 @@ const st = StyleSheet.create({
   modeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -416,8 +429,17 @@ const st = StyleSheet.create({
     gap: 12,
   },
   modeDot: { width: 12, height: 12, borderRadius: 6 },
-  modeName: { color: C.text, fontSize: 15, fontWeight: '700' },
-  modeBlurb: { color: C.dim, fontSize: 12, marginTop: 2 },
+  modeName: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+  },
+  modeBlurb: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    marginTop: 2,
+  },
   modeCheck: { fontSize: 12 },
   durRow: {
     flexDirection: 'row',
@@ -430,54 +452,80 @@ const st = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  durBtnText: { color: C.text, fontSize: 24, fontWeight: '700' },
+  durBtnText: {
+    color: Brand.text,
+    fontSize: 24,
+    fontFamily: BrandFonts.bold,
+  },
   durValueBox: { alignItems: 'center', minWidth: 80 },
-  durValue: { color: C.text, fontSize: 34, fontWeight: '800' },
-  durUnit: { color: C.faint, fontSize: 12, fontWeight: '600' },
-  durHint: {
-    color: C.faint,
+  durValue: {
+    color: Brand.text,
+    fontSize: 34,
+    fontFamily: BrandFonts.extrabold,
+  },
+  durUnit: {
+    color: Brand.textDim,
     fontSize: 12,
+    fontFamily: BrandFonts.semibold,
+  },
+  durHint: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
     textAlign: 'center',
     marginTop: 8,
   },
   sessionBox: {
-    backgroundColor: C.card,
-    borderColor: C.border,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 26,
     alignItems: 'center',
   },
-  sessionMode: { color: C.text, fontSize: 22, fontWeight: '800' },
-  sessionRemain: { color: C.dim, fontSize: 15, marginTop: 8 },
+  sessionMode: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+  },
+  sessionRemain: {
+    color: Brand.textDim,
+    fontSize: 15,
+    fontFamily: BrandFonts.regular,
+    marginTop: 8,
+  },
   stopBtn: {
-    backgroundColor: 'rgba(255,69,58,0.15)',
-    borderColor: 'rgba(255,69,58,0.4)',
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    borderColor: 'rgba(239,68,68,0.4)',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 40,
     marginTop: 24,
   },
-  stopBtnText: { color: '#FF453A', fontSize: 15, fontWeight: '700' },
+  stopBtnText: {
+    color: Brand.error,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+  },
   demoBox: {
     marginTop: 30,
     padding: 14,
     borderRadius: 12,
-    borderColor: C.border,
+    borderColor: Brand.border,
     borderWidth: 1,
     borderStyle: 'dashed',
   },
   demoTitle: {
-    color: C.faint,
+    color: Brand.textDim,
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     letterSpacing: 0.5,
     marginBottom: 10,
     textTransform: 'uppercase',
@@ -485,12 +533,16 @@ const st = StyleSheet.create({
   demoRow: { flexDirection: 'row', gap: 8 },
   demoBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: C.border,
+    backgroundColor: 'rgba(244,244,244,0.04)',
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  demoBtnText: { color: C.dim, fontSize: 12, fontWeight: '600' },
+  demoBtnText: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.semibold,
+  },
 });
