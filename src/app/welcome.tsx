@@ -53,14 +53,15 @@ export default function WelcomeScreen() {
 
   return (
     <View style={s.root}>
-      {/* Achtergrondfoto vult het hele scherm. */}
+      {/* Achtergrondfoto past volledig op het scherm (contain) — niets afgesneden.
+         De ruimte erom is automatisch Brand.bg (#0a0a0a, MERK_ANKER) via root. */}
       <Image
         source={require('../../assets/welcome_bg.png')}
         style={StyleSheet.absoluteFill}
-        resizeMode="cover"
+        resizeMode="contain"
         accessibilityIgnoresInvertColors
       />
-      {/* Donkere overlay zodat de wordmark + tekst leesbaar blijven. */}
+      {/* Lichte overlay — foto blijft helder, tekst blijft leesbaar. */}
       <View style={[StyleSheet.absoluteFill, s.overlay]} />
 
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
@@ -119,7 +120,7 @@ export default function WelcomeScreen() {
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
   root: { flex: 1, backgroundColor: Brand.bg },
-  overlay: { backgroundColor: 'rgba(10,10,10,0.55)' },
+  overlay: { backgroundColor: 'rgba(10,10,10,0.30)' },
   safe: {
     flex: 1,
     paddingHorizontal: 24,
