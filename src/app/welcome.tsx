@@ -53,16 +53,14 @@ export default function WelcomeScreen() {
 
   return (
     <View style={s.root}>
-      {/* Achtergrondfoto past volledig op het scherm (contain) — niets afgesneden.
-         De ruimte erom is automatisch Brand.bg (#0a0a0a, MERK_ANKER) via root. */}
+      {/* Achtergrondfoto (1080×2400, waas/fade al ingebakken) vult het hele scherm.
+         GEEN extra overlay — die maakt het te donker. */}
       <Image
         source={require('../../assets/welcome_bg.png')}
         style={StyleSheet.absoluteFill}
-        resizeMode="contain"
+        resizeMode="cover"
         accessibilityIgnoresInvertColors
       />
-      {/* Lichte overlay — foto blijft helder, tekst blijft leesbaar. */}
-      <View style={[StyleSheet.absoluteFill, s.overlay]} />
 
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <View style={s.top}>
@@ -75,9 +73,11 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={s.middle}>
-          <Text style={s.intro}>
-            Stop being a passenger in your own life. Change the game. Unlock
-            your full potential.
+          <Text style={s.header}>
+            Stop being a passenger in your own life.
+          </Text>
+          <Text style={s.subheader}>
+            Change the game. Unlock your full potential.
           </Text>
         </View>
 
@@ -120,7 +120,6 @@ export default function WelcomeScreen() {
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
   root: { flex: 1, backgroundColor: Brand.bg },
-  overlay: { backgroundColor: 'rgba(10,10,10,0.30)' },
   safe: {
     flex: 1,
     paddingHorizontal: 24,
@@ -135,18 +134,39 @@ const s = StyleSheet.create({
   wordmark: {
     width: 220,
     height: 36,
+    /* Wordmark is een PNG — textShadow werkt niet op een Image, dus iOS-shadow
+       props + Android-elevation voor leesbaarheid op de foto. */
+    shadowColor: '#000',
+    shadowOpacity: 0.85,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   middle: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
-  intro: {
+  header: {
     color: Brand.text,
     fontFamily: BrandFonts.extrabold,
-    fontSize: 24,
-    lineHeight: 32,
+    fontSize: 28,
+    lineHeight: 34,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
+  },
+  subheader: {
+    color: Brand.text,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginTop: 10,
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
   },
   bottom: {
     gap: 10,
