@@ -4,6 +4,61 @@
 > technisch onderdeel, en de exacte huidige staat. Bedoeld als projectkennis
 > zodat geen enkele context verloren gaat tussen chats.
 > Datum opgesteld: 18 mei 2026.
+>
+> ── WIJZIGING 19 mei 2026 (operator-beslissing) ──────────────────────
+> Er komt een NIET-BLOKKEREND WELKOMSTSCHERM als eerste scherm. Dit
+> vervangt Deel 2.1 ("GEEN welkomstscherm, opent direct in vrije inhoud").
+> De volledige nieuwe flow staat in het nieuwe "DEEL 0 — APP-ENTREE"
+> hieronder. Waar Deel 2.1 en Deel 0 verschillen, geldt DEEL 0.
+> Reden: Audio en Bracelet moeten gelijkwaardig aanvoelen (Deel 1.1);
+> de bezoeker mag niet op één van de twee "binnenkomen".
+> ─────────────────────────────────────────────────────────────────────
+
+---
+
+# DEEL 0 — APP-ENTREE (welkomstscherm + flows) — LEIDEND
+
+## 0.1 Welkomstscherm (eerste scherm, vóór de tabs)
+NIET-blokkerend, GEEN poort, GEEN keuzescherm. Bevat:
+- Full-screen achtergrondfoto: `assets/welcome_bg.png` (operator-
+  aangeleverd; tot definitief een nette placeholder in MERK_ANKER-stijl).
+- VIBEZCORE-wordmark (`assets/vibezcore_wordmark.png`).
+- Intro-tekst (operator-goedgekeurd, DEFINITIEF, niet wijzigen):
+  "Stop being a passenger in your own life. Change the game.
+   Unlock your full potential."
+- Twee GELIJKWAARDIGE knoppen (bewust even prominent — Deel 1.1):
+  · "Explore Bracelet"  → Bracelet-tab
+  · "Explore Audio Library (listen free sessions)"  → Audio-tab
+- Ondergeschikte regel (kleiner): "Already have a product? Sign in"
+  → Account-tab/login.
+- Knop-/regelteksten exact zoals hier. Overige copy = [OPERATOR].
+
+## 0.2 Flow per gebruiker
+- **Gast / nieuw (niet ingelogd):** welkomstscherm → knop → de app in
+  → ALLE tabs vrij (gast-first blijft volledig: alles zien, gratis
+  sessies luisteren, hele bracelet-sectie + preview bekijken). De knop
+  bepaalt alleen wáár je begint, niet wat je mág.
+- **Klant mét account, niet ingelogd op dit toestel:** "Already have a
+  product? Sign in" → login → backend levert entitlements → app
+  ontgrendelt AUTOMATISCH precies wat hij bezit.
+- **Bracelet-koper zonder account:** account maken + activatiecode
+  (QR + leesbare terugvalcode) → code bepaalt pakket → ontgrendelt.
+- **Reeds ingelogd:** welkomstscherm OVERSLAAN → direct de app in.
+
+## 0.3 Harde regel — geen "wat heb je"-vraag
+De app VRAAGT NOOIT aan de gebruiker welk pakket/product hij bezit.
+Bezit wordt bepaald door inloggen (entitlements uit backend) of door
+de activatiecode. Een keuzescherm "ik heb bracelet / bracelet+audio /
+audio" is EXPLICIET verworpen (onveilig + tegen gast-first). Dit is
+consistent met het entitlements-model (Deel 6).
+
+## 0.4 Navigatie-impact
+Root `_layout.tsx` registreert nu: (1) welkomstscherm (eerste,
+headerless, overgeslagen indien ingelogd), (2) de `(tabs)`-groep,
+(3) los `bracelet-control.tsx`. De 3 tabs zelf blijven ongewijzigd
+(Audio · Bracelet · Account) en gelijkwaardig.
+
+---
 
 ---
 

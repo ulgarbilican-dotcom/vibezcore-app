@@ -3,6 +3,12 @@
 > Dit bestand wordt automatisch gelezen door Claude Code bij elke sessie.
 > Het bevat de BINDENDE projectregels. De volledige context staat in `docs/`.
 > Bij twijfel: lees `docs/VIBEZCORE_APP_VOLLEDIGE_SPEC.md` (de complete specificatie).
+>
+> WIJZIGING 19 mei 2026 (operator): er KOMT een niet-blokkerend
+> welkomstscherm als eerste scherm. Dit vervangt de oude regel "geen
+> welkomstscherm / opent direct in Audio-tab". Zie §3 "Gast-first principe".
+> Reden: Audio en Bracelet moeten gelijkwaardig aanvoelen; de bezoeker
+> mag niet op één van de twee "binnenkomen".
 
 ---
 
@@ -70,18 +76,53 @@ build — geen Expo Go). Twee gelijkwaardige productkernen:
 "Audio first" = audio is *eerder verkoopbaar* (backend + content bestaan al),
 NIET belangrijker. Beide zijn kern.
 
-### Gast-first principe (geen poort)
-App opent DIRECT in vrije content. GEEN welkomstscherm, GEEN login-muur.
-Iedereen zonder account kan: alle sessies zien, gratis sessies beluisteren,
-de volledige bracelet-sectie bekijken, de account-tab openen en optioneel
-inloggen. Account is UITSLUITEND nodig voor volledige audio-bibliotheek of
-bracelet-activatie.
+### Gast-first principe (welkomstscherm, GEEN poort)
+[GEWIJZIGD 19 mei 2026 — operator-beslissing. Vervangt de oude regel
+"geen welkomstscherm".]
 
-### Navigatie: 3 tabs
-`(tabs)/index.tsx` = Audio · `(tabs)/bracelet.tsx` = Bracelet (etalage) ·
-`(tabs)/account.tsx` = Account. Plus los `bracelet-control.tsx` (gepusht
-vanuit Bracelet-tab). Root `_layout.tsx` registreert de (tabs)-groep +
-bracelet-control.
+Er IS een welkomstscherm als eerste scherm, MAAR het is GEEN poort en
+GEEN keuzescherm — het blokkeert niemand en dwingt geen keuze af.
+
+Welkomstscherm (eerste scherm, vóór de tabs):
+- Full-screen achtergrondfoto (`assets/welcome_bg.png`).
+- VIBEZCORE-wordmark.
+- Intro-tekst (operator-goedgekeurd, definitief, NIET wijzigen):
+  "Stop being a passenger in your own life. Change the game.
+  Unlock your full potential."
+- Twee gelijkwaardige knoppen — bewust even prominent want Audio en
+  Bracelet zijn gelijkwaardige productkernen (SPEC §1.1):
+  · "Explore Bracelet" → Bracelet-tab
+  · "Explore Audio Library (listen free sessions)" → Audio-tab
+- Ondergeschikte regel (kleiner, niet even zwaar als de 2 knoppen):
+  "Already have a product? Sign in" → Account-tab/login.
+- Knop-/regelteksten exact zoals hier; overige copy = [OPERATOR].
+- De achtergrondfoto is operator-aangeleverd; tot definitief een nette
+  placeholder in MERK_ANKER-stijl.
+
+Flow per gebruiker:
+- **Gast / nieuw (niet ingelogd)** → welkomstscherm → via een knop de
+  app in → ALLE tabs vrij toegankelijk (gast-first blijft: alles zien,
+  gratis sessies luisteren, hele bracelet-sectie + preview bekijken).
+- **Klant mét account (niet ingelogd op dit toestel)** → "Already have
+  a product? Sign in" → login → backend levert entitlements → app
+  ontgrendelt AUTOMATISCH wat hij bezit. De app VRAAGT NOOIT "wat bezit
+  je" — inloggen/code bepaalt het (entitlements-model).
+- **Bracelet-koper zonder account** → account maken + activatiecode
+  (QR + leesbare terugvalcode) → code bepaalt pakket (bracelet of
+  bracelet+audio) → ontgrendelt automatisch.
+- **Reeds ingelogd** → welkomstscherm OVERSLAAN → direct de app in.
+
+NOOIT een keuzescherm "wat ben jij / wat heb je". Bezit wordt door
+inloggen of activatiecode bepaald, niet aan de gebruiker gevraagd.
+Account is UITSLUITEND nodig voor volledige audio-bibliotheek of
+bracelet-activatie — niet om rond te kijken.
+
+### Navigatie: welkomstscherm + 3 tabs
+Root `_layout.tsx` registreert: het welkomstscherm (eerste, headerless,
+overgeslagen indien ingelogd), de `(tabs)`-groep, en los
+`bracelet-control.tsx` (gepusht vanuit Bracelet-tab).
+Tabs: `(tabs)/index.tsx` = Audio · `(tabs)/bracelet.tsx` = Bracelet
+(etalage) · `(tabs)/account.tsx` = Account.
 
 ---
 

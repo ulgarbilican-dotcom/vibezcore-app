@@ -24,6 +24,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+/* ────────────────────────────────────────────────────────────────
+   FINETUNE-KNOP voor de operator — verticale positie van de foto.
+   Verander alleen het getal hieronder en reload de app.
+   ──────────────────────────────────────────────────────────────── */
+const FOTO_Y = 0;   // negatief = foto omhoog, positief = foto omlaag, in pixels
+
 type Status = 'checking' | 'show';
 
 export default function WelcomeScreen() {
@@ -53,11 +59,14 @@ export default function WelcomeScreen() {
 
   return (
     <View style={s.root}>
-      {/* Achtergrondfoto (1080×2400, waas/fade al ingebakken) vult het hele scherm.
-         GEEN extra overlay — die maakt het te donker. */}
+      {/* Achtergrondfoto (1080×2400, waas/fade al ingebakken).
+         Schaalt op SCHERMBREEDTE met native aspect ratio (1080/2400) →
+         geen zoom, geen horizontale crop. Bovenkant foto = bovenkant scherm.
+         Als het scherm langer is dan de aspect toelaat, blijft onderaan
+         Brand.bg (#0a0a0a) over — naadloos zwart, geen overlay nodig. */}
       <Image
         source={require('../../assets/welcome_bg.png')}
-        style={StyleSheet.absoluteFill}
+        style={s.bgPhoto}
         resizeMode="cover"
         accessibilityIgnoresInvertColors
       />
@@ -73,39 +82,42 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={s.middle}>
-          <Text style={s.header}>
-            Stop being a passenger in your own life.
+          <Text style={s.header} numberOfLines={1} adjustsFontSizeToFit>
+            Stop Drifting.
           </Text>
+          <Text style={s.header} numberOfLines={1} adjustsFontSizeToFit>
+            Start Directing.
+          </Text>
+          {/* Accent-streepje tussen hoofdregel en caps-ondertekst (#3a8fff). */}
+          <View style={s.accentBar} />
           <Text style={s.subheader}>
-            Change the game. Unlock your full potential.
+            CHANGE THE GAME · UNLOCK YOUR FULL POTENTIAL
           </Text>
         </View>
 
         <View style={s.bottom}>
-          {/* Twee gelijkwaardige knoppen — bewust identiek qua gewicht. */}
+          {/* Twee gelijkwaardige knoppen — bewust identiek qua gewicht.
+             Volgorde per BLAUWDRUK §2: Audio eerst, Bracelet tweede. */}
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.replace('/bracelet')}
-            style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
-          >
-            <Text style={s.btnLabel}>Explore Smart Bead Bracelet</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.replace('/')}
+            onPress={() => router.navigate('/')}
             style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
           >
             <Text style={s.btnLabel}>Explore Audio Library</Text>
           </Pressable>
 
-          {/* Losse kleine gedimde regel onder knop 2 — GEEN knop. */}
-          <Text style={s.freeHint}>listen free sessions</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.navigate('/bracelet')}
+            style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
+          >
+            <Text style={s.btnLabel}>Explore Smart Bead Bracelet</Text>
+          </Pressable>
 
           {/* Ondergeschikte regel — kleiner, niet even zwaar als de knoppen. */}
           <Pressable
             accessibilityRole="link"
-            onPress={() => router.replace('/account')}
+            onPress={() => router.navigate('/account')}
             hitSlop={12}
             style={s.signinHit}
           >
@@ -120,11 +132,20 @@ export default function WelcomeScreen() {
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
   root: { flex: 1, backgroundColor: Brand.bg },
+  bgPhoto: {
+    /* Foto schaalt op breedte met native aspect ratio. Top-positie wordt
+       door de operator gefinetuned via FOTO_Y bovenaan dit bestand. */
+    position: 'absolute',
+    top: FOTO_Y,
+    left: 0,
+    width: '100%',
+    aspectRatio: 1080 / 2400,
+  },
   safe: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: 28,
+    paddingBottom: 18,
   },
   top: {
     alignItems: 'center',
@@ -147,23 +168,38 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
+  accentBar: {
+    width: 34,
+    height: 3,
+    backgroundColor: Brand.accent,
+    alignSelf: 'center',
+    marginTop: 22,
+    marginBottom: 16,
+  },
   header: {
+    /* Hoofdregel = visuele baas. Inter 900 + lichte negatieve letter-spacing
+       voor strakke koppen. fontSize gekozen zodat "Start Directing." (de
+       langste regel) op telefoon-breedtes op één regel past;
+       numberOfLines={1} + adjustsFontSizeToFit op de <Text> beschermt
+       extra-smalle toestellen tegen wrap. */
     color: Brand.text,
-    fontFamily: BrandFonts.extrabold,
-    fontSize: 28,
-    lineHeight: 34,
+    fontFamily: BrandFonts.black,
+    fontSize: 42,
+    lineHeight: 48,
+    letterSpacing: -0.5,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 2 },
   },
   subheader: {
-    color: Brand.text,
-    fontFamily: BrandFonts.semibold,
-    fontSize: 16,
-    lineHeight: 22,
+    /* Caps-ondertekst = rustig, gedimd, ondergeschikt aan de hoofdregel. */
+    color: Brand.textDim,
+    fontFamily: BrandFonts.medium,
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 2.4,
     textAlign: 'center',
-    marginTop: 10,
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 2 },
@@ -172,15 +208,22 @@ const s = StyleSheet.create({
     gap: 10,
   },
   btn: {
-    backgroundColor: Brand.accent,
+    /* Halftransparante accentkleur: bracelet schijnt er onderdoor heen.
+       Brand.accent = #3a8fff = rgb(58,143,255), 0.55 alpha. Lichte rand
+       houdt de knop-vorm helder tegen de foto. */
+    backgroundColor: 'rgba(58,143,255,0.55)',
     borderRadius: 14,
-    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    paddingVertical: 12,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnPressed: {
-    backgroundColor: Brand.accentHover,
+    /* Brand.accentHover = #2a7fee = rgb(42,127,238), iets minder transparant
+       voor duidelijke pressed-feedback. */
+    backgroundColor: 'rgba(42,127,238,0.78)',
   },
   btnLabel: {
     color: Brand.text,
@@ -188,13 +231,10 @@ const s = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.2,
     textAlign: 'center',
-  },
-  freeHint: {
-    color: Brand.textDim,
-    fontFamily: BrandFonts.medium,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: -2,
+    /* Tekstschaduw voor leesbaarheid over zowel donkere als lichte fotozones. */
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 4,
+    textShadowOffset: { width: 0, height: 1 },
   },
   signinHit: {
     alignItems: 'center',

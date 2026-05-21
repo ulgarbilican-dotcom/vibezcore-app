@@ -7,6 +7,7 @@
     "icon": "./assets/vibezcore_icon.png",
     "scheme": "vibezcoreapp",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
     "ios": {
       "icon": "./assets/vibezcore_icon.png"
     },
@@ -40,7 +41,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
     }
   }
 }

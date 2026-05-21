@@ -11,6 +11,7 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import { useSetting } from '@/utils/settings';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -18,6 +19,7 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
     View,
@@ -31,6 +33,33 @@ import {
 } from '../../services/auth';
 
 type Mode = 'login' | 'signup';
+
+/* Playback-settings card. Beschikbaar voor zowel signed-in als signed-out
+   users — een setting heeft geen account nodig. Vandaag is autoPlayNext
+   de enige toggle; nieuwe settings (sleep-default, default-rate) komen
+   in dezelfde card. */
+function PlaybackSettingsCard() {
+  const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
+  return (
+    <View style={s.card}>
+      <Text style={s.label}>Playback</Text>
+      <View style={s.toggleRow2}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={s.toggleTitle}>Auto-play next session</Text>
+          <Text style={s.toggleSub}>
+            Automatically play the next session in the series when one ends.
+          </Text>
+        </View>
+        <Switch
+          value={autoPlayNext}
+          onValueChange={setAutoPlayNext}
+          trackColor={{ true: Brand.accent, false: '#2a2a2a' }}
+          thumbColor={'#ffffff'}
+        />
+      </View>
+    </View>
+  );
+}
 
 export default function AccountScreen() {
   const [loading, setLoading] = useState(true);
@@ -112,6 +141,7 @@ export default function AccountScreen() {
               Kickstarter launch on 1 August 2026.
             </Text>
           </View>
+          <PlaybackSettingsCard />
           <Pressable style={s.signOut} onPress={onSignOut}>
             <Text style={s.signOutText}>Sign out</Text>
           </Pressable>
@@ -223,6 +253,8 @@ export default function AccountScreen() {
             </Text>
           )}
         </Pressable>
+
+        <PlaybackSettingsCard />
 
         <Text style={s.legal}>
           [OPERATOR] Terms / Privacy text from the web app to be placed here
@@ -380,5 +412,25 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 16,
     opacity: 0.6,
+  },
+
+  /* Playback-card row — naast bestaande s.toggleRow (Sign in/Create
+     account) gemikt; vandaar de _2-suffix om confusion te vermijden. */
+  toggleRow2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  toggleTitle: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+  },
+  toggleSub: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 17,
+    marginTop: 4,
   },
 });

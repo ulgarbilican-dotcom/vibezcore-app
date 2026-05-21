@@ -1,51 +1,89 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Audio player
+   VIBEZCORE — Audio player (cinematic full-screen)
 
-   GEDRAG (exact het model uit webapp index_2_correct.html, GEEN preview):
-     - gratis sessie (free=true)         → speelt VOLLEDIG af, geen account
-     - premium zonder abonnement         → speelt NIET; upgrade-scherm
-     - premium met abonnement            → speelt VOLLEDIG af
+   Architectuur:
+     - Audio leeft in src/services/audio-player.ts (module-singleton). Dit
+       scherm is een UI-laag die `usePlayerState()` consumeert. Minimize
+       (⌄) doet router.back() en laat audio gewoon doorspelen — komende
+       mini-player taak haakt aan dezelfde service zonder extra createAsync.
 
-   Letterlijke teksten uit de bron (regel 2763-2765), niets verzonnen:
-     badge : "Free — No Account Needed"
-     kop   : "Listen Free. No Limits."
-     p     : "One session from each series. No credit card. Just press play."
+   Layout (per spec TAAK 3):
+     Cinematic backdrop · Top bar · Title block · Progress / Resume panel
+     · Skip controls · Extras row (♥ / 1.0× / 🌙) · Full library CTA
+     · Preview-upsell modal (alleen wanneer 30s-cap geraakt is).
 
-   Geen 30s-preview, geen timer. Premium zonder abo komt nooit tot spelen.
+   Preview-flow: alle users zijn momenteel guest (`useSubscription()`
+   placeholder). PRO sessies (free=false) krijgen `preview:true` mee bij
+   het signen; backend honoreert dat zonder JWT. Client enforce't 30s cap.
 
-   Audio: expo-av → Claude Code: npx expo install expo-av
-   (NIET npm audit fix --force.)
+   GUMROAD_URL leeft in src/constants/links.ts.
+   ─────────────────────────────────────────────────────────────────────── */
 
-   Plaatsing: src/app/player.tsx (expo-router). Sessie via router params:
-   title, series, url, free, desc.
-   ─────────────────────────────────────────────────────────────────────────── */
-
-import { Audio } from 'expo-av';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  SERIES_PHOTO,
+  SERIES_SUBTITLE,
+  type Session,
+} from '@/data/audio-library-data';
+import { useFavorites } from '@/hooks/useFavorites';
+import {
+  continueFromSaved,
+  dismissEndedPanel,
+  loadSession,
+  playNextFromPanel,
+  seekTo,
+  setRate,
+  setSleepTimer,
+  skipBy,
+  startOver,
+  togglePlay,
+  unload,
+  usePlayerState,
+} from '@/services/audio-player';
+import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
+import { getEntryByUrl, useHistory } from '@/utils/history';
+import { requestScrollTo } from '@/utils/scroll-intent';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Dimensions,
+  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
-const C = {
-  bg: '#0a0a0a',
-  text: '#ffffff',
-  dim: 'rgba(255,255,255,0.5)',
-  faint: 'rgba(255,255,255,0.32)',
-  accent: '#3a8fff',
-  free: '#3ad07a',
-  border: '#1a1a1a',
-};
-
-/* [OPERATOR] — echte Gumroad-abonnementscheck hoort hier.
-   Webapp-equivalent: window.VIBEZCORE.hasSubscription === true. Nu: false. */
+/* [OPERATOR] — echte Gumroad-abonnementscheck hoort hier. Webapp-equivalent:
+   window.VIBEZCORE.hasSubscription === true. Nu: alle users = guest. */
 function useSubscription(): boolean {
   return false;
+}
+
+const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
+const SLEEP_OPTIONS = [0, 15, 30, 60];
+const BACKDROP_HEIGHT = Math.round(Dimensions.get('window').height * 0.5);
+
+const C = {
+  bg: '#000',
+  text: '#fff',
+  dim: 'rgba(255,255,255,0.55)',
+  faint: 'rgba(255,255,255,0.4)',
+  border: 'rgba(255,255,255,0.15)',
+  accent: '#3a8fff',
+  free: '#4ade80',
+  partial: '#3a8fff',
+  full: '#4ade80',
+  heart: '#ec4899',
+  modalOverlay: 'rgba(0,0,0,0.85)',
+};
+
+function fmt(ms: number): string {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
 export default function PlayerScreen() {
@@ -58,221 +96,874 @@ export default function PlayerScreen() {
     desc?: string;
   }>();
 
-  const title = p.title ?? '';
-  const series = p.series ?? '';
-  const url = p.url ?? '';
-  const isFree = p.free === 'true';
-  const desc = p.desc ?? '';
+  const session = useMemo<Session | null>(() => {
+    if (!p.url) return null;
+    return {
+      title: p.title ?? '',
+      series: p.series ?? '',
+      url: p.url,
+      free: p.free === 'true',
+      desc: p.desc ?? '',
+      subseries: '',
+      num: '',
+      added: '',
+    };
+  }, [p.title, p.series, p.url, p.free, p.desc]);
 
   const hasSubscription = useSubscription();
-  const canPlay = isFree || hasSubscription;
+  const usePreview = !!session && !session.free && !hasSubscription;
 
-  /* Sluit de player en ga terug naar de Audio Library. Eerste keus = back()
-     (popt het modal en houdt scroll/expand-state van /(tabs) intact). Als er
-     om welke reden dan ook geen back-history is (deep-link, hot-reload),
-     navigeren we expliciet naar `/` zodat de gebruiker NOOIT vastzit
-     (blauwdruk-prioriteit #2). */
-  const closePlayer = () => {
+  const playerState = usePlayerState();
+  /* useHistory() laadt vzh_v1 in geheugen + zorgt dat state-pill re-rendert
+     wanneer de status-callback tijdens deze sessie history schrijft. */
+  useHistory();
+
+  /* Laden bij mount — service skipt zelf wanneer dezelfde URL al loaded is. */
+  useEffect(() => {
+    if (!session) return;
+    loadSession(
+      {
+        url: session.url,
+        title: session.title,
+        series: session.series,
+        isFree: session.free,
+        desc: session.desc,
+      },
+      { preview: usePreview }
+    );
+  }, [session, usePreview]);
+
+  /* GEEN component-unmount cleanup van unload() meer. Sinds de MiniPlayer
+     bestaat (in (tabs)/_layout) is "audio blijft draaien zonder UI" geen
+     orphan-bug meer — de mini-player is de ingang. Cleanup zou nu juist
+     het Minimize-pad breken. Alleen expliciete onClose / preview "Maybe
+     later" stoppen audio. */
+
+  /* Favorites */
+  const { has: hasFav, toggle: toggleFav } = useFavorites();
+  const isFav = session ? hasFav(session.url) : false;
+
+  /* Sleep-cyclus: 0 → 15 → 30 → 60 → 0 ... */
+  const [sleepMin, setSleepMin] = useState<number>(0);
+
+  /* Progress-bar layout voor tap-to-seek */
+  const [progressWidth, setProgressWidth] = useState(0);
+  const onProgressLayout = (e: LayoutChangeEvent) =>
+    setProgressWidth(e.nativeEvent.layout.width);
+  const onProgressTap = (e: any) => {
+    if (progressWidth <= 0 || playerState.durationMs <= 0) return;
+    const x = e?.nativeEvent?.locationX ?? 0;
+    const pct = Math.max(0, Math.min(1, x / progressWidth));
+    seekTo((playerState.durationMs / 1000) * pct);
+  };
+
+  /* Series-foto: hoofdkaart van de serie. Soundscapes-subcategorieën
+     krijgen GEEN eigen photo (operator-besluit Q6 TAAK 3). */
+  const photoUri = session ? SERIES_PHOTO[session.series] : undefined;
+  const subtitle = session ? SERIES_SUBTITLE[session.series] ?? '' : '';
+
+  /* State-pill leest history. ▶ Partly listened (blauw) of ✓ Fully listened
+     (groen). Geen pill als deze sessie nog niet eerder gespeeld is. */
+  const stateLabel = useMemo(() => {
+    if (!session) return null;
+    const entry = getEntryByUrl(session.url);
+    if (!entry) return null;
+    if (entry.full) {
+      return { text: 'Fully listened', color: C.full, glyph: '✓' };
+    }
+    return { text: 'Partly listened', color: C.partial, glyph: '▶' };
+  }, [session, playerState.session]); // re-eval als history schrijft (via useHistory hierboven)
+
+  /* ── Actions ──────────────────────────────────────────────────────────── */
+
+  const openUpgrade = () => {
+    /* Operator-besluit 2026-05-20: in-app pricing-section ipv Gumroad
+       directlink. We signaleren scroll-intent en sluiten de full-player
+       UI. Audio blijft draaien — de mini-player (in (tabs)/_layout)
+       is nu de zichtbare ingang voor de actieve sessie. Gebruiker
+       kan zelf via ✕ op mini-player stoppen. */
+    requestScrollTo('pricing');
     if (router.canGoBack()) router.back();
     else router.navigate('/');
   };
 
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [loading, setLoading] = useState(canPlay);
-  const [playing, setPlaying] = useState(false);
-  const [posMs, setPosMs] = useState(0);
-  const [durMs, setDurMs] = useState(0);
-
-  useEffect(() => {
-    // Premium zonder abonnement: niets laden, geen audio. Upgrade-scherm.
-    if (!canPlay || !url) return;
-
-    let mounted = true;
-    (async () => {
-      try {
-        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: url },
-          { shouldPlay: true },
-          (st: any) => {
-            if (!st?.isLoaded) return;
-            setPlaying(st.isPlaying);
-            setPosMs(st.positionMillis ?? 0);
-            setDurMs(st.durationMillis ?? 0);
-          }
-        );
-        if (!mounted) {
-          await sound.unloadAsync();
-          return;
-        }
-        soundRef.current = sound;
-        setLoading(false);
-      } catch {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      soundRef.current?.unloadAsync();
-    };
-  }, [url, canPlay]);
-
-  async function toggle() {
-    const snd = soundRef.current;
-    if (!snd) return;
-    if (playing) await snd.pauseAsync();
-    else await snd.playAsync();
-  }
-
-  const fmt = (ms: number) => {
-    const t = Math.floor(ms / 1000);
-    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  const onMinimize = () => {
+    /* Sluit alleen de full-player UI — audio + service-state blijft.
+       Mini-player pikt het op. */
+    if (router.canGoBack()) router.back();
+    else router.navigate('/');
   };
-  const pct = durMs > 0 ? Math.min(100, (posMs / durMs) * 100) : 0;
 
-  /* ── PREMIUM ZONDER ABONNEMENT → upgrade-scherm, geen player ── */
-  if (!canPlay) {
-    return (
-      <SafeAreaView style={s.root} edges={['top']}>
-        <Pressable style={s.back} onPress={closePlayer} hitSlop={14}>
-          <Text style={s.backTxt}>‹ Back</Text>
-        </Pressable>
-        <View style={s.center}>
-          <Text style={s.lockGlyph}>🔒</Text>
-          <Text style={s.series}>{series.toUpperCase()}</Text>
-          <Text style={s.title}>{title}</Text>
-          <Text style={s.pwP}>
-            This is a premium session. Unlock the full VIBEZCORE Audio
-            Library to listen.
-          </Text>
-          {/* [OPERATOR] — koppel aan de echte Gumroad upgrade-flow. */}
-          <Pressable
-            style={s.pwBtn}
-            onPress={() => router.push('/(tabs)/account')}
-          >
-            <Text style={s.pwBtnTxt}>See subscription options</Text>
-          </Pressable>
-          <Pressable onPress={closePlayer} hitSlop={14}>
-            <Text style={s.pwBack}>Back to library</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
+  const onClose = async () => {
+    await unload();
+    if (router.canGoBack()) router.back();
+    else router.navigate('/');
+  };
+
+  const onCycleSpeed = async () => {
+    const idx = SPEEDS.indexOf(playerState.rate);
+    const next = SPEEDS[(idx + 1) % SPEEDS.length];
+    await setRate(next);
+  };
+
+  const onCycleSleep = () => {
+    const idx = SLEEP_OPTIONS.indexOf(sleepMin);
+    const next = SLEEP_OPTIONS[(idx + 1) % SLEEP_OPTIONS.length];
+    setSleepMin(next);
+    setSleepTimer(next);
+  };
+
+  const onUpsellMaybeLater = async () => {
+    await unload();
+    if (router.canGoBack()) router.back();
+    else router.navigate('/');
+  };
+
+  /* ── Render ───────────────────────────────────────────────────────────── */
+
+  if (!session) {
+    /* Defensief — als de player zonder url-param wordt geopend, gewoon
+       sluiten. Komt niet voor in normale flow. */
+    return <View style={s.root} />;
   }
 
-  /* ── GRATIS (of abonnee) → volledige player ── */
+  const pct =
+    playerState.durationMs > 0
+      ? Math.min(100, (playerState.positionMs / playerState.durationMs) * 100)
+      : 0;
+
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
-      <Pressable style={s.back} onPress={closePlayer} hitSlop={14}>
-        <Text style={s.backTxt}>‹ Back</Text>
-      </Pressable>
-      <View style={s.center}>
-        <Text style={s.series}>{series.toUpperCase()}</Text>
-        <Text style={s.title}>{title}</Text>
-        {desc ? <Text style={s.desc}>{desc}</Text> : null}
-        {isFree ? (
-          <Text style={s.freeTag}>Free — No Account Needed</Text>
-        ) : null}
-
-        <View style={s.progressTrack}>
-          <View style={[s.progressFill, { width: `${pct}%` }]} />
-        </View>
-        <View style={s.timeRow}>
-          <Text style={s.time}>{fmt(posMs)}</Text>
-          <Text style={s.time}>{fmt(durMs)}</Text>
-        </View>
-
-        {loading ? (
-          <ActivityIndicator color={C.accent} style={{ marginTop: 28 }} />
+    <View style={s.root}>
+      {/* ── Cinematic backdrop ────────────────────────────────────────── */}
+      <View style={s.backdrop}>
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={s.backdropImage} />
         ) : (
-          <Pressable style={s.playBtn} onPress={toggle}>
-            <Text style={s.playBtnTxt}>{playing ? '❚❚' : '▶'}</Text>
-          </Pressable>
+          <View style={[s.backdropImage, s.backdropFallback]} />
         )}
+        <LinearGradient
+          colors={[
+            'rgba(0,0,0,0)',
+            'rgba(0,0,0,0.4)',
+            'rgba(0,0,0,0.85)',
+            '#000',
+          ]}
+          locations={[0, 0.4, 0.7, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
       </View>
-    </SafeAreaView>
+
+      {/* ── Top bar (absolute over backdrop) ──────────────────────────── */}
+      {/* iOS-stijl: elk button is een ronde 32px container met een dun
+         glyph en een label eronder. NOW PLAYING-label staat centraal,
+         visueel uitgelijnd met de icon-centers (alignItems:'flex-start'
+         op de column zorgt dat de NOW PLAYING-text ook bovenaan staat). */}
+      <SafeAreaView edges={['top']} style={s.topbar}>
+        <Pressable onPress={onMinimize} hitSlop={14} style={s.topColumn}>
+          <View style={s.topIconBtn}>
+            <Text style={s.topGlyph}>⌄</Text>
+          </View>
+          <Text style={s.topBtnLabel}>MINIMIZE</Text>
+        </Pressable>
+        <View style={s.topColumn}>
+          <View style={s.topLabelSpacer} />
+          <Text style={s.topLabel}>NOW PLAYING</Text>
+        </View>
+        <Pressable onPress={onClose} hitSlop={14} style={s.topColumn}>
+          <View style={s.topIconBtn}>
+            <Text style={s.topGlyphX}>✕</Text>
+          </View>
+          <Text style={s.topBtnLabel}>CLOSE</Text>
+        </Pressable>
+      </SafeAreaView>
+
+      {/* ── Content (overlapt backdrop met -60px) ─────────────────────── */}
+      <View style={s.content}>
+        <View style={s.titleBlock}>
+          <Text style={s.series}>{session.series.toUpperCase()}</Text>
+          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+          <Text style={s.title} numberOfLines={3}>
+            {session.title}
+          </Text>
+          {stateLabel ? (
+            <Text style={[s.statePill, { color: stateLabel.color }]}>
+              {stateLabel.glyph} {stateLabel.text}
+            </Text>
+          ) : null}
+        </View>
+
+        {/* ── Progress OR Resume panel ────────────────────────────────── */}
+        {playerState.awaitingResume ? (
+          <View style={s.resumePanel}>
+            <Pressable
+              style={s.resumeBtn}
+              onPress={continueFromSaved}
+              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+            >
+              <Text style={s.resumeGlyph}>↩</Text>
+              <Text style={s.resumeText}>Continue</Text>
+              <Text style={s.resumeSub}>
+                {fmt(playerState.savedPositionSec * 1000)}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[s.resumeBtn, s.resumeBtnAlt]}
+              onPress={startOver}
+              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+            >
+              <Text style={s.resumeGlyph}>▶</Text>
+              <Text style={s.resumeText}>Start over</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={s.progressWrap}>
+            <Pressable
+              onLayout={onProgressLayout}
+              onPress={onProgressTap}
+              hitSlop={{ top: 12, bottom: 12, left: 0, right: 0 }}
+              style={s.progressHitArea}
+            >
+              <View style={s.progressTrack}>
+                <View style={[s.progressFill, { width: `${pct}%` }]} />
+              </View>
+            </Pressable>
+            <View style={s.timeRow}>
+              <Text style={s.time}>{fmt(playerState.positionMs)}</Text>
+              <Text style={s.time}>{fmt(playerState.durationMs)}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── Skip + Play controls ────────────────────────────────────── */}
+        <View style={s.skipRow}>
+          <Pressable
+            onPress={() => skipBy(-15)}
+            hitSlop={8}
+            style={s.skipBtn}
+          >
+            {/* FIX 14 (5e poging — react-native-svg ipv text-glyph).
+               Achtergrond-arc via Svg/Path, "15"-cijfer absoluut gevuld
+               over de hele Pressable met lineHeight=48+textAlign center.
+               Backward-variant: arc start linksboven, eindigt rechts. */}
+            <Svg
+              width={48}
+              height={48}
+              viewBox="0 0 24 24"
+              fill="none"
+              style={s.skipSvg}
+            >
+              <Path
+                d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                stroke="#ffffff"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M3 3v5h5"
+                stroke="#ffffff"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            <Text style={s.skipNum} allowFontScaling={false}>
+              15
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={togglePlay}
+            hitSlop={10}
+            style={s.playBtn}
+            disabled={playerState.loading || playerState.awaitingResume}
+          >
+            <PlayPauseGlyph
+              size={28}
+              color="#ffffff"
+              playing={playerState.playing}
+            />
+          </Pressable>
+
+          <Pressable
+            onPress={() => skipBy(15)}
+            hitSlop={8}
+            style={s.skipBtn}
+          >
+            {/* Forward-variant: arc start rechtsboven, eindigt links.
+               Paths zijn de mirror van de backward-knop. */}
+            <Svg
+              width={48}
+              height={48}
+              viewBox="0 0 24 24"
+              fill="none"
+              style={s.skipSvg}
+            >
+              <Path
+                d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                stroke="#ffffff"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M21 3v5h-5"
+                stroke="#ffffff"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            <Text style={s.skipNum} allowFontScaling={false}>
+              15
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* ── Extras row ──────────────────────────────────────────────── */}
+        <View style={s.extrasRow}>
+          <ExtraBtn
+            icon={isFav ? '♥' : '♡'}
+            label="Favorite"
+            color={isFav ? C.heart : C.text}
+            onPress={() =>
+              toggleFav({
+                url: session.url,
+                title: session.title,
+                series: session.series,
+              })
+            }
+          />
+          <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
+          <ExtraBtn
+            icon="🌙"
+            label={sleepMin > 0 ? `${sleepMin}m` : 'Sleep'}
+            onPress={onCycleSleep}
+          />
+        </View>
+
+        {/* ── Full library access CTA ─────────────────────────────────── */}
+        <Pressable
+          style={s.cta}
+          onPress={openUpgrade}
+          android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+        >
+          <Text style={s.ctaText}>→ Full library access</Text>
+        </Pressable>
+      </View>
+
+      {/* ── Preview-upsell modal ──────────────────────────────────────── */}
+      {playerState.previewBlocked ? (
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Continue listening?</Text>
+            <Text style={s.modalBody}>
+              Get full access to all 83 sessions across all 12 series.
+            </Text>
+            <View style={s.modalBtns}>
+              <Pressable style={s.modalPrimary} onPress={openUpgrade}>
+                <Text style={s.modalPrimaryText}>Get Full Access</Text>
+              </Pressable>
+              <Pressable
+                style={s.modalSecondary}
+                onPress={onUpsellMaybeLater}
+              >
+                <Text style={s.modalSecondaryText}>Maybe later</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── "Play next?"-paneel ───────────────────────────────────────── */}
+      {playerState.endedPanel ? (
+        <View style={s.modalOverlay}>
+          <View style={s.endedCard}>
+            <Text style={s.endedEyebrow}>SESSION COMPLETE</Text>
+            {playerState.endedPanel.nextSession ? (
+              <>
+                <Text style={s.endedSub}>Up next</Text>
+                <Text style={s.endedTitle} numberOfLines={2}>
+                  {playerState.endedPanel.nextSession.title}
+                </Text>
+                <Text style={s.endedSeries} numberOfLines={1}>
+                  {playerState.endedPanel.nextSession.series}
+                </Text>
+                <View style={s.endedBtns}>
+                  <Pressable
+                    onPress={dismissEndedPanel}
+                    style={s.endedDone}
+                  >
+                    <Text style={s.endedDoneText}>Done</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={playNextFromPanel}
+                    style={s.endedPlayNext}
+                  >
+                    <Text style={s.endedPlayNextText}>▶ Play next</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={s.endedTitle}>Series complete</Text>
+                <Text style={s.endedSeries}>
+                  You've finished {playerState.endedPanel.finishedSeries}
+                </Text>
+                <View style={[s.endedBtns, { justifyContent: 'center' }]}>
+                  <Pressable
+                    onPress={dismissEndedPanel}
+                    style={s.endedDone}
+                  >
+                    <Text style={s.endedDoneText}>Done</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
+/* ── Sub-components ─────────────────────────────────────────────────────── */
+
+function ExtraBtn({
+  icon,
+  label,
+  color,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  color?: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8} style={s.extraBtn}>
+      <Text style={[s.extraIcon, color ? { color } : null]}>{icon}</Text>
+      <Text style={s.extraLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function SpeedBtn({
+  rate,
+  onPress,
+}: {
+  rate: number;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8} style={s.extraBtn}>
+      <View style={s.speedCircle}>
+        <Text style={s.speedText}>{rate.toFixed(1)}×</Text>
+      </View>
+      <Text style={s.extraLabel}>Speed</Text>
+    </Pressable>
+  );
+}
+
+/* ── Styles ─────────────────────────────────────────────────────────────── */
+
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg, padding: 20 },
-  back: { paddingVertical: 10, paddingHorizontal: 8, alignSelf: 'flex-start' },
-  backTxt: { color: C.dim, fontSize: 15 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  lockGlyph: { fontSize: 40, marginBottom: 18, opacity: 0.7 },
+  root: { flex: 1, backgroundColor: C.bg },
+
+  /* Backdrop */
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: BACKDROP_HEIGHT,
+    backgroundColor: '#0a0a0a',
+  },
+  backdropImage: { width: '100%', height: '100%' },
+  backdropFallback: { backgroundColor: '#1a1a1a' },
+
+  /* Top bar — absolute zodat backdrop volledig erachter zit en content
+     niet wordt opgeschoven. SafeAreaView (top edge) zorgt voor status-bar
+     inset op zowel iOS als Android. alignItems:'flex-start' op de
+     SafeAreaView houdt de drie kolommen netjes vanaf de top — buttons
+     stapelen icon + label, middencolumn doet dat met een spacer. */
+  topbar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 10,
+  },
+  topColumn: {
+    alignItems: 'center',
+    minWidth: 64,
+  },
+  topIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /* Glyph in icon-button — fontWeight 400 voor SF-symbol-achtige dunne
+     stroke; lineHeight matched fontSize zodat vertically centered klopt. */
+  topGlyph: {
+    color: C.text,
+    fontSize: 18,
+    fontWeight: '400',
+    lineHeight: 18,
+    marginTop: -2, // optische correctie voor chevron-down baseline
+  },
+  topGlyphX: {
+    color: C.text,
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 14,
+  },
+  /* Label onder icon-button (MINIMIZE / CLOSE). */
+  topBtnLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1.08, // .12em op 9px
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  /* Spacer in midden-column zodat NOW PLAYING op gelijke hoogte komt als
+     de icon-button-mid (niet alleen onder een lege ruimte). 32 (icon) +
+     4 (gap) = 36 totaal hoogte tot label. Spacer vult tot label-positie. */
+  topLabelSpacer: { height: 36 },
+  /* "NOW PLAYING" — dimmer dan de actie-labels per spec. */
+  topLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.35, // .15em op 9px
+    textTransform: 'uppercase',
+  },
+
+  /* Content */
+  content: {
+    flex: 1,
+    marginTop: BACKDROP_HEIGHT - 60, // -60 overlap zoals spec voorschrijft
+    paddingHorizontal: 24,
+  },
+
+  /* Title block */
+  titleBlock: { paddingTop: 0 },
   series: {
     color: C.accent,
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: 10,
+    fontWeight: '800',
+    letterSpacing: 1.54,
+  },
+  subtitle: {
+    color: C.dim,
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
   },
   title: {
     color: C.text,
     fontSize: 24,
     fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: -0.5,
+    lineHeight: 28,
+    marginTop: 4,
   },
-  desc: {
-    color: C.dim,
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 10,
-    lineHeight: 19,
-    paddingHorizontal: 10,
-  },
-  freeTag: {
-    color: C.free,
+  /* FIX 15a: status-pill subtieler. fontSize 12→11, weight 600→500,
+     opacity 0.65 (dimmer), marginTop 8→6. Voelt als terloopse info
+     ipv hoofdmoot onder de titel. Kleur (blauw partial / groen full)
+     wordt nog steeds inline op de Text geset. */
+  statePill: {
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textAlign: 'center',
-    marginTop: 16,
+    fontWeight: '500',
+    opacity: 0.65,
+    letterSpacing: 0,
+    marginTop: 6,
   },
+
+  /* Progress */
+  progressWrap: { marginTop: 24, marginHorizontal: 0 },
+  progressHitArea: { paddingVertical: 12 },
   progressTrack: {
-    height: 4,
+    height: 3,
     width: '100%',
-    backgroundColor: C.border,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 2,
-    marginTop: 32,
     overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: C.accent },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 8,
+    marginTop: -2,
   },
-  time: { color: C.faint, fontSize: 11 },
+  time: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
+
+  /* Resume panel */
+  resumePanel: {
+    marginTop: 24,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  resumeBtn: {
+    flex: 1,
+    backgroundColor: C.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  resumeBtnAlt: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  resumeGlyph: { color: C.text, fontSize: 18, fontWeight: '700' },
+  resumeText: {
+    color: C.text,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  resumeSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 },
+
+  /* Skip + play */
+  skipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    marginBottom: 24,
+    gap: 48,
+  },
+  /* FIX 14 (5e poging — react-native-svg). Container 48×48,
+     position:'relative' zodat de absoluut-gepositioneerde SVG en Text
+     centreren op de container-bounds. */
+  skipBtn: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  /* SVG vult de hele skipBtn met de boog-arc + arrow-tip. */
+  skipSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  /* "15"-cijfer absoluut gevuld over de hele Pressable. textAlign
+     centert horizontaal. lineHeight=48 (= container height) +
+     textAlignVertical:'center' geeft Android een eerlijke vertical
+     center — anders schuift font-metric het cijfer net van de
+     boog-center. includeFontPadding:false verwijdert Inter's extra
+     Android-padding. allowFontScaling:false op de Text-instance zelf. */
+  skipNum: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
+    lineHeight: 48,
+    includeFontPadding: false,
+  },
   playBtn: {
-    marginTop: 28,
     width: 72,
     height: 72,
     borderRadius: 36,
     backgroundColor: C.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: C.accent,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
-  playBtnTxt: { color: '#001226', fontSize: 24, fontWeight: '800' },
-  pwP: {
-    color: C.dim,
+  playGlyph: { color: C.text, fontSize: 28, fontWeight: '700' },
+
+  /* Extras row */
+  extrasRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 48,
+    marginBottom: 24,
+  },
+  extraBtn: { alignItems: 'center', minWidth: 56 },
+  extraIcon: {
+    color: C.text,
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  extraLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    marginTop: 6,
+  },
+  speedCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speedText: { color: C.text, fontSize: 14, fontWeight: '700' },
+
+  /* CTA */
+  cta: {
+    marginTop: 'auto',
+    marginBottom: 24,
+    backgroundColor: C.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    alignItems: 'center',
+  },
+  ctaText: { color: C.text, fontSize: 15, fontWeight: '700' },
+
+  /* Preview modal */
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: C.modalOverlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    backgroundColor: '#0a0a0a',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    maxWidth: 360,
+    width: '100%',
+  },
+  modalTitle: {
+    color: C.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalBody: {
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 21,
-    paddingHorizontal: 16,
+    marginTop: 8,
+    maxWidth: 280,
+    lineHeight: 20,
   },
-  pwBtn: {
-    marginTop: 26,
+  modalBtns: {
+    width: '100%',
+    gap: 12,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  modalPrimary: {
     backgroundColor: C.accent,
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingHorizontal: 28,
-    borderRadius: 12,
+    borderRadius: 24,
+    alignSelf: 'stretch',
+    alignItems: 'center',
   },
-  pwBtnTxt: { color: '#001226', fontSize: 15, fontWeight: '800' },
-  pwBack: { color: C.dim, fontSize: 13, marginTop: 18 },
+  modalPrimaryText: { color: C.text, fontSize: 15, fontWeight: '700' },
+  modalSecondary: {
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  modalSecondaryText: { color: C.text, fontSize: 15, fontWeight: '600' },
+
+  /* Ended-paneel ("Play next?") — modal-achtig over de player */
+  endedCard: {
+    backgroundColor: 'rgba(20,20,25,0.97)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: 24,
+    maxWidth: 360,
+    width: '100%',
+  },
+  endedEyebrow: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  endedSub: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 6,
+  },
+  endedTitle: {
+    color: C.text,
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 8,
+    lineHeight: 24,
+  },
+  endedSeries: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  endedBtns: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  endedDone: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+  },
+  endedDoneText: {
+    color: C.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  endedPlayNext: {
+    flex: 1,
+    backgroundColor: C.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    alignItems: 'center',
+  },
+  endedPlayNextText: {
+    color: C.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

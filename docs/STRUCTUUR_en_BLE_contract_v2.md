@@ -10,6 +10,40 @@
 >
 > TEKSTEN: marketing-/modusbeschrijvingen worden door operator gefinaliseerd.
 > Alles wat operator nog moet herzien is gemarkeerd met [TEKST — OPERATOR].
+>
+> ── WIJZIGING 19 mei 2026 (operator) ─────────────────────────────────
+> Er komt een NIET-BLOKKEREND welkomstscherm als eerste scherm (zie
+> sectie 0 hieronder). Dit vervangt de oude regel "gast-first, geen
+> poort, opent direct in vrije inhoud" → wordt: "gast-first MET een
+> niet-blokkerend welkomstscherm". Waar oude tekst en sectie 0
+> verschillen, geldt SECTIE 0.
+> ─────────────────────────────────────────────────────────────────────
+
+---
+
+## 0. APP-ENTREE — welkomstscherm (LEIDEND, 19 mei 2026)
+
+Eerste scherm = welkomstscherm. NIET-blokkerend, GEEN poort, GEEN
+keuzescherm. Opbouw: full-screen foto (`assets/welcome_bg.png`) +
+VIBEZCORE-wordmark + intro-tekst (definitief, operator-goedgekeurd:
+"Stop being a passenger in your own life. Change the game. Unlock your
+full potential.") + 2 gelijkwaardige knoppen ("Explore Bracelet" →
+Bracelet-tab, "Explore Audio Library (listen free sessions)" →
+Audio-tab) + ondergeschikte regel "Already have a product? Sign in".
+
+Flows:
+- Gast/nieuw → welkomstscherm → knop → app in, ALLE tabs vrij.
+- Klant met account (niet ingelogd) → Sign in → backend-entitlements
+  ontgrendelen automatisch wat hij bezit.
+- Bracelet-koper zonder account → account + activatiecode → ontgrendelt.
+- Reeds ingelogd → welkomstscherm overslaan → direct de app in.
+
+Harde regel: de app vraagt NOOIT "wat bezit je". Inloggen of
+activatiecode bepaalt het (consistent met entitlements-model).
+De 3 tabs (Audio · Bracelet · Account) blijven ongewijzigd en
+gelijkwaardig; het welkomstscherm zit ervóór in de root-navigatie.
+
+---
 
 ---
 

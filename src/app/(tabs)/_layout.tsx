@@ -2,7 +2,12 @@
    VIBEZCORE — Tab navigation skeleton
 
    Gast-first: the app opens DIRECTLY here. No welcome page, no login wall.
-   4 tabs: Audio (landing/merk) · Library (sessies) · Bracelet · Account.
+   3 tabs: Audio Library · Bracelet · Account.
+
+   Library is GEEN aparte tab meer; de Library-functionaliteit (zoekbalk,
+   filters, Your Journey, FOLLOW per serie, favorites per sessie) wordt
+   geïntegreerd ÍN de Audio Library-tab — bron: blauwdruk §3 + besluit
+   eigenaar. library.tsx is daarom verwijderd uit deze map.
 
    ─── Waarom een custom tabBarButton ───
    Vastgesteld via console.log-diagnostiek: de default tab-button uit
@@ -17,11 +22,12 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { MiniPlayer } from '@/components/MiniPlayer';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { router, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-type TabPath = '/' | '/library' | '/bracelet' | '/account';
+type TabPath = '/' | '/bracelet' | '/account';
 
 /* Eigen tab-button. Wraps de bestaande icon+label-children van de navigator
    in een gewone Pressable; onPress doet één ding: navigeer naar path. */
@@ -79,67 +85,63 @@ function TabGlyph({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export default function TabLayout() {
+  /* Wrap Tabs in een View zodat we de MiniPlayer ernaast (absolute,
+     boven de tab-bar) kunnen mounten. MiniPlayer rendert zelf null
+     wanneer geen sessie actief is en op /player + /welcome. */
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Brand.bg,
-          borderTopColor: Brand.border,
-          borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: Brand.text,
-        tabBarInactiveTintColor: Brand.textDim,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontFamily: BrandFonts.semibold,
-          letterSpacing: 0.3,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Audio Library',
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <TabGlyph label="♪" focused={focused} />
-          ),
-          tabBarButton: (props) => <TabButton path="/" {...props} />,
+    <View style={{ flex: 1, backgroundColor: Brand.bg }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: Brand.bg,
+            borderTopColor: Brand.border,
+            borderTopWidth: 1,
+            height: 64,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: Brand.text,
+          tabBarInactiveTintColor: Brand.textDim,
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontFamily: BrandFonts.semibold,
+            letterSpacing: 0.3,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: 'Library',
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <TabGlyph label="≡" focused={focused} />
-          ),
-          tabBarButton: (props) => <TabButton path="/library" {...props} />,
-        }}
-      />
-      <Tabs.Screen
-        name="bracelet"
-        options={{
-          title: 'Bracelet',
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <TabGlyph label="◎" focused={focused} />
-          ),
-          tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
-        }}
-      />
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: 'Account',
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <TabGlyph label="○" focused={focused} />
-          ),
-          tabBarButton: (props) => <TabButton path="/account" {...props} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Audio Library',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph label="♪" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/" {...props} />,
+          }}
+        />
+        <Tabs.Screen
+          name="bracelet"
+          options={{
+            title: 'Bracelet',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph label="◎" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
+          }}
+        />
+        <Tabs.Screen
+          name="account"
+          options={{
+            title: 'Account',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph label="○" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/account" {...props} />,
+          }}
+        />
+      </Tabs>
+      <MiniPlayer />
+    </View>
   );
 }
