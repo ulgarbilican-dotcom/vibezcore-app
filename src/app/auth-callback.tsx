@@ -39,11 +39,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/* Supabase publishable key — zelfde als gebruikt in de webapp's
-   auth-callback.html. Publishable keys zijn safe om in client-code te
-   hebben (alleen scoped permissions). */
-const SUPABASE_URL = 'https://zotxpyjvcamnlzwdgceh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_LZH7TZUskMTphvMIiefiQQ_8As5C_Q2';
+/* Supabase config uit centrale constants. Eén plek wijzigen = alle
+   auth-flows mee. Publishable keys zijn safe in client-code (scoped). */
+import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 
 type State =
   | { phase: 'loading' }

@@ -86,10 +86,12 @@ async function persistSession(s: SessionPayload): Promise<void> {
     /* Silent fail zou betekenen dat user wel "ingelogd" lijkt maar bij
        volgende app-open weer login-form ziet. Console.warn zodat we
        deze stille fail zien in logs als er ooit een issue is. */
-    console.warn(
-      '[auth] persistSession failed:',
-      e instanceof Error ? e.message : String(e)
-    );
+    if (__DEV__) {
+      console.warn(
+        '[auth] persistSession failed:',
+        e instanceof Error ? e.message : String(e)
+      );
+    }
   }
 }
 
@@ -186,9 +188,9 @@ async function doRefresh(): Promise<string | null> {
          iedere non-2xx response → user moest na elke transient bug
          opnieuw inloggen (bug-fix 2026-05-25). */
       if (status === 401) {
-        console.warn('[auth] refresh-token rejected by backend (401) → clearing session');
+        if (__DEV__) console.warn('[auth] refresh-token rejected by backend (401) → clearing session');
         await clearSession();
-      } else {
+      } else if (__DEV__) {
         console.warn(
           `[auth] refresh failed with status ${status} — keeping session, will retry next launch`
         );

@@ -48,7 +48,7 @@ function TabButton({
   return (
     <Pressable
       onPress={() => {
-        console.log('TABBUTTON tap:', path);
+        if (__DEV__) console.log('TABBUTTON tap:', path);
         router.navigate(path);
       }}
       accessibilityRole="button"

@@ -250,7 +250,7 @@ async function ensureAudioMode(): Promise<void> {
   } catch (e) {
     /* Niet-fataal — meeste platforms zullen sane defaults gebruiken.
        Log alleen voor diagnostiek. */
-    console.warn('[audio-player] setAudioModeAsync failed:', e);
+    if (__DEV__) console.warn('[audio-player] setAudioModeAsync failed:', e);
   }
 }
 
@@ -439,7 +439,7 @@ function activateLockScreen(session: SessionInfo): void {
   } catch (e) {
     /* setActiveForLockScreen kan op web of bepaalde devices throwen —
        het is niet kritiek voor playback, alleen voor de OS-UI. */
-    console.warn('[audio-player] setActiveForLockScreen failed:', e);
+    if (__DEV__) console.warn('[audio-player] setActiveForLockScreen failed:', e);
   }
 }
 
@@ -535,7 +535,7 @@ export async function loadSession(
     if (e instanceof SignedUrlError) {
       msg = `[${e.code}] ${e.message}`;
     }
-    console.warn('[audio-player] load failed:', msg);
+    if (__DEV__) console.warn('[audio-player] load failed:', msg);
     setState({ loading: false, errorMessage: msg });
   }
 }

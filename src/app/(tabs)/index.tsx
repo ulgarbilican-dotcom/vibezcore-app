@@ -545,10 +545,12 @@ export default function AudioScreen() {
         const cardY = seriesPositions.current[seriesName];
         const libY = libListYRef.current;
         if (cardY === undefined) {
-          console.warn(
-            '[VIBEZCORE] geen Y-positie voor serie:',
-            seriesName,
-          );
+          if (__DEV__) {
+            console.warn(
+              '[VIBEZCORE] no Y-position for series:',
+              seriesName,
+            );
+          }
           return;
         }
         /* Spotlight-offset: 100px adem boven de gekozen card zodat de
@@ -565,22 +567,22 @@ export default function AudioScreen() {
      capable browser. Diag-logs blijven staan zodat per pad zichtbaar is
      wat er gebeurd is. */
   const openCheckout = async () => {
-    console.log('[VIBEZCORE] openCheckout fired, plan =', plan);
+    if (__DEV__) console.log('[VIBEZCORE] openCheckout fired, plan =', plan);
     const url = GUMROAD_URLS[plan];
-    console.log('[VIBEZCORE] resolved URL =', url);
+    if (__DEV__) console.log('[VIBEZCORE] resolved URL =', url);
     if (!url) {
-      console.log('[VIBEZCORE] URL is falsy — bailing');
+      if (__DEV__) console.log('[VIBEZCORE] URL is falsy — bailing');
       return;
     }
     try {
       const result = await WebBrowser.openBrowserAsync(url);
-      console.log('[VIBEZCORE] WebBrowser result =', result);
+      if (__DEV__) console.log('[VIBEZCORE] WebBrowser result =', result);
       if (result.type === 'cancel' || result.type === 'dismiss') {
-        console.log('[VIBEZCORE] Custom Tab niet getoond, fallback naar Linking');
+        if (__DEV__) console.log('[VIBEZCORE] Custom Tab not shown, fallback to Linking');
         await Linking.openURL(url);
       }
     } catch (e) {
-      console.log('[VIBEZCORE] WebBrowser threw, fallback naar Linking:', e);
+      if (__DEV__) console.log('[VIBEZCORE] WebBrowser threw, fallback to Linking:', e);
       await Linking.openURL(url);
     }
   };

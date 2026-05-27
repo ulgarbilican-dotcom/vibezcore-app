@@ -534,15 +534,15 @@ function countdownParts(target: number, now: number): {
    gedupliceerd ipv shared util omdat de fout-paden subtiel anders
    reageren per call-site (logging). */
 async function openExternal(url: string): Promise<void> {
-  console.log('[VIBEZCORE] bracelet openExternal →', url);
+  if (__DEV__) console.log('[VIBEZCORE] bracelet openExternal →', url);
   try {
     const result = await WebBrowser.openBrowserAsync(url);
     if (result.type === 'cancel' || result.type === 'dismiss') {
-      console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
+      if (__DEV__) console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
       await Linking.openURL(url);
     }
   } catch (e) {
-    console.log('[VIBEZCORE] WebBrowser threw — fallback Linking:', e);
+    if (__DEV__) console.log('[VIBEZCORE] WebBrowser threw — fallback Linking:', e);
     await Linking.openURL(url);
   }
 }
@@ -954,7 +954,7 @@ export default function BraceletScreen() {
             KICKSTARTER — 1 AUGUST 2026
           </Text>
           <Text style={s.heroTitle}>
-            VibeZCore{'\n'}Smart Bead Bracelet
+            VIBEZCORE{'\n'}Smart Bead Bracelet
           </Text>
           <Text style={s.heroSub}>
             5 haptic modes. One clear outcome.{'\n'}
@@ -1253,10 +1253,10 @@ export default function BraceletScreen() {
             <View style={s.ksHairline} />
             <Text style={s.ksIncludesLbl}>What's included</Text>
             <View>
-              <PIncluded text="VibeZCore Smart Bead Bracelet" />
+              <PIncluded text="VIBEZCORE Smart Bead Bracelet" />
               <PIncluded text="Extra Style Bracelet (8mm)" />
               <PIncluded text="12-Month Full Audio Library" />
-              <PIncluded text="VibeZCore App access" />
+              <PIncluded text="VIBEZCORE App access" />
             </View>
             <Pressable
               style={s.ksBtnPrimary}
@@ -1273,7 +1273,7 @@ export default function BraceletScreen() {
               geen accent — onderscheidt 'm visueel van de featured). */}
           <View style={s.ksOption}>
             <Text style={s.ksEyebrow}>BRACELET ONLY</Text>
-            <Text style={s.ksName}>VibeZCore Smart Bead Bracelet</Text>
+            <Text style={s.ksName}>VIBEZCORE Smart Bead Bracelet</Text>
             <View style={s.priceRow}>
               <Text style={s.priceMain}>{price.bracelet.main}</Text>
               <View style={s.priceMeta}>
@@ -1287,7 +1287,7 @@ export default function BraceletScreen() {
             <Text style={s.ksIncludesLbl}>What's included</Text>
             <View>
               <PIncluded text="Smart Bead Bracelet (choice of stone)" />
-              <PIncluded text="VibeZCore App access" />
+              <PIncluded text="VIBEZCORE App access" />
               <PIncluded text="5 haptic modes" />
               <PIncluded text="USB-C charging cable" />
             </View>

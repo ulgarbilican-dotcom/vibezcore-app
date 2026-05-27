@@ -143,7 +143,7 @@ async function fetchStatus(): Promise<void> {
     notifyAll(data);
     persistCache(data);
   } catch (e: any) {
-    console.warn('[useSubscription] fetch failed:', e?.message ?? e);
+    if (__DEV__) console.warn('[useSubscription] fetch failed:', e?.message ?? e);
     if (cachedStatus === null) {
       notifyAll({ active: false });
     }

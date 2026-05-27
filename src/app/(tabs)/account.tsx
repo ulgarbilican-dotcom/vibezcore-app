@@ -68,15 +68,15 @@ const FORGOT_PASSWORD_URL = 'https://app.vibezcore.com/forgot-password.html';
    en (tabs)/index.tsx — bewust gedupliceerd ipv shared util omdat
    log-paden subtiel anders zijn per call-site. */
 async function openExternal(url: string): Promise<void> {
-  console.log('[VIBEZCORE] account openExternal →', url);
+  if (__DEV__) console.log('[VIBEZCORE] account openExternal →', url);
   try {
     const result = await WebBrowser.openBrowserAsync(url);
     if (result.type === 'cancel' || result.type === 'dismiss') {
-      console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
+      if (__DEV__) console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
       await Linking.openURL(url);
     }
   } catch (e) {
-    console.log('[VIBEZCORE] WebBrowser threw — fallback Linking:', e);
+    if (__DEV__) console.log('[VIBEZCORE] WebBrowser threw — fallback Linking:', e);
     await Linking.openURL(url);
   }
 }

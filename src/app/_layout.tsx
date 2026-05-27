@@ -126,11 +126,11 @@ export default function RootLayout() {
           });
         } else if (path === 'forgot-password') {
           router.push('/forgot-password' as never);
-        } else {
+        } else if (__DEV__) {
           console.log('[deep-link] unhandled path:', path);
         }
       } catch (e) {
-        console.warn('[deep-link] parse failed:', e);
+        if (__DEV__) console.warn('[deep-link] parse failed:', e);
       }
     };
 

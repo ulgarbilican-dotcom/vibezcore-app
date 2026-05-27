@@ -28,9 +28,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const SUPABASE_URL = 'https://zotxpyjvcamnlzwdgceh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_LZH7TZUskMTphvMIiefiQQ_8As5C_Q2';
+import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 /* Redirect-URL die in de email-link verschijnt. Supabase voegt zelf
    `&token_hash=...&type=recovery` toe. Deep-link handler in _layout
    vangt 't pad `/reset-password` en routet erheen. */
