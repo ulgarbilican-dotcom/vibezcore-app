@@ -20,8 +20,10 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import {
+  SERIES,
   SERIES_PHOTO,
   SERIES_SUBTITLE,
+  SESSIONS,
   type Session,
 } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -502,7 +504,8 @@ export default function PlayerScreen() {
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>Continue listening?</Text>
             <Text style={s.modalBody}>
-              Get full access to all 83 sessions across all 12 series.
+              Get full access to all {SESSIONS.length} sessions across all{' '}
+              {SERIES.length} series.
             </Text>
             <View style={s.modalBtns}>
               <Pressable style={s.modalPrimary} onPress={openUpgrade}>

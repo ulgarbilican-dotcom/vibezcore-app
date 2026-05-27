@@ -707,6 +707,13 @@ export default function BraceletControl() {
   const modeStats = useBraceletStats(selectedMode);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /* Stale-status detection — wanneer de poll meer dan STALE_FAIL_TICKS
+     opeenvolgende keren faalt (= STALE_FAIL_TICKS × POLL_MS / 1000 sec
+     geen status-update), tonen we een indicator dat de getoonde data
+     mogelijk niet meer accuraat is. Zonder dit weet user niet of de
+     battery/remaining die op het scherm staat nog klopt of bevroren is. */
+  const pollFailsRef = useRef(0);
+  const [staleStatus, setStaleStatus] = useState(false);
 
   /* Connection state subscription. */
   useEffect(() => {
@@ -762,19 +769,31 @@ export default function BraceletControl() {
     }
   }, [status, pausedAt, selectedMode, duration]);
 
-  /* Poll status every 5s while connected (spec §8.3/§11.4). */
+  /* Poll status every 5s while connected (spec §8.3/§11.4).
+     Tracking opeenvolgende fouten → na 3× falen (15s) markeren we de
+     status als 'stale' zodat de UI dat kan tonen ipv stille rot. */
+  const STALE_FAIL_TICKS = 3;
   useEffect(() => {
     if (conn !== 'connected') {
       if (pollRef.current) clearInterval(pollRef.current);
+      pollFailsRef.current = 0;
+      setStaleStatus(false);
       return;
     }
     let alive = true;
     const tick = async () => {
       try {
         const st = await bracelet.requestStatus();
-        if (alive) setStatus(st);
+        if (!alive) return;
+        setStatus(st);
+        pollFailsRef.current = 0;
+        setStaleStatus(false);
       } catch {
-        /* transient — next tick retries */
+        if (!alive) return;
+        pollFailsRef.current += 1;
+        if (pollFailsRef.current >= STALE_FAIL_TICKS) {
+          setStaleStatus(true);
+        }
       }
     };
     tick();
@@ -1129,6 +1148,15 @@ export default function BraceletControl() {
             />
             <Text style={s.activeName}>{activeMeta.name}</Text>
           </View>
+          {/* Stale-status banner — verschijnt na 3 mislukte polls (15s)
+              zodat user weet dat battery/remaining mogelijk verouderd is.
+              Geen rood/alarm — gedimde tekst, informatief. Bracelet
+              draait autonoom door (BLE §8 design), dus geen paniek. */}
+          {staleStatus && (
+            <Text style={s.staleNote}>
+              Connection unstable — values may be out of date
+            </Text>
+          )}
           {isPaused && (
             <Text
               style={[s.pausedLabel, { color: activeMeta.color }]}
@@ -1136,6 +1164,20 @@ export default function BraceletControl() {
               PAUSED
             </Text>
           )}
+          {/* BLE-spec §11.2: duration wordt gehandhaafd binnen
+              [minMinutes, maxMinutes] van de modus. Als de gebruiker
+              pauseert met minder remaining dan minMinutes, zal Resume
+              de sessie verlengen tot minMinutes (de bracelet weigert
+              kortere sessies). Transparante notice voorkomt "huh, ik
+              had nog maar 2 min en nu staat er weer 8" verwarring. */}
+          {isPaused &&
+            pausedAt !== null &&
+            pausedAt < activeMeta.minMinutes && (
+              <Text style={s.pausedNote}>
+                Resuming will extend the session to {activeMeta.minMinutes}{' '}
+                min (bracelet minimum)
+              </Text>
+            )}
 
           {/* Adem-cirkel + timer + progress-arc.
               Layering: ProgressArc buitenste laag (300px), PulsingCircle
@@ -2083,6 +2125,33 @@ const s = StyleSheet.create({
     letterSpacing: 2.5,
     marginTop: -24,
     marginBottom: 28,
+  },
+  /* Stale-poll banner — verschijnt onder mode-row als BLE-status oud
+     is. Geen alarm-rood; subtiele waarschuwing. */
+  staleNote: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.medium,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: -16,
+    marginBottom: 18,
+    paddingHorizontal: 24,
+    maxWidth: 320,
+  },
+  /* Inline notice direct onder PAUSED-label — verschijnt alleen als
+     resume de duration zal verhogen (BLE-spec minimum). Kleine, gedimde
+     tekst — informatief, niet alarmerend. */
+  pausedNote: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: -16,
+    marginBottom: 22,
+    paddingHorizontal: 24,
+    maxWidth: 320,
   },
   /* Restart-link — kleine tertiaire actie tijdens active/paused. Geen
      button-look, gewoon een tappable tekstlink met icoon. */

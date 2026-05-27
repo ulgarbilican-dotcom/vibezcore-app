@@ -30,10 +30,14 @@ import {
   dismissWelcomePopup,
   useWelcomePopupVisible,
 } from '@/services/welcome-popup';
-import { useShowableLastPlayed, type LastPlayed } from '@/utils/last-played';
+import {
+  clearLastPlayed,
+  useShowableLastPlayed,
+  type LastPlayed,
+} from '@/utils/last-played';
 import { openSession } from '@/utils/openSession';
 import { setSavedPosition } from '@/utils/vzp';
-import { router, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import {
   BackHandler,
@@ -166,25 +170,25 @@ export function WelcomeBackPopup() {
    from X:XX / Start over"-prompt (= bestaande in-player flow,
    ongewijzigd zoals operator gevraagd). */
 async function onContinue(lp: LastPlayed): Promise<void> {
-  await setSavedPosition(lp.url, lp.positionSec);
-
   const sess = SESSIONS.find((x) => x.url === lp.url);
+
   if (sess) {
+    /* Happy path: sessie bestaat nog in de library. Sla positie op en
+       laat openSession() de player openen mét volledige metadata
+       (desc, subseries, etc.) zoals welke andere library-tap dan ook. */
+    await setSavedPosition(lp.url, lp.positionSec);
     openSession(sess);
   } else {
-    /* Fallback: lastPlayed-data direct doorgeven. Treedt alleen op als
-       de library na de save een refactor heeft gehad waardoor URLs
-       gewijzigd zijn — defensief, niet de happy-path. */
-    router.push({
-      pathname: '/player',
-      params: {
-        title: lp.title,
-        series: lp.series,
-        url: lp.url,
-        free: lp.isFree ? 'true' : 'false',
-        desc: '',
-      },
-    });
+    /* Stale entry: deze URL bestaat niet meer in SESSIONS — kan na een
+       library-refactor (URLs gewijzigd) of als een seizoen-content uit
+       de library getrokken is. We forceren GEEN player-push met lege
+       metadata (lege desc → halve title-card → gebroken UX). Stille
+       opruim + dismiss; de gebruiker valt terug op de library en kan
+       opnieuw een sessie kiezen. */
+    if (__DEV__) {
+      console.warn('[welcome-back] stale last-played, clearing:', lp.url);
+    }
+    await clearLastPlayed();
   }
 
   dismissWelcomePopup();

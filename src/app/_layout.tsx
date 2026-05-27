@@ -20,6 +20,7 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
@@ -58,6 +59,28 @@ RNTextWithDefault.defaultProps.style = [
 /* `undefined` = nog aan het checken; `null` = gast; string = token. */
 type AuthState = undefined | null | string;
 
+/* Auth-flow deep-link paden die de welcome-redirect MOETEN overrulen.
+   Zonder deze check zou een cold-start vanaf bv. een email-magic-link
+   (`vibezcoreapp://auth-callback?...`) als gast worden gedetecteerd
+   → `router.replace('/welcome')` zou de auth-callback push opslokken
+   → user landt op welcome ipv het verify-scherm. */
+const AUTH_DEEP_LINK_PATHS = new Set([
+  'auth-callback',
+  'reset-password',
+  'forgot-password',
+]);
+
+async function hasPendingAuthDeepLink(): Promise<boolean> {
+  try {
+    const initialUrl = await Linking.getInitialURL();
+    if (!initialUrl) return false;
+    const path = Linking.parse(initialUrl).path ?? '';
+    return AUTH_DEEP_LINK_PATHS.has(path);
+  } catch {
+    return false;
+  }
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -69,27 +92,43 @@ export default function RootLayout() {
   });
 
   const [auth, setAuth] = useState<AuthState>(undefined);
+  /* Was de app geopend via een auth-deep-link (magic link, password
+     recovery, invite)? Dan slaan we de welcome-redirect over zodat de
+     deep-link-handler ongestoord naar /auth-callback of /reset-password
+     kan pushen. Bug-fix voor de cold-start race waarbij welcome de
+     auth-flow opslokte. */
+  const [pendingAuthLink, setPendingAuthLink] = useState<boolean | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const t = await getToken();
-      if (!cancelled) setAuth(t ?? null);
+      const [t, pending] = await Promise.all([
+        getToken(),
+        hasPendingAuthDeepLink(),
+      ]);
+      if (cancelled) return;
+      setAuth(t ?? null);
+      setPendingAuthLink(pending);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const ready = fontsLoaded && auth !== undefined;
+  const ready =
+    fontsLoaded && auth !== undefined && pendingAuthLink !== undefined;
 
   useEffect(() => {
     if (!ready) return;
-    if (auth === null) {
+    /* Welcome-redirect ALLEEN als er geen auth-deep-link wacht.
+       Anders neemt de deep-link-handler in de tweede useEffect het over. */
+    if (auth === null && !pendingAuthLink) {
       router.replace('/welcome');
     }
     SplashScreen.hideAsync().catch(() => {});
-  }, [ready, auth]);
+  }, [ready, auth, pendingAuthLink]);
 
   /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
      Webapp wordt uitgefaseerd — alle email-flows (magic link na
@@ -154,9 +193,10 @@ export default function RootLayout() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Brand.bg }}>
-      <StatusBar style="light" />
-      <Stack
+    <ErrorBoundary>
+      <View style={{ flex: 1, backgroundColor: Brand.bg }}>
+        <StatusBar style="light" />
+        <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Brand.bg },
           headerTintColor: Brand.text,
@@ -218,13 +258,14 @@ export default function RootLayout() {
           (tabs)/index.tsx wanneer playerState.endedPanel toggelt. */}
       <BraceletUpsellModal />
 
-      {/* Welcome-back-popup — verschijnt op cold-start als er een geldige
-          last-played-entry is. Operator-besluit 2026-05-25 (vervangt de
-          eerdere Continue-card in de library): popup voelt warmer +
-          "welkom terug" ipv passieve resume-card. Triggert zichzelf via
-          useEffect in de component, beperkt tot (tabs)-segmenten zodat
-          'ie nooit over /welcome verschijnt. */}
-      <WelcomeBackPopup />
-    </View>
+        {/* Welcome-back-popup — verschijnt op cold-start als er een geldige
+            last-played-entry is. Operator-besluit 2026-05-25 (vervangt de
+            eerdere Continue-card in de library): popup voelt warmer +
+            "welkom terug" ipv passieve resume-card. Triggert zichzelf via
+            useEffect in de component, beperkt tot (tabs)-segmenten zodat
+            'ie nooit over /welcome verschijnt. */}
+        <WelcomeBackPopup />
+      </View>
+    </ErrorBoundary>
   );
 }

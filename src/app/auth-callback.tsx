@@ -57,6 +57,10 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let cancelled = false;
+    /* Redirect-timer — bewaard in een lokale variabele zodat cleanup
+       'm kan clearen. Voorkomt navigate-after-unmount warnings + dubbele
+       routes als de user weg-tikt voordat de 1200ms verstreken zijn. */
+    let redirectTimer: ReturnType<typeof setTimeout> | null = null;
 
     (async () => {
       const tokenHash = params.token_hash;
@@ -136,8 +140,8 @@ export default function AuthCallback() {
         }
 
         /* Automatische redirect na korte vertraging — geeft user kans
-           om de success-state te zien. */
-        setTimeout(() => {
+           om de success-state te zien. Timer wordt gecleared bij unmount. */
+        redirectTimer = setTimeout(() => {
           if (cancelled) return;
           if (needsPasswordSetup) {
             router.replace('/reset-password' as never);
@@ -146,6 +150,7 @@ export default function AuthCallback() {
           }
         }, 1200);
       } catch (e) {
+        if (__DEV__) console.warn('[auth-callback] verify failed:', e);
         if (!cancelled) {
           setState({
             phase: 'error',
@@ -157,6 +162,10 @@ export default function AuthCallback() {
 
     return () => {
       cancelled = true;
+      if (redirectTimer) {
+        clearTimeout(redirectTimer);
+        redirectTimer = null;
+      }
     };
   }, [params.token_hash, params.type]);
 

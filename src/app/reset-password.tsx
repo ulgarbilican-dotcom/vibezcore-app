@@ -1,38 +1,38 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Reset password screen (native)
+   VIBEZCORE — Reset password / Set password screen (native)
 
-   Landing-page voor de Supabase password-recovery deep link:
-     vibezcoreapp://reset-password?token_hash=xxx&type=recovery
+   Twee modi op één scherm — gedetecteerd via aanwezigheid van `token_hash`:
 
-   Flow:
-     1. Parse token_hash uit query params
-     2. Wissel token in voor temp access_token via `/auth/v1/verify`
-        (type=recovery)
-     3. User typt nieuwe password
-     4. PUT `/auth/v1/user` met Authorization: Bearer <access_token>
-     5. Success → persist session + redirect naar Audio Library
+   1. RECOVERY (token_hash aanwezig)
+      Landing voor de Supabase password-recovery deep link:
+        vibezcoreapp://reset-password?token_hash=xxx&type=recovery
+      Flow: parse token → /auth/v1/verify (type=recovery) → ready → PUT user
 
-   Ook gebruikt voor de "needs_password_setup"-flow van nieuwe Gumroad-
-   kopers: auth-callback.tsx detecteert die flag en routet direct hier-
-   heen na succesvolle invite-verificatie. In dat geval is er al een
-   geldige session — token-exchange-step skipt dan.
+   2. SETUP (geen token_hash)
+      Komt via auth-callback.tsx na een succesvolle invite-verificatie,
+      wanneer Gumroad-flag `needs_password_setup` true was. Er is al een
+      geldige session — token-exchange skipt.
+
+   Copy branches op `mode`: "Set your password" voor first-time setup vs
+   "Reset your password" voor recovery — anders voelt het laatste vreemd
+   ("set a NEW password" suggereert dat er een oude was).
 
    Provider-uitzondering: direct Supabase (zie auth-callback.tsx).
    ─────────────────────────────────────────────────────────────────── */
 
+import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { refreshSubscription } from '@/hooks/useSubscription';
 import {
   EMAIL_KEY,
   EXPIRES_KEY,
   LAST_EMAIL_KEY,
-  REFRESH_KEY,
   TOKEN_KEY,
   getToken,
 } from '@/services/auth';
-import { refreshSubscription } from '@/hooks/useSubscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -43,20 +43,54 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
+
+type Mode = 'recovery' | 'setup';
+type Phase = 'verifying' | 'ready' | 'updating' | 'done' | 'error';
+
+/* Copy-pakketten per modus. Eén plek wijzigen wijzigt overal. */
+const COPY = {
+  recovery: {
+    screenTitle: 'Reset password',
+    heading: 'Reset your password',
+    sub: 'Choose a strong password — at least 8 characters.',
+    submit: 'Update password',
+    doneTitle: 'Password updated',
+  },
+  setup: {
+    screenTitle: 'Set password',
+    heading: 'Set your password',
+    sub: "Welcome — let's secure your account. Choose a strong password (at least 8 characters).",
+    submit: 'Save password',
+    doneTitle: 'Password saved',
+  },
+} as const;
 
 export default function ResetPassword() {
   const params = useLocalSearchParams<{ token_hash?: string }>();
 
-  /* Phase: bezig met token-exchange | klaar om password te kiezen |
-     bezig met updaten | klaar | fout. */
-  const [phase, setPhase] = useState<
-    'verifying' | 'ready' | 'updating' | 'done' | 'error'
-  >('verifying');
+  /* Mode is afgeleid van URL params: token_hash → recovery, anders setup. */
+  const mode: Mode = params.token_hash ? 'recovery' : 'setup';
+  const copy = COPY[mode];
+
+  const [phase, setPhase] = useState<Phase>('verifying');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  /* setTimeout ref — opruimen bij unmount voorkomt navigate-after-unmount
+     warnings én double-routes als user snel weg-tikt na success. */
+  const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (doneTimerRef.current) {
+        clearTimeout(doneTimerRef.current);
+        doneTimerRef.current = null;
+      }
+    };
+  }, []);
 
   /* Verify token-hash → access_token. Of: gebruik bestaande session
      (needs_password_setup-flow van auth-callback). */
@@ -66,7 +100,6 @@ export default function ResetPassword() {
       const tokenHash = params.token_hash;
 
       if (tokenHash) {
-        /* Reset via email-link — wissel token in voor session. */
         try {
           const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
             method: 'POST',
@@ -96,8 +129,8 @@ export default function ResetPassword() {
           if (!cancelled) setPhase('error');
         }
       } else {
-        /* Geen token_hash — verwacht een bestaande session (kwam via
-           auth-callback met needs_password_setup). */
+        /* Setup-modus — er moet al een geldige session zijn (afkomstig
+           van auth-callback na invite-verify). */
         const existing = await getToken();
         if (!existing) {
           if (!cancelled) setPhase('error');
@@ -114,6 +147,11 @@ export default function ResetPassword() {
     };
   }, [params.token_hash]);
 
+  /* Live match-indicator: pas tonen zodra user iets in pw2 typt EN pw
+     ten minste 1 char heeft. Voorkomt rode flash terwijl user nog typt. */
+  const showMatchHint = pw.length > 0 && pw2.length > 0;
+  const matches = pw === pw2;
+
   const onSubmit = async () => {
     setErr(null);
     if (pw.length < 8) {
@@ -125,7 +163,11 @@ export default function ResetPassword() {
       return;
     }
     if (!accessToken) {
-      setErr('Recovery link expired. Request a new one.');
+      setErr(
+        mode === 'recovery'
+          ? 'Recovery link expired. Request a new one.'
+          : 'Session expired. Please sign in again.'
+      );
       return;
     }
     setPhase('updating');
@@ -146,15 +188,15 @@ export default function ResetPassword() {
           data?.error_description ||
           data?.error ||
           'Could not update password';
-        setErr(msg);
+        setErr(typeof msg === 'string' ? msg : 'Could not update password');
         setPhase('ready');
         return;
       }
-      /* Update gelukt — Supabase returnt de updated user. Persist een
-         schone session (we hebben al access_token; refresh komt later
-         vanzelf via auth-service refresh-cycle). */
       const updated = await res.json();
-      const expiresIn = 3600;
+      /* Server zou expires_in moeten leveren op een fresh verify, maar
+         de PUT /user response heeft 'm niet altijd. Fallback op 3600s. */
+      const expiresIn =
+        typeof updated?.expires_in === 'number' ? updated.expires_in : 3600;
       const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
       const pairs: [string, string][] = [
         [TOKEN_KEY, accessToken],
@@ -166,12 +208,15 @@ export default function ResetPassword() {
       }
       await AsyncStorage.multiSet(pairs);
 
-      refreshSubscription();
+      /* Awaiten zorgt dat Audio Library bij landing de juiste
+         entitlement-state heeft (was: race waarbij de tab kort als
+         free toonde voordat sub binnenkwam). */
+      await refreshSubscription();
       setPhase('done');
 
       /* Korte vertraging zodat user de done-state ziet, dan naar
-         Audio Library. */
-      setTimeout(() => router.replace('/'), 1200);
+         Audio Library. setTimeout-ref → cleanup bij unmount. */
+      doneTimerRef.current = setTimeout(() => router.replace('/'), 1200);
     } catch {
       setErr('Network error — please try again.');
       setPhase('ready');
@@ -194,22 +239,33 @@ export default function ResetPassword() {
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
-          options={{ title: 'Reset password', headerBackTitle: 'Back' }}
+          options={{ title: copy.screenTitle, headerBackTitle: 'Back' }}
         />
         <View style={s.center}>
           <View style={s.errorCircle}>
             <Text style={s.errorText}>!</Text>
           </View>
-          <Text style={s.title}>Link expired</Text>
+          <Text style={s.title}>
+            {mode === 'recovery' ? 'Link expired' : 'Session expired'}
+          </Text>
           <Text style={s.sub}>
-            This recovery link has expired or was already used.
-            Request a new one.
+            {mode === 'recovery'
+              ? 'This recovery link has expired or was already used. Request a new one.'
+              : 'Your sign-in session expired before you could set a password. Please sign in again.'}
           </Text>
           <Pressable
             style={s.btnPrimary}
-            onPress={() => router.replace('/forgot-password' as never)}
+            onPress={() =>
+              router.replace(
+                (mode === 'recovery'
+                  ? '/forgot-password'
+                  : '/account') as never
+              )
+            }
           >
-            <Text style={s.btnPrimaryText}>Request new link</Text>
+            <Text style={s.btnPrimaryText}>
+              {mode === 'recovery' ? 'Request new link' : 'Back to sign in'}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -224,7 +280,7 @@ export default function ResetPassword() {
           <View style={s.checkCircle}>
             <Text style={s.checkText}>✓</Text>
           </View>
-          <Text style={s.title}>Password updated</Text>
+          <Text style={s.title}>{copy.doneTitle}</Text>
           <Text style={s.sub}>Opening your library…</Text>
         </View>
       </SafeAreaView>
@@ -234,7 +290,7 @@ export default function ResetPassword() {
   return (
     <SafeAreaView style={s.root}>
       <Stack.Screen
-        options={{ title: 'Reset password', headerBackTitle: 'Back' }}
+        options={{ title: copy.screenTitle, headerBackTitle: 'Back' }}
       />
       <KeyboardAwareScrollView
         contentContainerStyle={s.scroll}
@@ -242,36 +298,62 @@ export default function ResetPassword() {
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
-        <Text style={s.title}>Set a new password</Text>
-        <Text style={s.sub}>
-          Choose a strong password — at least 8 characters.
-        </Text>
+        <Text style={s.title}>{copy.heading}</Text>
+        <Text style={s.sub}>{copy.sub}</Text>
 
-        <Text style={s.label}>New password</Text>
-        <TextInput
-          style={s.input}
-          value={pw}
-          onChangeText={setPw}
-          placeholder="••••••••"
-          placeholderTextColor={Brand.textDim}
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="new-password"
-          textContentType="newPassword"
-        />
+        <Text style={s.label}>
+          {mode === 'recovery' ? 'New password' : 'Password'}
+        </Text>
+        <View style={s.inputWrap}>
+          <TextInput
+            style={s.inputField}
+            value={pw}
+            onChangeText={setPw}
+            placeholder="At least 8 characters"
+            placeholderTextColor={Brand.textDim}
+            secureTextEntry={!showPw}
+            autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
+          />
+          <Pressable
+            onPress={() => setShowPw((v) => !v)}
+            accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+            hitSlop={8}
+            style={s.toggleBtn}
+          >
+            <Text style={s.toggleText}>{showPw ? 'Hide' : 'Show'}</Text>
+          </Pressable>
+        </View>
 
         <Text style={s.label}>Confirm password</Text>
-        <TextInput
-          style={s.input}
-          value={pw2}
-          onChangeText={setPw2}
-          placeholder="••••••••"
-          placeholderTextColor={Brand.textDim}
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="new-password"
-          textContentType="newPassword"
-        />
+        <View style={s.inputWrap}>
+          <TextInput
+            style={s.inputField}
+            value={pw2}
+            onChangeText={setPw2}
+            placeholder="Re-type your password"
+            placeholderTextColor={Brand.textDim}
+            secureTextEntry={!showPw2}
+            autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
+          />
+          <Pressable
+            onPress={() => setShowPw2((v) => !v)}
+            accessibilityLabel={showPw2 ? 'Hide password' : 'Show password'}
+            hitSlop={8}
+            style={s.toggleBtn}
+          >
+            <Text style={s.toggleText}>{showPw2 ? 'Hide' : 'Show'}</Text>
+          </Pressable>
+        </View>
+
+        {showMatchHint && (
+          <Text style={matches ? s.matchOk : s.matchBad}>
+            {matches ? '✓ Passwords match' : 'Passwords do not match yet'}
+          </Text>
+        )}
 
         {err && <Text style={s.err}>{err}</Text>}
 
@@ -283,7 +365,7 @@ export default function ResetPassword() {
           {phase === 'updating' ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={s.btnPrimaryText}>Update password</Text>
+            <Text style={s.btnPrimaryText}>{copy.submit}</Text>
           )}
         </Pressable>
       </KeyboardAwareScrollView>
@@ -327,16 +409,48 @@ const s = StyleSheet.create({
     marginBottom: 8,
     marginTop: 14,
   },
-  input: {
+  /* Wrapper rond TextInput + Show/Hide-knop — gedragspatroon van pro
+     auth-forms (Stripe, Apple). Border zit op de wrapper, niet op de
+     input zelf, zodat de knop in dezelfde "veld"-rand zit. */
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Brand.panel,
     borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 4,
+  },
+  inputField: {
+    flex: 1,
     paddingVertical: 13,
     color: Brand.text,
     fontSize: 14,
     fontFamily: BrandFonts.medium,
+  },
+  toggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  toggleText: {
+    color: Brand.accent,
+    fontSize: 12,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  matchOk: {
+    color: Brand.success,
+    fontSize: 12,
+    fontFamily: BrandFonts.semibold,
+    marginTop: 10,
+  },
+  matchBad: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    marginTop: 10,
   },
   err: {
     color: Brand.error,
