@@ -200,6 +200,15 @@ export class SimulatedBracelet implements BraceletTransport {
     this.evaluateSafety();
   }
 
+  /** Sim-only: clear a previously-triggered fault. Op echte hardware
+   *  vereist spec §9 rule 4 een Start-command om de DRV2605L te
+   *  re-initialiseren; in de sim moeten we 'm soms direct kunnen
+   *  resetten omdat de gebruiker vanuit de Fault-screen niet naar
+   *  Start kan navigeren. */
+  simClearFault() {
+    this.fault = false;
+  }
+
   /** Force a DRV2605L fault — demonstrates spec §9 rule 4 live. */
   simTriggerFault() {
     this.fault = true;

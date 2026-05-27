@@ -26,6 +26,7 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { router, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabPath = '/' | '/bracelet' | '/account';
 
@@ -85,6 +86,12 @@ function TabGlyph({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export default function TabLayout() {
+  /* Bottom safe-area inset → tab-bar krijgt extra paddingBottom zodat
+     labels niet onder de Android nav-bar / iPhone home-indicator vallen.
+     Op Pixel 8 (Android 15) bedroeg de oude vaste 64px tab-bar exact
+     de nav-bar zone → labels werden afgesneden. */
+  const insets = useSafeAreaInsets();
+
   /* Wrap Tabs in een View zodat we de MiniPlayer ernaast (absolute,
      boven de tab-bar) kunnen mounten. MiniPlayer rendert zelf null
      wanneer geen sessie actief is en op /player + /welcome. */
@@ -97,8 +104,11 @@ export default function TabLayout() {
             backgroundColor: Brand.bg,
             borderTopColor: Brand.border,
             borderTopWidth: 1,
-            height: 64,
-            paddingBottom: 8,
+            /* Basis-hoogte 64 + system-inset onderaan. paddingBottom
+               combineert eigen 8px ruimte met de safe-area-inset zodat
+               labels boven Android nav-bar / iPhone home-bar blijven. */
+            height: 64 + insets.bottom,
+            paddingBottom: 8 + insets.bottom,
             paddingTop: 8,
           },
           tabBarActiveTintColor: Brand.text,

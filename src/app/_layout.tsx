@@ -19,8 +19,9 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
+import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { Brand, BrandFonts } from '@/constants/theme';
-import { unload as unloadAudio } from '@/services/audio-player';
 import { getToken } from '@/services/auth';
 import {
   Inter_400Regular,
@@ -31,6 +32,7 @@ import {
   Inter_900Black,
   useFonts,
 } from '@expo-google-fonts/inter';
+import * as Linking from 'expo-linking';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -89,20 +91,63 @@ export default function RootLayout() {
     SplashScreen.hideAsync().catch(() => {});
   }, [ready, auth]);
 
-  /* Extra defensie tegen expo-av's "Player accessed on wrong thread"-crash
-     tijdens JS-reload (zie audio-player.ts AppState-listener voor de
-     andere helft van het verhaal). Wanneer de root-layout unmount —
-     ReactHostImpl.destroy of dev-reload — krijgt JS nog een laatste tick.
-     We gebruiken die om eventueel geladen audio via JS-bridge netjes te
-     unloaden. Tegen de tijd dat de native onHostDestroy fired, is de
-     player al weg → geen ExoPlayer.release op worker-thread meer mogelijk. */
+  /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
+     Webapp wordt uitgefaseerd — alle email-flows (magic link na
+     Gumroad-koop, password reset, etc.) moeten in de native app
+     openen. Scheme `vibezcoreapp://` (app.json). Wanneer user op
+     een email-link tikt:
+       vibezcoreapp://auth-callback?token_hash=xxx&type=recovery
+       vibezcoreapp://auth-callback?token_hash=xxx&type=invite
+       vibezcoreapp://reset-password?token_hash=xxx
+     → wordt hier gevangen, gerouted naar de juiste in-app screen
+     (die het token uitwisselt tegen Supabase en sessie opzet). */
   useEffect(() => {
-    return () => {
-      unloadAudio().catch(() => {
-        /* swallow — defensieve cleanup mag nooit zelf crashen */
-      });
+    if (!ready) return;
+
+    const handle = (url: string | null) => {
+      if (!url) return;
+      try {
+        const parsed = Linking.parse(url);
+        const path = parsed.path ?? '';
+        const params = parsed.queryParams ?? {};
+
+        /* Route per deep-link-pad. Onbekende paden negeren we
+           bewust — voorkomt dat een rogue link de app naar een
+           verkeerde route kan dwingen. */
+        if (path === 'auth-callback') {
+          router.push({
+            pathname: '/auth-callback' as never,
+            params: params as Record<string, string>,
+          });
+        } else if (path === 'reset-password') {
+          router.push({
+            pathname: '/reset-password' as never,
+            params: params as Record<string, string>,
+          });
+        } else if (path === 'forgot-password') {
+          router.push('/forgot-password' as never);
+        } else {
+          console.log('[deep-link] unhandled path:', path);
+        }
+      } catch (e) {
+        console.warn('[deep-link] parse failed:', e);
+      }
     };
-  }, []);
+
+    /* Cold-start: app werd geopend via deep-link */
+    Linking.getInitialURL().then(handle);
+
+    /* Warm: app draait en deep-link wordt afgevuurd */
+    const sub = Linking.addEventListener('url', (e) => handle(e.url));
+    return () => sub.remove();
+  }, [ready]);
+
+  /* Voorheen stond hier een unmount-cleanup die expliciet audio unloadde,
+     als defensie tegen de expo-av "Player accessed on wrong thread"-crash.
+     Verwijderd 2026-05-23 met de migratie naar expo-audio — die heeft
+     z'n eigen lifecycle-management en het hele PUNT van de migratie is
+     dat audio nu in background blijft leven (lock-screen + foreground-
+     service). Een unload op root-unmount zou dat doel direct breken. */
 
   if (!ready) {
     return <View style={{ flex: 1, backgroundColor: Brand.bg }} />;
@@ -129,12 +174,57 @@ export default function RootLayout() {
           name="player"
           options={{ headerShown: false, presentation: 'modal' }}
         />
+        {/* `settings` — sub-screen pushed from Account-tab. Toont Playback /
+           Privacy / About-secties die de webapp ook heeft. */}
+        <Stack.Screen
+          name="settings"
+          options={{ title: 'Settings', headerBackTitle: 'Account' }}
+        />
+        {/* ── Auth flow schermen (operator-keuze 2026-05-27: webapp wordt
+            uitgefaseerd, alles in native). ──
+            `auth-callback`: landing voor magic links + invite-emails
+            `forgot-password`: in-app form om reset-email te requesten
+            `reset-password`: landing voor recovery-email + nieuwe pw setup */}
+        <Stack.Screen
+          name="auth-callback"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="forgot-password"
+          options={{ title: 'Forgot password', headerBackTitle: 'Back' }}
+        />
+        <Stack.Screen
+          name="reset-password"
+          options={{ title: 'Reset password', headerBackTitle: 'Back' }}
+        />
+        {/* `legal/[doc]` — dynamic route voor 5 legal/safety-docs
+            (terms/privacy/refund/cookies/health). Inhoud in
+            `src/data/legal-content.ts`. */}
+        <Stack.Screen
+          name="legal/[doc]"
+          options={{ headerBackTitle: 'Account' }}
+        />
         {/* `coming` heeft géén handmatige Stack.Screen-registratie meer —
            expo-router 55 pikte 'm dubbel op (file-based routing + deze
            entry → "Too many screens defined. Route 'coming' is
            extraneous"). headerShown: false wordt nu IN coming.tsx zelf
            gezet via <Stack.Screen options={...} />. */}
       </Stack>
+
+      {/* Bracelet-upsell-modal — gemount aan de ROOT (sibling van Stack)
+          zodat 'ie als floating overlay boven player.tsx valt zonder
+          native-modal touch-intercept. Visibility wordt door de bracelet-
+          upsell singleton-service bepaald, getriggerd vanuit
+          (tabs)/index.tsx wanneer playerState.endedPanel toggelt. */}
+      <BraceletUpsellModal />
+
+      {/* Welcome-back-popup — verschijnt op cold-start als er een geldige
+          last-played-entry is. Operator-besluit 2026-05-25 (vervangt de
+          eerdere Continue-card in de library): popup voelt warmer +
+          "welkom terug" ipv passieve resume-card. Triggert zichzelf via
+          useEffect in de component, beperkt tot (tabs)-segmenten zodat
+          'ie nooit over /welcome verschijnt. */}
+      <WelcomeBackPopup />
     </View>
   );
 }

@@ -41,8 +41,10 @@ const C = {
   expand: 'rgba(255,255,255,0.4)',
 };
 
-function fmt(ms: number): string {
-  const t = Math.max(0, Math.floor(ms / 1000));
+/* Formatteer aantal seconden als "M:SS". Hernoemd van fmt(ms) → fmt(sec)
+   bij de expo-av → expo-audio migratie 2026-05-23. */
+function fmt(sec: number): string {
+  const t = Math.max(0, Math.floor(sec));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
@@ -60,8 +62,8 @@ export function MiniPlayer() {
 
   const session = state.session;
   const pct =
-    state.durationMs > 0
-      ? Math.min(100, (state.positionMs / state.durationMs) * 100)
+    state.durationSec > 0
+      ? Math.min(100, (state.positionSec / state.durationSec) * 100)
       : 0;
 
   const onExpand = () => {
@@ -143,7 +145,7 @@ export function MiniPlayer() {
 
           <View style={s.bottomRow}>
             <Text style={s.time}>
-              {fmt(state.positionMs)} / {fmt(state.durationMs)}
+              {fmt(state.positionSec)} / {fmt(state.durationSec)}
             </Text>
             <View style={s.btns}>
               <Pressable onPress={onPlay} hitSlop={8} style={s.playBtnWrap}>

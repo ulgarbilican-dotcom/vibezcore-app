@@ -109,18 +109,18 @@ export const SERIES_PHOTO: Record<string,string> = {
 };
 
 export const SERIES_SUBTITLE: Record<string,string> = {
-  'Master Mental Clarity': 'Andrew Huberman inspired',
-  'Beast Mode': 'Beast Mode Series',
-  'The Inner Blueprint': 'Carl Jung inspired',
-  'Daily Affirmations Power': 'Daily Affirmations Series',
-  'Meaning Over Comfort': 'Jordan Peterson inspired',
-  'Journey to Success': 'Journey to Success Series',
-  'Life After Betrayal': 'Life After Betrayal Series',
-  'Identity & Wealth': 'Napoleon Hill inspired',
-  'The Freedom Formula': 'Naval Ravikant inspired',
-  'The Stoic Fortress': 'The Stoic Mind Series',
-  'End Fight-Or-Flight': 'Walter Cannon inspired',
-  'Soundscapes': 'Frequency Sessions · Theta · Delta · Meditation · Ambient',
+  'Master Mental Clarity': 'ROOTED IN NEUROSCIENCE',
+  'Beast Mode': 'ROOTED IN DISCIPLINE SCIENCE',
+  'The Inner Blueprint': 'ROOTED IN PSYCHOLOGY',
+  'Daily Affirmations Power': 'ROOTED IN NEUROPLASTICITY',
+  'Meaning Over Comfort': 'ROOTED IN PHILOSOPHY',
+  'Journey to Success': 'ROOTED IN BEHAVIORAL SCIENCE',
+  'Life After Betrayal': 'ROOTED IN TRAUMA RESEARCH',
+  'Identity & Wealth': 'ROOTED IN WEALTH PSYCHOLOGY',
+  'The Freedom Formula': 'ROOTED IN STRATEGIC THINKING',
+  'The Stoic Fortress': 'ROOTED IN STOIC PHILOSOPHY',
+  'End Fight-Or-Flight': 'ROOTED IN NERVOUS SYSTEM SCIENCE',
+  'Soundscapes': 'ROOTED IN FREQUENCY SCIENCE',
 };
 
 /* Soundscapes-subcategorieën — EIGEN foto + eyebrow per subcat (SUBCAT_INFO, regel 7182). */
@@ -136,16 +136,16 @@ export const SERIES: Series[] = SERIES_ORDER.map((name)=>({ name, sessions: SESS
 
 /* Serie-subtitel (derde regel op de card) — exact uit bron card-sub. */
 export const SERIES_SUB: Record<string,string> = {
-  'Master Mental Clarity': 'Stay focused and composed under pressure',
-  'Beast Mode': 'Done with excuses',
-  'The Inner Blueprint': 'Understand yourself. Understand life.',
-  'Daily Affirmations Power': 'Reprogram your inner voice',
-  'Meaning Over Comfort': 'Done with drifting',
-  'Journey to Success': 'Build relentless momentum',
-  'Life After Betrayal': 'Rise beyond betrayal',
-  'Identity & Wealth': 'Build wealth through structure, not hype',
-  'The Freedom Formula': 'Leverage & freedom',
-  'The Stoic Fortress': 'Nothing can break you',
-  'End Fight-Or-Flight': 'Stop living in survival mode',
-  'Soundscapes': 'Calm your mind, access deeper awareness',
+  'Master Mental Clarity': 'Your brain is offline. Not broken.',
+  'Beast Mode': 'Done With excuses.',
+  'The Inner Blueprint': 'What\'s running your life isn\'t you.',
+  'Daily Affirmations Power': 'The voice in your head was installed by others.',
+  'Meaning Over Comfort': 'Your comfort zone became your prison.',
+  'Journey to Success': 'Your future is being shaped by today\'s excuses.',
+  'Life After Betrayal': 'Betrayal destroys illusions. Not your future.',
+  'Identity & Wealth': 'Wealth starts with identity, not income.',
+  'The Freedom Formula': 'Stop drifting. Start directing.',
+  'The Stoic Fortress': 'Master your mind. Master your life.',
+  'End Fight-Or-Flight': 'Escape survival mode.',
+  'Soundscapes': 'Your mind won\'t stop. Learn to guide it.',
 };

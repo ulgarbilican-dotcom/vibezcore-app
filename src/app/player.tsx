@@ -25,6 +25,7 @@ import {
   type Session,
 } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   continueFromSaved,
   dismissEndedPanel,
@@ -46,6 +47,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   Pressable,
@@ -56,12 +58,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-
-/* [OPERATOR] — echte Gumroad-abonnementscheck hoort hier. Webapp-equivalent:
-   window.VIBEZCORE.hasSubscription === true. Nu: alle users = guest. */
-function useSubscription(): boolean {
-  return false;
-}
 
 const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
 const SLEEP_OPTIONS = [0, 15, 30, 60];
@@ -81,8 +77,11 @@ const C = {
   modalOverlay: 'rgba(0,0,0,0.85)',
 };
 
-function fmt(ms: number): string {
-  const t = Math.max(0, Math.floor(ms / 1000));
+/* Formatteer aantal seconden als "M:SS". Hernoemd van fmt(ms) → fmt(sec)
+   bij de expo-av → expo-audio migratie 2026-05-23; expo-audio levert
+   currentTime/duration in seconden, niet milliseconden. */
+function fmt(sec: number): string {
+  const t = Math.max(0, Math.floor(sec));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
@@ -96,7 +95,13 @@ export default function PlayerScreen() {
     desc?: string;
   }>();
 
-  const session = useMemo<Session | null>(() => {
+  /* URL-search-params zijn de "entry-point": ze vertellen welke sessie we
+     INITIEEL moeten laden wanneer dit scherm via router.push opent. Daarna
+     is `playerState.session` (live van de service) de bron-van-waarheid
+     voor de UI — anders blijft de full-player de oude titel/photo/series
+     tonen wanneer de service via "Play next" of auto-play-next naar een
+     andere sessie switcht. Bug-fix 2026-05-23. */
+  const urlSession = useMemo<Session | null>(() => {
     if (!p.url) return null;
     return {
       title: p.title ?? '',
@@ -110,28 +115,51 @@ export default function PlayerScreen() {
     };
   }, [p.title, p.series, p.url, p.free, p.desc]);
 
-  const hasSubscription = useSubscription();
-  const usePreview = !!session && !session.free && !hasSubscription;
-
   const playerState = usePlayerState();
   /* useHistory() laadt vzh_v1 in geheugen + zorgt dat state-pill re-rendert
      wanneer de status-callback tijdens deze sessie history schrijft. */
   useHistory();
 
-  /* Laden bij mount — service skipt zelf wanneer dezelfde URL al loaded is. */
+  /* Live display-session: pak playerState.session zodra die geladen is,
+     val anders terug op de URL-params (initial render, vóór de service
+     load gerund heeft). */
+  const session = useMemo<Session | null>(() => {
+    if (playerState.session) {
+      return {
+        title: playerState.session.title,
+        series: playerState.session.series,
+        url: playerState.session.url,
+        free: playerState.session.isFree,
+        desc: playerState.session.desc,
+        subseries: '',
+        num: '',
+        added: '',
+      };
+    }
+    return urlSession;
+  }, [playerState.session, urlSession]);
+
+  const { isPro: hasSubscription } = useSubscription();
+  const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
+
+  /* Laden bij mount — driven door urlSession (= de sessie waar dit scherm
+     voor geopend werd). Service skipt zelf wanneer dezelfde URL al loaded
+     is. We gebruiken bewust urlSession, NIET session — anders zou de
+     useEffect re-firen zodra de service de live session update, met als
+     gevolg een useless loadSession-no-op call elke keer. */
   useEffect(() => {
-    if (!session) return;
+    if (!urlSession) return;
     loadSession(
       {
-        url: session.url,
-        title: session.title,
-        series: session.series,
-        isFree: session.free,
-        desc: session.desc,
+        url: urlSession.url,
+        title: urlSession.title,
+        series: urlSession.series,
+        isFree: urlSession.free,
+        desc: urlSession.desc,
       },
       { preview: usePreview }
     );
-  }, [session, usePreview]);
+  }, [urlSession, usePreview]);
 
   /* GEEN component-unmount cleanup van unload() meer. Sinds de MiniPlayer
      bestaat (in (tabs)/_layout) is "audio blijft draaien zonder UI" geen
@@ -151,10 +179,10 @@ export default function PlayerScreen() {
   const onProgressLayout = (e: LayoutChangeEvent) =>
     setProgressWidth(e.nativeEvent.layout.width);
   const onProgressTap = (e: any) => {
-    if (progressWidth <= 0 || playerState.durationMs <= 0) return;
+    if (progressWidth <= 0 || playerState.durationSec <= 0) return;
     const x = e?.nativeEvent?.locationX ?? 0;
     const pct = Math.max(0, Math.min(1, x / progressWidth));
-    seekTo((playerState.durationMs / 1000) * pct);
+    seekTo(playerState.durationSec * pct);
   };
 
   /* Series-foto: hoofdkaart van de serie. Soundscapes-subcategorieën
@@ -228,8 +256,8 @@ export default function PlayerScreen() {
   }
 
   const pct =
-    playerState.durationMs > 0
-      ? Math.min(100, (playerState.positionMs / playerState.durationMs) * 100)
+    playerState.durationSec > 0
+      ? Math.min(100, (playerState.positionSec / playerState.durationSec) * 100)
       : 0;
 
   return (
@@ -304,7 +332,7 @@ export default function PlayerScreen() {
               <Text style={s.resumeGlyph}>↩</Text>
               <Text style={s.resumeText}>Continue</Text>
               <Text style={s.resumeSub}>
-                {fmt(playerState.savedPositionSec * 1000)}
+                {fmt(playerState.savedPositionSec)}
               </Text>
             </Pressable>
             <Pressable
@@ -329,8 +357,8 @@ export default function PlayerScreen() {
               </View>
             </Pressable>
             <View style={s.timeRow}>
-              <Text style={s.time}>{fmt(playerState.positionMs)}</Text>
-              <Text style={s.time}>{fmt(playerState.durationMs)}</Text>
+              <Text style={s.time}>{fmt(playerState.positionSec)}</Text>
+              <Text style={s.time}>{fmt(playerState.durationSec)}</Text>
             </View>
           </View>
         )}
@@ -376,14 +404,25 @@ export default function PlayerScreen() {
           <Pressable
             onPress={togglePlay}
             hitSlop={10}
-            style={s.playBtn}
+            style={[
+              s.playBtn,
+              (playerState.loading || playerState.awaitingResume) &&
+                s.playBtnDisabled,
+            ]}
             disabled={playerState.loading || playerState.awaitingResume}
           >
-            <PlayPauseGlyph
-              size={28}
-              color="#ffffff"
-              playing={playerState.playing}
-            />
+            {playerState.loading ? (
+              /* Spinner ipv play/pause-icoon tijdens loading. Voorkomt
+                 het "het doet niks"-gevoel bij eerste play na cold-start
+                 (signed-URL fetch + native player init kan 1-3s duren). */
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <PlayPauseGlyph
+                size={28}
+                color="#ffffff"
+                playing={playerState.playing}
+              />
+            )}
           </Pressable>
 
           <Pressable
@@ -443,14 +482,18 @@ export default function PlayerScreen() {
           />
         </View>
 
-        {/* ── Full library access CTA ─────────────────────────────────── */}
-        <Pressable
-          style={s.cta}
-          onPress={openUpgrade}
-          android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
-        >
-          <Text style={s.ctaText}>→ Full library access</Text>
-        </Pressable>
+        {/* ── Full library access CTA ───────────────────────────────────
+            Alleen voor guests + free-tier zichtbaar. PRO-users zijn al
+            abonnee → de CTA is voor hen ruis (operator-besluit 2026-05-23). */}
+        {!hasSubscription && (
+          <Pressable
+            style={s.cta}
+            onPress={openUpgrade}
+            android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+          >
+            <Text style={s.ctaText}>→ Full library access</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* ── Preview-upsell modal ──────────────────────────────────────── */}
@@ -795,6 +838,12 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
     elevation: 8,
+  },
+  /* Subtle dim wanneer disabled (tijdens loading / awaiting-resume) zodat
+     het visueel duidelijk is dat de tap niet werkt. Combineert met de
+     spinner-vervanging van de play-glyph hierboven. */
+  playBtnDisabled: {
+    opacity: 0.65,
   },
   playGlyph: { color: C.text, fontSize: 28, fontWeight: '700' },
 

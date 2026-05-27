@@ -15,7 +15,18 @@
 
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
 import { useFavorites } from '@/hooks/useFavorites';
-import { usePlayerState } from '@/services/audio-player';
+import { useSubscription } from '@/hooks/useSubscription';
+import { getToken } from '@/services/auth';
+import {
+  getSnapshot,
+  onSessionFinish,
+  usePlayerState,
+} from '@/services/audio-player';
+import {
+  hideBraceletUpsell,
+  showBraceletUpsell,
+} from '@/services/bracelet-upsell';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getEntryByUrl, useHistory } from '@/utils/history';
 import { isNew } from '@/utils/isNew';
 import { openSession } from '@/utils/openSession';
@@ -23,9 +34,11 @@ import {
   consumeScrollIntent,
   subscribeScrollIntent,
 } from '@/utils/scroll-intent';
+import { useSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
@@ -35,6 +48,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   UIManager,
@@ -85,6 +99,28 @@ const GUMROAD_URLS: Record<'monthly' | 'yearly', string> = {
   monthly: 'https://vibezcore.gumroad.com/l/vibezcore-monthly',
   yearly: 'https://vibezcore.gumroad.com/l/vibezcore-yearly',
 };
+
+/* ── Bracelet-upsell-modal (post-session) configuratie ──
+   AsyncStorage-key voor laatste-getoond-timestamp. Cooldown van 24u
+   voorkomt dat de modal bij iedere voltooide sessie pop-upt (een
+   power-user die 4 sessies achter elkaar doet ziet 'm dus 1×, niet 4×).
+   80%-threshold filtert tracks waar didJustFinish vroeg fired door
+   stream-artifacts (in praktijk fired didJustFinish alleen op natural
+   end-of-file, dus dit is dubbele bodem).
+
+   Trigger leeft in een useEffect die playerState.endedPanel watcht:
+   wanneer het SESSION COMPLETE-paneel verschijnt (auto-play OFF) gaat
+   de modal mee open. Bij auto-play ON wordt het paneel nooit gezet →
+   geen modal (geen onderbreking van de flow). Modal sluit auto wanneer
+   user Done of Play next tikt (endedPanel → null). */
+const UPSELL_KEY = 'vzc_bracelet_upsell_shown';
+const UPSELL_COOLDOWN_MS = 86_400_000; // 24u in ms
+const UPSELL_COMPLETION_THRESHOLD = 0.8;
+/* Auto-hide duration. Tunable — verlaag voor sneller verdwijnen,
+   verhoog voor meer expose. 5000 (5s) is genoeg om visueel te
+   registreren zonder blijvend over de player te hangen tijdens een
+   nieuwe (auto-played) sessie. */
+const UPSELL_AUTO_HIDE_MS = 5_000;
 
 /* Pijlers — exact uit bron regel 2705-2738. Namen NIET wijzigen. */
 const PILLARS = [
@@ -149,12 +185,6 @@ function HeartButton({
   );
 }
 
-/* Provider-abstractie placeholder — identiek aan library.tsx.
-   [OPERATOR] later vervangen door echte Gumroad/Supabase-status. */
-function useSubscription(): boolean {
-  return false;
-}
-
 /* openSession is verhuisd naar src/utils/openSession.ts — wordt gedeeld
    met de Library-sub-pages. */
 
@@ -171,6 +201,7 @@ function SessionRow({
   onToggleFav,
   isActive,
   isPlaying,
+  hideTag,
 }: {
   session: Session;
   photo: string;
@@ -183,6 +214,9 @@ function SessionRow({
      play/pause). isPlaying = isActive && service.playing — bepaalt ▶/❚❚. */
   isActive: boolean;
   isPlaying: boolean;
+  /* true → verberg de FREE/PRO-tag boven de titel. Gebruikt voor PRO-users
+     waarvoor het onderscheid niet relevant is. */
+  hideTag?: boolean;
 }) {
   return (
     <Pressable style={[s.libRow, !canPlay && s.libRowLocked]} onPress={onPress}>
@@ -210,14 +244,16 @@ function SessionRow({
         </View>
       </View>
       <View style={{ flex: 1 }}>
-        <Text
-          style={[
-            s.libRowTag,
-            session.free ? s.libRowTagFree : s.libRowTagPro,
-          ]}
-        >
-          {session.free ? 'FREE' : 'PRO'}
-        </Text>
+        {!hideTag && (
+          <Text
+            style={[
+              s.libRowTag,
+              session.free ? s.libRowTagFree : s.libRowTagPro,
+            ]}
+          >
+            {session.free ? 'FREE' : 'PRO'}
+          </Text>
+        )}
         <Text style={s.libRowTitle}>{session.title}</Text>
         {session.desc ? <Text style={s.libRowDesc}>{session.desc}</Text> : null}
         {/* FIX 15b: status-regel ook hier in serie-expansion sessie-rijen. */}
@@ -243,18 +279,120 @@ function SessionRow({
 }
 
 export default function AudioScreen() {
-  const hasSub = useSubscription();
+  const { isPro: hasSub } = useSubscription();
+  /* Auth-state voor de top sign-in CTA banner (operator-keuze
+     2026-05-26: Welcome wordt na 1× dismiss niet meer bereikbaar,
+     dus uitgelogde users moeten ÓÓK vanaf de Audio-tab kunnen
+     inloggen, niet alleen via Account-tab). `null` = nog aan 't
+     checken — banner verbergen om flicker te voorkomen. */
+  const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const t = await getToken();
+      if (!cancelled) setIsSignedIn(!!t);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   /* Audio-service-snapshot voor de "now-playing" highlight op de
-     FREE-balk(en) onder elke serie. Re-rendert ~elke 250-500ms tijdens
-     playback (status-callback van expo-av), wat de 3px progress-strip
-     onderaan het blokje vloeiend laat lopen — zelfde tick als de
-     mini-player. */
+     FREE-balk(en) onder elke serie. Re-rendert ~elke 250ms tijdens
+     playback (expo-audio playbackStatusUpdate, updateInterval 250 in
+     audio-player.ts), wat de 3px progress-strip onderaan het blokje
+     vloeiend laat lopen — zelfde tick als de mini-player. */
   const playerState = usePlayerState();
   /* useHistory() laadt vzh_v1 in memory zodat getEntryByUrl(...) per
      sessie-rij een geldige snapshot teruggeeft. Re-rendert wanneer een
      sessie ge-flusht wordt (pause / finish) — status-regel verschijnt
      dan vanzelf. */
   useHistory();
+
+  /* ── Bracelet-upsell-modal trigger ──────────────────────────────────
+     Show/hide via singleton-service (bracelet-upsell.ts) zodat de modal-
+     UI in de root-layout gemount kan zijn — pas dan kan 'ie als floating
+     View boven player.tsx vallen ZONDER native-modal touch-intercept.
+
+     TWEE TRIGGERS samen:
+       1. onSessionFinish-event (uit audio-player service) — fired bij
+          ELKE natural-EOF, ongeacht auto-play setting. Cooldown van 24u
+          via AsyncStorage zorgt dat user 'm max 1× per dag ziet.
+       2. endedPanel-watcher — dismist de bar zodra user Done of Play
+          next tikt (endedPanel: truthy → null transition). Snellere
+          exit dan de 10s timer voor user die actief op het paneel
+          reageert.
+
+     AUTO-HIDE (10s):
+       Specifiek voor auto-play-pad: endedPanel wordt nooit gezet, dus
+       geen user-actie om dismiss te triggeren. Timer zorgt dat de bar
+       niet permanent in beeld blijft tijdens de nieuwe sessie. Power-
+       user ziet 'm 10s, daarna vrije player-UI weer.
+
+     LISTENER-FATIGUE bescherming:
+       - 24u cooldown = max 1 bar-bezoek per dag
+       - 10s auto-hide = nooit permanent
+       - Tap-bar / hardware-back / Done/Play-next = directe dismiss */
+  useEffect(() => {
+    let autoHideTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const unsubscribe = onSessionFinish(async (_finishedSession) => {
+      try {
+        /* 80%-threshold (defensief — didJustFinish fired alleen op
+           natural EOF dus dit triggert vrijwel nooit). */
+        const snap = getSnapshot();
+        if (
+          snap.durationSec > 0 &&
+          snap.positionSec / snap.durationSec < UPSELL_COMPLETION_THRESHOLD
+        ) {
+          return;
+        }
+        /* 24u cooldown — in DEV bypassed voor testen. */
+        const lastRaw = await AsyncStorage.getItem(UPSELL_KEY);
+        const last = lastRaw ? parseInt(lastRaw, 10) : 0;
+        if (
+          !__DEV__ &&
+          Number.isFinite(last) &&
+          Date.now() - last < UPSELL_COOLDOWN_MS
+        ) {
+          return;
+        }
+        showBraceletUpsell();
+        await AsyncStorage.setItem(UPSELL_KEY, String(Date.now()));
+
+        /* Auto-hide timer — alleen relevant voor auto-play-pad. Bij
+           paneel-pad zal de endedPanel-watcher hieronder 'm sneller
+           dismissen wanneer user Done/Play next tikt. */
+        if (autoHideTimer) clearTimeout(autoHideTimer);
+        autoHideTimer = setTimeout(() => {
+          hideBraceletUpsell();
+          autoHideTimer = null;
+        }, UPSELL_AUTO_HIDE_MS);
+      } catch {
+        /* AsyncStorage-fout mag de audio-flow nooit breken. */
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      if (autoHideTimer) clearTimeout(autoHideTimer);
+    };
+  }, []);
+
+  /* Endedpanel-watcher: dismist de bar zodra het SESSION COMPLETE-paneel
+     verdwijnt (Done of Play next geklikt). Geeft user een snellere
+     dismiss-route dan de 10s timer wanneer 'ie actief op het paneel
+     reageert. */
+  useEffect(() => {
+    if (!playerState.endedPanel) {
+      hideBraceletUpsell();
+    }
+  }, [playerState.endedPanel]);
+
+  /* Auto-play-next setting — gedeelde state met audio-player service.
+     Verhuisd van Account-tab naar hier zodat het natuurlijk bij de
+     audio-ervaring zit. Account toont alleen nog een link-card naar deze
+     positie (via scroll-intent 'library-settings'). */
+  const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
   /* Inline expand-/collapse-state per serie. Accordion: er kan slechts
      ÉÉN serie tegelijk uitgeklapt zijn — opent een nieuwe → eventuele
      andere klapt automatisch dicht (Spotify/Apple-stijl). Standaard
@@ -346,27 +484,35 @@ export default function AudioScreen() {
   /* Y-positie van de pricing-section (buyBlock). Doel voor scroll-intent
      'pricing' vanuit de player ("Full library access" / "Get Full Access"). */
   const pricingYRef = useRef<number | null>(null);
+  /* Y-positie van de auto-play-setting card. Doel voor scroll-intent
+     'library-settings' vanuit Account → "Library settings". */
+  const settingCardYRef = useRef<number | null>(null);
 
-  /* Scroll-intent: speler tikt CTA → wij scrollen naar pricing-section.
-     Twee paden afgedekt: (a) live signal terwijl deze tab al gemount is —
-     subscribe ontvangt 'm direct. (b) cold start — tab werd net gemount,
-     intent was eerder gezet — consumeScrollIntent() leest 'm.
-     Dubbele requestAnimationFrame om te wachten op onLayout-pass zodat
-     pricingYRef ingevuld is wanneer we scrollTo doen. */
+  /* Scroll-intent — twee paden, twee targets:
+       'pricing'          → speler-CTA, scroll naar buyBlock onderaan
+       'library-settings' → Account-link, scroll naar auto-play-card
+     Beide gebruiken hetzelfde patroon: dubbele requestAnimationFrame om
+     op onLayout-pass te wachten zodat de target-Y al gemeten is. */
   useEffect(() => {
-    const scrollToPricing = () => {
+    const scrollToTarget = (y: number | null) => {
+      if (y == null) return;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const y = pricingYRef.current;
-          if (y == null) return;
-          scrollViewRef.current?.scrollTo({ y, animated: true });
+          scrollViewRef.current?.scrollTo({
+            y: Math.max(0, y - 24),
+            animated: true,
+          });
         });
       });
     };
-    const unsub = subscribeScrollIntent((target) => {
-      if (target === 'pricing') scrollToPricing();
-    });
-    if (consumeScrollIntent() === 'pricing') scrollToPricing();
+    const handle = (target: string) => {
+      if (target === 'pricing') scrollToTarget(pricingYRef.current);
+      else if (target === 'library-settings')
+        scrollToTarget(settingCardYRef.current);
+    };
+    const unsub = subscribeScrollIntent(handle);
+    const pending = consumeScrollIntent();
+    if (pending) handle(pending);
     return unsub;
   }, []);
 
@@ -446,8 +592,26 @@ export default function AudioScreen() {
   const toggleSub = (name: string) =>
     setSubExpanded((p) => ({ ...p, [name]: !p[name] }));
 
+  /* ── Session-tap-handler ──
+     Operator-keuze 2026-05-27: geen blocking Alert meer voor uitgelogde
+     users op PRO-sessies. In plaats daarvan opent de sessie meteen in
+     60-seconden preview-mode. De audio-player's `shouldPreview()`
+     detecteert no-token of non-pro automatisch en signt de URL met
+     `?preview=true`. Na 60s kicks `PREVIEW_CAP_SEC` in → pauseert →
+     player.tsx toont z'n "Continue listening?"-upsell modal met de
+     bestaande "Get Full Access"-flow naar Gumroad of sign-in.
+
+     Beleid (al volledig afgehandeld door audio-player + player.tsx):
+       - FREE sessie → full playback (geen preview)
+       - PRO sessie + uitgelogd → 60s preview → upsell modal
+       - PRO sessie + ingelogd niet-pro → 60s preview → upsell modal
+       - PRO sessie + pro → full playback (no preview, no cap) */
+  const handleSessionPress = (sess: Session) => {
+    openSession(sess);
+  };
+
   return (
-    <View style={s.root}>
+    <SafeAreaView edges={['top']} style={s.root}>
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={s.scroll}
@@ -455,44 +619,80 @@ export default function AudioScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        {/* ── HERO ── bron regel 2682-2690 ── */}
-        <View style={s.hero}>
-          <Image
-            source={{ uri: `${CDN}/audio-library.png` }}
-            style={s.heroImg}
-            resizeMode="cover"
-          />
-          {/* .hero-grad: zwart onder → transparant boven, voor leesbaarheid */}
-          <View style={s.heroGrad} />
-          <View style={s.heroText}>
-            <Text style={s.heroEyebrow}>VIBEZCORE Audio Library</Text>
-            <Text
-              style={s.heroH1}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-            >
-              Where Insight{'\n'}Becomes Identity.
+        {/* ── SIGN-IN CTA BANNER ── (operator-keuze 2026-05-26)
+            Voor users die uitgelogd zijn maar geen welcome-screen meer
+            zien. Subtiel banner bovenaan met directe tap-naar-Account-
+            tab. Verbergen bij signed-in OR wanneer auth-state nog laadt
+            (null) om flicker te voorkomen. */}
+        {isSignedIn === false && (
+          <Pressable
+            style={s.signInBanner}
+            onPress={() => router.navigate('/account')}
+            android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+            accessibilityLabel="Sign in to unlock the full library"
+          >
+            <View style={s.signInBannerIcon}>
+              <Text style={s.signInBannerIconText}>♪</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.signInBannerTitle}>Sign in to unlock the full library</Text>
+              <Text style={s.signInBannerSub}>
+                Or create a free account · No credit card required
+              </Text>
+            </View>
+            <Text style={s.signInBannerArrow}>›</Text>
+          </Pressable>
+        )}
+
+        {/* ── HERO ── alleen voor guest/non-PRO. PRO-users hebben geen
+            "kom naar de library"-onboarding-header nodig — ze gaan direct
+            naar de sessies. */}
+        {!hasSub && (
+          <View style={s.hero}>
+            <Image
+              source={{ uri: `${CDN}/audio-library.png` }}
+              style={s.heroImg}
+              resizeMode="cover"
+            />
+            <View style={s.heroGrad} />
+            <View style={s.heroText}>
+              <Text style={s.heroEyebrow}>VIBEZCORE Audio Library</Text>
+              <Text
+                style={s.heroH1}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                Where Insight{'\n'}Becomes Identity.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── 4-FASENREGEL ── bron regel 2691-2693.
+           PRO-users verbergen — onderdeel van de "library begint bij de
+           search-bar"-policy (operator-besluit 2026-05-23). Returning
+           power-users willen direct toegang tot content, geen marketing-
+           ribbon. Guests/free-tier zien 'm wel — onderdeel van het
+           onboarding-narratief. */}
+        {!hasSub && (
+          <View style={s.phasesWrap}>
+            <Text style={s.phases}>
+              Understanding
+              <Text style={s.phasesArrow}>{'  →  '}</Text>
+              Awareness
+              <Text style={s.phasesArrow}>{'  →  '}</Text>
+              Regulation
+              <Text style={s.phasesArrow}>{'  →  '}</Text>
+              Integration
             </Text>
           </View>
-        </View>
-
-        {/* ── 4-FASENREGEL ── bron regel 2691-2693 ── */}
-        <View style={s.phasesWrap}>
-          <Text style={s.phases}>
-            Understanding
-            <Text style={s.phasesArrow}>{'  →  '}</Text>
-            Awareness
-            <Text style={s.phasesArrow}>{'  →  '}</Text>
-            Regulation
-            <Text style={s.phasesArrow}>{'  →  '}</Text>
-            Integration
-          </Text>
-        </View>
+        )}
 
         {/* "Ontdek"-secties — BUILT ON, pijlers, Emerson, EXPLORE SERIES-
-           header — verbergen tijdens een actieve zoekquery. Bij leeg search-
-           veld (default) gewoon zichtbaar. */}
-        {!searchActive && (
+           header — verbergen tijdens een actieve zoekquery EN voor PRO-
+           users (laatste = operator-besluit 2026-05-23: PRO's library
+           start direct bij de search-balk, geen marketing-secties). */}
+        {!searchActive && !hasSub && (
           <>
             {/* ── BUILT ON ── bron regel 2701-2704 ── */}
             <View style={s.builtOn}>
@@ -587,6 +787,14 @@ export default function AudioScreen() {
              - Audio Library is altijd de "homepage" (ongefilterd).
              - New / Favorites / Free zijn eigen sub-pages onder /library/. */}
 
+        {/* Continue-card op de library is VERVANGEN door een welcome-back
+            popup op cold-start (zie src/components/WelcomeBackPopup.tsx
+            + src/services/welcome-popup.ts). Operator-besluit 2026-05-25:
+            popup voelt warmer + duidelijker als "welkom terug" dan een
+            statische card die naast alle andere kaarten op de library
+            blijft staan. De last-played-tracker (useShowableLastPlayed)
+            blijft bestaan en voedt nu de popup ipv de library-card. */}
+
         {!searchActive && (
           <Pressable
             style={s.journeyCard}
@@ -602,6 +810,32 @@ export default function AudioScreen() {
             </View>
             <Text style={s.journeyChev}>›</Text>
           </Pressable>
+        )}
+
+        {/* Auto-play-next-setting — verhuisd van Account naar hier omdat
+           dit een audio-ervaring-instelling is. Account heeft alleen
+           een link-card die hierheen scrollt via scroll-intent. */}
+        {!searchActive && (
+          <View
+            style={s.settingCard}
+            onLayout={(e) => {
+              settingCardYRef.current = e.nativeEvent.layout.y;
+            }}
+          >
+            <View style={s.settingTextWrap}>
+              <Text style={s.settingTitle}>Auto-play next session</Text>
+              <Text style={s.settingSub}>
+                Automatically play the next session in the series when one
+                ends.
+              </Text>
+            </View>
+            <Switch
+              value={autoPlayNext}
+              onValueChange={setAutoPlayNext}
+              trackColor={{ false: '#3a3a3a', true: '#3a8fff' }}
+              thumbColor={'#ffffff'}
+            />
+          </View>
         )}
 
         {/* ── DE LIBRARY — serie-kaarten als bibliotheek (blauwdruk §3.5) ──
@@ -861,10 +1095,10 @@ export default function AudioScreen() {
                update on the fly via usePlayerState re-render. */
             const isCardActive = playerState.session?.series === ser.name;
             const cardPct =
-              isCardActive && playerState.durationMs > 0
+              isCardActive && playerState.durationSec > 0
                 ? Math.min(
                     100,
-                    (playerState.positionMs / playerState.durationMs) * 100
+                    (playerState.positionSec / playerState.durationSec) * 100
                   )
                 : 0;
             return (
@@ -953,13 +1187,10 @@ export default function AudioScreen() {
                 </Pressable>
 
                 {/* FREE-balk(en) onder de kaart — bron .vz-free-under-card.
-                   Eén balk per gratis sessie; layout: rond play-icoon links,
-                   titel+pill bovenin, desc eronder. Pill-tekst telt impliciet
-                   uit het aantal balken: bij precies 1 free in deze serie de
-                   spec-tekst "1 FREE SESSION"; bij meer (Soundscapes met 3)
-                   gewoon "FREE" per balk — het totaal blijkt vanzelf uit het
-                   aantal getoonde balken. */}
-                {frees.map((sess) => {
+                   Eén balk per gratis sessie. ALLEEN tonen voor guest/non-PRO
+                   users — PRO heeft full access, FREE-promotie is dan
+                   misleidend. */}
+                {!hasSub && frees.map((sess) => {
                   const pillText =
                     frees.length === 1 ? '1 FREE SESSION' : 'FREE';
                   /* FIX 9: "active" = url-match, ongeacht play/pause. Hele
@@ -970,10 +1201,10 @@ export default function AudioScreen() {
                     playerState.session?.url === sess.url;
                   const isPlayingHere = isActive && playerState.playing;
                   const pct =
-                    isActive && playerState.durationMs > 0
+                    isActive && playerState.durationSec > 0
                       ? Math.min(
                           100,
-                          (playerState.positionMs / playerState.durationMs) *
+                          (playerState.positionSec / playerState.durationSec) *
                             100
                         )
                       : 0;
@@ -1075,25 +1306,34 @@ export default function AudioScreen() {
                   );
                 })}
 
-                {/* Inline expansie — non-Soundscapes: alle sessierijen. */}
+                {/* Inline expansie — non-Soundscapes: sessierijen.
+                    Operator-keuze 2026-05-27: voor uitgelogde/free users
+                    de free-sessies WEGFILTEREN uit deze list — die staan
+                    al als groene promo-balk hierboven (regel ±1207).
+                    Anders verschijnt elke free-sessie 2× in de UI. Voor
+                    pro users (hasSub=true) toon alles want er is geen
+                    promo-balk dan. */}
                 {isOpen && !isSoundscapes && (
                   <View style={s.libExpand}>
-                    {ser.sessions.map((sess) => (
-                      <SessionRow
-                        key={sess.url}
-                        session={sess}
-                        photo={photo}
-                        canPlay={sess.free || hasSub}
-                        onPress={() => openSession(sess)}
-                        isFavorite={favorites.has(sess.url)}
-                        onToggleFav={() => toggleFavorite(sess)}
-                        isActive={playerState.session?.url === sess.url}
-                        isPlaying={
-                          playerState.session?.url === sess.url &&
-                          playerState.playing
-                        }
-                      />
-                    ))}
+                    {ser.sessions
+                      .filter((sess) => hasSub || !sess.free)
+                      .map((sess) => (
+                        <SessionRow
+                          key={sess.url}
+                          session={sess}
+                          photo={photo}
+                          canPlay={sess.free || hasSub}
+                          onPress={() => handleSessionPress(sess)}
+                          isFavorite={favorites.has(sess.url)}
+                          onToggleFav={() => toggleFavorite(sess)}
+                          isActive={playerState.session?.url === sess.url}
+                          isPlaying={
+                            playerState.session?.url === sess.url &&
+                            playerState.playing
+                          }
+                          hideTag={hasSub}
+                        />
+                      ))}
                   </View>
                 )}
 
@@ -1144,7 +1384,7 @@ export default function AudioScreen() {
                                 session={sess}
                                 photo={info.photo}
                                 canPlay={sess.free || hasSub}
-                                onPress={() => openSession(sess)}
+                                onPress={() => handleSessionPress(sess)}
                                 isFavorite={favorites.has(sess.url)}
                                 onToggleFav={() => toggleFavorite(sess)}
                                 isActive={
@@ -1154,6 +1394,7 @@ export default function AudioScreen() {
                                   playerState.session?.url === sess.url &&
                                   playerState.playing
                                 }
+                                hideTag={hasSub}
                               />
                             ))}
                         </View>
@@ -1234,8 +1475,11 @@ export default function AudioScreen() {
             GET FULL ACCESS-knop → Gumroad-checkout van het geselecteerde
             plan. Yearly is standaard uitgelicht én geselecteerd.
             Verbergen tijdens search zodat de autocomplete-overlay focus
-            houdt. */}
-        {!searchActive && (
+            houdt. PRO-users zien dit blok NIET — zij zijn al abonnee,
+            ruis (operator-besluit 2026-05-23). Independent-Content-
+            disclaimer eronder (regel 1427+) blijft wel zichtbaar — eigen
+            conditional block, juridische tekst geldt voor iedereen. */}
+        {!searchActive && !hasSub && (
         <View
           style={s.buyBlock}
           onLayout={(e) => {
@@ -1362,6 +1606,16 @@ export default function AudioScreen() {
           <Text style={s.fineline}>
             Prices in USD · 14-day money-back
           </Text>
+          {/* VAT-disclaimer (operator-keuze 2026-05-27): voorkomt
+              verwarring tussen card-prijs en Gumroad checkout-subtotal.
+              Gumroad toont eerst pre-VAT subtotal ($10.66) → daarna VAT
+              → totaal ($12.90). User die nu de card ziet ($12.90 incl.
+              VAT voor NL) ziet op Gumroad eerst $10.66 = lager. Deze
+              line maakt duidelijk dat dat geen prijswijziging is, alleen
+              de pre-tax breakdown. */}
+          <Text style={s.fineline}>
+            Excl. local VAT · Final price calculated at checkout
+          </Text>
           <Text style={s.secureRow}>
             🔒 SECURE CHECKOUT · ↻ CANCEL ANYTIME
           </Text>
@@ -1437,14 +1691,113 @@ export default function AudioScreen() {
         </View>
         )}
 
+        {/* ── BRACELET-TEASER (cross-product upsell) ──────────────────
+            Verschijnt ONDERAAN, NA de Independent-disclaimer (operator-
+            besluit 2026-05-23) en ALLEEN voor PRO-audio-users — classic
+            cross-sell: gebruiker heeft product A (audio) al gekocht, nu
+            tease product B (bracelet). Guest/free krijgen 'm niet —
+            zij worden eerst naar audio-PRO geleid via het aankoopblok
+            (premature bracelet-pitch zou de audio-conversie verstoren).
+
+            Tap navigeert naar de Bracelet-tab. Copy (KICKSTARTER-badge
+            + "Smart Bead Bracelet" + 5-haptic-modes subtitle) is letter-
+            lijk overgenomen uit bracelet.tsx hero zodat de twee plekken
+            niet uit elkaar groeien. Wanneer de aparte bracelet-pagina
+            in de app later landt kan deze tap-target daarheen worden
+            verlegd.
+
+            TODO: animatie nog te ontwerpen (operator stuurt specs).
+            Voor nu statische card; framer/reanimated-wrapper komt later.
+
+            Verbergen tijdens search (consistent met andere blokken). */}
+        {!searchActive && hasSub && (
+          <Pressable
+            style={s.braceletTeaser}
+            onPress={() => router.navigate('/bracelet')}
+            android_ripple={{ color: 'rgba(58,143,255,0.08)' }}
+          >
+            <View style={s.braceletTeaserBadge}>
+              <Text style={s.braceletTeaserBadgeText}>
+                ⚡ KICKSTARTER — 1 AUGUST 2026
+              </Text>
+            </View>
+            <Text style={s.braceletTeaserTitle}>Smart Bead Bracelet</Text>
+            <Text style={s.braceletTeaserSub}>
+              5 haptic modes. One clear outcome.{'\n'}
+              You in control of your own state.
+            </Text>
+            <Text style={s.braceletTeaserCta}>Explore the bracelet ›</Text>
+          </Pressable>
+        )}
+
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+  /* Compacte top-bar boven de ScrollView met alleen het V-logo
+     links. Maakt brand-presence zichtbaar zonder dat de wordmark
+     elke pagina overheerst. Padding match met hero-content (links 20). */
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
   scroll: { paddingBottom: 56 },
+
+  /* ── Sign-in CTA banner ──
+     Subtiel banner bovenaan voor uitgelogde users. Blauwe accent-tint
+     + accent border zodat 'ie opvalt zonder schreeuwerig te zijn.
+     Note-icoon links als visuele anchor (♪ — verwijst naar audio).
+     Tap-target full-width voor mobile UX. */
+  signInBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(58,143,255,0.10)',
+    borderColor: 'rgba(58,143,255,0.30)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  signInBannerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(58,143,255,0.20)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInBannerIconText: {
+    color: '#3a8fff',
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  signInBannerTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.2,
+  },
+  signInBannerSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
+  signInBannerArrow: {
+    color: '#3a8fff',
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+  },
 
   /* HERO — bron .hero / .hero-img / .hero-grad / .hero-text */
   hero: {
@@ -2489,6 +2842,36 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     gap: 14,
   },
+  /* Auto-play-next setting card — staat tussen Your Journey en de
+     eerste serie-card. marginHorizontal aligned met journeyCard (18)
+     en libCardUnit (via libList). */
+  settingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 18,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  settingTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  settingTitle: {
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  settingSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    lineHeight: 16,
+  },
   journeyIconBox: {
     width: 44,
     height: 44,
@@ -2517,6 +2900,10 @@ const s = StyleSheet.create({
     fontWeight: '800',
     marginLeft: 4,
   },
+
+  /* (Continue-card styles verwijderd 2026-05-25 — Continue-card is
+     vervangen door WelcomeBackPopup op cold-start. Zie commit log /
+     src/components/WelcomeBackPopup.tsx voor de nieuwe styling.) */
 
   /* ── DISCLAIMER (legal-toggle / legal-body, bron index_2_correct.html) ── */
   legalBlock: {
@@ -2572,5 +2959,60 @@ const s = StyleSheet.create({
     fontWeight: '700',
     marginTop: 4,
     marginBottom: 6,
+  },
+
+  /* ── BRACELET-TEASER — cross-product upsell-card aan einde van library.
+     Eigen panel met subtiele accent-tint zodat 'ie zich onderscheidt van
+     de series-cards (geen audio-content) zonder hard te schreeuwen.
+     Visueel consistent met bracelet.tsx hero zodat de tap-doorklik niet
+     verwarrend voelt: gebruiker ziet dezelfde KICKSTARTER-badge + titel
+     terug op de Bracelet-tab. */
+  braceletTeaser: {
+    backgroundColor: 'rgba(58,143,255,0.06)',
+    borderColor: 'rgba(58,143,255,0.22)',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 14,
+    alignItems: 'center',
+  },
+  braceletTeaserBadge: {
+    backgroundColor: 'rgba(58,143,255,0.15)',
+    borderColor: 'rgba(58,143,255,0.35)',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  braceletTeaserBadgeText: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  braceletTeaserTitle: {
+    color: C.text,
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  braceletTeaserSub: {
+    color: C.dim,
+    fontSize: 13,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 10,
+    lineHeight: 20,
+  },
+  braceletTeaserCta: {
+    color: C.accent,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginTop: 16,
   },
 });

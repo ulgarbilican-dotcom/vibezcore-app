@@ -32,6 +32,8 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env.test
+.env.bunny
 
 # typescript
 *.tsbuildinfo
@@ -45,3 +47,7 @@ app-example
 # build / agent noise
 .build-logs/
 .claude/
+
+# local screenshots / temp artefacts (developer-only)
+.tmp-screenshot.png
+screenshots/

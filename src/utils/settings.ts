@@ -18,10 +18,28 @@ export const SETTINGS_KEY = 'vzs_v1';
 
 export type Settings = {
   autoPlayNext: boolean;
+  /** Save listening progress — bewaart positie zodat sessies kunnen
+   *  hervatten waar je gebleven was. Default true (gewenste UX).
+   *  Wanneer uitgezet wordt vzp_v1 (saved-position) genegeerd door de
+   *  audio-player. Bestaande positie-state blijft staan tot user
+   *  Clear local data uitvoert. */
+  saveProgress: boolean;
+  /** Track listening history — vult vzh_v1 (Your Journey). Default true.
+   *  Uitschakelen voorkomt nieuwe history-entries; bestaande blijven
+   *  staan tot user 'm clear. */
+  trackHistory: boolean;
+  /** Audio quality — high (default) of low. Backend levert nu nog 1
+   *  bitrate, dus deze setting is voor toekomstige variant-keuze.
+   *  Comment-stub: audio-player respecteert deze nog niet (pas nodig
+   *  wanneer backend multi-bitrate ondersteunt). */
+  audioQuality: 'high' | 'low';
 };
 
 const defaults: Settings = {
   autoPlayNext: false,
+  saveProgress: true,
+  trackHistory: true,
+  audioQuality: 'high',
 };
 
 let state: Settings = { ...defaults };
@@ -46,6 +64,15 @@ async function loadOnce(): Promise<void> {
             ...defaults,
             ...(typeof obj.autoPlayNext === 'boolean'
               ? { autoPlayNext: obj.autoPlayNext }
+              : {}),
+            ...(typeof obj.saveProgress === 'boolean'
+              ? { saveProgress: obj.saveProgress }
+              : {}),
+            ...(typeof obj.trackHistory === 'boolean'
+              ? { trackHistory: obj.trackHistory }
+              : {}),
+            ...(obj.audioQuality === 'high' || obj.audioQuality === 'low'
+              ? { audioQuality: obj.audioQuality }
               : {}),
           };
         }

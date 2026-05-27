@@ -11,21 +11,32 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { useSetting } from '@/utils/settings';
+import { refreshSubscription, useSubscription } from '@/hooks/useSubscription';
+import {
+  cancelSubscription,
+  gumroadManageUrl,
+} from '@/services/subscription-actions';
+import { clearSignedUrlCache } from '@/utils/audio-url';
+import { clearLastPlayed } from '@/utils/last-played';
+import { requestScrollTo } from '@/utils/scroll-intent';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Image,
+    Alert,
+    Linking,
     Pressable,
-    ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     clearSession,
+    getLastLoginEmail,
     getToken,
     getUserEmail,
     login,
@@ -34,30 +45,170 @@ import {
 
 type Mode = 'login' | 'signup';
 
-/* Playback-settings card. Beschikbaar voor zowel signed-in als signed-out
-   users — een setting heeft geen account nodig. Vandaag is autoPlayNext
-   de enige toggle; nieuwe settings (sleep-default, default-rate) komen
-   in dezelfde card. */
-function PlaybackSettingsCard() {
-  const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
+/* Externe URL voor bracelet-purchase (operator-keuze 2026-05-26).
+   Webapp shop covered ook Kickstarter-reservering pre-launch en
+   reguliere purchase post-launch — één URL voor beide stadia. */
+const BRACELET_SHOP_URL = 'https://www.vibezcore.com/shop';
+
+/* Support-form op de webapp (Wix). Geen native endpoint nodig — link out. */
+const SUPPORT_URL = 'https://www.vibezcore.com/support';
+
+/* Forgot-password-flow draait volledig op de webapp (auth-flow met
+   email-link → reset-password.html → webapp login). De native app
+   linkt door zodat user 'm daar afhandelt en daarna terugkomt naar
+   de Account-tab om in te loggen. */
+const FORGOT_PASSWORD_URL = 'https://app.vibezcore.com/forgot-password.html';
+
+/* Audio-library scrolt naar pricing-block via scroll-intent (`pricing`).
+   Bestaand patroon — gebruikt al voor "library-settings"-link. */
+
+/* External link helper — primair via WebBrowser (Custom Tab op Android,
+   SFSafariViewController op iOS), fallback naar Linking wanneer
+   WebBrowser cancelled wordt. Zelfde patroon als (tabs)/bracelet.tsx
+   en (tabs)/index.tsx — bewust gedupliceerd ipv shared util omdat
+   log-paden subtiel anders zijn per call-site. */
+async function openExternal(url: string): Promise<void> {
+  console.log('[VIBEZCORE] account openExternal →', url);
+  try {
+    const result = await WebBrowser.openBrowserAsync(url);
+    if (result.type === 'cancel' || result.type === 'dismiss') {
+      console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
+      await Linking.openURL(url);
+    }
+  } catch (e) {
+    console.log('[VIBEZCORE] WebBrowser threw — fallback Linking:', e);
+    await Linking.openURL(url);
+  }
+}
+
+/* Subscription-card. Toont live PRO-status uit useSubscription()
+   (= /api/subscription-status van backend). Drie render-paden:
+     - isLoading      → "Checking…"
+     - isPro=false    → "Free account" + upgrade-hint
+     - isPro=true     → "PRO — Monthly/Yearly" + datum-regel
+   Datum-formatting via toLocaleDateString('en-GB') → "16 June 2026". */
+function SubscriptionCard() {
+  const {
+    isPro,
+    tier,
+    validUntil,
+    willRenew,
+    gumroadSubscriberId,
+    isLoading,
+  } = useSubscription();
+
+  let bigText: string;
+  let bigColor: string;
+  let subText: string;
+
+  if (isLoading) {
+    bigText = 'Checking…';
+    bigColor = Brand.textDim;
+    subText = '';
+  } else if (!isPro) {
+    bigText = 'Free account';
+    bigColor = Brand.text;
+    subText = 'Upgrade for full library access';
+  } else {
+    /* tier kan undefined zijn (defensief — backend zou dat niet
+       moeten doen voor een active=true sub, maar we crashen er niet
+       op). */
+    const tierLabel =
+      tier === 'yearly'
+        ? 'Yearly'
+        : tier === 'monthly'
+          ? 'Monthly'
+          : null;
+    bigText = tierLabel ? `PRO — ${tierLabel}` : 'PRO';
+    bigColor = Brand.accent;
+
+    /* Datum-regel — alleen als we een geldige validUntil hebben. */
+    if (validUntil) {
+      const d = new Date(validUntil);
+      if (!isNaN(d.getTime())) {
+        const formatted = d.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+        subText = willRenew
+          ? `Renews on ${formatted}`
+          : `Active until ${formatted}`;
+      } else {
+        subText = 'Active';
+      }
+    } else {
+      subText = 'Active';
+    }
+  }
+
+  /* Drie CTA-paden afhankelijk van state:
+       - Loading             → geen CTA (anders flicker)
+       - Non-pro signed-in   → "Upgrade to full library" → Library pricing
+       - Pro met subscriber  → "Manage billing" → Gumroad customer portal
+       - Pro zonder subscriber-id → geen CTA tonen (data nog incomplete) */
+  const showUpgrade = !isLoading && !isPro;
+  const showManageBilling = !isLoading && isPro && !!gumroadSubscriberId;
+
   return (
     <View style={s.card}>
-      <Text style={s.label}>Playback</Text>
-      <View style={s.toggleRow2}>
-        <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={s.toggleTitle}>Auto-play next session</Text>
-          <Text style={s.toggleSub}>
-            Automatically play the next session in the series when one ends.
-          </Text>
-        </View>
-        <Switch
-          value={autoPlayNext}
-          onValueChange={setAutoPlayNext}
-          trackColor={{ true: Brand.accent, false: '#2a2a2a' }}
-          thumbColor={'#ffffff'}
-        />
-      </View>
+      <Text style={s.label}>Subscription</Text>
+      <Text style={[s.subBig, { color: bigColor }]}>{bigText}</Text>
+      {subText ? <Text style={s.subSmall}>{subText}</Text> : null}
+      {showUpgrade && (
+        <Pressable
+          style={s.cardCta}
+          onPress={() => {
+            requestScrollTo('pricing');
+            router.navigate('/');
+          }}
+          accessibilityLabel="Upgrade to full library access"
+        >
+          <Text style={s.cardCtaText}>Upgrade to full library</Text>
+          <Text style={s.cardCtaArrow}>→</Text>
+        </Pressable>
+      )}
+      {showManageBilling && gumroadSubscriberId && (
+        <Pressable
+          style={s.cardCta}
+          onPress={() => openExternal(gumroadManageUrl(gumroadSubscriberId))}
+          accessibilityLabel="Manage billing on Gumroad"
+        >
+          <Text style={s.cardCtaText}>Manage billing</Text>
+          <Text style={s.cardCtaArrow}>→</Text>
+        </Pressable>
+      )}
     </View>
+  );
+}
+
+/* Library-settings link. Vervangt de oude PlaybackSettingsCard die de
+   auto-play-toggle inline had — die toggle is verhuisd naar Audio
+   Library zelf (audio-ervaring-instelling, hoort visueel daar). Account
+   houdt alleen deze "→"-link die de gebruiker direct op de toggle laat
+   landen via scroll-intent + tab-switch. Werkt voor zowel guest als
+   ingelogde users. */
+function LibrarySettingsLink() {
+  return (
+    <Pressable
+      style={s.linkCard}
+      onPress={() => {
+        /* requestScrollTo() fired het signal eerst (de listener in
+           (tabs)/index.tsx subscribed al — bij live tab-switch zal die
+           direct triggeren; bij cold start consumeert hij via
+           consumeScrollIntent()). Dan router.navigate('/') switcht naar
+           Library-tab. */
+        requestScrollTo('library-settings');
+        router.navigate('/');
+      }}
+      android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+    >
+      <View style={s.linkTextWrap}>
+        <Text style={s.linkTitle}>Library settings</Text>
+        <Text style={s.linkSub}>Auto-play and playback preferences</Text>
+      </View>
+      <Text style={s.linkArrow}>›</Text>
+    </Pressable>
   );
 }
 
@@ -72,10 +223,27 @@ export default function AccountScreen() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  /* useSubscription() bovenaan voor twee redenen:
+       1. Cancel-button alleen tonen voor pro users (`isProForActions`)
+       2. Fallback voor manage_url als backend 'm niet meegeeft */
+  const {
+    gumroadSubscriberId: gumroadSubscriberIdFromHook,
+    isPro: isProForActions,
+  } = useSubscription();
+
   useEffect(() => {
     (async () => {
       const t = await getToken();
-      if (t) setEmail((await getUserEmail()) || 'Signed in');
+      if (t) {
+        setEmail((await getUserEmail()) || 'Signed in');
+      } else {
+        /* Niet ingelogd → pre-fill het email-veld met de laatst-gebruikte
+           login-email als die bekend is. Overleeft explicit sign-out
+           (vz_last_login_email persistent key). User hoeft alleen nog
+           het wachtwoord te typen voor re-login. */
+        const lastEmail = await getLastLoginEmail();
+        if (lastEmail) setEmailInput(lastEmail);
+      }
       setLoading(false);
     })();
   }, []);
@@ -93,6 +261,36 @@ export default function AccountScreen() {
       if (r.ok) {
         setEmail(r.email || 'Signed in');
         setPwInput('');
+        /* Login/signup succesvol → forceer een fetch van
+           /api/subscription-status zodat useSubscription-consumers
+           (Library, Player) direct de echte PRO-status zien. */
+        refreshSubscription();
+
+        /* ── Post-login routing ────────────────────────────────────────
+           Operator-spec 2026-05-25:
+             - Audio PRO          → /(tabs)/        (Audio Library)
+             - Bracelet eigenaar  → bracelet-active (TODO — page nog te
+                                   bouwen, backend nog geen has_bracelet
+                                   veld)
+             - Geen van beide     → /(tabs)/        (Library als default)
+
+           Bracelet-ownership-detectie vereist:
+             1. Backend: /api/subscription-status uitbreiden met bv.
+                `has_bracelet: true` zodra activatie-code is gekoppeld
+             2. App: nieuwe route /bracelet-active met activatie-UI +
+                modus-control. Tot dan: alle ingelogde users → Library.
+
+           Wanneer beide klaar zijn, vervangen door:
+              const dest = sub?.has_bracelet ? '/bracelet-active' : '/';
+              router.replace(dest);
+
+           setTimeout 50ms zodat React eerst de state-updates van
+           setEmail/setPwInput commit; voorkomt edge-cases waar de
+           component-rerender met de oude (login-form) view nog draait
+           wanneer de nav fired. router.replace ipv navigate: clear de
+           account-tab-stack zodat back-knop niet terug naar het login-
+           formulier gaat. */
+        setTimeout(() => router.replace('/'), 50);
       } else {
         setMsg(r.error);
       }
@@ -101,69 +299,371 @@ export default function AccountScreen() {
     }
   };
 
-  const onSignOut = async () => {
-    await clearSession();
-    setEmail(null);
-    setEmailInput('');
-    setPwInput('');
+  /* Sign Out met confirmation-dialog. Voorkomt accidentele 1-tap sign-
+     outs (operator-feedback 2026-05-25: "lastig om telkens opnieuw in
+     te moeten loggen"). Default-knop is Cancel zodat onbedoelde tap geen
+     consequenties heeft. "Sign out" is destructive-style op iOS → rood
+     gerendered ter visuele waarschuwing. */
+  const onSignOut = () => {
+    Alert.alert(
+      'Sign out?',
+      'You will stay signed in on this device unless you sign out. After signing out, you will need to enter your password again next time.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            await clearSession();
+            setEmail(null);
+            setEmailInput('');
+            setPwInput('');
+            /* Token weg → refreshSubscription detecteert no-token, wist
+               persisted cache en notifiet alle consumers {active:false}. */
+            refreshSubscription();
+            /* Wis ook de in-memory signed-URL cache zodat een volgende user
+               op dit toestel geen leftover-URLs van vorige sessie krijgt. */
+            clearSignedUrlCache();
+            /* Continue-card op de library mag geen sessie van de vorige
+               user tonen aan de volgende user op dit toestel. */
+            clearLastPlayed();
+            /* Email-veld pre-fillen met laatst-gebruikte email zodat
+               re-login alleen wachtwoord vergt (LAST_EMAIL_KEY overleeft
+               clearSession). */
+            const lastEmail = await getLastLoginEmail();
+            if (lastEmail) setEmailInput(lastEmail);
+          },
+        },
+      ]
+    );
+  };
+
+  /* ── Cancel Subscription ──
+     Operator-besluit 2026-05-26: cancellatie loopt via Gumroad's customer
+     portal (backend kan niet zelfstandig cancellen — Gumroad API ondersteunt
+     dat niet meer voor creators). Flow:
+       1. Confirmation Alert
+       2. POST /api/cancel-subscription → backend markeert pending + returnt manage_url
+       3. Open manage_url in WebBrowser → user bevestigt definitief op Gumroad
+       4. Gumroad webhook reconcilieert onze DB (status='cancelled')
+       5. refreshSubscription() bij volgende app-open ziet de update */
+  const onCancelSubscription = () => {
+    Alert.alert(
+      'Cancel subscription?',
+      'You will keep full library access until the end of your current billing period. To finalize, confirm on Gumroad in the next step.',
+      [
+        { text: 'Keep subscription', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await cancelSubscription();
+            if (!result.ok) {
+              Alert.alert(
+                result.noGumroadId ? 'Manual cancellation needed' : 'Could not cancel',
+                result.error,
+                [
+                  { text: 'OK', style: 'cancel' },
+                  ...(result.noGumroadId
+                    ? [
+                        {
+                          text: 'Contact support',
+                          onPress: () => openExternal(SUPPORT_URL),
+                        },
+                      ]
+                    : []),
+                ],
+              );
+              return;
+            }
+            if (result.alreadyCancelled) {
+              Alert.alert(
+                'Already cancelled',
+                'Your subscription is already set to cancel. You keep access until the end of the period.',
+              );
+              refreshSubscription();
+              return;
+            }
+            /* Open Gumroad portal voor definitieve bevestiging.
+               manage_url komt rechtstreeks van backend; fallback op
+               client-computed URL als 'ie ontbreekt. */
+            const url =
+              result.manageUrl ||
+              (gumroadSubscriberIdFromHook
+                ? gumroadManageUrl(gumroadSubscriberIdFromHook)
+                : null);
+            if (url) await openExternal(url);
+            /* Geforceerde refresh — backend heeft mogelijk al will_renew=false
+               gezet. UI updatet zodat Cancel-button verdwijnt. */
+            refreshSubscription();
+          },
+        },
+      ],
+    );
+  };
+
+  /* ── Change Password ──
+     Routeert door naar de webapp forgot-password flow (Supabase recovery
+     email → reset-password.html → opnieuw in app inloggen met nieuw
+     password). Webapp handelt het volledige proces af; native app is
+     alleen de launcher. */
+  const onChangePassword = () => {
+    Alert.alert(
+      'Change password',
+      'We will open the password reset flow in your browser. You will receive an email with a link to set a new password.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          onPress: () => router.navigate('/forgot-password' as never),
+        },
+      ],
+    );
+  };
+
+  /* ── Delete Account ──
+     Account-deletion gebeurt manueel via support (operator-besluit
+     2026-05-26: te gevoelig + GDPR-verplichtingen voor verifiable deletion
+     workflow). Opent het support-formulier op de webapp. */
+  const onDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'Deleting your account is permanent. Your listening history, favorites, and subscription data will be removed. We will open our support form so you can confirm the request.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => openExternal(SUPPORT_URL),
+        },
+      ],
+    );
   };
 
   if (loading) {
     return (
-      <View style={[s.root, s.center]}>
+      <SafeAreaView edges={['top']} style={[s.root, s.center]}>
         <ActivityIndicator color={Brand.text} />
-      </View>
+      </SafeAreaView>
     );
   }
 
-  /* Signed-in view */
+  /* Signed-in view. KeyboardAwareScrollView ipv KeyboardAvoidingView —
+     laatstgenoemde gaf op Android + expo-router bottom tabs een race-
+     condition tussen tab-bar-resize en keyboard-animation (operator-
+     bevestigd 2026-05-20: "trillen + zwart scherm"). Pure-JS package,
+     geen native rebuild nodig. Future-proof voor activatiecode-input. */
   if (email) {
     return (
-      <View style={s.root}>
-        <ScrollView contentContainerStyle={s.scroll}>
+      <SafeAreaView edges={['top']} style={s.root}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={s.scroll}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          enableAutomaticScroll={true}
+        >
           <Text style={s.screenTitle}>Account</Text>
           <View style={s.card}>
             <Text style={s.label}>Signed in as</Text>
             <Text style={s.email}>{email}</Text>
           </View>
-          <View style={s.card}>
-            <Text style={s.label}>Subscription</Text>
-            <Text style={s.dimText}>
-              Status syncs from your existing VIBEZCORE account. Entitlements
-              (audio / bracelet) appear here once the access model backend is
-              in place.
-            </Text>
-          </View>
+          <SubscriptionCard />
           <View style={s.card}>
             <Text style={s.label}>Bracelet</Text>
             <Text style={s.dimText}>
               Bracelet activation (enter your code) opens after the
               Kickstarter launch on 1 August 2026.
             </Text>
+            {/* Reserve-CTA voor users die nog geen bracelet hebben
+                (per operator-feedback 2026-05-26: bracelet-cross-sell ook
+                bereikbaar maken vanaf Account, niet alleen via de
+                Bracelet-tab). vibezcore.com/shop covered zowel
+                Kickstarter-reservering als reguliere purchase. */}
+            <Pressable
+              style={s.cardCta}
+              onPress={() => openExternal(BRACELET_SHOP_URL)}
+              accessibilityLabel="Reserve your bracelet on the VIBEZCORE shop"
+            >
+              <Text style={s.cardCtaText}>Reserve your bracelet</Text>
+              <Text style={s.cardCtaArrow}>→</Text>
+            </Pressable>
           </View>
-          <PlaybackSettingsCard />
+          <LibrarySettingsLink />
+
+          {/* ── Account Actions (Settings, Change Password, Support) ──
+              Structuur matched account.html van de webapp. Sign Out blijft
+              z'n eigen prominente rode knop onderaan, niet in deze
+              "actions"-card — operator-besluit 2026-05-25: Sign Out moet
+              visueel onmiskenbaar zijn. */}
+          <View style={s.card}>
+            <Text style={s.label}>Account</Text>
+            <Pressable
+              style={s.cardRow}
+              onPress={() => router.navigate('/settings')}
+              accessibilityLabel="Open settings"
+            >
+              <Text style={s.cardRowText}>Settings</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={onChangePassword}
+              accessibilityLabel="Change your password"
+            >
+              <Text style={s.cardRowText}>Change password</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() => openExternal(SUPPORT_URL)}
+              accessibilityLabel="Contact VIBEZCORE support"
+            >
+              <Text style={s.cardRowText}>Contact support</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+          </View>
+
+          {/* Cancel Subscription — alleen voor active pro users. Aparte
+              card buiten Account Actions zodat 'm zichtbaar destructief
+              voelt (zoals webapp's "Cancel Subscription" knop in red). */}
+          {isProForActions && (
+            <Pressable
+              style={s.cancelBtn}
+              onPress={onCancelSubscription}
+              accessibilityLabel="Cancel your subscription"
+            >
+              <Text style={s.cancelBtnText}>Cancel subscription</Text>
+            </Pressable>
+          )}
+
           <Pressable style={s.signOut} onPress={onSignOut}>
             <Text style={s.signOutText}>Sign out</Text>
           </Pressable>
+
+          {/* ── Danger Zone — Delete Account ──
+              Visueel duidelijk gescheiden van Sign Out (welke reversible is)
+              en gemarkeerd met rode border zodat onbedoelde tap visueel
+              gestopt wordt. Opent support-form voor manual deletion. */}
+          <View style={s.dangerZone}>
+            <Text style={s.dangerLabel}>Danger Zone</Text>
+            <Text style={s.dangerText}>
+              Deleting your account is permanent. Your listening history,
+              favorites, and subscription data will be removed.
+            </Text>
+            <Pressable
+              style={s.dangerBtn}
+              onPress={onDeleteAccount}
+              accessibilityLabel="Request account deletion"
+            >
+              <Text style={s.dangerBtnText}>Delete my account</Text>
+            </Pressable>
+          </View>
+
+          {/* ── Legal section ──
+              Vervangt de oude [OPERATOR]-placeholder. 5 sub-screens
+              gepushed via `legal/[doc]`. Inhoud van de webapp HTMLs
+              (operator-bevestigd 2026-05-27) en wordt onafhankelijk
+              van die webapp in de app onderhouden — als de webapp
+              uitgefaseerd wordt blijven deze docs gewoon staan. */}
+          <View style={s.card}>
+            <Text style={s.label}>Legal & Safety</Text>
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'terms' } as never,
+                })
+              }
+              accessibilityLabel="Read Terms of Service"
+            >
+              <Text style={s.cardRowText}>Terms of Service</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'privacy' } as never,
+                })
+              }
+              accessibilityLabel="Read Privacy Policy"
+            >
+              <Text style={s.cardRowText}>Privacy Policy</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'refund' } as never,
+                })
+              }
+              accessibilityLabel="Read Refund Policy"
+            >
+              <Text style={s.cardRowText}>Refund Policy</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'cookies' } as never,
+                })
+              }
+              accessibilityLabel="Read Cookie Policy"
+            >
+              <Text style={s.cardRowText}>Cookie Policy</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'health' } as never,
+                })
+              }
+              accessibilityLabel="Read Health and Safety"
+            >
+              <Text style={s.cardRowText}>Health & Safety</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+          </View>
+
           <Text style={s.legal}>
-            [OPERATOR] Legal / disclaimer text from the web app to be placed
-            here before launch.
+            © VIBEZCORE · All rights reserved
           </Text>
-        </ScrollView>
-      </View>
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
     );
   }
 
-  /* Signed-out view — optional auth, not a wall */
+  /* Signed-out view — optional auth, not a wall. KeyboardAwareScrollView
+     scrollt automatisch naar het gefocuste TextInput zodat het niet
+     onder het soft-keyboard valt. enableOnAndroid=true is essentieel:
+     de library skipt anders Android (ios-only default).
+     extraScrollHeight=20 geeft een buffer onder het veld zodat het
+     niet pal tegen het keyboard plakt. */
   return (
-    <View style={s.root}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <Image
-          source={require('../../../assets/vibezcore_wordmark.png')}
-          style={s.wordmark}
-          resizeMode="contain"
-          accessibilityLabel="VIBEZCORE"
-        />
+    <SafeAreaView edges={['top']} style={s.root}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={s.scroll}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        enableAutomaticScroll={true}
+      >
         <Text style={s.subtitle}>
           {mode === 'login' ? 'Welcome back.' : 'Create your account.'}
         </Text>
@@ -217,6 +717,18 @@ export default function AccountScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           autoCorrect={false}
+          /* ── OS Password Manager hints ─────────────────────────────────
+             autoComplete (Android, Google Password Manager) +
+             textContentType (iOS, iCloud Keychain). Met deze hints biedt
+             het OS automatisch een "save credentials?"-prompt aan na een
+             succesvolle login, en op latere sessies kan het de inputs
+             auto-fillen met één tap. Combineert met LAST_EMAIL_KEY-prefill
+             zodat ingelogde-met-saved-creds-users letterlijk niets meer
+             hoeven te typen. (Geadresseerd 2026-05-25 — user-frustratie:
+             "POR USEZE ZOU NIET ELKE KEER OPNIEUW MOETEN INLOGGEN".)
+             ────────────────────────────────────────────────────────── */
+          autoComplete="email"
+          textContentType="emailAddress"
         />
 
         <Text style={s.inputLabel}>Password</Text>
@@ -229,6 +741,16 @@ export default function AccountScreen() {
             placeholderTextColor={Brand.textDim}
             secureTextEntry={!showPw}
             autoCapitalize="none"
+            /* Password autofill: dynamisch per mode — 'login' → bestaande
+               opgeslagen creds aanbieden; 'signup' → nieuwe-wachtwoord-flow
+               (OS biedt automatisch een suggested-strong-password aan). */
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            textContentType={mode === 'login' ? 'password' : 'newPassword'}
+            /* Submit via keyboard "Go" → trigger login direct ipv user
+               moet eerst keyboard sluiten + Sign-in-knop tappen. Eén tap
+               minder, vooral fijn na autofill. */
+            returnKeyType={mode === 'login' ? 'go' : 'done'}
+            onSubmitEditing={onSubmit}
           />
           <Pressable
             style={s.pwToggle}
@@ -254,14 +776,61 @@ export default function AccountScreen() {
           )}
         </Pressable>
 
-        <PlaybackSettingsCard />
+        {/* Forgot Password link — alleen tonen in sign-in modus (niet
+            tijdens create-account). Routeert door naar webapp forgot-
+            password.html waar Supabase recovery-email getriggerd wordt. */}
+        {mode === 'login' && (
+          <Pressable
+            style={s.forgotLink}
+            onPress={() => router.navigate('/forgot-password' as never)}
+            accessibilityLabel="Reset your password"
+          >
+            <Text style={s.forgotLinkText}>Forgot password?</Text>
+          </Pressable>
+        )}
+
+        {/* Reassurance — mobile-app conventie is dat de user ingelogd
+            blijft tussen app-launches. We tonen die boodschap expliciet
+            zodat nieuwe gebruikers niet bang zijn telkens opnieuw te
+            moeten inloggen. */}
+        <Text style={s.staySignedIn}>
+          You'll stay signed in on this device
+        </Text>
+
+        {/* ─── OR divider ─────────────────────────────────────────────── */}
+        <View style={s.divider}>
+          <View style={s.dividerLine} />
+          <Text style={s.dividerText}>OR</Text>
+          <View style={s.dividerLine} />
+        </View>
+
+        {/* Apple "Coming soon" — placeholder button die signaleert dat
+            SSO op de roadmap staat zonder dat we nu de full Apple-
+            Developer-Program + OAuth-config moeten doen (vóór launch
+            niet haalbaar). Disabled state met "Soon"-badge maakt duidelijk
+            dat 't nog niet werkt — geen verkeerd-klik-frustratie.
+            Operator-besluit 2026-05-25: Apple eerst, Google later. */}
+        <Pressable
+          style={[s.ssoBtn, s.ssoBtnDisabled]}
+          disabled
+          accessibilityRole="button"
+          accessibilityLabel="Sign in with Apple — coming soon"
+        >
+          <Text style={s.ssoBtnApple}> </Text>
+          <Text style={s.ssoBtnText}>Continue with Apple</Text>
+          <View style={s.soonBadge}>
+            <Text style={s.soonBadgeText}>SOON</Text>
+          </View>
+        </Pressable>
+
+        <LibrarySettingsLink />
 
         <Text style={s.legal}>
           [OPERATOR] Terms / Privacy text from the web app to be placed here
           before launch.
         </Text>
-      </ScrollView>
-    </View>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -269,11 +838,16 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: 48 },
-  wordmark: {
-    width: 200,
-    height: 34,
-    marginTop: 12,
-    marginBottom: 4,
+  /* Top-bar met klein V-logo links — vervangt de oude grote wordmark
+     in de signed-out view én de platte 'Account'-koptekst-only in de
+     signed-in view. Operator-besluit 2026-05-22: groot wordmark alleen
+     op welcome + splash. */
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
   screenTitle: {
     color: Brand.text,
@@ -363,6 +937,84 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
   },
   btnDisabled: { opacity: 0.5 },
+
+  /* "Stay signed in"-reassurance — kleine gedimde regel onder de primary
+     Sign-in knop. Komt uit operator-feedback dat user wist of de session
+     bewaard blijft. Bovendien mobiele-app-conventie. */
+  staySignedIn: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+
+  /* "OR" divider — scheidt email/password-flow van de SSO-knop(pen). */
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Brand.border,
+  },
+  dividerText: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    marginHorizontal: 12,
+  },
+
+  /* SSO-knop — Apple-style: zwarte achtergrond, witte tekst. */
+  ssoBtn: {
+    backgroundColor: '#000',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Brand.border,
+  },
+  /* Disabled state — gedimd zodat duidelijk is dat de knop nog niet
+     actief is. Combineert met de SOON-badge rechts. */
+  ssoBtnDisabled: {
+    opacity: 0.55,
+  },
+  /* Apple-logo glyph (Unicode ). Apple's brand-guidelines toestaan
+     deze glyph als logo-vervanger op donker veld. */
+  ssoBtnApple: {
+    color: '#ffffff',
+    fontSize: 18,
+    marginRight: 8,
+    marginTop: -2,
+  },
+  ssoBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.semibold,
+  },
+  /* SOON-badge — kleine pill rechts naast de knop-tekst. Duidelijk visueel
+     signaal dat de knop nog niet werkt zonder gebruiker te frustreren
+     met onverklaarde non-respons bij tap. */
+  soonBadge: {
+    marginLeft: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+  },
+  soonBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1,
+  },
   card: {
     backgroundColor: Brand.panel,
     borderColor: Brand.border,
@@ -383,6 +1035,21 @@ const s = StyleSheet.create({
     color: Brand.text,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
+  },
+  /* Subscription-card live data — bigText: PRO-status of "Free account".
+     Kleur wordt inline gezet (accent voor PRO, normaal voor Free,
+     textDim voor loading). */
+  subBig: {
+    fontSize: 18,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.2,
+  },
+  subSmall: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    marginTop: 4,
+    lineHeight: 18,
   },
   dimText: {
     color: Brand.textDim,
@@ -414,23 +1081,154 @@ const s = StyleSheet.create({
     opacity: 0.6,
   },
 
-  /* Playback-card row — naast bestaande s.toggleRow (Sign in/Create
-     account) gemikt; vandaar de _2-suffix om confusion te vermijden. */
-  toggleRow2: {
+  /* Library-settings link (vervangt oude toggleRow2-styling van de
+     in-place auto-play card). Visueel een tap-rij in Account-stijl:
+     bg .04 / border .08 / radius 14 — match met de andere cards. */
+  linkCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginTop: 14,
   },
-  toggleTitle: {
+  linkTextWrap: { flex: 1 },
+  linkTitle: {
     color: Brand.text,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
   },
-  toggleSub: {
+  linkSub: {
     color: Brand.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
-    lineHeight: 17,
     marginTop: 4,
+  },
+  linkArrow: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 28,
+    marginLeft: 8,
+    lineHeight: 28,
+  },
+  /* CTA-link binnen een card (Subscription's "Upgrade", Bracelet's
+     "Reserve"). Subtiele accent-link onder de card-content, met arrow.
+     Hairline-divider boven om visueel te scheiden van de info-tekst. */
+  cardCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.10)',
+  },
+  cardCtaText: {
+    color: Brand.accent,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+  },
+  cardCtaArrow: {
+    color: Brand.accent,
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+  },
+  /* Forgot Password — kleine subtiele link onder de Sign In knop. */
+  forgotLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  forgotLinkText: {
+    color: Brand.accent,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+  },
+  /* Account Actions card-rows (Change Password / Contact Support). Lijst-
+     style binnen een card, met hairline tussen items. Geen aparte
+     "Account"-label nodig — de card-Text "Account" doet 't werk. */
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  cardRowText: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: -0.1,
+  },
+  cardRowArrow: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 22,
+    fontFamily: BrandFonts.medium,
+  },
+  cardRowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  /* Cancel Subscription — neutraal-bordered knop (niet rood; cancel is
+     reversible binnen huidige periode). Visueel minder dramatisch dan
+     Sign Out (rood). */
+  cancelBtn: {
+    marginTop: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+  },
+  /* Danger Zone — Delete Account. Rode border + rode tekst voor
+     permanente actie. */
+  dangerZone: {
+    marginTop: 24,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    backgroundColor: 'rgba(239,68,68,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.25)',
+    borderRadius: 14,
+  },
+  dangerLabel: {
+    color: Brand.error,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  dangerText: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  dangerBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.4)',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  dangerBtnText: {
+    color: Brand.error,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
   },
 });
