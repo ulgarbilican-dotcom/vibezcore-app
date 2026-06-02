@@ -44,6 +44,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Dimensions,
   Image,
   LayoutAnimation,
   Linking,
@@ -345,20 +346,25 @@ export default function AudioScreen() {
      Reden landing voor bracelet-only: voorkomt dat ze het gevoel
      krijgen dat ze de free audio library als "main" hebben terwijl ze
      géén audio-sub bezitten. */
-  const showBraceletLanding =
-    isSignedIn === true && isBraceletOwner && !hasSub;
+  /* Iter 9dq v22 (2026-06-02): isSignedIn-check verwijderd. Real
+     bracelet-owner heeft in productie altijd een token (isSignedIn=true)
+     — daar verandert niets. Maar dev-override 'bracelet' heeft GEEN
+     real token → voorheen toonde landing nooit. Conditie nu: bracelet
+     owner zonder audio-sub → landing. Dat klopt voor beide scenarios.
+     Full PRO (audio+bracelet) blijft bypassen via !hasSub-check. */
+  const showBraceletLanding = isBraceletOwner && !hasSub;
   const needsAudioUpsell = true; // landing toont alleen bracelet-only PRO
   const [exploredLibrary, setExploredLibrary] = useState(false);
-  /* Reset exploredLibrary bij elke tab-focus zodat user die elders
-     in de app navigeert (bracelet, account) en terugkomt opnieuw de
-     landing ziet. */
-  useFocusEffect(
-    useCallback(() => {
-      if (showBraceletLanding) {
-        setExploredLibrary(false);
-      }
-    }, [showBraceletLanding]),
-  );
+  /* Iter 9dq v43 (2026-06-03): focus-reset verwijderd. Voorheen werd
+     exploredLibrary teruggezet op false bij elke tab-focus zodat user
+     bij tab-switch terug op de landing kwam. Maar: het modal-sluiten
+     van de player triggert OOK een tab-focus, waardoor user na het
+     sluiten van een free sessie ongewenst terug naar de landing
+     gestuurd werd. Operator-feedback: "bezoeker moet in de free
+     omgeving blijven en alle free sessies kunnen beluisteren tot hij
+     beslist om eruit te gaan". Oplossing: laat user in library mode
+     blijven voor de hele app-sessie. Landing toont weer bij next
+     cold-start. */
 
   /* Cold-start redirect: bracelet-owners landen op /bracelet bij eerste
      app-start. Eenmalig per sessie via module-level flag. */
@@ -719,11 +725,17 @@ export default function AudioScreen() {
        4. paddingBottom rekening houdend met tab-bar (64) + system inset */
   if (showBraceletLanding && !exploredLibrary) {
     const TAB_BAR_HEIGHT = 64; // matches (tabs)/_layout.tsx
+    /* Iter 9dq v23 (2026-06-02): copy upgrade — operator-keuze. Vervangt
+       de generic "Not a playlist / Built for long-term growth"-bullets
+       met een 4-stappen groei-trajectorie (Understand → Recognize → Gain
+       → Build) die de luisteraar door z'n eigen reis loodst. Frame:
+       inzicht → zelfreflectie → praktische toepassing → transformatie.
+       Past bij premium psychologisch werk + bracelet-owner publiek. */
     const features = [
-      'Not a playlist.',
-      'Built for long-term growth.',
-      'Neuroscience, psychology, philosophy.',
-      'Every session has a purpose.',
+      'Understand the hidden patterns shaping your life',
+      'Recognize what has been holding you back',
+      'Gain practical direction for real-world challenges',
+      'Build greater clarity, confidence and self-control',
     ];
     return (
       <View
@@ -732,33 +744,36 @@ export default function AudioScreen() {
           { paddingTop: safeInsets.top },
         ]}
       >
-        {/* FOTO-BLOCK — container aspect 1.15:1 blijft (zelfde hoogte,
-            body tekst verplaatst dus niet), maar resizeMode="contain"
-            zorgt dat de SQUARE source-image volledig zichtbaar is.
-            Geen crop meer aan top of bottom (operator v12). */}
+        {/* Iter 9dq v37 (2026-06-03): COMPLETE REBUILD van de photo +
+            gradient.
+            Vereisten:
+            1. Image: square source, top-aligned, geen hoofd-crop
+            2. Visible gradient fade vanaf ongeveer 75% naar solid Brand.bg
+               aan de bottom — zodat photo "naadloos" overgaat in dark
+            3. Hoofd + face blijven 100% clean, alleen baard/jaw-area
+               krijgt zachte fade
+            4. Implementatie maximaal simpel en zichtbaar — één container,
+               één image, één gradient. */}
         <View style={s.bLandingPhoto}>
           <Image
             source={{
               uri: 'https://vibezcore-audio.b-cdn.net/images/headphone%20audio%20library%20V%20vierkant.png',
             }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="contain"
+            style={s.bLandingPhotoImg}
           />
-          {/* Geleidelijke fade van transparant naar #0a0a0a aan de
-              fotobodem voor naadloze overgang naar content. */}
           <LinearGradient
-            /* Nog lichtere fade: baard-zone (rond 70-80%) blijft
-               veel langer helder. Sterke darkening pas vanaf 90%
-               richting de fotobodem (operator v13). */
             colors={[
-              'rgba(10,10,10,0)',
-              'rgba(10,10,10,0)',
-              'rgba(10,10,10,0.03)',
-              'rgba(10,10,10,0.18)',
-              'rgba(10,10,10,0.75)',
+              'transparent',
+              'transparent',
+              'rgba(10,10,10,0.55)',
               '#0a0a0a',
             ]}
-            locations={[0, 0.65, 0.78, 0.88, 0.96, 1]}
+            /* Iter 9dq v38 (2026-06-03): fade-start 0.75 → 0.85 op
+               operator-feedback "2cm lager". Fade-zone nu 15% ipv 25%.
+               Meer photo blijft volledig clean.
+               Iter 9dq v42 (2026-06-03): operator "nog lager beginnen".
+               0.85 → 0.90. Alleen onderste ~10% (~26dp ≈ 7mm) heeft fade. */
+            locations={[0, 0.90, 0.96, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
@@ -767,14 +782,18 @@ export default function AudioScreen() {
         {/* CONTENT-BLOCK — flex: 1 met space-between layout.
             paddingBottom = TAB_BAR_HEIGHT + system inset + buffer.
             Garandeert dat de bottom-group altijd boven de tab-bar én
-            boven de system gesture-bar zit. */}
+            boven de system gesture-bar zit.
+            Iter 9dq v24 (2026-06-02): buffer verhoogd 64 → 96 (operator-
+            feedback: CTA voelde te dicht bij de tab-bar op Samsung-
+            devices met grote nav-bar).
+            Iter 9dq v26 (2026-06-02): teruggezet naar 64 omdat de
+            extra subtitle + langere bullets de content uit het visible
+            area duwde. Foto-shrink (1.15 → 1.45 aspectRatio) levert
+            net genoeg ruimte op. */}
         <View
           style={[
             s.bLandingContent,
             {
-              /* Buffer 64 ipv 32 — "Or explore the free library
-                 first" zit nu duidelijk ver boven de tab-bar (operator
-                 v13). */
               paddingBottom: TAB_BAR_HEIGHT + safeInsets.bottom + 64,
             },
           ]}
@@ -785,6 +804,13 @@ export default function AudioScreen() {
               {needsAudioUpsell ? 'COMPLETE THE SYSTEM' : 'YOUR LIBRARY'}
             </Text>
             <Text style={s.bLandingTitle}>Audio Library.</Text>
+            {/* Iter 9dq v25 (2026-06-02): authority-subtitle direct onder
+                de hoofdtitle. "The intellectual legacy..." voegt
+                instant-credibility toe vóór de bullets — leest als
+                fundament van het product, niet als marketing-claim. */}
+            <Text style={s.bLandingAuthoritySubtitle}>
+              The intellectual legacy of history's greatest minds.
+            </Text>
             <View style={s.bLandingFeatures}>
               {features.map((line, i) => (
                 <View key={i} style={s.bLandingFeatureRow}>
@@ -795,42 +821,45 @@ export default function AudioScreen() {
             </View>
           </View>
 
-          {/* Bottom groep — buttons. marginTop garandeert MINIMAAL 40px
-              tussen features en knop, zodat space-between layout nooit
-              ze te dicht bij elkaar zet op kleinere schermen. */}
-          <View style={{ marginTop: 40 }}>
+          {/* Iter 9dq v40 (2026-06-03): bottom groep nu twee text-links
+              i.p.v. een filled button + small link. Operator-feedback:
+              "verwijder de knop, gewoon tekst met link, daaronder klein
+              listen free". Primary link: accent-blauw onderstreept;
+              Secondary link: subtle dim grijs eronder. Past bij premium
+              tone — minder commercieel knop-gevoel.
+              Iter 9dq v41 (2026-06-03): marginTop 40 → 24 om beide
+              links zichtbaar te houden bij grotere photo. */}
+          <View style={{ marginTop: 24 }}>
             <Pressable
-              style={s.bLandingPrimaryBtn}
+              style={s.bLandingPrimaryLink}
               onPress={() => {
                 setExploredLibrary(true);
                 if (needsAudioUpsell) {
                   setTimeout(() => requestScrollTo('pricing'), 100);
                 }
               }}
-              android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+              hitSlop={10}
               accessibilityLabel={
                 needsAudioUpsell ? 'Get the Audio Library' : 'Enter your library'
               }
             >
-              <Text style={s.bLandingPrimaryText}>
+              <Text style={s.bLandingPrimaryLinkText}>
                 {needsAudioUpsell
-                  ? 'Get the Audio Library  →'
-                  : 'Enter the library  →'}
+                  ? 'Get the full Audio Library →'
+                  : 'Enter the library →'}
               </Text>
             </Pressable>
             {needsAudioUpsell && (
               <Pressable
-                style={s.bLandingSecondaryBtn}
+                style={s.bLandingSecondaryLink}
                 onPress={() => {
                   setExploredLibrary(true);
-                  /* Scroll naar de top free card (begin van serie-lijst)
-                     ipv pricing. Operator v13 (2026-05-31). */
                   setTimeout(() => requestScrollTo('library'), 100);
                 }}
-                android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+                hitSlop={10}
                 accessibilityLabel="Listen to free sessions first"
               >
-                <Text style={s.bLandingSecondaryText}>
+                <Text style={s.bLandingSecondaryLinkText}>
                   Listen free sessions first
                 </Text>
               </Pressable>
@@ -850,57 +879,27 @@ export default function AudioScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        {/* ── SIGN-IN / GET-ACCESS BANNER ── (iter 9eee)
-            "or" als visuele connector tussen de twee tap-zones, met
-            hairlines aan beide kanten — Apple "OR"-divider stijl.
-
-            Robustness 2026-05-30 (operator-feedback): conditie nu
-            EXPLICIET PRO-users uitsluit. Voorheen alleen `isSignedIn
-            === false` — technisch correct (PRO is altijd signed-in)
-            maar de extra `!hasSub`-check garandeert dat een PRO user
-            de banner onder geen enkele rare cache/race-conditie
-            kan zien. */}
-        {isSignedIn === false && !hasSub && (
-          <View style={s.signInBanner}>
-            {/* Top tap-zone: Log in → Account sign-in form */}
-            <Pressable
-              style={s.signInBannerMainRow}
-              onPress={() => router.navigate('/account')}
-              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-              accessibilityLabel="Log in to your account"
-            >
-              <Text style={s.signInBannerTitle}>
-                Log in to your account
-              </Text>
-            </Pressable>
-            {/* "or" divider — visuele connector tussen de twee paden */}
-            <View style={s.signInBannerOrDivider} pointerEvents="none">
-              <View style={s.signInBannerOrLine} />
-              <Text style={s.signInBannerOrText}>or</Text>
-              <View style={s.signInBannerOrLine} />
-            </View>
-            {/* Sub tap-zone: Get the library → pricing scroll */}
-            <Pressable
-              style={s.signInBannerSubRow}
-              onPress={() => {
-                requestScrollTo('pricing');
-              }}
-              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-              accessibilityLabel="Get the full audio library"
-            >
-              <Text style={s.signInBannerSubText}>
-                Get the full audio library
-              </Text>
-            </Pressable>
-          </View>
-        )}
+        {/* ── SIGN-IN / GET-ACCESS BANNER ──
+            Iter 9dq v45 (2026-06-03): VERWIJDERD voor Free/Guest users.
+            Operator-feedback: "we kunnen niet direct beginnen te verkopen".
+            Een gast moet eerst vrije rondkijk-ruimte krijgen zonder dat
+            er meteen een upsell-banner bovenaan staat. Conversie kan via
+            de pricing-section verderop op de page (scroll naar pricing
+            via "Get full library" link op de bracelet-owner landing of
+            via expliciete tap op Account → Subscribe).
+            Bracelet-owner banner ("Add Audio Library") blijft wel staan
+            omdat dat een ingelogde context is met duidelijke meerwaarde. */}
 
         {/* ── BRACELET-OWNER UPSELL BANNER ── (operator-feedback 2026-05-30)
             Voor bracelet-only owners die ingelogd zijn. Vervangt de
             generieke sign-in banner met een gerichte "Add Audio Library
             to your bracelet" boodschap. Sub copy benadrukt het complete-
             system narratief (body + mind) ipv "kom de library kopen". */}
-        {isSignedIn === true && !hasSub && isBraceletOwner && (
+        {/* Iter 9dq v21 (2026-06-02): isSignedIn-check verwijderd uit
+            conditie. In productie heeft real bracelet owner een token
+            (isSignedIn=true), maar dev-override 'bracelet' niet. Beide
+            scenarios moeten dezelfde upsell-banner zien. */}
+        {!hasSub && isBraceletOwner && (
           <Pressable
             style={s.braceletUpsellBanner}
             onPress={() => requestScrollTo('pricing')}
@@ -1993,6 +1992,26 @@ export default function AudioScreen() {
             library voelde 't dubbele opvulling. Styles blijven in de
             stylesheet voor evt. rollback. */}
 
+        {/* Iter 9dq v46 (2026-06-03): subtle "Already a member? Sign in"
+            footer-link voor uitgelogde Free/Guest users. Vervangt de
+            agressieve banner bovenaan die we eerder verwijderden — geeft
+            gasten nog steeds een duidelijke maar niet-pushy weg naar
+            login na het volledig doorbladeren van de library. Standaard
+            patroon (Spotify-stijl footer). Bracelet owners en PRO users
+            zien dit niet (zij hebben al een ander pad). */}
+        {!searchActive && isSignedIn === false && !hasSub && !isBraceletOwner && (
+          <Pressable
+            style={s.signInFooterLink}
+            onPress={() => router.navigate('/account')}
+            hitSlop={12}
+            accessibilityLabel="Already a member, sign in"
+          >
+            <Text style={s.signInFooterText}>
+              Already a member? <Text style={s.signInFooterTextAccent}>Sign in</Text>
+            </Text>
+          </Pressable>
+        )}
+
       </ScrollView>
 
       {/* Iter 9aaa: Pillar-detail bottom sheet — Apple-style minimal.
@@ -2202,6 +2221,26 @@ const s = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
+  /* Iter 9dq v46 (2026-06-03): subtle "Already a member? Sign in"
+     footer-link voor uitgelogde Free/Guest users. Onderaan de library
+     scroll, na alle content. Dim text + accent-blauw op de "Sign in"
+     woord zodat de tap-target visueel duidelijk is zonder pushy. */
+  signInFooterLink: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    marginTop: 20,
+  },
+  signInFooterText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 0.1,
+  },
+  signInFooterTextAccent: {
+    color: '#3a8fff',
+    fontFamily: 'Inter_700Bold',
+  },
   signInBannerIcon: {
     width: 38,
     height: 38,
@@ -2266,10 +2305,41 @@ const s = StyleSheet.create({
     backgroundColor: '#0a0a0a',
   },
   /* Foto-block — aspect 1:1.15 (iets minder hoog dan square zodat
-     content ruimte krijgt voor tekst + 2 buttons + tab-bar buffer). */
+     content ruimte krijgt voor tekst + 2 buttons + tab-bar buffer).
+     Iter 9dq v26 (2026-06-02): aspectRatio bumped 1.15 → 1.45 zodat
+     de foto korter wordt en de content (nu met authority-subtitle +
+     langere bullets) volledig zichtbaar blijft met de CTAs in safe
+     zone. Image-fill blijft via cover (zie resizeMode op de Image)
+     zodat geen letterbox-bars verschijnen.
+     Iter 9dq v27 (2026-06-02): aspectRatio verder verhoogd naar 1.6
+     en overflow:hidden toegevoegd. Image (zie bLandingPhotoImg)
+     is square en top-aligned — hoofd blijft volledig zichtbaar,
+     alleen de torso/onderkant wordt gecropt. */
   bLandingPhoto: {
     width: '100%',
-    aspectRatio: 1.15,
+    /* Iter 9dq v39 (2026-06-03): aspectRatio 1.6 → 1.25. Photo ~63dp
+       langer (~1.7cm). Fade-zone schuift visueel naar beneden — fade
+       start (op 0.85 van photo) zit nu in absolute pixels ~54dp lager
+       op het scherm dan voorheen. Combined met content-area margin-
+       reducties hieronder past het nog steeds.
+       Iter 9dq v41 (2026-06-03): 1.25 → 1.4 om de secondary link
+       "Listen free sessions first" weer in beeld te krijgen. Photo
+       is nu nog steeds ~32dp groter dan origineel 1.6 (= fade
+       visueel ~0.8cm lager dan baseline), maar content area heeft
+       genoeg ruimte voor beide links. */
+    aspectRatio: 1.4,
+    overflow: 'hidden',
+  },
+  /* Iter 9dq v27: image is square (aspectRatio 1.0) en breder dan
+     het container-aspect → image overflowt onderaan, container clipt
+     'm. Top-aligned (top:0) zodat het hoofd ALTIJD bovenaan staat,
+     nooit weggecropt. */
+  bLandingPhotoImg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    aspectRatio: 1.0,
   },
   /* Content-block — vult de resterende verticale ruimte na de foto.
      space-between zet top-groep en bottom-groep aan respectievelijk
@@ -2278,7 +2348,9 @@ const s = StyleSheet.create({
   bLandingContent: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 16,
+    /* Iter 9dq v39: paddingTop 16 → 8 om verticale ruimte te besparen
+       nu de photo langer is. */
+    paddingTop: 8,
     justifyContent: 'space-between',
   },
   bLandingEyebrow: {
@@ -2294,13 +2366,34 @@ const s = StyleSheet.create({
     fontFamily: 'Inter_900Black',
     letterSpacing: -0.8,
     lineHeight: 34,
-    marginBottom: 22,
+    /* Iter 9dq v25: marginBottom verlaagd van 22 → 8 omdat er nu een
+       authority-subtitle tussen title en bullets staat die de eigen
+       margin levert.
+       Iter 9dq v39: 8 → 4. Photo is langer, content moet compacter. */
+    marginBottom: 4,
+  },
+  /* Iter 9dq v25 (2026-06-02): authority-subtitle onder de title.
+     Italic + dim om "fundament/legacy"-toon te bewaren zonder met de
+     bullets te concurreren. Subtiele blue-tint matched de eyebrow.
+     Iter 9dq v26: marginBottom 22 → 14 om verticale ruimte te besparen
+     zonder dat 't claustrofobisch wordt. */
+  bLandingAuthoritySubtitle: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    fontStyle: 'italic',
+    lineHeight: 20,
+    letterSpacing: -0.1,
+    /* Iter 9dq v39: 14 → 10. Compacter nu photo langer is. */
+    marginBottom: 10,
   },
   /* Features = checkmark-bullets. Geen marginBottom op de feature-list,
      want space-between regelt al de afstand tussen tekst-groep en
-     buttons-groep. */
+     buttons-groep.
+     Iter 9dq v26: gap 10 → 7 om verticale ruimte te besparen nu de
+     bullets langer zijn en mogelijk wrappen. */
   bLandingFeatures: {
-    gap: 10,
+    gap: 7,
   },
   bLandingFeatureRow: {
     flexDirection: 'row',
@@ -2350,6 +2443,33 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
     letterSpacing: 0.2,
+  },
+  /* Iter 9dq v40 (2026-06-03): nieuwe text-link styles (vervangen
+     bLandingPrimaryBtn/Text). Primary = grote accent-blauwe tekst
+     met arrow, geen achtergrond. Secondary = subtle dim. Past bij
+     premium minimalisme — geen commercieel knop-gevoel. */
+  bLandingPrimaryLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  bLandingPrimaryLinkText: {
+    /* Iter 9dq v41: accent-blauw → wit per operator-feedback. */
+    color: '#ffffff',
+    fontSize: 17,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.2,
+  },
+  bLandingSecondaryLink: {
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingBottom: 6,
+  },
+  bLandingSecondaryLinkText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 0.1,
   },
 
   /* Bracelet-owner upsell banner — vervangt de sign-in banner voor

@@ -20,8 +20,21 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import {
+  ensureBucketLoaded,
+  getCurrentBucket,
+  subscribeUserBucket,
+} from '@/utils/user-bucket';
 
+/* Iter 9dq v44 (2026-06-03): per-user bucketed storage.
+   VZP_KEY blijft als legacy / migratie-key. Echte storage onder
+   vzp_{bucket}_v1 zodat resume-posities per user-type apart staan. */
 export const VZP_KEY = 'vzp_v1';
+const KEY_PREFIX = 'vzp_';
+const KEY_SUFFIX = '_v1';
+function vzpBucketKey(bucket: string): string {
+  return `${KEY_PREFIX}${bucket}${KEY_SUFFIX}`;
+}
 const RESUME_MIN_SEC = 4; // < dit → niet de moeite waard om "continue" te tonen
 
 type Positions = Record<string, number>;
@@ -35,12 +48,32 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+/* Iter 9dq v44: eenmalig vzp_v1 → vzp_{bucket}_v1 migreren. */
+async function migrateLegacyVzpKey(bucket: string): Promise<void> {
+  try {
+    const legacy = await AsyncStorage.getItem(VZP_KEY);
+    if (!legacy) return;
+    const newKey = vzpBucketKey(bucket);
+    const existing = await AsyncStorage.getItem(newKey);
+    if (existing) {
+      await AsyncStorage.removeItem(VZP_KEY);
+      return;
+    }
+    await AsyncStorage.setItem(newKey, legacy);
+    await AsyncStorage.removeItem(VZP_KEY);
+  } catch {
+    /* migration mislukt — proberen we volgende keer opnieuw */
+  }
+}
+
 async function loadOnce(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     try {
-      const raw = await AsyncStorage.getItem(VZP_KEY);
+      const bucket = await ensureBucketLoaded();
+      await migrateLegacyVzpKey(bucket);
+      const raw = await AsyncStorage.getItem(vzpBucketKey(bucket));
       if (raw) {
         const obj = JSON.parse(raw);
         if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
@@ -64,11 +97,23 @@ async function loadOnce(): Promise<void> {
 
 async function persist(): Promise<void> {
   try {
-    await AsyncStorage.setItem(VZP_KEY, JSON.stringify(state));
+    const bucket = getCurrentBucket();
+    await AsyncStorage.setItem(vzpBucketKey(bucket), JSON.stringify(state));
   } catch {
     /* schrijf-fout — runtime-state blijft staan */
   }
 }
+
+/* Iter 9dq v44: bij bucket-switch wis cache + reload uit nieuwe bucket. */
+subscribeUserBucket(() => {
+  state = {};
+  initialized = false;
+  loadPromise = null;
+  notify();
+  loadOnce().catch(() => {
+    /* swallow */
+  });
+});
 
 /* ── Public API ─────────────────────────────────────────────────────────── */
 

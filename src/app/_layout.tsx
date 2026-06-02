@@ -168,6 +168,15 @@ export default function RootLayout() {
       !pendingAuthLink && (treatAsGuest || (!treatAsSignedIn && auth === null));
     if (showWelcome) {
       router.replace('/welcome');
+    } else if (!pendingAuthLink && override === 'bracelet') {
+      /* Iter 9dq v21 (2026-06-02): bracelet-owner-only users (no audio
+         sub) krijgen de Bracelet-tab als landing zodat dat hun primaire
+         interactie-vlak is. Audio Library is voor hen een secondary
+         upsell-target (teaser-landing in tab) — niet de eerste indruk
+         na app-open. Audio PRO / Full PRO blijven op Audio Library
+         landen (= hun primary product). In productie kan dezelfde
+         redirect getriggerd worden o.b.v. backend "has_bracelet"-flag. */
+      router.replace('/bracelet');
     }
     SplashScreen.hideAsync().catch(() => {});
   }, [ready, auth, pendingAuthLink]);

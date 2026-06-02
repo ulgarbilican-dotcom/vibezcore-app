@@ -12,7 +12,18 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { refreshSubscription, useSubscription } from '@/hooks/useSubscription';
-import { refreshUserBucket } from '@/utils/bracelet-history';
+import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
+import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
+
+/* Iter 9dq v44 (2026-06-03): bij elke sign-in/out moeten ZOWEL de
+   bracelet-bucket als de audio-bucket (history, favorites, positions)
+   her-evalueren naar de nieuwe user. Beide gebruiken dezelfde bucket-
+   resolutie (override of JWT sub) en triggeren cache-reload bij
+   bucket-switch. */
+function refreshUserBucket(): void {
+  refreshBraceletBucket();
+  refreshAudioBucket();
+}
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import {
   cancelSubscription,

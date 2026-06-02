@@ -24,9 +24,22 @@
 import { SESSIONS } from '@/data/audio-library-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  ensureBucketLoaded,
+  getCurrentBucket,
+  subscribeUserBucket,
+} from '@/utils/user-bucket';
 
+/* Iter 9dq v44 (2026-06-03): per-user bucketed storage.
+   FAV_KEY blijft als legacy / migratie-key. Echte storage onder
+   vzf_{bucket}_v1 zodat elke user-type z'n eigen favorites heeft. */
 export const FAV_KEY = 'vzf_v1';
 const LEGACY_KEY = 'vibezcore:favorites';
+const KEY_PREFIX = 'vzf_';
+const KEY_SUFFIX = '_v1';
+function favBucketKey(bucket: string): string {
+  return `${KEY_PREFIX}${bucket}${KEY_SUFFIX}`;
+}
 
 export type FavEntry = {
   url: string;
@@ -48,12 +61,34 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+/* Iter 9dq v44: migreer vzf_v1 (oude global key) naar de current-bucket
+   key zodat per-user buckets bestaande favorites behouden. */
+async function migrateLegacyFavKey(bucket: string): Promise<void> {
+  try {
+    const legacy = await AsyncStorage.getItem(FAV_KEY);
+    if (!legacy) return;
+    const newKey = favBucketKey(bucket);
+    const existing = await AsyncStorage.getItem(newKey);
+    if (existing) {
+      await AsyncStorage.removeItem(FAV_KEY);
+      return;
+    }
+    await AsyncStorage.setItem(newKey, legacy);
+    await AsyncStorage.removeItem(FAV_KEY);
+  } catch {
+    /* migration mislukt — proberen we volgende keer opnieuw */
+  }
+}
+
 async function loadOnce(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     try {
-      const raw = await AsyncStorage.getItem(FAV_KEY);
+      const bucket = await ensureBucketLoaded();
+      /* Eerst migreer vzf_v1 → bucket-key (eenmalig per device). */
+      await migrateLegacyFavKey(bucket);
+      const raw = await AsyncStorage.getItem(favBucketKey(bucket));
       if (raw) {
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) {
@@ -76,7 +111,7 @@ async function loadOnce(): Promise<void> {
         }
       }
 
-      /* Geen vzf_v1 → migratie-check op de oude Set<url>-key. */
+      /* Geen data in de bucket → migratie-check op de pre-vzf_v1 Set<url>-key. */
       const legacyRaw = await AsyncStorage.getItem(LEGACY_KEY);
       if (legacyRaw) {
         const urls = JSON.parse(legacyRaw);
@@ -94,9 +129,9 @@ async function loadOnce(): Promise<void> {
             });
           }
           favoritesState = migrated;
-          /* Schrijf naar nieuwe key, maar laat de oude staan (operator-besluit). */
+          /* Schrijf naar nieuwe bucket-key, oude pre-vzf_v1 key laat staan. */
           await AsyncStorage.setItem(
-            FAV_KEY,
+            favBucketKey(bucket),
             JSON.stringify([...favoritesState.values()])
           );
         }
@@ -112,14 +147,27 @@ async function loadOnce(): Promise<void> {
 
 async function save(): Promise<void> {
   try {
+    const bucket = getCurrentBucket();
     await AsyncStorage.setItem(
-      FAV_KEY,
+      favBucketKey(bucket),
       JSON.stringify([...favoritesState.values()])
     );
   } catch {
     /* schrijf-fout — runtime-state blijft staan, volgende mutation probeert opnieuw */
   }
 }
+
+/* Iter 9dq v44: bij bucket-switch (sign-in/out, override change), wis
+   in-memory cache en laad uit nieuwe bucket-key. */
+subscribeUserBucket(() => {
+  favoritesState = new Map();
+  initialized = false;
+  loadPromise = null;
+  notify();
+  loadOnce().catch(() => {
+    /* swallow */
+  });
+});
 
 export function useFavorites() {
   const [snapshot, setSnapshot] = useState<Map<string, FavEntry>>(favoritesState);

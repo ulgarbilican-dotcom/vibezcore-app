@@ -21,8 +21,21 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  ensureBucketLoaded,
+  getCurrentBucket,
+  subscribeUserBucket,
+} from '@/utils/user-bucket';
 
+/* Iter 9dq v44 (2026-06-03): per-user bucketed storage.
+   - HISTORY_KEY blijft als legacy-key voor backward compat / migratie.
+   - Echte storage gebeurt nu via vzh_{bucket}_v1 (zie historyBucketKey()). */
 export const HISTORY_KEY = 'vzh_v1';
+const KEY_PREFIX = 'vzh_';
+const KEY_SUFFIX = '_v1';
+function historyBucketKey(bucket: string): string {
+  return `${KEY_PREFIX}${bucket}${KEY_SUFFIX}`;
+}
 
 export type HistoryEntry = {
   url: string;
@@ -49,12 +62,34 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+/* Iter 9dq v44: legacy-migratie. Bestaande user-data onder vzh_v1 wordt
+   eenmalig overgezet naar de current-bucket key zodat upgrade naar
+   per-user buckets geen data-verlies geeft. */
+async function migrateLegacyIfNeeded(bucket: string): Promise<void> {
+  try {
+    const legacy = await AsyncStorage.getItem(HISTORY_KEY);
+    if (!legacy) return;
+    const newKey = historyBucketKey(bucket);
+    const existing = await AsyncStorage.getItem(newKey);
+    if (existing) {
+      await AsyncStorage.removeItem(HISTORY_KEY);
+      return;
+    }
+    await AsyncStorage.setItem(newKey, legacy);
+    await AsyncStorage.removeItem(HISTORY_KEY);
+  } catch {
+    /* migration mislukt — proberen we volgende keer opnieuw */
+  }
+}
+
 async function loadOnce(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     try {
-      const raw = await AsyncStorage.getItem(HISTORY_KEY);
+      const bucket = await ensureBucketLoaded();
+      await migrateLegacyIfNeeded(bucket);
+      const raw = await AsyncStorage.getItem(historyBucketKey(bucket));
       if (raw) {
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) {
@@ -80,11 +115,27 @@ async function loadOnce(): Promise<void> {
 
 async function persist(): Promise<void> {
   try {
-    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(historyState));
+    const bucket = getCurrentBucket();
+    await AsyncStorage.setItem(
+      historyBucketKey(bucket),
+      JSON.stringify(historyState),
+    );
   } catch {
     /* schrijven faalde — runtime blijft staan, volgende keer opnieuw */
   }
 }
+
+/* Iter 9dq v44: reageer op bucket-switch (sign-in/out, override change)
+   door cache te wissen en uit nieuwe bucket te laden. */
+subscribeUserBucket(() => {
+  historyState = [];
+  initialized = false;
+  loadPromise = null;
+  notify();
+  loadOnce().catch(() => {
+    /* swallow — volgende loadOnce probeert opnieuw */
+  });
+});
 
 /* ── Tracking API ───────────────────────────────────────────────────────── */
 
@@ -170,6 +221,9 @@ export function endListen(): void {
 
 export async function clearHistory(): Promise<void> {
   try {
+    /* Wis BEIDE de current bucket-key + legacy zodat 't volledig schoon is. */
+    const bucket = getCurrentBucket();
+    await AsyncStorage.removeItem(historyBucketKey(bucket));
     await AsyncStorage.removeItem(HISTORY_KEY);
   } catch {
     /* swallow */
