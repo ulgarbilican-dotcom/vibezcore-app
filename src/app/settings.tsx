@@ -24,6 +24,11 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import {
+  DevUserOverride,
+  setDevUserOverride,
+  useDevUserOverride,
+} from '@/utils/dev-user-override';
 import { useSetting } from '@/utils/settings';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -44,6 +49,10 @@ export default function SettingsScreen() {
   const [saveProgress, setSaveProgress] = useSetting('saveProgress');
   const [trackHistory, setTrackHistory] = useSetting('trackHistory');
   const [audioQuality, setAudioQuality] = useSetting('audioQuality');
+  /* Iter 9pp: auto-play next session verhuisd van Audio Library
+     naar Settings (operator-feedback "library is content-focused,
+     preferences horen hier"). */
+  const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
 
   /* Spinner-state op de Clear-knop zodat de async clear-call duidelijk
      voortgang toont en user 'm niet dubbel tikt. */
@@ -112,6 +121,23 @@ export default function SettingsScreen() {
         {/* ── PLAYBACK ────────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>Playback</Text>
         <View style={s.card}>
+          {/* Iter 9pp: auto-play next session (verhuisd van Library) */}
+          <View style={s.row}>
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Auto-play next session</Text>
+              <Text style={s.rowSub}>
+                Automatically continue to the next session.
+              </Text>
+            </View>
+            <Switch
+              value={autoPlayNext}
+              onValueChange={setAutoPlayNext}
+              trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+              thumbColor="#ffffff"
+              ios_backgroundColor="#3a3a3a"
+            />
+          </View>
+          <View style={s.divider} />
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Save listening progress</Text>
@@ -211,11 +237,18 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Version</Text>
-              <Text style={s.rowSub}>VIBEZCORE Audio Library</Text>
+              <Text style={s.rowSub}>VIBEZCORE App · Audio + Bracelet</Text>
             </View>
             <Text style={s.versionText}>{version}</Text>
           </View>
         </View>
+
+        {/* ── DEV USER-STATE OVERRIDE (iter 9p) ────────────────────────
+            Alleen zichtbaar in __DEV__ builds. Laat operator switchen
+            tussen guest / audio-only / bracelet / full-pro zonder
+            backend te wijzigen. AsyncStorage-persistent.
+            Productie-builds skippen deze sectie volledig. */}
+        {__DEV__ && <DevUserOverrideSection />}
 
         <Pressable
           style={s.backLink}
@@ -228,6 +261,143 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
+/* ── DevUserOverrideSection (iter 9p, uitgebreid 9hh) ──────────────
+   Dev-only switcher voor het simuleren van alle login/entitlement
+   combinaties zonder backend te wijzigen. Productie-builds skippen
+   deze sectie volledig.
+
+   5 user-states gedekt:
+     - Real      : echte backend-status
+     - Free      : ingelogd zonder PRO of bracelet (was 'guest')
+     - Audio PRO : audio-subscription actief
+     - Bracelet  : bracelet-owner zonder audio sub
+     - Full PRO  : audio + bracelet
+
+   "Echte guest" (geen account / niet ingelogd) → daarvoor moet user
+   apart uitloggen via Account → Sign Out. Hint onderaan stuurt user
+   daar naartoe. */
+function DevUserOverrideSection() {
+  const current = useDevUserOverride();
+  /* Iter 9ii: "Free signed-in" verwijderd — bestaat niet in productie
+     model. VIBEZCORE accounts ontstaan alleen via productaankoop.
+     Iter 9ap (2026-05-31): "Free / Guest" optie teruggebracht puur voor
+     TEST-doel — laat de operator snel testen wat een niet-ingelogde
+     bezoeker ziet (free audio library met preview-cap, marketing
+     bracelet etc.) zonder daadwerkelijk uit te loggen. Productie-model
+     blijft: signed-in = always at least one product (deze override
+     bestaat alleen in __DEV__). */
+  const options: {
+    value: DevUserOverride;
+    label: string;
+    sub: string;
+  }[] = [
+    { value: null, label: 'Real', sub: 'Use backend status (default)' },
+    {
+      value: 'guest',
+      label: 'Free / Guest',
+      sub: 'No entitlements · sees free env',
+    },
+    {
+      value: 'audio',
+      label: 'Audio PRO',
+      sub: 'Audio subscription only',
+    },
+    {
+      value: 'bracelet',
+      label: 'Bracelet owner',
+      sub: 'Owner only · no audio sub',
+    },
+    {
+      value: 'pro',
+      label: 'Full PRO',
+      sub: 'Audio + Bracelet',
+    },
+  ];
+  return (
+    <>
+      <Text style={s.sectionLabel}>
+        Developer · Simulate user type
+      </Text>
+      <View style={s.card}>
+        {options.map((opt, i) => {
+          const active = current === opt.value;
+          return (
+            <Pressable
+              key={String(opt.value)}
+              style={[
+                devS.row,
+                i < options.length - 1 && devS.rowDivider,
+                active && devS.rowActive,
+              ]}
+              onPress={() => setDevUserOverride(opt.value)}
+              accessibilityLabel={`Simulate ${opt.label}`}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[devS.label, active && devS.labelActive]}>
+                  {opt.label}
+                </Text>
+                <Text style={devS.sub}>{opt.sub}</Text>
+              </View>
+              {active && <Text style={devS.tick}>✓</Text>}
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={devS.hint}>
+        Production has no free signed-in tier — accounts only exist via
+        product purchase. "Free / Guest" simulates a non-logged-in visitor
+        for testing without actually signing out. Dev-only · resets when
+        clearing local data.
+      </Text>
+    </>
+  );
+}
+
+const devS = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  rowActive: {
+    backgroundColor: 'rgba(58,143,255,0.08)',
+  },
+  label: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+  },
+  labelActive: {
+    color: Brand.accent,
+  },
+  sub: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.regular,
+    marginTop: 2,
+  },
+  tick: {
+    color: Brand.accent,
+    fontSize: 14,
+    fontFamily: BrandFonts.bold,
+    marginLeft: 8,
+  },
+  hint: {
+    color: 'rgba(255,255,255,0.30)',
+    fontSize: 10,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+});
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },

@@ -60,10 +60,11 @@ export default function LibraryFavoritesScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* Iter 9dq v20 (2026-06-02): eyebrow verwijderd (operator-feedback:
+            3x "Your Favorites" + harde rode eyebrow voelt overdone).
+            Topbar geeft navigation-context, H1 + subtitle volstaan voor
+            page-intro. Zelfde aanpak op /library/new en /library/free. */}
         <View style={s.header}>
-          <Text style={[s.eyebrow, { color: '#f43f5e' }]}>
-            — YOUR FAVORITES —
-          </Text>
           <Text style={s.h1}>Your Favorites</Text>
           <Text style={s.subtitle}>
             Sessions you've saved to come back to

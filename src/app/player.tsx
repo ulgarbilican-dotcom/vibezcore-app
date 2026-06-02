@@ -58,7 +58,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
@@ -89,6 +89,10 @@ function fmt(sec: number): string {
 
 export default function PlayerScreen() {
   const router = useRouter();
+  /* Iter 9kk: safe-area-inset voor bottom CTA-knop (operator-feedback
+     "onderste knop staat niet in safe zone"). Home-indicator iOS +
+     gesture-bar Android moeten ruimte krijgen. */
+  const safeInsets = useSafeAreaInsets();
   const p = useLocalSearchParams<{
     title?: string;
     series?: string;
@@ -141,7 +145,20 @@ export default function PlayerScreen() {
     return urlSession;
   }, [playerState.session, urlSession]);
 
-  const { isPro: hasSubscription } = useSubscription();
+  /* Iter 9dq v13 (2026-06-02): preview-beslissing op realIsPro ipv isPro.
+     isPro is override-aware (UI), realIsPro is uitsluitend backend-state
+     (auth). Voorheen: dev override 'Audio PRO' zonder echte token → app
+     dacht user is PRO → stuurde geen preview=true → backend 401 → "Log
+     in to listen" modal. Nu: realIsPro is alleen true bij echte PRO-
+     subscription → override gebruikt nog steeds preview-flow → 60s
+     playback op PRO sessies (zoals Free), géén login-modal meer.
+     Echte ingelogde PRO-users blijven volledige toegang houden.
+     Iter 9dq v19 (2026-06-02): nu BEIDE waardes gebruiken — realIsPro
+     voor auth (preview-flag), isPro voor display (CTA tonen/verbergen).
+     Voorheen toonde de "Full library access" CTA in PRO override omdat
+     realIsPro=false; nu verbergt-ie correct want isPro=true. */
+  const { isPro: displayIsPro, realIsPro } = useSubscription();
+  const hasSubscription = realIsPro;
   const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
 
   /* Laden bij mount — driven door urlSession (= de sessie waar dit scherm
@@ -486,17 +503,70 @@ export default function PlayerScreen() {
 
         {/* ── Full library access CTA ───────────────────────────────────
             Alleen voor guests + free-tier zichtbaar. PRO-users zijn al
-            abonnee → de CTA is voor hen ruis (operator-besluit 2026-05-23). */}
-        {!hasSubscription && (
+            abonnee → de CTA is voor hen ruis (operator-besluit 2026-05-23).
+            Iter 9dq v19: gebruikt nu displayIsPro (override-aware) zodat
+            de CTA ook verbergt in PRO/Full dev-override, niet alleen bij
+            echte ingelogde PRO-users. */}
+        {!displayIsPro && (
           <Pressable
-            style={s.cta}
+            style={[s.cta, { marginBottom: 24 + safeInsets.bottom }]}
             onPress={openUpgrade}
             android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
           >
             <Text style={s.ctaText}>→ Full library access</Text>
           </Pressable>
         )}
+        {/* Iter 9kk: bottom-spacer voor PRO users (geen CTA = geen
+            safe-area margin) — voorkomt dat play/skip controls onder
+            de home-indicator vallen. */}
+        {displayIsPro && (
+          <View style={{ height: safeInsets.bottom + 12 }} />
+        )}
       </View>
+
+      {/* ── Error modal (iter 9vv → iter 9ww) ─────────────────────────
+          Twee CTAs: Sign in (voor bestaande customers) + Get access
+          (voor nieuwe). Voorheen was er één knop die altijd naar
+          pricing leidde — verkeerd voor users die al een account
+          hebben en gewoon moeten inloggen. */}
+      {playerState.errorMessage && !playerState.previewBlocked ? (
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>
+              {playerState.errorMessage.includes('LOGIN_REQUIRED')
+                ? 'Log in to listen'
+                : playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED')
+                  ? 'Subscription required'
+                  : 'Couldn\'t load this session'}
+            </Text>
+            <Text style={s.modalBody}>
+              {playerState.errorMessage.includes('LOGIN_REQUIRED')
+                ? 'Already have a VIBEZCORE account? Sign in. Otherwise get the audio library to unlock all sessions.'
+                : playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED')
+                  ? 'This is a PRO session. Get the full audio library to unlock it.'
+                  : 'Please check your connection and try again.'}
+            </Text>
+            <View style={s.modalBtns}>
+              {/* Primary: Sign in (snel pad voor bestaande customers) */}
+              <Pressable
+                style={s.modalPrimary}
+                onPress={() => {
+                  router.back();
+                  router.navigate('/account');
+                }}
+              >
+                <Text style={s.modalPrimaryText}>Sign in</Text>
+              </Pressable>
+              {/* Secondary: Get access (naar pricing) */}
+              <Pressable style={s.modalSecondary} onPress={openUpgrade}>
+                <Text style={s.modalSecondaryText}>
+                  Get the audio library →
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {/* ── Preview-upsell modal ──────────────────────────────────────── */}
       {playerState.previewBlocked ? (
@@ -547,7 +617,16 @@ export default function PlayerScreen() {
                     onPress={playNextFromPanel}
                     style={s.endedPlayNext}
                   >
-                    <Text style={s.endedPlayNextText}>▶ Play next</Text>
+                    <Text style={s.endedPlayNextText}>
+                      {/* Iter 9rr: voor guests was de "next" sessie altijd
+                          de volgende free sessie (cross-series jump) →
+                          expliciete label "free session" voorkwam verwarring.
+                          Iter 9dq v14 (2026-06-02): freeOnly UIT, next is
+                          altijd volgende sessie in dezelfde serie ongeacht
+                          PRO-state. Label is daarom uniform "Play next" —
+                          consistent UX voor alle user-types. */}
+                      ▶ Play next
+                    </Text>
                   </Pressable>
                 </View>
               </>

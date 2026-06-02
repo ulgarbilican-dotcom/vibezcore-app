@@ -16,6 +16,7 @@
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useBraceletOwner } from '@/utils/dev-user-override';
 import { getToken } from '@/services/auth';
 import {
   getSnapshot,
@@ -27,23 +28,26 @@ import {
   showBraceletUpsell,
 } from '@/services/bracelet-upsell';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Gem, Heart, Sparkles, TrendingUp } from 'lucide-react-native';
 import { getEntryByUrl, useHistory } from '@/utils/history';
 import { isNew } from '@/utils/isNew';
 import { openSession } from '@/utils/openSession';
 import {
   consumeScrollIntent,
+  requestScrollTo,
   subscribeScrollIntent,
 } from '@/utils/scroll-intent';
 import { useSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   LayoutAnimation,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -64,6 +68,13 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+/* Module-level flag voor cold-start redirect (operator 2026-05-30).
+   Bracelet-owners landen automatisch op /bracelet bij eerste app-start
+   ipv de default Audio Library tab — voor hen is Bracelet de belangrijkste
+   tab. Eenmalige redirect per app-sessie: na de redirect kan user
+   handmatig naar Audio Library tab (waar landing-page verschijnt). */
+let braceletOwnerColdStartRedirected = false;
 import {
   SERIES,
   SERIES_PHOTO,
@@ -122,12 +133,35 @@ const UPSELL_COMPLETION_THRESHOLD = 0.8;
    nieuwe (auto-played) sessie. */
 const UPSELL_AUTO_HIDE_MS = 5_000;
 
-/* Pijlers — exact uit bron regel 2705-2738. Namen NIET wijzigen. */
+/* Pijlers — exact uit bron regel 2705-2738. Namen NIET wijzigen.
+   Iter 9aaa: descriptions toegevoegd voor tap-to-popup detail. Apple-
+   style no-nonsense — één declaratieve regel per pillar, state-taal
+   per CLAUDE.md §1 (geen medical/scientific claims). */
 const PILLARS = [
-  { num: '01', name: 'Strategic Wealth',         img: `${CDN}/Strategic%20wealth.jpg` },
-  { num: '02', name: 'Psychological Resilience',  img: `${CDN}/Psychological%20Resilience%20correct.jpg` },
-  { num: '03', name: 'Social Mastery',            img: `${CDN}/Social%20mastery.jpg` },
-  { num: '04', name: 'Stoic Fortitude',           img: `${CDN}/Stoic%20mastery.jpg` },
+  {
+    num: '01',
+    name: 'Strategic Wealth',
+    img: `${CDN}/Strategic%20wealth.jpg`,
+    desc: 'Build wealth that compounds — money, leverage, the long game.',
+  },
+  {
+    num: '02',
+    name: 'Psychological Resilience',
+    img: `${CDN}/Psychological%20Resilience%20correct.jpg`,
+    desc: 'The mind that doesn\'t break under pressure. Composure as a trained skill.',
+  },
+  {
+    num: '03',
+    name: 'Social Mastery',
+    img: `${CDN}/Social%20mastery.jpg`,
+    desc: 'Read the room. Speak with weight. Build alignment.',
+  },
+  {
+    num: '04',
+    name: 'Stoic Fortitude',
+    img: `${CDN}/Stoic%20mastery.jpg`,
+    desc: 'Discipline over impulse. Direction over reaction.',
+  },
 ];
 
 /* Filter-pills + flat session-list voor Favorites/New zijn verhuisd naar
@@ -280,6 +314,7 @@ function SessionRow({
 
 export default function AudioScreen() {
   const { isPro: hasSub } = useSubscription();
+  const isBraceletOwner = useBraceletOwner();
   /* Auth-state voor de top sign-in CTA banner (operator-keuze
      2026-05-26: Welcome wordt na 1× dismiss niet meer bereikbaar,
      dus uitgelogde users moeten ÓÓK vanaf de Audio-tab kunnen
@@ -296,6 +331,47 @@ export default function AudioScreen() {
       cancelled = true;
     };
   }, []);
+
+  /* ── Bracelet-only PRO landing-flow (operator 2026-05-31, v3) ──
+     Voor BRACELET-ONLY PRO users (ingelogd, bracelet maar GEEN audio
+     sub). Landing page met "Complete the system / Add Audio Library"
+     upsell. Tap reveals de echte library content. Bij terug-navigatie
+     reset naar landing.
+
+     Full PRO (audio + bracelet) ziet de NORMALE Audio Library direct,
+     zoals voorheen — geen landing, want zij hebben al audio toegang.
+     De landing voelt voor hen onnodig (extra tap zonder waarde).
+
+     Reden landing voor bracelet-only: voorkomt dat ze het gevoel
+     krijgen dat ze de free audio library als "main" hebben terwijl ze
+     géén audio-sub bezitten. */
+  const showBraceletLanding =
+    isSignedIn === true && isBraceletOwner && !hasSub;
+  const needsAudioUpsell = true; // landing toont alleen bracelet-only PRO
+  const [exploredLibrary, setExploredLibrary] = useState(false);
+  /* Reset exploredLibrary bij elke tab-focus zodat user die elders
+     in de app navigeert (bracelet, account) en terugkomt opnieuw de
+     landing ziet. */
+  useFocusEffect(
+    useCallback(() => {
+      if (showBraceletLanding) {
+        setExploredLibrary(false);
+      }
+    }, [showBraceletLanding]),
+  );
+
+  /* Cold-start redirect: bracelet-owners landen op /bracelet bij eerste
+     app-start. Eenmalig per sessie via module-level flag. */
+  useEffect(() => {
+    if (
+      !braceletOwnerColdStartRedirected &&
+      isSignedIn === true &&
+      isBraceletOwner
+    ) {
+      braceletOwnerColdStartRedirected = true;
+      router.replace('/bracelet' as never);
+    }
+  }, [isSignedIn, isBraceletOwner]);
   /* Audio-service-snapshot voor de "now-playing" highlight op de
      FREE-balk(en) onder elke serie. Re-rendert ~elke 250ms tijdens
      playback (expo-audio playbackStatusUpdate, updateInterval 250 in
@@ -400,6 +476,14 @@ export default function AudioScreen() {
      onafhankelijke state — meerdere subcats mogen wél tegelijk open. */
   const [expandedSeries, setExpandedSeries] = useState<string | null>(null);
   const [subExpanded, setSubExpanded] = useState<Record<string, boolean>>({});
+  /* Iter 9aaa: pillar-detail modal state. Tap op pillar-card → open
+     bottom-sheet met korte uitleg. Apple-style minimal. */
+  const [detailPillar, setDetailPillar] = useState<
+    (typeof PILLARS)[number] | null
+  >(null);
+  /* Iter 9bbb: safe-area inset voor pillar-modal bottom (home-indicator
+     iOS / gesture-bar Android moeten ruimte krijgen). */
+  const safeInsets = useSafeAreaInsets();
   /* Plan-keuze in het aankoopblok — Yearly standaard geselecteerd
      (blauwdruk §3.6: "Yearly visueel uitgelicht, aanbevolen"). */
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
@@ -509,6 +593,11 @@ export default function AudioScreen() {
       if (target === 'pricing') scrollToTarget(pricingYRef.current);
       else if (target === 'library-settings')
         scrollToTarget(settingCardYRef.current);
+      else if (target === 'library')
+        /* Scroll naar het begin van de serie-lijst (bovenste free card).
+           Gebruikt door bracelet-owner landing → "Listen free sessions
+           first" CTA (operator v13). */
+        scrollToTarget(libListYRef.current);
     };
     const unsub = subscribeScrollIntent(handle);
     const pending = consumeScrollIntent();
@@ -588,9 +677,17 @@ export default function AudioScreen() {
   };
   /* Accordion-toggle: zelfde serie nogmaals tikken → dicht (null).
      Andere serie tikken → die wordt de geopende; eventuele vorige sluit
-     automatisch. Geen animatie geïntroduceerd (was er ook niet). */
+     automatisch.
+     Iter 9xx: bij sluiten/wisselen worden Soundscapes-subcat-expansies
+     ook gereset zodat de subcards niet "blijven openstaan" achter de
+     gesloten hoofdkaart. Volgende keer Soundscapes opent → alle 4
+     subcats start ingeklapt (operator-feedback). */
   const toggle = (name: string) =>
-    setExpandedSeries((prev) => (prev === name ? null : name));
+    setExpandedSeries((prev) => {
+      const next = prev === name ? null : name;
+      setSubExpanded({});
+      return next;
+    });
   const toggleSub = (name: string) =>
     setSubExpanded((p) => ({ ...p, [name]: !p[name] }));
 
@@ -612,8 +709,140 @@ export default function AudioScreen() {
     openSession(sess);
   };
 
+  /* ── BRACELET-OWNER LANDING PAGE (v11 — clean rebuild) ──
+     Volledig herbouwd voor robuuste verhoudingen op alle scherm-
+     groottes. Geen scroll, geen overflow, geen cut-off.
+     Structuur:
+       1. Root View met explicit paddingTop voor safe-area
+       2. Foto-block (aspectRatio voor proporties) met gradient overlay
+       3. Content-block (flex: 1) met space-between voor top/bottom groups
+       4. paddingBottom rekening houdend met tab-bar (64) + system inset */
+  if (showBraceletLanding && !exploredLibrary) {
+    const TAB_BAR_HEIGHT = 64; // matches (tabs)/_layout.tsx
+    const features = [
+      'Not a playlist.',
+      'Built for long-term growth.',
+      'Neuroscience, psychology, philosophy.',
+      'Every session has a purpose.',
+    ];
+    return (
+      <View
+        style={[
+          s.bLandingRoot,
+          { paddingTop: safeInsets.top },
+        ]}
+      >
+        {/* FOTO-BLOCK — container aspect 1.15:1 blijft (zelfde hoogte,
+            body tekst verplaatst dus niet), maar resizeMode="contain"
+            zorgt dat de SQUARE source-image volledig zichtbaar is.
+            Geen crop meer aan top of bottom (operator v12). */}
+        <View style={s.bLandingPhoto}>
+          <Image
+            source={{
+              uri: 'https://vibezcore-audio.b-cdn.net/images/headphone%20audio%20library%20V%20vierkant.png',
+            }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="contain"
+          />
+          {/* Geleidelijke fade van transparant naar #0a0a0a aan de
+              fotobodem voor naadloze overgang naar content. */}
+          <LinearGradient
+            /* Nog lichtere fade: baard-zone (rond 70-80%) blijft
+               veel langer helder. Sterke darkening pas vanaf 90%
+               richting de fotobodem (operator v13). */
+            colors={[
+              'rgba(10,10,10,0)',
+              'rgba(10,10,10,0)',
+              'rgba(10,10,10,0.03)',
+              'rgba(10,10,10,0.18)',
+              'rgba(10,10,10,0.75)',
+              '#0a0a0a',
+            ]}
+            locations={[0, 0.65, 0.78, 0.88, 0.96, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+        </View>
+
+        {/* CONTENT-BLOCK — flex: 1 met space-between layout.
+            paddingBottom = TAB_BAR_HEIGHT + system inset + buffer.
+            Garandeert dat de bottom-group altijd boven de tab-bar én
+            boven de system gesture-bar zit. */}
+        <View
+          style={[
+            s.bLandingContent,
+            {
+              /* Buffer 64 ipv 32 — "Or explore the free library
+                 first" zit nu duidelijk ver boven de tab-bar (operator
+                 v13). */
+              paddingBottom: TAB_BAR_HEIGHT + safeInsets.bottom + 64,
+            },
+          ]}
+        >
+          {/* Top groep */}
+          <View>
+            <Text style={s.bLandingEyebrow}>
+              {needsAudioUpsell ? 'COMPLETE THE SYSTEM' : 'YOUR LIBRARY'}
+            </Text>
+            <Text style={s.bLandingTitle}>Audio Library.</Text>
+            <View style={s.bLandingFeatures}>
+              {features.map((line, i) => (
+                <View key={i} style={s.bLandingFeatureRow}>
+                  <Text style={s.bLandingCheck}>✓</Text>
+                  <Text style={s.bLandingFeatureText}>{line}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Bottom groep — buttons. marginTop garandeert MINIMAAL 40px
+              tussen features en knop, zodat space-between layout nooit
+              ze te dicht bij elkaar zet op kleinere schermen. */}
+          <View style={{ marginTop: 40 }}>
+            <Pressable
+              style={s.bLandingPrimaryBtn}
+              onPress={() => {
+                setExploredLibrary(true);
+                if (needsAudioUpsell) {
+                  setTimeout(() => requestScrollTo('pricing'), 100);
+                }
+              }}
+              android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+              accessibilityLabel={
+                needsAudioUpsell ? 'Get the Audio Library' : 'Enter your library'
+              }
+            >
+              <Text style={s.bLandingPrimaryText}>
+                {needsAudioUpsell
+                  ? 'Get the Audio Library  →'
+                  : 'Enter the library  →'}
+              </Text>
+            </Pressable>
+            {needsAudioUpsell && (
+              <Pressable
+                style={s.bLandingSecondaryBtn}
+                onPress={() => {
+                  setExploredLibrary(true);
+                  /* Scroll naar de top free card (begin van serie-lijst)
+                     ipv pricing. Operator v13 (2026-05-31). */
+                  setTimeout(() => requestScrollTo('library'), 100);
+                }}
+                android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+                accessibilityLabel="Listen to free sessions first"
+              >
+                <Text style={s.bLandingSecondaryText}>
+                  Listen free sessions first
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView edges={['top']} style={s.root}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={s.scroll}
@@ -621,28 +850,76 @@ export default function AudioScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        {/* ── SIGN-IN CTA BANNER ── (operator-keuze 2026-05-26)
-            Voor users die uitgelogd zijn maar geen welcome-screen meer
-            zien. Subtiel banner bovenaan met directe tap-naar-Account-
-            tab. Verbergen bij signed-in OR wanneer auth-state nog laadt
-            (null) om flicker te voorkomen. */}
-        {isSignedIn === false && (
-          <Pressable
-            style={s.signInBanner}
-            onPress={() => router.navigate('/account')}
-            android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-            accessibilityLabel="Sign in to unlock the full library"
-          >
-            <View style={s.signInBannerIcon}>
-              <Text style={s.signInBannerIconText}>♪</Text>
+        {/* ── SIGN-IN / GET-ACCESS BANNER ── (iter 9eee)
+            "or" als visuele connector tussen de twee tap-zones, met
+            hairlines aan beide kanten — Apple "OR"-divider stijl.
+
+            Robustness 2026-05-30 (operator-feedback): conditie nu
+            EXPLICIET PRO-users uitsluit. Voorheen alleen `isSignedIn
+            === false` — technisch correct (PRO is altijd signed-in)
+            maar de extra `!hasSub`-check garandeert dat een PRO user
+            de banner onder geen enkele rare cache/race-conditie
+            kan zien. */}
+        {isSignedIn === false && !hasSub && (
+          <View style={s.signInBanner}>
+            {/* Top tap-zone: Log in → Account sign-in form */}
+            <Pressable
+              style={s.signInBannerMainRow}
+              onPress={() => router.navigate('/account')}
+              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+              accessibilityLabel="Log in to your account"
+            >
+              <Text style={s.signInBannerTitle}>
+                Log in to your account
+              </Text>
+            </Pressable>
+            {/* "or" divider — visuele connector tussen de twee paden */}
+            <View style={s.signInBannerOrDivider} pointerEvents="none">
+              <View style={s.signInBannerOrLine} />
+              <Text style={s.signInBannerOrText}>or</Text>
+              <View style={s.signInBannerOrLine} />
             </View>
+            {/* Sub tap-zone: Get the library → pricing scroll */}
+            <Pressable
+              style={s.signInBannerSubRow}
+              onPress={() => {
+                requestScrollTo('pricing');
+              }}
+              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+              accessibilityLabel="Get the full audio library"
+            >
+              <Text style={s.signInBannerSubText}>
+                Get the full audio library
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── BRACELET-OWNER UPSELL BANNER ── (operator-feedback 2026-05-30)
+            Voor bracelet-only owners die ingelogd zijn. Vervangt de
+            generieke sign-in banner met een gerichte "Add Audio Library
+            to your bracelet" boodschap. Sub copy benadrukt het complete-
+            system narratief (body + mind) ipv "kom de library kopen". */}
+        {isSignedIn === true && !hasSub && isBraceletOwner && (
+          <Pressable
+            style={s.braceletUpsellBanner}
+            onPress={() => requestScrollTo('pricing')}
+            android_ripple={{ color: 'rgba(58,143,255,0.10)' }}
+            accessibilityLabel="Add the Audio Library to your bracelet"
+          >
             <View style={{ flex: 1 }}>
-              <Text style={s.signInBannerTitle}>Sign in to unlock the full library</Text>
-              <Text style={s.signInBannerSub}>
-                Or create a free account · No credit card required
+              <Text style={s.braceletUpsellEyebrow}>
+                COMPLETE THE SYSTEM
+              </Text>
+              <Text style={s.braceletUpsellTitle}>
+                Add the Audio Library
+              </Text>
+              <Text style={s.braceletUpsellSub}>
+                You have the bracelet. Add structured psychological
+                transformation alongside it.
               </Text>
             </View>
-            <Text style={s.signInBannerArrow}>›</Text>
+            <Text style={s.braceletUpsellArrow}>→</Text>
           </Pressable>
         )}
 
@@ -704,17 +981,32 @@ export default function AudioScreen() {
               </Text>
             </View>
 
-            {/* ── 4 PIJLERS ── bron regel 2705-2738 ── */}
+            {/* ── 4 PIJLERS ── bron regel 2705-2738 ──
+                Iter 9aaa: Pressable + onPress opent detail-popup met
+                korte uitleg per pillar. */}
             <View style={s.pillarsGrid}>
               {PILLARS.map((p) => (
-                <View key={p.num} style={s.pillar}>
+                <Pressable
+                  key={p.num}
+                  style={s.pillar}
+                  onPress={() => setDetailPillar(p)}
+                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+                  accessibilityLabel={`Learn about ${p.name}`}
+                >
                   <Image source={{ uri: p.img }} style={s.pillarImg} resizeMode="cover" />
                   <View style={s.pillarOverlay} />
                   <View style={s.pillarTextWrap}>
                     <Text style={s.pillarNum}>{p.num}</Text>
-                    <Text style={s.pillarName}>{p.name}</Text>
+                    <Text
+                      style={s.pillarName}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.85}
+                    >
+                      {p.name}
+                    </Text>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </View>
 
@@ -746,11 +1038,11 @@ export default function AudioScreen() {
           </>
         )}
 
-        {/* ── LIBRARY-CONTROLS — bron vz-view-library (geconsolideerd in
-            deze tab). Geplaatst ONDER de "Updated monthly…"-regel zoals
-            besluit eigenaar. Zoekbalk + filter-pills (5, single-select,
-            horizontaal scrollbaar) + live sessie-teller rechts + Your
-            Journey-card. ── */}
+        {/* ── LIBRARY-CONTROLS — search bar
+            Iter 9ss: alleen tonen voor PRO users (full library doorzoekbaar).
+            Guests hebben slechts 14 free sessies; search is voor hen overhead
+            zonder waarde — die zien direct alle free via de chip. */}
+        {hasSub && (
         <View
           style={s.searchWrap}
           onLayout={(e) => {
@@ -782,6 +1074,7 @@ export default function AudioScreen() {
             </Pressable>
           ) : null}
         </View>
+        )}
 
         {/* Pills-rij + sessie-teller zijn vervangen door 3 navigatie-knoppen
            verderop in de pagina (zie blok onder de EXPLORE SERIES-header,
@@ -797,40 +1090,78 @@ export default function AudioScreen() {
             blijft staan. De last-played-tracker (useShowableLastPlayed)
             blijft bestaan en voedt nu de popup ipv de library-card. */}
 
+        {/* Iter 9dq v15 (2026-06-02): Your Journey + filter-chips in
+            ÉÉN blok naast elkaar, ipv journey als eigen list-row eronder.
+            Iter 9dq v16 (2026-06-02): operator-feedback — alle chips in
+            ÉÉN kleur (Brand.accent blauw) + exact even groot. Onderscheid
+            tussen chips via Lucide icoon + label, niet via kleur.
+            Equal-flex layout zodat 2 of 3 chips altijd even breed zijn,
+            vaste minHeight zodat ze even hoog zijn ongeacht label-wrap. */}
         {!searchActive && (
-          <Pressable
-            style={s.journeyCard}
-            onPress={() => router.push('/history')}
-            android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
-          >
-            <View style={s.journeyIconBox}>
-              <Text style={s.journeyIconGlyph}>🕒</Text>
-            </View>
-            <View style={s.journeyBody}>
-              <Text style={s.journeyTitle}>Your Journey</Text>
-              <Text style={s.journeySub}>Streak, history & insights</Text>
-            </View>
-            <Text style={s.journeyChev}>›</Text>
-          </Pressable>
+          <View style={s.libChipsRow}>
+            <Pressable
+              style={s.libChipCard}
+              onPress={() => router.push('/history')}
+              android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+              accessibilityLabel="View your listening journey"
+            >
+              <TrendingUp size={22} color="#3a8fff" strokeWidth={2.2} />
+              <Text style={s.libChipCardLabel}>Your Journey</Text>
+            </Pressable>
+
+            {!hasSub ? (
+              <Pressable
+                style={s.libChipCard}
+                onPress={() => router.push('/library/free')}
+                android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+                accessibilityLabel="Browse all free sessions"
+              >
+                <Gem size={22} color="#3a8fff" strokeWidth={2.2} />
+                <Text style={s.libChipCardLabel}>Free Sessions</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  style={s.libChipCard}
+                  onPress={() => router.push('/library/new')}
+                  android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+                  accessibilityLabel="Browse new sessions"
+                >
+                  <Sparkles size={22} color="#3a8fff" strokeWidth={2.2} />
+                  <Text style={s.libChipCardLabel}>New</Text>
+                </Pressable>
+                <Pressable
+                  style={s.libChipCard}
+                  onPress={() => router.push('/library/favorites')}
+                  android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+                  accessibilityLabel="Browse favorites"
+                >
+                  <Heart size={22} color="#3a8fff" strokeWidth={2.2} />
+                  <Text style={s.libChipCardLabel}>Favorites</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
         )}
 
-        {/* Auto-play-next-setting — verhuisd van Account naar hier omdat
-           dit een audio-ervaring-instelling is. Account heeft alleen
-           een link-card die hierheen scrollt via scroll-intent. */}
+        {/* Iter 9tt: auto-play toggle terug op Library (operator-feedback:
+            "moet directly accessible zijn, niet diep in Settings").
+            Compact 1-regel row met Switch rechts. Settings → Playback
+            blijft als secondaire plek. */}
         {!searchActive && (
           <View
-            style={s.settingCard}
+            style={s.autoPlayRow}
             onLayout={(e) => {
               settingCardYRef.current = e.nativeEvent.layout.y;
             }}
           >
-            <View style={s.settingTextWrap}>
-              <Text style={s.settingTitle}>Auto-play next session</Text>
-              <Text style={s.settingSub}>
-                Automatically play the next session in the series when one
-                ends.
-              </Text>
-            </View>
+            {/* Iter 9uu: label conditional op subscription. Voor guests
+                was auto-play altijd cross-series free flow → expliciet
+                "free session". PRO users zagen "next session".
+                Iter 9dq v14 (2026-06-02): freeOnly UIT — next is altijd
+                volgende sessie in dezelfde serie. Label uniform voor
+                alle user-types. */}
+            <Text style={s.autoPlayLabel}>Auto-play next session</Text>
             <Switch
               value={autoPlayNext}
               onValueChange={setAutoPlayNext}
@@ -1016,66 +1347,8 @@ export default function AudioScreen() {
             )
           ) : (
             <>
-              {/* 3 navigatie-knoppen — onder "Updated monthly with fresh
-                 sessions", boven de eerste serie-card. Geen toggles, geen
-                 actieve state — elke knop pusht naar een eigen sub-page. */}
-              <View
-                style={{
-                  flexDirection: 'row',
-                  marginHorizontal: 2,
-                  marginBottom: 20,
-                  gap: 8,
-                }}
-              >
-                <Pressable
-                  onPress={() => router.push('/library/new')}
-                  style={{
-                    flex: 1,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderRadius: 99,
-                    backgroundColor: 'rgba(255,255,255,0.06)',
-                    alignItems: 'center',
-                  }}
-                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600' }}>
-                    New
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => router.push('/library/favorites')}
-                  style={{
-                    flex: 1,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderRadius: 99,
-                    backgroundColor: 'rgba(255,255,255,0.06)',
-                    alignItems: 'center',
-                  }}
-                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600' }}>
-                    Favorites
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => router.push('/library/free')}
-                  style={{
-                    flex: 1,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderRadius: 99,
-                    backgroundColor: 'rgba(255,255,255,0.06)',
-                    alignItems: 'center',
-                  }}
-                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600' }}>
-                    Free
-                  </Text>
-                </Pressable>
-              </View>
+              {/* Iter 9pp: navTiles verplaatst naar boven (samen met search-
+                  utility zone). Series-cards starten direct na de hero-block. */}
               {/* Series-card-rendering — altijd 12 cards, ongefilterd
                  (Audio Library is in default-modus de homepage). */}
               {SERIES.map((ser) => {
@@ -1132,34 +1405,37 @@ export default function AudioScreen() {
                     end={{ x: 0, y: 1 }}
                     style={StyleSheet.absoluteFill}
                   />
-                  {/* Pill-cluster rechtsboven — NEW-badge (alleen wanneer
-                     hasNew=true) links van VIEW ALL. FOLLOW-pill
-                     is per eigenaar-besluit verwijderd; "save voor later"
-                     gaat via de Favorites-hartjes op sessie-niveau. De
-                     cluster blijft als wrapper voor consistente plaatsing
-                     met de Coming-card en als toekomstige uitbreidingsplek. */}
-                  <View style={s.pillCluster}>
-                    {hasNew && (
+                  {/* Pill-cluster rechtsboven — alleen NEW-badge (wanneer
+                     hasNew=true). De More/Less toggle is verhuisd naar
+                     bottom-right (operator-feedback 2026-05-30: chevron-
+                     only, hoort visueel onderaan de card, niet bovenop). */}
+                  {hasNew && (
+                    <View style={s.pillCluster}>
                       <View style={s.flatNewPill}>
                         <Text style={s.flatNewPillTxt}>NEW</Text>
                       </View>
-                    )}
-                    <Pressable
-                      style={s.viewAllPill}
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        toggle(ser.name);
-                      }}
-                      hitSlop={6}
-                      android_ripple={{
-                        color: 'rgba(255,255,255,0.10)',
-                        borderless: true,
-                      }}
-                    >
-                      <Text style={s.viewAllText}>VIEW ALL</Text>
-                      <Text style={s.viewAllChev}>›</Text>
-                    </Pressable>
-                  </View>
+                    </View>
+                  )}
+                  {/* More/Less toggle — rechtsONDER, icon-only.
+                      Chevron richting toont state: ⌄ closed, ⌃ open. Geen
+                      "More"/"Less" tekst meer (Apple-stijl disclosure). */}
+                  <Pressable
+                    style={s.moreToggleBR}
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                      toggle(ser.name);
+                    }}
+                    hitSlop={10}
+                    android_ripple={{
+                      color: 'rgba(255,255,255,0.12)',
+                      borderless: true,
+                    }}
+                    accessibilityLabel={isOpen ? 'Hide sessions' : 'Show all sessions'}
+                  >
+                    <Text style={s.moreToggleChev}>
+                      {isOpen ? '⌃' : '⌄'}
+                    </Text>
+                  </Pressable>
                   {/* FIX 5: 3px progress-strip net boven libCardBody. Pakt
                      dezelfde flex-end-flow als libCardBody zodat-ie precies
                      bovenaan het content-blok zit (= visuele "foto/body"-
@@ -1362,14 +1638,13 @@ export default function AudioScreen() {
                               style={s.libSubcatBg}
                             />
                             <View style={s.libSubcatGrad} />
+                            {/* Iter 9qq (operator-feedback 2026-05-30):
+                                chevron verhuisd van top-right → bottom-right
+                                + icon-only (⌄ closed, ⌃ open). Match met
+                                main series card moreToggleBR. */}
                             <View style={s.libCardChev}>
-                              <Text
-                                style={[
-                                  s.libCardChevTxt,
-                                  subOpen && s.libCardChevTxtOpen,
-                                ]}
-                              >
-                                ›
+                              <Text style={s.libCardChevTxt}>
+                                {subOpen ? '⌃' : '⌄'}
                               </Text>
                             </View>
                             <View style={s.libSubcatBody}>
@@ -1491,7 +1766,23 @@ export default function AudioScreen() {
             pricingYRef.current = e.nativeEvent.layout.y;
           }}
         >
+          {/* Iter 9zz: OUR MISSION terug bovenaan als context-intro,
+              geïntegreerd ipv los panel. Zet de "waarom" vóór de "hoe
+              veel" — natuurlijke flow van waarde → keuze → actie. */}
+          <View style={s.buyMissionRow}>
+            <Text style={s.buyMissionStar}>★</Text>
+            <Text style={s.buyMissionLabel}>OUR MISSION</Text>
+          </View>
+          <Text style={s.buyMissionStatement}>
+            Make personal growth accessible.
+          </Text>
+
+          <View style={s.buyDivider} />
+
           <Text style={s.buyTitle}>Start your journey today</Text>
+          <Text style={s.buySub}>
+            Choose your plan · Cancel anytime
+          </Text>
 
           <View style={s.priceRow}>
             {/* ── MONTHLY-kaart — neutraal: lichter-zwart blok, dunne grijze
@@ -1566,23 +1857,13 @@ export default function AudioScreen() {
             </Pressable>
           </View>
 
-          {/* OUR MISSION-blok — eigen panel met blauwe ster. */}
-          <View style={s.missionCard}>
-            <View style={s.missionLabelRow}>
-              <Text style={s.missionStar}>★</Text>
-              <Text style={s.missionLabel}>OUR MISSION</Text>
-            </View>
-            <Text style={s.missionTitle}>
-              Make personal growth accessible.
-            </Text>
-            <Text style={s.missionSub}>
-              The life you want requires a version of you that doesn't exist
-              yet.
-            </Text>
-          </View>
+          {/* Iter 9yy: OUR MISSION weggehaald uit pricing-blok. Was
+              visueel disruptief tussen cards en CTA. Mission leeft al
+              elders op de page (hero + pillars + emerson). */}
 
           {/* CTA — opent Gumroad-checkout van het geselecteerde plan.
-             Tekst toont actieve keuze + prijs/maand. */}
+              Direct onder pricing-cards: pricing → tap CTA → checkout
+              (geen mission-card meer als interruptie). */}
           <Pressable
             style={s.ctaBtn}
             onPress={openCheckout}
@@ -1595,29 +1876,20 @@ export default function AudioScreen() {
             </Text>
           </Pressable>
 
-          <Text style={s.fineline}>
-            One plan per checkout · Clear your cart when switching
-          </Text>
-
+          {/* Iter 9yy: checks-row direct onder CTA — voelt als één
+              "vertrouwen-bevestiging"-blok bij de aankoop. */}
           <View style={s.checks}>
             <Text style={s.check}>✓ Cancel anytime</Text>
             <Text style={s.check}>✓ Instant access</Text>
             <Text style={s.check}>✓ Monthly new drops</Text>
           </View>
 
+          {/* Iter 9yy: 3 finelines → 1 compact regeltje. Alle relevante
+              prijs/payment-info in één scan-line. */}
           <Text style={s.fineline}>
-            Prices in USD · 14-day money-back
+            14-day money-back · Prices in USD, incl. VAT
           </Text>
-          {/* VAT-disclaimer (operator-keuze 2026-05-27): voorkomt
-              verwarring tussen card-prijs en Gumroad checkout-subtotal.
-              Gumroad toont eerst pre-VAT subtotal ($10.66) → daarna VAT
-              → totaal ($12.90). User die nu de card ziet ($12.90 incl.
-              VAT voor NL) ziet op Gumroad eerst $10.66 = lager. Deze
-              line maakt duidelijk dat dat geen prijswijziging is, alleen
-              de pre-tax breakdown. */}
-          <Text style={s.fineline}>
-            Excl. local VAT · Final price calculated at checkout
-          </Text>
+
           <Text style={s.secureRow}>
             🔒 SECURE CHECKOUT · ↻ CANCEL ANYTIME
           </Text>
@@ -1711,34 +1983,195 @@ export default function AudioScreen() {
             TODO: animatie nog te ontwerpen (operator stuurt specs).
             Voor nu statische card; framer/reanimated-wrapper komt later.
 
-            Verbergen tijdens search (consistent met andere blokken). */}
-        {!searchActive && hasSub && (
-          <Pressable
-            style={s.braceletTeaser}
-            onPress={() => router.navigate('/bracelet')}
-            android_ripple={{ color: 'rgba(58,143,255,0.08)' }}
-          >
-            <View style={s.braceletTeaserBadge}>
-              <Text style={s.braceletTeaserBadgeText}>
-                ⚡ KICKSTARTER — 1 AUGUST 2026
-              </Text>
-            </View>
-            <Text style={s.braceletTeaserTitle}>Smart Bead Bracelet</Text>
-            <Text style={s.braceletTeaserSub}>
-              5 haptic modes. One clear outcome.{'\n'}
-              You in control of your own state.
-            </Text>
-            <Text style={s.braceletTeaserCta}>Explore the bracelet ›</Text>
-          </Pressable>
-        )}
+            Verbergen tijdens search (consistent met andere blokken).
+            Iter 9r: ook verbergen voor owners — die hebben de bracelet
+            al. Geen upsell-rationale. */}
+        {/* Iter 9di (2026-05-31): braceletTeaser-card verwijderd onderaan
+            de Audio Library voor PRO-users. De cross-sell naar de
+            bracelet leeft nu volledig op de Bracelet-tab zelf (waar
+            Audio PRO een eigen landing krijgt). Onderaan de audio-
+            library voelde 't dubbele opvulling. Styles blijven in de
+            stylesheet voor evt. rollback. */}
 
       </ScrollView>
+
+      {/* Iter 9aaa: Pillar-detail bottom sheet — Apple-style minimal.
+          Backdrop tap = close, ✕ rechtsboven, korte declaratieve copy. */}
+      {detailPillar && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setDetailPillar(null)}
+          statusBarTranslucent
+        >
+          <View style={s.pillarModalRoot}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setDetailPillar(null)}
+              accessibilityLabel="Close"
+            />
+            <View
+              style={[
+                s.pillarModalSheet,
+                /* Iter 9bbb: dynamic safe-area bottom padding */
+                { paddingBottom: 24 + safeInsets.bottom },
+              ]}
+            >
+              <View style={s.pillarModalHandle} />
+              <Pressable
+                style={s.pillarModalClose}
+                onPress={() => setDetailPillar(null)}
+                hitSlop={10}
+                accessibilityLabel="Close"
+              >
+                <Text style={s.pillarModalCloseText}>✕</Text>
+              </Pressable>
+              <Text style={s.pillarModalEyebrow}>
+                {detailPillar.num} · PILLAR
+              </Text>
+              <Text style={s.pillarModalTitle}>
+                {detailPillar.name}
+              </Text>
+              <Text style={s.pillarModalDesc}>{detailPillar.desc}</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+  /* Iter 9: nav-tiles voor New / Favorites / Free. Apple-iOS-style
+     squircle tiles met glyph + label. 12px radius, hairline border,
+     subtle bg-fill. Vervangt de oude full-pill nav-knoppen die te
+     "marketing-button"-achtig aanvoelden. */
+  navTiles: {
+    flexDirection: 'row',
+    marginHorizontal: 2,
+    marginBottom: 20,
+    gap: 10,
+  },
+  navTile: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    gap: 6,
+  },
+  navTileGlyph: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 18,
+    fontFamily: 'Inter_500Medium',
+  },
+  navTileLabel: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: -0.1,
+  },
+  /* Iter 9dq v15 (2026-06-02): chip-cards naast elkaar in 1 blok.
+     Equal-flex layout zodat 2 of 3 chips altijd even breed zijn.
+     Iter 9dq v16 (2026-06-02): 1 uniforme kleur (Brand.accent blauw) +
+     vaste height zodat alle chips identiek groot zijn ongeacht label-
+     length. Onderscheid komt van het icoon, niet van kleur. */
+  libChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingTop: 14,
+    paddingBottom: 18,
+    marginBottom: 4,
+  },
+  libChipCard: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 92,
+    backgroundColor: 'rgba(58, 143, 255, 0.08)',
+    borderColor: 'rgba(58, 143, 255, 0.22)',
+  },
+  libChipCardLabel: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: -0.1,
+    textAlign: 'center',
+    /* Iter 9dq v16: vaste 2-line hoogte voor labels zodat de icon-positie
+       gelijk is in alle chips, ongeacht of label 1 of 2 regels lang is.
+       "Your Journey" wraps → 2 lines, "New" stays → 1 line, maar beide
+       reserveren dezelfde 32px ruimte. Icon centreert daardoor identiek. */
+    height: 32,
+    lineHeight: 15,
+  },
+  /* Iter 9pp: Your Journey als compacte list-row (Apple Settings stijl)
+     ipv full-width card met grote icoon. */
+  journeyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.06)',
+    marginBottom: 24,
+    gap: 12,
+  },
+  journeyRowGlyph: {
+    fontSize: 16,
+  },
+  journeyRowBody: {
+    flex: 1,
+  },
+  journeyRowTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.1,
+  },
+  journeyRowSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 0.1,
+    marginTop: 1,
+  },
+  journeyRowChev: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 18,
+    fontFamily: 'Inter_500Medium',
+  },
+  /* Iter 9tt: compact auto-play toggle row — flush in de utility-zone
+     onder Your Journey. Geen card-bg meer (zoals de oude settingCard);
+     pure tekst + Switch zodat 't visueel ondergeschikt is aan de
+     personal entry erboven. */
+  autoPlayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 18,
+  },
+  autoPlayLabel: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: -0.1,
+  },
   /* Compacte top-bar boven de ScrollView met alleen het V-logo
      links. Maakt brand-presence zichtbaar zonder dat de wordmark
      elke pagina overheerst. Padding match met hero-content (links 20). */
@@ -1756,17 +2189,16 @@ const s = StyleSheet.create({
      + accent border zodat 'ie opvalt zonder schreeuwerig te zijn.
      Note-icoon links als visuele anchor (♪ — verwijst naar audio).
      Tap-target full-width voor mobile UX. */
+  /* Iter 9ccc: banner = outer frame, twee Pressable-rows binnen.
+     flexDirection veranderd naar column zodat de twee tap-zones onder
+     elkaar staan; padding 0 hier omdat de rows zelf hun padding hebben. */
   signInBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     backgroundColor: 'rgba(58,143,255,0.10)',
     borderColor: 'rgba(58,143,255,0.30)',
     borderWidth: 1,
     borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
     marginHorizontal: 16,
+    overflow: 'hidden',
     marginTop: 8,
     marginBottom: 4,
   },
@@ -1783,11 +2215,13 @@ const s = StyleSheet.create({
     fontSize: 18,
     lineHeight: 22,
   },
+  /* Iter 9ddd: gecentreerd, geen icon meer. Title-tekst standalone. */
   signInBannerTitle: {
     color: '#ffffff',
     fontSize: 14,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -0.2,
+    textAlign: 'center',
   },
   signInBannerSub: {
     color: 'rgba(255,255,255,0.55)',
@@ -1799,6 +2233,189 @@ const s = StyleSheet.create({
     color: '#3a8fff',
     fontSize: 22,
     fontFamily: 'Inter_700Bold',
+  },
+  /* Iter 9ddd → 9eee: tap-rows gecentreerd, "or"-divider tussen.
+     Borders op rows weggehaald (divider doet de separatie nu). */
+  signInBannerMainRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 13,
+    paddingBottom: 8,
+    paddingHorizontal: 14,
+  },
+  signInBannerSubRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+    paddingBottom: 13,
+    paddingHorizontal: 14,
+  },
+  signInBannerSubText: {
+    color: '#3a8fff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  /* ── BRACELET LANDING PAGE (v11 clean rebuild) ──────────────
+     Alle styles met `bLanding`-prefix om te voorkomen dat oude
+     stale references nog ergens hangen. Root tot button alles in
+     één blok hier — niets verspreid in het bestand. */
+  bLandingRoot: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  /* Foto-block — aspect 1:1.15 (iets minder hoog dan square zodat
+     content ruimte krijgt voor tekst + 2 buttons + tab-bar buffer). */
+  bLandingPhoto: {
+    width: '100%',
+    aspectRatio: 1.15,
+  },
+  /* Content-block — vult de resterende verticale ruimte na de foto.
+     space-between zet top-groep en bottom-groep aan respectievelijk
+     boven- en onderkant van deze ruimte, met flexibele witruimte
+     ertussen die meeschaalt met scherm-grootte. */
+  bLandingContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    justifyContent: 'space-between',
+  },
+  bLandingEyebrow: {
+    color: '#3a8fff',
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 2.4,
+    marginBottom: 12,
+  },
+  bLandingTitle: {
+    color: '#ffffff',
+    fontSize: 30,
+    fontFamily: 'Inter_900Black',
+    letterSpacing: -0.8,
+    lineHeight: 34,
+    marginBottom: 22,
+  },
+  /* Features = checkmark-bullets. Geen marginBottom op de feature-list,
+     want space-between regelt al de afstand tussen tekst-groep en
+     buttons-groep. */
+  bLandingFeatures: {
+    gap: 10,
+  },
+  bLandingFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  bLandingCheck: {
+    color: '#3a8fff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    lineHeight: 22,
+    width: 14,
+  },
+  bLandingFeatureText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.86)',
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    lineHeight: 22,
+    letterSpacing: -0.1,
+  },
+  bLandingPrimaryBtn: {
+    backgroundColor: '#3a8fff',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    /* marginBottom 2 ipv 8 — secondary CTA "Listen free sessions
+       first" zit dichter tegen de primary CTA (operator v14). */
+    marginBottom: 2,
+  },
+  bLandingPrimaryText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 0.4,
+  },
+  bLandingSecondaryBtn: {
+    /* Tightere padding zodat de tekst dichter tegen de primary
+       knop staat. */
+    paddingTop: 6,
+    paddingBottom: 10,
+    alignItems: 'center',
+  },
+  bLandingSecondaryText: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 0.2,
+  },
+
+  /* Bracelet-owner upsell banner — vervangt de sign-in banner voor
+     ingelogde bracelet-only users. Anders ge-style (geen "or"-divider,
+     wel een explicite arrow + eyebrow) zodat 't visueel duidelijk een
+     "next step" CTA is ipv een sign-in/get banner. Operator 2026-05-30. */
+  braceletUpsellBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    backgroundColor: 'rgba(58,143,255,0.10)',
+    borderColor: 'rgba(58,143,255,0.32)',
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  braceletUpsellEyebrow: {
+    color: '#3a8fff',
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1.5,
+    marginBottom: 5,
+  },
+  braceletUpsellTitle: {
+    color: '#f4f4f4',
+    fontSize: 16,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: -0.3,
+    marginBottom: 5,
+  },
+  braceletUpsellSub: {
+    color: '#8a8a8a',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
+  },
+  braceletUpsellArrow: {
+    color: '#3a8fff',
+    fontSize: 24,
+    fontFamily: 'Inter_700Bold',
+    marginLeft: 4,
+  },
+  /* Iter 9eee: "or"-divider — hairlines aan beide kanten met de tekst
+     centered ertussen. Apple "OR"-conventie uit sign-in screens. */
+  signInBannerOrDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 4,
+  },
+  signInBannerOrLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(58,143,255,0.30)',
+  },
+  signInBannerOrText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 1.5,
+    textTransform: 'lowercase',
+    paddingHorizontal: 10,
   },
 
   /* HERO — bron .hero / .hero-img / .hero-grad / .hero-text */
@@ -1913,11 +2530,78 @@ const s = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 2,
   },
+  /* Iter 9aaa — Pillar detail bottom-sheet modal (Apple-style minimal) */
+  pillarModalRoot: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  /* Iter 9bbb: paddingBottom verhuisd naar inline-style (dynamic +
+     safeInsets.bottom). Hier alleen de base layout. */
+  pillarModalSheet: {
+    backgroundColor: '#141414',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 10,
+    paddingHorizontal: 22,
+  },
+  pillarModalHandle: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    marginBottom: 18,
+  },
+  pillarModalClose: {
+    position: 'absolute',
+    top: 14,
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillarModalCloseText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  pillarModalEyebrow: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  pillarModalTitle: {
+    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    lineHeight: 30,
+    marginBottom: 14,
+  },
+  pillarModalDesc: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+    lineHeight: 24,
+  },
+  /* Iter 9mm: 15 → 14 px + iets tightere letterSpacing zodat
+     "Psychological Resilience" (langste pillar-naam) op één regel past.
+     Andere 3 pillars zien er nog steeds zelfde uit (geen impact). */
   pillarName: {
     color: C.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.35,
+    lineHeight: 17,
+    paddingRight: 12,
   },
 
   /* EMERSON — bron .vzm-emerson-block (compact horizontale card). */
@@ -2056,27 +2740,32 @@ const s = StyleSheet.create({
   /* libCardChev / libCardChevTxt / libCardChevTxtOpen blijven hieronder
      bestaan ten behoeve van Soundscapes subcat-cards — de MAIN serie-card
      gebruikt geen chevron meer; daar staat nu de VIEW ALL-pill. */
+  /* libCardChev — Soundscapes sub-cards. Iter 9qq: positie verhuisd
+     van top-right (top: 14) → bottom-right (bottom: 12) zodat 'ie
+     visueel matched met de moreToggleBR op de hoofd-series-cards.
+     libCardChevTxtOpen is verwijderd want we wisselen nu het glyph
+     zelf (⌄/⌃) ipv 'm te roteren. */
   libCardChev: {
     position: 'absolute',
-    top: 14,
-    right: 14,
+    bottom: 12,
+    right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 3,
   },
   libCardChevTxt: {
-    color: C.text,
-    fontSize: 22,
-    lineHeight: 22,
-    fontWeight: '800',
-    marginTop: -2,
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 16,
+    lineHeight: 16,
+    fontWeight: '700',
+    marginTop: -1,
   },
-  libCardChevTxtOpen: { transform: [{ rotate: '90deg' }] },
   /* Pill-cluster: container rechtsboven die positie + onderlinge gap regelt
      voor de pill(s) binnen een card-hero. viewAllPill heeft daardoor geen
      eigen position-props meer. (FOLLOW-pill is verwijderd, maar de cluster
@@ -2090,48 +2779,71 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  /* VIEW ALL-pill — bron .vz-card-viewall. Géén position-props, die zitten
-     op pillCluster. */
+  /* Iter 9ll: minder visueel druk. Glass-style pill met subtiele
+     dark-tinted bg + thin border, geen heavy shadow. Past beter bij
+     Apple-style disclosure indicator. */
   viewAllPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingTop: 6,
-    paddingBottom: 6,
-    paddingLeft: 12,
-    paddingRight: 11,
-    backgroundColor: 'rgba(58,143,255,0.28)', // dichter dan 0.18 om
-                                              // afwezigheid van backdrop-blur
-                                              // te compenseren
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.4)',
-    borderRadius: 99,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    gap: 4,
+    paddingVertical: 5,
+    paddingLeft: 10,
+    paddingRight: 9,
+    backgroundColor: 'rgba(0,0,0,0.40)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.20)',
+    borderRadius: 999,
   },
   viewAllText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6, // ≈ 0.06em bij 10px
-    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
   /* Variant van viewAllText voor de Coming-card: mixed case "Explore",
-     géén textTransform. Zelfde container (viewAllPill) wordt hergebruikt. */
+     matched iter 9ll color/weight voor consistency. */
   exploreText: {
-    color: '#ffffff',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
+  /* Iter 9ll: chevron is nu ⌃ / ⌄ (vertical disclosure), past bij
+     daadwerkelijk vertikaal openvouwen van de card. */
   viewAllChev: {
-    color: '#ffffff',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 12,
     lineHeight: 12,
-    fontWeight: '800',
+    fontWeight: '700',
+    marginTop: -1,
+  },
+  /* Iter 9qq (operator-feedback 2026-05-30): More/Less toggle
+     gemigreerd naar rechtsONDER van de card. Chevron-only,
+     vierkant glass-style pill — meer Apple disclosure-indicator.
+     Position: absolute zodat 'ie boven libCardBody zweeft maar
+     niet binnen de body-flow valt (anders zou-ie tekst pushen). */
+  moreToggleBR: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    zIndex: 3,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 999,
+  },
+  moreToggleChev: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 16,
+    lineHeight: 16,
+    fontWeight: '700',
+    /* Visuele centering — chevron-glyph zit standaard iets te hoog
+       binnen 't lineHeight-blok, kleine offset om optisch centraal
+       te staan in de cirkel. */
     marginTop: -1,
   },
   libCardBody: {
@@ -2457,17 +3169,70 @@ const s = StyleSheet.create({
   },
 
   /* ── AANKOOPBLOK — blauwdruk §3.6 / bron regel 3746+ ── */
+  /* Iter 9yy: buyBlock wordt nu één cohesief frame. Subtle bg-tint +
+     border + ruimere padding = visueel "one purchase experience"-blok
+     ipv losse elementen die toevallig dicht bij elkaar staan. */
   buyBlock: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
     paddingHorizontal: 16,
-    paddingTop: 28,
-    paddingBottom: 8,
+    paddingTop: 22,
+    paddingBottom: 18,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   buyTitle: {
     color: C.text,
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.4,
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  /* Sub-tekst onder de title — zet context voor de keuze, voorkomt
+     dat title los staat van de cards eronder. */
+  buySub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: -0.1,
+    marginBottom: 18,
+  },
+  /* Iter 9zz: mission als geïntegreerde context bovenaan ipv los panel.
+     Eyebrow + statement zonder eigen bg/border zodat 't één is met
+     het buy-frame. */
+  buyMissionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  buyMissionStar: {
+    color: C.accent,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  buyMissionLabel: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+  },
+  buyMissionStatement: {
+    color: C.text,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+    lineHeight: 22,
+  },
+  /* Subtle divider tussen mission-context en pricing-keuze.
+     Hairline, niet schreeuwend. */
+  buyDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 18,
   },
 
   /* Twee prijskaarten naast elkaar (Monthly links, Yearly rechts). */
@@ -2633,13 +3398,21 @@ const s = StyleSheet.create({
   },
 
   /* CTA — grote blauwe knop. */
+  /* Iter 9yy: marginTop 18 → 20 voor iets meer ademruimte tussen
+     pricing-cards en CTA. Plus subtle shadow voor primaire-actie
+     emphasis (Apple-stijl filled-action button). */
   ctaBtn: {
     backgroundColor: C.accent,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
+    marginTop: 20,
+    shadowColor: C.accent,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   ctaTxt: {
     /* Mixed-case CTA ("Get Yearly — $X/month") — strakke letter-spacing,
@@ -2651,31 +3424,36 @@ const s = StyleSheet.create({
   },
 
   /* Gedimde regels + vinkjes-rij + secure-rij onder de CTA. */
+  /* Iter 9yy: fineline subtieler — kleiner, dim grey, geen letterspacing.
+     Footer-info hoort visueel ondergeschikt te zijn. */
   fineline: {
-    color: C.dim,
+    color: 'rgba(255,255,255,0.40)',
     fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: 14,
   },
+  /* Iter 9yy: checks meer ruimte boven (van CTA) + iets compactere
+     interne spacing zodat alles als "trust signals"-rij voelt. */
   checks: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 10,
+    marginTop: 16,
     paddingHorizontal: 4,
   },
   check: {
     color: C.free,
     fontSize: 12,
     fontWeight: '700',
+    letterSpacing: -0.1,
   },
   secureRow: {
-    color: C.faint,
-    fontSize: 11,
+    color: 'rgba(255,255,255,0.30)',
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.4,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
 
   /* ── LIBRARY-CONTROLS — zoekbalk + filter-pills + Your Journey-card.

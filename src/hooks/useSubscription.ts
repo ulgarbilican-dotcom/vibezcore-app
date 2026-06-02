@@ -22,6 +22,7 @@
 
 import { getToken } from '@/services/auth';
 import { apiCall } from '@/utils/api';
+import { useDevUserOverride } from '@/utils/dev-user-override';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
@@ -79,6 +80,19 @@ async function loadCacheOnce(): Promise<void> {
   if (cacheLoadPromise) return cacheLoadPromise;
   cacheLoadPromise = (async () => {
     try {
+      /* Iter 9aq (2026-05-31): token-check VÓÓR cache-load. Zonder
+         token = guest = NOOIT PRO, ongeacht wat er in cache staat. Was
+         een bug waardoor een uitgelogde user (of fresh install na
+         eerdere PRO-test) alsnog PRO-content zag omdat de stale cache
+         werd geladen en de fetch nooit triggerde (cachedStatus !==
+         null). Nu: geen token → cache wissen → status active:false. */
+      const token = await getToken();
+      if (!token) {
+        await clearPersistedCache();
+        notifyAll({ active: false });
+        cacheLoaded = true;
+        return;
+      }
       const raw = await AsyncStorage.getItem(SUB_CACHE_KEY);
       if (raw) {
         const obj = JSON.parse(raw) as Partial<CachedShape>;
@@ -179,13 +193,36 @@ export function useSubscription() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Iter 9p: dev-only override voor user-state testing. Geen effect
+     in productie. */
+  const override = useDevUserOverride();
+  const realIsPro = status?.active === true;
+  const isPro =
+    override === 'audio' || override === 'pro'
+      ? true
+      : override === 'guest' || override === 'bracelet'
+        ? false
+        : realIsPro;
+
   return {
-    isPro: status?.active === true,
+    isPro,
+    /* Iter 9dq v13 (2026-06-02): realIsPro = uitsluitend backend-state
+       (status.active === true), genegeerd door dev-override. Bedoeld
+       voor consumers die op ECHTE auth-state moeten beslissen (zoals
+       de audio-player die bepaalt of-ie preview=true of een echte JWT
+       moet sturen). UI-elementen die alleen visueel "PRO" moeten tonen
+       (badges, upgrade-cards verbergen) blijven `isPro` gebruiken zodat
+       override hun visueel-state correct simuleert.
+       Lange-termijn pattern: scheid display-state (override-aware) van
+       auth-state (echt alleen). Voorkomt subtiele bugs zoals deze:
+       PRO override + geen real token → backend gaf 401 op PRO sessies
+       omdat we geen preview=true stuurden. */
+    realIsPro,
     tier: status?.tier,
     validUntil: status?.validUntil,
     willRenew: status?.willRenew,
     gumroadSubscriberId: status?.gumroadSubscriberId,
-    isLoading: status === null,
+    isLoading: status === null && override === null,
     refresh: refreshSubscription,
   };
 }

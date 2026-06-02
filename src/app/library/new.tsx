@@ -50,10 +50,9 @@ export default function LibraryNewScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* Iter 9dq v20 (2026-06-02): eyebrow weg — consistent met
+            /library/favorites + /library/free. H1 + subtitle volstaan. */}
         <View style={s.header}>
-          <Text style={[s.eyebrow, { color: '#3a8fff' }]}>
-            — NEW SESSIONS —
-          </Text>
           <Text style={s.h1}>What's New</Text>
           <Text style={s.subtitle}>
             Fresh sessions added in the last 30 days

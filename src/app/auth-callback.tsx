@@ -129,21 +129,27 @@ export default function AuthCallback() {
         }
         await AsyncStorage.multiSet(pairs);
 
-        /* Check needs_password_setup flag — gezet door gumroad-webhook
-           wanneer 'ie een nieuwe user aanmaakt. Forceert eerst password-
-           setup voordat user kan luisteren. */
+        /* Twee redenen om naar /reset-password te routen:
+           1. needs_password_setup-flag (gezet door gumroad-webhook bij
+              eerste keer; user moet een password kiezen)
+           2. type=recovery (forgot-password email kwam via auth-callback
+              ipv direct naar /reset-password — defense-in-depth: user
+              moet expliciet een nieuw password kiezen, niet "stilletjes"
+              ingelogd worden met een eenmalige recovery-token) */
         const needsPasswordSetup =
           session.user?.user_metadata?.needs_password_setup === true;
+        const isRecovery = (type || '') === 'recovery';
+        const forcePasswordScreen = needsPasswordSetup || isRecovery;
 
         if (!cancelled) {
-          setState({ phase: 'success', needsPasswordSetup });
+          setState({ phase: 'success', needsPasswordSetup: forcePasswordScreen });
         }
 
         /* Automatische redirect na korte vertraging — geeft user kans
            om de success-state te zien. Timer wordt gecleared bij unmount. */
         redirectTimer = setTimeout(() => {
           if (cancelled) return;
-          if (needsPasswordSetup) {
+          if (forcePasswordScreen) {
             router.replace('/reset-password' as never);
           } else {
             router.replace('/');

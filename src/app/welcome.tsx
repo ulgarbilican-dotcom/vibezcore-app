@@ -13,6 +13,11 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
+import {
+  awaitDevUserOverrideLoaded,
+  getDevUserOverride,
+} from '@/utils/dev-user-override';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -25,10 +30,27 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* ────────────────────────────────────────────────────────────────
-   FINETUNE-KNOP voor de operator — verticale positie van de foto.
-   Verander alleen het getal hieronder en reload de app.
+   FINETUNE-KNOPPEN voor de operator
    ──────────────────────────────────────────────────────────────── */
-const FOTO_Y = 0;   // negatief = foto omhoog, positief = foto omlaag, in pixels
+/* Iter 9ai (2026-05-31): Calm/Headspace-style full-bleed welcome.
+   Cover + slimme crop. Foto vloeit via een lange zachte gradient over
+   in Brand.bg — geen harde randen, wereldklasse-gevoel.
+
+   Iter 9an (2026-05-31): nieuwe "zoom out zonder zwarte randen" knop —
+   FOTO_HEIGHT bepaalt hoeveel SCHERMHOOGTE de foto inneemt (top-anchored,
+   cover binnen die ruimte). Bij FOTO_HEIGHT < 100% is het onderdeel boven
+   de buttons een rustig dark vlak dat door de bottom-gradient wordt
+   opgevangen — geen randen om de foto, want links/rechts blijft 'cover'
+   de wrapper netjes vullen.
+
+   FOTO_Y: translateY-shift binnen de wrapper. Negatief = focal point
+   omhoog, positief = omlaag.
+
+   FOTO_SCALE: extra zoom binnen de wrapper. ≥1.0 garandeert geen zwarte
+   randen aan zijkanten. <1.0 NIET aanraden (geeft randen). */
+const FOTO_HEIGHT = 75;   // % van schermhoogte, top-anchored
+const FOTO_Y = -20;        // pixels: negatief = omhoog
+const FOTO_SCALE = 1.0;    // ≥1.0 om randen te vermijden
 
 type Status = 'checking' | 'show';
 
@@ -36,13 +58,29 @@ export default function WelcomeScreen() {
   const [status, setStatus] = useState<Status>('checking');
 
   /* Reeds ingelogd? → welkomstscherm overslaan, direct de tabs in.
-     Tijdens de check tonen we alleen de merk-achtergrondkleur (geen flits). */
+     Tijdens de check tonen we alleen de merk-achtergrondkleur (geen flits).
+     Iter 9ar (2026-05-31): respecteert nu OOK de dev user-override
+     'guest' — operator kan zo de welcome-flow testen zonder daadwerkelijk
+     uit te loggen. We wachten eerst tot de override-cache geladen is om
+     een race-conditie te vermijden waarbij de token-check eerder klaar
+     is dan de override-load. In prod is awaitDevUserOverrideLoaded()
+     een no-op (resolved direct). */
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      await awaitDevUserOverrideLoaded();
+      if (cancelled) return;
+      const override = getDevUserOverride();
       const token = await getToken();
       if (cancelled) return;
-      if (token) {
+      /* Iter 9dj (2026-05-31): override 'audio' / 'bracelet' / 'pro'
+         simuleren ingelogde state → ook zonder echte token welcome
+         overslaan, anders blijft welcome hangen op cold-start tests. */
+      const treatAsGuest = override === 'guest';
+      const treatAsSignedIn =
+        override === 'audio' || override === 'bracelet' || override === 'pro';
+      const isSignedIn = treatAsSignedIn || (!!token && !treatAsGuest);
+      if (isSignedIn) {
         router.replace('/');
       } else {
         setStatus('show');
@@ -59,16 +97,55 @@ export default function WelcomeScreen() {
 
   return (
     <View style={s.root}>
-      {/* Achtergrondfoto (1080×2400, waas/fade al ingebakken).
-         Schaalt op SCHERMBREEDTE met native aspect ratio (1080/2400) →
-         geen zoom, geen horizontale crop. Bovenkant foto = bovenkant scherm.
-         Als het scherm langer is dan de aspect toelaat, blijft onderaan
-         Brand.bg (#0a0a0a) over — naadloos zwart, geen overlay nodig. */}
-      <Image
-        source={require('../../assets/welcome_bg.png')}
-        style={s.bgPhoto}
-        resizeMode="cover"
-        accessibilityIgnoresInvertColors
+      {/* Iter 9ai (2026-05-31): Calm/Headspace-style full-bleed photo.
+         Wrapper-View met overflow:hidden zorgt dat de cover-image netjes
+         binnen het scherm valt; FOTO_Y translateY tilt de focal point.
+         Iter 9al (2026-05-31): operator probeert "master-mental-clarity"
+         als welcome — testen of de "arrival energy" sterker leest dan
+         de vorige Sharp Focus / Beta crop. */}
+      <View style={s.bgPhotoWrap}>
+        <Image
+          source={{
+            uri: 'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg',
+          }}
+          style={s.bgPhoto}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+
+      {/* Top scrim — subtiele donkere fade voor status bar + wordmark.
+         15% van scherm, transparant → 35% zwart. Houdt de tekst leesbaar
+         tegen lichte fotozones bovenaan zonder de foto te dempen. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(10,10,10,0.55)', 'rgba(10,10,10,0)']}
+        locations={[0, 1]}
+        style={s.topScrim}
+      />
+
+      {/* Iter 9ao (2026-05-31): bottom-gradient afgestemd op FOTO_HEIGHT.
+         Gradient bereikt 100% opacity exact bij de wrapper-onderkant
+         (FOTO_HEIGHT% van scherm) zodat foto onmerkbaar in zwart over­
+         vloeit. Geen "harde lijn" meer. Cubic-like curve over 8 stops
+         voor maximaal zachte transitie. Gradient strekt naar boven uit
+         tot 10% van scherm zodat 65% van gradient-zone benut wordt voor
+         de fade — vergeleken met 50% eerder. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[
+          'rgba(10,10,10,0)',
+          'rgba(10,10,10,0.04)',
+          'rgba(10,10,10,0.12)',
+          'rgba(10,10,10,0.25)',
+          'rgba(10,10,10,0.45)',
+          'rgba(10,10,10,0.70)',
+          'rgba(10,10,10,0.92)',
+          Brand.bg,
+          Brand.bg,
+        ]}
+        locations={[0, 0.15, 0.30, 0.45, 0.55, 0.63, 0.70, 0.72, 1]}
+        style={s.bottomFade}
       />
 
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
@@ -132,14 +209,42 @@ export default function WelcomeScreen() {
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
   root: { flex: 1, backgroundColor: Brand.bg },
-  bgPhoto: {
-    /* Foto schaalt op breedte met native aspect ratio. Top-positie wordt
-       door de operator gefinetuned via FOTO_Y bovenaan dit bestand. */
+  /* Iter 9an (2026-05-31): wrapper is TOP-anchored met FOTO_HEIGHT%.
+     Foto vult de wrapper (cover, geen randen aan zijkanten). Onder de
+     wrapper is Brand.bg, naadloos opgepakt door de bottom-gradient. */
+  bgPhotoWrap: {
     position: 'absolute',
-    top: FOTO_Y,
+    top: 0,
     left: 0,
+    right: 0,
+    height: `${FOTO_HEIGHT}%`,
+    overflow: 'hidden',
+    backgroundColor: Brand.bg,
+  },
+  bgPhoto: {
     width: '100%',
-    aspectRatio: 1080 / 2400,
+    height: '100%',
+    transform: [{ scale: FOTO_SCALE }, { translateY: FOTO_Y }],
+  },
+  /* Top scrim — 15% van scherm. Subtiel zwart-fade voor status bar +
+     wordmark leesbaarheid, dempt de foto niet onnodig. */
+  topScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '15%',
+  },
+  /* Iter 9ao (2026-05-31): bottom-fade strekt nu 90% van schermhoogte
+     (was 68%). Maakt de fade veel gradueler én laat de gradient 100%
+     opacity bereiken precies op de foto-wrapper onderkant (FOTO_HEIGHT).
+     Resultaat: foto en zwart vlak vloeien onmerkbaar in elkaar over. */
+  bottomFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '90%',
   },
   safe: {
     flex: 1,
@@ -167,6 +272,10 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 8,
+    /* Iter 9ao (2026-05-31): 1 cm naar beneden geschoven (≈38px op
+       standaard density). Houdt de headline weg van VIBEZCORE-wordmark
+       en geeft de foto meer eigen ademruimte boven de tekst. */
+    transform: [{ translateY: 38 }],
   },
   accentBar: {
     width: 34,
@@ -193,8 +302,10 @@ const s = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
   },
   subheader: {
-    /* Caps-ondertekst = rustig, gedimd, ondergeschikt aan de hoofdregel. */
-    color: Brand.textDim,
+    /* Iter 9ao (2026-05-31): kleur naar wit (was Brand.textDim #8a8a8a).
+       Door de zachtere gradient is de fotozone op die hoogte te druk
+       voor de gedimde grijs-tekst — wit met text-shadow leest altijd. */
+    color: Brand.text,
     fontFamily: BrandFonts.medium,
     fontSize: 11,
     lineHeight: 16,

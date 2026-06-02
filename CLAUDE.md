@@ -135,11 +135,11 @@ Strategic Wealth · Psychological Resilience · Social Mastery · Stoic Fortitud
 
 | Idx | Intern | App-naam (voorlopig) | Kleur | Duur (min=default – max) |
 |-----|--------|----------------------|-------|--------------------------|
-| 0 | Gamma | Boost | Rood #FF453A | 8 – 15 min |
+| 0 | Gamma | Boost | Wit #FFFFFF (was Rood #FF453A — operator 27 mei 2026: rood te agressief) | 8 – 15 min |
 | 1 | Beta | Sharp Focus | Oranje #FF9F0A | 15 – 30 min |
 | 2 | Alpha | Calm Control | Blauw #0A84FF | 15 – 30 min |
 | 3 | Theta | Clarity | Paars #BF5AF2 | 15 – 30 min |
-| 4 | Delta | Rest & Reset | Groen #30D158 | 25 – 45 min |
+| 4 | Delta | Rest & Reset | Sage #4FA46B (was #30D158 — operator 27 mei 2026: te flashy) | 25 – 45 min |
 
 App toont NOOIT technische parameters (PPS, burst_ms, amplitude, RTP) — spec §11.5.
 Alleen modusnaam, duur, resterende tijd, batterij, status.

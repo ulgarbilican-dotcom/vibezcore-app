@@ -12,6 +12,8 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { refreshSubscription, useSubscription } from '@/hooks/useSubscription';
+import { refreshUserBucket } from '@/utils/bracelet-history';
+import { useBraceletOwner } from '@/utils/dev-user-override';
 import {
   cancelSubscription,
   gumroadManageUrl,
@@ -25,6 +27,7 @@ import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     Linking,
     Pressable,
     StyleSheet,
@@ -33,7 +36,7 @@ import {
     View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     clearSession,
     getLastLoginEmail,
@@ -96,6 +99,9 @@ function SubscriptionCard() {
     gumroadSubscriberId,
     isLoading,
   } = useSubscription();
+  /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
+     PRO + bracelet owner → speciale "Full PRO" label. */
+  const isBraceletOwner = useBraceletOwner();
 
   let bigText: string;
   let bigColor: string;
@@ -105,10 +111,23 @@ function SubscriptionCard() {
     bigText = 'Checking…';
     bigColor = Brand.textDim;
     subText = '';
-  } else if (!isPro) {
+  } else if (!isPro && !isBraceletOwner) {
     bigText = 'Free account';
     bigColor = Brand.text;
     subText = 'Upgrade for full library access';
+  } else if (isPro && isBraceletOwner) {
+    /* Full PRO — beide producten actief. */
+    bigText = 'Full PRO';
+    bigColor = Brand.accent;
+    subText = 'Audio Library + Bracelet';
+  } else if (isBraceletOwner) {
+    /* Bracelet-only owner — geen audio sub. Operator-update 2026-05-30:
+       wijst nu expliciet op wat er nog WEL kan: Audio Library toevoegen
+       om het systeem compleet te maken. Niet "missing" framing maar
+       "complete the system" — past bij VIBEZCORE's holistic-tone. */
+    bigText = 'Bracelet active';
+    bigColor = Brand.accent;
+    subText = 'Audio Library not yet activated';
   } else {
     /* tier kan undefined zijn (defensief — backend zou dat niet
        moeten doen voor een active=true sub, maar we crashen er niet
@@ -119,7 +138,10 @@ function SubscriptionCard() {
         : tier === 'monthly'
           ? 'Monthly'
           : null;
-    bigText = tierLabel ? `PRO — ${tierLabel}` : 'PRO';
+    /* "Audio PRO" ipv "PRO" — disambigueert van Bracelet-bezit. Een user
+       met alleen audio-sub moet zien dat dit hun AUDIO-product is, niet
+       een algemene "PRO"-status (operator-keuze 2026-05-29). */
+    bigText = tierLabel ? `Audio PRO — ${tierLabel}` : 'Audio PRO';
     bigColor = Brand.accent;
 
     /* Datum-regel — alleen als we een geldige validUntil hebben. */
@@ -142,13 +164,22 @@ function SubscriptionCard() {
     }
   }
 
-  /* Drie CTA-paden afhankelijk van state:
+  /* Vier CTA-paden afhankelijk van state:
        - Loading             → geen CTA (anders flicker)
-       - Non-pro signed-in   → "Upgrade to full library" → Library pricing
+       - Free (geen products)→ "Upgrade to full library" → Library pricing
+       - Bracelet-only       → "Add Audio Library" → Library pricing
+                              (zelfde doel, andere copy — user heeft al
+                              een product, dit is een aanvulling)
        - Pro met subscriber  → "Manage billing" → Gumroad customer portal
        - Pro zonder subscriber-id → geen CTA tonen (data nog incomplete) */
   const showUpgrade = !isLoading && !isPro;
   const showManageBilling = !isLoading && isPro && !!gumroadSubscriberId;
+  const upgradeCtaText = isBraceletOwner
+    ? 'Add Audio Library'
+    : 'Upgrade to full library';
+  const upgradeAccessibilityLabel = isBraceletOwner
+    ? 'Add Audio Library to your bracelet'
+    : 'Upgrade to full library access';
 
   return (
     <View style={s.card}>
@@ -162,9 +193,9 @@ function SubscriptionCard() {
             requestScrollTo('pricing');
             router.navigate('/');
           }}
-          accessibilityLabel="Upgrade to full library access"
+          accessibilityLabel={upgradeAccessibilityLabel}
         >
-          <Text style={s.cardCtaText}>Upgrade to full library</Text>
+          <Text style={s.cardCtaText}>{upgradeCtaText}</Text>
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
@@ -178,6 +209,59 @@ function SubscriptionCard() {
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
+    </View>
+  );
+}
+
+/* BraceletCard (iter 9r) — bracelet-status block in Account.
+   Operator-update 2026-05-30: non-owner state verwijderd. Reden:
+   Account-tab is voor "wat heb ik / wat beheer ik", niet voor
+   product-discovery. De Bracelet-tab handelt reservatie/info al af
+   — duplicate "Reserve your bracelet" CTA in Account voelt als
+   marketing-prik op de verkeerde plek.
+     - Owner          : "Bracelet active" + Open Control + beadband
+                        upsell — functioneel, hoort hier
+     - Niet-owner     : niets tonen (return null) */
+function BraceletCard() {
+  const isBraceletOwner = useBraceletOwner();
+  if (!isBraceletOwner) return null;
+  return (
+    <View style={s.card}>
+      <Text style={s.label}>Bracelet</Text>
+      <Text style={[s.subBig, { color: Brand.accent }]}>
+        Bracelet active
+      </Text>
+      <Text style={s.subSmall}>
+        Your Smart Bead Bracelet is paired and ready to use.
+      </Text>
+      <Pressable
+        style={s.cardCta}
+        /* Operator 2026-05-30: navigate naar /bracelet tab ipv push naar
+           /bracelet-control stack-screen. Reden: navigatie was inconsistent
+           — vanaf Account kreeg user een back-arrow naar Account, maar
+           vanuit de tab geen exit-pad. Nu uniforme tab-flow: user gaat naar
+           Bracelet tab waar BraceletControl inline rendert + tab-bar
+           zichtbaar blijft voor uitstappen via andere tabs. */
+        onPress={() => router.navigate('/bracelet' as never)}
+        accessibilityLabel="Open bracelet control"
+      >
+        <Text style={s.cardCtaText}>Open Bracelet Control</Text>
+        <Text style={s.cardCtaArrow}>→</Text>
+      </Pressable>
+      {/* Iter 9gg (operator-correctie): bracelet heeft VERVANGBARE bead-
+          bands, geen "rechargeable edition". Klanten kunnen nieuwe
+          beadbands bestellen (andere stones, vervanging). URL volgt
+          van operator. */}
+      <Pressable
+        style={[s.cardCta, { marginTop: 10, opacity: 0.6 }]}
+        onPress={() =>
+          openExternal('https://www.vibezcore.com/shop/beadbands')
+        }
+        accessibilityLabel="Order new beadband"
+      >
+        <Text style={s.cardCtaText}>Order new beadband</Text>
+        <Text style={s.cardCtaArrow}>→</Text>
+      </Pressable>
     </View>
   );
 }
@@ -215,6 +299,12 @@ function LibrarySettingsLink() {
 export default function AccountScreen() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
+  /* Iter 9dq v17 (2026-06-02): dynamic safe-area inset. Voorheen had de
+     ScrollView hardcoded paddingBottom: 48 wat op iOS 15+ devices met
+     groot home-indicator (tot 34px) onvoldoende kon zijn. Met tab-bar
+     (64px) eronder was 't praktisch ok, maar 't was niet future-proof.
+     Nu dynamisch zodat content altijd boven safe-zone blijft. */
+  const safeInsets = useSafeAreaInsets();
 
   const [mode, setMode] = useState<Mode>('login');
   const [emailInput, setEmailInput] = useState('');
@@ -265,6 +355,9 @@ export default function AccountScreen() {
            /api/subscription-status zodat useSubscription-consumers
            (Library, Player) direct de echte PRO-status zien. */
         refreshSubscription();
+        /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
+           token = potentieel nieuwe user = andere local-storage key. */
+        refreshUserBucket();
 
         /* ── Post-login routing ────────────────────────────────────────
            Operator-spec 2026-05-25:
@@ -321,6 +414,10 @@ export default function AccountScreen() {
             /* Token weg → refreshSubscription detecteert no-token, wist
                persisted cache en notifiet alle consumers {active:false}. */
             refreshSubscription();
+            /* Iter 9dn (2026-05-31): history-bucket re-evalueren — geen
+               token meer → schakelt naar 'anon' bucket, voormalige user's
+               history blijft staan onder hun eigen key (niet gewist). */
+            refreshUserBucket();
             /* Wis ook de in-memory signed-URL cache zodat een volgende user
                op dit toestel geen leftover-URLs van vorige sessie krijgt. */
             clearSignedUrlCache();
@@ -407,18 +504,14 @@ export default function AccountScreen() {
      email → reset-password.html → opnieuw in app inloggen met nieuw
      password). Webapp handelt het volledige proces af; native app is
      alleen de launcher. */
+  /* Change password — directe in-app flow voor ingelogde users die
+     hun bekende password willen wijzigen (anders dan /forgot-password
+     wat een email-reset is voor vergeten passwords). Operator-keuze
+     2026-05-30: voorheen ging deze route via een alert naar de forgot
+     flow — overdreven voor users die gewoon hun password willen
+     veranderen. */
   const onChangePassword = () => {
-    Alert.alert(
-      'Change password',
-      'We will open the password reset flow in your browser. You will receive an email with a link to set a new password.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          onPress: () => router.navigate('/forgot-password' as never),
-        },
-      ],
-    );
+    router.navigate('/change-password' as never);
   };
 
   /* ── Delete Account ──
@@ -442,7 +535,7 @@ export default function AccountScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView edges={['top']} style={[s.root, s.center]}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={[s.root, s.center]}>
         <ActivityIndicator color={Brand.text} />
       </SafeAreaView>
     );
@@ -455,49 +548,71 @@ export default function AccountScreen() {
      geen native rebuild nodig. Future-proof voor activatiecode-input. */
   if (email) {
     return (
-      <SafeAreaView edges={['top']} style={s.root}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
         <KeyboardAwareScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}
           enableAutomaticScroll={true}
         >
           <Text style={s.screenTitle}>Account</Text>
+
+          {/* ── My account ──
+              Persoonlijke account-info op één plek: email (read-only —
+              kan alleen via support gewijzigd worden, GDPR/verifiable
+              workflow) + password (interactief, opent in-app change
+              flow). Voorheen waren deze gespreid (email in subscription
+              card, password in Account Actions). Consolidatie maakt
+              "waar staat mijn info?" voor de hand liggend.
+              Operator-feedback 2026-05-30. */}
           <View style={s.card}>
-            <Text style={s.label}>Signed in as</Text>
-            <Text style={s.email}>{email}</Text>
-          </View>
-          <SubscriptionCard />
-          <View style={s.card}>
-            <Text style={s.label}>Bracelet</Text>
-            <Text style={s.dimText}>
-              Bracelet activation (enter your code) opens after the
-              Kickstarter launch on 1 August 2026.
-            </Text>
-            {/* Reserve-CTA voor users die nog geen bracelet hebben
-                (per operator-feedback 2026-05-26: bracelet-cross-sell ook
-                bereikbaar maken vanaf Account, niet alleen via de
-                Bracelet-tab). vibezcore.com/shop covered zowel
-                Kickstarter-reservering als reguliere purchase. */}
+            <Text style={s.label}>My account</Text>
+
+            {/* Email row — niet interactief, label boven value gestackt */}
+            <View style={s.accountField}>
+              <Text style={s.accountFieldLabel}>Email</Text>
+              <Text style={s.accountFieldValue} numberOfLines={1}>
+                {email}
+              </Text>
+            </View>
+
+            <View style={s.cardRowDivider} />
+
+            {/* Password row — interactief: label/value gestackt links,
+                "Change" + chevron rechts. Dot-string als "value" voor
+                visuele bevestiging dat er een password is ingesteld. */}
             <Pressable
-              style={s.cardCta}
-              onPress={() => openExternal(BRACELET_SHOP_URL)}
-              accessibilityLabel="Reserve your bracelet on the VIBEZCORE shop"
+              style={s.accountFieldInteractive}
+              onPress={onChangePassword}
+              accessibilityLabel="Change your password"
             >
-              <Text style={s.cardCtaText}>Reserve your bracelet</Text>
-              <Text style={s.cardCtaArrow}>→</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.accountFieldLabel}>Password</Text>
+                <Text style={s.accountFieldValue}>••••••••••</Text>
+              </View>
+              <Text style={s.accountFieldCta}>Change</Text>
+              <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
           </View>
-          <LibrarySettingsLink />
+
+          <SubscriptionCard />
+          <BraceletCard />
+          {/* Iter 9r: LibrarySettingsLink weggehaald — operator-feedback
+              "Library settings mag overal uit settings weg". Auto-play
+              en track-history toggles leven al in Settings sub-screen. */}
 
           {/* ── Account Actions (Settings, Change Password, Support) ──
               Structuur matched account.html van de webapp. Sign Out blijft
               z'n eigen prominente rode knop onderaan, niet in deze
               "actions"-card — operator-besluit 2026-05-25: Sign Out moet
               visueel onmiskenbaar zijn. */}
+          {/* ── Settings & Help ──
+              Hernoemd van "Account" → "Settings & Help" (Change password
+              is verhuisd naar My account card bovenaan). Dit card bevat
+              alleen secundaire actions: app-settings, about, FAQ, contact. */}
           <View style={s.card}>
-            <Text style={s.label}>Account</Text>
+            <Text style={s.label}>Settings & help</Text>
             <Pressable
               style={s.cardRow}
               onPress={() => router.navigate('/settings')}
@@ -507,18 +622,34 @@ export default function AccountScreen() {
               <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
             <View style={s.cardRowDivider} />
+            {/* About VIBEZCORE — brand-story screen voor users die
+                meer willen weten over wat VIBEZCORE is. Custom screen
+                src/app/about.tsx, gesynced met vibezcore.com/about-
+                vibezcore. */}
             <Pressable
               style={s.cardRow}
-              onPress={onChangePassword}
-              accessibilityLabel="Change your password"
+              onPress={() => router.navigate('/about' as never)}
+              accessibilityLabel="Learn about VIBEZCORE"
             >
-              <Text style={s.cardRowText}>Change password</Text>
+              <Text style={s.cardRowText}>About VIBEZCORE</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            {/* FAQ — voor "Contact support" zodat user eerst self-serve
+                kan proberen. Mirror van vibezcore.com/faq, content in
+                src/data/faq-content.ts. */}
+            <Pressable
+              style={s.cardRow}
+              onPress={() => router.navigate('/faq' as never)}
+              accessibilityLabel="Browse frequently asked questions"
+            >
+              <Text style={s.cardRowText}>Frequently asked questions</Text>
               <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
             <View style={s.cardRowDivider} />
             <Pressable
               style={s.cardRow}
-              onPress={() => openExternal(SUPPORT_URL)}
+              onPress={() => router.navigate('/support')}
               accessibilityLabel="Contact VIBEZCORE support"
             >
               <Text style={s.cardRowText}>Contact support</Text>
@@ -578,9 +709,9 @@ export default function AccountScreen() {
                   params: { doc: 'terms' } as never,
                 })
               }
-              accessibilityLabel="Read Terms of Service"
+              accessibilityLabel="Read Terms and Conditions"
             >
-              <Text style={s.cardRowText}>Terms of Service</Text>
+              <Text style={s.cardRowText}>Terms and Conditions</Text>
               <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
             <View style={s.cardRowDivider} />
@@ -603,12 +734,40 @@ export default function AccountScreen() {
               onPress={() =>
                 router.navigate({
                   pathname: '/legal/[doc]' as never,
+                  params: { doc: 'accessibility' } as never,
+                })
+              }
+              accessibilityLabel="Read Accessibility Statement"
+            >
+              <Text style={s.cardRowText}>Accessibility Statement</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'shipping' } as never,
+                })
+              }
+              accessibilityLabel="Read Shipping Policy"
+            >
+              <Text style={s.cardRowText}>Shipping Policy</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
                   params: { doc: 'refund' } as never,
                 })
               }
-              accessibilityLabel="Read Refund Policy"
+              accessibilityLabel="Read Refund and Returns Policy"
             >
-              <Text style={s.cardRowText}>Refund Policy</Text>
+              <Text style={s.cardRowText}>Refund & Returns Policy</Text>
               <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
             <View style={s.cardRowDivider} />
@@ -634,9 +793,27 @@ export default function AccountScreen() {
                   params: { doc: 'health' } as never,
                 })
               }
-              accessibilityLabel="Read Health and Safety"
+              accessibilityLabel="Read Consumer Health Notice"
             >
-              <Text style={s.cardRowText}>Health & Safety</Text>
+              <Text style={s.cardRowText}>Consumer Health Notice</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
+            {/* Audio Sessions — legal-disclaimer specifiek voor de
+                audio content (no affiliation, IP, etc). Op de website
+                staat 'ie onder PLATFORM-footer, in de app bij Legal
+                & Safety omdat de inhoud legal van aard is. */}
+            <Pressable
+              style={s.cardRow}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/legal/[doc]' as never,
+                  params: { doc: 'audio-sessions' } as never,
+                })
+              }
+              accessibilityLabel="Read Audio Sessions disclaimer"
+            >
+              <Text style={s.cardRowText}>Audio Sessions</Text>
               <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
           </View>
@@ -656,130 +833,94 @@ export default function AccountScreen() {
      extraScrollHeight=20 geeft een buffer onder het veld zodat het
      niet pal tegen het keyboard plakt. */
   return (
-    <SafeAreaView edges={['top']} style={s.root}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <KeyboardAwareScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}
         enableAutomaticScroll={true}
       >
-        <Text style={s.subtitle}>
-          {mode === 'login' ? 'Welcome back.' : 'Create your account.'}
-        </Text>
-        <Text style={s.optional}>
-          You don’t need an account to explore. Sign in for the full audio
-          library or to activate a bracelet.
-        </Text>
+        {/* Iter 9iii: complete redesign signed-out view.
+            - Hero greeting (warm, professional)
+            - Sign-in card (één frame met form + forgot + stay-signed)
+            - "or get started" divider
+            - Product card (één frame, 3 knoppen, 1 disclaimer)
+            - Legal footer met 5 doc-links (compliance + altijd accessibel)
+            - Apple SSO weggehaald uit guest-flow (komt terug als 't werkt) */}
 
-        <View style={s.toggleRow}>
-          <Pressable
-            style={[s.toggle, mode === 'login' && s.toggleActive]}
-            onPress={() => {
-              setMode('login');
-              setMsg(null);
-            }}
-          >
-            <Text
-              style={[
-                s.toggleText,
-                mode === 'login' && s.toggleTextActive,
-              ]}
-            >
-              Sign in
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[s.toggle, mode === 'signup' && s.toggleActive]}
-            onPress={() => {
-              setMode('signup');
-              setMsg(null);
-            }}
-          >
-            <Text
-              style={[
-                s.toggleText,
-                mode === 'signup' && s.toggleTextActive,
-              ]}
-            >
-              Create account
-            </Text>
-          </Pressable>
-        </View>
-
-        <Text style={s.inputLabel}>Email</Text>
-        <TextInput
-          style={s.input}
-          value={emailInput}
-          onChangeText={setEmailInput}
-          placeholder="you@example.com"
-          placeholderTextColor={Brand.textDim}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoCorrect={false}
-          /* ── OS Password Manager hints ─────────────────────────────────
-             autoComplete (Android, Google Password Manager) +
-             textContentType (iOS, iCloud Keychain). Met deze hints biedt
-             het OS automatisch een "save credentials?"-prompt aan na een
-             succesvolle login, en op latere sessies kan het de inputs
-             auto-fillen met één tap. Combineert met LAST_EMAIL_KEY-prefill
-             zodat ingelogde-met-saved-creds-users letterlijk niets meer
-             hoeven te typen. (Geadresseerd 2026-05-25 — user-frustratie:
-             "POR USEZE ZOU NIET ELKE KEER OPNIEUW MOETEN INLOGGEN".)
-             ────────────────────────────────────────────────────────── */
-          autoComplete="email"
-          textContentType="emailAddress"
-        />
-
-        <Text style={s.inputLabel}>Password</Text>
-        <View style={s.pwWrap}>
-          <TextInput
-            style={[s.input, s.pwInput]}
-            value={pwInput}
-            onChangeText={setPwInput}
-            placeholder="••••••••"
-            placeholderTextColor={Brand.textDim}
-            secureTextEntry={!showPw}
-            autoCapitalize="none"
-            /* Password autofill: dynamisch per mode — 'login' → bestaande
-               opgeslagen creds aanbieden; 'signup' → nieuwe-wachtwoord-flow
-               (OS biedt automatisch een suggested-strong-password aan). */
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            textContentType={mode === 'login' ? 'password' : 'newPassword'}
-            /* Submit via keyboard "Go" → trigger login direct ipv user
-               moet eerst keyboard sluiten + Sign-in-knop tappen. Eén tap
-               minder, vooral fijn na autofill. */
-            returnKeyType={mode === 'login' ? 'go' : 'done'}
-            onSubmitEditing={onSubmit}
+        {/* Hero greeting — iter 9mmm: brand-style met wordmark + accent
+            bar conform welcome.tsx voor consistentie tussen Welcome en
+            Account guest-view. */}
+        <View style={s.heroBlock}>
+          <Text style={s.heroEyebrow}>WELCOME TO</Text>
+          <Image
+            source={require('../../../assets/vibezcore_wordmark.png')}
+            style={s.heroWordmark}
+            resizeMode="contain"
+            accessibilityLabel="VIBEZCORE"
           />
-          <Pressable
-            style={s.pwToggle}
-            onPress={() => setShowPw((v: boolean) => !v)}
-          >
-            <Text style={s.pwToggleText}>{showPw ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          <View style={s.heroAccentBar} />
+          <Text style={s.heroSub}>
+            Sign in if you already have access,{'\n'}or get started below.
+          </Text>
         </View>
 
-        {msg && <Text style={s.msg}>{msg}</Text>}
+        {/* ── SIGN-IN CARD ── */}
+        <View style={s.authCard}>
+          <Text style={s.authCardLabel}>SIGN IN</Text>
 
-        <Pressable
-          style={[s.primaryBtn, busy && s.btnDisabled]}
-          onPress={onSubmit}
-          disabled={busy}
-        >
-          {busy ? (
-            <ActivityIndicator color={Brand.text} />
-          ) : (
-            <Text style={s.primaryBtnText}>
-              {mode === 'login' ? 'Sign in' : 'Create account'}
-            </Text>
-          )}
-        </Pressable>
+          <Text style={s.inputLabel}>Email</Text>
+          <TextInput
+            style={s.input}
+            value={emailInput}
+            onChangeText={setEmailInput}
+            placeholder="you@example.com"
+            placeholderTextColor={Brand.textDim}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+          />
 
-        {/* Forgot Password link — alleen tonen in sign-in modus (niet
-            tijdens create-account). Routeert door naar webapp forgot-
-            password.html waar Supabase recovery-email getriggerd wordt. */}
-        {mode === 'login' && (
+          <Text style={s.inputLabel}>Password</Text>
+          <View style={s.pwWrap}>
+            <TextInput
+              style={[s.input, s.pwInput]}
+              value={pwInput}
+              onChangeText={setPwInput}
+              placeholder="••••••••"
+              placeholderTextColor={Brand.textDim}
+              secureTextEntry={!showPw}
+              autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={onSubmit}
+            />
+            <Pressable
+              style={s.pwToggle}
+              onPress={() => setShowPw((v: boolean) => !v)}
+            >
+              <Text style={s.pwToggleText}>{showPw ? 'Hide' : 'Show'}</Text>
+            </Pressable>
+          </View>
+
+          {msg && <Text style={s.msg}>{msg}</Text>}
+
+          <Pressable
+            style={[s.primaryBtn, busy && s.btnDisabled]}
+            onPress={onSubmit}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator color={Brand.text} />
+            ) : (
+              <Text style={s.primaryBtnText}>Sign in</Text>
+            )}
+          </Pressable>
+
           <Pressable
             style={s.forgotLink}
             onPress={() => router.navigate('/forgot-password' as never)}
@@ -787,48 +928,227 @@ export default function AccountScreen() {
           >
             <Text style={s.forgotLinkText}>Forgot password?</Text>
           </Pressable>
-        )}
 
-        {/* Reassurance — mobile-app conventie is dat de user ingelogd
-            blijft tussen app-launches. We tonen die boodschap expliciet
-            zodat nieuwe gebruikers niet bang zijn telkens opnieuw te
-            moeten inloggen. */}
-        <Text style={s.staySignedIn}>
-          You'll stay signed in on this device
-        </Text>
-
-        {/* ─── OR divider ─────────────────────────────────────────────── */}
-        <View style={s.divider}>
-          <View style={s.dividerLine} />
-          <Text style={s.dividerText}>OR</Text>
-          <View style={s.dividerLine} />
+          <Text style={s.staySignedIn}>
+            You'll stay signed in on this device
+          </Text>
         </View>
 
-        {/* Apple "Coming soon" — placeholder button die signaleert dat
-            SSO op de roadmap staat zonder dat we nu de full Apple-
-            Developer-Program + OAuth-config moeten doen (vóór launch
-            niet haalbaar). Disabled state met "Soon"-badge maakt duidelijk
-            dat 't nog niet werkt — geen verkeerd-klik-frustratie.
-            Operator-besluit 2026-05-25: Apple eerst, Google later. */}
-        <Pressable
-          style={[s.ssoBtn, s.ssoBtnDisabled]}
-          disabled
-          accessibilityRole="button"
-          accessibilityLabel="Sign in with Apple — coming soon"
-        >
-          <Text style={s.ssoBtnApple}> </Text>
-          <Text style={s.ssoBtnText}>Continue with Apple</Text>
-          <View style={s.soonBadge}>
-            <Text style={s.soonBadgeText}>SOON</Text>
+        {/* "or get started" divider */}
+        <View style={s.orDivider}>
+          <View style={s.orLine} />
+          <Text style={s.orText}>or get started</Text>
+          <View style={s.orLine} />
+        </View>
+
+        {/* ── PRODUCT CARDS — restructured iter 9dq v10 (2026-06-02) ──
+            Was: 2 cards × 16 tekstlagen + 3 CTAs + 3 badges = visueel
+            druk voor een gast. Operator-feedback: rustiger maar boeiend,
+            upsell behouden.
+            Nu: 2 cards, elk met eyebrow-status + titel + 1-line + CTA.
+            Bundle leeft INSIDE de bracelet-card als inline BEST VALUE-
+            rij ipv eigen CTA. Reassurance gereduceerd tot 1 dim regel. */}
+
+        {/* Card 1: Audio Library — available now (primary product) */}
+        <View style={s.productCard}>
+          <View style={s.productStatusRow}>
+            <View
+              style={[
+                s.productStatusDot,
+                { backgroundColor: Brand.success },
+              ]}
+            />
+            <Text style={s.productStatusLabel}>AVAILABLE NOW</Text>
           </View>
-        </Pressable>
+          <Text style={s.productTitle}>Audio Library</Text>
+          <Text style={s.productOneLiner}>
+            All sessions · monthly or yearly
+          </Text>
+          <Pressable
+            style={s.productCtaPrimary}
+            onPress={() => {
+              requestScrollTo('pricing');
+              router.navigate('/');
+            }}
+            accessibilityLabel="Subscribe to Audio Library"
+          >
+            <Text style={s.productCtaPrimaryText}>Subscribe</Text>
+            <Text style={s.productCtaPrimaryArrow}>→</Text>
+          </Pressable>
+        </View>
 
-        <LibrarySettingsLink />
+        {/* Card 2: Smart Bead Bracelet — preorder, met 2 duidelijke
+            reserveringsopties (Bracelet alone vs Bundle). Iter 9dq v11
+            (2026-06-02): operator-feedback — verschil tussen opties was
+            niet duidelijk + CTA moest "Reserve your spot" zijn ipv los
+            "Reserve". Beide opties tonen nu titel + sub-line die exact
+            zegt wat je reserveert.
+            Iter 9dq v12 (2026-06-02): Early Bird-framing + product-namen.
+            Eyebrow combineert "EARLY BIRD" met launch-datum. Onder titel
+            staan de oorspronkelijke scarcity-zinnen ("lowest Kickstarter
+            price" + "first reserved, first served") in 2 dim regels.
+            Opties tonen nu de pakketnamen: VIBEZCORE Smart Bead Bracelet
+            en VIBEZCORE Full Bundle (laatste met sub "Bracelet + 12-mo
+            Audio Library" voor inhoud-duidelijkheid). */}
+        <View style={s.productCard}>
+          <View style={s.productStatusRow}>
+            <View
+              style={[
+                s.productStatusDot,
+                { backgroundColor: 'rgba(255,255,255,0.30)' },
+              ]}
+            />
+            <Text style={s.productStatusLabel}>
+              EARLY BIRD · LAUNCHING 1 AUG
+            </Text>
+          </View>
+          <Text style={s.productTitle}>Smart Bead Bracelet</Text>
+          <Text style={s.productOneLiner}>
+            Secure the lowest Kickstarter price
+          </Text>
+          <Text style={s.productSubOneLiner}>
+            Limited units — first reserved, first served
+          </Text>
 
-        <Text style={s.legal}>
-          [OPERATOR] Terms / Privacy text from the web app to be placed here
-          before launch.
-        </Text>
+          {/* Option A: Bracelet alone — outlined, lower-key */}
+          <Pressable
+            style={s.reserveOption}
+            onPress={() =>
+              openExternal('https://www.vibezcore.com/subscribe-bracelet')
+            }
+            accessibilityLabel="Reserve your spot for VIBEZCORE Smart Bead Bracelet"
+          >
+            <View style={s.reserveOptionLeft}>
+              <Text style={s.reserveOptionTitle}>Reserve your spot</Text>
+              <Text style={s.reserveOptionSub}>
+                VIBEZCORE Smart Bead Bracelet
+              </Text>
+            </View>
+            <Text style={s.reserveOptionArrow}>→</Text>
+          </Pressable>
+
+          {/* Option B: Bundle — BEST VALUE highlighted, order-bump styling.
+              Pakketnaam (VIBEZCORE Full Bundle) prominent + extra dim
+              regel onder met wat de bundle inhoudt. */}
+          <Pressable
+            style={s.reserveOptionBundle}
+            onPress={() =>
+              openExternal('https://www.vibezcore.com/subscribe-bundle')
+            }
+            accessibilityLabel="Reserve your spot for VIBEZCORE Full Bundle, bracelet plus 12-month Audio"
+          >
+            <View style={s.reserveOptionLeft}>
+              <View style={s.bundleInlineBadge}>
+                <Text style={s.bundleInlineBadgeText}>BEST VALUE</Text>
+              </View>
+              <Text style={s.reserveOptionTitle}>Reserve your spot</Text>
+              <Text style={s.reserveOptionSub}>VIBEZCORE Full Bundle</Text>
+              <Text style={s.reserveOptionSubFine}>
+                Bracelet + 12-month Audio Library
+              </Text>
+            </View>
+            <Text style={s.reserveOptionArrow}>→</Text>
+          </Pressable>
+
+          {/* Disclaimer — 2-regel volledig zoals voorheen, omdat dit
+              juridisch + emotioneel relevant is voor preorders. */}
+          <Text style={s.productCardDisclaimer}>
+            No credit card · No financial data · No purchase obligation
+          </Text>
+          <Text style={s.productCardDisclaimerSub}>
+            We only use your email to notify you before launch
+          </Text>
+        </View>
+
+        {/* ── LEGAL FOOTER ──
+            5 docs altijd toegankelijk, ook voor guests (AVG/compliance +
+            UX-conventie). Inline link-row, subtle, Apple-style. */}
+        <View style={s.legalFooter}>
+          <View style={s.legalLinkRow}>
+            <Pressable
+              onPress={() => router.navigate('/legal/terms' as never)}
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Terms</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() => router.navigate('/legal/privacy' as never)}
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Privacy</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() =>
+                router.navigate('/legal/accessibility' as never)
+              }
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Access</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() =>
+                router.navigate('/legal/shipping' as never)
+              }
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Shipping</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() => router.navigate('/legal/refund' as never)}
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Refund</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() => router.navigate('/legal/cookies' as never)}
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Cookies</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() => router.navigate('/legal/health' as never)}
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Health</Text>
+            </Pressable>
+            <Text style={s.legalLinkSep}>·</Text>
+            <Pressable
+              onPress={() =>
+                router.navigate('/legal/audio-sessions' as never)
+              }
+              hitSlop={8}
+            >
+              <Text style={s.legalLink}>Audio</Text>
+            </Pressable>
+          </View>
+          <Text style={s.legalCopy}>© VIBEZCORE 2026</Text>
+        </View>
+
+        {/* Iter 9dq (2026-06-02): dev-only Settings-link in signed-out
+            view. De normale Settings-link zit alleen in de ingelogde
+            Account-view, dus voor het wisselen van de Dev user-override
+            in test (bv. 'Free / Guest' vs 'Audio PRO') moest je eerst
+            inloggen. Met deze link kan een tester de override aanpassen
+            zonder eerst een account-roundtrip te doen. Verschijnt enkel
+            in __DEV__ builds — productie ziet 'm niet. */}
+        {__DEV__ && (
+          <Pressable
+            onPress={() => router.navigate('/settings' as never)}
+            hitSlop={12}
+            style={s.devSettingsLink}
+            accessibilityLabel="Open developer settings"
+          >
+            <Text style={s.devSettingsLinkText}>
+              🔧 Developer settings (dev only)
+            </Text>
+          </Pressable>
+        )}
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -838,6 +1158,530 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: 48 },
+  /* ── Iter 9iii → 9mmm: signed-out hero ──
+     Brand-style hero block met "WELCOME TO" eyebrow + wordmark image
+     + accent bar + sub. Conform welcome.tsx voor consistente brand-
+     presence tussen Welcome screen en Account guest-view. */
+  heroBlock: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 6,
+    marginBottom: 20,
+  },
+  heroEyebrow: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 2.4,
+    marginBottom: 12,
+  },
+  heroWordmark: {
+    width: 220,
+    height: 36,
+    /* Subtle shadow voor brand-presence — matched welcome.tsx style. */
+    shadowColor: '#000',
+    shadowOpacity: 0.40,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  heroAccentBar: {
+    width: 34,
+    height: 3,
+    backgroundColor: Brand.accent,
+    marginTop: 18,
+    marginBottom: 16,
+  },
+  /* Old heroGreeting (Welcome to VIBEZCORE plain text) replaced by
+     heroBlock met wordmark. Style kept for any legacy usage. */
+  heroGreeting: {
+    color: Brand.text,
+    fontSize: 26,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.5,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  heroSub: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  /* Card-frame voor zowel sign-in als product-sectie. Subtle bg-tint
+     + hairline border = visueel één geheel per sectie. */
+  authCard: {
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    marginBottom: 18,
+  },
+  authCardLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+    marginBottom: 14,
+  },
+  authCardIntro: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+
+  /* ── Iter 9dq v10 (2026-06-02): restructured product-cards ──
+     Clean layout: eyebrow → title → 1-liner → CTA. Bundle als inline
+     order-bump met BEST VALUE stamp. Vervangt de oude druk gestapelde
+     2-card layout met 3 CTAs en 3 badges. */
+  productCard: {
+    marginTop: 14,
+    padding: 18,
+    borderRadius: 14,
+    backgroundColor: Brand.panel,
+    /* Subtiele blauwe omlijning matched de history-page card-style. */
+    borderColor: 'rgba(58, 143, 255, 0.28)',
+    borderWidth: 1,
+  },
+  productStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  productStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 8,
+  },
+  productStatusLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+  },
+  productTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  productOneLiner: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    marginBottom: 18,
+  },
+  /* Iter 9dq v12: extra dim regel onder one-liner voor "limited units —
+     first reserved, first served". Subtieler dan one-liner zodat het
+     als scarcity-microcopy leest, niet als hoofdpunt. */
+  productSubOneLiner: {
+    color: 'rgba(255,255,255,0.40)',
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    fontStyle: 'italic',
+    marginTop: -12,
+    marginBottom: 18,
+  },
+  /* Primary CTA — solid accent fill voor Audio (direct verkoopbaar). */
+  productCtaPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Brand.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    gap: 8,
+  },
+  productCtaPrimaryText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+  },
+  productCtaPrimaryArrow: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+  },
+  /* Secondary CTA — outlined voor Reserve (geen aankoop, lower commitment). */
+  productCtaSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderColor: Brand.accent,
+    borderWidth: 1,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 14,
+  },
+  productCtaSecondaryText: {
+    color: Brand.accent,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+  },
+  productCtaSecondaryArrow: {
+    color: Brand.accent,
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+  },
+  /* Iter 9dq v11 (2026-06-02): twee reservation-opties met duidelijk
+     verschillende klasse.
+     Option A (Bracelet alone) — outlined accent border, neutrale bg.
+     Option B (Bundle) — subtle blauwe tint bg, stronger border, BEST
+     VALUE stamp bovenaan. Visueel duidelijk dat dit dezelfde actie is
+     met meer waarde, niet een totaal andere knop. */
+  reserveOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(58, 143, 255, 0.45)',
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  reserveOptionBundle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(58, 143, 255, 0.10)',
+    borderColor: 'rgba(58, 143, 255, 0.50)',
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  reserveOptionLeft: {
+    flex: 1,
+  },
+  reserveOptionTitle: {
+    color: Brand.accent,
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.1,
+  },
+  reserveOptionSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    marginTop: 3,
+  },
+  /* Iter 9dq v12: extra fine-print onder pakketnaam (alleen bundle).
+     Toont wat in de bundle zit zonder de pakketnaam te overschaduwen. */
+  reserveOptionSubFine: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 11,
+    fontFamily: BrandFonts.regular,
+    marginTop: 2,
+  },
+  reserveOptionArrow: {
+    color: Brand.accent,
+    fontSize: 18,
+    fontFamily: BrandFonts.bold,
+    marginLeft: 10,
+  },
+  /* BEST VALUE pill — gedeeld door bundle inline. */
+  bundleInlineBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Brand.success,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  bundleInlineBadgeText: {
+    color: '#0a0a0a',
+    fontSize: 9,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: 0.8,
+  },
+
+  /* "or get started" divider tussen de twee cards. Hairlines + text. */
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    marginBottom: 18,
+  },
+  orLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  orText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.4,
+    paddingHorizontal: 12,
+  },
+  /* Iter 9lll — Audio btn wrapper voor "AVAILABLE NOW" badge. */
+  audioBtnWrap: {
+    position: 'relative',
+    marginTop: 4,
+  },
+  availableBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Brand.success,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  availableDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#ffffff',
+  },
+  availableBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.8,
+  },
+  /* Iter 9lll: outlined variant voor secundaire reservatie-CTAs.
+     Accent-border, transparante bg, accent-tekst — lichter visueel
+     gewicht dan de solid-filled audio-knop. */
+  getProductBtnOutlined: {
+    backgroundColor: 'rgba(58,143,255,0.06)',
+    borderColor: Brand.accent,
+    borderWidth: 1,
+  },
+  /* Iter 9kkk — Bundle btn wrapper voor BEST VALUE-badge die boven
+     de knop uitsteekt (overflow visible nodig). */
+  bundleBtnWrap: {
+    position: 'relative',
+    marginTop: 4,
+  },
+  bundleBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 14,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  bundleBadgeText: {
+    color: Brand.accent,
+    fontSize: 9,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1,
+  },
+  /* Iter 9jjj — Early Bird card (Bracelet + Bundle, Kickstarter pre-order) */
+  earlyBirdEyebrowRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  earlyBirdLabel: {
+    color: Brand.accent,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+  },
+  earlyBirdDate: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  earlyBirdHeadline: {
+    color: Brand.text,
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  earlyBirdSub: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+  /* Disclaimer onder de 3 product-knoppen (samengevoegd uit 2 dubbele) */
+  productCardDisclaimer: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 6,
+  },
+  productCardDisclaimerSub: {
+    color: 'rgba(255,255,255,0.40)',
+    fontSize: 10,
+    fontFamily: BrandFonts.regular,
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 6,
+    lineHeight: 14,
+  },
+  /* Legal footer — 5 doc-links als inline link-row, altijd zichtbaar
+     (ook voor guests = AVG/compliance + UX-conventie). */
+  legalFooter: {
+    marginTop: 14,
+    paddingTop: 18,
+    paddingBottom: 8,
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  legalLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  legalLink: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  legalLinkSep: {
+    color: 'rgba(255,255,255,0.25)',
+    fontSize: 12,
+  },
+  legalCopy: {
+    color: 'rgba(255,255,255,0.30)',
+    fontSize: 10,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.6,
+  },
+  /* Iter 9dq — dev-only Settings-link in signed-out account view.
+     Subtiel maar herkenbaar (🔧 prefix + dim accent kleur). */
+  devSettingsLink: {
+    marginTop: 24,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  devSettingsLinkText: {
+    color: 'rgba(58,143,255,0.65)',
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.4,
+  },
+  /* Iter 9ii — Get-product sectie (vervangt Create-account toggle) */
+  getProductSection: {
+    marginTop: 28,
+    marginBottom: 18,
+  },
+  getProductHeader: {
+    color: Brand.text,
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  getProductSub: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  getProductBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  getProductBtnFeatured: {
+    backgroundColor: Brand.accent,
+    borderColor: Brand.accent,
+  },
+  getProductBtnLeft: {
+    flex: 1,
+  },
+  getProductBtnTitle: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.1,
+  },
+  getProductBtnSub: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.medium,
+    marginTop: 2,
+  },
+  getProductBtnSubFeatured: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontFamily: BrandFonts.medium,
+    marginTop: 2,
+  },
+  getProductBtnArrow: {
+    color: Brand.text,
+    fontSize: 18,
+    fontFamily: BrandFonts.bold,
+    marginLeft: 12,
+  },
+  /* Iter 9jj: disclaimer-tekst onder bracelet + bundle (waitlist-flow).
+     "No credit card · No financial data · No purchase obligation" +
+     "We only use your email to notify you before launch". */
+  getProductDisclaimer: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.2,
+    marginTop: -4,
+    marginBottom: 1,
+    paddingHorizontal: 6,
+    lineHeight: 14,
+  },
+  getProductDisclaimerSub: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 10,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    marginBottom: 12,
+    paddingHorizontal: 6,
+    lineHeight: 14,
+  },
   /* Top-bar met klein V-logo links — vervangt de oude grote wordmark
      in de signed-out view én de platte 'Account'-koptekst-only in de
      signed-in view. Operator-besluit 2026-05-22: groot wordmark alleen
@@ -1171,6 +2015,42 @@ const s = StyleSheet.create({
   cardRowDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  /* My Account-card field rows — andere visuele structuur dan de
+     normale cardRow (die heeft alleen tekst + chevron). Hier tonen we
+     LABEL boven VALUE — klassieke iOS Settings-stijl voor account-info.
+     `accountField` = niet-interactief (column stack), `accountField-
+     Interactive` = interactief met CTA + chevron rechts. */
+  accountField: {
+    paddingVertical: 14,
+  },
+  accountFieldInteractive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 10,
+  },
+  accountFieldLabel: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  accountFieldValue: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: -0.1,
+  },
+  /* "Change" CTA tekst in password-row — accent-blauw, naast de
+     chevron. Geeft direct duidelijk dat dit interactief is. */
+  accountFieldCta: {
+    color: Brand.accent,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
   },
   /* Cancel Subscription — neutraal-bordered knop (niet rood; cancel is
      reversible binnen huidige periode). Visueel minder dramatisch dan

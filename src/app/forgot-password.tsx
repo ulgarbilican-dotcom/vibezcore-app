@@ -27,18 +27,36 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 /* Redirect-URL die in de email-link verschijnt. Supabase voegt zelf
-   `&token_hash=...&type=recovery` toe. Deep-link handler in _layout
-   vangt 't pad `/reset-password` en routet erheen. */
-const REDIRECT_TO = 'vibezcoreapp://reset-password';
+   `&token_hash=...&type=recovery` toe.
+
+   WAAROM DE WEBAPP RESET-PAGE (en niet `vibezcoreapp://reset-password`):
+   Supabase rewriet silent custom URL-schemes in email templates terug
+   naar de Site URL (security-feature, niet uit te schakelen). En een
+   deep-link-only oplossing zou nieuwe Audio PRO-users uitsluiten die
+   net via Gumroad kochten en de app nog niet hebben geïnstalleerd —
+   ZIJ moeten ook hun password kunnen instellen.
+
+   De webapp `reset-password.html` werkt voor IEDEREEN:
+     - Desktop user → form in browser
+     - Mobile user mét app → form in browser, nieuw password werkt
+       daarna ook in app (zelfde Supabase account)
+     - Mobile user zónder app → form in browser, kan daarna app
+       installeren en inloggen met nieuw password
+   Operator-keuze 2026-05-29. */
+const REDIRECT_TO = 'https://app.vibezcore.com/reset-password.html';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /* Iter 9dq v17 (2026-06-02): dynamic safe-area inset zodat Submit-knop
+     niet onder iOS home-indicator of Android nav-bar valt. SafeAreaView
+     dekte voorheen alleen top af; scroll-content had geen bottom-padding. */
+  const insets = useSafeAreaInsets();
 
   const onSubmit = async () => {
     setErr(null);
@@ -48,6 +66,18 @@ export default function ForgotPassword() {
       return;
     }
     setBusy(true);
+    /* Diagnostic logging (operator-debug 2026-05-29) — toont in Metro
+       console exact wat de app naar Supabase stuurt. Helpt vaststellen
+       of redirect_to wel/niet daadwerkelijk meegestuurd wordt, want de
+       email-link blijkt soms naar de Site URL te vallen ipv het deep
+       link schema. Zichtbaar in `npx expo start` console. */
+    if (__DEV__) {
+      console.log('[forgot-password] ⇢ POST /auth/v1/recover');
+      console.log('[forgot-password] body:', {
+        email: trimmed,
+        redirect_to: REDIRECT_TO,
+      });
+    }
     try {
       const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
         method: 'POST',
@@ -60,22 +90,57 @@ export default function ForgotPassword() {
           redirect_to: REDIRECT_TO,
         }),
       });
+      if (__DEV__) {
+        console.log('[forgot-password] ⇠ response status:', res.status);
+        const responseText = await res.clone().text();
+        console.log('[forgot-password] ⇠ response body:', responseText);
+      }
       /* Supabase returnt 200 ongeacht of email bestaat (privacy-feature).
          We tonen altijd dezelfde confirmation zodat user-existence niet
          lekt via timing. */
       if (res.ok || res.status === 200) {
         setSent(true);
       } else {
+        /* Lees response body voor diagnose — Supabase geeft een
+           hele duidelijke error_description bij common problems
+           (rate-limit, redirect-niet-whitelisted, etc). */
         const data = await res.json().catch(() => ({}));
-        const msg =
+        if (__DEV__) {
+          console.warn('[forgot-password] supabase error:', res.status, data);
+        }
+        const rawMsg =
           data?.msg ||
           data?.error_description ||
           data?.error ||
-          'Could not send reset link';
-        setErr(msg);
+          data?.message ||
+          '';
+
+        /* Common Supabase errors mappen naar user-vriendelijke copy.
+           - 429 rate-limit  : "Too many requests"
+           - redirect_to     : misconfig (operator-fix in Supabase dashboard)
+           - invalid email   : echte client-side fout */
+        let friendly: string;
+        if (res.status === 429 || /rate.?limit|too many/i.test(rawMsg)) {
+          friendly =
+            'Too many requests. Please wait a minute and try again.';
+        } else if (/redirect/i.test(rawMsg)) {
+          /* Supabase blokkeert redirect_to als 'ie niet in de Auth →
+             URL Configuration → Redirect URLs whitelist staat. Operator
+             moet 'vibezcoreapp://reset-password' toevoegen. */
+          friendly =
+            'Email service is not fully configured. Please contact support.';
+        } else if (/invalid.*email/i.test(rawMsg)) {
+          friendly = 'Please enter a valid email address.';
+        } else {
+          friendly =
+            rawMsg ||
+            'Could not send reset link. Please try again or contact support.';
+        }
+        setErr(friendly);
       }
-    } catch {
-      setErr('Network error — please try again.');
+    } catch (e) {
+      if (__DEV__) console.warn('[forgot-password] network error:', e);
+      setErr('Network error — please check your connection and try again.');
     } finally {
       setBusy(false);
     }
@@ -115,7 +180,10 @@ export default function ForgotPassword() {
         options={{ title: 'Forgot password', headerBackTitle: 'Back' }}
       />
       <KeyboardAwareScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[
+          s.scroll,
+          { paddingBottom: 28 + insets.bottom },
+        ]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}

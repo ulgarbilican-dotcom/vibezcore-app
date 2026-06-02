@@ -172,6 +172,17 @@ export default function ResetPassword() {
     }
     setPhase('updating');
     try {
+      /* Body voor PUT /auth/v1/user:
+         - password : nieuwe password
+         - data     : update user_metadata. ZONDER `needs_password_setup:
+                      false` zou een Audio-PRO user die net voor het eerst
+                      een password ingesteld heeft bij elke volgende
+                      magic-link OPNIEUW door de setup-flow geforceerd
+                      worden (auth-callback.tsx leest die flag). Operator-
+                      keuze 2026-05-29: clear de flag op iedere
+                      password-update — recovery mode mag 't ook clearen
+                      (de flag hoort sowieso na een ingestelde password
+                      false te zijn). */
       const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
         method: 'PUT',
         headers: {
@@ -179,10 +190,16 @@ export default function ResetPassword() {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password: pw }),
+        body: JSON.stringify({
+          password: pw,
+          data: { needs_password_setup: false },
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (__DEV__) {
+          console.warn('[reset-password] PUT /user failed:', res.status, data);
+        }
         const msg =
           data?.msg ||
           data?.error_description ||

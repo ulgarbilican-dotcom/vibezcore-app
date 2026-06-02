@@ -33,6 +33,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Fragment } from 'react';
 import {
+  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -41,6 +42,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* Wordmark als eyebrow ipv platte tekst — huisstijl is het echte
+   logo, niet "VIBEZCORE" in blauwe letters (operator 2026-05-30). */
+const WORDMARK = require('../../../assets/vibezcore_wordmark.png');
 
 /* External URL opener — same patroon als rest van de app. Custom Tab /
    SFSafariViewController eerst, Linking als fallback. */
@@ -121,20 +126,72 @@ function InlineText({
   );
 }
 
+/* Verwijder "1. ", "2. " etc. prefix uit oude h2-titels (Terms, Refund,
+   Cookies, Health hebben handmatige nummering). Renderer voegt zelf
+   "01" eyebrows toe — dubbele nummering = lelijk. Wordt overbodig
+   zodra alle docs gesynced zijn met de nieuwe website-stijl. */
+function stripLegacyNumbering(text: string): string {
+  return text.replace(/^\d+\.\s+/, '');
+}
+
 /* ── Block renderer ─────────────────────────────────────────────────── */
-function BlockRenderer({ block }: { block: LegalBlock }) {
+function BlockRenderer({
+  block,
+  sectionNumber,
+}: {
+  block: LegalBlock;
+  sectionNumber?: string;
+}) {
   switch (block.kind) {
     case 'h2':
-      return <Text style={s.h2}>{block.text}</Text>;
+      return (
+        <View style={s.h2Wrap}>
+          {sectionNumber && (
+            <Text style={s.sectionNumber}>{sectionNumber}</Text>
+          )}
+          <Text style={s.h2}>{stripLegacyNumbering(block.text)}</Text>
+        </View>
+      );
+    case 'h3':
+      return <Text style={s.h3}>{block.text}</Text>;
     case 'p':
       return <InlineText text={block.text} style={s.p} />;
-    case 'ul':
+    case 'ul': {
+      const isCheck = block.style === 'check';
       return (
         <View style={s.ul}>
           {block.items.map((item, i) => (
             <View key={i} style={s.li}>
-              <Text style={s.liBullet}>•</Text>
+              {isCheck ? (
+                <View style={s.liCheck}>
+                  <Text style={s.liCheckText}>✓</Text>
+                </View>
+              ) : (
+                <Text style={s.liBullet}>•</Text>
+              )}
               <InlineText text={item} style={s.liText} />
+            </View>
+          ))}
+        </View>
+      );
+    }
+    case 'tags':
+      return (
+        <View style={s.tagsWrap}>
+          {block.items.map((item, i) => (
+            <View key={i} style={s.tag}>
+              <Text style={s.tagText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      );
+    case 'cards':
+      return (
+        <View style={s.cardsGrid}>
+          {block.items.map((card, i) => (
+            <View key={i} style={s.gridCard}>
+              <Text style={s.gridCardTitle}>{card.title}</Text>
+              <Text style={s.gridCardText}>{card.text}</Text>
             </View>
           ))}
         </View>
@@ -197,18 +254,43 @@ export default function LegalDoc() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header — eyebrow + title + lastUpdated */}
-        <Text style={s.eyebrow}>{doc.eyebrow}</Text>
+        {/* Header — wordmark eyebrow + title + optionele subtitle +
+            lastUpdated tekst. Date is platte tekst (Apple-stijl,
+            geen pill, geen groene status-dot). */}
+        <Image
+          source={WORDMARK}
+          style={s.wordmark}
+          resizeMode="contain"
+          accessibilityLabel="VIBEZCORE"
+        />
         <Text style={s.title}>{doc.title}</Text>
-        <Text style={s.lastUpdated}>Last updated: {doc.lastUpdated}</Text>
+        {doc.subtitle && <Text style={s.subtitle}>{doc.subtitle}</Text>}
+        <Text style={s.lastUpdatedText}>
+          Last updated: {doc.lastUpdated}
+        </Text>
 
-        {/* Body — alle blocks in document order */}
+        {/* Body — alle blocks in document order. We tellen h2's vooraf
+            zodat sectie-eyebrows ("01", "02") automatisch worden
+            geïnjecteerd, exact zoals op vibezcore.com legal pages. */}
         <View style={s.body}>
-          {doc.blocks.map((block, i) => (
-            <Fragment key={i}>
-              <BlockRenderer block={block} />
-            </Fragment>
-          ))}
+          {(() => {
+            let h2Count = 0;
+            return doc.blocks.map((block, i) => {
+              let sectionNumber: string | undefined;
+              if (block.kind === 'h2') {
+                h2Count += 1;
+                sectionNumber = String(h2Count).padStart(2, '0');
+              }
+              return (
+                <Fragment key={i}>
+                  <BlockRenderer
+                    block={block}
+                    sectionNumber={sectionNumber}
+                  />
+                </Fragment>
+              );
+            });
+          })()}
         </View>
 
         {/* Contact-support card aan de bodem */}
@@ -220,7 +302,7 @@ export default function LegalDoc() {
           </Text>
           <Pressable
             style={s.contactBtn}
-            onPress={() => openExternal(SUPPORT_URL)}
+            onPress={() => router.navigate('/support' as never)}
             accessibilityLabel="Contact VIBEZCORE support"
           >
             <Text style={s.contactBtnText}>Contact Support  →</Text>
@@ -274,6 +356,17 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   /* ── Header ── */
+  /* Wordmark als brand-eyebrow boven de doc-titel. Compacte maat
+     (130×22px) zodat de h1-titel het hero-element blijft. */
+  wordmark: {
+    width: 130,
+    height: 22,
+    alignSelf: 'flex-start',
+    marginBottom: 14,
+  },
+  /* `eyebrow` style blijft staan voor backward-compat met sectie-
+     subtitles indien die nog eyebrow-stijl nodig hebben (bv. de
+     section-number die elders gerenderd wordt). */
   eyebrow: {
     color: Brand.accent,
     fontSize: 10,
@@ -284,27 +377,67 @@ const s = StyleSheet.create({
   },
   title: {
     color: Brand.text,
-    fontSize: 30,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.6,
-    lineHeight: 34,
-    marginBottom: 8,
+    fontSize: 32,
+    fontFamily: BrandFonts.black,
+    letterSpacing: -0.8,
+    lineHeight: 38,
+    marginBottom: 12,
   },
-  lastUpdated: {
+  /* Hero-subtitle — optionele tagline onder de titel (van vibezcore.com
+     legal hero-sub). Italic-aanvoelend door de lichte kleur + lijnhoogte. */
+  subtitle: {
     color: Brand.textDim,
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    marginBottom: 8,
+    fontSize: 15,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 22,
+    marginBottom: 18,
+    maxWidth: 520,
   },
-  body: { marginTop: 14 },
+  /* Last-updated — Apple-stijl plain text. Geen pill, geen groene
+     status-dot. Subtle metadata, niet luid. Operator-besluit
+     2026-05-30. */
+  lastUpdatedText: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: -0.1,
+    marginBottom: 24,
+  },
+  body: { marginTop: 6 },
+  /* Section-number eyebrow boven elke h2 ("01", "02", ...) — auto-
+     gegenereerd door de renderer, matched de visuele structuur van
+     vibezcore.com legal pages. */
+  h2Wrap: {
+    marginTop: 36,
+    marginBottom: 10,
+    paddingTop: 26,
+    borderTopColor: Brand.border,
+    borderTopWidth: 1,
+  },
+  sectionNumber: {
+    color: Brand.accent,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
   /* ── H2 ── */
   h2: {
     color: Brand.text,
-    fontSize: 17,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: -0.2,
-    marginTop: 26,
-    marginBottom: 10,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.4,
+    lineHeight: 28,
+  },
+  /* H3 — sub-header binnen een h2-sectie (zoals "Personal Information"
+     onder "Information We Collect"). */
+  h3: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+    marginTop: 22,
+    marginBottom: 8,
   },
   /* ── Paragraph ── */
   p: {
@@ -337,12 +470,87 @@ const s = StyleSheet.create({
     marginRight: 10,
     lineHeight: 22,
   },
+  /* Check-style li (style: 'check') — accent-blauwe gevulde cirkel met
+     checkmark, zoals de "rights-list" op vibezcore.com. */
+  liCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 12,
+    backgroundColor: 'rgba(58,143,255,0.18)',
+    borderColor: 'rgba(58,143,255,0.45)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 1,
+  },
+  liCheckText: {
+    color: Brand.accent,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    lineHeight: 13,
+  },
   liText: {
     flex: 1,
     color: 'rgba(255,255,255,0.65)',
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     lineHeight: 22,
+  },
+  /* ── Tags (chip pills) — voor data-type chips zoals "Name",
+     "Email address", etc. Identiek visueel aan website tag-grid. */
+  tagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  tag: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  tagText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+  },
+  /* ── Cards grid — 2-koloms grid van label+description cards
+     (Essential / Analytics / Functional / Security). Op smalle screens
+     wrappen ze naar 1 kolom via flex-wrap. */
+  cardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  gridCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 140,
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+  },
+  gridCardTitle: {
+    color: Brand.text,
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.1,
+    marginBottom: 4,
+  },
+  gridCardText: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 17,
   },
   /* ── Highlight box (blue tint) ── */
   highlightBox: {

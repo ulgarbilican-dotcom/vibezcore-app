@@ -22,8 +22,13 @@
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
+import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
+import {
+  awaitDevUserOverrideLoaded,
+  getDevUserOverride,
+} from '@/utils/dev-user-override';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -37,7 +42,7 @@ import * as Linking from 'expo-linking';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -104,9 +109,13 @@ export default function RootLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      /* Iter 9as (2026-05-31): wacht óók op dev-override cache zodat
+         de welcome-redirect-check daar rekening mee kan houden. In prod
+         is awaitDevUserOverrideLoaded() een no-op. */
       const [t, pending] = await Promise.all([
         getToken(),
         hasPendingAuthDeepLink(),
+        awaitDevUserOverrideLoaded(),
       ]);
       if (cancelled) return;
       setAuth(t ?? null);
@@ -120,11 +129,44 @@ export default function RootLayout() {
   const ready =
     fontsLoaded && auth !== undefined && pendingAuthLink !== undefined;
 
+  /* Iter 9dq (2026-06-02): redirect-guard. Voorheen kon de welcome-
+     redirect-effect twee keer firen bij een snelle user: cold-start
+     toonde kort /(tabs)/ omdat auth-check async is, user tikte een
+     sessie aan → /player gepusht → toen pas resolvede de auth-check,
+     ready werd true, effect fired → router.replace('/welcome') blikseme
+     de player weg. Tweede klik werkte dan wel (state stabiel).
+     Ook in productie mogelijk bij trage netwerk-/storage-reads.
+     Fix: ref-guard zorgt dat de welcome-redirect maar ÉÉN keer firet
+     per app-mount, namelijk op cold-start vóór enige user-navigatie.
+     Latere state-changes (bv. sign-out) worden door de schermen zelf
+     afgehandeld via expliciete router-calls, niet door dit globale
+     effect. */
+  const welcomeRedirectFiredRef = useRef(false);
+
   useEffect(() => {
     if (!ready) return;
+    if (welcomeRedirectFiredRef.current) {
+      /* Splash zou onderhand allang weg moeten zijn; defensief nogmaals
+         aanroepen schaadt niet als 'ie al hidden is. */
+      SplashScreen.hideAsync().catch(() => {});
+      return;
+    }
+    welcomeRedirectFiredRef.current = true;
     /* Welcome-redirect ALLEEN als er geen auth-deep-link wacht.
-       Anders neemt de deep-link-handler in de tweede useEffect het over. */
-    if (auth === null && !pendingAuthLink) {
+       Anders neemt de deep-link-handler in de tweede useEffect het over.
+       Iter 9as: dev-override 'guest' triggert óók de welcome-redirect,
+       ook al is er nog een token (simuleert niet-ingelogd).
+       Iter 9dj (2026-05-31): dev-override 'audio' / 'bracelet' / 'pro'
+       simuleren juist een INGELOGDE PRO-user → welcome moet OVERSLAAN
+       ook al heeft de tester geen echte token. Hierdoor verschijnt
+       welcome niet meer op cold-start bij dev-tests met die overrides. */
+    const override = getDevUserOverride();
+    const treatAsGuest = override === 'guest';
+    const treatAsSignedIn =
+      override === 'audio' || override === 'bracelet' || override === 'pro';
+    const showWelcome =
+      !pendingAuthLink && (treatAsGuest || (!treatAsSignedIn && auth === null));
+    if (showWelcome) {
       router.replace('/welcome');
     }
     SplashScreen.hideAsync().catch(() => {});
@@ -210,6 +252,18 @@ export default function RootLayout() {
           name="bracelet-control"
           options={{ title: 'Bracelet', headerBackTitle: 'Back' }}
         />
+        {/* `bracelet-history` — sub-screen voor sessie-overzicht. Push
+            vanaf bracelet-control idle (history-knop). */}
+        <Stack.Screen
+          name="bracelet-history"
+          options={{ title: 'Session history', headerBackTitle: 'Back' }}
+        />
+        {/* `support` — in-app contact-form (vervangt externe support-URL).
+            Push vanaf Account → Support of legal-docs Contact-CTA. */}
+        <Stack.Screen
+          name="support"
+          options={{ title: 'Support', headerBackTitle: 'Back' }}
+        />
         <Stack.Screen
           name="player"
           options={{ headerShown: false, presentation: 'modal' }}
@@ -237,12 +291,37 @@ export default function RootLayout() {
           name="reset-password"
           options={{ title: 'Reset password', headerBackTitle: 'Back' }}
         />
+        {/* `change-password` — voor ingelogde users die hun bekende
+            password willen wijzigen. Anders dan /reset-password
+            (forgot flow via email-link). Geopend vanuit Account-tab
+            → "Change password" row. */}
+        <Stack.Screen
+          name="change-password"
+          options={{ title: 'Change password', headerBackTitle: 'Account' }}
+        />
         {/* `legal/[doc]` — dynamic route voor 5 legal/safety-docs
             (terms/privacy/refund/cookies/health). Inhoud in
             `src/data/legal-content.ts`. */}
         <Stack.Screen
           name="legal/[doc]"
           options={{ headerBackTitle: 'Account' }}
+        />
+        {/* `faq` — Frequently Asked Questions, gesynced van
+            vibezcore.com/faq. Content in `src/data/faq-content.ts`.
+            Geopend vanuit Account → Support menu OF vanuit Support
+            form ("Browse FAQ first" link bovenaan). */}
+        <Stack.Screen
+          name="faq"
+          options={{ title: 'FAQ', headerBackTitle: 'Back' }}
+        />
+        {/* `about` — Brand story screen, gesynced van vibezcore.com/
+            about-vibezcore. 8 secties (origin, challenge, system,
+            science, pillars, collective, who-it's-for, mission) met
+            pull-quotes, system cards, pillars grid. Custom layout —
+            niet via Legal renderer omdat visueel anders. */}
+        <Stack.Screen
+          name="about"
+          options={{ title: 'About', headerBackTitle: 'Back' }}
         />
         {/* `coming` heeft géén handmatige Stack.Screen-registratie meer —
            expo-router 55 pikte 'm dubbel op (file-based routing + deze
@@ -265,6 +344,12 @@ export default function RootLayout() {
             useEffect in de component, beperkt tot (tabs)-segmenten zodat
             'ie nooit over /welcome verschijnt. */}
         <WelcomeBackPopup />
+
+      {/* Welcome-back-warrior — motivationele begroeting bij cold-start
+          na >12h gap (iter 9s, operator-feedback "Welcome back Warrior").
+          Apart van WelcomeBackPopup (die over audio-resume gaat).
+          Subscription-relevant copy + send-feedback link. */}
+      <WelcomeBackWarrior />
       </View>
     </ErrorBoundary>
   );

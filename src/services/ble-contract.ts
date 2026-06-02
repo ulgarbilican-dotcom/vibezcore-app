@@ -65,7 +65,11 @@ export const MODES: ModeMeta[] = [
     mode: BraceletMode.Gamma,
     name: 'Boost',
     blurb: 'Peak alertness and sharp concentration.',
-    color: '#FF453A', // red
+    /* Iter 8c: rood #FF453A → wit (operator-feedback "rood te
+       agressief"). Voelt als monochrome/premium "kracht in eenvoud"-
+       look, niet aggressief. Op donkere bg leest 't als wit-met-
+       outline, op cards als wit-fill-met-donker-text. */
+    color: '#FFFFFF',
     minMinutes: 8,
     maxMinutes: 15,
   },
@@ -97,7 +101,10 @@ export const MODES: ModeMeta[] = [
     mode: BraceletMode.Delta,
     name: 'Rest & Reset',
     blurb: 'Deep rest and the transition to sleep.',
-    color: '#30D158', // green
+    /* Iter 8c: groen #30D158 → zachter #4FA46B (operator-feedback
+       "flashy, te fel"). Mossier/sage-tint, leest rustiger en past
+       beter bij de "rest & reset"-intentie. */
+    color: '#4FA46B',
     minMinutes: 25,
     maxMinutes: 45,
   },

@@ -59,6 +59,7 @@ import {
   SERIES_SUBTITLE,
 } from '@/data/audio-library-data';
 import { getSignedAudioUrl, SignedUrlError } from '@/utils/audio-url';
+import { getDevUserOverride } from '@/utils/dev-user-override';
 import { endListen, pauseListen, startListen } from '@/utils/history';
 import { getNextSession } from '@/utils/next-session';
 import { getSetting } from '@/utils/settings';
@@ -339,12 +340,23 @@ function onStatus(st: AudioStatus): void {
     });
   }
 
-  /* Preview-cap → pauze + UI-modal. Eenmalig triggeren. */
+  /* Preview-cap → pauze + UI-modal. Eenmalig triggeren.
+     Iter 9dq v16 (2026-06-02): in __DEV__ + override 'audio'/'pro' skippen
+     we de client-side cap. Reden: backend levert volledige audio-file via
+     signed URL (preview=true geeft toegang), de 60s cap is alleen client-
+     side enforcement. Voor operator-tests die "PRO-experience" willen
+     simuleren zonder real Supabase-account hoeft de cap dus niet te
+     hitten. Echte gasten in productie hebben nooit een override → krijgen
+     normale cap zoals voorheen. */
+  const overridePretendsPro =
+    __DEV__ &&
+    (getDevUserOverride() === 'audio' || getDevUserOverride() === 'pro');
   if (
     state.preview &&
     !state.previewBlocked &&
     posSec >= PREVIEW_CAP_SEC &&
-    isPlayingNow
+    isPlayingNow &&
+    !overridePretendsPro
   ) {
     player?.pause();
     setState({ previewBlocked: true });
@@ -395,6 +407,19 @@ function onStatus(st: AudioStatus): void {
       }
     });
 
+    /* Iter 9nn: voor non-PRO users alleen volgende FREE sessie zoeken,
+       niet PRO sessies. Voorkomt valse "Play next"-belofte die in een
+       lege preview of upsell zou eindigen.
+       Iter 9dq v14 (2026-06-02): freeOnly UIT — operator-feedback. De
+       originele reden ("PRO sessies geven hard block voor Free users")
+       is achterhaald sinds de backend 60s-preview ondersteunt op PRO
+       content. Free + PRO override + echte PRO krijgen nu allemaal de
+       volgende sessie in DEZELFDE serie. Bij PRO next:
+         - Free → 60s preview → upsell modal (natuurlijke funnel)
+         - PRO override → 60s preview (geen real token = geen full access)
+         - Echte PRO met token → full playback
+       Voorkomt dat de player onverwacht naar een totaal andere serie
+       springt na een sessie. */
     const nextSess = getNextSession(finishedSession.url);
     const nextInfo: SessionInfo | null = nextSess
       ? {
@@ -407,8 +432,15 @@ function onStatus(st: AudioStatus): void {
       : null;
 
     if (getSetting('autoPlayNext') && nextInfo) {
-      /* Fire-and-forget. loadSession reset state. */
-      loadSession(nextInfo, { preview: shouldPreview(nextInfo) });
+      /* Fire-and-forget. loadSession reset state.
+         Iter 9dq v18 (2026-06-02): autoStart:true → skip resume-prompt
+         + start direct vanaf 0. Voorkomt dat de player blokkeert op een
+         Continue/Start over-keuze tussen series-sessies. User die auto-
+         play aanzet wil seamless doorspelen, niet per sessie kiezen. */
+      loadSession(nextInfo, {
+        preview: shouldPreview(nextInfo),
+        autoStart: true,
+      });
       return;
     }
 
@@ -427,6 +459,10 @@ function onStatus(st: AudioStatus): void {
 
 function activateLockScreen(session: SessionInfo): void {
   if (!player) return;
+  /* Iter 9hhh: terug naar plain URLs — operator-besluit niet Bunny
+     Optimizer ($9.5/mo) maar handmatig 1024×1024 source-jpgs uploaden
+     in Bunny Storage. Geen runtime transform nodig dan, source is al
+     groot genoeg voor lockscreen-widget. */
   const artworkUrl = SERIES_PHOTO[session.series];
   const artist = SERIES_SUBTITLE[session.series] ?? session.series;
   try {
@@ -443,16 +479,33 @@ function activateLockScreen(session: SessionInfo): void {
   }
 }
 
+/* Iter 9fff: publieke re-activator voor lock-screen metadata.
+   Aanroepbaar wanneer een interruption (call, alarm) onze OS-UI heeft
+   weggehaald en we 'm willen herstellen, of na een orientation change
+   die de notification-shade reset.
+   Geen-op als er geen sessie is. */
+export function reactivateLockScreen(): void {
+  if (!state.session || !player) return;
+  activateLockScreen(state.session);
+}
+
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
 /**
  * Laad + start een nieuwe sessie. Indien er een saved-position > 4s
  * bestaat, laden we op pauze en zetten awaitingResume=true zodat de UI
  * eerst het Continue/Start over-panel toont.
+ *
+ * Iter 9dq v18 (2026-06-02): opts.autoStart skipt de resume-prompt en
+ * start direct vanaf 0. Gebruikt door auto-play-next-flow: na het einde
+ * van sessie 1 wil de player seamless doorspelen naar sessie 2, niet
+ * blokkeren op een Continue/Start over-keuze. Saved position wordt
+ * gewist zodat 'ie ook later niet meer als "Partly listened" leest na
+ * een complete auto-play-cyclus.
  */
 export async function loadSession(
   session: SessionInfo,
-  opts: { preview?: boolean } = {}
+  opts: { preview?: boolean; autoStart?: boolean } = {}
 ): Promise<void> {
   // Same session already loaded? Skip — minimize+reopen scenario.
   if (state.session?.url === session.url && player) {
@@ -466,8 +519,14 @@ export async function loadSession(
   lastPeriodicWritePosSec = -Infinity;
 
   const preview = !!opts.preview;
-  const savedSec = getSavedPosition(session.url);
-  const shouldShowResume = savedSec > 4;
+  /* Iter 9dq v18: bij autoStart de saved position wissen + resume-prompt
+     overslaan. Auto-play continueert door een serie; user verwacht geen
+     "Continue waar je was?"-keuze per sessie. */
+  if (opts.autoStart) {
+    clearSavedPosition(session.url);
+  }
+  const savedSec = opts.autoStart ? 0 : getSavedPosition(session.url);
+  const shouldShowResume = !opts.autoStart && savedSec > 4;
 
   setState({
     session,

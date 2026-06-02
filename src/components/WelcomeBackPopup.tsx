@@ -67,16 +67,31 @@ export function WelcomeBackPopup() {
   const segments = useSegments() as string[];
 
   /* Trigger-logica: cold-start + lastPlayed + in (tabs) → showWelcomePopup.
-     De segment-check zorgt dat 'ie nooit op /welcome verschijnt (gast-
-     flow). De service zelf bewaakt "al getoond"-status, dus deze effect
-     mag rustig vaker firen — meer dan één show binnen dezelfde process
-     is fysiek onmogelijk. */
+
+     KRITIEKE BUG FIX (iter 9kk, 2026-05-29 operator-feedback "popup
+     verschijnt bij sluiten van sessie binnen dezelfde app-launch"):
+
+     Voorheen: app-launch zonder lastPlayed → markWelcomePopupSkipped()
+     werd nooit aangeroepen → coldStartShown bleef false. Later wanneer
+     user een sessie startte en sloot, werd lastPlayed gezet → useEffect
+     re-fired → lastPlayed bestond nu → popup verscheen. Dat is wat de
+     operator als bug zag.
+
+     Fix: zodra useEffect voor het eerst fired EN er is geen lastPlayed,
+     markeren we direct als skipped. Future updates aan lastPlayed
+     triggeren dan geen popup meer (showWelcomePopup is no-op zodra
+     coldStartShown true is). */
   useEffect(() => {
-    if (!lastPlayed) return;
+    const { showWelcomePopup, markWelcomePopupSkipped } =
+      require('@/services/welcome-popup');
+    if (!lastPlayed) {
+      /* Geen entry bij app-start → markeer skipped. Voorkomt dat
+         later-gemaakte sessies triggeren binnen dezelfde process. */
+      markWelcomePopupSkipped();
+      return;
+    }
     const inTabs = segments[0] === '(tabs)';
     if (!inTabs) return;
-    // Import dynamically to avoid circular dep risk; service is tiny.
-    const { showWelcomePopup } = require('@/services/welcome-popup');
     showWelcomePopup();
   }, [lastPlayed, segments]);
 

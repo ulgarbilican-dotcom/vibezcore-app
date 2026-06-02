@@ -8,6 +8,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SERIES_PHOTO, type Session } from '@/data/audio-library-data';
+import { useSubscription } from '@/hooks/useSubscription';
 import type { ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -21,6 +22,11 @@ export function LibraryListRow({
   rightAccessory?: ReactNode;
 }) {
   const photo = SERIES_PHOTO[session.series];
+  /* Iter 9dq v20 (2026-06-02): display-aware isPro (override-aware). In PRO
+     mode geen FREE/PRO tag — alles is toegankelijk dus onderscheid is
+     irrelevant. Free/Guest user zien de tag wel als wegwijzer voor wat ze
+     nu kunnen vs wat upgrade vereist. */
+  const { isPro } = useSubscription();
   return (
     <Pressable
       onPress={onPress}
@@ -31,9 +37,11 @@ export function LibraryListRow({
         {photo ? <Image source={{ uri: photo }} style={s.artImg} /> : null}
       </View>
       <View style={s.body}>
-        <Text style={[s.tag, session.free ? s.tagFree : s.tagPro]}>
-          {session.free ? 'FREE' : 'PRO'}
-        </Text>
+        {!isPro && (
+          <Text style={[s.tag, session.free ? s.tagFree : s.tagPro]}>
+            {session.free ? 'FREE' : 'PRO'}
+          </Text>
+        )}
         <Text style={s.title} numberOfLines={2}>
           {session.title}
         </Text>

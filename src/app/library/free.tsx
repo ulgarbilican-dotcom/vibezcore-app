@@ -46,10 +46,9 @@ export default function LibraryFreeScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* Iter 9dq v20 (2026-06-02): eyebrow weg — consistent met
+            /library/favorites + /library/new. H1 + subtitle volstaan. */}
         <View style={s.header}>
-          <Text style={[s.eyebrow, { color: '#4ade80' }]}>
-            — FREE ACCESS —
-          </Text>
           <Text style={s.h1}>Free Sessions</Text>
           <Text style={s.subtitle}>
             Listen to these any time — no subscription required
