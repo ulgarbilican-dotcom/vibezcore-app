@@ -1683,65 +1683,65 @@ export default function AudioScreen() {
           })}
 
           {/* ── 13e card — VIBEZCORE ROADMAP / "What's Coming Next" ──
-              Bron: index_2_correct.html, comment "13TH CARD: What's
-              Coming Next". Visueel zit deze in dezelfde reeks als de
-              12 series, maar opent een ander scherm (router.push('/coming')).
-              Geen FREE-balk eronder, dus ALLE hoeken rond (geen naadloos
-              aansluiten op iets). Eigen "Explore →"-pill in plaats van
-              VIEW ALL. Sterkere gradient zodat de eyebrow + titel
-              prominenter naar voren komen. */}
-          <View style={s.libCardUnit}>
-            <Pressable
-              style={[s.libCard, s.libCardStandalone]}
-              onPress={() => router.push('/coming')}
-              android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-            >
-              <Image
-                source={{
-                  uri: 'https://vibezcore-audio.b-cdn.net/images/whats-coming.png',
-                }}
-                style={s.libCardBg}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={[
-                  'transparent',
-                  'rgba(0,0,0,0.15)',
-                  'rgba(0,0,0,0.4)',
-                  'rgba(0,0,0,0.92)',
-                ]}
-                locations={[0, 0.4, 0.55, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              {/* "Explore →"-pill — zelfde container-stijl als VIEW ALL
-                 maar mixed-case tekst. Coming-card heeft geen FOLLOW; één
-                 pill in de cluster (pillCluster levert de positie nu
-                 viewAllPill zelf geen position-props meer heeft). */}
-              <View style={s.pillCluster}>
+              Iter 9dq v48 (2026-06-03): operator-besluit — card tijdelijk
+              verborgen op alle pagina's. /coming-route blijft intact
+              (src/app/coming.tsx + Stack-registratie via screen-eigen
+              <Stack.Screen>), alleen de toegangs-card uit de library is
+              uit zicht. Styles (libCardStandalone, exploreText,
+              comingEyebrow) blijven staan om restore triviaal te houden.
+              JSX hieronder bewust uitgecomment ipv verwijderd zodat
+              re-enable één blok-uncomment is.
+
+              ── Originele JSX (re-enable: verwijder de wrapping comment) ──
+              <View style={s.libCardUnit}>
                 <Pressable
-                  style={s.viewAllPill}
+                  style={[s.libCard, s.libCardStandalone]}
                   onPress={() => router.push('/coming')}
-                  hitSlop={6}
-                  android_ripple={{
-                    color: 'rgba(255,255,255,0.10)',
-                    borderless: true,
-                  }}
+                  android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Text style={s.exploreText}>Explore</Text>
-                  <Text style={s.viewAllChev}>›</Text>
+                  <Image
+                    source={{
+                      uri: 'https://vibezcore-audio.b-cdn.net/images/whats-coming.png',
+                    }}
+                    style={s.libCardBg}
+                    resizeMode="cover"
+                  />
+                  <LinearGradient
+                    colors={[
+                      'transparent',
+                      'rgba(0,0,0,0.15)',
+                      'rgba(0,0,0,0.4)',
+                      'rgba(0,0,0,0.92)',
+                    ]}
+                    locations={[0, 0.4, 0.55, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={s.pillCluster}>
+                    <Pressable
+                      style={s.viewAllPill}
+                      onPress={() => router.push('/coming')}
+                      hitSlop={6}
+                      android_ripple={{
+                        color: 'rgba(255,255,255,0.10)',
+                        borderless: true,
+                      }}
+                    >
+                      <Text style={s.exploreText}>Explore</Text>
+                      <Text style={s.viewAllChev}>›</Text>
+                    </Pressable>
+                  </View>
+                  <View style={s.libCardBody}>
+                    <Text style={s.comingEyebrow}>VIBEZCORE ROADMAP</Text>
+                    <Text style={s.libCardTitle}>What's Coming Next</Text>
+                    <Text style={s.libCardSubline}>
+                      New series, new tools, new layers
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
-              <View style={s.libCardBody}>
-                <Text style={s.comingEyebrow}>VIBEZCORE ROADMAP</Text>
-                <Text style={s.libCardTitle}>What's Coming Next</Text>
-                <Text style={s.libCardSubline}>
-                  New series, new tools, new layers
-                </Text>
-              </View>
-            </Pressable>
-          </View>
+              ─────────────────────────────────────────────────────────── */}
             </>
           )}
         </View>

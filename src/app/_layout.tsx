@@ -168,14 +168,21 @@ export default function RootLayout() {
       !pendingAuthLink && (treatAsGuest || (!treatAsSignedIn && auth === null));
     if (showWelcome) {
       router.replace('/welcome');
-    } else if (!pendingAuthLink && override === 'bracelet') {
+    } else if (
+      !pendingAuthLink &&
+      (override === 'bracelet' || override === 'pro')
+    ) {
       /* Iter 9dq v21 (2026-06-02): bracelet-owner-only users (no audio
          sub) krijgen de Bracelet-tab als landing zodat dat hun primaire
          interactie-vlak is. Audio Library is voor hen een secondary
          upsell-target (teaser-landing in tab) — niet de eerste indruk
-         na app-open. Audio PRO / Full PRO blijven op Audio Library
-         landen (= hun primary product). In productie kan dezelfde
-         redirect getriggerd worden o.b.v. backend "has_bracelet"-flag. */
+         na app-open.
+         Iter 9dq v47 (2026-06-03): operator-keuze — Full PRO override
+         ('pro') landt ook op /bracelet. Reden: een Full PRO user heeft
+         BEIDE producten, en de bracelet is de actieve fysieke interactie
+         die op de juiste mode gestart moet worden. Audio Library blijft
+         één tab away. In productie zou dezelfde routing kunnen werken
+         o.b.v. backend "has_bracelet"-flag. */
       router.replace('/bracelet');
     }
     SplashScreen.hideAsync().catch(() => {});
