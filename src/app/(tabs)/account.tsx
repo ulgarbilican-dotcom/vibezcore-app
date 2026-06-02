@@ -127,10 +127,33 @@ function SubscriptionCard() {
     bigColor = Brand.text;
     subText = 'Upgrade for full library access';
   } else if (isPro && isBraceletOwner) {
-    /* Full PRO — beide producten actief. */
-    bigText = 'Full PRO';
+    /* Full PRO — beide producten actief.
+       Iter 9dq v49 (2026-06-03): operator-feedback — los "Full PRO"
+       voelde te dun naast "Audio PRO — Yearly" voor audio-only. Pakket-
+       scope nu inline in de bigText ("Full PRO — Audio + Bracelet")
+       zodat de status zelf direct vertelt wat erin zit, geen 2e regel
+       nodig om dezelfde info te dragen. subText hergebruikt vervolgens
+       de renew/active-datum van het audio-deel (zelfde format als
+       Audio-PRO-alleen), wat dus écht extra info toevoegt ipv echo. */
+    bigText = 'Full PRO — Audio + Bracelet';
     bigColor = Brand.accent;
-    subText = 'Audio Library + Bracelet';
+    if (validUntil) {
+      const d = new Date(validUntil);
+      if (!isNaN(d.getTime())) {
+        const formatted = d.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+        subText = willRenew
+          ? `Audio renews on ${formatted}`
+          : `Audio active until ${formatted}`;
+      } else {
+        subText = '';
+      }
+    } else {
+      subText = '';
+    }
   } else if (isBraceletOwner) {
     /* Bracelet-only owner — geen audio sub. Operator-update 2026-05-30:
        wijst nu expliciet op wat er nog WEL kan: Audio Library toevoegen
