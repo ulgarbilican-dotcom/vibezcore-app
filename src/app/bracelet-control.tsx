@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   recordSession,
@@ -3501,6 +3502,7 @@ export default function BraceletControl() {
               : previewHeaderOptions('Bracelet control preview')
           }
         />
+        <PreviewBanner />
         <View style={s.searchingWrap}>
           {/* Iter 8b: statische 3-dot replaced door radar-pulse animatie.
               Visualiseert actief zoeken — 3 ringen die expanderen en
@@ -3548,6 +3550,7 @@ export default function BraceletControl() {
               : previewHeaderOptions('Bracelet control preview')
           }
         />
+        <PreviewBanner />
         <View style={s.faultWrap}>
           <View style={s.faultIcon}>
             <Text style={s.faultIconText}>!</Text>
@@ -3593,6 +3596,7 @@ export default function BraceletControl() {
               : previewHeaderOptions('Bracelet control preview')
           }
         />
+        <PreviewBanner />
         <View style={s.chargingWrap}>
           <View style={s.chargingIcon}>
             <Text style={s.chargingIconText}>⚡</Text>
@@ -4063,6 +4067,7 @@ export default function BraceletControl() {
             : previewHeaderOptions('Bracelet control preview')
         }
       />
+      <PreviewBanner />
       {/* Iter 9ae (2026-05-31): expliciete paddingBottom voor safe-zone.
           Start-button stond op Audio PRO (non-owner standalone) te dicht
           tegen home-indicator. Math.max zorgt voor minimum 28px buffer

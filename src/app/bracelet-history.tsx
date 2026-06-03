@@ -16,6 +16,7 @@
    src/app/_layout.tsx als losse Stack.Screen.
    ─────────────────────────────────────────────────────────────────── */
 
+import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   clearHistory,
@@ -978,6 +979,7 @@ export default function BraceletHistory() {
           ),
         }}
       />
+      <PreviewBanner />
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}

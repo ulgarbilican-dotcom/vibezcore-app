@@ -35,6 +35,7 @@
      aangepast (operator-besluit 2026-05-25).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
@@ -1041,6 +1042,9 @@ export default function BraceletScreen() {
   if (showAudioProLanding && !exploreUnlocked) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
+        {/* Iter 9dq v79: zelfde preview-banner als de main bracelet-tab
+            route — Audio PRO landing is ook bracelet-content. */}
+        <PreviewBanner />
         <ScrollView
           contentContainerStyle={s.landingScroll}
           showsVerticalScrollIndicator={false}
@@ -1107,6 +1111,11 @@ export default function BraceletScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
+      {/* Iter 9dq v79 (2026-06-03): preview-banner bovenaan elke bracelet-
+          pagina. Bracelet-hardware is nog niet verzonden (Kickstarter 1 aug
+          2026); deze banner zet correcte verwachtingen voor pre-launch
+          testers en vroege owners wier device nog niet aankomt. */}
+      <PreviewBanner />
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}

@@ -270,10 +270,15 @@ function BraceletCard() {
     <View style={s.card}>
       <Text style={s.label}>Bracelet</Text>
       <Text style={[s.subBig, { color: Brand.accent }]}>
-        Bracelet active
+        Bracelet activated
       </Text>
+      {/* Iter 9dq v79 (2026-06-03): copy was "paired and ready to use"
+          maar voor pre-launch activatie-code users (Kickstarter aug 2026)
+          is de hardware nog niet verzonden — "paired" misleidt. Bracelet-
+          pagina's tonen nu een aparte PREVIEW-banner, dus hier alleen
+          state-neutrale tekst over wat de user kan doen. */}
       <Text style={s.subSmall}>
-        Your Smart Bead Bracelet is paired and ready to use.
+        Open Bracelet to preview your modes and review your activation.
       </Text>
       <Pressable
         style={s.cardCta}
