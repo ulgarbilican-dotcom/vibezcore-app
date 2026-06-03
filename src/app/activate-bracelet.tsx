@@ -24,6 +24,7 @@ import {
   activateBracelet,
   normalizeActivationCode,
 } from '@/services/bracelet-activation';
+import { setDevBraceletActivated } from '@/utils/dev-user-override';
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -57,11 +58,15 @@ export default function ActivateBraceletScreen() {
     setPhase('submitting');
     const result = await activateBracelet(code);
     if (result.ok) {
+      /* Iter 9dq v89 (2026-06-03): dev-flag setten zodat useBraceletOwner
+         na deze activation true returnt (samen met override = 'bracelet'
+         / 'pro'). Productie wordt afgehandeld door backend has_bracelet
+         in /api/subscription-status — die zet zichzelf na backend-
+         validatie van de code. */
+      if (__DEV__) {
+        await setDevBraceletActivated(true);
+      }
       setPhase('success');
-      /* Iter 9dq v88 (2026-06-03): naar /bracelet-control ipv /bracelet
-         tab. De tab toont alleen de control-inline wanneer de user al
-         bracelet-owner is — direct naar /bracelet-control vermijdt dat
-         de net-geactiveerde user de marketing-etalage te zien krijgt. */
       setTimeout(() => router.replace('/bracelet-control' as never), 1200);
       return;
     }

@@ -31,7 +31,11 @@ import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 async function refreshUserBucket(): Promise<void> {
   await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
 }
-import { useBraceletOwner, useDevUserOverride } from '@/utils/dev-user-override';
+import {
+  useBraceletEntitled,
+  useBraceletOwner,
+  useDevUserOverride,
+} from '@/utils/dev-user-override';
 import {
   cancelSubscription,
   gumroadManageUrl,
@@ -358,8 +362,13 @@ function BraceletCard() {
    state. Tot dan: dev-override + activation-flow trigger 'm via
    refreshSubscription. */
 function ActivateBraceletCta() {
-  const isBraceletOwner = useBraceletOwner();
-  if (isBraceletOwner) return null;
+  /* Iter 9dq v89 (2026-06-03): toon CTA wanneer user RECHT heeft op
+     bracelet-features (entitled = paid) maar nog niet geactiveerd is.
+     Voorheen toonde 'm voor ALLE non-owners (ook gasten/audio-PRO zonder
+     bracelet) wat verwarrend was. */
+  const entitled = useBraceletEntitled();
+  const activated = useBraceletOwner();
+  if (!entitled || activated) return null;
   return (
     <Pressable
       style={s.linkCard}

@@ -109,14 +109,94 @@ export function useDevUserOverride(): DevUserOverride {
   return __DEV__ ? value : null;
 }
 
-/** Bracelet-ownership wrapper — gebruikt door bracelet.tsx etc. Gebruikt
- *  override indien aanwezig, anders fallback (momenteel hardcoded false
- *  tot backend-endpoint live is). */
-export function useBraceletOwner(): boolean {
+/* ── Bracelet activation tracking (iter 9dq v89, 2026-06-03) ────────
+   Operator-feedback: override 'bracelet' / 'pro' liet de user direct
+   zien als "Bracelet activated" terwijl in productie een gekochte
+   bracelet ook eerst geactiveerd moet worden met de 12-char code.
+   Twee onafhankelijke staten nu:
+     1. Entitled = paid → override 'bracelet' of 'pro'
+     2. Activated = code geredeem'd → separate flag
+   Account-tab toont "Activate"-CTA bij entitled-niet-activated.
+   BraceletCard verschijnt pas wanneer activated.
+   In productie regelt backend has_bracelet=true dit; deze flag is
+   alleen voor dev-mock-flow. Clear bij override-change voor schone tests. */
+const ACTIVATED_KEY = 'vz_dev_bracelet_activated_v1';
+let activatedCached = false;
+let activatedLoaded = false;
+const activationListeners = new Set<(v: boolean) => void>();
+
+function notifyActivation(): void {
+  activationListeners.forEach((cb) => cb(activatedCached));
+}
+
+async function loadActivationOnce(): Promise<void> {
+  if (activatedLoaded) return;
+  try {
+    const raw = await AsyncStorage.getItem(ACTIVATED_KEY);
+    activatedCached = raw === '1';
+  } catch {
+    /* swallow */
+  }
+  activatedLoaded = true;
+  notifyActivation();
+}
+
+export async function setDevBraceletActivated(value: boolean): Promise<void> {
+  if (!__DEV__) return;
+  activatedCached = value;
+  notifyActivation();
+  try {
+    if (value) {
+      await AsyncStorage.setItem(ACTIVATED_KEY, '1');
+    } else {
+      await AsyncStorage.removeItem(ACTIVATED_KEY);
+    }
+  } catch {
+    /* swallow */
+  }
+}
+
+/** Heeft user de activation-code ingevoerd? Dev-only flag. */
+export function useDevBraceletActivated(): boolean {
+  const [value, setValue] = useState<boolean>(activatedCached);
+  useEffect(() => {
+    activationListeners.add(setValue);
+    if (activatedCached !== value) setValue(activatedCached);
+    loadActivationOnce();
+    return () => {
+      activationListeners.delete(setValue);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return __DEV__ ? value : false;
+}
+
+/** Reset activation-flag wanneer override verandert — schone test-cycli. */
+listeners.add(() => {
+  if (activatedCached) {
+    activatedCached = false;
+    notifyActivation();
+    AsyncStorage.removeItem(ACTIVATED_KEY).catch(() => {});
+  }
+});
+
+/** Heeft user RECHT op bracelet-features? = paid (override).
+ *  Niet hetzelfde als 'has activated' — voor activation-status gebruik
+ *  useBraceletOwner() (die beide combineert). */
+export function useBraceletEntitled(): boolean {
   const override = useDevUserOverride();
   if (override === 'bracelet' || override === 'pro') return true;
-  /* TODO: backend endpoint — momenteel hardcoded false. */
   return false;
 }
 
+/** Bracelet-ownership wrapper. Iter 9dq v89: vereist NU zowel entitled
+ *  (paid) als activated (code geredeem'd). In productie levert backend
+ *  has_bracelet pas true wanneer beide compleet zijn. */
+export function useBraceletOwner(): boolean {
+  const entitled = useBraceletEntitled();
+  const activated = useDevBraceletActivated();
+  return entitled && activated;
+}
+
 loadOnce();
+loadActivationOnce();
