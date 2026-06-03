@@ -20,14 +20,9 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import {
-  EMAIL_KEY,
-  EXPIRES_KEY,
-  LAST_EMAIL_KEY,
-  REFRESH_KEY,
-  TOKEN_KEY,
-} from '@/services/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearSession, persistSession } from '@/services/auth';
+import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
+import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -112,22 +107,32 @@ export default function AuthCallback() {
           return;
         }
 
-        /* Persist session — zelfde keys als auth.ts gebruikt zodat
-           de bestaande getToken() / useSubscription() flow alles
-           direct ziet. */
-        const expiresIn =
-          typeof session.expires_in === 'number' ? session.expires_in : 3600;
-        const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
-        const pairs: [string, string][] = [
-          [TOKEN_KEY, session.access_token],
-          [EXPIRES_KEY, String(expiresAt)],
-        ];
-        if (session.refresh_token) pairs.push([REFRESH_KEY, session.refresh_token]);
-        if (session.user?.email) {
-          pairs.push([EMAIL_KEY, session.user.email]);
-          pairs.push([LAST_EMAIL_KEY, session.user.email]);
-        }
-        await AsyncStorage.multiSet(pairs);
+        /* Persist session — gebruik clearSession + persistSession uit
+           auth.ts in plaats van rechtstreekse AsyncStorage.multiSet.
+
+           Iter 9dq v52 (2026-06-03, audit-finding C3): clearSession ÉÉRST.
+           Zonder die stap blijft een eventueel-oude refresh_token van een
+           VORIGE user-sessie in AsyncStorage staan wanneer deze magic-link
+           uitwisseling om de een of andere reden GEEN refresh_token
+           teruggeeft (bv. recovery-type Verify-responses). De volgende
+           auto-refresh in auth.ts grijpt dan die stale refresh_token van
+           de vorige user, krijgt 401 van Supabase → clearSession → silent
+           logout. Door eerst alles te wissen kan dit niet meer mismatchen:
+           ofwel zit alle data van de nieuwe user erin, ofwel niets. */
+        await clearSession();
+        await persistSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_in: session.expires_in,
+          user: { email: session.user?.email },
+        });
+
+        /* Iter 9dq v55 (2026-06-03, audit C5+C6): bucket-switch hier
+           afwachten zodat de Audio Library / Bracelet-tab waar we
+           straks naar redirecten al de juiste per-user bucket-key
+           gebruikt. Zonder dit kon een snelle interactie na landing
+           nog naar de oude bucket schrijven. */
+        await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
 
         /* Twee redenen om naar /reset-password te routen:
            1. needs_password_setup-flag (gezet door gumroad-webhook bij

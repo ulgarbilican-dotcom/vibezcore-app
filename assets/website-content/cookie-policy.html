@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookie Policy — VIBEZCORE</title>
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  :root {
+    --white: #ffffff;
+    --black: #1d1d1f;
+    --gray-100: #f5f5f7;
+    --gray-200: #e8e8ed;
+    --gray-400: #86868b;
+    --gray-600: #515154;
+    --blue: #0071e3;
+    --blue-hover: #0077ed;
+    --radius: 12px;
+  }
+
+  html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 48px;
+    height: 52px;
+  }
+  .nav-tag {
+    font-size: 12px;
+    color: var(--gray-400);
+    letter-spacing: 0.02em;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 100px 24px 72px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .hero-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.07;
+    color: var(--black);
+    margin-bottom: 20px;
+  }
+  .hero-sub {
+    font-size: 17px;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  /* LAYOUT */
+  .page-wrap {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 48px 120px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 64px;
+    align-items: start;
+  }
+
+  /* SIDEBAR */
+  .sidebar { position: sticky; top: 72px; }
+  .sidebar-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--gray-400);
+    margin-bottom: 16px; padding-left: 12px;
+  }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-link {
+    display: block; width: 100%; padding: 8px 12px; font-size: 13px;
+    color: var(--gray-600); text-decoration: none; border-radius: 6px;
+    transition: background 0.15s, color 0.15s; line-height: 1.4;
+    background: none; border: none; cursor: pointer; text-align: left;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  .sidebar-link:hover { background: var(--gray-100); color: var(--black); }
+  .sidebar-link.active {
+    background: var(--gray-100); color: var(--black); font-weight: 500;
+  }
+
+  /* CONTENT */
+  .content { min-width: 0; }
+  /* Date — plain text, geen pill of groene dot. Apple-stijl: subtle
+     metadata in lichte grijze typografie, geen visuele ballast. */
+  .date-badge {
+    display: block;
+    font-size: 13px;
+    color: var(--gray-400);
+    font-weight: 400;
+    margin-bottom: 48px;
+    letter-spacing: -0.01em;
+  }
+
+  /* SECTIONS */
+  .section {
+    border-bottom: 1px solid var(--gray-200);
+    padding: 48px 0;
+    opacity: 0; transform: translateY(16px);
+    animation: fadeUp 0.5s forwards;
+  }
+  .section:first-of-type { padding-top: 0; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .section:nth-child(1)  { animation-delay: 0.05s; }
+  .section:nth-child(2)  { animation-delay: 0.10s; }
+  .section:nth-child(3)  { animation-delay: 0.15s; }
+  .section:nth-child(4)  { animation-delay: 0.20s; }
+  .section:nth-child(5)  { animation-delay: 0.25s; }
+  .section:nth-child(6)  { animation-delay: 0.30s; }
+  .section:nth-child(7)  { animation-delay: 0.35s; }
+  .section:nth-child(8)  { animation-delay: 0.40s; }
+  .section:nth-child(9)  { animation-delay: 0.45s; }
+  .section:nth-child(10) { animation-delay: 0.50s; }
+
+  .section-number {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--blue);
+    margin-bottom: 8px;
+  }
+  .section h2 {
+    font-size: 24px; font-weight: 600; letter-spacing: -0.5px;
+    color: var(--black); margin-bottom: 20px; line-height: 1.2;
+  }
+  .section h3 {
+    font-size: 15px; font-weight: 600; color: var(--black);
+    margin: 28px 0 10px;
+  }
+  .section p {
+    font-size: 15px; color: var(--gray-600); line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .section p:last-child { margin-bottom: 0; }
+  .section strong { color: var(--black); font-weight: 600; }
+  .section a { color: var(--blue); text-decoration: none; }
+  .section a:hover { text-decoration: underline; }
+
+  /* RIGHTS LIST (check-style) — block-level li met absolute checkmark.
+     Voorkomt dat <strong>/<a> hun eigen flex-kolom krijgen op smal scherm. */
+  .rights-list {
+    list-style: none;
+    margin-top: 16px;
+  }
+  .rights-list li {
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: var(--gray-600);
+    line-height: 1.6;
+  }
+  .rights-list li:last-child { margin-bottom: 0; }
+  .rights-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e8f4fd;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-6' stroke='%230071e3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* HIGHLIGHT (blue accent) */
+  .highlight {
+    background: #f0f7ff; border-radius: var(--radius);
+    padding: 20px 24px; margin-top: 16px;
+    border-left: 3px solid var(--blue);
+  }
+  .highlight-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--blue);
+    margin-bottom: 8px;
+  }
+  .highlight p {
+    font-size: 14px; color: #1d1d1f; margin: 0; line-height: 1.65;
+  }
+  .highlight strong { color: var(--black); font-weight: 600; }
+
+  /* SUPPORT — Apple-stijl text-link onderaan. Geen pill, geen filled
+     button, geen uppercase letter-spacing-bombardement. Subtle text
+     met arrow zoals Apple support pages. */
+  .support-cta {
+    width: 100%;
+    text-align: center;
+    padding: 48px 24px 32px;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .support-btn {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    color: var(--blue);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .support-btn:hover {
+    color: var(--blue-hover);
+    text-decoration: underline;
+  }
+  /* Arrow als unicode-character ipv pseudo-element constructie —
+     volgt de tekst-baseline en lijkt op Apple's "Learn more ›" style. */
+  .support-btn::after {
+    content: ' ›';
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 300;
+  }
+
+  /* ═══ MOBILE ═══ */
+  @media (max-width: 768px) {
+    nav { padding: 0 16px; height: 48px; }
+    .nav-tag { font-size: 11px; }
+
+    .hero { padding: 48px 20px 36px; max-width: 100%; }
+    .hero-label { font-size: 11px; margin-bottom: 14px; }
+    .hero h1 { font-size: 32px; letter-spacing: -0.8px; line-height: 1.1; margin-bottom: 14px; }
+    .hero-sub { font-size: 15px; line-height: 1.55; }
+
+    .page-wrap {
+      padding: 0 16px 20px;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .sidebar { display: block; position: static; margin-bottom: 16px; }
+    .sidebar-label { display: none; }
+    .sidebar-nav {
+      display: none; background: var(--gray-100);
+      border-radius: var(--radius); padding: 8px; margin-top: 4px;
+    }
+    .sidebar-nav.open { display: flex; }
+    .sidebar-link { padding: 11px 12px; font-size: 14px; }
+    .mobile-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; background: var(--gray-100); border: none;
+      border-radius: var(--radius); padding: 14px 16px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 14px; font-weight: 600; color: var(--black);
+      cursor: pointer;
+    }
+    .mobile-toggle-icon {
+      width: 16px; height: 16px;
+      transition: transform 0.2s; color: var(--gray-400);
+    }
+    .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
+
+    .date-badge { font-size: 12px; padding: 6px 12px; margin-bottom: 36px; }
+
+    .section { padding: 36px 0; }
+    .section h2 { font-size: 22px; letter-spacing: -0.4px; margin-bottom: 16px; }
+    .section h3 { font-size: 15px; margin: 24px 0 8px; }
+    .section p { font-size: 15px; line-height: 1.65; margin-bottom: 12px; }
+    .section-number { font-size: 10px; margin-bottom: 6px; }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+
+    .rights-list li {
+      font-size: 14px; line-height: 1.6;
+      padding-left: 26px; margin-bottom: 8px;
+    }
+    .rights-list li::before { width: 16px; height: 16px; top: 4px; }
+
+    .highlight { padding: 16px 18px; }
+    .highlight p { font-size: 14px; line-height: 1.55; }
+    .highlight-title { font-size: 10px; margin-bottom: 6px; }
+
+    .support-cta { padding: 36px 20px 12px; }
+    .support-btn { font-size: 14px; }
+  }
+
+  /* — Small phones — */
+  @media (max-width: 380px) {
+    .hero { padding: 36px 18px 28px; }
+    .hero h1 { font-size: 28px; }
+    .hero-sub { font-size: 14px; }
+    .page-wrap { padding: 0 14px 16px; }
+    .section { padding: 30px 0; }
+    .section h2 { font-size: 20px; }
+    .support-cta { padding: 28px 16px 8px; }
+    .support-btn { font-size: 13px; }
+  }
+
+  @media (min-width: 769px) {
+    .mobile-toggle { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-tag">Cookie Policy</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Cookie Policy</h1>
+  <p class="hero-sub">How VIBEZCORE uses cookies and similar storage technologies — and what choices you have.</p>
+</div>
+
+<!-- LAYOUT -->
+<div class="page-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <p class="sidebar-label">Contents</p>
+    <button class="mobile-toggle" id="contentsToggle">
+      Contents
+      <svg class="mobile-toggle-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link" data-target="s1">What Cookies Are</button>
+      <button class="sidebar-link" data-target="s2">What We Store</button>
+      <button class="sidebar-link" data-target="s3">Cookie Consent</button>
+      <button class="sidebar-link" data-target="s4">Managing Your Choices</button>
+      <button class="sidebar-link" data-target="s5">Local Storage &amp; Mobile App</button>
+      <button class="sidebar-link" data-target="s6">Do Not Track</button>
+      <button class="sidebar-link" data-target="s7">Policy Updates</button>
+      <button class="sidebar-link" data-target="s8">Contact</button>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <div class="date-badge">Last updated: March 2026</div>
+
+    <!-- Intro paragraph + short version highlight -->
+    <p style="font-size:15px;color:var(--gray-600);line-height:1.7;margin-bottom:24px;">
+      This Cookie Policy explains how <strong>VIBEZCORE</strong> uses cookies and similar storage technologies across both the website and the mobile app. It applies to all VIBEZCORE products — Audio Library and Smart Bead Bracelet — and complements our Privacy Policy.
+    </p>
+
+    <div class="highlight" style="margin-top:0;margin-bottom:36px;">
+      <p class="highlight-title">Short version</p>
+      <p>We use only essential, functional storage. We do <strong>not</strong> use advertising cookies, cross-site trackers, or third-party analytics that profile you. No consent banner is required because we set no non-essential trackers.</p>
+    </div>
+
+    <!-- 01 WHAT COOKIES ARE -->
+    <section class="section" id="s1">
+      <p class="section-number">01</p>
+      <h2>What Cookies &amp; Similar Technologies Are</h2>
+      <p>"Cookies" are small text files stored on your device by a website. "Local storage" and "session storage" are similar features that allow apps to save data locally on your device without sending it to a server.</p>
+      <p>VIBEZCORE relies primarily on <strong>local storage</strong> for most functionality across both products. Bracelet session history is stored entirely on your device.</p>
+    </section>
+
+    <!-- 02 WHAT WE STORE -->
+    <section class="section" id="s2">
+      <p class="section-number">02</p>
+      <h2>What We Actually Store</h2>
+
+      <h3>Essential — required for the service to work</h3>
+      <ul class="rights-list">
+        <li><strong>Session token</strong> — keeps you logged in</li>
+        <li><strong>Listening progress</strong> — remembers where you stopped in each session</li>
+        <li><strong>Play history</strong> — your Your Journey stats and streak</li>
+        <li><strong>Session status</strong> — fully-listened vs. partly-listened flags</li>
+        <li><strong>Favourites and follows</strong> — series you have saved or are following</li>
+      </ul>
+      <p style="margin-top:16px;">All of the above are stored locally on your device. They are not transmitted to our servers unless cross-device sync is enabled.</p>
+
+      <h3>Third-party — only at payment</h3>
+      <p><strong>Gumroad</strong> may set its own cookies during checkout to handle payment securely. These are governed by Gumroad's privacy and cookie policies — out of our control.</p>
+
+      <div class="highlight">
+        <p>We do <strong>not</strong> use Google Analytics, Facebook Pixel, advertising networks, or any other cross-site tracking technology.</p>
+      </div>
+    </section>
+
+    <!-- 03 COOKIE CONSENT -->
+    <section class="section" id="s3">
+      <p class="section-number">03</p>
+      <h2>Cookie Consent</h2>
+      <p>Because we use only essential storage required to provide the service, <strong>no cookie consent banner is required</strong> under EU law (GDPR/ePrivacy). You will not see persistent cookie pop-ups on VIBEZCORE properties.</p>
+      <p>If we ever introduce non-essential storage (we currently have no plans to), we will request your explicit consent first.</p>
+    </section>
+
+    <!-- 04 MANAGING YOUR CHOICES -->
+    <section class="section" id="s4">
+      <p class="section-number">04</p>
+      <h2>Managing Your Choices</h2>
+      <p>You can control all storage through your device or browser settings:</p>
+      <ul class="rights-list">
+        <li><strong>Web browser</strong> — clear cookies and local storage from your browser settings (usually under "Privacy" or "Site data")</li>
+        <li><strong>Mobile app</strong> — clear all VIBEZCORE local data via the in-app <strong>Settings → Clear all local data</strong> option</li>
+        <li><strong>Reinstall</strong> — uninstalling and reinstalling the app removes all local data</li>
+      </ul>
+      <p style="margin-top:16px;">Please note: disabling essential storage will prevent core functionality such as login, listening progress, and subscription access.</p>
+    </section>
+
+    <!-- 05 LOCAL STORAGE & MOBILE APP -->
+    <section class="section" id="s5">
+      <p class="section-number">05</p>
+      <h2>Local Storage &amp; the Mobile App</h2>
+      <p>The VIBEZCORE mobile app uses <strong>device-local storage</strong> (AsyncStorage on iOS/Android) — not cookies. This data lives only on your device and is not transmitted to our servers unless required for the service to function (e.g. authentication tokens to verify your subscription).</p>
+      <p>Smart Bead Bracelet session history is stored <strong>entirely locally</strong> and never leaves your device.</p>
+    </section>
+
+    <!-- 06 DO NOT TRACK -->
+    <section class="section" id="s6">
+      <p class="section-number">06</p>
+      <h2>Do Not Track Signals</h2>
+      <p>There is no agreed industry standard for "Do Not Track" signals, and VIBEZCORE does not currently respond to them. However, because we do not use tracking technology in the first place, this has no practical impact on your privacy.</p>
+    </section>
+
+    <!-- 07 POLICY UPDATES -->
+    <section class="section" id="s7">
+      <p class="section-number">07</p>
+      <h2>Changes to This Policy</h2>
+      <p>We may update this Cookie Policy periodically — for instance, if we introduce a new tool or change how we store data. Any updates will be posted on this page with a revised "Last updated" date.</p>
+      <p>Material changes will also be communicated by email or in-app notification.</p>
+    </section>
+
+    <!-- 08 CONTACT -->
+    <section class="section" id="s8" style="padding-bottom:0;border-bottom:none;">
+      <p class="section-number">08</p>
+      <h2>Contact</h2>
+      <p>Questions about this policy or about how we handle data? Our support team is here to help.</p>
+    </section>
+
+  </main>
+</div>
+
+<!-- SUPPORT — Apple-stijl text-link (arrow via CSS ::after) -->
+<div class="support-cta">
+  <a class="support-btn" href="https://www.vibezcore.com/support" target="_blank" rel="noopener">Contact support</a>
+</div>
+
+<script>
+  /* Wix HTML-embed auto-resize. Stuurt content-hoogte naar Wix zodat
+     de iframe past op de content (geen witruimte/scroll). */
+  function reportHeight() {
+    var h = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) {
+    new MutationObserver(reportHeight).observe(document.body, {
+      childList: true, subtree: true, attributes: true,
+    });
+  }
+
+  /* Sidebar nav + mobile toggle */
+  const btns = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('.section');
+  const toggle = document.getElementById('contentsToggle');
+  const nav = document.getElementById('sidebarNav');
+
+  toggle.addEventListener('click', () => {
+    nav.classList.toggle('open');
+    toggle.classList.toggle('open');
+  });
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      nav.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+
+  function setActive() {
+    let current = sections[0].id;
+    sections.forEach(s => {
+      if (s.getBoundingClientRect().top <= 120) current = s.id;
+    });
+    btns.forEach(b => b.classList.toggle('active', b.dataset.target === current));
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+
+</body>
+</html>

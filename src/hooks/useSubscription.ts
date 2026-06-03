@@ -51,6 +51,16 @@ let cachedStatus: SubscriptionStatus | null = null;
 let cacheLoaded = false;
 let cacheLoadPromise: Promise<void> | null = null;
 let isFetching = false;
+/* Iter 9dq v56 (2026-06-03, audit-finding C2): fetchGeneration markeert
+   "welke fetch is nu de canonical?". refreshSubscription() bumpt deze
+   waarde, wat impliciet alle in-flight fetches met een lagere generatie
+   ongeldig maakt. Voorheen kon een in-flight fetch van user A's
+   subscription afronden ná dat user A had gesignout (en user B/anon
+   actief was). De .notifyAll() schreef dan user A's status (PRO!) in
+   het cache van user B/anon → cross-user data-leak. Met generation-
+   check: na elke await checken we of we nog actueel zijn; zo niet,
+   discard de response. */
+let fetchGeneration = 0;
 const subscribers = new Set<(s: SubscriptionStatus | null) => void>();
 
 function notifyAll(status: SubscriptionStatus | null): void {
@@ -125,10 +135,22 @@ async function loadCacheOnce(): Promise<void> {
 }
 
 async function fetchStatus(): Promise<void> {
-  if (isFetching) return;
+  /* Iter 9dq v56 (2026-06-03, audit C2): elke fetch claimt z'n eigen
+     generation-nummer. Bij elke yield-point checken we of we nog de
+     "current" generation zijn; zo niet → discard. Hierdoor schrijft
+     een in-flight user-A-fetch nooit meer in user-B's cache. */
+  const myGen = fetchGeneration;
+  if (isFetching) {
+    /* Een eerdere fetch loopt nog. Die heeft een lagere of dezelfde
+       generatie. Als dezelfde → al onderweg, niets dubbel doen. Als
+       lagere → 'ie wordt straks toch gediscard, geen reden om hier
+       te wachten. In beide gevallen: geen nieuwe parallelle fetch. */
+    return;
+  }
   isFetching = true;
   try {
     const token = await getToken();
+    if (myGen !== fetchGeneration) return; /* gerevoket — sign-out happened */
     if (!token) {
       notifyAll({ active: false });
       clearPersistedCache();
@@ -139,6 +161,7 @@ async function fetchStatus(): Promise<void> {
       '/api/subscription-status',
       { auth: true }
     );
+    if (myGen !== fetchGeneration) return; /* gerevoket midden in fetch */
     const data: SubscriptionStatus = {
       active: raw.active === true,
       tier:
@@ -158,6 +181,7 @@ async function fetchStatus(): Promise<void> {
     persistCache(data);
   } catch (e: any) {
     if (__DEV__) console.warn('[useSubscription] fetch failed:', e?.message ?? e);
+    if (myGen !== fetchGeneration) return; /* gerevoket — niet schrijven */
     if (cachedStatus === null) {
       notifyAll({ active: false });
     }
@@ -172,10 +196,21 @@ export function getCachedSubscription(): SubscriptionStatus | null {
   return cachedStatus;
 }
 
-/** Trigger refresh — bv. vanuit Account.tsx na login of na sign-out. */
+/** Trigger refresh — bv. vanuit Account.tsx na login of na sign-out.
+ *  Iter 9dq v56 (2026-06-03, audit C2): bumpt fetchGeneration zodat
+ *  in-flight fetches van de vorige user worden gediscard wanneer hun
+ *  await teruggegeven wordt aan de event-loop. Ook clearPersistedCache
+ *  zodat een no-token scenario direct ook AsyncStorage opschoont (anders
+ *  zou een fresh app-start van user-B nog user-A's gecachede status
+ *  pakken voordat de fetch klaar is). */
 export function refreshSubscription(): void {
+  fetchGeneration++;
   cachedStatus = null;
   subscribers.forEach((cb) => cb(null));
+  /* Direct preventief cache-wipe zodat een verse load nooit stale
+     user-A data binnenpakt. fetchStatus overschrijft 'm met de echte
+     waarde wanneer 'ie klaar is. */
+  clearPersistedCache().catch(() => {});
   fetchStatus();
 }
 

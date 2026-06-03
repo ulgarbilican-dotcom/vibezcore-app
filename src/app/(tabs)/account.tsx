@@ -19,10 +19,17 @@ import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
    bracelet-bucket als de audio-bucket (history, favorites, positions)
    her-evalueren naar de nieuwe user. Beide gebruiken dezelfde bucket-
    resolutie (override of JWT sub) en triggeren cache-reload bij
-   bucket-switch. */
-function refreshUserBucket(): void {
-  refreshBraceletBucket();
-  refreshAudioBucket();
+   bucket-switch.
+
+   Iter 9dq v55 (2026-06-03, audit-finding C5+C6): functie maakt nu
+   ECHT async en wordt voor navigatie geawait. Voorheen fire-and-forget
+   → race-window waarin user na sign-in al naar Audio Library was
+   genavigeerd terwijl de bucket nog 'anon' was → een toggle in dat
+   window schreef naar 'vzf_anon_v1' (visible voor de volgende anon
+   user op het device). Door te awaiten weten we dat de bucket switch
+   compleet is voor de UI verder gaat. */
+async function refreshUserBucket(): Promise<void> {
+  await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
 }
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import {
@@ -390,8 +397,12 @@ export default function AccountScreen() {
            (Library, Player) direct de echte PRO-status zien. */
         refreshSubscription();
         /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
-           token = potentieel nieuwe user = andere local-storage key. */
-        refreshUserBucket();
+           token = potentieel nieuwe user = andere local-storage key.
+           Iter 9dq v55 (2026-06-03, audit C5+C6): AWAIT zodat bucket
+           switch echt klaar is voordat user op de Audio Library kan
+           interacten. Anders schreef een snelle toggle nog naar de
+           anon-bucket en lekte data tussen sessies. */
+        await refreshUserBucket();
 
         /* ── Post-login routing ────────────────────────────────────────
            Operator-spec 2026-05-25:
@@ -450,8 +461,13 @@ export default function AccountScreen() {
             refreshSubscription();
             /* Iter 9dn (2026-05-31): history-bucket re-evalueren — geen
                token meer → schakelt naar 'anon' bucket, voormalige user's
-               history blijft staan onder hun eigen key (niet gewist). */
-            refreshUserBucket();
+               history blijft staan onder hun eigen key (niet gewist).
+               Iter 9dq v55 (2026-06-03, audit C5+C6): AWAIT zodat de
+               bucket-switch klaar is voordat we de in-memory cleanups
+               (clearSignedUrlCache, clearLastPlayed) firen — zonder
+               await kon een vroege re-render nog op de oude bucket
+               schrijven. */
+            await refreshUserBucket();
             /* Wis ook de in-memory signed-URL cache zodat een volgende user
                op dit toestel geen leftover-URLs van vorige sessie krijgt. */
             clearSignedUrlCache();

@@ -23,13 +23,7 @@
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { refreshSubscription } from '@/hooks/useSubscription';
-import {
-  EMAIL_KEY,
-  EXPIRES_KEY,
-  TOKEN_KEY,
-  getUserEmail,
-} from '@/services/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserEmail, persistSession } from '@/services/auth';
 import { Stack, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -179,17 +173,77 @@ export default function ChangePassword() {
         return;
       }
 
-      /* ── Stap 3: persist nieuwe session ── */
+      /* ── Stap 3: fresh login met NIEUW password ──
+         Iter 9dq v51 (2026-06-03, audit-finding C1): Supabase REVOKET
+         ALLE refresh_tokens wanneer een password gewijzigd wordt
+         (security-best-practice — alle bestaande sessies moeten dood).
+         Voorheen persistte deze code alleen het access_token uit step 1
+         (de verify-call), maar de refresh_token in AsyncStorage bleef
+         de OUDE (van vóór de password-change). Wanneer dat access_token
+         binnen ~1u expireerde → auto-refresh in auth.ts → 401 → silent
+         logout. User dacht dat 'ie ingelogd was, kreeg ineens login-form.
+
+         Fix: doe een verse /token?grant_type=password met het NIEUWE
+         password om een fresh access_token + refresh_token + expires_in
+         te krijgen die NIET door de password-wijziging gerevoket worden.
+         persistSession (uit auth.ts) schrijft alle keys correct
+         (TOKEN_KEY, REFRESH_KEY, EXPIRES_KEY, EMAIL_KEY, LAST_EMAIL_KEY).
+
+         Mocht deze fresh-login ooit falen (zeldzaam — Supabase rate
+         limit?), behouden we de bestaande verify-session als fallback
+         zodat user niet uitgelogd is — alleen worst case is dat binnen
+         1u refresh faalt en hij dan opnieuw moet inloggen (= current
+         broken state, niet erger). */
       const updated = await updateRes.json();
-      const expiresIn =
-        typeof session?.expires_in === 'number' ? session.expires_in : 3600;
-      const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
-      const pairs: [string, string][] = [
-        [TOKEN_KEY, session.access_token],
-        [EXPIRES_KEY, String(expiresAt)],
-      ];
-      if (updated?.email) pairs.push([EMAIL_KEY, updated.email]);
-      await AsyncStorage.multiSet(pairs);
+      try {
+        const freshRes = await fetch(
+          `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password: pw1 }),
+          },
+        );
+        if (freshRes.ok) {
+          const freshSession = await freshRes.json();
+          if (freshSession?.access_token) {
+            await persistSession({
+              access_token: freshSession.access_token,
+              refresh_token: freshSession.refresh_token,
+              expires_in: freshSession.expires_in,
+              user: { email: updated?.email || email },
+            });
+          } else {
+            /* Fallback: gebruik de verify-session uit step 1 — minder ideaal
+               maar voorkomt silent logout vandaag (refresh kan binnen 1u
+               nog falen, gelijk aan oude gedrag). */
+            await persistSession({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_in: session.expires_in,
+              user: { email: updated?.email || email },
+            });
+          }
+        } else {
+          await persistSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_in: session.expires_in,
+            user: { email: updated?.email || email },
+          });
+        }
+      } catch {
+        /* Network glitch op de fresh-login — fallback op verify-session. */
+        await persistSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_in: session.expires_in,
+          user: { email: updated?.email || email },
+        });
+      }
 
       /* Subscription state refreshen zodat Audio Library de juiste
          entitlements toont (in praktijk al hetzelfde, maar safe). */

@@ -37,6 +37,16 @@ export const FAV_KEY = 'vzf_v1';
 const LEGACY_KEY = 'vibezcore:favorites';
 const KEY_PREFIX = 'vzf_';
 const KEY_SUFFIX = '_v1';
+/* Iter 9dq v54 (2026-06-03, audit-finding C4): device-scope flag die
+   markeert dat de pre-vzf_v1 Set<url>-key éénmalig naar EEN bucket is
+   gemigreerd. Voorheen werd de LEGACY_KEY bij iedere bucket-switch
+   opnieuw geïmporteerd zolang die nog bestond (operator wilde 'm laten
+   staan voor rollback). Gevolg: user A migreert legacy → bucket A,
+   signed out; user B signs in, bucket B is leeg → legacy gemigreerd
+   naar bucket B = cross-user data-leak op dezelfde device. Met deze
+   flag: éérste bucket die de migratie doet wint, alle volgende buckets
+   slaan de legacy-import over en starten met een ECHT lege Map. */
+const LEGACY_MIGRATED_FLAG = 'vzf_legacy_migrated_v1';
 function favBucketKey(bucket: string): string {
   return `${KEY_PREFIX}${bucket}${KEY_SUFFIX}`;
 }
@@ -111,30 +121,43 @@ async function loadOnce(): Promise<void> {
         }
       }
 
-      /* Geen data in de bucket → migratie-check op de pre-vzf_v1 Set<url>-key. */
-      const legacyRaw = await AsyncStorage.getItem(LEGACY_KEY);
-      if (legacyRaw) {
-        const urls = JSON.parse(legacyRaw);
-        if (Array.isArray(urls)) {
-          const now = Date.now();
-          const migrated = new Map<string, FavEntry>();
-          for (const u of urls) {
-            if (typeof u !== 'string') continue;
-            const sess = SESSIONS.find((s) => s.url === u);
-            migrated.set(u, {
-              url: u,
-              title: sess?.title ?? '',
-              series: sess?.series ?? '',
-              ts: now,
-            });
+      /* Geen data in de bucket → migratie-check op de pre-vzf_v1 Set<url>-key.
+         Iter 9dq v54 (2026-06-03, audit-finding C4): éérst checken of de
+         legacy-migratie op deze device al gedaan is. Zo ja → skip, zodat
+         de tweede user op dit toestel niet de favorites van de eerste
+         user (uit de legacy-key) krijgt. */
+      const alreadyMigrated = await AsyncStorage.getItem(LEGACY_MIGRATED_FLAG);
+      if (!alreadyMigrated) {
+        const legacyRaw = await AsyncStorage.getItem(LEGACY_KEY);
+        if (legacyRaw) {
+          const urls = JSON.parse(legacyRaw);
+          if (Array.isArray(urls)) {
+            const now = Date.now();
+            const migrated = new Map<string, FavEntry>();
+            for (const u of urls) {
+              if (typeof u !== 'string') continue;
+              const sess = SESSIONS.find((s) => s.url === u);
+              migrated.set(u, {
+                url: u,
+                title: sess?.title ?? '',
+                series: sess?.series ?? '',
+                ts: now,
+              });
+            }
+            favoritesState = migrated;
+            /* Schrijf naar nieuwe bucket-key, oude pre-vzf_v1 key laat staan
+               (operator-keuze 2026-05-20: behouden voor rollback). */
+            await AsyncStorage.setItem(
+              favBucketKey(bucket),
+              JSON.stringify([...favoritesState.values()])
+            );
           }
-          favoritesState = migrated;
-          /* Schrijf naar nieuwe bucket-key, oude pre-vzf_v1 key laat staan. */
-          await AsyncStorage.setItem(
-            favBucketKey(bucket),
-            JSON.stringify([...favoritesState.values()])
-          );
         }
+        /* Markeer migratie als gedaan, ongeacht of de LEGACY_KEY data
+           had — anders blijven we elke load opnieuw de check doen op
+           een lege legacy-key (idempotent maar zonde van de AsyncStorage-
+           read). */
+        await AsyncStorage.setItem(LEGACY_MIGRATED_FLAG, '1');
       }
     } catch {
       /* corrupt / missing — start met lege Map */

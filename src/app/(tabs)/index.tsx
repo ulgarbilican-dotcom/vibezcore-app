@@ -14,6 +14,7 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
+import { GUMROAD_URLS } from '@/constants/links';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBraceletOwner } from '@/utils/dev-user-override';
@@ -103,14 +104,14 @@ const C = {
 /* CDN — exact de host die de webapp gebruikt. */
 const CDN = 'https://vibezcore-audio.b-cdn.net/images';
 
-/* Gumroad-checkout-URLs — exact zoals operator opgegeven.
+/* Gumroad-checkout-URLs — single source of truth in constants/links.ts.
    App praat niet rechtstreeks met Gumroad voor entitlements (provider-
    agnostisch via eigen backend), maar de checkout ZELF mag uiteraard
-   direct naar Gumroad — dat is hoe de webapp het ook doet. */
-const GUMROAD_URLS: Record<'monthly' | 'yearly', string> = {
-  monthly: 'https://vibezcore.gumroad.com/l/vibezcore-monthly',
-  yearly: 'https://vibezcore.gumroad.com/l/vibezcore-yearly',
-};
+   direct naar Gumroad — dat is hoe de webapp het ook doet.
+   Iter 9dq v50 (2026-06-03): inline-duplicate weggewerkt, import uit
+   constants/links.ts — voorkomt dat één file een oude URL gebruikt
+   wanneer Gumroad-producten verhuizen (audit-finding C8). */
+// GUMROAD_URLS uit constants/links.ts — zie import boven
 
 /* ── Bracelet-upsell-modal (post-session) configuratie ──
    AsyncStorage-key voor laatste-getoond-timestamp. Cooldown van 24u

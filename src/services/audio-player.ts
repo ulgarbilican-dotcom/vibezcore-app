@@ -161,6 +161,17 @@ let player: AudioPlayer | null = null;
 /** Subscription op de player's playbackStatusUpdate-event. Bewaard zodat
  *  unload() 'm netjes kan afmelden. */
 let statusSubscription: { remove: () => void } | null = null;
+/** Iter 9dq v57 (2026-06-03, audit-finding C7): generation-teller voor
+ *  loadSession. Elke loadSession() bumpt deze waarde en captured z'n
+ *  "my generation". Bij elke await-yield-point controleert loadSession
+ *  of we nog de actuele generatie zijn; zo niet → discard alle werk en
+ *  ruim eventueel reeds-aangemaakte players op. Voorheen kon een snelle
+ *  dubbel-tap (Session A, dan Session B vóór A geladen was) twee
+ *  parallelle AudioPlayer-instances opleveren: A's createAudioPlayer
+ *  draait door, B overschrijft `player`-ref, A's listener blijft state
+ *  schrijven terwijl player niet meer naar A wijst, twee tracks
+ *  gelijktijdig hoorbaar. */
+let loadGeneration = 0;
 let playingRef = false;
 let trackingActive = false;
 let sleepTimer: ReturnType<typeof setTimeout> | null = null;
@@ -512,7 +523,15 @@ export async function loadSession(
     return;
   }
 
+  /* Iter 9dq v57 (2026-06-03, audit C7): claim een fresh generation.
+     Bij elk await-punt hieronder checken we of we nog actueel zijn.
+     Zo niet → discard al ons werk (inclusief een eventueel reeds
+     aangemaakte newPlayer cleanen) en niet meer schrijven aan
+     `state` of `player`. */
+  const myGen = ++loadGeneration;
+
   await unload();
+  if (myGen !== loadGeneration) return;
 
   /* Periodische-write-counter resetten — anders zou een seek-back op de
      nieuwe sessie geen schrijf-trigger geven als de oude pos hoger lag. */
@@ -544,12 +563,14 @@ export async function loadSession(
 
   try {
     await ensureAudioMode();
+    if (myGen !== loadGeneration) return;
     /* Notification-permission fire-and-forget; UI niet blokkeren. Eerste
        loadSession is het moment waarop de user duidelijk "wil luisteren",
        dus dit is het juiste moment om de Android-prompt te tonen. */
     ensureNotifPermission();
 
     const signedUrl = await getSignedAudioUrl(session.url, { preview });
+    if (myGen !== loadGeneration) return;
 
     /* updateInterval 250ms ≈ 4 ticks/sec. Voldoende vloeiend voor de
        progress-bar (mini + full) zonder JS-bridge te overspoelen.
@@ -571,6 +592,20 @@ export async function loadSession(
       { updateInterval: 250 }
     );
 
+    /* Generation re-check NA createAudioPlayer (synchronous native call,
+       maar tussen vorige await en nu kan toch een nieuwere loadSession
+       gefired hebben). Zo ja: clean de net-aangemaakte player op zodat
+       we geen ghost-instance laten draaien. */
+    if (myGen !== loadGeneration) {
+      try {
+        newPlayer.pause();
+      } catch {}
+      try {
+        newPlayer.remove();
+      } catch {}
+      return;
+    }
+
     /* Status-events: identieke transitie-logica als voorheen, maar nu
        via addListener ipv de constructor-callback van expo-av. */
     statusSubscription = newPlayer.addListener(
@@ -590,6 +625,7 @@ export async function loadSession(
 
     setState({ loading: false });
   } catch (e) {
+    if (myGen !== loadGeneration) return; /* gerevoket — niet UI-vervuilen */
     let msg = e instanceof Error ? e.message : String(e);
     if (e instanceof SignedUrlError) {
       msg = `[${e.code}] ${e.message}`;

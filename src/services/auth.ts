@@ -65,7 +65,7 @@ type ErrorPayload = {
 
 /* ── Persistence ────────────────────────────────────────────────────────── */
 
-async function persistSession(s: SessionPayload): Promise<void> {
+export async function persistSession(s: SessionPayload): Promise<void> {
   if (!s.access_token) return;
   const expiresIn = typeof s.expires_in === 'number' ? s.expires_in : 3600;
   const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;

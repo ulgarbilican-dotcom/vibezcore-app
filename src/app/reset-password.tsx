@@ -23,14 +23,9 @@
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { refreshSubscription } from '@/hooks/useSubscription';
-import {
-  EMAIL_KEY,
-  EXPIRES_KEY,
-  LAST_EMAIL_KEY,
-  TOKEN_KEY,
-  getToken,
-} from '@/services/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearSession, getToken, persistSession } from '@/services/auth';
+import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
+import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -210,25 +205,80 @@ export default function ResetPassword() {
         return;
       }
       const updated = await res.json();
-      /* Server zou expires_in moeten leveren op een fresh verify, maar
-         de PUT /user response heeft 'm niet altijd. Fallback op 3600s. */
-      const expiresIn =
-        typeof updated?.expires_in === 'number' ? updated.expires_in : 3600;
-      const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
-      const pairs: [string, string][] = [
-        [TOKEN_KEY, accessToken],
-        [EXPIRES_KEY, String(expiresAt)],
-      ];
-      if (updated?.email) {
-        pairs.push([EMAIL_KEY, updated.email]);
-        pairs.push([LAST_EMAIL_KEY, updated.email]);
+      /* Iter 9dq v53 (2026-06-03, audit-finding C3): voorheen schreven
+         we ALLEEN access_token + expires + email weg — geen REFRESH_KEY.
+         Gevolg: na de ~1u TTL van het access_token wilde getToken()
+         refreshen, vond geen refresh_token (of de stale van vorige
+         sessie), kreeg 401 van Supabase → clearSession() → silent
+         logout. Reset-password-flow was dus letterlijk een tijdbom
+         van 1u.
+
+         Bovendien: Supabase REVOKET alle bestaande refresh_tokens
+         wanneer een password gewijzigd wordt — dus zelfs als we een
+         oude refresh_token zouden hergebruiken, was die ook dood.
+
+         Fix: doe een verse POST /token?grant_type=password met email
+         + NIEUW password om een fresh access_token + refresh_token
+         + expires_in te krijgen. clearSession() eerst zodat geen
+         stale-data van een vorige user-sessie blijft staan. Fallback:
+         als de fresh-login om welke reden ook faalt, persisten we
+         minstens het access_token uit de PUT-context zodat user niet
+         direct uitgelogd is — slechtste geval blijft current behavior
+         (refresh faalt over 1u). */
+      const emailForLogin: string | undefined = updated?.email;
+      let persistedFresh = false;
+      if (emailForLogin) {
+        try {
+          const freshRes = await fetch(
+            `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+            {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_KEY,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ email: emailForLogin, password: pw }),
+            }
+          );
+          if (freshRes.ok) {
+            const freshSession = await freshRes.json();
+            if (freshSession?.access_token) {
+              await clearSession();
+              await persistSession({
+                access_token: freshSession.access_token,
+                refresh_token: freshSession.refresh_token,
+                expires_in: freshSession.expires_in,
+                user: { email: emailForLogin },
+              });
+              persistedFresh = true;
+            }
+          }
+        } catch {
+          /* Network glitch — val terug op fallback hieronder. */
+        }
       }
-      await AsyncStorage.multiSet(pairs);
+      if (!persistedFresh) {
+        /* Fallback: tenminste access_token van de PUT/verify-context
+           wegschrijven zodat user dit scherm nog kan verlaten als
+           ingelogd. Geen refresh_token = zelfde tijdbom als voorheen,
+           maar dit pad triggert alleen wanneer fresh-login faalt (zeldzaam). */
+        await clearSession();
+        await persistSession({
+          access_token: accessToken,
+          expires_in:
+            typeof updated?.expires_in === 'number' ? updated.expires_in : 3600,
+          user: { email: emailForLogin },
+        });
+      }
 
       /* Awaiten zorgt dat Audio Library bij landing de juiste
          entitlement-state heeft (was: race waarbij de tab kort als
-         free toonde voordat sub binnenkwam). */
+         free toonde voordat sub binnenkwam).
+         Iter 9dq v55 (2026-06-03, audit C5+C6): óók bucket-switch
+         awaiten zodat per-user data (history, favorites, positions)
+         vóór landing op de juiste bucket-key staan. */
       await refreshSubscription();
+      await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
       setPhase('done');
 
       /* Korte vertraging zodat user de done-state ziet, dan naar
