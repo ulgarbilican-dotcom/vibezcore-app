@@ -1606,6 +1606,36 @@ export default function AudioScreen() {
                   );
                 })}
 
+                {/* ── "Show all N sessions"-link (iter 9dq v70, 2026-06-03) ──
+                    Operator-UX-feedback: het was niet duidelijk dat er
+                    onder de FREE-balk preview-rij nog meer sessies zaten.
+                    Chevron is icon-only en visueel klein. Deze expliciete
+                    knop kondigt het aantal aan en is een tweede tap-target
+                    (zelfde toggle-actie als de chevron).
+
+                    Toont alleen wanneer card collapsed is. Voor Soundscapes
+                    spreek je over "categorieën" ipv "sessies" omdat de
+                    expansie subcat-cards toont, geen losse sessies. */}
+                {!isOpen && (
+                  <Pressable
+                    style={s.showAllRow}
+                    onPress={() => toggle(ser.name)}
+                    android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+                    accessibilityLabel={
+                      isSoundscapes
+                        ? `Show all ${SUBCAT_ORDER.length} categories`
+                        : `Show all ${ser.sessions.length} sessions`
+                    }
+                  >
+                    <Text style={s.showAllText}>
+                      {isSoundscapes
+                        ? `Show all ${SUBCAT_ORDER.length} categories`
+                        : `Show all ${ser.sessions.length} sessions`}
+                    </Text>
+                    <Text style={s.showAllChev}>›</Text>
+                  </Pressable>
+                )}
+
                 {/* Inline expansie — non-Soundscapes: sessierijen.
                     Operator-keuze 2026-05-27: voor uitgelogde/free users
                     de free-sessies WEGFILTEREN uit deze list — die staan
@@ -3185,6 +3215,40 @@ const s = StyleSheet.create({
 
   /* Inline-expansie-container (gewone sessierijen of subcat-kaarten). */
   libExpand: { marginTop: 10 },
+
+  /* "Show all N sessions"-link (iter 9dq v70, 2026-06-03).
+     Verschijnt onder de FREE-balk preview-rij wanneer de card collapsed
+     is — geeft de user expliciete count + tap-target naast de chevron.
+     Dim accent-stijl: niet luid maar wel duidelijk klikbaar. */
+  showAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 8,
+    gap: 4,
+    backgroundColor: 'rgba(58,143,255,0.05)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.15)',
+  },
+  showAllText: {
+    color: '#3a8fff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  showAllChev: {
+    color: '#3a8fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 2,
+    /* Optical alignment — chevron `›` is licht boven baseline,
+       paar pt naar beneden om visueel op-line met de tekst te staan. */
+    marginTop: -2,
+  },
 
   /* Sessierij in geopende kaart of geopende subcat. */
   libRow: {
