@@ -55,8 +55,15 @@ type Mode = 'signup' | 'signin';
 type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 'error';
 
 export default function SubscribeScreen() {
-  const params = useLocalSearchParams<{ tier?: string }>();
+  const params = useLocalSearchParams<{ tier?: string; devForceSignedIn?: string }>();
   const tier: AudioTier = params.tier === 'monthly' ? 'monthly' : 'yearly';
+  /* Iter 9dq v69 (2026-06-03): dev-only param om de signed-in review-
+     flow te kunnen previewen zonder een echt test-account te hoeven
+     aanmaken. Geactiveerd via Settings → Developer · screen previews →
+     "Subscribe — signed-in review". Productie negeert deze param
+     (geguard met __DEV__). */
+  const devForceSignedIn =
+    __DEV__ && params.devForceSignedIn === '1';
 
   const { getProduct, purchase, loading: iapLoading } = useIAP();
   const product = getProduct(tier);
@@ -80,6 +87,13 @@ export default function SubscribeScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      /* Dev-shortcut: render review-flow met fake email zonder echte
+         token check. Alleen __DEV__ — productie negeert. */
+      if (devForceSignedIn) {
+        setSignedIn(true);
+        setSignedInEmail('dev-preview@vibezcore.local');
+        return;
+      }
       const t = await getToken();
       if (cancelled) return;
       if (t) {
@@ -94,7 +108,7 @@ export default function SubscribeScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [devForceSignedIn]);
 
   /* ── Sub-flow: account-create wanneer nodig, dan IAP popup ─── */
   const runIapFlow = async () => {

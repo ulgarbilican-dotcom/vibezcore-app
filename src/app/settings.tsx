@@ -250,6 +250,49 @@ export default function SettingsScreen() {
             Productie-builds skippen deze sectie volledig. */}
         {__DEV__ && <DevUserOverrideSection />}
 
+        {/* ── DEV SCREEN-PREVIEW SHORTCUTS (iter 9dq v69) ──────────────
+            Alleen __DEV__: snel een specifiek scherm openen zonder de
+            volledige user-flow te doorlopen. Vooral handig voor de
+            subscribe-screen review-flow die een signed-in user vereist
+            — wat normaal gesproken een echt test-account betekent. */}
+        {__DEV__ && (
+          <>
+            <Text style={s.sectionLabel}>Developer · screen previews</Text>
+            <View style={s.card}>
+              <Pressable
+                style={s.row}
+                onPress={() =>
+                  router.push(
+                    '/subscribe?tier=yearly&devForceSignedIn=1' as never,
+                  )
+                }
+                accessibilityLabel="Preview subscribe screen as signed-in user"
+              >
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Subscribe — signed-in review</Text>
+                  <Text style={s.rowSub}>
+                    Toont order-summary + "Continue to checkout" zonder
+                    echt account.
+                  </Text>
+                </View>
+              </Pressable>
+              <View style={s.divider} />
+              <Pressable
+                style={s.row}
+                onPress={() => router.push('/subscribe?tier=monthly' as never)}
+                accessibilityLabel="Preview subscribe screen as guest"
+              >
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Subscribe — signed-out form</Text>
+                  <Text style={s.rowSub}>
+                    Toont email/password form (account-create-pad).
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+          </>
+        )}
+
         <Pressable
           style={s.backLink}
           onPress={() => router.back()}
