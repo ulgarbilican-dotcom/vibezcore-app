@@ -20,10 +20,8 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import {
-  SERIES,
   SERIES_PHOTO,
   SERIES_SUBTITLE,
-  SESSIONS,
   type Session,
 } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -573,9 +571,13 @@ export default function PlayerScreen() {
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>Continue listening?</Text>
+            {/* Iter 9dq v65 (2026-06-03): operator-keuze variant C —
+                kort, evergreen, geen vaste sessie-count die misleidend
+                wordt naarmate de bibliotheek groeit. Voorheen interpoleerde
+                deze regel SESSIONS.length + SERIES.length wat het aantal
+                hardcodeert in de UI. */}
             <Text style={s.modalBody}>
-              Get full access to all {SESSIONS.length} sessions across all{' '}
-              {SERIES.length} series.
+              Get full access to the complete VIBEZCORE library.
             </Text>
             <View style={s.modalBtns}>
               <Pressable style={s.modalPrimary} onPress={openUpgrade}>

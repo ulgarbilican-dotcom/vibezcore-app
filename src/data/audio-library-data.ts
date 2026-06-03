@@ -113,7 +113,7 @@ export const SESSIONS: Session[] = [
   { title:'Gentle Awakening', series:'Soundscapes', subseries:'Zen Flow', free:false, desc:'Soft meditation to start your day.', num:'03', url:'https://vibezcore-audio.b-cdn.net/14-meditation-gentle.mp3.mp3', added:'' },
   { title:'Stillness Piano', series:'Soundscapes', subseries:'Zen Flow', free:false, desc:'Meditation with calming piano.', num:'04', url:'https://vibezcore-audio.b-cdn.net/15-meditation-piano.mp3.mp3', added:'' },
   { title:'Meditation', series:'Soundscapes', subseries:'Zen Flow', free:false, desc:'A simple meditation session.', num:'05', url:'https://vibezcore-audio.b-cdn.net/16-meditation-general.mp3.mp3', added:'' },
-  { title:'Forest Sanctuary', series:'Soundscapes', subseries:'Harmonic', free:false, desc:'Nature ambience for calm and focus.', num:'01', url:'https://vibezcore-audio.b-cdn.net/18-ambient-forest-sanctuary.mp3.m4a', added:'' },
+  { title:'Forest Sanctuary', series:'Soundscapes', subseries:'Harmonic', free:true, desc:'Nature ambience for calm and focus.', num:'01', url:'https://vibezcore-audio.b-cdn.net/18-ambient-forest-sanctuary.mp3.m4a', added:'' },
   { title:'Yoga Ritual', series:'Soundscapes', subseries:'Harmonic', free:false, desc:'Soundscape for your yoga practice.', num:'02', url:'https://vibezcore-audio.b-cdn.net/19-ambient-yoga.mp3.mp3', added:'' },
 ];
 

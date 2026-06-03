@@ -49,8 +49,16 @@ export type AccessTier = 'public' | 'account' | 'pro';
  *  alsnog wil invoeren, zonder code-rewrite. */
 export function getEffectiveTier(session: Session): AccessTier {
   if (session.accessTier) return session.accessTier;
-  /* Fallback voor data zonder explicit accessTier. */
-  if (session.series === 'Soundscapes') return 'public';
+  /* Fallback voor data zonder explicit accessTier.
+     Iter 9dq v65 (2026-06-03): Soundscapes is niet langer blanket-public.
+     Operator-besluit: alleen de eerste sessie van elke subcategorie is
+     vrij (= 4 stuks bij 4 subcats), de rest is PRO. Implementatie: laat
+     Soundscapes-sessies hetzelfde `free`-veld respecteren als series.
+     Operator markeert per subcat één sessie als free:true (Theta Arabic,
+     Delta Descent, Background Calm + Forest Sanctuary voor Harmonic). */
+  if (session.series === 'Soundscapes') {
+    return session.free ? 'public' : 'pro';
+  }
   if (session.free) return 'public';
   return 'pro';
 }
