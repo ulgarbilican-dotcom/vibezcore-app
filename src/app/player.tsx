@@ -522,46 +522,66 @@ export default function PlayerScreen() {
         )}
       </View>
 
-      {/* ── Error modal (iter 9vv → iter 9ww) ─────────────────────────
-          Twee CTAs: Sign in (voor bestaande customers) + Get access
-          (voor nieuwe). Voorheen was er één knop die altijd naar
-          pricing leidde — verkeerd voor users die al een account
-          hebben en gewoon moeten inloggen. */}
+      {/* ── Error modal (iter 9dq v67, 2026-06-03) ────────────────────
+          Stijl unification met de upsell-modal hieronder. Twee paden:
+
+          - LOGIN_REQUIRED / SUBSCRIPTION_REQUIRED → paid-content
+            blokkade. Zelfde body-tekst als de preview-upsell modal
+            ("Get full access to the complete VIBEZCORE library."),
+            primary CTA leidt naar pricing (zelfde flow als upsell),
+            secondary "Sign in" voor users die al account hebben.
+
+          - Andere errors (netwerk, signed-URL fail, etc.) → korte
+            retry-modal met één CTA om te sluiten. Geen pricing-link
+            zoals voorheen — een netwerk-glitch is geen aankoop-trigger,
+            user moet gewoon opnieuw kunnen proberen.
+
+          Voorheen had de paid-error-modal eigen langere tekst
+          ("Already have a VIBEZCORE account? Sign in. Otherwise get the
+          audio library...") die ondertussen niet meer matchte met de
+          rest van de UI. Korte evergreen copy past beter bij app-store
+          tone-of-voice. */}
       {playerState.errorMessage && !playerState.previewBlocked ? (
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
-            <Text style={s.modalTitle}>
-              {playerState.errorMessage.includes('LOGIN_REQUIRED')
-                ? 'Log in to listen'
-                : playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED')
-                  ? 'Subscription required'
-                  : 'Couldn\'t load this session'}
-            </Text>
-            <Text style={s.modalBody}>
-              {playerState.errorMessage.includes('LOGIN_REQUIRED')
-                ? 'Already have a VIBEZCORE account? Sign in. Otherwise get the audio library to unlock all sessions.'
-                : playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED')
-                  ? 'This is a PRO session. Get the full audio library to unlock it.'
-                  : 'Please check your connection and try again.'}
-            </Text>
-            <View style={s.modalBtns}>
-              {/* Primary: Sign in (snel pad voor bestaande customers) */}
-              <Pressable
-                style={s.modalPrimary}
-                onPress={() => {
-                  router.back();
-                  router.navigate('/account');
-                }}
-              >
-                <Text style={s.modalPrimaryText}>Sign in</Text>
-              </Pressable>
-              {/* Secondary: Get access (naar pricing) */}
-              <Pressable style={s.modalSecondary} onPress={openUpgrade}>
-                <Text style={s.modalSecondaryText}>
-                  Get the audio library →
+            {playerState.errorMessage.includes('LOGIN_REQUIRED') ||
+            playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED') ? (
+              <>
+                <Text style={s.modalTitle}>Continue listening?</Text>
+                <Text style={s.modalBody}>
+                  Get full access to the complete VIBEZCORE library.
                 </Text>
-              </Pressable>
-            </View>
+                <View style={s.modalBtns}>
+                  <Pressable style={s.modalPrimary} onPress={openUpgrade}>
+                    <Text style={s.modalPrimaryText}>Get Full Access</Text>
+                  </Pressable>
+                  <Pressable
+                    style={s.modalSecondary}
+                    onPress={() => {
+                      router.back();
+                      router.navigate('/account');
+                    }}
+                  >
+                    <Text style={s.modalSecondaryText}>Sign in</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={s.modalTitle}>Couldn't load this session</Text>
+                <Text style={s.modalBody}>
+                  Please check your connection and try again.
+                </Text>
+                <View style={s.modalBtns}>
+                  <Pressable
+                    style={s.modalPrimary}
+                    onPress={() => router.back()}
+                  >
+                    <Text style={s.modalPrimaryText}>Close</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
         </View>
       ) : null}
