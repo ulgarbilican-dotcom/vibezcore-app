@@ -35,6 +35,7 @@ import { useBraceletOwner } from '@/utils/dev-user-override';
 import {
   cancelSubscription,
   gumroadManageUrl,
+  storeSubscriptionsUrl,
 } from '@/services/subscription-actions';
 import { clearSignedUrlCache } from '@/utils/audio-url';
 import { clearLastPlayed } from '@/utils/last-played';
@@ -205,16 +206,22 @@ function SubscriptionCard() {
     }
   }
 
-  /* Vier CTA-paden afhankelijk van state:
-       - Loading             → geen CTA (anders flicker)
-       - Free (geen products)→ "Upgrade to full library" → Library pricing
-       - Bracelet-only       → "Add Audio Library" → Library pricing
-                              (zelfde doel, andere copy — user heeft al
-                              een product, dit is een aanvulling)
-       - Pro met subscriber  → "Manage billing" → Gumroad customer portal
-       - Pro zonder subscriber-id → geen CTA tonen (data nog incomplete) */
+  /* CTA-paden afhankelijk van state — iter 9dq v83 (2026-06-03):
+       - Loading                  → geen CTA (anders flicker)
+       - Free (geen products)     → "Upgrade to full library" → /subscribe
+       - Bracelet-only            → "Add Audio Library" → /subscribe
+       - PRO met Gumroad-sub      → "Manage billing" → Gumroad customer portal
+                                    (legacy users die vóór IAP-launch kochten)
+       - PRO zonder Gumroad-sub   → "Manage subscription" → Apple/Google
+                                    store-subscription-page (IAP-users +
+                                    Apple/Google policy: verplicht in-app
+                                    manage-link).
+
+     Geen "geen CTA" pad meer voor PRO-users — Apple eist altijd toegang
+     tot manage-subscription. */
   const showUpgrade = !isLoading && !isPro;
-  const showManageBilling = !isLoading && isPro && !!gumroadSubscriberId;
+  const showManageGumroad = !isLoading && isPro && !!gumroadSubscriberId;
+  const showManageStore = !isLoading && isPro && !gumroadSubscriberId;
   const upgradeCtaText = isBraceletOwner
     ? 'Add Audio Library'
     : 'Upgrade to full library';
@@ -240,13 +247,23 @@ function SubscriptionCard() {
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
-      {showManageBilling && gumroadSubscriberId && (
+      {showManageGumroad && gumroadSubscriberId && (
         <Pressable
           style={s.cardCta}
           onPress={() => openExternal(gumroadManageUrl(gumroadSubscriberId))}
           accessibilityLabel="Manage billing on Gumroad"
         >
           <Text style={s.cardCtaText}>Manage billing</Text>
+          <Text style={s.cardCtaArrow}>→</Text>
+        </Pressable>
+      )}
+      {showManageStore && (
+        <Pressable
+          style={s.cardCta}
+          onPress={() => openExternal(storeSubscriptionsUrl())}
+          accessibilityLabel="Manage your subscription in the App Store or Google Play"
+        >
+          <Text style={s.cardCtaText}>Manage subscription</Text>
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
@@ -712,10 +729,18 @@ export default function AccountScreen() {
             </Pressable>
           </View>
 
-          {/* Cancel Subscription — alleen voor active pro users. Aparte
-              card buiten Account Actions zodat 'm zichtbaar destructief
-              voelt (zoals webapp's "Cancel Subscription" knop in red). */}
-          {isProForActions && (
+          {/* Cancel Subscription — alleen voor active GUMROAD-pro-users.
+              Iter 9dq v83 (2026-06-03): IAP-users (Apple StoreKit / Google
+              Play Billing) MOGEN niet via een third-party in-app endpoint
+              gecanceld worden — Apple/Google verbieden dat (cancellation
+              moet via hun eigen subscription-management). Voor hen zit de
+              cancel-flow geïntegreerd in de "Manage subscription"-knop
+              hierboven die naar Apple/Google opent.
+
+              Gumroad-users (legacy, vóór IAP-launch) zien wel de cancel-
+              knop hier omdat onze backend hun cancellatie nog wel kan
+              triggeren via Gumroad's API. */}
+          {isProForActions && !!gumroadSubscriberIdFromHook && (
             <Pressable
               style={s.cancelBtn}
               onPress={onCancelSubscription}

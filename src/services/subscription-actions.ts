@@ -19,12 +19,35 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { apiCall } from '@/utils/api';
+import { Platform } from 'react-native';
 
 /** Bouwt de Gumroad customer-portal URL voor een subscriber-id.
  *  Format: https://app.gumroad.com/subscriptions/{subscriber_id}/manage
  *  Dezelfde URL die backend zou returnen via cancel-subscription. */
 export function gumroadManageUrl(subscriberId: string): string {
   return `https://app.gumroad.com/subscriptions/${encodeURIComponent(subscriberId)}/manage`;
+}
+
+/** Iter 9dq v83 (2026-06-03): platform-specifieke subscription-management
+ *  URL. Apple en Google EISEN dat een app een in-app-toegankelijke link
+ *  biedt naar de subscription-instellingen van het OS — voor cancel,
+ *  re-subscribe, billing-info, etc. App Store review fail't zonder.
+ *
+ *    iOS     : itms-apps://apps.apple.com/account/subscriptions
+ *              (deep-link naar Settings → Apple ID → Subscriptions)
+ *    Android : https://play.google.com/store/account/subscriptions
+ *              (opent Play Store-app in subscription-tab)
+ *    Web/onbekend : Play Store-URL als pragmatische fallback
+ *
+ *  Voor users met een IAP-sub: dit IS de enige manier om te managen
+ *  of cancellen (Apple/Google eisen dat het via hun systeem gaat —
+ *  een app mag niet zelf cancellatie afhandelen voor IAP-content). */
+export function storeSubscriptionsUrl(): string {
+  if (Platform.OS === 'ios') {
+    return 'itms-apps://apps.apple.com/account/subscriptions';
+  }
+  /* Android + web fallback. */
+  return 'https://play.google.com/store/account/subscriptions';
 }
 
 /** Response shape voor /api/cancel-subscription. */
