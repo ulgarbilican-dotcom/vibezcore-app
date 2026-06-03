@@ -15,6 +15,11 @@
 
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
 import { GUMROAD_URLS } from '@/constants/links';
+import {
+  getEffectiveTier,
+  tierBadgeColor,
+  tierBadgeLabel,
+} from '@/utils/access-tier';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBraceletOwner } from '@/utils/dev-user-override';
@@ -280,16 +285,19 @@ function SessionRow({
         </View>
       </View>
       <View style={{ flex: 1 }}>
-        {!hideTag && (
-          <Text
-            style={[
-              s.libRowTag,
-              session.free ? s.libRowTagFree : s.libRowTagPro,
-            ]}
-          >
-            {session.free ? 'FREE' : 'PRO'}
-          </Text>
-        )}
+        {!hideTag && (() => {
+          /* Iter 9dq v60 (2026-06-03): 3-tier badge ipv 2. Tier-resolutie
+             via getEffectiveTier (utils/access-tier.ts) — werkt met
+             expliciet `accessTier`-veld OF de fallback op `free`. */
+          const tier = getEffectiveTier(session);
+          const label = tierBadgeLabel(tier);
+          if (!label) return null;
+          return (
+            <Text style={[s.libRowTag, { color: tierBadgeColor(tier) }]}>
+              {label}
+            </Text>
+          );
+        })()}
         <Text style={s.libRowTitle}>{session.title}</Text>
         {session.desc ? <Text style={s.libRowDesc}>{session.desc}</Text> : null}
         {/* FIX 15b: status-regel ook hier in serie-expansion sessie-rijen. */}
@@ -1269,14 +1277,22 @@ export default function AudioScreen() {
                             ) : null}
                           </View>
                           <View style={s.acBody}>
-                            <Text
-                              style={[
-                                s.acTag,
-                                sess.free ? s.acTagFree : s.acTagPro,
-                              ]}
-                            >
-                              {sess.free ? 'FREE' : 'PRO'}
-                            </Text>
+                            {(() => {
+                              /* Iter 9dq v60 (2026-06-03): 3-tier badge. */
+                              const tier = getEffectiveTier(sess);
+                              const label = tierBadgeLabel(tier);
+                              if (!label) return null;
+                              return (
+                                <Text
+                                  style={[
+                                    s.acTag,
+                                    { color: tierBadgeColor(tier) },
+                                  ]}
+                                >
+                                  {label}
+                                </Text>
+                              );
+                            })()}
                             <Text style={s.acTitle} numberOfLines={1}>
                               {sess.title}
                             </Text>
