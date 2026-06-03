@@ -505,32 +505,31 @@ export default function PlayerScreen() {
             Iter 9dq v19: gebruikt nu displayIsPro (override-aware) zodat
             de CTA ook verbergt in PRO/Full dev-override, niet alleen bij
             echte ingelogde PRO-users. */}
+        {/* Iter 9dq v75 (2026-06-03, ronde 3): de inline marginBottom-
+            overrides van v73/v74 hadden GEEN visueel effect op de
+            Samsung 3-button nav — vermoedelijk Android edge-to-edge
+            window-mode die de inline style ergens negeert. Nieuwe
+            aanpak: wrap in SafeAreaView met edges={['bottom']}. Dat
+            is de idiomatische RN-Way om systeem-chrome te respecteren
+            en werkt onafhankelijk van inset-reporting. Extra 20px
+            ademruimte tussen knop en bar via spacer-View. */}
         {!displayIsPro && (
-          <Pressable
-            style={[
-              s.cta,
-              {
-                /* Iter 9dq v74 (2026-06-03, operator-feedback ronde 2):
-                   v73 had floor 48 — nog steeds te krap op Samsung
-                   3-button nav (bar is 48-56px hoog, knop heeft 14px
-                   eigen padding → minimum 72px nodig om de knop volledig
-                   boven de bar te houden). Floor opgetrokken naar 72px;
-                   safeInsets.bottom + 40 voor extra ademruimte wanneer
-                   het systeem een grotere inset reportert. */
-                marginBottom: Math.max(safeInsets.bottom + 40, 72),
-              },
-            ]}
-            onPress={openUpgrade}
-            android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
-          >
-            <Text style={s.ctaText}>→ Full library access</Text>
-          </Pressable>
+          <SafeAreaView edges={['bottom']} style={{ marginTop: 'auto' }}>
+            <Pressable
+              style={s.cta}
+              onPress={openUpgrade}
+              android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+            >
+              <Text style={s.ctaText}>→ Full library access</Text>
+            </Pressable>
+            <View style={{ height: 20 }} />
+          </SafeAreaView>
         )}
-        {/* Iter 9kk: bottom-spacer voor PRO users (geen CTA = geen
-            safe-area margin) — voorkomt dat play/skip controls onder
-            de home-indicator vallen. v73: zelfde floor-pattern als CTA. */}
+        {/* PRO-spacer — geen CTA, alleen safe-area + ademruimte. */}
         {displayIsPro && (
-          <View style={{ height: Math.max(safeInsets.bottom + 24, 56) }} />
+          <SafeAreaView edges={['bottom']} style={{ marginTop: 'auto' }}>
+            <View style={{ height: 24 }} />
+          </SafeAreaView>
         )}
       </View>
 
