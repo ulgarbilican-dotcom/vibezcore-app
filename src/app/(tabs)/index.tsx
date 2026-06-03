@@ -1485,8 +1485,15 @@ export default function AudioScreen() {
                    users — PRO heeft full access, FREE-promotie is dan
                    misleidend. */}
                 {!hasSub && frees.map((sess) => {
-                  const pillText =
-                    frees.length === 1 ? '1 FREE SESSION' : 'FREE';
+                  /* Iter 9dq v61 (2026-06-03): pill is tier-aware ipv
+                     series-level aggregate. Public → groene "FREE",
+                     account → blauwe "FREE WITH ACCOUNT". Tier-resolutie
+                     via getEffectiveTier zodat data zonder explicit
+                     accessTier-veld via de fallback in access-tier.ts
+                     goed wordt geclassificeerd. */
+                  const sessTier = getEffectiveTier(sess);
+                  const pillText = tierBadgeLabel(sessTier) ?? 'FREE';
+                  const pillTierColor = tierBadgeColor(sessTier);
                   /* FIX 9: "active" = url-match, ongeacht play/pause. Hele
                      blokje blijft blauw tijdens pauze, consistent met de
                      card-glow (FIX 5+). De play-knop icon switcht binnen
@@ -1545,12 +1552,20 @@ export default function AudioScreen() {
                           <View
                             style={[
                               s.freePill,
+                              /* Tier-kleur als bg/border-tint wanneer niet
+                                 active. Active overschrijft met accent-blauw
+                                 (now-playing-state). */
+                              !isActive && {
+                                backgroundColor: `${pillTierColor}1a`,
+                                borderColor: `${pillTierColor}4d`,
+                              },
                               isActive && s.freePillActive,
                             ]}
                           >
                             <Text
                               style={[
                                 s.freePillText,
+                                !isActive && { color: pillTierColor },
                                 isActive && s.freePillTextActive,
                               ]}
                             >
