@@ -126,7 +126,11 @@ const KICKSTARTER_TARGET = new Date('2026-08-01T00:00:00').getTime();
    source of truth voor zowel het JSX als de styles. */
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SIDE_INSET = 16;
-const PEEK = 26;
+/* Iter 9dq v81 (2026-06-03): PEEK opgetrokken van 26 → 70 zodat cards
+   smaller worden — operator-feedback "cards veel te groot en breed".
+   Meer peek van de volgende card = duidelijker affordance dat 'r meer is
+   om te swipen. */
+const PEEK = 70;
 const CARD_GAP = 10;
 const CARD_WIDTH = SCREEN_WIDTH - SIDE_INSET * 2 - PEEK;
 const CARD_SNAP = CARD_WIDTH + CARD_GAP;
@@ -2297,11 +2301,11 @@ const s = StyleSheet.create({
        cliped de foto netjes binnen de afgeronde hoeken. */
     overflow: 'hidden',
   },
-  /* Foto-header bovenaan elke mode-card (iter 9dq v80).
+  /* Foto-header bovenaan elke mode-card (iter 9dq v80, ↓ v81).
      Vaste hoogte zodat carousel-cards visueel uitgelijnd blijven
-     ongeacht foto-aspect-ratio. */
+     ongeacht foto-aspect-ratio. Hoogte 150 → 110 voor compactere cards. */
   modePhotoWrap: {
-    height: 150,
+    height: 110,
     width: '100%',
     position: 'relative',
   },
@@ -2314,16 +2318,17 @@ const s = StyleSheet.create({
      Absolute bottom-left, witte tekst over de dark-gradient. */
   modePhotoOverlayContent: {
     position: 'absolute',
-    left: 18,
-    right: 18,
-    bottom: 14,
+    left: 14,
+    right: 14,
+    bottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
-  /* Inner content (head, body, ideal-list) onder de foto. */
+  /* Inner content (head, body, ideal-list) onder de foto.
+     Padding 22 → 18 voor compactere cards (iter 9dq v81). */
   modeCardContent: {
-    padding: 22,
+    padding: 18,
   },
   dotRow: {
     flexDirection: 'row',
