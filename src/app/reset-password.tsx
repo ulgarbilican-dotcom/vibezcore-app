@@ -37,7 +37,7 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Mode = 'recovery' | 'setup';
 type Phase = 'verifying' | 'ready' | 'updating' | 'done' | 'error';
@@ -74,6 +74,9 @@ export default function ResetPassword() {
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /* Iter 9dq v77 (2026-06-03): safe-area-aware scroll padding.
+     Floor 72 = consistent met andere bottom-CTAs. */
+  const safeInsets = useSafeAreaInsets();
 
   /* setTimeout ref — opruimen bij unmount voorkomt navigate-after-unmount
      warnings én double-routes als user snel weg-tikt na success. */
@@ -360,7 +363,7 @@ export default function ResetPassword() {
         options={{ title: copy.screenTitle, headerBackTitle: 'Back' }}
       />
       <KeyboardAwareScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}

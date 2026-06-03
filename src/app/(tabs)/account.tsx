@@ -600,7 +600,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
         <KeyboardAwareScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}

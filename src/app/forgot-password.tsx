@@ -182,7 +182,9 @@ export default function ForgotPassword() {
       <KeyboardAwareScrollView
         contentContainerStyle={[
           s.scroll,
-          { paddingBottom: 28 + insets.bottom },
+          /* Iter 9dq v77 (2026-06-03): geharmoniseerde formule met
+             floor 72 → clears Samsung 3-button nav. */
+          { paddingBottom: Math.max(insets.bottom + 24, 72) },
         ]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}

@@ -505,31 +505,33 @@ export default function PlayerScreen() {
             Iter 9dq v19: gebruikt nu displayIsPro (override-aware) zodat
             de CTA ook verbergt in PRO/Full dev-override, niet alleen bij
             echte ingelogde PRO-users. */}
-        {/* Iter 9dq v75 (2026-06-03, ronde 3): de inline marginBottom-
-            overrides van v73/v74 hadden GEEN visueel effect op de
-            Samsung 3-button nav — vermoedelijk Android edge-to-edge
-            window-mode die de inline style ergens negeert. Nieuwe
-            aanpak: wrap in SafeAreaView met edges={['bottom']}. Dat
-            is de idiomatische RN-Way om systeem-chrome te respecteren
-            en werkt onafhankelijk van inset-reporting. Extra 20px
-            ademruimte tussen knop en bar via spacer-View. */}
+        {/* Iter 9dq v77 (2026-06-03, ronde 4 — definitief):
+            SafeAreaView-wrap in v75 werkte niet in modal-context
+            (player draait als presentation:'modal' wat het
+            SafeAreaProvider doorbreekt op Android). Terug naar inline
+            marginBottom met VEILIGE floor 72px. Die floor:
+              - Clears Samsung 3-button nav (48-56px) + 14px button-
+                eigen padding → minimum 70px nodig
+              - safeInsets.bottom + 24 voor extra ademruimte wanneer
+                inset-API correct rapporteert
+              - Werkt op iPhones (notch home indicator ~34 + 24 = 58 < 72)
+            Hard floor 72 = consistent over alle device-form-factors. */}
         {!displayIsPro && (
-          <SafeAreaView edges={['bottom']} style={{ marginTop: 'auto' }}>
-            <Pressable
-              style={s.cta}
-              onPress={openUpgrade}
-              android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
-            >
-              <Text style={s.ctaText}>→ Full library access</Text>
-            </Pressable>
-            <View style={{ height: 20 }} />
-          </SafeAreaView>
+          <Pressable
+            style={[
+              s.cta,
+              { marginBottom: Math.max(safeInsets.bottom + 24, 72) },
+            ]}
+            onPress={openUpgrade}
+            android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+          >
+            <Text style={s.ctaText}>→ Full library access</Text>
+          </Pressable>
         )}
-        {/* PRO-spacer — geen CTA, alleen safe-area + ademruimte. */}
+        {/* PRO-spacer — zelfde formule, kleinere base (geen knop = minder
+            padding nodig). */}
         {displayIsPro && (
-          <SafeAreaView edges={['bottom']} style={{ marginTop: 'auto' }}>
-            <View style={{ height: 24 }} />
-          </SafeAreaView>
+          <View style={{ height: Math.max(safeInsets.bottom + 16, 48) }} />
         )}
       </View>
 

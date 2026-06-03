@@ -49,7 +49,7 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Mode = 'signup' | 'signin';
 type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 'error';
@@ -57,6 +57,11 @@ type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 
 export default function SubscribeScreen() {
   const params = useLocalSearchParams<{ tier?: string; devForceSignedIn?: string }>();
   const tier: AudioTier = params.tier === 'monthly' ? 'monthly' : 'yearly';
+  /* Iter 9dq v77 (2026-06-03): safe-area-aware bottom padding zodat
+     de Continue/Create-account knop nooit onder de Samsung 3-button
+     nav valt. Floor 72 = consistent met alle andere bottom-CTAs. */
+  const safeInsets = useSafeAreaInsets();
+  const scrollBottomPadding = Math.max(safeInsets.bottom + 24, 72);
   /* Iter 9dq v69 (2026-06-03): dev-only param om de signed-in review-
      flow te kunnen previewen zonder een echt test-account te hoeven
      aanmaken. Geactiveerd via Settings → Developer · screen previews →
@@ -306,7 +311,7 @@ export default function SubscribeScreen() {
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
         <KeyboardAwareScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPadding }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}

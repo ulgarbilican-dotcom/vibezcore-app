@@ -2070,10 +2070,10 @@ export default function AudioScreen() {
             <View
               style={[
                 s.pillarModalSheet,
-                /* Iter 9bbb → 9dq v76 (2026-06-03): harmonised CTA-
-                   bottom formula. Floor 48px clears Samsung 3-button
+                /* Iter 9bbb → 9dq v77 (2026-06-03): harmonised CTA-
+                   bottom formula. Floor 72px clears Samsung 3-button
                    nav waar safeInsets.bottom soms onderrapporteert. */
-                { paddingBottom: Math.max(safeInsets.bottom + 16, 48) },
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
               ]}
             >
               <View style={s.pillarModalHandle} />

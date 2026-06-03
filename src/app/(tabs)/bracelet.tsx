@@ -1689,12 +1689,12 @@ export default function BraceletScreen() {
         <View
           style={[
             s.detailOverlay,
-            /* Iter 9aw → 9dq v76 (2026-06-03): harmonised CTA-bottom
-               formula. Floor 48px → consistent met andere screens,
+            /* Iter 9aw → 9dq v77 (2026-06-03): harmonised CTA-bottom
+               formula. Floor 72px → consistent met andere screens,
                clears 3-button nav waar safeInsets soms 0 rapporteert. */
             {
               paddingTop: safeInsets.top + 12,
-              paddingBottom: Math.max(safeInsets.bottom + 16, 48),
+              paddingBottom: Math.max(safeInsets.bottom + 24, 72),
             },
           ]}
           pointerEvents="box-none"

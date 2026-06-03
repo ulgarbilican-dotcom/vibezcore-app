@@ -889,7 +889,9 @@ function ModeDetailModal({
         <View
           style={[
             s.modeModalSheet,
-            { paddingBottom: 24 + insets.bottom },
+            /* Iter 9dq v77 (2026-06-03): geharmoniseerde formule met
+               floor 72 → consistent met alle andere bottom-CTAs. */
+            { paddingBottom: Math.max(insets.bottom + 24, 72) },
           ]}
         >
           <View style={s.modeModalHandle} />
@@ -3705,10 +3707,11 @@ export default function BraceletControl() {
         <View
           style={[
             s.activeScreen,
-            /* Iter 9dq v76 (2026-06-03): floor bumped van 32 → 48 voor
-               consistentie met andere screens. Samsung 3-button nav
-               had nog cutoff op 32. */
-            { paddingBottom: Math.max(safeInsets.bottom + 16, 48) },
+            /* Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
+               48 was nog te krap voor Samsung 3-button nav waar de
+               inset-API onderrapporteert. 72px = consistent met
+               player.tsx en andere bottom-CTAs. */
+            { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
           ]}
         >
           {/* Iter 9bz (2026-05-31): PAUSED-eyebrow staat nu BOVEN de
@@ -4067,10 +4070,9 @@ export default function BraceletControl() {
       <View
         style={[
           s.idleSingleScreen,
-          /* Iter 9dq v76 (2026-06-03): floor bumped van 28 → 48 voor
-             consistentie. Voorheen kon bracelet-control-idle CTA onder
-             de Samsung 3-button nav vallen. */
-          { paddingBottom: Math.max(safeInsets.bottom + 16, 48) },
+          /* Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
+             Consistent met player.tsx en andere bottom-CTAs. */
+          { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native

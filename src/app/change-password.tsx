@@ -35,7 +35,7 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Phase = 'form' | 'updating' | 'done';
 
@@ -49,6 +49,9 @@ export default function ChangePassword() {
   const [show2, setShow2] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
   const [err, setErr] = useState<string | null>(null);
+  /* Iter 9dq v77 (2026-06-03): safe-area-aware scroll padding.
+     Floor 72 = consistent met andere bottom-CTAs. */
+  const safeInsets = useSafeAreaInsets();
 
   /* Email ophalen uit auth-state — nodig voor de current-password
      verificatie via /auth/v1/token. */
@@ -284,7 +287,7 @@ export default function ChangePassword() {
         options={{ title: 'Change password', headerBackTitle: 'Account' }}
       />
       <KeyboardAwareScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}
