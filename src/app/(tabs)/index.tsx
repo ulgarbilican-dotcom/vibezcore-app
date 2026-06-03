@@ -3216,35 +3216,31 @@ const s = StyleSheet.create({
   /* Inline-expansie-container (gewone sessierijen of subcat-kaarten). */
   libExpand: { marginTop: 10 },
 
-  /* "Show all N sessions"-link (iter 9dq v70, 2026-06-03).
-     Verschijnt onder de FREE-balk preview-rij wanneer de card collapsed
-     is — geeft de user expliciete count + tap-target naast de chevron.
-     Dim accent-stijl: niet luid maar wel duidelijk klikbaar. */
+  /* "Show all N sessions"-link (iter 9dq v70 → v71, 2026-06-03).
+     Operator-feedback: card-vorm met bg+border voelde rommelig naast de
+     groene FREE-balk hierboven. Nu pure tekst-link, dim/muted, geen bg,
+     geen border. Apple-stijl "see more" disclosure. Functioneel
+     identiek (zelfde toggle-handler). */
   showAllRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginTop: 8,
+    justifyContent: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginTop: 2,
     gap: 4,
-    backgroundColor: 'rgba(58,143,255,0.05)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.15)',
   },
   showAllText: {
-    color: '#3a8fff',
+    color: 'rgba(255,255,255,0.50)',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   showAllChev: {
-    color: '#3a8fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 2,
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: 15,
+    fontWeight: '500',
+    marginLeft: 1,
     /* Optical alignment — chevron `›` is licht boven baseline,
        paar pt naar beneden om visueel op-line met de tekst te staan. */
     marginTop: -2,
