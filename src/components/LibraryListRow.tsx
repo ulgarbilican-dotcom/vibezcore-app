@@ -9,6 +9,11 @@
 
 import { SERIES_PHOTO, type Session } from '@/data/audio-library-data';
 import { useSubscription } from '@/hooks/useSubscription';
+import {
+  getEffectiveTier,
+  tierBadgeColor,
+  tierBadgeLabel,
+} from '@/utils/access-tier';
 import type { ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -25,8 +30,14 @@ export function LibraryListRow({
   /* Iter 9dq v20 (2026-06-02): display-aware isPro (override-aware). In PRO
      mode geen FREE/PRO tag — alles is toegankelijk dus onderscheid is
      irrelevant. Free/Guest user zien de tag wel als wegwijzer voor wat ze
-     nu kunnen vs wat upgrade vereist. */
+     nu kunnen vs wat upgrade vereist.
+     Iter 9dq v59 (2026-06-03): drie tiers ipv twee — 'public' (FREE groen),
+     'account' (FREE WITH ACCOUNT blauw), 'pro' (PRO dim). Voor PRO-users
+     blijven we de badge verbergen want zij ervaren alles als unlocked. */
   const { isPro } = useSubscription();
+  const tier = getEffectiveTier(session);
+  const badgeLabel = tierBadgeLabel(tier);
+  const badgeColor = tierBadgeColor(tier);
   return (
     <Pressable
       onPress={onPress}
@@ -37,10 +48,8 @@ export function LibraryListRow({
         {photo ? <Image source={{ uri: photo }} style={s.artImg} /> : null}
       </View>
       <View style={s.body}>
-        {!isPro && (
-          <Text style={[s.tag, session.free ? s.tagFree : s.tagPro]}>
-            {session.free ? 'FREE' : 'PRO'}
-          </Text>
+        {!isPro && badgeLabel && (
+          <Text style={[s.tag, { color: badgeColor }]}>{badgeLabel}</Text>
         )}
         <Text style={s.title} numberOfLines={2}>
           {session.title}

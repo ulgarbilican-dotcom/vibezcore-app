@@ -1,8 +1,32 @@
 /* VIBEZCORE — Audio bibliotheek data. Exact uit index_2_correct.html, niets verzonnen.
    83 sessies, 12 series. Soundscapes heeft 4 subcategorieën
-   (SUBCAT_INFO) met EIGEN foto's — sessies daarin via session.subseries. */
+   (SUBCAT_INFO) met EIGEN foto's — sessies daarin via session.subseries.
 
-export type Session = { title:string; series:string; subseries:string; free:boolean; desc:string; num:string; url:string; added:string; };
+   Iter 9dq v59 (2026-06-03, operator-besluit): nieuw access-tier-model.
+   Naast `free` (legacy) bestaat nu `accessTier` (optioneel) met drie waarden:
+     - 'public'  : iedereen, geen account vereist
+     - 'account' : ingelogd account vereist, geen sub
+     - 'pro'     : actieve audio-PRO subscription vereist
+   Wanneer `accessTier` ontbreekt valt utils/access-tier.ts terug op regels
+   gebaseerd op `free` + `series` (zie getEffectiveTier). Bestaande data
+   blijft werken zonder per-rij wijziging.
+
+   Bij content-update vult de operator `accessTier` per nieuwe sessie in. */
+
+export type AccessTier = 'public' | 'account' | 'pro';
+export type Session = {
+  title: string;
+  series: string;
+  subseries: string;
+  free: boolean;
+  desc: string;
+  num: string;
+  url: string;
+  added: string;
+  /** Operator-besluit voor toegangsniveau. Wanneer afwezig, val terug op de
+   *  fallback in utils/access-tier.ts (op basis van `free` + `series`). */
+  accessTier?: AccessTier;
+};
 export type Series = { name:string; sessions:Session[] };
 
 export const SERIES_ORDER: string[] = ['Master Mental Clarity', 'Beast Mode', 'The Inner Blueprint', 'Daily Affirmations Power', 'Meaning Over Comfort', 'Journey to Success', 'Life After Betrayal', 'Identity & Wealth', 'The Freedom Formula', 'The Stoic Fortress', 'End Fight-Or-Flight', 'Soundscapes'];

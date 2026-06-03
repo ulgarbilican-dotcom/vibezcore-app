@@ -19,6 +19,7 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
@@ -284,6 +285,13 @@ export default function RootLayout() {
           name="player"
           options={{ headerShown: false, presentation: 'modal' }}
         />
+        {/* `subscribe` — IAP-bridge screen (operator-flow 2026-06-03).
+            Gast tikt pricing-card → /subscribe?tier=monthly|yearly →
+            account-create-form (of skip als ingelogd) → IAP-popup. */}
+        <Stack.Screen
+          name="subscribe"
+          options={{ title: 'Subscribe', headerBackTitle: 'Back' }}
+        />
         {/* `settings` — sub-screen pushed from Account-tab. Toont Playback /
            Privacy / About-secties die de webapp ook heeft. */}
         <Stack.Screen
@@ -352,6 +360,13 @@ export default function RootLayout() {
           upsell singleton-service bepaald, getriggerd vanuit
           (tabs)/index.tsx wanneer playerState.endedPanel toggelt. */}
       <BraceletUpsellModal />
+
+      {/* Account-wall-modal — verschijnt wanneer een gast op een
+          'account'-tier sessie tikt. Sibling-mount (zelfde reden als
+          BraceletUpsellModal): voorkomt native-Modal touch-intercept,
+          werkt als floating overlay over álle schermen heen. Visibility
+          gestuurd door utils/openSession.ts → useGatedOpenSession. */}
+      <AccountWallModal />
 
         {/* Welcome-back-popup — verschijnt op cold-start als er een geldige
             last-played-entry is. Operator-besluit 2026-05-25 (vervangt de
