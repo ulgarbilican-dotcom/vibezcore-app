@@ -1817,10 +1817,10 @@ export default function AudioScreen() {
             >
               <View style={[s.cardClip, s.cardClipMonthly]}>
                 <View style={s.strikeRow}>
-                  <Text style={s.priceStrike}>$16.90</Text>
+                  <Text style={s.priceStrike}>€12.99</Text>
                 </View>
                 <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>$12.90</Text>
+                  <Text style={s.priceBigAmount}>€9.99</Text>
                   <Text style={s.priceBigPer}>/month</Text>
                 </View>
                 <Text style={s.priceMeta}>Billed monthly</Text>
@@ -1852,14 +1852,14 @@ export default function AudioScreen() {
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={s.strikeRow}>
-                  <Text style={s.priceStrike}>$9.92</Text>
-                  <Text style={s.saveTag}>SAVE 42%</Text>
+                  <Text style={s.priceStrike}>€9.99</Text>
+                  <Text style={s.saveTag}>SAVE 50%</Text>
                 </View>
                 <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>$7.49</Text>
+                  <Text style={s.priceBigAmount}>€4.99</Text>
                   <Text style={s.priceBigPer}>/month</Text>
                 </View>
-                <Text style={s.priceMeta}>Billed $89.90/year</Text>
+                <Text style={s.priceMeta}>Billed €59.99/year</Text>
                 {plan === 'yearly' && (
                   <Text style={[s.selCheck, s.selCheckYearly]} pointerEvents="none">
                     ✓
@@ -1893,8 +1893,8 @@ export default function AudioScreen() {
           >
             <Text style={s.ctaTxt}>
               {plan === 'yearly'
-                ? 'Get Yearly — $7.49/month'
-                : 'Get Monthly — $12.90/month'}
+                ? 'Get Yearly — €4.99/month'
+                : 'Get Monthly — €9.99/month'}
             </Text>
           </Pressable>
 

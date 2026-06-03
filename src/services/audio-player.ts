@@ -373,18 +373,30 @@ function onStatus(st: AudioStatus): void {
     setState({ previewBlocked: true });
   }
 
-  /* History-hooks — zelfde transitie-logica als voorheen. */
-  if (isPlayingNow && !playingRef && state.session) {
-    startListen(state.session.url, state.session.title, state.session.series);
-    trackingActive = true;
-  }
-  if (!isPlayingNow && playingRef && trackingActive) {
-    pauseListen();
-  }
+  /* History-hooks + saved-position — ZELFDE als voorheen, behalve dat
+     preview-sessies (60-sec teaser voor non-PRO users die op PRO-tier
+     content tikken) géén history-entries of resume-posities mogen
+     opleveren.
 
-  /* Saved position — alleen bij echte pauze (niet bij einde). */
-  if (!isPlayingNow && playingRef && state.session && !st.didJustFinish) {
-    saveCurrentPositionIfWorthwhile();
+     Iter 9dq v66 (2026-06-03, operator-feedback): de "Partly listened"-
+     badge en de Continue/Start over-resume-prompt suggereerden dat de
+     user bij een PRO-sessie verder kon gaan waar 'ie was — maar de cap
+     stopt 'm sowieso na 60s. Cosmetisch misleidend + verwarrend bij
+     volgende bezoek. Door previews uit te sluiten blijven die UI-states
+     reservoir voor echte luister-engagement. */
+  if (!state.preview) {
+    if (isPlayingNow && !playingRef && state.session) {
+      startListen(state.session.url, state.session.title, state.session.series);
+      trackingActive = true;
+    }
+    if (!isPlayingNow && playingRef && trackingActive) {
+      pauseListen();
+    }
+
+    /* Saved position — alleen bij echte pauze (niet bij einde). */
+    if (!isPlayingNow && playingRef && state.session && !st.didJustFinish) {
+      saveCurrentPositionIfWorthwhile();
+    }
   }
 
   playingRef = isPlayingNow;
@@ -815,9 +827,19 @@ export function setSleepTimer(minutes: number): void {
  */
 export async function unload(): Promise<void> {
   clearSleepTimer();
-  saveCurrentPositionIfWorthwhile();
-  if (trackingActive) {
-    pauseListen();
+  /* Iter 9dq v66 (2026-06-03): preview-sessies sluiten zonder positie
+     op te slaan of history-flush. Anders zou close-and-reopen alsnog
+     een Continue-prompt geven voor een sessie die toch op 60s gecapped
+     is. Identiek aan onStatus-handler. */
+  if (!state.preview) {
+    saveCurrentPositionIfWorthwhile();
+    if (trackingActive) {
+      pauseListen();
+      trackingActive = false;
+    }
+  } else {
+    /* Wel trackingActive resetten zodat een volgende non-preview-sessie
+       schoon begint. */
     trackingActive = false;
   }
   playingRef = false;
