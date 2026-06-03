@@ -510,13 +510,14 @@ export default function PlayerScreen() {
             style={[
               s.cta,
               {
-                /* Iter 9dq v73 (2026-06-03, operator-feedback): CTA werd
-                   afgekapt door de Android gesture-bar. safeInsets.bottom
-                   alleen was te weinig (24 + ~12 = 36px op apparaten waar
-                   het systeem 48-56px claimt). Math.max-floor van 48px
-                   garandeert ademruimte ook wanneer de inset-API klein
-                   rapporteert. */
-                marginBottom: Math.max(safeInsets.bottom + 32, 48),
+                /* Iter 9dq v74 (2026-06-03, operator-feedback ronde 2):
+                   v73 had floor 48 — nog steeds te krap op Samsung
+                   3-button nav (bar is 48-56px hoog, knop heeft 14px
+                   eigen padding → minimum 72px nodig om de knop volledig
+                   boven de bar te houden). Floor opgetrokken naar 72px;
+                   safeInsets.bottom + 40 voor extra ademruimte wanneer
+                   het systeem een grotere inset reportert. */
+                marginBottom: Math.max(safeInsets.bottom + 40, 72),
               },
             ]}
             onPress={openUpgrade}
@@ -529,7 +530,7 @@ export default function PlayerScreen() {
             safe-area margin) — voorkomt dat play/skip controls onder
             de home-indicator vallen. v73: zelfde floor-pattern als CTA. */}
         {displayIsPro && (
-          <View style={{ height: Math.max(safeInsets.bottom + 16, 32) }} />
+          <View style={{ height: Math.max(safeInsets.bottom + 24, 56) }} />
         )}
       </View>
 
