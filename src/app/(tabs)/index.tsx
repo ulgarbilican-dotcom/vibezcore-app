@@ -37,7 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gem, Heart, Sparkles, TrendingUp } from 'lucide-react-native';
 import { getEntryByUrl, useHistory } from '@/utils/history';
 import { isNew } from '@/utils/isNew';
-import { openSession } from '@/utils/openSession';
+import { useGatedOpenSession } from '@/utils/openSession';
 import {
   consumeScrollIntent,
   requestScrollTo,
@@ -707,21 +707,21 @@ export default function AudioScreen() {
     setSubExpanded((p) => ({ ...p, [name]: !p[name] }));
 
   /* ── Session-tap-handler ──
-     Operator-keuze 2026-05-27: geen blocking Alert meer voor uitgelogde
-     users op PRO-sessies. In plaats daarvan opent de sessie meteen in
-     60-seconden preview-mode. De audio-player's `shouldPreview()`
-     detecteert no-token of non-pro automatisch en signt de URL met
-     `?preview=true`. Na 60s kicks `PREVIEW_CAP_SEC` in → pauseert →
-     player.tsx toont z'n "Continue listening?"-upsell modal met de
-     bestaande "Get Full Access"-flow naar Gumroad of sign-in.
-
-     Beleid (al volledig afgehandeld door audio-player + player.tsx):
-       - FREE sessie → full playback (geen preview)
-       - PRO sessie + uitgelogd → 60s preview → upsell modal
-       - PRO sessie + ingelogd niet-pro → 60s preview → upsell modal
-       - PRO sessie + pro → full playback (no preview, no cap) */
+     Iter 9dq v63 (2026-06-03): tap loopt nu door useGatedOpenSession.
+     Drie paden:
+       - public tier (FREE) → openSession() → player → playback
+       - account tier → AccountWallModal (huidig: dormant, geen sessies
+                        op deze tier — fallback maakt alles public)
+       - pro tier + actieve sub → openSession() → player → playback
+       - pro tier + geen sub → push naar /subscribe?tier=yearly
+     Het oude 60-sec-preview-pad (Gumroad-era) wordt vervangen door de
+     IAP-bridge in subscribe.tsx. De audio-player blijft `shouldPreview()`
+     intern doen voor edge-cases waar een PRO-sessie tóch in de player
+     belandt (bv. via deep-link of auto-play-next), maar de hoofdroute
+     voor tap-acties gaat nu door de gating-laag. */
+  const openGated = useGatedOpenSession();
   const handleSessionPress = (sess: Session) => {
-    openSession(sess);
+    openGated(sess);
   };
 
   /* ── BRACELET-OWNER LANDING PAGE (v11 — clean rebuild) ──
@@ -1516,7 +1516,7 @@ export default function AudioScreen() {
                         s.libFreeRow,
                         isActive && s.libFreeRowActive,
                       ]}
-                      onPress={() => openSession(sess)}
+                      onPress={() => openGated(sess)}
                       android_ripple={{
                         color: isActive
                           ? 'rgba(58,143,255,0.18)'

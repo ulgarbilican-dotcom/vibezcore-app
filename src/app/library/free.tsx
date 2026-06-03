@@ -8,7 +8,7 @@
 
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
-import { openSession } from '@/utils/openSession';
+import { useGatedOpenSession } from '@/utils/openSession';
 import { router, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import {
@@ -25,6 +25,11 @@ export default function LibraryFreeScreen() {
     () => SESSIONS.filter((sess) => sess.free),
     [],
   );
+  /* Iter 9dq v63 (2026-06-03): gated-open ipv directe openSession. Public-
+     tier sessies (alle 'free' in deze sub-page) spelen direct. Mocht een
+     account-tier of PRO-tier sessie hier later landen, dan handelt de
+     gating-laag de juiste flow af (AccountWallModal / push naar /subscribe). */
+  const openGated = useGatedOpenSession();
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -58,7 +63,7 @@ export default function LibraryFreeScreen() {
           <LibraryListRow
             key={sess.url}
             session={sess}
-            onPress={() => openSession(sess)}
+            onPress={() => openGated(sess)}
             rightAccessory={
               <View style={s.freePill}>
                 <Text style={s.freePillTxt}>FREE</Text>

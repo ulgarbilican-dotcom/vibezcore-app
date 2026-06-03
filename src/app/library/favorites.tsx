@@ -10,7 +10,7 @@
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
-import { openSession } from '@/utils/openSession';
+import { useGatedOpenSession } from '@/utils/openSession';
 import { router, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import {
@@ -24,6 +24,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LibraryFavoritesScreen() {
   const { favorites, toggle: toggleFavorite } = useFavorites();
+  /* Iter 9dq v63 (2026-06-03): gated-open. Tap op een favoriete PRO-sessie
+     door een free-user → push naar /subscribe ipv stille fail in player. */
+  const openGated = useGatedOpenSession();
 
   /* Map<url, FavEntry> behoudt insertion-order. We sorteren op `ts` descending
      (= nieuwste-toegevoegd bovenaan) zodat een replay van een oude favoriet
@@ -83,7 +86,7 @@ export default function LibraryFavoritesScreen() {
             <LibraryListRow
               key={sess.url}
               session={sess}
-              onPress={() => openSession(sess)}
+              onPress={() => openGated(sess)}
               rightAccessory={
                 <Pressable
                   onPress={(e) => {

@@ -9,7 +9,7 @@
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { isNew } from '@/utils/isNew';
-import { openSession } from '@/utils/openSession';
+import { useGatedOpenSession } from '@/utils/openSession';
 import { router, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import {
@@ -29,6 +29,9 @@ export default function LibraryNewScreen() {
       ),
     [],
   );
+  /* Iter 9dq v63 (2026-06-03): gated-open — PRO-sessies bij free-user
+     leiden naar /subscribe ipv stille fail. */
+  const openGated = useGatedOpenSession();
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -71,7 +74,7 @@ export default function LibraryNewScreen() {
             <LibraryListRow
               key={sess.url}
               session={sess}
-              onPress={() => openSession(sess)}
+              onPress={() => openGated(sess)}
               rightAccessory={
                 <View style={s.newPill}>
                   <Text style={s.newPillTxt}>NEW</Text>
