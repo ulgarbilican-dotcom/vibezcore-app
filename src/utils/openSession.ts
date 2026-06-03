@@ -72,9 +72,17 @@ export function useGatedOpenSession() {
       } else if (access === 'needs-account') {
         showAccountWall(session.title);
       } else if (access === 'needs-pro') {
-        /* Default naar yearly omdat dat de aanbevolen tier is (50% off
-           vs monthly). User kan op subscribe-screen nog switchen. */
-        router.push('/subscribe?tier=yearly' as never);
+        /* Iter 9dq v64 (2026-06-03, operator-keuze): PRO-sessies voor
+           non-PRO users gaan terug naar de player ipv direct naar
+           /subscribe. De player detecteert via shouldPreview() dat er
+           geen actieve sub is en signt de URL met preview=true → 60-sec
+           cap → upsell-modal. Die modal route't dan naar /subscribe
+           (zie player.tsx — "Get full access"-knop).
+
+           Behoud van de 60-sec-preview is conversie-strategie: laat user
+           proeven vóór upsell. Direct doorpushen naar /subscribe was
+           aggressiever en is bewust teruggedraaid voor launch. */
+        openSession(session);
       }
     },
     [isSignedIn, isPro],

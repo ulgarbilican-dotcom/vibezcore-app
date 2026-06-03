@@ -46,14 +46,15 @@ import {
 import { useSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+/* expo-web-browser was nodig voor de oude Gumroad-WebBrowser-flow.
+   Iter 9dq v64: Gumroad-checkout vervangen door /subscribe (IAP). Indien
+   ooit terug nodig (bv. een externe info-pagina openen): re-import. */
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
   LayoutAnimation,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -665,30 +666,20 @@ export default function AudioScreen() {
       });
     });
   };
-  /* Open de Gumroad-checkout. Primair via WebBrowser (Custom Tab in-app);
-     fallback naar Linking.openURL (systeembrowser-intent) wanneer de Custom
-     Tab niet gerenderd kan worden — bv. AVD's zonder Chrome/Custom-Tabs-
-     capable browser. Diag-logs blijven staan zodat per pad zichtbaar is
-     wat er gebeurd is. */
+  /* Open de subscribe-flow voor de geselecteerde plan-tier.
+     Iter 9dq v64 (2026-06-03): voorheen opende dit Gumroad direct in een
+     WebBrowser (Custom Tab) — werkt prima voor web/sideload maar Apple
+     en Google staan dit pad NIET toe voor digital subscriptions in een
+     app-store gepubliceerde app. Nu pushen we naar /subscribe?tier=<plan>
+     waar de IAP-bridge het overneemt: account-create form indien nodig,
+     dan Apple StoreKit / Google Play Billing popup, dan receipt-verify
+     naar backend.
+
+     De GUMROAD_URLS-constant blijft in code maar wordt niet meer direct
+     gebruikt — handig als referentie voor de webapp / als noodknop. */
   const openCheckout = async () => {
-    if (__DEV__) console.log('[VIBEZCORE] openCheckout fired, plan =', plan);
-    const url = GUMROAD_URLS[plan];
-    if (__DEV__) console.log('[VIBEZCORE] resolved URL =', url);
-    if (!url) {
-      if (__DEV__) console.log('[VIBEZCORE] URL is falsy — bailing');
-      return;
-    }
-    try {
-      const result = await WebBrowser.openBrowserAsync(url);
-      if (__DEV__) console.log('[VIBEZCORE] WebBrowser result =', result);
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        if (__DEV__) console.log('[VIBEZCORE] Custom Tab not shown, fallback to Linking');
-        await Linking.openURL(url);
-      }
-    } catch (e) {
-      if (__DEV__) console.log('[VIBEZCORE] WebBrowser threw, fallback to Linking:', e);
-      await Linking.openURL(url);
-    }
+    if (__DEV__) console.log('[VIBEZCORE] openCheckout → /subscribe, plan =', plan);
+    router.push(`/subscribe?tier=${plan}` as never);
   };
   /* Accordion-toggle: zelfde serie nogmaals tikken → dicht (null).
      Andere serie tikken → die wordt de geopende; eventuele vorige sluit
