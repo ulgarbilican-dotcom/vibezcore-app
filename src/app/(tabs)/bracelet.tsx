@@ -1419,7 +1419,10 @@ export default function BraceletScreen() {
                         </View>
                       </View>
                     )}
-                    <Text style={s.modeHead}>{m.head}</Text>
+                    {/* Iter 9dq v82 (2026-06-03): operator-keuze om de
+                        eerste "head"-zin weg te halen — voelde dubbel
+                        naast de body-tekst. Alleen body als één
+                        compacte beschrijving onder de foto. */}
                     <Text style={s.uCardBody}>{m.body}</Text>
                     <Text style={s.modeIdealLbl}>Ideal for</Text>
                     {/* Iter 9: pill-row → verticale ✓ checklist (Apple Health-
@@ -2301,11 +2304,14 @@ const s = StyleSheet.create({
        cliped de foto netjes binnen de afgeronde hoeken. */
     overflow: 'hidden',
   },
-  /* Foto-header bovenaan elke mode-card (iter 9dq v80, ↓ v81).
+  /* Foto-header bovenaan elke mode-card (iter 9dq v80 → v81 → v82).
      Vaste hoogte zodat carousel-cards visueel uitgelijnd blijven
-     ongeacht foto-aspect-ratio. Hoogte 150 → 110 voor compactere cards. */
+     ongeacht foto-aspect-ratio.
+     v82: 110 → 180 nadat operator de head-tekst weghaalde — body alleen
+     is veel compacter dan head+body, dus we kunnen de foto laten domineren
+     zonder de card hoger te maken dan vorige versie. */
   modePhotoWrap: {
-    height: 110,
+    height: 180,
     width: '100%',
     position: 'relative',
   },
