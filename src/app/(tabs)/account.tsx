@@ -31,7 +31,7 @@ import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 async function refreshUserBucket(): Promise<void> {
   await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
 }
-import { useBraceletOwner } from '@/utils/dev-user-override';
+import { useBraceletOwner, useDevUserOverride } from '@/utils/dev-user-override';
 import {
   cancelSubscription,
   gumroadManageUrl,
@@ -121,6 +121,13 @@ function SubscriptionCard() {
   /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
      PRO + bracelet owner → speciale "Full PRO" label. */
   const isBraceletOwner = useBraceletOwner();
+  /* Iter 9dq v84 (2026-06-03): dev-override mode forceert IAP-flow zodat
+     operators de "Manage subscription"-knop (store-deep-link) kunnen
+     testen ook al heeft hun echte account een gumroadSubscriberId.
+     Productie ziet hier override = null → normale logica. */
+  const devOverride = useDevUserOverride();
+  const devForcesIapMode =
+    __DEV__ && (devOverride === 'audio' || devOverride === 'pro');
 
   let bigText: string;
   let bigColor: string;
@@ -220,8 +227,14 @@ function SubscriptionCard() {
      Geen "geen CTA" pad meer voor PRO-users — Apple eist altijd toegang
      tot manage-subscription. */
   const showUpgrade = !isLoading && !isPro;
-  const showManageGumroad = !isLoading && isPro && !!gumroadSubscriberId;
-  const showManageStore = !isLoading && isPro && !gumroadSubscriberId;
+  /* Iter 9dq v84: devForcesIapMode trumps de gumroadSubscriberId-check,
+     zodat operators de IAP-flow in dev kunnen testen ook wanneer hun
+     account een echte Gumroad-sub heeft. Productie: devOverride is null
+     → gewone gumroadSubscriberId-detectie. */
+  const showManageGumroad =
+    !isLoading && isPro && !!gumroadSubscriberId && !devForcesIapMode;
+  const showManageStore =
+    !isLoading && isPro && (!gumroadSubscriberId || devForcesIapMode);
   const upgradeCtaText = isBraceletOwner
     ? 'Add Audio Library'
     : 'Upgrade to full library';
