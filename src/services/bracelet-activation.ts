@@ -42,14 +42,16 @@ export type ActivationErrorCode =
   | 'network'
   | 'unknown';
 
-/** Normalize user-typed code → "XXXX-XXXX-XXXX-XXXX" format.
+/** Normalize user-typed code → "XXXX-XXXX-XXXX" format (12 chars + 2 dashes).
  *  Strips spaces / dashes / lowercase, uppercases, re-inserts dashes
- *  elke 4 chars. Tolereert tussenruimtes en mixed case. */
+ *  elke 4 chars. Tolereert tussenruimtes en mixed case.
+ *  Iter 9dq v88 (2026-06-03): code-lengte 16 → 12 op operator-verzoek
+ *  (12 chars = ~10^18 combinaties, ruim genoeg voor Kickstarter-units). */
 export function normalizeActivationCode(raw: string): string {
   const stripped = raw
     .replace(/[\s\-_]/g, '')
     .toUpperCase()
-    .slice(0, 16);
+    .slice(0, 12);
   /* Splits in 4-char-groepen en plak met dashes terug. Werkt ook bij
      kortere input (gedeeltelijk getypt) zodat de UI live kan formatten. */
   const groups: string[] = [];
@@ -60,10 +62,10 @@ export function normalizeActivationCode(raw: string): string {
 }
 
 /** Snel client-side validatie of een code de juiste vorm heeft.
- *  16 alfa-num chars (na strip). Backend doet de echte check. */
+ *  12 alfa-num chars (na strip). Backend doet de echte check. */
 export function isValidActivationCodeFormat(raw: string): boolean {
   const stripped = raw.replace(/[\s\-_]/g, '').toUpperCase();
-  return /^[A-Z0-9]{16}$/.test(stripped);
+  return /^[A-Z0-9]{12}$/.test(stripped);
 }
 
 /** Submit activation code naar backend. */
@@ -75,7 +77,7 @@ export async function activateBracelet(
     return {
       ok: false,
       code: 'invalid_format',
-      message: 'Please enter a 16-character activation code.',
+      message: 'Please enter a 12-character activation code.',
     };
   }
 

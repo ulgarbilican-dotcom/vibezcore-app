@@ -105,7 +105,7 @@ export default function ActivateBraceletScreen() {
       >
         <Text style={s.heading}>Activate your bracelet</Text>
         <Text style={s.sub}>
-          Enter the 16-character activation code from the email we sent
+          Enter the 12-character activation code from the email we sent
           when your bracelet shipped.
         </Text>
 
@@ -114,12 +114,12 @@ export default function ActivateBraceletScreen() {
           style={s.input}
           value={code}
           onChangeText={onChangeCode}
-          placeholder="XXXX-XXXX-XXXX-XXXX"
+          placeholder="XXXX-XXXX-XXXX"
           placeholderTextColor={Brand.textDim}
           autoCapitalize="characters"
           autoCorrect={false}
           autoComplete="off"
-          maxLength={19} /* 16 chars + 3 dashes */
+          maxLength={14} /* 12 chars + 2 dashes */
           returnKeyType="go"
           onSubmitEditing={onSubmit}
           editable={phase !== 'submitting'}
@@ -133,7 +133,7 @@ export default function ActivateBraceletScreen() {
             phase === 'submitting' && s.btnDisabled,
           ]}
           onPress={onSubmit}
-          disabled={phase === 'submitting' || code.replace(/-/g, '').length < 16}
+          disabled={phase === 'submitting' || code.replace(/-/g, '').length < 12}
           accessibilityLabel="Activate bracelet"
         >
           {phase === 'submitting' ? (
