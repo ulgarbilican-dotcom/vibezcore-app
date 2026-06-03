@@ -1423,9 +1423,12 @@ export default function AudioScreen() {
                       </View>
                     </View>
                   )}
-                  {/* More/Less toggle — rechtsONDER, icon-only.
-                      Chevron richting toont state: ⌄ closed, ⌃ open. Geen
-                      "More"/"Less" tekst meer (Apple-stijl disclosure). */}
+                  {/* More/Less toggle — rechtsONDER. Count-tekst boven
+                      de chevron wanneer card collapsed is (operator-
+                      feedback iter 9dq v72): geeft de user expliciete
+                      "er zit meer onder"-signaal naast de pijl. Open-
+                      state toont enkel ⌃ (tekst is dan visueel
+                      overbodig — sessies zijn uitgeklapt zichtbaar). */}
                   <Pressable
                     style={s.moreToggleBR}
                     onPress={(e) => {
@@ -1437,8 +1440,21 @@ export default function AudioScreen() {
                       color: 'rgba(255,255,255,0.12)',
                       borderless: true,
                     }}
-                    accessibilityLabel={isOpen ? 'Hide sessions' : 'Show all sessions'}
+                    accessibilityLabel={
+                      isOpen
+                        ? 'Hide sessions'
+                        : isSoundscapes
+                          ? `Show all ${SUBCAT_ORDER.length} categories`
+                          : `Show all ${ser.sessions.length} sessions`
+                    }
                   >
+                    {!isOpen && (
+                      <Text style={s.moreToggleLabel}>
+                        {isSoundscapes
+                          ? `${SUBCAT_ORDER.length} categories`
+                          : `${ser.sessions.length} sessions`}
+                      </Text>
+                    )}
                     <Text style={s.moreToggleChev}>
                       {isOpen ? '⌃' : '⌄'}
                     </Text>
@@ -1605,36 +1621,6 @@ export default function AudioScreen() {
                     </Pressable>
                   );
                 })}
-
-                {/* ── "Show all N sessions"-link (iter 9dq v70, 2026-06-03) ──
-                    Operator-UX-feedback: het was niet duidelijk dat er
-                    onder de FREE-balk preview-rij nog meer sessies zaten.
-                    Chevron is icon-only en visueel klein. Deze expliciete
-                    knop kondigt het aantal aan en is een tweede tap-target
-                    (zelfde toggle-actie als de chevron).
-
-                    Toont alleen wanneer card collapsed is. Voor Soundscapes
-                    spreek je over "categorieën" ipv "sessies" omdat de
-                    expansie subcat-cards toont, geen losse sessies. */}
-                {!isOpen && (
-                  <Pressable
-                    style={s.showAllRow}
-                    onPress={() => toggle(ser.name)}
-                    android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-                    accessibilityLabel={
-                      isSoundscapes
-                        ? `Show all ${SUBCAT_ORDER.length} categories`
-                        : `Show all ${ser.sessions.length} sessions`
-                    }
-                  >
-                    <Text style={s.showAllText}>
-                      {isSoundscapes
-                        ? `Show all ${SUBCAT_ORDER.length} categories`
-                        : `Show all ${ser.sessions.length} sessions`}
-                    </Text>
-                    <Text style={s.showAllChev}>›</Text>
-                  </Pressable>
-                )}
 
                 {/* Inline expansie — non-Soundscapes: sessierijen.
                     Operator-keuze 2026-05-27: voor uitgelogde/free users
@@ -3000,14 +2986,26 @@ const s = StyleSheet.create({
     bottom: 12,
     right: 12,
     zIndex: 3,
-    width: 32,
-    height: 32,
+    minWidth: 32,
+    /* Iter 9dq v72 (2026-06-03): geen fixed height meer — laat de
+       content zichzelf groeien. Wanneer collapsed staat er "5 sessions"
+       boven de chevron (vertical stack); wanneer open staat alleen de
+       chevron. Padding zorgt voor consistente touch-target maat. */
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.50)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.22)',
-    borderRadius: 999,
+    borderRadius: 14,
+  },
+  moreToggleLabel: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 1,
   },
   moreToggleChev: {
     color: 'rgba(255,255,255,0.92)',
@@ -3216,35 +3214,10 @@ const s = StyleSheet.create({
   /* Inline-expansie-container (gewone sessierijen of subcat-kaarten). */
   libExpand: { marginTop: 10 },
 
-  /* "Show all N sessions"-link (iter 9dq v70 → v71, 2026-06-03).
-     Operator-feedback: card-vorm met bg+border voelde rommelig naast de
-     groene FREE-balk hierboven. Nu pure tekst-link, dim/muted, geen bg,
-     geen border. Apple-stijl "see more" disclosure. Functioneel
-     identiek (zelfde toggle-handler). */
-  showAllRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginTop: 2,
-    gap: 4,
-  },
-  showAllText: {
-    color: 'rgba(255,255,255,0.50)',
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.1,
-  },
-  showAllChev: {
-    color: 'rgba(255,255,255,0.50)',
-    fontSize: 15,
-    fontWeight: '500',
-    marginLeft: 1,
-    /* Optical alignment — chevron `›` is licht boven baseline,
-       paar pt naar beneden om visueel op-line met de tekst te staan. */
-    marginTop: -2,
-  },
+  /* showAllRow/showAllText/showAllChev — iter 9dq v70+v71 standalone
+     link onder de FREE-balk. Verwijderd in v72: operator-keuze om de
+     count IN de card te zetten (boven de chevron). Zie moreToggleLabel
+     hierboven. Styles weggehaald om dead code te vermijden. */
 
   /* Sessierij in geopende kaart of geopende subcat. */
   libRow: {
