@@ -42,6 +42,10 @@ docs/OPERATOR_HANDOVER.md
 docs/handover-word/*.docx
 docs/handover-word/node_modules/
 
+# Operator-local content directories (bunny upload-stage + webapp content snapshots)
+assets/bunny-upload/
+assets/website-content/
+
 # typescript
 *.tsbuildinfo
 
