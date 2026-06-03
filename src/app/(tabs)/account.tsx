@@ -348,6 +348,36 @@ function BraceletCard() {
   );
 }
 
+/* ActivateBraceletCta (iter 9dq v87) — entry-point voor bracelet-owners
+   wier hardware (na Kickstarter shipping) is aangekomen + ze de activation-
+   code via email hebben gekregen. Toont alleen wanneer user ingelogd is en
+   NIET al bracelet-owner is (anders is BraceletCard al zichtbaar).
+
+   Productie-tip: zodra backend has_bracelet-flag teruggeeft via /api/
+   subscription-status, fungeert useBraceletOwner() automatisch op die echte
+   state. Tot dan: dev-override + activation-flow trigger 'm via
+   refreshSubscription. */
+function ActivateBraceletCta() {
+  const isBraceletOwner = useBraceletOwner();
+  if (isBraceletOwner) return null;
+  return (
+    <Pressable
+      style={s.linkCard}
+      onPress={() => router.navigate('/activate-bracelet' as never)}
+      accessibilityLabel="Activate your bracelet with a code"
+      android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+    >
+      <View style={s.linkTextWrap}>
+        <Text style={s.linkTitle}>Activate your bracelet</Text>
+        <Text style={s.linkSub}>
+          Got a Smart Bead Bracelet? Enter your activation code.
+        </Text>
+      </View>
+      <Text style={s.linkArrow}>›</Text>
+    </Pressable>
+  );
+}
+
 /* Library-settings link. Vervangt de oude PlaybackSettingsCard die de
    auto-play-toggle inline had — die toggle is verhuisd naar Audio
    Library zelf (audio-ervaring-instelling, hoort visueel daar). Account
@@ -715,6 +745,7 @@ export default function AccountScreen() {
 
           <SubscriptionCard />
           <BraceletCard />
+          <ActivateBraceletCta />
           {/* Iter 9r: LibrarySettingsLink weggehaald — operator-feedback
               "Library settings mag overal uit settings weg". Auto-play
               en track-history toggles leven al in Settings sub-screen. */}

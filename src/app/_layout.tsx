@@ -292,6 +292,14 @@ export default function RootLayout() {
           name="subscribe"
           options={{ title: 'Subscribe', headerBackTitle: 'Back' }}
         />
+        {/* `activate-bracelet` — activation-code redemption (iter 9dq v87).
+            Gepusht vanaf Account-tab CTA voor ingelogde users zonder
+            has_bracelet=true. Backend-endpoint /api/bracelet/activate
+            nog te bouwen — dev draait op mock-success. */}
+        <Stack.Screen
+          name="activate-bracelet"
+          options={{ title: 'Activate bracelet', headerBackTitle: 'Back' }}
+        />
         {/* `settings` — sub-screen pushed from Account-tab. Toont Playback /
            Privacy / About-secties die de webapp ook heeft. */}
         <Stack.Screen
