@@ -58,7 +58,11 @@ export default function ActivateBraceletScreen() {
     const result = await activateBracelet(code);
     if (result.ok) {
       setPhase('success');
-      setTimeout(() => router.replace('/bracelet' as never), 1200);
+      /* Iter 9dq v88 (2026-06-03): naar /bracelet-control ipv /bracelet
+         tab. De tab toont alleen de control-inline wanneer de user al
+         bracelet-owner is — direct naar /bracelet-control vermijdt dat
+         de net-geactiveerde user de marketing-etalage te zien krijgt. */
+      setTimeout(() => router.replace('/bracelet-control' as never), 1200);
       return;
     }
     setErrMsg(result.message);
