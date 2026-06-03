@@ -2070,8 +2070,10 @@ export default function AudioScreen() {
             <View
               style={[
                 s.pillarModalSheet,
-                /* Iter 9bbb: dynamic safe-area bottom padding */
-                { paddingBottom: 24 + safeInsets.bottom },
+                /* Iter 9bbb → 9dq v76 (2026-06-03): harmonised CTA-
+                   bottom formula. Floor 48px clears Samsung 3-button
+                   nav waar safeInsets.bottom soms onderrapporteert. */
+                { paddingBottom: Math.max(safeInsets.bottom + 16, 48) },
               ]}
             >
               <View style={s.pillarModalHandle} />

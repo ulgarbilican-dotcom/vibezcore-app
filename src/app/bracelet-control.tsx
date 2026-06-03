@@ -3705,7 +3705,10 @@ export default function BraceletControl() {
         <View
           style={[
             s.activeScreen,
-            { paddingBottom: Math.max(safeInsets.bottom + 16, 32) },
+            /* Iter 9dq v76 (2026-06-03): floor bumped van 32 → 48 voor
+               consistentie met andere screens. Samsung 3-button nav
+               had nog cutoff op 32. */
+            { paddingBottom: Math.max(safeInsets.bottom + 16, 48) },
           ]}
         >
           {/* Iter 9bz (2026-05-31): PAUSED-eyebrow staat nu BOVEN de
@@ -4064,7 +4067,10 @@ export default function BraceletControl() {
       <View
         style={[
           s.idleSingleScreen,
-          { paddingBottom: Math.max(safeInsets.bottom + 12, 28) },
+          /* Iter 9dq v76 (2026-06-03): floor bumped van 28 → 48 voor
+             consistentie. Voorheen kon bracelet-control-idle CTA onder
+             de Samsung 3-button nav vallen. */
+          { paddingBottom: Math.max(safeInsets.bottom + 16, 48) },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
