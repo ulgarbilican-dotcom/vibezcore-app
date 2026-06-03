@@ -38,12 +38,20 @@ export type AccessTier = 'public' | 'account' | 'pro';
  *  `accessTier` op de sessie; valt anders terug op de regels hierboven.
  *
  *  Dit is de ENIGE plek waar we tier-resolutie doen — UI- en open-handlers
- *  roepen deze functie aan, NIET de fallback-logica zelf. */
+ *  roepen deze functie aan, NIET de fallback-logica zelf.
+ *
+ *  Iter 9dq v62 (2026-06-03): operator-rollback van het account-gating
+ *  experiment. Default voor `free:true` is nu 'public' ipv 'account' —
+ *  dat herstelt het gedrag van vóór de 3-tier-introductie (alle eerste-
+ *  sessies + Soundscapes zijn vrij toegankelijk, geen account vereist).
+ *  Framework blijft intact: operator kan later expliciet `accessTier:
+ *  'account'` zetten op specifieke sessies wanneer 'ie de email-gating
+ *  alsnog wil invoeren, zonder code-rewrite. */
 export function getEffectiveTier(session: Session): AccessTier {
   if (session.accessTier) return session.accessTier;
   /* Fallback voor data zonder explicit accessTier. */
   if (session.series === 'Soundscapes') return 'public';
-  if (session.free) return 'account';
+  if (session.free) return 'public';
   return 'pro';
 }
 
