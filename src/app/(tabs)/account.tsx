@@ -327,16 +327,21 @@ function BraceletCard() {
       {/* Iter 9gg (operator-correctie): bracelet heeft VERVANGBARE bead-
           bands, geen "rechargeable edition". Klanten kunnen nieuwe
           beadbands bestellen (andere stones, vervanging). URL volgt
-          van operator. */}
+          van operator.
+          Iter 9dq v85 (2026-06-03): styling fix — opacity:0.6 maakte de
+          knop disabled-looking terwijl 't een actieve secondary-action
+          is. Nu eigen subtieler outlined style (transparent bg, dim
+          border) ipv de gevulde primary cardCta met fade. Tekst en
+          arrow op accent-kleur zodat de tap-affordance duidelijk is. */}
       <Pressable
-        style={[s.cardCta, { marginTop: 10, opacity: 0.6 }]}
+        style={s.cardCtaSecondary}
         onPress={() =>
           openExternal('https://www.vibezcore.com/shop/beadbands')
         }
         accessibilityLabel="Order new beadband"
       >
-        <Text style={s.cardCtaText}>Order new beadband</Text>
-        <Text style={s.cardCtaArrow}>→</Text>
+        <Text style={s.cardCtaSecondaryText}>Order new beadband</Text>
+        <Text style={s.cardCtaSecondaryArrow}>→</Text>
       </Pressable>
     </View>
   );
@@ -2072,6 +2077,29 @@ const s = StyleSheet.create({
     color: Brand.accent,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
+  },
+  /* Iter 9dq v85 (2026-06-03): secondary cardCta — voor extra acties
+     in een card (bv. "Order new beadband") die wel actief klikbaar zijn
+     maar niet de primary action. Visueel: dim grijze tekst ipv accent,
+     géén border-top. Voorheen werd hiervoor de primary cardCta met
+     opacity:0.6 hergebruikt → leek disabled. */
+  cardCtaSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingVertical: 4,
+  },
+  cardCtaSecondaryText: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: -0.1,
+  },
+  cardCtaSecondaryArrow: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
   },
   /* Forgot Password — kleine subtiele link onder de Sign In knop. */
   forgotLink: {

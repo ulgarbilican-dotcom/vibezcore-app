@@ -46,25 +46,29 @@ export const USE_MOCK_IAP = __DEV__;
 
 let instance: IAPProvider | null = null;
 
-/** Lazy-singleton: bouw de provider bij eerste aanvraag, hergebruik daarna. */
+/** Lazy-singleton: bouw de provider bij eerste aanvraag, hergebruik daarna.
+ *
+ *  Iter 9dq v85 (2026-06-03): RealIAPProvider-skeleton is nu beschikbaar
+ *  in iap-real.ts. Wanneer react-native-iap geïnstalleerd is:
+ *    1. npx expo install react-native-iap
+ *    2. npx expo prebuild
+ *    3. Uncomment de TODO-blokken in iap-real.ts
+ *    4. Flip USE_MOCK_IAP naar false hieronder
+ *  Tot dan: mock-mode in dev, RealIAPProvider als productie-fallback met
+ *  duidelijke error in console — voorkomt silent failure als een dev per
+ *  ongeluk in release-mode build zonder dat de library aanwezig is. */
 export function getIAP(): IAPProvider {
   if (instance) return instance;
   if (USE_MOCK_IAP) {
     instance = new MockIAPProvider();
   } else {
-    /* TODO (release-blocker): hier komt RealIAPProvider.
-       Voorlopig fallback op mock zodat de app niet crasht wanneer
-       USE_MOCK_IAP per ongeluk op false staat tijdens dev.
-
-       Wanneer iap-real.ts bestaat, vervangt dit blok:
-         instance = new RealIAPProvider();
-    */
-    if (__DEV__) {
-      console.warn(
-        '[IAP] USE_MOCK_IAP=false maar RealIAPProvider nog niet ingebouwd — terugval op mock.'
-      );
-    }
-    instance = new MockIAPProvider();
+    /* Productie-pad: gebruik de Real-provider. Deze vereist react-native-iap.
+       Zolang library niet geïnstalleerd is en switch toch op false staat,
+       returnt RealIAPProvider 'unavailable' errors met een duidelijke
+       message — niet ideaal maar beter dan een crash. */
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { RealIAPProvider } = require('./iap-real') as typeof import('./iap-real');
+    instance = new RealIAPProvider();
   }
   return instance;
 }
