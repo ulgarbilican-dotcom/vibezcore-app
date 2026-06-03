@@ -1444,15 +1444,13 @@ export default function AudioScreen() {
                       isOpen
                         ? 'Hide sessions'
                         : isSoundscapes
-                          ? `Show all ${SUBCAT_ORDER.length} categories`
-                          : `Show all ${ser.sessions.length} sessions`
+                          ? 'Show all categories'
+                          : 'Show all sessions'
                     }
                   >
                     {!isOpen && (
                       <Text style={s.moreToggleLabel}>
-                        {isSoundscapes
-                          ? `${SUBCAT_ORDER.length} categories`
-                          : `${ser.sessions.length} sessions`}
+                        {isSoundscapes ? 'All categories' : 'All sessions'}
                       </Text>
                     )}
                     <Text style={s.moreToggleChev}>
