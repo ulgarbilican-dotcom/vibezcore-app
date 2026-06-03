@@ -507,7 +507,18 @@ export default function PlayerScreen() {
             echte ingelogde PRO-users. */}
         {!displayIsPro && (
           <Pressable
-            style={[s.cta, { marginBottom: 24 + safeInsets.bottom }]}
+            style={[
+              s.cta,
+              {
+                /* Iter 9dq v73 (2026-06-03, operator-feedback): CTA werd
+                   afgekapt door de Android gesture-bar. safeInsets.bottom
+                   alleen was te weinig (24 + ~12 = 36px op apparaten waar
+                   het systeem 48-56px claimt). Math.max-floor van 48px
+                   garandeert ademruimte ook wanneer de inset-API klein
+                   rapporteert. */
+                marginBottom: Math.max(safeInsets.bottom + 32, 48),
+              },
+            ]}
             onPress={openUpgrade}
             android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
           >
@@ -516,9 +527,9 @@ export default function PlayerScreen() {
         )}
         {/* Iter 9kk: bottom-spacer voor PRO users (geen CTA = geen
             safe-area margin) — voorkomt dat play/skip controls onder
-            de home-indicator vallen. */}
+            de home-indicator vallen. v73: zelfde floor-pattern als CTA. */}
         {displayIsPro && (
-          <View style={{ height: safeInsets.bottom + 12 }} />
+          <View style={{ height: Math.max(safeInsets.bottom + 16, 32) }} />
         )}
       </View>
 
