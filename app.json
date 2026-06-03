@@ -9,7 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
-      "icon": "./assets/vibezcore_icon.png"
+      "icon": "./assets/vibezcore_icon.png",
+      "bundleIdentifier": "com.ubili.vibezcoreapp",
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {

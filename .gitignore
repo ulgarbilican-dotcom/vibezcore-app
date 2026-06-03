@@ -35,6 +35,9 @@ yarn-error.*
 .env.test
 .env.bunny
 
+# SECRETS — operator-only handover doc met credentials, NOOIT committen
+docs/OPERATOR_HANDOVER.md
+
 # typescript
 *.tsbuildinfo
 

@@ -1524,7 +1524,7 @@ export const AUDIO_SESSIONS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'For licensing inquiries, contact [legal@vibezcore.com](mailto:legal@vibezcore.com).',
+      text: 'For licensing inquiries, contact [info@vibezcore.com](mailto:info@vibezcore.com).',
     },
 
     /* Legal note onderaan — kleine grijze disclaimer (nominative fair
