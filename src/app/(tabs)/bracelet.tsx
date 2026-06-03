@@ -37,6 +37,7 @@
 
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
 import { useBraceletOwner } from '@/utils/dev-user-override';
@@ -237,6 +238,21 @@ type Mode = {
   head: string;
   body: string;
   ideal: string[];
+};
+
+/* Iter 9dq v80 (2026-06-03): per-mode foto's voor de carousel-cards op
+   bracelet-tab. Spiegelt de MODE_IMAGES-map in bracelet-control.tsx —
+   zelfde foto's voor consistentie tussen het marketing-overzicht en de
+   sessie-selectie. Wanneer operator een foto vervangt: beide files
+   updaten (of refactoren naar één gedeelde constant). */
+const MODE_PHOTOS_BY_WAVE: Record<string, string> = {
+  Gamma: 'https://vibezcore-audio.b-cdn.net/images/gamma%20pic.jpg',
+  Beta: 'https://vibezcore-audio.b-cdn.net/images/welcome%20new.png',
+  Alpha: 'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg',
+  Theta:
+    'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
+  Delta:
+    'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg',
 };
 
 const MODES: Mode[] = [
@@ -1320,52 +1336,107 @@ export default function BraceletScreen() {
             onMomentumScrollEnd={onModeScrollEnd}
             contentContainerStyle={{ paddingHorizontal: SIDE_INSET }}
           >
-            {MODES.map((m, i) => (
-              <View
-                key={m.app}
-                style={[
-                  s.carouselCard,
-                  {
-                    width: CARD_WIDTH,
-                    marginRight: i === MODES.length - 1 ? 0 : CARD_GAP,
-                  },
-                ]}
-              >
-                <View style={s.modeHdr}>
-                  <View
-                    style={[s.modeDot, { backgroundColor: m.color }]}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.uCardTitle, { marginBottom: 0 }]}>
-                      {m.app}
-                    </Text>
-                    {/* "Direction · Duration" — geen wave-label
-                        (CLAUDE.md §1). */}
-                    <Text style={s.modeWave}>
-                      {m.direction} · {m.duration}
-                    </Text>
+            {MODES.map((m, i) => {
+              const photo = MODE_PHOTOS_BY_WAVE[m.wave];
+              return (
+                <View
+                  key={m.app}
+                  style={[
+                    s.carouselCard,
+                    {
+                      width: CARD_WIDTH,
+                      marginRight: i === MODES.length - 1 ? 0 : CARD_GAP,
+                    },
+                  ]}
+                >
+                  {/* Iter 9dq v80 (2026-06-03): foto-header voor visuele
+                      ankerpunt per modus. Operator-feedback: cards waren
+                      te tekst-zwaar. Photo + dark-gradient-overlay zodat
+                      mode-naam + direction leesbaar blijven over de foto. */}
+                  {photo && (
+                    <View style={s.modePhotoWrap}>
+                      <Image
+                        source={{ uri: photo }}
+                        style={s.modePhoto}
+                        resizeMode="cover"
+                      />
+                      <LinearGradient
+                        colors={[
+                          'rgba(0,0,0,0.10)',
+                          'rgba(0,0,0,0.40)',
+                          'rgba(0,0,0,0.88)',
+                        ]}
+                        locations={[0, 0.55, 1]}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <View style={s.modePhotoOverlayContent}>
+                        <View
+                          style={[
+                            s.modeDot,
+                            { backgroundColor: m.color },
+                          ]}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              s.uCardTitle,
+                              { marginBottom: 0, color: '#ffffff' },
+                            ]}
+                          >
+                            {m.app}
+                          </Text>
+                          <Text
+                            style={[
+                              s.modeWave,
+                              { color: 'rgba(255,255,255,0.75)' },
+                            ]}
+                          >
+                            {m.direction} · {m.duration}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                  <View style={s.modeCardContent}>
+                    {/* Fallback header (geen foto): originele in-content
+                        header. */}
+                    {!photo && (
+                      <View style={s.modeHdr}>
+                        <View
+                          style={[s.modeDot, { backgroundColor: m.color }]}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[s.uCardTitle, { marginBottom: 0 }]}>
+                            {m.app}
+                          </Text>
+                          <Text style={s.modeWave}>
+                            {m.direction} · {m.duration}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    <Text style={s.modeHead}>{m.head}</Text>
+                    <Text style={s.uCardBody}>{m.body}</Text>
+                    <Text style={s.modeIdealLbl}>Ideal for</Text>
+                    {/* Iter 9: pill-row → verticale ✓ checklist (Apple Health-
+                        achtige "Use this for"-presentatie). Voelt meer als
+                        een functie-bullet dan een marketing-pill. */}
+                    <View style={s.idealList}>
+                      {m.ideal.map((t) => (
+                        <View key={t} style={s.idealItem}>
+                          <Text
+                            style={[s.idealCheck, { color: m.color }]}
+                          >
+                            ✓
+                          </Text>
+                          <Text style={s.idealItemText}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
                 </View>
-                <Text style={s.modeHead}>{m.head}</Text>
-                <Text style={s.uCardBody}>{m.body}</Text>
-                <Text style={s.modeIdealLbl}>Ideal for</Text>
-                {/* Iter 9: pill-row → verticale ✓ checklist (Apple Health-
-                    achtige "Use this for"-presentatie). Voelt meer als
-                    een functie-bullet dan een marketing-pill. */}
-                <View style={s.idealList}>
-                  {m.ideal.map((t) => (
-                    <View key={t} style={s.idealItem}>
-                      <Text
-                        style={[s.idealCheck, { color: m.color }]}
-                      >
-                        ✓
-                      </Text>
-                      <Text style={s.idealItemText}>{t}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
         </View>
         <View style={s.dotRow}>
@@ -2221,6 +2292,37 @@ const s = StyleSheet.create({
   carouselCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 22,
+    /* Iter 9dq v80 (2026-06-03): padding verplaatst naar modeCardContent
+       zodat de foto-header edge-to-edge kan zonder margin. overflow:hidden
+       cliped de foto netjes binnen de afgeronde hoeken. */
+    overflow: 'hidden',
+  },
+  /* Foto-header bovenaan elke mode-card (iter 9dq v80).
+     Vaste hoogte zodat carousel-cards visueel uitgelijnd blijven
+     ongeacht foto-aspect-ratio. */
+  modePhotoWrap: {
+    height: 150,
+    width: '100%',
+    position: 'relative',
+  },
+  modePhoto: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  /* Content-overlay op de foto: mode-naam + direction · duration.
+     Absolute bottom-left, witte tekst over de dark-gradient. */
+  modePhotoOverlayContent: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  /* Inner content (head, body, ideal-list) onder de foto. */
+  modeCardContent: {
     padding: 22,
   },
   dotRow: {
