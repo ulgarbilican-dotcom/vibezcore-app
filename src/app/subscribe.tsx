@@ -28,6 +28,7 @@
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
 import { refreshSubscription } from '@/hooks/useSubscription';
+import { restorePurchases } from '@/services/restore-purchases';
 import {
   getToken,
   getUserEmail,
@@ -41,6 +42,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   StyleSheet,
@@ -302,6 +304,38 @@ export default function SubscribeScreen() {
     </Text>
   );
 
+  /* Iter 9dq v86 (2026-06-03): Restore-purchases link — Apple App Review
+     Guideline 3.1.1 vereist deze knop. Onder de legal-line zodat 'ie
+     beschikbaar is voor terugkerende users zonder de upsell te onderbreken. */
+  const handleRestore = async () => {
+    const result = await restorePurchases();
+    if (result.ok) {
+      if (result.restoredCount > 0) {
+        Alert.alert(
+          'Subscription restored',
+          `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
+          [{ text: 'OK', onPress: () => router.replace('/') }],
+        );
+      } else {
+        Alert.alert(
+          'Nothing to restore',
+          'No active subscriptions were found for this Apple ID or Google account.',
+        );
+      }
+    } else {
+      Alert.alert('Could not restore', result.error);
+    }
+  };
+  const RestoreLink = (
+    <Pressable
+      style={s.restoreLink}
+      onPress={() => void handleRestore()}
+      accessibilityLabel="Restore previous purchases"
+    >
+      <Text style={s.restoreLinkText}>Already subscribed? Restore purchases</Text>
+    </Pressable>
+  );
+
   /* ── Signed-in review-flow ─────────────────────────────────────────
      User heeft al een account → geen form. Toon order-summary, hun
      ingelogd-email als context, en een expliciete "Continue to
@@ -349,6 +383,7 @@ export default function SubscribeScreen() {
           </Pressable>
 
           {LegalLine}
+          {RestoreLink}
         </KeyboardAwareScrollView>
       </SafeAreaView>
     );
@@ -440,6 +475,7 @@ export default function SubscribeScreen() {
         </Pressable>
 
         {LegalLine}
+        {RestoreLink}
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -615,6 +651,19 @@ const s = StyleSheet.create({
     lineHeight: 16,
     textAlign: 'center',
     marginTop: 24,
+  },
+  /* Iter 9dq v86 (2026-06-03): Restore-purchases link. Subtiel onder
+     legal-line, accent-kleur zodat de tap-affordance duidelijk is
+     maar zonder upsell-momentum te onderbreken. */
+  restoreLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  restoreLinkText: {
+    color: Brand.accent,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
   },
   /* Busy / done / error */
   busyTitle: {

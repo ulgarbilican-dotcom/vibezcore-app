@@ -37,6 +37,7 @@ import {
   gumroadManageUrl,
   storeSubscriptionsUrl,
 } from '@/services/subscription-actions';
+import { restorePurchases } from '@/services/restore-purchases';
 import { clearSignedUrlCache } from '@/utils/audio-url';
 import { clearLastPlayed } from '@/utils/last-played';
 import { requestScrollTo } from '@/utils/scroll-intent';
@@ -391,6 +392,32 @@ export default function AccountScreen() {
   const [emailInput, setEmailInput] = useState('');
   const [pwInput, setPwInput] = useState('');
   const [showPw, setShowPw] = useState(false);
+  /* Iter 9dq v86 (2026-06-03): restore-purchases state. Apple/Google
+     verplichten zo'n knop voor IAP-apps zodat users hun sub kunnen
+     herstellen na reinstall of op een nieuw toestel. */
+  const [restoring, setRestoring] = useState(false);
+
+  const onRestorePurchases = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    const result = await restorePurchases();
+    setRestoring(false);
+    if (result.ok) {
+      if (result.restoredCount > 0) {
+        Alert.alert(
+          'Subscription restored',
+          `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`,
+        );
+      } else {
+        Alert.alert(
+          'Nothing to restore',
+          'No active subscriptions were found for this Apple ID or Google account. If you believe this is wrong, contact support.',
+        );
+      }
+    } else {
+      Alert.alert('Could not restore', result.error);
+    }
+  };
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -703,6 +730,26 @@ export default function AccountScreen() {
               alleen secundaire actions: app-settings, about, FAQ, contact. */}
           <View style={s.card}>
             <Text style={s.label}>Settings & help</Text>
+            {/* Iter 9dq v86 (2026-06-03): Restore Purchases. Apple App
+                Review Guideline 3.1.1 vereist deze knop voor IAP-apps.
+                Bovenaan de lijst zodat 'ie vindbaar is na een reinstall
+                of new-device sign-in. */}
+            <Pressable
+              style={s.cardRow}
+              onPress={onRestorePurchases}
+              disabled={restoring}
+              accessibilityLabel="Restore previous purchases"
+            >
+              <Text style={s.cardRowText}>
+                {restoring ? 'Restoring…' : 'Restore purchases'}
+              </Text>
+              {restoring ? (
+                <ActivityIndicator color={Brand.textDim} size="small" />
+              ) : (
+                <Text style={s.cardRowArrow}>›</Text>
+              )}
+            </Pressable>
+            <View style={s.cardRowDivider} />
             <Pressable
               style={s.cardRow}
               onPress={() => router.navigate('/settings')}
