@@ -124,8 +124,12 @@ function SubscriptionCard() {
     isLoading,
   } = useSubscription();
   /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
-     PRO + bracelet owner → speciale "Full PRO" label. */
+     PRO + bracelet owner → speciale "Full PRO" label.
+     Iter 9dq v90 (2026-06-03): driestaten — niet-eigenaar, entitled-
+     pending (paid maar niet geactiveerd), activated. */
   const isBraceletOwner = useBraceletOwner();
+  const isBraceletEntitled = useBraceletEntitled();
+  const isBraceletPending = isBraceletEntitled && !isBraceletOwner;
   /* Iter 9dq v84 (2026-06-03): dev-override mode forceert IAP-flow zodat
      operators de "Manage subscription"-knop (store-deep-link) kunnen
      testen ook al heeft hun echte account een gumroadSubscriberId.
@@ -142,10 +146,22 @@ function SubscriptionCard() {
     bigText = 'Checking…';
     bigColor = Brand.textDim;
     subText = '';
+  } else if (!isPro && isBraceletPending) {
+    /* Iter 9dq v90 (2026-06-03): bracelet paid, niet geactiveerd. Niet
+       "Free account" want user heeft betaald — moet alleen nog code
+       redeemen. CTA hieronder verwijst naar /activate-bracelet. */
+    bigText = 'Bracelet — pending activation';
+    bigColor = '#f59e0b';
+    subText = 'Enter your activation code to unlock your bracelet';
   } else if (!isPro && !isBraceletOwner) {
     bigText = 'Free account';
     bigColor = Brand.text;
     subText = 'Upgrade for full library access';
+  } else if (isPro && isBraceletPending) {
+    /* Audio PRO + paid bracelet niet geactiveerd. */
+    bigText = 'Audio PRO · Bracelet pending';
+    bigColor = Brand.accent;
+    subText = 'Enter your bracelet activation code to complete Full PRO';
   } else if (isPro && isBraceletOwner) {
     /* Full PRO — beide producten actief.
        Iter 9dq v49 (2026-06-03): operator-feedback — los "Full PRO"
@@ -231,7 +247,10 @@ function SubscriptionCard() {
 
      Geen "geen CTA" pad meer voor PRO-users — Apple eist altijd toegang
      tot manage-subscription. */
-  const showUpgrade = !isLoading && !isPro;
+  /* Iter 9dq v90 (2026-06-03): Upgrade-CTA verborgen voor bracelet-
+     pending users — die hoeven niet te upgraden, ze hoeven alleen hun
+     code in te voeren. ActivateBraceletCta zit daar al voor. */
+  const showUpgrade = !isLoading && !isPro && !isBraceletPending;
   /* Iter 9dq v84: devForcesIapMode trumps de gumroadSubscriberId-check,
      zodat operators de IAP-flow in dev kunnen testen ook wanneer hun
      account een echte Gumroad-sub heeft. Productie: devOverride is null

@@ -171,14 +171,11 @@ export function useDevBraceletActivated(): boolean {
   return __DEV__ ? value : false;
 }
 
-/** Reset activation-flag wanneer override verandert — schone test-cycli. */
-listeners.add(() => {
-  if (activatedCached) {
-    activatedCached = false;
-    notifyActivation();
-    AsyncStorage.removeItem(ACTIVATED_KEY).catch(() => {});
-  }
-});
+/* Iter 9dq v90 (2026-06-03): activation-flag GEEN auto-reset meer.
+   Vorige versie reset op elke loadOnce-notify, ook bij cold-start →
+   activated user verloor z'n state bij kill+reopen. Nu persistent;
+   operator wist via Settings → Clear all local data wanneer ze een
+   schone test willen. */
 
 /** Heeft user RECHT op bracelet-features? = paid (override).
  *  Niet hetzelfde als 'has activated' — voor activation-status gebruik
