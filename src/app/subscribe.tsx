@@ -30,6 +30,7 @@ import { useIAP } from '@/hooks/useIAP';
 import { refreshSubscription } from '@/hooks/useSubscription';
 import {
   getToken,
+  getUserEmail,
   login as authLogin,
   signup as authSignup,
 } from '@/services/auth';
@@ -40,6 +41,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -66,27 +68,33 @@ export default function SubscribeScreen() {
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  /* Skip de form als user al ingelogd is — direct door naar IAP. */
-  const [skipForm, setSkipForm] = useState<boolean | null>(null);
+  /* Auth-state detectie. Voor ingelogde users tonen we een review-step
+     (order-summary + "Continue to checkout"-knop) ipv direct de IAP-popup
+     te firen. Apple HIG: altijd een expliciete bevestigings-tap vóór
+     payment.
+     Iter 9dq v68 (2026-06-03): operator-keuze om de auto-fire weg te
+     halen die voorheen ingelogde users meteen in een Apple-popup gooide
+     zonder enige review-stap. Te abrupt UX-wise. */
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const t = await getToken();
       if (cancelled) return;
-      setSkipForm(!!t);
+      if (t) {
+        setSignedIn(true);
+        const e = await getUserEmail();
+        if (cancelled) return;
+        setSignedInEmail(e);
+      } else {
+        setSignedIn(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
-
-  /* Wanneer skipForm true is, direct de IAP-flow starten. */
-  useEffect(() => {
-    if (skipForm === true && phase === 'form') {
-      void runIapFlow();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skipForm]);
 
   /* ── Sub-flow: account-create wanneer nodig, dan IAP popup ─── */
   const runIapFlow = async () => {
@@ -230,6 +238,106 @@ export default function SubscribeScreen() {
     );
   }
 
+  /* Auth-state nog onbekend → spinner. Voorkomt flash van form/review-
+     card vóór we weten welk pad de user nodig heeft. */
+  if (signedIn === null) {
+    return (
+      <SafeAreaView style={s.root}>
+        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={Brand.accent} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* Gedeelde order-summary card — toont wat user gaat kopen.
+     Verschijnt boven zowel de signed-in review-flow als de signed-out
+     account-create-form. */
+  const OrderSummary = (
+    <View style={s.orderCard}>
+      <Text style={s.orderEyebrow}>YOUR SELECTION</Text>
+      <Text style={s.orderTitle}>VIBEZCORE Audio — {tierLabel}</Text>
+      <View style={s.orderPriceRow}>
+        <Text style={s.orderPrice}>
+          {priceLabel}
+          <Text style={s.orderPeriod}>{periodLabel}</Text>
+        </Text>
+        {iapLoading ? (
+          <ActivityIndicator color={Brand.textDim} size="small" />
+        ) : null}
+      </View>
+      {tier === 'yearly' && (
+        <Text style={s.orderSave}>Save 50% vs monthly</Text>
+      )}
+    </View>
+  );
+
+  /* Gedeelde legal-line onderaan — disclosure voor auto-renew + cancel
+     (Apple- en Google-policy: moet expliciet vermeld vóór purchase). */
+  const LegalLine = (
+    <Text style={s.legal}>
+      By continuing you agree to our Terms and Privacy Policy.
+      Subscription auto-renews. Cancel anytime in your Apple ID or
+      Google Play account settings.
+    </Text>
+  );
+
+  /* ── Signed-in review-flow ─────────────────────────────────────────
+     User heeft al een account → geen form. Toon order-summary, hun
+     ingelogd-email als context, en een expliciete "Continue to
+     checkout"-knop die de IAP-popup pas firet na hun tap. */
+  if (signedIn === true) {
+    return (
+      <SafeAreaView style={s.root}>
+        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <KeyboardAwareScrollView
+          contentContainerStyle={s.scroll}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+        >
+          {OrderSummary}
+
+          <Text style={s.heading}>Review your purchase</Text>
+          <Text style={s.sub}>
+            You'll be asked to confirm payment with{' '}
+            {Platform.OS === 'ios' ? 'Touch ID / Face ID' : 'your Google account'}
+            {' '}in the next step.
+          </Text>
+
+          {/* Signed-in context — laat user zien aan welk account de
+              aankoop wordt gekoppeld. Voorkomt verwarring "wie ben ik
+              ook al weer ingelogd?". */}
+          <View style={s.accountContext}>
+            <Text style={s.accountLabel}>SIGNED IN AS</Text>
+            <Text style={s.accountEmail} numberOfLines={1}>
+              {signedInEmail ?? 'your VIBEZCORE account'}
+            </Text>
+          </View>
+
+          {errMsg && <Text style={s.err}>{errMsg}</Text>}
+
+          <Pressable style={s.btnPrimary} onPress={() => void runIapFlow()}>
+            <Text style={s.btnPrimaryText}>Continue to checkout</Text>
+          </Pressable>
+
+          <Pressable
+            style={s.linkBtn}
+            onPress={() => router.back()}
+          >
+            <Text style={s.linkText}>Cancel</Text>
+          </Pressable>
+
+          {LegalLine}
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  /* ── Signed-out signup/signin-flow ─────────────────────────────────
+     User heeft nog geen sessie op dit device → email + password form,
+     dan account-create OF sign-in (mode-toggle), dan IAP-popup. */
   return (
     <SafeAreaView style={s.root}>
       <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
@@ -239,23 +347,7 @@ export default function SubscribeScreen() {
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
-        {/* Order-summary bovenaan — herinnert user aan wat ze kopen. */}
-        <View style={s.orderCard}>
-          <Text style={s.orderEyebrow}>YOUR SELECTION</Text>
-          <Text style={s.orderTitle}>VIBEZCORE Audio — {tierLabel}</Text>
-          <View style={s.orderPriceRow}>
-            <Text style={s.orderPrice}>
-              {priceLabel}
-              <Text style={s.orderPeriod}>{periodLabel}</Text>
-            </Text>
-            {iapLoading ? (
-              <ActivityIndicator color={Brand.textDim} size="small" />
-            ) : null}
-          </View>
-          {tier === 'yearly' && (
-            <Text style={s.orderSave}>Save 50% vs monthly</Text>
-          )}
-        </View>
+        {OrderSummary}
 
         <Text style={s.heading}>
           {mode === 'signup'
@@ -328,11 +420,7 @@ export default function SubscribeScreen() {
           </Text>
         </Pressable>
 
-        <Text style={s.legal}>
-          By continuing you agree to our Terms and Privacy Policy.
-          Subscription auto-renews. Cancel anytime in your Apple ID or
-          Google Play account settings.
-        </Text>
+        {LegalLine}
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -474,6 +562,31 @@ const s = StyleSheet.create({
   linkText: {
     color: Brand.accent,
     fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+  },
+  /* Signed-in review-flow: laat user expliciet zien onder welk account
+     ze straks de subscription krijgen. Dim panel met SIGNED IN AS label
+     + email — voorkomt "wie ben ik?"-verwarring. */
+  accountContext: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 18,
+    marginBottom: 6,
+  },
+  accountLabel: {
+    color: Brand.textDim,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.4,
+    marginBottom: 4,
+  },
+  accountEmail: {
+    color: Brand.text,
+    fontSize: 14,
     fontFamily: BrandFonts.semibold,
   },
   legal: {
