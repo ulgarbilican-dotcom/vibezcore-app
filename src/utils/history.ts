@@ -168,7 +168,12 @@ function flushListen(full: boolean): void {
   }
 
   /* Niet-full flushes negeren we onder de 1s (filter ongelukkige kliks).
-     Full flushes mogen wél door bij 0s (didJustFinish na een pauseListen). */
+     Full flushes mogen wél door bij 0s (didJustFinish na een pauseListen).
+     Iter 9dq v120 (2026-06-04): drempel teruggedraaid van 15s → 1s.
+     Auto-play residue wordt nu in audio-player.ts via loadedWithAutoStart-
+     vlag voorkomen (v119) — geen startListen voor auto-played sessies
+     tot user interacteert. Daarmee is de 15s-drempel niet meer nodig
+     en filterde 'ie ten onrechte korte manual luister-sessies eruit. */
   if (!full && listenedSec < 1) return;
 
   loadOnce().then(() => {
@@ -188,7 +193,6 @@ function flushListen(full: boolean): void {
       ];
     } else {
       const prev = historyState[idx];
-      const wasFull = prev.full;
       const next: HistoryEntry = {
         ...prev,
         title: curTitle || prev.title,
@@ -196,9 +200,15 @@ function flushListen(full: boolean): void {
         ts: Date.now(),
         dur: prev.dur + Math.max(0, Math.round(listenedSec)),
         full: prev.full || full,
-        /* fc++ wanneer deze flush een full-event is, OF wanneer dit een
-           nieuwe play is op een eerder volledig afgespeelde entry (her-luister) */
-        fc: prev.fc + (full ? 1 : wasFull ? 1 : 0),
+        /* Iter 9dq v112 (2026-06-04): fc++ ALLEEN bij een full-event
+           (sessie tot het einde afgespeeld). Voorheen werd fc óók
+           verhoogd bij elke nieuwe play op een al-volledig entry, ook
+           wanneer die nieuwe play maar gedeeltelijk werd afgespeeld
+           → label toonde dan ten onrechte "Fully listened x2".
+           Operator-spec 2026-06-04: "1x fully listened + 1x partly
+           listened mag NIET als fully listened x2 worden gelabeld".
+           Nu: fc telt strikt het aantal afgespelde-tot-einde events. */
+        fc: prev.fc + (full ? 1 : 0),
       };
       historyState = [
         ...historyState.slice(0, idx),
@@ -329,6 +339,48 @@ export function computeStats(raw: HistoryEntry[]): HistoryStats {
  */
 export function getEntryByUrl(url: string): HistoryEntry | undefined {
   return historyState.find((e) => e.url === url);
+}
+
+/* ── Listened-label formatter ───────────────────────────────────────────────
+   Iter 9dq v111 (2026-06-04): één centrale plek voor de "Partly listened" /
+   "Fully listened" / "Fully listened x2" / "Fully listened x3" tekst zodat
+   alle consumers (audio library, player, history-screen) exact dezelfde
+   labels tonen.
+
+   Regels:
+     - entry niet bestaand of fc=0 + full=false  → 'Partly listened'  (started, not finished)
+     - full=true, fc<=1                          → 'Fully listened'
+     - full=true, fc>=2                          → 'Fully listened x{fc}'
+
+   Operator-feedback (2026-06-04): "enkel fully listened verschijnt, partly
+   listened en fully listened x2 niet" → label-formatter moet de fc-count
+   in z'n label opnemen. Voorheen toonden alle render-sites alleen
+   "Fully listened" / "Partly listened" zonder count. */
+export type ListenedLabel = {
+  text: string;
+  /** True wanneer de session minstens 1× volledig is afgespeeld. */
+  isFull: boolean;
+  /** Aantal volledige afspelingen (0 bij partly, 1+ bij fully). */
+  fullCount: number;
+};
+
+export function formatListenedLabel(
+  entry: HistoryEntry | undefined,
+): ListenedLabel | null {
+  if (!entry) return null;
+  const fc = Math.max(0, entry.fc);
+  if (!entry.full) {
+    return { text: 'Partly listened', isFull: false, fullCount: 0 };
+  }
+  if (fc <= 1) {
+    return { text: 'Fully listened', isFull: true, fullCount: fc || 1 };
+  }
+  return { text: `Fully listened x${fc}`, isFull: true, fullCount: fc };
+}
+
+/** Convenience: rechtstreeks via URL — combineert getEntryByUrl + format. */
+export function getListenedLabelByUrl(url: string): ListenedLabel | null {
+  return formatListenedLabel(getEntryByUrl(url));
 }
 
 /* ── React hook ─────────────────────────────────────────────────────────── */

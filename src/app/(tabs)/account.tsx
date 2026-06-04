@@ -32,8 +32,12 @@ async function refreshUserBucket(): Promise<void> {
   await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
 }
 import {
-  useBraceletEntitled,
+  awaitDevUserOverrideLoaded,
+  getDevUserOverride,
+  setDevBraceletActivated,
+  setDevUserOverride,
   useBraceletOwner,
+  useDevBraceletActivated,
   useDevUserOverride,
 } from '@/utils/dev-user-override';
 import {
@@ -44,10 +48,14 @@ import {
 import { restorePurchases } from '@/services/restore-purchases';
 import { clearSignedUrlCache } from '@/utils/audio-url';
 import { clearLastPlayed } from '@/utils/last-played';
-import { requestScrollTo } from '@/utils/scroll-intent';
+import {
+  consumeScrollIntent,
+  requestScrollTo,
+  subscribeScrollIntent,
+} from '@/utils/scroll-intent';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -125,11 +133,12 @@ function SubscriptionCard() {
   } = useSubscription();
   /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
      PRO + bracelet owner → speciale "Full PRO" label.
-     Iter 9dq v90 (2026-06-03): driestaten — niet-eigenaar, entitled-
-     pending (paid maar niet geactiveerd), activated. */
+     Iter 9dq v91 (2026-06-03): pending-state verwijderd. Operator-feedback
+     "na aankoop+account moet user altijd in PRO omgeving zitten". Wie
+     betaald heeft = PRO, óók als de code nog niet ingevoerd is. De
+     activate-prompt verhuist naar de BraceletCard zelf (sub-stap) ipv
+     gate naar PRO-entitlement. */
   const isBraceletOwner = useBraceletOwner();
-  const isBraceletEntitled = useBraceletEntitled();
-  const isBraceletPending = isBraceletEntitled && !isBraceletOwner;
   /* Iter 9dq v84 (2026-06-03): dev-override mode forceert IAP-flow zodat
      operators de "Manage subscription"-knop (store-deep-link) kunnen
      testen ook al heeft hun echte account een gumroadSubscriberId.
@@ -146,22 +155,10 @@ function SubscriptionCard() {
     bigText = 'Checking…';
     bigColor = Brand.textDim;
     subText = '';
-  } else if (!isPro && isBraceletPending) {
-    /* Iter 9dq v90 (2026-06-03): bracelet paid, niet geactiveerd. Niet
-       "Free account" want user heeft betaald — moet alleen nog code
-       redeemen. CTA hieronder verwijst naar /activate-bracelet. */
-    bigText = 'Bracelet — pending activation';
-    bigColor = '#f59e0b';
-    subText = 'Enter your activation code to unlock your bracelet';
   } else if (!isPro && !isBraceletOwner) {
     bigText = 'Free account';
     bigColor = Brand.text;
     subText = 'Upgrade for full library access';
-  } else if (isPro && isBraceletPending) {
-    /* Audio PRO + paid bracelet niet geactiveerd. */
-    bigText = 'Audio PRO · Bracelet pending';
-    bigColor = Brand.accent;
-    subText = 'Enter your bracelet activation code to complete Full PRO';
   } else if (isPro && isBraceletOwner) {
     /* Full PRO — beide producten actief.
        Iter 9dq v49 (2026-06-03): operator-feedback — los "Full PRO"
@@ -194,8 +191,16 @@ function SubscriptionCard() {
     /* Bracelet-only owner — geen audio sub. Operator-update 2026-05-30:
        wijst nu expliciet op wat er nog WEL kan: Audio Library toevoegen
        om het systeem compleet te maken. Niet "missing" framing maar
-       "complete the system" — past bij VIBEZCORE's holistic-tone. */
-    bigText = 'Bracelet active';
+       "complete the system" — past bij VIBEZCORE's holistic-tone.
+       Iter 9dq v94 (2026-06-03): label "Bracelet active" → "Bracelet PRO".
+       Reden: "active" was verwarrend met de device-activation-state
+       (geactiveerd vs niet-geactiveerd via code). "PRO" is symmetrisch
+       met "Audio PRO" en duidelijk een entitlement-label, niet een
+       link-status. Subscription-card praat over WAT JE BEZIT;
+       BraceletCard praat over WAT GEKOPPELD IS. Verandering alleen
+       in deze branche — andere staten (Free / Audio PRO / Full PRO)
+       blijven ongewijzigd. */
+    bigText = 'Bracelet PRO';
     bigColor = Brand.accent;
     subText = 'Audio Library not yet activated';
   } else {
@@ -247,10 +252,7 @@ function SubscriptionCard() {
 
      Geen "geen CTA" pad meer voor PRO-users — Apple eist altijd toegang
      tot manage-subscription. */
-  /* Iter 9dq v90 (2026-06-03): Upgrade-CTA verborgen voor bracelet-
-     pending users — die hoeven niet te upgraden, ze hoeven alleen hun
-     code in te voeren. ActivateBraceletCta zit daar al voor. */
-  const showUpgrade = !isLoading && !isPro && !isBraceletPending;
+  const showUpgrade = !isLoading && !isPro;
   /* Iter 9dq v84: devForcesIapMode trumps de gumroadSubscriberId-check,
      zodat operators de IAP-flow in dev kunnen testen ook wanneer hun
      account een echte Gumroad-sub heeft. Productie: devOverride is null
@@ -314,12 +316,52 @@ function SubscriptionCard() {
    product-discovery. De Bracelet-tab handelt reservatie/info al af
    — duplicate "Reserve your bracelet" CTA in Account voelt als
    marketing-prik op de verkeerde plek.
-     - Owner          : "Bracelet active" + Open Control + beadband
-                        upsell — functioneel, hoort hier
-     - Niet-owner     : niets tonen (return null) */
+
+   Iter 9dq v91 (2026-06-03): activation is een SUB-STAP binnen deze
+   card, geen gate vóór deze card. Bracelet-owner ziet altijd:
+     - Niet-geactiveerd : "Activate your bracelet" als primary CTA +
+                          dim sub-text dat 't nog wacht op de code
+     - Geactiveerd      : "Open Bracelet Control" + beadband-upsell
+   Operator-rationale: "na aankoop en account aanmaken moet elke user
+   altijd in PRO omgeving zitten" — Bracelet-card hoort bij PRO, alleen
+   z'n binnenkant verschilt. */
 function BraceletCard() {
   const isBraceletOwner = useBraceletOwner();
+  const isActivated = useDevBraceletActivated();
   if (!isBraceletOwner) return null;
+
+  /* Niet-geactiveerde owner — toon activate-prompt als primary action.
+     User is wel PRO (heeft betaald) maar de bracelet is nog NIET aan
+     dit account gekoppeld. Iter 9dq v93 (2026-06-03): label aangepast
+     van "Bracelet ready" → "Activation required" + amber-kleur. Reden:
+     "ready" suggereerde dat 't klaar voor gebruik was, terwijl er nog
+     niets gelinkt is. Amber matched de PREVIEW-banner-tint en signaleert
+     "wacht op actie van de user". */
+  if (!isActivated) {
+    return (
+      <View style={s.card}>
+        <Text style={s.label}>Bracelet</Text>
+        <Text style={[s.subBig, { color: '#f59e0b' }]}>
+          Activation required
+        </Text>
+        <Text style={s.subSmall}>
+          Your bracelet is not yet linked to this account. Enter your
+          12-character activation code to pair it.
+        </Text>
+        <Pressable
+          style={s.cardCta}
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+          accessibilityLabel="Activate your bracelet with a code"
+        >
+          <Text style={s.cardCtaText}>Activate your bracelet</Text>
+          <Text style={s.cardCtaArrow}>→</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  /* Geactiveerde owner — volledige bracelet-card met control + beadband-
+     upsell. */
   return (
     <View style={s.card}>
       <Text style={s.label}>Bracelet</Text>
@@ -371,40 +413,12 @@ function BraceletCard() {
   );
 }
 
-/* ActivateBraceletCta (iter 9dq v87) — entry-point voor bracelet-owners
-   wier hardware (na Kickstarter shipping) is aangekomen + ze de activation-
-   code via email hebben gekregen. Toont alleen wanneer user ingelogd is en
-   NIET al bracelet-owner is (anders is BraceletCard al zichtbaar).
-
-   Productie-tip: zodra backend has_bracelet-flag teruggeeft via /api/
-   subscription-status, fungeert useBraceletOwner() automatisch op die echte
-   state. Tot dan: dev-override + activation-flow trigger 'm via
-   refreshSubscription. */
-function ActivateBraceletCta() {
-  /* Iter 9dq v89 (2026-06-03): toon CTA wanneer user RECHT heeft op
-     bracelet-features (entitled = paid) maar nog niet geactiveerd is.
-     Voorheen toonde 'm voor ALLE non-owners (ook gasten/audio-PRO zonder
-     bracelet) wat verwarrend was. */
-  const entitled = useBraceletEntitled();
-  const activated = useBraceletOwner();
-  if (!entitled || activated) return null;
-  return (
-    <Pressable
-      style={s.linkCard}
-      onPress={() => router.navigate('/activate-bracelet' as never)}
-      accessibilityLabel="Activate your bracelet with a code"
-      android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-    >
-      <View style={s.linkTextWrap}>
-        <Text style={s.linkTitle}>Activate your bracelet</Text>
-        <Text style={s.linkSub}>
-          Got a Smart Bead Bracelet? Enter your activation code.
-        </Text>
-      </View>
-      <Text style={s.linkArrow}>›</Text>
-    </Pressable>
-  );
-}
+/* Iter 9dq v91 (2026-06-03): losse ActivateBraceletCta verwijderd. Reden:
+   operator-feedback "na aankoop+account moet user altijd in PRO omgeving
+   zitten". Een aparte CTA naast de BraceletCard wekte de indruk dat
+   bracelet-ownership pas na activation echt was. De activate-prompt zit
+   nu IN BraceletCard zelf (als de niet-geactiveerde variant) zodat de
+   user direct in z'n eigen PRO-card landt met de juiste sub-stap. */
 
 /* Library-settings link. Vervangt de oude PlaybackSettingsCard die de
    auto-play-toggle inline had — die toggle is verhuisd naar Audio
@@ -445,6 +459,29 @@ export default function AccountScreen() {
      (64px) eronder was 't praktisch ok, maar 't was niet future-proof.
      Nu dynamisch zodat content altijd boven safe-zone blijft. */
   const safeInsets = useSafeAreaInsets();
+
+  /* Iter 9dq v110 (2026-06-04): scroll-ref voor signed-out KeyboardAware-
+     ScrollView. Listent op scroll-intent 'account-top' (gefired vanuit
+     Audio Library bottom "Sign in"-link) en scrollt naar top zodat de
+     guest meteen de SIGN IN-card ziet i.p.v. een preserved scroll-
+     positie van een vorige bezoek. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const signedOutScrollRef = useRef<any>(null);
+  useEffect(() => {
+    const scrollToTop = () => {
+      requestAnimationFrame(() => {
+        signedOutScrollRef.current?.scrollToPosition?.(0, 0, false);
+      });
+    };
+    /* Cold-start: intent kan al gezet zijn voordat deze listener leeft. */
+    if (consumeScrollIntent() === 'account-top') {
+      scrollToTop();
+    }
+    const unsub = subscribeScrollIntent((target) => {
+      if (target === 'account-top') scrollToTop();
+    });
+    return unsub;
+  }, []);
 
   const [mode, setMode] = useState<Mode>('login');
   const [emailInput, setEmailInput] = useState('');
@@ -530,22 +567,26 @@ export default function AccountScreen() {
         await refreshUserBucket();
 
         /* ── Post-login routing ────────────────────────────────────────
-           Operator-spec 2026-05-25:
-             - Audio PRO          → /(tabs)/        (Audio Library)
-             - Bracelet eigenaar  → bracelet-active (TODO — page nog te
-                                   bouwen, backend nog geen has_bracelet
-                                   veld)
-             - Geen van beide     → /(tabs)/        (Library als default)
+           Iter 9dq v96 (2026-06-03): differentiated routing per user-type.
+           Operator-spec:
+             - SIGN-UP (eerste keer)        → blijf op /account
+                 → user ziet meteen "Activation required" + activate-CTA
+             - LOGIN + Bracelet PRO         → /bracelet
+                 → returning bracelet-owner landt direct bij z'n bracelet
+             - LOGIN + Audio PRO            → /         (Audio Library)
+             - LOGIN + Full PRO             → /bracelet (bracelet is premium)
+             - LOGIN + Free                 → /         (Audio Library)
 
-           Bracelet-ownership-detectie vereist:
-             1. Backend: /api/subscription-status uitbreiden met bv.
-                `has_bracelet: true` zodra activatie-code is gekoppeld
-             2. App: nieuwe route /bracelet-active met activatie-UI +
-                modus-control. Tot dan: alle ingelogde users → Library.
+           Bracelet-ownership-detectie in dev:
+             - Synchroon via getDevUserOverride() (cache is geladen door
+               loadOnce() bij module-import; awaitDevUserOverrideLoaded
+               is een safety-net voor cold-start race).
 
-           Wanneer beide klaar zijn, vervangen door:
-              const dest = sub?.has_bracelet ? '/bracelet-active' : '/';
-              router.replace(dest);
+           Productie-pad (na backend-endpoint):
+             - useSubscription cache lezen na refreshSubscription:
+               const hasBracelet = cachedStatus?.has_bracelet_activated;
+             - cachedStatus is module-level in useSubscription.ts;
+               getter exporteren wanneer endpoint live is.
 
            setTimeout 50ms zodat React eerst de state-updates van
            setEmail/setPwInput commit; voorkomt edge-cases waar de
@@ -553,7 +594,20 @@ export default function AccountScreen() {
            wanneer de nav fired. router.replace ipv navigate: clear de
            account-tab-stack zodat back-knop niet terug naar het login-
            formulier gaat. */
-        setTimeout(() => router.replace('/'), 50);
+        await awaitDevUserOverrideLoaded();
+        const override = getDevUserOverride();
+        const isBraceletPro = override === 'bracelet' || override === 'pro';
+        if (mode === 'signup') {
+          /* Sign-up: blijf op /account. User ziet nu de signed-in view
+             met BraceletCard (Activation required) of subscription-card,
+             en kan vandaaruit de juiste eerstvolgende stap nemen
+             (bracelet activeren / audio upgraden). */
+          /* no redirect — gewoon de huidige view re-renderen */
+        } else if (isBraceletPro) {
+          setTimeout(() => router.replace('/bracelet' as never), 50);
+        } else {
+          setTimeout(() => router.replace('/'), 50);
+        }
       } else {
         setMsg(r.error);
       }
@@ -578,6 +632,18 @@ export default function AccountScreen() {
           style: 'destructive',
           onPress: async () => {
             await clearSession();
+            /* Iter 9dq v99 (2026-06-04): bij sign-out óók dev-overrides
+               wissen. Anders bleef de override (bv 'bracelet') hangen
+               terwijl Account 'uitgelogd' toonde — andere tabs (Bracelet,
+               Audio) toonden nog steeds de PRO-omgeving = inconsistent.
+               Productie kent dit probleem niet (overrides bestaan daar
+               niet); puur dev-hygiene zodat sign-out altijd in een
+               schone 'echte gast'-staat eindigt. Re-test als PRO?
+               Settings → Override opnieuw zetten. */
+            if (__DEV__) {
+              await setDevUserOverride(null);
+              await setDevBraceletActivated(false);
+            }
             setEmail(null);
             setEmailInput('');
             setPwInput('');
@@ -773,7 +839,6 @@ export default function AccountScreen() {
 
           <SubscriptionCard />
           <BraceletCard />
-          <ActivateBraceletCta />
           {/* Iter 9r: LibrarySettingsLink weggehaald — operator-feedback
               "Library settings mag overal uit settings weg". Auto-play
               en track-history toggles leven al in Settings sub-screen. */}
@@ -1039,6 +1104,7 @@ export default function AccountScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <KeyboardAwareScrollView
+        ref={signedOutScrollRef}
         contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}

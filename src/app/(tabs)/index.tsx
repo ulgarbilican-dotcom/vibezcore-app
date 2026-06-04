@@ -35,9 +35,14 @@ import {
 } from '@/services/bracelet-upsell';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gem, Heart, Sparkles, TrendingUp } from 'lucide-react-native';
-import { getEntryByUrl, useHistory } from '@/utils/history';
+import {
+  getEntryByUrl,
+  getListenedLabelByUrl,
+  useHistory,
+} from '@/utils/history';
 import { isNew } from '@/utils/isNew';
 import { useGatedOpenSession } from '@/utils/openSession';
+import { subscribeLibraryReset } from '@/utils/library-reset-intent';
 import {
   consumeScrollIntent,
   requestScrollTo,
@@ -301,19 +306,21 @@ function SessionRow({
         })()}
         <Text style={s.libRowTitle}>{session.title}</Text>
         {session.desc ? <Text style={s.libRowDesc}>{session.desc}</Text> : null}
-        {/* FIX 15b: status-regel ook hier in serie-expansion sessie-rijen. */}
+        {/* FIX 15b: status-regel ook hier in serie-expansion sessie-rijen.
+            Iter 9dq v111 (2026-06-04): centralised formatListenedLabel
+            zodat fc-count meekomt ("Fully listened x2" etc.). */}
         {(() => {
-          const e = getEntryByUrl(session.url);
-          if (!e) return null;
-          const isFull = e.full;
+          const label = getListenedLabelByUrl(session.url);
+          if (!label) return null;
           return (
             <Text
               style={[
                 s.statusRowRow,
-                { color: isFull ? '#4ade80' : '#3a8fff' },
+                { color: label.isFull ? '#4ade80' : '#3a8fff' },
               ]}
             >
-              {isFull ? '✓ Fully listened' : '▶ Partly listened'}
+              {label.isFull ? '✓ ' : '▶ '}
+              {label.text}
             </Text>
           );
         })()}
@@ -372,9 +379,22 @@ export default function AudioScreen() {
      sluiten van een free sessie ongewenst terug naar de landing
      gestuurd werd. Operator-feedback: "bezoeker moet in de free
      omgeving blijven en alle free sessies kunnen beluisteren tot hij
-     beslist om eruit te gaan". Oplossing: laat user in library mode
-     blijven voor de hele app-sessie. Landing toont weer bij next
-     cold-start. */
+     beslist om eruit te gaan".
+
+     Iter 9dq v98 (2026-06-04): tab-switch reset KOMT TERUG via een
+     expliciet signaal vanuit de tab-button (requestLibraryReset).
+     Anders dan useFocusEffect firet dit ALLEEN bij echte tab-button-
+     press, niet bij modal-close. Beide flows werken nu:
+       - Player modal close            → blijft in library (geen reset)
+       - Audio-tab-tap vanuit elders   → terug naar landing (wel reset)
+     Operator-spec: "als hij terug op audio library tab moet eerst
+     korte audio library pagina verschijnen niet de free". */
+  useEffect(() => {
+    const unsubscribe = subscribeLibraryReset(() => {
+      setExploredLibrary(false);
+    });
+    return unsubscribe;
+  }, []);
 
   /* Cold-start redirect: bracelet-owners landen op /bracelet bij eerste
      app-start. Eenmalig per sessie via module-level flag. */
@@ -429,6 +449,15 @@ export default function AudioScreen() {
 
     const unsubscribe = onSessionFinish(async (_finishedSession) => {
       try {
+        /* Iter 9dq v126/v127 (2026-06-04): upsell-modal toont ALLEEN voor
+           Audio PRO users (= hebben audio-sub maar geen bracelet).
+           Operator-spec:
+             - Free / Guest    → geen popup, ze hebben de Bracelet-tab al
+             - Audio PRO       → POPUP (echte upsell — geen bracelet)
+             - Bracelet PRO    → geen popup, bezit al
+             - Full PRO        → geen popup, bezit al + heeft audio
+           Skip-condities: geen-PRO (free) of al-owner. */
+        if (!hasSub || isBraceletOwner) return;
         /* 80%-threshold (defensief — didJustFinish fired alleen op
            natural EOF dus dit triggert vrijwel nooit). */
         const snap = getSnapshot();
@@ -468,7 +497,11 @@ export default function AudioScreen() {
       unsubscribe();
       if (autoHideTimer) clearTimeout(autoHideTimer);
     };
-  }, []);
+    /* hasSub + isBraceletOwner in deps zodat upsell-skip up-to-date is
+       bij runtime override-wisselingen (dev-only). Productie verandert
+       dit weinig — backend-status is per-session stabiel. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSub, isBraceletOwner]);
 
   /* Endedpanel-watcher: dismist de bar zodra het SESSION COMPLETE-paneel
      verdwijnt (Done of Play next geklikt). Geeft user een snellere
@@ -1585,23 +1618,25 @@ export default function AudioScreen() {
                         {sess.desc ? (
                           <Text style={s.freeSessionDesc}>{sess.desc}</Text>
                         ) : null}
-                        {/* FIX 15b: status-regel ("▶ Partly listened" /
-                           "✓ Fully listened") alleen wanneer er history
-                           bestaat voor deze sessie-url. */}
+                        {/* Status-regel ("▶ Partly listened" / "✓ Fully
+                           listened" / "✓ Fully listened x2") alleen
+                           wanneer er history bestaat voor deze sessie-url.
+                           Iter 9dq v111 (2026-06-04): label nu via
+                           getListenedLabelByUrl met fc-count. */}
                         {(() => {
-                          const e = getEntryByUrl(sess.url);
-                          if (!e) return null;
-                          const isFull = e.full;
+                          const label = getListenedLabelByUrl(sess.url);
+                          if (!label) return null;
                           return (
                             <Text
                               style={[
                                 s.statusRow,
                                 {
-                                  color: isFull ? '#4ade80' : '#3a8fff',
+                                  color: label.isFull ? '#4ade80' : '#3a8fff',
                                 },
                               ]}
                             >
-                              {isFull ? '✓ Fully listened' : '▶ Partly listened'}
+                              {label.isFull ? '✓ ' : '▶ '}
+                              {label.text}
                             </Text>
                           );
                         })()}
@@ -2039,7 +2074,13 @@ export default function AudioScreen() {
         {!searchActive && isSignedIn === false && !hasSub && !isBraceletOwner && (
           <Pressable
             style={s.signInFooterLink}
-            onPress={() => router.navigate('/account')}
+            onPress={() => {
+              /* Iter 9dq v110 (2026-06-04): scroll-intent 'account-top'
+                 zodat user op top van /account belandt (sign-in form
+                 zichtbaar) i.p.v. eventuele preserved scroll-positie. */
+              requestScrollTo('account-top');
+              router.navigate('/account');
+            }}
             hitSlop={12}
             accessibilityLabel="Already a member, sign in"
           >

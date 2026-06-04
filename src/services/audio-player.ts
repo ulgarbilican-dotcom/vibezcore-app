@@ -60,7 +60,12 @@ import {
 } from '@/data/audio-library-data';
 import { getSignedAudioUrl, SignedUrlError } from '@/utils/audio-url';
 import { getDevUserOverride } from '@/utils/dev-user-override';
-import { endListen, pauseListen, startListen } from '@/utils/history';
+import {
+  endListen,
+  getEntryByUrl,
+  pauseListen,
+  startListen,
+} from '@/utils/history';
 import { getNextSession } from '@/utils/next-session';
 import { getSetting } from '@/utils/settings';
 import { clearLastPlayed, setLastPlayed } from '@/utils/last-played';
@@ -124,9 +129,15 @@ export type PlayerState = {
 
 const PREVIEW_CAP_SEC = 60; // operator-keuze 2026-05-27: 30s te kort voor Calm-modes, 60s geeft echte feel
 /* Positie wordt pas opgeslagen onder vzp_v1 vanaf 4 sec en alleen als we
-   niet binnen 1 sec van het einde zitten (= effectief aan de finish). */
+   niet binnen 30 sec van het einde zitten (= effectief aan de finish).
+   Iter 9dq v121 (2026-06-04): marge 1s → 30s. Operator-feedback: Continue-
+   prompt verscheen voor sessies die user "essentieel volledig" had
+   beluisterd maar net niet de laatste seconde haalden (geen
+   didJustFinish). Door 30s marge wordt een sessie als "klaar" gezien
+   zodra je in de laatste 30s zit — geen save, geen Continue prompt
+   volgende keer. */
 const SAVE_MIN_SEC = 4;
-const SAVE_END_MARGIN_SEC = 1;
+const SAVE_END_MARGIN_SEC = 30;
 /* Tolerantie voor "ben ik klaar?"-detectie in togglePlay (0.1 s ≈ 100 ms
    in de oude ms-versie). */
 const END_OF_TRACK_TOLERANCE_SEC = 0.1;
@@ -174,6 +185,16 @@ let statusSubscription: { remove: () => void } | null = null;
 let loadGeneration = 0;
 let playingRef = false;
 let trackingActive = false;
+/* Iter 9dq v119 (2026-06-04): tracked sessie geladen via auto-play next?
+   - true wanneer loadSession met opts.autoStart=true werd aangeroepen
+     (i.e. chain via auto-play next aan einde vorige sessie)
+   - false bij elke expliciete user-interactie (play/pause/seek) of bij
+     handmatig openen van een sessie
+   Doel: positie-save + history-tracking skippen voor auto-played
+   sessies waar user niet mee bezig is. Operator-feedback: na 9:53
+   verschijnt Continue-prompt voor sessie die user nooit explicit
+   geopend heeft. */
+let loadedWithAutoStart = false;
 let sleepTimer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
 /* ── Finish-listeners (apart van state-listeners) ───────────────────────
@@ -221,6 +242,11 @@ function clearSleepTimer() {
 
 function saveCurrentPositionIfWorthwhile() {
   if (!state.session) return;
+  /* Iter 9dq v119 (2026-06-04): skip position-save voor sessies geladen
+     via auto-play next zolang user niet expliciet heeft gepauzeerd /
+     speeld / geseekt. Voorkomt Continue-prompt voor sessies die user
+     nooit explicit geopend heeft. */
+  if (loadedWithAutoStart) return;
   const url = state.session.url;
   const pos = state.positionSec;
   if (pos < SAVE_MIN_SEC) return;
@@ -336,6 +362,9 @@ function onStatus(st: AudioStatus): void {
   if (
     isPlayingNow &&
     state.session &&
+    /* Iter 9dq v119 (2026-06-04): skip periodic-save voor auto-played
+       sessies tot user interacteert. */
+    !loadedWithAutoStart &&
     posSec >= SAVE_MIN_SEC &&
     (durSec === 0 || posSec < durSec - SAVE_END_MARGIN_SEC) &&
     Math.abs(posSec - lastPeriodicWritePosSec) >= PERIODIC_WRITE_INTERVAL_SEC
@@ -383,9 +412,27 @@ function onStatus(st: AudioStatus): void {
      user bij een PRO-sessie verder kon gaan waar 'ie was — maar de cap
      stopt 'm sowieso na 60s. Cosmetisch misleidend + verwarrend bij
      volgende bezoek. Door previews uit te sluiten blijven die UI-states
-     reservoir voor echte luister-engagement. */
-  if (!state.preview) {
-    if (isPlayingNow && !playingRef && state.session) {
+     reservoir voor echte luister-engagement.
+
+     Iter 9dq v116 (2026-06-04): overridePretendsPro toegevoegd aan de
+     guard. Dev-override 'audio'/'pro' simuleert PRO-toegang maar
+     realIsPro=false → state.preview=true. Zonder deze extra check
+     bleef history-tracking uit voor operator-tests, terwijl ze de
+     volledige audio kunnen afspelen (cap-skip hierboven). Dat verklaart
+     waarom "Fully listened" niet verscheen in Audio PRO override-mode.
+     Productie: __DEV__=false → overridePretendsPro=false → gedrag
+     ongewijzigd. Alleen dev-flow krijgt nu correcte history. */
+  if (!state.preview || overridePretendsPro) {
+    /* Iter 9dq v119 (2026-06-04): voor auto-played sessies skippen we
+       startListen tot user expliciet interacteert. Voorkomt phantom
+       Partly-listened-entries voor sessies die alleen via auto-play
+       zijn gestart maar user nooit echt geluisterd heeft. */
+    if (
+      isPlayingNow &&
+      !playingRef &&
+      state.session &&
+      !loadedWithAutoStart
+    ) {
       startListen(state.session.url, state.session.title, state.session.series);
       trackingActive = true;
     }
@@ -393,7 +440,9 @@ function onStatus(st: AudioStatus): void {
       pauseListen();
     }
 
-    /* Saved position — alleen bij echte pauze (niet bij einde). */
+    /* Saved position — alleen bij echte pauze (niet bij einde).
+       saveCurrentPositionIfWorthwhile heeft eigen loadedWithAutoStart-
+       guard, dus deze call is voor non-auto-started sessies. */
     if (!isPlayingNow && playingRef && state.session && !st.didJustFinish) {
       saveCurrentPositionIfWorthwhile();
     }
@@ -556,6 +605,20 @@ export async function loadSession(
   if (opts.autoStart) {
     clearSavedPosition(session.url);
   }
+  /* Iter 9dq v121 (2026-06-04): als deze sessie al volledig is beluisterd
+     (history.full=true), wis dan een eventuele stale saved positie.
+     Voorkomt Continue-prompts voor sessies die user al heeft afgemaakt
+     maar waarvan een oude partial-state in storage staat (bv. data van
+     vóór een fix of vóór didJustFinish een vorige keer ontbroken heeft).
+     Defensief: schaadt niet voor sessies zonder entry. */
+  const historyEntry = getEntryByUrl(session.url);
+  if (historyEntry?.full) {
+    clearSavedPosition(session.url);
+  }
+  /* Iter 9dq v119 (2026-06-04): markeer dat deze sessie via auto-play
+     is geladen. Position-save en history-tracking blokkeren tot user
+     expliciet interacteert (play/pause/seek). */
+  loadedWithAutoStart = !!opts.autoStart;
   const savedSec = opts.autoStart ? 0 : getSavedPosition(session.url);
   const shouldShowResume = !opts.autoStart && savedSec > 4;
 
@@ -649,6 +712,10 @@ export async function loadSession(
 
 export async function pauseAudio(): Promise<void> {
   if (!player) return;
+  /* Iter 9dq v119 (2026-06-04): expliciete user-pause = engagement-
+     signaal → auto-start flag clearen zodat positie + history vanaf
+     nu wel getrackt worden. */
+  loadedWithAutoStart = false;
   try {
     player.pause();
   } catch {}
@@ -656,6 +723,9 @@ export async function pauseAudio(): Promise<void> {
 
 export async function resumeAudio(): Promise<void> {
   if (!player || state.previewBlocked) return;
+  /* Iter 9dq v119 (2026-06-04): expliciete user-resume/play =
+     engagement-signaal → auto-start flag clearen. */
+  loadedWithAutoStart = false;
   try {
     player.play();
   } catch {}
@@ -686,6 +756,8 @@ export async function togglePlay(): Promise<void> {
 
 export async function seekTo(positionSec: number): Promise<void> {
   if (!player) return;
+  /* Iter 9dq v119 (2026-06-04): expliciete seek = engagement → flag clear. */
+  loadedWithAutoStart = false;
   const clamped = Math.max(0, positionSec);
   try {
     /* expo-audio.seekTo() is async (returns Promise<void>). We awaiten zodat
@@ -825,13 +897,25 @@ export function setSleepTimer(minutes: number): void {
  * eerst de positie op voor de actieve sessie zodat "Close → later opnieuw
  * openen" Continue laat zien op de juiste plek.
  */
-export async function unload(): Promise<void> {
+export async function unload(opts: { skipSave?: boolean } = {}): Promise<void> {
   clearSleepTimer();
   /* Iter 9dq v66 (2026-06-03): preview-sessies sluiten zonder positie
      op te slaan of history-flush. Anders zou close-and-reopen alsnog
      een Continue-prompt geven voor een sessie die toch op 60s gecapped
-     is. Identiek aan onStatus-handler. */
-  if (!state.preview) {
+     is. Identiek aan onStatus-handler.
+     Iter 9dq v117 (2026-06-04): overridePretendsPro toegevoegd zoals in
+     onStatus (v116). Dev-override 'audio'/'pro' moet ook bij close /
+     navigate-away een pauseListen-flush krijgen, anders schrijft de
+     guard 'm niet weg → "Partly listened" verschijnt nooit.
+     Iter 9dq v124 (2026-06-04): opts.skipSave → totale unload zonder
+     vzp/history-writes. Gebruikt door Settings → Clear all local data:
+     anders schrijft saveCurrentPositionIfWorthwhile de huidige positie
+     TERUG naar vzp ná de clearAllSavedPositions, waardoor Continue-
+     prompt blijft verschijnen. */
+  const overridePretendsPro =
+    __DEV__ &&
+    (getDevUserOverride() === 'audio' || getDevUserOverride() === 'pro');
+  if (!opts.skipSave && (!state.preview || overridePretendsPro)) {
     saveCurrentPositionIfWorthwhile();
     if (trackingActive) {
       pauseListen();

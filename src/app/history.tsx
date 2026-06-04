@@ -26,6 +26,7 @@ import {
   computeStreak,
   dayLabel,
   fmtDur,
+  formatListenedLabel,
   relTime,
   useHistory,
   type HistoryEntry,
@@ -56,7 +57,10 @@ const C = {
   border: 'rgba(255,255,255,0.08)',
   searchBg: 'rgba(255,255,255,0.05)',
   accent: '#3a8fff',
-  partial: '#f59e0b',
+  /* Iter 9dq v113 (2026-06-04): amber → blauw (#3a8fff). Operator-feedback:
+     "Partly listened" was hier geel terwijl audio library + player 'm blauw
+     tonen. Nu één kleur door de hele app voor consistent state-signaling. */
+  partial: '#3a8fff',
   full: '#4ade80',
   inputDim: 'rgba(255,255,255,0.4)',
 };
@@ -346,9 +350,16 @@ function EntryRow({
   onPlay: () => void;
 }) {
   const photo = SERIES_PHOTO[entry.series];
-  const stateIcon = entry.full ? '✓' : '◐';
-  const stateColor = entry.full ? C.full : C.partial;
-  const stateLabel = entry.full ? 'Fully listened' : 'Partly listened';
+  /* Iter 9dq v115 (2026-06-04): EXACT dezelfde label-logica als de
+     audio library free-view en player. Eén bron (formatListenedLabel),
+     één icoon-set (▶ partly, ✓ fully), één kleur (blauw partly, groen
+     fully). Was ◐ voor partly — operator-mandate "exact dezelfde
+     logica van free toepassen". */
+  const labelInfo = formatListenedLabel(entry);
+  const stateIcon = labelInfo?.isFull ? '✓' : '▶';
+  const stateColor = labelInfo?.isFull ? C.full : C.partial;
+  const stateLabel =
+    labelInfo?.text ?? (entry.full ? 'Fully listened' : 'Partly listened');
 
   return (
     <View style={s.entryRow}>

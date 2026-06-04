@@ -44,9 +44,32 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Text as RNText, View } from 'react-native';
+import { Image, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/* Iter 9dq v100 (2026-06-04): bracelet-mode foto-prefetch.
+   Operator-feedback: "audio pro de bracelet korte pagina laadt soms
+   traag". Oorzaak: bracelet etalage + bracelet-control gebruiken beide
+   dezelfde 5 Bunny-CDN-foto's, geladen on-demand. Eerste navigatie =
+   netwerk-fetch, voelt laggy.
+   Fix: kick-off Image.prefetch bij app-cold-start zodat tegen de tijd
+   dat user de bracelet-tab opent (via welcome of post-login), de cache
+   warm is. Fire-and-forget, faalt stil bij offline.
+   URLs zijn gespiegeld met bracelet-control.tsx MODE_IMAGES en
+   (tabs)/bracelet.tsx MODE_PHOTOS_BY_WAVE — als één wijzigt, hier ook. */
+const BRACELET_MODE_PHOTOS_PREFETCH = [
+  'https://vibezcore-audio.b-cdn.net/images/gamma%20pic.jpg',
+  'https://vibezcore-audio.b-cdn.net/images/welcome%20new.png',
+  'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg',
+  'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
+  'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg',
+];
+BRACELET_MODE_PHOTOS_PREFETCH.forEach((url) => {
+  Image.prefetch(url).catch(() => {
+    /* offline / cdn-blip = stil falen, on-demand fetch is fallback */
+  });
+});
 
 /* Centrale font-inheritance — zet Inter als default op elke <Text> in de app,
    zodat schermen die geen eigen fontFamily zetten tóch Inter krijgen

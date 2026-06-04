@@ -26,10 +26,15 @@
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   DevUserOverride,
+  setDevBraceletActivated,
   setDevUserOverride,
   useDevUserOverride,
 } from '@/utils/dev-user-override';
+import { unload as unloadAudioPlayer } from '@/services/audio-player';
+import { clearHistory } from '@/utils/history';
+import { clearLastPlayed } from '@/utils/last-played';
 import { useSetting } from '@/utils/settings';
+import { clearAllSavedPositions } from '@/utils/vzp';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Stack, router } from 'expo-router';
@@ -91,6 +96,29 @@ export default function SettingsScreen() {
               if (toRemove.length > 0) {
                 await AsyncStorage.multiRemove(toRemove);
               }
+              /* Iter 9dq v122/v123/v124 (2026-06-04): drie-traps-fix.
+                 v122: AsyncStorage.multiRemove wist storage maar niet de
+                       in-memory module-state van vzp/history/last-played.
+                 v123: audio-player state.session bleef plakken door
+                       loadSession's same-session-fast-path.
+                 v124: unload() roept saveCurrentPositionIfWorthwhile aan,
+                       die de huidige positie schrijft NÁ clearAllSaved-
+                       Positions → Continue-prompt bleef bestaan.
+                 Volgorde nu STRIKT sequentieel:
+                   1. unload met skipSave=true → reset player+state, geen
+                      stiekeme save naar vzp
+                   2. clearAllSavedPositions → vzp module wist
+                   3. clearLastPlayed + clearHistory parallel (onafhankelijk) */
+              await unloadAudioPlayer({ skipSave: true });
+              await clearAllSavedPositions();
+              await Promise.all([
+                clearLastPlayed(),
+                clearHistory(),
+                /* Iter 9dq v125: ook activation-flag wissen (in-memory +
+                   storage). Anders kon "Looking for your bracelet" blijven
+                   verschijnen voor owners die voorheen geactiveerd waren. */
+                setDevBraceletActivated(false),
+              ]);
               Alert.alert(
                 'Cleared',
                 'All local data has been removed. Restart the app to see a fresh state.',

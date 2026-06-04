@@ -81,6 +81,7 @@ export async function setDevUserOverride(
   value: DevUserOverride,
 ): Promise<void> {
   if (!__DEV__) return;
+  const prev = cached;
   cached = value;
   notify();
   try {
@@ -91,6 +92,16 @@ export async function setDevUserOverride(
     }
   } catch {
     /* swallow */
+  }
+  /* Iter 9dq v125 (2026-06-04): bij elke override-verandering ook de
+     activation-flag resetten. Anders bleef bv. activation=true uit een
+     Bracelet-test plakken wanneer je naar Pro/Full PRO switcht → eerste
+     bezoek aan bracelet-control toonde "Looking for your bracelet" (=
+     activated owner zonder hardware) i.p.v. "Bracelet not linked" (=
+     not-yet-activated owner). Elke override start nu schoon: activate
+     opnieuw via /activate-bracelet om de geactiveerde state te krijgen. */
+  if (prev !== value) {
+    await setDevBraceletActivated(false);
   }
 }
 
@@ -119,7 +130,41 @@ export function useDevUserOverride(): DevUserOverride {
    Account-tab toont "Activate"-CTA bij entitled-niet-activated.
    BraceletCard verschijnt pas wanneer activated.
    In productie regelt backend has_bracelet=true dit; deze flag is
-   alleen voor dev-mock-flow. Clear bij override-change voor schone tests. */
+   alleen voor dev-mock-flow. Clear bij override-change voor schone tests.
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ⚠️  BELANGRIJK — ACTIVATIE IS ACCOUNT-LEVEL, NIET DEVICE-LEVEL
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   In productie moet de bracelet-activated-status uit de BACKEND komen
+   (per-user, niet per-telefoon). Concreet: /api/subscription-status
+   uitbreiden met een veld `has_bracelet_activated: boolean` dat true
+   wordt zodra de 12-char code is geredeem'd in /api/bracelet/activate.
+
+   Waarom account-level:
+     - User koopt nieuwe telefoon → install app → login zelfde account
+       → backend zegt "yes activated" → géén code-her-invoer nodig
+     - User installeert op tablet naast telefoon → beide zien activated
+     - Backend is source-of-truth voor "wie heeft welke bracelet"
+     - Verloren-telefoon-scenario: oude device kan via support los-
+       gekoppeld worden (zie deactivate-flow, separate spec)
+
+   Wat deze module DOET in dev-mode:
+     - Lokale AsyncStorage-flag (ACTIVATED_KEY) als dev-mock
+     - Alleen voor operator/tester om de pre- en post-activation UI
+       te previewen zonder echte backend-roundtrip
+     - Productie negeert dit (alleen __DEV__-guards return)
+
+   Backend-implementatie checklist (vibezcore-backend repo):
+     □ Tabel `bracelet_activations` met (user_id, code, activated_at)
+     □ Endpoint POST /api/bracelet/activate valideert + insert + zet
+       user.has_bracelet_activated = true
+     □ GET /api/subscription-status returnt has_bracelet_activated
+     □ useSubscription-hook leest dat veld → useBraceletActivated
+       (productie-versie) baseert op subscription-state ipv lokale flag
+     □ Deactivate-flow: support-handmatig of /api/bracelet/deactivate
+       (operator-keuze pending) — clear het flag-veld backend-side
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const ACTIVATED_KEY = 'vz_dev_bracelet_activated_v1';
 let activatedCached = false;
 let activatedLoaded = false;
@@ -177,22 +222,23 @@ export function useDevBraceletActivated(): boolean {
    operator wist via Settings → Clear all local data wanneer ze een
    schone test willen. */
 
-/** Heeft user RECHT op bracelet-features? = paid (override).
- *  Niet hetzelfde als 'has activated' — voor activation-status gebruik
- *  useBraceletOwner() (die beide combineert). */
-export function useBraceletEntitled(): boolean {
+/** Bracelet-ownership = heeft betaald.
+ *  Iter 9dq v91 (2026-06-03): teruggedraaid naar override-only. Reden:
+ *  operator-feedback "na aankoop+account moet user in PRO omgeving zitten".
+ *  Activation is een SUB-STAP in de bracelet-flow zelf (welk apparaat
+ *  bind ik aan dit account?), niet een gate naar PRO entitlement. Wie
+ *  betaald heeft = is PRO user, ook al moet 'ie nog z'n code invoeren.
+ *
+ *  De activation-status (useDevBraceletActivated) bepaalt vervolgens
+ *  wat de BraceletCard intern toont (pending vs activated), niet of
+ *  de user wel/niet bracelet-owner is.
+ *
+ *  useBraceletEntitled is verwijderd — was hetzelfde concept onder
+ *  andere naam. */
+export function useBraceletOwner(): boolean {
   const override = useDevUserOverride();
   if (override === 'bracelet' || override === 'pro') return true;
   return false;
-}
-
-/** Bracelet-ownership wrapper. Iter 9dq v89: vereist NU zowel entitled
- *  (paid) als activated (code geredeem'd). In productie levert backend
- *  has_bracelet pas true wanneer beide compleet zijn. */
-export function useBraceletOwner(): boolean {
-  const entitled = useBraceletEntitled();
-  const activated = useDevBraceletActivated();
-  return entitled && activated;
 }
 
 loadOnce();

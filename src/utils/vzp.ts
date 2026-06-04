@@ -147,6 +147,24 @@ export async function clearSavedPosition(url: string): Promise<void> {
   persist();
 }
 
+/* Iter 9dq v122 (2026-06-04): wis ALLE saved-positions + in-memory state.
+   Gebruikt door Settings → Clear all local data. AsyncStorage.multiRemove
+   wist de storage-key wel, maar deze module's in-memory `state` bleef
+   stale — getSavedPosition gaf nog steeds oude waarden tot de app
+   volledig restartte. Nu reset state direct ook zonder full restart. */
+export async function clearAllSavedPositions(): Promise<void> {
+  state = {};
+  initialized = true; // mark as loaded zodat geen loadOnce de oude data terughaalt
+  notify();
+  try {
+    const bucket = getCurrentBucket();
+    await AsyncStorage.removeItem(vzpBucketKey(bucket));
+    await AsyncStorage.removeItem(VZP_KEY);
+  } catch {
+    /* swallow */
+  }
+}
+
 /* ── React hook ─────────────────────────────────────────────────────────── */
 
 /**

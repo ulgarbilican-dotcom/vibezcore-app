@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
@@ -63,7 +64,10 @@ import {
 } from '../services/ble-contract';
 import { getBracelet, getSimHooks } from '../services/bracelet';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useBraceletOwner } from '@/utils/dev-user-override';
+import {
+  useBraceletOwner,
+  useDevBraceletActivated,
+} from '@/utils/dev-user-override';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -2852,6 +2856,46 @@ function previewHeaderOptions(title: string, onBack?: () => void) {
   };
 }
 
+/* Iter 9dq v109 (2026-06-04): unified in-screen header voor ALLE accounts.
+   Operator-mandate: bracelet control, active en connect moet voor Audio
+   PRO, Bracelet PRO en Full PRO identiek ogen.
+   - Audio PRO accessed via Stack push (router.push('/bracelet-control')).
+   - Owners (Bracelet/Full PRO) accessed inline (rendered binnen (tabs)/
+     bracelet.tsx) — geen Stack-header.
+   Voor beide flows zetten we Stack.Screen options op headerShown:false
+   en renderen we deze in-page header zodat 't visueel hetzelfde is.
+   Back-arrow logica per state komt uit de aanroepende branch. */
+function BraceletHeader({
+  title,
+  onBack,
+  showBack = true,
+}: {
+  title: string;
+  onBack?: () => void;
+  showBack?: boolean;
+}) {
+  return (
+    <View style={s.customHeader}>
+      {showBack && onBack ? (
+        <Pressable
+          onPress={onBack}
+          style={s.headerSide}
+          hitSlop={12}
+          accessibilityLabel="Back"
+        >
+          <Text style={s.headerBackArrow}>←</Text>
+        </Pressable>
+      ) : (
+        <View style={s.headerSide} />
+      )}
+      <Text style={s.headerTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      <View style={s.headerSide} />
+    </View>
+  );
+}
+
 export default function BraceletControl() {
   const bracelet = getBracelet();
   const sim = getSimHooks(); // null on real hardware
@@ -2869,6 +2913,17 @@ export default function BraceletControl() {
   const isBraceletOwner = useBraceletOwner();
   const { isPro } = useSubscription();
   const showAudioUpsell = isBraceletOwner && !isPro;
+
+  /* Iter 9dq v92 (2026-06-03): activation-state. Bracelet-owners die hun
+     12-char code nog niet hebben ingevoerd zien op ELKE screen-variant
+     (idle, searching, fault, charging) bovenaan een prominente
+     "Activate your bracelet" CTA. Operator-rationale: "klant moet zelf
+     activeren na sign-up — zolang bracelet niet gelinkt is, knop/link
+     op de control-page". Tot activation is er geen echte bracelet aan
+     het account gekoppeld; de preview-content blijft zichtbaar zodat
+     user kan rondkijken vóór activatie. */
+  const isActivated = useDevBraceletActivated();
+  const showActivationPrompt = isBraceletOwner && !isActivated;
 
   /* Iter 9br → 9bx (2026-05-31): non-owner preview-entry komt altijd op
      idle binnen MET een gezonde sim-state. Was alleen Stop-sessie;
@@ -3495,45 +3550,82 @@ export default function BraceletControl() {
   if (conn !== 'connected') {
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <Stack.Screen
-          options={
-            isBraceletOwner
-              ? { title: 'Bracelet' }
-              : previewHeaderOptions('Bracelet control preview')
-          }
+        <Stack.Screen options={{ headerShown: false }} />
+        <BraceletHeader
+          title="Bracelet connect"
+          showBack={router.canGoBack()}
+          onBack={() => router.back()}
         />
         <PreviewBanner />
+        {/* Iter 9dq v93 (2026-06-03): top-banner CTA NIET tonen op
+            disconnected-screen wanneer al activation-required is —
+            de hele screen wordt dan al de activate-flow (titel +
+            sub + primary CTA onderaan). Anders 3× "activate your
+            bracelet" op één scherm. Wel zichtbaar op connected/
+            idle als constant reminder tijdens preview. */}
         <View style={s.searchingWrap}>
           {/* Iter 8b: statische 3-dot replaced door radar-pulse animatie.
               Visualiseert actief zoeken — 3 ringen die expanderen en
-              fade-out, staggered, met centrale dot. */}
-          <SearchingPulse color={Brand.accent} />
-          <Text style={s.searchingTitle}>
-            {conn === 'scanning'
-              ? 'Searching'
-              : conn === 'connecting'
-                ? 'Connecting'
-                : 'Looking for your bracelet'}
-          </Text>
-          <Text style={s.searchingSub}>
-            Make sure your bracelet is nearby and powered on.
-          </Text>
+              fade-out, staggered, met centrale dot.
+              Iter 9dq v93 (2026-06-03): bij niet-geactiveerde owners
+              vervangen we "Searching" door een eerlijker "Not linked yet"
+              messaging — er VALT niets te zoeken want er is geen bracelet
+              aan dit account gekoppeld. */}
+          {showActivationPrompt ? (
+            <>
+              <Text style={s.searchingTitle}>Bracelet not linked</Text>
+              <Text style={s.searchingSub}>
+                Activate your bracelet with your 12-character code to
+                connect it to this account.
+              </Text>
+            </>
+          ) : (
+            <>
+              <SearchingPulse color={Brand.accent} />
+              <Text style={s.searchingTitle}>
+                {conn === 'scanning'
+                  ? 'Searching'
+                  : conn === 'connecting'
+                    ? 'Connecting'
+                    : 'Looking for your bracelet'}
+              </Text>
+              <Text style={s.searchingSub}>
+                Make sure your bracelet is nearby and powered on.
+              </Text>
+            </>
+          )}
         </View>
         <View style={s.bottomBar}>
-          <Pressable
-            style={[s.outlinedBtn, busy && s.btnDisabled]}
-            onPress={onConnect}
-            disabled={busy}
-            accessibilityLabel="Retry searching for bracelet"
-          >
-            {busy ? (
-              <ActivityIndicator color={Brand.text} />
-            ) : (
-              <Text style={s.outlinedBtnText}>
-                {conn === 'disconnected' ? 'Connect' : 'Retry'}
-              </Text>
-            )}
-          </Pressable>
+          {/* Iter 9dq v93 (2026-06-03): wanneer de bracelet nog NIET
+              geactiveerd is, vervangen we de Connect/Retry-knop door
+              een primaire "Activate your bracelet"-CTA. Connect heeft
+              geen zin zolang er geen bracelet aan dit account hangt.
+              Operator-rationale: "connect knop zou misschien niet actief
+              moeten zijn in pro zolang bracelet niet geactiveerd is". */}
+          {showActivationPrompt ? (
+            <Pressable
+              style={s.primaryBtn}
+              onPress={() => router.navigate('/activate-bracelet' as never)}
+              accessibilityLabel="Activate your bracelet with a code"
+            >
+              <Text style={s.primaryBtnText}>Activate your bracelet</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[s.outlinedBtn, busy && s.btnDisabled]}
+              onPress={onConnect}
+              disabled={busy}
+              accessibilityLabel="Retry searching for bracelet"
+            >
+              {busy ? (
+                <ActivityIndicator color={Brand.text} />
+              ) : (
+                <Text style={s.outlinedBtnText}>
+                  {conn === 'disconnected' ? 'Connect' : 'Retry'}
+                </Text>
+              )}
+            </Pressable>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -3543,14 +3635,13 @@ export default function BraceletControl() {
   if (fault) {
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <Stack.Screen
-          options={
-            isBraceletOwner
-              ? { title: 'Bracelet' }
-              : previewHeaderOptions('Bracelet control preview')
-          }
+        <Stack.Screen options={{ headerShown: false }} />
+        <BraceletHeader
+          title="Bracelet error"
+          onBack={onDisconnect}
         />
         <PreviewBanner />
+        {showActivationPrompt && <BraceletActivationCta />}
         <View style={s.faultWrap}>
           <View style={s.faultIcon}>
             <Text style={s.faultIconText}>!</Text>
@@ -3589,14 +3680,13 @@ export default function BraceletControl() {
   if (charging && !sessionActive) {
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <Stack.Screen
-          options={
-            isBraceletOwner
-              ? { title: 'Bracelet' }
-              : previewHeaderOptions('Bracelet control preview')
-          }
+        <Stack.Screen options={{ headerShown: false }} />
+        <BraceletHeader
+          title="Bracelet charging"
+          onBack={onDisconnect}
         />
         <PreviewBanner />
+        {showActivationPrompt && <BraceletActivationCta />}
         <View style={s.chargingWrap}>
           <View style={s.chargingIcon}>
             <Text style={s.chargingIconText}>⚡</Text>
@@ -3669,25 +3759,12 @@ export default function BraceletControl() {
     })();
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        {/* Header tijdens active session.
-            - OWNER (echte sessie): headerShown:false → immersieve focus-
-              modus zoals operator wilde 2026-05-27. Exit via End-knop.
-            - NON-OWNER (preview): header MET ← pijl + gecentreerde titel
-              "Bracelet active preview" → user moet 'm makkelijk uit
-              kunnen, ook tijdens een gesimuleerde sessie. Iter 9bq. */}
-        {/* Iter 9bu (2026-05-31): non-owner active-preview back-pijl
-            beëindigt de sessie en blijft op bracelet-control. Die rendert
-            dan automatisch het idle (Bracelet control preview) screen
-            zoals user verwacht — niet pop naar /bracelet tab. */}
-        <Stack.Screen
-          options={
-            isBraceletOwner
-              ? { headerShown: false }
-              : previewHeaderOptions('Bracelet active preview', () => {
-                  onStop();
-                })
-          }
-        />
+        {/* Active session blijft immersief voor ALLE accounts.
+            Iter 9dq v109 (2026-06-04): voorheen had non-owner een preview-
+            header met back-arrow tijdens active session. Voor unified
+            UX nu ook hidden — eind-knop is de juiste exit (consistent
+            met spec §11 "één focuspunt"). */}
+        <Stack.Screen options={{ headerShown: false }} />
         {/* Ambient tint-overlay — 8% opacity full-screen mood layer.
             pointerEvents="none" zodat touches doorgaan naar onderliggende
             UI. Zit BOVEN Brand.bg maar onder alle content (eerste child). */}
@@ -4053,30 +4130,28 @@ export default function BraceletControl() {
        Voor NON-OWNERS (preview met native Stack header) = ['bottom'] only,
        want de native header consumeert al de top safe-area. Dubbele 'top'
        inset gaf een grote leegte tussen header en content. */
-    <SafeAreaView
-      style={s.root}
-      edges={isBraceletOwner ? ['top', 'bottom'] : ['bottom']}
-    >
-      {/* Iter 9bq (2026-05-31): non-owner krijgt Pattern C preview header
-          met titel "Bracelet control preview" (pre-session/idle fase).
-          De active fase gebruikt "Bracelet active preview" (zie hierboven). */}
-      <Stack.Screen
-        options={
-          isBraceletOwner
-            ? { title: 'Bracelet' }
-            : previewHeaderOptions('Bracelet control preview')
-        }
+    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <BraceletHeader
+        title="Bracelet control"
+        onBack={onDisconnect}
       />
       <PreviewBanner />
+      {showActivationPrompt && <BraceletActivationCta />}
       {/* Iter 9ae (2026-05-31): expliciete paddingBottom voor safe-zone.
           Start-button stond op Audio PRO (non-owner standalone) te dicht
           tegen home-indicator. Math.max zorgt voor minimum 28px buffer
-          ook op Android zonder gesture-bar. */}
+          ook op Android zonder gesture-bar.
+          Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
+          Consistent met player.tsx en andere bottom-CTAs.
+          Iter 9dq v105 (2026-06-04, REVERT): vorige iteraties (v100/v102/
+          v104 — paddingBottom 100/140 + ScrollView-wrapper) hebben
+          owner-inline-render verpest (Start-knop afgesneden, layout
+          stuk). Operator-mandate: terug naar 2 dagen geleden, niet
+          scrollbaar, alles moet in scherm passen. */}
       <View
         style={[
           s.idleSingleScreen,
-          /* Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
-             Consistent met player.tsx en andere bottom-CTAs. */
           { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
         ]}
       >
@@ -4099,9 +4174,27 @@ export default function BraceletControl() {
                   : 'Ready'}
             </Text>
           </View>
-          <Text style={[s.statusBattery, { color: batteryColor }]}>
-            {battery == null ? '—' : `${battery}%`}
-          </Text>
+          {/* Iter 9dq v106 (2026-06-04): Disconnect-link IN status-row.
+              Iter 9dq v108 (2026-06-04): isBraceletOwner-conditie weg.
+              Operator-mandate: bracelet connect/control/active moet
+              voor alle 3 accounts (Audio PRO, Bracelet PRO, Full PRO)
+              EXACT hetzelfde zijn. Toon Disconnect altijd in connected
+              state behalve tijdens pre-activation banner-flow (waar
+              de banner bovenaan al de primary action is). */}
+          <View style={s.statusRightGroup}>
+            <Text style={[s.statusBattery, { color: batteryColor }]}>
+              {battery == null ? '—' : `${battery}%`}
+            </Text>
+            {!showActivationPrompt && (
+              <Pressable
+                onPress={onDisconnect}
+                hitSlop={10}
+                accessibilityLabel="Disconnect bracelet"
+              >
+                <Text style={s.statusDisconnect}>Disconnect</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* ── Choose mode — horizontale scroll van foto-cards (iter 9b)
@@ -4243,7 +4336,7 @@ export default function BraceletControl() {
             min={meta.minMinutes}
             max={meta.maxMinutes}
             color={meta.color}
-            size={92}
+            size={76}
           />
         </View>
         <DurationSlider
@@ -4329,27 +4422,12 @@ export default function BraceletControl() {
           </Pressable>
         </View>
 
-        {/* Audio Library upsell — alleen voor bracelet-only owners
-            (operator-toevoeging 2026-05-30). Subtiele banner, niet
-            opdringerig, hoort logisch binnen het bracelet-flow:
-            "je hebt 't haptic-pad, voeg het mentale pad toe". */}
-        {showAudioUpsell && (
-          <Pressable
-            style={s.audioUpsellCard}
-            onPress={() => router.navigate('/' as never)}
-            accessibilityLabel="Explore the Audio Library to complete your VIBEZCORE system"
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={s.audioUpsellEyebrow}>COMPLETE THE SYSTEM</Text>
-              <Text style={s.audioUpsellTitle}>Add the Audio Library</Text>
-              <Text style={s.audioUpsellSub}>
-                Body resets. Mind follows.{'\n'}
-                Long-term growth alongside your bracelet.
-              </Text>
-            </View>
-            <Text style={s.audioUpsellArrow}>→</Text>
-          </Pressable>
-        )}
+        {/* Iter 9dq v105 (2026-06-04): "Complete the system" Audio
+            Library upsell verwijderd op operator-verzoek
+            ("upsell complete the system is hier niet nodig"). Audio
+            upsell-pad blijft beschikbaar via Account-tab subscription-
+            card. Hier op bracelet-control hoorde 't niet thuis —
+            content moet in scherm passen, geen extra cards. */}
 
         {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
         {sim && <SimDemoBar sim={sim} />}
@@ -4518,6 +4596,36 @@ const s = StyleSheet.create({
     padding: 16,
     paddingTop: 12,
   },
+  /* Iter 9dq v109 (2026-06-04): custom in-screen header voor unified
+     control-flow across Audio PRO / Bracelet PRO / Full PRO. */
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    paddingHorizontal: 8,
+    backgroundColor: Brand.bg,
+  },
+  headerSide: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBackArrow: {
+    color: Brand.text,
+    fontSize: 26,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 28,
+  },
+  headerTitle: {
+    flex: 1,
+    color: Brand.text,
+    fontSize: 17,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
   /* Section-eyebrow (Apple iOS-style section header — small caps, dim) */
   sectionEyebrow: {
     color: 'rgba(255,255,255,0.45)',
@@ -4538,8 +4646,10 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.4,
-    marginTop: 22,
-    marginBottom: 14,
+    /* Iter 9dq v107 (2026-06-04): margins gecomprimeerd zodat
+       History-footer in scherm past zonder scrollen. Was 22/14. */
+    marginTop: 12,
+    marginBottom: 8,
   },
   /* ── Mode card strip (horizontal scroll) ─────────────────────────── */
   /* Iter 9d: expliciete flex-grow op de ScrollView om te voorkomen dat
@@ -4549,7 +4659,8 @@ const s = StyleSheet.create({
      te accommoderen. 148 (alleen card) → 180 (card + button + gap).
      position:relative zodat de fade-gradient absoluut kan positioneren. */
   modeCardScrollWrap: {
-    height: 180,
+    /* Iter 9dq v107: 180 → 156. Card 138 → 116 saves 22. */
+    height: 156,
     position: 'relative',
   },
   /* Iter 9m: fade-gradient over rechter-rand om scroll-affordance te
@@ -4566,8 +4677,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginTop: 22,
-    marginBottom: 14,
+    /* Iter 9dq v107: margins gecomprimeerd. */
+    marginTop: 12,
+    marginBottom: 8,
   },
   modeScrollHint: {
     color: 'rgba(255,255,255,0.40)',
@@ -4586,7 +4698,8 @@ const s = StyleSheet.create({
   /* Iter 9l v2: info-button als capsule onder de geselecteerde card.
      Mode-color tint maakt visueel duidelijk welke card 'm hoort. */
   modeInfoBtn: {
-    marginTop: 8,
+    /* Iter 9dq v107: 8 → 4. */
+    marginTop: 4,
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -4606,8 +4719,9 @@ const s = StyleSheet.create({
     paddingVertical: 2, // ruimte voor selected border
   },
   modeCardSmall: {
+    /* Iter 9dq v107: 138 → 116, saves 22px verticaal. */
     width: 110,
-    height: 138,
+    height: 116,
     borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#1a1a1a',
@@ -4740,7 +4854,8 @@ const s = StyleSheet.create({
   /* Duration kleine fill-circle wrap */
   durCircleSmallWrap: {
     alignItems: 'center',
-    marginBottom: 16,
+    /* Iter 9dq v107: 16 → 8. */
+    marginBottom: 8,
   },
   /* ── Breathwork animaties (iter 9f/g) ──────────────────────────────
      Container voor alle protocol-specifieke animaties. */
@@ -5024,17 +5139,18 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontFamily: BrandFonts.bold,
   },
-  /* Smaller / lower start button (iter 9b) */
+  /* Smaller / lower start button (iter 9b).
+     Iter 9dq v107: marginBottom 14 → 6, padding 14 → 12. */
   startBtnSmall: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,
-    marginTop: 8,
-    marginBottom: 14,
+    marginTop: 6,
+    marginBottom: 6,
     alignSelf: 'center',
     minWidth: '70%',
   },
@@ -5198,7 +5314,23 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    /* Iter 9dq v107: 20 → 10. */
+    marginBottom: 10,
+  },
+  /* Iter 9dq v106 (2026-06-04): Disconnect inline in status-row.
+     statusRightGroup houdt battery% + Disconnect samen rechts. */
+  statusRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  statusDisconnect: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(138,138,138,0.40)',
+    paddingVertical: 4,
   },
   statusDotRow: {
     flexDirection: 'row',

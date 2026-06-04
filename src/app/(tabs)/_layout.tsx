@@ -24,6 +24,7 @@
 
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { requestLibraryReset } from '@/utils/library-reset-intent';
 import { router, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +50,15 @@ function TabButton({
     <Pressable
       onPress={() => {
         if (__DEV__) console.log('TABBUTTON tap:', path);
+        /* Iter 9dq v98 (2026-06-04): tap op Audio Library-tab reset de
+           landing-state in (tabs)/index.tsx zodat bracelet-only users die
+           in de free-library waren doorgeklikt, bij hun terugkeer eerst
+           de korte bracelet-only landing-page zien (operator-spec). Vuurt
+           alleen op echte tab-button-tap — modal-close triggert dit niet
+           (geen focus-effect-misuse). */
+        if (path === '/') {
+          requestLibraryReset();
+        }
         router.navigate(path);
       }}
       accessibilityRole="button"

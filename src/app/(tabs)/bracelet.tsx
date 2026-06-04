@@ -926,9 +926,30 @@ export default function BraceletScreen() {
      teaser-landing, true = toont volledige marketing-pagina. Resets
      elke tab-focus zodat user bij terugkomst weer op de landing belandt. */
   const [exploreUnlocked, setExploreUnlocked] = useState(false);
+  /* Iter 9dq v101 (2026-06-04): ScrollView-refs voor scroll-to-top bij
+     tab-focus. React Navigation unmount tabs niet — de ScrollView houdt
+     z'n eigen scroll-positie vast tussen tab-switches. Operator-
+     screenshot toonde dat de Audio PRO landing-content soms "buiten
+     scherm" stond: alleen "Check it out" + "Back to Audio Library"
+     onder de PREVIEW-banner, met de bracelet-render half off-screen.
+     Oorzaak: user was vorige keer naar de bottom gescrolld, kwam terug,
+     ScrollView nog op die positie. Fix: scrollTo({y:0}) bij elke focus.
+     2 refs nodig omdat de Audio PRO landing-branch een eigen ScrollView
+     heeft (early-return), apart van de hoofd-etalage ScrollView. */
+  const landingScrollRef = useRef<ScrollView>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
   useFocusEffect(
     useCallback(() => {
       setExploreUnlocked(false);
+      /* Scroll beide views naar top — alleen één is in DOM op een gegeven
+         moment (op basis van showAudioProLanding && !exploreUnlocked),
+         maar setExploreUnlocked-reset hierboven kan de andere zo direct
+         mounten. requestAnimationFrame zorgt dat scroll firet NA de
+         re-render zodat de juiste ref een geldige .current heeft. */
+      requestAnimationFrame(() => {
+        landingScrollRef.current?.scrollTo({ y: 0, animated: false });
+        mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+      });
       return undefined;
     }, []),
   );
@@ -1066,6 +1087,7 @@ export default function BraceletScreen() {
             route — Audio PRO landing is ook bracelet-content. */}
         <PreviewBanner />
         <ScrollView
+          ref={landingScrollRef}
           contentContainerStyle={s.landingScroll}
           showsVerticalScrollIndicator={false}
         >
@@ -1137,6 +1159,7 @@ export default function BraceletScreen() {
           testers en vroege owners wier device nog niet aankomt. */}
       <PreviewBanner />
       <ScrollView
+        ref={mainScrollRef}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >

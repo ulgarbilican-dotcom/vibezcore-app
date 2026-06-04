@@ -20,13 +20,18 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import { getToken } from '@/services/auth';
 import {
   activateBracelet,
   normalizeActivationCode,
 } from '@/services/bracelet-activation';
-import { setDevBraceletActivated } from '@/utils/dev-user-override';
+import {
+  awaitDevUserOverrideLoaded,
+  getDevUserOverride,
+  setDevBraceletActivated,
+} from '@/utils/dev-user-override';
 import { Stack, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -45,6 +50,42 @@ export default function ActivateBraceletScreen() {
   const [code, setCode] = useState('');
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  /* Iter 9dq v97 (2026-06-04): auth-guard. Backend
+     /api/bracelet/activate vereist Bearer-token; zonder login krijg je
+     401 → user heeft net 12 chars getypt voor niets. Hier blokkeren
+     we vóór de form: niet ingelogd → "Sign in first"-scherm met knop
+     naar /account. Dev-override 'bracelet'/'pro'/'audio' simuleert
+     signed-in en passeert (zelfde semantiek als useSubscription). */
+  const [authChecked, setAuthChecked] = useState(false);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await awaitDevUserOverrideLoaded();
+      const override = getDevUserOverride();
+      const overrideSignedIn =
+        override === 'bracelet' ||
+        override === 'pro' ||
+        override === 'audio';
+      if (overrideSignedIn) {
+        if (!cancelled) {
+          setNeedsSignIn(false);
+          setAuthChecked(true);
+        }
+        return;
+      }
+      const t = await getToken();
+      if (!cancelled) {
+        setNeedsSignIn(!t);
+        setAuthChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /* Live auto-formatten — gebruiker typt "ABCD1234" en ziet "ABCD-1234"
      terwijl 'ie verder typt. Tolerant voor spaties + dashes + lowercase. */
@@ -73,6 +114,49 @@ export default function ActivateBraceletScreen() {
     setErrMsg(result.message);
     setPhase('error');
   };
+
+  /* ── Auth-guard loading (heel kort: AsyncStorage-token-check) ──── */
+  if (!authChecked) {
+    return (
+      <SafeAreaView style={s.root}>
+        <Stack.Screen options={{ title: 'Activate bracelet' }} />
+        <View style={s.center}>
+          <ActivityIndicator color={Brand.text} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* ── Auth-guard: niet ingelogd ──────────────────────────────────
+     Geen token + geen override-simulatie van sign-in → blokkeer de
+     code-form. User moet eerst account aanmaken/inloggen anders
+     krijgt 'ie van backend toch 401. */
+  if (needsSignIn) {
+    return (
+      <SafeAreaView style={s.root}>
+        <Stack.Screen
+          options={{ title: 'Activate bracelet', headerBackTitle: 'Back' }}
+        />
+        <View style={s.center}>
+          <View style={s.lockCircle}>
+            <Text style={s.lockText}>🔒</Text>
+          </View>
+          <Text style={s.gateTitle}>Sign in first</Text>
+          <Text style={s.gateSub}>
+            Your bracelet is linked to your VIBEZCORE account. Please sign
+            in or create an account before entering your activation code.
+          </Text>
+          <Pressable
+            style={s.btnPrimary}
+            onPress={() => router.replace('/account' as never)}
+            accessibilityLabel="Go to account sign in"
+          >
+            <Text style={s.btnPrimaryText}>Go to sign in</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   /* ── Success-state ─────────────────────────────────────────────── */
   if (phase === 'success') {
@@ -264,5 +348,38 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  /* Auth-guard state — iter 9dq v97 (2026-06-04) */
+  lockCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(58,143,255,0.12)',
+    borderColor: 'rgba(58,143,255,0.40)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  lockText: {
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  gateTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.4,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  gateSub: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 16,
   },
 });

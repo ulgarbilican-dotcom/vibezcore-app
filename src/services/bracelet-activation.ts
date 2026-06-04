@@ -24,7 +24,39 @@
      400:     { error: "invalid_code" | "already_used" | "expired" }
      404:     { error: "code_not_found" }
      401:     { error: "unauthorized" }
-   ─────────────────────────────────────────────────────────────────────── */
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ⚠️  ACTIVATIE = ACCOUNT-LEVEL, ÉÉNMALIG PER BRACELET
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   De 12-char code linkt een fysieke bracelet aan een VIBEZCORE-account
+   (backend store). Eens geredeem'd:
+     - User koopt nieuwe telefoon → login zelfde account → bracelet is
+       nog steeds geactiveerd; alleen de BLE-pairing op de nieuwe
+       telefoon moet nog gebeuren (separate, lokale handshake)
+     - Code kan NIET op een 2e account worden hergebruikt ('already_used'
+       error van backend)
+     - Multi-device support: zelfde account op telefoon + tablet =
+       beide zien activated, beide kunnen connecten
+
+   Daarom moet de backend bij elke /api/subscription-status-call een
+   `has_bracelet_activated`-boolean teruggeven. App leest dat ipv een
+   eigen lokale flag bij te houden.
+
+   Dev-mock flow (deze file in __DEV__):
+     1. activateBracelet(code) → mock 600ms success
+     2. setDevBraceletActivated(true) in dev-user-override.ts
+     3. useDevBraceletActivated() retourneert nu true
+     4. UI toont post-activation state
+
+   Productie-flow (na backend-endpoint):
+     1. activateBracelet(code) → echte POST → backend valideert
+     2. refreshSubscription() → /api/subscription-status haalt fresh
+     3. useSubscription() krijgt has_bracelet_activated=true
+     4. UI toont post-activation state
+
+   De lokale dev-flag verdwijnt zodra de subscription-hook 't kan dragen.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 import { refreshSubscription } from '@/hooks/useSubscription';
 import { apiCall } from '@/utils/api';

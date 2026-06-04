@@ -41,7 +41,11 @@ import {
   usePlayerState,
 } from '@/services/audio-player';
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
-import { getEntryByUrl, useHistory } from '@/utils/history';
+import {
+  formatListenedLabel,
+  getEntryByUrl,
+  useHistory,
+} from '@/utils/history';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -208,15 +212,18 @@ export default function PlayerScreen() {
   const subtitle = session ? SERIES_SUBTITLE[session.series] ?? '' : '';
 
   /* State-pill leest history. ▶ Partly listened (blauw) of ✓ Fully listened
-     (groen). Geen pill als deze sessie nog niet eerder gespeeld is. */
+     (groen) of ✓ Fully listened x2/3/... voor herhaalde afspelingen.
+     Iter 9dq v111 (2026-06-04): label gecentraliseerd in
+     formatListenedLabel — inclusief fc-count. */
   const stateLabel = useMemo(() => {
     if (!session) return null;
-    const entry = getEntryByUrl(session.url);
-    if (!entry) return null;
-    if (entry.full) {
-      return { text: 'Fully listened', color: C.full, glyph: '✓' };
-    }
-    return { text: 'Partly listened', color: C.partial, glyph: '▶' };
+    const label = formatListenedLabel(getEntryByUrl(session.url));
+    if (!label) return null;
+    return {
+      text: label.text,
+      color: label.isFull ? C.full : C.partial,
+      glyph: label.isFull ? '✓' : '▶',
+    };
   }, [session, playerState.session]); // re-eval als history schrijft (via useHistory hierboven)
 
   /* ── Actions ──────────────────────────────────────────────────────────── */
