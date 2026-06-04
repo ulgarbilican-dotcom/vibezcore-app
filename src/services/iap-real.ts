@@ -45,23 +45,18 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Platform } from 'react-native';
-/* TODO: uncomment wanneer react-native-iap is geïnstalleerd.
-   Zonder package gooit deze import een TS-error wat correct gedrag is —
-   dit bestand wordt momenteel niet uit iap.ts geïmporteerd.
-
 import {
   endConnection,
+  ErrorCode,
+  fetchProducts,
   finishTransaction,
-  getSubscriptions,
+  getAvailablePurchases,
   initConnection,
-  PurchaseError,
+  type PurchaseError,
   purchaseErrorListener,
   purchaseUpdatedListener,
-  requestSubscription,
-  type Subscription as RNIapSubscription,
-  type SubscriptionPurchase,
+  requestPurchase,
 } from 'react-native-iap';
-*/
 
 import {
   IAPProvider,
@@ -165,101 +160,132 @@ export class RealIAPProvider implements IAPProvider {
 
   async init(): Promise<void> {
     if (this.initialized) return;
-    /* TODO uncomment wanneer react-native-iap aanwezig is:
-       await initConnection();
-       this.purchaseSub = purchaseUpdatedListener((purchase) => {
-         const mapped = mapToIapPurchase(purchase, false);
-         if (mapped) {
-           this.purchaseListeners.forEach((cb) => {
-             try { cb(mapped); } catch (e) { if (__DEV__) console.warn('[RealIAP] listener threw:', e); }
-           });
-         }
-         finishTransaction({ purchase, isConsumable: false }).catch(() => {});
-       });
-       this.errorSub = purchaseErrorListener((err: PurchaseError) => {
-         if (__DEV__) console.warn('[RealIAP] purchase error:', err);
-       });
-    */
+    /* Iter 9dq v128 (2026-06-04): react-native-iap aangezet voor productie. */
+    await initConnection();
+    this.purchaseSub = purchaseUpdatedListener((purchase) => {
+      const mapped = mapToIapPurchase(purchase, false);
+      if (mapped) {
+        this.purchaseListeners.forEach((cb) => {
+          try {
+            cb(mapped);
+          } catch (e) {
+            if (__DEV__) console.warn('[RealIAP] listener threw:', e);
+          }
+        });
+      }
+      /* finishTransaction acknowledged het purchase bij de store. Voor
+         non-consumables (subscriptions) is dat verplicht binnen 3 dagen
+         anders refundt de store automatisch. */
+      finishTransaction({ purchase, isConsumable: false }).catch(() => {});
+    });
+    this.errorSub = purchaseErrorListener((err: PurchaseError) => {
+      if (__DEV__) console.warn('[RealIAP] purchase error:', err);
+    });
     this.initialized = true;
-    if (__DEV__) {
-      console.warn(
-        '[RealIAP] init() called but react-native-iap is not wired in yet — ' +
-          'see iap-real.ts top-of-file installation steps.'
-      );
-    }
   }
 
   async getProducts(): Promise<IapProduct[]> {
     await this.init();
-    /* TODO uncomment:
-       const raws: RNIapSubscription[] = await getSubscriptions({
-         skus: [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly],
-       });
-       return raws.map(mapToIapProduct).filter((p): p is IapProduct => p !== null);
-    */
-    /* Fallback — geeft lege array zodat UI niet crasht maar er staan
-       geen subs te koop. Pricing-cards tonen dan placeholder-prijzen. */
-    return [];
+    /* v15 API: fetchProducts vervangt getSubscriptions. type:'subs' = abos. */
+    const raws = await fetchProducts({
+      skus: [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly],
+      type: 'subs',
+    });
+    if (!raws) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (raws as any[])
+      .map((r) => mapToIapProduct(r))
+      .filter((p): p is IapProduct => p !== null);
   }
 
   async requestSubscription(tier: AudioTier): Promise<IapPurchaseResult> {
     await this.init();
     const sku = PRODUCT_IDS[tier];
-    /* TODO uncomment:
-       try {
-         const result = await requestSubscription({
-           sku,
-           ...(Platform.OS === 'android' ? { subscriptionOffers: [{ sku, offerToken: '' }] } : {}),
-         });
-         // requestSubscription returns void of een purchase op iOS; Android
-         // fired alleen via de purchaseUpdatedListener. Op iOS leveren we
-         // het direct terug.
-         if (result && !Array.isArray(result)) {
-           const mapped = mapToIapPurchase(result, false);
-           if (mapped) return { ok: true, purchase: mapped };
-         }
-         // Android: wacht op listener. Returnt een "in-progress"-stub —
-         // de subscribe-screen subscribed op onPurchase voor het echte
-         // event.
-         return {
-           ok: false,
-           error: { code: 'unknown', message: 'Purchase initiated — waiting for confirmation event.' },
-         };
-       } catch (e: any) {
-         const code = e?.code;
-         if (code === 'E_USER_CANCELLED') {
-           return { ok: false, error: { code: 'user_cancelled', message: 'Cancelled by user.' } };
-         }
-         if (code === 'E_NETWORK_ERROR') {
-           return { ok: false, error: { code: 'network', message: 'Network error.' } };
-         }
-         if (code === 'E_ALREADY_OWNED') {
-           return { ok: false, error: { code: 'already_owned', message: 'You already own this subscription.' } };
-         }
-         return {
-           ok: false,
-           error: { code: 'unknown', message: e?.message ?? String(e) },
-         };
-       }
-    */
-    return {
-      ok: false,
-      error: {
-        code: 'unavailable',
-        message: 'react-native-iap is not installed yet. See services/iap-real.ts for setup steps.',
-      },
-    };
+    try {
+      /* v15 API: requestPurchase met per-platform request-shape.
+         - Apple: { sku }
+         - Google/Android: { skus: [sku], subscriptionOffers: [{sku, offerToken}] }
+         Android-offerToken halen we op via fetchProducts. iOS heeft het
+         niet nodig. */
+      let androidOfferToken = '';
+      if (Platform.OS === 'android') {
+        const subs = await fetchProducts({ skus: [sku], type: 'subs' });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sub = (subs as any[] | null)?.[0];
+        androidOfferToken =
+          sub?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
+      }
+      const result = await requestPurchase({
+        request: {
+          ...(Platform.OS === 'ios' ? { ios: { sku } } : {}),
+          ...(Platform.OS === 'android'
+            ? {
+                android: {
+                  skus: [sku],
+                  subscriptionOffers: [
+                    { sku, offerToken: androidOfferToken },
+                  ],
+                },
+              }
+            : {}),
+        },
+        type: 'subs',
+      });
+      /* iOS: requestPurchase kan een Purchase-object direct returneren.
+         Android: returnt typisch null/void — purchase event komt via
+         purchaseUpdatedListener. */
+      if (result && !Array.isArray(result)) {
+        const mapped = mapToIapPurchase(result, false);
+        if (mapped) return { ok: true, purchase: mapped };
+      }
+      /* Wacht op listener. subscribe-screen subscribed op onPurchase. */
+      return {
+        ok: false,
+        error: {
+          code: 'unknown',
+          message: 'Purchase initiated — waiting for confirmation event.',
+        },
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      /* v15 error codes via ErrorCode enum (string values). */
+      const code = e?.code;
+      if (code === ErrorCode.UserCancelled) {
+        return {
+          ok: false,
+          error: { code: 'user_cancelled', message: 'Cancelled by user.' },
+        };
+      }
+      if (code === ErrorCode.NetworkError) {
+        return {
+          ok: false,
+          error: { code: 'network', message: 'Network error.' },
+        };
+      }
+      if (code === ErrorCode.AlreadyOwned) {
+        return {
+          ok: false,
+          error: {
+            code: 'already_owned',
+            message: 'You already own this subscription.',
+          },
+        };
+      }
+      return {
+        ok: false,
+        error: { code: 'unknown', message: e?.message ?? String(e) },
+      };
+    }
   }
 
   async restorePurchases(): Promise<IapPurchase[]> {
     await this.init();
-    /* TODO uncomment:
-       const purchases: SubscriptionPurchase[] = await getAvailablePurchases();
-       return purchases
-         .map((p) => mapToIapPurchase(p, true))
-         .filter((p): p is IapPurchase => p !== null);
-    */
-    return [];
+    const purchases = await getAvailablePurchases();
+    if (!purchases) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (purchases as any[])
+      .map((p) => mapToIapPurchase(p, true))
+      .filter((p): p is IapPurchase => p !== null);
   }
 
   onPurchase(callback: (purchase: IapPurchase) => void): () => void {
@@ -270,11 +296,15 @@ export class RealIAPProvider implements IAPProvider {
   }
 
   async teardown(): Promise<void> {
-    /* TODO uncomment:
-       try { this.purchaseSub?.remove(); } catch {}
-       try { this.errorSub?.remove(); } catch {}
-       try { await endConnection(); } catch {}
-    */
+    try {
+      this.purchaseSub?.remove();
+    } catch {}
+    try {
+      this.errorSub?.remove();
+    } catch {}
+    try {
+      await endConnection();
+    } catch {}
     this.purchaseListeners.clear();
     this.initialized = false;
   }
