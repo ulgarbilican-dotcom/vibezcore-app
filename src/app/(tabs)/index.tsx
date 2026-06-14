@@ -2393,11 +2393,13 @@ export default function AudioScreen() {
           {/* Iter 9yy: 3 finelines → 1 compact regeltje. Alle relevante
               prijs/payment-info in één scan-line.
               Iter 9dq v136 (operator 2026-06-15): "14-day money-back"
-              verwijderd — Apple/Google IAP doen geen 14-day money-back
-              guarantee (Apple heeft eigen refund-flow via support, geen
-              vaste termijn), dus de claim was niet houdbaar. */}
+              verwijderd (Apple/Google IAP doen geen 14-day money-back
+              guarantee) + "Prices in USD, incl. VAT" vervangen door
+              accurate, universeel-correcte tekst. Apple/Google
+              localizedPrice = valuta v/d user + tax already included
+              voor die regio (BTW in EU, sales tax in US, etc). */}
           <Text style={s.fineline}>
-            Prices in USD, incl. VAT
+            Prices incl. tax (varies by country)
           </Text>
 
           <Text style={s.secureRow}>
