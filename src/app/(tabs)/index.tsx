@@ -2379,7 +2379,7 @@ export default function AudioScreen() {
             <Text style={s.billedByLine}>Google Play</Text>
           </View>
           <Text style={s.billedByMeta}>
-            Billed securely · Cancel anytime
+            Billed securely by your store account
           </Text>
 
           {/* Iter 9yy: checks-row direct onder CTA — voelt als één
