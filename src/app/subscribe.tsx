@@ -43,6 +43,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -55,6 +56,52 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 type Mode = 'signup' | 'signin';
 type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 'error';
+
+/* Iter 9dq v134 (2026-06-14): mapt rauwe technische errors (auth-proxy
+   "upstream fetch failed", IAP "network error", Supabase 401's, etc.)
+   naar leesbare user-facing tekst. Operator-feedback 2026-06-14: gast
+   zag "upstream fetch failed" na tap op Get Yearly — niet acceptabel.
+   Defensief: onbekende strings vallen terug op een veilige default ipv
+   de raw error te tonen (kan tokens/IDs lekken). */
+const SUPPORT_EMAIL = 'support@vibezcore.com';
+function friendlyError(raw: string | null | undefined): string {
+  if (!raw) return 'Something went wrong. Please try again.';
+  const t = String(raw).toLowerCase();
+  if (
+    t.includes('upstream') ||
+    t.includes('fetch failed') ||
+    t.includes('failed to fetch') ||
+    t.includes('network') ||
+    t.includes('timeout') ||
+    t.includes('econnrefused') ||
+    t.includes('econnreset') ||
+    t.includes('socket')
+  ) {
+    return "We couldn't reach our servers. Check your connection and try again.";
+  }
+  if (t.includes('already') && (t.includes('exist') || t.includes('registered'))) {
+    return 'An account with this email already exists. Try signing in instead.';
+  }
+  if (t.includes('invalid') && (t.includes('password') || t.includes('credentials') || t.includes('login'))) {
+    return 'Email or password is incorrect.';
+  }
+  if (t.includes('email') && t.includes('invalid')) {
+    return "That email address doesn't look valid.";
+  }
+  if (t.includes('weak') && t.includes('password')) {
+    return 'Please choose a stronger password (8+ characters).';
+  }
+  if (t.includes('not available') || t.includes('unavailable') || t.includes('store')) {
+    return 'In-app purchases are not available right now. Please try again later.';
+  }
+  if (t.includes('rate limit') || t.includes('too many')) {
+    return 'Too many attempts. Wait a moment and try again.';
+  }
+  /* Onbekend → veilige default. Bewust GEEN raw-passthrough: raw kan
+     stack-traces of identifiers bevatten. Operator ziet de raw via
+     __DEV__ console.warn in de roepende code. */
+  return 'Something went wrong. Please try again — or contact support if it keeps happening.';
+}
 
 export default function SubscribeScreen() {
   const params = useLocalSearchParams<{ tier?: string; devForceSignedIn?: string }>();
@@ -129,7 +176,10 @@ export default function SubscribeScreen() {
         setPhase('form');
         return;
       }
-      setErrMsg(result.error.message || 'Purchase failed. Please try again.');
+      if (__DEV__) {
+        console.warn('[subscribe] purchase failed (raw):', result.error.message);
+      }
+      setErrMsg(friendlyError(result.error.message));
       setPhase('error');
       return;
     }
@@ -182,7 +232,8 @@ export default function SubscribeScreen() {
     const fn = mode === 'signup' ? authSignup : authLogin;
     const r = await fn(email.trim(), pw);
     if (!r.ok) {
-      setErrMsg(r.error);
+      if (__DEV__) console.warn(`[subscribe] ${mode} failed (raw):`, r.error);
+      setErrMsg(friendlyError(r.error));
       setPhase('form');
       return;
     }
@@ -254,6 +305,16 @@ export default function SubscribeScreen() {
           >
             <Text style={s.btnPrimaryText}>Try again</Text>
           </Pressable>
+          <Pressable
+            style={s.linkBtn}
+            onPress={() => {
+              void Linking.openURL(
+                `mailto:${SUPPORT_EMAIL}?subject=VIBEZCORE%20subscribe%20issue`,
+              );
+            }}
+          >
+            <Text style={s.linkText}>Contact support</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -323,7 +384,8 @@ export default function SubscribeScreen() {
         );
       }
     } else {
-      Alert.alert('Could not restore', result.error);
+      if (__DEV__) console.warn('[subscribe] restore failed (raw):', result.error);
+      Alert.alert('Could not restore', friendlyError(result.error));
     }
   };
   const RestoreLink = (
@@ -418,7 +480,10 @@ export default function SubscribeScreen() {
         <TextInput
           style={s.input}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (errMsg) setErrMsg(null);
+          }}
           placeholder="you@example.com"
           placeholderTextColor={Brand.textDim}
           autoCapitalize="none"
@@ -433,7 +498,10 @@ export default function SubscribeScreen() {
           <TextInput
             style={[s.input, s.pwInput]}
             value={pw}
-            onChangeText={setPw}
+            onChangeText={(v) => {
+              setPw(v);
+              if (errMsg) setErrMsg(null);
+            }}
             placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••'}
             placeholderTextColor={Brand.textDim}
             secureTextEntry={!showPw}
@@ -451,6 +519,18 @@ export default function SubscribeScreen() {
             <Text style={s.pwToggleText}>{showPw ? 'Hide' : 'Show'}</Text>
           </Pressable>
         </View>
+
+        {/* Iter 9dq v134 (2026-06-14): live password-hint voor signup. Begint
+            dim, wordt success-groen zodra de 8-char drempel is gehaald. Geen
+            tekstuele claim over "strength" — alleen lengte, want we eisen
+            niet meer (operator-policy: geen friction op signup). */}
+        {mode === 'signup' && pw.length > 0 && (
+          <Text style={[s.pwHint, pw.length >= 8 && s.pwHintMet]}>
+            {pw.length >= 8
+              ? 'Looks good'
+              : `${pw.length}/8 characters`}
+          </Text>
+        )}
 
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
@@ -595,6 +675,15 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     marginTop: 12,
+  },
+  pwHint: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    marginTop: 8,
+  },
+  pwHintMet: {
+    color: Brand.success,
   },
   btnPrimary: {
     backgroundColor: Brand.accent,

@@ -181,11 +181,11 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'audio',
     question: 'What topics do the audio sessions cover?',
     answer:
-      "The VIBEZCORE Audio Library covers four core domains:\n\n" +
-      "**Mindset** — cognitive reframing, belief systems, identity, and mental flexibility.\n\n" +
-      "**Resilience** — stress regulation, emotional recovery, adversity response, and nervous system awareness.\n\n" +
-      "**Social Mastery** — communication, influence, presence, reading social dynamics, and connection.\n\n" +
-      "**Personal Growth** — habit formation, self-discipline, purpose, focus, and intentional living.",
+      "The VIBEZCORE Audio Library covers four core pillars:\n\n" +
+      "**Psychological Resilience** — Build what cannot break.\n\n" +
+      "**Inner Sovereignty** — Master what is yours.\n\n" +
+      "**Social Mastery** — Command without force.\n\n" +
+      "**Strategic Execution & Wealth** — Engineer your autonomy.",
   },
   {
     id: 'audio-beginners',

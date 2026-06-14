@@ -180,3 +180,33 @@ export function useShowableLastPlayed(): LastPlayed | null {
   }, []);
   return snap;
 }
+
+/**
+ * Iter 2026-06-05: laadbaar-vlag voor consumers die moeten WACHTEN tot
+ * de AsyncStorage-load voltooid is voordat ze besluiten "geen entry
+ * aanwezig" (bv. WelcomeBackPopup die anders te vroeg markSkipped
+ * aanriep tijdens cold-start race).
+ *
+ * Returnt:
+ *   - false zolang de eerste loadOnce nog niet klaar is
+ *   - true zodra `initialized` op true staat
+ *
+ * Wijzigt niets aan bestaande state / save-logic — puur read-side helper.
+ */
+export function useLastPlayedReady(): boolean {
+  const [ready, setReady] = useState(initialized);
+  useEffect(() => {
+    if (initialized) {
+      setReady(true);
+      return;
+    }
+    let cancelled = false;
+    loadOnce().then(() => {
+      if (!cancelled) setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return ready;
+}

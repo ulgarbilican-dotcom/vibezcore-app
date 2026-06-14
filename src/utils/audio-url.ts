@@ -89,6 +89,26 @@ export async function getSignedAudioUrl(
     throw new SignedUrlError('SIGN_FAILED', `invalid raw url: ${rawUrl}`);
   }
 
+  /* ════════════════════════════════════════════════════════════════════════
+     Iter 9dq v133 (2026-06-14): DEV bypass voor alle Bunny CDN URLs.
+
+     ALLE vibezcore-audio.b-cdn.net URLs worden direct teruggegeven zonder
+     backend signing. Werkt zoals de website widget — Bunny is een publieke
+     CDN, signing is alleen voor backend-zijde gating/tracking.
+
+     Reden: meerdere paths (oude én nieuwe /audio-new/) staan momenteel niet
+     consistent in de backend audio_sessions tabel → 404 errors. Voor dev
+     fase: alles direct afspelen om te kunnen testen.
+
+     ⚠️ OPERATOR-TODO VÓÓR LAUNCH:
+     - Zorg dat alle audio paths in backend audio_sessions tabel staan
+     - Verwijder onderstaande bypass om normale signing/gating te herstellen
+     - PRO gating werkt NU NIET — elke user kan alle content afspelen
+     ════════════════════════════════════════════════════════════════════════ */
+  if (/^https?:\/\/vibezcore-audio\.b-cdn\.net\//.test(rawUrl)) {
+    return rawUrl;
+  }
+
   /* Cache-lookup: hit en nog geldig (met safety margin) → return direct,
      skip backend roundtrip volledig. Saves 200-1500ms per repeat-play. */
   const ck = cacheKey(pathname, preview);

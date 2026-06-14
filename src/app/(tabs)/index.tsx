@@ -41,6 +41,8 @@ import {
   useHistory,
 } from '@/utils/history';
 import { isNew } from '@/utils/isNew';
+import { BREATHWORK_CHOOSER } from '@/data/breathwork-modes';
+import { getModeMeta } from '@/services/ble-contract';
 import { useGatedOpenSession } from '@/utils/openSession';
 import { subscribeLibraryReset } from '@/utils/library-reset-intent';
 import {
@@ -89,8 +91,11 @@ if (
    handmatig naar Audio Library tab (waar landing-page verschijnt). */
 let braceletOwnerColdStartRedirected = false;
 import {
+  PILLAR_META,
+  PILLAR_ORDER,
   SERIES,
   SERIES_PHOTO,
+  SERIES_PILLAR,
   SERIES_SUB,
   SERIES_SUBTITLE,
   SESSIONS,
@@ -108,7 +113,14 @@ const C = {
   accent: '#3a8fff',
   arrow: 'rgba(58,143,255,0.7)',
   border: '#1a1a1a',
-  free: '#4ade80',
+  /* Iter 2026-06-05: kleur-hiërarchie cleanup (operator-feedback).
+     - WIT = default state (info, "vrij beschikbaar")
+     - BLAUW (#3a8fff) = active state (playing, in progress)
+     - GROEN (#4ade80) = completion state (fully listened) — alleen daar
+     Vroeger was C.free groen — gaf te veel kleur overal. Nu witte tint
+     met subtiele border zodat FREE-label nog informatie geeft zonder
+     het accent-systeem te verwateren. */
+  free: 'rgba(255,255,255,0.72)',
   rowBg: '#0d0d0d',
 };
 
@@ -153,27 +165,31 @@ const UPSELL_AUTO_HIDE_MS = 5_000;
 const PILLARS = [
   {
     num: '01',
-    name: 'Strategic Wealth',
-    img: `${CDN}/Strategic%20wealth.jpg`,
-    desc: 'Build wealth that compounds — money, leverage, the long game.',
+    name: 'Psychological Resilience',
+    key: 'resilience' as const,
+    img: `${CDN}/Psychological%20Resilience%20correct.jpg`,
+    desc: 'Build what cannot break.',
   },
   {
     num: '02',
-    name: 'Psychological Resilience',
-    img: `${CDN}/Psychological%20Resilience%20correct.jpg`,
-    desc: 'The mind that doesn\'t break under pressure. Composure as a trained skill.',
+    name: 'Inner Sovereignty',
+    key: 'sovereignty' as const,
+    img: `${CDN}/Stoic%20mastery.jpg`,
+    desc: 'Master what is yours.',
   },
   {
     num: '03',
     name: 'Social Mastery',
+    key: 'social' as const,
     img: `${CDN}/Social%20mastery.jpg`,
-    desc: 'Read the room. Speak with weight. Build alignment.',
+    desc: 'Command without force.',
   },
   {
     num: '04',
-    name: 'Stoic Fortitude',
-    img: `${CDN}/Stoic%20mastery.jpg`,
-    desc: 'Discipline over impulse. Direction over reaction.',
+    name: 'Strategic Execution & Wealth',
+    key: 'drive' as const,
+    img: `${CDN}/Strategic%20wealth.jpg`,
+    desc: 'Engineer your autonomy.',
   },
 ];
 
@@ -527,9 +543,21 @@ export default function AudioScreen() {
   const [subExpanded, setSubExpanded] = useState<Record<string, boolean>>({});
   /* Iter 9aaa: pillar-detail modal state. Tap op pillar-card → open
      bottom-sheet met korte uitleg. Apple-style minimal. */
+  /* Iter 9dq v130 (2026-06-14): pillar-filter state. Tap op pillar-card =
+     filter library tot die pijler. Tap nogmaals = un-filter. Default = null
+     (toon alle pijlers gegroepeerd). */
+  const [activePillarFilter, setActivePillarFilter] = useState<
+    'resilience' | 'sovereignty' | 'social' | 'drive' | 'tools' | null
+  >(null);
+
   const [detailPillar, setDetailPillar] = useState<
     (typeof PILLARS)[number] | null
   >(null);
+  /* Free Breathwork chooser modal — opent vanuit de discovery-card
+     onderaan de Audio tab. Toont de 5 breathwork-protocols zodat de
+     gebruiker de juiste state kiest vóór navigatie naar bracelet-control
+     (met ?mode=X&breathwork=1 zodat de juiste breathwork pre-selected is). */
+  const [breathChooserOpen, setBreathChooserOpen] = useState(false);
   /* Iter 9bbb: safe-area inset voor pillar-modal bottom (home-indicator
      iOS / gesture-bar Android moeten ruimte krijgen). */
   const safeInsets = useSafeAreaInsets();
@@ -614,6 +642,9 @@ export default function AudioScreen() {
   const searchBarYRef = useRef<number | null>(null);
   const seriesPositions = useRef<Record<string, number>>({});
   const libListYRef = useRef<number>(0);
+  /* Iter 9dq v131 (2026-06-14): Y van de pillar-cards grid t.o.v. de
+     ScrollView. Gebruikt door "Back to pillars" knop om terug te scrollen. */
+  const pillarsYRef = useRef<number>(0);
   /* Y-positie van de pricing-section (buyBlock). Doel voor scroll-intent
      'pricing' vanuit de player ("Full library access" / "Get Full Access"). */
   const pricingYRef = useRef<number | null>(null);
@@ -878,7 +909,7 @@ export default function AudioScreen() {
             >
               <Text style={s.bLandingPrimaryLinkText}>
                 {needsAudioUpsell
-                  ? 'Get the full Audio Library →'
+                  ? 'Get full Audio Library →'
                   : 'Enter the library →'}
               </Text>
             </Pressable>
@@ -1013,33 +1044,204 @@ export default function AudioScreen() {
               </Text>
             </View>
 
-            {/* ── 4 PIJLERS ── bron regel 2705-2738 ──
-                Iter 9aaa: Pressable + onPress opent detail-popup met
-                korte uitleg per pillar. */}
-            <View style={s.pillarsGrid}>
-              {PILLARS.map((p) => (
-                <Pressable
-                  key={p.num}
-                  style={s.pillar}
-                  onPress={() => setDetailPillar(p)}
-                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-                  accessibilityLabel={`Learn about ${p.name}`}
-                >
-                  <Image source={{ uri: p.img }} style={s.pillarImg} resizeMode="cover" />
-                  <View style={s.pillarOverlay} />
-                  <View style={s.pillarTextWrap}>
-                    <Text style={s.pillarNum}>{p.num}</Text>
+            {/* ── 4 PIJLERS ──
+                Iter 9dq v131 (2026-06-14): tap = filter + auto-scroll naar
+                library section (zoals website). Tap dezelfde pillar opnieuw
+                = un-filter. Long-press opent detail-popup (legacy). Card-content
+                volgt website-pattern: PILLAR 0X label boven, naam + tagline
+                onder, VIEW X SESSIONS + pijl onderaan. */}
+
+            {/* Subtiele hint boven de pillar cards — signaleert dat reeksen
+                onder elke card zitten. Operator-feedback 2026-06-14, gelijk
+                aan website .pillar-cards-hint. */}
+            <Text
+              style={{
+                color: C.dim,
+                fontFamily: 'Inter_500Medium',
+                fontSize: 12,
+                textAlign: 'center',
+                letterSpacing: 0.4,
+                marginTop: 8,
+                marginBottom: 14,
+                paddingHorizontal: 20,
+                opacity: 0.85,
+              }}
+            >
+              Tap a card to start or continue your journey
+            </Text>
+
+            <View
+              style={s.pillarsGrid}
+              onLayout={(e) => {
+                pillarsYRef.current = e.nativeEvent.layout.y;
+              }}
+            >
+              {PILLARS.map((p) => {
+                const isActiveFilter = activePillarFilter === p.key;
+                /* Aantal sessies in deze pillar — uit SESSIONS gefilterd via
+                   SERIES_PILLAR. Toont "VIEW X SESSIONS" zoals web. */
+                const sessionCount = SESSIONS.filter(
+                  (sess) => SERIES_PILLAR[sess.series] === p.key,
+                ).length;
+                return (
+                  <Pressable
+                    key={p.num}
+                    style={[
+                      s.pillar,
+                      { height: 200 },
+                      isActiveFilter && {
+                        borderWidth: 2,
+                        borderColor: C.accent,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (isActiveFilter) {
+                        /* Toggle off: clear filter, geen scroll (gebruiker
+                           is al in deze view en wil mogelijk "alles" zien). */
+                        setActivePillarFilter(null);
+                      } else {
+                        /* Set filter + auto-scroll naar library section. */
+                        setActivePillarFilter(p.key);
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => {
+                            scrollViewRef.current?.scrollTo({
+                              y: Math.max(0, libListYRef.current - 24),
+                              animated: true,
+                            });
+                          });
+                        });
+                      }
+                    }}
+                    onLongPress={() => setDetailPillar(p)}
+                    android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+                    accessibilityLabel={`Filter library to ${p.name}`}
+                  >
+                    <Image source={{ uri: p.img }} style={s.pillarImg} resizeMode="cover" />
+                    {/* Subtiele dark gradient onderaan voor tekst-leesbaarheid
+                        (operator 2026-06-14): geen volledige overlay meer,
+                        alleen een soft fade van transparant → donker over de
+                        onderste 60% zodat foto's licht blijven maar tekst
+                        scherp leesbaar is zonder visueel rommelige shadows. */}
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.85)']}
+                      locations={[0, 1]}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: '65%',
+                      }}
+                      pointerEvents="none"
+                    />
+                    {/* Subtiele top fade — geeft de PILLAR 0X label een
+                        leesbare context zonder de foto te verzwaren. */}
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)']}
+                      locations={[0, 1]}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        height: 50,
+                      }}
+                      pointerEvents="none"
+                    />
+                    {/* PILLAR 0X label — top-left, uppercase tracked tekst */}
                     <Text
-                      style={s.pillarName}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
+                      style={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 14,
+                        color: 'rgba(255,255,255,0.85)',
+                        fontFamily: 'Inter_800ExtraBold',
+                        fontSize: 10,
+                        letterSpacing: 2,
+                      }}
                     >
-                      {p.name}
+                      {`PILLAR ${p.num}`}
                     </Text>
-                  </View>
-                </Pressable>
-              ))}
+                    {/* Bottom block — vaste hoogte met space-between layout.
+                        Top: naam + tagline tight tegen elkaar.
+                        Bottom: VIEW X SESSIONS + ↓ pijl.
+                        Naam start altijd op exact dezelfde Y over alle 4
+                        cards (anchor = top van block, block bottom = 12). */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: 14,
+                        right: 14,
+                        bottom: 12,
+                        height: 92,
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View>
+                        <Text
+                          style={[
+                            s.pillarName,
+                            {
+                              fontSize: 14,
+                              lineHeight: 17,
+                              color: '#fff',
+                              letterSpacing: -0.3,
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {p.name}
+                        </Text>
+                        <Text
+                          style={{
+                            color: 'rgba(255,255,255,0.75)',
+                            fontFamily: 'Inter_500Medium',
+                            fontSize: 11,
+                            marginTop: 3,
+                            letterSpacing: 0.1,
+                            lineHeight: 14,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {p.desc}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingTop: 8,
+                          borderTopWidth: 1,
+                          borderTopColor: 'rgba(255,255,255,0.18)',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: 'rgba(255,255,255,0.65)',
+                            fontFamily: 'Inter_700Bold',
+                            fontSize: 9.5,
+                            letterSpacing: 1.4,
+                          }}
+                        >
+                          {`VIEW ${sessionCount} SESSIONS`}
+                        </Text>
+                        <Text
+                          style={{
+                            color: isActiveFilter
+                              ? C.accent
+                              : 'rgba(255,255,255,0.65)',
+                            fontFamily: 'Inter_700Bold',
+                            fontSize: 14,
+                          }}
+                        >
+                          ↓
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
 
             {/* ── EMERSON-QUOTE ── bron regel 2742-2755 ── */}
@@ -1060,7 +1262,7 @@ export default function AudioScreen() {
 
             {/* ── EXPLORE SERIES — header-blok ── */}
             <View style={s.exploreHead}>
-              <Text style={s.exploreEyebrow}>— EXPLORE SERIES —</Text>
+              <Text style={s.exploreEyebrow}>— EXPLORE {SERIES.length} SERIES —</Text>
               <Text style={s.exploreH1}>Not just inspiration.</Text>
               <Text style={s.exploreH1}>Real transformation.</Text>
               <Text style={s.exploreMetaText}>
@@ -1389,9 +1591,116 @@ export default function AudioScreen() {
             <>
               {/* Iter 9pp: navTiles verplaatst naar boven (samen met search-
                   utility zone). Series-cards starten direct na de hero-block. */}
-              {/* Series-card-rendering — altijd 12 cards, ongefilterd
-                 (Audio Library is in default-modus de homepage). */}
-              {SERIES.map((ser) => {
+              {/* Iter 9dq v129 (2026-06-14): per-pillar grouping. Outer loop
+                  itereert PILLAR_ORDER, inner blijft per-serie rendering. Geen
+                  enkele wijziging aan de card-content, player, autoplay,
+                  paywall — alleen visuele groepering + section headers. */}
+              {/* Back-to-pillars knop — alleen zichtbaar wanneer een filter
+                  actief is. Brengt gebruiker terug naar de pillar-grid om
+                  een nieuwe pijler te kiezen. */}
+              {activePillarFilter && (
+                <Pressable
+                  onPress={() => {
+                    setActivePillarFilter(null);
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => {
+                        scrollViewRef.current?.scrollTo({
+                          y: Math.max(0, pillarsYRef.current - 24),
+                          animated: true,
+                        });
+                      });
+                    });
+                  }}
+                  style={{
+                    alignSelf: 'flex-start',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    marginHorizontal: 16,
+                    marginBottom: 14,
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(58,143,255,0.10)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(58,143,255,0.32)',
+                  }}
+                  android_ripple={{ color: 'rgba(58,143,255,0.20)' }}
+                >
+                  <Text
+                    style={{
+                      color: C.accent,
+                      fontFamily: 'Inter_700Bold',
+                      fontSize: 14,
+                    }}
+                  >
+                    ↑
+                  </Text>
+                  <Text
+                    style={{
+                      color: C.accent,
+                      fontFamily: 'Inter_700Bold',
+                      fontSize: 11.5,
+                      letterSpacing: 1.4,
+                    }}
+                  >
+                    BACK TO PILLARS
+                  </Text>
+                </Pressable>
+              )}
+              {PILLAR_ORDER.map((pillar) => {
+                /* Destination flow (operator-besluit 2026-06-14): default state
+                   toont ALLEEN pillar cards, geen series. Series verschijnen
+                   pas wanneer luisteraar een pillar tapt. Matcht website UX
+                   en voorkomt cognitive overload door 25+ cards. */
+                if (activePillarFilter !== pillar) {
+                  return null;
+                }
+                const pillarSeries = SERIES.filter(
+                  (s) => SERIES_PILLAR[s.name] === pillar,
+                );
+                if (pillarSeries.length === 0) return null;
+                const pillarMeta = PILLAR_META[pillar];
+                return (
+                  <View
+                    key={`pillar-${pillar}`}
+                    style={{ marginTop: pillar === PILLAR_ORDER[0] ? 0 : 24 }}
+                  >
+                    {/* Pijler-section header — eyebrow + tagline, Apple-stijl
+                        gecentreerd. Volgt visuele taal van exploreEyebrow. */}
+                    <View
+                      style={{
+                        alignItems: 'center',
+                        marginBottom: 16,
+                        paddingHorizontal: 12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: C.accent,
+                          fontFamily: 'Inter_700Bold',
+                          fontSize: 11,
+                          letterSpacing: 2,
+                          textTransform: 'uppercase',
+                          marginBottom: 6,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {`${pillarMeta.num} · ${pillarMeta.name}`}
+                      </Text>
+                      <Text
+                        style={{
+                          color: C.text,
+                          fontFamily: 'Inter_600SemiBold',
+                          fontSize: 14,
+                          letterSpacing: -0.2,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {pillarMeta.tagline}
+                      </Text>
+                    </View>
+                    {pillarSeries.map((ser) => {
             const photo = SERIES_PHOTO[ser.name];
             const eyebrow = SERIES_SUBTITLE[ser.name];
             const subline = SERIES_SUB[ser.name];
@@ -1558,7 +1867,7 @@ export default function AudioScreen() {
                       android_ripple={{
                         color: isActive
                           ? 'rgba(58,143,255,0.18)'
-                          : 'rgba(74,222,128,0.18)',
+                          : 'rgba(255,255,255,0.10)',
                       }}
                     >
                       <View
@@ -1575,12 +1884,12 @@ export default function AudioScreen() {
                             style={s.freePlayBtnGradient}
                           />
                         ) : null}
-                        {/* FIX 10: SVG-shape glyph. Kleur groen in rust
-                           (matched #4ade80), wit op blauwe gradient in
-                           active state. */}
+                        {/* FIX 10: SVG-shape glyph. Iter 2026-06-05:
+                           kleur-cleanup — default state is nu wit (was
+                           groen). Blauwe accent op active state blijft. */}
                         <PlayPauseGlyph
                           size={14}
-                          color={isActive ? '#ffffff' : '#4ade80'}
+                          color={isActive ? '#ffffff' : '#ffffff'}
                           playing={isPlayingHere}
                         />
                       </View>
@@ -1753,6 +2062,61 @@ export default function AudioScreen() {
               </View>
             );
           })}
+                    {/* Tweede back-to-pillars knop — na de laatste series
+                        card in de gefilterde pijler. Voorkomt dat gebruiker
+                        helemaal naar boven moet scrollen vanaf de onderste
+                        card. Subtiele variant: minder prominent dan de
+                        bovenste knop, maar zelfde functie. */}
+                    {activePillarFilter === pillar && (
+                      <Pressable
+                        onPress={() => {
+                          setActivePillarFilter(null);
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                              scrollViewRef.current?.scrollTo({
+                                y: Math.max(0, pillarsYRef.current - 24),
+                                animated: true,
+                              });
+                            });
+                          });
+                        }}
+                        style={{
+                          alignSelf: 'center',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          marginTop: 18,
+                          marginBottom: 8,
+                          borderRadius: 999,
+                        }}
+                        android_ripple={{ color: 'rgba(58,143,255,0.12)' }}
+                      >
+                        <Text
+                          style={{
+                            color: C.dim,
+                            fontFamily: 'Inter_700Bold',
+                            fontSize: 12,
+                          }}
+                        >
+                          ↑
+                        </Text>
+                        <Text
+                          style={{
+                            color: C.dim,
+                            fontFamily: 'Inter_600SemiBold',
+                            fontSize: 12,
+                            letterSpacing: 0.8,
+                          }}
+                        >
+                          Back to pillars
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
 
           {/* ── 13e card — VIBEZCORE ROADMAP / "What's Coming Next" ──
               Iter 9dq v48 (2026-06-03): operator-besluit — card tijdelijk
@@ -2064,6 +2428,57 @@ export default function AudioScreen() {
             library voelde 't dubbele opvulling. Styles blijven in de
             stylesheet voor evt. rollback. */}
 
+        {/* Free Breathwork CTA — Apple-stijl discovery card, gericht
+            naar /bracelet-control (de bestaande breathwork-pagina).
+            Zichtbaar voor iedereen (free, signed-in, PRO) — breathwork
+            is altijd gratis en losstaand van bracelet/audio. Geen koppeling
+            in copy: alleen de 5 states + "Always free".
+            Iter 2026-06-05: verbergen voor bracelet owners (operator-
+            feedback). Zij hebben breathwork al in handen via de Bracelet-
+            tab — onnodig om hier opnieuw te pushen. Alle andere accounts
+            (free, signed-in zonder bracelet, audio PRO) zien de card wel. */}
+        {!searchActive && !isBraceletOwner && (
+          <Pressable
+            style={s.breathDiscoverCard}
+            onPress={() => router.push('/breath')}
+            accessibilityLabel="Open breathwork tab"
+          >
+            {/* Iter 2026-06-05 v4: full-bleed hero card. Foto vult hele
+                card met cover (geen letterbox), alle content (label,
+                states, meta, button) overlaid onderaan met sterke
+                gradient. Operator-feedback: foto groter + volledig +
+                tekst en knop op foto. */}
+            <Image
+              source={{
+                uri: 'https://vibezcore-audio.b-cdn.net/images/Psychological%20Resilience.png',
+              }}
+              style={s.breathDiscoverImage}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.75)']}
+              locations={[0, 0.50, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={s.breathDiscoverHeroGradient}
+              pointerEvents="none"
+            />
+            <View style={s.breathDiscoverHeroText}>
+              <Text style={s.breathDiscoverLabel}>Free breathwork</Text>
+              <Text style={s.breathDiscoverStates}>
+                Energy. Focus. Calm. Clarity. Rest.
+              </Text>
+              <Text style={s.breathDiscoverMeta}>
+                Five techniques. Always free.
+              </Text>
+              <View style={s.breathDiscoverCta}>
+                <Text style={s.breathDiscoverCtaText}>Open Breathwork</Text>
+                <Text style={s.breathDiscoverCtaArrow}>→</Text>
+              </View>
+            </View>
+          </Pressable>
+        )}
+
         {/* Iter 9dq v46 (2026-06-03): subtle "Already a member? Sign in"
             footer-link voor uitgelogde Free/Guest users. Vervangt de
             agressieve banner bovenaan die we eerder verwijderden — geeft
@@ -2091,6 +2506,146 @@ export default function AudioScreen() {
         )}
 
       </ScrollView>
+
+      {/* ── Floating "Back to pillars" chip — altijd zichtbaar wanneer een
+          pijler-filter actief is, ongeacht de scroll-positie. Vanuit elke
+          series card kan luisteraar direct terug naar de pillar-grid.
+          Subtiele blur-glass pill rechtsboven, blokkeert content niet. ── */}
+      {activePillarFilter && (
+        <Pressable
+          onPress={() => {
+            setActivePillarFilter(null);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                scrollViewRef.current?.scrollTo({
+                  y: Math.max(0, pillarsYRef.current - 24),
+                  animated: true,
+                });
+              });
+            });
+          }}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 16,
+            zIndex: 100,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: 'rgba(20,20,20,0.85)',
+            borderWidth: 1,
+            borderColor: 'rgba(58,143,255,0.40)',
+            shadowColor: '#000',
+            shadowOpacity: 0.35,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+          android_ripple={{ color: 'rgba(58,143,255,0.20)' }}
+          accessibilityLabel="Back to pillars"
+        >
+          <Text
+            style={{
+              color: C.accent,
+              fontFamily: 'Inter_700Bold',
+              fontSize: 13,
+            }}
+          >
+            ↑
+          </Text>
+          <Text
+            style={{
+              color: C.accent,
+              fontFamily: 'Inter_700Bold',
+              fontSize: 10.5,
+              letterSpacing: 1.3,
+            }}
+          >
+            PILLARS
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Free Breathwork chooser — Apple-stijl bottom sheet. Toont de 5
+          breathwork-protocols (color-dot + state + techniek + duur). Tap
+          op een rij → navigatie naar /bracelet-control met de juiste
+          mode + breathwork pre-enabled, zodat de user direct op de juiste
+          breathwork-ready screen landt. */}
+      {breathChooserOpen && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setBreathChooserOpen(false)}
+          statusBarTranslucent
+        >
+          <View style={s.pillarModalRoot}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setBreathChooserOpen(false)}
+              accessibilityLabel="Close"
+            />
+            <View
+              style={[
+                s.pillarModalSheet,
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+              ]}
+            >
+              <View style={s.pillarModalHandle} />
+              <Pressable
+                style={s.pillarModalClose}
+                onPress={() => setBreathChooserOpen(false)}
+                hitSlop={10}
+                accessibilityLabel="Close"
+              >
+                <Text style={s.pillarModalCloseText}>✕</Text>
+              </Pressable>
+              <Text style={s.pillarModalEyebrow}>FREE BREATHWORK</Text>
+              <Text style={s.breathChooserTitle}>Choose a state.</Text>
+              <Text style={s.breathChooserSub}>
+                Five techniques. Always free.
+              </Text>
+              <View style={s.breathChooserList}>
+                {BREATHWORK_CHOOSER.map((opt) => {
+                  const modeMeta = getModeMeta(opt.mode);
+                  return (
+                    <Pressable
+                      key={opt.mode}
+                      style={s.breathChooserRow}
+                      onPress={() => {
+                        setBreathChooserOpen(false);
+                        router.push(
+                          `/bracelet-control?mode=${opt.mode}&breathwork=1&from=audio` as never,
+                        );
+                      }}
+                      accessibilityLabel={`Open ${opt.purpose} breathwork — ${opt.technique}`}
+                    >
+                      <View
+                        style={[
+                          s.breathChooserDot,
+                          { backgroundColor: modeMeta.color },
+                        ]}
+                      />
+                      <View style={s.breathChooserRowText}>
+                        <Text style={s.breathChooserRowPurpose}>
+                          {opt.purpose}
+                        </Text>
+                        <Text style={s.breathChooserRowMeta}>
+                          {opt.technique} · {opt.minutes} min
+                        </Text>
+                      </View>
+                      <Text style={s.breathChooserRowArrow}>→</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Iter 9aaa: Pillar-detail bottom sheet — Apple-style minimal.
           Backdrop tap = close, ✕ rechtsboven, korte declaratieve copy. */}
@@ -2301,6 +2856,114 @@ const s = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
+  /* Free Breathwork discovery card — v4 (2026-06-05): full-bleed hero
+     met foto die hele card vult. Alle content (label, states, meta,
+     CTA-button) overlaid onderaan met sterke gradient. Geen letterbox,
+     foto is dominant. Operator-feedback: foto groter, alles op foto.
+     v4.3 (2026-06-05): meer shift naar rechts (32L/8R) en lichtere
+     gradient (zie breathDiscoverHeroGradient) — operator-feedback. */
+  breathDiscoverCard: {
+    marginLeft: 32,
+    marginRight: 8,
+    marginTop: 28,
+    marginBottom: 12,
+    aspectRatio: 4 / 5,
+    backgroundColor: '#000',
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  breathDiscoverImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  /* v4.3 (2026-06-05): gradient hoogte 75 → 60% en lichter (zie colors
+     in JSX) — operator-feedback "te veel overlay". Tekst-shadows zorgen
+     nog steeds voor leesbaarheid. */
+  breathDiscoverHeroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
+  },
+  /* Tekst-block onderaan de card, overlaid op image+gradient.
+     v4.1 (2026-06-05): paddingBottom verhoogd 24 → 42 zodat tekst+knop
+     niet tegen de onderrand kleven (operator-feedback). */
+  breathDiscoverHeroText: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 42,
+  },
+  /* v4 2026-06-05: alle hero-tekst krijgt nu blurry zwart-shadow EN
+     gebruikt pure wit (geen opacity). Werkt zelfs op lichte image-
+     delen waar de gradient ook al doorheen schijnt. */
+  breathDiscoverLabel: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
+  breathDiscoverStates: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.4,
+    lineHeight: 28,
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
+  breathDiscoverMeta: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 0.1,
+    marginBottom: 18,
+    textShadowColor: 'rgba(0,0,0,0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
+  breathDiscoverCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    backgroundColor: '#3a8fff',
+    borderRadius: 100,
+    gap: 8,
+  },
+  breathDiscoverCtaText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
+  breathDiscoverCtaArrow: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    lineHeight: 16,
+  },
+
   /* Iter 9dq v46 (2026-06-03): subtle "Already a member? Sign in"
      footer-link voor uitgelogde Free/Guest users. Onderaan de library
      scroll, na alle content. Dim text + accent-blauw op de "Sign in"
@@ -2792,9 +3455,75 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
     lineHeight: 24,
   },
+
+  /* Free Breathwork chooser modal — Apple-stijl bottom sheet rows.
+     Lijst van 5 protocols, elk met color-dot + state + techniek + duur.
+     Hergebruikt pillarModal{Root,Sheet,Eyebrow,Handle,Close} voor de
+     algemene sheet-shell — alleen content-specifieke stijlen hier. */
+  breathChooserTitle: {
+    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    lineHeight: 30,
+    marginBottom: 6,
+  },
+  breathChooserSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    marginBottom: 22,
+  },
+  breathChooserList: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  breathChooserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    gap: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  breathChooserDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  breathChooserRowText: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+    gap: 2,
+  },
+  breathChooserRowPurpose: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+    lineHeight: 22,
+  },
+  breathChooserRowMeta: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0,
+    lineHeight: 18,
+  },
+  breathChooserRowArrow: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 20,
+    flexShrink: 0,
+  },
   /* Iter 9mm: 15 → 14 px + iets tightere letterSpacing zodat
-     "Psychological Resilience" (langste pillar-naam) op één regel past.
-     Andere 3 pillars zien er nog steeds zelfde uit (geen impact). */
+     "Strategic Execution & Wealth" (langste pillar-naam, 27 char) op
+     één regel past. Andere 3 pillars zien er nog steeds zelfde uit. */
   pillarName: {
     color: C.text,
     fontSize: 14,
@@ -3122,12 +3851,14 @@ const s = StyleSheet.create({
     borderTopRightRadius: 0,
     borderBottomLeftRadius: 14,
     borderBottomRightRadius: 14,
-    backgroundColor: 'rgba(74,222,128,0.06)',
+    /* Iter 2026-06-05: groen-tint vervangen door neutraal wit. Default
+       state = info ("dit kan je beluisteren"), geen completion-signaal. */
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderTopWidth: 0,
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderLeftWidth: 1,
-    borderColor: 'rgba(74,222,128,0.2)',
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   /* Ronde play-knop links — 40x40 (FIX 9). PAD A patch: overflow:'hidden'
      verwijderd (Fabric-crash combo met active-state shadow). De
@@ -3137,9 +3868,11 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(74,222,128,0.15)',
+    /* Iter 2026-06-05: groen → wit/neutraal in default state. Active
+       state blijft blauwe LinearGradient (zie isActive branch in JSX). */
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.45)',
+    borderColor: 'rgba(255,255,255,0.20)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3169,9 +3902,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 99,
-    backgroundColor: 'rgba(74,222,128,0.1)',
+    /* Iter 2026-06-05: groen → wit. FREE pill is informationeel, geen
+       completion-signaal. Subtiele witte tint + border. */
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.3)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   freePillText: {
     color: C.free,
@@ -3772,7 +4507,9 @@ const s = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  acTagFree: { color: '#4ade80' },
+  /* Iter 2026-06-05: FREE label in active player area — wit i.p.v. groen
+     (kleur-cleanup, default = wit, groen alleen voor completion). */
+  acTagFree: { color: 'rgba(255,255,255,0.72)' },
   acTagPro: { color: 'rgba(255,255,255,0.55)' },
   acTitle: {
     color: '#ffffff',

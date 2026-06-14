@@ -74,7 +74,12 @@ const C = {
   faint: 'rgba(255,255,255,0.4)',
   border: 'rgba(255,255,255,0.15)',
   accent: '#3a8fff',
-  free: '#4ade80',
+  /* Iter 2026-06-05: kleur-cleanup (operator-feedback).
+     - FREE label: wit i.p.v. groen (info, geen completion-signaal)
+     - PARTIAL: blauw (active/in-progress) — ongewijzigd
+     - FULL: groen (completion) — ongewijzigd
+     De drie staten hebben nu één duidelijk semantiek elk. */
+  free: 'rgba(255,255,255,0.72)',
   partial: '#3a8fff',
   full: '#4ade80',
   heart: '#ec4899',

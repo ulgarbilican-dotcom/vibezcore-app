@@ -37,6 +37,8 @@
 
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { BREATHWORK_CHOOSER } from '@/data/breathwork-modes';
+import { getModeMeta } from '@/services/ble-contract';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
@@ -53,6 +55,7 @@ import {
   Image,
   LayoutAnimation,
   Linking,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
@@ -145,14 +148,14 @@ const SERIES_COLORS = {
   imperial: { bg: 'rgba(212,163,90,0.18)', text: '#d4a35a' },
 } as const;
 
-/* Iter 9av (2026-05-31): moderne display-namen voor de 3 series.
-   Was Pure/Premium/Imperial — voelde marketing-cliché. Nieuw Origin/
-   Signature/Reserve — strakker, on-brand, geen vorstelijk/koopjes-
-   accent. Internal type blijft op de oude keys voor data-stabiliteit. */
+/* Operator-besluit 2026-06-14: terug naar de oorspronkelijke series-namen
+   Pure / Premium / Imperial. De Iter 9av wijziging naar Origin/Signature/
+   Reserve werd teruggedraaid — de oorspronkelijke namen zijn helderder
+   en consistent met de keys onder de motorkap. */
 const SERIES_DISPLAY_NAMES = {
-  pure: 'Origin',
-  premium: 'Signature',
-  imperial: 'Reserve',
+  pure: 'Pure',
+  premium: 'Premium',
+  imperial: 'Imperial',
 } as const;
 
 /* ── Data: 7-step story (How it works) ──────────────────────────────────── */
@@ -1020,6 +1023,13 @@ export default function BraceletScreen() {
   /* Welke edition is uitgeklapt voor detail-panel. `null` = niets. */
   const [selectedEdition, setSelectedEdition] = useState<string | null>(null);
 
+  /* Free Breathwork chooser modal — opent vanuit de discovery-card
+     onderaan de Bracelet tab. Toont de 5 breathwork-protocols zodat
+     de gebruiker de juiste state kiest vóór navigatie naar
+     bracelet-control (met ?mode=X&breathwork=1). Identiek aan de Audio
+     tab versie — één coherente UX. */
+  const [breathChooserOpen, setBreathChooserOpen] = useState(false);
+
   /* Currency-toggle weggehaald 2026-05-26: alleen USD tonen. */
 
   /* Countdown — re-render elke seconde. setInterval geannuleerd bij
@@ -1768,6 +1778,49 @@ export default function BraceletScreen() {
             nu in de Kickstarter-card footer. Sign-in-link blijft —
             verhuisd naar standalone block hieronder. */}
 
+        {/* Free Breathwork CTA — Apple-stijl discovery card, gericht
+            naar /bracelet-control (de bestaande breathwork-pagina).
+            Identiek aan de Audio tab card — één coherente voice. Bracelet
+            wordt nooit "optional" genoemd: bracelet is hoofdproduct. Card
+            spreekt alleen over breathwork's 5 states + "Always free". */}
+        <Pressable
+          style={s.breathDiscoverCard}
+          onPress={() => router.push('/breath')}
+          accessibilityLabel="Open breathwork tab"
+        >
+          {/* v4 (2026-06-05): full-bleed hero card. Foto vult hele card
+              met cover (geen letterbox), alle content (label, states,
+              meta, button) overlaid onderaan met sterke gradient. */}
+          <Image
+            source={{
+              uri: 'https://vibezcore-audio.b-cdn.net/images/Psychological%20Resilience.png',
+            }}
+            style={s.breathDiscoverImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.75)']}
+            locations={[0, 0.50, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={s.breathDiscoverHeroGradient}
+            pointerEvents="none"
+          />
+          <View style={s.breathDiscoverHeroText}>
+            <Text style={s.breathDiscoverLabel}>Free breathwork</Text>
+            <Text style={s.breathDiscoverStates}>
+              Energy. Focus. Calm. Clarity. Rest.
+            </Text>
+            <Text style={s.breathDiscoverMeta}>
+              Five techniques. Always free.
+            </Text>
+            <View style={s.breathDiscoverCta}>
+              <Text style={s.breathDiscoverCtaText}>Open Breathwork</Text>
+              <Text style={s.breathDiscoverCtaArrow}>→</Text>
+            </View>
+          </View>
+        </Pressable>
+
         {/* Sign-in-link voor wie nog niet ingelogd is. Subtiel, geen
             dominante CTA. Toont alleen wanneer state geladen is én
             user niet ingelogd.
@@ -1824,6 +1877,82 @@ export default function BraceletScreen() {
             />
           </View>
         </View>
+      )}
+
+      {/* Free Breathwork chooser — Apple-stijl bottom sheet, identiek
+          aan de Audio tab versie. 5 protocols, tap → navigeert naar
+          /bracelet-control met de juiste mode + breathwork pre-enabled. */}
+      {breathChooserOpen && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setBreathChooserOpen(false)}
+          statusBarTranslucent
+        >
+          <View style={s.breathChooserModalRoot}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setBreathChooserOpen(false)}
+              accessibilityLabel="Close"
+            />
+            <View
+              style={[
+                s.breathChooserSheet,
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+              ]}
+            >
+              <View style={s.breathChooserHandle} />
+              <Pressable
+                style={s.breathChooserClose}
+                onPress={() => setBreathChooserOpen(false)}
+                hitSlop={10}
+                accessibilityLabel="Close"
+              >
+                <Text style={s.breathChooserCloseText}>✕</Text>
+              </Pressable>
+              <Text style={s.breathChooserEyebrow}>FREE BREATHWORK</Text>
+              <Text style={s.breathChooserTitle}>Choose a state.</Text>
+              <Text style={s.breathChooserSub}>
+                Five techniques. Always free.
+              </Text>
+              <View style={s.breathChooserList}>
+                {BREATHWORK_CHOOSER.map((opt) => {
+                  const modeMeta = getModeMeta(opt.mode);
+                  return (
+                    <Pressable
+                      key={opt.mode}
+                      style={s.breathChooserRow}
+                      onPress={() => {
+                        setBreathChooserOpen(false);
+                        router.push(
+                          `/bracelet-control?mode=${opt.mode}&breathwork=1&from=bracelet` as never,
+                        );
+                      }}
+                      accessibilityLabel={`Open ${opt.purpose} breathwork — ${opt.technique}`}
+                    >
+                      <View
+                        style={[
+                          s.breathChooserDot,
+                          { backgroundColor: modeMeta.color },
+                        ]}
+                      />
+                      <View style={s.breathChooserRowText}>
+                        <Text style={s.breathChooserRowPurpose}>
+                          {opt.purpose}
+                        </Text>
+                        <Text style={s.breathChooserRowMeta}>
+                          {opt.technique} · {opt.minutes} min
+                        </Text>
+                      </View>
+                      <Text style={s.breathChooserRowArrow}>→</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
     </SafeAreaView>
   );
@@ -1921,6 +2050,108 @@ const s = StyleSheet.create({
   signInLinkAccent: {
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
+  },
+
+  /* Free Breathwork discovery card — v4 (2026-06-05): full-bleed hero
+     met foto die hele card vult. Alle content overlaid onderaan met
+     sterke gradient. Identiek aan Audio tab.
+     v4.3 (2026-06-05): meer shift naar rechts (32L/8R) en lichtere
+     gradient — operator-feedback. */
+  breathDiscoverCard: {
+    marginLeft: 32,
+    marginRight: 8,
+    marginTop: 28,
+    marginBottom: 12,
+    aspectRatio: 4 / 5,
+    backgroundColor: '#000',
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  breathDiscoverImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  /* v4.3 (2026-06-05): lichter gradient (60% hoogte). */
+  breathDiscoverHeroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
+  },
+  /* v4.1 (2026-06-05): paddingBottom 24 → 42 voor ademruimte onderaan. */
+  breathDiscoverHeroText: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 42,
+  },
+  /* v4 2026-06-05: sterkere shadow + pure wit voor leesbaarheid op
+     willekeurige image content (ook lichte gebieden). */
+  breathDiscoverLabel: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
+  breathDiscoverStates: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.4,
+    lineHeight: 28,
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
+  breathDiscoverMeta: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    marginBottom: 18,
+    textShadowColor: 'rgba(0,0,0,0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
+  breathDiscoverCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    backgroundColor: Brand.accent,
+    borderRadius: 100,
+    gap: 8,
+  },
+  breathDiscoverCtaText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.5,
+  },
+  breathDiscoverCtaArrow: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    lineHeight: 16,
   },
 
   /* ── 1. Hero (Apple-style: tightere headline-letterspacing, ruimere
@@ -3393,5 +3624,117 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
     lineHeight: 17,
+  },
+
+  /* Free Breathwork chooser modal — Apple-stijl bottom sheet. Volledige
+     stijl-set hier (geen pillarModal-hergebruik beschikbaar in dit
+     bestand). Donker oppervlak, handle bovenaan, close ✕ rechtsboven,
+     5 rows. Identiek visueel aan de Audio tab versie. */
+  breathChooserModalRoot: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  breathChooserSheet: {
+    backgroundColor: '#141414',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 10,
+    paddingHorizontal: 22,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  breathChooserHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: 14,
+  },
+  breathChooserClose: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  breathChooserCloseText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    lineHeight: 16,
+  },
+  breathChooserEyebrow: {
+    color: Brand.accent,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  breathChooserTitle: {
+    color: '#ffffff',
+    fontSize: 26,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.6,
+    lineHeight: 30,
+    marginBottom: 6,
+  },
+  breathChooserSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    marginBottom: 22,
+  },
+  breathChooserList: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  breathChooserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    gap: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  breathChooserDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  breathChooserRowText: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+    gap: 2,
+  },
+  breathChooserRowPurpose: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.3,
+    lineHeight: 22,
+  },
+  breathChooserRowMeta: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0,
+    lineHeight: 18,
+  },
+  breathChooserRowArrow: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 18,
+    fontFamily: BrandFonts.semibold,
+    lineHeight: 20,
+    flexShrink: 0,
   },
 });

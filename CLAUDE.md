@@ -128,8 +128,16 @@ Tabs: `(tabs)/index.tsx` = Audio · `(tabs)/bracelet.tsx` = Bracelet
 
 ## 4. DE 4 PIJLERS (audio)
 
-Strategic Wealth · Psychological Resilience · Social Mastery · Stoic Fortitude.
-(Consistent over de hele webapp — niet wijzigen.)
+[GEWIJZIGD door operator — vervangt oude pijlers
+"Strategic Wealth · Psychological Resilience · Social Mastery · Stoic Fortitude".
+Bij verdere wijzigingen ook deze sectie + alle widgets bijwerken.]
+
+1. **Psychological Resilience** — Build what cannot break.
+2. **Inner Sovereignty** — Master what is yours.
+3. **Social Mastery** — Command without force.
+4. **Strategic Execution & Wealth** — Engineer your autonomy.
+
+Volgorde en taglines zijn bindend en consistent over de hele webapp.
 
 ## 5. DE 5 BRACELET-MODI (namen voorlopig — [OPERATOR] finaliseert)
 

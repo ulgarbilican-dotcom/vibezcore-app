@@ -298,6 +298,12 @@ export default function RootLayout() {
           name="bracelet-history"
           options={{ title: 'Session history', headerBackTitle: 'Back' }}
         />
+        {/* `breath-history` — full-page Your Practice met stats + lijst.
+            Push vanaf Breath-tab "Your Practice" link. */}
+        <Stack.Screen
+          name="breath-history"
+          options={{ title: 'Your Practice', headerBackTitle: 'Back' }}
+        />
         {/* `support` — in-app contact-form (vervangt externe support-URL).
             Push vanaf Account → Support of legal-docs Contact-CTA. */}
         <Stack.Screen

@@ -174,23 +174,23 @@ export default function AboutScreen() {
         <View style={s.pillarsGrid}>
           <Pillar
             num="01"
-            name="Wealth"
-            desc="Building the mindset, habits, and clarity required for financial independence and long-term prosperity."
+            name="Psychological Resilience"
+            desc="Build what cannot break."
           />
           <Pillar
             num="02"
-            name="Psychological Resilience"
-            desc="Stress regulation, emotional recovery, nervous system awareness, and the ability to perform under pressure."
+            name="Inner Sovereignty"
+            desc="Master what is yours."
           />
           <Pillar
             num="03"
             name="Social Mastery"
-            desc="Communication, influence, presence, reading social dynamics, and building genuine connections."
+            desc="Command without force."
           />
           <Pillar
             num="04"
-            name="Stoic Fortitude"
-            desc="Discipline, self-respect, purpose, and the capacity to act with integrity under any circumstance."
+            name="Strategic Execution & Wealth"
+            desc="Engineer your autonomy."
           />
         </View>
 

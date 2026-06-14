@@ -29,7 +29,7 @@ import { router, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type TabPath = '/' | '/bracelet' | '/account';
+type TabPath = '/' | '/breath' | '/bracelet' | '/account';
 
 /* Eigen tab-button. Wraps de bestaande icon+label-children van de navigator
    in een gewone Pressable; onPress doet één ding: navigeer naar path. */
@@ -138,6 +138,16 @@ export default function TabLayout() {
               <TabGlyph label="♪" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/" {...props} />,
+          }}
+        />
+        <Tabs.Screen
+          name="breath"
+          options={{
+            title: 'Breath',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph label="○" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/breath" {...props} />,
           }}
         />
         <Tabs.Screen

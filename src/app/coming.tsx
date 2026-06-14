@@ -194,7 +194,7 @@ const EXISTING_SERIES: RoadmapItem[] = [
     ],
   },
   {
-    name: 'The Stoic Fortress',
+    name: 'The Stoic Mind',
     sub: 'Inner control & resilience',
     tags: [
       'Emotional Detachment',
@@ -210,7 +210,7 @@ const EXISTING_SERIES: RoadmapItem[] = [
     ],
   },
   {
-    name: 'End Fight-Or-Flight',
+    name: 'Fight Or Flight',
     sub: 'Full nervous system control',
     tags: [
       'Nervous System Reset',

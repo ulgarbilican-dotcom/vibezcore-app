@@ -34,7 +34,7 @@ import {
 } from '@/utils/bracelet-history';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
-import { Stack, router, useFocusEffect } from 'expo-router';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -1031,7 +1031,18 @@ function CompletionModal({
           onPress={onDismiss}
           accessibilityLabel="Done"
         >
-          <Text style={s.completionBtnText}>Done</Text>
+          {/* Iter 2026-06-05: contrast-fix voor light modes (Boost = wit).
+              Witte tekst op witte achtergrond = onzichtbaar. Voor light
+              mode-colors switchen we naar zwarte tekst, anders houden we
+              wit (bestaand gedrag voor dark modes). */}
+          <Text
+            style={[
+              s.completionBtnText,
+              isLightColor(meta.color) && { color: '#0a0a0a' },
+            ]}
+          >
+            Done
+          </Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -2869,21 +2880,31 @@ function BraceletHeader({
   title,
   onBack,
   showBack = true,
+  backLabel,
 }: {
   title: string;
   onBack?: () => void;
   showBack?: boolean;
+  /* Iter 2026-06-05: optionele label naast back-arrow. Wanneer gezet:
+     "← Audio Library" of "← Bracelet". Default: alleen "←". Op die manier
+     wordt het bestaande gedrag voor non-CTA screens niet aangeraakt. */
+  backLabel?: string;
 }) {
   return (
     <View style={s.customHeader}>
       {showBack && onBack ? (
         <Pressable
           onPress={onBack}
-          style={s.headerSide}
+          style={[s.headerSide, backLabel ? s.headerSideWithLabel : null]}
           hitSlop={12}
-          accessibilityLabel="Back"
+          accessibilityLabel={backLabel ? `Back to ${backLabel}` : 'Back'}
         >
           <Text style={s.headerBackArrow}>←</Text>
+          {backLabel ? (
+            <Text style={s.headerBackLabel} numberOfLines={1}>
+              {backLabel}
+            </Text>
+          ) : null}
         </Pressable>
       ) : (
         <View style={s.headerSide} />
@@ -2961,9 +2982,37 @@ export default function BraceletControl() {
   const [conn, setConn] = useState<BleConnectionState>(
     bracelet.getConnectionState(),
   );
-  const [selectedMode, setSelectedMode] = useState<BraceletMode>(
-    BraceletMode.Alpha,
-  );
+
+  /* Query-params support — Free Breathwork CTA's op Audio/Bracelet tabs
+     openen een chooser en navigeren hier met ?mode=0-4&breathwork=1.
+     - mode      : initiële BraceletMode (0=Gamma/Boost t/m 4=Delta/Rest)
+     - breathwork: indien "1" triggert de auto-connect + auto-start van de
+                   bracelet-sessie zodat user direct op het Active-scherm
+                   landt (i.p.v. eerst Connect → Start). De breathwork-
+                   toggle blijft FALSE — user tapt zelf "Start" op de
+                   breathwork-strip wanneer hij klaar is. Operator-feedback
+                   2026-06-05: breathwork mag niet vanzelf beginnen. */
+  const params = useLocalSearchParams<{ mode?: string; breathwork?: string; from?: string }>();
+  const initialMode: BraceletMode = (() => {
+    const raw = params.mode;
+    if (typeof raw === 'string') {
+      const n = parseInt(raw, 10);
+      if (n >= 0 && n <= 4) return n as BraceletMode;
+    }
+    return BraceletMode.Alpha;
+  })();
+  const autoStartBracelet = params.breathwork === '1';
+  /* Operator-feedback 2026-06-05: bij CTA-flow vanuit Audio of Bracelet
+     tab is het onduidelijk waarheen de back-knop terug gaat. Met `from`
+     param maken we de back-knop context-aware: "Audio Library" of
+     "Bracelet" als label + navigatie naar de juiste tab. */
+  const fromContext: 'audio' | 'bracelet' | null = (() => {
+    if (params.from === 'audio') return 'audio';
+    if (params.from === 'bracelet') return 'bracelet';
+    return null;
+  })();
+
+  const [selectedMode, setSelectedMode] = useState<BraceletMode>(initialMode);
   const meta = getModeMeta(selectedMode);
   const [duration, setDuration] = useState<number>(meta.minMinutes);
   const [status, setStatus] = useState<BleStatusPacket | null>(null);
@@ -2971,7 +3020,8 @@ export default function BraceletControl() {
   /* Breathwork toggle — opt-in tijdens active session. False per default
      ("bracelet+haptic is main, breathwork is optioneel" — operator-keuze
      2026-05-27 iter 5). Reset bij sessie-eind via natural-completion
-     useEffect zodat volgende sessie weer schoon start. */
+     useEffect zodat volgende sessie weer schoon start.
+     Ook bij CTA-flow blijft dit FALSE — user tapt zelf Start op de strip. */
   const [breathworkEnabled, setBreathworkEnabled] = useState(false);
 
   /* Iter 9ca (2026-05-31): bij transition breathworkEnabled true → false
@@ -3246,6 +3296,90 @@ export default function BraceletControl() {
       setBusy(false);
     }
   };
+
+  /* Context-aware back voor Free Breathwork CTA-flow (operator-feedback
+     2026-06-05). Bij `from=audio` of `from=bracelet` willen we de user
+     terugleiden naar de bronpagina i.p.v. naar de connect-state of een
+     willekeurige plek in de history.
+     - navigateBackToSource: alleen navigeren (voor Connect-screen, geen
+       bracelet om te disconnecten).
+     - disconnectAndBackToSource: eerst disconnect (clean stop) → daarna
+       navigeren (voor Active-screen).
+     Bij geen fromContext gedraagt alles zich exact zoals voorheen. */
+  const navigateBackToSource = () => {
+    if (fromContext === 'audio') router.navigate('/(tabs)/' as never);
+    else if (fromContext === 'bracelet') router.navigate('/(tabs)/bracelet' as never);
+  };
+  const disconnectAndBackToSource = async () => {
+    /* Iter 2026-06-05 v2: per BLE spec §8 stopt disconnect alleen de
+       BLE-verbinding — niet de bracelet-sessie zelf (die loopt autonoom
+       op hardware-timer door). Voor CTA-flow willen we dat user terug
+       gaat ÉN de bracelet stopt. Dus eerst Stop-command (via onStop)
+       die de hardware-timer afbreekt, daarna disconnect. */
+    try {
+      await onStop();
+    } catch (_e) { /* ignore: connect may already have failed */ }
+    await onDisconnect();
+    if (fromContext === 'audio') router.navigate('/(tabs)/' as never);
+    else if (fromContext === 'bracelet') router.navigate('/(tabs)/bracelet' as never);
+  };
+
+  /* Iter 2026-06-05: label naast back-arrow afgeleid uit fromContext.
+     Undefined → BraceletHeader toont alleen "←" (bestaand gedrag). */
+  const ctaBackLabel = fromContext === 'audio' ? 'Audio Library'
+                     : fromContext === 'bracelet' ? 'Bracelet'
+                     : undefined;
+
+  /* Auto-connect + auto-start voor Free Breathwork CTA-flow.
+     Wanneer user landt met ?breathwork=1 willen we niet dat hij eerst
+     het "Bracelet connect" zoek-scherm moet doorlopen + handmatig Start
+     moet tappen. Vuur op mount één keer: connect (indien nodig) →
+     sendCommand Start. Daarna gaat de render-branch automatisch naar
+     het Active-scherm. De breathwork-strip toont onderaan in idle-state
+     met een "Start"-knop — user start breathwork zelf wanneer klaar. */
+  const autoStartFiredRef = useRef(false);
+  useEffect(() => {
+    if (autoStartFiredRef.current) return;
+    if (!autoStartBracelet) return;
+    autoStartFiredRef.current = true;
+
+    (async () => {
+      try {
+        if (bracelet.getConnectionState() !== 'connected') {
+          await bracelet.connect();
+        }
+        const dur = clampDuration(initialMode, getModeMeta(initialMode).minMinutes);
+        await bracelet.sendCommand({
+          mode: initialMode,
+          duration: dur,
+          command: BleCommand.Start,
+        });
+        const startMs = Date.now();
+        sessionStartedAtRef.current = startMs;
+        sessionRealStartedAtRef.current = startMs;
+        sessionPlannedRef.current = dur;
+        resetBreathworkTracking();
+        /* Iter 2026-06-05: auto-pause direct na auto-start (operator-
+           feedback: in free/CTA-flow mag de bracelet-timer niet vanzelf
+           aftellen — user kwam voor breathwork, niet voor een bracelet-
+           sessie). Sessie wordt geladen op 8:00, klaar om Resume te
+           tappen wanneer user wil. Mimics onPause: Stop-command +
+           setPausedAt = volledige geplande duration (niets verstreken). */
+        pausedAtElapsedMsRef.current = 0;
+        await bracelet.sendCommand({
+          mode: initialMode,
+          duration: 0,
+          command: BleCommand.Stop,
+        });
+        setPausedAt(dur);
+        const st = await bracelet.requestStatus();
+        setStatus(st);
+      } catch (e) {
+        console.warn('[bracelet-control] auto-start failed:', e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onStart = async () => {
     setBusy(true);
@@ -3553,8 +3687,9 @@ export default function BraceletControl() {
         <Stack.Screen options={{ headerShown: false }} />
         <BraceletHeader
           title="Bracelet connect"
-          showBack={router.canGoBack()}
-          onBack={() => router.back()}
+          showBack={fromContext !== null || router.canGoBack()}
+          onBack={fromContext ? navigateBackToSource : () => router.back()}
+          backLabel={ctaBackLabel}
         />
         <PreviewBanner />
         {/* Iter 9dq v93 (2026-06-03): top-banner CTA NIET tonen op
@@ -3763,8 +3898,18 @@ export default function BraceletControl() {
             Iter 9dq v109 (2026-06-04): voorheen had non-owner een preview-
             header met back-arrow tijdens active session. Voor unified
             UX nu ook hidden — eind-knop is de juiste exit (consistent
-            met spec §11 "één focuspunt"). */}
+            met spec §11 "één focuspunt").
+            Iter 2026-06-05: ALLEEN voor Free Breathwork CTA-flow voegen
+            we tóch een back-header toe zodat user naar bronpagina terug
+            kan. Non-CTA users zien geen header (bestaand immersief gedrag). */}
         <Stack.Screen options={{ headerShown: false }} />
+        {fromContext && (
+          <BraceletHeader
+            title=""
+            onBack={disconnectAndBackToSource}
+            backLabel={ctaBackLabel}
+          />
+        )}
         {/* Ambient tint-overlay — 8% opacity full-screen mood layer.
             pointerEvents="none" zodat touches doorgaan naar onderliggende
             UI. Zit BOVEN Brand.bg maar onder alle content (eerste child). */}
@@ -3904,6 +4049,15 @@ export default function BraceletControl() {
                     };
                 return (
                   <>
+                    {/* Iter 2026-06-05: kleine "BRACELET" caption boven de
+                        timer wanneer user via Free Breathwork CTA komt.
+                        Operator-feedback: anders denkt de breathwork-user
+                        dat de countdown voor breathwork is. */}
+                    {fromContext && (
+                      <Text style={[s.timerContextLabel, timerColorOverride]}>
+                        BRACELET
+                      </Text>
+                    )}
                     <Text style={[s.timerNum, timerColorOverride]}>
                       {mm}:{ss.toString().padStart(2, '0')}
                     </Text>
@@ -4086,6 +4240,18 @@ export default function BraceletControl() {
               BreathworkStrip. Stats blijven zichtbaar op het idle-screen
               en in de completion-modal (na sessie-eind), dus geen
               info-verlies. */}
+          {/* Iter 2026-06-05 v2: Context-chip vlak boven de breathwork-card
+              wanneer user via Free Breathwork CTA komt (operator-feedback:
+              eerder bovenaan scherm geplaatst maar moet visueel gekoppeld
+              zijn aan de breathwork-strip). Apple-stijl pill in brand-blauw,
+              zichtbaar maar subtiel. */}
+          {fromContext && (
+            <View style={s.breathContextChip}>
+              <Text style={s.breathContextChipText}>
+                FREE BREATHWORK · {activeMeta.name} mode
+              </Text>
+            </View>
+          )}
           {/* Iter 8c: mode={selectedMode} ipv activeMeta.mode. Reden:
               activeMeta wordt uit BLE-status afgeleid, en `currentMode`
               kan tijdens pauze terugvallen naar 0 (sim/fw resets). Dat
@@ -4134,7 +4300,8 @@ export default function BraceletControl() {
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
         title="Bracelet control"
-        onBack={onDisconnect}
+        onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
+        backLabel={ctaBackLabel}
       />
       <PreviewBanner />
       {showActivationPrompt && <BraceletActivationCta />}
@@ -4612,11 +4779,29 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /* Iter 2026-06-05: bredere headerSide-variant wanneer er een back-label
+     naast de "←" wordt getoond (CTA-flow: "Audio Library" of "Bracelet").
+     Behoudt verticaal centreren maar groeit horizontaal mee. */
+  headerSideWithLabel: {
+    width: 'auto',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+  },
   headerBackArrow: {
     color: Brand.text,
     fontSize: 26,
     fontFamily: BrandFonts.regular,
     lineHeight: 28,
+  },
+  /* Iter 2026-06-05: label tekst naast back-arrow. Subtiel, dim, regular.
+     Alleen zichtbaar wanneer backLabel prop is gezet (CTA-flow). */
+  headerBackLabel: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 18,
+    opacity: 0.85,
   },
   headerTitle: {
     flex: 1,
@@ -5796,6 +5981,43 @@ const s = StyleSheet.create({
      Brand.text (#f4f4f4) voor max contrast op gevulde mode-color
      achtergrond. Operator-feedback: "tekst in de cirkel blijft bijna
      onleesbaar" — bij Delta groen was 't met off-white te zwak. */
+  /* Iter 2026-06-05: kleine BRACELET-caption boven de timer (alleen
+     zichtbaar wanneer user via Free Breathwork CTA komt). Erft kleur
+     van timerColorOverride zodat het leesbaar blijft op light + dark
+     mode-achtergronden. */
+  timerContextLabel: {
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 2.4,
+    marginBottom: 6,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  /* Iter 2026-06-05: Context-chip bovenaan active screen wanneer user
+     via Free Breathwork CTA komt. Apple-stijl pill in brand-blauw,
+     subtiel maar duidelijk — communiceert: "dit scherm draait nu in
+     breathwork-context, de bracelet onderaan is de motor".
+     v2 (2026-06-05): marginTop 16 toegevoegd zodat chip ademruimte
+     heeft tov de Resume/End action-row erboven. Voorheen geen marginTop
+     waardoor chip tegen de knoppen aan kleefde wanneer breathwork-card
+     uitklapte. */
+  breathContextChip: {
+    alignSelf: 'center',
+    marginTop: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 100,
+    backgroundColor: 'rgba(58,143,255,0.10)',
+    borderColor: 'rgba(58,143,255,0.30)',
+    borderWidth: 1,
+  },
+  breathContextChipText: {
+    color: Brand.accent,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.6,
+  },
   timerNum: {
     color: '#FFFFFF',
     fontSize: 52,

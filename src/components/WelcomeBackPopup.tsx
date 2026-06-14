@@ -32,6 +32,7 @@ import {
 } from '@/services/welcome-popup';
 import {
   clearLastPlayed,
+  useLastPlayedReady,
   useShowableLastPlayed,
   type LastPlayed,
 } from '@/utils/last-played';
@@ -64,6 +65,7 @@ function fmtTime(sec: number): string {
 export function WelcomeBackPopup() {
   const visible = useWelcomePopupVisible();
   const lastPlayed = useShowableLastPlayed();
+  const lastPlayedReady = useLastPlayedReady();
   const segments = useSegments() as string[];
 
   /* Trigger-logica: cold-start + lastPlayed + in (tabs) → showWelcomePopup.
@@ -80,8 +82,17 @@ export function WelcomeBackPopup() {
      Fix: zodra useEffect voor het eerst fired EN er is geen lastPlayed,
      markeren we direct als skipped. Future updates aan lastPlayed
      triggeren dan geen popup meer (showWelcomePopup is no-op zodra
-     coldStartShown true is). */
+     coldStartShown true is).
+
+     ITER 2026-06-05 race-condition fix: 9kk's markSkipped firde óók
+     wanneer AsyncStorage nog niet geladen was — lastPlayed was dan
+     tijdelijk null tijdens initial render, popup werd "skipped" voor
+     het echt geladen werd. Operator-feedback: popup verschijnt nooit
+     na een cold-start zelfs met geldige entry.
+     Fix: wacht op useLastPlayedReady() voordat we beslissen. Pas na
+     load-complete weten we of er ECHT geen entry is. */
   useEffect(() => {
+    if (!lastPlayedReady) return;
     const { showWelcomePopup, markWelcomePopupSkipped } =
       require('@/services/welcome-popup');
     if (!lastPlayed) {
@@ -93,7 +104,7 @@ export function WelcomeBackPopup() {
     const inTabs = segments[0] === '(tabs)';
     if (!inTabs) return;
     showWelcomePopup();
-  }, [lastPlayed, segments]);
+  }, [lastPlayed, lastPlayedReady, segments]);
 
   /* Android hardware-back = dismiss (UX-conventie: back nooit door een
      overlay heen laten propaganderen — anders zou hij ook de tab-bar of
