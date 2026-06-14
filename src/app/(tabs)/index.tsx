@@ -2403,7 +2403,7 @@ export default function AudioScreen() {
           </Text>
 
           <Text style={s.secureRow}>
-            🔒 SECURE CHECKOUT · ↻ CANCEL ANYTIME
+            🔒 SECURE CHECKOUT
           </Text>
         </View>
         )}
