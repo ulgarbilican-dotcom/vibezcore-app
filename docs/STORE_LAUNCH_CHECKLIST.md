@@ -68,7 +68,7 @@ In-App Purchase Display Names:
 
 In-App Purchase Descriptions:
   monthly:                                [OPERATOR — €9,99/maand · alle sessies]
-  yearly:                                 [OPERATOR — €59,99/jaar · alle sessies]
+  yearly:                                 [OPERATOR — €71,88/jaar (€5,99/m) · alle sessies]
 ```
 
 ```
@@ -90,7 +90,7 @@ In-App Subscription Product:
     Name:                                 [OPERATOR]
     Description:                          [OPERATOR]
     Base plan:                            "audio-yearly" — Yearly, auto-renewing
-    Price:                                €59,99 / jaar
+    Price:                                €71,88 / jaar  (= €5,99 / maand, SAVE 40% vs monthly)
 ```
 
 ## 4. Externe acties — operator

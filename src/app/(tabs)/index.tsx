@@ -21,6 +21,7 @@ import {
   tierBadgeLabel,
 } from '@/utils/access-tier';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import { getToken } from '@/services/auth';
@@ -35,6 +36,7 @@ import {
 } from '@/services/bracelet-upsell';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gem, Heart, Sparkles, TrendingUp } from 'lucide-react-native';
+import { AppleLogo, GooglePlayLogo } from '@/components/StoreLogos';
 import {
   getEntryByUrl,
   getListenedLabelByUrl,
@@ -564,6 +566,52 @@ export default function AudioScreen() {
   /* Plan-keuze in het aankoopblok — Yearly standaard geselecteerd
      (blauwdruk §3.6: "Yearly visueel uitgelicht, aanbevolen"). */
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
+
+  /* Iter 9dq v135 (2026-06-15): pull IAP-products zodat pricing-cards in
+     LOKALE valuta van de user tonen ($ voor US, € voor EU, £ voor UK, etc).
+     localizedPrice is een al-opgemaakte string van StoreKit / Google Play
+     Billing — wij doen GEEN valutaconversie zelf. Fallback naar EUR-defaults
+     als products nog niet geladen zijn (eerste paint vóór StoreKit-call). */
+  const { getProduct: getIapProduct } = useIAP();
+  const monthlyProduct = getIapProduct('monthly');
+  const yearlyProduct = getIapProduct('yearly');
+  const monthlyPriceLabel = monthlyProduct?.localizedPrice ?? '€9.99';
+  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€71.88';
+
+  /* Helper: vervang het numerieke deel in een localizedPrice ("€9.99",
+     "$9.99", "9,99 €") door een nieuwe value, behoud valuta-symbool. We
+     gebruiken bewust GEEN Intl.NumberFormat (Hermes-compat-risico op
+     oudere RN-builds). Werkt voor leading-symbol locales ($/€/£/¥) en
+     valt terug op currency-code voor trailing-symbol locales. */
+  const reformatWithSymbol = (sample: string, currency: string, newValue: number): string => {
+    const formatted = newValue.toFixed(2);
+    const leading = sample.match(/^([^\d\s]+)/);
+    if (leading) return `${leading[1]}${formatted}`;
+    return `${formatted} ${currency}`;
+  };
+
+  /* Per-maand-equivalent voor yearly = yearly_total / 12, in dezelfde
+     valuta als yearly localizedPrice. Fallback: €5.99 (operator-pricing
+     2026-06-15: yearly = €71.88/year = €5.99/month, save 40% vs monthly). */
+  const yearlyPerMonthLabel = (() => {
+    if (!yearlyProduct?.priceAmountMicros) return '€5.99';
+    const monthlyValue = yearlyProduct.priceAmountMicros / 12 / 1_000_000;
+    return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
+  })();
+
+  /* Monthly "REGULAR" strike-price = monthly × 1.30, afgerond. Operator-
+     marketing 2026-06-15: €9.99 → €12.99 als referentie-strike, matcht
+     website. Auto-localized: $9.99 → $12.99, £8.99 → £11.69 etc.
+     ⚠ TM/Review-noot: dit is een marketing-claim ("regular price"), geen
+     échte historische prijs. Houd ratio constant of zet op via App Store
+     Connect introductory-offer (preferred). */
+  const monthlyStrikeLabel = (() => {
+    if (!monthlyProduct?.priceAmountMicros) return '€12.99';
+    const strikeValue = (monthlyProduct.priceAmountMicros / 1_000_000) * 1.30;
+    return reformatWithSymbol(monthlyProduct.localizedPrice, monthlyProduct.currency, strikeValue);
+  })();
+  /* (verwijderd: storeName per platform — operator wil beide platforms
+     tonen voor vertrouwen ongeacht device). */
   /* Uitklap-state voor de disclaimer onderaan de pagina — default DICHT. */
   const [legalOpen, setLegalOpen] = useState(false);
   const toggleLegal = () => {
@@ -2229,11 +2277,16 @@ export default function AudioScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             >
               <View style={[s.cardClip, s.cardClipMonthly]}>
+                {/* Iter 9dq v135 (operator 2026-06-15): website-style
+                    "REGULAR" strike-prijs terug op monthly-card, gederiveerd
+                    × 1.30 zodat het in elke valuta klopt. Matcht
+                    audio-library-page.html. */}
                 <View style={s.strikeRow}>
-                  <Text style={s.priceStrike}>€12.99</Text>
+                  <Text style={s.priceStrike}>{monthlyStrikeLabel}</Text>
+                  <Text style={s.regularTag}>REGULAR</Text>
                 </View>
                 <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>€9.99</Text>
+                  <Text style={s.priceBigAmount}>{monthlyPriceLabel}</Text>
                   <Text style={s.priceBigPer}>/month</Text>
                 </View>
                 <Text style={s.priceMeta}>Billed monthly</Text>
@@ -2264,15 +2317,18 @@ export default function AudioScreen() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
+                {/* Iter 9dq v135 (operator 2026-06-15): SAVE 40% = math-
+                    correct met monthly €9.99 vs yearly-per-month €5.99.
+                    Matcht website audio-library-page.html. */}
                 <View style={s.strikeRow}>
-                  <Text style={s.priceStrike}>€9.99</Text>
-                  <Text style={s.saveTag}>SAVE 50%</Text>
+                  <Text style={s.priceStrike}>{monthlyPriceLabel}</Text>
+                  <Text style={s.saveTag}>SAVE 40%</Text>
                 </View>
                 <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>€4.99</Text>
+                  <Text style={s.priceBigAmount}>{yearlyPerMonthLabel}</Text>
                   <Text style={s.priceBigPer}>/month</Text>
                 </View>
-                <Text style={s.priceMeta}>Billed €59.99/year</Text>
+                <Text style={s.priceMeta}>Billed {yearlyTotalLabel}/year</Text>
                 {plan === 'yearly' && (
                   <Text style={[s.selCheck, s.selCheckYearly]} pointerEvents="none">
                     ✓
@@ -2306,10 +2362,25 @@ export default function AudioScreen() {
           >
             <Text style={s.ctaTxt}>
               {plan === 'yearly'
-                ? 'Get Yearly — €4.99/month'
-                : 'Get Monthly — €9.99/month'}
+                ? `Get Yearly — ${yearlyPerMonthLabel}/month`
+                : `Get Monthly — ${monthlyPriceLabel}/month`}
             </Text>
           </Pressable>
+
+          {/* Iter 9dq v135 (operator 2026-06-15): trust-rij onder CTA met
+              ECHTE store-logos (witte Apple-silhouet + Google Play 4-color
+              triangle) i.p.v. brand-neutrale Lucide icons. Beide platforms
+              altijd zichtbaar — versterkt vertrouwen. */}
+          <View style={s.billedByRow}>
+            <AppleLogo size={14} />
+            <Text style={s.billedByLine}>App Store</Text>
+            <Text style={s.billedByDot}>·</Text>
+            <GooglePlayLogo size={14} />
+            <Text style={s.billedByLine}>Google Play</Text>
+          </View>
+          <Text style={s.billedByMeta}>
+            Billed securely · Cancel anytime
+          </Text>
 
           {/* Iter 9yy: checks-row direct onder CTA — voelt als één
               "vertrouwen-bevestiging"-blok bij de aankoop. */}
@@ -4268,6 +4339,16 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     marginLeft: 8,
   },
+  /* Iter 9dq v135: REGULAR-tag op monthly-card. Subtieler (dim) dan
+     SAVE 40% op yearly-card, want is informatie ipv conversie-driver. */
+  regularTag: {
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginLeft: 8,
+  },
 
   /* Selectie-signaal — uitsluitend een ✓ rechtsboven binnen de kaart.
      Geen extra rand, geen kleurverschuiving. Kleur verschilt per kaart. */
@@ -4372,6 +4453,36 @@ const s = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  /* Iter 9dq v135: trust-rij direct onder CTA. Twee badges (App Store +
+     Google Play) met icoontjes, dim genoeg om niet met de CTA te
+     concurreren maar duidelijk leesbaar. */
+  billedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+  },
+  billedByLine: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  billedByDot: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginHorizontal: 2,
+  },
+  billedByMeta: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 4,
     letterSpacing: 0.2,
   },
 

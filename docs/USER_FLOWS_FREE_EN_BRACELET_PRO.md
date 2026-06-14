@@ -32,7 +32,7 @@ De default-staat van elke verse gebruiker. Geen account, geen entitlements. App 
 - **Locked-toegang:** sessies 2-5 → tap → "Sign up for access"-prompt → /account.
 - **Soundscapes:** volledig vrij (geen lock).
 - **Continue-card:** toont laatst-gespeelde free sessie indien aanwezig.
-- **Pricing-block:** onderaan, scrollbaar via "Upgrade to full library"-CTA's. Toont €9.99/maand en €59.99/jaar (strike-prijzen €12.99/€9.99 als refrentie).
+- **Pricing-block:** onderaan, scrollbaar via "Upgrade to full library"-CTA's. Toont €9.99/maand (REGULAR €12.99) en €71.88/jaar = €5.99/maand (SAVE 40% strike-prijs €9.99). Bron: operator-pricing 2026-06-15, matcht audio-library-page.html.
 - **Tap pricing → /subscribe** (review-screen) → IAP-popup.
 
 ### 1.3 Bracelet-tab — Free

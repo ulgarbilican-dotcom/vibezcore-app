@@ -36,9 +36,9 @@ import {
 } from './iap-contract';
 
 /** Hardcoded mock-prijzen — reflecteren de launch-strategie (operator-
- *  besluit 2026-06-03 na competitor-analyse Mindset/Calm/Headspace):
- *    Monthly €9,99 — ietsje onder Mindset, tussen Headspace en Calm.
- *    Yearly  €59,99 — 50% discount (6 maanden) → tussen Mindset en Calm.
+ *  besluit 2026-06-15, matcht website audio-library-page.html):
+ *    Monthly €9,99 (REGULAR strike €12,99) — tussen Headspace en Calm.
+ *    Yearly  €71,88 = €5,99/maand — SAVE 40% vs monthly.
  *  Title bevat bewust "MOCK" zodat een dev ziet dat hij niet tegen
  *  echte StoreKit-data praat. In productie komt deze data uit Apple/
  *  Google die de prijs en titel per regio/taal serveren. */
@@ -58,9 +58,9 @@ const MOCK_PRODUCTS: IapProduct[] = [
     tier: 'yearly',
     title: 'MOCK — VIBEZCORE Audio Yearly',
     description: 'Mock subscription — geen echte aankoop.',
-    localizedPrice: '€59,99',
+    localizedPrice: '€71,88',
     currency: 'EUR',
-    priceAmountMicros: 59_990_000,
+    priceAmountMicros: 71_880_000,
     subscriptionPeriod: 'P1Y',
   },
 ];

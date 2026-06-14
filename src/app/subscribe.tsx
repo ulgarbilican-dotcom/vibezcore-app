@@ -248,7 +248,7 @@ export default function SubscribeScreen() {
   /* ── Render ─────────────────────────────────────────────────────── */
 
   const tierLabel = tier === 'yearly' ? 'Yearly' : 'Monthly';
-  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€59,99' : '€9,99');
+  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€71,88' : '€9,99');
   const periodLabel = tier === 'yearly' ? '/year' : '/month';
 
   /* Loading/transitional phases — single full-screen state */
@@ -350,7 +350,7 @@ export default function SubscribeScreen() {
         ) : null}
       </View>
       {tier === 'yearly' && (
-        <Text style={s.orderSave}>Save 50% vs monthly</Text>
+        <Text style={s.orderSave}>Save 40% vs monthly</Text>
       )}
     </View>
   );
