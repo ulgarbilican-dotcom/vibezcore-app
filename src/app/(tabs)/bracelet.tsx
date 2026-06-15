@@ -540,9 +540,13 @@ const EDITIONS: Edition[] = [
 /* ── Data: Pricing (placeholders — operator past later aan) ──────────────── */
 
 /* USD-only sinds 2026-05-26 (operator-keuze: EUR-toggle weg, alleen
-   USD tonen — eenvoudiger, Kickstarter is USD-first). Bundle-prijs
-   gewijzigd $209 → $219 (operator-correctie); save-bedrag herberekend
-   tov originele $483 sum-of-parts. */
+   USD tonen — eenvoudiger, Kickstarter is USD-first).
+   Iter 9dq v143 (operator 2026-06-15 v3): pricing herzien naar de
+   definitieve KS-launch-tier. Bracelet $159 → $169, bundle $219 → $215,
+   bundle-sum-of-parts $483 → $415 (klopt nu wiskundig: bracelet $299 +
+   yearly audio $69.99 + beads $32 ≈ $400, afgerond naar $415 voor ronde
+   save $200). Extra-beads-pricing onveranderd (operator-keuze). Matcht
+   STORE_LAUNCH_CHECKLIST.md + kickstarter-page.html PR.USD object. */
 type PriceRow = { main: string; old: string; save: string };
 type PriceSet = {
   bracelet: PriceRow;
@@ -550,8 +554,8 @@ type PriceSet = {
   extra: PriceRow;
 };
 const PRICING: PriceSet = {
-  bracelet: { main: '$159', old: '$299', save: 'Save $140' },
-  bundle: { main: '$219', old: '$483', save: 'Save $264' },
+  bracelet: { main: '$169', old: '$299', save: 'Save $130' },
+  bundle: { main: '$215', old: '$415', save: 'Save $200' },
   extra: { main: '$24.90', old: '$42', save: 'Save $17' },
 };
 
@@ -1216,7 +1220,7 @@ export default function BraceletScreen() {
                 - Titel: VIBEZCORE drop, alleen "Smart Bead Bracelet"
                   (brand staat al impliciet overal in de app)
                 - KICKSTARTER row krijgt een EARLY BIRD-chip ernaast
-                - Subline-onder krijgt micro-CTA "Reserve from $159 →"
+                - Subline-onder krijgt micro-CTA "Reserve from $169 →"
                   die naar de Kickstarter pricing-section scrollt */}
             <View style={s.hero}>
               <View style={s.heroEyebrowRow}>
@@ -3435,7 +3439,7 @@ const s = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   /* Iter 9: priceSave-pill weggehaald, vervangen door inline text
-     "$483 · save $264" met success-kleur op het save-deel. iOS-style
+     "$415 · save $200" met success-kleur op het save-deel. iOS-style
      inline-pricing-pattern, geen meer pill. */
   priceSaveInline: {
     color: Brand.success,

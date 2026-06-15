@@ -121,6 +121,17 @@ export default function SubscribeScreen() {
 
   const { getProduct, purchase, loading: iapLoading } = useIAP();
   const product = getProduct(tier);
+  /* Iter 9dq v141: voor dynamische SAVE % berekening hebben we BEIDE
+     producten nodig (yearly review toont savings vs monthly). */
+  const monthlyProductForSave = getProduct('monthly');
+  const yearlyProductForSave = getProduct('yearly');
+  const orderSaveLabel = (() => {
+    if (!monthlyProductForSave?.priceAmountMicros || !yearlyProductForSave?.priceAmountMicros) return 'Save 42% vs monthly';
+    const monthlyTotal = monthlyProductForSave.priceAmountMicros / 1_000_000;
+    const yearlyPerMonth = (yearlyProductForSave.priceAmountMicros / 12) / 1_000_000;
+    const pct = Math.round((1 - yearlyPerMonth / monthlyTotal) * 100);
+    return `Save ${pct}% vs monthly`;
+  })();
 
   const [mode, setMode] = useState<Mode>('signup');
   const [email, setEmail] = useState('');
@@ -248,7 +259,7 @@ export default function SubscribeScreen() {
   /* ── Render ─────────────────────────────────────────────────────── */
 
   const tierLabel = tier === 'yearly' ? 'Yearly' : 'Monthly';
-  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€71,88' : '€9,99');
+  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€69,00' : '€9,99');
   const periodLabel = tier === 'yearly' ? '/year' : '/month';
 
   /* Loading/transitional phases — single full-screen state */
@@ -350,7 +361,7 @@ export default function SubscribeScreen() {
         ) : null}
       </View>
       {tier === 'yearly' && (
-        <Text style={s.orderSave}>Save 40% vs monthly</Text>
+        <Text style={s.orderSave}>{orderSaveLabel}</Text>
       )}
     </View>
   );

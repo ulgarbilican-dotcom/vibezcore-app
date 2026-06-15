@@ -96,6 +96,7 @@ import {
   PILLAR_META,
   PILLAR_ORDER,
   SERIES,
+  SERIES_FOCAL,
   SERIES_PHOTO,
   SERIES_PILLAR,
   SERIES_SUB,
@@ -183,7 +184,10 @@ const PILLARS = [
     num: '03',
     name: 'Social Mastery',
     key: 'social' as const,
-    img: `${CDN}/Social%20mastery.jpg`,
+    /* iter 9dq v137 (operator 2026-06-15): nieuwe pillar-foto. Oude
+       Social%20mastery.jpg deelde een asset met de Calm Control bracelet-
+       mode; voor de pillar-card willen we een eigen, sterker beeld. */
+    img: `${CDN}/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg`,
     desc: 'Command without force.',
   },
   {
@@ -192,6 +196,17 @@ const PILLARS = [
     key: 'drive' as const,
     img: `${CDN}/Strategic%20wealth.jpg`,
     desc: 'Engineer your autonomy.',
+  },
+  /* Iter 9dq v137 (operator 2026-06-15): Tools & Practices als 5e pillar-
+     kaart in de UI. Stond al in PILLAR_META + SERIES_PILLAR (data-laag)
+     met 2 series (Daily Affirmations Power, Soundscapes) maar werd niet
+     gerenderd. Foto-URL op Bunny CDN aangeleverd door operator. */
+  {
+    num: '05',
+    name: 'Tools & Practices',
+    key: 'tools' as const,
+    img: `${CDN}/Workout%20on%20Beach_edited.jpg`,
+    desc: 'Layered over everything.',
   },
 ];
 
@@ -576,7 +591,7 @@ export default function AudioScreen() {
   const monthlyProduct = getIapProduct('monthly');
   const yearlyProduct = getIapProduct('yearly');
   const monthlyPriceLabel = monthlyProduct?.localizedPrice ?? '€9.99';
-  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€71.88';
+  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€69.00';
 
   /* Helper: vervang het numerieke deel in een localizedPrice ("€9.99",
      "$9.99", "9,99 €") door een nieuwe value, behoud valuta-symbool. We
@@ -591,10 +606,10 @@ export default function AudioScreen() {
   };
 
   /* Per-maand-equivalent voor yearly = yearly_total / 12, in dezelfde
-     valuta als yearly localizedPrice. Fallback: €5.99 (operator-pricing
-     2026-06-15: yearly = €71.88/year = €5.99/month, save 40% vs monthly). */
+     valuta als yearly localizedPrice. Fallback: €5.75 (operator-pricing
+     2026-06-15 v2: yearly = €69.00/year = €5.75/month, save 42% vs monthly). */
   const yearlyPerMonthLabel = (() => {
-    if (!yearlyProduct?.priceAmountMicros) return '€5.99';
+    if (!yearlyProduct?.priceAmountMicros) return '€5.75';
     const monthlyValue = yearlyProduct.priceAmountMicros / 12 / 1_000_000;
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
@@ -609,6 +624,20 @@ export default function AudioScreen() {
     if (!monthlyProduct?.priceAmountMicros) return '€12.99';
     const strikeValue = (monthlyProduct.priceAmountMicros / 1_000_000) * 1.30;
     return reformatWithSymbol(monthlyProduct.localizedPrice, monthlyProduct.currency, strikeValue);
+  })();
+
+  /* Iter 9dq v141 (operator 2026-06-15 v3): SAVE % dynamisch berekend uit
+     beide products' priceAmountMicros. Resultaat klopt per regio:
+       EU monthly €9.99 vs yearly €5.75/mo → SAVE 42%
+       US monthly $11.99 vs yearly $5.83/mo → SAVE 51%
+       UK monthly £8.99 vs yearly £5.00/mo → SAVE 44%
+     Fallback 42% wanneer products nog niet geladen zijn (matcht EUR base). */
+  const savePercentLabel = (() => {
+    if (!monthlyProduct?.priceAmountMicros || !yearlyProduct?.priceAmountMicros) return 'SAVE 42%';
+    const monthlyTotal = monthlyProduct.priceAmountMicros / 1_000_000;
+    const yearlyPerMonth = (yearlyProduct.priceAmountMicros / 12) / 1_000_000;
+    const savedPct = Math.round((1 - yearlyPerMonth / monthlyTotal) * 100);
+    return `SAVE ${savedPct}%`;
   })();
   /* (verwijderd: storeName per platform — operator wil beide platforms
      tonen voor vertrouwen ongeacht device). */
@@ -1787,7 +1816,34 @@ export default function AudioScreen() {
                   android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
                 >
                   {photo ? (
-                    <Image source={{ uri: photo }} style={s.libCardBg} />
+                    /* iter 9dq v139 (2026-06-15): aanpak omgegooid.
+                       Transform-based focal shift werkte niet zichtbaar
+                       op series cards. Nu: voor focal-series rendert de
+                       Image expliciet langer dan de card (height = 100% +
+                       extra), met top:0 zodat de TOP van de foto in beeld
+                       blijft (parent libCard heeft overflow:hidden). Voor
+                       overige series: ongewijzigd standaard cover. */
+                    SERIES_FOCAL[ser.name] ? (
+                      <Image
+                        source={{ uri: photo }}
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          top: 0,
+                          /* Card is 200px hoog. We maken het Image-element
+                             extra hoog zodat cover de foto schaalt op die
+                             hoogte → onderkant wordt geclipt, TOP zichtbaar.
+                             Per-serie tunable via SERIES_FOCAL.translateY:
+                             grotere waarde = meer extra hoogte = grotere
+                             "zakken"-effect (meer van de top zichtbaar). */
+                          height: 200 + SERIES_FOCAL[ser.name].translateY * 2,
+                        }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Image source={{ uri: photo }} style={s.libCardBg} />
+                    )
                   ) : null}
                   {/* FIX 6: foto-tint is bewust verwijderd. Foto blijft
                      kraakhelder; rand + glow doen al het "actief"-werk. */}
@@ -2317,12 +2373,12 @@ export default function AudioScreen() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-                {/* Iter 9dq v135 (operator 2026-06-15): SAVE 40% = math-
-                    correct met monthly €9.99 vs yearly-per-month €5.99.
-                    Matcht website audio-library-page.html. */}
+                {/* Iter 9dq v141 (operator 2026-06-15 v3): SAVE % dynamisch
+                    berekend uit IAP-products. EU 42%, US 51%, UK 44%.
+                    Matcht website auto-detect logica. */}
                 <View style={s.strikeRow}>
                   <Text style={s.priceStrike}>{monthlyPriceLabel}</Text>
-                  <Text style={s.saveTag}>SAVE 40%</Text>
+                  <Text style={s.saveTag}>{savePercentLabel}</Text>
                 </View>
                 <View style={s.priceBig}>
                   <Text style={s.priceBigAmount}>{yearlyPerMonthLabel}</Text>
@@ -4346,7 +4402,7 @@ const s = StyleSheet.create({
     marginLeft: 8,
   },
   /* Iter 9dq v135: REGULAR-tag op monthly-card. Subtieler (dim) dan
-     SAVE 40% op yearly-card, want is informatie ipv conversie-driver. */
+     SAVE 42% op yearly-card, want is informatie ipv conversie-driver. */
   regularTag: {
     color: 'rgba(255,255,255,0.50)',
     fontSize: 10,

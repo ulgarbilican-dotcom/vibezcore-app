@@ -68,7 +68,23 @@ In-App Purchase Display Names:
 
 In-App Purchase Descriptions:
   monthly:                                [OPERATOR — €9,99/maand · alle sessies]
-  yearly:                                 [OPERATOR — €71,88/jaar (€5,99/m) · alle sessies]
+  yearly:                                 [OPERATOR — €69,00/jaar (€5,75/m) · alle sessies]
+
+PRICING — Custom per territory (operator-besluit 2026-06-15 v3):
+  Kies bij subscription pricing → "Custom pricing per country/region"
+  i.p.v. "Apple's automatic conversion". Reden: max revenue per markt.
+
+  Monthly subscription (com.ubili.vibezcoreapp.audio.monthly):
+    🇪🇺 Eurozone (NL/BE/DE/FR/IT/ES/IE/AT/PT/FI/etc.):      €9,99
+    🇺🇸 United States:                                       $11.99
+    🇬🇧 United Kingdom:                                      £8.99
+    Andere markten:                                          Apple PPP-conversie van EUR base
+
+  Yearly subscription (com.ubili.vibezcoreapp.audio.yearly):
+    🇪🇺 Eurozone:                                            €69,00  (= €5,75/m · SAVE 42%)
+    🇺🇸 United States:                                       $69.99  (= $5.83/m · SAVE 51%)
+    🇬🇧 United Kingdom:                                      £59.99  (= £5.00/m · SAVE 44%)
+    Andere markten:                                          Apple PPP-conversie van EUR base
 ```
 
 ```
@@ -80,17 +96,91 @@ Full Description (max 4000):              [OPERATOR — gestructureerde tekst me
 Category:                                 Health & Fitness  (operator-keuze)
 Content Rating questionnaire:             [OPERATOR — invullen na app-aanmaak in Play Console]
 
-In-App Subscription Product:
+In-App Subscription Products:
   com.ubili.vibezcoreapp.audio.monthly
     Name:                                 [OPERATOR]
     Description:                          [OPERATOR]
     Base plan:                            "audio-monthly" — Monthly, auto-renewing
-    Price:                                €9,99 / maand
+    Pricing — Regional pricing per country (operator-besluit 2026-06-15 v3):
+      🇪🇺 Eurozone:                       €9,99 / maand
+      🇺🇸 United States:                  $11.99 / month
+      🇬🇧 United Kingdom:                 £8.99 / month
+      Andere markten:                     Google auto-convert van EUR base
+
   com.ubili.vibezcoreapp.audio.yearly
     Name:                                 [OPERATOR]
     Description:                          [OPERATOR]
     Base plan:                            "audio-yearly" — Yearly, auto-renewing
-    Price:                                €71,88 / jaar  (= €5,99 / maand, SAVE 40% vs monthly)
+    Pricing — Regional pricing per country:
+      🇪🇺 Eurozone:                       €69,00 / jaar  (€5,75/m · SAVE 42%)
+      🇺🇸 United States:                  $69.99 / year  ($5.83/m · SAVE 51%)
+      🇬🇧 United Kingdom:                 £59.99 / year  (£5.00/m · SAVE 44%)
+      Andere markten:                     Google auto-convert van EUR base
+```
+
+```
+WEBSITE — Currency auto-detect (operator-besluit 2026-06-15 v3)
+
+Implementatie: alle pricing-elementen op de website hebben nu
+data-eur / data-usd / data-gbp attributen. Een klein script op elke
+pagina kiest het juiste attribuut op basis van Intl.DateTimeFormat
+timezone (Europe/London → GBP, Europe/* → EUR, America/* → USD, rest → USD).
+
+Manuele EUR/USD toggle (.cur-toggle) wordt verborgen met display:none —
+geen "compare-and-feel-cheated" risico voor US users.
+
+Bijgewerkte pages (kopiëren naar Wix):
+  - assets/website-content/_homepage-NIEUW/audio-library-page.html
+  - assets/website-content/_homepage-NIEUW/home-system-cards.html
+  - assets/website-content/_homepage-NIEUW/home-app-strip.html
+  - assets/website-content/app-page.html
+  - assets/website-content/kickstarter-page.html       ← USD-only voor bracelet (zie KS-sectie)
+  - assets/website-content/shop-bundle-bracelet-compact.html
+```
+
+```
+KICKSTARTER CAMPAGNE — Pricing & Currency (operator-besluit 2026-06-15 v3)
+
+Primary currency:                         USD
+Reden:                                    70%+ van hardware-Kickstarter backers
+                                          is US-based. Kickstarter ondersteunt
+                                          maar één primary currency per
+                                          campagne (geen multi-currency display).
+                                          EU/UK backers zien USD en betalen
+                                          via bank-conversie (~3% fee).
+
+Tier pricing (early bird → standard → retail):
+  Bracelet Early Bird:                    $169   (save $130 vs retail)
+  Bracelet Standard:                      $199   (save $100 vs retail)
+  Bracelet Retail (post-KS reference):    $299
+  Bundle Early Bird (Bracelet + 1yr Audio + beads):  $215   (save $200 vs retail)
+  Bundle Standard:                        $249
+  Bundle Retail (post-KS reference):      $415
+
+Bundle composition (worth-breakdown @ retail):
+  Bracelet:                               $299
+  1-year Audio Library access:            $69.99 (matcht App Store yearly price)
+  Interchangeable bead set:               $32
+  Totaal retail waarde:                   ~$400
+
+Belastingafdracht (België):
+  Kickstarter betaalt uit via Stripe in EUR op je KBO-bankrekening.
+  Stripe converteert USD → EUR aan spot rate, fee ~1.5%.
+  BTW-afdracht via je boekhouder na campaign-end.
+
+Website-implementatie:
+  De kickstarter-page.html toont bracelet/bundle ALTIJD in USD (override
+  van de auto-detect script via PR.USD-force in setCur). Audio-pricing op
+  diezelfde page gebruikt nog wel auto-detect (EU/UK users zien EUR/GBP
+  voor de audio FAQ) want audio gaat via App Store met regio-pricing.
+
+Post-Kickstarter (Stripe-shop fase):
+  Na KS-delivery transitioneer je naar je eigen Stripe-shop. Daar zet je
+  WEL regional pricing per markt:
+    Bracelet retail:   EU €279 · US $299 · UK £239
+    Bundle retail:     EU €380 · US $415 · UK £329
+  De shop-pages (home-system-cards.html, shop-bundle-bracelet-compact.html)
+  blijven auto-detect — geen verandering nodig na KS-end.
 ```
 
 ## 4. Externe acties — operator

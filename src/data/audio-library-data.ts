@@ -234,6 +234,48 @@ export const SERIES_PHOTO: Record<string,string> = {
   'The Stoic Mind': 'https://vibezcore-audio.b-cdn.net/images/the-stoic-fortress.jpg',
   'Fight Or Flight': 'https://vibezcore-audio.b-cdn.net/images/end-fight-or-flight.jpg',
   'Soundscapes': 'https://vibezcore-audio.b-cdn.net/images/theta-and-alpha-frequency.jpg',
+  /* iter 9dq v137 (operator 2026-06-15): 12 nieuwe series-photos (Bunny CDN)
+     aangeleverd door operator. Gegroepeerd per pijler voor leesbaarheid.
+     ⚠ Iron Discipline ontbreekt — geen URL aangeleverd, valt voorlopig terug
+     op pijler-foto.
+     ⚠ Purpose & Mission URL bevat operator-typo "puprose" (filename op CDN)
+     — bewust niet gecorrigeerd, anders 404. */
+  /* — Pillar: Psychological Resilience — */
+  'The Father Wound':          'https://vibezcore-audio.b-cdn.net/images/father%20wound.jpg',
+  'The Mother Wound':          'https://vibezcore-audio.b-cdn.net/images/mother%20wound.jpg',
+  /* — Pillar: Inner Sovereignty — */
+  'Time, Death & Legacy':      'https://vibezcore-audio.b-cdn.net/images/time%20en%20death.jpg',
+  'Become Who You Are':        'https://vibezcore-audio.b-cdn.net/images/become%20who%20you%20are.jpg',
+  'Meaning Through Suffering': 'https://vibezcore-audio.b-cdn.net/images/meaning%20through%20suffering.jpg',
+  'The Way Of Wu Wei':         'https://vibezcore-audio.b-cdn.net/images/wu%20wei.jpg',
+  /* — Pillar: Social Mastery — */
+  'Power & Human Nature':      'https://vibezcore-audio.b-cdn.net/images/machiavelli.jpg',
+  'Attachment':                'https://vibezcore-audio.b-cdn.net/images/attachment.jpg',
+  'Dignity':                   'https://vibezcore-audio.b-cdn.net/images/Dignity.jpg',
+  'Daily Discipline':          'https://vibezcore-audio.b-cdn.net/images/daily%20discipline.jpg',
+  /* — Pillar: Strategic Execution & Wealth — */
+  'Wealth Psychology':         'https://vibezcore-audio.b-cdn.net/images/wealth%20psychology.jpg',
+  'Purpose & Mission':         'https://vibezcore-audio.b-cdn.net/images/puprose%20and%20mission.jpg',
+};
+
+/* iter 9dq v137 (operator 2026-06-15): focal-point shift per serie voor
+   library-cards (libCard 200px hoog). React Native heeft geen object-
+   position prop, dus we gebruiken transform [scale + translateY] in
+   combinatie met de parent's overflow:hidden:
+   - scale > 1 maakt de Image groter dan de card (krijgt extra "ruimte")
+   - positieve translateY schuift het zichtbare deel naar BOVEN in de foto
+     (we zien meer van de top → gezichten die hoog in beeld staan komen
+     binnen het zichtbare frame)
+   - negatieve translateY zou tegenovergesteld werken (zelden nodig)
+   Per serie alleen ingesteld als nodig — anders default centered cover. */
+export const SERIES_FOCAL: Record<string, { scale: number; translateY: number }> = {
+  /* iter 9dq v138 (2026-06-15): waarden bumped naar duidelijk-zichtbaar
+     niveau zodat operator visueel kan bevestigen dat het werkt. Na visuele
+     bevestiging dialen we terug naar subtiele waarden indien gewenst. */
+  'Wealth Psychology':    { scale: 1.40, translateY: 35 }, // "beetje zakken"
+  'Power & Human Nature': { scale: 1.40, translateY: 50 }, // "zakken"
+  'Meaning Over Comfort': { scale: 1.40, translateY: 35 }, // "beetje zakken"
+  'The Mother Wound':     { scale: 1.40, translateY: 50 }, // "zakken" — kind + moeder in beeld
 };
 
 /* Eyebrow tekst EXACT zoals website widget (2026-06-14). Vibe: "X Inspired
@@ -272,7 +314,7 @@ export const SERIES_SUBTITLE: Record<string,string> = {
 export const SUBCAT_INFO: Record<string,{photo:string;eyebrow:string}> = {
   'Calm Clarity': { photo:'https://vibezcore-audio.b-cdn.net/images/Ambient%20background.jpg', eyebrow:'Theta Waves (4-7 Hz) · Best with headphones' },
   'Rest & Reset': { photo:'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg', eyebrow:'Delta Waves (0.5-4 Hz) · Best with headphones' },
-  'Zen Flow': { photo:'https://vibezcore-audio.b-cdn.net/images/Psychological%20Resilience.png', eyebrow:'Meditation sessions' },
+  'Zen Flow': { photo:'https://vibezcore-audio.b-cdn.net/images/zen%20flow%20correct.png', eyebrow:'Meditation sessions' },
   'Harmonic': { photo:'https://vibezcore-audio.b-cdn.net/images/Calm%20Clarety.jpg', eyebrow:'Background soundscapes' },
 };
 export const SUBCAT_ORDER: string[] = ['Calm Clarity', 'Rest & Reset', 'Zen Flow', 'Harmonic'];
@@ -303,9 +345,9 @@ export const PILLAR_ORDER: Pillar[] = ['resilience', 'sovereignty', 'social', 'd
 export const PILLAR_META: Record<Pillar, { num: string; name: string; tagline: string; img?: string }> = {
   resilience:  { num: '01', name: 'Psychological Resilience',     tagline: 'Build what cannot break.',  img: 'https://vibezcore-audio.b-cdn.net/images/Psychological%20Resilience%20correct.jpg' },
   sovereignty: { num: '02', name: 'Inner Sovereignty',            tagline: 'Master what is yours.',     img: 'https://vibezcore-audio.b-cdn.net/images/Stoic%20mastery.jpg' },
-  social:      { num: '03', name: 'Social Mastery',               tagline: 'Command without force.',    img: 'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg' },
+  social:      { num: '03', name: 'Social Mastery',               tagline: 'Command without force.',    img: 'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg' },
   drive:       { num: '04', name: 'Strategic Execution & Wealth', tagline: 'Engineer your autonomy.',   img: 'https://vibezcore-audio.b-cdn.net/images/Strategic%20wealth.jpg' },
-  tools:       { num: '05', name: 'Tools & Practices',            tagline: 'Layered over everything.' },
+  tools:       { num: '05', name: 'Tools & Practices',            tagline: 'Layered over everything.', img: 'https://vibezcore-audio.b-cdn.net/images/Workout%20on%20Beach_edited.jpg' },
 };
 
 /* Welke pijler hoort een serie bij? Bestaande 12 series gemapped per
@@ -323,8 +365,12 @@ export const SERIES_PILLAR: Record<string, Pillar> = {
   'Time, Death & Legacy':     'sovereignty',
   'Become Who You Are':       'sovereignty',
   'Meaning Through Suffering':'sovereignty',
-  'The Way Of Wu Wei':        'sovereignty',
-  'Life After Betrayal':      'social',
+  /* iter 9dq v137 (operator 2026-06-15): Wu Wei ↔ Life After Betrayal
+     gewisseld van pijler. Wu Wei past beter bij Social Mastery (effortless
+     action in relations), Life After Betrayal past beter bij Inner
+     Sovereignty (rebuilding self after trust-breach). */
+  'The Way Of Wu Wei':        'social',
+  'Life After Betrayal':      'sovereignty',
   'Power & Human Nature':     'social',
   'Attachment':               'social',
   'Dignity':                  'social',
@@ -343,8 +389,11 @@ export const SERIES_PILLAR: Record<string, Pillar> = {
 /* Volgorde EXACT zoals op vibezcore.com audio-library widget (2026-06-14). */
 export const PILLAR_SERIES_ORDER: Record<Pillar, string[]> = {
   resilience:  ['The Father Wound', 'The Mother Wound', 'Master Mental Clarity', 'The Inner Blueprint', 'Fight Or Flight'],
-  sovereignty: ['Meaning Over Comfort', 'The Stoic Mind', 'The Freedom Formula', 'Time, Death & Legacy', 'Become Who You Are', 'Meaning Through Suffering', 'The Way Of Wu Wei'],
-  social:      ['Power & Human Nature', 'Life After Betrayal', 'Attachment', 'Dignity', 'Daily Discipline'],
+  /* iter 9dq v137 (operator 2026-06-15): zie SERIES_PILLAR-comment.
+     Wu Wei + Life After Betrayal van pijler gewisseld. Volgorde binnen
+     elke pijler: nieuwe binnenkomer aan het eind, rest ongewijzigd. */
+  sovereignty: ['Meaning Over Comfort', 'The Stoic Mind', 'The Freedom Formula', 'Time, Death & Legacy', 'Become Who You Are', 'Meaning Through Suffering', 'Life After Betrayal'],
+  social:      ['Power & Human Nature', 'Attachment', 'Dignity', 'Daily Discipline', 'The Way Of Wu Wei'],
   drive:       ['Identity & Wealth', 'Journey to Success', 'Beast Mode', 'Wealth Psychology', 'Iron Discipline', 'Purpose & Mission'],
   tools:       ['Daily Affirmations Power', 'Soundscapes'],
 };
