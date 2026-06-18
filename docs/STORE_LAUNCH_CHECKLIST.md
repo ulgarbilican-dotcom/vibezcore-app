@@ -153,15 +153,19 @@ Tier pricing (early bird → standard → retail):
   Bracelet Early Bird:                    $169   (save $130 vs retail)
   Bracelet Standard:                      $199   (save $100 vs retail)
   Bracelet Retail (post-KS reference):    $299
-  Bundle Early Bird (Bracelet + 1yr Audio + beads):  $215   (save $200 vs retail)
+  Bundle Early Bird (Bracelet + 1yr Audio + beads):  $215   (save $184 vs retail)
   Bundle Standard:                        $249
-  Bundle Retail (post-KS reference):      $415
+  Bundle Retail (post-KS reference):      $399
 
 Bundle composition (worth-breakdown @ retail):
   Bracelet:                               $299
   1-year Audio Library access:            $69.99 (matcht App Store yearly price)
   Interchangeable bead set:               $32
-  Totaal retail waarde:                   ~$400
+  Totaal retail waarde:                   $400.99 → $399 afgerond
+
+Iter 9dq v175 (operator-audit 2026-06-18): pricing-mismatch tussen
+app (was $415/$200) en website (al $399/$184) opgelost. Site is
+single source of truth voor pricing-numbers.
 
 Belastingafdracht (België):
   Kickstarter betaalt uit via Stripe in EUR op je KBO-bankrekening.
@@ -178,7 +182,7 @@ Post-Kickstarter (Stripe-shop fase):
   Na KS-delivery transitioneer je naar je eigen Stripe-shop. Daar zet je
   WEL regional pricing per markt:
     Bracelet retail:   EU €279 · US $299 · UK £239
-    Bundle retail:     EU €380 · US $415 · UK £329
+    Bundle retail:     EU €378 · US $399 · UK £324
   De shop-pages (home-system-cards.html, shop-bundle-bracelet-compact.html)
   blijven auto-detect — geen verandering nodig na KS-end.
 ```
