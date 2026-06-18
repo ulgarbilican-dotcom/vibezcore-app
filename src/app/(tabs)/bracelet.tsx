@@ -15,7 +15,7 @@
      5. Technical Specs — 2-koloms grid
      6. The Collection — 15 gemstone-editions, Pure/Premium/Imperial
      7. Pricing — Bracelet/Bundle/Extra, EUR/USD toggle
-     8. Countdown — naar Kickstarter 1 augustus 2026
+     8. Countdown — naar Kickstarter 1 september 2026
      9. Join the Waitlist — link naar vibezcore.com via WebBrowser
 
    Belangrijk:
@@ -111,10 +111,10 @@ const WAITLIST_BRACELET_URL = 'https://www.vibezcore.com/subscribe-bracelet';
    blijft voor backwards-compat als operator 'm later wil terugroepen. */
 const WAITLIST_URL = 'https://www.vibezcore.com/';
 
-/* Kickstarter-target. CLAUDE.md §3 zegt 1 augustus 2026. Datum/tijd in
-   lokale tijd (geen 'Z'-suffix) — countdown-cosmetica, geen kritieke
-   precisie. */
-const KICKSTARTER_TARGET = new Date('2026-08-01T00:00:00').getTime();
+/* Kickstarter-target. Operator-update 2026-06-17: launch verschoven van
+   1 augustus → 1 september 2026. Datum/tijd in lokale tijd (geen 'Z'-
+   suffix) — countdown-cosmetica, geen kritieke precisie. */
+const KICKSTARTER_TARGET = new Date('2026-09-01T00:00:00').getTime();
 
 /* ── Carousel dimensions (How-it-works + Modes) ───────────────────────────
    Apple iPhone-page-style swipe-carousel met peek van de volgende card.
@@ -541,12 +541,14 @@ const EDITIONS: Edition[] = [
 
 /* USD-only sinds 2026-05-26 (operator-keuze: EUR-toggle weg, alleen
    USD tonen — eenvoudiger, Kickstarter is USD-first).
-   Iter 9dq v143 (operator 2026-06-15 v3): pricing herzien naar de
-   definitieve KS-launch-tier. Bracelet $159 → $169, bundle $219 → $215,
-   bundle-sum-of-parts $483 → $415 (klopt nu wiskundig: bracelet $299 +
-   yearly audio $69.99 + beads $32 ≈ $400, afgerond naar $415 voor ronde
-   save $200). Extra-beads-pricing onveranderd (operator-keuze). Matcht
-   STORE_LAUNCH_CHECKLIST.md + kickstarter-page.html PR.USD object. */
+   Iter 9dq v143 (operator 2026-06-15 v3) + v175 (operator 2026-06-18):
+   pricing-audit. Match'd nu de canonical values uit
+   assets/website-content/kickstarter-page.html + shop-bundle-bracelet-
+   compact.html:
+     Bracelet: was $299, now $169, save $130
+     Bundle:   was $399, now $215, save $184
+                (math: $299 + $69.99 audio + $32 beads ≈ $399 retail)
+     Extra bead set: $32 retail (geen losse KS-discount op website) */
 type PriceRow = { main: string; old: string; save: string };
 type PriceSet = {
   bracelet: PriceRow;
@@ -555,8 +557,8 @@ type PriceSet = {
 };
 const PRICING: PriceSet = {
   bracelet: { main: '$169', old: '$299', save: 'Save $130' },
-  bundle: { main: '$215', old: '$415', save: 'Save $200' },
-  extra: { main: '$24.90', old: '$42', save: 'Save $17' },
+  bundle: { main: '$215', old: '$399', save: 'Save $184' },
+  extra: { main: '$32', old: '', save: '' },
 };
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
@@ -1746,10 +1748,21 @@ export default function BraceletScreen() {
             </View>
             <View style={s.ksAddonPrice}>
               <Text style={s.priceMainSmall}>{price.extra.main}</Text>
-              <Text style={s.ksAddonMeta}>
-                <Text style={s.priceOld}>{price.extra.old}</Text>
-                <Text style={s.priceSaveInline}> · {price.extra.save}</Text>
-              </Text>
+              {/* Iter 9dq v175: extra bead set match'd website ($32 retail,
+                  geen KS-discount). old + save zijn leeg → niet renderen. */}
+              {price.extra.old || price.extra.save ? (
+                <Text style={s.ksAddonMeta}>
+                  {price.extra.old ? (
+                    <Text style={s.priceOld}>{price.extra.old}</Text>
+                  ) : null}
+                  {price.extra.save ? (
+                    <Text style={s.priceSaveInline}>
+                      {price.extra.old ? ' · ' : ''}
+                      {price.extra.save}
+                    </Text>
+                  ) : null}
+                </Text>
+              ) : null}
             </View>
           </View>
 
@@ -3439,7 +3452,7 @@ const s = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   /* Iter 9: priceSave-pill weggehaald, vervangen door inline text
-     "$415 · save $200" met success-kleur op het save-deel. iOS-style
+     "$399 · save $184" met success-kleur op het save-deel. iOS-style
      inline-pricing-pattern, geen meer pill. */
   priceSaveInline: {
     color: Brand.success,

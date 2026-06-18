@@ -4,7 +4,7 @@
    Smal, oranje banner-stripje dat bovenaan een scherm verschijnt om te
    communiceren dat de getoonde ervaring een PREVIEW is en het echte
    product (de Smart Bead Bracelet) nog niet geleverd is — Kickstarter
-   launch 1 augustus 2026 per CLAUDE.md §3 + SPEC.
+   launch 1 september 2026 (operator-update 2026-06-17, was 1 augustus).
 
    Gebruikt op alle bracelet-gerelateerde schermen (Bracelet-tab,
    Bracelet-control, Bracelet-history). NIET op audio-schermen — audio
@@ -26,12 +26,12 @@ import { BrandFonts } from '@/constants/theme';
 import { StyleSheet, Text, View } from 'react-native';
 
 type Props = {
-  /** Optionele uitleg-regel. Default 'Bracelet ships Summer 2026'. */
+  /** Optionele uitleg-regel. Default 'Bracelet ships after 1 September 2026 launch'. */
   subtitle?: string;
 };
 
 export function PreviewBanner({
-  subtitle = 'Bracelet ships Summer 2026',
+  subtitle = 'Bracelet ships after 1 September 2026 launch',
 }: Props) {
   return (
     <View style={s.banner}>

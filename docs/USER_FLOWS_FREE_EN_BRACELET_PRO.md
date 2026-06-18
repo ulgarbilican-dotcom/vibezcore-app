@@ -37,7 +37,7 @@ De default-staat van elke verse gebruiker. Geen account, geen entitlements. App 
 
 ### 1.3 Bracelet-tab — Free
 
-- **PreviewBanner** bovenaan: "PREVIEW · Bracelet ships Summer 2026"
+- **PreviewBanner** bovenaan: "PREVIEW · Bracelet ships after 1 September 2026 launch"
 - **Etalage-modus:** how-it-works carrousel, mode-carrousel (Boost/Sharp Focus/Calm Control/Clarity/Rest & Reset met foto's), editions, Kickstarter countdown.
 - **Geen control-page** — visitor heeft geen bracelet.
 - **Reserve-CTAs:**

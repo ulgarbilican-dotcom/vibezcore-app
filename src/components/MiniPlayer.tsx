@@ -23,13 +23,36 @@ import {
   unload,
   usePlayerState,
 } from '@/services/audio-player';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, usePathname } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+  Animated,
+  Dimensions,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_BAR_HEIGHT = 64; // moet matchen met (tabs)/_layout
 const GAP_ABOVE_TABBAR = 8;
+
+/* Iter 9dq v149/v150 (operator 2026-06-17): MiniPlayer is draggable.
+   Reden: op breath.tsx en bracelet-control overlapt de player de START-
+   knop, waardoor de gebruiker breathwork niet kan starten.
+   v150: snap-to-top/bottom verwijderd — gebruiker kan player nu op ELKE
+   exacte Y-positie binnen het veilige bereik laten staan (operator-keuze
+   2026-06-17: "kan ik naar exacte plaats draggen?"). Wordt geclamped
+   tussen TOP_Y (safe-area top + gap) en BOTTOM_Y (boven tab-bar) zodat
+   de player nooit buiten het zichtbare gebied valt.
+   Exacte Y persist als number in AsyncStorage. */
+const POSITION_STORAGE_KEY = 'miniPlayerPosition_v2'; // v2: exact Y ipv 'top'|'bottom'
+const CARD_HEIGHT_ESTIMATE = 110; // card hoogte incl. padding — voor BOTTOM_Y math
+const DRAG_THRESHOLD = 8; // px vertikale beweging vóór drag-modus activeert (laat taps door)
 
 const C = {
   border: 'rgba(58,143,255,0.15)',
@@ -52,6 +75,83 @@ export function MiniPlayer() {
   const state = usePlayerState();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+
+  /* ── Draggable positioning (operator-feature 2026-06-17) ──────────────
+     animY = absolute Y-positie (px van top van het scherm). Default
+     bottom-positie matcht het oude gedrag exact zodat bestaande users
+     geen verschil zien tot ze 'm actief verslepen. */
+  const screenHeight = Dimensions.get('window').height;
+  const TOP_Y = insets.top + GAP_ABOVE_TABBAR;
+  const BOTTOM_Y = useMemo(
+    () =>
+      screenHeight -
+      TAB_BAR_HEIGHT -
+      insets.bottom -
+      GAP_ABOVE_TABBAR -
+      CARD_HEIGHT_ESTIMATE,
+    [screenHeight, insets.bottom],
+  );
+  const animY = useRef(new Animated.Value(BOTTOM_Y)).current;
+
+  /* Persisted exacte Y-positie laden bij mount. Resync wanneer
+     TOP_Y/BOTTOM_Y verandert (rotatie / safe-area). */
+  useEffect(() => {
+    AsyncStorage.getItem(POSITION_STORAGE_KEY).then((v) => {
+      if (v === null) {
+        /* Geen persisted value — default = bottom (oude gedrag). */
+        animY.setValue(BOTTOM_Y);
+        return;
+      }
+      const parsed = parseFloat(v);
+      if (!Number.isFinite(parsed)) {
+        animY.setValue(BOTTOM_Y);
+        return;
+      }
+      /* Clamp persisted value binnen huidig veilig bereik (kan veranderd
+         zijn door rotatie of devicewissel). */
+      const clamped = Math.max(TOP_Y, Math.min(BOTTOM_Y, parsed));
+      animY.setValue(clamped);
+    });
+  }, [TOP_Y, BOTTOM_Y, animY]);
+
+  /* PanResponder: drag-modus activeert alleen bij significant vertikale
+     beweging (>8px). Onder die threshold doorgegeven aan onderliggende
+     Pressables (expand/play/close) zodat taps blijven werken.
+     Geen snap meer (v150) — exacte Y blijft staan waar gebruiker loslaat,
+     binnen het veilige bereik [TOP_Y, BOTTOM_Y]. */
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evt, gs) =>
+        Math.abs(gs.dy) > DRAG_THRESHOLD,
+      onPanResponderGrant: () => {
+        animY.extractOffset();
+      },
+      onPanResponderMove: Animated.event([null, { dy: animY }], {
+        useNativeDriver: false,
+      }),
+      onPanResponderRelease: () => {
+        animY.flattenOffset();
+        // @ts-expect-error _value is internal maar stabiele Animated API
+        const currentY = animY._value as number;
+        /* Clamp binnen veilig bereik. Als drag verder ging dan TOP_Y of
+           BOTTOM_Y, spring 'm rustig terug naar de grens — anders blijft
+           'ie precies waar de vinger losliet. */
+        const clamped = Math.max(TOP_Y, Math.min(BOTTOM_Y, currentY));
+        if (clamped !== currentY) {
+          Animated.spring(animY, {
+            toValue: clamped,
+            tension: 80,
+            friction: 14,
+            useNativeDriver: false,
+          }).start();
+        }
+        AsyncStorage.setItem(POSITION_STORAGE_KEY, String(clamped)).catch(
+          () => {},
+        );
+      },
+    }),
+  ).current;
 
   if (!state.session) return null;
   /* Verstop op routes waar de mini-player niet thuishoort. usePathname is
@@ -95,16 +195,16 @@ export function MiniPlayer() {
   };
 
   return (
-    <View
-      style={[
-        s.wrap,
-        { bottom: insets.bottom + TAB_BAR_HEIGHT + GAP_ABOVE_TABBAR },
-      ]}
+    <Animated.View
+      style={[s.wrap, { top: animY }]}
       pointerEvents="box-none"
+      {...panResponder.panHandlers}
     >
       {/* Hele card = tap-zone voor expand. Inner Pressables voor play en
          close capturen taps (RN gesture system pakt de dichtstbijzijnde
-         Pressable, dus expand vuurt niet wanneer je op play/close tikt). */}
+         Pressable, dus expand vuurt niet wanneer je op play/close tikt).
+         PanResponder boven valt terug op false bij dy < 8px, dus korte
+         taps blijven werken. */}
       <Pressable
         onPress={onExpand}
         android_ripple={{ color: 'rgba(255,255,255,0.03)' }}
@@ -115,6 +215,12 @@ export function MiniPlayer() {
           end={{ x: 0, y: 1 }}
           style={s.card}
         >
+          {/* Drag-handle indicator: kleine horizontale pill bovenaan center.
+              Visuele cue dat de card draggable is — sleep om naar elke
+              gewenste Y-positie te verplaatsen. */}
+          <View style={s.dragHandle} pointerEvents="none">
+            <View style={s.dragHandlePill} />
+          </View>
           {/* Expand-chevron top-right, omhoog (tap = uitklappen naar full). */}
           <Text style={s.expand}>⌃</Text>
 
@@ -168,7 +274,7 @@ export function MiniPlayer() {
           </View>
         </LinearGradient>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -186,7 +292,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     borderRadius: 16,
-    paddingTop: 10,
+    paddingTop: 14, // +4 om ruimte te maken voor drag-handle pill
     paddingHorizontal: 12,
     paddingBottom: 11,
     /* Donkere shadow boven het balkje (webapp shadow: 0 -8 32) */
@@ -194,6 +300,24 @@ const s = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 32,
     shadowOffset: { width: 0, height: -8 },
+  },
+
+  /* Drag-handle indicator — kleine pill bovenaan center.
+     pointerEvents:none op de wrapper zodat de PanResponder van de
+     parent View de drag oppikt zonder dat de handle taps swallowt. */
+  dragHandle: {
+    position: 'absolute',
+    top: 4,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  dragHandlePill: {
+    width: 32,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
 
   /* Expand-chevron top-right — wijst omhoog: tap = uitklappen naar full.

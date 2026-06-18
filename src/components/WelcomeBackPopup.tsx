@@ -37,8 +37,9 @@ import {
   type LastPlayed,
 } from '@/utils/last-played';
 import { openSession } from '@/utils/openSession';
+import { urlEq } from '@/utils/url-eq';
 import { setSavedPosition } from '@/utils/vzp';
-import { useSegments } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import {
   BackHandler,
@@ -196,13 +197,21 @@ export function WelcomeBackPopup() {
    from X:XX / Start over"-prompt (= bestaande in-player flow,
    ongewijzigd zoals operator gevraagd). */
 async function onContinue(lp: LastPlayed): Promise<void> {
-  const sess = SESSIONS.find((x) => x.url === lp.url);
+  const sess = SESSIONS.find((x) => urlEq(x.url, lp.url));
 
   if (sess) {
     /* Happy path: sessie bestaat nog in de library. Sla positie op en
        laat openSession() de player openen mét volledige metadata
-       (desc, subseries, etc.) zoals welke andere library-tap dan ook. */
+       (desc, subseries, etc.) zoals welke andere library-tap dan ook.
+       Iter 9dq v157: vóór de player-push expliciet eerst naar de Audio
+       Library-tab navigeren. Reden: bracelet-owners worden bij cold-
+       start automatisch naar /bracelet geredirect; als de player daar
+       bovenop pusht en daarna sluit, valt user terug op bracelet ipv
+       audio. Door eerst naar '/' te navigeren, landt user na de player
+       weer op Audio Library — natuurlijker voor wie "Continue listening"
+       koos. */
     await setSavedPosition(lp.url, lp.positionSec);
+    router.navigate('/' as never);
     openSession(sess);
   } else {
     /* Stale entry: deze URL bestaat niet meer in SESSIONS — kan na een

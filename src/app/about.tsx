@@ -247,7 +247,7 @@ export default function AboutScreen() {
           by the system, compounded over time.
         </P>
         <P>
-          The Kickstarter launch is scheduled for Summer 2026. A
+          The Kickstarter launch is scheduled for 1 September 2026. A
           limited first release for the people who understand what this
           is and are ready to move.
         </P>
