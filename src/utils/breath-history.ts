@@ -104,6 +104,36 @@ export async function clearBreathHistory(): Promise<void> {
   await persist();
 }
 
+/* ── Streak-berekening (iter 9dq v172, operator-fix 2026-06-18) ───────
+   Aantal consecutive dagen waarop de gebruiker minstens één breath-sessie
+   afgerond heeft, terugkijkend vanaf vandaag. Dag-grens = lokale midder-
+   nacht (Date.toDateString). Eén sessie/dag telt als dag-aanwezig.
+   Voorbeelden:
+     - sessies vandaag + gisteren + eergisteren → streak = 3
+     - sessies vandaag + 2 dagen terug → streak = 1 (gap gisteren)
+     - geen sessies vandaag, wel gisteren → streak = 0 (streak vervalt
+       als vandaag nog niets gedaan is)
+   Operator-keuze "vandaag-anker": streak = 0 wanneer er vandaag niets
+   gedaan is. Voorkomt "yesterday's streak"-illusie. */
+export function calculateStreak(
+  entries: BreathHistoryEntry[],
+): number {
+  if (entries.length === 0) return 0;
+  /* Set van dag-strings waarop minstens één sessie staat. */
+  const days = new Set<string>();
+  for (const e of entries) {
+    days.add(new Date(e.ts).toDateString());
+  }
+  /* Loop terug vanaf vandaag tot de eerste dag zonder sessie. */
+  let streak = 0;
+  const cursor = new Date();
+  while (days.has(cursor.toDateString())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 /* React-hook — gebruik in components voor reactive history-rendering. */
 export function useBreathHistory(): BreathHistoryEntry[] {
   const [entries, setEntries] = useState<BreathHistoryEntry[]>(state);

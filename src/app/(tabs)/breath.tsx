@@ -24,10 +24,25 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { addBreathSession, useBreathHistory } from '@/utils/breath-history';
+import {
+  addBreathSession,
+  calculateStreak,
+  useBreathHistory,
+} from '@/utils/breath-history';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Vibrate, VibrateOff } from 'lucide-react-native';
+import { Vibrate, VibrateOff, Volume2, VolumeX } from 'lucide-react-native';
+/* Iter 9dq v174+v183 (operator 2026-06-18): voice guidance — vereist
+   native rebuild voor expo-speech module. Tot dan: no-op stub zodat
+   de bestaande dev-build niet crasht. Re-enable:
+     1. USB rebuild (`npx expo run:android --device`) OF
+     2. EAS Cloud Build (`npx eas build --profile development -p android`)
+     3. Daarna: comment stub uit, uncomment de echte import. */
+// import * as Speech from 'expo-speech';
+const Speech = {
+  stop: () => {},
+  speak: (_phrase: string, _opts?: Record<string, unknown>) => {},
+};
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -135,14 +150,34 @@ const PATTERNS: BreathPattern[] = [
 type Phase = 'idle' | 'inhale' | 'hold-in' | 'exhale' | 'hold-out';
 
 /* Mode-specifieke felicitatie na natural completion. State-taal,
-   geen medical claims. Matched met COMPLETION_MESSAGES in
-   bracelet-control.tsx voor consistentie tussen tabs. */
-const COMPLETION_MESSAGES: Record<BreathPattern['key'], string> = {
-  boost:   'You showed up. The edge is sharper.',
-  focus:   'Focus done. The deep work counts.',
-  calm:    'Stillness reclaimed. Carry it with you.',
-  clarity: 'Insight earned. Trust what came up.',
-  rest:    'Recovery accomplished. Your system thanks you.',
+   geen medical claims.
+   Iter 9dq v167 (operator-fix 2026-06-18): twee-regelige copy ipv één.
+   Eerste regel = vivid statement (wat zojuist gebeurde), tweede regel =
+   "wat nu"-hint. Levendiger dan de single-line die "saai" voelde. */
+const COMPLETION_MESSAGES: Record<
+  BreathPattern['key'],
+  { line1: string; line2: string }
+> = {
+  boost: {
+    line1: 'Your edge is sharper now.',
+    line2: 'Take it into what comes next.',
+  },
+  focus: {
+    line1: 'Focus locked in.',
+    line2: 'The deep work is yours to claim.',
+  },
+  calm: {
+    line1: 'Stillness reclaimed.',
+    line2: 'Carry it into the next moment.',
+  },
+  clarity: {
+    line1: 'Something opened up.',
+    line2: 'Trust what surfaced. Act on it.',
+  },
+  rest: {
+    line1: 'Your system softened.',
+    line2: 'Recovery has already begun.',
+  },
 };
 
 const CIRCLE_MIN = 0.55;
@@ -193,9 +228,18 @@ export default function BreathScreen() {
   const [phase, setPhase] = useState<Phase>('idle');
   const [running, setRunning] = useState(false);
   const [vibeOn, setVibeOn] = useState(true);
+  /* v174: voice guidance default ON (operator wil "wereldklasse" feel —
+     voice is de single biggest missing piece volgens jouw eigen audit). */
+  const [voiceOn, setVoiceOn] = useState(true);
   const [roundNum, setRoundNum] = useState(0);
   const [secsLeft, setSecsLeft] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  /* Iter 9dq v161 (operator-fix 2026-06-18): inline switch-confirm banner.
+     Wanneer user mid-session op een andere pattern-card tapt, slaan we de
+     gewenste switch op en tonen we een banner met [STOP & SWITCH]-knop.
+     Voorheen: silent no-op = user denkt dat de app stuk is. */
+  const [pendingSwitchKey, setPendingSwitchKey] =
+    useState<BreathPattern['key'] | null>(null);
   /* Completion-state — gevuld bij natural completion (niet bij manual stop) */
   const [completion, setCompletion] = useState<{
     pattern: BreathPattern;
@@ -207,6 +251,11 @@ export default function BreathScreen() {
   const haloAnim = useRef(new Animated.Value(HALO_MIN)).current;
   /* Completion-dot pulse animatie */
   const completionPulse = useRef(new Animated.Value(1)).current;
+  /* Iter 9dq v162 (operator-fix 2026-06-18): hover-animatie voor de
+     meditator-silhouette in de completion modal. Subtiel oscillerend
+     translateY zodat het figuurtje "drijft" — voelt actiever dan een
+     stilstaand icoon. */
+  const silhouetteHover = useRef(new Animated.Value(0)).current;
   /* Scroll ref voor on-mount demo scroll (visuele hint dat horizontale
      scroll mogelijk is). */
   const patternsScrollRef = useRef<ScrollView | null>(null);
@@ -215,6 +264,7 @@ export default function BreathScreen() {
   const runningRef = useRef(false);
   const roundRef = useRef(0);
   const vibeOnRef = useRef(true);
+  const voiceOnRef = useRef(true);
 
   const history = useBreathHistory();
 
@@ -262,10 +312,36 @@ export default function BreathScreen() {
   useEffect(() => {
     vibeOnRef.current = vibeOn;
   }, [vibeOn]);
+  useEffect(() => {
+    voiceOnRef.current = voiceOn;
+    /* Bij toggle-off: stop direct elke ongoing utterance zodat de
+       sessie niet door blijft praten tot het zin-einde. */
+    if (!voiceOn) Speech.stop();
+  }, [voiceOn]);
 
   const vibCue = useCallback((ms: number) => {
     if (!vibeOnRef.current) return;
     try { Vibration.vibrate(ms); } catch {}
+  }, []);
+
+  /* v174: voice cue via OS-native TTS. Korte commando's per phase.
+     Stop eerst eventuele ongoing utterance zodat snelle phase-transitions
+     niet stapelen ("hold-out" begint terwijl "exhale" nog wordt
+     uitgesproken). Rate iets onder default (0.95) zodat het rustiger
+     en meditatiever klinkt. */
+  const voiceCue = useCallback((phrase: string) => {
+    if (!voiceOnRef.current) return;
+    try {
+      Speech.stop();
+      Speech.speak(phrase, {
+        language: 'en-US',
+        rate: 0.95,
+        pitch: 1.0,
+        volume: 0.85,
+      });
+    } catch {
+      /* swallow — TTS-failure mag de sessie niet breken */
+    }
   }, []);
 
   const runInhaleAnim = useCallback(
@@ -314,6 +390,7 @@ export default function BreathScreen() {
 
       if (ph === 'inhale') {
         vibCue(VIB_INHALE);
+        voiceCue('Breathe in');
         runInhaleAnim(p.inhale);
         startCountdown(p.inhale, () => {
           if (p.hold1 > 0) runPhase(p, 'hold-in');
@@ -321,9 +398,11 @@ export default function BreathScreen() {
         });
       } else if (ph === 'hold-in') {
         vibCue(VIB_HOLD);
+        voiceCue('Hold');
         startCountdown(p.hold1, () => runPhase(p, 'exhale'));
       } else if (ph === 'exhale') {
         vibCue(VIB_EXHALE);
+        voiceCue('Breathe out');
         runExhaleAnim(p.exhale);
         startCountdown(p.exhale, () => {
           if (p.hold2 > 0) runPhase(p, 'hold-out');
@@ -331,10 +410,11 @@ export default function BreathScreen() {
         });
       } else if (ph === 'hold-out') {
         vibCue(VIB_HOLD);
+        voiceCue('Hold');
         startCountdown(p.hold2, () => nextRound(p));
       }
     },
-    [clearTimers, runInhaleAnim, runExhaleAnim, startCountdown, vibCue],
+    [clearTimers, runInhaleAnim, runExhaleAnim, startCountdown, vibCue, voiceCue],
   );
 
   /* Forward-ref naar endSession (declared verderop). Voorkomt TDZ-error
@@ -372,6 +452,8 @@ export default function BreathScreen() {
     scaleAnim.stopAnimation();
     haloAnim.stopAnimation();
     Vibration.cancel();
+    /* v174: stop ongoing TTS-utterance bij elke vorm van session-einde. */
+    try { Speech.stop(); } catch {}
     Animated.parallel([
       Animated.timing(scaleAnim, { toValue: CIRCLE_MIN, duration: 500, useNativeDriver: true }),
       Animated.timing(haloAnim, { toValue: HALO_MIN, duration: 500, useNativeDriver: true }),
@@ -381,6 +463,33 @@ export default function BreathScreen() {
     setRoundNum(0);
     roundRef.current = 0;
   }, [clearTimers, scaleAnim, haloAnim]);
+
+  /* Iter 9dq v161: pendingSwitchKey opruimen zodra de sessie eindigt
+     (natural completion, manual stop, of welke andere reden). Voorkomt
+     dat een stale banner blijft hangen. */
+  useEffect(() => {
+    if (!running) setPendingSwitchKey(null);
+  }, [running]);
+
+  /* Iter 9dq v161: confirm-handler voor de switch-banner. Stopt huidige
+     sessie (zelfde flow als onStopPressed → partial in history), switcht
+     daarna naar de pending pattern, en wist de pending state. */
+  const onConfirmSwitch = useCallback(() => {
+    if (!pendingSwitchKey) return;
+    const partialDur = getElapsedSec(current, roundNum, phase, secsLeft);
+    if (partialDur >= 1) {
+      void addBreathSession({
+        key: current.key,
+        name: current.name,
+        durSec: partialDur,
+        rounds: Math.max(1, roundNum),
+        completed: false,
+      });
+    }
+    cleanupSession();
+    setCurrentKey(pendingSwitchKey);
+    setPendingSwitchKey(null);
+  }, [pendingSwitchKey, current, roundNum, phase, secsLeft, cleanupSession]);
 
   /* Manual STOP — gebruiker drukt knop. Slaat partial op in historiek
      mits er minstens 1 seconde gespeeld is. Geen completion modal. */
@@ -455,17 +564,51 @@ export default function BreathScreen() {
     return () => loop.stop();
   }, [completion, completionPulse]);
 
+  /* Iter 9dq v162: silhouette hover-loop. 3.2s cyclus (langzamer dan de
+     dot-pulse) zodat de twee bewegingen niet synchroon lopen — voelt
+     natuurlijker. */
+  useEffect(() => {
+    if (!completion) {
+      silhouetteHover.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(silhouetteHover, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(silhouetteHover, {
+          toValue: 0,
+          duration: 1600,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [completion, silhouetteHover]);
+
   const onDismissCompletion = useCallback(() => {
     setCompletion(null);
   }, []);
 
-  /* Card-tap: enkel selecteren, geen modal. Modal opent via "Read details". */
+  /* Card-tap: enkel selecteren, geen modal. Modal opent via "Read details".
+     Iter 9dq v161 (operator-fix 2026-06-18): bij actieve sessie + tap op
+     andere pattern → toon switch-confirm banner ipv silent no-op. Tap op
+     dezelfde card als de huidige doet niets (al actief). */
   const onCardPress = useCallback(
     (key: BreathPattern['key']) => {
-      if (running) return;
+      if (running) {
+        if (key !== currentKey) setPendingSwitchKey(key);
+        return;
+      }
       setCurrentKey(key);
     },
-    [running],
+    [running, currentKey],
   );
 
   const onOpenModal = useCallback(() => {
@@ -475,6 +618,10 @@ export default function BreathScreen() {
 
   const onCloseModal = useCallback(() => {
     setModalOpen(false);
+  }, []);
+
+  const toggleVoice = useCallback(() => {
+    setVoiceOn((v) => !v);
   }, []);
 
   const toggleVibe = useCallback(() => {
@@ -511,6 +658,54 @@ export default function BreathScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Breathe with intention.</Text>
         </View>
+
+        {/* ── Onboarding hint — alleen voor first-time users (geen history).
+            Iter 9dq v173 (operator-fix 2026-06-18): geeft een gast/nieuwe
+            user direct context wat deze tab is en wat de actie is. Verdwijnt
+            automatisch zodra de eerste sessie afgerond is. */}
+        {history.length === 0 && (
+          <View style={styles.onboardingCard}>
+            <View style={styles.onboardingRow}>
+              <View
+                style={[
+                  styles.onboardingStepBubble,
+                  { backgroundColor: 'rgba(58,143,255,0.18)' },
+                ]}
+              >
+                <Text style={styles.onboardingStepNum}>1</Text>
+              </View>
+              <Text style={styles.onboardingStepTxt}>
+                Pick a breath pattern below
+              </Text>
+            </View>
+            <View style={styles.onboardingRow}>
+              <View
+                style={[
+                  styles.onboardingStepBubble,
+                  { backgroundColor: 'rgba(58,143,255,0.18)' },
+                ]}
+              >
+                <Text style={styles.onboardingStepNum}>2</Text>
+              </View>
+              <Text style={styles.onboardingStepTxt}>
+                Tap START SESSION and follow the rhythm
+              </Text>
+            </View>
+            <View style={styles.onboardingRow}>
+              <View
+                style={[
+                  styles.onboardingStepBubble,
+                  { backgroundColor: 'rgba(58,143,255,0.18)' },
+                ]}
+              >
+                <Text style={styles.onboardingStepNum}>3</Text>
+              </View>
+              <Text style={styles.onboardingStepTxt}>
+                Free to use. No account needed.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* ── Pattern selector — horizontal scroll met right-edge fade ── */}
         <View style={styles.patternsWrap}>
@@ -558,27 +753,93 @@ export default function BreathScreen() {
           </View>
         </View>
 
-        {/* ── Read details + History links — onder de cards ── */}
+        {/* ── Switch-confirm banner ── verschijnt wanneer user mid-sessie
+            op een andere pattern-card tapt. Iter 9dq v161 (operator 2026-
+            06-18). */}
+        {pendingSwitchKey && (() => {
+          const pendingPattern = PATTERNS.find(
+            (pp) => pp.key === pendingSwitchKey,
+          );
+          if (!pendingPattern) return null;
+          return (
+            <View
+              style={[
+                styles.switchBanner,
+                { borderColor: pendingPattern.color },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.switchBannerEyebrow}>
+                  CURRENTLY IN {current.name.toUpperCase()}
+                </Text>
+                <Text style={styles.switchBannerTitle}>
+                  Switch to {pendingPattern.name}?
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setPendingSwitchKey(null)}
+                style={styles.switchBannerCancel}
+                hitSlop={8}
+                accessibilityLabel="Cancel switch"
+              >
+                <Text style={styles.switchBannerCancelTxt}>✕</Text>
+              </Pressable>
+              <Pressable
+                onPress={onConfirmSwitch}
+                style={[
+                  styles.switchBannerCta,
+                  { backgroundColor: pendingPattern.color },
+                ]}
+                android_ripple={{ color: 'rgba(0,0,0,0.10)' }}
+                accessibilityLabel="Stop current and switch"
+              >
+                <Text style={styles.switchBannerCtaTxt}>STOP &amp; SWITCH</Text>
+              </Pressable>
+            </View>
+          );
+        })()}
+
+        {/* ── Details + History — outlined pill buttons (iter 9dq v161) ──
+            Voorheen platte text-links die er onaf uitzagen. Nu twee
+            compact-pill knoppen met icoon + label. Details-knop toont
+            dynamisch welk protocol je opent (was "Read protocol details"
+            = vaag). */}
         <View style={styles.linksRow}>
           <Pressable
             onPress={onOpenModal}
-            style={styles.linkBtn}
-            android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
+            style={styles.linkPill}
+            android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             hitSlop={6}
+            accessibilityLabel={`Read protocol details for ${current.name}`}
           >
-            <Text style={styles.linkTxt}>
-              Read protocol details ›
-            </Text>
+            <Text style={[styles.linkPillIcon, { color: current.color }]}>ⓘ</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.linkPillLabel} numberOfLines={1}>
+                Details
+              </Text>
+              <Text style={styles.linkPillSub} numberOfLines={1}>
+                {current.name}
+              </Text>
+            </View>
           </Pressable>
           <Pressable
             onPress={() => router.push('/breath-history')}
-            style={styles.linkBtn}
-            android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
+            style={styles.linkPill}
+            android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             hitSlop={6}
+            accessibilityLabel="View your breath history"
           >
-            <Text style={styles.linkTxt}>
-              Your Practice {history.length > 0 ? `(${history.length}) ` : ''}›
-            </Text>
+            <Text style={[styles.linkPillIcon, { color: Brand.accent }]}>⟳</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.linkPillLabel} numberOfLines={1}>
+                History
+              </Text>
+              <Text style={styles.linkPillSub} numberOfLines={1}>
+                {history.length > 0
+                  ? `${history.length} session${history.length === 1 ? '' : 's'}`
+                  : 'No sessions yet'}
+              </Text>
+            </View>
           </Pressable>
         </View>
 
@@ -639,8 +900,23 @@ export default function BreathScreen() {
           <Text style={styles.counterTxt}>/ {current.rounds}</Text>
         </View>
 
-        {/* ── Controls (Start + Vibe toggle) ── */}
+        {/* ── Controls — VIBE · START · VOICE (iter 9dq v181, operator-
+            fix 2026-06-18). START/STOP staat nu centraal tussen de twee
+            toggles voor symmetrie en primaire-actie-prominence. */}
         <View style={styles.controls}>
+          <Pressable
+            style={[styles.soundBtn, !vibeOn && { opacity: 0.6 }]}
+            onPress={toggleVibe}
+            android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+            accessibilityLabel={`Vibration ${vibeOn ? 'on' : 'off'}`}
+          >
+            {vibeOn ? (
+              <Vibrate size={14} color={Brand.text} strokeWidth={2.2} />
+            ) : (
+              <VibrateOff size={14} color={Brand.textDim} strokeWidth={2.2} />
+            )}
+            <Text style={styles.soundTxt}>{`VIBE ${vibeOn ? 'ON' : 'OFF'}`}</Text>
+          </Pressable>
           <Pressable
             style={[
               styles.startBtn,
@@ -650,20 +926,21 @@ export default function BreathScreen() {
             android_ripple={{ color: 'rgba(0,0,0,0.10)' }}
           >
             <Text style={[styles.startBtnTxt, { color: startBtnFg }]}>
-              {running ? 'STOP' : 'START SESSION'}
+              {running ? 'STOP' : 'START'}
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.soundBtn, !vibeOn && { opacity: 0.6 }]}
-            onPress={toggleVibe}
+            style={[styles.soundBtn, !voiceOn && { opacity: 0.6 }]}
+            onPress={toggleVoice}
             android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+            accessibilityLabel={`Voice guidance ${voiceOn ? 'on' : 'off'}`}
           >
-            {vibeOn ? (
-              <Vibrate size={14} color={Brand.text} strokeWidth={2.2} />
+            {voiceOn ? (
+              <Volume2 size={14} color={Brand.text} strokeWidth={2.2} />
             ) : (
-              <VibrateOff size={14} color={Brand.textDim} strokeWidth={2.2} />
+              <VolumeX size={14} color={Brand.textDim} strokeWidth={2.2} />
             )}
-            <Text style={styles.soundTxt}>{`VIBE ${vibeOn ? 'ON' : 'OFF'}`}</Text>
+            <Text style={styles.soundTxt}>{`VOICE ${voiceOn ? 'ON' : 'OFF'}`}</Text>
           </Pressable>
         </View>
       </View>
@@ -745,63 +1022,184 @@ export default function BreathScreen() {
       >
         <Pressable style={styles.modalBackdrop} onPress={onDismissCompletion}>
           <Pressable
-            style={[
-              styles.completionSheet,
-              completion && { borderColor: completion.pattern.color },
-            ]}
+            style={styles.completionSheet}
             onPress={(e) => e.stopPropagation()}
           >
             {completion && (
               <>
-                {/* Pulsing dot — glow + scale animatie */}
-                <View style={styles.completionDotWrap}>
-                  <Animated.View
+                {/* Iter 9dq v170 (operator-fix 2026-06-18): dynamische/
+                    moderne touches.
+                    1. Accent-strip (5px ribbon) in pattern-kleur bovenaan
+                       — geeft per protocol een unieke visuele identiteit.
+                    2. Subtiele background-tint (LinearGradient van 8%
+                       pattern-kleur → wit) ipv plat wit. Voelt diepvol
+                       en modern, niet steriel.
+                    Beide elementen absoluut gepositioneerd zodat ze de
+                    layout van de bestaande content niet verstoren. */}
+                <LinearGradient
+                  colors={[
+                    `${completion.pattern.color}14`, // ~8% opacity
+                    `${completion.pattern.color}00`, // 0% (fade-out)
+                  ]}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 0.55 }}
+                  style={styles.completionTint}
+                  pointerEvents="none"
+                />
+                <View
+                  style={[
+                    styles.completionAccentStrip,
+                    { backgroundColor: completion.pattern.color },
+                  ]}
+                  pointerEvents="none"
+                />
+                {/* Iter 9dq v162 (operator-fix 2026-06-18): hoverende
+                    meditator-silhouette ipv kleine pulsing dot. Voelt
+                    actiever en past beter bij de meditatieve afsluiting.
+                    🧘 emoji is placeholder — kan vervangen worden door
+                    een custom CDN-silhouette (1 regel onder bij {emoji}). */}
+                <View style={styles.silhouetteWrap}>
+                  {/* Iter 9dq v164 (operator 2026-06-18): emoji vervangen
+                      door custom Buddha-asset op Bunny CDN. Behoud van
+                      hover-animatie via Animated.Image (zelfde transform-
+                      pattern als emoji). */}
+                  <Animated.Image
+                    source={{
+                      uri: 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png',
+                    }}
+                    resizeMode="contain"
                     style={[
-                      styles.completionDot,
+                      styles.silhouetteFigure,
                       {
-                        backgroundColor: completion.pattern.color,
-                        shadowColor: completion.pattern.color,
-                        transform: [{ scale: completionPulse }],
+                        transform: [
+                          {
+                            translateY: silhouetteHover.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, -8],
+                            }),
+                          },
+                        ],
                       },
                     ]}
                   />
                 </View>
 
-                <Text style={styles.completionEyebrow}>SESSION COMPLETE</Text>
-                <Text style={styles.completionTitle}>
-                  {completion.pattern.name}
+                {/* Iter 9dq v168 (operator-fix 2026-06-18): visuele
+                    hiërarchie omgegooid. Voorheen: kleine eyebrow + grote
+                    pattern-name. Nu: prominent "Well done." als
+                    congratulations-statement + kleinere "You completed X"
+                    als context. Voelt warmer en celebratoir. */}
+                <Text style={styles.completionEyebrow}>
+                  ✦ CONGRATULATIONS ✦
                 </Text>
-                <Text style={styles.completionMsg}>
-                  {COMPLETION_MESSAGES[completion.pattern.key]}
+                <Text style={styles.completionTitle}>Well done.</Text>
+                <Text style={styles.completionSubtitle}>
+                  You completed {completion.pattern.name}
                 </Text>
 
+                {/* Iter 9dq v172 (operator-fix 2026-06-18): streak-badge.
+                    Toont een dynamisch "🔥 X-day streak"-label gebaseerd
+                    op de bestaande breath-history. Geeft emotionele return
+                    voor recurring users zonder dat we gamification-overdoen. */}
+                {(() => {
+                  const streak = calculateStreak(history);
+                  if (streak < 1) return null;
+                  return (
+                    <View
+                      style={[
+                        styles.completionStreak,
+                        {
+                          borderColor: `${completion.pattern.color}55`,
+                          backgroundColor: `${completion.pattern.color}10`,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.completionStreakIcon}>🔥</Text>
+                      <Text
+                        style={[
+                          styles.completionStreakTxt,
+                          { color: completion.pattern.color },
+                        ]}
+                      >
+                        {streak === 1
+                          ? 'Day 1 — streak started'
+                          : `${streak}-day streak`}
+                      </Text>
+                    </View>
+                  );
+                })()}
+                <Text style={styles.completionMsgPrimary}>
+                  {COMPLETION_MESSAGES[completion.pattern.key].line1}
+                </Text>
+                <Text style={styles.completionMsgSecondary}>
+                  {COMPLETION_MESSAGES[completion.pattern.key].line2}
+                </Text>
+
+                {/* Iter 9dq v170: stats nu als twee pill-cards naast elkaar
+                    met subtle bg-tint + iconen ipv het oude divider-pattern.
+                    Voelt moderner en geeft visueel gewicht aan de stats. */}
                 <View style={styles.completionStatsRow}>
-                  <View style={styles.completionStatCol}>
-                    <Text style={styles.completionStatNum}>
-                      {completion.rounds}
+                  <View
+                    style={[
+                      styles.completionStatPill,
+                      { borderColor: `${completion.pattern.color}40` },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.completionStatIcon,
+                        { color: completion.pattern.color },
+                      ]}
+                    >
+                      ↻
                     </Text>
-                    <Text style={styles.completionStatLbl}>ROUNDS</Text>
+                    <View>
+                      <Text style={styles.completionStatNum}>
+                        {completion.rounds}
+                      </Text>
+                      <Text style={styles.completionStatLbl}>ROUNDS</Text>
+                    </View>
                   </View>
-                  <View style={styles.completionStatDivider} />
-                  <View style={styles.completionStatCol}>
-                    <Text style={styles.completionStatNum}>
-                      {formatMMSS(completion.durSec)}
+                  <View
+                    style={[
+                      styles.completionStatPill,
+                      { borderColor: `${completion.pattern.color}40` },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.completionStatIcon,
+                        { color: completion.pattern.color },
+                      ]}
+                    >
+                      ◴
                     </Text>
-                    <Text style={styles.completionStatLbl}>DURATION</Text>
+                    <View>
+                      <Text style={styles.completionStatNum}>
+                        {formatMMSS(completion.durSec)}
+                      </Text>
+                      <Text style={styles.completionStatLbl}>DURATION</Text>
+                    </View>
                   </View>
                 </View>
 
+                {/* Iter 9dq v169 (operator-fix 2026-06-18): DONE-knop
+                    duidelijker als button maken. Voorheen kleine pill met
+                    12.5px tekst → leek niet op een actie-element. Nu
+                    full-width CTA met grotere tekst, ✓ icoon en duidelijke
+                    "close" intent label "I'M DONE". */}
                 <Pressable
                   style={[
                     styles.completionDone,
                     { backgroundColor: completion.pattern.color },
                   ]}
                   onPress={onDismissCompletion}
-                  android_ripple={{ color: 'rgba(0,0,0,0.10)' }}
+                  android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close completion screen"
                 >
-                  <Text style={[styles.completionDoneTxt, { color: '#000' }]}>
-                    DONE
-                  </Text>
+                  <Text style={styles.completionDoneIcon}>✓</Text>
+                  <Text style={styles.completionDoneTxt}>I'M DONE</Text>
                 </Pressable>
               </>
             )}
@@ -815,10 +1213,51 @@ export default function BreathScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Brand.bg },
-  container: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  /* v177: meer top-padding zodat de header niet op de status-bar / notch
+     plakt. Operator-feedback: "bovenaan heel druk, alles op elkaar". */
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 12 },
 
   /* Header */
-  header: { alignItems: 'center', marginBottom: 14 },
+  /* v177: meer marge onder de header voor visuele rust. */
+  header: { alignItems: 'center', marginBottom: 22 },
+
+  /* Iter 9dq v173: onboarding-card voor first-time users (geen history). */
+  onboardingCard: {
+    backgroundColor: 'rgba(58,143,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.18)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
+  onboardingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  onboardingStepBubble: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingStepNum: {
+    color: Brand.accent,
+    fontFamily: BrandFonts.bold,
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  onboardingStepTxt: {
+    flex: 1,
+    color: Brand.text,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    letterSpacing: -0.1,
+    lineHeight: 18,
+  },
   title: {
     fontFamily: BrandFonts.bold,
     fontSize: 22,
@@ -829,7 +1268,9 @@ const styles = StyleSheet.create({
   },
 
   /* Pattern selector */
-  patternsWrap: { position: 'relative', marginBottom: 6 },
+  /* v177: meer marge onder de pattern-carousel ervoor (en eronder voor de
+     pill-buttons / visualizer). 6 was te krap. */
+  patternsWrap: { position: 'relative', marginBottom: 14 },
   patternsScroll: { flexGrow: 0 },
   patternsRow: { paddingRight: 28, gap: 8 },
   patternsFade: {
@@ -872,23 +1313,92 @@ const styles = StyleSheet.create({
     color: Brand.textDim, textAlign: 'center',
   },
 
-  /* Links onder de cards: Protocol details + Your Practice */
+  /* Iter 9dq v161: Details + History — outlined pills naast elkaar.
+     Voorheen waren dit text-only links. */
   linksRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 18,
-    marginBottom: 4,
+    gap: 10,
+    marginBottom: 10,
+    marginTop: 4,
   },
-  linkBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+  linkPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  linkTxt: {
+  linkPillIcon: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 18,
+    lineHeight: 20,
+  },
+  linkPillLabel: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 12.5,
+    letterSpacing: 0.4,
+    color: Brand.text,
+    marginBottom: 1,
+  },
+  linkPillSub: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 10.5,
+    color: Brand.textDim,
+  },
+
+  /* Iter 9dq v161: switch-confirm banner — mid-sessie pattern-switch. */
+  switchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingLeft: 14,
+    paddingRight: 8,
+    marginVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  switchBannerEyebrow: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: Brand.textDim,
+    marginBottom: 2,
+  },
+  switchBannerTitle: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
+    color: Brand.text,
+    letterSpacing: -0.1,
+  },
+  switchBannerCancel: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchBannerCancelTxt: {
+    color: Brand.textDim,
+    fontSize: 16,
     fontFamily: BrandFonts.semibold,
-    fontSize: 11.5,
+  },
+  switchBannerCta: {
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  switchBannerCtaTxt: {
+    color: '#000',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
     letterSpacing: 0.8,
-    color: Brand.accent,
   },
 
   /* Swipe-hint badge — float boven rechterhoek pattern row */
@@ -950,17 +1460,23 @@ const styles = StyleSheet.create({
   },
 
   /* Visualizer */
+  /* v179 (operator-fix 2026-06-18): halo botst tegen pills boven en
+     tekst onder bij uitdeinen. Twee fixes:
+     1. Halo + circle iets kleiner zodat de max-scaled halo binnen het
+        reserved venster blijft.
+     2. Viz minHeight verhoogd + extra vertical margin zodat het reserved
+        venster echt ademruimte heeft voor de uitdeinende halo. */
   viz: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12, minHeight: 220,
+    marginVertical: 18, minHeight: 260,
   },
   halo: {
     position: 'absolute',
-    width: 260, height: 260, borderRadius: 130,
+    width: 220, height: 220, borderRadius: 110,
     opacity: 0.55,
   },
   circle: {
-    width: 190, height: 190, borderRadius: 95,
+    width: 160, height: 160, borderRadius: 80,
     borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
     /* GEEN shadow/elevation — die rendert op Android als hexagon/octagon
@@ -1007,13 +1523,16 @@ const styles = StyleSheet.create({
   },
   counterNum: { fontFamily: BrandFonts.bold, fontSize: 13 },
 
-  /* Controls */
+  /* Controls — v180 (operator-fix 2026-06-18): alle drie naast elkaar
+     op één rij. START compact zodat 't past. */
   controls: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   startBtn: {
-    paddingHorizontal: 32, paddingVertical: 14,
+    paddingHorizontal: 22, paddingVertical: 12,
     borderRadius: 999, borderWidth: 1,
   },
   startBtnTxt: {
@@ -1129,16 +1648,41 @@ const styles = StyleSheet.create({
   },
 
   /* ── Completion Modal ── */
+  /* Iter 9dq v166+v168+v170: white card met dynamische touches:
+     overflow:hidden klipt de accent-strip + background-tint binnen
+     de border-radius. */
   completionSheet: {
     width: '100%',
-    maxWidth: 360,
-    backgroundColor: Brand.panel,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    borderRadius: 22,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
+    maxWidth: 400,
+    backgroundColor: '#ffffff',
+    borderWidth: 0,
+    borderRadius: 28,
+    paddingVertical: 32,
+    paddingHorizontal: 28,
     alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOpacity: 0.40,
+    shadowOffset: { width: 0, height: 16 },
+    shadowRadius: 40,
+    elevation: 18,
+  },
+  /* v170: accent-strip ribbon bovenaan, gevuld met pattern-kleur. */
+  completionAccentStrip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+  },
+  /* v170: subtiele background-tint die afzakt naar wit. */
+  completionTint: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
   },
   completionDotWrap: {
     width: 64, height: 64,
@@ -1151,67 +1695,159 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 22, elevation: 14,
   },
+  /* Iter 9dq v162+v165+v171: meer ademruimte onder de Buddha zodat het
+     bovenste blok niet ingedrukt voelt. */
+  silhouetteWrap: {
+    width: 200,
+    height: 170,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+    position: 'relative',
+  },
+  silhouetteFigure: {
+    width: 170,
+    height: 170,
+  },
+  /* v168+v171: meer marges tussen eyebrow → title → subtitle voor
+     "luchtigere" verticale ritme in het bovenste blok. */
   completionEyebrow: {
     fontFamily: BrandFonts.bold,
     fontSize: 10,
-    letterSpacing: 2.2,
+    letterSpacing: 2.4,
     color: Brand.accent,
-    marginBottom: 6,
+    marginBottom: 16,
   },
   completionTitle: {
     fontFamily: BrandFonts.bold,
-    fontSize: 26,
-    letterSpacing: -0.4,
-    color: Brand.text,
+    fontSize: 32,
+    letterSpacing: -0.6,
+    color: '#0a0a0a',
     marginBottom: 10,
     textAlign: 'center',
+  },
+  completionSubtitle: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.2,
+    color: 'rgba(0,0,0,0.45)',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  /* v172: streak-badge — outlined pill in pattern-kleur. */
+  completionStreak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  completionStreakIcon: {
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  completionStreakTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   completionMsg: {
     fontFamily: BrandFonts.medium,
     fontSize: 14, lineHeight: 20,
-    color: Brand.textDim,
+    color: 'rgba(0,0,0,0.55)',
     textAlign: 'center',
     marginBottom: 22,
     paddingHorizontal: 8,
   },
+  /* v167+v171: meer marges voor luchtigere ritme. */
+  completionMsgPrimary: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#0a0a0a',
+    textAlign: 'center',
+    marginBottom: 6,
+    paddingHorizontal: 8,
+    letterSpacing: -0.2,
+  },
+  completionMsgSecondary: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(0,0,0,0.55)',
+    textAlign: 'center',
+    marginBottom: 28,
+    paddingHorizontal: 8,
+  },
+  /* v170: stats nu als twee pill-cards. */
   completionStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
-    marginBottom: 22,
+    alignSelf: 'stretch',
+    gap: 10,
+    marginBottom: 24,
   },
-  completionStatCol: {
+  completionStatPill: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: 'rgba(0,0,0,0.025)',
+  },
+  completionStatIcon: {
+    fontSize: 22,
+    fontFamily: BrandFonts.bold,
+    lineHeight: 24,
   },
   completionStatNum: {
     fontFamily: BrandFonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     letterSpacing: -0.3,
-    color: Brand.text,
-    marginBottom: 2,
+    color: '#0a0a0a',
+    marginBottom: 1,
   },
   completionStatLbl: {
     fontFamily: BrandFonts.bold,
     fontSize: 9,
-    letterSpacing: 1.5,
-    color: Brand.textDim,
+    letterSpacing: 1.4,
+    color: 'rgba(0,0,0,0.50)',
   },
-  completionStatDivider: {
-    width: 1, height: 32,
-    backgroundColor: Brand.border,
-  },
+  /* Iter 9dq v169: full-width CTA-knop met sterker contrast + ✓ icoon.
+     Voorheen smal pill met klein tekst → leek niet op een knop. */
   completionDone: {
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 999,
-    minWidth: 180,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    alignSelf: 'stretch',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  completionDoneIcon: {
+    color: '#000',
+    fontSize: 18,
+    fontFamily: BrandFonts.bold,
+    lineHeight: 18,
   },
   completionDoneTxt: {
+    color: '#000',
     fontFamily: BrandFonts.bold,
-    fontSize: 12.5,
-    letterSpacing: 1.5,
+    fontSize: 15,
+    letterSpacing: 1.2,
   },
 
   /* ── History Modal ── */
