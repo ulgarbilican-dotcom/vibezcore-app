@@ -1097,7 +1097,7 @@ export const COOKIES: LegalDoc = {
     { kind: 'h3', text: 'Third-party — only at payment' },
     {
       kind: 'p',
-      text: "**Gumroad** may set its own cookies during checkout to handle payment securely. These are governed by Gumroad's privacy and cookie policies — out of our control.",
+      text: "**Apple App Store** and **Google Play** handle all in-app subscription payments. Receipt verification and renewal are managed by their systems and follow their privacy policies — out of our control.",
     },
     {
       kind: 'highlight',

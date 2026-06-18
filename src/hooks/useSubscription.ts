@@ -39,10 +39,10 @@ export type SubscriptionStatus = {
   validUntil?: string;
   /** true = abo verlengt automatisch op `validUntil`. Backend `will_renew`. */
   willRenew?: boolean;
-  /** Gumroad subscriber-id. Nodig voor de "Manage billing"-link die de user
-   *  naar de Gumroad-portal opent (https://app.gumroad.com/subscriptions/{id}/manage).
-   *  Backend (`subscription-status.js`) returnt dit als `gumroad_subscriber_id`. */
-  gumroadSubscriberId?: string;
+  /** Iter 9dq v150 (operator 2026-06-17): Gumroad-veld verwijderd. App is
+   *  IAP-only (App Store / Play Store). Geen Gumroad-subscriptions meer
+   *  in productie — operator-besluit "GUMROAD NIET MEER VOOR DE APP".
+   *  Cancellation gaat via storeSubscriptionsUrl() (Apple/Google policy). */
 };
 
 type CachedShape = SubscriptionStatus & { cachedAt: number };
@@ -120,7 +120,6 @@ async function loadCacheOnce(): Promise<void> {
               email: obj.email,
               validUntil: obj.validUntil,
               willRenew: obj.willRenew,
-              gumroadSubscriberId: obj.gumroadSubscriberId,
             };
             notifyAll(status);
           }
@@ -172,10 +171,6 @@ async function fetchStatus(): Promise<void> {
         typeof raw.valid_until === 'string' ? raw.valid_until : undefined,
       willRenew:
         typeof raw.will_renew === 'boolean' ? raw.will_renew : undefined,
-      gumroadSubscriberId:
-        typeof raw.gumroad_subscriber_id === 'string'
-          ? raw.gumroad_subscriber_id
-          : undefined,
     };
     notifyAll(data);
     persistCache(data);
@@ -256,7 +251,6 @@ export function useSubscription() {
     tier: status?.tier,
     validUntil: status?.validUntil,
     willRenew: status?.willRenew,
-    gumroadSubscriberId: status?.gumroadSubscriberId,
     isLoading: status === null && override === null,
     refresh: refreshSubscription,
   };

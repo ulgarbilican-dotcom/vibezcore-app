@@ -41,8 +41,6 @@ import {
   useDevUserOverride,
 } from '@/utils/dev-user-override';
 import {
-  cancelSubscription,
-  gumroadManageUrl,
   storeSubscriptionsUrl,
 } from '@/services/subscription-actions';
 import { restorePurchases } from '@/services/restore-purchases';
@@ -128,24 +126,11 @@ function SubscriptionCard() {
     tier,
     validUntil,
     willRenew,
-    gumroadSubscriberId,
     isLoading,
   } = useSubscription();
   /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
-     PRO + bracelet owner → speciale "Full PRO" label.
-     Iter 9dq v91 (2026-06-03): pending-state verwijderd. Operator-feedback
-     "na aankoop+account moet user altijd in PRO omgeving zitten". Wie
-     betaald heeft = PRO, óók als de code nog niet ingevoerd is. De
-     activate-prompt verhuist naar de BraceletCard zelf (sub-stap) ipv
-     gate naar PRO-entitlement. */
+     PRO + bracelet owner → speciale "Full PRO" label. */
   const isBraceletOwner = useBraceletOwner();
-  /* Iter 9dq v84 (2026-06-03): dev-override mode forceert IAP-flow zodat
-     operators de "Manage subscription"-knop (store-deep-link) kunnen
-     testen ook al heeft hun echte account een gumroadSubscriberId.
-     Productie ziet hier override = null → normale logica. */
-  const devOverride = useDevUserOverride();
-  const devForcesIapMode =
-    __DEV__ && (devOverride === 'audio' || devOverride === 'pro');
 
   let bigText: string;
   let bigColor: string;
@@ -239,28 +224,19 @@ function SubscriptionCard() {
     }
   }
 
-  /* CTA-paden afhankelijk van state — iter 9dq v83 (2026-06-03):
+  /* CTA-paden afhankelijk van state — iter 9dq v150 (operator 2026-06-17):
        - Loading                  → geen CTA (anders flicker)
        - Free (geen products)     → "Upgrade to full library" → /subscribe
        - Bracelet-only            → "Add Audio Library" → /subscribe
-       - PRO met Gumroad-sub      → "Manage billing" → Gumroad customer portal
-                                    (legacy users die vóór IAP-launch kochten)
-       - PRO zonder Gumroad-sub   → "Manage subscription" → Apple/Google
-                                    store-subscription-page (IAP-users +
-                                    Apple/Google policy: verplicht in-app
-                                    manage-link).
+       - PRO                      → "Manage subscription" → Apple/Google
+                                    store-subscription-page (IAP-policy
+                                    verplicht in-app manage-link).
 
-     Geen "geen CTA" pad meer voor PRO-users — Apple eist altijd toegang
-     tot manage-subscription. */
+     Voorheen was er een dubbel pad (Gumroad customer portal vs store-link),
+     maar Gumroad is verwijderd uit de app — geen branching meer nodig.
+     Apple eist altijd toegang tot manage-subscription voor PRO users. */
   const showUpgrade = !isLoading && !isPro;
-  /* Iter 9dq v84: devForcesIapMode trumps de gumroadSubscriberId-check,
-     zodat operators de IAP-flow in dev kunnen testen ook wanneer hun
-     account een echte Gumroad-sub heeft. Productie: devOverride is null
-     → gewone gumroadSubscriberId-detectie. */
-  const showManageGumroad =
-    !isLoading && isPro && !!gumroadSubscriberId && !devForcesIapMode;
-  const showManageStore =
-    !isLoading && isPro && (!gumroadSubscriberId || devForcesIapMode);
+  const showManageStore = !isLoading && isPro;
   const upgradeCtaText = isBraceletOwner
     ? 'Add Audio Library'
     : 'Upgrade to full library';
@@ -283,16 +259,6 @@ function SubscriptionCard() {
           accessibilityLabel={upgradeAccessibilityLabel}
         >
           <Text style={s.cardCtaText}>{upgradeCtaText}</Text>
-          <Text style={s.cardCtaArrow}>→</Text>
-        </Pressable>
-      )}
-      {showManageGumroad && gumroadSubscriberId && (
-        <Pressable
-          style={s.cardCta}
-          onPress={() => openExternal(gumroadManageUrl(gumroadSubscriberId))}
-          accessibilityLabel="Manage billing on Gumroad"
-        >
-          <Text style={s.cardCtaText}>Manage billing</Text>
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
@@ -369,7 +335,7 @@ function BraceletCard() {
         Bracelet activated
       </Text>
       {/* Iter 9dq v79 (2026-06-03): copy was "paired and ready to use"
-          maar voor pre-launch activatie-code users (Kickstarter aug 2026)
+          maar voor pre-launch activatie-code users (Kickstarter sept 2026)
           is de hardware nog niet verzonden — "paired" misleidt. Bracelet-
           pagina's tonen nu een aparte PREVIEW-banner, dus hier alleen
           state-neutrale tekst over wat de user kan doen. */}
@@ -516,13 +482,11 @@ export default function AccountScreen() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  /* useSubscription() bovenaan voor twee redenen:
-       1. Cancel-button alleen tonen voor pro users (`isProForActions`)
-       2. Fallback voor manage_url als backend 'm niet meegeeft */
-  const {
-    gumroadSubscriberId: gumroadSubscriberIdFromHook,
-    isPro: isProForActions,
-  } = useSubscription();
+  /* Iter 9dq v150 (operator 2026-06-17): gumroadSubscriberId weg —
+     IAP-only, geen cancel-button meer in-app (Apple/Google handelen
+     cancellation via storeSubscriptionsUrl). isProForActions blijft
+     bestaan want andere code-paden checken hier nog op. */
+  const { isPro: isProForActions } = useSubscription();
 
   useEffect(() => {
     (async () => {
@@ -565,6 +529,13 @@ export default function AccountScreen() {
            interacten. Anders schreef een snelle toggle nog naar de
            anon-bucket en lekte data tussen sessies. */
         await refreshUserBucket();
+        /* Iter 9dq v158 (operator-fix 2026-06-18): last-played wissen bij
+           login zodat de Continue-listening popup nooit een sessie van
+           de vorige user op dit toestel toont aan de nieuwe user. Vorige
+           pad (sign-out) deed dit al, maar account-switch zonder
+           tussentijdse sign-out (gebruiker A blijft ingelogd → gebruiker
+           B logt in met andere creds) miste de cleanup. */
+        await clearLastPlayed();
 
         /* ── Post-login routing ────────────────────────────────────────
            Iter 9dq v96 (2026-06-03): differentiated routing per user-type.
@@ -676,69 +647,12 @@ export default function AccountScreen() {
     );
   };
 
-  /* ── Cancel Subscription ──
-     Operator-besluit 2026-05-26: cancellatie loopt via Gumroad's customer
-     portal (backend kan niet zelfstandig cancellen — Gumroad API ondersteunt
-     dat niet meer voor creators). Flow:
-       1. Confirmation Alert
-       2. POST /api/cancel-subscription → backend markeert pending + returnt manage_url
-       3. Open manage_url in WebBrowser → user bevestigt definitief op Gumroad
-       4. Gumroad webhook reconcilieert onze DB (status='cancelled')
-       5. refreshSubscription() bij volgende app-open ziet de update */
-  const onCancelSubscription = () => {
-    Alert.alert(
-      'Cancel subscription?',
-      'You will keep full library access until the end of your current billing period. To finalize, confirm on Gumroad in the next step.',
-      [
-        { text: 'Keep subscription', style: 'cancel' },
-        {
-          text: 'Continue',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await cancelSubscription();
-            if (!result.ok) {
-              Alert.alert(
-                result.noGumroadId ? 'Manual cancellation needed' : 'Could not cancel',
-                result.error,
-                [
-                  { text: 'OK', style: 'cancel' },
-                  ...(result.noGumroadId
-                    ? [
-                        {
-                          text: 'Contact support',
-                          onPress: () => openExternal(SUPPORT_URL),
-                        },
-                      ]
-                    : []),
-                ],
-              );
-              return;
-            }
-            if (result.alreadyCancelled) {
-              Alert.alert(
-                'Already cancelled',
-                'Your subscription is already set to cancel. You keep access until the end of the period.',
-              );
-              refreshSubscription();
-              return;
-            }
-            /* Open Gumroad portal voor definitieve bevestiging.
-               manage_url komt rechtstreeks van backend; fallback op
-               client-computed URL als 'ie ontbreekt. */
-            const url =
-              result.manageUrl ||
-              (gumroadSubscriberIdFromHook
-                ? gumroadManageUrl(gumroadSubscriberIdFromHook)
-                : null);
-            if (url) await openExternal(url);
-            /* Geforceerde refresh — backend heeft mogelijk al will_renew=false
-               gezet. UI updatet zodat Cancel-button verdwijnt. */
-            refreshSubscription();
-          },
-        },
-      ],
-    );
-  };
+  /* ── Cancel Subscription verwijderd ──
+     Iter 9dq v150 (operator 2026-06-17): Apple/Google policy verbiedt
+     in-app subscription cancellation voor IAP-content. Cancellation
+     gaat via Settings → Apple ID → Subscriptions (iOS) of Play Store →
+     Subscriptions (Android). De "Manage subscription"-knop bovenaan
+     deze tab opent dat OS-scherm via storeSubscriptionsUrl(). */
 
   /* ── Change Password ──
      Routeert door naar de webapp forgot-password flow (Supabase recovery
@@ -918,26 +832,11 @@ export default function AccountScreen() {
             </Pressable>
           </View>
 
-          {/* Cancel Subscription — alleen voor active GUMROAD-pro-users.
-              Iter 9dq v83 (2026-06-03): IAP-users (Apple StoreKit / Google
-              Play Billing) MOGEN niet via een third-party in-app endpoint
-              gecanceld worden — Apple/Google verbieden dat (cancellation
-              moet via hun eigen subscription-management). Voor hen zit de
-              cancel-flow geïntegreerd in de "Manage subscription"-knop
-              hierboven die naar Apple/Google opent.
-
-              Gumroad-users (legacy, vóór IAP-launch) zien wel de cancel-
-              knop hier omdat onze backend hun cancellatie nog wel kan
-              triggeren via Gumroad's API. */}
-          {isProForActions && !!gumroadSubscriberIdFromHook && (
-            <Pressable
-              style={s.cancelBtn}
-              onPress={onCancelSubscription}
-              accessibilityLabel="Cancel your subscription"
-            >
-              <Text style={s.cancelBtnText}>Cancel subscription</Text>
-            </Pressable>
-          )}
+          {/* Cancel Subscription verwijderd — iter 9dq v150 (operator
+              2026-06-17): app is IAP-only. Apple/Google verbieden in-app
+              cancellation; user gebruikt de "Manage subscription"-knop
+              bovenaan deze tab (opent Settings → Apple ID → Subscriptions
+              of Play Store → Subscriptions). */}
 
           <Pressable style={s.signOut} onPress={onSignOut}>
             <Text style={s.signOutText}>Sign out</Text>
