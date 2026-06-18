@@ -22,6 +22,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SESSIONS } from '@/data/audio-library-data';
+import { urlEq } from '@/utils/url-eq';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -136,7 +137,7 @@ async function loadOnce(): Promise<void> {
             const migrated = new Map<string, FavEntry>();
             for (const u of urls) {
               if (typeof u !== 'string') continue;
-              const sess = SESSIONS.find((s) => s.url === u);
+              const sess = SESSIONS.find((s) => urlEq(s.url, u));
               migrated.set(u, {
                 url: u,
                 title: sess?.title ?? '',

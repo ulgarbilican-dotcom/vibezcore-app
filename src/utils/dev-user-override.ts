@@ -16,6 +16,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { clearLastPlayed } from '@/utils/last-played';
 
 const KEY = 'vz_dev_user_override_v1';
 
@@ -102,6 +103,12 @@ export async function setDevUserOverride(
      opnieuw via /activate-bracelet om de geactiveerde state te krijgen. */
   if (prev !== value) {
     await setDevBraceletActivated(false);
+    /* Iter 9dq v158 (operator-fix 2026-06-18): bij elke override-switch
+       ook last-played wissen. Anders krijgt de "nieuwe" user de Continue-
+       listening popup voor een sessie van de "oude" user → cross-user
+       data leak. Productie-sign-out doet dit al in account.tsx:631; deze
+       dev-pad mistte het. */
+    await clearLastPlayed();
   }
 }
 

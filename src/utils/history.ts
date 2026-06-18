@@ -19,6 +19,7 @@
    Your Journey-screen meteen re-rendert bij elke flush.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { urlEq } from '@/utils/url-eq';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -177,7 +178,7 @@ function flushListen(full: boolean): void {
   if (!full && listenedSec < 1) return;
 
   loadOnce().then(() => {
-    const idx = historyState.findIndex((e) => e.url === curUrl);
+    const idx = historyState.findIndex((e) => urlEq(e.url, curUrl));
     if (idx === -1) {
       historyState = [
         ...historyState,
@@ -338,7 +339,7 @@ export function computeStats(raw: HistoryEntry[]): HistoryStats {
  * lookup gebeurt per render-cycle van één scherm.
  */
 export function getEntryByUrl(url: string): HistoryEntry | undefined {
-  return historyState.find((e) => e.url === url);
+  return historyState.find((e) => urlEq(e.url, url));
 }
 
 /* ── Listened-label formatter ───────────────────────────────────────────────

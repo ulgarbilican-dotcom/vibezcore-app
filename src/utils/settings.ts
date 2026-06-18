@@ -36,7 +36,12 @@ export type Settings = {
 };
 
 const defaults: Settings = {
-  autoPlayNext: false,
+  /* Iter 9dq v153 (operator-fix 2026-06-17): default ON. Operator-keuze
+     "hij moet automatisch doorspelen volgende" — voorheen stond default
+     OFF wat na elke sessie het "Session Complete"-paneel triggerde ook
+     wanneer er nog volgende sessies in de serie waren. User kan altijd
+     terug-toggle via de Auto-play switch op de Library. */
+  autoPlayNext: true,
   saveProgress: true,
   trackHistory: true,
   audioQuality: 'high',

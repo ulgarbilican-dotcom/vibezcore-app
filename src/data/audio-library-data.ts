@@ -222,7 +222,7 @@ export const SESSIONS: Session[] = [
 ];
 
 export const SERIES_PHOTO: Record<string,string> = {
-  'Master Mental Clarity': 'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg',
+  'Master Mental Clarity': 'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
   'Beast Mode': 'https://vibezcore-audio.b-cdn.net/images/beast-mode.jpg',
   'The Inner Blueprint': 'https://vibezcore-audio.b-cdn.net/images/the-inner-blueprint.jpg',
   'Daily Affirmations Power': 'https://vibezcore-audio.b-cdn.net/images/daily-affirmations-power.jpg',
@@ -234,10 +234,9 @@ export const SERIES_PHOTO: Record<string,string> = {
   'The Stoic Mind': 'https://vibezcore-audio.b-cdn.net/images/the-stoic-fortress.jpg',
   'Fight Or Flight': 'https://vibezcore-audio.b-cdn.net/images/end-fight-or-flight.jpg',
   'Soundscapes': 'https://vibezcore-audio.b-cdn.net/images/theta-and-alpha-frequency.jpg',
-  /* iter 9dq v137 (operator 2026-06-15): 12 nieuwe series-photos (Bunny CDN)
+  /* iter 9dq v137 (operator 2026-06-15): 13 nieuwe series-photos (Bunny CDN)
      aangeleverd door operator. Gegroepeerd per pijler voor leesbaarheid.
-     ⚠ Iron Discipline ontbreekt — geen URL aangeleverd, valt voorlopig terug
-     op pijler-foto.
+     Iron Discipline toegevoegd in v144 (2026-06-15).
      ⚠ Purpose & Mission URL bevat operator-typo "puprose" (filename op CDN)
      — bewust niet gecorrigeerd, anders 404. */
   /* — Pillar: Psychological Resilience — */
@@ -255,6 +254,7 @@ export const SERIES_PHOTO: Record<string,string> = {
   'Daily Discipline':          'https://vibezcore-audio.b-cdn.net/images/daily%20discipline.jpg',
   /* — Pillar: Strategic Execution & Wealth — */
   'Wealth Psychology':         'https://vibezcore-audio.b-cdn.net/images/wealth%20psychology.jpg',
+  'Iron Discipline':           'https://vibezcore-audio.b-cdn.net/images/Iron%20discipline.jpg',
   'Purpose & Mission':         'https://vibezcore-audio.b-cdn.net/images/puprose%20and%20mission.jpg',
 };
 
@@ -343,9 +343,9 @@ export type Pillar = 'resilience' | 'sovereignty' | 'social' | 'drive' | 'tools'
 export const PILLAR_ORDER: Pillar[] = ['resilience', 'sovereignty', 'social', 'drive', 'tools'];
 
 export const PILLAR_META: Record<Pillar, { num: string; name: string; tagline: string; img?: string }> = {
-  resilience:  { num: '01', name: 'Psychological Resilience',     tagline: 'Build what cannot break.',  img: 'https://vibezcore-audio.b-cdn.net/images/Psychological%20Resilience%20correct.jpg' },
+  resilience:  { num: '01', name: 'Psychological Resilience',     tagline: 'Build what cannot break.',  img: 'https://vibezcore-audio.b-cdn.net/images/psychological%20resilience%202.png' },
   sovereignty: { num: '02', name: 'Inner Sovereignty',            tagline: 'Master what is yours.',     img: 'https://vibezcore-audio.b-cdn.net/images/Stoic%20mastery.jpg' },
-  social:      { num: '03', name: 'Social Mastery',               tagline: 'Command without force.',    img: 'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg' },
+  social:      { num: '03', name: 'Social Mastery',               tagline: 'Command without force.',    img: 'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg' },
   drive:       { num: '04', name: 'Strategic Execution & Wealth', tagline: 'Engineer your autonomy.',   img: 'https://vibezcore-audio.b-cdn.net/images/Strategic%20wealth.jpg' },
   tools:       { num: '05', name: 'Tools & Practices',            tagline: 'Layered over everything.', img: 'https://vibezcore-audio.b-cdn.net/images/Workout%20on%20Beach_edited.jpg' },
 };

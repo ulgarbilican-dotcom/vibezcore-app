@@ -20,12 +20,13 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { SERIES_ORDER, SESSIONS, type Session } from '@/data/audio-library-data';
+import { urlEq } from '@/utils/url-eq';
 
 export function getNextSession(
   currentUrl: string,
   opts: { freeOnly?: boolean } = {},
 ): Session | null {
-  const current = SESSIONS.find((s) => s.url === currentUrl);
+  const current = SESSIONS.find((s) => urlEq(s.url, currentUrl));
   if (!current) return null;
 
   const isSoundscapes = current.series === 'Soundscapes';
@@ -35,7 +36,7 @@ export function getNextSession(
       (!isSoundscapes || s.subseries === current.subseries),
   );
 
-  const idx = pool.findIndex((s) => s.url === currentUrl);
+  const idx = pool.findIndex((s) => urlEq(s.url, currentUrl));
   if (idx < 0) return null;
 
   /* Free-only flow (iter 9oo): voor guests/free-tier eerst free sessie

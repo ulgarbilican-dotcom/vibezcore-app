@@ -69,6 +69,7 @@ import {
 import { getNextSession } from '@/utils/next-session';
 import { getSetting } from '@/utils/settings';
 import { clearLastPlayed, setLastPlayed } from '@/utils/last-played';
+import { urlEq } from '@/utils/url-eq';
 import {
   clearSavedPosition,
   getSavedPosition,
@@ -580,7 +581,9 @@ export async function loadSession(
   opts: { preview?: boolean; autoStart?: boolean } = {}
 ): Promise<void> {
   // Same session already loaded? Skip — minimize+reopen scenario.
-  if (state.session?.url === session.url && player) {
+  // Iter 9dq v160: urlEq i.p.v. === voor de zekerheid (encoded vs decoded
+  // mismatch zou anders een onnodige re-load veroorzaken).
+  if (state.session?.url && player && urlEq(state.session.url, session.url)) {
     return;
   }
 

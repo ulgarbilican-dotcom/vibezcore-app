@@ -14,7 +14,6 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
-import { GUMROAD_URLS } from '@/constants/links';
 import {
   getEffectiveTier,
   tierBadgeColor,
@@ -46,6 +45,7 @@ import { isNew } from '@/utils/isNew';
 import { BREATHWORK_CHOOSER } from '@/data/breathwork-modes';
 import { getModeMeta } from '@/services/ble-contract';
 import { useGatedOpenSession } from '@/utils/openSession';
+import { urlEq } from '@/utils/url-eq';
 import { subscribeLibraryReset } from '@/utils/library-reset-intent';
 import {
   consumeScrollIntent,
@@ -130,14 +130,9 @@ const C = {
 /* CDN — exact de host die de webapp gebruikt. */
 const CDN = 'https://vibezcore-audio.b-cdn.net/images';
 
-/* Gumroad-checkout-URLs — single source of truth in constants/links.ts.
-   App praat niet rechtstreeks met Gumroad voor entitlements (provider-
-   agnostisch via eigen backend), maar de checkout ZELF mag uiteraard
-   direct naar Gumroad — dat is hoe de webapp het ook doet.
-   Iter 9dq v50 (2026-06-03): inline-duplicate weggewerkt, import uit
-   constants/links.ts — voorkomt dat één file een oude URL gebruikt
-   wanneer Gumroad-producten verhuizen (audit-finding C8). */
-// GUMROAD_URLS uit constants/links.ts — zie import boven
+/* Iter 9dq v150 (operator 2026-06-17): Gumroad-checkout URLs verwijderd
+   uit de app. Checkout loopt via /subscribe → Apple StoreKit / Google
+   Play Billing (IAP). Geen externe Gumroad-redirect meer. */
 
 /* ── Bracelet-upsell-modal (post-session) configuratie ──
    AsyncStorage-key voor laatste-getoond-timestamp. Cooldown van 24u
@@ -170,7 +165,7 @@ const PILLARS = [
     num: '01',
     name: 'Psychological Resilience',
     key: 'resilience' as const,
-    img: `${CDN}/Psychological%20Resilience%20correct.jpg`,
+    img: `${CDN}/psychological%20resilience%202.png`,
     desc: 'Build what cannot break.',
   },
   {
@@ -184,10 +179,10 @@ const PILLARS = [
     num: '03',
     name: 'Social Mastery',
     key: 'social' as const,
-    /* iter 9dq v137 (operator 2026-06-15): nieuwe pillar-foto. Oude
-       Social%20mastery.jpg deelde een asset met de Calm Control bracelet-
-       mode; voor de pillar-card willen we een eigen, sterker beeld. */
-    img: `${CDN}/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg`,
+    /* iter 9dq v148 (operator 2026-06-15): gewisseld met Master Mental
+       Clarity. Pillar 3 krijgt nu de master-mental-clarity foto, en
+       Master Mental Clarity series krijgt confident-man-with-beard. */
+    img: `${CDN}/master-mental-clarity.jpg`,
     desc: 'Command without force.',
   },
   {
@@ -564,7 +559,7 @@ export default function AudioScreen() {
      filter library tot die pijler. Tap nogmaals = un-filter. Default = null
      (toon alle pijlers gegroepeerd). */
   const [activePillarFilter, setActivePillarFilter] = useState<
-    'resilience' | 'sovereignty' | 'social' | 'drive' | 'tools' | null
+    'resilience' | 'sovereignty' | 'social' | 'drive' | 'tools' | 'free' | null
   >(null);
 
   const [detailPillar, setDetailPillar] = useState<
@@ -575,6 +570,11 @@ export default function AudioScreen() {
      gebruiker de juiste state kiest vóór navigatie naar bracelet-control
      (met ?mode=X&breathwork=1 zodat de juiste breathwork pre-selected is). */
   const [breathChooserOpen, setBreathChooserOpen] = useState(false);
+  /* Iter 9dq v156 (operator 2026-06-18): info-popup voor de Auto-play
+     toggle. User-initiated — opent door tap op de ⓘ-knop naast het label.
+     Custom modal in VIBEZCORE-stijl (zelfde bottom-sheet pattern als
+     pillar-detail), niet de generic OS Alert. */
+  const [autoPlayInfoOpen, setAutoPlayInfoOpen] = useState(false);
   /* Iter 9bbb: safe-area inset voor pillar-modal bottom (home-indicator
      iOS / gesture-bar Android moeten ruimte krijgen). */
   const safeInsets = useSafeAreaInsets();
@@ -807,6 +807,36 @@ export default function AudioScreen() {
       });
     });
   };
+
+  /* Iter 9dq v152 (operator 2026-06-17): tap-handler voor sessie-rij in
+     "Free Picks" mode. Switcht naar de bijbehorende pillar, expandt de
+     serie, scroll't naar de serie-card, en speelt de sessie. Eindstand
+     voor gebruiker: hij ziet de serie-card uitgeklapt MET zijn gekozen
+     sessie aan het spelen, zodat de andere sessies in die reeks zichtbaar
+     zijn — exact wat operator vraagt. */
+  const openSessionFromFreePicks = (sess: Session) => {
+    const targetPillar = SERIES_PILLAR[sess.series];
+    if (targetPillar) {
+      setActivePillarFilter(targetPillar);
+    }
+    setExpandedSeries(sess.series);
+    /* Wacht twee frames zodat de pillar-switch + expand al gerenderd
+       zijn, dan scroll naar de serie-card. Iter 9dq v159 (operator-fix
+       2026-06-18): GEEN auto-play meer — gebruiker landt op de
+       uitgeklapte serie-card, ziet de free-sessie + alle andere
+       (PRO-)sessies van die reeks, en beslist zelf wanneer 'ie tikt.
+       Voelt minder agressief en geeft context voordat de player start. */
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const cardY = seriesPositions.current[sess.series];
+        const libY = libListYRef.current;
+        if (cardY !== undefined) {
+          const targetY = Math.max(0, libY + cardY - 100);
+          scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+        }
+      });
+    });
+  };
   /* Open de subscribe-flow voor de geselecteerde plan-tier.
      Iter 9dq v64 (2026-06-03): voorheen opende dit Gumroad direct in een
      WebBrowser (Custom Tab) — werkt prima voor web/sideload maar Apple
@@ -994,8 +1024,26 @@ export default function AudioScreen() {
               <Pressable
                 style={s.bLandingSecondaryLink}
                 onPress={() => {
+                  /* Operator-fix 2026-06-18 iter 2: bracelet-owner "Listen
+                     free sessions first" gebruikt nu dezelfde inline Free
+                     Picks-flow als een gewone gast die op de Free Picks-
+                     card tapt — activePillarFilter='free' opent de 28
+                     sessie-rijen in de library, tap op een sessie navigeert
+                     naar de juiste serie waar 'ie speelt mét overige
+                     sessies in die reeks zichtbaar. Voorheen pushte 'ie
+                     naar /library/free (losse pagina), wat de flow brak. */
                   setExploredLibrary(true);
-                  setTimeout(() => requestScrollTo('library'), 100);
+                  setActivePillarFilter('free');
+                  /* Twee frames wachten zodat de library-sectie eerst
+                     gerenderd is, dan scroll'en naar het Free Picks-blok. */
+                  requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                      scrollViewRef.current?.scrollTo({
+                        y: Math.max(0, libListYRef.current - 24),
+                        animated: true,
+                      });
+                    });
+                  });
                 }}
                 hitSlop={10}
                 accessibilityLabel="Listen to free sessions first"
@@ -1015,7 +1063,19 @@ export default function AudioScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[
+          s.scroll,
+          /* Iter 9dq v154+v155 (operator-fix 2026-06-18):
+             - paddingTop: extra ademruimte boven de search bar zodat
+               'ie niet tegen de status-bar plakt. SafeAreaView pakt al
+               de basis-inset; deze 12px is puur visuele lucht.
+             - paddingBottom: tab bar (64 + insets.bottom) + mini-player
+               + gap zodat onderste content niet wegvalt. */
+          {
+            paddingTop: 12,
+            paddingBottom: 64 + safeInsets.bottom + 96,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -1107,10 +1167,16 @@ export default function AudioScreen() {
           </View>
         )}
 
-        {/* "Ontdek"-secties — BUILT ON, pijlers, Emerson, EXPLORE SERIES-
-           header — verbergen tijdens een actieve zoekquery EN voor PRO-
-           users (laatste = operator-besluit 2026-05-23: PRO's library
-           start direct bij de search-balk, geen marketing-secties). */}
+        {/* "Ontdek"-secties — BUILT ON, Emerson, EXPLORE SERIES-header —
+           verbergen tijdens een actieve zoekquery EN voor PRO-users
+           (operator-besluit 2026-05-23: PRO's library start direct bij
+           de search-balk, geen marketing-secties).
+
+           Operator-fix 2026-06-17: PIJLER-grid is uit deze wrapper
+           gehaald en staat hieronder als eigen block — pillar cards
+           moeten zichtbaar zijn voor ÉLK account-type (gast, audio PRO,
+           bracelet-only, full PRO). Alleen de marketing-tekst eromheen
+           blijft PRO-hidden. */}
         {!searchActive && !hasSub && (
           <>
             {/* ── BUILT ON ── bron regel 2701-2704 ── */}
@@ -1121,31 +1187,147 @@ export default function AudioScreen() {
               </Text>
             </View>
 
-            {/* ── 4 PIJLERS ──
-                Iter 9dq v131 (2026-06-14): tap = filter + auto-scroll naar
-                library section (zoals website). Tap dezelfde pillar opnieuw
-                = un-filter. Long-press opent detail-popup (legacy). Card-content
-                volgt website-pattern: PILLAR 0X label boven, naam + tagline
-                onder, VIEW X SESSIONS + pijl onderaan. */}
+            {/* ── EMERSON-QUOTE ── verhuisd naar onder BUILT ON
+                (operator-fix 2026-06-18). Thematisch sterker: "intellectual
+                legacy" → quote van Emerson. Voorheen stond 'ie onder de
+                pillars in een "lege sectie" die geen relatie had met de
+                pillar-grid. */}
+            <View style={s.quoteBlock}>
+              <Image
+                source={{ uri: `${CDN}/ralph-waldo-emerson.png` }}
+                style={s.quoteAvatar}
+                resizeMode="cover"
+              />
+              <View style={s.quoteContent}>
+                <Text style={s.quoteText}>
+                  "The only person you are destined to become is the person you
+                  decide to be."
+                </Text>
+                <Text style={s.quoteAuthor}>— Ralph Waldo Emerson</Text>
+              </View>
+            </View>
+          </>
+        )}
 
+        {/* ── SEARCH BAR ── boven pillars (operator-fix 2026-06-18).
+            Voorheen stond search ÓNDER de pillar-grid; operator wil 'm
+            bovenaan voor sneller toegang. Alleen PRO-users (zien volle
+            library; voor guests is search voor 14 free sessies overhead). */}
+        {hasSub && (
+          <View
+            style={s.searchWrap}
+            onLayout={(e) => {
+              searchBarYRef.current = e.nativeEvent.layout.y;
+            }}
+          >
+            <Text style={s.searchIcon}>🔍</Text>
+            <TextInput
+              style={s.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search sessions, series…"
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {searchActive ? (
+              <Pressable
+                onPress={() => setSearchQuery('')}
+                hitSlop={12}
+                style={s.searchClear}
+                android_ripple={{
+                  color: 'rgba(255,255,255,0.10)',
+                  borderless: true,
+                }}
+              >
+                <Text style={s.searchClearGlyph}>×</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
+
+        {/* ── YOUR JOURNEY + NEW/FAV/FREE chips ── boven pillars
+            (operator-fix 2026-06-18). Sneller toegang dan onderaan. */}
+        {!searchActive && (
+          <View style={s.libChipsRow}>
+            <Pressable
+              style={s.libChipCard}
+              onPress={() => router.push('/history')}
+              android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+              accessibilityLabel="View your listening journey"
+            >
+              <TrendingUp size={22} color="#3a8fff" strokeWidth={2.2} />
+              <Text style={s.libChipCardLabel}>Your Journey</Text>
+            </Pressable>
+
+            {!hasSub ? (
+              <Pressable
+                style={s.libChipCard}
+                onPress={() => router.push('/library/free')}
+                android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+                accessibilityLabel="Browse all free sessions"
+              >
+                <Gem size={22} color="#3a8fff" strokeWidth={2.2} />
+                <Text style={s.libChipCardLabel}>Free Sessions</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  style={s.libChipCard}
+                  onPress={() => router.push('/library/new')}
+                  android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+                  accessibilityLabel="Browse new sessions"
+                >
+                  <Sparkles size={22} color="#3a8fff" strokeWidth={2.2} />
+                  <Text style={s.libChipCardLabel}>New</Text>
+                </Pressable>
+                <Pressable
+                  style={s.libChipCard}
+                  onPress={() => router.push('/library/favorites')}
+                  android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
+                  accessibilityLabel="Browse favorites"
+                >
+                  <Heart size={22} color="#3a8fff" strokeWidth={2.2} />
+                  <Text style={s.libChipCardLabel}>Favorites</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* ── 4 PIJLERS ── altijd zichtbaar (behalve tijdens search)
+            Iter 9dq v131 (2026-06-14): tap = filter + auto-scroll naar
+            library section (zoals website). Tap dezelfde pillar opnieuw
+            = un-filter. Long-press opent detail-popup (legacy). Card-content
+            volgt website-pattern: PILLAR 0X label boven, naam + tagline
+            onder, VIEW X SESSIONS + pijl onderaan.
+            Operator-fix 2026-06-17: pillar cards moeten zichtbaar zijn
+            voor élk account (audio PRO, bracelet-only en full PRO ook),
+            niet alleen voor gasten/free. Was eerder gegate'd op !hasSub. */}
+        {!searchActive && (
+          <>
             {/* Subtiele hint boven de pillar cards — signaleert dat reeksen
                 onder elke card zitten. Operator-feedback 2026-06-14, gelijk
-                aan website .pillar-cards-hint. */}
-            <Text
-              style={{
-                color: C.dim,
-                fontFamily: 'Inter_500Medium',
-                fontSize: 12,
-                textAlign: 'center',
-                letterSpacing: 0.4,
-                marginTop: 8,
-                marginBottom: 14,
-                paddingHorizontal: 20,
-                opacity: 0.85,
-              }}
-            >
-              Tap a card to start or continue your journey
-            </Text>
+                aan website .pillar-cards-hint. Alleen tonen voor non-PRO
+                (PRO's library is "instructieloos" — ze kennen de structuur). */}
+            {!hasSub && (
+              <Text
+                style={{
+                  color: C.dim,
+                  fontFamily: 'Inter_500Medium',
+                  fontSize: 12,
+                  textAlign: 'center',
+                  letterSpacing: 0.4,
+                  marginTop: 8,
+                  marginBottom: 14,
+                  paddingHorizontal: 20,
+                  opacity: 0.85,
+                }}
+              >
+                Tap a card to start or continue your journey
+              </Text>
+            )}
 
             <View
               style={s.pillarsGrid}
@@ -1319,166 +1501,246 @@ export default function AudioScreen() {
                   </Pressable>
                 );
               })}
-            </View>
 
-            {/* ── EMERSON-QUOTE ── bron regel 2742-2755 ── */}
-            <View style={s.quoteBlock}>
-              <Image
-                source={{ uri: `${CDN}/ralph-waldo-emerson.png` }}
-                style={s.quoteAvatar}
-                resizeMode="cover"
-              />
-              <View style={s.quoteContent}>
-                <Text style={s.quoteText}>
-                  "The only person you are destined to become is the person you
-                  decide to be."
-                </Text>
-                <Text style={s.quoteAuthor}>— Ralph Waldo Emerson</Text>
-              </View>
-            </View>
-
-            {/* ── EXPLORE SERIES — header-blok ── */}
-            <View style={s.exploreHead}>
-              <Text style={s.exploreEyebrow}>— EXPLORE {SERIES.length} SERIES —</Text>
-              <Text style={s.exploreH1}>Not just inspiration.</Text>
-              <Text style={s.exploreH1}>Real transformation.</Text>
-              <Text style={s.exploreMetaText}>
-                Updated monthly with fresh sessions
-              </Text>
+              {/* ── 6e CARD: FREE PICKS — "Taste the Library" ──
+                  Operator-fix 2026-06-17 iter 2: card hoort in de pillar-
+                  grid (positie 6, onder pillar 4 in 2-col layout). Tap
+                  zet activePillarFilter='free' wat de library-sectie
+                  switcht naar de 28 free-sessie-rijen, en gebruiker kan
+                  doorklikken naar de juiste serie. "Back to pillars"-knop
+                  brengt 'm terug naar de pillar-grid.
+                  Iter 9dq v153 (operator-fix 2026-06-17): NIET tonen
+                  voor PRO-users (audio PRO + full PRO). Die hebben alles
+                  al — een "free picks" entry-point is dan visuele ruis. */}
+              {!hasSub && (() => {
+                const isFreeActive = activePillarFilter === 'free';
+                const freeCount = SESSIONS.filter((sess) => sess.free).length;
+                return (
+                  <Pressable
+                    key="free-picks"
+                    style={[
+                      s.pillar,
+                      {
+                        height: 200,
+                        backgroundColor: 'rgba(74,222,128,0.06)',
+                        borderColor: isFreeActive
+                          ? '#4ade80'
+                          : 'rgba(74,222,128,0.40)',
+                        borderWidth: isFreeActive ? 2 : 1,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (isFreeActive) {
+                        setActivePillarFilter(null);
+                      } else {
+                        setActivePillarFilter('free');
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => {
+                            scrollViewRef.current?.scrollTo({
+                              y: Math.max(0, libListYRef.current - 24),
+                              animated: true,
+                            });
+                          });
+                        });
+                      }
+                    }}
+                    android_ripple={{ color: 'rgba(74,222,128,0.10)' }}
+                    accessibilityLabel="Free picks — first session of every series"
+                  >
+                    {/* Geen achtergrondfoto — groene tint + play-icoon
+                        in het midden zodat het visueel onderscheidt van
+                        de 5 echte pillar-cards eronder. */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 36,
+                        left: 0,
+                        right: 0,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: 28,
+                          backgroundColor: 'rgba(74,222,128,0.16)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(74,222,128,0.45)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: '#4ade80',
+                            fontFamily: 'Inter_800ExtraBold',
+                            fontSize: 22,
+                            marginLeft: 3,
+                          }}
+                        >
+                          ▶
+                        </Text>
+                      </View>
+                    </View>
+                    {/* FREE label — top-left, zoals "PILLAR 0X" op de
+                        andere cards. */}
+                    <Text
+                      style={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 14,
+                        color: '#4ade80',
+                        fontFamily: 'Inter_800ExtraBold',
+                        fontSize: 10,
+                        letterSpacing: 2,
+                      }}
+                    >
+                      {`FREE · ${freeCount}`}
+                    </Text>
+                    {/* Bottom block — naam + tagline + actie-regel,
+                        gespiegeld aan pillar-card-structuur. */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: 14,
+                        right: 14,
+                        bottom: 12,
+                        height: 92,
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View>
+                        <Text
+                          style={[
+                            s.pillarName,
+                            {
+                              fontSize: 14,
+                              lineHeight: 17,
+                              color: '#fff',
+                              letterSpacing: -0.3,
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          Free Picks
+                        </Text>
+                        <Text
+                          style={{
+                            color: 'rgba(255,255,255,0.75)',
+                            fontFamily: 'Inter_500Medium',
+                            fontSize: 11,
+                            marginTop: 3,
+                            letterSpacing: 0.1,
+                            lineHeight: 14,
+                          }}
+                          numberOfLines={1}
+                        >
+                          Taste the library
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingTop: 8,
+                          borderTopWidth: 1,
+                          borderTopColor: 'rgba(74,222,128,0.30)',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: '#4ade80',
+                            fontFamily: 'Inter_700Bold',
+                            fontSize: 9.5,
+                            letterSpacing: 1.4,
+                          }}
+                        >
+                          {`LISTEN ${freeCount} SESSIONS`}
+                        </Text>
+                        <Text
+                          style={{
+                            color: isFreeActive
+                              ? '#4ade80'
+                              : 'rgba(74,222,128,0.65)',
+                            fontFamily: 'Inter_700Bold',
+                            fontSize: 14,
+                          }}
+                        >
+                          ↓
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })()}
             </View>
           </>
         )}
 
-        {/* ── LIBRARY-CONTROLS — search bar
-            Iter 9ss: alleen tonen voor PRO users (full library doorzoekbaar).
-            Guests hebben slechts 14 free sessies; search is voor hen overhead
-            zonder waarde — die zien direct alle free via de chip. */}
-        {hasSub && (
-        <View
-          style={s.searchWrap}
-          onLayout={(e) => {
-            searchBarYRef.current = e.nativeEvent.layout.y;
-          }}
-        >
-          <Text style={s.searchIcon}>🔍</Text>
-          <TextInput
-            style={s.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search sessions, series…"
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            returnKeyType="search"
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {searchActive ? (
-            <Pressable
-              onPress={() => setSearchQuery('')}
-              hitSlop={12}
-              style={s.searchClear}
-              android_ripple={{
-                color: 'rgba(255,255,255,0.10)',
-                borderless: true,
-              }}
-            >
-              <Text style={s.searchClearGlyph}>×</Text>
-            </Pressable>
-          ) : null}
-        </View>
-        )}
+        {/* Iter 9dq v155 (operator 2026-06-18): EMERSON-QUOTE en EXPLORE
+            SERIES verwijderd uit deze positie.
+            - Emerson is verhuisd naar BOVEN, direct onder BUILT ON
+              (thematisch sterker: intellectual legacy + Emerson-citaat).
+            - EXPLORE SERIES header ("Not just inspiration / Real
+              transformation") is volledig gedropt — was visuele ruis,
+              de pillar-cards dragen de boodschap al via hun taglines en
+              elke card toont al de session-count.
+            - Default-state ruimte onder pillars is nu schoon (geen lege
+              sectie meer voor non-PRO scrolers). */}
 
-        {/* Pills-rij + sessie-teller zijn vervangen door 3 navigatie-knoppen
-           verderop in de pagina (zie blok onder de EXPLORE SERIES-header,
-           vlak boven de eerste serie-card). Eigenaar-besluit:
-             - Audio Library is altijd de "homepage" (ongefilterd).
-             - New / Favorites / Free zijn eigen sub-pages onder /library/. */}
+        {/* Search bar + Library chips zijn verhuisd naar BOVEN de pillar-
+            grid (iter 9dq v154, operator 2026-06-18) — zie blok hierboven
+            vlak na de marketing-intro. */}
 
-        {/* Continue-card op de library is VERVANGEN door een welcome-back
-            popup op cold-start (zie src/components/WelcomeBackPopup.tsx
-            + src/services/welcome-popup.ts). Operator-besluit 2026-05-25:
-            popup voelt warmer + duidelijker als "welkom terug" dan een
-            statische card die naast alle andere kaarten op de library
-            blijft staan. De last-played-tracker (useShowableLastPlayed)
-            blijft bestaan en voedt nu de popup ipv de library-card. */}
+        {/* Iter 9dq v155 (operator 2026-06-18): autoplay-toggle verhuisd
+            naar de "BACK TO PILLARS + Auto-play" control-row die alleen
+            verschijnt wanneer een pillar-filter actief is. Voorheen stond
+            'ie altijd los onder de pillars wat een lege/random indruk gaf.
+            Zie de control-row in de libList onderaan. */}
 
-        {/* Iter 9dq v15 (2026-06-02): Your Journey + filter-chips in
-            ÉÉN blok naast elkaar, ipv journey als eigen list-row eronder.
-            Iter 9dq v16 (2026-06-02): operator-feedback — alle chips in
-            ÉÉN kleur (Brand.accent blauw) + exact even groot. Onderscheid
-            tussen chips via Lucide icoon + label, niet via kleur.
-            Equal-flex layout zodat 2 of 3 chips altijd even breed zijn,
-            vaste minHeight zodat ze even hoog zijn ongeacht label-wrap. */}
-        {!searchActive && (
-          <View style={s.libChipsRow}>
-            <Pressable
-              style={s.libChipCard}
-              onPress={() => router.push('/history')}
-              android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
-              accessibilityLabel="View your listening journey"
-            >
-              <TrendingUp size={22} color="#3a8fff" strokeWidth={2.2} />
-              <Text style={s.libChipCardLabel}>Your Journey</Text>
-            </Pressable>
-
-            {!hasSub ? (
-              <Pressable
-                style={s.libChipCard}
-                onPress={() => router.push('/library/free')}
-                android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
-                accessibilityLabel="Browse all free sessions"
-              >
-                <Gem size={22} color="#3a8fff" strokeWidth={2.2} />
-                <Text style={s.libChipCardLabel}>Free Sessions</Text>
-              </Pressable>
-            ) : (
-              <>
-                <Pressable
-                  style={s.libChipCard}
-                  onPress={() => router.push('/library/new')}
-                  android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
-                  accessibilityLabel="Browse new sessions"
-                >
-                  <Sparkles size={22} color="#3a8fff" strokeWidth={2.2} />
-                  <Text style={s.libChipCardLabel}>New</Text>
-                </Pressable>
-                <Pressable
-                  style={s.libChipCard}
-                  onPress={() => router.push('/library/favorites')}
-                  android_ripple={{ color: 'rgba(58, 143, 255, 0.10)' }}
-                  accessibilityLabel="Browse favorites"
-                >
-                  <Heart size={22} color="#3a8fff" strokeWidth={2.2} />
-                  <Text style={s.libChipCardLabel}>Favorites</Text>
-                </Pressable>
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Iter 9tt: auto-play toggle terug op Library (operator-feedback:
-            "moet directly accessible zijn, niet diep in Settings").
-            Compact 1-regel row met Switch rechts. Settings → Playback
-            blijft als secondaire plek. */}
-        {!searchActive && (
+        {/* ── HINT-CARD voor de lege default-state (operator-fix B+C) ──
+            Wanneer er geen pillar-filter actief is en geen search-query,
+            tonen we een subtiele "tap een pillar"-hint zodat gebruikers
+            begrijpen dat de pillar-grid de actieve ingang is. */}
+        {!searchActive && !activePillarFilter && (
           <View
-            style={s.autoPlayRow}
-            onLayout={(e) => {
-              settingCardYRef.current = e.nativeEvent.layout.y;
+            style={{
+              marginHorizontal: 16,
+              marginTop: 8,
+              marginBottom: 24,
+              paddingVertical: 18,
+              paddingHorizontal: 22,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: 'rgba(58,143,255,0.20)',
+              backgroundColor: 'rgba(58,143,255,0.04)',
+              alignItems: 'center',
             }}
           >
-            {/* Iter 9uu: label conditional op subscription. Voor guests
-                was auto-play altijd cross-series free flow → expliciet
-                "free session". PRO users zagen "next session".
-                Iter 9dq v14 (2026-06-02): freeOnly UIT — next is altijd
-                volgende sessie in dezelfde serie. Label uniform voor
-                alle user-types. */}
-            <Text style={s.autoPlayLabel}>Auto-play next session</Text>
-            <Switch
-              value={autoPlayNext}
-              onValueChange={setAutoPlayNext}
-              trackColor={{ false: '#3a3a3a', true: '#3a8fff' }}
-              thumbColor={'#ffffff'}
-            />
+            <Text
+              style={{
+                color: C.accent,
+                fontFamily: 'Inter_700Bold',
+                fontSize: 13,
+                marginBottom: 4,
+                letterSpacing: 0.3,
+              }}
+            >
+              ↑ Tap a pillar above
+            </Text>
+            <Text
+              style={{
+                color: C.dim,
+                fontFamily: 'Inter_500Medium',
+                fontSize: 12,
+                textAlign: 'center',
+                lineHeight: 16,
+              }}
+            >
+              Each pillar opens a focused set of series. New sessions added monthly.
+            </Text>
           </View>
         )}
 
@@ -1672,112 +1934,339 @@ export default function AudioScreen() {
                   itereert PILLAR_ORDER, inner blijft per-serie rendering. Geen
                   enkele wijziging aan de card-content, player, autoplay,
                   paywall — alleen visuele groepering + section headers. */}
-              {/* Back-to-pillars knop — alleen zichtbaar wanneer een filter
-                  actief is. Brengt gebruiker terug naar de pillar-grid om
-                  een nieuwe pijler te kiezen. */}
+              {/* ── CONTROL ROW: BACK TO PILLARS + Auto-play ──
+                  (operator-fix 2026-06-18, iter 9dq v155)
+                  Twee functioneel-gerelateerde session-controls naast
+                  elkaar in één rij: links de back-knop (terug naar
+                  pillar-grid), rechts de auto-play toggle. Voorheen
+                  hingen ze los van elkaar wat een random/onorganisch
+                  effect gaf. Alleen zichtbaar wanneer een pillar-filter
+                  actief is — bij default-state staat de hint-card op
+                  hun plek. */}
               {activePillarFilter && (
-                <Pressable
-                  onPress={() => {
-                    setActivePillarFilter(null);
-                    requestAnimationFrame(() => {
-                      requestAnimationFrame(() => {
-                        scrollViewRef.current?.scrollTo({
-                          y: Math.max(0, pillarsYRef.current - 24),
-                          animated: true,
-                        });
-                      });
-                    });
+                <View
+                  onLayout={(e) => {
+                    settingCardYRef.current = e.nativeEvent.layout.y;
                   }}
                   style={{
-                    alignSelf: 'flex-start',
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    marginHorizontal: 16,
-                    marginBottom: 14,
-                    borderRadius: 999,
-                    backgroundColor: 'rgba(58,143,255,0.10)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(58,143,255,0.32)',
+                    justifyContent: 'space-between',
+                    /* Operator-fix 2026-06-18 iter 4: marginHorizontal
+                       verwijderd zodat de BACK TO PILLARS-knop links
+                       uitlijnt met de chapter-header en series-cards
+                       eronder (die op libList-paddingHorizontal:16 zitten
+                       zonder eigen margin). Voorheen 16+16=32 ingesprongen. */
+                    marginTop: 32,
+                    marginBottom: 6,
+                    gap: 12,
                   }}
-                  android_ripple={{ color: 'rgba(58,143,255,0.20)' }}
                 >
-                  <Text
-                    style={{
-                      color: C.accent,
-                      fontFamily: 'Inter_700Bold',
-                      fontSize: 14,
+                  <Pressable
+                    onPress={() => {
+                      setActivePillarFilter(null);
+                      requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                          scrollViewRef.current?.scrollTo({
+                            y: Math.max(0, pillarsYRef.current - 24),
+                            animated: true,
+                          });
+                        });
+                      });
                     }}
-                  >
-                    ↑
-                  </Text>
-                  <Text
                     style={{
-                      color: C.accent,
-                      fontFamily: 'Inter_700Bold',
-                      fontSize: 11.5,
-                      letterSpacing: 1.4,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: 999,
+                      backgroundColor: 'rgba(58,143,255,0.10)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(58,143,255,0.32)',
                     }}
+                    android_ripple={{ color: 'rgba(58,143,255,0.20)' }}
                   >
-                    BACK TO PILLARS
-                  </Text>
-                </Pressable>
-              )}
-              {PILLAR_ORDER.map((pillar) => {
-                /* Destination flow (operator-besluit 2026-06-14): default state
-                   toont ALLEEN pillar cards, geen series. Series verschijnen
-                   pas wanneer luisteraar een pillar tapt. Matcht website UX
-                   en voorkomt cognitive overload door 25+ cards. */
-                if (activePillarFilter !== pillar) {
-                  return null;
-                }
-                const pillarSeries = SERIES.filter(
-                  (s) => SERIES_PILLAR[s.name] === pillar,
-                );
-                if (pillarSeries.length === 0) return null;
-                const pillarMeta = PILLAR_META[pillar];
-                return (
-                  <View
-                    key={`pillar-${pillar}`}
-                    style={{ marginTop: pillar === PILLAR_ORDER[0] ? 0 : 24 }}
-                  >
-                    {/* Pijler-section header — eyebrow + tagline, Apple-stijl
-                        gecentreerd. Volgt visuele taal van exploreEyebrow. */}
-                    <View
+                    <Text
                       style={{
-                        alignItems: 'center',
-                        marginBottom: 16,
-                        paddingHorizontal: 12,
+                        color: C.accent,
+                        fontFamily: 'Inter_700Bold',
+                        fontSize: 14,
                       }}
+                    >
+                      ↑
+                    </Text>
+                    <Text
+                      style={{
+                        color: C.accent,
+                        fontFamily: 'Inter_700Bold',
+                        fontSize: 11.5,
+                        letterSpacing: 1.4,
+                      }}
+                    >
+                      BACK TO PILLARS
+                    </Text>
+                  </Pressable>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: C.dim,
+                        fontFamily: 'Inter_600SemiBold',
+                        fontSize: 12,
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      Auto-play
+                    </Text>
+                    {/* ⓘ info-knop (operator-fix 2026-06-18): tap opent
+                        uitleg over wat Auto-play doet. User-initiated zodat
+                        we niet onnodig pop-ups gooien naar power-users die
+                        de feature al kennen. */}
+                    <Pressable
+                      onPress={() => setAutoPlayInfoOpen(true)}
+                      hitSlop={10}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.30)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      accessibilityLabel="What does auto-play do?"
                     >
                       <Text
                         style={{
-                          color: C.accent,
+                          color: 'rgba(255,255,255,0.65)',
                           fontFamily: 'Inter_700Bold',
+                          fontSize: 10,
+                          lineHeight: 12,
+                        }}
+                      >
+                        i
+                      </Text>
+                    </Pressable>
+                    <Switch
+                      value={autoPlayNext}
+                      onValueChange={setAutoPlayNext}
+                      trackColor={{ false: '#3a3a3a', true: '#3a8fff' }}
+                      thumbColor={'#ffffff'}
+                    />
+                  </View>
+                </View>
+              )}
+              {PILLAR_ORDER.map((pillar, idx) => {
+                /* Destination flow (operator-besluit 2026-06-14): default state
+                   toont ALLEEN pillar cards, geen series. Series verschijnen
+                   pas wanneer luisteraar een pillar tapt. Matcht website UX
+                   en voorkomt cognitive overload door 25+ cards.
+                   Iter 9dq v152 (operator 2026-06-17): 'free' mode toegevoegd.
+                   Wanneer activePillarFilter === 'free' rendert deze loop EEN
+                   keer (idx === 0) met ALLE series die een free-sessie hebben
+                   onder een "Free Picks"-chapter-header. Hierdoor kan gebruiker
+                   per serie z'n free-sessie spelen + de overige (PRO-)sessies
+                   in die reeks zien. */
+                /* Iter 9dq v153 (operator-fix 2026-06-17): free-mode niet
+                   beschikbaar voor PRO-users. Veiligheidsguard zodat een
+                   PRO-user die via stale state in free-mode zou belanden
+                   automatisch alles ziet (filter cleared). */
+                const isFreeMode = activePillarFilter === 'free' && !hasSub;
+                if (isFreeMode && idx !== 0) return null;
+                if (!isFreeMode && activePillarFilter !== pillar) return null;
+                const pillarSeries = isFreeMode
+                  ? SERIES.filter((s) =>
+                      s.sessions.some((x) => x.free),
+                    )
+                  : SERIES.filter((s) => SERIES_PILLAR[s.name] === pillar);
+                if (pillarSeries.length === 0) return null;
+                const pillarMeta = isFreeMode ? null : PILLAR_META[pillar];
+                return (
+                  <View
+                    key={isFreeMode ? 'free-section' : `pillar-${pillar}`}
+                    style={{
+                      marginTop:
+                        isFreeMode || pillar === PILLAR_ORDER[0] ? 0 : 24,
+                    }}
+                  >
+                    {/* SECTION header — pillar-pattern of free-pattern.
+                        Beide hetzelfde "centered + outlined panel" zodat het
+                        visueel duidelijk een chapter-marker is en niet de
+                        titel van de serie-card eronder. Verschil: free krijgt
+                        groene accent en andere copy. */}
+                    <View
+                      style={{
+                        marginBottom: 20,
+                        marginTop: 8,
+                        paddingVertical: 18,
+                        paddingHorizontal: 20,
+                        borderRadius: 14,
+                        borderWidth: 1,
+                        borderColor: isFreeMode
+                          ? 'rgba(74,222,128,0.40)'
+                          : 'rgba(58,143,255,0.40)',
+                        backgroundColor: isFreeMode
+                          ? 'rgba(74,222,128,0.06)'
+                          : 'rgba(58,143,255,0.06)',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {/* Eyebrow */}
+                      <Text
+                        style={{
+                          color: isFreeMode ? '#4ade80' : C.accent,
+                          fontFamily: 'Inter_800ExtraBold',
                           fontSize: 11,
-                          letterSpacing: 2,
+                          letterSpacing: 2.4,
                           textTransform: 'uppercase',
+                          marginBottom: 8,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {isFreeMode
+                          ? `FREE PICKS · ${pillarSeries.length} SERIES`
+                          : `PILLAR ${pillarMeta!.num}`}
+                      </Text>
+                      {/* Section-naam — chapter title, groot en bold,
+                          gecentreerd binnen het omkaderde panel. */}
+                      <Text
+                        style={{
+                          color: C.text,
+                          fontFamily: 'Inter_800ExtraBold',
+                          fontSize: 26,
+                          letterSpacing: -0.5,
+                          lineHeight: 30,
                           marginBottom: 6,
                           textAlign: 'center',
                         }}
                       >
-                        {`${pillarMeta.num} · ${pillarMeta.name}`}
+                        {isFreeMode ? 'Taste the Library' : pillarMeta!.name}
                       </Text>
+                      {/* Tagline — gecentreerd, muted kleur. */}
                       <Text
                         style={{
-                          color: C.text,
-                          fontFamily: 'Inter_600SemiBold',
-                          fontSize: 14,
-                          letterSpacing: -0.2,
+                          color: C.dim,
+                          fontFamily: 'Inter_500Medium',
+                          fontSize: 13.5,
+                          letterSpacing: -0.1,
+                          lineHeight: 19,
                           textAlign: 'center',
                         }}
                       >
-                        {pillarMeta.tagline}
+                        {isFreeMode
+                          ? 'First session of every series — yours. Tap a session to play it inside its series.'
+                          : pillarMeta!.tagline}
                       </Text>
                     </View>
-                    {pillarSeries.map((ser) => {
+
+                    {/* ── Free Picks SESSIE-LIJST (operator-fix 2026-06-17 iter 3) ──
+                        In 'free' mode tonen we niet de 28 serie-cards maar 28
+                        sessie-rijen — elke rij is de gratis intro-sessie van
+                        een serie + subtitle die de serie-naam toont. Tap →
+                        switcht naar die serie's pillar, expand de serie, scroll
+                        ernaartoe, en start de sessie. Eindstand voor gebruiker:
+                        sessie speelt MET de andere sessies in die reeks
+                        zichtbaar boven/onder. */}
+                    {isFreeMode && (
+                      <View style={{ marginBottom: 20 }}>
+                        {SESSIONS.filter((sess) => sess.free).map((sess) => {
+                          const photo = SERIES_PHOTO[sess.series];
+                          return (
+                            <Pressable
+                              key={`free-row-${sess.url}`}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 12,
+                                paddingVertical: 12,
+                                paddingHorizontal: 4,
+                                borderBottomWidth: 0.5,
+                                borderBottomColor: 'rgba(255,255,255,0.06)',
+                              }}
+                              onPress={() => openSessionFromFreePicks(sess)}
+                              android_ripple={{ color: 'rgba(74,222,128,0.06)' }}
+                              accessibilityLabel={`Play ${sess.title} from ${sess.series}`}
+                            >
+                              {/* Thumbnail */}
+                              <View
+                                style={{
+                                  width: 52,
+                                  height: 52,
+                                  borderRadius: 10,
+                                  overflow: 'hidden',
+                                  backgroundColor: '#1a1a1a',
+                                }}
+                              >
+                                {photo ? (
+                                  <Image
+                                    source={{ uri: photo }}
+                                    style={{ width: '100%', height: '100%' }}
+                                  />
+                                ) : null}
+                              </View>
+                              {/* Title + series */}
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text
+                                  style={{
+                                    color: '#4ade80',
+                                    fontFamily: 'Inter_800ExtraBold',
+                                    fontSize: 9,
+                                    letterSpacing: 1.2,
+                                    textTransform: 'uppercase',
+                                    marginBottom: 3,
+                                  }}
+                                >
+                                  FREE
+                                </Text>
+                                <Text
+                                  style={{
+                                    color: C.text,
+                                    fontFamily: 'Inter_700Bold',
+                                    fontSize: 14.5,
+                                    letterSpacing: -0.2,
+                                    lineHeight: 18,
+                                    marginBottom: 3,
+                                  }}
+                                  numberOfLines={2}
+                                >
+                                  {sess.title}
+                                </Text>
+                                <Text
+                                  style={{
+                                    color: C.dim,
+                                    fontFamily: 'Inter_500Medium',
+                                    fontSize: 12,
+                                    letterSpacing: -0.05,
+                                  }}
+                                  numberOfLines={1}
+                                >
+                                  {`Series · ${sess.series}`}
+                                </Text>
+                              </View>
+                              {/* Play-pijl */}
+                              <Text
+                                style={{
+                                  color: 'rgba(74,222,128,0.75)',
+                                  fontFamily: 'Inter_800ExtraBold',
+                                  fontSize: 18,
+                                  marginRight: 6,
+                                }}
+                              >
+                                ▶
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {!isFreeMode && pillarSeries.map((ser) => {
             const photo = SERIES_PHOTO[ser.name];
             const eyebrow = SERIES_SUBTITLE[ser.name];
             const subline = SERIES_SUB[ser.name];
@@ -1950,7 +2439,7 @@ export default function AudioScreen() {
                      card-glow (FIX 5+). De play-knop icon switcht binnen
                      active op basis van playerState.playing (▶ ↔ ⏸). */
                   const isActive =
-                    playerState.session?.url === sess.url;
+                    !!playerState.session?.url && urlEq(playerState.session.url, sess.url);
                   const isPlayingHere = isActive && playerState.playing;
                   const pct =
                     isActive && playerState.durationSec > 0
@@ -2088,9 +2577,9 @@ export default function AudioScreen() {
                           onPress={() => handleSessionPress(sess)}
                           isFavorite={favorites.has(sess.url)}
                           onToggleFav={() => toggleFavorite(sess)}
-                          isActive={playerState.session?.url === sess.url}
+                          isActive={!!playerState.session?.url && urlEq(playerState.session.url, sess.url)}
                           isPlaying={
-                            playerState.session?.url === sess.url &&
+                            !!playerState.session?.url && urlEq(playerState.session.url, sess.url) &&
                             playerState.playing
                           }
                           hideTag={hasSub}
@@ -2149,10 +2638,10 @@ export default function AudioScreen() {
                                 isFavorite={favorites.has(sess.url)}
                                 onToggleFav={() => toggleFavorite(sess)}
                                 isActive={
-                                  playerState.session?.url === sess.url
+                                  !!playerState.session?.url && urlEq(playerState.session.url, sess.url)
                                 }
                                 isPlaying={
-                                  playerState.session?.url === sess.url &&
+                                  !!playerState.session?.url && urlEq(playerState.session.url, sess.url) &&
                                   playerState.playing
                                 }
                                 hideTag={hasSub}
@@ -2170,8 +2659,9 @@ export default function AudioScreen() {
                         card in de gefilterde pijler. Voorkomt dat gebruiker
                         helemaal naar boven moet scrollen vanaf de onderste
                         card. Subtiele variant: minder prominent dan de
-                        bovenste knop, maar zelfde functie. */}
-                    {activePillarFilter === pillar && (
+                        bovenste knop, maar zelfde functie. Iter 9dq v152:
+                        ook tonen bij 'free' mode (al-pillars-view). */}
+                    {(activePillarFilter === pillar || isFreeMode) && (
                       <Pressable
                         onPress={() => {
                           setActivePillarFilter(null);
@@ -2640,67 +3130,12 @@ export default function AudioScreen() {
 
       </ScrollView>
 
-      {/* ── Floating "Back to pillars" chip — altijd zichtbaar wanneer een
-          pijler-filter actief is, ongeacht de scroll-positie. Vanuit elke
-          series card kan luisteraar direct terug naar de pillar-grid.
-          Subtiele blur-glass pill rechtsboven, blokkeert content niet. ── */}
-      {activePillarFilter && (
-        <Pressable
-          onPress={() => {
-            setActivePillarFilter(null);
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                scrollViewRef.current?.scrollTo({
-                  y: Math.max(0, pillarsYRef.current - 24),
-                  animated: true,
-                });
-              });
-            });
-          }}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 16,
-            zIndex: 100,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 999,
-            backgroundColor: 'rgba(20,20,20,0.85)',
-            borderWidth: 1,
-            borderColor: 'rgba(58,143,255,0.40)',
-            shadowColor: '#000',
-            shadowOpacity: 0.35,
-            shadowOffset: { width: 0, height: 2 },
-            shadowRadius: 8,
-            elevation: 6,
-          }}
-          android_ripple={{ color: 'rgba(58,143,255,0.20)' }}
-          accessibilityLabel="Back to pillars"
-        >
-          <Text
-            style={{
-              color: C.accent,
-              fontFamily: 'Inter_700Bold',
-              fontSize: 13,
-            }}
-          >
-            ↑
-          </Text>
-          <Text
-            style={{
-              color: C.accent,
-              fontFamily: 'Inter_700Bold',
-              fontSize: 10.5,
-              letterSpacing: 1.3,
-            }}
-          >
-            PILLARS
-          </Text>
-        </Pressable>
-      )}
+      {/* Iter 9dq v155 (operator-fix 2026-06-18): floating "↑ PILLARS"-
+          pill rechtsboven verwijderd. Operator: "rechtsboven zie ik een
+          pill met PILLAR, kan dat? zo ja moet weg".
+          De BACK TO PILLARS-knop in de control-row (binnen de libList)
+          dekt deze functie al af; een tweede sticky-versie was visueel
+          ruis. */}
 
       {/* Free Breathwork chooser — Apple-stijl bottom sheet. Toont de 5
           breathwork-protocols (color-dot + state + techniek + duur). Tap
@@ -2821,6 +3256,139 @@ export default function AudioScreen() {
                 {detailPillar.name}
               </Text>
               <Text style={s.pillarModalDesc}>{detailPillar.desc}</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ── AUTO-PLAY INFO MODAL ── (operator-fix 2026-06-18, iter 9dq v156)
+          User-initiated uitleg over wat auto-play doet en wanneer het
+          nuttig is. Zelfde bottom-sheet styling als de pillar-detail
+          modal — VIBEZCORE-stijl ipv generic OS Alert. */}
+      {autoPlayInfoOpen && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setAutoPlayInfoOpen(false)}
+          statusBarTranslucent
+        >
+          <View style={s.pillarModalRoot}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setAutoPlayInfoOpen(false)}
+              accessibilityLabel="Close"
+            />
+            <View
+              style={[
+                s.pillarModalSheet,
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+              ]}
+            >
+              <View style={s.pillarModalHandle} />
+              <Pressable
+                style={s.pillarModalClose}
+                onPress={() => setAutoPlayInfoOpen(false)}
+                hitSlop={10}
+                accessibilityLabel="Close"
+              >
+                <Text style={s.pillarModalCloseText}>✕</Text>
+              </Pressable>
+              <Text style={s.pillarModalEyebrow}>AUTO-PLAY</Text>
+              <Text style={s.pillarModalTitle}>Continuous flow</Text>
+              <Text style={s.pillarModalDesc}>
+                When a session ends, the next one in the same series starts
+                automatically — listen straight through without tapping
+                play between sessions.
+              </Text>
+
+              {/* Lijst met gebruikssituaties — visueel met blauwe stip
+                  per item zodat het luchtig leest. */}
+              <View style={{ marginTop: 22, gap: 12 }}>
+                {[
+                  { label: 'Driving', desc: 'Eyes on the road, hands on the wheel.' },
+                  { label: 'Walking', desc: 'Outdoors or commute. Phone in pocket.' },
+                  { label: 'In the gym', desc: 'Between sets without breaking flow.' },
+                  { label: 'Falling asleep', desc: 'Drift off as the series unfolds.' },
+                  { label: 'Deep focus', desc: 'Background continuity, foreground work.' },
+                ].map((item) => (
+                  <View
+                    key={item.label}
+                    style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
+                  >
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: C.accent,
+                        marginTop: 8,
+                      }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          color: '#ffffff',
+                          fontFamily: 'Inter_700Bold',
+                          fontSize: 14.5,
+                          letterSpacing: -0.2,
+                          marginBottom: 2,
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                      <Text
+                        style={{
+                          color: 'rgba(255,255,255,0.55)',
+                          fontFamily: 'Inter_500Medium',
+                          fontSize: 13,
+                          lineHeight: 18,
+                        }}
+                      >
+                        {item.desc}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              <Text
+                style={{
+                  color: 'rgba(255,255,255,0.40)',
+                  fontFamily: 'Inter_500Medium',
+                  fontSize: 12.5,
+                  lineHeight: 18,
+                  marginTop: 22,
+                  marginBottom: 24,
+                }}
+              >
+                Toggle off anytime if you prefer to choose each session
+                manually.
+              </Text>
+
+              <Pressable
+                onPress={() => setAutoPlayInfoOpen(false)}
+                style={{
+                  height: 50,
+                  borderRadius: 14,
+                  backgroundColor: C.accent,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+                accessibilityLabel="Close auto-play info"
+              >
+                <Text
+                  style={{
+                    color: '#ffffff',
+                    fontFamily: 'Inter_700Bold',
+                    fontSize: 14.5,
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  Got it
+                </Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
