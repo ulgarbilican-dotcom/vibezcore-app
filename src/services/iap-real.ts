@@ -60,6 +60,7 @@ import {
 
 import {
   IAPProvider,
+  IapError,
   IapProduct,
   IapPurchase,
   IapPurchaseResult,
@@ -67,6 +68,27 @@ import {
   AudioTier,
   tierFromProductId,
 } from './iap-contract';
+
+/** Centrale mapper van react-native-iap ErrorCode → onze IapError shape.
+ *  Wordt gebruikt door zowel het sync requestPurchase catch-pad als het
+ *  Android purchaseErrorListener-pad zodat het foutgedrag consistent is
+ *  ongeacht waar de error binnenkomt. */
+function mapErrorCode(code: unknown, message?: string): IapError {
+  const msg = typeof message === 'string' && message.length > 0 ? message : '';
+  if (code === ErrorCode.UserCancelled) {
+    return { code: 'user_cancelled', message: msg || 'Cancelled by user.' };
+  }
+  if (code === ErrorCode.NetworkError) {
+    return { code: 'network', message: msg || 'Network error.' };
+  }
+  if (code === ErrorCode.AlreadyOwned) {
+    return { code: 'already_owned', message: msg || 'You already own this subscription.' };
+  }
+  if (code === ErrorCode.ItemUnavailable || code === ErrorCode.SkuNotFound) {
+    return { code: 'unavailable', message: msg || 'This product is not available right now.' };
+  }
+  return { code: 'unknown', message: msg || String(code ?? 'Unknown error') };
+}
 
 /* ── Hulp: react-native-iap types → onze IapProduct ──
    Subscription-shape verschilt iets per platform. Op iOS heeft 'm
@@ -153,6 +175,7 @@ function mapToIapPurchase(raw: any, isRestore = false): IapPurchase | null {
 export class RealIAPProvider implements IAPProvider {
   private initialized = false;
   private purchaseListeners = new Set<(p: IapPurchase) => void>();
+  private errorListeners = new Set<(e: IapError) => void>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private purchaseSub: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -160,7 +183,6 @@ export class RealIAPProvider implements IAPProvider {
 
   async init(): Promise<void> {
     if (this.initialized) return;
-    /* Iter 9dq v128 (2026-06-04): react-native-iap aangezet voor productie. */
     await initConnection();
     this.purchaseSub = purchaseUpdatedListener((purchase) => {
       const mapped = mapToIapPurchase(purchase, false);
@@ -180,6 +202,14 @@ export class RealIAPProvider implements IAPProvider {
     });
     this.errorSub = purchaseErrorListener((err: PurchaseError) => {
       if (__DEV__) console.warn('[RealIAP] purchase error:', err);
+      const mapped = mapErrorCode(err?.code, err?.message);
+      this.errorListeners.forEach((cb) => {
+        try {
+          cb(mapped);
+        } catch (e) {
+          if (__DEV__) console.warn('[RealIAP] error-listener threw:', e);
+        }
+      });
     });
     this.initialized = true;
   }
@@ -201,44 +231,99 @@ export class RealIAPProvider implements IAPProvider {
   async requestSubscription(tier: AudioTier): Promise<IapPurchaseResult> {
     await this.init();
     const sku = PRODUCT_IDS[tier];
-    try {
-      /* v15 API: requestPurchase met per-platform request-shape.
-         - Apple: { sku }
-         - Google/Android: { skus: [sku], subscriptionOffers: [{sku, offerToken}] }
-         Android-offerToken halen we op via fetchProducts. iOS heeft het
-         niet nodig. */
-      let androidOfferToken = '';
-      if (Platform.OS === 'android') {
-        const subs = await fetchProducts({ skus: [sku], type: 'subs' });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sub = (subs as any[] | null)?.[0];
-        androidOfferToken =
-          sub?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
-      }
-      const result = await requestPurchase({
-        request: {
-          ...(Platform.OS === 'ios' ? { ios: { sku } } : {}),
-          ...(Platform.OS === 'android'
-            ? {
-                android: {
-                  skus: [sku],
-                  subscriptionOffers: [
-                    { sku, offerToken: androidOfferToken },
-                  ],
-                },
-              }
-            : {}),
-        },
-        type: 'subs',
+
+    /* v15 API: requestPurchase initieert de native popup.
+       - iOS: kan een Purchase-object DIRECT returneren via de awaited promise.
+       - Android: returnt typisch null/void — de echte purchase arriveert via
+         purchaseUpdatedListener (en errors via purchaseErrorListener).
+
+       Fix v141 (2026-06-23): voor Android wachten we op het listener-event
+       voordat we returnen. Anders zag de caller {ok:false} terwijl de gebruiker
+       wel degelijk de "Subscribe"-knop in de Google Play dialog tikte → "Something
+       went wrong"-melding bovenop een succesvolle aankoop. Operator-gerapporteerd
+       2026-06-23. */
+
+    let androidOfferToken = '';
+    if (Platform.OS === 'android') {
+      const subs = await fetchProducts({ skus: [sku], type: 'subs' });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sub = (subs as any[] | null)?.[0];
+      androidOfferToken =
+        sub?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
+    }
+
+    const requestArgs = {
+      request: {
+        ...(Platform.OS === 'ios' ? { ios: { sku } } : {}),
+        ...(Platform.OS === 'android'
+          ? {
+              android: {
+                skus: [sku],
+                subscriptionOffers: [
+                  { sku, offerToken: androidOfferToken },
+                ],
+              },
+            }
+          : {}),
+      },
+      type: 'subs' as const,
+    };
+
+    /* Android: wacht op listener (purchase OF error event). Timeout van 5 min
+       voorkomt dat de Promise eeuwig blijft hangen wanneer beide listeners
+       om een of andere reden niet vuren. */
+    if (Platform.OS === 'android') {
+      return new Promise<IapPurchaseResult>((resolve) => {
+        let settled = false;
+        const settle = (r: IapPurchaseResult) => {
+          if (settled) return;
+          settled = true;
+          unsubPurchase();
+          unsubError();
+          clearTimeout(timeoutId);
+          resolve(r);
+        };
+
+        const purchaseCb = (p: IapPurchase) => {
+          if (p.tier !== tier) return;
+          settle({ ok: true, purchase: p });
+        };
+        const errorCb = (e: IapError) => {
+          settle({ ok: false, error: e });
+        };
+
+        this.purchaseListeners.add(purchaseCb);
+        this.errorListeners.add(errorCb);
+        const unsubPurchase = () => this.purchaseListeners.delete(purchaseCb);
+        const unsubError = () => this.errorListeners.delete(errorCb);
+
+        const timeoutId = setTimeout(() => {
+          settle({
+            ok: false,
+            error: { code: 'unknown', message: 'Purchase timed out — please try again.' },
+          });
+        }, 5 * 60 * 1000);
+
+        /* Fire-and-forget: het echte resultaat komt via de listeners. Sync
+           errors (zoals user_cancelled bij sommige Android-versies) catchen we
+           hier en routeren naar settle(). */
+        requestPurchase(requestArgs).catch((e: unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const err = e as any;
+          const mapped = mapErrorCode(err?.code, err?.message);
+          settle({ ok: false, error: mapped });
+        });
       });
-      /* iOS: requestPurchase kan een Purchase-object direct returneren.
-         Android: returnt typisch null/void — purchase event komt via
-         purchaseUpdatedListener. */
+    }
+
+    /* iOS-pad: behoudt de oude synchrone-await flow. */
+    try {
+      const result = await requestPurchase(requestArgs);
       if (result && !Array.isArray(result)) {
         const mapped = mapToIapPurchase(result, false);
         if (mapped) return { ok: true, purchase: mapped };
       }
-      /* Wacht op listener. subscribe-screen subscribed op onPurchase. */
+      /* iOS zou hier niet mogen komen — listener fallback voor safety. */
       return {
         ok: false,
         error: {
@@ -248,33 +333,8 @@ export class RealIAPProvider implements IAPProvider {
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
-      /* v15 error codes via ErrorCode enum (string values). */
-      const code = e?.code;
-      if (code === ErrorCode.UserCancelled) {
-        return {
-          ok: false,
-          error: { code: 'user_cancelled', message: 'Cancelled by user.' },
-        };
-      }
-      if (code === ErrorCode.NetworkError) {
-        return {
-          ok: false,
-          error: { code: 'network', message: 'Network error.' },
-        };
-      }
-      if (code === ErrorCode.AlreadyOwned) {
-        return {
-          ok: false,
-          error: {
-            code: 'already_owned',
-            message: 'You already own this subscription.',
-          },
-        };
-      }
-      return {
-        ok: false,
-        error: { code: 'unknown', message: e?.message ?? String(e) },
-      };
+      const mapped = mapErrorCode(e?.code, e?.message ?? String(e));
+      return { ok: false, error: mapped };
     }
   }
 
