@@ -7,7 +7,6 @@
     "icon": "./assets/vibezcore_icon.png",
     "scheme": "vibezcoreapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "ios": {
       "icon": "./assets/vibezcore_icon.png",
       "bundleIdentifier": "com.ubili.vibezcoreapp",
