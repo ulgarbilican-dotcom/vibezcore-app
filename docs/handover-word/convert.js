@@ -921,12 +921,14 @@ function markdownToBodyChildren(md) {
 const ROOT = path.resolve(__dirname, '..', '..');
 const ARCH_MD = path.join(ROOT, 'docs', 'APP_ARCHITECTUUR_VOLLEDIG.md');
 const HANDOVER_MD = path.join(ROOT, 'docs', 'OPERATOR_HANDOVER.md');
+const BLUEPRINT_MD = path.join(ROOT, 'docs', 'VIBEZCORE_BLUEPRINT.md');
 const OUT_DIR = __dirname;
 
 async function generateAll() {
   console.log('Reading markdown files...');
   const archMd = fs.readFileSync(ARCH_MD, 'utf8');
   const handoverMd = fs.readFileSync(HANDOVER_MD, 'utf8');
+  const blueprintMd = fs.readFileSync(BLUEPRINT_MD, 'utf8');
 
   /* BELANGRIJK: voor elke output-doc OPNIEUW parsen zodat ExternalHyperlink-
      instances geen state delen tussen documenten. Hergebruik veroorzaakt
@@ -1005,11 +1007,26 @@ async function generateAll() {
     combinedBuf
   );
 
+  /* ─── 4. BLUEPRINT — A-tot-Z technical doc ─── */
+  console.log('Building VIBEZCORE_Blueprint.docx...');
+  const blueprintDoc = buildDoc({
+    title: 'Complete Blueprint',
+    subtitle: 'A-tot-Z technical specification voor herbouw + debug',
+    isPrivate: false,
+    bodyChildren: markdownToBodyChildren(blueprintMd),
+  });
+  const blueprintBuf = await Packer.toBuffer(blueprintDoc);
+  fs.writeFileSync(
+    path.join(OUT_DIR, 'VIBEZCORE_Blueprint.docx'),
+    blueprintBuf
+  );
+
   console.log('\nDone. Files written:');
   for (const f of [
     'VIBEZCORE_App_Architectuur.docx',
     'VIBEZCORE_Operator_Handover.docx',
     'VIBEZCORE_Complete_Handover.docx',
+    'VIBEZCORE_Blueprint.docx',
   ]) {
     const stat = fs.statSync(path.join(OUT_DIR, f));
     console.log(`  ${f}  (${Math.round(stat.size / 1024)} KB)`);

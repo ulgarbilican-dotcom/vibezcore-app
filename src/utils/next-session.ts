@@ -27,7 +27,12 @@ export function getNextSession(
   opts: { freeOnly?: boolean } = {},
 ): Session | null {
   const current = SESSIONS.find((s) => urlEq(s.url, currentUrl));
-  if (!current) return null;
+  console.log('[next-session] currentUrl:', currentUrl);
+  console.log('[next-session] current found:', current?.title, '/ series:', current?.series, '/ subseries:', current?.subseries);
+  if (!current) {
+    console.log('[next-session] NO MATCH in SESSIONS — returning null');
+    return null;
+  }
 
   const isSoundscapes = current.series === 'Soundscapes';
   const pool = SESSIONS.filter(
@@ -35,8 +40,10 @@ export function getNextSession(
       s.series === current.series &&
       (!isSoundscapes || s.subseries === current.subseries),
   );
+  console.log('[next-session] pool size:', pool.length, '/ titles:', pool.map(p => p.title).join(' | '));
 
   const idx = pool.findIndex((s) => urlEq(s.url, currentUrl));
+  console.log('[next-session] idx in pool:', idx, '/ pool.length-1:', pool.length - 1);
   if (idx < 0) return null;
 
   /* Free-only flow (iter 9oo): voor guests/free-tier eerst free sessie
@@ -63,6 +70,11 @@ export function getNextSession(
     return null;
   }
 
-  if (idx === pool.length - 1) return null;
-  return pool[idx + 1];
+  if (idx === pool.length - 1) {
+    console.log('[next-session] LAST in pool — returning null (Series complete correct)');
+    return null;
+  }
+  const next = pool[idx + 1];
+  console.log('[next-session] next:', next.title);
+  return next;
 }

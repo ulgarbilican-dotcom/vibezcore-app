@@ -11,6 +11,7 @@ import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useGatedOpenSession } from '@/utils/openSession';
+import { urlEq } from '@/utils/url-eq';
 import { router, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import {
@@ -37,7 +38,7 @@ export default function LibraryFavoritesScreen() {
     const entries = [...favorites.values()].sort((a, b) => b.ts - a.ts);
     const out: Session[] = [];
     for (const fav of entries) {
-      const sess = SESSIONS.find((s) => s.url === fav.url);
+      const sess = SESSIONS.find((s) => urlEq(s.url, fav.url));
       if (sess) out.push(sess);
     }
     return out;

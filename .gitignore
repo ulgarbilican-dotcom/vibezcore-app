@@ -35,8 +35,11 @@ yarn-error.*
 .env.test
 .env.bunny
 
-# SECRETS — operator-only handover doc met credentials, NOOIT committen
+# SECRETS — credentials & private keys, NOOIT committen
 docs/OPERATOR_HANDOVER.md
+secrets/
+*.serviceaccount.json
+google-play-service-account*.json
 
 # Word handover-docs (credentials in *.docx — regenereer via convert.js)
 docs/handover-word/*.docx

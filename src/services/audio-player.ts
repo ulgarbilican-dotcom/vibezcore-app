@@ -66,6 +66,7 @@ import {
   pauseListen,
   startListen,
 } from '@/utils/history';
+import { logPlayEvent } from '@/utils/play-events';
 import { getNextSession } from '@/utils/next-session';
 import { getSetting } from '@/utils/settings';
 import { clearLastPlayed, setLastPlayed } from '@/utils/last-played';
@@ -435,6 +436,10 @@ function onStatus(st: AudioStatus): void {
       !loadedWithAutoStart
     ) {
       startListen(state.session.url, state.session.title, state.session.series);
+      /* Anonymous aggregate play-event (popularity tracking, no PII).
+         Fire-and-forget — blokkeert nooit playback. Zie play-events.ts +
+         docs/supabase-play-events-migration.sql */
+      logPlayEvent(state.session.url);
       trackingActive = true;
     }
     if (!isPlayingNow && playingRef && trackingActive) {
@@ -493,7 +498,10 @@ function onStatus(st: AudioStatus): void {
          - Echte PRO met token → full playback
        Voorkomt dat de player onverwacht naar een totaal andere serie
        springt na een sessie. */
+    console.log('[audio-player] finished session url:', finishedSession.url);
+    console.log('[audio-player] autoPlayNext setting:', getSetting('autoPlayNext'));
     const nextSess = getNextSession(finishedSession.url);
+    console.log('[audio-player] nextSess result:', nextSess?.title ?? 'NULL → Series complete');
     const nextInfo: SessionInfo | null = nextSess
       ? {
           url: nextSess.url,

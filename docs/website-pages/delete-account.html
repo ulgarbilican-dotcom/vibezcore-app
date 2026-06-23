@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delete Account — VIBEZCORE</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --white: #ffffff;
+    --black: #1d1d1f;
+    --gray-100: #f5f5f7;
+    --gray-200: #e8e8ed;
+    --gray-400: #86868b;
+    --gray-600: #515154;
+    --blue: #0071e3;
+    --blue-hover: #0077ed;
+    --radius: 12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 48px;
+    height: 52px;
+  }
+
+  .nav-tag {
+    font-size: 12px;
+    color: var(--gray-400);
+    letter-spacing: 0.02em;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 100px 24px 72px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .hero-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.07;
+    color: var(--black);
+    margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    font-size: 17px;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  /* LAYOUT */
+  .page-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 48px 120px;
+  }
+
+  .date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gray-100);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--gray-600);
+    margin-bottom: 48px;
+  }
+
+  .date-badge::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: #34c759;
+    border-radius: 50%;
+  }
+
+  /* SECTIONS */
+  .section {
+    border-bottom: 1px solid var(--gray-200);
+    padding: 48px 0;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeUp 0.5s forwards;
+  }
+
+  .section:first-of-type { padding-top: 0; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section:nth-child(1) { animation-delay: 0.05s; }
+  .section:nth-child(2) { animation-delay: 0.10s; }
+  .section:nth-child(3) { animation-delay: 0.15s; }
+  .section:nth-child(4) { animation-delay: 0.20s; }
+  .section:nth-child(5) { animation-delay: 0.25s; }
+  .section:nth-child(6) { animation-delay: 0.30s; }
+  .section:nth-child(7) { animation-delay: 0.35s; }
+
+  .section-number {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  .section h2 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--black);
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+
+  .section h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--black);
+    margin: 28px 0 10px;
+  }
+
+  .section p {
+    font-size: 15px;
+    color: var(--gray-600);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+
+  .section p:last-child { margin-bottom: 0; }
+
+  .section a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+
+  .section a:hover { text-decoration: underline; }
+
+  /* STEPS */
+  .steps {
+    list-style: none;
+    counter-reset: step;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 40px;
+    min-height: 26px;
+    font-size: 15px;
+    color: var(--gray-600);
+    line-height: 1.6;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* TAGS */
+  .tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .tag {
+    background: var(--gray-100);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--gray-600);
+  }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: var(--gray-100);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+
+  .card p {
+    font-size: 13px;
+    color: var(--gray-600);
+    margin: 0;
+    line-height: 1.55;
+  }
+
+  .card .meta {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  /* HIGHLIGHT BOX */
+  .highlight {
+    background: #f0f7ff;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-top: 16px;
+    border-left: 3px solid var(--blue);
+  }
+
+  .highlight h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+
+  .highlight p {
+    font-size: 14px;
+    color: #1d1d1f;
+    margin: 0;
+  }
+
+  /* CONTACT */
+  .contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--blue);
+    color: #ffffff !important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border-radius: 980px;
+    text-decoration: none;
+    margin-top: 28px;
+    transition: background 0.15s, transform 0.15s;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .contact-btn:hover {
+    background: var(--blue-hover);
+    transform: translateY(-1px);
+  }
+
+  .contact-btn svg { color: #ffffff; flex-shrink: 0; }
+
+  @media (max-width: 480px) {
+    .contact-btn {
+      font-size: 12px;
+      padding: 12px 22px;
+      gap: 10px;
+      letter-spacing: 0.08em;
+    }
+    .contact-btn svg { width: 18px; height: 8px; }
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--gray-200);
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  footer p {
+    font-size: 12px;
+    color: var(--gray-400);
+  }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap { padding: 0 20px 16px; }
+    footer { flex-direction: column; gap: 8px; padding: 16px 20px; text-align: center; }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Delete Your Account</h1>
+  <p class="hero-sub">Request deletion of your VIBEZCORE account and any personal data associated with it. This page explains the process, what is removed, what is retained, and how long it takes.</p>
+</div>
+
+<!-- LAYOUT -->
+<div class="page-wrap">
+
+  <div class="date-badge">Last updated: June 2026</div>
+
+  <!-- 1 -->
+  <section class="section">
+    <p class="section-number">01</p>
+    <h2>About This Page</h2>
+    <p>This page explains how to request deletion of your account and personal data for the VIBEZCORE mobile application (iOS and Android). It forms part of the VIBEZCORE Privacy Policy.</p>
+    <p>Below you will find the request procedure, the data that will be removed, the data we are legally required to retain, and the timeframe for completion. Requests can be made at any time and are processed free of charge.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="section">
+    <p class="section-number">02</p>
+    <h2>How to Request Deletion</h2>
+    <p>Account deletion requests are submitted through our Support Center and processed manually so that we can verify ownership before any personal data is removed.</p>
+
+    <ol class="steps">
+      <li>Go to the <a href="https://www.vibezcore.com/support" target="_top">VIBEZCORE Support Center</a>.</li>
+      <li>In the contact form, select <strong>Delete my VIBEZCORE account</strong> from the subject dropdown.</li>
+      <li>Enter the email address linked to your VIBEZCORE account. We use this to verify that you are the account holder.</li>
+      <li>In the message field, add any additional details you would like us to consider.</li>
+      <li>Submit the form. We will acknowledge your request within 5 business days and complete the deletion within 30 days.</li>
+    </ol>
+
+    <div class="highlight">
+      <h4>Subscription note</h4>
+      <p>Deleting your VIBEZCORE account does not automatically cancel any active subscription. Please cancel your subscription first via the Google Play Store or Apple App Store (Settings → Subscriptions) to avoid further charges, then request account deletion.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="section">
+    <p class="section-number">03</p>
+    <h2>Data That Will Be Removed</h2>
+    <p>Once your deletion request has been verified and processed, the following data is permanently removed from our active systems:</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>Account &amp; profile</h4>
+        <p>Your email address, login credentials, account identifier, and registration date.</p>
+      </div>
+      <div class="card">
+        <h4>Listening progress</h4>
+        <p>Resume positions, last-played session, and in-app playback history.</p>
+      </div>
+      <div class="card">
+        <h4>Favourites &amp; follows</h4>
+        <p>Saved sessions, followed series, and any in-app lists you created.</p>
+      </div>
+      <div class="card">
+        <h4>Bracelet pairing</h4>
+        <p>The link between your activation code and bracelet identifier, including paired-device records.</p>
+      </div>
+      <div class="card">
+        <h4>Entitlement record</h4>
+        <p>The association between your account and your purchases, including subscription and bracelet bundle status.</p>
+      </div>
+      <div class="card">
+        <h4>Support correspondence</h4>
+        <p>Email correspondence between you and our support team that is linked to your account.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="section">
+    <p class="section-number">04</p>
+    <h2>Data We Are Required to Retain</h2>
+    <p>A limited amount of data must be retained after account deletion to comply with legal and tax obligations. None of this data is used to identify you after your account has been removed.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <span class="meta">Up to 7 years</span>
+        <h4>Tax &amp; invoice records</h4>
+        <p>Purchase invoices and transaction records that we are legally required to retain under Belgian and EU accounting regulations. Stored by our payment processors and used only for tax reporting and statutory audit purposes.</p>
+      </div>
+      <div class="card">
+        <span class="meta">Up to 30 days</span>
+        <h4>Encrypted backups</h4>
+        <p>Routine encrypted database backups are retained for a maximum of 30 days. Your data is permanently removed as these backups cycle out of rotation.</p>
+      </div>
+      <div class="card">
+        <span class="meta">Indefinitely · fully anonymous</span>
+        <h4>Aggregate analytics</h4>
+        <p>Anonymous usage statistics, such as aggregate session play counts, that were never linked to your account or any identifying information. This data cannot be traced back to you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="section">
+    <p class="section-number">05</p>
+    <h2>Timeline</h2>
+    <p><strong>Within 5 business days:</strong> we confirm receipt of your request.</p>
+    <p><strong>Within 30 days:</strong> your account and the personal data listed in section 03 are removed from our active systems.</p>
+    <p><strong>Within 30 days thereafter:</strong> residual copies are removed as encrypted backups rotate out.</p>
+    <p>If additional time is required to verify your identity or to resolve a billing matter, we will inform you in writing and explain the reason for the delay.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="section">
+    <p class="section-number">06</p>
+    <h2>Partial Deletion</h2>
+    <p>You are not required to delete your entire account in order to remove specific data. Submit a request through the <a href="https://www.vibezcore.com/support" target="_top">Support Center</a> specifying the data you wish to have removed — for example, your listening history or favourites — and we will process the request under the same timeframe as a full deletion.</p>
+  </section>
+
+  <!-- 7 -->
+  <section class="section" style="padding-bottom:0;border-bottom:none;">
+    <p class="section-number">07</p>
+    <h2>Questions &amp; Data Access</h2>
+    <p>If you have questions about this page, or if you would like to request a copy of the personal data we hold about you before proceeding with deletion, please contact our support team.</p>
+    <a href="https://www.vibezcore.com/support" target="_top" class="contact-btn">
+      Support Center
+      <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </section>
+
+</div>
+
+<script>
+  /* Wix HTML-embed auto-resize. Stuurt content-hoogte naar Wix zodat
+     de iframe past op de content (geen witruimte/scroll). Match met
+     privacy.html en cookie-policy.html. */
+  function reportHeight() {
+    var h = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) {
+    new MutationObserver(reportHeight).observe(document.body, {
+      childList: true, subtree: true, attributes: true,
+    });
+  }
+</script>
+
+</body>
+</html>

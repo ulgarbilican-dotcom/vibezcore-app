@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — VIBEZCORE</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --white: #ffffff;
+    --black: #1d1d1f;
+    --gray-100: #f5f5f7;
+    --gray-200: #e8e8ed;
+    --gray-400: #86868b;
+    --gray-600: #515154;
+    --blue: #0071e3;
+    --blue-hover: #0077ed;
+    --radius: 12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 48px;
+    height: 52px;
+  }
+
+  .nav-logo {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--black);
+    text-decoration: none;
+  }
+
+  .nav-tag {
+    font-size: 12px;
+    color: var(--gray-400);
+    letter-spacing: 0.02em;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 100px 24px 72px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .hero-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.07;
+    color: var(--black);
+    margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    font-size: 17px;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  /* LAYOUT */
+  .page-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 48px 120px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 64px;
+    align-items: start;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: sticky;
+    top: 72px;
+  }
+
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin-bottom: 16px;
+    padding-left: 12px;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sidebar-link {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--gray-600);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1.4;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  .sidebar-link:hover {
+    background: var(--gray-100);
+    color: var(--black);
+  }
+
+  .sidebar-link.active {
+    background: var(--gray-100);
+    color: var(--black);
+    font-weight: 500;
+  }
+
+  /* CONTENT */
+  .content { min-width: 0; }
+
+  .date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gray-100);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--gray-600);
+    margin-bottom: 48px;
+  }
+
+  .date-badge::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: #34c759;
+    border-radius: 50%;
+  }
+
+  /* SECTIONS */
+  .section {
+    border-bottom: 1px solid var(--gray-200);
+    padding: 48px 0;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeUp 0.5s forwards;
+  }
+
+  .section:first-of-type { padding-top: 0; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section:nth-child(1)  { animation-delay: 0.05s; }
+  .section:nth-child(2)  { animation-delay: 0.10s; }
+  .section:nth-child(3)  { animation-delay: 0.15s; }
+  .section:nth-child(4)  { animation-delay: 0.20s; }
+  .section:nth-child(5)  { animation-delay: 0.25s; }
+  .section:nth-child(6)  { animation-delay: 0.30s; }
+  .section:nth-child(7)  { animation-delay: 0.35s; }
+  .section:nth-child(8)  { animation-delay: 0.40s; }
+  .section:nth-child(9)  { animation-delay: 0.45s; }
+  .section:nth-child(10) { animation-delay: 0.50s; }
+  .section:nth-child(11) { animation-delay: 0.55s; }
+  .section:nth-child(12) { animation-delay: 0.60s; }
+  .section:nth-child(13) { animation-delay: 0.65s; }
+  .section:nth-child(14) { animation-delay: 0.70s; }
+  .section:nth-child(15) { animation-delay: 0.75s; }
+
+  .section-number {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  .section h2 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--black);
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+
+  .section h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--black);
+    margin: 28px 0 10px;
+  }
+
+  .section p {
+    font-size: 15px;
+    color: var(--gray-600);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+
+  .section p:last-child { margin-bottom: 0; }
+
+  .section a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+
+  .section a:hover { text-decoration: underline; }
+
+  /* TAGS */
+  .tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .tag {
+    background: var(--gray-100);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--gray-600);
+  }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: var(--gray-100);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 12px;
+    color: var(--blue);
+  }
+
+  .card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 4px;
+  }
+
+  .card p {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* RIGHTS LIST */
+  .rights-list {
+    list-style: none;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rights-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--gray-600);
+  }
+
+  .rights-list li::before {
+    content: '';
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e8f4fd;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-6' stroke='%230071e3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* HIGHLIGHT BOX */
+  .highlight {
+    background: #f0f7ff;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-top: 16px;
+    border-left: 3px solid var(--blue);
+  }
+
+  .highlight h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+
+  .highlight p {
+    font-size: 14px;
+    color: #1d1d1f;
+    margin: 0;
+  }
+
+  /* CONTACT */
+  .contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--blue);
+    color: #ffffff !important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border-radius: 980px;
+    text-decoration: none;
+    margin-top: 28px;
+    transition: background 0.15s, transform 0.15s;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .contact-btn:hover {
+    background: var(--blue-hover);
+    transform: translateY(-1px);
+  }
+
+  .contact-btn svg { color: #ffffff; flex-shrink: 0; }
+
+  @media (max-width: 480px) {
+    .contact-btn {
+      font-size: 12px;
+      padding: 12px 22px;
+      gap: 10px;
+      letter-spacing: 0.08em;
+    }
+    .contact-btn svg { width: 18px; height: 8px; }
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--gray-200);
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  footer p {
+    font-size: 12px;
+    color: var(--gray-400);
+  }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap {
+      padding: 0 20px 16px;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .sidebar {
+      display: block;
+      position: static;
+      margin-bottom: 8px;
+    }
+    .sidebar-label { display: none; }
+    .sidebar-nav {
+      display: none;
+      background: var(--gray-100);
+      border-radius: var(--radius);
+      padding: 8px;
+      margin-top: 0;
+    }
+    .sidebar-nav.open { display: flex; }
+    .mobile-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: var(--gray-100);
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--black);
+      cursor: pointer;
+      margin-bottom: 4px;
+    }
+    .mobile-toggle-icon {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.2s;
+      color: var(--gray-400);
+    }
+    .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
+    footer { flex-direction: column; gap: 8px; padding: 16px 20px; text-align: center; }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  }
+  @media (min-width: 769px) {
+    .mobile-toggle { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-tag">Privacy Policy</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Privacy Policy</h1>
+  <p class="hero-sub">We believe privacy is a fundamental human right. Here's exactly how we handle your data.</p>
+</div>
+
+<!-- LAYOUT -->
+<div class="page-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <p class="sidebar-label">Contents</p>
+    <button class="mobile-toggle" id="contentsToggle">
+      Contents
+      <svg class="mobile-toggle-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link" data-target="s1">Information We Collect</button>
+      <button class="sidebar-link" data-target="s2">How We Collect</button>
+      <button class="sidebar-link" data-target="s3">How We Use It</button>
+      <button class="sidebar-link" data-target="s4">Legal Basis (EEA)</button>
+      <button class="sidebar-link" data-target="s5">Sharing</button>
+      <button class="sidebar-link" data-target="s6">App Permissions</button>
+      <button class="sidebar-link" data-target="s7">International Transfers</button>
+      <button class="sidebar-link" data-target="s8">Data Retention</button>
+      <button class="sidebar-link" data-target="s9">Security</button>
+      <button class="sidebar-link" data-target="s10">Your Rights</button>
+      <button class="sidebar-link" data-target="s11">California (CCPA)</button>
+      <button class="sidebar-link" data-target="s12">Children's Privacy</button>
+      <button class="sidebar-link" data-target="s13">Third-Party Links</button>
+      <button class="sidebar-link" data-target="s14">Policy Updates</button>
+      <button class="sidebar-link" data-target="s15">Contact</button>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <div class="date-badge">Last updated: June 2026</div>
+
+    <!-- 1 -->
+    <section class="section" id="s1">
+      <p class="section-number">01</p>
+      <h2>Information We Collect</h2>
+
+      <h3>Personal Information</h3>
+      <p>Data that can identify you directly or indirectly when you interact with VIBEZCORE.</p>
+      <div class="tag-grid">
+        <span class="tag">Name</span>
+        <span class="tag">Email address</span>
+        <span class="tag">Phone number</span>
+        <span class="tag">Login credentials</span>
+        <span class="tag">Billing information</span>
+        <span class="tag">Form submissions</span>
+      </div>
+
+      <h3>Usage & Technical Data</h3>
+      <p>Automatically collected when you visit our website to help improve functionality and performance.</p>
+      <div class="tag-grid">
+        <span class="tag">IP address</span>
+        <span class="tag">Browser type</span>
+        <span class="tag">Device & OS</span>
+        <span class="tag">Pages visited</span>
+        <span class="tag">Date & time</span>
+        <span class="tag">Referring URLs</span>
+        <span class="tag">Navigation patterns</span>
+      </div>
+
+      <h3>Mobile App Data</h3>
+      <p>When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens and subscription receipts are transmitted to our servers.</p>
+      <div class="tag-grid">
+        <span class="tag">Random device identifier</span>
+        <span class="tag">Authentication token</span>
+        <span class="tag">IAP receipts (Apple / Google)</span>
+        <span class="tag">Listening progress</span>
+        <span class="tag">Favourites & follows</span>
+        <span class="tag">Bracelet pairing info</span>
+      </div>
+      <div class="highlight" style="margin-top:20px;">
+        <p>We do not collect your IMEI, MAC address, biometric data, or any health information from the Smart Bead Bracelet. Bracelet session history stays entirely on your device.</p>
+      </div>
+
+      <h3>Cookies & Local Storage</h3>
+      <p>We use only essential cookies (website) and local storage (mobile app) required for the service to function. We do <strong>not</strong> use analytics cookies, advertising trackers, or cross-site tracking technology.</p>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Essential</h4>
+          <p>Required for basic functionality — login, session state, subscription access</p>
+        </div>
+        <div class="card">
+          <h4>Functional</h4>
+          <p>Remember your preferences and settings</p>
+        </div>
+        <div class="card">
+          <h4>Security</h4>
+          <p>Protect against fraud and abuse</p>
+        </div>
+      </div>
+      <p style="margin-top:16px;">See our <a href="/legal/cookies">Cookie Policy</a> for full details on what we store and why.</p>
+    </section>
+
+    <!-- 2 -->
+    <section class="section" id="s2">
+      <p class="section-number">02</p>
+      <h2>How We Collect Information</h2>
+      <p>Information may be collected through several methods when you interact with VIBEZCORE.</p>
+      <ul class="rights-list">
+        <li>Directly from you when you register, contact us, or subscribe</li>
+        <li>Automatically through website usage and basic technical logs</li>
+        <li>Through the mobile app when you create an account or purchase a subscription</li>
+        <li>Through Apple App Store and Google Play when you make in-app purchases</li>
+        <li>Through interactions with our content or services</li>
+      </ul>
+    </section>
+
+    <!-- 3 -->
+    <section class="section" id="s3">
+      <p class="section-number">03</p>
+      <h2>How We Use Your Information</h2>
+      <p>We use your information only where it genuinely helps us serve you better.</p>
+      <ul class="rights-list">
+        <li>Providing, maintaining, and improving our services</li>
+        <li>Processing transactions and managing accounts</li>
+        <li>Verifying subscription entitlements with Apple App Store and Google Play</li>
+        <li>Responding to inquiries and support requests</li>
+        <li>Communicating updates and service-related messages</li>
+        <li>Sending newsletters when you have opted in</li>
+        <li>Monitoring platform performance and usage patterns</li>
+        <li>Preventing fraud, abuse, or security threats</li>
+        <li>Complying with legal and regulatory obligations</li>
+      </ul>
+    </section>
+
+    <!-- 4 -->
+    <section class="section" id="s4">
+      <p class="section-number">04</p>
+      <h2>Legal Basis for Processing</h2>
+      <p>For users located within the European Economic Area (EEA), we process personal data based on one or more of the following legal grounds:</p>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Consent</h4>
+          <p>You have given us explicit permission</p>
+        </div>
+        <div class="card">
+          <h4>Contract</h4>
+          <p>Necessary to perform our services for you</p>
+        </div>
+        <div class="card">
+          <h4>Legal obligation</h4>
+          <p>Required to comply with the law</p>
+        </div>
+        <div class="card">
+          <h4>Legitimate interests</h4>
+          <p>Where they don't override your rights</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="section" id="s5">
+      <p class="section-number">05</p>
+      <h2>Sharing of Information</h2>
+      <div class="highlight">
+        <p>VIBEZCORE does not sell your personal data — ever.</p>
+      </div>
+      <p style="margin-top:20px;">We share limited information with the following trusted service providers only when necessary to operate our services:</p>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Apple App Store</h4>
+          <p>Merchant of Record for iOS in-app purchases — handles billing, taxes, and refunds</p>
+        </div>
+        <div class="card">
+          <h4>Google Play</h4>
+          <p>Merchant of Record for Android in-app purchases — handles billing, taxes, and refunds</p>
+        </div>
+        <div class="card">
+          <h4>Supabase (EU)</h4>
+          <p>Authentication, account data, and subscription state — hosted in the European Union</p>
+        </div>
+        <div class="card">
+          <h4>Bunny CDN (EU)</h4>
+          <p>Audio content delivery — based in the European Union</p>
+        </div>
+      </div>
+      <p style="margin-top:16px;">All third parties are contractually required to protect personal information and process it only for the specific purposes listed above.</p>
+    </section>
+
+    <!-- 6 -->
+    <section class="section" id="s6">
+      <p class="section-number">06</p>
+      <h2>Mobile App Permissions</h2>
+      <p>The VIBEZCORE mobile app requests only the permissions strictly necessary for the features you use. You can revoke any permission at any time via your device settings.</p>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Bluetooth</h4>
+          <p>Required to connect and control your Smart Bead Bracelet. Not used for tracking or location.</p>
+        </div>
+        <div class="card">
+          <h4>Audio playback</h4>
+          <p>Required for background audio session playback when your screen is off.</p>
+        </div>
+        <div class="card">
+          <h4>Notifications</h4>
+          <p>Optional — used only if you opt in to session reminders or completion alerts.</p>
+        </div>
+        <div class="card">
+          <h4>Network</h4>
+          <p>Required for login, content streaming, and subscription verification.</p>
+        </div>
+      </div>
+      <div class="highlight" style="margin-top:20px;">
+        <h4>What we do NOT request</h4>
+        <p>VIBEZCORE does not request access to your microphone, camera, location, contacts, calendar, photos, or health data. The Smart Bead Bracelet does not collect biometric or health information.</p>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="section" id="s7">
+      <p class="section-number">07</p>
+      <h2>International Data Transfers</h2>
+      <p>Because VIBEZCORE operates globally, personal information may be transferred to and processed in countries outside your country of residence.</p>
+      <p>Where required by law, we implement appropriate safeguards — such as Standard Contractual Clauses — to ensure international data transfers comply with applicable data protection regulations.</p>
+    </section>
+
+    <!-- 8 -->
+    <section class="section" id="s8">
+      <p class="section-number">08</p>
+      <h2>Data Retention</h2>
+      <p>We keep your personal data only for as long as genuinely necessary.</p>
+      <ul class="rights-list">
+        <li>To provide services and fulfill contractual obligations</li>
+        <li>To comply with legal or regulatory requirements</li>
+        <li>To resolve disputes and enforce agreements</li>
+      </ul>
+      <p style="margin-top:16px;">When data is no longer required, it is securely deleted or anonymized.</p>
+    </section>
+
+    <!-- 9 -->
+    <section class="section" id="s9">
+      <p class="section-number">09</p>
+      <h2>Data Security</h2>
+      <p>VIBEZCORE implements appropriate technical and organizational measures to protect personal information from unauthorized access, alteration, disclosure, or destruction.</p>
+      <div class="highlight">
+        <p>No internet transmission or storage system can be guaranteed to be completely secure. We continuously work to improve our safeguards.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <p class="section-number">10</p>
+      <h2>Your Privacy Rights</h2>
+      <p>Depending on your location, you may have the following rights regarding your personal data:</p>
+      <ul class="rights-list">
+        <li>Access your personal data</li>
+        <li>Correct inaccurate information</li>
+        <li>Request deletion of personal data</li>
+        <li>Restrict or object to processing</li>
+        <li>Data portability</li>
+        <li>Withdraw consent at any time</li>
+      </ul>
+      <p style="margin-top:16px;">To exercise any of these rights, please use the contact information provided below.</p>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <p class="section-number">11</p>
+      <h2>California Privacy Rights</h2>
+      <p>If you are a California resident, the CCPA/CPRA grants you specific additional rights:</p>
+      <ul class="rights-list">
+        <li>Know what personal information is collected about you</li>
+        <li>Request deletion of personal information</li>
+        <li>Correct inaccurate personal information</li>
+        <li>Opt out of the sale or sharing of personal information</li>
+      </ul>
+      <div class="highlight" style="margin-top:20px;">
+        <p>VIBEZCORE does not sell personal data.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <p class="section-number">12</p>
+      <h2>Children's Privacy</h2>
+      <p>The VIBEZCORE platform is not directed to individuals under the age of 13. We do not knowingly collect personal data from children.</p>
+      <p>If we become aware that personal information from a child has been collected without parental consent, we will promptly take steps to delete such information.</p>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="s13">
+      <p class="section-number">13</p>
+      <h2>Third-Party Links</h2>
+      <p>Our website and app may contain links to external websites or services not operated by VIBEZCORE. We are not responsible for the privacy practices or policies of third-party websites.</p>
+      <p>We encourage you to review the privacy policies of any third-party sites you visit.</p>
+    </section>
+
+    <!-- 14 -->
+    <section class="section" id="s14">
+      <p class="section-number">14</p>
+      <h2>Updates to This Policy</h2>
+      <p>We may update this Privacy Policy periodically to reflect changes in legal requirements, technology, or business practices.</p>
+      <p>Any updates will be posted on this page with a revised "Last updated" date. We encourage you to review this policy occasionally.</p>
+    </section>
+
+    <!-- 15 -->
+    <section class="section" id="s15" style="padding-bottom:0;border-bottom:none;">
+      <p class="section-number">15</p>
+      <h2>Contact</h2>
+      <p>Questions about this policy, your order, or the VIBEZCORE platform? Our support team is here to help.</p>
+      <a href="https://www.vibezcore.com/support" target="_top" class="contact-btn">
+        Support Center
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </section>
+
+  </main>
+</div>
+
+
+<script>
+  const btns = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('.section');
+  const toggle = document.getElementById('contentsToggle');
+  const nav = document.getElementById('sidebarNav');
+
+  toggle.addEventListener('click', () => {
+    nav.classList.toggle('open');
+    toggle.classList.toggle('open');
+  });
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      nav.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+
+  function setActive() {
+    let current = sections[0].id;
+    sections.forEach(s => {
+      if (s.getBoundingClientRect().top <= 120) current = s.id;
+    });
+    btns.forEach(b => b.classList.toggle('active', b.dataset.target === current));
+  }
+
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  /* Wix HTML-embed auto-resize. Stuurt content-hoogte naar Wix zodat
+     de iframe past op de content (geen witruimte/scroll). Match met
+     cookie-policy.html dat al goed werkt. */
+  function reportHeight() {
+    var h = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) {
+    new MutationObserver(reportHeight).observe(document.body, {
+      childList: true, subtree: true, attributes: true,
+    });
+  }
+</script>
+
+</body>
+</html>

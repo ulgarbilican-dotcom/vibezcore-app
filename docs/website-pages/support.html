@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Center — VIBEZCORE</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --white: #ffffff;
+    --black: #1d1d1f;
+    --gray-100: #f5f5f7;
+    --gray-200: #e8e8ed;
+    --gray-400: #86868b;
+    --gray-600: #515154;
+    --blue: #0071e3;
+    --blue-hover: #0077ed;
+    --radius: 12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 48px;
+    height: 52px;
+  }
+
+  .nav-logo {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--black);
+    text-decoration: none;
+  }
+
+  .nav-tag {
+    font-size: 12px;
+    color: var(--gray-400);
+    letter-spacing: 0.02em;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 100px 24px 72px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .hero-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.07;
+    color: var(--black);
+    margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    font-size: 17px;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  /* CONTENT */
+  .content { min-width: 0; }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: var(--gray-100);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--gray-200);
+  }
+
+  .card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 4px;
+  }
+
+  .card p {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .card-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--blue);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+
+  .card-link:hover { text-decoration: underline; }
+
+  /* FAQ BANNER */
+  .faq-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    background: #f0f7ff;
+    border: 1px solid #d6e7fb;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+
+  .faq-banner:hover {
+    background: #e6f1ff;
+    border-color: #b8d6f7;
+    transform: translateY(-1px);
+  }
+
+  .faq-banner-text h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 4px;
+    letter-spacing: -0.1px;
+  }
+
+  .faq-banner-text p {
+    font-size: 13px;
+    color: var(--gray-600);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .faq-banner-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 600px) {
+    .faq-banner {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px 20px;
+    }
+  }
+
+  /* SUPPORT FORM */
+  .support-form {
+    margin: 40px 0 40px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-field { margin-bottom: 16px; }
+
+  .form-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+
+  .form-field label .req {
+    color: #e0245e;
+    margin-left: 2px;
+  }
+
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--black);
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .form-field input:focus,
+  .form-field select:focus,
+  .form-field textarea:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(0,113,227,0.12);
+  }
+
+  .form-field textarea {
+    min-height: 160px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  .form-field select {
+    background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23515154' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  .honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--blue);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 980px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 8px;
+  }
+
+  .submit-btn:hover { background: var(--blue-hover); }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .form-status {
+    display: none;
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .form-status.success {
+    display: block;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+  }
+
+  .form-status.error {
+    display: block;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; gap: 0; margin-bottom: 0; }
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--gray-200);
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  footer p {
+    font-size: 12px;
+    color: var(--gray-400);
+  }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap {
+      padding: 0 20px 40px !important;
+    }
+    footer { flex-direction: column; gap: 8px; padding: 16px 20px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <span class="hero-label">Support</span>
+  <h1>Support Center</h1>
+  <p class="hero-sub">We handle every request personally and will get back to you as soon as possible.</p>
+</div>
+
+<!-- LAYOUT -->
+<div class="page-wrap" style="display:block;max-width:760px;margin:0 auto;padding:0 48px 60px;">
+
+  <main class="content" style="max-width:100%;">
+
+    <!-- RESPONSE TIME BADGE -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:40px;">
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#f0faf4;border-radius:20px;padding:8px 16px;font-size:13px;color:#1a7a40;font-weight:500;">
+        <span style="width:7px;height:7px;background:#34c759;border-radius:50%;display:inline-block;"></span>
+        We respond within 1–2 business days
+      </span>
+    </div>
+
+    <!-- CATEGORY CARDS -->
+    <div class="card-grid" style="margin-bottom:32px;">
+      <div class="card">
+        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">💎</div>
+        <h4>Bracelet</h4>
+        <p>Hardware orders, setup, pairing, or warranty. One-time purchase, no subscription.</p>
+      </div>
+      <div class="card">
+        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">🎧</div>
+        <h4>Audio Library</h4>
+        <p>Subscription, billing, playback, or access to sessions.</p>
+      </div>
+      <div class="card">
+        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">🔐</div>
+        <h4>Account</h4>
+        <p>Issues with login, password, or account settings.</p>
+      </div>
+      <div class="card">
+        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">🗑️</div>
+        <h4>Account deletion</h4>
+        <p>Request removal of your account and personal data.</p>
+        <a href="https://www.vibezcore.com/delete-account" target="_top" class="card-link">View instructions →</a>
+      </div>
+    </div>
+
+    <!-- FAQ BANNER -->
+    <a href="https://www.vibezcore.com/faq" target="_top" class="faq-banner">
+      <div class="faq-banner-text">
+        <h3>Looking for a quick answer?</h3>
+        <p>Most common questions are answered in our FAQ — usually faster than waiting for a reply.</p>
+      </div>
+      <span class="faq-banner-cta">
+        Browse FAQ
+        <svg width="18" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+    </a>
+
+    <!-- CONTACT FORM -->
+    <form id="supportForm" class="support-form" novalidate>
+      <!-- Honeypot anti-spam (hidden from users, filled in by bots) -->
+      <input type="text" name="_honey" class="honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="firstName">First name<span class="req">*</span></label>
+          <input id="firstName" name="First name" type="text" required autocomplete="given-name">
+        </div>
+        <div class="form-field">
+          <label for="lastName">Last name<span class="req">*</span></label>
+          <input id="lastName" name="Last name" type="text" required autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="email">Email<span class="req">*</span></label>
+        <input id="email" name="Email" type="email" required autocomplete="email">
+      </div>
+
+      <div class="form-field">
+        <label for="subject">Select a subject<span class="req">*</span></label>
+        <select id="subject" name="Subject" required>
+          <option value="" disabled selected>Choose one…</option>
+          <optgroup label="Bracelet (hardware)">
+            <option value="Bracelet — order or shipping">Order or shipping</option>
+            <option value="Bracelet — setup or activation">Setup or activation</option>
+            <option value="Bracelet — technical issue">Technical issue</option>
+            <option value="Bracelet — warranty or repair">Warranty or repair</option>
+          </optgroup>
+          <optgroup label="Audio Library">
+            <option value="Audio — subscription or billing">Subscription or billing</option>
+            <option value="Audio — playback or access">Playback or access</option>
+          </optgroup>
+          <optgroup label="Account">
+            <option value="Account — login or password">Login or password</option>
+            <option value="Delete my VIBEZCORE account">Delete my VIBEZCORE account</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="General question">General question</option>
+            <option value="Partnership or press">Partnership or press</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="message">Message<span class="req">*</span></label>
+        <textarea id="message" name="Message" required placeholder="Tell us how we can help. If your request relates to account deletion, please confirm your registered email address."></textarea>
+      </div>
+
+      <button type="submit" class="submit-btn">
+        Send message
+        <svg width="16" height="12" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 9h21M17 1l5 8-5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div id="formStatus" class="form-status" role="status" aria-live="polite"></div>
+    </form>
+
+    <!-- LEGAL TEXT -->
+    <div style="border-top:1px solid var(--gray-200);padding-top:24px;">
+      <p style="font-size:12px;color:var(--gray-400);line-height:1.7;margin-bottom:12px;">
+        By submitting this form you agree that VIBEZCORE may process your personal data (name, email address, and message content) solely for the purpose of handling your support request. Your data will not be shared with third parties and will be retained only as long as necessary to resolve your request, in accordance with our <a href="https://www.vibezcore.com/privacy-policy" target="_blank" style="color:var(--gray-600);text-decoration:underline;">Privacy Policy</a> and applicable data protection legislation (GDPR).
+      </p>
+      <p style="font-size:12px;color:var(--gray-400);line-height:1.7;margin-bottom:12px;">
+        VIBEZCORE aims to respond to all support requests within 1–2 business days. Response times may vary during public holidays or periods of high volume. Submitting a support request does not constitute a guarantee of a specific outcome or resolution.
+      </p>
+      <p style="font-size:12px;color:var(--gray-400);line-height:1.7;">
+        If your request relates to a right of withdrawal, refund, or complaint, please refer to our <a href="https://www.vibezcore.com/refund-policy" target="_blank" style="color:var(--gray-600);text-decoration:underline;">Refund Policy</a> and <a href="https://www.vibezcore.com/terms-and-conditions" target="_blank" style="color:var(--gray-600);text-decoration:underline;">Terms &amp; Conditions</a> for the applicable procedures and timeframes.
+      </p>
+    </div>
+
+  </main>
+</div>
+
+
+<script>
+  /* ─────────────────────────────────────────────────────────────
+     CONTACT FORM — sends submissions to info@vibezcore.com via
+     FormSubmit.co (no account, no API key). On first submission
+     FormSubmit emails an activation link to info@vibezcore.com —
+     click it once, then all future submissions arrive directly.
+     ───────────────────────────────────────────────────────────── */
+  (function () {
+    var form = document.getElementById('supportForm');
+    var status = document.getElementById('formStatus');
+    if (!form) return;
+
+    /* Per-subject message template — gevuld zodra de bezoeker de subject
+       kiest EN het message-veld nog leeg is (we overschrijven nooit wat
+       de bezoeker al getypt heeft). */
+    var TEMPLATES = {
+      'Delete my VIBEZCORE account':
+        'Please process my VIBEZCORE account deletion request.\n\n' +
+        'Registered email address: \n\n' +
+        'Additional notes (optional):\n'
+    };
+
+    var subjectSelect = document.getElementById('subject');
+    var messageField = document.getElementById('message');
+    if (subjectSelect && messageField) {
+      subjectSelect.addEventListener('change', function () {
+        var template = TEMPLATES[subjectSelect.value];
+        if (template && messageField.value.trim() === '') {
+          messageField.value = template;
+          /* Cursor op de eerste lege regel zetten (na "Registered email address: ") */
+          var pos = template.indexOf('Registered email address: ') + 'Registered email address: '.length;
+          try { messageField.focus(); messageField.setSelectionRange(pos, pos); } catch (e) {}
+        }
+      });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+
+      var btn = form.querySelector('.submit-btn');
+      var originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Sending…';
+      status.className = 'form-status';
+      status.textContent = '';
+
+      var data = new FormData(form);
+      var chosen = data.get('Subject') || 'Support Request';
+      data.set('_subject', 'VIBEZCORE Support · ' + chosen);
+      data.set('_captcha', 'false');
+      data.set('_template', 'table');
+
+      fetch('https://formsubmit.co/ajax/info@vibezcore.com', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: data
+      })
+        .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, json: j }; }); })
+        .then(function (result) {
+          if (result.ok && result.json.success !== false) {
+            status.className = 'form-status success';
+            status.textContent = 'Thank you — your message has been sent. We will reply within 1–2 business days.';
+            form.reset();
+          } else {
+            throw new Error(result.json.message || 'Submission failed');
+          }
+        })
+        .catch(function () {
+          status.className = 'form-status error';
+          status.textContent = 'Something went wrong. Please email info@vibezcore.com directly so your request still reaches us.';
+        })
+        .then(function () {
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+        });
+    });
+  })();
+
+  /* Wix HTML-embed auto-resize. */
+  function reportHeight() {
+    var h = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) {
+    new MutationObserver(reportHeight).observe(document.body, {
+      childList: true, subtree: true, attributes: true,
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -34,6 +34,7 @@ import {
   getUserEmail,
   login as authLogin,
   signup as authSignup,
+  VZ_BACKEND_URL,
 } from '@/services/auth';
 import type { AudioTier, IapPurchase } from '@/services/iap-contract';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
@@ -63,7 +64,7 @@ type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 
    zag "upstream fetch failed" na tap op Get Yearly — niet acceptabel.
    Defensief: onbekende strings vallen terug op een veilige default ipv
    de raw error te tonen (kan tokens/IDs lekken). */
-const SUPPORT_EMAIL = 'support@vibezcore.com';
+const SUPPORT_EMAIL = 'info@vibezcore.com';
 function friendlyError(raw: string | null | undefined): string {
   if (!raw) return 'Something went wrong. Please try again.';
   const t = String(raw).toLowerCase();
@@ -200,22 +201,42 @@ export default function SubscribeScreen() {
   const verifyAndComplete = async (purchaseData: IapPurchase) => {
     setPhase('verifying');
     try {
-      /* TODO (backend-dependency): receipt server-side valideren.
-         Endpoint nog te bouwen: POST /api/iap-verify met body
-         { platform: 'ios'|'android', tier, transactionId, receiptToken,
-           productId }. Backend valideert bij Apple/Google, update
-         Supabase subscription-row, returnt success/fail. Voor nu skippen
-         we de fetch zodat de mock-flow eind-tot-eind werkt; verver dit
-         door echte fetch wanneer endpoint live is. */
-      if (__DEV__) {
-        console.log('[subscribe] would POST /api/iap-verify:', {
-          tier: purchaseData.tier,
-          transactionId: purchaseData.transactionId,
-          productId: purchaseData.productId,
-        });
+      /* Receipt server-side valideren via backend /api/iap-verify.
+         Backend valideert bij Apple/Google, upsert subscriptions-row,
+         returnt {active, tier, valid_until, will_renew, platform}.
+         JWT moet meegestuurd (user moet ingelogd zijn op dit punt — anders
+         had het signup-flow al gefaald). Failure → error-state met
+         support-fallback (gebruiker kan support contacteren met
+         transactionId voor handmatige fix). */
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Not authenticated — please sign in again');
       }
-      /* Triggert UI-refetch van /api/subscription-status — straks ziet
-         de hele app dat user PRO is. */
+      const res = await fetch(`${VZ_BACKEND_URL}/api/iap-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          platform: Platform.OS === 'ios' ? 'ios' : 'android',
+          tier: purchaseData.tier,
+          productId: purchaseData.productId,
+          transactionId: purchaseData.transactionId,
+          receiptToken: purchaseData.receiptToken,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        if (__DEV__) console.warn('[subscribe] verify HTTP error:', res.status, text);
+        throw new Error(`Verification failed (${res.status})`);
+      }
+      const data = await res.json().catch(() => ({}));
+      if (data?.active !== true) {
+        throw new Error('Subscription was not activated server-side');
+      }
+      /* Triggert UI-refetch van /api/subscription-status — hele app ziet
+         nu dat user PRO is. */
       refreshSubscription();
       setPhase('done');
       setTimeout(() => router.replace('/'), 1200);
@@ -223,7 +244,7 @@ export default function SubscribeScreen() {
       const msg = e instanceof Error ? e.message : String(e);
       if (__DEV__) console.warn('[subscribe] verify failed:', msg);
       setErrMsg(
-        'Could not verify your purchase. Contact support — your account will be set up shortly.',
+        'Your purchase was completed but we could not activate it yet. Please contact support — we will set up your account within 24 hours.',
       );
       setPhase('error');
     }
@@ -259,7 +280,7 @@ export default function SubscribeScreen() {
   /* ── Render ─────────────────────────────────────────────────────── */
 
   const tierLabel = tier === 'yearly' ? 'Yearly' : 'Monthly';
-  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€69,00' : '€9,99');
+  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€69,99' : '€9,99');
   const periodLabel = tier === 'yearly' ? '/year' : '/month';
 
   /* Loading/transitional phases — single full-screen state */

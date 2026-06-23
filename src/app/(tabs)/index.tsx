@@ -591,7 +591,7 @@ export default function AudioScreen() {
   const monthlyProduct = getIapProduct('monthly');
   const yearlyProduct = getIapProduct('yearly');
   const monthlyPriceLabel = monthlyProduct?.localizedPrice ?? '€9.99';
-  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€69.00';
+  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€69.99';
 
   /* Helper: vervang het numerieke deel in een localizedPrice ("€9.99",
      "$9.99", "9,99 €") door een nieuwe value, behoud valuta-symbool. We
@@ -606,32 +606,36 @@ export default function AudioScreen() {
   };
 
   /* Per-maand-equivalent voor yearly = yearly_total / 12, in dezelfde
-     valuta als yearly localizedPrice. Fallback: €5.75 (operator-pricing
-     2026-06-15 v2: yearly = €69.00/year = €5.75/month, save 42% vs monthly). */
+     valuta als yearly localizedPrice. Fallback: €5.83 (operator-pricing
+     2026-06-20: yearly intro €69.99/year = €5.83/month, save 61% vs
+     monthly regular €14.99). */
   const yearlyPerMonthLabel = (() => {
-    if (!yearlyProduct?.priceAmountMicros) return '€5.75';
+    if (!yearlyProduct?.priceAmountMicros) return '€5.83';
     const monthlyValue = yearlyProduct.priceAmountMicros / 12 / 1_000_000;
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
 
-  /* Monthly "REGULAR" strike-price = monthly × 1.30, afgerond. Operator-
-     marketing 2026-06-15: €9.99 → €12.99 als referentie-strike, matcht
-     website. Auto-localized: $9.99 → $12.99, £8.99 → £11.69 etc.
+  /* Monthly "REGULAR" strike-price = monthly × 1.50, afgerond. Operator-
+     pricing update 2026-06-19: intro €9.99/$9.99/£8.99 → regular
+     €14.99/$14.99/£12.99 (12 mnd intro lock). Ratio 1.50 matcht EU/US
+     exact, UK is iets overschat (~£13.49 vs werkelijk £12.99).
      ⚠ TM/Review-noot: dit is een marketing-claim ("regular price"), geen
-     échte historische prijs. Houd ratio constant of zet op via App Store
-     Connect introductory-offer (preferred). */
+     échte historische prijs. Echte intro-flag staat in Google Play Console
+     base plan offer — IAP product geeft alleen huidige effectieve prijs. */
   const monthlyStrikeLabel = (() => {
-    if (!monthlyProduct?.priceAmountMicros) return '€12.99';
-    const strikeValue = (monthlyProduct.priceAmountMicros / 1_000_000) * 1.30;
+    if (!monthlyProduct?.priceAmountMicros) return '€14.99';
+    const strikeValue = (monthlyProduct.priceAmountMicros / 1_000_000) * 1.50;
     return reformatWithSymbol(monthlyProduct.localizedPrice, monthlyProduct.currency, strikeValue);
   })();
 
-  /* Iter 9dq v141 (operator 2026-06-15 v3): SAVE % dynamisch berekend uit
-     beide products' priceAmountMicros. Resultaat klopt per regio:
-       EU monthly €9.99 vs yearly €5.75/mo → SAVE 42%
-       US monthly $11.99 vs yearly $5.83/mo → SAVE 51%
-       UK monthly £8.99 vs yearly £5.00/mo → SAVE 44%
-     Fallback 42% wanneer products nog niet geladen zijn (matcht EUR base). */
+  /* Iter 9dq v141 (operator 2026-06-15 v3, prijsupd 2026-06-19): SAVE %
+     dynamisch berekend uit beide products' priceAmountMicros. Vergelijking
+     is monthly-intro vs yearly per maand. Bij elk regio dezelfde formule:
+       EU monthly intro €9.99 vs yearly €X/mo → SAVE Y%
+       US monthly intro $9.99 vs yearly $X/mo → SAVE Y%
+       UK monthly intro £8.99 vs yearly £X/mo → SAVE Y%
+     Yearly pricing nog niet finaal (memory: yearly open). Fallback 42%
+     blijft staan als safe estimate tot yearly definitief is. */
   const savePercentLabel = (() => {
     if (!monthlyProduct?.priceAmountMicros || !yearlyProduct?.priceAmountMicros) return 'SAVE 42%';
     const monthlyTotal = monthlyProduct.priceAmountMicros / 1_000_000;

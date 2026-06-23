@@ -32,17 +32,17 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Vibrate, VibrateOff, Volume2, VolumeX } from 'lucide-react-native';
-/* Iter 9dq v174+v183 (operator 2026-06-18): voice guidance — vereist
-   native rebuild voor expo-speech module. Tot dan: no-op stub zodat
-   de bestaande dev-build niet crasht. Re-enable:
-     1. USB rebuild (`npx expo run:android --device`) OF
-     2. EAS Cloud Build (`npx eas build --profile development -p android`)
-     3. Daarna: comment stub uit, uncomment de echte import. */
-// import * as Speech from 'expo-speech';
-const Speech = {
-  stop: () => {},
-  speak: (_phrase: string, _opts?: Record<string, unknown>) => {},
-};
+/* Iter 9dq v185 (operator 2026-06-18): pre-recorded voice cues via
+   expo-audio (al in dev-build, geen rebuild nodig). Vervangt de
+   expo-speech TTS-stub. Service in src/services/breath-voice.ts
+   beheert 4 phase-cue files + 5 completion-files op Bunny CDN. */
+import {
+  playBreathCue,
+  playCompletionCue,
+  setVoiceEnabled,
+  stopVoice,
+  type BreathKey,
+} from '@/services/breath-voice';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -314,9 +314,9 @@ export default function BreathScreen() {
   }, [vibeOn]);
   useEffect(() => {
     voiceOnRef.current = voiceOn;
-    /* Bij toggle-off: stop direct elke ongoing utterance zodat de
-       sessie niet door blijft praten tot het zin-einde. */
-    if (!voiceOn) Speech.stop();
+    /* Sync de service-state met de UI-toggle. Bij toggle-off stopt de
+       service zelf elke lopende cue. */
+    setVoiceEnabled(voiceOn);
   }, [voiceOn]);
 
   const vibCue = useCallback((ms: number) => {
@@ -324,23 +324,16 @@ export default function BreathScreen() {
     try { Vibration.vibrate(ms); } catch {}
   }, []);
 
-  /* v174: voice cue via OS-native TTS. Korte commando's per phase.
-     Stop eerst eventuele ongoing utterance zodat snelle phase-transitions
-     niet stapelen ("hold-out" begint terwijl "exhale" nog wordt
-     uitgesproken). Rate iets onder default (0.95) zodat het rustiger
-     en meditatiever klinkt. */
-  const voiceCue = useCallback((phrase: string) => {
+  /* v185: voice cue via pre-recorded Bunny-CDN files (expo-audio).
+     Per phase + protocol exhaleVia pickt de service de juiste URL en
+     speelt 'm af. Stopt automatisch een eventueel lopende cue zodat
+     ze niet overlappen bij snelle phase-transitions. */
+  const voiceCue = useCallback((phase: 'inhale' | 'hold-in' | 'exhale' | 'hold-out', p: BreathPattern) => {
     if (!voiceOnRef.current) return;
     try {
-      Speech.stop();
-      Speech.speak(phrase, {
-        language: 'en-US',
-        rate: 0.95,
-        pitch: 1.0,
-        volume: 0.85,
-      });
+      playBreathCue(phase, p.exhaleVia);
     } catch {
-      /* swallow — TTS-failure mag de sessie niet breken */
+      /* swallow — audio-failure mag de sessie niet breken */
     }
   }, []);
 
@@ -390,7 +383,7 @@ export default function BreathScreen() {
 
       if (ph === 'inhale') {
         vibCue(VIB_INHALE);
-        voiceCue('Breathe in');
+        voiceCue('inhale', p);
         runInhaleAnim(p.inhale);
         startCountdown(p.inhale, () => {
           if (p.hold1 > 0) runPhase(p, 'hold-in');
@@ -398,11 +391,11 @@ export default function BreathScreen() {
         });
       } else if (ph === 'hold-in') {
         vibCue(VIB_HOLD);
-        voiceCue('Hold');
+        voiceCue('hold-in', p);
         startCountdown(p.hold1, () => runPhase(p, 'exhale'));
       } else if (ph === 'exhale') {
         vibCue(VIB_EXHALE);
-        voiceCue('Breathe out');
+        voiceCue('exhale', p);
         runExhaleAnim(p.exhale);
         startCountdown(p.exhale, () => {
           if (p.hold2 > 0) runPhase(p, 'hold-out');
@@ -410,7 +403,7 @@ export default function BreathScreen() {
         });
       } else if (ph === 'hold-out') {
         vibCue(VIB_HOLD);
-        voiceCue('Hold');
+        voiceCue('hold-out', p);
         startCountdown(p.hold2, () => nextRound(p));
       }
     },
@@ -452,8 +445,8 @@ export default function BreathScreen() {
     scaleAnim.stopAnimation();
     haloAnim.stopAnimation();
     Vibration.cancel();
-    /* v174: stop ongoing TTS-utterance bij elke vorm van session-einde. */
-    try { Speech.stop(); } catch {}
+    /* v185: stop ongoing voice-cue bij elke vorm van session-einde. */
+    try { stopVoice(); } catch {}
     Animated.parallel([
       Animated.timing(scaleAnim, { toValue: CIRCLE_MIN, duration: 500, useNativeDriver: true }),
       Animated.timing(haloAnim, { toValue: HALO_MIN, duration: 500, useNativeDriver: true }),
@@ -566,11 +559,20 @@ export default function BreathScreen() {
 
   /* Iter 9dq v162: silhouette hover-loop. 3.2s cyclus (langzamer dan de
      dot-pulse) zodat de twee bewegingen niet synchroon lopen — voelt
-     natuurlijker. */
+     natuurlijker.
+     v185: trigger ook de completion voice-cue wanneer de modal opent. */
   useEffect(() => {
     if (!completion) {
       silhouetteHover.setValue(0);
       return;
+    }
+    /* v185: speel de motiverende completion-monoloog parallel aan de
+       visuele animatie. Voice draagt het lange verhaal; modal-tekst
+       blijft kort en neutraal (zie JSX). */
+    try {
+      playCompletionCue(completion.pattern.key as BreathKey);
+    } catch {
+      /* swallow */
     }
     const loop = Animated.loop(
       Animated.sequence([
@@ -593,6 +595,9 @@ export default function BreathScreen() {
   }, [completion, silhouetteHover]);
 
   const onDismissCompletion = useCallback(() => {
+    /* v185: stop voice ook bij dismiss zodat 'm niet doorpraat als de
+       gebruiker DONE tikt vóór 't einde van de monoloog. */
+    try { stopVoice(); } catch {}
     setCompletion(null);
   }, []);
 
@@ -659,53 +664,8 @@ export default function BreathScreen() {
           <Text style={styles.title}>Breathe with intention.</Text>
         </View>
 
-        {/* ── Onboarding hint — alleen voor first-time users (geen history).
-            Iter 9dq v173 (operator-fix 2026-06-18): geeft een gast/nieuwe
-            user direct context wat deze tab is en wat de actie is. Verdwijnt
-            automatisch zodra de eerste sessie afgerond is. */}
-        {history.length === 0 && (
-          <View style={styles.onboardingCard}>
-            <View style={styles.onboardingRow}>
-              <View
-                style={[
-                  styles.onboardingStepBubble,
-                  { backgroundColor: 'rgba(58,143,255,0.18)' },
-                ]}
-              >
-                <Text style={styles.onboardingStepNum}>1</Text>
-              </View>
-              <Text style={styles.onboardingStepTxt}>
-                Pick a breath pattern below
-              </Text>
-            </View>
-            <View style={styles.onboardingRow}>
-              <View
-                style={[
-                  styles.onboardingStepBubble,
-                  { backgroundColor: 'rgba(58,143,255,0.18)' },
-                ]}
-              >
-                <Text style={styles.onboardingStepNum}>2</Text>
-              </View>
-              <Text style={styles.onboardingStepTxt}>
-                Tap START SESSION and follow the rhythm
-              </Text>
-            </View>
-            <View style={styles.onboardingRow}>
-              <View
-                style={[
-                  styles.onboardingStepBubble,
-                  { backgroundColor: 'rgba(58,143,255,0.18)' },
-                ]}
-              >
-                <Text style={styles.onboardingStepNum}>3</Text>
-              </View>
-              <Text style={styles.onboardingStepTxt}>
-                Free to use. No account needed.
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* Iter 9dq v184 (operator-fix 2026-06-18): onboarding-card weg
+            — "duwde alles naar beneden". Visualizer-ruimte gaat voor. */}
 
         {/* ── Pattern selector — horizontal scroll met right-edge fade ── */}
         <View style={styles.patternsWrap}>
@@ -1128,12 +1088,11 @@ export default function BreathScreen() {
                     </View>
                   );
                 })()}
-                <Text style={styles.completionMsgPrimary}>
-                  {COMPLETION_MESSAGES[completion.pattern.key].line1}
-                </Text>
-                <Text style={styles.completionMsgSecondary}>
-                  {COMPLETION_MESSAGES[completion.pattern.key].line2}
-                </Text>
+                {/* Iter 9dq v185 (operator-fix 2026-06-18): visuele copy
+                    nu kort en neutraal. De motiverende monoloog komt
+                    via voice-cue (playCompletionCue). Twee-regelige
+                    geschreven copy concurreerde te veel met de gesproken
+                    versie — gedropt. */}
 
                 {/* Iter 9dq v170: stats nu als twee pill-cards naast elkaar
                     met subtle bg-tint + iconen ipv het oude divider-pattern.

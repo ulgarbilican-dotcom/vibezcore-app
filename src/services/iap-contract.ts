@@ -21,8 +21,12 @@
    ── Product-IDs ──
    We declareren TWEE auto-renewing subscription products:
 
-     com.ubili.vibezcoreapp.audio.monthly   — maandelijks abonnement
-     com.ubili.vibezcoreapp.audio.yearly    — jaarlijks abonnement
+     vibezcore_audio_monthly   — maandelijks abonnement
+     vibezcore_audio_yearly    — jaarlijks abonnement
+
+   IDs zijn EXACT zoals in Google Play Console aangemaakt (2026-06-19/20).
+   App vraagt deze IDs op via BillingClient.queryProductDetails — als ze
+   niet matchen, krijgt user "Product unavailable" error en kan niet kopen.
 
    Beide moeten 1:1 worden aangemaakt in:
      - App Store Connect → My Apps → VIBEZCORE → Features → Subscriptions
@@ -39,10 +43,13 @@
 /** De twee tiers die VIBEZCORE Audio aanbiedt. */
 export type AudioTier = 'monthly' | 'yearly';
 
-/** Product-IDs. Identiek op iOS én Android voor één codebase. */
+/** Product-IDs. Identiek op iOS én Android voor één codebase.
+ *  Operator gebruikte simpele naming in Console (zonder package-prefix),
+ *  dus we matchen dat hier. iOS App Store Connect moet dezelfde IDs
+ *  aanmaken voor consistency. */
 export const PRODUCT_IDS: Record<AudioTier, string> = {
-  monthly: 'com.ubili.vibezcoreapp.audio.monthly',
-  yearly: 'com.ubili.vibezcoreapp.audio.yearly',
+  monthly: 'vibezcore_audio_monthly',
+  yearly: 'vibezcore_audio_yearly',
 };
 
 /** Reverse lookup product-ID → tier-label. Handig voor receipt-parsing. */

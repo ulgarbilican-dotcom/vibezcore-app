@@ -134,7 +134,7 @@ Hierdoor wordt de owner-CTA nooit gerenderd. **Nodig:** backend-endpoint `/api/m
 
 - [ ] **a)** Backend voegt `manage_url` toe — ik strip de client-side URL-builder
 - [ ] **b)** Laat zoals 'ie is (we breken CLAUDE.md-principe bewust voor pre-launch snelheid)
-- [ ] **c)** Volledig weghalen — user gaat naar `support@vibezcore.com` voor cancel
+- [ ] **c)** Volledig weghalen — user gaat naar `info@vibezcore.com` voor cancel
 
 ### 5c. Gumroad-webhook recover→invite (van vorige sessie)
 We hadden eerder afgesproken dat de webhook `gumroad-webhook.js` aangepast moest worden: nieuwe Gumroad-kopers krijgen nu via `/auth/v1/recover` een mail met "reset password" copy — terwijl 't eigenlijk een eerste-keer-setup is.
@@ -214,7 +214,7 @@ Apple review-team verwacht een "Restore Purchase"-knop op iOS, ook als je via Gu
 Privacy Policy belooft data-portability maar er is geen UI-pad. Settings → "Export my data" knop die backend-endpoint aanroept en JSON downloadt.
 
 - [ ] **a)** Voeg toe — backend `/api/me/export` endpoint nodig (geeft user's history + entitlements terug)
-- [ ] **b)** Skip — verwijs naar support@vibezcore.com in privacy policy
+- [ ] **b)** Skip — verwijs naar info@vibezcore.com in privacy policy
 - [ ] **c)** Plan voor post-Kickstarter
 
 ---

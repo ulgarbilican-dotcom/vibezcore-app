@@ -319,16 +319,26 @@ export const TERMS: LegalDoc = {
 };
 
 /* ── 2. Privacy Policy ──────────────────────────────────────────────── */
-/* Privacy Policy — synced 1-op-1 met vibezcore.com/privacy (2026-05-30).
-   Sectie-nummering wordt automatisch toegevoegd door de renderer (h2 →
-   "01", "02", ...) zodat we titles zonder prefix kunnen schrijven. */
+/* Privacy Policy — synced met vibezcore.com/privacy + mobile-app
+   uitbreidingen (2026-06-19). Sectie-nummering wordt automatisch
+   toegevoegd door de renderer (h2 → "01", "02", ...).
+
+   Changes 2026-06-19 (Google Play submission compliance):
+   - Cookies-sectie gefixt (geen analytics meer claimen, matched
+     Cookie Policy)
+   - Nieuwe h3 "Mobile App Data" in sectie 01
+   - Sectie 02 + 03 uitgebreid met app/IAP context
+   - Sectie 05 Sharing: tags → cards met expliciete namen
+     (Apple App Store, Google Play, Supabase, Bunny CDN)
+   - Nieuwe sectie 06 "Mobile App Permissions" met opt-in/opt-out
+     scope (Bluetooth, audio, notifications) + NIET-gevraagd-lijst */
 export const PRIVACY: LegalDoc = {
   slug: 'privacy',
   eyebrow: 'VIBEZCORE',
   title: 'Privacy Policy',
   subtitle:
     "We believe privacy is a fundamental human right. Here's exactly how we handle your data.",
-  lastUpdated: 'March 2026',
+  lastUpdated: 'June 2026',
   short: 'Privacy',
   blocks: [
     /* ── 01. Information We Collect ── */
@@ -369,19 +379,43 @@ export const PRIVACY: LegalDoc = {
       ],
     },
 
-    { kind: 'h3', text: 'Cookies & Tracking' },
+    { kind: 'h3', text: 'Mobile App Data' },
     {
       kind: 'p',
-      text: 'We use cookies to enhance user experience, analyze usage, and improve our services. You may control or disable cookies through your browser settings.',
+      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens and subscription receipts are transmitted to our servers.',
+    },
+    {
+      kind: 'tags',
+      items: [
+        'Random device identifier',
+        'Authentication token',
+        'IAP receipts (Apple / Google)',
+        'Listening progress',
+        'Favourites & follows',
+        'Bracelet pairing info',
+      ],
+    },
+    {
+      kind: 'highlight',
+      text: 'We do not collect your IMEI, MAC address, biometric data, or any health information from the Smart Bead Bracelet. Bracelet session history stays entirely on your device.',
+    },
+
+    { kind: 'h3', text: 'Cookies & Local Storage' },
+    {
+      kind: 'p',
+      text: 'We use only essential cookies (website) and local storage (mobile app) required for the service to function. We do **not** use analytics cookies, advertising trackers, or cross-site tracking technology.',
     },
     {
       kind: 'cards',
       items: [
-        { title: 'Essential',  text: 'Required for basic website functionality' },
-        { title: 'Analytics',  text: 'Help us understand how you use our platform' },
+        { title: 'Essential',  text: 'Required for basic functionality — login, session state, subscription access' },
         { title: 'Functional', text: 'Remember your preferences and settings' },
         { title: 'Security',   text: 'Protect against fraud and abuse' },
       ],
+    },
+    {
+      kind: 'p',
+      text: 'See our [Cookie Policy](https://www.vibezcore.com/legal/cookies) for full details on what we store and why.',
     },
 
     /* ── 02. How We Collect Information ── */
@@ -395,8 +429,9 @@ export const PRIVACY: LegalDoc = {
       style: 'check',
       items: [
         'Directly from you when you register, contact us, or subscribe',
-        'Automatically through website usage and analytics tools',
-        'Through cookies and tracking technologies',
+        'Automatically through website usage and basic technical logs',
+        'Through the mobile app when you create an account or purchase a subscription',
+        'Through Apple App Store and Google Play when you make in-app purchases',
         'Through interactions with our content or services',
       ],
     },
@@ -413,6 +448,7 @@ export const PRIVACY: LegalDoc = {
       items: [
         'Providing, maintaining, and improving our services',
         'Processing transactions and managing accounts',
+        'Verifying subscription entitlements with Apple App Store and Google Play',
         'Responding to inquiries and support requests',
         'Communicating updates and service-related messages',
         'Sending newsletters when you have opted in',
@@ -446,24 +482,44 @@ export const PRIVACY: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'We may share information with trusted third parties only when necessary to operate our services:',
+      text: 'We share limited information with the following trusted service providers only when necessary to operate our services:',
     },
     {
-      kind: 'tags',
+      kind: 'cards',
       items: [
-        'Hosting providers',
-        'Payment processors',
-        'Analytics providers',
-        'Technical partners',
-        'Legal authorities (when required)',
+        { title: 'Apple App Store',  text: 'Merchant of Record for iOS in-app purchases — handles billing, taxes, and refunds' },
+        { title: 'Google Play',      text: 'Merchant of Record for Android in-app purchases — handles billing, taxes, and refunds' },
+        { title: 'Supabase (EU)',    text: 'Authentication, account data, and subscription state — hosted in the European Union' },
+        { title: 'Bunny CDN (EU)',   text: 'Audio content delivery — based in the European Union' },
       ],
     },
     {
       kind: 'p',
-      text: 'All parties are contractually required to protect personal information and process it only for authorized purposes.',
+      text: 'All third parties are contractually required to protect personal information and process it only for the specific purposes listed above.',
     },
 
-    /* ── 06. International Data Transfers ── */
+    /* ── 06. Mobile App Permissions ── */
+    { kind: 'h2', text: 'Mobile App Permissions' },
+    {
+      kind: 'p',
+      text: 'The VIBEZCORE mobile app requests only the permissions strictly necessary for the features you use. You can revoke any permission at any time via your device settings.',
+    },
+    {
+      kind: 'cards',
+      items: [
+        { title: 'Bluetooth',      text: 'Required to connect and control your Smart Bead Bracelet. Not used for tracking or location.' },
+        { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
+        { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
+        { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
+      ],
+    },
+    {
+      kind: 'highlight',
+      title: 'What we do NOT request',
+      text: 'VIBEZCORE does not request access to your microphone, camera, location, contacts, calendar, photos, or health data. The Smart Bead Bracelet does not collect biometric or health information.',
+    },
+
+    /* ── 07. International Data Transfers ── */
     { kind: 'h2', text: 'International Data Transfers' },
     {
       kind: 'p',
@@ -474,7 +530,7 @@ export const PRIVACY: LegalDoc = {
       text: 'Where required by law, we implement appropriate safeguards — such as **Standard Contractual Clauses** — to ensure international data transfers comply with applicable data protection regulations.',
     },
 
-    /* ── 07. Data Retention ── */
+    /* ── 08. Data Retention ── */
     { kind: 'h2', text: 'Data Retention' },
     {
       kind: 'p',
@@ -494,7 +550,7 @@ export const PRIVACY: LegalDoc = {
       text: 'When data is no longer required, it is securely deleted or anonymized.',
     },
 
-    /* ── 08. Data Security ── */
+    /* ── 09. Data Security ── */
     { kind: 'h2', text: 'Data Security' },
     {
       kind: 'p',
@@ -505,7 +561,7 @@ export const PRIVACY: LegalDoc = {
       text: 'No internet transmission or storage system can be guaranteed to be completely secure. We continuously work to improve our safeguards.',
     },
 
-    /* ── 09. Your Privacy Rights ── */
+    /* ── 10. Your Privacy Rights ── */
     { kind: 'h2', text: 'Your Privacy Rights' },
     {
       kind: 'p',
@@ -528,7 +584,7 @@ export const PRIVACY: LegalDoc = {
       text: 'To exercise any of these rights, please use the contact information provided below.',
     },
 
-    /* ── 10. California Privacy Rights ── */
+    /* ── 11. California Privacy Rights ── */
     { kind: 'h2', text: 'California Privacy Rights' },
     {
       kind: 'p',
@@ -549,7 +605,7 @@ export const PRIVACY: LegalDoc = {
       text: 'VIBEZCORE does not sell personal data.',
     },
 
-    /* ── 11. Children's Privacy ── */
+    /* ── 12. Children's Privacy ── */
     { kind: 'h2', text: "Children's Privacy" },
     {
       kind: 'p',
@@ -560,18 +616,18 @@ export const PRIVACY: LegalDoc = {
       text: 'If we become aware that personal information from a child has been collected without parental consent, we will promptly take steps to delete such information.',
     },
 
-    /* ── 12. Third-Party Links ── */
+    /* ── 13. Third-Party Links ── */
     { kind: 'h2', text: 'Third-Party Links' },
     {
       kind: 'p',
-      text: 'Our website may contain links to external websites or services not operated by VIBEZCORE. We are not responsible for the privacy practices or policies of third-party websites.',
+      text: 'Our website and app may contain links to external websites or services not operated by VIBEZCORE. We are not responsible for the privacy practices or policies of third-party websites.',
     },
     {
       kind: 'p',
       text: 'We encourage you to review the privacy policies of any third-party sites you visit.',
     },
 
-    /* ── 13. Updates to This Policy ── */
+    /* ── 14. Updates to This Policy ── */
     { kind: 'h2', text: 'Updates to This Policy' },
     {
       kind: 'p',
@@ -582,7 +638,7 @@ export const PRIVACY: LegalDoc = {
       text: 'Any updates will be posted on this page with a revised "Last updated" date. We encourage you to review this policy occasionally.',
     },
 
-    /* ── 14. Contact ── */
+    /* ── 15. Contact ── */
     { kind: 'h2', text: 'Contact' },
     {
       kind: 'p',

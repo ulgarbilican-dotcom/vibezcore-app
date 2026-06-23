@@ -21,7 +21,10 @@
    Iter 9dq v86 (2026-06-03).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { Platform } from 'react-native';
+
 import { refreshSubscription } from '@/hooks/useSubscription';
+import { getToken, VZ_BACKEND_URL } from './auth';
 import { getIAP } from './iap';
 import type { IapPurchase } from './iap-contract';
 
@@ -33,10 +36,10 @@ export type RestoreResult =
  *  + verified bij backend. Bij 0 active = user heeft niets te restoren
  *  (Apple/Google rapporteerden geen purchases voor dit account).
  *
- *  Backend-call POST /api/iap-verify is momenteel een TODO — wanneer
- *  endpoint live is, vul de fetch in. Tot dan: we returnen alleen wat
- *  Apple/Google teruggaf zonder backend-koppeling. Dat is niet ideaal
- *  maar voorkomt een dood UI in dev mock-mode. */
+ *  Backend POST /api/iap-verify: voor elke purchase een aparte call zodat
+ *  ze elk hun eigen verify-flow krijgen. Partial success accepteren: zelfs
+ *  als 1 van de 2 mislukt willen we de andere wel restoren. Backend is
+ *  idempotent op transactionId (zie iap-verify.js). */
 export async function restorePurchases(): Promise<RestoreResult> {
   try {
     const iap = getIAP();
@@ -47,19 +50,41 @@ export async function restorePurchases(): Promise<RestoreResult> {
       return { ok: true, purchases: [], restoredCount: 0 };
     }
 
-    /* TODO (backend-dependency): voor elke purchase POST /api/iap-verify
-       met {platform, productId, transactionId, receiptToken}. Backend
-       valideert bij Apple/Google en linkt aan Supabase-user. Voor nu
-       skippen we deze stap zodat de mock-flow eind-tot-eind werkt. */
-    if (__DEV__) {
-      console.log(
-        '[restorePurchases] would POST /api/iap-verify for each:',
-        purchases.map((p) => ({
-          tier: p.tier,
-          transactionId: p.transactionId,
-          isRestore: p.isRestore,
-        }))
-      );
+    const token = await getToken();
+    if (!token) {
+      return { ok: false, error: 'Please sign in before restoring purchases.' };
+    }
+
+    let restoredCount = 0;
+    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+
+    for (const p of purchases) {
+      try {
+        const res = await fetch(`${VZ_BACKEND_URL}/api/iap-verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            platform,
+            tier: p.tier,
+            productId: p.productId,
+            transactionId: p.transactionId,
+            receiptToken: p.receiptToken,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data?.active === true) restoredCount += 1;
+        } else if (__DEV__) {
+          const text = await res.text().catch(() => '');
+          console.warn('[restorePurchases] verify HTTP error:', res.status, text);
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[restorePurchases] verify error:', err);
+        /* continue with next purchase */
+      }
     }
 
     /* Triggert subscription-status fetch — als backend de restored
@@ -70,7 +95,7 @@ export async function restorePurchases(): Promise<RestoreResult> {
     return {
       ok: true,
       purchases,
-      restoredCount: purchases.length,
+      restoredCount,
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

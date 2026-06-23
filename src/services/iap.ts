@@ -27,8 +27,8 @@
      7. Android: `internal testing track` op Play Console + tester-emails.
 
    App Store Connect / Play Console moeten Producten hebben met IDs:
-     com.ubili.vibezcoreapp.audio.monthly
-     com.ubili.vibezcoreapp.audio.yearly
+     vibezcore_audio_monthly
+     vibezcore_audio_yearly
    (zie iap-contract.ts voor de centrale PRODUCT_IDS const.)
    ─────────────────────────────────────────────────────────────────────── */
 
