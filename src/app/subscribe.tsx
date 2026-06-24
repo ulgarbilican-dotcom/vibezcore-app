@@ -30,6 +30,7 @@ import { useIAP } from '@/hooks/useIAP';
 import { refreshSubscription } from '@/hooks/useSubscription';
 import { restorePurchases } from '@/services/restore-purchases';
 import {
+  getLastLoginEmail,
   getToken,
   getUserEmail,
   login as authLogin,
@@ -134,6 +135,11 @@ export default function SubscribeScreen() {
     return `Save ${pct}% vs monthly`;
   })();
 
+  /* Iter 9dq v142 (2026-06-23): default mode is 'signup' bij echte first-
+     timers, maar pre-fillen we straks de email + flippen we naar 'signin'
+     wanneer er al een eerder gebruikt e-mailadres in storage staat — dat is
+     de overgrote meerderheid van returning users. Voorkomt dat ze worden
+     gevraagd om een account te "maken" voor een email die ze al hebben. */
   const [mode, setMode] = useState<Mode>('signup');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
@@ -167,8 +173,19 @@ export default function SubscribeScreen() {
         const e = await getUserEmail();
         if (cancelled) return;
         setSignedInEmail(e);
-      } else {
-        setSignedIn(false);
+        return;
+      }
+      setSignedIn(false);
+      /* Iter 9dq v142: returning user (heeft eerder al ingelogd op dit
+         toestel) → pre-fill email + default naar 'signin' mode. Voorkomt
+         dat ze worden gevraagd een account te "maken" voor een email die
+         ze al hebben. Eerste echte first-timers (geen LAST_EMAIL_KEY) zien
+         de standaard 'signup' mode. */
+      const lastEmail = await getLastLoginEmail();
+      if (cancelled) return;
+      if (lastEmail) {
+        setEmail(lastEmail);
+        setMode('signin');
       }
     })();
     return () => {
@@ -265,6 +282,21 @@ export default function SubscribeScreen() {
     const r = await fn(email.trim(), pw);
     if (!r.ok) {
       if (__DEV__) console.warn(`[subscribe] ${mode} failed (raw):`, r.error);
+      /* Iter 9dq v142: signup → "already exists" → auto-switch naar signin
+         mode met email behouden + lege password. User hoeft niet zelf de
+         toggle te zoeken — de UI doet wat hij toch al ging doen. */
+      const t = String(r.error || '').toLowerCase();
+      if (
+        mode === 'signup' &&
+        t.includes('already') &&
+        (t.includes('exist') || t.includes('registered'))
+      ) {
+        setMode('signin');
+        setPw('');
+        setErrMsg('You already have an account — sign in with your password.');
+        setPhase('form');
+        return;
+      }
       setErrMsg(friendlyError(r.error));
       setPhase('form');
       return;
@@ -275,6 +307,23 @@ export default function SubscribeScreen() {
     refreshSubscription();
     /* Door naar IAP-popup. */
     void runIapFlow();
+  };
+
+  /* Iter 9dq v142: forgot-password link → externe pagina op vibezcore.com.
+     Geen in-app reset-flow (backend ondersteunt 'm nog niet) maar wel een
+     duidelijke uitweg voor users die hun wachtwoord kwijt zijn. Operator
+     kan op vibezcore.com/reset-password een Supabase password-reset email
+     triggeren via een simpel formulier. */
+  const onForgotPassword = () => {
+    const target = email.trim()
+      ? `${VZ_BACKEND_URL}/reset-password?email=${encodeURIComponent(email.trim())}`
+      : `${VZ_BACKEND_URL}/reset-password`;
+    void Linking.openURL(target).catch(() => {
+      Alert.alert(
+        'Reset password',
+        `Open this link in your browser to reset your password:\n\n${target}`,
+      );
+    });
   };
 
   /* ── Render ─────────────────────────────────────────────────────── */
@@ -564,6 +613,18 @@ export default function SubscribeScreen() {
           </Text>
         )}
 
+        {/* Iter 9dq v142: Forgot-password link onder password-veld, alleen
+            in signin mode (signup heeft geen wachtwoord om te resetten). */}
+        {mode === 'signin' && (
+          <Pressable
+            style={s.forgotLink}
+            onPress={onForgotPassword}
+            hitSlop={6}
+          >
+            <Text style={s.forgotLinkText}>Forgot password?</Text>
+          </Pressable>
+        )}
+
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
         <Pressable style={s.btnPrimary} onPress={onSubmit}>
@@ -716,6 +777,21 @@ const s = StyleSheet.create({
   },
   pwHintMet: {
     color: Brand.success,
+  },
+  /* Forgot-password link onder password-veld (alleen in signin mode).
+     Klein, dim, rechts uitgelijnd zodat 't niet competeert met de primary
+     "Sign in & continue" knop maar wel zichtbaar is voor wie 't nodig heeft. */
+  forgotLink: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    marginTop: 4,
+  },
+  forgotLinkText: {
+    color: Brand.accent,
+    fontSize: 12,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.1,
   },
   btnPrimary: {
     backgroundColor: Brand.accent,
