@@ -46,6 +46,7 @@ import {
 } from '@/services/social-auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
+import { validateEmail, emailHintText } from '@/utils/validate-email';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -221,6 +222,31 @@ export default function SubscribeScreen() {
     };
   }, [devForceSignedIn]);
 
+  /* Iter v144 (2026-06-24): IAP-specifieke error mapping. friendlyError()
+     mapt rauwe strings naar leesbare tekst, maar IAP-errors hebben een
+     gestructureerde `code` die we explicieter kunnen vertalen — operator
+     krijgt nu te zien WAAROM de aankoop niet doorging ipv een blanco
+     "Something went wrong".
+
+     Speciale aandacht voor `unavailable` (ItemUnavailable/SkuNotFound):
+     dit is wat een net-toegevoegde Google Play license-tester ziet
+     gedurende de propagatie-window (kan tot 24h duren). */
+  const iapErrorMessage = (code: string, rawMessage: string): string => {
+    if (code === 'network') {
+      return "We couldn't reach the store. Check your connection and try again.";
+    }
+    if (code === 'unavailable') {
+      return Platform.OS === 'android'
+        ? "This subscription isn't available on this device yet. If you were just added as a license tester, this can take up to 24 hours. Otherwise, please contact support."
+        : "This subscription isn't available right now. Please try again later.";
+    }
+    if (code === 'already_owned') {
+      return 'You already own this subscription. Tap "Already subscribed? Restore purchases" below to activate it on this device.';
+    }
+    /* Onbekende codes → val terug op friendlyError voor consistentie. */
+    return friendlyError(rawMessage);
+  };
+
   /* ── Sub-flow: account-create wanneer nodig, dan IAP popup ─── */
   const runIapFlow = async () => {
     setErrMsg(null);
@@ -234,9 +260,13 @@ export default function SubscribeScreen() {
         return;
       }
       if (__DEV__) {
-        console.warn('[subscribe] purchase failed (raw):', result.error.message);
+        console.warn(
+          '[subscribe] purchase failed:',
+          result.error.code,
+          result.error.message,
+        );
       }
-      setErrMsg(friendlyError(result.error.message));
+      setErrMsg(iapErrorMessage(result.error.code, result.error.message));
       setPhase('error');
       return;
     }
@@ -301,6 +331,29 @@ export default function SubscribeScreen() {
       setErrMsg('Enter your email and password.');
       return;
     }
+    /* Iter v144 (2026-06-24): strikte email-validatie vóór submit. Voorkomt
+       incident waarbij `name@gmail.comn` (typo) door Supabase werd
+       geaccepteerd → account aangemaakt → IAP faalde → user vast in een
+       onbruikbaar account. Bij signup ÉN signin van toepassing — een typo
+       in signin maakt evenmin zin (krijgt sowieso "wrong credentials"). */
+    const v = validateEmail(email);
+    if (v.ok === false) {
+      setErrMsg(
+        v.reason === 'format'
+          ? "That email address doesn't look right — check the spelling."
+          : 'Enter your email address.',
+      );
+      return;
+    }
+    if (v.ok === 'maybe') {
+      /* Format is technisch geldig maar lijkt op een bekende typo.
+         Tonen we als waarschuwing + suggestion onder het email-veld
+         (live hint); hier in onSubmit BLOKKEREN we omdat dit altijd
+         een typo blijkt te zijn in praktijk (gmial→gmail, .comn→.com).
+         User moet de suggestion tappen of de email handmatig corrigeren. */
+      setErrMsg(`Did you mean ${v.suggestion}? Tap the suggestion above to fix.`);
+      return;
+    }
     if (mode === 'signup' && pw.length < 8) {
       setErrMsg('Password must be at least 8 characters.');
       return;
@@ -333,6 +386,13 @@ export default function SubscribeScreen() {
        anders kan een snelle IAP-trigger nog naar de oude bucket schrijven. */
     await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
     refreshSubscription();
+    /* Iter v144: na geslaagde signup/signin de lokale signedIn-state ook
+       updaten. Zonder dit toont het error-scherm (als IAP daarna faalt) de
+       "user is gast"-tekst terwijl het account wèl is aangemaakt. Met deze
+       update kan de error-recovery flow expliciet zeggen "Je account
+       bestaat — probeer Subscribe later opnieuw vanuit Account". */
+    setSignedIn(true);
+    setSignedInEmail(email.trim());
     /* Door naar IAP-popup. */
     void runIapFlow();
   };
@@ -385,6 +445,10 @@ export default function SubscribeScreen() {
     }
     await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
     refreshSubscription();
+    /* Iter v144: zelfde signedIn-state update als bij email/password
+       signup zodat het error-scherm de juiste recovery-flow toont. */
+    setSignedIn(true);
+    if (r.email) setSignedInEmail(r.email);
     void runIapFlow();
   };
 
@@ -404,6 +468,8 @@ export default function SubscribeScreen() {
     }
     await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
     refreshSubscription();
+    setSignedIn(true);
+    if (r.email) setSignedInEmail(r.email);
     void runIapFlow();
   };
 
@@ -449,6 +515,13 @@ export default function SubscribeScreen() {
   }
 
   if (phase === 'error') {
+    /* Iter v144: recovery-flow. Als user TOCH is ingelogd betekent dat
+       signup/signin geslaagd is en de IAP-stap faalde. Het account
+       bestaat dus — user moet weten dat hij niet verloren is + opties
+       krijgen om verder te gaan (browse free, retry later, of uit-
+       loggen om met een andere email opnieuw te beginnen als de
+       eerste poging een typo was). */
+    const wasSignedIn = signedIn === true;
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
@@ -456,17 +529,48 @@ export default function SubscribeScreen() {
           <View style={s.errorCircle}>
             <Text style={s.errorText}>!</Text>
           </View>
-          <Text style={s.busyTitle}>Something went wrong</Text>
+          <Text style={s.busyTitle}>
+            {wasSignedIn ? 'Subscription not activated' : 'Something went wrong'}
+          </Text>
           <Text style={s.busySub}>{errMsg ?? 'Please try again.'}</Text>
+
+          {wasSignedIn && signedInEmail && (
+            <View style={s.recoveryNote}>
+              <Text style={s.recoveryNoteLabel}>YOUR ACCOUNT</Text>
+              <Text style={s.recoveryNoteEmail} numberOfLines={1}>
+                {signedInEmail}
+              </Text>
+              <Text style={s.recoveryNoteText}>
+                Your account is created. You can browse free sessions now and
+                try Subscribe again later from the Account tab.
+              </Text>
+            </View>
+          )}
+
           <Pressable
             style={s.btnPrimary}
             onPress={() => {
               setErrMsg(null);
               setPhase('form');
+              if (wasSignedIn) {
+                /* Bij re-try na success-then-IAP-fail willen we direct
+                   naar de signed-in review-flow, niet terug naar de
+                   signup form (account bestaat al). */
+              }
             }}
           >
             <Text style={s.btnPrimaryText}>Try again</Text>
           </Pressable>
+
+          {wasSignedIn && (
+            <Pressable
+              style={s.linkBtn}
+              onPress={() => router.replace('/')}
+            >
+              <Text style={s.linkText}>Browse free sessions instead</Text>
+            </Pressable>
+          )}
+
           <Pressable
             style={s.linkBtn}
             onPress={() => {
@@ -688,6 +792,42 @@ export default function SubscribeScreen() {
           textContentType="emailAddress"
         />
 
+        {/* Iter v144: live email-feedback. Toont niets bij leeg veld; bij
+            valid format → groen "Looks good"; bij typo → tap-baar
+            "Did you mean X?" suggestion; bij format-fout → rood. */}
+        {(() => {
+          if (!email.trim()) return null;
+          const v = validateEmail(email);
+          const hint = emailHintText(v);
+          if (!hint.text) return null;
+          const tone =
+            hint.tone === 'success'
+              ? s.emailHintSuccess
+              : hint.tone === 'warn'
+                ? s.emailHintWarn
+                : hint.tone === 'error'
+                  ? s.emailHintError
+                  : s.emailHintDim;
+          if (v.ok === 'maybe' && v.reason === 'typo') {
+            return (
+              <Pressable
+                onPress={() => {
+                  setEmail(v.suggestion);
+                  if (errMsg) setErrMsg(null);
+                }}
+                style={s.emailHintTap}
+                accessibilityLabel={`Use suggested email ${v.suggestion}`}
+              >
+                <Text style={[s.emailHintBase, tone]}>
+                  {hint.text}
+                </Text>
+                <Text style={s.emailHintAction}>Tap to use it</Text>
+              </Pressable>
+            );
+          }
+          return <Text style={[s.emailHintBase, tone]}>{hint.text}</Text>;
+        })()}
+
         <Text style={s.label}>Password</Text>
         <View style={s.pwWrap}>
           <TextInput
@@ -891,6 +1031,35 @@ const s = StyleSheet.create({
   },
   pwHintMet: {
     color: Brand.success,
+  },
+  /* Iter v144: email-hint styles. Mirror van pwHint maar met tonen voor
+     success / warn (typo) / error (format) / dim (neutraal). */
+  emailHintBase: {
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    marginTop: 8,
+  },
+  emailHintSuccess: { color: Brand.success },
+  emailHintWarn: { color: '#ffb450' },
+  emailHintError: { color: Brand.error },
+  emailHintDim: { color: Brand.textDim },
+  emailHintTap: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,180,80,0.10)',
+    borderColor: 'rgba(255,180,80,0.35)',
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  emailHintAction: {
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: '#ffb450',
+    marginTop: 2,
   },
   /* Forgot-password link onder password-veld (alleen in signin mode).
      Klein, dim, rechts uitgelijnd zodat 't niet competeert met de primary
@@ -1101,5 +1270,38 @@ const s = StyleSheet.create({
     fontSize: 28,
     fontFamily: BrandFonts.extrabold,
     lineHeight: 32,
+  },
+  /* Iter v144: recovery-note voor "signup OK maar IAP failed" pad.
+     Toont het email-adres + reassurance dat account bestaat. */
+  recoveryNote: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 22,
+    marginBottom: 4,
+    maxWidth: 360,
+    width: '100%',
+  },
+  recoveryNoteLabel: {
+    color: Brand.textDim,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.4,
+    marginBottom: 4,
+  },
+  recoveryNoteEmail: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    marginBottom: 8,
+  },
+  recoveryNoteText: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 17,
   },
 });

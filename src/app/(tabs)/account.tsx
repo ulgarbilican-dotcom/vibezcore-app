@@ -46,6 +46,7 @@ import {
 import { restorePurchases } from '@/services/restore-purchases';
 import { clearSignedUrlCache } from '@/utils/audio-url';
 import { clearLastPlayed } from '@/utils/last-played';
+import { validateEmail, emailHintText } from '@/utils/validate-email';
 import {
   consumeScrollIntent,
   requestScrollTo,
@@ -509,6 +510,22 @@ export default function AccountScreen() {
     setMsg(null);
     if (!emailInput.trim() || !pwInput) {
       setMsg('Enter your email and password.');
+      return;
+    }
+    /* Iter v144 (2026-06-24): strikte email-validatie. Voorkomt incident
+       waarbij typo-emails (`@gmail.comn`) een Supabase-account aanmaken
+       dat de user nooit meer kan verifieren. Zelfde util als subscribe.tsx. */
+    const v = validateEmail(emailInput);
+    if (v.ok === false) {
+      setMsg(
+        v.reason === 'format'
+          ? "That email address doesn't look right — check the spelling."
+          : 'Enter your email address.',
+      );
+      return;
+    }
+    if (v.ok === 'maybe') {
+      setMsg(`Did you mean ${v.suggestion}? Check spelling and try again.`);
       return;
     }
     setBusy(true);
@@ -1047,7 +1064,10 @@ export default function AccountScreen() {
           <TextInput
             style={s.input}
             value={emailInput}
-            onChangeText={setEmailInput}
+            onChangeText={(v) => {
+              setEmailInput(v);
+              if (msg) setMsg(null);
+            }}
             placeholder="you@example.com"
             placeholderTextColor={Brand.textDim}
             autoCapitalize="none"
@@ -1056,6 +1076,63 @@ export default function AccountScreen() {
             autoComplete="email"
             textContentType="emailAddress"
           />
+
+          {/* Iter v144: live email-feedback. Toont niets bij leeg veld;
+              warn bij typo (met tap-to-fix); success bij valid format. */}
+          {(() => {
+            if (!emailInput.trim()) return null;
+            const v = validateEmail(emailInput);
+            const hint = emailHintText(v);
+            if (!hint.text) return null;
+            const toneStyle =
+              hint.tone === 'success'
+                ? { color: Brand.success }
+                : hint.tone === 'warn'
+                  ? { color: '#ffb450' }
+                  : hint.tone === 'error'
+                    ? { color: Brand.error }
+                    : { color: Brand.textDim };
+            if (v.ok === 'maybe' && v.reason === 'typo') {
+              return (
+                <Pressable
+                  onPress={() => {
+                    setEmailInput(v.suggestion);
+                    if (msg) setMsg(null);
+                  }}
+                  style={{
+                    marginTop: 8,
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(255,180,80,0.10)',
+                    borderColor: 'rgba(255,180,80,0.35)',
+                    borderWidth: 1,
+                    alignSelf: 'flex-start',
+                  }}
+                  accessibilityLabel={`Use suggested email ${v.suggestion}`}
+                >
+                  <Text style={[{ fontSize: 12, fontFamily: BrandFonts.medium }, toneStyle]}>
+                    {hint.text}
+                  </Text>
+                  <Text style={{
+                    fontSize: 11,
+                    fontFamily: BrandFonts.bold,
+                    letterSpacing: 0.4,
+                    textTransform: 'uppercase',
+                    color: '#ffb450',
+                    marginTop: 2,
+                  }}>
+                    Tap to use it
+                  </Text>
+                </Pressable>
+              );
+            }
+            return (
+              <Text style={[{ fontSize: 12, fontFamily: BrandFonts.medium, marginTop: 8 }, toneStyle]}>
+                {hint.text}
+              </Text>
+            );
+          })()}
 
           <Text style={s.inputLabel}>Password</Text>
           <View style={s.pwWrap}>
