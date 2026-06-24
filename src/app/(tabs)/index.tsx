@@ -751,7 +751,8 @@ export default function AudioScreen() {
       });
     };
     const handle = (target: string) => {
-      if (target === 'pricing') scrollToTarget(pricingYRef.current);
+      if (target === 'top') scrollToTarget(0);
+      else if (target === 'pricing') scrollToTarget(pricingYRef.current);
       else if (target === 'library-settings')
         scrollToTarget(settingCardYRef.current);
       else if (target === 'library')

@@ -577,6 +577,10 @@ export default function AccountScreen() {
         } else if (isBraceletPro) {
           setTimeout(() => router.replace('/bracelet' as never), 50);
         } else {
+          /* Sign-in vanuit account tab → audio library opent op bovenkant.
+             Zonder dit behoudt de tab z'n vorige scroll-positie (bv. van
+             een eerdere free-browse sessie) en landt user halverwege. */
+          requestScrollTo('top');
           setTimeout(() => router.replace('/'), 50);
         }
       } else {
