@@ -140,7 +140,7 @@ export async function getLastLoginEmail(): Promise<string | null> {
    er geen redirect-magie meer nodig. */
 
 async function postToAuthProxy(
-  action: 'login' | 'signup' | 'refresh',
+  action: 'login' | 'signup' | 'refresh' | 'google' | 'apple',
   payload: Record<string, unknown>
 ): Promise<{ ok: boolean; status: number; data: SessionPayload & ErrorPayload }> {
   const res = await fetch(
@@ -309,6 +309,75 @@ export async function signup(
     return {
       ok: false,
       error: 'Account created — please confirm your email, then sign in.',
+    };
+  } catch {
+    return { ok: false, error: 'Network error — check your connection' };
+  }
+}
+
+/* ── Social sign-in (Google / Apple) ──────────────────────────────────────
+   Iter v142 (2026-06-23): één-tap auth via Google / Apple ID-token.
+   App krijgt het ID-token van de native SDK (Google Sign-In op Android,
+   Apple Authentication op iOS), wij sturen 't naar de auth-proxy waar
+   Supabase 'm verifieert. Geen wachtwoord-management voor social-flow
+   users — een email-clash met een bestaand password-account wordt door
+   Supabase opgelost door de Google/Apple-identity te linken aan het
+   bestaande user-record (zelfde email = zelfde user).
+
+   Vereiste backend-config:
+     - Supabase dashboard → Authentication → Providers → Google enabled
+       met Web-Client-ID uit Google Cloud Console
+     - Supabase dashboard → Authentication → Providers → Apple enabled
+       met Services-ID uit Apple Developer Console (na enrollment) */
+
+export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
+  if (!idToken) return { ok: false, error: 'Missing Google ID token' };
+  try {
+    const { ok, data } = await postToAuthProxy('google', {
+      id_token: idToken,
+    });
+    if (!ok || !data.access_token) {
+      const msg =
+        data.error_description ||
+        data.msg ||
+        data.error ||
+        'Google sign-in failed';
+      return { ok: false, error: msg };
+    }
+    await persistSession(data);
+    return {
+      ok: true,
+      token: data.access_token,
+      email: data.user?.email,
+    };
+  } catch {
+    return { ok: false, error: 'Network error — check your connection' };
+  }
+}
+
+export async function loginWithApple(
+  idToken: string,
+  nonce?: string,
+): Promise<AuthResult> {
+  if (!idToken) return { ok: false, error: 'Missing Apple identity token' };
+  try {
+    const { ok, data } = await postToAuthProxy('apple', {
+      id_token: idToken,
+      ...(nonce ? { nonce } : {}),
+    });
+    if (!ok || !data.access_token) {
+      const msg =
+        data.error_description ||
+        data.msg ||
+        data.error ||
+        'Apple sign-in failed';
+      return { ok: false, error: msg };
+    }
+    await persistSession(data);
+    return {
+      ok: true,
+      token: data.access_token,
+      email: data.user?.email,
     };
   } catch {
     return { ok: false, error: 'Network error — check your connection' };

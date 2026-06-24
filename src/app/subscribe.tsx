@@ -38,6 +38,12 @@ import {
   VZ_BACKEND_URL,
 } from '@/services/auth';
 import type { AudioTier, IapPurchase } from '@/services/iap-contract';
+import {
+  isAppleSignInAvailable,
+  isGoogleSignInAvailable,
+  signInWithApple,
+  signInWithGoogle,
+} from '@/services/social-auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -326,6 +332,59 @@ export default function SubscribeScreen() {
     });
   };
 
+  /* Iter v142: social sign-in beschikbaarheid. Google = synchroon check op
+     web client ID. Apple = async (native isAvailableAsync). */
+  const googleAvailable = isGoogleSignInAvailable();
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const a = await isAppleSignInAvailable();
+      if (!cancelled) setAppleAvailable(a);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onGoogleSignIn = async () => {
+    setErrMsg(null);
+    setPhase('creating-account');
+    const r = await signInWithGoogle();
+    if (!r.ok) {
+      if (r.reason === 'cancelled') {
+        setPhase('form');
+        return;
+      }
+      if (__DEV__) console.warn('[subscribe] Google sign-in failed:', r.error);
+      setErrMsg(friendlyError(r.error));
+      setPhase('form');
+      return;
+    }
+    await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
+    refreshSubscription();
+    void runIapFlow();
+  };
+
+  const onAppleSignIn = async () => {
+    setErrMsg(null);
+    setPhase('creating-account');
+    const r = await signInWithApple();
+    if (!r.ok) {
+      if (r.reason === 'cancelled') {
+        setPhase('form');
+        return;
+      }
+      if (__DEV__) console.warn('[subscribe] Apple sign-in failed:', r.error);
+      setErrMsg(friendlyError(r.error));
+      setPhase('form');
+      return;
+    }
+    await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
+    refreshSubscription();
+    void runIapFlow();
+  };
+
   /* ── Render ─────────────────────────────────────────────────────── */
 
   const tierLabel = tier === 'yearly' ? 'Yearly' : 'Monthly';
@@ -556,6 +615,39 @@ export default function SubscribeScreen() {
             ? 'One account to access your audio across all your devices.'
             : 'Welcome back — sign in to continue with checkout.'}
         </Text>
+
+        {/* Iter v142: Social sign-in knoppen (Google / Apple).
+            Bovenaan zodat 't de eerste optie is — één tap, geen
+            wachtwoord. Email/password blijft beschikbaar onder de
+            "or"-divider voor users die geen Google/Apple-account willen
+            gebruiken of er geen hebben. */}
+        {(googleAvailable || appleAvailable) && (
+          <View style={s.socialBlock}>
+            {appleAvailable && (
+              <Pressable
+                style={[s.socialBtn, s.socialBtnApple]}
+                onPress={() => void onAppleSignIn()}
+              >
+                <Text style={s.socialBtnIconApple}></Text>
+                <Text style={s.socialBtnTextApple}>Continue with Apple</Text>
+              </Pressable>
+            )}
+            {googleAvailable && (
+              <Pressable
+                style={[s.socialBtn, s.socialBtnGoogle]}
+                onPress={() => void onGoogleSignIn()}
+              >
+                <Text style={s.socialBtnIconGoogle}>G</Text>
+                <Text style={s.socialBtnTextGoogle}>Continue with Google</Text>
+              </Pressable>
+            )}
+            <View style={s.divider}>
+              <View style={s.dividerLine} />
+              <Text style={s.dividerText}>or</Text>
+              <View style={s.dividerLine} />
+            </View>
+          </View>
+        )}
 
         <Text style={s.label}>Email</Text>
         <TextInput
@@ -792,6 +884,81 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.1,
+  },
+  /* Social sign-in block — boven email/password form. Apple knop volgt
+     Apple HIG (zwart, witte tekst). Google knop volgt Google's branding
+     (witte achtergrond, donkere tekst, gekleurde G). Beide vol-breed +
+     gap zodat ze tap-targets van >=48dp halen (a11y). */
+  socialBlock: {
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  socialBtnApple: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  socialBtnGoogle: {
+    backgroundColor: '#ffffff',
+  },
+  socialBtnIconApple: {
+    color: '#ffffff',
+    fontSize: 18,
+    marginRight: 10,
+    /* Apple-glyph komt direct uit het Unicode  symbool. Past op iOS
+       altijd, op Android valt 't terug op een visueel-vergelijkbaar
+       icoon van de system font. */
+  },
+  socialBtnIconGoogle: {
+    color: '#4285F4',
+    fontSize: 18,
+    fontFamily: BrandFonts.extrabold,
+    marginRight: 10,
+    /* Single-letter "G" placeholder. Voor échte Google-brand-compliant
+       knop zou je 't 4-kleurige G-logo SVG moeten gebruiken; voor MVP
+       is dit acceptabel (geen brand violation). */
+  },
+  socialBtnTextApple: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.1,
+  },
+  socialBtnTextGoogle: {
+    color: '#1f1f1f',
+    fontSize: 15,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.1,
+  },
+  /* "or" divider tussen social en email/password. Twee lijntjes met de
+     tekst gecentreerd ertussen. Conventioneel patroon op login-schermen. */
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Brand.border,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   btnPrimary: {
     backgroundColor: Brand.accent,
