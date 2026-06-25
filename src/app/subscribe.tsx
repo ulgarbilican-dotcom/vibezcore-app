@@ -175,6 +175,13 @@ export default function SubscribeScreen() {
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  /* Iter v145 (2026-06-25): raw IAP error info voor diagnose. Operator
+     krijgt op het error-scherm de rauwe code + message te zien wanneer
+     IAP faalt — anders weten we nooit waarom Google Play niet wil
+     verkopen (license tester, product status, config, etc.). Klein en
+     dim ondercroten — niet primair UI maar wel zichtbaar voor copy-
+     pasten naar support of debugging. */
+  const [errDebug, setErrDebug] = useState<string | null>(null);
 
   /* Auth-state detectie. Voor ingelogde users tonen we een review-step
      (order-summary + "Continue to checkout"-knop) ipv direct de IAP-popup
@@ -267,6 +274,7 @@ export default function SubscribeScreen() {
         );
       }
       setErrMsg(iapErrorMessage(result.error.code, result.error.message));
+      setErrDebug(`code=${result.error.code} · ${result.error.message || '(no message)'}`);
       setPhase('error');
       return;
     }
@@ -321,6 +329,7 @@ export default function SubscribeScreen() {
       setErrMsg(
         'Your purchase was completed but we could not activate it yet. Please contact support — we will set up your account within 24 hours.',
       );
+      setErrDebug(`verify · ${msg}`);
       setPhase('error');
     }
   };
@@ -534,6 +543,15 @@ export default function SubscribeScreen() {
           </Text>
           <Text style={s.busySub}>{errMsg ?? 'Please try again.'}</Text>
 
+          {/* Iter v145: raw debug-info zichtbaar zodat operator / support
+              meteen de IAP-error-code kan zien. Klein, monospace, dim —
+              niet primair UI maar wel selecteerbaar voor copy-paste. */}
+          {errDebug && (
+            <Text selectable style={s.debugInfo}>
+              {errDebug}
+            </Text>
+          )}
+
           {wasSignedIn && signedInEmail && (
             <View style={s.recoveryNote}>
               <Text style={s.recoveryNoteLabel}>YOUR ACCOUNT</Text>
@@ -551,6 +569,7 @@ export default function SubscribeScreen() {
             style={s.btnPrimary}
             onPress={() => {
               setErrMsg(null);
+              setErrDebug(null);
               setPhase('form');
               if (wasSignedIn) {
                 /* Bij re-try na success-then-IAP-fail willen we direct
@@ -1303,5 +1322,17 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     lineHeight: 17,
+  },
+  /* Iter v145: raw debug-info — monospace, dim, selectable. Bedoeld voor
+     diagnose (operator/support kunnen exact zien wat Google Play of de
+     verify-server teruggaf). Niet primary UI maar zichtbaar. */
+  debugInfo: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    textAlign: 'center',
+    maxWidth: 360,
   },
 });
