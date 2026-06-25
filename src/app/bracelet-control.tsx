@@ -2332,6 +2332,9 @@ function BreathworkStrip({
   const [phase, setPhase] = useState<Phase>('idle');
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState<number>(Date.now());
+  /* Iter v150 (2026-06-25): completion-popup parity met breath-tab.
+     Operator-feedback: audio speelt wel maar Buddha-popup ontbrak. */
+  const [completionVisible, setCompletionVisible] = useState(false);
   /* Iter 9dq v8 (2026-06-02): info-popup. Lokale state — opent vanaf
      de ⓘ icon in de eyebrow, sluit via backdrop tap of Close knop.
      Bevat WHAT/WHEN/HOW + pairing-hint. */
@@ -2494,6 +2497,9 @@ function BreathworkStrip({
             : mode === 3 ? 'clarity'
             : 'rest';
           playBreathCompletionCue(breathKey);
+          /* Iter v150: trigger Buddha-popup voor visuele parity met
+             breath-tab completion (operator-feedback). */
+          setCompletionVisible(true);
           return;
         }
         phaseIdx = 0;
@@ -2866,6 +2872,55 @@ function BreathworkStrip({
           ? `${protocol.cycles} / ${protocol.cycles} cycles · Complete`
           : `${Math.min(cycle + 1, protocol.cycles)} / ${protocol.cycles} · ${remainingMin}:${remainingSec.toString().padStart(2, '0')} left`}
       </Text>
+
+      {/* Iter v150 (2026-06-25): Buddha-popup voor breathwork completion,
+          parity met breath-tab modal. Operator-feedback: 'audio speelt
+          maar geen popup met budha'. Simpele variant van breath-tab
+          completionSheet — Buddha image, congratulations, dismiss. */}
+      <Modal
+        visible={completionVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCompletionVisible(false)}
+      >
+        <Pressable
+          style={s.bwCompletionBackdrop}
+          onPress={() => setCompletionVisible(false)}
+        >
+          <Pressable
+            style={s.bwCompletionSheet}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View
+              style={[
+                s.bwCompletionAccentStrip,
+                { backgroundColor: meta.color },
+              ]}
+            />
+            <Image
+              source={{
+                uri: 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png',
+              }}
+              resizeMode="contain"
+              style={s.bwCompletionBuddha}
+            />
+            <Text style={[s.bwCompletionEyebrow, { color: meta.color }]}>
+              ✦ BREATHWORK COMPLETE ✦
+            </Text>
+            <Text style={s.bwCompletionTitle}>Well done.</Text>
+            <Text style={s.bwCompletionBody}>
+              You completed {protocol.cycles} cycles of {protocol.name}.
+              Carry the breath with you.
+            </Text>
+            <Pressable
+              style={[s.bwCompletionBtn, { backgroundColor: meta.color }]}
+              onPress={() => setCompletionVisible(false)}
+            >
+              <Text style={s.bwCompletionBtnText}>Continue</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -6470,6 +6525,73 @@ const s = StyleSheet.create({
     color: Brand.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
+  },
+  /* Iter v150: BreathworkStrip completion modal styles (Buddha popup). */
+  bwCompletionBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  bwCompletionSheet: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#0f0f0f',
+    borderRadius: 22,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  bwCompletionAccentStrip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+  },
+  bwCompletionBuddha: {
+    width: 96,
+    height: 96,
+    marginTop: 6,
+    marginBottom: 18,
+  },
+  bwCompletionEyebrow: {
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 2,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  bwCompletionTitle: {
+    color: Brand.text,
+    fontSize: 26,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.5,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  bwCompletionBody: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 21,
+    marginBottom: 22,
+    textAlign: 'center',
+  },
+  bwCompletionBtn: {
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  bwCompletionBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.3,
   },
   /* Outlined neutrale action button — voor End/Pause. Iter 8b refinement
      voor professioneler gevoel: stevigere padding, hogere border-
