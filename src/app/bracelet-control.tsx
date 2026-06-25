@@ -69,6 +69,8 @@ import {
   stopBraceletVoice,
 } from '@/services/bracelet-voice';
 import { playBreathCue, playCompletionCue as playBreathCompletionCue } from '@/services/breath-voice';
+import { useSetting } from '@/utils/settings';
+import { Volume2, VolumeX } from 'lucide-react-native';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   useBraceletOwner,
@@ -3058,6 +3060,12 @@ export default function BraceletControl() {
   const [duration, setDuration] = useState<number>(meta.minMinutes);
   const [status, setStatus] = useState<BleStatusPacket | null>(null);
   const [busy, setBusy] = useState(false);
+  /* Iter v149 v4 (2026-06-25): voice-cues toggle direct op de active-
+     session view zodat user 'm ter plekke kan dimmen (operator-feedback:
+     'in het blok heel duidelijk' — niet verstopt in Settings). Sync via
+     useSetting → globale single source of truth, ook respected door
+     breath-tab en Settings menu. */
+  const [voiceCues, setVoiceCues] = useSetting('voiceCues');
   /* Breathwork toggle — opt-in tijdens active session. False per default
      ("bracelet+haptic is main, breathwork is optioneel" — operator-keuze
      2026-05-27 iter 5). Reset bij sessie-eind via natural-completion
@@ -4247,6 +4255,44 @@ export default function BraceletControl() {
               )}
             </Pressable>
           </View>
+
+          {/* Iter v149 v4 (2026-06-25): Voice toggle prominent op active
+              session view. Operator-feedback: dimmer-knop moet hier
+              zichtbaar zijn, niet verstopt in Settings (bv. user begint
+              sessie tijdens vergadering en wil meteen kunnen stillen). */}
+          <Pressable
+            style={[
+              s.voiceToggleRow,
+              voiceCues && {
+                borderColor: activeMeta.color + '55',
+                backgroundColor: activeMeta.color + '14',
+              },
+            ]}
+            onPress={() => setVoiceCues(!voiceCues)}
+            accessibilityLabel={`Voice guidance ${voiceCues ? 'on — tap to mute' : 'off — tap to enable'}`}
+          >
+            {voiceCues ? (
+              <Volume2 size={18} color={activeMeta.color} />
+            ) : (
+              <VolumeX size={18} color={Brand.textDim} />
+            )}
+            <Text
+              style={[
+                s.voiceToggleLabel,
+                voiceCues && { color: Brand.text },
+              ]}
+            >
+              Voice guidance
+            </Text>
+            <Text
+              style={[
+                s.voiceToggleState,
+                voiceCues && { color: activeMeta.color },
+              ]}
+            >
+              {voiceCues ? 'ON' : 'OFF'}
+            </Text>
+          </Pressable>
 
           {/* BreathingHint weggehaald 2026-05-27 iter 5: ademgids leeft
               nu in de opt-in BreathworkStrip onderaan, niet meer hier. */}
@@ -6273,6 +6319,36 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.2,
+  },
+  /* Iter v149 v4 (2026-06-25): Voice toggle row op active session.
+     Prominent zichtbaar, niet verstopt — tap-target met label + state.
+     Border + bg veranderen bij ON state om duidelijk visueel feedback
+     te geven. */
+  voiceToggleRow: {
+    marginTop: 12,
+    marginHorizontal: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  voiceToggleLabel: {
+    flex: 1,
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    marginLeft: 10,
+    letterSpacing: 0.1,
+  },
+  voiceToggleState: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.4,
   },
   /* Outlined neutrale action button — voor End/Pause. Iter 8b refinement
      voor professioneler gevoel: stevigere padding, hogere border-
