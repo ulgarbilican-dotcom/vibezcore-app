@@ -1781,6 +1781,34 @@ export default function BraceletScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Iter v149 (2026-06-25): activatie-entry-point voor users die
+            HUN BRACELET AL HEBBEN. Zichtbaar onder de pricing-cards
+            zodat een Kickstarter-backer die z'n bracelet net heeft
+            ontvangen meteen ziet waar 'ie de code moet invoeren —
+            voorheen alleen verstopt achter signup → Account-tab.
+
+            Twee paden vanuit deze CTA (afgehandeld door
+            /activate-bracelet zelf):
+              - Solo bracelet code → unlocks bracelet
+              - Bundle code (bracelet + 1 jaar audio) → unlocks beide
+
+            Of de user al ingelogd is of niet: /activate-bracelet
+            handelt de signin/signup prompt vóór de code-stap af. */}
+        <Pressable
+          style={s.activateBraceletEntry}
+          onPress={() => router.push('/activate-bracelet')}
+          accessibilityLabel="Activate your bracelet with a code"
+        >
+          <View style={s.activateBraceletEntryInner}>
+            <Text style={s.activateBraceletEntryLabel}>
+              Already have your bracelet?
+            </Text>
+            <Text style={s.activateBraceletEntryTitle}>
+              Enter your activation code →
+            </Text>
+          </View>
+        </Pressable>
         </>
         )}
 
@@ -3541,6 +3569,35 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.2,
     textAlign: 'center',
+  },
+  /* Iter v149 (2026-06-25): bracelet-code activatie entry-point onder
+     pricing cards. Discrete styling — niet als upsell-CTA maar als
+     "ik heb 'm al" pad. Border + subtle background zodat 't visueel
+     gescheiden is van pricing cards. */
+  activateBraceletEntry: {
+    marginTop: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.25)',
+    backgroundColor: 'rgba(58,143,255,0.06)',
+  },
+  activateBraceletEntryInner: {
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+  },
+  activateBraceletEntryLabel: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
+  activateBraceletEntryTitle: {
+    color: Brand.accent,
+    fontSize: 15,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.2,
   },
 
   /* ── 8. Countdown (Apple-style: warmer accent-tint ipv hard navy,
