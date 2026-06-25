@@ -355,6 +355,57 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
   }
 }
 
+/* ── Account deletion (GDPR + Apple/Google policy) ──────────────────────
+   Iter v145 (2026-06-25): self-service delete. Apple Guideline 5.1.1(v)
+   en Google Play vereisen sinds 2022 dat een app met account-creatie
+   ook in-app account-deletion biedt. "Open a support email" voldoet niet.
+
+   Endpoint: POST /api/delete-account met Bearer access_token.
+   Server roept Supabase admin API aan om de auth.users-row te verwijderen
+   (cascade naar onze public-schema tabellen). Client wist daarna z'n
+   eigen sessie + LAST_EMAIL_KEY.
+
+   Belangrijk: dit cancelt geen actieve Google Play / Apple subscription —
+   die leeft in het store-account, niet bij ons. UI moet dit duidelijk
+   maken vóór bevestiging. */
+export async function deleteAccount(): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const token = await getToken();
+    if (!token) {
+      return { ok: false, error: 'You are not signed in.' };
+    }
+    const res = await fetch(VZ_BACKEND_URL + '/api/delete-account', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+      },
+    });
+    if (!res.ok) {
+      let msg = 'Could not delete account.';
+      try {
+        const body = await res.json();
+        if (body && typeof body.message === 'string') msg = body.message;
+      } catch {
+        /* non-json body — keep default msg */
+      }
+      return { ok: false, error: msg };
+    }
+    /* Sessie + last-email wissen zodat de app niet meer probeert te
+       refreshen met een nu-niet-bestaande user. LAST_EMAIL_KEY ook
+       wissen zodat het login-form geen vorige email pre-fillt. */
+    await clearSession();
+    try {
+      await AsyncStorage.removeItem(LAST_EMAIL_KEY);
+    } catch {
+      /* non-fatal */
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Network error — check your connection.' };
+  }
+}
+
 export async function loginWithApple(
   idToken: string,
   nonce?: string,

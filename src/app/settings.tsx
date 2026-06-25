@@ -65,10 +65,15 @@ export default function SettingsScreen() {
 
   /* App-version uit expo-constants. `expoConfig.version` komt uit
      app.json's `expo.version`-veld. Fallback "Unknown" bij edge-cases
-     (devbuild zonder expoConfig, web, etc.). expo-application zou ook
-     werken maar is geen bestaande dependency en zou een native rebuild
-     vereisen (CLAUDE.md §9). */
+     (devbuild zonder expoConfig, web, etc.).
+
+     Iter v145 (2026-06-25): nativeBuildVersion erbij. EAS Build
+     auto-increment maakt `expoConfig.version` op zich onvoldoende —
+     twee builds met dezelfde "1.0.0" hebben elk een eigen versionCode.
+     Voor closed testing moet je weten "is dit #10 of nog #9?". */
   const version = Constants.expoConfig?.version ?? 'Unknown';
+  const buildVersion = Constants.nativeBuildVersion;
+  const versionLabel = buildVersion ? `${version} (${buildVersion})` : version;
 
   /* Clear all local data — wist alle AsyncStorage-keys. Confirmation
      dialog voorkomt accidentele 1-tap data-loss. */
@@ -267,7 +272,7 @@ export default function SettingsScreen() {
               <Text style={s.rowTitle}>Version</Text>
               <Text style={s.rowSub}>VIBEZCORE App · Audio + Bracelet</Text>
             </View>
-            <Text style={s.versionText}>{version}</Text>
+            <Text style={s.versionText}>{versionLabel}</Text>
           </View>
         </View>
 

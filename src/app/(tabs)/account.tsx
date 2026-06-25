@@ -70,6 +70,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     clearSession,
+    deleteAccount,
     getLastLoginEmail,
     getToken,
     getUserEmail,
@@ -691,19 +692,61 @@ export default function AccountScreen() {
   };
 
   /* ── Delete Account ──
-     Account-deletion gebeurt manueel via support (operator-besluit
-     2026-05-26: te gevoelig + GDPR-verplichtingen voor verifiable deletion
-     workflow). Opent het support-formulier op de webapp. */
+     Iter v145 (2026-06-25): self-service delete, Apple/Google policy.
+     Vervangt de oude "open support form"-flow die NIET aan Apple
+     Guideline 5.1.1(v) voldeed. Twee-staps confirm zodat een accident-
+     tap niet alles wist. Backend doet de echte Supabase admin delete,
+     daarna clearSession + replace('/') zodat user landt in de gast-app. */
   const onDeleteAccount = () => {
     Alert.alert(
       'Delete account?',
-      'Deleting your account is permanent. Your listening history, favorites, and subscription data will be removed. We will open our support form so you can confirm the request.',
+      "This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — you must cancel via Google Play (or App Store) Subscriptions separately.\n\nThis cannot be undone.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Continue',
+          text: 'Delete forever',
           style: 'destructive',
-          onPress: () => openExternal(SUPPORT_URL),
+          onPress: () => {
+            /* Tweede confirm voor zekerheid — destructive action waar
+               we niet van terug kunnen. */
+            Alert.alert(
+              'Are you sure?',
+              'Last chance to cancel. Once deleted, your account cannot be recovered.',
+              [
+                { text: 'Keep my account', style: 'cancel' },
+                {
+                  text: 'Yes, delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setBusy(true);
+                    const r = await deleteAccount();
+                    setBusy(false);
+                    if (r.ok) {
+                      /* App-state cleanup mirror van sign-out — bracelet
+                         override, last-played, etc. */
+                      if (__DEV__) {
+                        await setDevUserOverride(null);
+                        await setDevBraceletActivated(false);
+                      }
+                      setEmail(null);
+                      setEmailInput('');
+                      setPwInput('');
+                      await clearLastPlayed();
+                      await clearSignedUrlCache();
+                      refreshSubscription();
+                      Alert.alert(
+                        'Account deleted',
+                        'Your account has been permanently deleted.',
+                        [{ text: 'OK', onPress: () => router.replace('/') }],
+                      );
+                    } else {
+                      Alert.alert('Could not delete account', r.error);
+                    }
+                  },
+                },
+              ],
+            );
+          },
         },
       ],
     );
