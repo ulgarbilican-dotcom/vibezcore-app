@@ -3066,6 +3066,11 @@ export default function BraceletControl() {
      useSetting → globale single source of truth, ook respected door
      breath-tab en Settings menu. */
   const [voiceCues, setVoiceCues] = useSetting('voiceCues');
+
+  /* Iter v149 v5 (2026-06-25): custom End-session modal ipv Alert.alert.
+     Operator-feedback: 'ui moet vibezcore stijl niet statisch lelijk zoals
+     nu'. System Alert voelt vreemd op een dark-themed app. */
+  const [endSessionVisible, setEndSessionVisible] = useState(false);
   /* Breathwork toggle — opt-in tijdens active session. False per default
      ("bracelet+haptic is main, breathwork is optioneel" — operator-keuze
      2026-05-27 iter 5). Reset bij sessie-eind via natural-completion
@@ -3687,30 +3692,8 @@ export default function BraceletControl() {
     useCallback(() => {
       if (!sessionActive && !isPausedRef.current) return;
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        Alert.alert(
-          'End session?',
-          'The bracelet will stop and you\'ll return to the previous screen. To keep the session running in the background, tap "Keep running".',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Keep running',
-              onPress: () => {
-                /* Sessie loopt door op de bracelet (BLE-autonoom).
-                   User navigeert weg; bij terugkeer wordt UI vanuit
-                   status hersteld. */
-              },
-            },
-            {
-              text: 'End session',
-              style: 'destructive',
-              onPress: () => {
-                onStop();
-              },
-            },
-          ],
-          { cancelable: true },
-        );
-        return true; // prevent default until user picks an alert option
+        setEndSessionVisible(true);
+        return true; // prevent default until user picks an option
       });
       return () => handler.remove();
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4721,6 +4704,73 @@ export default function BraceletControl() {
           onClose={() => setDetailModeForModal(null)}
         />
       )}
+
+      {/* Iter v149 v5 (2026-06-25): End-session confirm modal in VIBEZCORE
+          stijl ipv system Alert.alert. Dark panel + mode-accent border,
+          3 duidelijke CTAs (Cancel / Keep running / End session). */}
+      <Modal
+        visible={endSessionVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEndSessionVisible(false)}
+        statusBarTranslucent
+      >
+        <Pressable
+          style={s.endModalBackdrop}
+          onPress={() => setEndSessionVisible(false)}
+        >
+          <Pressable
+            style={[
+              s.endModalCard,
+              { borderColor: getModeMeta(selectedMode).color + '55' },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={s.endModalTitle}>End session?</Text>
+            <Text style={s.endModalBody}>
+              The bracelet will stop and you&apos;ll return to the previous
+              screen. To keep the session running in the background, tap
+              &ldquo;Keep running&rdquo;.
+            </Text>
+
+            <Pressable
+              style={[
+                s.endModalBtnPrimary,
+                { backgroundColor: getModeMeta(selectedMode).color },
+              ]}
+              onPress={() => setEndSessionVisible(false)}
+            >
+              <Text
+                style={[
+                  s.endModalBtnPrimaryText,
+                  isLightColor(getModeMeta(selectedMode).color) && {
+                    color: '#0a0a0a',
+                  },
+                ]}
+              >
+                Keep running
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={s.endModalBtnDestructive}
+              onPress={() => {
+                setEndSessionVisible(false);
+                onStop();
+              }}
+            >
+              <Text style={s.endModalBtnDestructiveText}>End session</Text>
+            </Pressable>
+
+            <Pressable
+              style={s.endModalBtnCancel}
+              onPress={() => setEndSessionVisible(false)}
+            >
+              <Text style={s.endModalBtnCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -6349,6 +6399,73 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.4,
+  },
+  /* Iter v149 v5 (2026-06-25): VIBEZCORE-style End session modal. */
+  endModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  endModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#0f0f0f',
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 24,
+    paddingHorizontal: 22,
+  },
+  endModalTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.4,
+    marginBottom: 12,
+  },
+  endModalBody: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 21,
+    marginBottom: 20,
+  },
+  endModalBtnPrimary: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  endModalBtnPrimaryText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+  },
+  endModalBtnDestructive: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.45)',
+    backgroundColor: 'rgba(239,68,68,0.10)',
+    marginBottom: 10,
+  },
+  endModalBtnDestructiveText: {
+    color: Brand.error,
+    fontSize: 15,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.2,
+  },
+  endModalBtnCancel: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  endModalBtnCancelText: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
   },
   /* Outlined neutrale action button — voor End/Pause. Iter 8b refinement
      voor professioneler gevoel: stevigere padding, hogere border-
