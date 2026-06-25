@@ -63,6 +63,11 @@ import {
   getModeMeta,
 } from '../services/ble-contract';
 import { getBracelet, getSimHooks } from '../services/bracelet';
+import {
+  playBraceletStartCue,
+  playBraceletCompletionCue,
+  stopBraceletVoice,
+} from '@/services/bracelet-voice';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   useBraceletOwner,
@@ -3236,6 +3241,10 @@ export default function BraceletControl() {
          niet bij manual End of Restart (die clearen
          sessionStartedAtRef expliciet en raken deze branch niet). */
       setCompletedModeForModal(selectedMode);
+      /* Iter v147 (2026-06-25): voice-cue bij natural completion.
+         Mirror van breath-voice's playCompletionCue: niet gegate'd
+         op voiceEnabled — sessie is afgewerkt, closing-reward verdiend. */
+      playBraceletCompletionCue(selectedMode);
       /* Reset breathwork toggle bij natural completion zodat volgende
          sessie weer met breathwork=uit start (opt-in default). */
       setBreathworkEnabled(false);
@@ -3401,6 +3410,14 @@ export default function BraceletControl() {
       sessionPlannedRef.current = clampDuration(selectedMode, duration);
       /* Iter 9ca: schone start voor breathwork-tracking. */
       resetBreathworkTracking();
+      /* Iter v147 (2026-06-25): voice-cue bij sessie-start. SessionKey
+         = mode-duration-startMs zodat opeenvolgende sessies elk hun
+         eigen cue krijgen (idempotent voor poll-renders binnen 1
+         sessie). */
+      playBraceletStartCue(
+        selectedMode,
+        `${selectedMode}-${sessionPlannedRef.current}-${startMs}`,
+      );
       const st = await bracelet.requestStatus();
       setStatus(st);
     } finally {
