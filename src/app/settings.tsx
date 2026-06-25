@@ -58,6 +58,7 @@ export default function SettingsScreen() {
      naar Settings (operator-feedback "library is content-focused,
      preferences horen hier"). */
   const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
+  const [voiceCues, setVoiceCues] = useSetting('voiceCues');
 
   /* Spinner-state op de Clear-knop zodat de async clear-call duidelijk
      voortgang toont en user 'm niet dubbel tikt. */
@@ -165,6 +166,25 @@ export default function SettingsScreen() {
             <Switch
               value={autoPlayNext}
               onValueChange={setAutoPlayNext}
+              trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+              thumbColor="#ffffff"
+              ios_backgroundColor="#3a3a3a"
+            />
+          </View>
+          <View style={s.divider} />
+          {/* Iter v149 v3 (2026-06-25): voice cues toggle voor breath +
+              bracelet sessies. Default OFF — operator-feedback dat
+              bracelet-stem te luid was bij onverwacht moment (vergadering). */}
+          <View style={s.row}>
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Voice cues</Text>
+              <Text style={s.rowSub}>
+                Spoken guidance during breath and bracelet sessions.
+              </Text>
+            </View>
+            <Switch
+              value={voiceCues}
+              onValueChange={setVoiceCues}
               trackColor={{ false: '#3a3a3a', true: Brand.accent }}
               thumbColor="#ffffff"
               ios_backgroundColor="#3a3a3a"

@@ -499,6 +499,11 @@ export default function AccountScreen() {
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
+      /* Iter v149 v3 (2026-06-25): operator-feedback — Google sign-in
+         bleef op de Account-tab. Voor consistency met email/password
+         flow: na success → naar Audio Library bovenkant. */
+      requestScrollTo('top');
+      setTimeout(() => router.replace('/'), 50);
     } finally {
       setBusy(false);
     }
@@ -520,6 +525,9 @@ export default function AccountScreen() {
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
+      /* Iter v149 v3: zelfde redirect als Google + email flow. */
+      requestScrollTo('top');
+      setTimeout(() => router.replace('/'), 50);
     } finally {
       setBusy(false);
     }

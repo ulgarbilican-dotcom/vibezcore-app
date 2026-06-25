@@ -60,7 +60,12 @@ const MODE_CUES: Record<BraceletMode, { start: string; end: string }> = {
 
 /* ── State ─────────────────────────────────────────────────────────── */
 
-let voiceEnabled = true;
+/* Iter v149 v3 (2026-06-25): operator-feedback — voice was te luid en
+   te AI-achtig. Default uit-zetten (user kan zelf inschakelen via
+   Settings) zodat een bracelet-activatie tijdens een vergadering nooit
+   onverwacht een stem laat klinken. Plus volume verlaagd via rate 0.85
+   en lagere pitch zodat het kalmer aanvoelt. */
+let voiceEnabled = false;
 
 /** Track of de start-cue al gespeeld is voor de huidige sessie, zodat
  *  her-renders (poll updates) de cue niet opnieuw triggeren. Reset bij
@@ -100,9 +105,12 @@ export function playBraceletStartCue(
   if (!cue) return;
   startedForSession = sessionKey;
   try {
+    /* Iter v149 v3: kalmer, minder AI-achtig.
+       rate 0.85 (was 0.95) = langzamer
+       pitch 0.92 (was 1.0) = warmer/dieper */
     Speech.speak(cue, {
-      rate: 0.95,
-      pitch: 1.0,
+      rate: 0.85,
+      pitch: 0.92,
       language: 'en-US',
     });
   } catch {
@@ -120,9 +128,10 @@ export function playBraceletCompletionCue(mode: BraceletMode): void {
   /* Reset sessie-state zodat een volgende sessie weer een start-cue krijgt. */
   startedForSession = null;
   try {
+    /* Iter v149 v3: kalmer dan default, mirror van start-cue. */
     Speech.speak(cue, {
-      rate: 0.9,
-      pitch: 1.0,
+      rate: 0.8,
+      pitch: 0.92,
       language: 'en-US',
     });
   } catch {

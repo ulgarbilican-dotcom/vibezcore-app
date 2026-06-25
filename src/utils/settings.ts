@@ -33,6 +33,12 @@ export type Settings = {
    *  Comment-stub: audio-player respecteert deze nog niet (pas nodig
    *  wanneer backend multi-bitrate ondersteunt). */
   audioQuality: 'high' | 'low';
+  /** Iter v149 v3 (2026-06-25): voice cues aan/uit voor breath + bracelet
+   *  sessies. Operator-feedback: bracelet stem te luid + AI-achtig, user
+   *  wil 'm kunnen dimmen wanneer hij in vergadering zit. Default OFF
+   *  zodat een ongeplande activatie nooit onverwacht stem laat klinken.
+   *  User kan 'm zelf inschakelen via Settings → Voice cues. */
+  voiceCues: boolean;
 };
 
 const defaults: Settings = {
@@ -45,6 +51,7 @@ const defaults: Settings = {
   saveProgress: true,
   trackHistory: true,
   audioQuality: 'high',
+  voiceCues: false,
 };
 
 let state: Settings = { ...defaults };

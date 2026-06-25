@@ -1,0 +1,13 @@
+src/app/bracelet-history.tsx(755,21): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(759,27): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(762,29): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(775,9): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(785,11): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(803,11): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(812,11): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(816,10): error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?
+src/app/bracelet-history.tsx(856,13): error TS2322: Type '{ unlocked: boolean; id: string; label: string; Icon: LucideIcon; iconCount?: number; color: string; hint: (stats: BraceletStats) => string; progress: (stats: BraceletStats) => number; }' is not assignable to type 'Milestone & { unlocked: boolean; }'.
+  Type '{ unlocked: boolean; id: string; label: string; Icon: LucideIcon; iconCount?: number; color: string; hint: (stats: BraceletStats) => string; progress: (stats: BraceletStats) => number; }' is not assignable to type 'Milestone'.
+    Types of property 'unlocked' are incompatible.
+      Type 'boolean' is not assignable to type '(stats: BraceletStats) => boolean'.
+src/components/app-tabs.web.tsx(28,38): error TS2322: Type '"/explore"' is not assignable to type '"/" | RelativePathString | ExternalPathString | "/about" | `/about?${string}` | `/about#${string}` | "/auth-callback" | `/auth-callback?${string}` | `/auth-callback#${string}` | "/bracelet-control" | ... 123 more ... | undefined'.

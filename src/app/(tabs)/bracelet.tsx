@@ -1113,7 +1113,7 @@ export default function BraceletScreen() {
               fundament onder de bracelet). */}
           <View style={s.landingKsEyebrowRow}>
             <Text style={s.landingKsDate}>
-              KICKSTARTER · AUG 1, 2026
+              KICKSTARTER · SEPT 1, 2026
             </Text>
             <View style={s.landingKsBadge}>
               <Text style={s.landingKsBadgeText}>EARLY BIRD</Text>
@@ -1227,7 +1227,7 @@ export default function BraceletScreen() {
             <View style={s.hero}>
               <View style={s.heroEyebrowRow}>
                 <Text style={s.heroEyebrow}>
-                  KICKSTARTER · AUG 1, 2026
+                  KICKSTARTER · SEPT 1, 2026
                 </Text>
                 <View style={s.heroEarlyBird}>
                   <Text style={s.heroEarlyBirdText}>EARLY BIRD</Text>

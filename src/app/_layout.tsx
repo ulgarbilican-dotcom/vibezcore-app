@@ -27,6 +27,9 @@ import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import { recoverOnStartup as iapRecoverOnStartup } from '@/services/iap-recovery';
+import { setVoiceEnabled as setBreathVoiceEnabled } from '@/services/breath-voice';
+import { setVoiceEnabled as setBraceletVoiceEnabled } from '@/services/bracelet-voice';
+import { getSetting, ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
@@ -165,6 +168,20 @@ export default function RootLayout() {
     if (!ready) return;
     void iapRecoverOnStartup();
   }, [ready]);
+
+  /* Iter v149 v3 (2026-06-25): sync voice-cues setting met beide
+     voice-services (breath + bracelet). Voorheen had elke service een
+     eigen default; nu is Settings → Voice cues de single source of truth.
+     User toggle wordt live doorgevoerd in beide services. */
+  const voiceCuesSetting = useSetting('voiceCues')[0];
+  useEffect(() => {
+    void (async () => {
+      await ensureSettingsLoaded();
+      const enabled = getSetting('voiceCues');
+      setBreathVoiceEnabled(enabled);
+      setBraceletVoiceEnabled(enabled);
+    })();
+  }, [voiceCuesSetting]);
 
   /* Iter 9dq (2026-06-02): redirect-guard. Voorheen kon de welcome-
      redirect-effect twee keer firen bij een snelle user: cold-start
