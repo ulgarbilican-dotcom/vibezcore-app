@@ -1801,12 +1801,19 @@ export default function BraceletScreen() {
           accessibilityLabel="Activate your bracelet with a code"
         >
           <View style={s.activateBraceletEntryInner}>
-            <Text style={s.activateBraceletEntryLabel}>
-              Already have your bracelet?
-            </Text>
-            <Text style={s.activateBraceletEntryTitle}>
-              Enter your activation code →
-            </Text>
+            <View style={s.activateBraceletEntryTextWrap}>
+              <Text style={s.activateBraceletEntryEyebrow}>
+                Already have one
+              </Text>
+              <Text style={s.activateBraceletEntryLabel}>
+                Activate your bracelet
+              </Text>
+              <Text style={s.activateBraceletEntryTitle}>
+                Enter your activation code to unlock your bracelet and
+                (for bundle owners) 1 year of audio library.
+              </Text>
+            </View>
+            <Text style={s.activateBraceletEntryArrow}>→</Text>
           </View>
         </Pressable>
         </>
@@ -3570,34 +3577,63 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
     textAlign: 'center',
   },
-  /* Iter v149 (2026-06-25): bracelet-code activatie entry-point onder
-     pricing cards. Discrete styling — niet als upsell-CTA maar als
-     "ik heb 'm al" pad. Border + subtle background zodat 't visueel
-     gescheiden is van pricing cards. */
+  /* Iter v149 v2 (2026-06-25): bracelet-code activatie entry-point.
+     Operator-feedback: was te dim en bijna onzichtbaar. Bracelet wordt
+     het main product, deze entry MOET prominent. Upgrade naar:
+     - Donker panel met accent-glow border (matched merk-anker)
+     - Eyebrow label, grote titel + sub, pijl-icoon rechts
+     - Visueel gelijkwaardig aan Reserve-CTA's bovenaan zodat het
+       2e gelijkwaardige pad voelt (Reserve vs Activate). */
   activateBraceletEntry: {
-    marginTop: 18,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.25)',
-    backgroundColor: 'rgba(58,143,255,0.06)',
+    marginTop: 22,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,143,255,0.55)',
+    backgroundColor: 'rgba(58,143,255,0.10)',
+    shadowColor: '#3a8fff',
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
   },
   activateBraceletEntryInner: {
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activateBraceletEntryTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  activateBraceletEntryEyebrow: {
+    color: Brand.accent,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 6,
   },
   activateBraceletEntryLabel: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
+    color: Brand.text,
+    fontSize: 18,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.2,
     marginBottom: 4,
-    letterSpacing: 0.2,
+    lineHeight: 22,
   },
   activateBraceletEntryTitle: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    lineHeight: 18,
+  },
+  activateBraceletEntryArrow: {
     color: Brand.accent,
-    fontSize: 15,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
+    fontSize: 28,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 28,
   },
 
   /* ── 8. Countdown (Apple-style: warmer accent-tint ipv hard navy,

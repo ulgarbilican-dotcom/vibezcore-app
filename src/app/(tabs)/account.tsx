@@ -1366,37 +1366,43 @@ export default function AccountScreen() {
             You'll stay signed in on this device
           </Text>
 
-          {/* Iter v149 (2026-06-25): bracelet-code activation entry-point
-              voor uitgelogde users. Bracelet-kopers (Kickstarter-backers,
-              webshop) krijgen een activatiecode bij verzending — die
-              code unlockt zowel bracelet als (afhankelijk van pakket)
-              1 jaar audio library zonder dat ze eerst een subscription
-              moeten kopen. Voorheen alleen zichtbaar NA signin → backers
-              dachten dat ze eerst account moesten kopen + dan code.
-              Tap routeert naar /activate-bracelet die zelf vraagt om
-              signin/signup zodat de grant aan een account gekoppeld
-              wordt. */}
-          <Pressable
-            style={{
-              marginTop: 18,
-              paddingTop: 14,
-              borderTopWidth: 1,
-              borderTopColor: Brand.border,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onPress={() => router.navigate('/activate-bracelet' as never)}
-            accessibilityLabel="Activate a bracelet code"
-          >
-            <Text style={{ fontSize: 13, color: Brand.textDim, fontFamily: BrandFonts.regular }}>
-              Have a bracelet code?{' '}
-            </Text>
-            <Text style={{ fontSize: 13, color: Brand.accent, fontFamily: BrandFonts.semibold }}>
-              Activate it →
-            </Text>
-          </Pressable>
         </View>
+
+        {/* Iter v149 v2 (2026-06-25): bracelet-code activation als EIGEN
+            prominent CARD onder de SIGN IN card — niet als dim link
+            verstopt onder "stay signed in". Bracelet wordt main product
+            (operator 2026-06-25): activatie-pad moet visueel gelijkwaardig
+            zijn aan de SIGN IN card zelf. Backers / bundle-owners zien
+            meteen waar ze hun code kunnen inwisselen.
+
+            Doelgroep: 2 types bracelet-owners
+            - Solo: code unlockt alleen bracelet
+            - Bundle: code unlockt bracelet + 1 jaar audio library
+
+            Route: /activate-bracelet handelt zelf signin/signup voor de
+            code-stap af. */}
+        <Pressable
+          style={s.activateBraceletCard}
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+          accessibilityLabel="Activate a bracelet code"
+        >
+          <View style={s.activateBraceletCardInner}>
+            <View style={s.activateBraceletCardTextWrap}>
+              <Text style={s.activateBraceletCardEyebrow}>
+                Already have one
+              </Text>
+              <Text style={s.activateBraceletCardLabel}>
+                Activate your bracelet
+              </Text>
+              <Text style={s.activateBraceletCardSub}>
+                Enter your code to unlock your bracelet
+                {'\n'}
+                Bundle owners also get 1 year of audio
+              </Text>
+            </View>
+            <Text style={s.activateBraceletCardArrow}>→</Text>
+          </View>
+        </Pressable>
 
         {/* "or get started" divider */}
         <View style={s.orDivider}>
@@ -1683,6 +1689,61 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 18,
     marginBottom: 18,
+  },
+  /* Iter v149 v2 (2026-06-25): bracelet-code activate als eigen prominent
+     card — gelijkwaardig aan SIGN IN card. Accent border + glow zodat
+     bracelet-owners het meteen vinden. Operator-feedback: bracelet wordt
+     main product, niet verstoppen onder dim link. */
+  activateBraceletCard: {
+    backgroundColor: 'rgba(58,143,255,0.10)',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,143,255,0.55)',
+    marginBottom: 18,
+    shadowColor: '#3a8fff',
+    shadowOpacity: 0.20,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  activateBraceletCardInner: {
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activateBraceletCardTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  activateBraceletCardEyebrow: {
+    color: Brand.accent,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  activateBraceletCardLabel: {
+    color: Brand.text,
+    fontSize: 17,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+    lineHeight: 21,
+  },
+  activateBraceletCardSub: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    lineHeight: 17,
+  },
+  activateBraceletCardArrow: {
+    color: Brand.accent,
+    fontSize: 26,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 26,
   },
   authCardLabel: {
     color: 'rgba(255,255,255,0.55)',
