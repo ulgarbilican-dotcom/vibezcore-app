@@ -1292,7 +1292,7 @@ export default function AccountScreen() {
               ]}
             />
             <Text style={s.productStatusLabel}>
-              EARLY BIRD · LAUNCHING 1 AUG
+              EARLY BIRD · LAUNCHING 1 SEPT
             </Text>
           </View>
           <Text style={s.productTitle}>Smart Bead Bracelet</Text>

@@ -1637,7 +1637,7 @@ export default function BraceletScreen() {
             de tijd-urgency ziet vóór 'ie de pricing-keuze maakt. */}
         <View style={s.timerWrap}>
           <Text style={s.timerLabel}>
-            KICKSTARTER LAUNCH — 1 AUGUST 2026
+            KICKSTARTER LAUNCH — 1 SEPTEMBER 2026
           </Text>
           {cd ? (
             <View style={s.timerBlocks}>
