@@ -1816,6 +1816,23 @@ export default function BraceletScreen() {
             <Text style={s.activateBraceletEntryArrow}>→</Text>
           </View>
         </Pressable>
+
+        {/* Iter v149 v3 (2026-06-25): preview-CTA voor uitgelogde users —
+            geen sign-in wall, gewoon verkennen wat de 5 states doen.
+            Operator-feedback punt 1. Discreter dan de Activate-card omdat
+            het info-only is, geen actie. */}
+        <Pressable
+          style={s.previewBraceletEntry}
+          onPress={() => router.push('/bracelet-preview' as never)}
+          accessibilityLabel="See how the bracelet works"
+        >
+          <Text style={s.previewBraceletEntryText}>
+            Just curious?{' '}
+            <Text style={s.previewBraceletEntryLink}>
+              See how it works →
+            </Text>
+          </Text>
+        </Pressable>
         </>
         )}
 
@@ -3634,6 +3651,23 @@ const s = StyleSheet.create({
     fontSize: 28,
     fontFamily: BrandFonts.regular,
     lineHeight: 28,
+  },
+  /* Iter v149 v3: 'See how it works' preview-link. Discreter dan
+     activate-card omdat het info-only is. */
+  previewBraceletEntry: {
+    marginTop: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  previewBraceletEntryText: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+  },
+  previewBraceletEntryLink: {
+    color: Brand.accent,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
   },
 
   /* ── 8. Countdown (Apple-style: warmer accent-tint ipv hard navy,

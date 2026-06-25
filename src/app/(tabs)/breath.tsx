@@ -25,6 +25,10 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
+  setBreathSessionActive,
+  clearBreathSession,
+} from '@/services/breath-session-state';
+import {
   addBreathSession,
   calculateStreak,
   useBreathHistory,
@@ -428,12 +432,25 @@ export default function BreathScreen() {
     [runPhase],
   );
 
+  /* Iter v149 v3 (2026-06-25): ref naar cleanupSession zodat startSession
+     een stable onStop callback aan de global breath-session state kan
+     geven die latere re-renders overleeft. */
+  const cleanupSessionRef = useRef<() => void>(() => {});
+
   const startSession = useCallback(() => {
     runningRef.current = true;
     setRunning(true);
     roundRef.current = 1;
     setRoundNum(1);
     runPhase(current, 'inhale');
+    /* Registreer sessie in global state — root-layout toont mini-control
+       wanneer user wegnavigeert. */
+    setBreathSessionActive({
+      patternKey: current.key,
+      patternName: current.name,
+      patternColor: current.color,
+      onStop: () => cleanupSessionRef.current(),
+    });
   }, [current, runPhase]);
 
   /* Interne cleanup — geen save, geen modal. Wordt gedeeld door manual
@@ -447,6 +464,10 @@ export default function BreathScreen() {
     Vibration.cancel();
     /* v185: stop ongoing voice-cue bij elke vorm van session-einde. */
     try { stopVoice(); } catch {}
+    /* Iter v149 v3 (2026-06-25): wis de global session zodat de mini-
+       control verdwijnt. Veilig om hier te doen — cleanupSession wordt
+       altijd aangeroepen bij sessie-einde (manual, natural, unmount). */
+    clearBreathSession();
     Animated.parallel([
       Animated.timing(scaleAnim, { toValue: CIRCLE_MIN, duration: 500, useNativeDriver: true }),
       Animated.timing(haloAnim, { toValue: HALO_MIN, duration: 500, useNativeDriver: true }),
@@ -463,6 +484,14 @@ export default function BreathScreen() {
   useEffect(() => {
     if (!running) setPendingSwitchKey(null);
   }, [running]);
+
+  /* Iter v149 v3: houdt cleanupSessionRef in sync met de huidige
+     cleanupSession-closure zodat de stable onStop-callback (gebruikt
+     door global breath-session-state's mini-control) altijd de meest
+     recente cleanup uitvoert. */
+  useEffect(() => {
+    cleanupSessionRef.current = cleanupSession;
+  }, [cleanupSession]);
 
   /* Iter 9dq v161: confirm-handler voor de switch-banner. Stopt huidige
      sessie (zelfde flow als onStopPressed → partial in history), switcht

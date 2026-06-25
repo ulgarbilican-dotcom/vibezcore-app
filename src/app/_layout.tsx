@@ -21,6 +21,7 @@
 
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
+import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
@@ -322,6 +323,13 @@ export default function RootLayout() {
           name="bracelet-control"
           options={{ title: 'Bracelet', headerBackTitle: 'Back' }}
         />
+        {/* Iter v149 v3 (2026-06-25): preview-screen voor uitgelogde
+            users die de 5 bracelet-states willen verkennen zonder eerst
+            een account te hoeven aanmaken. */}
+        <Stack.Screen
+          name="bracelet-preview"
+          options={{ title: 'Preview', headerBackTitle: 'Back' }}
+        />
         {/* `bracelet-history` — sub-screen voor sessie-overzicht. Push
             vanaf bracelet-control idle (history-knop). */}
         <Stack.Screen
@@ -448,6 +456,11 @@ export default function RootLayout() {
           Apart van WelcomeBackPopup (die over audio-resume gaat).
           Subscription-relevant copy + send-feedback link. */}
       <WelcomeBackWarrior />
+
+      {/* Iter v149 v3 (2026-06-25): floating breath mini-control —
+          verschijnt wanneer een breath-sessie loopt en user is niet op de
+          /breath route. Tap → naar breath-tab, X → stop sessie. */}
+      <BreathMiniControl />
       </View>
     </ErrorBoundary>
   );

@@ -68,6 +68,7 @@ import {
   playBraceletCompletionCue,
   stopBraceletVoice,
 } from '@/services/bracelet-voice';
+import { playBreathCue, playCompletionCue as playBreathCompletionCue } from '@/services/breath-voice';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   useBraceletOwner,
@@ -2445,6 +2446,28 @@ function BreathworkStrip({
     let currentCycle = 0;
     let phaseIdx = 0;
 
+    /* Iter v149 v3 (2026-06-25): voice-cue per phase, identiek aan
+       breath tab. Operator-feedback punt 6: gedeelde stem + dezelfde
+       cue-tekst zodat breath in bracelet-sessie identiek aanvoelt als
+       breath-tab solo. Toggle via Settings → Voice cues (gedeeld). */
+    const exhaleVia: 'nose' | 'mouth' =
+      protocol.kind === '478' || protocol.kind === 'sigh' ? 'mouth' : 'nose';
+
+    const playPhaseCue = (ph: Phase) => {
+      if (ph === 'in' || ph === 'in-left' || ph === 'in-right' || ph === 'in-topup') {
+        playBreathCue('inhale', exhaleVia);
+      } else if (ph === 'hold-in') {
+        playBreathCue('hold-in', exhaleVia);
+      } else if (ph === 'hold-out') {
+        playBreathCue('hold-out', exhaleVia);
+      } else if (ph === 'out' || ph === 'out-left' || ph === 'out-right') {
+        playBreathCue('exhale', exhaleVia);
+      }
+    };
+
+    /* Initial cue voor eerste phase. */
+    playPhaseCue(firstPhase);
+
     const advance = () => {
       if (!active) return;
       phaseIdx += 1;
@@ -2453,6 +2476,18 @@ function BreathworkStrip({
         currentCycle += 1;
         if (currentCycle >= protocol.cycles) {
           setPhase('done');
+          /* Iter v149 v3: completion-cue mapped op bracelet-mode (zelfde
+             5 modes als bracelet-voice maar via breath-voice's eigen
+             completion files). BraceletMode-index = BreathKey-index in
+             practice — Boost=0=boost, Beta=1=focus, Alpha=2=calm,
+             Theta=3=clarity, Delta=4=rest. */
+          const breathKey: 'boost' | 'focus' | 'calm' | 'clarity' | 'rest' =
+            mode === 0 ? 'boost'
+            : mode === 1 ? 'focus'
+            : mode === 2 ? 'calm'
+            : mode === 3 ? 'clarity'
+            : 'rest';
+          playBreathCompletionCue(breathKey);
           return;
         }
         phaseIdx = 0;
@@ -2460,6 +2495,7 @@ function BreathworkStrip({
       }
       const nextPhase = phaseSequence[phaseIdx];
       setPhase(nextPhase);
+      playPhaseCue(nextPhase);
       setTimeout(advance, phaseDurationMs(nextPhase));
     };
 
