@@ -226,7 +226,11 @@ export default function SubscribeScreen() {
       if (cancelled) return;
       if (lastEmail) {
         setEmail(lastEmail);
-        setMode('signin');
+        /* Iter v150 (2026-06-25): pre-fill email maar BLIJF in signup-mode
+           omdat user via pricing CTA komt (intent = kopen, niet inloggen).
+           Operator-feedback: 'Sign in to subscribe' suggereerde verkeerd
+           dat hij MOET inloggen. Tabs bovenaan laten hem alsnog switchen
+           als hij wel een bestaand account heeft. */
       }
     })();
     return () => {
@@ -808,16 +812,51 @@ export default function SubscribeScreen() {
       >
         {OrderSummary}
 
-        <Text style={s.heading}>
-          {mode === 'signup'
-            ? 'Create your account to subscribe'
-            : 'Sign in to subscribe'}
-        </Text>
+        {/* Iter v150 (2026-06-25): operator-feedback — copy was verwarrend
+            voor users die via pricing CTA komen ("ik kom om te kopen,
+            waarom moet ik inloggen?"). Nu één duidelijke heading +
+            prominente mode-tabs zodat user direct ziet dat er twee
+            paden zijn: nieuwe account OF bestaande. */}
+        <Text style={s.heading}>One step from your subscription</Text>
         <Text style={s.sub}>
-          {mode === 'signup'
-            ? 'One account to access your audio across all your devices.'
-            : 'Welcome back — sign in to continue with checkout.'}
+          Create a new account or sign in to your existing one. We need
+          this to link your purchase to your library.
         </Text>
+
+        <View style={s.modeTabsWrap}>
+          <Pressable
+            style={[s.modeTab, mode === 'signup' && s.modeTabActive]}
+            onPress={() => {
+              setErrMsg(null);
+              setMode('signup');
+            }}
+          >
+            <Text
+              style={[
+                s.modeTabText,
+                mode === 'signup' && s.modeTabTextActive,
+              ]}
+            >
+              New account
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[s.modeTab, mode === 'signin' && s.modeTabActive]}
+            onPress={() => {
+              setErrMsg(null);
+              setMode('signin');
+            }}
+          >
+            <Text
+              style={[
+                s.modeTabText,
+                mode === 'signin' && s.modeTabTextActive,
+              ]}
+            >
+              I have an account
+            </Text>
+          </Pressable>
+        </View>
 
         {/* Iter v142: Social sign-in knoppen (Google / Apple).
             Bovenaan zodat 't de eerste optie is — één tap, geen
@@ -964,19 +1003,10 @@ export default function SubscribeScreen() {
           </Text>
         </Pressable>
 
-        <Pressable
-          style={s.linkBtn}
-          onPress={() => {
-            setErrMsg(null);
-            setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
-          }}
-        >
-          <Text style={s.linkText}>
-            {mode === 'signup'
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Create one"}
-          </Text>
-        </Pressable>
+        {/* Iter v150: toggle-link onderaan weggehaald — mode-tabs bovenaan
+            zijn nu de primaire wisselaar. Voorkomt twee plekken die
+            hetzelfde doen (operator-feedback: 'is heel onduidelijk
+            deze sectie'). */}
 
         {LegalLine}
         {RestoreLink}
@@ -1047,6 +1077,33 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.4,
     marginBottom: 8,
+  },
+  /* Iter v150 (2026-06-25): mode-tabs voor signup/signin keuze. */
+  modeTabsWrap: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 4,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  modeTab: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 9,
+    alignItems: 'center',
+  },
+  modeTabActive: {
+    backgroundColor: Brand.accent,
+  },
+  modeTabText: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.2,
+  },
+  modeTabTextActive: {
+    color: '#ffffff',
   },
   sub: {
     color: Brand.textDim,

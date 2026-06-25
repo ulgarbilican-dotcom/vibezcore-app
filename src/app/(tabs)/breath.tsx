@@ -28,6 +28,7 @@ import {
   setBreathSessionActive,
   clearBreathSession,
 } from '@/services/breath-session-state';
+import { useSetting } from '@/utils/settings';
 import {
   addBreathSession,
   calculateStreak,
@@ -234,7 +235,13 @@ export default function BreathScreen() {
   const [vibeOn, setVibeOn] = useState(true);
   /* v174: voice guidance default ON (operator wil "wereldklasse" feel —
      voice is de single biggest missing piece volgens jouw eigen audit). */
-  const [voiceOn, setVoiceOn] = useState(true);
+  /* Iter v150 (2026-06-25): voice toggle = Settings → voiceCues (single
+     source of truth). Voorheen had breath.tsx een lokale voiceOn state die
+     conflicteerde met Settings — operator zag 'voice cues' off in Settings
+     terwijl in een session de breath voice nog aanstond. Nu wijzen alle
+     toggles (Settings, breath-tab pill, bracelet active session) naar
+     dezelfde useSetting('voiceCues'). */
+  const [voiceOn, setVoiceOn] = useSetting('voiceCues');
   const [roundNum, setRoundNum] = useState(0);
   const [secsLeft, setSecsLeft] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -655,7 +662,7 @@ export default function BreathScreen() {
   }, []);
 
   const toggleVoice = useCallback(() => {
-    setVoiceOn((v) => !v);
+    setVoiceOn(!voiceOn);
   }, []);
 
   const toggleVibe = useCallback(() => {
