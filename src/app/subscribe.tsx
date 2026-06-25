@@ -524,13 +524,81 @@ export default function SubscribeScreen() {
   }
 
   if (phase === 'error') {
-    /* Iter v144: recovery-flow. Als user TOCH is ingelogd betekent dat
-       signup/signin geslaagd is en de IAP-stap faalde. Het account
-       bestaat dus — user moet weten dat hij niet verloren is + opties
-       krijgen om verder te gaan (browse free, retry later, of uit-
-       loggen om met een andere email opnieuw te beginnen als de
-       eerste poging een typo was). */
+    /* Iter v146 (2026-06-25): pro UX-fix na operator-feedback.
+       Twee compleet verschillende paden gemerged onder 'phase=error':
+
+       Pad A — signup/signin SLAAGDE, IAP faalde:
+         Dit is GEEN error voor de user — account bestaat, app werkt.
+         Framing: success/notification ('You're in!') ipv error.
+         Primary CTA = direct waarde geven (Start listening) ipv user
+         dwingen tot retry-loop die alleen het probleem reproduceert.
+         Retry-subscription wordt secondary text-link voor de wie het
+         meteen opnieuw wil. Industry pattern (Spotify/Netflix doen
+         dit identiek bij payment failure na account create).
+
+       Pad B — IAP faalde ZONDER voorafgaande account-creatie:
+         Klassieke error: niets is gelukt. Behoud error-framing met
+         retry als primary. */
     const wasSignedIn = signedIn === true;
+
+    if (wasSignedIn) {
+      /* Pad A — success framing */
+      return (
+        <SafeAreaView style={s.root}>
+          <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+          <View style={s.center}>
+            <View style={s.checkCircle}>
+              <Text style={s.checkText}>✓</Text>
+            </View>
+            <Text style={s.busyTitle}>You're in</Text>
+            <Text style={s.busySub}>
+              Your account is ready{signedInEmail ? ` — signed in as ${signedInEmail}` : ''}.
+              {'\n\n'}
+              We couldn't activate your subscription right now. Your account
+              is saved and you can start listening to free sessions, or try
+              the upgrade again whenever you're ready.
+            </Text>
+
+            {errDebug && (
+              <Text selectable style={s.debugInfo}>
+                {errDebug}
+              </Text>
+            )}
+
+            <Pressable
+              style={s.btnPrimary}
+              onPress={() => router.replace('/')}
+            >
+              <Text style={s.btnPrimaryText}>Start listening</Text>
+            </Pressable>
+
+            <Pressable
+              style={s.linkBtn}
+              onPress={() => {
+                setErrMsg(null);
+                setErrDebug(null);
+                setPhase('form');
+              }}
+            >
+              <Text style={s.linkText}>Retry subscription</Text>
+            </Pressable>
+
+            <Pressable
+              style={s.linkBtn}
+              onPress={() => {
+                void Linking.openURL(
+                  `mailto:${SUPPORT_EMAIL}?subject=VIBEZCORE%20subscribe%20issue`,
+                );
+              }}
+            >
+              <Text style={s.linkText}>Contact support</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    /* Pad B — klassieke error, niets gelukt */
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
@@ -538,31 +606,13 @@ export default function SubscribeScreen() {
           <View style={s.errorCircle}>
             <Text style={s.errorText}>!</Text>
           </View>
-          <Text style={s.busyTitle}>
-            {wasSignedIn ? 'Subscription not activated' : 'Something went wrong'}
-          </Text>
+          <Text style={s.busyTitle}>Something went wrong</Text>
           <Text style={s.busySub}>{errMsg ?? 'Please try again.'}</Text>
 
-          {/* Iter v145: raw debug-info zichtbaar zodat operator / support
-              meteen de IAP-error-code kan zien. Klein, monospace, dim —
-              niet primair UI maar wel selecteerbaar voor copy-paste. */}
           {errDebug && (
             <Text selectable style={s.debugInfo}>
               {errDebug}
             </Text>
-          )}
-
-          {wasSignedIn && signedInEmail && (
-            <View style={s.recoveryNote}>
-              <Text style={s.recoveryNoteLabel}>YOUR ACCOUNT</Text>
-              <Text style={s.recoveryNoteEmail} numberOfLines={1}>
-                {signedInEmail}
-              </Text>
-              <Text style={s.recoveryNoteText}>
-                Your account is created. You can browse free sessions now and
-                try Subscribe again later from the Account tab.
-              </Text>
-            </View>
           )}
 
           <Pressable
@@ -571,24 +621,10 @@ export default function SubscribeScreen() {
               setErrMsg(null);
               setErrDebug(null);
               setPhase('form');
-              if (wasSignedIn) {
-                /* Bij re-try na success-then-IAP-fail willen we direct
-                   naar de signed-in review-flow, niet terug naar de
-                   signup form (account bestaat al). */
-              }
             }}
           >
             <Text style={s.btnPrimaryText}>Try again</Text>
           </Pressable>
-
-          {wasSignedIn && (
-            <Pressable
-              style={s.linkBtn}
-              onPress={() => router.replace('/')}
-            >
-              <Text style={s.linkText}>Browse free sessions instead</Text>
-            </Pressable>
-          )}
 
           <Pressable
             style={s.linkBtn}
