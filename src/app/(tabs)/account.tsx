@@ -77,6 +77,12 @@ import {
     login,
     signup,
 } from '../../services/auth';
+import {
+    isAppleSignInAvailable,
+    isGoogleSignInAvailable,
+    signInWithApple,
+    signInWithGoogle,
+} from '@/services/social-auth';
 
 type Mode = 'login' | 'signup';
 
@@ -459,6 +465,65 @@ export default function AccountScreen() {
      verplichten zo'n knop voor IAP-apps zodat users hun sub kunnen
      herstellen na reinstall of op een nieuw toestel. */
   const [restoring, setRestoring] = useState(false);
+
+  /* Iter v149 (2026-06-25): social sign-in op de Account-tab login,
+     mirror van subscribe.tsx. Eerder was social-auth alleen via
+     /subscribe → inconsistent voor users die via Account willen inloggen
+     zonder eerst een pricing-card te tikken. */
+  const googleAvailable = isGoogleSignInAvailable();
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const a = await isAppleSignInAvailable();
+      if (!cancelled) setAppleAvailable(a);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onGoogleSignIn = async () => {
+    setMsg(null);
+    setBusy(true);
+    try {
+      const r = await signInWithGoogle();
+      if (!r.ok) {
+        if (r.reason === 'cancelled') return;
+        setMsg(r.error);
+        return;
+      }
+      setEmail(r.email || 'Signed in');
+      setPwInput('');
+      refreshSubscription();
+      await refreshUserBucket();
+      await clearLastPlayed();
+      clearSignedUrlCache();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onAppleSignIn = async () => {
+    setMsg(null);
+    setBusy(true);
+    try {
+      const r = await signInWithApple();
+      if (!r.ok) {
+        if (r.reason === 'cancelled') return;
+        setMsg(r.error);
+        return;
+      }
+      setEmail(r.email || 'Signed in');
+      setPwInput('');
+      refreshSubscription();
+      await refreshUserBucket();
+      await clearLastPlayed();
+      clearSignedUrlCache();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const onRestorePurchases = async () => {
     if (restoring) return;
@@ -1103,6 +1168,81 @@ export default function AccountScreen() {
         <View style={s.authCard}>
           <Text style={s.authCardLabel}>SIGN IN</Text>
 
+          {/* Iter v149: social sign-in. Boven email/password zoals
+              subscribe.tsx — één tap, geen wachtwoord. Apple HIG +
+              Google branding. Werkt voor zowel sign-in als signup
+              (Supabase grant_type=id_token maakt-of-vindt user). */}
+          {(googleAvailable || appleAvailable) && (
+            <View style={{ marginBottom: 14 }}>
+              {appleAvailable && (
+                <Pressable
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 48,
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    marginBottom: 10,
+                    backgroundColor: '#000000',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.18)',
+                  }}
+                  onPress={() => void onAppleSignIn()}
+                >
+                  <Text style={{ color: '#ffffff', fontSize: 18, marginRight: 10 }}></Text>
+                  <Text style={{ color: '#ffffff', fontSize: 14, fontFamily: BrandFonts.semibold }}>
+                    Continue with Apple
+                  </Text>
+                </Pressable>
+              )}
+              {googleAvailable && (
+                <Pressable
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 48,
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    backgroundColor: '#ffffff',
+                  }}
+                  onPress={() => void onGoogleSignIn()}
+                >
+                  <Text style={{ color: '#4285F4', fontSize: 18, fontFamily: BrandFonts.extrabold, marginRight: 10 }}>
+                    G
+                  </Text>
+                  <Text style={{ color: '#1f1f1f', fontSize: 14, fontFamily: BrandFonts.semibold }}>
+                    Continue with Google
+                  </Text>
+                </Pressable>
+              )}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginTop: 14,
+                  marginBottom: 4,
+                }}
+              >
+                <View style={{ flex: 1, height: 1, backgroundColor: Brand.border }} />
+                <Text
+                  style={{
+                    marginHorizontal: 12,
+                    color: Brand.textDim,
+                    fontSize: 11,
+                    fontFamily: BrandFonts.semibold,
+                    letterSpacing: 1.2,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  or
+                </Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: Brand.border }} />
+              </View>
+            </View>
+          )}
+
           <Text style={s.inputLabel}>Email</Text>
           <TextInput
             style={s.input}
@@ -1225,6 +1365,37 @@ export default function AccountScreen() {
           <Text style={s.staySignedIn}>
             You'll stay signed in on this device
           </Text>
+
+          {/* Iter v149 (2026-06-25): bracelet-code activation entry-point
+              voor uitgelogde users. Bracelet-kopers (Kickstarter-backers,
+              webshop) krijgen een activatiecode bij verzending — die
+              code unlockt zowel bracelet als (afhankelijk van pakket)
+              1 jaar audio library zonder dat ze eerst een subscription
+              moeten kopen. Voorheen alleen zichtbaar NA signin → backers
+              dachten dat ze eerst account moesten kopen + dan code.
+              Tap routeert naar /activate-bracelet die zelf vraagt om
+              signin/signup zodat de grant aan een account gekoppeld
+              wordt. */}
+          <Pressable
+            style={{
+              marginTop: 18,
+              paddingTop: 14,
+              borderTopWidth: 1,
+              borderTopColor: Brand.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onPress={() => router.navigate('/activate-bracelet' as never)}
+            accessibilityLabel="Activate a bracelet code"
+          >
+            <Text style={{ fontSize: 13, color: Brand.textDim, fontFamily: BrandFonts.regular }}>
+              Have a bracelet code?{' '}
+            </Text>
+            <Text style={{ fontSize: 13, color: Brand.accent, fontFamily: BrandFonts.semibold }}>
+              Activate it →
+            </Text>
+          </Pressable>
         </View>
 
         {/* "or get started" divider */}
