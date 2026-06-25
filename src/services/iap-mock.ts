@@ -125,6 +125,13 @@ export class MockIAPProvider implements IAPProvider {
     };
   }
 
+  /* Iter v148: MockIAP heeft geen native acknowledge — no-op. Symmetrie
+     met IAPProvider-interface zodat de useIAP hook geen platform-check
+     hoeft te doen. */
+  async acknowledge(_transactionId: string): Promise<void> {
+    if (__DEV__) console.log('[MockIAP] acknowledge (no-op):', _transactionId);
+  }
+
   async teardown(): Promise<void> {
     this.listeners.clear();
     this.initialized = false;

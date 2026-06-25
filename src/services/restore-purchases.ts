@@ -56,7 +56,10 @@ export async function restorePurchases(): Promise<RestoreResult> {
     }
 
     let restoredCount = 0;
-    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    /* Iter v148 (2026-06-25): platform string + receipt field name moeten
+       matchen met backend contract — 'apple'/'google' (niet 'ios'/'android')
+       en `receipt` (niet `receiptToken`). Zelfde fix als subscribe.tsx. */
+    const platform = Platform.OS === 'ios' ? 'apple' : 'google';
 
     for (const p of purchases) {
       try {
@@ -71,7 +74,7 @@ export async function restorePurchases(): Promise<RestoreResult> {
             tier: p.tier,
             productId: p.productId,
             transactionId: p.transactionId,
-            receiptToken: p.receiptToken,
+            receipt: p.receiptToken,
           }),
         });
         if (res.ok) {

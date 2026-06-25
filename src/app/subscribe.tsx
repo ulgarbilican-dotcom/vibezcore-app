@@ -28,6 +28,11 @@
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
 import { refreshSubscription } from '@/hooks/useSubscription';
+import { getIAP } from '@/services/iap';
+import {
+  queuePendingVerify,
+  verifyWithRetry,
+} from '@/services/iap-recovery';
 import { restorePurchases } from '@/services/restore-purchases';
 import {
   getLastLoginEmail,
@@ -283,55 +288,72 @@ export default function SubscribeScreen() {
 
   const verifyAndComplete = async (purchaseData: IapPurchase) => {
     setPhase('verifying');
-    try {
-      /* Receipt server-side valideren via backend /api/iap-verify.
-         Backend valideert bij Apple/Google, upsert subscriptions-row,
-         returnt {active, tier, valid_until, will_renew, platform}.
-         JWT moet meegestuurd (user moet ingelogd zijn op dit punt — anders
-         had het signup-flow al gefaald). Failure → error-state met
-         support-fallback (gebruiker kan support contacteren met
-         transactionId voor handmatige fix). */
-      const token = await getToken();
-      if (!token) {
-        throw new Error('Not authenticated — please sign in again');
+
+    /* Iter v148 (2026-06-25): drie-laagse robuustheid voor de aankoop-
+       verificatie zodat een transient hiccup nooit een betalende user
+       achterlaat zonder PRO.
+
+       Laag 1 — verifyWithRetry: inline 3x retry met exponential backoff
+                                 (1s, 2s, 4s). Dekt 95% van failures.
+       Laag 2 — queuePendingVerify: bij retriable final failure → opslaan
+                                    in AsyncStorage. App-startup recovery
+                                    pakt het later op.
+       Laag 3 — acknowledge: pas finishTransaction() NA succesvolle
+                             backend activate. Behoudt Google Play's
+                             eigen retry-mechanisme als laatste vangnet. */
+    const outcome = await verifyWithRetry(purchaseData);
+
+    if (outcome.ok && outcome.active) {
+      /* Server-side actief → bevestig bij store zodat de purchase niet
+         na 3 dagen wordt gerefund. Non-fatal als acknowledge faalt:
+         backend heeft 'm al, user is PRO. */
+      try {
+        await getIAP().acknowledge(purchaseData.transactionId);
+      } catch {
+        /* swallow */
       }
-      const res = await fetch(`${VZ_BACKEND_URL}/api/iap-verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          platform: Platform.OS === 'ios' ? 'ios' : 'android',
-          tier: purchaseData.tier,
-          productId: purchaseData.productId,
-          transactionId: purchaseData.transactionId,
-          receiptToken: purchaseData.receiptToken,
-        }),
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        if (__DEV__) console.warn('[subscribe] verify HTTP error:', res.status, text);
-        throw new Error(`Verification failed (${res.status})`);
-      }
-      const data = await res.json().catch(() => ({}));
-      if (data?.active !== true) {
-        throw new Error('Subscription was not activated server-side');
-      }
-      /* Triggert UI-refetch van /api/subscription-status — hele app ziet
-         nu dat user PRO is. */
       refreshSubscription();
       setPhase('done');
       setTimeout(() => router.replace('/'), 1200);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (__DEV__) console.warn('[subscribe] verify failed:', msg);
-      setErrMsg(
-        'Your purchase was completed but we could not activate it yet. Please contact support — we will set up your account within 24 hours.',
-      );
-      setErrDebug(`verify · ${msg}`);
-      setPhase('error');
+      return;
     }
+
+    /* Verify gefaald. Twee paden afhankelijk van retriable vs permanent. */
+    if (!outcome.ok && outcome.retriable) {
+      /* Transient failure (network, 5xx, timeout) → in queue voor app-
+         startup recovery. User ziet duidelijke message dat het later
+         vanzelf gefixt wordt — geen support-mail nodig. */
+      await queuePendingVerify(purchaseData);
+      if (__DEV__) {
+        console.warn(
+          '[subscribe] verify failed (retriable, queued):',
+          outcome.ok === false ? outcome.error : '(active=false)',
+        );
+      }
+      setErrMsg(
+        "Your purchase went through, but we couldn't confirm it just now. " +
+          "We'll finish setting up your subscription automatically the next " +
+          'time you open the app. No action needed.',
+      );
+      setErrDebug(
+        `verify · queued · ${outcome.ok === false ? outcome.error : 'inactive'}`,
+      );
+      setPhase('error');
+      return;
+    }
+
+    /* Permanent failure (4xx, bad receipt, replay attempt). Niet
+       retryen — sturen naar support. */
+    const errStr =
+      outcome.ok === false ? outcome.error : 'inactive';
+    if (__DEV__) console.warn('[subscribe] verify failed (permanent):', errStr);
+    setErrMsg(
+      'Your purchase was completed but we could not activate it. Please ' +
+        "contact support with your transaction ID — we'll fix this within " +
+        '24 hours.',
+    );
+    setErrDebug(`verify · permanent · ${errStr} · tx=${purchaseData.transactionId}`);
+    setPhase('error');
   };
 
   const onSubmit = async () => {

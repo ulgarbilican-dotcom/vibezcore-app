@@ -141,6 +141,20 @@ export interface IAPProvider {
    *  Returnt unsubscribe-functie. */
   onPurchase(callback: (purchase: IapPurchase) => void): () => void;
 
+  /** Iter v148 (2026-06-25): expliciete acknowledge na backend verify.
+   *  Roept native finishTransaction() / acknowledgePurchase() aan zodat
+   *  Google Play / Apple weten dat onze backend de aankoop heeft verwerkt.
+   *
+   *  KRITIEK: deze MOET binnen 3 dagen na de purchase aangeroepen worden,
+   *  anders refundt Google Play automatisch. Voorheen werd dit direct in
+   *  de purchaseUpdatedListener gedaan, vóór backend verify — daardoor
+   *  verloor Google Play z'n retry-mechanisme als verify daarna faalde.
+   *
+   *  Idempotent: dubbele acknowledge calls op zelfde transactionId zijn
+   *  no-ops. Errors worden geswallowed (de aankoop is bij ons al geldig
+   *  in de DB; acknowledge-failure is non-fatal voor de user). */
+  acknowledge(transactionId: string): Promise<void>;
+
   /** Sluit de native store-connectie. Roepen op app-unmount of bij
    *  expliciete teardown. Niet kritisch — OS ruimt anders op. */
   teardown(): Promise<void>;

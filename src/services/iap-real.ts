@@ -180,6 +180,10 @@ export class RealIAPProvider implements IAPProvider {
   private purchaseSub: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private errorSub: any = null;
+  /* Iter v148: bewaar raw-purchase-objecten per transactionId zodat
+     acknowledge() (na backend verify) kan finishTransaction() aanroepen. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private pendingPurchases = new Map<string, any>();
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -187,6 +191,15 @@ export class RealIAPProvider implements IAPProvider {
     this.purchaseSub = purchaseUpdatedListener((purchase) => {
       const mapped = mapToIapPurchase(purchase, false);
       if (mapped) {
+        /* Iter v148 (2026-06-25, KRITIEKE FIX): bewaar raw-purchase
+           naar mapped so caller kan finishTransaction() expliciet
+           aanroepen NA backend verify. Voorheen werd finishTransaction
+           direct hier gecalled, wat het Google Play retry-mechanisme
+           verbrak: als backend verify daarna faalde, dan was Google
+           Play al "acknowledged" en de user kreeg geen refund-retry +
+           wij hadden geen subscription. Nu: finish pas na succesvolle
+           server-side activation. */
+        this.pendingPurchases.set(mapped.transactionId, purchase);
         this.purchaseListeners.forEach((cb) => {
           try {
             cb(mapped);
@@ -195,10 +208,6 @@ export class RealIAPProvider implements IAPProvider {
           }
         });
       }
-      /* finishTransaction acknowledged het purchase bij de store. Voor
-         non-consumables (subscriptions) is dat verplicht binnen 3 dagen
-         anders refundt de store automatisch. */
-      finishTransaction({ purchase, isConsumable: false }).catch(() => {});
     });
     this.errorSub = purchaseErrorListener((err: PurchaseError) => {
       if (__DEV__) console.warn('[RealIAP] purchase error:', err);
@@ -335,6 +344,28 @@ export class RealIAPProvider implements IAPProvider {
     } catch (e: any) {
       const mapped = mapErrorCode(e?.code, e?.message ?? String(e));
       return { ok: false, error: mapped };
+    }
+  }
+
+  /** Iter v148 (2026-06-25): finishTransaction NA backend verify, niet
+   *  ervoor. Caller (subscribe.tsx verifyAndComplete) roept dit aan
+   *  zodra de receipt server-side gevalideerd + subscription active is.
+   *
+   *  Bewaarde raw-purchase wordt uit pendingPurchases gehaald en
+   *  doorgegeven aan finishTransaction. Bij ontbrekend object (race
+   *  condition, app-restart) doen we niets — Google Play retried dan
+   *  automatisch tot we het opnieuw zien. */
+  async acknowledge(transactionId: string): Promise<void> {
+    const raw = this.pendingPurchases.get(transactionId);
+    if (!raw) return;
+    try {
+      await finishTransaction({ purchase: raw, isConsumable: false });
+      this.pendingPurchases.delete(transactionId);
+    } catch (e) {
+      if (__DEV__) console.warn('[RealIAP] acknowledge failed:', e);
+      /* Non-fatal: backend heeft de aankoop al, user is PRO. Google
+         Play retried 'm gewoon de volgende keer dat onze app
+         purchaseUpdatedListener triggert. */
     }
   }
 

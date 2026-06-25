@@ -26,6 +26,7 @@ import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
+import { recoverOnStartup as iapRecoverOnStartup } from '@/services/iap-recovery';
 import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
@@ -152,6 +153,18 @@ export default function RootLayout() {
 
   const ready =
     fontsLoaded && auth !== undefined && pendingAuthLink !== undefined;
+
+  /* Iter v148 (2026-06-25): IAP startup-recovery. Fire-and-forget
+     achtergrond-call die (a) pending verifies uit AsyncStorage drain't
+     en (b) een silent restorePurchases uitvoert. Zorgt dat een user die
+     z'n app sluit mid-verify, of die op een nieuw toestel installeert,
+     z'n PRO-toegang automatisch terugkrijgt zonder ergens te tikken.
+     Geblokt achter ready zodat we de auth-token-check al hebben gedaan
+     (recoverOnStartup zelf no-ops als er geen sessie is). */
+  useEffect(() => {
+    if (!ready) return;
+    void iapRecoverOnStartup();
+  }, [ready]);
 
   /* Iter 9dq (2026-06-02): redirect-guard. Voorheen kon de welcome-
      redirect-effect twee keer firen bij een snelle user: cold-start
