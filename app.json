@@ -124,7 +124,9 @@
       "eas": {
         "projectId": "8c47743c-4586-4790-91b5-a1a6508b8e7a"
       },
-      "googleWebClientId": "80535193832-hmkidpmb9ki274p5go7rhsli6fgcueht.apps.googleusercontent.com"
+      "googleWebClientId": "80535193832-hmkidpmb9ki274p5go7rhsli6fgcueht.apps.googleusercontent.com",
+      "revenuecatApiKeyAndroid": "goog_KyNEYIhvNNHzFWGdJeCPCmpPxWp",
+      "revenuecatApiKeyIos": ""
     },
     "owner": "ubili",
     "runtimeVersion": {

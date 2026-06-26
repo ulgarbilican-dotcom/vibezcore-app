@@ -29,6 +29,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import Purchases, {
   CustomerInfo,
   LOG_LEVEL,
@@ -50,12 +51,20 @@ import {
   tierFromProductId,
 } from './iap-contract';
 
-/** RevenueCat API keys per platform. Operator vult deze in via env-var
- *  of via app.json `extra` field. Bij ontbrekende key throwt init() —
- *  beter early-fail dan silent IAP-loop. */
-const ANDROID_KEY =
-  process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID ?? '';
-const IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '';
+/** RevenueCat Public SDK API keys per platform. Komen uit app.json
+ *  `extra` veld (via Constants.expoConfig.extra). Public keys zijn safe
+ *  om in client-side code te zitten — RevenueCat's docs bevestigen dit
+ *  expliciet voor goog_/appl_ prefixed Public SDK keys. (Secret API keys
+ *  zijn een aparte categorie, NIET deze.)
+ *  Bij ontbrekende key throwt init() — beter early-fail dan silent IAP-loop. */
+const extra =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (Constants.expoConfig?.extra as any) ??
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (Constants.manifestExtra as any) ??
+  {};
+const ANDROID_KEY: string = extra.revenuecatApiKeyAndroid ?? '';
+const IOS_KEY: string = extra.revenuecatApiKeyIos ?? '';
 
 /** Entitlement identifier zoals geconfigureerd in RevenueCat dashboard.
  *  Beide Monthly en Yearly products granten DEZE entitlement — zo praat
