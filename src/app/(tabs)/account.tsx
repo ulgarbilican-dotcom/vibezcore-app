@@ -1522,11 +1522,18 @@ export default function AccountScreen() {
           </View>
         </Pressable>
 
-        {/* "or get started" divider */}
-        <View style={s.orDivider}>
-          <View style={s.orLine} />
-          <Text style={s.orText}>or get started</Text>
-          <View style={s.orLine} />
+        {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
+            een echte sectie-header. Operator-feedback: 'sign up CTA om aan
+            te kopen is zeer onprofessioneel en volgt de flow niet — get
+            started moet onmiddellijk volgen na sign in voor geval user
+            geen abonnement heeft'.
+            Nieuwe styling: sectie-eyebrow + subline zoals andere screens. */}
+        <View style={s.getStartedHeader}>
+          <Text style={s.getStartedEyebrow}>NEW TO VIBEZCORE</Text>
+          <Text style={s.getStartedTitle}>Get started</Text>
+          <Text style={s.getStartedSub}>
+            Choose what fits — sign in is only for returning users.
+          </Text>
         </View>
 
         {/* ── PRODUCT CARDS — restructured iter 9dq v10 (2026-06-02) ──
@@ -2054,24 +2061,34 @@ const s = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  /* "or get started" divider tussen de twee cards. Hairlines + text. */
-  orDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    marginBottom: 18,
+  /* Iter v159 (2026-06-26): Get Started sectie-header — vervangt de
+     'or get started' divider. Operator: 'sign up CTA om aan te kopen
+     is zeer onprofessioneel — get started moet duidelijk en prominent
+     onmiddellijk volgen na sign in'. */
+  getStartedHeader: {
+    marginTop: 24,
+    marginBottom: 14,
+    paddingHorizontal: 4,
   },
-  orLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  orText: {
-    color: 'rgba(255,255,255,0.45)',
+  getStartedEyebrow: {
+    color: Brand.accent,
     fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.4,
-    paddingHorizontal: 12,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  getStartedTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  getStartedSub: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 20,
   },
   /* Iter 9lll — Audio btn wrapper voor "AVAILABLE NOW" badge. */
   audioBtnWrap: {
