@@ -77,7 +77,7 @@ type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 
    zag "upstream fetch failed" na tap op Get Yearly — niet acceptabel.
    Defensief: onbekende strings vallen terug op een veilige default ipv
    de raw error te tonen (kan tokens/IDs lekken). */
-const SUPPORT_EMAIL = 'info@vibezcore.com';
+const SUPPORT_URL = 'https://www.vibezcore.com/support';
 function friendlyError(raw: string | null | undefined): string {
   if (!raw) return 'Something went wrong. Please try again.';
   const t = String(raw).toLowerCase();
@@ -667,7 +667,7 @@ export default function SubscribeScreen() {
             style={s.linkBtn}
             onPress={() => {
               void Linking.openURL(
-                `mailto:${SUPPORT_EMAIL}?subject=VIBEZCORE%20subscribe%20issue`,
+                SUPPORT_URL,
               );
             }}
           >

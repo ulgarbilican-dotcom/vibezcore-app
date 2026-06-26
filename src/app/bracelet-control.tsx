@@ -2740,9 +2740,9 @@ function BreathworkStrip({
       case 'in-topup':
         return 'Top up — small breath in';
       case 'out':
-        if (protocol.kind === 'sigh') return 'Long exhale through your mouth';
+        if (protocol.kind === 'sigh') return 'Long exhale through mouth';
         return method.outVia === 'mouth'
-          ? 'Exhale through your mouth'
+          ? 'Exhale through mouth'
           : 'Exhale through your nose';
       case 'hold-in':
         return 'Hold';

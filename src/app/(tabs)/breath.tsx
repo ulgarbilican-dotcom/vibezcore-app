@@ -684,9 +684,16 @@ export default function BreathScreen() {
     : phase === 'exhale' ? 'Exhale'
     : 'Ready';
 
+  /* Iter v159 (2026-06-26): mouth-exhale verkort naar 'through mouth'
+     (zonder 'your') zodat de tekst korter past binnen snelle cyclus van
+     Boost (2-2 Bhastrika). Nose-exhale houdt 'through your nose' want
+     past wel binnen langzamere protocols. */
   const phaseVia =
     phase === 'inhale' ? `through your ${current.inhaleVia}`
-    : phase === 'exhale' ? `through your ${current.exhaleVia}`
+    : phase === 'exhale'
+      ? current.exhaleVia === 'mouth'
+        ? 'through mouth'
+        : `through your ${current.exhaleVia}`
     : '';
 
   const startBtnBg = running ? 'rgba(255,255,255,0.06)' : current.color;

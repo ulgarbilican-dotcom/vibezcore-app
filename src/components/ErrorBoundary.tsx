@@ -17,7 +17,9 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+
+const SUPPORT_URL = 'https://www.vibezcore.com/support';
 
 type Props = {
   children: React.ReactNode;
@@ -74,6 +76,17 @@ export class ErrorBoundary extends React.Component<Props, State> {
               accessibilityLabel="Try again"
             >
               <Text style={s.btnText}>Try again</Text>
+            </Pressable>
+            {/* Iter v159 (2026-06-26): Contact support knop → opent
+                webformulier op vibezcore.com/support. Niet meer email-app. */}
+            <Pressable
+              style={s.linkBtn}
+              onPress={() => {
+                void Linking.openURL(SUPPORT_URL);
+              }}
+              accessibilityLabel="Contact support"
+            >
+              <Text style={s.linkText}>Contact support</Text>
             </Pressable>
           </View>
         </View>
@@ -154,5 +167,15 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.3,
+  },
+  linkBtn: {
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  linkText: {
+    color: Brand.accent,
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.2,
   },
 });
