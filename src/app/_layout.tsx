@@ -28,6 +28,7 @@ import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import { recoverOnStartup as iapRecoverOnStartup } from '@/services/iap-recovery';
+import { clearSessionIfBuildChanged } from '@/services/version-tracker';
 import { setVoiceEnabled as setBreathVoiceEnabled } from '@/services/breath-voice';
 import { setVoiceEnabled as setBraceletVoiceEnabled } from '@/services/bracelet-voice';
 import { getSetting, ensureSettingsLoaded, useSetting } from '@/utils/settings';
@@ -138,6 +139,14 @@ export default function RootLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      /* Iter v159 (2026-06-26): force fresh state bij build-upgrade.
+         clearSessionIfBuildChanged() compares nativeBuildVersion met de
+         vorige opgeslagen waarde. Bij mismatch (incl. eerste install)
+         wordt de Supabase session + email-cache gewist. Voorkomt het
+         'oude email automatisch ingevuld na update'-effect. MOET vóór
+         getToken() lopen zodat het verse antwoord wordt opgehaald. */
+      await clearSessionIfBuildChanged();
+
       /* Iter 9as (2026-05-31): wacht óók op dev-override cache zodat
          de welcome-redirect-check daar rekening mee kan houden. In prod
          is awaitDevUserOverrideLoaded() een no-op. */

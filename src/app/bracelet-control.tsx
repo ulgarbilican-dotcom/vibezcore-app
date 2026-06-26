@@ -2926,7 +2926,18 @@ function BreathworkStrip({
               style={[s.bwCompletionBtn, { backgroundColor: meta.color }]}
               onPress={() => setCompletionVisible(false)}
             >
-              <Text style={s.bwCompletionBtnText}>✓ I&apos;M DONE</Text>
+              {/* Iter v159 (2026-06-26): luminance-aware text color. Voor
+                  lichte mode-colors (Boost = wit #FFFFFF) was de hardcoded
+                  witte tekst onzichtbaar. Nu zwarte tekst op lichte
+                  backgrounds, witte tekst op donkere. */}
+              <Text
+                style={[
+                  s.bwCompletionBtnText,
+                  isLightColor(meta.color) && { color: '#0a0a0a' },
+                ]}
+              >
+                ✓ I&apos;M DONE
+              </Text>
             </Pressable>
           </Pressable>
         </Pressable>

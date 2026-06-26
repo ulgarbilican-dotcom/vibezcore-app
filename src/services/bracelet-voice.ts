@@ -91,31 +91,19 @@ export function isVoiceEnabled(): boolean {
   return voiceEnabled;
 }
 
-/** Speel de start-cue voor een bracelet-sessie. Idempotent per sessieKey
- *  — een sessieKey is typisch `${mode}-${duration}-${startTime}` zodat
- *  twee opeenvolgende sessies (zelfde mode, ander tijdstip) beide hun
- *  eigen start-cue krijgen. */
+/** Iter v159 (2026-06-26): NO-OP. Operator-feedback: 'gewoon geen stem
+ *  voor starten bracelet sessies — robotachtige TTS klinkt slecht plus
+ *  user wil misschien stilte tijdens vergadering'. Start-cue compleet
+ *  verwijderd. Method blijft voor backwards-compat zodat callers niet
+ *  hoeven aangepast te worden — doet gewoon niets meer.
+ *
+ *  Completion-cue blijft wel actief (zie playBraceletCompletionCue) —
+ *  dat is een afsluitend reward-moment dat user heeft verdiend. */
 export function playBraceletStartCue(
-  mode: BraceletMode,
-  sessionKey: string,
+  _mode: BraceletMode,
+  _sessionKey: string,
 ): void {
-  if (!voiceEnabled) return;
-  if (startedForSession === sessionKey) return;
-  const cue = MODE_CUES[mode]?.start;
-  if (!cue) return;
-  startedForSession = sessionKey;
-  try {
-    /* Iter v149 v3: kalmer, minder AI-achtig.
-       rate 0.85 (was 0.95) = langzamer
-       pitch 0.92 (was 1.0) = warmer/dieper */
-    Speech.speak(cue, {
-      rate: 0.85,
-      pitch: 0.92,
-      language: 'en-US',
-    });
-  } catch {
-    /* swallow — TTS-failure mag de sessie nooit breken */
-  }
+  /* intentionally empty */
 }
 
 /** Speel de completion-cue. NIET gegate'd op voiceEnabled: completion is
