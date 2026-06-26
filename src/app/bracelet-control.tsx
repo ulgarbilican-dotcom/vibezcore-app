@@ -2718,37 +2718,38 @@ function BreathworkStrip({
   const remainingSec = Math.floor((remainingMs % 60000) / 1000);
   const progress = phase === 'done' ? 1 : cycle / protocol.cycles;
 
-  /* Prompt-tekst per phase-type. Iter 8: ondersteunt nu box-breathing
-     holds (hold-in, hold-out), Nadi Shodhana alternerende neusgaten
-     (in-left, out-right, in-right, out-left), en bestaande in/out + 478. */
+  /* Iter v152 (2026-06-25): prompt-tekst nu 1:1 gesynchroniseerd met de
+     voice cue files in breath-voice.ts. Operator-feedback: 'stem zegt
+     inhale through your nose en tekst zegt breathe in nose' — UI en
+     audio moeten exact dezelfde taal spreken voor een professionele
+     gebruikerservaring. */
   const method = BREATH_METHOD[mode];
-  const outViaLabel =
-    method.outVia === 'nose-or-mouth' ? 'nose or pursed lips' : method.outVia;
   const promptText = (() => {
     switch (phase) {
       case 'in':
-        /* Physiological Sigh: eerste in = "diep" labeling. Voor andere
-           protocols gewoon "Breathe in". */
-        if (protocol.kind === 'sigh') return 'Inhale deeply (nose)';
-        return `Breathe in (${method.inVia})`;
+        if (protocol.kind === 'sigh') return 'Inhale deeply through your nose';
+        return method.inVia === 'mouth'
+          ? 'Inhale through your mouth'
+          : 'Inhale through your nose';
       case 'in-topup':
-        return 'Top up — small sip (nose)';
+        return 'Top up — small breath in';
       case 'out':
-        /* Physiological Sigh: lange uitademing als signature feel. */
-        if (protocol.kind === 'sigh') return 'Long exhale (mouth)';
-        return `Breathe out (${outViaLabel})`;
+        if (protocol.kind === 'sigh') return 'Long exhale through your mouth';
+        return method.outVia === 'mouth'
+          ? 'Exhale through your mouth'
+          : 'Exhale through your nose';
       case 'hold-in':
-        return 'Hold (lungs full)';
+        return 'Hold';
       case 'hold-out':
-        return 'Hold (lungs empty)';
+        return 'Hold';
       case 'in-left':
-        return 'Inhale — left nostril';
+        return 'Inhale through your left nostril';
       case 'out-right':
-        return 'Exhale — right nostril';
+        return 'Exhale through your right nostril';
       case 'in-right':
-        return 'Inhale — right nostril';
+        return 'Inhale through your right nostril';
       case 'out-left':
-        return 'Exhale — left nostril';
+        return 'Exhale through your left nostril';
       case 'done':
         return 'Complete';
       case 'idle':
@@ -2904,8 +2905,11 @@ function BreathworkStrip({
               resizeMode="contain"
               style={s.bwCompletionBuddha}
             />
+            {/* Iter v152 (2026-06-25): consistency met breath-tab popup.
+                Operator-feedback: 'tekst bij pop up met buddha moet ook
+                consistent zijn met breathe, knop moet i'm done zeggen'. */}
             <Text style={[s.bwCompletionEyebrow, { color: meta.color }]}>
-              ✦ BREATHWORK COMPLETE ✦
+              ✦ CONGRATULATIONS ✦
             </Text>
             <Text style={s.bwCompletionTitle}>Well done.</Text>
             <Text style={s.bwCompletionBody}>
@@ -2916,7 +2920,7 @@ function BreathworkStrip({
               style={[s.bwCompletionBtn, { backgroundColor: meta.color }]}
               onPress={() => setCompletionVisible(false)}
             >
-              <Text style={s.bwCompletionBtnText}>Continue</Text>
+              <Text style={s.bwCompletionBtnText}>✓ I&apos;M DONE</Text>
             </Pressable>
           </Pressable>
         </Pressable>
