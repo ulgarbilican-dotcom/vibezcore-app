@@ -1278,11 +1278,10 @@ function BreathingHint({
 
   return (
     <Animated.Text style={[s.breatheHint, { opacity }]}>
-      {/* Iter v150 (2026-06-25): consistent label met breath-tab.
-          Operator-feedback: 'Breathe in/out' tekst in bracelet active
-          komt niet overeen met breath-tab tekst — beide moeten dezelfde
-          taal gebruiken die afgestemd is op de voice cue. */}
-      {phase === 'in' ? 'Inhale' : 'Exhale'}
+      {/* Iter v154 (2026-06-25): tekst 1:1 met voice. Default 'nose'
+          omdat BreathingHint geen protocol-context heeft — fallback
+          op de meest voorkomende cue ('Inhale through your nose'). */}
+      {phase === 'in' ? 'Inhale through your nose' : 'Exhale through your nose'}
     </Animated.Text>
   );
 }

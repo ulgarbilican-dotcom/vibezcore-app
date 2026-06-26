@@ -671,10 +671,13 @@ export default function BreathScreen() {
 
   /* ── Render ──────────────────────────────────────────────────── */
   /* Iter v154 (2026-06-25): tekst 1:1 met voice cue. Operator-feedback:
-     'tekst dat in de breathwork card staat bij in en uitademen is andere
-     tekst dan wat begeleidende stem zegt'. Voice zegt 'Inhale through
-     your nose' (met 'your'), oude tekst zei 'through nose' zonder
-     bezittelijk pronomen. Nu identiek aan voice. */
+     'in alle cards alles nakijken en aanpassen — Inhale Exhale, Hold'.
+     Voice zegt 'Inhale through your nose', 'Exhale through your mouth',
+     'Hold' — UI moet exact dit tonen.
+
+     Twee aparte Texts (label + via) zodat de label groter blijft staan
+     visueel, maar samen ze ÉÉN exact-dezelfde-string vormen als de voice:
+     bv 'Inhale' + 'through your nose' = 'Inhale through your nose'. */
   const phaseLabel =
     phase === 'inhale' ? 'Inhale'
     : phase === 'hold-in' || phase === 'hold-out' ? 'Hold'
