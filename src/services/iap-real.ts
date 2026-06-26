@@ -202,13 +202,17 @@ export class RealIAPProvider implements IAPProvider {
   async requestSubscription(tier: AudioTier): Promise<IapPurchaseResult> {
     await this.init();
 
-    /* Find the package matching this tier */
+    /* Find the package matching this tier.
+       Iter v158 (2026-06-26): RevenueCat formatteert Play Store products als
+       'vibezcore_audio_yearly:yearly' (met base_plan_id suffix). We matchen
+       op de prefix vóór ':' zodat zowel raw Play Store SKU als RC-format
+       werkt. */
     if (!this.cachedOffering) {
       await this.getProducts();
     }
     const targetSku = PRODUCT_IDS[tier];
     const pkg = this.cachedOffering?.availablePackages.find(
-      (p) => p.product.identifier === targetSku
+      (p) => p.product.identifier.split(':')[0] === targetSku
     );
     if (!pkg) {
       return {

@@ -52,13 +52,19 @@ export const PRODUCT_IDS: Record<AudioTier, string> = {
   yearly: 'vibezcore_audio_yearly',
 };
 
-/** Reverse lookup product-ID → tier-label. Handig voor receipt-parsing. */
+/** Reverse lookup product-ID → tier-label. Handig voor receipt-parsing.
+ *
+ *  Iter v158 (2026-06-26): RevenueCat formatteert Play Store products als
+ *  `<product_id>:<base_plan_id>` (bv. 'vibezcore_audio_yearly:yearly').
+ *  We strippen die suffix voordat we matchen, zodat de RevenueCat product
+ *  identifier én de raw Play Store SKU beide werken. */
 export function tierFromProductId(productId: string): AudioTier | null {
+  const baseSku = productId.split(':')[0];
   for (const [tier, id] of Object.entries(PRODUCT_IDS) as [
     AudioTier,
     string,
   ][]) {
-    if (id === productId) return tier;
+    if (id === baseSku) return tier;
   }
   return null;
 }
