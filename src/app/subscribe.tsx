@@ -491,6 +491,7 @@ export default function SubscribeScreen() {
 
   const onGoogleSignIn = async () => {
     setErrMsg(null);
+    setErrDebug(null);
     setPhase('creating-account');
     const r = await signInWithGoogle();
     if (!r.ok) {
@@ -498,8 +499,14 @@ export default function SubscribeScreen() {
         setPhase('form');
         return;
       }
-      if (__DEV__) console.warn('[subscribe] Google sign-in failed:', r.error);
+      if (__DEV__) console.warn('[subscribe] Google sign-in failed:', r.reason, r.error);
       setErrMsg(friendlyError(r.error));
+      /* Iter v153 (2026-06-25): raw reason+error zichtbaar voor diagnose.
+         Operator vroeg om de raw error te kunnen lezen — friendlyError()
+         zegt alleen 'Something went wrong' en verbergt de echte oorzaak
+         (SHA-1 mismatch, Web Client ID config, OAuth consent screen,
+         network, etc.). Net als bij IAP errors — selectable monospace. */
+      setErrDebug(`google · reason=${r.reason} · ${r.error || '(no message)'}`);
       setPhase('form');
       return;
     }
@@ -1044,6 +1051,15 @@ export default function SubscribeScreen() {
         )}
 
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
+
+        {/* Iter v153: raw debug-info bij signin/Google-failures zodat
+            operator/support de echte oorzaak kan zien (SHA-1 mismatch,
+            OAuth config, etc.) ipv alleen 'Something went wrong'. */}
+        {errDebug && (
+          <Text selectable style={s.debugInfo}>
+            {errDebug}
+          </Text>
+        )}
 
         <Pressable style={s.btnPrimary} onPress={onSubmit}>
           <Text style={s.btnPrimaryText}>

@@ -48,15 +48,23 @@ import { Platform } from 'react-native';
 import {
   endConnection,
   ErrorCode,
-  fetchProducts,
   finishTransaction,
   getAvailablePurchases,
+  getSubscriptions,
   initConnection,
   type PurchaseError,
   purchaseErrorListener,
   purchaseUpdatedListener,
-  requestPurchase,
+  requestSubscription,
 } from 'react-native-iap';
+
+/* Iter v153 (2026-06-25): downgrade van v15.3.1 → v12.16.3. v15 vereiste
+   react-native-nitro-modules die in Expo SDK 55 niet correct linked
+   waardoor IAP altijd faalde met 'Nitro runtime not installed' op
+   gebruiker's telefoon. v12 is de laatste pre-Nitro stable release —
+   gebruikt classic React Native bridge, bewezen werkt zonder extra setup.
+   API verschilt: requestSubscription dedicated method (niet requestPurchase
+   met type:'subs'), getSubscriptions ipv fetchProducts. */
 
 import {
   IAPProvider,
@@ -75,16 +83,16 @@ import {
  *  ongeacht waar de error binnenkomt. */
 function mapErrorCode(code: unknown, message?: string): IapError {
   const msg = typeof message === 'string' && message.length > 0 ? message : '';
-  if (code === ErrorCode.UserCancelled) {
+  if (code === ErrorCode.E_USER_CANCELLED) {
     return { code: 'user_cancelled', message: msg || 'Cancelled by user.' };
   }
-  if (code === ErrorCode.NetworkError) {
+  if (code === ErrorCode.E_NETWORK_ERROR) {
     return { code: 'network', message: msg || 'Network error.' };
   }
-  if (code === ErrorCode.AlreadyOwned) {
+  if (code === ErrorCode.E_ALREADY_OWNED) {
     return { code: 'already_owned', message: msg || 'You already own this subscription.' };
   }
-  if (code === ErrorCode.ItemUnavailable || code === ErrorCode.SkuNotFound) {
+  if (code === ErrorCode.E_ITEM_UNAVAILABLE) {
     return { code: 'unavailable', message: msg || 'This product is not available right now.' };
   }
   return { code: 'unknown', message: msg || String(code ?? 'Unknown error') };
@@ -225,10 +233,10 @@ export class RealIAPProvider implements IAPProvider {
 
   async getProducts(): Promise<IapProduct[]> {
     await this.init();
-    /* v15 API: fetchProducts vervangt getSubscriptions. type:'subs' = abos. */
-    const raws = await fetchProducts({
+    /* Iter v153 (2026-06-25): v12 API — getSubscriptions voor recurring
+       subscriptions (vs getProducts voor one-time). Accepteert {skus}. */
+    const raws = await getSubscriptions({
       skus: [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly],
-      type: 'subs',
     });
     if (!raws) return [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -241,42 +249,29 @@ export class RealIAPProvider implements IAPProvider {
     await this.init();
     const sku = PRODUCT_IDS[tier];
 
-    /* v15 API: requestPurchase initieert de native popup.
-       - iOS: kan een Purchase-object DIRECT returneren via de awaited promise.
-       - Android: returnt typisch null/void — de echte purchase arriveert via
-         purchaseUpdatedListener (en errors via purchaseErrorListener).
-
-       Fix v141 (2026-06-23): voor Android wachten we op het listener-event
-       voordat we returnen. Anders zag de caller {ok:false} terwijl de gebruiker
-       wel degelijk de "Subscribe"-knop in de Google Play dialog tikte → "Something
-       went wrong"-melding bovenop een succesvolle aankoop. Operator-gerapporteerd
-       2026-06-23. */
+    /* Iter v153 (2026-06-25): v12 API — requestSubscription dedicated
+       method (in v15 was dit unified onder requestPurchase met type:'subs').
+       Android: typisch null return + event via purchaseUpdatedListener.
+       iOS: kan direct Purchase resolved promise. */
 
     let androidOfferToken = '';
     if (Platform.OS === 'android') {
-      const subs = await fetchProducts({ skus: [sku], type: 'subs' });
+      const subs = await getSubscriptions({ skus: [sku] });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sub = (subs as any[] | null)?.[0];
       androidOfferToken =
         sub?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
     }
 
-    const requestArgs = {
-      request: {
-        ...(Platform.OS === 'ios' ? { ios: { sku } } : {}),
-        ...(Platform.OS === 'android'
-          ? {
-              android: {
-                skus: [sku],
-                subscriptionOffers: [
-                  { sku, offerToken: androidOfferToken },
-                ],
-              },
-            }
-          : {}),
-      },
-      type: 'subs' as const,
-    };
+    /* v12 requestSubscription signature: takes {sku} en optioneel
+       Android-specifieke subscriptionOffers. Geen type-veld zoals v15. */
+    const requestArgs =
+      Platform.OS === 'android'
+        ? {
+            sku,
+            subscriptionOffers: [{ sku, offerToken: androidOfferToken }],
+          }
+        : { sku };
 
     /* Android: wacht op listener (purchase OF error event). Timeout van 5 min
        voorkomt dat de Promise eeuwig blijft hangen wanneer beide listeners
@@ -316,7 +311,8 @@ export class RealIAPProvider implements IAPProvider {
         /* Fire-and-forget: het echte resultaat komt via de listeners. Sync
            errors (zoals user_cancelled bij sommige Android-versies) catchen we
            hier en routeren naar settle(). */
-        requestPurchase(requestArgs).catch((e: unknown) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (requestSubscription as any)(requestArgs).catch((e: unknown) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const err = e as any;
           const mapped = mapErrorCode(err?.code, err?.message);
@@ -327,12 +323,12 @@ export class RealIAPProvider implements IAPProvider {
 
     /* iOS-pad: behoudt de oude synchrone-await flow. */
     try {
-      const result = await requestPurchase(requestArgs);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (requestSubscription as any)(requestArgs);
       if (result && !Array.isArray(result)) {
         const mapped = mapToIapPurchase(result, false);
         if (mapped) return { ok: true, purchase: mapped };
       }
-      /* iOS zou hier niet mogen komen — listener fallback voor safety. */
       return {
         ok: false,
         error: {
