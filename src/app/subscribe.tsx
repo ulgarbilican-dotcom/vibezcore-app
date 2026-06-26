@@ -428,6 +428,31 @@ export default function SubscribeScreen() {
        bestaat — probeer Subscribe later opnieuw vanuit Account". */
     setSignedIn(true);
     setSignedInEmail(email.trim());
+
+    /* Iter v153 (2026-06-25): operator-feedback — na signin met een
+       BESTAAND PRO-account moet de user direct naar de Audio Library
+       worden geleid (entitlement-aware routing), NIET door de IAP-popup
+       die alleen verwarrend is voor iemand die al betaalt. */
+    if (mode === 'signin') {
+      try {
+        const token = await getToken();
+        if (token) {
+          const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const status = await res.json().catch(() => ({}));
+            if (status?.active === true) {
+              router.replace('/');
+              return;
+            }
+          }
+        }
+      } catch {
+        /* fetch failed — val terug op IAP flow. */
+      }
+    }
+
     /* Door naar IAP-popup. */
     void runIapFlow();
   };
@@ -484,6 +509,29 @@ export default function SubscribeScreen() {
        signup zodat het error-scherm de juiste recovery-flow toont. */
     setSignedIn(true);
     if (r.email) setSignedInEmail(r.email);
+
+    /* Iter v153: entitlement-aware routing — als de Google-user al PRO
+       is, skip IAP popup en direct naar Audio Library. Google sign-in
+       is by-design hetzelfde voor signup als signin — Supabase verifieert
+       de id_token en maakt-of-vindt de user. Dus check ALTIJD. */
+    try {
+      const token = await getToken();
+      if (token) {
+        const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const status = await res.json().catch(() => ({}));
+          if (status?.active === true) {
+            router.replace('/');
+            return;
+          }
+        }
+      }
+    } catch {
+      /* fall through to IAP flow */
+    }
+
     void runIapFlow();
   };
 
