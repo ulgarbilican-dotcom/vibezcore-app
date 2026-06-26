@@ -544,6 +544,7 @@ export default function SubscribeScreen() {
 
   const onAppleSignIn = async () => {
     setErrMsg(null);
+    setErrDebug(null);
     setPhase('creating-account');
     const r = await signInWithApple();
     if (!r.ok) {
@@ -551,8 +552,10 @@ export default function SubscribeScreen() {
         setPhase('form');
         return;
       }
-      if (__DEV__) console.warn('[subscribe] Apple sign-in failed:', r.error);
+      if (__DEV__) console.warn('[subscribe] Apple sign-in failed:', r.reason, r.error);
       setErrMsg(friendlyError(r.error));
+      /* Iter v153: raw reason+error zichtbaar voor diagnose (zelfde als Google). */
+      setErrDebug(`apple · reason=${r.reason} · ${r.error || '(no message)'}`);
       setPhase('form');
       return;
     }
@@ -560,6 +563,26 @@ export default function SubscribeScreen() {
     refreshSubscription();
     setSignedIn(true);
     if (r.email) setSignedInEmail(r.email);
+
+    /* Iter v153: entitlement-aware routing — zelfde als Google flow. */
+    try {
+      const token = await getToken();
+      if (token) {
+        const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const status = await res.json().catch(() => ({}));
+          if (status?.active === true) {
+            router.replace('/');
+            return;
+          }
+        }
+      }
+    } catch {
+      /* fall through to IAP flow */
+    }
+
     void runIapFlow();
   };
 

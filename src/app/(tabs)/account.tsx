@@ -76,6 +76,7 @@ import {
     getUserEmail,
     login,
     signup,
+    VZ_BACKEND_URL,
 } from '../../services/auth';
 import {
     isAppleSignInAvailable,
@@ -656,21 +657,48 @@ export default function AccountScreen() {
            wanneer de nav fired. router.replace ipv navigate: clear de
            account-tab-stack zodat back-knop niet terug naar het login-
            formulier gaat. */
-        await awaitDevUserOverrideLoaded();
-        const override = getDevUserOverride();
-        const isBraceletPro = override === 'bracelet' || override === 'pro';
+        /* Iter v153 (2026-06-25): productie-pad entitlement check via
+           backend ipv dev-override. Operator-feedback: 'na ingelogd zijn
+           moet bezoeker naar juiste pagina, audio owner audio bracelet
+           owner bracelet'. Dev-override blijft beschikbaar als fallback
+           voor testing. */
+        let isBraceletPro = false;
+        let isAudioPro = false;
+        try {
+          const token = await getToken();
+          if (token) {
+            const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              const status = await res.json().catch(() => ({}));
+              isAudioPro = status?.active === true;
+              isBraceletPro = status?.has_bracelet_activated === true;
+            }
+          }
+        } catch {
+          /* network hiccup — val terug op dev-override hieronder */
+        }
+        if (!isAudioPro && !isBraceletPro) {
+          await awaitDevUserOverrideLoaded();
+          const override = getDevUserOverride();
+          isBraceletPro = override === 'bracelet' || override === 'pro';
+          if (override === 'pro') isAudioPro = true;
+        }
+
         if (mode === 'signup') {
           /* Sign-up: blijf op /account. User ziet nu de signed-in view
              met BraceletCard (Activation required) of subscription-card,
              en kan vandaaruit de juiste eerstvolgende stap nemen
              (bracelet activeren / audio upgraden). */
           /* no redirect — gewoon de huidige view re-renderen */
-        } else if (isBraceletPro) {
+        } else if (isBraceletPro && !isAudioPro) {
+          /* Bracelet-only owner → direct naar Bracelet tab. */
           setTimeout(() => router.replace('/bracelet' as never), 50);
         } else {
-          /* Sign-in vanuit account tab → audio library opent op bovenkant.
-             Zonder dit behoudt de tab z'n vorige scroll-positie (bv. van
-             een eerdere free-browse sessie) en landt user halverwege. */
+          /* Audio PRO / Full Bundle / Free → Audio Library bovenkant.
+             Zonder requestScrollTo behoudt de tab z'n vorige scroll-positie
+             (bv. van een eerdere free-browse sessie). */
           requestScrollTo('top');
           setTimeout(() => router.replace('/'), 50);
         }
