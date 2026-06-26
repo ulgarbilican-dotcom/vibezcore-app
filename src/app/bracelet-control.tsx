@@ -227,55 +227,57 @@ type Protocol =
   | SighProtocol
   | TriangleProtocol;
 
+/* Iter v155 (2026-06-25): bracelet breathwork-protocols 1:1 IDENTIEK
+   gesynchroniseerd met breath-tab PATTERNS. Operator-feedback: 'in breath
+   tab staan de correcte breathwork, bracelet active pagina breathwork
+   moet identiek zelfde zijn als in breath tab'. Mapping:
+     Gamma (Boost)        → boost: 2-0-2-0 nose/mouth, 45 cycli (Bhastrika)
+     Beta  (Sharp Focus)  → focus: 5-0-5-0 nose/nose, 30 cycli (Coherent)
+     Alpha (Calm Control) → calm:  4-4-4-4 nose/nose, 19 cycli (Box)
+     Theta (Clarity)      → clarity: 4-2-6-0 nose/mouth, 20 cycli (Long exhale)
+     Delta (Rest & Reset) → rest: 4-7-8-0 nose/mouth, 12 cycli (4-7-8) */
 const BREATH_PROTOCOLS: Record<BraceletMode, Protocol> = {
-  /* Boost — interim 'simple' protocol tot fase 3 (Wim Hof rounds) klaar is.
-     60 × 3s/3s = 6 min, mond-uit. Zit in 5-7 min research-target window. */
+  /* Boost = Bhastrika quick activation. 2s in / 2s out × 45 = 3 min. */
   [BraceletMode.Gamma]: {
     kind: 'simple',
-    name: 'Energizing',
-    cycles: 60,
-    inMs: 3000,
-    outMs: 3000,
+    name: 'Bhastrika',
+    cycles: 45,
+    inMs: 2000,
+    outMs: 2000,
   },
-  /* Sharp Focus — Triangle breathing 4-4-4 (iter 9h, operator 27 mei).
-     Was box-4-4-4-4, verhuisd naar Rest & Reset. Triangle is een 3-fase
-     pranayama-protocol (Sama Vritti): in 4s, hold 4s, out 4s. Eén hold
-     na de inademing voor CO2-stabilisatie. 20 cycles × 12s = 4 min. */
+  /* Sharp Focus = Coherent breath 5-5. 30 cycli × 10s = 5 min. */
   [BraceletMode.Beta]: {
-    kind: 'triangle',
-    name: 'Triangle breath',
-    cycles: 20,
-    phaseMs: 4000,
-  },
-  /* Calm Control — Coherent / Resonant ademen, 5s/5s, geen holds. Bron
-     van waarheid: HRV resonance frequency (Lehrer & Gevirtz). */
-  [BraceletMode.Alpha]: {
     kind: 'simple',
-    name: 'Coherent',
+    name: 'Coherent breath',
     cycles: 30,
     inMs: 5000,
     outMs: 5000,
   },
-  /* Clarity — Nadi Shodhana (alternerende neusgaten). Iter 8 fase 2:
-     volledig herwerkt naar correct protocol. 20 cycli × 4 fasen × 4s
-     = 5.3 min (research-target 5-10 min, low end voor entry-level).
-     Per cyclus: L-in → R-out → R-in → L-out. */
-  [BraceletMode.Theta]: {
-    kind: 'nadi',
-    name: 'Nadi Shodhana',
-    cycles: 20,
-    phaseMs: 4000,
-  },
-  /* Rest & Reset — Box Breathing 4-4-4-4 (iter 9h, operator 27 mei).
-     Verhuisd van Sharp Focus. Box heeft 2 holds (full + empty) wat
-     het ritme rustig houdt — past beter bij Rest-context dan bij
-     actieve focus. Navy SEAL stress-recovery use case. 15 cycles ×
-     16s = 4 min. Eenvoudiger voor users dan de Physiological Sigh. */
-  [BraceletMode.Delta]: {
+  /* Calm Control = Box breath 4-4-4-4. 19 cycli × 16s = 5 min. */
+  [BraceletMode.Alpha]: {
     kind: 'box',
     name: 'Box breath',
-    cycles: 15,
+    cycles: 19,
     phaseMs: 4000,
+  },
+  /* Clarity = Long exhale 4-2-6 (4-7-8 family met korte hold). 20 cycli
+     × 12s = 4 min. Mond-exhale, neus-inhale. */
+  [BraceletMode.Theta]: {
+    kind: '478',
+    name: 'Long exhale',
+    cycles: 20,
+    inMs: 4000,
+    holdMs: 2000,
+    outMs: 6000,
+  },
+  /* Rest & Reset = 4-7-8. 12 cycli × 19s = ~4 min. Wind-down protocol. */
+  [BraceletMode.Delta]: {
+    kind: '478',
+    name: '4-7-8',
+    cycles: 12,
+    inMs: 4000,
+    holdMs: 7000,
+    outMs: 8000,
   },
 };
 
@@ -375,15 +377,16 @@ const BREATH_PAIRING_HINT =
      - Clarity (Nadi):         wisselende neusgaten (zie nadi-prompts)
      - Rest (4-7-8 Weil):      neus-in, mond-uit met whoosh
    'nose-or-mouth' = user mag kiezen (Calm Control's exhale variant). */
+/* Iter v155 (2026-06-25): inhaleVia/exhaleVia 1:1 met breath-tab PATTERNS. */
 const BREATH_METHOD: Record<
   BraceletMode,
   { inVia: 'nose' | 'mouth'; outVia: 'nose' | 'mouth' | 'nose-or-mouth' }
 > = {
-  [BraceletMode.Gamma]: { inVia: 'nose', outVia: 'mouth' },
-  [BraceletMode.Beta]: { inVia: 'nose', outVia: 'nose' }, // triangle = nasal
-  [BraceletMode.Alpha]: { inVia: 'nose', outVia: 'nose-or-mouth' },
-  [BraceletMode.Theta]: { inVia: 'nose', outVia: 'nose' }, // overridden per phase in nadi
-  [BraceletMode.Delta]: { inVia: 'nose', outVia: 'nose' }, // box = nasal (iter 9h)
+  [BraceletMode.Gamma]: { inVia: 'nose', outVia: 'mouth' }, // boost: nose/mouth
+  [BraceletMode.Beta]:  { inVia: 'nose', outVia: 'nose' },  // focus: nose/nose
+  [BraceletMode.Alpha]: { inVia: 'nose', outVia: 'nose' },  // calm:  nose/nose
+  [BraceletMode.Theta]: { inVia: 'nose', outVia: 'mouth' }, // clarity: nose/mouth
+  [BraceletMode.Delta]: { inVia: 'nose', outVia: 'mouth' }, // rest: nose/mouth
 };
 
 /* Per-mode ambient background tint voor de active-session screen.
@@ -449,12 +452,15 @@ type ModeDescription = {
   protocol: string;
   protocolHow: string;
 };
+/* Iter v155 (2026-06-25): protocol-strings + protocolHow 1:1 IDENTIEK
+   met breath-tab PATTERNS. Operator wil exact dezelfde breathwork in
+   bracelet active page als in breath tab. */
 const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Gamma]: {
     intent: 'Alert, energized — primed for high-output moments.',
     braceletDoes:
       'Sharp, brisk haptic pulses wake the system up and break through fatigue.',
-    protocol: 'Energizing breath 3-3 · 6 min',
+    protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
       'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
   },
@@ -462,33 +468,33 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
     intent: 'Locked-in focus — attention that holds the line.',
     braceletDoes:
       'Steady rhythmic haptic anchors your attention to one task at a time.',
-    protocol: 'Triangle breath 4-4-4 · 4 min',
+    protocol: 'Coherent breath 5-5 · 5 min',
     protocolHow:
-      'Inhale, hold, exhale — each 4 seconds. Sama Vritti pranayama tradition. The brief hold supports cognitive alertness.',
+      'Inhale 5 seconds, exhale 5 seconds. Six breaths per minute — a resonance pace used in focus-research traditions.',
   },
   [BraceletMode.Alpha]: {
     intent: 'Steady and composed — alert but relaxed.',
     braceletDoes:
       'Slow gentle pulses guide the system toward calm without dulling alertness.',
-    protocol: 'Coherent breath 5-5 · 5 min',
+    protocol: 'Box breath 4-4-4-4 · 5 min',
     protocolHow:
-      'Inhale 5 seconds, exhale 5 seconds. Six breaths per minute — a resonance pace used in stress-research traditions.',
+      'Inhale 4, hold 4, exhale 4, hold 4. Used by special forces for stress recovery — the symmetric holds slow the system down.',
   },
   [BraceletMode.Theta]: {
     intent: 'Quieter mind — space for thought, decompression.',
     braceletDoes:
       'Soft undulating haptic invites an inward turn and lets mental noise settle.',
-    protocol: 'Nadi Shodhana · 5 min',
+    protocol: 'Long-exhale 4-2-6 · 4 min',
     protocolHow:
-      'Alternate-nostril breathing, 4 seconds per phase. Ancient pranayama tradition — promotes balance and quieter attention.',
+      'Inhale 4, brief 2-second hold, exhale 6 through the mouth. Inspired by extended-exhale practices used in reflection traditions.',
   },
   [BraceletMode.Delta]: {
     intent: 'Wind-down — recovery, pre-sleep, after stressful days.',
     braceletDoes:
       'Slow restful haptic pattern eases the system toward recovery mode.',
-    protocol: 'Box breath 4-4-4-4 · 4 min',
+    protocol: '4-7-8 breath · 4 min',
     protocolHow:
-      'Inhale 4, hold 4, exhale 4, hold 4. Used by special forces for stress recovery — the symmetric holds slow the system down.',
+      'Inhale 4, hold 7, exhale 8 through the mouth. Popularized by Dr. Andrew Weil — the extended exhale signals the body to slow down.',
   },
 };
 
