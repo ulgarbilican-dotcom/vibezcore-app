@@ -123,10 +123,73 @@ async function openExternal(url: string): Promise<void> {
   }
 }
 
+/* Iter v158 (2026-06-26, operator-spec): FreeEnvironmentCard voor
+   ingelogd-zonder-entitlement state. Vervangt de oude 'Activate access'
+   single-card met een explicit 3-paden view zodat de user direct ziet
+   wat de drie acquisitie-paden zijn én welke (nog) niet beschikbaar zijn.
+
+   Operator-quote: 'duidelijk dat het free envoirement is en de upgrade
+   naar audio pro of full: bracelet + audio of bracelet moet dan wel
+   werken'. Plus 'professioneel communiceren dat user weet wat de
+   bedoeling van die knoppen zijn. misschien onder knop available
+   summer 2026'.
+
+   Kickstarter launch: 1 september 2026 — bracelet-paden disabled tot dan. */
+function FreeEnvironmentCard() {
+  return (
+    <View style={s.card}>
+      <Text style={s.label}>Status</Text>
+      <Text style={[s.subBig, { color: Brand.text }]}>
+        You&apos;re in the free environment
+      </Text>
+      <Text style={s.subSmall}>
+        27 of 144 sessions available. Activate full access below:
+      </Text>
+
+      {/* Pad 1 — Audio subscribe (ACTIVE NOW) */}
+      <Pressable
+        style={s.cardCta}
+        onPress={() => router.navigate('/subscribe?tier=yearly' as never)}
+        accessibilityLabel="Subscribe to the audio library"
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={s.cardCtaText}>Subscribe to Audio Library</Text>
+          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
+            Full library — €9.99/m intro, then €14.99
+          </Text>
+        </View>
+        <Text style={s.cardCtaArrow}>→</Text>
+      </Pressable>
+
+      {/* Pad 2 — Activate Bracelet code (DISABLED tot Sep 2026 KS) */}
+      <View style={[s.cardCta, { opacity: 0.55 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.cardCtaText}>Activate Bracelet code</Text>
+          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
+            Available from September 2026
+          </Text>
+        </View>
+        <Text style={[s.cardCtaArrow, { opacity: 0.5 }]}>—</Text>
+      </View>
+
+      {/* Pad 3 — Bundle (DISABLED tot Sep 2026 KS) */}
+      <View style={[s.cardCta, { opacity: 0.55 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.cardCtaText}>Get the Bundle — Bracelet + Audio</Text>
+          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
+            Available from September 2026
+          </Text>
+        </View>
+        <Text style={[s.cardCtaArrow, { opacity: 0.5 }]}>—</Text>
+      </View>
+    </View>
+  );
+}
+
 /* Subscription-card. Toont live PRO-status uit useSubscription()
    (= /api/subscription-status van backend). Drie render-paden:
      - isLoading      → "Checking…"
-     - isPro=false    → "Free account" + upgrade-hint
+     - isPro=false    → delegated to FreeEnvironmentCard (Iter v158)
      - isPro=true     → "PRO — Monthly/Yearly" + datum-regel
    Datum-formatting via toLocaleDateString('en-GB') → "16 June 2026". */
 function SubscriptionCard() {
@@ -141,6 +204,14 @@ function SubscriptionCard() {
      PRO + bracelet owner → speciale "Full PRO" label. */
   const isBraceletOwner = useBraceletOwner();
 
+  /* Iter v158 (2026-06-26, operator-spec): voor ingelogd-zonder-entitlement
+     toon NIET de standaard subscription-card maar een aparte "free
+     environment" view met 3 paden (Audio/Bracelet/Bundle). Bracelet en
+     Bundle disabled tot September 2026 (KS launch). */
+  if (!isLoading && !isPro && !isBraceletOwner) {
+    return <FreeEnvironmentCard />;
+  }
+
   let bigText: string;
   let bigColor: string;
   let subText: string;
@@ -149,14 +220,6 @@ function SubscriptionCard() {
     bigText = 'Checking…';
     bigColor = Brand.textDim;
     subText = '';
-  } else if (!isPro && !isBraceletOwner) {
-    /* Iter v157 (2026-06-26): operator-correctie. 'Free account bestaat
-       niet — zodra er een account is moet er iets aan gekoppeld zijn'.
-       Een ingelogde user zonder entitlement = incomplete setup, niet
-       'free'. UI nodigt uit tot voltooien ipv troostprijs. */
-    bigText = 'Activate access';
-    bigColor = Brand.accent;
-    subText = 'Subscribe to audio or activate your bracelet code';
   } else if (isPro && isBraceletOwner) {
     /* Full PRO — beide producten actief.
        Iter 9dq v49 (2026-06-03): operator-feedback — los "Full PRO"
@@ -284,6 +347,21 @@ function SubscriptionCard() {
           <Text style={s.cardCtaText}>Manage subscription</Text>
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
+      )}
+      {/* Iter v158: cross-sell naar bracelet voor audio-only users.
+          Disabled tot KS launch sept 2026 — duidelijke "coming soon"
+          framing zodat user weet wat de bedoeling is. Niet getoond
+          voor Full PRO / Bracelet-only users (zij weten al). */}
+      {!isLoading && isPro && !isBraceletOwner && (
+        <View style={[s.cardCta, { opacity: 0.55 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.cardCtaText}>Got a bracelet? Activate code</Text>
+            <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
+              Available from September 2026
+            </Text>
+          </View>
+          <Text style={[s.cardCtaArrow, { opacity: 0.5 }]}>—</Text>
+        </View>
       )}
     </View>
   );
