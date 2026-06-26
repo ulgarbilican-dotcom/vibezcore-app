@@ -69,10 +69,12 @@ export function AccountWallModal() {
 
   const goToAccount = () => {
     hideAccountWall();
-    /* Bij aanmaken vanaf de wall: stuur gebruiker naar Account-tab voor
-       sign-up. De Account-tab heeft al de auth-form. Operator kan later
-       een eigen sign-up-screen splitsen. */
-    router.navigate('/account' as never);
+    /* Iter v157 (2026-06-26): wall pusht nu naar Subscribe ipv Account.
+       Operator-flow: free omgeving voor iedereen → wall toont subscribe
+       prompt → klik = direct naar plan-keuze (yearly default = best
+       deal). Account-creatie gebeurt PAS na verified purchase op de
+       subscribe-flow. */
+    router.navigate('/subscribe?tier=yearly' as never);
   };
 
   return (
@@ -85,29 +87,34 @@ export function AccountWallModal() {
 
       <View style={s.cardWrap} pointerEvents="box-none">
         <View style={s.card}>
-          <Text style={s.eyebrow}>UNLOCK 9 MORE SESSIONS</Text>
-          <Text style={s.title}>Create a free account</Text>
+          {/* Iter v157 (2026-06-26): operator-correctie. Geen 'create free
+              account' pad meer — account = altijd betalend of bracelet
+              owner. Promo wall pusht direct naar subscribe ipv 'free
+              account' middenstap. Free tier (27 sessies) blijft zonder
+              account toegankelijk. */}
+          <Text style={s.eyebrow}>UNLOCK THE FULL LIBRARY</Text>
+          <Text style={s.title}>Subscribe to keep going</Text>
           {lastSessionTitle ? (
             <Text style={s.subline}>
-              <Text style={s.subQuote}>“{lastSessionTitle}”</Text> and 8 more
-              series-openers — yours forever, no payment required.
+              <Text style={s.subQuote}>“{lastSessionTitle}”</Text> is just one
+              of 100+ sessions in the full library.
             </Text>
           ) : (
             <Text style={s.subline}>
-              Save your favorites and unlock 9 more series-openers — yours
-              forever, no payment required.
+              You've explored the free picks. The full library has 100+ more
+              sessions across every pillar.
             </Text>
           )}
 
           {/* Bullet-list — waarde-propositie */}
           <View style={s.bullets}>
-            <Bullet text="9 extra series-openers unlocked" />
+            <Bullet text="Full library — 100+ sessions" />
             <Bullet text="Save favorites across all your devices" />
-            <Bullet text="No payment now — free with email" />
+            <Bullet text="Cancel anytime in Play Store" />
           </View>
 
           <Pressable style={s.btnPrimary} onPress={goToAccount}>
-            <Text style={s.btnPrimaryText}>Create free account</Text>
+            <Text style={s.btnPrimaryText}>See plans</Text>
           </Pressable>
 
           <Pressable style={s.btnSecondary} onPress={hideAccountWall}>

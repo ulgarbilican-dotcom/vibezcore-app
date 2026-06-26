@@ -150,9 +150,13 @@ function SubscriptionCard() {
     bigColor = Brand.textDim;
     subText = '';
   } else if (!isPro && !isBraceletOwner) {
-    bigText = 'Free account';
-    bigColor = Brand.text;
-    subText = 'Upgrade for full library access';
+    /* Iter v157 (2026-06-26): operator-correctie. 'Free account bestaat
+       niet — zodra er een account is moet er iets aan gekoppeld zijn'.
+       Een ingelogde user zonder entitlement = incomplete setup, niet
+       'free'. UI nodigt uit tot voltooien ipv troostprijs. */
+    bigText = 'Activate access';
+    bigColor = Brand.accent;
+    subText = 'Subscribe to audio or activate your bracelet code';
   } else if (isPro && isBraceletOwner) {
     /* Full PRO — beide producten actief.
        Iter 9dq v49 (2026-06-03): operator-feedback — los "Full PRO"

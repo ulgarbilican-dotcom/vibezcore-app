@@ -1,70 +1,43 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Real IAP-provider (productie via react-native-iap)
+   VIBEZCORE — Real IAP-provider (productie via RevenueCat)
 
-   Iter 9dq v85 (2026-06-03): forward-prep skeleton. Vereist installatie
-   van `react-native-iap`:
+   Iter v157 (2026-06-26): TOTAAL VERVANGEN van react-native-iap door
+   react-native-purchases (RevenueCat). Reden: react-native-iap v15+Nitro
+   faalde TWEE builds met 'Nitro runtime not installed' op operator's
+   telefoon. Mijn 3s polling-fix loste het niet op (Nitro werd nooit ready).
 
-       npx expo install react-native-iap
-       npx expo prebuild        # genereert ios/ en android/ folders
-       cd ios && pod install    # iOS-side; alleen op macOS
+   RevenueCat:
+   - Industry standard, draait op duizenden production apps
+   - Geen Nitro / TurboModule pain, classic React Native bridge
+   - Free tier tot $10k MRR — meer dan ruim voor jaar 1
+   - Backend krijgt server-to-server webhooks ipv handmatige receipt verify
+   - Cross-platform: zelfde code voor Android + iOS
 
-   Daarna in services/iap.ts:
-       export const USE_MOCK_IAP = false;   // was __DEV__
-       import { RealIAPProvider } from './iap-real';   // uncomment
+   ── Setup vereist (operator) ──
+   1. Maak gratis account op revenuecat.com
+   2. Add Android app → upload Google Play service account JSON
+   3. Add Apple app (later, voor iOS)
+   4. Map products: vibezcore_audio_monthly + vibezcore_audio_yearly
+   5. Create entitlement "audio_pro" met beide products in offering
+   6. Copy Android API key → vul in als EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID
+      (in .env of app.json extra field)
+   7. Idem voor iOS API key
 
-   TypeScript-noot: zolang react-native-iap NIET geïnstalleerd is, geeft
-   de import op regel ~50 een "Cannot find module"-error. Dat is correct
-   gedrag — dit bestand WORDT bewust niet geladen in de huidige bundle
-   omdat USE_MOCK_IAP=true. Pas wanneer je de switch flipt en de library
-   installeert, valt deze error weg.
-
-   ── Wat dit bestand doet ──
-   - Implementeert IAPProvider-interface (zie iap-contract.ts).
-   - Mapt react-native-iap's eigen types naar onze IapProduct / IapPurchase.
-   - Verbergt platform-verschillen achter de interface (StoreKit vs Play
-     Billing).
-   - Geeft cancelled / network / unavailable errors door via IapError.
-
-   ── Wat dit NIET doet ──
-   - Backend receipt-verify. Dat is een aparte fetch naar
-     /api/iap-verify die het subscribe-screen doet nadat onPurchase
-     fired (zie subscribe.tsx).
-   - Persistente sub-state cache. Die zit in useSubscription.ts.
-
-   ── Apple sandbox-testing ──
-   Maak een sandbox-tester aan in App Store Connect → Users and Access →
-   Sandbox Testers. Op iOS Settings → App Store → Sandbox Account →
-   inloggen. Vanaf dan: `requestSubscription` opent de echte StoreKit
-   popup maar rekent geen geld af. Receipts zijn echt en kunnen door je
-   backend gevalideerd worden tegen Apple's sandbox-verify endpoint.
-
-   ── Google Play testing ──
-   App Console → Setup → License testing → email toevoegen. Daarna kun
-   je test-purchases doen met die Google-account zonder geld uit te
-   geven.
+   ── App-API (gelijk aan oude impl, IAPProvider interface) ──
+   - Pricing-cards, post-purchase prompts, restore-knop: ongewijzigd
+   - Onder de motorkap: Purchases SDK ipv react-native-iap
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Platform } from 'react-native';
-import {
-  endConnection,
-  ErrorCode,
-  fetchProducts,
-  finishTransaction,
-  getAvailablePurchases,
-  initConnection,
-  isNitroReady,
-  type PurchaseError,
-  purchaseErrorListener,
-  purchaseUpdatedListener,
-  requestPurchase,
-} from 'react-native-iap';
-
-/* Iter v156 (2026-06-26): TERUG naar v15.3.1 met expliciete Nitro setup.
-   v12 was risico op New Architecture compat (RN 0.83 Expo SDK 55 = New
-   Arch default-on). v15 is Nitro-native = TurboModule = native New Arch
-   compatible. Plus react-native-nitro-modules nu expliciet als peer dep
-   geinstalleerd (was in v12-poging weggehaald — root cause van Nitro
-   'runtime not installed' op build #16). */
+import Purchases, {
+  CustomerInfo,
+  LOG_LEVEL,
+  PurchasesError,
+  PurchasesOffering,
+  PurchasesPackage,
+  PurchasesStoreTransaction,
+  PURCHASES_ERROR_CODE,
+} from 'react-native-purchases';
 
 import {
   IAPProvider,
@@ -77,103 +50,83 @@ import {
   tierFromProductId,
 } from './iap-contract';
 
-/** Centrale mapper van react-native-iap ErrorCode → onze IapError shape.
- *  Wordt gebruikt door zowel het sync requestPurchase catch-pad als het
- *  Android purchaseErrorListener-pad zodat het foutgedrag consistent is
- *  ongeacht waar de error binnenkomt. */
-function mapErrorCode(code: unknown, message?: string): IapError {
-  const msg = typeof message === 'string' && message.length > 0 ? message : '';
-  if (code === ErrorCode.UserCancelled) {
-    return { code: 'user_cancelled', message: msg || 'Cancelled by user.' };
+/** RevenueCat API keys per platform. Operator vult deze in via env-var
+ *  of via app.json `extra` field. Bij ontbrekende key throwt init() —
+ *  beter early-fail dan silent IAP-loop. */
+const ANDROID_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID ?? '';
+const IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '';
+
+/** Entitlement identifier zoals geconfigureerd in RevenueCat dashboard.
+ *  Beide Monthly en Yearly products granten DEZE entitlement — zo praat
+ *  de backend over één concept ("audio_pro") ipv twee SKUs. */
+const ENTITLEMENT_AUDIO_PRO = 'audio_pro';
+
+function mapPurchasesErrorCode(
+  rcCode: PURCHASES_ERROR_CODE | string | undefined,
+  msg?: string
+): IapError {
+  switch (rcCode) {
+    case PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR:
+      return { code: 'user_cancelled', message: msg || 'Purchase cancelled.' };
+    case PURCHASES_ERROR_CODE.NETWORK_ERROR:
+      return { code: 'network', message: msg || 'Network error. Check your connection.' };
+    case PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR:
+      return { code: 'already_owned', message: msg || 'You already own this subscription.' };
+    case PURCHASES_ERROR_CODE.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
+      return { code: 'unavailable', message: msg || 'This product is not available right now.' };
+    case PURCHASES_ERROR_CODE.RECEIPT_ALREADY_IN_USE_ERROR:
+      return { code: 'already_owned', message: msg || 'This receipt is linked to another account.' };
+    case PURCHASES_ERROR_CODE.INVALID_RECEIPT_ERROR:
+      return { code: 'verify_failed', message: msg || 'Receipt validation failed.' };
+    default:
+      return { code: 'unknown', message: msg || String(rcCode ?? 'Unknown error') };
   }
-  if (code === ErrorCode.NetworkError) {
-    return { code: 'network', message: msg || 'Network error.' };
-  }
-  if (code === ErrorCode.AlreadyOwned) {
-    return { code: 'already_owned', message: msg || 'You already own this subscription.' };
-  }
-  if (code === ErrorCode.ItemUnavailable) {
-    return { code: 'unavailable', message: msg || 'This product is not available right now.' };
-  }
-  return { code: 'unknown', message: msg || String(code ?? 'Unknown error') };
 }
 
-/* ── Hulp: react-native-iap types → onze IapProduct ──
-   Subscription-shape verschilt iets per platform. Op iOS heeft 'm
-   `localizedPrice` direct, op Android zit dat in subscriptionOfferDetails.
-   Helper-functies pakken het juiste veld. */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapToIapProduct(raw: any): IapProduct | null {
-  const productId = raw?.productId;
-  if (typeof productId !== 'string') return null;
+function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
+  const productId = pkg.product.identifier;
   const tier = tierFromProductId(productId);
   if (!tier) return null;
-
-  /* iOS: raw.localizedPrice + raw.currency */
-  /* Android: raw.subscriptionOfferDetails[0].pricingPhases.pricingPhaseList[0].formattedPrice */
-  let localizedPrice = '';
-  let currency = '';
-  let priceAmountMicros: number | undefined;
-
-  if (Platform.OS === 'ios') {
-    localizedPrice = typeof raw.localizedPrice === 'string' ? raw.localizedPrice : '';
-    currency = typeof raw.currency === 'string' ? raw.currency : '';
-    priceAmountMicros =
-      typeof raw.price === 'string'
-        ? Math.round(parseFloat(raw.price) * 1_000_000)
-        : undefined;
-  } else {
-    const offer = raw?.subscriptionOfferDetails?.[0];
-    const phase = offer?.pricingPhases?.pricingPhaseList?.[0];
-    localizedPrice = typeof phase?.formattedPrice === 'string' ? phase.formattedPrice : '';
-    currency = typeof phase?.priceCurrencyCode === 'string' ? phase.priceCurrencyCode : '';
-    priceAmountMicros =
-      typeof phase?.priceAmountMicros === 'string'
-        ? parseInt(phase.priceAmountMicros, 10)
-        : undefined;
-  }
-
   return {
     productId,
     tier,
-    title: typeof raw.title === 'string' ? raw.title : `VIBEZCORE Audio ${tier}`,
-    description: typeof raw.description === 'string' ? raw.description : '',
-    localizedPrice,
-    currency,
-    priceAmountMicros,
+    title: pkg.product.title || `VIBEZCORE Audio ${tier}`,
+    description: pkg.product.description || '',
+    localizedPrice: pkg.product.priceString,
+    currency: pkg.product.currencyCode,
+    priceAmountMicros: Math.round(pkg.product.price * 1_000_000),
     subscriptionPeriod: tier === 'monthly' ? 'P1M' : 'P1Y',
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapToIapPurchase(raw: any, isRestore = false): IapPurchase | null {
-  const productId = raw?.productId;
-  if (typeof productId !== 'string') return null;
+function mapTransactionToPurchase(
+  tx: PurchasesStoreTransaction,
+  productId: string,
+  customerInfo: CustomerInfo,
+  isRestore = false
+): IapPurchase | null {
   const tier = tierFromProductId(productId);
   if (!tier) return null;
 
-  /* iOS: raw.transactionReceipt (base64 receipt voor backend)
-     Android: raw.purchaseToken (Google Play purchase token) */
-  let receiptToken = '';
-  if (Platform.OS === 'ios') {
-    receiptToken = typeof raw.transactionReceipt === 'string' ? raw.transactionReceipt : '';
-  } else {
-    receiptToken = typeof raw.purchaseToken === 'string' ? raw.purchaseToken : '';
-  }
+  /* Receipt-token voor backend verify.
+     iOS: original app-store receipt (base64) — kan ook via CustomerInfo.
+     Android: purchase token — beschikbaar via transaction.purchaseToken
+     OF via originalAppUserId in CustomerInfo voor server-to-server lookup.
+     RevenueCat raadt aan: gebruik de RevenueCat customer-info zelf als
+     bron-van-waarheid via webhook, niet handmatig receipt verifiëren.
+     Voor backwards-compat met onze /api/iap-verify behouden we de token. */
+  const receiptToken =
+    Platform.OS === 'ios'
+      ? customerInfo.originalAppUserId
+      : tx.transactionIdentifier;
 
   return {
     productId,
     tier,
-    transactionId:
-      typeof raw.transactionId === 'string'
-        ? raw.transactionId
-        : `${Platform.OS}_${Date.now()}`,
+    transactionId: tx.transactionIdentifier,
     receiptToken,
-    purchaseDate:
-      typeof raw.transactionDate === 'number'
-        ? new Date(raw.transactionDate).toISOString()
-        : new Date().toISOString(),
+    purchaseDate: tx.purchaseDate || new Date().toISOString(),
     isRestore,
   };
 }
@@ -183,226 +136,178 @@ function mapToIapPurchase(raw: any, isRestore = false): IapPurchase | null {
 export class RealIAPProvider implements IAPProvider {
   private initialized = false;
   private purchaseListeners = new Set<(p: IapPurchase) => void>();
-  private errorListeners = new Set<(e: IapError) => void>();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private purchaseSub: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private errorSub: any = null;
-  /* Iter v148: bewaar raw-purchase-objecten per transactionId zodat
-     acknowledge() (na backend verify) kan finishTransaction() aanroepen. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private pendingPurchases = new Map<string, any>();
+  private customerInfoUpdateHandler: ((info: CustomerInfo) => void) | null = null;
+  private cachedOffering: PurchasesOffering | null = null;
 
   async init(): Promise<void> {
     if (this.initialized) return;
 
-    /* Iter v156 (2026-06-26, KRITIEK voor v15+Nitro): expliciete Nitro-
-       readiness check voor we initConnection() proberen. Reden: in
-       Expo SDK 55 + RN 0.83 + New Architecture werd react-native-nitro-
-       modules niet altijd aan-de-tijd geinitialized (race tussen JS-thread
-       en native runtime bootstrap). Result voor user: 'Nitro runtime not
-       installed' op de eerste subscribe-poging. Door isNitroReady() te
-       polen met retry geven we de runtime tijd om volledig op te starten
-       voordat we native methods aanroepen. */
-    const MAX_NITRO_WAIT_MS = 3000;
-    const POLL_MS = 100;
-    const start = Date.now();
-    while (!isNitroReady()) {
-      if (Date.now() - start > MAX_NITRO_WAIT_MS) {
-        const err = new Error(
-          'Nitro runtime did not become ready within 3s. ' +
-          'react-native-nitro-modules may not be linked correctly.'
-        );
-        if (__DEV__) console.warn('[RealIAP] Nitro timeout:', err);
-        throw err;
-      }
-      await new Promise((r) => setTimeout(r, POLL_MS));
-    }
-    if (__DEV__) {
-      console.log(`[RealIAP] Nitro ready after ${Date.now() - start}ms`);
+    const apiKey = Platform.OS === 'ios' ? IOS_KEY : ANDROID_KEY;
+    if (!apiKey) {
+      throw new Error(
+        `RevenueCat API key missing for ${Platform.OS}. ` +
+        `Set EXPO_PUBLIC_REVENUECAT_API_KEY_${Platform.OS === 'ios' ? 'IOS' : 'ANDROID'} ` +
+        `in your environment or app.json extra field.`
+      );
     }
 
-    await initConnection();
-    this.purchaseSub = purchaseUpdatedListener((purchase) => {
-      const mapped = mapToIapPurchase(purchase, false);
-      if (mapped) {
-        /* Iter v148 (2026-06-25, KRITIEKE FIX): bewaar raw-purchase
-           naar mapped so caller kan finishTransaction() expliciet
-           aanroepen NA backend verify. Voorheen werd finishTransaction
-           direct hier gecalled, wat het Google Play retry-mechanisme
-           verbrak: als backend verify daarna faalde, dan was Google
-           Play al "acknowledged" en de user kreeg geen refund-retry +
-           wij hadden geen subscription. Nu: finish pas na succesvolle
-           server-side activation. */
-        this.pendingPurchases.set(mapped.transactionId, purchase);
-        this.purchaseListeners.forEach((cb) => {
-          try {
-            cb(mapped);
-          } catch (e) {
-            if (__DEV__) console.warn('[RealIAP] listener threw:', e);
-          }
-        });
+    if (__DEV__) {
+      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    }
+    await Purchases.configure({ apiKey });
+
+    /* Luister op customer-info updates: subscription-renewals, restores,
+       en cross-device sync triggeren dit event. Forward naar onze
+       purchase listeners als er een nieuwe entitlement bij komt. */
+    this.customerInfoUpdateHandler = (info: CustomerInfo) => {
+      if (__DEV__) {
+        console.log(
+          '[RealIAP] customerInfoUpdate, entitlements:',
+          Object.keys(info.entitlements.active)
+        );
       }
-    });
-    this.errorSub = purchaseErrorListener((err: PurchaseError) => {
-      if (__DEV__) console.warn('[RealIAP] purchase error:', err);
-      const mapped = mapErrorCode(err?.code, err?.message);
-      this.errorListeners.forEach((cb) => {
-        try {
-          cb(mapped);
-        } catch (e) {
-          if (__DEV__) console.warn('[RealIAP] error-listener threw:', e);
-        }
-      });
-    });
+    };
+    Purchases.addCustomerInfoUpdateListener(this.customerInfoUpdateHandler);
+
     this.initialized = true;
   }
 
   async getProducts(): Promise<IapProduct[]> {
     await this.init();
-    /* Iter v156 (2026-06-26): v15 API — fetchProducts unified met type:'subs'. */
-    const raws = await fetchProducts({
-      skus: [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly],
-      type: 'subs',
-    });
-    if (!raws) return [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (raws as any[])
-      .map((r) => mapToIapProduct(r))
-      .filter((p): p is IapProduct => p !== null);
+    const offerings = await Purchases.getOfferings();
+    const current = offerings.current;
+    if (!current) {
+      if (__DEV__) console.warn('[RealIAP] No current offering configured in RevenueCat dashboard.');
+      return [];
+    }
+    this.cachedOffering = current;
+
+    const products: IapProduct[] = [];
+    for (const pkg of current.availablePackages) {
+      const mapped = mapPackageToProduct(pkg);
+      if (mapped) products.push(mapped);
+    }
+    return products;
   }
 
   async requestSubscription(tier: AudioTier): Promise<IapPurchaseResult> {
     await this.init();
-    const sku = PRODUCT_IDS[tier];
 
-    /* Iter v156 (2026-06-26): v15 API — requestPurchase unified onder
-       type:'subs' (geen aparte requestSubscription meer in v15).
-       Android: typisch null/void return + event via purchaseUpdatedListener.
-       iOS: kan direct Purchase resolved promise. */
-
-    let androidOfferToken = '';
-    if (Platform.OS === 'android') {
-      const subs = await fetchProducts({ skus: [sku], type: 'subs' });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sub = (subs as any[] | null)?.[0];
-      androidOfferToken =
-        sub?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
+    /* Find the package matching this tier */
+    if (!this.cachedOffering) {
+      await this.getProducts();
     }
-
-    const requestArgs = {
-      request: {
-        ...(Platform.OS === 'ios' ? { ios: { sku } } : {}),
-        ...(Platform.OS === 'android'
-          ? {
-              android: {
-                skus: [sku],
-                subscriptionOffers: [
-                  { sku, offerToken: androidOfferToken },
-                ],
-              },
-            }
-          : {}),
-      },
-      type: 'subs' as const,
-    };
-
-    /* Android: wacht op listener (purchase OF error event). Timeout van 5 min
-       voorkomt dat de Promise eeuwig blijft hangen wanneer beide listeners
-       om een of andere reden niet vuren. */
-    if (Platform.OS === 'android') {
-      return new Promise<IapPurchaseResult>((resolve) => {
-        let settled = false;
-        const settle = (r: IapPurchaseResult) => {
-          if (settled) return;
-          settled = true;
-          unsubPurchase();
-          unsubError();
-          clearTimeout(timeoutId);
-          resolve(r);
-        };
-
-        const purchaseCb = (p: IapPurchase) => {
-          if (p.tier !== tier) return;
-          settle({ ok: true, purchase: p });
-        };
-        const errorCb = (e: IapError) => {
-          settle({ ok: false, error: e });
-        };
-
-        this.purchaseListeners.add(purchaseCb);
-        this.errorListeners.add(errorCb);
-        const unsubPurchase = () => this.purchaseListeners.delete(purchaseCb);
-        const unsubError = () => this.errorListeners.delete(errorCb);
-
-        const timeoutId = setTimeout(() => {
-          settle({
-            ok: false,
-            error: { code: 'unknown', message: 'Purchase timed out — please try again.' },
-          });
-        }, 5 * 60 * 1000);
-
-        /* Fire-and-forget: het echte resultaat komt via de listeners. */
-        requestPurchase(requestArgs).catch((e: unknown) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const err = e as any;
-          const mapped = mapErrorCode(err?.code, err?.message);
-          settle({ ok: false, error: mapped });
-        });
-      });
-    }
-
-    /* iOS-pad: behoudt de oude synchrone-await flow. */
-    try {
-      const result = await requestPurchase(requestArgs);
-      if (result && !Array.isArray(result)) {
-        const mapped = mapToIapPurchase(result, false);
-        if (mapped) return { ok: true, purchase: mapped };
-      }
+    const targetSku = PRODUCT_IDS[tier];
+    const pkg = this.cachedOffering?.availablePackages.find(
+      (p) => p.product.identifier === targetSku
+    );
+    if (!pkg) {
       return {
         ok: false,
         error: {
-          code: 'unknown',
-          message: 'Purchase initiated — waiting for confirmation event.',
+          code: 'unavailable',
+          message: `Product ${targetSku} not found in RevenueCat offering.`,
         },
       };
+    }
+
+    try {
+      const result = await Purchases.purchasePackage(pkg);
+      const customerInfo = result.customerInfo;
+      const transaction = (result as { transaction?: PurchasesStoreTransaction })
+        .transaction;
+      if (!transaction) {
+        /* Shouldn't happen in normal flow — purchasePackage returns transaction
+           on success. If null, something is off — treat as unknown error. */
+        return {
+          ok: false,
+          error: {
+            code: 'unknown',
+            message: 'Purchase completed but no transaction returned.',
+          },
+        };
+      }
+
+      const mapped = mapTransactionToPurchase(
+        transaction,
+        pkg.product.identifier,
+        customerInfo,
+        false
+      );
+      if (!mapped) {
+        return {
+          ok: false,
+          error: {
+            code: 'unknown',
+            message: 'Could not parse purchase result.',
+          },
+        };
+      }
+
+      /* Fire listeners (subscribe.tsx subscribes during checkout). */
+      this.purchaseListeners.forEach((cb) => {
+        try {
+          cb(mapped);
+        } catch (e) {
+          if (__DEV__) console.warn('[RealIAP] listener threw:', e);
+        }
+      });
+
+      return { ok: true, purchase: mapped };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
-      const mapped = mapErrorCode(e?.code, e?.message ?? String(e));
+      const err = e as PurchasesError;
+      const mapped = mapPurchasesErrorCode(err?.code, err?.message);
       return { ok: false, error: mapped };
-    }
-  }
-
-  /** Iter v148 (2026-06-25): finishTransaction NA backend verify, niet
-   *  ervoor. Caller (subscribe.tsx verifyAndComplete) roept dit aan
-   *  zodra de receipt server-side gevalideerd + subscription active is.
-   *
-   *  Bewaarde raw-purchase wordt uit pendingPurchases gehaald en
-   *  doorgegeven aan finishTransaction. Bij ontbrekend object (race
-   *  condition, app-restart) doen we niets — Google Play retried dan
-   *  automatisch tot we het opnieuw zien. */
-  async acknowledge(transactionId: string): Promise<void> {
-    const raw = this.pendingPurchases.get(transactionId);
-    if (!raw) return;
-    try {
-      await finishTransaction({ purchase: raw, isConsumable: false });
-      this.pendingPurchases.delete(transactionId);
-    } catch (e) {
-      if (__DEV__) console.warn('[RealIAP] acknowledge failed:', e);
-      /* Non-fatal: backend heeft de aankoop al, user is PRO. Google
-         Play retried 'm gewoon de volgende keer dat onze app
-         purchaseUpdatedListener triggert. */
     }
   }
 
   async restorePurchases(): Promise<IapPurchase[]> {
     await this.init();
-    const purchases = await getAvailablePurchases();
-    if (!purchases) return [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (purchases as any[])
-      .map((p) => mapToIapPurchase(p, true))
-      .filter((p): p is IapPurchase => p !== null);
+    try {
+      const customerInfo = await Purchases.restorePurchases();
+      /* RevenueCat geeft geen aparte "purchases array" terug bij restore —
+         we leiden af welke entitlement(s) actief zijn en synthesiseren
+         IapPurchase-objecten. Backend ontvangt customer's originalAppUserId
+         als receiptToken; via RevenueCat webhook gaat de echte server-to-
+         server validatie. */
+      const restored: IapPurchase[] = [];
+      const activeEntitlement = customerInfo.entitlements.active[ENTITLEMENT_AUDIO_PRO];
+      if (activeEntitlement) {
+        const productId = activeEntitlement.productIdentifier;
+        const tier = tierFromProductId(productId);
+        if (tier) {
+          restored.push({
+            productId,
+            tier,
+            transactionId: activeEntitlement.originalPurchaseDate || `restore_${Date.now()}`,
+            receiptToken:
+              Platform.OS === 'ios'
+                ? customerInfo.originalAppUserId
+                : customerInfo.originalAppUserId,
+            purchaseDate: activeEntitlement.latestPurchaseDate || new Date().toISOString(),
+            isRestore: true,
+          });
+        }
+      }
+
+      /* Fire listeners for each restored purchase so caller can re-verify. */
+      restored.forEach((p) => {
+        this.purchaseListeners.forEach((cb) => {
+          try {
+            cb(p);
+          } catch (e) {
+            if (__DEV__) console.warn('[RealIAP] restore-listener threw:', e);
+          }
+        });
+      });
+
+      return restored;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      if (__DEV__) console.warn('[RealIAP] restorePurchases error:', e);
+      return [];
+    }
   }
 
   onPurchase(callback: (purchase: IapPurchase) => void): () => void {
@@ -412,16 +317,19 @@ export class RealIAPProvider implements IAPProvider {
     };
   }
 
+  /** RevenueCat handelt acknowledge automatisch af — geen native
+   *  finishTransaction call meer nodig. Houdt method als no-op
+   *  voor IAPProvider interface compat. */
+  async acknowledge(_transactionId: string): Promise<void> {
+    /* RevenueCat auto-acknowledges via Purchases.purchasePackage internal flow.
+       Backend hoeft niets te doen — RevenueCat webhook bevestigt sub. */
+  }
+
   async teardown(): Promise<void> {
-    try {
-      this.purchaseSub?.remove();
-    } catch {}
-    try {
-      this.errorSub?.remove();
-    } catch {}
-    try {
-      await endConnection();
-    } catch {}
+    if (this.customerInfoUpdateHandler) {
+      Purchases.removeCustomerInfoUpdateListener(this.customerInfoUpdateHandler);
+      this.customerInfoUpdateHandler = null;
+    }
     this.purchaseListeners.clear();
     this.initialized = false;
   }
