@@ -670,6 +670,11 @@ export default function BreathScreen() {
   }, []);
 
   /* ── Render ──────────────────────────────────────────────────── */
+  /* Iter v154 (2026-06-25): tekst 1:1 met voice cue. Operator-feedback:
+     'tekst dat in de breathwork card staat bij in en uitademen is andere
+     tekst dan wat begeleidende stem zegt'. Voice zegt 'Inhale through
+     your nose' (met 'your'), oude tekst zei 'through nose' zonder
+     bezittelijk pronomen. Nu identiek aan voice. */
   const phaseLabel =
     phase === 'inhale' ? 'Inhale'
     : phase === 'hold-in' || phase === 'hold-out' ? 'Hold'
@@ -677,8 +682,8 @@ export default function BreathScreen() {
     : 'Ready';
 
   const phaseVia =
-    phase === 'inhale' ? `through ${current.inhaleVia}`
-    : phase === 'exhale' ? `through ${current.exhaleVia}`
+    phase === 'inhale' ? `through your ${current.inhaleVia}`
+    : phase === 'exhale' ? `through your ${current.exhaleVia}`
     : '';
 
   const startBtnBg = running ? 'rgba(255,255,255,0.06)' : current.color;
