@@ -112,7 +112,6 @@
           "enableBackgroundRecording": false
         }
       ],
-      "react-native-iap",
       "@react-native-google-signin/google-signin"
     ],
     "experiments": {
