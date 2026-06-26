@@ -48,23 +48,23 @@ import { Platform } from 'react-native';
 import {
   endConnection,
   ErrorCode,
+  fetchProducts,
   finishTransaction,
   getAvailablePurchases,
-  getSubscriptions,
   initConnection,
+  isNitroReady,
   type PurchaseError,
   purchaseErrorListener,
   purchaseUpdatedListener,
-  requestSubscription,
+  requestPurchase,
 } from 'react-native-iap';
 
-/* Iter v153 (2026-06-25): downgrade van v15.3.1 → v12.16.3. v15 vereiste
-   react-native-nitro-modules die in Expo SDK 55 niet correct linked
-   waardoor IAP altijd faalde met 'Nitro runtime not installed' op
-   gebruiker's telefoon. v12 is de laatste pre-Nitro stable release —
-   gebruikt classic React Native bridge, bewezen werkt zonder extra setup.
-   API verschilt: requestSubscription dedicated method (niet requestPurchase
-   met type:'subs'), getSubscriptions ipv fetchProducts. */
+/* Iter v156 (2026-06-26): TERUG naar v15.3.1 met expliciete Nitro setup.
+   v12 was risico op New Architecture compat (RN 0.83 Expo SDK 55 = New
+   Arch default-on). v15 is Nitro-native = TurboModule = native New Arch
+   compatible. Plus react-native-nitro-modules nu expliciet als peer dep
+   geinstalleerd (was in v12-poging weggehaald — root cause van Nitro
+   'runtime not installed' op build #16). */
 
 import {
   IAPProvider,
@@ -83,16 +83,16 @@ import {
  *  ongeacht waar de error binnenkomt. */
 function mapErrorCode(code: unknown, message?: string): IapError {
   const msg = typeof message === 'string' && message.length > 0 ? message : '';
-  if (code === ErrorCode.E_USER_CANCELLED) {
+  if (code === ErrorCode.UserCancelled) {
     return { code: 'user_cancelled', message: msg || 'Cancelled by user.' };
   }
-  if (code === ErrorCode.E_NETWORK_ERROR) {
+  if (code === ErrorCode.NetworkError) {
     return { code: 'network', message: msg || 'Network error.' };
   }
-  if (code === ErrorCode.E_ALREADY_OWNED) {
+  if (code === ErrorCode.AlreadyOwned) {
     return { code: 'already_owned', message: msg || 'You already own this subscription.' };
   }
-  if (code === ErrorCode.E_ITEM_UNAVAILABLE) {
+  if (code === ErrorCode.ItemUnavailable) {
     return { code: 'unavailable', message: msg || 'This product is not available right now.' };
   }
   return { code: 'unknown', message: msg || String(code ?? 'Unknown error') };
@@ -195,6 +195,33 @@ export class RealIAPProvider implements IAPProvider {
 
   async init(): Promise<void> {
     if (this.initialized) return;
+
+    /* Iter v156 (2026-06-26, KRITIEK voor v15+Nitro): expliciete Nitro-
+       readiness check voor we initConnection() proberen. Reden: in
+       Expo SDK 55 + RN 0.83 + New Architecture werd react-native-nitro-
+       modules niet altijd aan-de-tijd geinitialized (race tussen JS-thread
+       en native runtime bootstrap). Result voor user: 'Nitro runtime not
+       installed' op de eerste subscribe-poging. Door isNitroReady() te
+       polen met retry geven we de runtime tijd om volledig op te starten
+       voordat we native methods aanroepen. */
+    const MAX_NITRO_WAIT_MS = 3000;
+    const POLL_MS = 100;
+    const start = Date.now();
+    while (!isNitroReady()) {
+      if (Date.now() - start > MAX_NITRO_WAIT_MS) {
+        const err = new Error(
+          'Nitro runtime did not become ready within 3s. ' +
+          'react-native-nitro-modules may not be linked correctly.'
+        );
+        if (__DEV__) console.warn('[RealIAP] Nitro timeout:', err);
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, POLL_MS));
+    }
+    if (__DEV__) {
+      console.log(`[RealIAP] Nitro ready after ${Date.now() - start}ms`);
+    }
+
     await initConnection();
     this.purchaseSub = purchaseUpdatedListener((purchase) => {
       const mapped = mapToIapPurchase(purchase, false);
@@ -233,10 +260,10 @@ export class RealIAPProvider implements IAPProvider {
 
   async getProducts(): Promise<IapProduct[]> {
     await this.init();
-    /* Iter v153 (2026-06-25): v12 API — getSubscriptions voor recurring
-       subscriptions (vs getProducts voor one-time). Accepteert {skus}. */
-    const raws = await getSubscriptions({
+    /* Iter v156 (2026-06-26): v15 API — fetchProducts unified met type:'subs'. */
+    const raws = await fetchProducts({
       skus: [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly],
+      type: 'subs',
     });
     if (!raws) return [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -249,29 +276,36 @@ export class RealIAPProvider implements IAPProvider {
     await this.init();
     const sku = PRODUCT_IDS[tier];
 
-    /* Iter v153 (2026-06-25): v12 API — requestSubscription dedicated
-       method (in v15 was dit unified onder requestPurchase met type:'subs').
-       Android: typisch null return + event via purchaseUpdatedListener.
+    /* Iter v156 (2026-06-26): v15 API — requestPurchase unified onder
+       type:'subs' (geen aparte requestSubscription meer in v15).
+       Android: typisch null/void return + event via purchaseUpdatedListener.
        iOS: kan direct Purchase resolved promise. */
 
     let androidOfferToken = '';
     if (Platform.OS === 'android') {
-      const subs = await getSubscriptions({ skus: [sku] });
+      const subs = await fetchProducts({ skus: [sku], type: 'subs' });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sub = (subs as any[] | null)?.[0];
       androidOfferToken =
         sub?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
     }
 
-    /* v12 requestSubscription signature: takes {sku} en optioneel
-       Android-specifieke subscriptionOffers. Geen type-veld zoals v15. */
-    const requestArgs =
-      Platform.OS === 'android'
-        ? {
-            sku,
-            subscriptionOffers: [{ sku, offerToken: androidOfferToken }],
-          }
-        : { sku };
+    const requestArgs = {
+      request: {
+        ...(Platform.OS === 'ios' ? { ios: { sku } } : {}),
+        ...(Platform.OS === 'android'
+          ? {
+              android: {
+                skus: [sku],
+                subscriptionOffers: [
+                  { sku, offerToken: androidOfferToken },
+                ],
+              },
+            }
+          : {}),
+      },
+      type: 'subs' as const,
+    };
 
     /* Android: wacht op listener (purchase OF error event). Timeout van 5 min
        voorkomt dat de Promise eeuwig blijft hangen wanneer beide listeners
@@ -308,11 +342,8 @@ export class RealIAPProvider implements IAPProvider {
           });
         }, 5 * 60 * 1000);
 
-        /* Fire-and-forget: het echte resultaat komt via de listeners. Sync
-           errors (zoals user_cancelled bij sommige Android-versies) catchen we
-           hier en routeren naar settle(). */
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (requestSubscription as any)(requestArgs).catch((e: unknown) => {
+        /* Fire-and-forget: het echte resultaat komt via de listeners. */
+        requestPurchase(requestArgs).catch((e: unknown) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const err = e as any;
           const mapped = mapErrorCode(err?.code, err?.message);
@@ -323,8 +354,7 @@ export class RealIAPProvider implements IAPProvider {
 
     /* iOS-pad: behoudt de oude synchrone-await flow. */
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (requestSubscription as any)(requestArgs);
+      const result = await requestPurchase(requestArgs);
       if (result && !Array.isArray(result)) {
         const mapped = mapToIapPurchase(result, false);
         if (mapped) return { ok: true, purchase: mapped };
