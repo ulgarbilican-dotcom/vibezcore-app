@@ -355,12 +355,13 @@ const BREATH_WHEN: Record<BraceletMode, string> = {
 /* Iter 9dq v9 (2026-06-02): pace-meta per mode. Concrete rhythm-info
    zonder medische claims (CLAUDE.md §1: geen "verlaagt hartslag" /
    "activeert X system"). Beschrijft alleen het ademritme zelf. */
+/* Iter v155 (2026-06-25): pace-strings 1:1 met breath-tab protocols. */
 const BREATH_PACE: Record<BraceletMode, string> = {
-  [BraceletMode.Gamma]: '3s in · 3s out · 10 breaths/min',
-  [BraceletMode.Beta]: '4-4-4 phases · 5 breaths/min',
-  [BraceletMode.Alpha]: '5s in · 5s out · 6 breaths/min',
-  [BraceletMode.Theta]: '4-phase nasal alternation',
-  [BraceletMode.Delta]: '4-4-4-4 box · ~4 breaths/min',
+  [BraceletMode.Gamma]: '2s in · 2s out · 15 breaths/min',
+  [BraceletMode.Beta]: '5s in · 5s out · 6 breaths/min',
+  [BraceletMode.Alpha]: '4-4-4-4 box · ~4 breaths/min',
+  [BraceletMode.Theta]: '4s in · 2s hold · 6s out · ~5 breaths/min',
+  [BraceletMode.Delta]: '4-7-8 · ~3 breaths/min',
 };
 
 /* "Hoe samen met bracelet" — micro-copy onder de breath-card. Maakt
