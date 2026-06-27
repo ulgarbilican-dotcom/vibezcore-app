@@ -299,59 +299,67 @@ export default function SubscribeScreen() {
        Laag 3 — acknowledge: pas finishTransaction() NA succesvolle
                              backend activate. Behoudt Google Play's
                              eigen retry-mechanisme als laatste vangnet. */
-    const outcome = await verifyWithRetry(purchaseData);
+    /* Iter v164 (2026-06-27): RevenueCat customerInfo is bron-van-waarheid.
+       Voorheen stuurden we purchaseData.receiptToken naar /api/iap-verify
+       wat een raw Google purchase token verwachtte. RevenueCat geeft echter
+       z'n eigen transactionIdentifier terug — Google's verify API geeft 400
+       (invalid_receipt google_400) op die identifier. Resultaat: échte
+       betaling lukte, maar app activate'de niet → user kwam niet in PRO.
 
-    if (outcome.ok && outcome.active) {
-      /* Server-side actief → bevestig bij store zodat de purchase niet
-         na 3 dagen wordt gerefund. Non-fatal als acknowledge faalt:
-         backend heeft 'm al, user is PRO. */
-      try {
-        await getIAP().acknowledge(purchaseData.transactionId);
-      } catch {
-        /* swallow */
+       RevenueCat heeft de receipt al server-to-server bij Google
+       gevalideerd vóór hij customerInfo teruggeeft. We vertrouwen die
+       bron-van-waarheid: als customerInfo.entitlements.active['audio_pro']
+       bestaat, dan ÍS de user PRO. */
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Purchases = require('react-native-purchases').default;
+      const customerInfo = await Purchases.getCustomerInfo();
+      const isPro = !!customerInfo?.entitlements?.active?.['audio_pro'];
+
+      if (isPro) {
+        /* Acknowledge bij store zodat de purchase niet na 3 dagen wordt
+           gerefund. RevenueCat doet dit eigenlijk al automatisch, maar
+           we behouden onze eigen acknowledge() voor symmetrie. */
+        try {
+          await getIAP().acknowledge(purchaseData.transactionId);
+        } catch {
+          /* swallow — non-fatal */
+        }
+        refreshSubscription();
+        setPhase('done');
+        setTimeout(() => router.replace('/'), 1200);
+        return;
       }
-      refreshSubscription();
-      setPhase('done');
-      setTimeout(() => router.replace('/'), 1200);
-      return;
-    }
 
-    /* Verify gefaald. Twee paden afhankelijk van retriable vs permanent. */
-    if (!outcome.ok && outcome.retriable) {
-      /* Transient failure (network, 5xx, timeout) → in queue voor app-
-         startup recovery. User ziet duidelijke message dat het later
-         vanzelf gefixt wordt — geen support-mail nodig. */
+      /* Edge case: customerInfo zegt geen entitlement. Kan gebeuren bij
+         cross-platform sync race-condition. Queue voor app-startup
+         recovery (zelfde mechanisme als voorheen). */
       await queuePendingVerify(purchaseData);
-      if (__DEV__) {
-        console.warn(
-          '[subscribe] verify failed (retriable, queued):',
-          outcome.ok === false ? outcome.error : '(active=false)',
-        );
-      }
       setErrMsg(
         "Your purchase went through, but we couldn't confirm it just now. " +
           "We'll finish setting up your subscription automatically the next " +
           'time you open the app. No action needed.',
       );
-      setErrDebug(
-        `verify · queued · ${outcome.ok === false ? outcome.error : 'inactive'}`,
-      );
+      setErrDebug(`entitlement · queued · audio_pro inactive after purchase`);
       setPhase('error');
-      return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      /* getCustomerInfo zelf gefaald (network, SDK-error). Behandel als
+         retriable — startup recovery pakt 'm later op. */
+      if (__DEV__) console.warn('[subscribe] customerInfo fetch failed:', e);
+      await queuePendingVerify(purchaseData);
+      setErrMsg(
+        "Your purchase went through, but we couldn't confirm it just now. " +
+          "We'll finish setting up your subscription automatically the next " +
+          'time you open the app. No action needed.',
+      );
+      setErrDebug(`entitlement · queued · ${e?.message ?? String(e)}`);
+      setPhase('error');
     }
 
-    /* Permanent failure (4xx, bad receipt, replay attempt). Niet
-       retryen — sturen naar support. */
-    const errStr =
-      outcome.ok === false ? outcome.error : 'inactive';
-    if (__DEV__) console.warn('[subscribe] verify failed (permanent):', errStr);
-    setErrMsg(
-      'Your purchase was completed but we could not activate it. Please ' +
-        "contact support with your transaction ID — we'll fix this within " +
-        '24 hours.',
-    );
-    setErrDebug(`verify · permanent · ${errStr} · tx=${purchaseData.transactionId}`);
-    setPhase('error');
+    /* Verwijderd: outcome-based retry/permanent split die op het oude
+       verifyWithRetry result rustte. Niet meer relevant — RevenueCat
+       customerInfo is binary (PRO of niet) en server-side al gevalideerd. */
   };
 
   const onSubmit = async () => {
