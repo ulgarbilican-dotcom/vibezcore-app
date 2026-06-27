@@ -93,10 +93,43 @@ function mapPurchasesErrorCode(
   }
 }
 
+/** Iter v163 (2026-06-27): extract regular (non-intro) prijs uit
+ *  Google's pricingPhases. Android subscription products hebben een
+ *  defaultOption (of subscriptionOptions[0]) met pricingPhases array.
+ *  Laatste fase is altijd de regular post-intro prijs. Eerste fase(s)
+ *  zijn intro/trial periods. Alleen als er >1 fase is hebben we een
+ *  intro aanbieding actief voor deze klant — anders null.
+ *
+ *  Werkt in ELKE valuta want Google geeft localized prices direct
+ *  terug (geen conversie nodig in code). */
+function extractRegularPriceFromPackage(
+  pkg: PurchasesPackage
+): { label: string; micros: number } | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const product = pkg.product as any;
+  const opt = product?.defaultOption ?? product?.subscriptionOptions?.[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const phases: any[] = opt?.pricingPhases;
+  if (!Array.isArray(phases) || phases.length < 2) return null;
+  const regularPhase = phases[phases.length - 1];
+  const price = regularPhase?.price;
+  if (!price) return null;
+  const label: string | undefined = price.formatted ?? price.formattedPrice;
+  const micros: number | undefined =
+    typeof price.amountMicros === 'number'
+      ? price.amountMicros
+      : typeof price.amountMicros === 'string'
+        ? parseInt(price.amountMicros, 10)
+        : undefined;
+  if (typeof label !== 'string' || typeof micros !== 'number') return null;
+  return { label, micros };
+}
+
 function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
   const productId = pkg.product.identifier;
   const tier = tierFromProductId(productId);
   if (!tier) return null;
+  const reg = extractRegularPriceFromPackage(pkg);
   return {
     productId,
     tier,
@@ -106,6 +139,8 @@ function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
     currency: pkg.product.currencyCode,
     priceAmountMicros: Math.round(pkg.product.price * 1_000_000),
     subscriptionPeriod: tier === 'monthly' ? 'P1M' : 'P1Y',
+    regularPriceLabel: reg?.label,
+    regularPriceMicros: reg?.micros,
   };
 }
 

@@ -85,6 +85,14 @@ export type IapProduct = {
   /** Per-platform subscription-period: 'P1M' (monthly) of 'P1Y' (yearly).
    *  ISO 8601 duration format, zelfde op iOS en Android. */
   subscriptionPeriod?: string;
+  /** Iter v163 (2026-06-27): regular (non-intro) prijs als strikethrough
+   *  display. Komt direct uit Google's pricingPhases (laatste fase na
+   *  intro-12m). Werkt in alle valuta's want Google geeft localized
+   *  prices terug. Undefined als product geen intro-aanbieding heeft
+   *  voor deze klant (License Tester, of intro al verlopen). */
+  regularPriceLabel?: string;
+  /** Numerieke regular prijs in micro-units, voor berekeningen. */
+  regularPriceMicros?: number;
 };
 
 /** Wat een purchase-event aan de app oplevert. Backend krijgt de

@@ -615,57 +615,28 @@ export default function AudioScreen() {
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
 
-  /* Iter v161 (2026-06-27): correcte strikethrough TERUG, maar alleen
-     wanneer klant daadwerkelijk de intro-prijs ziet (currentPrice <
-     regularPrice). License Testers + bestaande klanten zien de regular
-     prijs zonder strikethrough; nieuwe klanten met intro-12m
-     eligibility zien ~regular~ → intro met strikethrough.
+  /* Iter v163 (2026-06-27): strikethroughs komen DIRECT uit Google's
+     pricingPhases (regularPriceLabel). Geen hardcoded waarden per
+     valuta meer. Operator-spec: 'prijzen in app en website moeten in
+     alle valuta ook kloppen met prijzen in google wat de klant
+     betaald'. RevenueCat reads pricingPhases van Google Play Billing
+     en geeft ons de regular post-intro prijs in dezelfde lokale
+     valuta. Werkt in elke regio (EUR, USD, GBP, CAD, AUD, ...) want
+     het is letterlijk wat Google teruggeeft. */
 
-     Regular prices komen uit jouw Play Console basisabonnement config
-     (per memory 2026-06-19/20):
-       Monthly regular: €14.99 / $14.99 / £12.99
-       Yearly regular:  €89.99 / $89.99 / £79.99
-     Intro prices (12-mnd lock):
-       Monthly: €9.99 / $9.99 / £8.99
-       Yearly:  €69.99 / $69.99 / £59.99
+  /* Intro detectie via aanwezigheid van regularPriceLabel — Google
+     geeft ALLEEN een regular phase terug als er een intro is. */
+  const monthlyHasIntro = !!monthlyProduct?.regularPriceLabel;
+  const yearlyHasIntro = !!yearlyProduct?.regularPriceLabel;
 
-     Detectie: als de teruggegeven localizedPrice OnDeR de regular prijs
-     ligt (drempel 95%), dan toont Google de intro voor deze klant →
-     wij overlayen de regular als strikethrough. Anders geen strikethrough. */
-  const REGULAR_PRICES: Record<string, { monthly: number; yearly: number }> = {
-    EUR: { monthly: 14.99, yearly: 89.99 },
-    USD: { monthly: 14.99, yearly: 89.99 },
-    GBP: { monthly: 12.99, yearly: 79.99 },
-  };
-
-  /* Detect of klant de intro-prijs ziet (currentPrice < regular × 0.95). */
-  const monthlyHasIntro = (() => {
-    if (!monthlyProduct?.priceAmountMicros) return false;
-    const regular = REGULAR_PRICES[monthlyProduct.currency]?.monthly;
-    if (!regular) return false;
-    return (monthlyProduct.priceAmountMicros / 1_000_000) < regular * 0.95;
-  })();
-
-  const yearlyHasIntro = (() => {
-    if (!yearlyProduct?.priceAmountMicros) return false;
-    const regular = REGULAR_PRICES[yearlyProduct.currency]?.yearly;
-    if (!regular) return false;
-    return (yearlyProduct.priceAmountMicros / 1_000_000) < regular * 0.95;
-  })();
-
-  /* Monthly strikethrough: REGULAR prijs als klant intro ziet. */
-  const monthlyStrikeLabel = (() => {
-    if (!monthlyHasIntro || !monthlyProduct) return null;
-    const regular = REGULAR_PRICES[monthlyProduct.currency]?.monthly;
-    if (!regular) return null;
-    return reformatWithSymbol(monthlyProduct.localizedPrice, monthlyProduct.currency, regular);
-  })();
-
-  /* Yearly strikethrough: monthly intro prijs (per website-layout —
-     comparison "monthly intro per-month versus yearly per-month"). */
-  const yearlyStrikeLabel = yearlyHasIntro && monthlyProduct
-    ? monthlyPriceLabel
+  /* Monthly strikethrough: regular price uit Google pricingPhases. */
+  const monthlyStrikeLabel = monthlyHasIntro
+    ? monthlyProduct?.regularPriceLabel ?? null
     : null;
+
+  /* Yearly strikethrough: monthly intro current price (per website-
+     layout — comparison "yearly per-month vs monthly per-month"). */
+  const yearlyStrikeLabel = yearlyHasIntro ? monthlyPriceLabel : null;
 
   /* SAVE %: berekend uit monthly per-month vs yearly per-month, alleen
      wanneer yearly intro actief is. */
