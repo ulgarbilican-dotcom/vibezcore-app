@@ -615,34 +615,14 @@ export default function AudioScreen() {
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
 
-  /* Monthly "REGULAR" strike-price = monthly × 1.50, afgerond. Operator-
-     pricing update 2026-06-19: intro €9.99/$9.99/£8.99 → regular
-     €14.99/$14.99/£12.99 (12 mnd intro lock). Ratio 1.50 matcht EU/US
-     exact, UK is iets overschat (~£13.49 vs werkelijk £12.99).
-     ⚠ TM/Review-noot: dit is een marketing-claim ("regular price"), geen
-     échte historische prijs. Echte intro-flag staat in Google Play Console
-     base plan offer — IAP product geeft alleen huidige effectieve prijs. */
-  const monthlyStrikeLabel = (() => {
-    if (!monthlyProduct?.priceAmountMicros) return '€14.99';
-    const strikeValue = (monthlyProduct.priceAmountMicros / 1_000_000) * 1.50;
-    return reformatWithSymbol(monthlyProduct.localizedPrice, monthlyProduct.currency, strikeValue);
-  })();
-
-  /* Iter 9dq v141 (operator 2026-06-15 v3, prijsupd 2026-06-19): SAVE %
-     dynamisch berekend uit beide products' priceAmountMicros. Vergelijking
-     is monthly-intro vs yearly per maand. Bij elk regio dezelfde formule:
-       EU monthly intro €9.99 vs yearly €X/mo → SAVE Y%
-       US monthly intro $9.99 vs yearly $X/mo → SAVE Y%
-       UK monthly intro £8.99 vs yearly £X/mo → SAVE Y%
-     Yearly pricing nog niet finaal (memory: yearly open). Fallback 42%
-     blijft staan als safe estimate tot yearly definitief is. */
-  const savePercentLabel = (() => {
-    if (!monthlyProduct?.priceAmountMicros || !yearlyProduct?.priceAmountMicros) return 'SAVE 42%';
-    const monthlyTotal = monthlyProduct.priceAmountMicros / 1_000_000;
-    const yearlyPerMonth = (yearlyProduct.priceAmountMicros / 12) / 1_000_000;
-    const savedPct = Math.round((1 - yearlyPerMonth / monthlyTotal) * 100);
-    return `SAVE ${savedPct}%`;
-  })();
+  /* Iter v160 (2026-06-27): VERWIJDERD — monthlyStrikeLabel (verzonnen
+     1.50× ratio) en savePercentLabel (auto-berekende fake SAVE %).
+     Operator-correctie: 'jij bent alles kapot aan het maken — bezoeker
+     moet altijd zien wat hij effectief betaalt, niet de zogezegde
+     regular prijs'. Pricing-cards tonen nu alleen de werkelijke prijs
+     die Google teruggeeft via localizedPrice. Geen marketing-trickery
+     in code. Strikethrough komt automatisch van Google Play wanneer
+     een Aanbieding (intro-12m) actief is voor de klant. */
   /* (verwijderd: storeName per platform — operator wil beide platforms
      tonen voor vertrouwen ongeacht device). */
   /* Uitklap-state voor de disclaimer onderaan de pagina — default DICHT. */
@@ -2828,14 +2808,8 @@ export default function AudioScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             >
               <View style={[s.cardClip, s.cardClipMonthly]}>
-                {/* Iter 9dq v135 (operator 2026-06-15): website-style
-                    "REGULAR" strike-prijs terug op monthly-card, gederiveerd
-                    × 1.30 zodat het in elke valuta klopt. Matcht
-                    audio-library-page.html. */}
-                <View style={s.strikeRow}>
-                  <Text style={s.priceStrike}>{monthlyStrikeLabel}</Text>
-                  <Text style={s.regularTag}>REGULAR</Text>
-                </View>
+                {/* Iter v160 (2026-06-27): verzonnen REGULAR-strikethrough
+                    verwijderd. Toon alleen wat klant effectief betaalt. */}
                 <View style={s.priceBig}>
                   <Text style={s.priceBigAmount}>{monthlyPriceLabel}</Text>
                   <Text style={s.priceBigPer}>/month</Text>
@@ -2868,18 +2842,14 @@ export default function AudioScreen() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-                {/* Iter 9dq v141 (operator 2026-06-15 v3): SAVE % dynamisch
-                    berekend uit IAP-products. EU 42%, US 51%, UK 44%.
-                    Matcht website auto-detect logica. */}
-                <View style={s.strikeRow}>
-                  <Text style={s.priceStrike}>{monthlyPriceLabel}</Text>
-                  <Text style={s.saveTag}>{savePercentLabel}</Text>
-                </View>
+                {/* Iter v160 (2026-06-27): SAVE % + monthly-strikethrough
+                    verwijderd. Toon yearly totaal als hoofdprijs, niet
+                    een verzonnen per-maand berekening. */}
                 <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>{yearlyPerMonthLabel}</Text>
-                  <Text style={s.priceBigPer}>/month</Text>
+                  <Text style={s.priceBigAmount}>{yearlyTotalLabel}</Text>
+                  <Text style={s.priceBigPer}>/year</Text>
                 </View>
-                <Text style={s.priceMeta}>Billed {yearlyTotalLabel}/year</Text>
+                <Text style={s.priceMeta}>Billed yearly</Text>
                 {plan === 'yearly' && (
                   <Text style={[s.selCheck, s.selCheckYearly]} pointerEvents="none">
                     ✓
@@ -2913,7 +2883,7 @@ export default function AudioScreen() {
           >
             <Text style={s.ctaTxt}>
               {plan === 'yearly'
-                ? `Get Yearly — ${yearlyPerMonthLabel}/month`
+                ? `Get Yearly — ${yearlyTotalLabel}/year`
                 : `Get Monthly — ${monthlyPriceLabel}/month`}
             </Text>
           </Pressable>

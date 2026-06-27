@@ -157,17 +157,11 @@ export default function SubscribeScreen() {
 
   const { getProduct, purchase, loading: iapLoading } = useIAP();
   const product = getProduct(tier);
-  /* Iter 9dq v141: voor dynamische SAVE % berekening hebben we BEIDE
-     producten nodig (yearly review toont savings vs monthly). */
-  const monthlyProductForSave = getProduct('monthly');
-  const yearlyProductForSave = getProduct('yearly');
-  const orderSaveLabel = (() => {
-    if (!monthlyProductForSave?.priceAmountMicros || !yearlyProductForSave?.priceAmountMicros) return 'Save 42% vs monthly';
-    const monthlyTotal = monthlyProductForSave.priceAmountMicros / 1_000_000;
-    const yearlyPerMonth = (yearlyProductForSave.priceAmountMicros / 12) / 1_000_000;
-    const pct = Math.round((1 - yearlyPerMonth / monthlyTotal) * 100);
-    return `Save ${pct}% vs monthly`;
-  })();
+  /* Iter v160 (2026-06-27): VERWIJDERD orderSaveLabel (verzonnen SAVE %
+     berekening). Operator-correctie: 'bezoeker moet altijd zien wat hij
+     effectief betaalt — geen verzonnen besparing-claims'. Review-card
+     toont nu alleen de prijs die de klant betaalt. */
+  const orderSaveLabel = '';
 
   /* Iter 9dq v142 (2026-06-23): default mode is 'signup' bij echte first-
      timers, maar pre-fillen we straks de email + flippen we naar 'signin'
@@ -707,9 +701,9 @@ export default function SubscribeScreen() {
           <ActivityIndicator color={Brand.textDim} size="small" />
         ) : null}
       </View>
-      {tier === 'yearly' && (
-        <Text style={s.orderSave}>{orderSaveLabel}</Text>
-      )}
+      {/* Iter v160 (2026-06-27): orderSave label verwijderd — geen
+          verzonnen 'Save 42%' meer. Klant ziet alleen de werkelijke
+          prijs in priceLabel hierboven. */}
     </View>
   );
 
