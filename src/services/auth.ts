@@ -54,8 +54,77 @@ type SessionPayload = {
   access_token?: string;
   refresh_token?: string;
   expires_in?: number;
-  user?: { email?: string };
+  user?: { id?: string; email?: string };
 };
+
+/* ── RevenueCat user-linking helpers ───────────────────────────────────────
+   Iter v165 (2026-06-27): zodra een user inlogt/signupt koppelen we z'n
+   Supabase auth.users.id (de `sub` in de JWT) aan z'n RevenueCat-customer.
+   Vanaf dat moment komen alle RevenueCat webhook-events bij onze backend
+   binnen met `event.app_user_id === <supabaseAuthUserId>`, waardoor we
+   server-side de juiste public.users-row kunnen vinden zonder ooit nog een
+   client-driven /api/iap-verify call nodig te hebben.
+
+   Op clearSession() doen we Purchases.logOut() zodat het volgende account
+   op hetzelfde toestel niet de entitlements erft van de vorige user.
+
+   Alle calls zijn try/catch + lazy require — geen fatale fail als
+   react-native-purchases native module niet ready is (bv. bij koude start
+   vóór RealIAP.init). De auth flow mag NOOIT blokkeren op IAP-state. */
+
+export async function linkRevenueCatUser(userId: string | null | undefined): Promise<void> {
+  if (!userId) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Purchases = require('react-native-purchases').default;
+    if (!Purchases || typeof Purchases.logIn !== 'function') return;
+    await Purchases.logIn(userId);
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(
+        '[auth] linkRevenueCatUser failed (non-fatal):',
+        e instanceof Error ? e.message : String(e)
+      );
+    }
+  }
+}
+
+export async function unlinkRevenueCatUser(): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Purchases = require('react-native-purchases').default;
+    if (!Purchases || typeof Purchases.logOut !== 'function') return;
+    await Purchases.logOut();
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(
+        '[auth] unlinkRevenueCatUser failed (non-fatal):',
+        e instanceof Error ? e.message : String(e)
+      );
+    }
+  }
+}
+
+/** Decode the JWT payload to extract the `sub` (= Supabase auth.users.id).
+ *  We don't verify the signature here — backend does that on every request.
+ *  Purpose is purely to know WHICH user to link to RevenueCat. */
+export function getAuthUserIdFromToken(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    // global.atob is available in RN 0.81+ via Hermes
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const decoded = typeof atob === 'function' ? atob(b64) : '';
+    if (!decoded) return null;
+    const json = JSON.parse(decoded);
+    return typeof json?.sub === 'string' ? json.sub : null;
+  } catch {
+    return null;
+  }
+}
 
 type ErrorPayload = {
   error?: string;
@@ -96,6 +165,11 @@ export async function persistSession(s: SessionPayload): Promise<void> {
 }
 
 export async function clearSession(): Promise<void> {
+  /* Iter v165 (2026-06-27): unlink RevenueCat customer VÓÓR we de Supabase
+     sessie wissen, zodat het volgende account op dit toestel niet de PRO-
+     entitlements van de vorige user erft. unlinkRevenueCatUser swallowt
+     z'n eigen errors → mag nooit blokkeren op auth-clearance. */
+  await unlinkRevenueCatUser();
   try {
     await AsyncStorage.multiRemove([
       TOKEN_KEY,
@@ -271,6 +345,13 @@ export async function login(
     }
 
     await persistSession(data);
+    /* Iter v165: koppel deze Supabase user aan RevenueCat zodat alle
+       toekomstige IAP-events (webhook) bij het juiste account terechtkomen
+       én entitlements van eerdere apparaten van dezelfde user automatisch
+       herstellen. Non-blocking — bij IAP-fail mag login NIET falen. */
+    void linkRevenueCatUser(
+      data.user?.id ?? getAuthUserIdFromToken(data.access_token)
+    );
     return {
       ok: true,
       token: data.access_token,
@@ -299,6 +380,9 @@ export async function signup(
 
     if (data.access_token) {
       await persistSession(data);
+      void linkRevenueCatUser(
+        data.user?.id ?? getAuthUserIdFromToken(data.access_token)
+      );
       return {
         ok: true,
         token: data.access_token,
@@ -345,6 +429,9 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
       return { ok: false, error: msg };
     }
     await persistSession(data);
+    void linkRevenueCatUser(
+      data.user?.id ?? getAuthUserIdFromToken(data.access_token)
+    );
     return {
       ok: true,
       token: data.access_token,
@@ -425,6 +512,9 @@ export async function loginWithApple(
       return { ok: false, error: msg };
     }
     await persistSession(data);
+    void linkRevenueCatUser(
+      data.user?.id ?? getAuthUserIdFromToken(data.access_token)
+    );
     return {
       ok: true,
       token: data.access_token,

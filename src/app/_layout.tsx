@@ -26,7 +26,12 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
-import { getToken } from '@/services/auth';
+import {
+  getAuthUserIdFromToken,
+  getToken,
+  linkRevenueCatUser,
+} from '@/services/auth';
+import { refreshSubscription } from '@/hooks/useSubscription';
 import { recoverOnStartup as iapRecoverOnStartup } from '@/services/iap-recovery';
 import { clearSessionIfBuildChanged } from '@/services/version-tracker';
 import { setVoiceEnabled as setBreathVoiceEnabled } from '@/services/breath-voice';
@@ -50,7 +55,7 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Text as RNText, View } from 'react-native';
+import { AppState, Image, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -178,6 +183,89 @@ export default function RootLayout() {
     if (!ready) return;
     void iapRecoverOnStartup();
   }, [ready]);
+
+  /* Iter v165 (2026-06-27): RevenueCat bootstrap — één effect dat Purchases
+     configureert, de customer aan de huidige Supabase user koppelt, en een
+     customer-info-update listener registreert.
+
+     Volgorde is belangrijk: Purchases.logIn en addCustomerInfoUpdateListener
+     vereisen BEIDE dat Purchases.configure al gedraaid heeft. iap.init() is
+     idempotent — twee parallelle calls wachten op dezelfde initialized flag.
+
+     Eén effect ipv drie zodat we geen race tussen 'logIn' en 'configure'
+     krijgen: bij login op een fresh-install toestel runt configure → logIn
+     → listener-attach lineair binnen één promise-chain.
+
+     De listener firet bij elke entitlement-state-change (renewal, cancel,
+     refund, restore op ander toestel) en triggert refreshSubscription zodat
+     UI overal mee-update. */
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    let removeListener: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { getIAP } = await import('@/services/iap');
+        await getIAP().init();
+      } catch {
+        /* Init faalde — listener werkt niet maar UI valt terug op
+           backend-status via useSubscription. Auth-flows in auth.ts
+           proberen Purchases.logIn opnieuw na hun eigen events. */
+        return;
+      }
+      if (cancelled) return;
+
+      /* Link Supabase user aan RevenueCat customer als er een sessie is.
+         Bij vers-geïnstalleerde apps met bestaand account zorgt dit dat
+         entitlements direct hersteld worden. */
+      if (auth) {
+        const authUserId = getAuthUserIdFromToken(auth);
+        if (authUserId) {
+          await linkRevenueCatUser(authUserId);
+        }
+      }
+      if (cancelled) return;
+
+      /* Customer-info-update listener — backend-events (renewals,
+         cancellations, server-side restores) triggeren dit lokaal. */
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Purchases = require('react-native-purchases').default;
+        if (!Purchases?.addCustomerInfoUpdateListener) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const handler = (_info: any) => {
+          refreshSubscription();
+        };
+        Purchases.addCustomerInfoUpdateListener(handler);
+        removeListener = () => {
+          try {
+            Purchases.removeCustomerInfoUpdateListener?.(handler);
+          } catch {
+            /* swallow */
+          }
+        };
+      } catch {
+        /* swallow */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (removeListener) removeListener();
+    };
+  }, [ready, auth]);
+
+  /* Iter v165: AppState-foreground refresh. User komt terug uit settings
+     (sub geannuleerd) of na ~12h achtergrond → subscription kan zijn
+     veranderd. Vers ophalen bij elke foreground-transitie zodat we nooit
+     stale PRO-status tonen. */
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshSubscription();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   /* Iter v149 v3 (2026-06-25): sync voice-cues setting met beide
      voice-services (breath + bracelet). Voorheen had elke service een

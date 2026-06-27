@@ -133,6 +133,49 @@ async function loadCacheOnce(): Promise<void> {
   return cacheLoadPromise;
 }
 
+/* Iter v164 (2026-06-27): RevenueCat customerInfo als PRIMARY bron-van-
+   waarheid. Operator-spec: 'na betaling dient PRO unlocked te zijn en
+   als user afsluit en terugkomt moet die altijd in PRO omgeving zolang
+   abonnement geldig is'.
+
+   RevenueCat houdt customerInfo automatisch up-to-date — bij elke
+   getCustomerInfo() call krijgen we de huidige entitlement-state
+   server-validated. Geen backend webhook nodig om te weten dat user PRO
+   is — RevenueCat's customer-info IS de status.
+
+   Fallback: /api/subscription-status (backend Supabase) blijft secondary
+   bron voor het geval RevenueCat SDK niet bereikbaar is (offline + cache
+   verlopen). Maar als RevenueCat zegt PRO → user IS PRO, ongeacht wat
+   backend nog van eerdere weet. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function tryRevenueCatStatus(): Promise<SubscriptionStatus | null> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Purchases = require('react-native-purchases').default;
+    const customerInfo = await Purchases.getCustomerInfo();
+    const audioPro = customerInfo?.entitlements?.active?.['audio_pro'];
+    if (!audioPro) return null; /* geen actieve entitlement — fall through */
+    const productId: string | undefined = audioPro.productIdentifier;
+    const tier: 'monthly' | 'yearly' | undefined = productId?.includes('yearly')
+      ? 'yearly'
+      : productId?.includes('monthly')
+        ? 'monthly'
+        : undefined;
+    return {
+      active: true,
+      tier,
+      status: 'active',
+      validUntil:
+        typeof audioPro.expirationDate === 'string'
+          ? audioPro.expirationDate
+          : undefined,
+      willRenew: audioPro.willRenew === true,
+    };
+  } catch {
+    return null; /* SDK niet geladen / native module mist — fall back */
+  }
+}
+
 async function fetchStatus(): Promise<void> {
   /* Iter 9dq v56 (2026-06-03, audit C2): elke fetch claimt z'n eigen
      generation-nummer. Bij elke yield-point checken we of we nog de
@@ -148,6 +191,18 @@ async function fetchStatus(): Promise<void> {
   }
   isFetching = true;
   try {
+    /* Iter v164: probeer RevenueCat eerst. Bij actieve entitlement is
+       dit DE bron-van-waarheid — geen backend round-trip nodig. */
+    const rcStatus = await tryRevenueCatStatus();
+    if (myGen !== fetchGeneration) return;
+    if (rcStatus?.active) {
+      notifyAll(rcStatus);
+      persistCache(rcStatus);
+      return;
+    }
+
+    /* Geen actieve RevenueCat entitlement → check backend voor het geval
+       user al PRO is via een ander pad (bv. handmatige grant). */
     const token = await getToken();
     if (myGen !== fetchGeneration) return; /* gerevoket — sign-out happened */
     if (!token) {

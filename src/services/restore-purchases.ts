@@ -5,26 +5,32 @@
    subscriptions verkopen MOETEN een "Restore Purchases"-knop bieden.
    Google heeft een vergelijkbare vereiste in Play Console policy.
 
-   Wanneer een user de app herinstalleert of op een nieuw toestel inlogt,
-   moet 'ie z'n bestaande subscription kunnen "restoren" — d.w.z. de
-   IAP-receipt opnieuw ophalen bij Apple/Google en linken aan het
-   ingelogde VIBEZCORE-account.
+   Iter v165 (2026-06-27): VOLLEDIG VEREENVOUDIGD — RevenueCat doet alles.
+   Voorheen riepen we voor elke gevonden purchase /api/iap-verify aan met
+   de raw receipt + Bearer JWT. Dat brak in twee scenario's:
+     1. RevenueCat geeft z'n eigen transactionIdentifier ipv een Google
+        purchaseToken → /api/iap-verify gaf 400 google_400.
+     2. User die restore tikt voordat 'ie inlogt → geen JWT → 'Please sign
+        in' fout, terwijl Apple/Google een receipt heeft die we KUNNEN
+        oppakken via RevenueCat's anonymous-user flow.
 
-   Flow:
-     1. iap.restorePurchases() → vraagt aan Apple/Google welke active
-        subs deze Apple-ID / Google-account heeft
-     2. Voor elke gevonden purchase: POST /api/iap-verify met de receipt
-        zodat backend 'm aan de ingelogde Supabase user koppelt
-     3. refreshSubscription() → useSubscription hook ziet de nieuwe state
-     4. UI toont success / error
-
-   Iter 9dq v86 (2026-06-03).
+   Nieuwe flow:
+     1. Init IAP (idempotent — geen overhead als al klaar).
+     2. Als user ingelogd → re-link RevenueCat customer aan auth-user-id.
+        Zorgt dat het webhook-event (server-to-server) bij het juiste
+        Supabase account aankomt. Bij gast → RevenueCat blijft anonymous;
+        entitlements zijn lokaal zichtbaar maar worden niet in backend
+        opgeslagen tot user inlogt en logIn() fired.
+     3. iap.restorePurchases() → triggert Purchases.restorePurchases() in
+        de SDK. RevenueCat valideert receipt server-side bij Apple/Google
+        en update z'n customerInfo. Async webhook update tegelijk Supabase.
+     4. refreshSubscription() → useSubscription's tryRevenueCatStatus()
+        leest de net-bijgewerkte customerInfo lokaal → UI ziet PRO meteen,
+        zonder backend round-trip te wachten.
    ─────────────────────────────────────────────────────────────────────── */
 
-import { Platform } from 'react-native';
-
 import { refreshSubscription } from '@/hooks/useSubscription';
-import { getToken, VZ_BACKEND_URL } from './auth';
+import { getAuthUserIdFromToken, getToken, linkRevenueCatUser } from './auth';
 import { getIAP } from './iap';
 import type { IapPurchase } from './iap-contract';
 
@@ -32,73 +38,44 @@ export type RestoreResult =
   | { ok: true; purchases: IapPurchase[]; restoredCount: number }
   | { ok: false; error: string };
 
-/** Trigger restore-purchases flow. Returnt aantal active subs gevonden
- *  + verified bij backend. Bij 0 active = user heeft niets te restoren
- *  (Apple/Google rapporteerden geen purchases voor dit account).
+/** Trigger restore-purchases flow. Returnt aantal active subs gevonden door
+ *  RevenueCat (= aantal entitlements actief na restore).
  *
- *  Backend POST /api/iap-verify: voor elke purchase een aparte call zodat
- *  ze elk hun eigen verify-flow krijgen. Partial success accepteren: zelfs
- *  als 1 van de 2 mislukt willen we de andere wel restoren. Backend is
- *  idempotent op transactionId (zie iap-verify.js). */
+ *  Werkt voor zowel ingelogde als anonieme users — RevenueCat handelt de
+ *  anonymous-naar-named user merge automatisch af zodra logIn() fired.
+ *
+ *  De backend Supabase-row wordt asynchroon bijgewerkt door de RevenueCat
+ *  webhook (zie netlify/functions/iap-webhook.js). UI hoeft daar niet op
+ *  te wachten omdat useSubscription's tryRevenueCatStatus() rechtstreeks
+ *  uit customerInfo leest (lokaal up-to-date direct na restore). */
 export async function restorePurchases(): Promise<RestoreResult> {
   try {
     const iap = getIAP();
     await iap.init();
-    const purchases = await iap.restorePurchases();
 
-    if (purchases.length === 0) {
-      return { ok: true, purchases: [], restoredCount: 0 };
-    }
-
+    /* Re-link RC customer aan huidige auth-user als die er is. Voorkomt dat
+       een ingelogde user die net een ander toestel had aangezet de restore
+       op anonymous niveau krijgt (zou de webhook nooit naar Supabase laten
+       routen). Bij gast doen we niets — RC blijft anonymous. */
     const token = await getToken();
-    if (!token) {
-      return { ok: false, error: 'Please sign in before restoring purchases.' };
-    }
-
-    let restoredCount = 0;
-    /* Iter v148 (2026-06-25): platform string + receipt field name moeten
-       matchen met backend contract — 'apple'/'google' (niet 'ios'/'android')
-       en `receipt` (niet `receiptToken`). Zelfde fix als subscribe.tsx. */
-    const platform = Platform.OS === 'ios' ? 'apple' : 'google';
-
-    for (const p of purchases) {
-      try {
-        const res = await fetch(`${VZ_BACKEND_URL}/api/iap-verify`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            platform,
-            tier: p.tier,
-            productId: p.productId,
-            transactionId: p.transactionId,
-            receipt: p.receiptToken,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data?.active === true) restoredCount += 1;
-        } else if (__DEV__) {
-          const text = await res.text().catch(() => '');
-          console.warn('[restorePurchases] verify HTTP error:', res.status, text);
-        }
-      } catch (err) {
-        if (__DEV__) console.warn('[restorePurchases] verify error:', err);
-        /* continue with next purchase */
+    if (token) {
+      const authUserId = getAuthUserIdFromToken(token);
+      if (authUserId) {
+        await linkRevenueCatUser(authUserId);
       }
     }
 
-    /* Triggert subscription-status fetch — als backend de restored
-       purchases inderdaad heeft gelinkt, ziet useSubscription nu de
-       PRO-state. */
+    const purchases = await iap.restorePurchases();
+
+    /* Triggert subscription-status fetch — tryRevenueCatStatus() in
+       useSubscription leest customerInfo lokaal (al bijgewerkt door SDK)
+       en zet PRO direct in UI. Backend Supabase-row volgt via webhook. */
     refreshSubscription();
 
     return {
       ok: true,
       purchases,
-      restoredCount,
+      restoredCount: purchases.length,
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
