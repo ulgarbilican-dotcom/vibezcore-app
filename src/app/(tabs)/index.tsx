@@ -615,14 +615,48 @@ export default function AudioScreen() {
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
 
-  /* Iter v160 (2026-06-27): VERWIJDERD — monthlyStrikeLabel (verzonnen
-     1.50× ratio) en savePercentLabel (auto-berekende fake SAVE %).
-     Operator-correctie: 'jij bent alles kapot aan het maken — bezoeker
-     moet altijd zien wat hij effectief betaalt, niet de zogezegde
-     regular prijs'. Pricing-cards tonen nu alleen de werkelijke prijs
-     die Google teruggeeft via localizedPrice. Geen marketing-trickery
-     in code. Strikethrough komt automatisch van Google Play wanneer
-     een Aanbieding (intro-12m) actief is voor de klant. */
+  /* Iter v161 (2026-06-27): correcte strikethrough TERUG, maar alleen
+     wanneer klant daadwerkelijk de intro-prijs ziet (currentPrice <
+     regularPrice). License Testers + bestaande klanten zien de regular
+     prijs zonder strikethrough; nieuwe klanten met intro-12m
+     eligibility zien ~regular~ → intro met strikethrough.
+
+     Regular prices komen uit jouw Play Console basisabonnement config
+     (per memory 2026-06-19/20):
+       Monthly regular: €14.99 / $14.99 / £12.99
+       Yearly regular:  €89.99 / $89.99 / £79.99
+     Intro prices (12-mnd lock):
+       Monthly: €9.99 / $9.99 / £8.99
+       Yearly:  €69.99 / $69.99 / £59.99
+
+     Detectie: als de teruggegeven localizedPrice OnDeR de regular prijs
+     ligt (drempel 95%), dan toont Google de intro voor deze klant →
+     wij overlayen de regular als strikethrough. Anders geen strikethrough. */
+  const REGULAR_PRICES: Record<string, { monthly: number; yearly: number }> = {
+    EUR: { monthly: 14.99, yearly: 89.99 },
+    USD: { monthly: 14.99, yearly: 89.99 },
+    GBP: { monthly: 12.99, yearly: 79.99 },
+  };
+
+  const monthlyStrikeLabel = (() => {
+    if (!monthlyProduct?.priceAmountMicros) return null;
+    const currency = monthlyProduct.currency;
+    const regular = REGULAR_PRICES[currency]?.monthly;
+    if (!regular) return null;
+    const current = monthlyProduct.priceAmountMicros / 1_000_000;
+    if (current >= regular * 0.95) return null; // already showing regular
+    return reformatWithSymbol(monthlyProduct.localizedPrice, currency, regular);
+  })();
+
+  const yearlyStrikeLabel = (() => {
+    if (!yearlyProduct?.priceAmountMicros) return null;
+    const currency = yearlyProduct.currency;
+    const regular = REGULAR_PRICES[currency]?.yearly;
+    if (!regular) return null;
+    const current = yearlyProduct.priceAmountMicros / 1_000_000;
+    if (current >= regular * 0.95) return null;
+    return reformatWithSymbol(yearlyProduct.localizedPrice, currency, regular);
+  })();
   /* (verwijderd: storeName per platform — operator wil beide platforms
      tonen voor vertrouwen ongeacht device). */
   /* Uitklap-state voor de disclaimer onderaan de pagina — default DICHT. */
@@ -2808,8 +2842,15 @@ export default function AudioScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             >
               <View style={[s.cardClip, s.cardClipMonthly]}>
-                {/* Iter v160 (2026-06-27): verzonnen REGULAR-strikethrough
-                    verwijderd. Toon alleen wat klant effectief betaalt. */}
+                {/* Iter v161 (2026-06-27): strikethrough verschijnt ALLEEN
+                    als de klant de intro-prijs ziet — niet voor License
+                    Testers of bestaande klanten die de regular betalen. */}
+                {monthlyStrikeLabel && (
+                  <View style={s.strikeRow}>
+                    <Text style={s.priceStrike}>{monthlyStrikeLabel}</Text>
+                    <Text style={s.regularTag}>REGULAR</Text>
+                  </View>
+                )}
                 <View style={s.priceBig}>
                   <Text style={s.priceBigAmount}>{monthlyPriceLabel}</Text>
                   <Text style={s.priceBigPer}>/month</Text>
@@ -2842,9 +2883,16 @@ export default function AudioScreen() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-                {/* Iter v160 (2026-06-27): SAVE % + monthly-strikethrough
-                    verwijderd. Toon yearly totaal als hoofdprijs, niet
-                    een verzonnen per-maand berekening. */}
+                {/* Iter v161 (2026-06-27): strikethrough verschijnt ALLEEN
+                    als klant intro ziet (currentPrice < regularYearly).
+                    License Tester ziet €89.99 zonder strike. Nieuwe klant
+                    ziet ~€89.99~ → €69.99 (intro). */}
+                {yearlyStrikeLabel && (
+                  <View style={s.strikeRow}>
+                    <Text style={s.priceStrike}>{yearlyStrikeLabel}</Text>
+                    <Text style={s.regularTag}>REGULAR</Text>
+                  </View>
+                )}
                 <View style={s.priceBig}>
                   <Text style={s.priceBigAmount}>{yearlyTotalLabel}</Text>
                   <Text style={s.priceBigPer}>/year</Text>
