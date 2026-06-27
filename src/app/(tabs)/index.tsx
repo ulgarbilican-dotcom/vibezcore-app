@@ -638,24 +638,44 @@ export default function AudioScreen() {
     GBP: { monthly: 12.99, yearly: 79.99 },
   };
 
-  const monthlyStrikeLabel = (() => {
-    if (!monthlyProduct?.priceAmountMicros) return null;
-    const currency = monthlyProduct.currency;
-    const regular = REGULAR_PRICES[currency]?.monthly;
-    if (!regular) return null;
-    const current = monthlyProduct.priceAmountMicros / 1_000_000;
-    if (current >= regular * 0.95) return null; // already showing regular
-    return reformatWithSymbol(monthlyProduct.localizedPrice, currency, regular);
+  /* Detect of klant de intro-prijs ziet (currentPrice < regular × 0.95). */
+  const monthlyHasIntro = (() => {
+    if (!monthlyProduct?.priceAmountMicros) return false;
+    const regular = REGULAR_PRICES[monthlyProduct.currency]?.monthly;
+    if (!regular) return false;
+    return (monthlyProduct.priceAmountMicros / 1_000_000) < regular * 0.95;
   })();
 
-  const yearlyStrikeLabel = (() => {
-    if (!yearlyProduct?.priceAmountMicros) return null;
-    const currency = yearlyProduct.currency;
-    const regular = REGULAR_PRICES[currency]?.yearly;
+  const yearlyHasIntro = (() => {
+    if (!yearlyProduct?.priceAmountMicros) return false;
+    const regular = REGULAR_PRICES[yearlyProduct.currency]?.yearly;
+    if (!regular) return false;
+    return (yearlyProduct.priceAmountMicros / 1_000_000) < regular * 0.95;
+  })();
+
+  /* Monthly strikethrough: REGULAR prijs als klant intro ziet. */
+  const monthlyStrikeLabel = (() => {
+    if (!monthlyHasIntro || !monthlyProduct) return null;
+    const regular = REGULAR_PRICES[monthlyProduct.currency]?.monthly;
     if (!regular) return null;
-    const current = yearlyProduct.priceAmountMicros / 1_000_000;
-    if (current >= regular * 0.95) return null;
-    return reformatWithSymbol(yearlyProduct.localizedPrice, currency, regular);
+    return reformatWithSymbol(monthlyProduct.localizedPrice, monthlyProduct.currency, regular);
+  })();
+
+  /* Yearly strikethrough: monthly intro prijs (per website-layout —
+     comparison "monthly intro per-month versus yearly per-month"). */
+  const yearlyStrikeLabel = yearlyHasIntro && monthlyProduct
+    ? monthlyPriceLabel
+    : null;
+
+  /* SAVE %: berekend uit monthly per-month vs yearly per-month, alleen
+     wanneer yearly intro actief is. */
+  const yearlySavePercentLabel = (() => {
+    if (!yearlyHasIntro) return null;
+    if (!monthlyProduct?.priceAmountMicros || !yearlyProduct?.priceAmountMicros) return null;
+    const monthlyAmount = monthlyProduct.priceAmountMicros;
+    const yearlyPerMonthMicros = yearlyProduct.priceAmountMicros / 12;
+    const pct = Math.round((1 - yearlyPerMonthMicros / monthlyAmount) * 100);
+    return `SAVE ${pct}%`;
   })();
   /* (verwijderd: storeName per platform — operator wil beide platforms
      tonen voor vertrouwen ongeacht device). */
@@ -2883,21 +2903,23 @@ export default function AudioScreen() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-                {/* Iter v161 (2026-06-27): strikethrough verschijnt ALLEEN
-                    als klant intro ziet (currentPrice < regularYearly).
-                    License Tester ziet €89.99 zonder strike. Nieuwe klant
-                    ziet ~€89.99~ → €69.99 (intro). */}
+                {/* Iter v162 (2026-06-27): layout 1:1 met vibezcore.com/
+                    audio-library yearly card. Per-month-equivalent als
+                    big price, monthly intro als strikethrough, SAVE %
+                    inline. Alles ALLEEN wanneer intro actief is. */}
                 {yearlyStrikeLabel && (
                   <View style={s.strikeRow}>
                     <Text style={s.priceStrike}>{yearlyStrikeLabel}</Text>
-                    <Text style={s.regularTag}>REGULAR</Text>
+                    {yearlySavePercentLabel && (
+                      <Text style={s.saveTag}>{yearlySavePercentLabel}</Text>
+                    )}
                   </View>
                 )}
                 <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>{yearlyTotalLabel}</Text>
-                  <Text style={s.priceBigPer}>/year</Text>
+                  <Text style={s.priceBigAmount}>{yearlyPerMonthLabel}</Text>
+                  <Text style={s.priceBigPer}>/month</Text>
                 </View>
-                <Text style={s.priceMeta}>Billed yearly</Text>
+                <Text style={s.priceMeta}>Billed {yearlyTotalLabel}/year</Text>
                 {plan === 'yearly' && (
                   <Text style={[s.selCheck, s.selCheckYearly]} pointerEvents="none">
                     ✓
@@ -2931,7 +2953,7 @@ export default function AudioScreen() {
           >
             <Text style={s.ctaTxt}>
               {plan === 'yearly'
-                ? `Get Yearly — ${yearlyTotalLabel}/year`
+                ? `Get Yearly — ${yearlyPerMonthLabel}/month`
                 : `Get Monthly — ${monthlyPriceLabel}/month`}
             </Text>
           </Pressable>
