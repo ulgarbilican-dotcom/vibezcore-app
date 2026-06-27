@@ -591,7 +591,7 @@ export default function AudioScreen() {
   const monthlyProduct = getIapProduct('monthly');
   const yearlyProduct = getIapProduct('yearly');
   const monthlyPriceLabel = monthlyProduct?.localizedPrice ?? '€9.99';
-  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€69.99';
+  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€69.60';
 
   /* Helper: vervang het numerieke deel in een localizedPrice ("€9.99",
      "$9.99", "9,99 €") door een nieuwe value, behoud valuta-symbool. We
@@ -610,7 +610,7 @@ export default function AudioScreen() {
      2026-06-20: yearly intro €69.99/year = €5.83/month, save 61% vs
      monthly regular €14.99). */
   const yearlyPerMonthLabel = (() => {
-    if (!yearlyProduct?.priceAmountMicros) return '€5.83';
+    if (!yearlyProduct?.priceAmountMicros) return '€5.80';
     const monthlyValue = yearlyProduct.priceAmountMicros / 12 / 1_000_000;
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
