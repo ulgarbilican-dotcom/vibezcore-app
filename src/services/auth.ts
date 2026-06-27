@@ -345,11 +345,15 @@ export async function login(
     }
 
     await persistSession(data);
-    /* Iter v165: koppel deze Supabase user aan RevenueCat zodat alle
-       toekomstige IAP-events (webhook) bij het juiste account terechtkomen
-       én entitlements van eerdere apparaten van dezelfde user automatisch
-       herstellen. Non-blocking — bij IAP-fail mag login NIET falen. */
-    void linkRevenueCatUser(
+    /* Iter v166 (2026-06-27): linkRevenueCatUser AWAITED zodat de RC
+       customer GELINKT IS vóór een eventuele directe purchase call. In
+       v165 was dit fire-and-forget → race condition: subscribe.tsx
+       triggerde Purchases.purchasePackage vóórdat logIn klaar was → de
+       purchase werd toegekend aan de anonymous RC user ($RCAnonymousID)
+       ipv aan de Supabase user, waardoor de webhook bij anon werd
+       gefilterd en Supabase nooit ge-update werd. ~500ms latency hier
+       is acceptabel; betere correcte attribution wint van snelheid. */
+    await linkRevenueCatUser(
       data.user?.id ?? getAuthUserIdFromToken(data.access_token)
     );
     return {

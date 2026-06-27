@@ -261,6 +261,26 @@ export default function SubscribeScreen() {
   const runIapFlow = async () => {
     setErrMsg(null);
     setPhase('iap-popup');
+    /* Iter v166 (2026-06-27): defensive RC user-link direct vóór de purchase.
+       authSignup/authLogin koppelen al na sessie-persist, maar deze flow kan
+       ook worden bereikt door een ingelogde user die /subscribe direct opent
+       (auth.ts linkRevenueCatUser niet recent gefired). Een dubbele logIn-
+       call is idempotent in RevenueCat SDK — kosten = ~500ms extra latency,
+       baten = ZEKERHEID dat de purchase op de Supabase user attribute'd
+       wordt en niet op een lingering $RCAnonymousID. */
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getAuthUserIdFromToken, getToken, linkRevenueCatUser } =
+        require('@/services/auth');
+      const token = await getToken();
+      if (token) {
+        const authUserId = getAuthUserIdFromToken(token);
+        if (authUserId) await linkRevenueCatUser(authUserId);
+      }
+    } catch {
+      /* swallow — non-fatal; purchase may still succeed and webhook will
+         eventually correct via TRANSFER event when user re-opens app. */
+    }
     const result = await purchase(tier);
     if (!result.ok) {
       if (result.error.code === 'user_cancelled') {
@@ -313,8 +333,10 @@ export default function SubscribeScreen() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Purchases = require('react-native-purchases').default;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { ENTITLEMENT_AUDIO_PRO } = require('@/services/iap-real');
       const customerInfo = await Purchases.getCustomerInfo();
-      const isPro = !!customerInfo?.entitlements?.active?.['audio_pro'];
+      const isPro = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
 
       if (isPro) {
         /* Acknowledge bij store zodat de purchase niet na 3 dagen wordt

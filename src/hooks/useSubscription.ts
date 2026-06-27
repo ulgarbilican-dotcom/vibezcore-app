@@ -152,8 +152,10 @@ async function tryRevenueCatStatus(): Promise<SubscriptionStatus | null> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ENTITLEMENT_AUDIO_PRO } = require('@/services/iap-real');
     const customerInfo = await Purchases.getCustomerInfo();
-    const audioPro = customerInfo?.entitlements?.active?.['audio_pro'];
+    const audioPro = customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
     if (!audioPro) return null; /* geen actieve entitlement — fall through */
     const productId: string | undefined = audioPro.productIdentifier;
     const tier: 'monthly' | 'yearly' | undefined = productId?.includes('yearly')

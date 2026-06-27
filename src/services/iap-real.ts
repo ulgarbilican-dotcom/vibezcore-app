@@ -68,8 +68,13 @@ const IOS_KEY: string = extra.revenuecatApiKeyIos ?? '';
 
 /** Entitlement identifier zoals geconfigureerd in RevenueCat dashboard.
  *  Beide Monthly en Yearly products granten DEZE entitlement — zo praat
- *  de backend over één concept ("audio_pro") ipv twee SKUs. */
-const ENTITLEMENT_AUDIO_PRO = 'audio_pro';
+ *  de backend over één concept ipv twee SKUs.
+ *
+ *  Iter v166 (2026-06-27): operator setup gebruikt 'VIBEZCORE Pro' (met
+ *  spatie + hoofdletters) als RC entitlement identifier. RevenueCat
+ *  identifiers zijn IMMUTABLE na creation, dus we matchen op die exacte
+ *  string. Display name is "audio_pro" (puur UI). */
+export const ENTITLEMENT_AUDIO_PRO = 'VIBEZCORE Pro';
 
 function mapPurchasesErrorCode(
   rcCode: PURCHASES_ERROR_CODE | string | undefined,
