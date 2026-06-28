@@ -23,33 +23,25 @@ import { Platform } from 'react-native';
  *
  *    iOS     : itms-apps://apps.apple.com/account/subscriptions
  *              (deep-link naar Settings → Apple ID → Subscriptions)
- *    Android : https://play.google.com/store/account/subscriptions?sku=...&package=...
- *              (opent Play Store-app op VIBEZCORE subscription-page als
- *               die bestaat op het actieve Google Play account; anders valt
- *               Play Store terug op de generieke subscription-lijst)
- *    Web/onbekend : Play Store-URL als pragmatische fallback
+ *    Android : https://play.google.com/store/account/subscriptions
+ *              (opent Play Store-app op de generieke subscription-lijst;
+ *               gebruiker ziet alle eigen subs incl. VIBEZCORE)
  *
  *  Voor users met een IAP-sub: dit IS de enige manier om te managen of
  *  cancellen (Apple/Google eisen dat het via hun systeem gaat — een app
  *  mag niet zelf cancellatie afhandelen voor IAP-content).
  *
- *  Iter v168 (2026-06-28): SKU-specific Android deeplink. Voorheen openden
- *  we de generieke /subscriptions pagina. Operator zag bij multi-account
- *  testing dat VIBEZCORE niet zichtbaar was (Play Store account ≠ VIBEZCORE
- *  account). Met SKU + package opent Play Store direct op de VIBEZCORE
- *  subscription detail-page wanneer die bestaat, wat een betere hint
- *  geeft als de subscription op een ander Google account staat. Optioneel
- *  tier ('monthly'/'yearly') bepaalt welke SKU. Default 'monthly'. */
-export function storeSubscriptionsUrl(tier?: 'monthly' | 'yearly'): string {
+ *  Iter v169 (2026-06-28): SKU-specific Android deeplink uit v168 teruggedraaid.
+ *  Live testing wees uit dat `?sku=...&package=...` vaak een "kan niet vinden"-
+ *  page produceert i.p.v. de subscription detail-page — zelfs als de
+ *  subscription wél op het actieve Google account staat. Yearly heeft
+ *  bovendien een `:yearly` base_plan_id suffix die Play Store soms anders
+ *  verwacht. Generic URL = robuuster: opent direct de subscription-lijst,
+ *  gebruiker ziet z'n VIBEZCORE-sub als die er is. Account-mismatch detectie
+ *  blijft via restore-purchases.ts werken (toont gerichte modal). */
+export function storeSubscriptionsUrl(_tier?: 'monthly' | 'yearly'): string {
   if (Platform.OS === 'ios') {
     return 'itms-apps://apps.apple.com/account/subscriptions';
   }
-  /* Android: SKU-specifieke URL. Package + product-id uit app.json zodat
-     een naam-wissel later geen broken deeplink achterlaat. */
-  const pkg =
-    (Constants.expoConfig?.android?.package as string | undefined) ??
-    'com.vibezcore.app';
-  const sku =
-    tier === 'yearly' ? 'vibezcore_audio_yearly' : 'vibezcore_audio_monthly';
-  return `https://play.google.com/store/account/subscriptions?sku=${sku}&package=${pkg}`;
+  return 'https://play.google.com/store/account/subscriptions';
 }
