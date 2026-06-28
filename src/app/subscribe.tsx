@@ -141,7 +141,17 @@ function friendlyError(raw: string | null | undefined): string {
 
 export default function SubscribeScreen() {
   const params = useLocalSearchParams<{ tier?: string; devForceSignedIn?: string }>();
-  const tier: AudioTier = params.tier === 'monthly' ? 'monthly' : 'yearly';
+  /* Iter v167 (2026-06-28): plan-picker step. Voorheen defaultten we naar
+     'yearly' wanneer er geen ?tier= query param was — operator-feedback:
+     "ik moet eerst kunnen kiezen monthly of yearly". Account-tab CTA en
+     andere entry points zonder expliciete tier komen nu eerst op een
+     plan-picker. Audio-tab pricing-cards blijven werken: die pushen
+     ?tier=monthly|yearly direct door. */
+  const initialTier: AudioTier | null =
+    params.tier === 'monthly' ? 'monthly' :
+    params.tier === 'yearly' ? 'yearly' : null;
+  const [tier, setTier] = useState<AudioTier | null>(initialTier);
+  const tierForCompute: AudioTier = tier ?? 'yearly';
   /* Iter 9dq v77 (2026-06-03): safe-area-aware bottom padding zodat
      de Continue/Create-account knop nooit onder de Samsung 3-button
      nav valt. Floor 72 = consistent met alle andere bottom-CTAs. */
@@ -156,7 +166,7 @@ export default function SubscribeScreen() {
     __DEV__ && params.devForceSignedIn === '1';
 
   const { getProduct, purchase, loading: iapLoading } = useIAP();
-  const product = getProduct(tier);
+  const product = getProduct(tierForCompute);
   /* Iter v160 (2026-06-27): VERWIJDERD orderSaveLabel (verzonnen SAVE %
      berekening). Operator-correctie: 'bezoeker moet altijd zien wat hij
      effectief betaalt — geen verzonnen besparing-claims'. Review-card
@@ -281,7 +291,7 @@ export default function SubscribeScreen() {
       /* swallow — non-fatal; purchase may still succeed and webhook will
          eventually correct via TRANSFER event when user re-opens app. */
     }
-    const result = await purchase(tier);
+    const result = await purchase(tierForCompute);
     if (!result.ok) {
       if (result.error.code === 'user_cancelled') {
         /* User wegtikte de popup → terug naar form-state, geen error
@@ -612,9 +622,9 @@ export default function SubscribeScreen() {
 
   /* ── Render ─────────────────────────────────────────────────────── */
 
-  const tierLabel = tier === 'yearly' ? 'Yearly' : 'Monthly';
-  const priceLabel = product?.localizedPrice ?? (tier === 'yearly' ? '€69,99' : '€9,99');
-  const periodLabel = tier === 'yearly' ? '/year' : '/month';
+  const tierLabel = tierForCompute === 'yearly' ? 'Yearly' : 'Monthly';
+  const priceLabel = product?.localizedPrice ?? (tierForCompute === 'yearly' ? '€69,99' : '€9,99');
+  const periodLabel = tierForCompute === 'yearly' ? '/year' : '/month';
 
   /* Loading/transitional phases — single full-screen state */
   if (phase === 'creating-account' || phase === 'iap-popup' || phase === 'verifying') {
@@ -698,6 +708,58 @@ export default function SubscribeScreen() {
             <Text style={s.linkText}>Contact support</Text>
           </Pressable>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* Iter v167 (2026-06-28): plan-picker. Wanneer user op /subscribe komt
+     zonder ?tier= param (bv. via Account-tab CTA), eerst plan kiezen
+     vóór de form/review-flow. Twee tap-cards: Monthly + Yearly met live
+     prijzen vanuit het IAP-product (fallback naar hardcoded EU-prijzen). */
+  if (tier === null) {
+    const monthlyProduct = getProduct('monthly');
+    const yearlyProduct = getProduct('yearly');
+    const monthlyPrice = monthlyProduct?.localizedPrice ?? '€9,99';
+    const yearlyPrice = yearlyProduct?.localizedPrice ?? '€89,99';
+    return (
+      <SafeAreaView style={s.root}>
+        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <KeyboardAwareScrollView
+          contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPadding }]}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+        >
+          <Text style={s.heading}>Choose your plan</Text>
+          <Text style={s.sub}>
+            Full access to the VIBEZCORE Audio Library. Cancel anytime.
+          </Text>
+
+          <Pressable style={s.planCard} onPress={() => setTier('yearly')}>
+            <View style={s.planCardHeader}>
+              <Text style={s.planCardTitle}>Yearly</Text>
+              <Text style={s.planCardBadge}>BEST VALUE</Text>
+            </View>
+            <Text style={s.planCardPrice}>
+              {yearlyPrice}
+              <Text style={s.planCardPeriod}>/year</Text>
+            </Text>
+            <Text style={s.planCardSub}>Best value · one payment a year</Text>
+          </Pressable>
+
+          <Pressable style={s.planCardAlt} onPress={() => setTier('monthly')}>
+            <View style={s.planCardHeader}>
+              <Text style={s.planCardTitle}>Monthly</Text>
+            </View>
+            <Text style={s.planCardPrice}>
+              {monthlyPrice}
+              <Text style={s.planCardPeriod}>/month</Text>
+            </Text>
+            <Text style={s.planCardSub}>Flexible · cancel anytime</Text>
+          </Pressable>
+
+          {LegalLine}
+          {RestoreLink}
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
@@ -1116,6 +1178,67 @@ const s = StyleSheet.create({
     color: Brand.success,
     fontSize: 12,
     fontFamily: BrandFonts.semibold,
+    marginTop: 6,
+  },
+  /* Iter v167 (2026-06-28): plan-picker cards. Yearly = primary (blauwe
+     glow border, "BEST VALUE" badge). Monthly = alt (subtieler, gewone
+     border). Tap → setTier → flow gaat door. */
+  planCard: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.accent,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  planCardAlt: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 12,
+  },
+  planCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  planCardTitle: {
+    color: Brand.text,
+    fontSize: 18,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+  },
+  planCardBadge: {
+    color: Brand.accent,
+    backgroundColor: 'rgba(58, 143, 255, 0.14)',
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  planCardPrice: {
+    color: Brand.accent,
+    fontSize: 26,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.6,
+    marginTop: 2,
+  },
+  planCardPeriod: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+  },
+  planCardSub: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
     marginTop: 6,
   },
   /* Form */

@@ -146,10 +146,12 @@ function FreeEnvironmentCard() {
         27 of 144 sessions available. Activate full access below:
       </Text>
 
-      {/* Pad 1 — Audio subscribe (ACTIVE NOW) */}
+      {/* Pad 1 — Audio subscribe (ACTIVE NOW)
+          Iter v167 (2026-06-28): geen hardcoded tier — /subscribe zonder
+          query param toont plan-picker (Monthly vs Yearly). */}
       <Pressable
         style={s.cardCta}
-        onPress={() => router.navigate('/subscribe?tier=yearly' as never)}
+        onPress={() => router.navigate('/subscribe' as never)}
         accessibilityLabel="Subscribe to the audio library"
       >
         <View style={{ flex: 1 }}>
