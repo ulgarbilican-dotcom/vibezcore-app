@@ -23,6 +23,21 @@
 
 import * as Speech from 'expo-speech';
 import type { BraceletMode } from '@/services/ble-contract';
+import { playCompletionCue, type BreathKey } from '@/services/breath-voice';
+
+/* Iter v168 (2026-06-28): bracelet-mode → breath-key mapping zodat we de
+   pre-recorded ElevenLabs MP3-cues van breath-voice.ts kunnen hergebruiken
+   voor de bracelet completion. Operator-feedback: 'bij bracelet active
+   pagina breathwork op einde sessies heb jij zelf een stem en popup
+   gegenereerd dat is niet goed. moet exact hetzelfde einde popup tekst en
+   stem zijn zoals in breath tabblad'. Mode index volgt CLAUDE.md §5. */
+const MODE_TO_BREATH_KEY: Record<BraceletMode, BreathKey> = {
+  0: 'boost',    // Gamma → Boost
+  1: 'focus',    // Beta → Sharp Focus
+  2: 'calm',     // Alpha → Calm Control
+  3: 'clarity',  // Theta → Clarity
+  4: 'rest',     // Delta → Rest & Reset
+};
 
 /* ── Per-mode copy ─────────────────────────────────────────────────────
    Korte, neutrale teksten. Geen wetenschapsclaims (CLAUDE.md §1) — alleen
@@ -109,22 +124,20 @@ export function playBraceletStartCue(
 /** Speel de completion-cue. NIET gegate'd op voiceEnabled: completion is
  *  een speciaal "always-play" moment (mirror van breath-voice.ts
  *  playCompletionCue). User heeft z'n sessie afgemaakt en verdient z'n
- *  closing-reward, ook als 'ie mid-sessie de toggle uitzette. */
+ *  closing-reward, ook als 'ie mid-sessie de toggle uitzette.
+ *
+ *  Iter v168 (2026-06-28): NU gebruikt dezelfde ElevenLabs MP3 als de
+ *  breath-tab — `boost finished .mp3`, `calm finished.mp3`, etc. Voorheen
+ *  TTS via expo-speech met door mij verzonnen tekst — operator wees dat
+ *  af ('je hebt zelf een stem gegenereerd dat is niet goed'). MP3 cues
+ *  zijn door operator opgenomen via ElevenLabs en zijn de canonical
+ *  bracelet-completion audio. */
 export function playBraceletCompletionCue(mode: BraceletMode): void {
-  const cue = MODE_CUES[mode]?.end;
-  if (!cue) return;
   /* Reset sessie-state zodat een volgende sessie weer een start-cue krijgt. */
   startedForSession = null;
-  try {
-    /* Iter v149 v3: kalmer dan default, mirror van start-cue. */
-    Speech.speak(cue, {
-      rate: 0.8,
-      pitch: 0.92,
-      language: 'en-US',
-    });
-  } catch {
-    /* swallow */
-  }
+  const key = MODE_TO_BREATH_KEY[mode];
+  if (!key) return;
+  playCompletionCue(key);
 }
 
 /** Stop alle voice-output direct. Roep aan bij sessie-cancel /
