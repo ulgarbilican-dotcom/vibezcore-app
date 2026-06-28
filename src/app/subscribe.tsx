@@ -230,11 +230,15 @@ export default function SubscribeScreen() {
       if (cancelled) return;
       if (lastEmail) {
         setEmail(lastEmail);
-        /* Iter v150 (2026-06-25): pre-fill email maar BLIJF in signup-mode
-           omdat user via pricing CTA komt (intent = kopen, niet inloggen).
-           Operator-feedback: 'Sign in to subscribe' suggereerde verkeerd
-           dat hij MOET inloggen. Tabs bovenaan laten hem alsnog switchen
-           als hij wel een bestaand account heeft. */
+        /* Iter v168 (2026-06-28): bij pre-fill ÓÓK switchen naar signin-mode.
+           Operator-feedback: in 'New account' mode + pre-filled email + groene
+           'Looks good' suggereerde dat een nieuwe gebruiker net andermans
+           email aan het registreren was. Tap "Create account" → "already
+           exists" error → auto-switch alsnog. Beter: direct juist mode tonen.
+           Voor returning users: signin = correct (LAST_EMAIL = hun email).
+           Voor first-timers zonder pre-fill: signup blijft de default.
+           Mode-tabs bovenaan blijven beschikbaar voor wisselen. */
+        setMode('signin');
       }
     })();
     return () => {
@@ -820,6 +824,16 @@ export default function SubscribeScreen() {
           title: 'Subscription restored',
           message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
           buttons: [{ text: 'OK', onPress: () => router.replace('/') }],
+        });
+      } else if (result.accountMismatch) {
+        /* Iter v168 (2026-06-28): account-mismatch — VIBEZCORE-side weet
+           dat user PRO is, maar de Play Store / Apple ID op dit toestel
+           toont geen aankoop. Vermijd het tegenstrijdige 'nothing to
+           restore' bericht; leg uit wat de oorzaak is. */
+        void showVibezAlert({
+          title: 'Active on your account, not on this device',
+          message:
+            "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.",
         });
       } else {
         void showVibezAlert({

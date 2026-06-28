@@ -343,7 +343,10 @@ function SubscriptionCard() {
       {showManageStore && (
         <Pressable
           style={s.cardCta}
-          onPress={() => openExternal(storeSubscriptionsUrl())}
+          /* Iter v168 (2026-06-28): SKU-specifieke deeplink (gebaseerd op
+             huidige tier) → Play Store landt direct op VIBEZCORE als de
+             subscription op het actieve Google account staat. */
+          onPress={() => openExternal(storeSubscriptionsUrl(tier))}
           accessibilityLabel="Manage your subscription in the App Store or Google Play"
         >
           <Text style={s.cardCtaText}>Manage subscription</Text>
@@ -628,6 +631,15 @@ export default function AccountScreen() {
         void showVibezAlert({
           title: 'Subscription restored',
           message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`,
+        });
+      } else if (result.accountMismatch) {
+        /* Iter v168 (2026-06-28): vermijd tegenstrijdige UI 'Audio PRO Monthly'
+           + 'Nothing to restore'. Mismatch = Play Store/Apple ID op device ≠
+           VIBEZCORE account dat de aankoop deed. */
+        void showVibezAlert({
+          title: 'Active on your account, not on this device',
+          message:
+            "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.",
         });
       } else {
         void showVibezAlert({
@@ -1291,8 +1303,12 @@ export default function AccountScreen() {
             accessibilityLabel="VIBEZCORE"
           />
           <View style={s.heroAccentBar} />
+          {/* Iter v168 (2026-06-28): copy corrigeren — "or get started below"
+              verwees naar niets (geen signup-mode toggle op dit scherm; nieuwe
+              accounts komen via Subscribe of Continue with Google). Operator
+              wees dit aan als verwarrend. */}
           <Text style={s.heroSub}>
-            Sign in if you already have access,{'\n'}or get started below.
+            Sign in to your VIBEZCORE account.
           </Text>
         </View>
 

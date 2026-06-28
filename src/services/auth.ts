@@ -433,7 +433,15 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
       return { ok: false, error: msg };
     }
     await persistSession(data);
-    void linkRevenueCatUser(
+    /* Iter v168 (2026-06-28): AWAIT zodat RC SDK gekoppeld is vóór
+       useSubscription.fetchStatus() draait. Voorheen fire-and-forget
+       (`void`) → race condition: fetchStatus liep met anonymous RC
+       customer → entitlement miste → Audio Library + Account hingen
+       in 'Checking…' tot AppState bg/fg cycle de fetch opnieuw triggerde.
+       Operator zag 2+ minuten 'Checking…'. Zelfde await-fix als eerder
+       toegepast op login() en signup() — Google/Apple paths waren
+       overgeslagen. */
+    await linkRevenueCatUser(
       data.user?.id ?? getAuthUserIdFromToken(data.access_token)
     );
     return {
@@ -516,7 +524,9 @@ export async function loginWithApple(
       return { ok: false, error: msg };
     }
     await persistSession(data);
-    void linkRevenueCatUser(
+    /* Iter v168 (2026-06-28): AWAIT — zelfde fix als loginWithGoogle.
+       Race-condition met fetchStatus voorkomen. */
+    await linkRevenueCatUser(
       data.user?.id ?? getAuthUserIdFromToken(data.access_token)
     );
     return {

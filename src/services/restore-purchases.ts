@@ -29,13 +29,24 @@
         zonder backend round-trip te wachten.
    ─────────────────────────────────────────────────────────────────────── */
 
-import { refreshSubscription } from '@/hooks/useSubscription';
+import { getCachedSubscription, refreshSubscription } from '@/hooks/useSubscription';
 import { getAuthUserIdFromToken, getToken, linkRevenueCatUser } from './auth';
 import { getIAP } from './iap';
 import type { IapPurchase } from './iap-contract';
 
 export type RestoreResult =
-  | { ok: true; purchases: IapPurchase[]; restoredCount: number }
+  | {
+      ok: true;
+      purchases: IapPurchase[];
+      restoredCount: number;
+      /* Iter v168 (2026-06-28): true wanneer Google Play / App Store geen
+         actieve subscription teruggaf, maar onze VIBEZCORE-side (RC of
+         backend) WEL al weet dat de user PRO is. Symptoom van een mismatch
+         tussen het Play Store / Apple ID account op het device en het account
+         waarop de aankoop staat. UI toont dan een uitleg-modal ipv een
+         tegenstrijdig 'nothing to restore'. */
+      accountMismatch?: boolean;
+    }
   | { ok: false; error: string };
 
 /** Trigger restore-purchases flow. Returnt aantal active subs gevonden door
@@ -72,10 +83,19 @@ export async function restorePurchases(): Promise<RestoreResult> {
        en zet PRO direct in UI. Backend Supabase-row volgt via webhook. */
     refreshSubscription();
 
+    /* Iter v168 (2026-06-28): account-mismatch detectie. Operator zag de
+       tegenstrijdige UI 'Audio PRO Monthly' (Account) + 'Nothing to restore'
+       (modal) in één view — root cause: Play Store account ≠ VIBEZCORE
+       account. Detectie: 0 restored maar onze huidige useSubscription-cache
+       weet dat user al PRO is (RC entitlement of backend status). */
+    const accountMismatch =
+      purchases.length === 0 && getCachedSubscription()?.active === true;
+
     return {
       ok: true,
       purchases,
       restoredCount: purchases.length,
+      ...(accountMismatch ? { accountMismatch: true } : {}),
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

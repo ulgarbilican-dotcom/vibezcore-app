@@ -619,13 +619,16 @@ export default function PlayerScreen() {
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>Continue listening?</Text>
-            {/* Iter 9dq v65 (2026-06-03): operator-keuze variant C —
-                kort, evergreen, geen vaste sessie-count die misleidend
-                wordt naarmate de bibliotheek groeit. Voorheen interpoleerde
-                deze regel SESSIONS.length + SERIES.length wat het aantal
-                hardcodeert in de UI. */}
+            {/* Iter v168 (2026-06-28): Free Picks expliciet vernoemen in de
+                paywall. Operator-feedback: gast die hier landt weet niet dat
+                er 27 gratis sessies bestaan en denkt 'alles is betaald' →
+                conversie-killer. Door Free Picks te noemen blijft de upsell
+                primair (Get Full Access) maar krijgt de gast een eerlijk
+                alternatief. */}
             <Text style={s.modalBody}>
               Get full access to the complete VIBEZCORE library.
+              {'\n\n'}
+              Not ready? Browse Free Picks to keep listening for free.
             </Text>
             <View style={s.modalBtns}>
               <Pressable style={s.modalPrimary} onPress={openUpgrade}>

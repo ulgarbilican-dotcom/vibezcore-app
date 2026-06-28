@@ -359,7 +359,16 @@ function SessionRow({
 }
 
 export default function AudioScreen() {
-  const { isPro: hasSub } = useSubscription();
+  /* Iter v168 (2026-06-28): tijdens isLoading (status === null) behandelen
+     we hasSub als TRUE — voorkomt FREE flicker bij cold-start en net-na-
+     sign-in. Audio Library renderde anders 'FREE · 27' tile + upsell-cards
+     terwijl de PRO-status nog werd opgehaald (RC + backend roundtrip).
+     Operator zag dit als 'amateuristisch'. Voor echte gasten resolveert
+     useSubscription binnen ms naar {active:false} zonder loading-state
+     (geen token → direct notifyAll). Voor PRO users bij refresh: kort
+     'unknown' → render als PRO → zodra fetch klaar render exact. */
+  const sub = useSubscription();
+  const hasSub = sub.isLoading ? true : sub.isPro;
   const isBraceletOwner = useBraceletOwner();
   /* Auth-state voor de top sign-in CTA banner (operator-keuze
      2026-05-26: Welcome wordt na 1× dismiss niet meer bereikbaar,
@@ -2139,8 +2148,13 @@ export default function AudioScreen() {
                           textAlign: 'center',
                         }}
                       >
+                        {/* Iter v168 (2026-06-28): toon SESSIONS (== freeCount)
+                            ipv SERIES, zodat het getal matcht met de Free Picks
+                            tile op de Library ("LISTEN 27 SESSIONS"). Operator-
+                            feedback: "27 vs 25" wisselend tussen schermen was
+                            verwarrend — 27 is het correcte sessie-aantal. */}
                         {isFreeMode
-                          ? `FREE PICKS · ${pillarSeries.length} SERIES`
+                          ? `FREE PICKS · ${freeCount} SESSIONS`
                           : `PILLAR ${pillarMeta!.num}`}
                       </Text>
                       {/* Section-naam — chapter title, groot en bold,
