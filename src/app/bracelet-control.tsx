@@ -118,12 +118,7 @@ const MODE_IMAGES: Partial<Record<BraceletMode, string>> = {
      - Rest & Reset (Delta): 7s/7s = ~4.3 BPM, slaap-voorbereiding
    Pulse-animatie cycle = inMs + outMs (totaal 6-14s afh. mode). */
 const MODE_BREATH: Record<BraceletMode, { inMs: number; outMs: number }> = {
-  /* Iter v168 (2026-06-28): Gamma visuele pulse synchroniseren met het
-     daadwerkelijke breathwork-protocol (2-2 Bhastrika in BREATH_PROTOCOLS
-     hieronder). Voorheen 3000/3000 → visuele animatie liep uit pas met
-     de actual breath timing. Operator zag op active-sessie verschillende
-     waarden tussen Breath tab (2-2) en Bracelet (3-3). */
-  [BraceletMode.Gamma]: { inMs: 2000, outMs: 2000 },
+  [BraceletMode.Gamma]: { inMs: 3000, outMs: 3000 },
   [BraceletMode.Beta]: { inMs: 4000, outMs: 4000 },
   [BraceletMode.Alpha]: { inMs: 5000, outMs: 5000 },
   [BraceletMode.Theta]: { inMs: 6000, outMs: 6000 },
@@ -552,34 +547,15 @@ function durationPresets(mode: BraceletMode): number[] {
 }
 
 /* ── Completion messages per mode ──
-   Iter v168 (2026-06-28): EXACT identieke tekst aan breath.tsx
-   COMPLETION_MESSAGES. Operator-feedback: 'bij bracelet active pagina
-   breathwork op einde sessies heb jij zelf een stem en popup gegenereerd
-   dat is niet goed. moet exact hetzelfde einde popup tekst en stem zijn
-   zoals in breath tabblad'. Bracelet mode-key → breath pattern-key
-   mapping (Gamma=boost, Beta=focus, etc.). Bij aanpassing aan deze
-   strings ook breath.tsx:164 mee-updaten. */
-const COMPLETION_MESSAGES: Record<BraceletMode, { line1: string; line2: string }> = {
-  [BraceletMode.Gamma]: {
-    line1: 'Your edge is sharper now.',
-    line2: 'Take it into what comes next.',
-  },
-  [BraceletMode.Beta]: {
-    line1: 'Focus locked in.',
-    line2: 'The deep work is yours to claim.',
-  },
-  [BraceletMode.Alpha]: {
-    line1: 'Stillness reclaimed.',
-    line2: 'Carry it into the next moment.',
-  },
-  [BraceletMode.Theta]: {
-    line1: 'Something opened up.',
-    line2: 'Trust what surfaced. Act on it.',
-  },
-  [BraceletMode.Delta]: {
-    line1: 'Your system softened.',
-    line2: 'Recovery has already begun.',
-  },
+   Mode-specifieke felicitatie-tekst voor de CompletionModal aan
+   het einde van een sessie. Brand-aligned (CLAUDE.md §1 — alleen
+   toestand-taal, geen medische claims), kort en bevestigend. */
+const COMPLETION_MESSAGES: Record<BraceletMode, string> = {
+  [BraceletMode.Gamma]: 'You showed up. The edge is sharper.',
+  [BraceletMode.Beta]: 'Focus done. The deep work counts.',
+  [BraceletMode.Alpha]: 'Stillness reclaimed. Carry it with you.',
+  [BraceletMode.Theta]: 'Insight earned. Trust what came up.',
+  [BraceletMode.Delta]: 'Recovery accomplished. Your system thanks you.',
 };
 
 /* ── DurationFillCircle — cirkel met water-fill voor idle screen ──
@@ -1047,21 +1023,24 @@ function CompletionModal({
         accessibilityLabel="Dismiss completion"
       />
       <View style={s.completionCard}>
-        {/* Iter v168 (2026-06-28): popup-layout uitgelijnd met Breath tab
-            completion. Eyebrow + 'Well done.' + 'You completed X' subtitle
-            + line1/line2 messages — exact dezelfde structuur en copy als
-            (tabs)/breath.tsx. Voorheen had bracelet een eigen check-icon
-            + 'Session complete' + één-regelige msg → operator wees dit
-            af als 'zelf gegenereerd'. */}
-        <Text style={[s.completionEyebrow, { color: meta.color }]}>
-          ✦ CONGRATULATIONS ✦
+        <View
+          style={[
+            s.completionIcon,
+            {
+              backgroundColor: hexToTint(meta.color, 0.18),
+              borderColor: hexToTint(meta.color, 0.5),
+            },
+          ]}
+        >
+          <Text style={[s.completionIconText, { color: meta.color }]}>
+            ✓
+          </Text>
+        </View>
+        <Text style={s.completionTitle}>Session complete</Text>
+        <Text style={[s.completionMode, { color: meta.color }]}>
+          {meta.name}
         </Text>
-        <Text style={s.completionTitle}>Well done.</Text>
-        <Text style={s.completionSubtitle}>
-          You completed {meta.name}
-        </Text>
-        <Text style={s.completionMsgLine1}>{msg.line1}</Text>
-        <Text style={s.completionMsgLine2}>{msg.line2}</Text>
+        <Text style={s.completionMsg}>{msg}</Text>
         <Pressable
           style={[s.completionBtn, { backgroundColor: meta.color }]}
           onPress={onDismiss}
@@ -1306,9 +1285,10 @@ function BreathingHint({
 
   return (
     <Animated.Text style={[s.breatheHint, { opacity }]}>
-      {/* Iter v168 (2026-06-28): verkorte vorm 'through nose' zonder 'your',
-          consistent met Breath tab. */}
-      {phase === 'in' ? 'Inhale through nose' : 'Exhale through nose'}
+      {/* Iter v154 (2026-06-25): tekst 1:1 met voice. Default 'nose'
+          omdat BreathingHint geen protocol-context heeft — fallback
+          op de meest voorkomende cue ('Inhale through your nose'). */}
+      {phase === 'in' ? 'Inhale through your nose' : 'Exhale through your nose'}
     </Animated.Text>
   );
 }
@@ -2744,24 +2724,26 @@ function BreathworkStrip({
   const remainingSec = Math.floor((remainingMs % 60000) / 1000);
   const progress = phase === 'done' ? 1 : cycle / protocol.cycles;
 
-  /* Iter v168 (2026-06-28): verkort 'through your X' → 'through X' overal,
-     consistent met Breath tab. Operator: snelle cycli hebben geen tijd
-     voor 'your', en consistency tussen tabs is essentieel. */
+  /* Iter v152 (2026-06-25): prompt-tekst nu 1:1 gesynchroniseerd met de
+     voice cue files in breath-voice.ts. Operator-feedback: 'stem zegt
+     inhale through your nose en tekst zegt breathe in nose' — UI en
+     audio moeten exact dezelfde taal spreken voor een professionele
+     gebruikerservaring. */
   const method = BREATH_METHOD[mode];
   const promptText = (() => {
     switch (phase) {
       case 'in':
-        if (protocol.kind === 'sigh') return 'Inhale deeply through nose';
+        if (protocol.kind === 'sigh') return 'Inhale deeply through your nose';
         return method.inVia === 'mouth'
-          ? 'Inhale through mouth'
-          : 'Inhale through nose';
+          ? 'Inhale through your mouth'
+          : 'Inhale through your nose';
       case 'in-topup':
         return 'Top up — small breath in';
       case 'out':
         if (protocol.kind === 'sigh') return 'Long exhale through mouth';
         return method.outVia === 'mouth'
           ? 'Exhale through mouth'
-          : 'Exhale through nose';
+          : 'Exhale through your nose';
       case 'hold-in':
         return 'Hold';
       case 'hold-out':
@@ -6199,40 +6181,6 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   completionMsg: {
-    color: Brand.textDim,
-    fontSize: 15,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 8,
-  },
-  /* Iter v168 (2026-06-28): styling identiek aan breath.tsx completion. */
-  completionEyebrow: {
-    fontSize: 11,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2.4,
-    textAlign: 'center',
-    marginBottom: 14,
-    textTransform: 'uppercase',
-  },
-  completionSubtitle: {
-    color: Brand.textDim,
-    fontSize: 14,
-    fontFamily: BrandFonts.medium,
-    textAlign: 'center',
-    marginBottom: 18,
-  },
-  completionMsgLine1: {
-    color: Brand.text,
-    fontSize: 17,
-    fontFamily: BrandFonts.semibold,
-    lineHeight: 23,
-    textAlign: 'center',
-    marginBottom: 4,
-    paddingHorizontal: 8,
-  },
-  completionMsgLine2: {
     color: Brand.textDim,
     fontSize: 15,
     fontFamily: BrandFonts.regular,

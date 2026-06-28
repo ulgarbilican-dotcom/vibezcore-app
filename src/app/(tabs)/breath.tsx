@@ -89,12 +89,10 @@ const PATTERNS: BreathPattern[] = [
     key: 'boost', name: 'Boost', tech: 'Quick activation',
     color: '#FFFFFF', colorSoft: 'rgba(255,255,255,0.25)',
     inhale: 2, hold1: 0, exhale: 2, hold2: 0, rounds: 45,
-    /* Iter v168 (2026-06-28): Bhastrika is nose-breathing in én uit.
-       Voorheen 'mouth' exhale → mismatch met de bedoeling van het pattern. */
-    inhaleVia: 'nose', exhaleVia: 'nose',
+    inhaleVia: 'nose', exhaleVia: 'mouth',
     intent: 'Alert, energized — primed for high-output moments.',
     breathDoes:
-      'Short even nose breaths wake the system up and break through fatigue.',
+      'Short even breaths through nose and mouth wake the system up and break through fatigue.',
     protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
       'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
@@ -663,14 +661,9 @@ export default function BreathScreen() {
     setModalOpen(false);
   }, []);
 
-  /* Iter v168 (2026-06-28): functional setter form. Voorheen `setVoiceOn(!voiceOn)`
-     met empty deps → stale closure: eerste tap toggle't, daarna blijft 'ie hangen
-     op de initial-render waarde. Operator-melding 'voice on kan niet bediend
-     worden'. Mirror van toggleVibe direct hieronder die wel functional form
-     gebruikt. */
   const toggleVoice = useCallback(() => {
-    setVoiceOn((v) => !v);
-  }, [setVoiceOn]);
+    setVoiceOn(!voiceOn);
+  }, []);
 
   const toggleVibe = useCallback(() => {
     setVibeOn((v) => !v);
@@ -691,13 +684,16 @@ export default function BreathScreen() {
     : phase === 'exhale' ? 'Exhale'
     : 'Ready';
 
-  /* Iter v168 (2026-06-28): consistent verkorte vorm ZONDER 'your' voor
-     alle modes. Operator-feedback: korte snelle cycli (Boost 2-2) hebben
-     geen tijd voor lange labels, en consistency is belangrijker dan
-     formele beleefdheid. */
+  /* Iter v159 (2026-06-26): mouth-exhale verkort naar 'through mouth'
+     (zonder 'your') zodat de tekst korter past binnen snelle cyclus van
+     Boost (2-2 Bhastrika). Nose-exhale houdt 'through your nose' want
+     past wel binnen langzamere protocols. */
   const phaseVia =
-    phase === 'inhale' ? `through ${current.inhaleVia}`
-    : phase === 'exhale' ? `through ${current.exhaleVia}`
+    phase === 'inhale' ? `through your ${current.inhaleVia}`
+    : phase === 'exhale'
+      ? current.exhaleVia === 'mouth'
+        ? 'through mouth'
+        : `through your ${current.exhaleVia}`
     : '';
 
   const startBtnBg = running ? 'rgba(255,255,255,0.06)' : current.color;
