@@ -56,7 +56,6 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   Pressable,
@@ -65,6 +64,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showVibezAlert } from '@/components/VibezAlert';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -491,10 +491,10 @@ export default function SubscribeScreen() {
       ? `${VZ_BACKEND_URL}/reset-password?email=${encodeURIComponent(email.trim())}`
       : `${VZ_BACKEND_URL}/reset-password`;
     void Linking.openURL(target).catch(() => {
-      Alert.alert(
-        'Reset password',
-        `Open this link in your browser to reset your password:\n\n${target}`,
-      );
+      void showVibezAlert({
+        title: 'Reset password',
+        message: `Open this link in your browser to reset your password:\n\n${target}`,
+      });
     });
   };
 
@@ -754,20 +754,24 @@ export default function SubscribeScreen() {
     const result = await restorePurchases();
     if (result.ok) {
       if (result.restoredCount > 0) {
-        Alert.alert(
-          'Subscription restored',
-          `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
-          [{ text: 'OK', onPress: () => router.replace('/') }],
-        );
+        void showVibezAlert({
+          title: 'Subscription restored',
+          message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
+          buttons: [{ text: 'OK', onPress: () => router.replace('/') }],
+        });
       } else {
-        Alert.alert(
-          'Nothing to restore',
-          'No active subscriptions were found for this Apple ID or Google account.',
-        );
+        void showVibezAlert({
+          title: 'Nothing to restore',
+          message:
+            'No active subscriptions were found for this Apple ID or Google account.',
+        });
       }
     } else {
       if (__DEV__) console.warn('[subscribe] restore failed (raw):', result.error);
-      Alert.alert('Could not restore', friendlyError(result.error));
+      void showVibezAlert({
+        title: 'Could not restore',
+        message: friendlyError(result.error),
+      });
     }
   };
   const RestoreLink = (

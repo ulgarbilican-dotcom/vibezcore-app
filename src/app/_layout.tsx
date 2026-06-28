@@ -23,6 +23,7 @@ import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { VibezAlertHost } from '@/components/VibezAlert';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
@@ -558,6 +559,13 @@ export default function RootLayout() {
           verschijnt wanneer een breath-sessie loopt en user is niet op de
           /breath route. Tap → naar breath-tab, X → stop sessie. */}
       <BreathMiniControl />
+
+      {/* Iter v167 (2026-06-28): VIBEZCORE-styled alert host. Queue-based
+          modal that replaces Alert.alert system popups — keeps brand-
+          immersion across every app-emitted confirm/notify. Native store
+          popups (Google Play "Fout", Apple StoreKit) are intentionally
+          left untouched (we have no control over those). */}
+      <VibezAlertHost />
       </View>
     </ErrorBoundary>
   );

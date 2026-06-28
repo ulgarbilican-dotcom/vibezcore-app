@@ -37,7 +37,6 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Easing,
   Pressable,
@@ -47,6 +46,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { showVibezAlert } from '@/components/VibezAlert';
 import { BraceletMode, MODES, getModeMeta } from '../services/ble-contract';
 
 /* Force-refresh van de session-list elke keer de hook-stats wijzigen.
@@ -924,10 +924,11 @@ export default function BraceletHistory() {
   };
 
   const onClear = () => {
-    Alert.alert(
-      'Clear all history?',
-      'This will permanently delete all bracelet session records on this device. Cannot be undone.',
-      [
+    void showVibezAlert({
+      title: 'Clear all history?',
+      message:
+        'This will permanently delete all bracelet session records on this device. Cannot be undone.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear all',
@@ -937,7 +938,7 @@ export default function BraceletHistory() {
           },
         },
       ],
-    );
+    });
   };
 
   return (

@@ -40,7 +40,6 @@ import Constants from 'expo-constants';
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -49,6 +48,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { showVibezAlert } from '@/components/VibezAlert';
 
 export default function SettingsScreen() {
   const [saveProgress, setSaveProgress] = useSetting('saveProgress');
@@ -79,10 +79,11 @@ export default function SettingsScreen() {
   /* Clear all local data — wist alle AsyncStorage-keys. Confirmation
      dialog voorkomt accidentele 1-tap data-loss. */
   const onClearData = () => {
-    Alert.alert(
-      'Clear all local data?',
-      'This will remove your listening progress, history, favorites, and other local preferences from this device. Your subscription and account stay intact.',
-      [
+    void showVibezAlert({
+      title: 'Clear all local data?',
+      message:
+        'This will remove your listening progress, history, favorites, and other local preferences from this device. Your subscription and account stay intact.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear data',
@@ -125,22 +126,24 @@ export default function SettingsScreen() {
                    verschijnen voor owners die voorheen geactiveerd waren. */
                 setDevBraceletActivated(false),
               ]);
-              Alert.alert(
-                'Cleared',
-                'All local data has been removed. Restart the app to see a fresh state.',
-              );
+              void showVibezAlert({
+                title: 'Cleared',
+                message:
+                  'All local data has been removed. Restart the app to see a fresh state.',
+              });
             } catch (e) {
-              Alert.alert(
-                'Could not clear',
-                'Something went wrong. Try again or contact support if the problem persists.',
-              );
+              void showVibezAlert({
+                title: 'Could not clear',
+                message:
+                  'Something went wrong. Try again or contact support if the problem persists.',
+              });
             } finally {
               setClearing(false);
             }
           },
         },
       ],
-    );
+    });
   };
 
   return (

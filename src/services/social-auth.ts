@@ -98,6 +98,18 @@ export async function signInWithGoogle(): Promise<SocialAuthResult> {
     const mod = await import('@react-native-google-signin/google-signin');
     const { GoogleSignin, statusCodes } = mod;
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    /* Iter v167 (2026-06-28): force-show account picker each time.
+       Without this, Android's Google Sign-In SDK silently re-uses the last
+       chosen account — user cannot switch between Google accounts on the
+       device (a real problem for users with personal + work accounts, and
+       a blocker during license-tester testing). signOut() invalidates the
+       cached selection; the next signIn() prompts the picker. Errors are
+       swallowed because there may be no previous session on first launch. */
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      /* no previous session — proceed to picker */
+    }
     const response = await GoogleSignin.signIn();
     /* v13+ API: response.data.idToken. v12 en eerder: response.idToken.
        Defensief: probeer beide. */

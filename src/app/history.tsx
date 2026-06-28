@@ -35,7 +35,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
   Pressable,
@@ -45,6 +44,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { showVibezAlert } from '@/components/VibezAlert';
 
 const C = {
   bg: '#000',
@@ -129,10 +129,11 @@ export default function HistoryScreen() {
 
   const onClearHistory = () => {
     setMenuOpen(false);
-    Alert.alert(
-      'Clear history',
-      'This will permanently delete your listening history. Continue?',
-      [
+    void showVibezAlert({
+      title: 'Clear history',
+      message:
+        'This will permanently delete your listening history. Continue?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear',
@@ -141,8 +142,8 @@ export default function HistoryScreen() {
             clear();
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const playEntry = (e: HistoryEntry) => {

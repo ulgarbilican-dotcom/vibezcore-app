@@ -16,7 +16,6 @@ import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,6 +23,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { showVibezAlert } from '@/components/VibezAlert';
 
 /* Pattern-metadata voor lookup (kleur + display-naam) — duplicate van
    breath.tsx PATTERNS om geen cross-file dep te creëren. Bij toevoegen
@@ -299,10 +299,10 @@ export default function BreathHistoryScreen() {
                 primary action is. ── */}
             <Pressable
               onPress={() => {
-                Alert.alert(
-                  'Clear practice history?',
-                  `This will permanently delete all ${history.length} session${history.length === 1 ? '' : 's'} from Your Practice. This cannot be undone.`,
-                  [
+                void showVibezAlert({
+                  title: 'Clear practice history?',
+                  message: `This will permanently delete all ${history.length} session${history.length === 1 ? '' : 's'} from Your Practice. This cannot be undone.`,
+                  buttons: [
                     { text: 'Cancel', style: 'cancel' },
                     {
                       text: 'Clear all',
@@ -310,7 +310,7 @@ export default function BreathHistoryScreen() {
                       onPress: () => { void clearBreathHistory(); },
                     },
                   ],
-                );
+                });
               }}
               style={styles.clearBtn}
               android_ripple={{ color: 'rgba(239,68,68,0.10)' }}

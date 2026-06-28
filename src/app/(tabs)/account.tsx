@@ -57,7 +57,6 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Image,
     Linking,
     Pressable,
@@ -66,6 +65,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { showVibezAlert } from '@/components/VibezAlert';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -623,18 +623,19 @@ export default function AccountScreen() {
     setRestoring(false);
     if (result.ok) {
       if (result.restoredCount > 0) {
-        Alert.alert(
-          'Subscription restored',
-          `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`,
-        );
+        void showVibezAlert({
+          title: 'Subscription restored',
+          message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`,
+        });
       } else {
-        Alert.alert(
-          'Nothing to restore',
-          'No active subscriptions were found for this Apple ID or Google account. If you believe this is wrong, contact support.',
-        );
+        void showVibezAlert({
+          title: 'Nothing to restore',
+          message:
+            'No active subscriptions were found for this Apple ID or Google account. If you believe this is wrong, contact support.',
+        });
       }
     } else {
-      Alert.alert('Could not restore', result.error);
+      void showVibezAlert({ title: 'Could not restore', message: result.error });
     }
   };
   const [busy, setBusy] = useState(false);
@@ -798,10 +799,11 @@ export default function AccountScreen() {
      consequenties heeft. "Sign out" is destructive-style op iOS → rood
      gerendered ter visuele waarschuwing. */
   const onSignOut = () => {
-    Alert.alert(
-      'Sign out?',
-      'You will stay signed in on this device unless you sign out. After signing out, you will need to enter your password again next time.',
-      [
+    void showVibezAlert({
+      title: 'Sign out?',
+      message:
+        'You will stay signed in on this device unless you sign out. After signing out, you will need to enter your password again next time.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign out',
@@ -848,8 +850,8 @@ export default function AccountScreen() {
             if (lastEmail) setEmailInput(lastEmail);
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   /* ── Cancel Subscription verwijderd ──
@@ -881,10 +883,11 @@ export default function AccountScreen() {
      tap niet alles wist. Backend doet de echte Supabase admin delete,
      daarna clearSession + replace('/') zodat user landt in de gast-app. */
   const onDeleteAccount = () => {
-    Alert.alert(
-      'Delete account?',
-      "This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — you must cancel via Google Play (or App Store) Subscriptions separately.\n\nThis cannot be undone.",
-      [
+    void showVibezAlert({
+      title: 'Delete account?',
+      message:
+        "This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — you must cancel via Google Play (or App Store) Subscriptions separately.\n\nThis cannot be undone.",
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete forever',
@@ -892,10 +895,11 @@ export default function AccountScreen() {
           onPress: () => {
             /* Tweede confirm voor zekerheid — destructive action waar
                we niet van terug kunnen. */
-            Alert.alert(
-              'Are you sure?',
-              'Last chance to cancel. Once deleted, your account cannot be recovered.',
-              [
+            void showVibezAlert({
+              title: 'Are you sure?',
+              message:
+                'Last chance to cancel. Once deleted, your account cannot be recovered.',
+              buttons: [
                 { text: 'Keep my account', style: 'cancel' },
                 {
                   text: 'Yes, delete',
@@ -917,22 +921,30 @@ export default function AccountScreen() {
                       await clearLastPlayed();
                       await clearSignedUrlCache();
                       refreshSubscription();
-                      Alert.alert(
-                        'Account deleted',
-                        'Your account has been permanently deleted.',
-                        [{ text: 'OK', onPress: () => router.replace('/') }],
-                      );
+                      void showVibezAlert({
+                        title: 'Account deleted',
+                        message: 'Your account has been permanently deleted.',
+                        buttons: [
+                          {
+                            text: 'OK',
+                            onPress: () => router.replace('/'),
+                          },
+                        ],
+                      });
                     } else {
-                      Alert.alert('Could not delete account', r.error);
+                      void showVibezAlert({
+                        title: 'Could not delete account',
+                        message: r.error,
+                      });
                     }
                   },
                 },
               ],
-            );
+            });
           },
         },
       ],
-    );
+    });
   };
 
   if (loading) {
