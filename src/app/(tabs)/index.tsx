@@ -2148,13 +2148,17 @@ export default function AudioScreen() {
                           textAlign: 'center',
                         }}
                       >
-                        {/* Iter v168 (2026-06-28): toon SESSIONS (== freeCount)
-                            ipv SERIES, zodat het getal matcht met de Free Picks
-                            tile op de Library ("LISTEN 27 SESSIONS"). Operator-
-                            feedback: "27 vs 25" wisselend tussen schermen was
-                            verwarrend — 27 is het correcte sessie-aantal. */}
+                        {/* Iter v168 (2026-06-28): toon SESSIONS-count ipv SERIES,
+                            zodat het getal matcht met de Free Picks tile op de
+                            Library ("LISTEN 27 SESSIONS"). Operator-feedback:
+                            "27 vs 25" wisselend tussen schermen was verwarrend
+                            — 27 is het correcte sessie-aantal.
+                            Iter v169 hotfix (2026-06-28): `freeCount` op regel
+                            1536 zit binnen een aparte IIFE-scope en is hier
+                            NIET bereikbaar — ReferenceError → crash. Inline
+                            berekening fixt het zonder side-effects. */}
                         {isFreeMode
-                          ? `FREE PICKS · ${freeCount} SESSIONS`
+                          ? `FREE PICKS · ${SESSIONS.filter((sess) => sess.free).length} SESSIONS`
                           : `PILLAR ${pillarMeta!.num}`}
                       </Text>
                       {/* Section-naam — chapter title, groot en bold,
