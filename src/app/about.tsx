@@ -1,23 +1,30 @@
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — About screen
 
-   Brand-story page, 1-op-1 met vibezcore.com/about-vibezcore (2026-05-30).
-   8 secties die uitleggen wat VIBEZCORE is, waarom 't bestaat, en voor
-   wie. Geen legal doc — staat los van de legal/[doc] renderer omdat de
-   visuele structuur fundamenteel anders is (pull quotes, system cards,
-   4-pillar grid).
+   Iter v170 (2026-06-28): volledig herwerkt naar product-first structuur.
+   Voorheen: 8 brand-story secties (Origin → Challenge → System → Science →
+   Pillars → Collective → Who → Mission), ~2000 woorden, twee producten pas
+   diep in sectie 03. Operator-feedback 2026-06-28: "niet heel duidelijk wat
+   VIBEZCORE is, beide producten krijgen niet hun eigen platform".
 
-   Open vanuit: Account-tab → "About VIBEZCORE". Mogelijk later ook
-   vanuit Welcome-screen voor first-time users.
+   Nieuw:
+     - Hero in 2 zinnen vertelt WAT het is.
+     - Twee product-cards direct daaronder met badges (AVAILABLE NOW /
+       KICKSTARTER) + CTAs naar de respectievelijke tab.
+     - Brand-story ingedikt tot 4 secties (Why · How · Pillars · Who).
+     - Mission als closing-statement.
+
+   Open vanuit: Account-tab → "About VIBEZCORE".
 
    Visuele stijl volgt MERK_ANKER: dark bg, Inter (regular/semibold/
    extrabold/black), accent #3a8fff, royale spacing, grote koppen.
    ─────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import {
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,9 +32,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/* Wordmark als eyebrow ipv platte tekst (operator-besluit 2026-05-30:
-   huisstijl = echt logo, niet "VIBEZCORE" in blauwe letters). Local
-   require zodat 'ie offline werkt; MERK_ANKER §3. */
+/* Wordmark als hero — huisstijl-anker (MERK_ANKER §3). Local require zodat
+   'ie offline werkt. */
 const WORDMARK = require('../../assets/vibezcore_wordmark.png');
 
 export default function AboutScreen() {
@@ -47,130 +53,77 @@ export default function AboutScreen() {
           resizeMode="contain"
           accessibilityLabel="VIBEZCORE"
         />
-        <Text style={s.title}>
-          Built on Experience.{'\n'}Anchored in Science.
+        <Text style={s.heroTitle}>
+          Personal development, engineered.
         </Text>
         <Text style={s.heroSub}>
-          The life you want requires a version of you that doesn't exist
-          yet. VIBEZCORE was built to close that gap — permanently.
+          VIBEZCORE combines a haptic bracelet with a structured audio
+          library. Two instruments, one purpose: lasting change.
         </Text>
 
-        {/* ── 01. Origin & Foundation ── */}
-        <SectionHeader num="01" title="Origin & Foundation" />
+        {/* ── Two products ── */}
+        <ProductCard
+          status="available"
+          badge="AVAILABLE NOW"
+          tag="Long-term growth"
+          title="Audio Library"
+          desc="144 structured psychological sessions across 4 core pillars. Not motivation — guided rewiring through audio that compounds over time."
+          ctaLabel="Open Audio Library"
+          onPress={() => router.navigate('/(tabs)/' as never)}
+        />
+        <ProductCard
+          status="upcoming"
+          badge="KICKSTARTER · 1 SEPT 2026"
+          tag="Instant state control"
+          title="Smart Bead Bracelet"
+          desc="Precision haptic pulses on the wrist. Backed by science, bottom-up by design. Reset your state in minutes."
+          ctaLabel="Explore Bracelet"
+          onPress={() => router.navigate('/(tabs)/bracelet' as never)}
+        />
+
+        {/* ── 01. Why ── */}
+        <SectionHeader num="01" title="Why VIBEZCORE exists" />
         <P>
-          VIBEZCORE was not built in a boardroom. It was built from
-          experience — from the kind of personal reckoning that happens
-          when you've spent years watching yourself and others operate
-          far below their real capacity, not from lack of intelligence
-          or ambition, but from a lack of the right tools.
+          The life you want requires a version of you that doesn&apos;t
+          exist yet. Most personal development addresses the mind while
+          ignoring the body — telling you what to think while your
+          nervous system keeps running the same old patterns.
         </P>
         <P>
-          The insight was simple but overlooked: most personal
-          development addresses the mind while ignoring the body. It
-          tells you what to think while your nervous system keeps
-          running the same old patterns. Real change doesn't start in
-          the mind. It starts in the body — and the mind follows.
-        </P>
-        <PullQuote>
-          "Stop drifting. Start directing. The life you want requires a
-          version of you that doesn't exist yet."
-        </PullQuote>
-        <P>
-          That realisation became the foundation of everything VIBEZCORE
-          is built on — a system that works from the body up, not the
-          mind down.
+          Real change starts in the body. The mind follows. That insight
+          became VIBEZCORE&apos;s foundation: a system that works from
+          the body up, not the mind down.
         </P>
 
-        {/* ── 02. The Challenge ── */}
-        <SectionHeader num="02" title="The Challenge" />
-        <P>
-          Most people never fully understand themselves. They move
-          through life reacting — to situations, to people, to emotions
-          they can't name. They adapt to avoid friction. Little by
-          little, adapting becomes the default and their own direction
-          fades.
-        </P>
-        <P>
-          They've kept themselves easy, agreeable, and small enough to
-          avoid conflict. They sense their potential but can't access
-          it. They've been let down by systems, by people, by self-help
-          content that promises transformation but delivers only
-          temporary inspiration.
-        </P>
-        <PullQuote>
-          "You've adapted long enough. No more shrinking. It stops here."
-        </PullQuote>
-        <P bold="reliable">
-          The world is full of motivation. What it lacks is a reliable
-          method to change how you actually function — in real time,
-          under real pressure, in real life.
-        </P>
-
-        {/* ── 03. The VIBEZCORE System ── */}
-        <SectionHeader num="03" title="The VIBEZCORE System" />
-        <P>
-          VIBEZCORE is a two-instrument system. Each instrument
-          addresses a different dimension of human performance.
-          Together, they form a complete approach to lasting change.
-        </P>
-        <View style={s.systemsGrid}>
-          <SystemCard
-            variant="dark"
-            tag="Instant State Control"
-            title="Smart Bead Bracelet"
-            desc="A precision-engineered neuroscience instrument delivering calibrated haptic pulses through the wrist. Body resets. Mind follows. Immediate, repeatable, reliable."
-          />
-          <SystemCard
-            variant="accent"
-            tag="Long-Term Growth"
-            title="Audio Library"
-            desc="A structured psychological transformation program — not motivation, not a podcast. Intellectual guidance through audio that compounds over time."
-          />
-        </View>
-        <P style={{ marginTop: 20 }}>
-          One controls the moment. The other changes the game. Neither
-          is optional if you want permanent results.
-        </P>
-
-        {/* ── 04. The Science ── */}
-        <SectionHeader num="04" title="The Science Behind It" />
+        {/* ── 02. How ── */}
+        <SectionHeader num="02" title="How the two instruments work" />
         <P>
           VIBEZCORE is grounded in the neuroscience of bottom-up
-          regulation — the understanding that the nervous system can be
+          regulation — the principle that the nervous system can be
           directly influenced through the body before cognitive
           processes engage.
         </P>
         <P>
-          The wrist provides access to nerve pathways that influence
-          the autonomic nervous system. Precisely calibrated haptic
-          stimulation at this location triggers a physiological
-          response — resetting your internal state faster and more
-          reliably than any top-down cognitive technique.
-        </P>
-        <P>
-          The Audio Library operates on a complementary principle:
-          structured, repeated exposure to reframed concepts — drawn
-          from behavioural science, psychology, and philosophy —
-          gradually rewires the patterns that drive your decisions,
-          reactions, and identity.
+          The bracelet delivers calibrated haptic pulses to nerve
+          pathways at the wrist, triggering a physiological state reset
+          in real time. The audio library reframes core concepts — drawn
+          from behavioural science, psychology, and philosophy — through
+          structured repeated exposure that compounds into permanent
+          change.
         </P>
         <Text style={[s.p, s.pBoldClose]}>
-          <Text style={s.bold}>Body first. Mind follows. Then identity
-          shifts.</Text>{' '}This is the VIBEZCORE sequence.
+          <Text style={s.bold}>
+            Body first. Mind follows. Then identity shifts.
+          </Text>
         </Text>
         <Text style={s.smallNote}>
-          All referenced research and thought leaders in our content
-          are independent of VIBEZCORE. No affiliation, endorsement, or
-          partnership of any kind exists or is implied.
+          All referenced research and thought leaders in our content are
+          independent of VIBEZCORE. No affiliation or endorsement of any
+          kind exists or is implied.
         </Text>
 
-        {/* ── 05. Four Pillars ── */}
-        <SectionHeader num="05" title="Four Pillars of Growth" />
-        <P>
-          Everything within VIBEZCORE — the audio sessions, the
-          community, the content — is built around four core domains of
-          human development.
-        </P>
+        {/* ── 03. Pillars ── */}
+        <SectionHeader num="03" title="Four pillars of growth" />
         <View style={s.pillarsGrid}>
           <Pillar
             num="01"
@@ -194,66 +147,33 @@ export default function AboutScreen() {
           />
         </View>
 
-        {/* ── 06. Collective ── */}
-        <SectionHeader num="06" title="The VIBEZCORE Collective" />
+        {/* ── 04. Who ── */}
+        <SectionHeader num="04" title="Who it's for" />
         <P>
-          VIBEZCORE is not a solo journey. The VIBEZCORE Collective is
-          a private community for members who are serious about growth
-          — a space where standard is maintained, not lowered to
-          accommodate comfort.
+          VIBEZCORE is not for everyone. It&apos;s built for people who
+          are done living small — who sense their full potential but
+          can&apos;t access it, who have adapted too long at the cost of
+          their own growth, who want to understand themselves at the
+          deepest level and build something unshakeable from the inside
+          out.
         </P>
-        <P>
-          Inside the Collective, members engage with the four pillars,
-          share real experiences, and hold each other to a higher
-          standard. This is not a support group. It is a performance
-          environment built for people who are done with excuses.
-        </P>
-        <P>
-          Access is strictly personal and non-transferable. The quality
-          of the space depends on the quality of the people in it.
-        </P>
+        <Text style={s.smallNote}>
+          The platform is intended for users aged 18 and older.
+        </Text>
 
-        {/* ── 07. Who It's For ── */}
-        <SectionHeader num="07" title="Who VIBEZCORE Is For" />
-        <P>
-          VIBEZCORE is not for everyone. It is built for people who are
-          done living small — those who are tired of not reaching their
-          full potential, of not being understood or respected, of
-          moving through life without real direction.
-        </P>
-        <P>
-          It is for the person who has adapted too long, who has kept
-          themselves easy and agreeable at the cost of their own
-          growth. The person who senses there is more — and is ready to
-          do what it takes to access it.
-        </P>
-        <P>
-          Whether you are an entrepreneur, a leader, an athlete, or
-          simply someone who refuses to settle — if you want to
-          understand yourself at the deepest level and build something
-          unshakeable from the inside out, VIBEZCORE was built for you.
-        </P>
-        <P>The platform is intended for users aged 18 and older.</P>
+        {/* ── Closing — Mission ── */}
+        <View style={s.missionBlock}>
+          <Text style={s.missionLine}>
+            Self-understanding. Self-control. Self-respect.
+          </Text>
+          <Text style={s.missionLine}>
+            Growth. Success. Freedom.
+          </Text>
+          <Text style={s.missionFooter}>
+            That&apos;s what VIBEZCORE exists to build.
+          </Text>
+        </View>
 
-        {/* ── 08. The Mission ── */}
-        <SectionHeader num="08" title="The Mission" />
-        <PullQuote>
-          Self-understanding. Self-control. Self-respect.{'\n'}
-          Growth. Success. Freedom.
-        </PullQuote>
-        <P>
-          That is what VIBEZCORE exists to build. Not as abstract
-          ideals. As lived reality — earned through the work, structured
-          by the system, compounded over time.
-        </P>
-        <P>
-          The Kickstarter launch is scheduled for 1 September 2026. A
-          limited first release for the people who understand what this
-          is and are ready to move.
-        </P>
-
-        {/* Closing footer — kort, brand-statement zonder CTA-druk
-           (de echte CTA's komen elders in de app). */}
         <View style={s.footer}>
           <Text style={s.footerText}>© VIBEZCORE</Text>
         </View>
@@ -273,64 +193,69 @@ function SectionHeader({ num, title }: { num: string; title: string }) {
   );
 }
 
-function P({
-  children,
-  bold,
-  style,
-}: {
-  children: React.ReactNode;
-  /** Optionele substring die als bold wordt gerenderd binnen de p */
-  bold?: string;
-  style?: object;
-}) {
-  if (bold && typeof children === 'string') {
-    /* Eenvoudige bold-injectie: split rond de bold-substring. Bruikbaar
-       voor short bold-runs binnen een paragraaf. Voor complexere markup
-       gebruik Text-elementen direct. */
-    const idx = children.indexOf(bold);
-    if (idx >= 0) {
-      return (
-        <Text style={[s.p, style]}>
-          {children.slice(0, idx)}
-          <Text style={s.bold}>{bold}</Text>
-          {children.slice(idx + bold.length)}
-        </Text>
-      );
-    }
-  }
-  return <Text style={[s.p, style]}>{children}</Text>;
+function P({ children }: { children: React.ReactNode }) {
+  return <Text style={s.p}>{children}</Text>;
 }
 
-function PullQuote({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={s.pullQuote}>
-      <Text style={s.pullQuoteText}>{children}</Text>
-    </View>
-  );
-}
-
-function SystemCard({
-  variant,
+/* Iter v170: ProductCard — vervangt het oude SystemCard-grid. Per product
+   één volle-breedte card met badge (status-indicator), tag, title,
+   beschrijving, en een tap-bare CTA naar de respectievelijke tab. */
+function ProductCard({
+  status,
+  badge,
   tag,
   title,
   desc,
+  ctaLabel,
+  onPress,
 }: {
-  variant: 'dark' | 'accent';
+  status: 'available' | 'upcoming';
+  badge: string;
   tag: string;
   title: string;
   desc: string;
+  ctaLabel: string;
+  onPress: () => void;
 }) {
-  const isDark = variant === 'dark';
+  const isAvailable = status === 'available';
   return (
-    <View style={[s.systemCard, isDark ? s.systemDark : s.systemAccent]}>
-      <Text style={[s.systemTag, isDark ? s.systemTagDark : s.systemTagAccent]}>
-        {tag}
-      </Text>
-      <Text style={[s.systemTitle, isDark && s.systemTitleLight]}>
-        {title}
-      </Text>
-      <Text style={[s.systemDesc, isDark && s.systemDescLight]}>{desc}</Text>
-    </View>
+    <Pressable
+      style={[
+        s.productCard,
+        isAvailable ? s.productCardAvailable : s.productCardUpcoming,
+      ]}
+      onPress={onPress}
+      accessibilityLabel={ctaLabel}
+    >
+      <View
+        style={[
+          s.productBadge,
+          isAvailable ? s.productBadgeAvailable : s.productBadgeUpcoming,
+        ]}
+      >
+        <View
+          style={[
+            s.productBadgeDot,
+            { backgroundColor: isAvailable ? Brand.success : Brand.accent },
+          ]}
+        />
+        <Text
+          style={[
+            s.productBadgeText,
+            { color: isAvailable ? Brand.success : Brand.accent },
+          ]}
+        >
+          {badge}
+        </Text>
+      </View>
+      <Text style={s.productTag}>{tag}</Text>
+      <Text style={s.productTitle}>{title}</Text>
+      <Text style={s.productDesc}>{desc}</Text>
+      <View style={s.productCta}>
+        <Text style={s.productCtaText}>{ctaLabel}</Text>
+        <Text style={s.productCtaArrow}>→</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -359,22 +284,19 @@ const s = StyleSheet.create({
   scroll: { padding: 20, paddingBottom: 48 },
 
   /* Hero */
-  /* Wordmark als eyebrow — afmeting bewust kleiner dan de welcome-
-     screen wordmark (180px) zodat 'ie als brand-anchor functioneert,
-     niet als hero-element. Het echte hero is de h1-titel eronder. */
   wordmark: {
-    width: 130,
-    height: 22,
+    width: 160,
+    height: 26,
     alignSelf: 'flex-start',
-    marginBottom: 18,
-    tintColor: undefined, // PNG is wit op transparant — geen tint nodig
+    marginBottom: 22,
+    tintColor: undefined,
   },
-  title: {
+  heroTitle: {
     color: Brand.text,
-    fontSize: 32,
+    fontSize: 30,
     fontFamily: BrandFonts.black,
     letterSpacing: -0.8,
-    lineHeight: 38,
+    lineHeight: 36,
     marginBottom: 14,
   },
   heroSub: {
@@ -382,13 +304,93 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     lineHeight: 23,
-    marginBottom: 8,
+    marginBottom: 30,
     maxWidth: 520,
+  },
+
+  /* Product cards */
+  productCard: {
+    borderRadius: 16,
+    padding: 22,
+    marginBottom: 14,
+    borderWidth: 1,
+  },
+  productCardAvailable: {
+    backgroundColor: 'rgba(74,222,128,0.06)',
+    borderColor: 'rgba(74,222,128,0.28)',
+  },
+  productCardUpcoming: {
+    backgroundColor: 'rgba(58,143,255,0.06)',
+    borderColor: 'rgba(58,143,255,0.28)',
+  },
+  productBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  productBadgeAvailable: {
+    backgroundColor: 'rgba(74,222,128,0.10)',
+  },
+  productBadgeUpcoming: {
+    backgroundColor: 'rgba(58,143,255,0.12)',
+  },
+  productBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 8,
+  },
+  productBadgeText: {
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.4,
+  },
+  productTag: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  productTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.4,
+    marginBottom: 10,
+  },
+  productDesc: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 22,
+    marginBottom: 18,
+  },
+  productCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  productCtaText: {
+    color: Brand.accent,
+    fontSize: 14,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+    marginRight: 6,
+  },
+  productCtaArrow: {
+    color: Brand.accent,
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
   },
 
   /* Sections */
   sectionHeader: {
-    marginTop: 40,
+    marginTop: 36,
     marginBottom: 14,
     paddingTop: 26,
     borderTopColor: Brand.border,
@@ -419,6 +421,7 @@ const s = StyleSheet.create({
   },
   pBoldClose: {
     marginBottom: 6,
+    marginTop: 4,
   },
   bold: {
     color: Brand.text,
@@ -433,87 +436,12 @@ const s = StyleSheet.create({
     marginTop: 14,
   },
 
-  /* Pull quote — accent-blauwe linker rand, panel-bg */
-  pullQuote: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    borderLeftColor: Brand.accent,
-    borderLeftWidth: 3,
-    borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 22,
-    marginVertical: 16,
-  },
-  pullQuoteText: {
-    color: Brand.text,
-    fontSize: 17,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.3,
-    lineHeight: 26,
-  },
-
-  /* Systems grid — twee cards (dark + accent) naast elkaar */
-  systemsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 18,
-  },
-  systemCard: {
-    flexBasis: '48%',
-    flexGrow: 1,
-    minWidth: 220,
-    borderRadius: 16,
-    padding: 22,
-  },
-  systemDark: {
-    backgroundColor: '#0f0f0f',
-    borderColor: Brand.border,
-    borderWidth: 1,
-  },
-  systemAccent: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    borderColor: 'rgba(58,143,255,0.30)',
-    borderWidth: 1,
-  },
-  systemTag: {
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-  },
-  systemTagDark: {
-    color: 'rgba(244,244,244,0.4)',
-  },
-  systemTagAccent: {
-    color: Brand.accent,
-  },
-  systemTitle: {
-    color: Brand.text,
-    fontSize: 16,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.3,
-    marginBottom: 8,
-  },
-  systemTitleLight: {
-    color: '#ffffff',
-  },
-  systemDesc: {
-    color: Brand.textDim,
-    fontSize: 13,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 20,
-  },
-  systemDescLight: {
-    color: 'rgba(255,255,255,0.58)',
-  },
-
   /* Pillars — 4 cards in 2x2 grid */
   pillarsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginTop: 18,
+    marginTop: 6,
   },
   pillar: {
     flexBasis: '48%',
@@ -546,12 +474,39 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  /* Footer */
-  footer: {
+  /* Mission closing */
+  missionBlock: {
     marginTop: 40,
-    paddingTop: 24,
+    paddingTop: 30,
+    paddingBottom: 20,
+    paddingHorizontal: 18,
     borderTopColor: Brand.border,
     borderTopWidth: 1,
+    alignItems: 'center',
+  },
+  missionLine: {
+    color: Brand.text,
+    fontSize: 17,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.3,
+    lineHeight: 26,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  missionFooter: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginTop: 12,
+    maxWidth: 320,
+  },
+
+  /* Footer */
+  footer: {
+    marginTop: 24,
+    paddingTop: 18,
     alignItems: 'center',
   },
   footerText: {
