@@ -266,6 +266,25 @@ export function refreshSubscription(): void {
   fetchStatus();
 }
 
+/** Iter v170 (2026-06-28): explicit sign-out marker. Synchroon notify met
+ *  {active:false} zonder fetchStatus loop. Voorheen riep account.tsx
+ *  alleen refreshSubscription() aan na clearSession() — dat zet status
+ *  tijdelijk op null (= isLoading), en mijn iter v168 fix in (tabs)/index.tsx
+ *  behandelt isLoading als hasSub=true, waardoor Audio Library de PRO-
+ *  rendering BEHIELD na sign-out totdat fetchStatus voltooide (2+ sec, of
+ *  bij RC SDK cache stale: helemaal niet tot app-restart). Operator zag dit
+ *  als "Free Picks tile verdwijnt na sign-out, komt pas terug na app-restart".
+ *
+ *  setSignedOutStatus() omzeilt de fetch: direct notify {active:false} +
+ *  cachedStatus update + cache-wipe. Daarna optionele refresh om backend
+ *  in sync te houden, maar UI hoeft niet meer te wachten. */
+export function setSignedOutStatus(): void {
+  fetchGeneration++;
+  const freeStatus: SubscriptionStatus = { active: false };
+  notifyAll(freeStatus);
+  clearPersistedCache().catch(() => {});
+}
+
 export function useSubscription() {
   const [status, setStatus] = useState<SubscriptionStatus | null>(cachedStatus);
 

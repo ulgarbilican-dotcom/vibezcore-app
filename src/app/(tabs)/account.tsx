@@ -11,7 +11,11 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { refreshSubscription, useSubscription } from '@/hooks/useSubscription';
+import {
+  refreshSubscription,
+  setSignedOutStatus,
+  useSubscription,
+} from '@/hooks/useSubscription';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 
@@ -839,9 +843,13 @@ export default function AccountScreen() {
             setEmail(null);
             setEmailInput('');
             setPwInput('');
-            /* Token weg → refreshSubscription detecteert no-token, wist
-               persisted cache en notifiet alle consumers {active:false}. */
-            refreshSubscription();
+            /* Iter v170 (2026-06-28): synchroon notify {active:false} ipv
+               refreshSubscription() dat een async fetchStatus afwacht.
+               Voorheen: na sign-out bleef Audio Library de PRO-rendering
+               vasthouden (geen Free Picks tile) totdat fetchStatus voltooide
+               of, bij RC SDK cache stale, tot app-restart. Operator zag dit
+               direct: "Free Picks card komt pas terug na app afsluiten". */
+            setSignedOutStatus();
             /* Iter 9dn (2026-05-31): history-bucket re-evalueren — geen
                token meer → schakelt naar 'anon' bucket, voormalige user's
                history blijft staan onder hun eigen key (niet gewist).
@@ -934,7 +942,10 @@ export default function AccountScreen() {
                       setPwInput('');
                       await clearLastPlayed();
                       await clearSignedUrlCache();
-                      refreshSubscription();
+                      /* Iter v170: synchroon FREE-marker, identiek aan
+                         sign-out flow — voorkomt UI dat PRO-rendering
+                         vasthoudt na delete. */
+                      setSignedOutStatus();
                       void showVibezAlert({
                         title: 'Account deleted',
                         message: 'Your account has been permanently deleted.',
