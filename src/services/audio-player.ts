@@ -198,6 +198,13 @@ let trackingActive = false;
    geopend heeft. */
 let loadedWithAutoStart = false;
 let sleepTimer: ReturnType<typeof setTimeout> | null = null;
+/* Iter v171 (2026-06-29): dual-track sleep-timer. setTimeout-only versie
+   miste fire bij background/lockscreen (Android Doze vertraagt of bevriest
+   JS timers). Operator: "sleep op 15 min ingesteld, audio stopt niet".
+   Fix: bij setSleepTimer slaan we óók de wall-clock deadline op. De audio
+   onStatus-handler (loopt periodiek tijdens playback) checkt elke status-
+   update of we de deadline gepasseerd zijn — werkt ook na Doze-wake-up. */
+let sleepDeadlineMs: number | null = null;
 const listeners = new Set<() => void>();
 /* ── Finish-listeners (apart van state-listeners) ───────────────────────
    State-listeners firen op ELKE state-mutatie (~4x/sec tijdens playback).
@@ -239,6 +246,17 @@ function clearSleepTimer() {
   if (sleepTimer) {
     clearTimeout(sleepTimer);
     sleepTimer = null;
+  }
+  sleepDeadlineMs = null;
+}
+
+/** Iter v171 (2026-06-29): wall-clock deadline check. Roep aan vanuit
+ *  onStatus handler (loopt periodiek tijdens playback). Als deadline
+ *  gepasseerd → pause. Vangt de Doze-vertraging op die setTimeout mist. */
+function checkSleepDeadline() {
+  if (sleepDeadlineMs !== null && Date.now() >= sleepDeadlineMs) {
+    clearSleepTimer();
+    pauseAudio();
   }
 }
 
@@ -327,6 +345,11 @@ function onStatus(st: AudioStatus): void {
     positionSec: posSec,
     durationSec: durSec,
   });
+
+  /* Iter v171 (2026-06-29): sleep-timer wall-clock check. setTimeout alleen
+     mist fire bij Android Doze (background/lockscreen); deze periodic
+     deadline-check vangt het op zodra status weer binnenkomt. */
+  checkSleepDeadline();
 
   /* Lock-screen-metadata aggressief re-applyen — op ELKE status-update.
      Reden: expo-audio's interne MediaSession leest ID3-tags uit het mp3-
@@ -893,14 +916,19 @@ export async function playNextFromPanel(): Promise<void> {
   });
 }
 
-/** Sleep-timer: t-min in de toekomst pauzeren. t=0 → uit. */
+/** Sleep-timer: t-min in de toekomst pauzeren. t=0 → uit.
+ *  Iter v171 (2026-06-29): dual-track. setTimeout vuurt foreground binnen
+ *  seconde van deadline; sleepDeadlineMs vangt het op bij background/Doze
+ *  via onStatus periodic check. */
 export function setSleepTimer(minutes: number): void {
   clearSleepTimer();
   if (minutes <= 0) return;
+  const ms = minutes * 60 * 1000;
+  sleepDeadlineMs = Date.now() + ms;
   sleepTimer = setTimeout(() => {
-    sleepTimer = null;
+    clearSleepTimer();
     pauseAudio();
-  }, minutes * 60 * 1000);
+  }, ms);
 }
 
 /**

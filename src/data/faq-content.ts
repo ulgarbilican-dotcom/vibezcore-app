@@ -57,22 +57,27 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'overview',
     question: 'What is VIBEZCORE?',
     answer:
-      "Self-control is the foundation of everything. Without it, there is no confidence. Without confidence, there is no real growth, no success, no freedom.\n\n" +
-      "Most people never fully understand themselves. They move through life reacting — to situations, to people, to emotions they can't name. They sense their potential, but can't access it. VIBEZCORE was built to change that.\n\n" +
-      "VIBEZCORE is a two-part system designed for both immediate control and long-term transformation — for anyone who wants to operate at a higher level. Whether you are building confidence from the ground up, or you already have it and want to sharpen your edge, deepen your self-awareness, and compound your growth over time.\n\n" +
-      "**1. Instant State Control — Smart Bead Bracelet**\nIn high-pressure moments, your internal state determines everything. The VIBEZCORE Smart Bead Bracelet uses precisely calibrated haptic signals that interact with your nervous system, guiding your body out of a reactive state and back into control — instantly. No effort. No screens. Just results.\n\n" +
-      "**2. Long-Term Growth — Audio Library**\nReal change comes from understanding the patterns behind your thoughts, behavior, and decisions. The VIBEZCORE Audio Library is built for deep, structured development — helping you recognize behavioral patterns, build discipline, clarity, and self-respect over time. You don't just react differently. You become different.\n\n" +
-      "This is not motivation. This is not a quick fix. This is a system — structured, compounding, and real.",
+      "VIBEZCORE is a personal development platform built around two distinct instruments. Most personal development gives you motivation but leaves both your physiology and your mental frameworks untouched — so the old patterns keep running.\n\n" +
+      "Real change requires both: a way to shift your state in the moment, and a way to rewire how you think over time. VIBEZCORE is built around that pairing.\n\n" +
+      "**1. Control the Moment — Smart Bead Bracelet**\nPrecision haptics at the wrist. Instant state regulation — calm, focus or recovery. No screens. No effort. Just results.\n\n" +
+      "The body influences the mind: signals from your nervous system shape attention, emotion and decisions before cognition engages. The bracelet works with that biology — a direct route to inner state, bottom-up by design.\n\n" +
+      "Body first. Mind follows.\n\n" +
+      "**2. Train the Mind — Audio Library**\nBuilt on neuroscience, psychology and philosophy. Not motivation — understanding. Sessions that create real mental shifts over time.\n\n" +
+      "Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
+      "Each instrument works independently. Together, they form a complete system for both immediate control and lasting growth.",
   },
   {
     id: 'overview-components',
     category: 'overview',
     question: 'What components are part of the VIBEZCORE system?',
     answer:
-      "The VIBEZCORE system consists of two core instruments:\n\n" +
-      "**1. Instant State Control — Smart Bead Bracelet**\nA precision-engineered neuroscience instrument that delivers calibrated haptic pulses through the wrist, triggering instant bottom-up state regulation. Body resets first. Mind follows.\n\n" +
+      "The VIBEZCORE system consists of two core instruments — each addressing a different dimension of how you operate.\n\n" +
+      "**1. Control the Moment — Smart Bead Bracelet**\nPrecision haptics at the wrist. Instant state regulation — calm, focus or recovery. No screens. No effort. Just results.\n\n" +
+      "The body influences the mind: signals from your nervous system shape attention, emotion and decisions before cognition engages. The bracelet works with that biology — a direct route to inner state, bottom-up by design.\n\n" +
       "The bracelet features an interchangeable bead system — one HapticCore module, 15 editions of natural gemstones sourced from across the globe. Origin, Signature and Reserve series. Each stone is unique in character, origin, and energy.\n\n" +
-      "**2. Long-Term Growth — Audio Library**\nA structured psychological transformation program — four pillars, grounded in ancient wisdom and modern science. Not motivation. Real, compounding change over time.\n\n" +
+      "Body first. Mind follows.\n\n" +
+      "**2. Train the Mind — Audio Library**\nBuilt on neuroscience, psychology and philosophy. Not motivation — understanding. Sessions that create real mental shifts over time.\n\n" +
+      "Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
       "Each instrument works independently. Together, they form a complete system for both immediate control and lasting growth.",
   },
   {
@@ -99,9 +104,9 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'overview',
     question: 'What makes VIBEZCORE different from other self-improvement platforms?',
     answer:
-      "Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on two levels simultaneously.\n\n" +
-      "**Instant State Control** — the Smart Bead Bracelet regulates your state in real time. In the moments that count — under pressure, in high-stakes situations, when clarity drops — your body is guided back to control automatically. No meditation required. No conscious effort. Just immediate, repeatable results.\n\n" +
-      "**Long-Term Growth** — the Audio Library rewires how you think, feel, and respond over time. Building self-understanding, discipline, and self-respect that compounds — session after session.\n\n" +
+      "Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on two levels simultaneously — bottom-up and top-down at the same time.\n\n" +
+      "**Control the Moment** — the Smart Bead Bracelet regulates your state in real time through bottom-up neural pathways. In the moments that count — under pressure, in high-stakes situations, when clarity drops — your body is guided back to control automatically. No meditation required. No conscious effort. Just immediate, repeatable results.\n\n" +
+      "**Train the Mind** — the Audio Library reshapes how you think, feel, and respond over time through ideas drawn from psychology, philosophy and behavioural science. Building cognitive frameworks, self-awareness, and reflective thinking that compounds — session after session.\n\n" +
       "Two instruments. One direction: growth, success, and freedom.",
   },
 
