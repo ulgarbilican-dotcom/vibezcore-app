@@ -1310,9 +1310,11 @@ function BreathingHint({
 
   return (
     <Animated.Text style={[s.breatheHint, { opacity }]}>
-      {/* Iter v168 (2026-06-28): verkorte vorm 'through nose' zonder 'your',
-          consistent met Breath tab. */}
-      {phase === 'in' ? 'Inhale through nose' : 'Exhale through nose'}
+      {/* Iter v170 (2026-06-28): terug naar 'through your nose' — deze
+          BreathingHint is een algemene fallback zonder protocol-context,
+          dus matcht de oorspronkelijke (lange) audio cues. Boost-specifieke
+          kort vorm wordt elders gehandeld (zie promptText met isBoost). */}
+      {phase === 'in' ? 'Inhale through your nose' : 'Exhale through your nose'}
     </Animated.Text>
   );
 }
@@ -2748,24 +2750,33 @@ function BreathworkStrip({
   const remainingSec = Math.floor((remainingMs % 60000) / 1000);
   const progress = phase === 'done' ? 1 : cycle / protocol.cycles;
 
-  /* Iter v168 (2026-06-28): verkort 'through your X' → 'through X' overal,
-     consistent met Breath tab. Operator: snelle cycli hebben geen tijd
-     voor 'your', en consistency tussen tabs is essentieel. */
+  /* Iter v170 (2026-06-28): verkorte vorm ('through X' zonder 'your') ALLEEN
+     voor Boost mode (BraceletMode.Gamma) — diens 2-2 cyclus is te snel voor
+     lange audio cues. Andere modes gebruiken oorspronkelijke 'through your X'
+     audio takes en moeten dezelfde UI tekst tonen. Operator-instructie 2026-
+     06-28: "niet aan de andere states komen enkel boost aanpassen". */
   const method = BREATH_METHOD[mode];
+  const isBoost = mode === BraceletMode.Gamma;
   const promptText = (() => {
     switch (phase) {
       case 'in':
-        if (protocol.kind === 'sigh') return 'Inhale deeply through nose';
+        if (protocol.kind === 'sigh') return 'Inhale deeply through your nose';
+        if (isBoost) {
+          return method.inVia === 'mouth' ? 'Inhale through mouth' : 'Inhale through nose';
+        }
         return method.inVia === 'mouth'
-          ? 'Inhale through mouth'
-          : 'Inhale through nose';
+          ? 'Inhale through your mouth'
+          : 'Inhale through your nose';
       case 'in-topup':
         return 'Top up — small breath in';
       case 'out':
-        if (protocol.kind === 'sigh') return 'Long exhale through mouth';
+        if (protocol.kind === 'sigh') return 'Long exhale through your mouth';
+        if (isBoost) {
+          return method.outVia === 'mouth' ? 'Exhale through mouth' : 'Exhale through nose';
+        }
         return method.outVia === 'mouth'
-          ? 'Exhale through mouth'
-          : 'Exhale through nose';
+          ? 'Exhale through your mouth'
+          : 'Exhale through your nose';
       case 'hold-in':
         return 'Hold';
       case 'hold-out':

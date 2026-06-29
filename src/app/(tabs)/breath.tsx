@@ -694,13 +694,20 @@ export default function BreathScreen() {
     : phase === 'exhale' ? 'Exhale'
     : 'Ready';
 
-  /* Iter v168 (2026-06-28): consistent verkorte vorm ZONDER 'your' voor
-     alle modes. Operator-feedback: korte snelle cycli (Boost 2-2) hebben
-     geen tijd voor lange labels, en consistency is belangrijker dan
-     formele beleefdheid. */
+  /* Iter v170 (2026-06-28): verkorte vorm ('through nose' zonder 'your')
+     ALLEEN voor Boost. Reden: Boost cyclus 2-2 is te snel voor de lange
+     "Inhale through your nose" audio cue — operator nam korte ElevenLabs
+     takes op om audio binnen de cyclus te laten passen.
+     Andere modes (Focus 5-5, Calm 4-4-4-4, Clarity 4-2-6, Rest 4-7-8)
+     hebben langzame cycli en gebruiken de oorspronkelijke "through your
+     X" audio takes — UI tekst matcht die. Operator-instructie:
+     "niet aan de andere states komen enkel boost aanpassen". */
+  const isBoost = current.key === 'boost';
   const phaseVia =
-    phase === 'inhale' ? `through ${current.inhaleVia}`
-    : phase === 'exhale' ? `through ${current.exhaleVia}`
+    phase === 'inhale'
+      ? (isBoost ? `through ${current.inhaleVia}` : `through your ${current.inhaleVia}`)
+    : phase === 'exhale'
+      ? (isBoost ? `through ${current.exhaleVia}` : `through your ${current.exhaleVia}`)
     : '';
 
   const startBtnBg = running ? 'rgba(255,255,255,0.06)' : current.color;
