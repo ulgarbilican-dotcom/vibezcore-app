@@ -104,11 +104,19 @@ type AuthState = undefined | null | string;
    Zonder deze check zou een cold-start vanaf bv. een email-magic-link
    (`vibezcoreapp://auth-callback?...`) als gast worden gedetecteerd
    → `router.replace('/welcome')` zou de auth-callback push opslokken
-   → user landt op welcome ipv het verify-scherm. */
+   → user landt op welcome ipv het verify-scherm.
+
+   Iter v170 (2026-06-28): `account` toegevoegd. Web reset-password.html
+   stuurt user naar `vibezcoreapp://account` na "Password updated" zodat
+   hij direct kan inloggen met nieuwe password. Zonder deze entry zou de
+   welcome-redirect dat opslokken → user landt op welkomstscherm en moet
+   extra "Already have a product? Sign in" tappen. Operator-test
+   2026-06-28 ~11:50 toonde deze friction expliciet aan. */
 const AUTH_DEEP_LINK_PATHS = new Set([
   'auth-callback',
   'reset-password',
   'forgot-password',
+  'account',
 ]);
 
 async function hasPendingAuthDeepLink(): Promise<boolean> {
