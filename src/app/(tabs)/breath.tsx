@@ -42,8 +42,10 @@ import { Vibrate, VibrateOff, Volume2, VolumeX } from 'lucide-react-native';
    expo-speech TTS-stub. Service in src/services/breath-voice.ts
    beheert 4 phase-cue files + 5 completion-files op Bunny CDN. */
 import {
+  claimVoiceSource,
   playBreathCue,
   playCompletionCue,
+  releaseVoiceSource,
   setVoiceEnabled,
   stopVoice,
   type BreathKey,
@@ -347,7 +349,9 @@ export default function BreathScreen() {
   const voiceCue = useCallback((phase: 'inhale' | 'hold-in' | 'exhale' | 'hold-out', p: BreathPattern) => {
     if (!voiceOnRef.current) return;
     try {
-      playBreathCue(phase, p.exhaleVia, p.key as 'boost' | 'focus' | 'calm' | 'clarity' | 'rest');
+      /* Iter v170: source='breath' zodat bracelet active de cues niet
+         door elkaar speelt als beide tegelijk lopen. */
+      playBreathCue(phase, p.exhaleVia, p.key as 'boost' | 'focus' | 'calm' | 'clarity' | 'rest', 'breath');
     } catch {
       /* swallow — audio-failure mag de sessie niet breken */
     }
@@ -454,6 +458,9 @@ export default function BreathScreen() {
     setRunning(true);
     roundRef.current = 1;
     setRoundNum(1);
+    /* Iter v170: claim voice-source='breath'. Een eventueel parallel-
+       lopende bracelet active sessie wordt automatisch stilgehouden. */
+    claimVoiceSource('breath');
     runPhase(current, 'inhale');
     /* Registreer sessie in global state — root-layout toont mini-control
        wanneer user wegnavigeert. */
@@ -474,8 +481,11 @@ export default function BreathScreen() {
     scaleAnim.stopAnimation();
     haloAnim.stopAnimation();
     Vibration.cancel();
-    /* v185: stop ongoing voice-cue bij elke vorm van session-einde. */
+    /* v185: stop ongoing voice-cue bij elke vorm van session-einde.
+       Iter v170: release voice-source zodat bracelet active solo verder
+       kan zonder dat we de claim blijven vasthouden. */
     try { stopVoice(); } catch {}
+    try { releaseVoiceSource('breath'); } catch {}
     /* Iter v149 v3 (2026-06-25): wis de global session zodat de mini-
        control verdwijnt. Veilig om hier te doen — cleanupSession wordt
        altijd aangeroepen bij sessie-einde (manual, natural, unmount). */

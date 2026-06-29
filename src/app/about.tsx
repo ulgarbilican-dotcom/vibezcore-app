@@ -85,37 +85,52 @@ export default function AboutScreen() {
         <SectionHeader num="01" title="Why VIBEZCORE exists" />
         <P>
           The life you want requires a version of you that doesn&apos;t
-          exist yet. Most personal development addresses the mind while
-          ignoring the body — telling you what to think while your
-          nervous system keeps running the same old patterns.
+          exist yet. Most personal development gives you motivation but
+          leaves both your physiology and your mental frameworks
+          untouched — so the old patterns keep running.
         </P>
         <P>
-          Real change starts in the body. The mind follows. That insight
-          became VIBEZCORE&apos;s foundation: a system that works from
-          the body up, not the mind down.
+          Real change requires both: a way to shift your state in the
+          moment, and a way to rewire how you think over time. VIBEZCORE
+          is built around that pairing.
         </P>
 
         {/* ── 02. How ── */}
         <SectionHeader num="02" title="How the two instruments work" />
+
+        <Text style={s.subSection}>The Audio Library</Text>
+        <Text style={s.tagline}>Train the Mind</Text>
         <P>
-          VIBEZCORE is grounded in the neuroscience of bottom-up
-          regulation — the principle that the nervous system can be
-          directly influenced through the body before cognitive
-          processes engage.
+          Built on neuroscience, psychology and philosophy. Not
+          motivation — understanding. Sessions that create real mental
+          shifts over time.
         </P>
         <P>
-          The bracelet delivers calibrated haptic pulses to nerve
-          pathways at the wrist, triggering a physiological state reset
-          in real time. The audio library reframes core concepts — drawn
-          from behavioural science, psychology, and philosophy — through
-          structured repeated exposure that compounds into permanent
-          change.
+          Each session expands the frameworks through which you
+          understand yourself, sharpens self-awareness, and strengthens
+          reflective thinking. Over time the ideas compound — improving
+          emotional regulation, sharpening decisions, and giving you
+          the clarity to guide your own evolution.
+        </P>
+
+        <Text style={[s.subSection, { marginTop: 26 }]}>
+          The Smart Bead Bracelet
+        </Text>
+        <Text style={s.tagline}>Control the Moment</Text>
+        <P>
+          Precision haptics at the wrist. Instant state regulation —
+          calm, focus or recovery. No screens. No effort. Just results.
+        </P>
+        <P>
+          The body influences the mind: signals from your nervous
+          system shape attention, emotion and decisions before
+          cognition engages. The bracelet works with that biology —
+          a direct route to inner state, bottom-up by design.
         </P>
         <Text style={[s.p, s.pBoldClose]}>
-          <Text style={s.bold}>
-            Body first. Mind follows. Then identity shifts.
-          </Text>
+          <Text style={s.bold}>Body first. Mind follows.</Text>
         </Text>
+
         <Text style={s.smallNote}>
           All referenced research and thought leaders in our content are
           independent of VIBEZCORE. No affiliation or endorsement of any
@@ -422,6 +437,22 @@ const s = StyleSheet.create({
   pBoldClose: {
     marginBottom: 6,
     marginTop: 4,
+  },
+  subSection: {
+    color: Brand.accent,
+    fontSize: 12,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  tagline: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.5,
+    lineHeight: 28,
+    marginBottom: 12,
   },
   bold: {
     color: Brand.text,

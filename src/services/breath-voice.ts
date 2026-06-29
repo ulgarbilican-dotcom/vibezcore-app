@@ -67,6 +67,15 @@ export type ExhaleVia = 'nose' | 'mouth';
 
 let voiceEnabled = true;
 
+/* Iter v170 (2026-06-28): voice-source ownership. Voorkomt dubbele cues
+   wanneer breath-tab sessie loopt EN bracelet active sessie breathwork
+   tegelijk activeert. Wie als laatste claimVoiceSource() aanroept "wint"
+   en alleen die source's playBreathCue() doet daadwerkelijk geluid.
+   Andere cues = silent no-op (geen interferentie). releaseVoiceSource()
+   bij session-end zodat een latere solo-sessie weer kan claimen. */
+export type VoiceSource = 'breath' | 'bracelet';
+let activeVoiceSource: VoiceSource | null = null;
+
 /* Cache: één AudioPlayer per unieke URL. Lazy-init bij eerste play.
    AudioPlayer-instances overleven over de tab-levensduur — geen overhead
    na de eerste warmup. */
@@ -84,6 +93,27 @@ export function setVoiceEnabled(enabled: boolean): void {
   if (!enabled) stopVoice();
 }
 
+/** Iter v170 (2026-06-28): claim voice-ownership voor één source. Een
+ *  tweede claim (bv. bracelet active start terwijl breath-tab nog speelt)
+ *  vervangt de eerste — oude source's cues stoppen direct en latere
+ *  playBreathCue() calls van die source worden no-op tot ze opnieuw claimen
+ *  of de huidige sessie eindigt. */
+export function claimVoiceSource(source: VoiceSource): void {
+  if (activeVoiceSource !== null && activeVoiceSource !== source) {
+    /* Onderbreking — stop huidige cue zodat oude source niet doorpoept. */
+    stopVoice();
+  }
+  activeVoiceSource = source;
+}
+
+/** Iter v170: vrijgeven aan einde van een sessie of bij cleanup. */
+export function releaseVoiceSource(source: VoiceSource): void {
+  if (activeVoiceSource === source) {
+    activeVoiceSource = null;
+    stopVoice();
+  }
+}
+
 /** Speel de juiste cue voor een phase + protocol. Optionele `key` selecteert
  *  protocol-specifieke cues waar beschikbaar (iter v170: Boost heeft eigen
  *  korte takes; andere modes vallen terug op generieke cues). */
@@ -91,8 +121,16 @@ export function playBreathCue(
   phase: BreathPhase,
   exhaleVia: ExhaleVia,
   key?: BreathKey,
+  source?: VoiceSource,
 ): void {
   if (!voiceEnabled) return;
+  /* Iter v170: silently no-op als er een andere source de voice claimt.
+     Voorkomt dat breath-tab cues door bracelet active heen spelen of
+     vice versa. Calls zonder source parameter blijven backwards-compat
+     en spelen altijd af. */
+  if (source && activeVoiceSource !== null && activeVoiceSource !== source) {
+    return;
+  }
   let url: string;
   if (phase === 'inhale') {
     url = key === 'boost' ? CUE_URLS.boostInhaleNose : CUE_URLS.inhaleNose;

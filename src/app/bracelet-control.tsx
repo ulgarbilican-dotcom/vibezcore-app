@@ -68,7 +68,7 @@ import {
   playBraceletCompletionCue,
   stopBraceletVoice,
 } from '@/services/bracelet-voice';
-import { playBreathCue, playCompletionCue as playBreathCompletionCue } from '@/services/breath-voice';
+import { claimVoiceSource, playBreathCue, playCompletionCue as playBreathCompletionCue, releaseVoiceSource } from '@/services/breath-voice';
 import { useSetting } from '@/utils/settings';
 import { Volume2, VolumeX } from 'lucide-react-native';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -2487,22 +2487,29 @@ function BreathworkStrip({
     let currentCycle = 0;
     let phaseIdx = 0;
 
-    /* Iter v149 v3 (2026-06-25): voice-cue per phase, identiek aan
-       breath tab. Operator-feedback punt 6: gedeelde stem + dezelfde
-       cue-tekst zodat breath in bracelet-sessie identiek aanvoelt als
-       breath-tab solo. Toggle via Settings → Voice cues (gedeeld). */
-    const exhaleVia: 'nose' | 'mouth' =
-      protocol.kind === '478' || protocol.kind === 'sigh' ? 'mouth' : 'nose';
+    /* Iter v170 (2026-06-28): voice-cue per phase, identiek aan breath tab.
+       Boost (Gamma) krijgt korte protocol-specifieke MP3's via key='boost' +
+       mouth exhale (matcht breath tab Boost pattern). Andere modes gebruiken
+       generieke 'your nose/mouth' cues (geen Boost-specifieke takes).
+       Claim voice-source='bracelet' zodat een tegelijk-lopende breath-tab
+       sessie automatisch wordt overstemd (operator-feedback: dubbele cues
+       waren verwarrend). */
+    claimVoiceSource('bracelet');
+    const isBoost = mode === BraceletMode.Gamma;
+    const exhaleVia: 'nose' | 'mouth' = isBoost
+      ? 'mouth'
+      : protocol.kind === '478' || protocol.kind === 'sigh' ? 'mouth' : 'nose';
+    const protocolKey = isBoost ? ('boost' as const) : undefined;
 
     const playPhaseCue = (ph: Phase) => {
       if (ph === 'in' || ph === 'in-left' || ph === 'in-right' || ph === 'in-topup') {
-        playBreathCue('inhale', exhaleVia);
+        playBreathCue('inhale', exhaleVia, protocolKey, 'bracelet');
       } else if (ph === 'hold-in') {
-        playBreathCue('hold-in', exhaleVia);
+        playBreathCue('hold-in', exhaleVia, protocolKey, 'bracelet');
       } else if (ph === 'hold-out') {
-        playBreathCue('hold-out', exhaleVia);
+        playBreathCue('hold-out', exhaleVia, protocolKey, 'bracelet');
       } else if (ph === 'out' || ph === 'out-left' || ph === 'out-right') {
-        playBreathCue('exhale', exhaleVia);
+        playBreathCue('exhale', exhaleVia, protocolKey, 'bracelet');
       }
     };
 
@@ -2548,6 +2555,9 @@ function BreathworkStrip({
     return () => {
       active = false;
       clearTimeout(handle);
+      /* Iter v170: release voice-source bij cleanup zodat een latere
+         breath-tab solo-sessie weer kan claimen. */
+      try { releaseVoiceSource('bracelet'); } catch {}
     };
     /* Deps: enable, mode (protocol verandert) — phaseSequence en
        phaseDurationMs zijn afgeleid van protocol/mode, dus impliciet
