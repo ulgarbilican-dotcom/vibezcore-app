@@ -58,7 +58,9 @@ export default function SettingsScreen() {
      naar Settings (operator-feedback "library is content-focused,
      preferences horen hier"). */
   const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
-  const [voiceCues, setVoiceCues] = useSetting('voiceCues');
+  /* Iter v170: voice cues toggle verplaatst naar in-context (Breath tab +
+     Bracelet active). Setting key blijft bestaan in storage; Breath tab
+     leest 'm via z'n eigen useSetting('voiceCues'). */
 
   /* Spinner-state op de Clear-knop zodat de async clear-call duidelijk
      voortgang toont en user 'm niet dubbel tikt. */
@@ -175,25 +177,15 @@ export default function SettingsScreen() {
             />
           </View>
           <View style={s.divider} />
-          {/* Iter v149 v3 (2026-06-25): voice cues toggle voor breath +
-              bracelet sessies. Default OFF — operator-feedback dat
-              bracelet-stem te luid was bij onverwacht moment (vergadering). */}
-          <View style={s.row}>
-            <View style={s.rowText}>
-              <Text style={s.rowTitle}>Voice cues</Text>
-              <Text style={s.rowSub}>
-                Spoken guidance during breath and bracelet sessions.
-              </Text>
-            </View>
-            <Switch
-              value={voiceCues}
-              onValueChange={setVoiceCues}
-              trackColor={{ false: '#3a3a3a', true: Brand.accent }}
-              thumbColor="#ffffff"
-              ios_backgroundColor="#3a3a3a"
-            />
-          </View>
-          <View style={s.divider} />
+          {/* Iter v170 (2026-06-28): Voice cues toggle uit Settings verwijderd.
+              Operator-feedback: "er zijn 2 verschillende paginas waar voice
+              voor breathwork is, die apart bediend worden — nu verwarrend".
+              Plus copy claimde "breath AND bracelet" terwijl bracelet-voice
+              eigen state heeft die NIET met deze setting synchroniseerde.
+              Voice toggle blijft in-context (Breath tab active sessie +
+              Bracelet active sessie) waar gebruiker mid-sessie de keuze
+              wil maken. `voiceCues` setting key blijft bestaan in storage
+              omdat de Breath tab toggle 'm gebruikt. */}
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Save listening progress</Text>

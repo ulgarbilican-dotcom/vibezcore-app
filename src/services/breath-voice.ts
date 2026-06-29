@@ -27,14 +27,24 @@ import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 
 const CDN_BASE = 'https://vibezcore-audio.b-cdn.net/Breathwork%20audio';
 
-/** Vier breath-cue URLs. Inhale is altijd nose (alle 5 protocols hebben
- *  inhaleVia: 'nose'). Exhale wisselt: nose voor focus + calm, mouth
- *  voor boost + clarity + rest. */
+/** Breath-cue URLs. Generieke files zeggen 'through your X' (oudere ElevenLabs
+ *  takes); Boost-specifieke files zeggen verkort 'through X' (zonder 'your')
+ *  matchend met de UI tekst.
+ *
+ *  Iter v170 (2026-06-28): Boost-cues toegevoegd. Operator nam 2 nieuwe MP3's
+ *  op voor de korte vorm. Andere modes (focus, calm, clarity, rest) blijven
+ *  op de oudere "your nose/mouth" cues totdat operator nieuwe opnames
+ *  beschikbaar heeft.
+ *
+ *  Per-protocol selectie via getCueUrl() hieronder. */
 const CUE_URLS = {
-  inhaleNose:   `${CDN_BASE}/Inhale%20through%20your%20nose..mp3`,
-  hold:         `${CDN_BASE}/Hold.mp3`,
-  exhaleNose:   `${CDN_BASE}/Exhale%20through%20your%20nose..mp3`,
-  exhaleMouth:  `${CDN_BASE}/Exhale%20through%20your%20mouth..mp3`,
+  inhaleNose:        `${CDN_BASE}/Inhale%20through%20your%20nose..mp3`,
+  hold:              `${CDN_BASE}/Hold.mp3`,
+  exhaleNose:        `${CDN_BASE}/Exhale%20through%20your%20nose..mp3`,
+  exhaleMouth:       `${CDN_BASE}/Exhale%20through%20your%20mouth..mp3`,
+  /* Iter v170: Boost-specifieke takes — korte vorm matcht UI 'through nose/mouth' */
+  boostInhaleNose:   `${CDN_BASE}/Boost_%20inhale%20through%20nose.mp3`,
+  boostExhaleMouth:  `${CDN_BASE}/Boost%20exhale%20through%20mouth.mp3`,
 } as const;
 
 /** Vijf completion-files, één per protocol-key. Lange motiverende
@@ -74,17 +84,27 @@ export function setVoiceEnabled(enabled: boolean): void {
   if (!enabled) stopVoice();
 }
 
-/** Speel de juiste cue voor een phase + protocol. */
+/** Speel de juiste cue voor een phase + protocol. Optionele `key` selecteert
+ *  protocol-specifieke cues waar beschikbaar (iter v170: Boost heeft eigen
+ *  korte takes; andere modes vallen terug op generieke cues). */
 export function playBreathCue(
   phase: BreathPhase,
   exhaleVia: ExhaleVia,
+  key?: BreathKey,
 ): void {
   if (!voiceEnabled) return;
   let url: string;
-  if (phase === 'inhale') url = CUE_URLS.inhaleNose;
-  else if (phase === 'hold-in' || phase === 'hold-out') url = CUE_URLS.hold;
-  else if (phase === 'exhale') {
-    url = exhaleVia === 'mouth' ? CUE_URLS.exhaleMouth : CUE_URLS.exhaleNose;
+  if (phase === 'inhale') {
+    url = key === 'boost' ? CUE_URLS.boostInhaleNose : CUE_URLS.inhaleNose;
+  } else if (phase === 'hold-in' || phase === 'hold-out') {
+    url = CUE_URLS.hold;
+  } else if (phase === 'exhale') {
+    if (key === 'boost') {
+      /* Boost-specifieke exhale = mouth (Bhastrika-adapted, nose-in/mouth-out). */
+      url = CUE_URLS.boostExhaleMouth;
+    } else {
+      url = exhaleVia === 'mouth' ? CUE_URLS.exhaleMouth : CUE_URLS.exhaleNose;
+    }
   } else return;
   playUrl(url);
 }

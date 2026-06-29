@@ -89,15 +89,18 @@ const PATTERNS: BreathPattern[] = [
     key: 'boost', name: 'Boost', tech: 'Quick activation',
     color: '#FFFFFF', colorSoft: 'rgba(255,255,255,0.25)',
     inhale: 2, hold1: 0, exhale: 2, hold2: 0, rounds: 45,
-    /* Iter v168 (2026-06-28): Bhastrika is nose-breathing in én uit.
-       Voorheen 'mouth' exhale → mismatch met de bedoeling van het pattern. */
-    inhaleVia: 'nose', exhaleVia: 'nose',
+    /* Iter v170 (2026-06-28): terug naar 'mouth' exhale. Iter v168 had
+       'nose' gezet vanuit puristisch Bhastrika-argument, maar operator
+       bevestigde: nose-in / mouth-out is gangbaarder in moderne breathwork
+       apps (Wim Hof / Othership / Breathwrk) en past beter bij eerste-keer-
+       UX. Plus matcht de 2 nieuwe ElevenLabs MP3's die operator opnam. */
+    inhaleVia: 'nose', exhaleVia: 'mouth',
     intent: 'Alert, energized — primed for high-output moments.',
     breathDoes:
-      'Short even nose breaths wake the system up and break through fatigue.',
+      'Short even breaths through nose and mouth wake the system up and break through fatigue.',
     protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
-      'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
+      'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — adapted for nose-in / mouth-out and faster pace.',
     ideals: ['Energy', 'Mental sprints', 'Pre-workout', 'Speed & precision'],
   },
   {
@@ -344,7 +347,7 @@ export default function BreathScreen() {
   const voiceCue = useCallback((phase: 'inhale' | 'hold-in' | 'exhale' | 'hold-out', p: BreathPattern) => {
     if (!voiceOnRef.current) return;
     try {
-      playBreathCue(phase, p.exhaleVia);
+      playBreathCue(phase, p.exhaleVia, p.key as 'boost' | 'focus' | 'calm' | 'clarity' | 'rest');
     } catch {
       /* swallow — audio-failure mag de sessie niet breken */
     }

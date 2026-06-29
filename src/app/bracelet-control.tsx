@@ -242,10 +242,14 @@ type Protocol =
      Theta (Clarity)      → clarity: 4-2-6-0 nose/mouth, 20 cycli (Long exhale)
      Delta (Rest & Reset) → rest: 4-7-8-0 nose/mouth, 12 cycli (4-7-8) */
 const BREATH_PROTOCOLS: Record<BraceletMode, Protocol> = {
-  /* Boost = Bhastrika quick activation. 2s in / 2s out × 45 = 3 min. */
+  /* Boost = Bhastrika-inspired quick activation, nose-in/mouth-out.
+     2s in / 2s out × 45 = 3 min.
+     Iter v170 (2026-06-28): naam 'Bhastrika' → 'Boost' voor consistency
+     met Breath tab (zelfde techniek, zelfde label). Bhastrika blijft als
+     inspiratie in comment + protocolHow van breath.tsx. */
   [BraceletMode.Gamma]: {
     kind: 'simple',
-    name: 'Bhastrika',
+    name: 'Boost',
     cycles: 45,
     inMs: 2000,
     outMs: 2000,
