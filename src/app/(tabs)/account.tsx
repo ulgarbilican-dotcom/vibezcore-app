@@ -71,11 +71,16 @@ import {
     View,
 } from 'react-native';
 
-/* Iter v173 (2026-06-30): central constants voor invite-flow. Single source
-   of truth — bij wijziging hoeven we maar 1 plek aan te passen. KS-launch:
-   1 september 2026, niet wijzigen tot na launch. */
+/* Iter v174 (2026-06-30): central constants voor invite-flow. Operator-
+   feedback v173 was te generiek ("free personal development audio"); nu
+   specifieker met grondslag (science / philosophy / psychology) + duidelijke
+   bracelet-value-prop. Single source of truth — bij wijziging hoeven we
+   maar 1 plek aan te passen. KS-launch: 1 september 2026. */
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
-const INVITE_MESSAGE = `Try VIBEZCORE — free personal development audio sessions + Smart Bead Bracelet launching September 1, 2026.\n\nInstall the app: ${PLAY_STORE_URL}`;
+const BRAND_PITCH =
+  'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
+  'Launching September 1, 2026 — Smart Bead Bracelet for instant state control.';
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app: ${PLAY_STORE_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {

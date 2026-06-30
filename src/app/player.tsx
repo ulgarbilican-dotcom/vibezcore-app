@@ -271,16 +271,20 @@ export default function PlayerScreen() {
     setSleepTimer(next);
   };
 
-  /* Iter v173 (2026-06-30): share via Play Store link met sessie-naam +
-     KS-mention, niet de rauwe MP3 URL. Doel = app-install. */
+  /* Iter v174 (2026-06-30): personal opener ("I'm listening to…") geeft
+     context aan ontvangers die VIBEZCORE niet kennen — sessie-naam alleen
+     ("Neural State Control") zegt outsiders niks. Daarna brand-pitch
+     (science/philosophy/psychology + bracelet) + Play Store install. */
   const onShare = async () => {
     if (!session) return;
-    const ksLine = 'Smart Bead Bracelet launching September 1, 2026.';
     const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
+    const pitch =
+      'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
+      'Launching September 1, 2026 — Smart Bead Bracelet for instant state control.';
     try {
       await Share.share({
         title: 'VIBEZCORE',
-        message: `"${session.title}" — a free session in VIBEZCORE.\n\n${ksLine}\n\nInstall the app: ${url}`,
+        message: `I'm listening to "${session.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app: ${url}`,
         url,
       });
     } catch {}

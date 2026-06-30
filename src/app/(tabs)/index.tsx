@@ -2278,18 +2278,22 @@ export default function AudioScreen() {
                                   {`Series · ${sess.series}`}
                                 </Text>
                               </View>
-                              {/* Share-knop — iter v173 (2026-06-30): deelt
-                                  naar Play Store met sessie-naam + KS-mention,
-                                  niet de rauwe MP3 URL. Doel = app-install,
-                                  niet een onbranded browser audio player. */}
+                              {/* Share-knop — iter v174 (2026-06-30): personal
+                                  opener ("I'm listening to…") + brand-pitch
+                                  (Free Personal Growth Audio Sessions grounded
+                                  in Science, Philosophy & Psychology + bracelet
+                                  KS) + Play Store install. Operator v173-feedback:
+                                  sessie-naam alleen zegt outsiders niks. */}
                               <Pressable
                                 onPress={(e) => {
                                   e.stopPropagation();
-                                  const ksLine = 'Smart Bead Bracelet launching September 1, 2026.';
                                   const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
+                                  const pitch =
+                                    'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
+                                    'Launching September 1, 2026 — Smart Bead Bracelet for instant state control.';
                                   Share.share({
                                     title: 'VIBEZCORE',
-                                    message: `"${sess.title}" — a free session in VIBEZCORE.\n\n${ksLine}\n\nInstall the app: ${url}`,
+                                    message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app: ${url}`,
                                     url,
                                   }).catch(() => {});
                                 }}
