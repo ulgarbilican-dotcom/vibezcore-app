@@ -250,13 +250,16 @@ function clearSleepTimer() {
   sleepDeadlineMs = null;
 }
 
-/** Iter v171 (2026-06-29): wall-clock deadline check. Roep aan vanuit
- *  onStatus handler (loopt periodiek tijdens playback). Als deadline
- *  gepasseerd → pause. Vangt de Doze-vertraging op die setTimeout mist. */
+/** Iter v172 (2026-06-30): wall-clock deadline check. Roep aan vanuit
+ *  onStatus handler. Als deadline gepasseerd → unload (NIET pauseAudio).
+ *  pauseAudio bleek onbetrouwbaar in background/Doze omdat Android's
+ *  foreground-service expo-audio's player.pause() soms negeert wanneer
+ *  screen locked. Unload release de foreground service + stopt audio
+ *  definitief. Operator melding: "sleep timer werkt niet, audio speelt door". */
 function checkSleepDeadline() {
   if (sleepDeadlineMs !== null && Date.now() >= sleepDeadlineMs) {
     clearSleepTimer();
-    pauseAudio();
+    void unload();
   }
 }
 
@@ -916,10 +919,12 @@ export async function playNextFromPanel(): Promise<void> {
   });
 }
 
-/** Sleep-timer: t-min in de toekomst pauzeren. t=0 → uit.
- *  Iter v171 (2026-06-29): dual-track. setTimeout vuurt foreground binnen
- *  seconde van deadline; sleepDeadlineMs vangt het op bij background/Doze
- *  via onStatus periodic check. */
+/** Sleep-timer: t-min in de toekomst de audio stoppen. t=0 → uit.
+ *  Iter v172 (2026-06-30): dual-track + unload (was pauseAudio). setTimeout
+ *  vuurt foreground binnen seconde van deadline; sleepDeadlineMs vangt het op
+ *  bij background/Doze via onStatus periodic check. Unload ipv pauseAudio
+ *  omdat player.pause() onbetrouwbaar is wanneer Android foreground-service
+ *  actief is + screen locked. Unload release de foreground service hard. */
 export function setSleepTimer(minutes: number): void {
   clearSleepTimer();
   if (minutes <= 0) return;
@@ -927,7 +932,7 @@ export function setSleepTimer(minutes: number): void {
   sleepDeadlineMs = Date.now() + ms;
   sleepTimer = setTimeout(() => {
     clearSleepTimer();
-    pauseAudio();
+    void unload();
   }, ms);
 }
 

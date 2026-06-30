@@ -68,6 +68,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -2277,6 +2278,36 @@ export default function AudioScreen() {
                                   {`Series · ${sess.series}`}
                                 </Text>
                               </View>
+                              {/* Share-knop — operator-besluit 2026-06-30:
+                                  sharing moet duidelijk EN altijd zichtbaar zijn
+                                  voor free sessions, niet alleen in player. */}
+                              <Pressable
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  Share.share({
+                                    title: sess.title,
+                                    message: `Listen on VIBEZCORE: ${sess.title}\n\n${sess.url}`,
+                                    url: sess.url,
+                                  }).catch(() => {});
+                                }}
+                                hitSlop={8}
+                                style={{
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 6,
+                                  marginRight: 2,
+                                }}
+                                accessibilityLabel={`Share ${sess.title}`}
+                              >
+                                <Text
+                                  style={{
+                                    color: '#4ade80',
+                                    fontFamily: 'Inter_700Bold',
+                                    fontSize: 16,
+                                  }}
+                                >
+                                  ↗
+                                </Text>
+                              </Pressable>
                               {/* Play-pijl */}
                               <Text
                                 style={{

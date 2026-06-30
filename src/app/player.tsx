@@ -55,6 +55,7 @@ import {
   Dimensions,
   Image,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -64,7 +65,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Path } from 'react-native-svg';
 
 const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
-const SLEEP_OPTIONS = [0, 15, 30, 60];
+const SLEEP_OPTIONS = [0, 5, 10, 15, 30, 60];
 const BACKDROP_HEIGHT = Math.round(Dimensions.get('window').height * 0.5);
 
 const C = {
@@ -268,6 +269,17 @@ export default function PlayerScreen() {
     const next = SLEEP_OPTIONS[(idx + 1) % SLEEP_OPTIONS.length];
     setSleepMin(next);
     setSleepTimer(next);
+  };
+
+  const onShare = async () => {
+    if (!session) return;
+    try {
+      await Share.share({
+        title: session.title,
+        message: `Listen on VIBEZCORE: ${session.title}\n\n${session.url}`,
+        url: session.url,
+      });
+    } catch {}
   };
 
   const onUpsellMaybeLater = async () => {
@@ -490,7 +502,7 @@ export default function PlayerScreen() {
         </View>
 
         {/* ── Extras row ──────────────────────────────────────────────── */}
-        <View style={s.extrasRow}>
+        <View style={[s.extrasRow, session.isFree && s.extrasRowFour]}>
           <ExtraBtn
             icon={isFav ? '♥' : '♡'}
             label="Favorite"
@@ -509,6 +521,9 @@ export default function PlayerScreen() {
             label={sleepMin > 0 ? `${sleepMin}m` : 'Sleep'}
             onPress={onCycleSleep}
           />
+          {session.isFree && (
+            <ExtraBtn icon="↗" label="Share" onPress={onShare} />
+          )}
         </View>
 
         {/* ── Full library access CTA ───────────────────────────────────
@@ -996,6 +1011,7 @@ const s = StyleSheet.create({
     gap: 48,
     marginBottom: 24,
   },
+  extrasRowFour: { gap: 28 },
   extraBtn: { alignItems: 'center', minWidth: 56 },
   extraIcon: {
     color: C.text,

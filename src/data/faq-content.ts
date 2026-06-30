@@ -57,38 +57,33 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'overview',
     question: 'What is VIBEZCORE?',
     answer:
-      "VIBEZCORE is a personal development platform built around two distinct instruments. Most personal development gives you motivation but leaves both your physiology and your mental frameworks untouched — so the old patterns keep running.\n\n" +
-      "Real change requires both: a way to shift your state in the moment, and a way to rewire how you think over time. VIBEZCORE is built around that pairing.\n\n" +
-      "**1. Control the Moment — Smart Bead Bracelet**\nPrecision haptics at the wrist. Instant state regulation — calm, focus or recovery. No screens. No effort. Just results.\n\n" +
-      "The body influences the mind: signals from your nervous system shape attention, emotion and decisions before cognition engages. The bracelet works with that biology — a direct route to inner state, bottom-up by design.\n\n" +
-      "Body first. Mind follows.\n\n" +
-      "**2. Train the Mind — Audio Library**\nBuilt on neuroscience, psychology and philosophy. Not motivation — understanding. Sessions that create real mental shifts over time.\n\n" +
-      "Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
-      "Each instrument works independently. Together, they form a complete system for both immediate control and lasting growth.",
+      "VIBEZCORE is a personal development platform built on a simple principle: real change requires both a way to shift your state in the moment and a way to rewire how you think over time.\n\n" +
+      "Most platforms give you motivation that fades by evening. They leave your physiology and your mental frameworks untouched — so the old patterns keep running. VIBEZCORE works on two levels — bottom-up through your body, top-down through ideas — so change is immediate AND lasting.\n\n" +
+      "It is built for people who take their performance, mindset, and inner state seriously.",
   },
   {
     id: 'overview-components',
     category: 'overview',
     question: 'What components are part of the VIBEZCORE system?',
     answer:
-      "The VIBEZCORE system consists of two core instruments — each addressing a different dimension of how you operate.\n\n" +
+      "VIBEZCORE consists of two distinct instruments — each addressing a different dimension of how you operate.\n\n" +
       "**1. Control the Moment — Smart Bead Bracelet**\nPrecision haptics at the wrist. Instant state regulation — calm, focus or recovery. No screens. No effort. Just results.\n\n" +
       "The body influences the mind: signals from your nervous system shape attention, emotion and decisions before cognition engages. The bracelet works with that biology — a direct route to inner state, bottom-up by design.\n\n" +
       "The bracelet features an interchangeable bead system — one HapticCore module, 15 editions of natural gemstones sourced from across the globe. Origin, Signature and Reserve series. Each stone is unique in character, origin, and energy.\n\n" +
       "Body first. Mind follows.\n\n" +
       "**2. Train the Mind — Audio Library**\nBuilt on neuroscience, psychology and philosophy. Not motivation — understanding. Sessions that create real mental shifts over time.\n\n" +
       "Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
-      "Each instrument works independently. Together, they form a complete system for both immediate control and lasting growth.",
+      "Each instrument is fully independent. Use one, the other, or both — entirely as fits your life.",
   },
   {
     id: 'overview-separate-purchase',
     category: 'overview',
     question: 'Can I purchase the bracelet and audio library separately?',
     answer:
-      "Yes. VIBEZCORE can be used in three ways:\n\n" +
-      "**Bracelet only** — as a standalone state regulation instrument for daily use.\n\n" +
-      "**Audio Library only** — access the session library independently through a membership.\n\n" +
-      "**Full system** — the recommended approach. Both instruments are designed to work in tandem for maximum and lasting impact.",
+      "Yes. The bracelet and the Audio Library are independent instruments — each with its own purpose. Neither requires the other to work.\n\n" +
+      "**Bracelet only** — a standalone state regulation instrument for daily use. Calm, focus, or recovery on demand, without needing audio.\n\n" +
+      "**Audio Library only** — access the session library independently through a membership. Build cognitive frameworks and self-awareness over time, without needing the bracelet.\n\n" +
+      "**Both** — they were designed as separate tools, but they complement each other naturally. Some users wear the bracelet before an audio session to enter a calm or focused state, deepening their integration. Others use them in entirely different parts of their day. Use them however fits you.",
   },
   {
     id: 'overview-who-for',
@@ -139,7 +134,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Can VIBEZCORE be used multiple times per day?',
     answer:
       "Yes. The Smart Bead Bracelet can be worn throughout the entire day and used as often as you choose. Many users wear it from morning to evening as a constant awareness anchor.\n\n" +
-      "For audio sessions, we recommend one focused session per day for optimal integration — though this depends on personal preference and capacity.",
+      "For audio sessions, listen at whatever pace fits your life. Some users do one session per day, others several. Returning to the same session multiple times also has value — repetition deepens integration as the ideas compound over time.",
   },
   {
     id: 'bracelet-tracks-data',
@@ -202,9 +197,11 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'audio-offline',
     category: 'audio',
-    question: 'Can I access the audio sessions offline?',
+    question: 'Can I share or download audio sessions?',
     answer:
-      "Offline access depends on your membership tier. Certain plans include the ability to download sessions for offline listening. Please refer to the membership details on the VIBEZCORE platform for the most current information.",
+      "Free sessions can be shared with others directly from the player — they are designed as an open entry point into VIBEZCORE.\n\n" +
+      "The full Audio Library (subscription content) is streaming-only and cannot be shared, which protects the integrity of the membership for paying subscribers.\n\n" +
+      "Offline download is on the roadmap for a future update.",
   },
   {
     id: 'audio-professional-help',
