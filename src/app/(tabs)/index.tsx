@@ -54,6 +54,7 @@ import {
 } from '@/utils/scroll-intent';
 import { useSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Share2 } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
 /* expo-web-browser was nodig voor de oude Gumroad-WebBrowser-flow.
    Iter 9dq v64: Gumroad-checkout vervangen door /subscribe (IAP). Indien
@@ -2305,15 +2306,7 @@ export default function AudioScreen() {
                                 }}
                                 accessibilityLabel={`Share ${sess.title}`}
                               >
-                                <Text
-                                  style={{
-                                    color: '#4ade80',
-                                    fontFamily: 'Inter_700Bold',
-                                    fontSize: 16,
-                                  }}
-                                >
-                                  ↗
-                                </Text>
+                                <Share2 size={18} color="#4ade80" strokeWidth={2.2} />
                               </Pressable>
                               {/* Play-pijl */}
                               <Text

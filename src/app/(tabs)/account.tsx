@@ -70,6 +70,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { Share2 } from 'lucide-react-native';
 
 /* Iter v174 (2026-06-30): central constants voor invite-flow. Operator-
    feedback v173 was te generiek ("free personal development audio"); nu
@@ -1074,15 +1075,18 @@ export default function AccountScreen() {
               alleen secundaire actions: app-settings, about, FAQ, contact. */}
           <View style={s.card}>
             <Text style={s.label}>Settings & help</Text>
-            {/* Iter v173 (2026-06-30): Invite-a-friend prominent bovenaan.
-                Operator: "sharing moet duidelijk en altijd zichtbaar".
-                Doel = app-download via Play Store + KS-pre-launch awareness. */}
+            {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-
+                glyph (Android-native share-symbool) ipv ↗ Unicode-arrow.
+                Operator: "sharing moet duidelijk en altijd zichtbaar". */}
             <Pressable
               style={s.cardRow}
               onPress={shareInvite}
               accessibilityLabel="Invite a friend to VIBEZCORE"
             >
-              <Text style={[s.cardRowText, { color: '#4ade80' }]}>↗  Invite a friend</Text>
+              <View style={s.cardRowIconText}>
+                <Share2 size={17} color="#4ade80" strokeWidth={2.2} />
+                <Text style={[s.cardRowText, { color: '#4ade80', marginLeft: 10 }]}>Invite a friend</Text>
+              </View>
               <Text style={s.cardRowArrow}>›</Text>
             </Pressable>
             <View style={s.cardRowDivider} />
@@ -1715,16 +1719,17 @@ export default function AccountScreen() {
           </Text>
         </Pressable>
 
-        {/* Iter v173 (2026-06-30): Invite-a-friend prominent boven info-links
-            voor guests. Operator-besluit "sharing moet duidelijk en altijd
-            zichtbaar". Gasten zien dit direct na Get Started — primaire
-            growth-loop voor pre-KS-launch awareness. */}
+        {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-glyph
+            voor guests. Operator: "sharing moet duidelijk en altijd zichtbaar".
+            Gasten zien dit direct na Get Started — primaire growth-loop voor
+            pre-KS-launch awareness. */}
         <Pressable
           style={s.guestInviteCta}
           onPress={shareInvite}
           accessibilityLabel="Invite a friend to VIBEZCORE"
         >
-          <Text style={s.guestInviteCtaText}>↗  Invite a friend</Text>
+          <Share2 size={18} color="#4ade80" strokeWidth={2.2} />
+          <Text style={s.guestInviteCtaText}>Invite a friend</Text>
         </Pressable>
 
         {/* Iter v172 (2026-06-29): About / FAQ / Contact support links voor
@@ -2329,9 +2334,10 @@ const s = StyleSheet.create({
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
   },
-  /* Iter v173 (2026-06-30): Invite-friend CTA voor guests — prominent
-     boven info-links. Groen accent matchet Free Picks branding (free
-     sessions = entry-point voor invited users). */
+  /* Iter v174 (2026-06-30): Invite-friend CTA voor guests — prominent
+     boven info-links. Groen accent matched Free Picks branding (free
+     sessions = entry-point voor invited users). Share2-icon links van
+     label voor visuele balans. */
   guestInviteCta: {
     marginTop: 12,
     marginHorizontal: 16,
@@ -2341,13 +2347,22 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(74,222,128,0.3)',
     backgroundColor: 'rgba(74,222,128,0.08)',
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 10,
   },
   guestInviteCtaText: {
     color: '#4ade80',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
+  },
+  /* Voor cardRow met icoon links van label — Share2-glyph naast tekst. */
+  cardRowIconText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   /* Iter v172 (2026-06-29): About / FAQ / Contact support link-row voor
      uitgelogde users — zodat ze deze info pre-purchase kunnen vinden

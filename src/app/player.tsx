@@ -49,7 +49,7 @@ import {
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -63,6 +63,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { Share2 } from 'lucide-react-native';
 
 const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
 const SLEEP_OPTIONS = [0, 5, 10, 15, 30, 60];
@@ -510,7 +511,7 @@ export default function PlayerScreen() {
         </View>
 
         {/* ── Extras row ──────────────────────────────────────────────── */}
-        <View style={[s.extrasRow, session.isFree && s.extrasRowFour]}>
+        <View style={[s.extrasRow, session.free && s.extrasRowFour]}>
           <ExtraBtn
             icon={isFav ? '♥' : '♡'}
             label="Favorite"
@@ -529,8 +530,8 @@ export default function PlayerScreen() {
             label={sleepMin > 0 ? `${sleepMin}m` : 'Sleep'}
             onPress={onCycleSleep}
           />
-          {session.isFree && (
-            <ExtraBtn icon="↗" label="Share" onPress={onShare} />
+          {session.free && (
+            <ExtraBtn icon={<Share2 size={24} color={C.text} strokeWidth={2.2} />} label="Share" onPress={onShare} />
           )}
         </View>
 
@@ -737,14 +738,21 @@ function ExtraBtn({
   color,
   onPress,
 }: {
-  icon: string;
+  icon: string | ReactNode;
   label: string;
   color?: string;
   onPress: () => void;
 }) {
+  /* Iter v174 (2026-06-30): icon mag string of ReactNode zijn. Share-button
+     gebruikt Share2-glyph van lucide (officieel Android share-symbool); andere
+     extras blijven met Unicode-glyph strings werken. */
   return (
     <Pressable onPress={onPress} hitSlop={8} style={s.extraBtn}>
-      <Text style={[s.extraIcon, color ? { color } : null]}>{icon}</Text>
+      {typeof icon === 'string' ? (
+        <Text style={[s.extraIcon, color ? { color } : null]}>{icon}</Text>
+      ) : (
+        <View style={s.extraIconBox}>{icon}</View>
+      )}
       <Text style={s.extraLabel}>{label}</Text>
     </Pressable>
   );
@@ -1025,6 +1033,13 @@ const s = StyleSheet.create({
     color: C.text,
     fontSize: 24,
     lineHeight: 28,
+  },
+  /* Iter v174 (2026-06-30): box-variant voor lucide-icons in extras-row.
+     Matched de visuele footprint van extraIcon-text (28px lineHeight). */
+  extraIconBox: {
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   extraLabel: {
     color: 'rgba(255,255,255,0.55)',

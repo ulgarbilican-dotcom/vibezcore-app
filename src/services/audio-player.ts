@@ -84,6 +84,7 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import { useEffect, useState } from 'react';
+import { AppState, type NativeEventSubscription } from 'react-native';
 
 export type SessionInfo = {
   url: string;
@@ -198,13 +199,22 @@ let trackingActive = false;
    geopend heeft. */
 let loadedWithAutoStart = false;
 let sleepTimer: ReturnType<typeof setTimeout> | null = null;
-/* Iter v171 (2026-06-29): dual-track sleep-timer. setTimeout-only versie
+/* Iter v174 (2026-06-30): quad-track sleep-timer. setTimeout-only versie
    miste fire bij background/lockscreen (Android Doze vertraagt of bevriest
-   JS timers). Operator: "sleep op 15 min ingesteld, audio stopt niet".
-   Fix: bij setSleepTimer slaan we óók de wall-clock deadline op. De audio
-   onStatus-handler (loopt periodiek tijdens playback) checkt elke status-
-   update of we de deadline gepasseerd zijn — werkt ook na Doze-wake-up. */
+   JS timers). Iter v171 (dual-track met onStatus check) en v172 (unload ipv
+   pauseAudio) waren niet voldoende — operator: "sleep timer werkt nog steeds
+   niet". Reden: bij screen lock + Doze stoppen ZOWEL setTimeout ALS onStatus
+   met firen. Fix: 4 onafhankelijke detection-paths:
+     1. setTimeout (vuurt foreground binnen seconde van deadline)
+     2. sleepDeadlineMs + onStatus check (tijdens actieve playback)
+     3. NIEUW: setInterval elke 10s (extra net voor korte Doze < 30 min)
+     4. NIEUW: AppState 'active' listener (vuurt bij ontgrendelen telefoon
+        — fail-safe wanneer alle JS-timers bevroren waren).
+   Bij elk path: clearSleepTimer + unload. Idempotent dankzij null-check op
+   sleepDeadlineMs in checkSleepDeadline. */
 let sleepDeadlineMs: number | null = null;
+let sleepInterval: ReturnType<typeof setInterval> | null = null;
+let sleepAppStateSub: NativeEventSubscription | null = null;
 const listeners = new Set<() => void>();
 /* ── Finish-listeners (apart van state-listeners) ───────────────────────
    State-listeners firen op ELKE state-mutatie (~4x/sec tijdens playback).
@@ -247,15 +257,24 @@ function clearSleepTimer() {
     clearTimeout(sleepTimer);
     sleepTimer = null;
   }
+  if (sleepInterval) {
+    clearInterval(sleepInterval);
+    sleepInterval = null;
+  }
+  if (sleepAppStateSub) {
+    sleepAppStateSub.remove();
+    sleepAppStateSub = null;
+  }
   sleepDeadlineMs = null;
 }
 
-/** Iter v172 (2026-06-30): wall-clock deadline check. Roep aan vanuit
- *  onStatus handler. Als deadline gepasseerd → unload (NIET pauseAudio).
- *  pauseAudio bleek onbetrouwbaar in background/Doze omdat Android's
- *  foreground-service expo-audio's player.pause() soms negeert wanneer
- *  screen locked. Unload release de foreground service + stopt audio
- *  definitief. Operator melding: "sleep timer werkt niet, audio speelt door". */
+/** Iter v174 (2026-06-30): wall-clock deadline check. Aangeroepen vanuit
+ *  drie onafhankelijke sources: (1) onStatus handler tijdens playback,
+ *  (2) setInterval elke 10s, (3) AppState 'active' listener bij ontgrendelen.
+ *  Idempotent: na de eerste fire wordt sleepDeadlineMs op null gezet door
+ *  clearSleepTimer, dus latere calls zijn no-op. Unload (ipv pauseAudio)
+ *  omdat player.pause() onbetrouwbaar is in Android background/Doze met
+ *  foreground-service actief. Unload release de foreground service hard. */
 function checkSleepDeadline() {
   if (sleepDeadlineMs !== null && Date.now() >= sleepDeadlineMs) {
     clearSleepTimer();
@@ -920,20 +939,33 @@ export async function playNextFromPanel(): Promise<void> {
 }
 
 /** Sleep-timer: t-min in de toekomst de audio stoppen. t=0 → uit.
- *  Iter v172 (2026-06-30): dual-track + unload (was pauseAudio). setTimeout
- *  vuurt foreground binnen seconde van deadline; sleepDeadlineMs vangt het op
- *  bij background/Doze via onStatus periodic check. Unload ipv pauseAudio
- *  omdat player.pause() onbetrouwbaar is wanneer Android foreground-service
- *  actief is + screen locked. Unload release de foreground service hard. */
+ *  Iter v174 (2026-06-30): quad-track + unload. Vier onafhankelijke detection-
+ *  paths zodat audio betrouwbaar stopt zelfs als Android Doze JS-timers
+ *  bevriest. Zie sleepDeadlineMs comment voor het waarom. */
 export function setSleepTimer(minutes: number): void {
   clearSleepTimer();
   if (minutes <= 0) return;
   const ms = minutes * 60 * 1000;
   sleepDeadlineMs = Date.now() + ms;
+  /* Track 1: primaire setTimeout — vuurt foreground binnen seconde van
+     deadline. Door Doze vertraagd of bevroren in background. */
   sleepTimer = setTimeout(() => {
     clearSleepTimer();
     void unload();
   }, ms);
+  /* Track 3: 10-sec interval. Pakt deadlines op tijdens korte Doze-pauzes
+     (Doze begint na ~30 min idle, dus voor 5/10/15 min timers werkt dit
+     vrijwel altijd). Bij langere timers (30/60 min) groter risico op Doze-
+     bevriezing, maar AppState-listener (track 4) is dan de fail-safe. */
+  sleepInterval = setInterval(() => {
+    checkSleepDeadline();
+  }, 10 * 1000);
+  /* Track 4: AppState fail-safe. Wanneer user telefoon ontgrendelt (state
+     wisselt naar 'active'), check direct of deadline gepasseerd is. Vangt
+     het geval dat ALLE JS-timers tijdens lockscreen bevroren waren. */
+  sleepAppStateSub = AppState.addEventListener('change', (next) => {
+    if (next === 'active') checkSleepDeadline();
+  });
 }
 
 /**
