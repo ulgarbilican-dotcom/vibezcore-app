@@ -2278,16 +2278,19 @@ export default function AudioScreen() {
                                   {`Series · ${sess.series}`}
                                 </Text>
                               </View>
-                              {/* Share-knop — operator-besluit 2026-06-30:
-                                  sharing moet duidelijk EN altijd zichtbaar zijn
-                                  voor free sessions, niet alleen in player. */}
+                              {/* Share-knop — iter v173 (2026-06-30): deelt
+                                  naar Play Store met sessie-naam + KS-mention,
+                                  niet de rauwe MP3 URL. Doel = app-install,
+                                  niet een onbranded browser audio player. */}
                               <Pressable
                                 onPress={(e) => {
                                   e.stopPropagation();
+                                  const ksLine = 'Smart Bead Bracelet launching September 1, 2026.';
+                                  const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
                                   Share.share({
-                                    title: sess.title,
-                                    message: `Listen on VIBEZCORE: ${sess.title}\n\n${sess.url}`,
-                                    url: sess.url,
+                                    title: 'VIBEZCORE',
+                                    message: `"${sess.title}" — a free session in VIBEZCORE.\n\n${ksLine}\n\nInstall the app: ${url}`,
+                                    url,
                                   }).catch(() => {});
                                 }}
                                 hitSlop={8}

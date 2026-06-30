@@ -64,11 +64,28 @@ import {
     Image,
     Linking,
     Pressable,
+    Share,
     StyleSheet,
     Text,
     TextInput,
     View,
 } from 'react-native';
+
+/* Iter v173 (2026-06-30): central constants voor invite-flow. Single source
+   of truth — bij wijziging hoeven we maar 1 plek aan te passen. KS-launch:
+   1 september 2026, niet wijzigen tot na launch. */
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
+const INVITE_MESSAGE = `Try VIBEZCORE — free personal development audio sessions + Smart Bead Bracelet launching September 1, 2026.\n\nInstall the app: ${PLAY_STORE_URL}`;
+
+async function shareInvite(): Promise<void> {
+  try {
+    await Share.share({
+      title: 'VIBEZCORE',
+      message: INVITE_MESSAGE,
+      url: PLAY_STORE_URL,
+    });
+  } catch {}
+}
 import { showVibezAlert } from '@/components/VibezAlert';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1052,6 +1069,18 @@ export default function AccountScreen() {
               alleen secundaire actions: app-settings, about, FAQ, contact. */}
           <View style={s.card}>
             <Text style={s.label}>Settings & help</Text>
+            {/* Iter v173 (2026-06-30): Invite-a-friend prominent bovenaan.
+                Operator: "sharing moet duidelijk en altijd zichtbaar".
+                Doel = app-download via Play Store + KS-pre-launch awareness. */}
+            <Pressable
+              style={s.cardRow}
+              onPress={shareInvite}
+              accessibilityLabel="Invite a friend to VIBEZCORE"
+            >
+              <Text style={[s.cardRowText, { color: '#4ade80' }]}>↗  Invite a friend</Text>
+              <Text style={s.cardRowArrow}>›</Text>
+            </Pressable>
+            <View style={s.cardRowDivider} />
             {/* Iter 9dq v86 (2026-06-03): Restore Purchases. Apple App
                 Review Guideline 3.1.1 vereist deze knop voor IAP-apps.
                 Bovenaan de lijst zodat 'ie vindbaar is na een reinstall
@@ -1681,6 +1710,18 @@ export default function AccountScreen() {
           </Text>
         </Pressable>
 
+        {/* Iter v173 (2026-06-30): Invite-a-friend prominent boven info-links
+            voor guests. Operator-besluit "sharing moet duidelijk en altijd
+            zichtbaar". Gasten zien dit direct na Get Started — primaire
+            growth-loop voor pre-KS-launch awareness. */}
+        <Pressable
+          style={s.guestInviteCta}
+          onPress={shareInvite}
+          accessibilityLabel="Invite a friend to VIBEZCORE"
+        >
+          <Text style={s.guestInviteCtaText}>↗  Invite a friend</Text>
+        </Pressable>
+
         {/* Iter v172 (2026-06-29): About / FAQ / Contact support links voor
             guests. Settings & Help blok zat verstopt achter sign-in;
             operator-feedback dat About/FAQ/Support pre-purchase ook
@@ -2282,6 +2323,26 @@ const s = StyleSheet.create({
   activateBraceletInlineLink: {
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
+  },
+  /* Iter v173 (2026-06-30): Invite-friend CTA voor guests — prominent
+     boven info-links. Groen accent matchet Free Picks branding (free
+     sessions = entry-point voor invited users). */
+  guestInviteCta: {
+    marginTop: 12,
+    marginHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(74,222,128,0.3)',
+    backgroundColor: 'rgba(74,222,128,0.08)',
+    alignItems: 'center',
+  },
+  guestInviteCtaText: {
+    color: '#4ade80',
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
   },
   /* Iter v172 (2026-06-29): About / FAQ / Contact support link-row voor
      uitgelogde users — zodat ze deze info pre-purchase kunnen vinden

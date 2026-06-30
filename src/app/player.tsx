@@ -271,13 +271,17 @@ export default function PlayerScreen() {
     setSleepTimer(next);
   };
 
+  /* Iter v173 (2026-06-30): share via Play Store link met sessie-naam +
+     KS-mention, niet de rauwe MP3 URL. Doel = app-install. */
   const onShare = async () => {
     if (!session) return;
+    const ksLine = 'Smart Bead Bracelet launching September 1, 2026.';
+    const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
     try {
       await Share.share({
-        title: session.title,
-        message: `Listen on VIBEZCORE: ${session.title}\n\n${session.url}`,
-        url: session.url,
+        title: 'VIBEZCORE',
+        message: `"${session.title}" — a free session in VIBEZCORE.\n\n${ksLine}\n\nInstall the app: ${url}`,
+        url,
       });
     } catch {}
   };
