@@ -1527,41 +1527,12 @@ export default function AccountScreen() {
 
         </View>
 
-        {/* Iter v149 v2 (2026-06-25): bracelet-code activation als EIGEN
-            prominent CARD onder de SIGN IN card — niet als dim link
-            verstopt onder "stay signed in". Bracelet wordt main product
-            (operator 2026-06-25): activatie-pad moet visueel gelijkwaardig
-            zijn aan de SIGN IN card zelf. Backers / bundle-owners zien
-            meteen waar ze hun code kunnen inwisselen.
-
-            Doelgroep: 2 types bracelet-owners
-            - Solo: code unlockt alleen bracelet
-            - Bundle: code unlockt bracelet + 1 jaar audio library
-
-            Route: /activate-bracelet handelt zelf signin/signup voor de
-            code-stap af. */}
-        <Pressable
-          style={s.activateBraceletCard}
-          onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Activate a bracelet code"
-        >
-          <View style={s.activateBraceletCardInner}>
-            <View style={s.activateBraceletCardTextWrap}>
-              <Text style={s.activateBraceletCardEyebrow}>
-                Already have one
-              </Text>
-              <Text style={s.activateBraceletCardLabel}>
-                Activate your bracelet
-              </Text>
-              <Text style={s.activateBraceletCardSub}>
-                Enter your code to unlock your bracelet
-                {'\n'}
-                Bundle owners also get 1 year of audio
-              </Text>
-            </View>
-            <Text style={s.activateBraceletCardArrow}>→</Text>
-          </View>
-        </Pressable>
+        {/* Iter v172 (2026-06-29): Activate-bracelet card VERPLAATST naar
+            ONDERAAN — eerst Get Started (Audio + Bracelet) zodat een
+            eerste-keer-bezoeker WEET wat VIBEZCORE biedt, daarna pas de
+            code-activation voor bracelet-owners. Operator-feedback:
+            "Activate your bracelet bovenaan is rare vraag, niemand weet
+            wat er aan de hand is als ze bracelet nog niet kennen". */}
 
         {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
             een echte sectie-header. Operator-feedback: 'sign up CTA om aan
@@ -1694,6 +1665,47 @@ export default function AccountScreen() {
           <Text style={s.productCardDisclaimerSub}>
             We only use your email to notify you before launch
           </Text>
+        </View>
+
+        {/* Iter v172 (2026-06-29): Activate-bracelet als KLEINE rij ONDER
+            de productcards. Voor backers/bundle-owners die hun code willen
+            inwisselen. Niet meer als prominente card bovenaan — dat was
+            verwarrend voor eerste-keer-bezoekers. */}
+        <Pressable
+          style={s.activateBraceletInline}
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+          accessibilityLabel="Activate a bracelet code"
+        >
+          <Text style={s.activateBraceletInlineText}>
+            Got a bracelet code? <Text style={s.activateBraceletInlineLink}>Activate it here →</Text>
+          </Text>
+        </Pressable>
+
+        {/* Iter v172 (2026-06-29): About / FAQ / Contact support links voor
+            guests. Settings & Help blok zat verstopt achter sign-in;
+            operator-feedback dat About/FAQ/Support pre-purchase ook
+            vindbaar moeten zijn. Inline link-row, subtle. */}
+        <View style={s.guestInfoLinks}>
+          <Pressable
+            onPress={() => router.navigate('/about' as never)}
+            hitSlop={8}
+          >
+            <Text style={s.guestInfoLink}>About</Text>
+          </Pressable>
+          <Text style={s.guestInfoLinkSep}>·</Text>
+          <Pressable
+            onPress={() => router.navigate('/faq' as never)}
+            hitSlop={8}
+          >
+            <Text style={s.guestInfoLink}>FAQ</Text>
+          </Pressable>
+          <Text style={s.guestInfoLinkSep}>·</Text>
+          <Pressable
+            onPress={() => router.navigate('/support' as never)}
+            hitSlop={8}
+          >
+            <Text style={s.guestInfoLink}>Contact support</Text>
+          </Pressable>
         </View>
 
         {/* ── LEGAL FOOTER ──
@@ -2253,6 +2265,47 @@ const s = StyleSheet.create({
   },
   /* Legal footer — 5 doc-links als inline link-row, altijd zichtbaar
      (ook voor guests = AVG/compliance + UX-conventie). */
+  /* Iter v172 (2026-06-29): inline activate-bracelet link onder
+     productcards. Sober, niet visueel zwaar — voor backers die hun
+     code zoeken. Operator-feedback: was bovenaan verwarrend. */
+  activateBraceletInline: {
+    marginTop: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  activateBraceletInlineText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+  },
+  activateBraceletInlineLink: {
+    color: Brand.accent,
+    fontFamily: BrandFonts.semibold,
+  },
+  /* Iter v172 (2026-06-29): About / FAQ / Contact support link-row voor
+     uitgelogde users — zodat ze deze info pre-purchase kunnen vinden
+     zonder dat het Settings & Help blok prominent staat. */
+  guestInfoLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  guestInfoLink: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  guestInfoLinkSep: {
+    color: 'rgba(255,255,255,0.25)',
+    fontSize: 12,
+  },
   legalFooter: {
     marginTop: 14,
     paddingTop: 18,

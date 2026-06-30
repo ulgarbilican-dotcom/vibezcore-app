@@ -113,32 +113,12 @@ export default function AboutScreen() {
           the clarity to guide your own evolution.
         </P>
 
-        <Text style={[s.subSection, { marginTop: 26 }]}>
-          The Smart Bead Bracelet
-        </Text>
-        <Text style={s.tagline}>Control the Moment</Text>
-        <P>
-          Precision haptics at the wrist. Instant state regulation —
-          calm, focus or recovery. No screens. No effort. Just results.
-        </P>
-        <P>
-          The body influences the mind: signals from your nervous
-          system shape attention, emotion and decisions before
-          cognition engages. The bracelet works with that biology —
-          a direct route to inner state, bottom-up by design.
-        </P>
-        <Text style={[s.p, s.pBoldClose]}>
-          <Text style={s.bold}>Body first. Mind follows.</Text>
-        </Text>
-
-        <Text style={s.smallNote}>
-          All referenced research and thought leaders in our content are
-          independent of VIBEZCORE. No affiliation or endorsement of any
-          kind exists or is implied.
-        </Text>
-
-        {/* ── 03. Pillars ── */}
-        <SectionHeader num="03" title="Four pillars of growth" />
+        {/* Iter v172 (2026-06-29): Pillars verplaatst van losse sectie 03
+            naar BINNEN Audio Library sub-sectie. Operator-feedback: "de
+            sectie 4 pillaar of growth hoort bij blok audio library". De
+            144 audio-sessies zijn georganiseerd over deze 4 pillars —
+            bracelet heeft geen pillars. */}
+        <Text style={s.pillarsHeading}>Four pillars of growth</Text>
         <View style={s.pillarsGrid}>
           <Pillar
             num="01"
@@ -162,8 +142,32 @@ export default function AboutScreen() {
           />
         </View>
 
-        {/* ── 04. Who ── */}
-        <SectionHeader num="04" title="Who it's for" />
+        <Text style={[s.subSection, { marginTop: 32 }]}>
+          The Smart Bead Bracelet
+        </Text>
+        <Text style={s.tagline}>Control the Moment</Text>
+        <P>
+          Precision haptics at the wrist. Instant state regulation —
+          calm, focus or recovery. No screens. No effort. Just results.
+        </P>
+        <P>
+          The body influences the mind: signals from your nervous
+          system shape attention, emotion and decisions before
+          cognition engages. The bracelet works with that biology —
+          a direct route to inner state, bottom-up by design.
+        </P>
+        <Text style={[s.p, s.pBoldClose]}>
+          <Text style={s.bold}>Body first. Mind follows.</Text>
+        </Text>
+
+        <Text style={s.smallNote}>
+          All referenced research and thought leaders in our content are
+          independent of VIBEZCORE. No affiliation or endorsement of any
+          kind exists or is implied.
+        </Text>
+
+        {/* ── 03. Who (was sectie 04, hernummerd na verplaatsing pillars) ── */}
+        <SectionHeader num="03" title="Who it's for" />
         <P>
           VIBEZCORE is not for everyone. It&apos;s built for people who
           are done living small — who sense their full potential but
@@ -467,6 +471,16 @@ const s = StyleSheet.create({
     marginTop: 14,
   },
 
+  /* Iter v172 (2026-06-29): Pillars-heading nu BINNEN Audio Library
+     sub-sectie, niet als losse section. Iets kleinere visual weight. */
+  pillarsHeading: {
+    color: Brand.text,
+    fontSize: 17,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+    marginTop: 22,
+    marginBottom: 4,
+  },
   /* Pillars — 4 cards in 2x2 grid */
   pillarsGrid: {
     flexDirection: 'row',
