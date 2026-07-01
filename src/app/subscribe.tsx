@@ -363,7 +363,10 @@ export default function SubscribeScreen() {
         }
         refreshSubscription();
         setPhase('done');
-        setTimeout(() => router.replace('/'), 1200);
+        /* Iter v175 (2026-06-30): auto-redirect na 1.2s verwijderd. Post-
+           purchase is een emotioneel moment — laat user zelf op "Start
+           listening" klikken. Betekenisvoller welkomstscherm + gebruiker
+           heeft controle. */
         return;
       }
 
@@ -651,15 +654,40 @@ export default function SubscribeScreen() {
   }
 
   if (phase === 'done') {
+    /* Iter v175 (2026-06-30): betekenisvol welkomstscherm ipv 1.2s flash.
+       Operator-feedback: post-purchase moment moet dankbaarheid + wat je
+       hebt gekocht communiceren. Manual "Start listening" CTA geeft user
+       controle en tijd om moment te absorberen. */
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={s.center}>
+        <View style={s.doneWrap}>
           <View style={s.checkCircle}>
             <Text style={s.checkText}>✓</Text>
           </View>
-          <Text style={s.busyTitle}>You're PRO</Text>
-          <Text style={s.busySub}>Opening your library…</Text>
+          <Text style={s.doneTitle}>Welcome to VIBEZCORE Audio Library</Text>
+          <Text style={s.doneThanks}>Thank you for subscribing.</Text>
+
+          <View style={s.donePerks}>
+            <Text style={s.donePerkTitle}>You now have access to:</Text>
+            <Text style={s.donePerkLine}>· 144 sessions across 4 pillars of growth</Text>
+            <Text style={s.donePerkLine}>· All content unlocked</Text>
+            <Text style={s.donePerkLine}>· New sessions added regularly</Text>
+          </View>
+
+          <Pressable
+            style={s.btnPrimary}
+            onPress={() => router.replace('/')}
+            accessibilityLabel="Start listening to your library"
+          >
+            <Text style={s.btnPrimaryText}>Start listening</Text>
+          </Pressable>
+
+          <Text style={s.doneFooter}>
+            You&apos;ll receive a confirmation email from Google Play.
+            {'\n'}
+            Manage your subscription anytime in Settings.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -932,46 +960,21 @@ export default function SubscribeScreen() {
             waarom moet ik inloggen?"). Nu één duidelijke heading +
             prominente mode-tabs zodat user direct ziet dat er twee
             paden zijn: nieuwe account OF bestaande. */}
-        <Text style={s.heading}>One step from your subscription</Text>
+        <Text style={s.heading}>
+          {mode === 'signup'
+            ? 'One step from your subscription'
+            : 'Sign in to continue'}
+        </Text>
         <Text style={s.sub}>
-          Create a new account or sign in to your existing one. We need
-          this to link your purchase to your library.
+          {mode === 'signup'
+            ? 'Create your VIBEZCORE account to complete purchase. Your subscription links to this account for access on all your devices.'
+            : 'Enter your existing VIBEZCORE credentials to link this subscription to your account.'}
         </Text>
 
-        <View style={s.modeTabsWrap}>
-          <Pressable
-            style={[s.modeTab, mode === 'signup' && s.modeTabActive]}
-            onPress={() => {
-              setErrMsg(null);
-              setMode('signup');
-            }}
-          >
-            <Text
-              style={[
-                s.modeTabText,
-                mode === 'signup' && s.modeTabTextActive,
-              ]}
-            >
-              New account
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[s.modeTab, mode === 'signin' && s.modeTabActive]}
-            onPress={() => {
-              setErrMsg(null);
-              setMode('signin');
-            }}
-          >
-            <Text
-              style={[
-                s.modeTabText,
-                mode === 'signin' && s.modeTabTextActive,
-              ]}
-            >
-              I have an account
-            </Text>
-          </Pressable>
-        </View>
+        {/* Iter v175 (2026-06-30): tabs "New account" / "I have an account"
+            verwijderd. Operator-feedback: 80% van Subscribe-visits = nieuwe
+            bezoekers zonder account, dus signup moet primair zijn. Sign in
+            is nu een secondary link onderaan de card. */}
 
         {/* Iter v142: Social sign-in knoppen (Google / Apple).
             Bovenaan zodat 't de eerste optie is — één tap, geen
@@ -1127,10 +1130,42 @@ export default function SubscribeScreen() {
           </Text>
         </Pressable>
 
-        {/* Iter v150: toggle-link onderaan weggehaald — mode-tabs bovenaan
-            zijn nu de primaire wisselaar. Voorkomt twee plekken die
-            hetzelfde doen (operator-feedback: 'is heel onduidelijk
-            deze sectie'). */}
+        {/* Iter v175 (2026-06-30): Mode-switcher als secondary link onderaan.
+            Signup-mode toont expliciet welke 3 producten een account krijgen
+            zodat bracelet-owners + subscribers zichzelf herkennen. Signin-mode
+            geeft escape route terug naar signup voor wie op verkeerde link
+            klikte. */}
+        <View style={s.modeSwitchWrap}>
+          {mode === 'signup' ? (
+            <>
+              <Text style={s.modeSwitchLabel}>Already own VIBEZCORE?</Text>
+              <Text style={s.modeSwitchSubline}>
+                Audio Library · Smart Bead Bracelet · Bundle
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setErrMsg(null);
+                  setMode('signin');
+                }}
+                hitSlop={8}
+              >
+                <Text style={s.modeSwitchLink}>Sign in  →</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              onPress={() => {
+                setErrMsg(null);
+                setMode('signup');
+              }}
+              hitSlop={8}
+            >
+              <Text style={s.modeSwitchLink}>
+                ← New here? Create an account
+              </Text>
+            </Pressable>
+          )}
+        </View>
 
         {LegalLine}
         {RestoreLink}
@@ -1263,32 +1298,37 @@ const s = StyleSheet.create({
     letterSpacing: -0.4,
     marginBottom: 8,
   },
-  /* Iter v150 (2026-06-25): mode-tabs voor signup/signin keuze. */
-  modeTabsWrap: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12,
-    padding: 4,
-    marginTop: 8,
-    marginBottom: 18,
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 9,
+  /* Iter v175 (2026-06-30): mode-switcher als secondary link onderaan de card
+     (vervangt de v150 mode-tabs bovenaan). Primary CTA = Create account. */
+  modeSwitchWrap: {
+    marginTop: 18,
+    marginBottom: 22,
     alignItems: 'center',
+    paddingHorizontal: 8,
   },
-  modeTabActive: {
-    backgroundColor: Brand.accent,
-  },
-  modeTabText: {
-    color: Brand.textDim,
-    fontSize: 13,
+  modeSwitchLabel: {
+    color: Brand.text,
+    fontSize: 14,
     fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
+    textAlign: 'center',
   },
-  modeTabTextActive: {
-    color: '#ffffff',
+  modeSwitchSubline: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    marginTop: 3,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modeSwitchLink: {
+    color: Brand.accent,
+    fontSize: 14,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
   sub: {
     color: Brand.textDim,
@@ -1573,6 +1613,66 @@ const s = StyleSheet.create({
     fontSize: 28,
     fontFamily: BrandFonts.extrabold,
     lineHeight: 32,
+  },
+  /* Iter v175 (2026-06-30): welkomstscherm-styles voor post-purchase 'done'
+     phase. Vervangt de 1.2s "You're PRO"-flash. */
+  doneWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+  },
+  doneTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 6,
+    maxWidth: 320,
+  },
+  doneThanks: {
+    color: Brand.textDim,
+    fontSize: 15,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    marginBottom: 26,
+  },
+  donePerks: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  donePerkTitle: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.1,
+    marginBottom: 10,
+  },
+  donePerkLine: {
+    color: Brand.textDim,
+    fontSize: 13.5,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.05,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  doneFooter: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 11.5,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    marginTop: 22,
+    textAlign: 'center',
+    lineHeight: 16,
+    maxWidth: 320,
   },
   errorCircle: {
     width: 56,

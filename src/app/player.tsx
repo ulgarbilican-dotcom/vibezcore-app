@@ -33,7 +33,6 @@ import {
   playNextFromPanel,
   seekTo,
   setRate,
-  setSleepTimer,
   skipBy,
   startOver,
   togglePlay,
@@ -66,7 +65,6 @@ import Svg, { Path } from 'react-native-svg';
 import { Share2 } from 'lucide-react-native';
 
 const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
-const SLEEP_OPTIONS = [0, 5, 10, 15, 30, 60];
 const BACKDROP_HEIGHT = Math.round(Dimensions.get('window').height * 0.5);
 
 const C = {
@@ -199,9 +197,6 @@ export default function PlayerScreen() {
   const { has: hasFav, toggle: toggleFav } = useFavorites();
   const isFav = session ? hasFav(session.url) : false;
 
-  /* Sleep-cyclus: 0 → 15 → 30 → 60 → 0 ... */
-  const [sleepMin, setSleepMin] = useState<number>(0);
-
   /* Progress-bar layout voor tap-to-seek */
   const [progressWidth, setProgressWidth] = useState(0);
   const onProgressLayout = (e: LayoutChangeEvent) =>
@@ -265,12 +260,11 @@ export default function PlayerScreen() {
     await setRate(next);
   };
 
-  const onCycleSleep = () => {
-    const idx = SLEEP_OPTIONS.indexOf(sleepMin);
-    const next = SLEEP_OPTIONS[(idx + 1) % SLEEP_OPTIONS.length];
-    setSleepMin(next);
-    setSleepTimer(next);
-  };
+  /* Iter v175 (2026-06-30): sleep timer verwijderd — expo-audio module
+     kan `player.pause()` niet betrouwbaar uitvoeren wanneer Android's
+     foreground-service actief is + screen locked. Quad-track fallback (v174)
+     werkte ook niet. Native MediaSession implementation nodig voor sleep
+     timer die WERKT in lockscreen/Doze — parked voor v1.1. */
 
   /* Iter v174 (2026-06-30): personal opener ("I'm listening to…") geeft
      context aan ontvangers die VIBEZCORE niet kennen — sessie-naam alleen
@@ -510,8 +504,9 @@ export default function PlayerScreen() {
           </Pressable>
         </View>
 
-        {/* ── Extras row ──────────────────────────────────────────────── */}
-        <View style={[s.extrasRow, session.free && s.extrasRowFour]}>
+        {/* ── Extras row — iter v175 (2026-06-30): Sleep-knop weg. Zie
+            audio-player.ts iter v175 voor rationale (expo-audio limitation). */}
+        <View style={s.extrasRow}>
           <ExtraBtn
             icon={isFav ? '♥' : '♡'}
             label="Favorite"
@@ -525,11 +520,6 @@ export default function PlayerScreen() {
             }
           />
           <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
-          <ExtraBtn
-            icon="🌙"
-            label={sleepMin > 0 ? `${sleepMin}m` : 'Sleep'}
-            onPress={onCycleSleep}
-          />
           {session.free && (
             <ExtraBtn icon={<Share2 size={24} color={C.text} strokeWidth={2.2} />} label="Share" onPress={onShare} />
           )}
@@ -1027,7 +1017,6 @@ const s = StyleSheet.create({
     gap: 48,
     marginBottom: 24,
   },
-  extrasRowFour: { gap: 28 },
   extraBtn: { alignItems: 'center', minWidth: 56 },
   extraIcon: {
     color: C.text,

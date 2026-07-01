@@ -84,7 +84,6 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import { useEffect, useState } from 'react';
-import { AppState, type NativeEventSubscription } from 'react-native';
 
 export type SessionInfo = {
   url: string;
@@ -198,23 +197,14 @@ let trackingActive = false;
    verschijnt Continue-prompt voor sessie die user nooit explicit
    geopend heeft. */
 let loadedWithAutoStart = false;
-let sleepTimer: ReturnType<typeof setTimeout> | null = null;
-/* Iter v174 (2026-06-30): quad-track sleep-timer. setTimeout-only versie
-   miste fire bij background/lockscreen (Android Doze vertraagt of bevriest
-   JS timers). Iter v171 (dual-track met onStatus check) en v172 (unload ipv
-   pauseAudio) waren niet voldoende — operator: "sleep timer werkt nog steeds
-   niet". Reden: bij screen lock + Doze stoppen ZOWEL setTimeout ALS onStatus
-   met firen. Fix: 4 onafhankelijke detection-paths:
-     1. setTimeout (vuurt foreground binnen seconde van deadline)
-     2. sleepDeadlineMs + onStatus check (tijdens actieve playback)
-     3. NIEUW: setInterval elke 10s (extra net voor korte Doze < 30 min)
-     4. NIEUW: AppState 'active' listener (vuurt bij ontgrendelen telefoon
-        — fail-safe wanneer alle JS-timers bevroren waren).
-   Bij elk path: clearSleepTimer + unload. Idempotent dankzij null-check op
-   sleepDeadlineMs in checkSleepDeadline. */
-let sleepDeadlineMs: number | null = null;
-let sleepInterval: ReturnType<typeof setInterval> | null = null;
-let sleepAppStateSub: NativeEventSubscription | null = null;
+/* Iter v175 (2026-06-30): Sleep timer volledig verwijderd. Iters v171-v174
+   probeerden progressief betere fallback-strategieën (dual-track → unload →
+   quad-track met AppState listener) maar geen enkele werkte betrouwbaar in
+   Android background/Doze. Root cause: expo-audio module's foreground-service
+   negeert player.pause() ÉN unload() wanneer screen locked, plus JS-timers
+   worden door Doze bevroren. Fundamenteel fixable via native MediaSession +
+   AlarmManager implementation — parked voor v1.1. Beter geen sleep-feature
+   dan een gebroken sleep-feature. */
 const listeners = new Set<() => void>();
 /* ── Finish-listeners (apart van state-listeners) ───────────────────────
    State-listeners firen op ELKE state-mutatie (~4x/sec tijdens playback).
@@ -252,35 +242,6 @@ function setState(patch: Partial<PlayerState>) {
   notify();
 }
 
-function clearSleepTimer() {
-  if (sleepTimer) {
-    clearTimeout(sleepTimer);
-    sleepTimer = null;
-  }
-  if (sleepInterval) {
-    clearInterval(sleepInterval);
-    sleepInterval = null;
-  }
-  if (sleepAppStateSub) {
-    sleepAppStateSub.remove();
-    sleepAppStateSub = null;
-  }
-  sleepDeadlineMs = null;
-}
-
-/** Iter v174 (2026-06-30): wall-clock deadline check. Aangeroepen vanuit
- *  drie onafhankelijke sources: (1) onStatus handler tijdens playback,
- *  (2) setInterval elke 10s, (3) AppState 'active' listener bij ontgrendelen.
- *  Idempotent: na de eerste fire wordt sleepDeadlineMs op null gezet door
- *  clearSleepTimer, dus latere calls zijn no-op. Unload (ipv pauseAudio)
- *  omdat player.pause() onbetrouwbaar is in Android background/Doze met
- *  foreground-service actief. Unload release de foreground service hard. */
-function checkSleepDeadline() {
-  if (sleepDeadlineMs !== null && Date.now() >= sleepDeadlineMs) {
-    clearSleepTimer();
-    void unload();
-  }
-}
 
 function saveCurrentPositionIfWorthwhile() {
   if (!state.session) return;
@@ -367,11 +328,6 @@ function onStatus(st: AudioStatus): void {
     positionSec: posSec,
     durationSec: durSec,
   });
-
-  /* Iter v171 (2026-06-29): sleep-timer wall-clock check. setTimeout alleen
-     mist fire bij Android Doze (background/lockscreen); deze periodic
-     deadline-check vangt het op zodra status weer binnenkomt. */
-  checkSleepDeadline();
 
   /* Lock-screen-metadata aggressief re-applyen — op ELKE status-update.
      Reden: expo-audio's interne MediaSession leest ID3-tags uit het mp3-
@@ -938,43 +894,12 @@ export async function playNextFromPanel(): Promise<void> {
   });
 }
 
-/** Sleep-timer: t-min in de toekomst de audio stoppen. t=0 → uit.
- *  Iter v174 (2026-06-30): quad-track + unload. Vier onafhankelijke detection-
- *  paths zodat audio betrouwbaar stopt zelfs als Android Doze JS-timers
- *  bevriest. Zie sleepDeadlineMs comment voor het waarom. */
-export function setSleepTimer(minutes: number): void {
-  clearSleepTimer();
-  if (minutes <= 0) return;
-  const ms = minutes * 60 * 1000;
-  sleepDeadlineMs = Date.now() + ms;
-  /* Track 1: primaire setTimeout — vuurt foreground binnen seconde van
-     deadline. Door Doze vertraagd of bevroren in background. */
-  sleepTimer = setTimeout(() => {
-    clearSleepTimer();
-    void unload();
-  }, ms);
-  /* Track 3: 10-sec interval. Pakt deadlines op tijdens korte Doze-pauzes
-     (Doze begint na ~30 min idle, dus voor 5/10/15 min timers werkt dit
-     vrijwel altijd). Bij langere timers (30/60 min) groter risico op Doze-
-     bevriezing, maar AppState-listener (track 4) is dan de fail-safe. */
-  sleepInterval = setInterval(() => {
-    checkSleepDeadline();
-  }, 10 * 1000);
-  /* Track 4: AppState fail-safe. Wanneer user telefoon ontgrendelt (state
-     wisselt naar 'active'), check direct of deadline gepasseerd is. Vangt
-     het geval dat ALLE JS-timers tijdens lockscreen bevroren waren. */
-  sleepAppStateSub = AppState.addEventListener('change', (next) => {
-    if (next === 'active') checkSleepDeadline();
-  });
-}
-
 /**
- * Audio stoppen + AudioPlayer-instance opruimen + sluit timers af. Slaat
- * eerst de positie op voor de actieve sessie zodat "Close → later opnieuw
- * openen" Continue laat zien op de juiste plek.
+ * Audio stoppen + AudioPlayer-instance opruimen. Slaat eerst de positie op
+ * voor de actieve sessie zodat "Close → later opnieuw openen" Continue laat
+ * zien op de juiste plek.
  */
 export async function unload(opts: { skipSave?: boolean } = {}): Promise<void> {
-  clearSleepTimer();
   /* Iter 9dq v66 (2026-06-03): preview-sessies sluiten zonder positie
      op te slaan of history-flush. Anders zou close-and-reopen alsnog
      een Continue-prompt geven voor een sessie die toch op 60s gecapped
