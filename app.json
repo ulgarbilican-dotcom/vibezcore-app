@@ -96,9 +96,11 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0a0a0a",
+          "image": "./assets/vibezcore_icon.png",
+          "imageWidth": 140,
           "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "image": "./assets/vibezcore_icon.png",
+            "imageWidth": 140
           }
         }
       ],

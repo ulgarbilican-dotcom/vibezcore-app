@@ -1091,10 +1091,12 @@ export default function AudioScreen() {
                'ie niet tegen de status-bar plakt. SafeAreaView pakt al
                de basis-inset; deze 12px is puur visuele lucht.
              - paddingBottom: tab bar (64 + insets.bottom) + mini-player
-               + gap zodat onderste content niet wegvalt. */
+               buffer alleen wanneer er audio actief is (playerState.session).
+               Iter v176 (2026-06-30): operator "onderkant heeft te veel
+               vrije ruimte" bij guest state zonder mini-player. */
           {
             paddingTop: 12,
-            paddingBottom: 64 + safeInsets.bottom + 96,
+            paddingBottom: 64 + safeInsets.bottom + (playerState.session ? 96 : 24),
           },
         ]}
         showsVerticalScrollIndicator={false}

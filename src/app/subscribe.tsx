@@ -1135,37 +1135,13 @@ export default function SubscribeScreen() {
             zodat bracelet-owners + subscribers zichzelf herkennen. Signin-mode
             geeft escape route terug naar signup voor wie op verkeerde link
             klikte. */}
-        <View style={s.modeSwitchWrap}>
-          {mode === 'signup' ? (
-            <>
-              <Text style={s.modeSwitchLabel}>Already own VIBEZCORE?</Text>
-              <Text style={s.modeSwitchSubline}>
-                Audio Library · Smart Bead Bracelet · Bundle
-              </Text>
-              <Pressable
-                onPress={() => {
-                  setErrMsg(null);
-                  setMode('signin');
-                }}
-                hitSlop={8}
-              >
-                <Text style={s.modeSwitchLink}>Sign in  →</Text>
-              </Pressable>
-            </>
-          ) : (
-            <Pressable
-              onPress={() => {
-                setErrMsg(null);
-                setMode('signup');
-              }}
-              hitSlop={8}
-            >
-              <Text style={s.modeSwitchLink}>
-                ← New here? Create an account
-              </Text>
-            </Pressable>
-          )}
-        </View>
+        {/* Iter v176 (2026-06-30): Sign in mode volledig verwijderd uit
+            Subscribe screen. Operator-analyse: Sign in in de purchase flow
+            was verwarrend want users interpreteerden het als "ik heb al
+            iets → moet ik dan nog betalen?". Nu: alleen signup flow. Users
+            met bestaande subscription gebruiken RestoreLink (visueel
+            prominenter gemaakt). Users met bestaand account zonder sub
+            loggen in via Account tab → keren terug naar subscribe. */}
 
         {LegalLine}
         {RestoreLink}
