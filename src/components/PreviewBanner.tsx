@@ -16,28 +16,29 @@
      - Centered "PREVIEW" tekst + optionele sub-regel
      - Geen interactie — puur informatief
 
-   Iter 9dq v79 (2026-06-03, operator-keuze): vervangt staat-afhankelijke
-   "paired and ready"-copy met een eerlijke globale indicator. Eenvoudiger
-   te onderhouden + zet correcte verwachtingen voor pre-launch testers
-   en vroege bracelet-kopers wier hardware nog niet is verzonden.
-   ─────────────────────────────────────────────────────────────────── */
+   Iter v177 (2026-07-02): shipping-subtitle verwijderd op operator-verzoek.
+   Alleen "PREVIEW" tonen zodat het duidelijk is dat het een preview is,
+   zonder shipping-informatie of andere claim. Props.subtitle blijft
+   optioneel behouden voor eventueel toekomstig gebruik. */
 
 import { BrandFonts } from '@/constants/theme';
 import { StyleSheet, Text, View } from 'react-native';
 
 type Props = {
-  /** Optionele uitleg-regel. Default 'Bracelet ships after 1 September 2026 launch'. */
+  /** Optionele uitleg-regel. Standaard leeg — enkel "PREVIEW". */
   subtitle?: string;
 };
 
-export function PreviewBanner({
-  subtitle = 'Bracelet ships after 1 September 2026 launch',
-}: Props) {
+export function PreviewBanner({ subtitle }: Props) {
   return (
     <View style={s.banner}>
       <Text style={s.label}>PREVIEW</Text>
-      <Text style={s.sep}>·</Text>
-      <Text style={s.subtitle}>{subtitle}</Text>
+      {subtitle ? (
+        <>
+          <Text style={s.sep}>·</Text>
+          <Text style={s.subtitle}>{subtitle}</Text>
+        </>
+      ) : null}
     </View>
   );
 }
