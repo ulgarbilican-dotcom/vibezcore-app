@@ -4006,7 +4006,7 @@ export default function BraceletControl() {
             </View>
           </View>
         </View>
-        {sim && <SimDemoBar sim={sim} />}
+        {__DEV__ && sim && <SimDemoBar sim={sim} />}
       </SafeAreaView>
     );
   }
@@ -4802,7 +4802,7 @@ export default function BraceletControl() {
             content moet in scherm passen, geen extra cards. */}
 
         {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
-        {sim && <SimDemoBar sim={sim} />}
+        {__DEV__ && sim && <SimDemoBar sim={sim} />}
       </View>
 
       {/* CompletionModal — toont na natural completion (timer hits 0).

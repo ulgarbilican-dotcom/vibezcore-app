@@ -318,18 +318,21 @@ const s = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
+  /* Iter v180 (2026-07-02): CTA breder + tekst-ademruimte (systemisch met
+     subscribe.tsx). */
   btnPrimary: {
     backgroundColor: Brand.accent,
-    borderRadius: 12,
-    paddingVertical: 15,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     alignItems: 'center',
     marginTop: 22,
   },
   btnPrimaryText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 16.5,
     fontFamily: BrandFonts.bold,
-    letterSpacing: 0.2,
+    letterSpacing: 0.4,
   },
   btnDisabled: { opacity: 0.5 },
   legal: {

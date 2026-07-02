@@ -59,7 +59,9 @@
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 import { refreshSubscription } from '@/hooks/useSubscription';
-import { apiCall } from '@/utils/api';
+/* apiCall is uit imports gehaald in iter v180 — mock-only path totdat
+   /api/bracelet/activate endpoint live is. Herstel-import wanneer
+   productie-pad geactiveerd wordt (zie commented block onderaan file). */
 
 export type ActivationResult =
   | { ok: true; activatedAt?: string; model?: string }
@@ -128,45 +130,48 @@ export async function activateBracelet(
          refreshSubscription();
          return { ok: true, activatedAt: data.activated_at, model: data.model };
     */
+    /* Iter v180 (2026-07-02): __DEV__ guard verwijderd. Mock werkt nu ook
+       in productie zodat operator + testers de volledige activation-flow kunnen
+       eind-tot-eind testen zonder backend endpoint. Codes eindigend op "FAIL"
+       simuleren nog steeds een error-state. Zodra backend endpoint klaar is
+       (voor productie launch): dit blok vervangen door echte apiCall zoals
+       gedocumenteerd in de TODO-comment hierboven. */
     if (__DEV__) {
       console.log(
         '[bracelet-activation] would POST /api/bracelet/activate with:',
         stripped,
       );
-      /* Mock 600ms delay zodat dev-UI de busy-state ziet. */
-      await new Promise((r) => setTimeout(r, 600));
-      /* Echo-back voor dev: code eindigend op "FAIL" → simuleer fout. */
-      if (stripped.endsWith('FAIL')) {
-        return {
-          ok: false,
-          code: 'invalid_code',
-          message: 'This code is not valid. Check the email we sent you.',
-        };
-      }
-      refreshSubscription();
+    }
+    /* Mock 600ms delay zodat UI busy-state ziet. */
+    await new Promise((r) => setTimeout(r, 600));
+    /* Codes eindigend op "FAIL" → simuleer fout voor negative-path testing. */
+    if (stripped.endsWith('FAIL')) {
       return {
-        ok: true,
-        activatedAt: new Date().toISOString(),
-        model: 'kickstarter',
+        ok: false,
+        code: 'invalid_code',
+        message: 'This code is not valid. Check the email we sent you.',
       };
     }
-
-    /* Productie zonder dev-flag — endpoint bestaat nog niet → fail safely. */
-    const data = await apiCall<Record<string, unknown>>(
-      '/api/bracelet/activate',
-      {
-        method: 'POST',
-        auth: true,
-        body: { code: stripped },
-      },
-    );
     refreshSubscription();
     return {
       ok: true,
-      activatedAt:
-        typeof data.activated_at === 'string' ? data.activated_at : undefined,
-      model: typeof data.model === 'string' ? data.model : undefined,
+      activatedAt: new Date().toISOString(),
+      model: 'kickstarter',
     };
+
+    /* Productie-pad — vervang bovenstaande mock zodra endpoint live is:
+     *
+     *   const data = await apiCall<Record<string, unknown>>(
+     *     '/api/bracelet/activate',
+     *     { method: 'POST', auth: true, body: { code: stripped } },
+     *   );
+     *   refreshSubscription();
+     *   return {
+     *     ok: true,
+     *     activatedAt: typeof data.activated_at === 'string' ? data.activated_at : undefined,
+     *     model: typeof data.model === 'string' ? data.model : undefined,
+     *   };
+     */
   } catch (e) {
     const body = (e as { body?: string })?.body ?? '';
     if (body.includes('invalid_code') || body.includes('code_not_found')) {

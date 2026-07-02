@@ -642,11 +642,14 @@ export default function SubscribeScreen() {
   const priceLabel = product?.localizedPrice ?? (tierForCompute === 'yearly' ? '€69,99' : '€9,99');
   const periodLabel = tierForCompute === 'yearly' ? '/year' : '/month';
 
-  /* Loading/transitional phases — single full-screen state */
+  /* Loading/transitional phases — single full-screen state.
+     Iter v179 (2026-07-02): creating-account sub-text hangt af van mode.
+     Voorheen altijd "Creating your account…" — fout bij signin flow
+     want user heeft al een account. */
   if (phase === 'creating-account' || phase === 'iap-popup' || phase === 'verifying') {
     const sub =
       phase === 'creating-account'
-        ? 'Creating your account…'
+        ? (mode === 'signin' ? 'Signing you in…' : 'Creating your account…')
         : phase === 'iap-popup'
           ? `Opening secure checkout…`
           : 'Confirming your purchase…';
@@ -685,11 +688,11 @@ export default function SubscribeScreen() {
           </View>
 
           <Pressable
-            style={s.btnPrimary}
+            style={s.doneCta}
             onPress={() => router.replace('/')}
             accessibilityLabel="Start listening to your library"
           >
-            <Text style={s.btnPrimaryText}>Start listening</Text>
+            <Text style={s.doneCtaText}>Start listening</Text>
           </Pressable>
 
           <Text style={s.doneFooter}>
@@ -1517,18 +1520,22 @@ const s = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
+  /* Iter v180 (2026-07-02): CTA-knoppen systemisch verruimd. Operator
+     -feedback: knoppen te krap, tekst moet ademen. Padding + fontSize
+     omhoog + iets meer letterSpacing voor betere leesbaarheid. */
   btnPrimary: {
     backgroundColor: Brand.accent,
-    borderRadius: 12,
-    paddingVertical: 15,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     alignItems: 'center',
     marginTop: 22,
   },
   btnPrimaryText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 16.5,
     fontFamily: BrandFonts.bold,
-    letterSpacing: 0.2,
+    letterSpacing: 0.4,
   },
   linkBtn: {
     alignItems: 'center',
@@ -1679,6 +1686,26 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
     maxWidth: 320,
+  },
+  /* Iter v179 (2026-07-02): eigen bredere Start-listening CTA voor done-phase.
+     Operator: knop moet breder en tekst moet ademen. */
+  doneCta: {
+    backgroundColor: Brand.accent,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    maxWidth: 380,
+    marginTop: 6,
+  },
+  doneCtaText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.4,
   },
   errorCircle: {
     width: 56,

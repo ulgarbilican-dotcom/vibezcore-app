@@ -2061,18 +2061,26 @@ const s = StyleSheet.create({
   /* ── Personalisatie-banners (top van pagina, conditional) ──
      Apple-style: fill-only (geen borders), grotere radius, ruimere
      padding. Pro-banner subtiel, owner-banner prominenter. */
+  /* Iter v180 (2026-07-02): pro-banner opgeschoond — gecentreerde tekst,
+     ruimere padding, subtiele border voor definitie. Operator-feedback:
+     "Reserved for VIBEZCORE members" mag mooier + gecentreerd. */
   proBanner: {
-    backgroundColor: 'rgba(58,143,255,0.12)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: 'rgba(58,143,255,0.10)',
+    borderColor: 'rgba(58,143,255,0.28)',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   proBannerText: {
     color: Brand.accent,
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.1,
+    letterSpacing: 0.1,
+    textAlign: 'center',
   },
   /* Owner-eyebrow (iter 9t) — vervangt hero voor owners. Klein,
      "you are here"-style, geen marketing-vibe. */
