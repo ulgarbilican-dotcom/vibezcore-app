@@ -1051,6 +1051,16 @@ function CompletionModal({
         accessibilityLabel="Dismiss completion"
       />
       <View style={s.completionCard}>
+        {/* Iter v181 (2026-07-02): Buddha-figuur toegevoegd voor visuele
+            parity met Breath tab en breathwork completion in deze zelfde
+            file (§2926+). Operator: "popup breathwork mist budha in bracelet
+            active" — deze CompletionModal (natural completion) had 'm nog
+            niet. Nu wel: exact zelfde Bunny-URL asset als breath.tsx. */}
+        <Image
+          source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png' }}
+          resizeMode="contain"
+          style={s.completionBuddha}
+        />
         {/* Iter v168 (2026-06-28): popup-layout uitgelijnd met Breath tab
             completion. Eyebrow + 'Well done.' + 'You completed X' subtitle
             + line1/line2 messages — exact dezelfde structuur en copy als
@@ -6194,6 +6204,14 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     padding: 28,
     alignItems: 'center',
+  },
+  /* Iter v181 (2026-07-02): Buddha-figuur boven eyebrow (consistent met
+     Breath tab completion). Statische Image, geen animatie — kleiner
+     complexity, geen unmount-issues in modal. */
+  completionBuddha: {
+    width: 84,
+    height: 84,
+    marginBottom: 12,
   },
   completionIcon: {
     width: 64,
