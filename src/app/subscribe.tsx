@@ -27,7 +27,7 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
-import { refreshSubscription } from '@/hooks/useSubscription';
+import { refreshSubscription, setProSubscribedStatus } from '@/hooks/useSubscription';
 import { getIAP } from '@/services/iap';
 import {
   queuePendingVerify,
@@ -184,6 +184,10 @@ export default function SubscribeScreen() {
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  /* Iter v177 (2026-07-02): infoMsg voor positieve transities — bijv. duplicate
+     email switch naar signin. Wordt in GROENE banner getoond ipv rood, zodat
+     user snapt dat het geen fout is maar een automatische hulp. */
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
   /* Iter v145 (2026-06-25): raw IAP error info voor diagnose. Operator
      krijgt op het error-scherm de rauwe code + message te zien wanneer
      IAP faalt — anders weten we nooit waarom Google Play niet wil
@@ -361,6 +365,12 @@ export default function SubscribeScreen() {
         } catch {
           /* swallow — non-fatal */
         }
+        /* Iter v177 (2026-07-02): setProSubscribedStatus() SYNCHROON eerst.
+           Zo is de app-brede subscription state IMMEDIATE actief zodra we het
+           welkomstscherm tonen. refreshSubscription() daarna is een backend-
+           sync die de UI niet blokkeert — voorkomt de race waarbij de user
+           na "Start listening" tap kort de FREE Audio Library ziet. */
+        setProSubscribedStatus();
         refreshSubscription();
         setPhase('done');
         /* Iter v175 (2026-06-30): auto-redirect na 1.2s verwijderd. Post-
@@ -439,9 +449,12 @@ export default function SubscribeScreen() {
     const r = await fn(email.trim(), pw);
     if (!r.ok) {
       if (__DEV__) console.warn(`[subscribe] ${mode} failed (raw):`, r.error);
-      /* Iter 9dq v142: signup → "already exists" → auto-switch naar signin
-         mode met email behouden + lege password. User hoeft niet zelf de
-         toggle te zoeken — de UI doet wat hij toch al ging doen. */
+      /* Iter v177 (2026-07-02): signup → "already exists" → automatische
+         transitie naar signin-mode + POSITIEVE info banner (groen ipv rood).
+         Rationale: user tikte "Create account" met een e-mail die al bestaat.
+         Backend heeft account herkend, we schakelen automatisch naar sign-in.
+         Rood errMsg zou dit als fout laten voelen — infoMsg communiceert
+         helder dat het systeem hem gewoon helpt door te gaan. */
       const t = String(r.error || '').toLowerCase();
       if (
         mode === 'signup' &&
@@ -450,7 +463,8 @@ export default function SubscribeScreen() {
       ) {
         setMode('signin');
         setPw('');
-        setErrMsg('You already have an account — sign in with your password.');
+        setErrMsg(null);
+        setInfoMsg('Welcome back — enter your password to complete your subscription.');
         setPhase('form');
         return;
       }
@@ -766,7 +780,12 @@ export default function SubscribeScreen() {
             Full access to the VIBEZCORE Audio Library. Cancel anytime.
           </Text>
 
-          <Pressable style={s.planCard} onPress={() => setTier('yearly')}>
+          <Pressable
+            style={s.planCard}
+            onPress={() => setTier('yearly')}
+            accessibilityLabel={`Select yearly plan — ${yearlyPrice} per year, best value`}
+            accessibilityRole="button"
+          >
             <View style={s.planCardHeader}>
               <Text style={s.planCardTitle}>Yearly</Text>
               <Text style={s.planCardBadge}>BEST VALUE</Text>
@@ -778,7 +797,12 @@ export default function SubscribeScreen() {
             <Text style={s.planCardSub}>Best value · one payment a year</Text>
           </Pressable>
 
-          <Pressable style={s.planCardAlt} onPress={() => setTier('monthly')}>
+          <Pressable
+            style={s.planCardAlt}
+            onPress={() => setTier('monthly')}
+            accessibilityLabel="Select monthly plan"
+            accessibilityRole="button"
+          >
             <View style={s.planCardHeader}>
               <Text style={s.planCardTitle}>Monthly</Text>
             </View>
@@ -921,7 +945,8 @@ export default function SubscribeScreen() {
             </Text>
           </View>
 
-          {errMsg && <Text style={s.err}>{errMsg}</Text>}
+          {infoMsg && <Text style={s.info}>{infoMsg}</Text>}
+        {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
           <Pressable style={s.btnPrimary} onPress={() => void runIapFlow()}>
             <Text style={s.btnPrimaryText}>Continue to checkout</Text>
@@ -1113,6 +1138,7 @@ export default function SubscribeScreen() {
           </Pressable>
         )}
 
+        {infoMsg && <Text style={s.info}>{infoMsg}</Text>}
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
         {/* Iter v153: raw debug-info bij signin/Google-failures zodat
@@ -1357,6 +1383,15 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     marginTop: 12,
+  },
+  /* Iter v177: positieve info banner (groen) — voor "welcome back" transitie
+     bij duplicate-email die auto-switch naar signin-mode veroorzaakt. */
+  info: {
+    color: Brand.success,
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    marginTop: 12,
+    lineHeight: 18,
   },
   pwHint: {
     color: Brand.textDim,

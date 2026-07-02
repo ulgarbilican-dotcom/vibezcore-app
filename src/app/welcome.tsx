@@ -159,10 +159,10 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={s.middle}>
-          <Text style={s.header} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={s.header} numberOfLines={2}>
             Stop Drifting.
           </Text>
-          <Text style={s.header} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={s.header} numberOfLines={2}>
             Start Directing.
           </Text>
           {/* Accent-streepje tussen hoofdregel en caps-ondertekst (#3a8fff). */}

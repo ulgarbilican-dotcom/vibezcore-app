@@ -190,10 +190,10 @@ function FreeEnvironmentCard() {
         <Text style={s.cardCtaArrow}>→</Text>
       </Pressable>
 
-      {/* Pad 2 — Activate Bracelet code (DISABLED tot Sep 2026 KS) */}
+      {/* Pad 2 — Activate your bracelet (DISABLED tot Sep 2026 KS) */}
       <View style={[s.cardCta, { opacity: 0.55 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Activate Bracelet code</Text>
+          <Text style={s.cardCtaText}>Activate your bracelet</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
             Available from September 2026
           </Text>
@@ -387,7 +387,7 @@ function SubscriptionCard() {
       {!isLoading && isPro && !isBraceletOwner && (
         <View style={[s.cardCta, { opacity: 0.55 }]}>
           <View style={{ flex: 1 }}>
-            <Text style={s.cardCtaText}>Got a bracelet? Activate code</Text>
+            <Text style={s.cardCtaText}>Got a bracelet? Activate your bracelet</Text>
             <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
               Available from September 2026
             </Text>
@@ -610,7 +610,10 @@ export default function AccountScreen() {
       }
       setEmail(r.email || 'Signed in');
       setPwInput('');
-      refreshSubscription();
+      /* Iter v177 (2026-07-02): AWAIT refreshSubscription vóór verdere state
+         zodat een snelle vervolgactie (bv. direct naar Subscribe) niet meer
+         een race hit tussen sign-in en subscription cache. */
+      await refreshSubscription();
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -636,7 +639,8 @@ export default function AccountScreen() {
       }
       setEmail(r.email || 'Signed in');
       setPwInput('');
-      refreshSubscription();
+      /* Iter v177 (2026-07-02): AWAIT refreshSubscription — race-fix Apple */
+      await refreshSubscription();
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -734,10 +738,10 @@ export default function AccountScreen() {
       if (r.ok) {
         setEmail(r.email || 'Signed in');
         setPwInput('');
-        /* Login/signup succesvol → forceer een fetch van
-           /api/subscription-status zodat useSubscription-consumers
-           (Library, Player) direct de echte PRO-status zien. */
-        refreshSubscription();
+        /* Iter v177 (2026-07-02): AWAIT refreshSubscription vóór verdere state.
+           Vermijdt race conditie waarbij user snel doorklikt naar Subscribe of
+           Audio Library terwijl subscription-cache nog stale is. */
+        await refreshSubscription();
         /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
            token = potentieel nieuwe user = andere local-storage key.
            Iter 9dq v55 (2026-06-03, audit C5+C6): AWAIT zodat bucket

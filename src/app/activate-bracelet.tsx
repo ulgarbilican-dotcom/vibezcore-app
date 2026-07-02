@@ -107,8 +107,10 @@ export default function ActivateBraceletScreen() {
       if (__DEV__) {
         await setDevBraceletActivated(true);
       }
+      /* Iter v177 (2026-07-02): auto-redirect na 1.2s vervangen door manual
+         "Open your bracelet" CTA. Matchet de subscribe-flow (v175): post-
+         success is emotioneel moment — user moet het kunnen absorberen. */
       setPhase('success');
-      setTimeout(() => router.replace('/bracelet-control' as never), 1200);
       return;
     }
     setErrMsg(result.message);
@@ -119,7 +121,7 @@ export default function ActivateBraceletScreen() {
   if (!authChecked) {
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Activate bracelet' }} />
+        <Stack.Screen options={{ title: 'Activate your bracelet' }} />
         <View style={s.center}>
           <ActivityIndicator color={Brand.text} />
         </View>
@@ -135,7 +137,7 @@ export default function ActivateBraceletScreen() {
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
-          options={{ title: 'Activate bracelet', headerBackTitle: 'Back' }}
+          options={{ title: 'Activate your bracelet', headerBackTitle: 'Back' }}
         />
         <View style={s.center}>
           <View style={s.lockCircle}>
@@ -159,16 +161,38 @@ export default function ActivateBraceletScreen() {
   }
 
   /* ── Success-state ─────────────────────────────────────────────── */
+  /* Iter v177 (2026-07-02): full confirmation screen met manual CTA — matcht
+     subscribe.tsx v175 done-phase patroon. Voorheen flitste dit 1.2s en dan
+     auto-redirect, wat voelde als bug. Nu neemt user zelf actie. */
   if (phase === 'success') {
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={s.center}>
+        <View style={s.doneWrap}>
           <View style={s.checkCircle}>
             <Text style={s.checkText}>✓</Text>
           </View>
-          <Text style={s.successTitle}>Bracelet activated</Text>
-          <Text style={s.successSub}>Opening your bracelet…</Text>
+          <Text style={s.doneTitle}>Bracelet activated</Text>
+          <Text style={s.doneThanks}>Welcome to VIBEZCORE.</Text>
+
+          <View style={s.donePerks}>
+            <Text style={s.donePerkTitle}>You now have access to:</Text>
+            <Text style={s.donePerkLine}>· 5 haptic session modes</Text>
+            <Text style={s.donePerkLine}>· Full bracelet controls in the app</Text>
+            <Text style={s.donePerkLine}>· Session history and progress tracking</Text>
+          </View>
+
+          <Pressable
+            style={s.doneBtn}
+            onPress={() => router.replace('/bracelet-control' as never)}
+            accessibilityLabel="Open your bracelet control screen"
+          >
+            <Text style={s.doneBtnText}>Open your bracelet</Text>
+          </Pressable>
+
+          <Text style={s.doneFooter}>
+            You can manage your bracelet anytime from the Bracelet tab.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -179,7 +203,7 @@ export default function ActivateBraceletScreen() {
     <SafeAreaView style={s.root}>
       <Stack.Screen
         options={{
-          title: 'Activate bracelet',
+          title: 'Activate your bracelet',
           headerBackTitle: 'Back',
         }}
       />
@@ -348,6 +372,80 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  /* Iter v177 (2026-07-02): full confirmation screen styles — match
+     subscribe.tsx done-phase. */
+  doneWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+  },
+  doneTitle: {
+    color: Brand.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 6,
+    maxWidth: 320,
+  },
+  doneThanks: {
+    color: Brand.textDim,
+    fontSize: 15,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    marginBottom: 26,
+  },
+  donePerks: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  donePerkTitle: {
+    color: Brand.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.1,
+    marginBottom: 10,
+  },
+  donePerkLine: {
+    color: Brand.textDim,
+    fontSize: 13.5,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.05,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  doneBtn: {
+    backgroundColor: Brand.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 999,
+    alignItems: 'center',
+    minWidth: 240,
+  },
+  doneBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+  },
+  doneFooter: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 11.5,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    marginTop: 22,
+    textAlign: 'center',
+    lineHeight: 16,
+    maxWidth: 320,
   },
   /* Auth-guard state — iter 9dq v97 (2026-06-04) */
   lockCircle: {

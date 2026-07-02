@@ -70,18 +70,11 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
    warm is. Fire-and-forget, faalt stil bij offline.
    URLs zijn gespiegeld met bracelet-control.tsx MODE_IMAGES en
    (tabs)/bracelet.tsx MODE_PHOTOS_BY_WAVE — als één wijzigt, hier ook. */
-const BRACELET_MODE_PHOTOS_PREFETCH = [
-  'https://vibezcore-audio.b-cdn.net/images/gamma%20pic.jpg',
-  'https://vibezcore-audio.b-cdn.net/images/welcome%20new.png',
-  'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg',
-  'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
-  'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg',
-];
-BRACELET_MODE_PHOTOS_PREFETCH.forEach((url) => {
-  Image.prefetch(url).catch(() => {
-    /* offline / cdn-blip = stil falen, on-demand fetch is fallback */
-  });
-});
+/* Iter v177 (2026-07-02): image prefetch verplaatst naar (tabs)/bracelet.tsx
+   useFocusEffect. Bij cold-start liet dit 5 parallel CDN-fetches lopen die
+   met langzame netwerken (2G/3G) andere startup-work konden vertragen.
+   Nu triggert prefetch ALLEEN wanneer user daadwerkelijk de bracelet-tab
+   opent — sneller cold-start, geen impact op eerst-load UX. */
 
 /* Centrale font-inheritance — zet Inter als default op elke <Text> in de app,
    zodat schermen die geen eigen fontFamily zetten tóch Inter krijgen
@@ -471,7 +464,7 @@ export default function RootLayout() {
             nog te bouwen — dev draait op mock-success. */}
         <Stack.Screen
           name="activate-bracelet"
-          options={{ title: 'Activate bracelet', headerBackTitle: 'Back' }}
+          options={{ title: 'Activate your bracelet', headerBackTitle: 'Back' }}
         />
         {/* `settings` — sub-screen pushed from Account-tab. Toont Playback /
            Privacy / About-secties die de webapp ook heeft. */}

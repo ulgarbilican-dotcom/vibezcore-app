@@ -255,7 +255,10 @@ export function getCachedSubscription(): SubscriptionStatus | null {
  *  zodat een no-token scenario direct ook AsyncStorage opschoont (anders
  *  zou een fresh app-start van user-B nog user-A's gecachede status
  *  pakken voordat de fetch klaar is). */
-export function refreshSubscription(): void {
+/* Iter v177 (2026-07-02): return de fetchStatus promise zodat callers KUNNEN
+   awaiten voor race-critical paths (sign-in → subscribe flow). Bestaande
+   callers die niet awaiten blijven werken als fire-and-forget. */
+export function refreshSubscription(): Promise<void> {
   fetchGeneration++;
   cachedStatus = null;
   subscribers.forEach((cb) => cb(null));
@@ -263,7 +266,7 @@ export function refreshSubscription(): void {
      user-A data binnenpakt. fetchStatus overschrijft 'm met de echte
      waarde wanneer 'ie klaar is. */
   clearPersistedCache().catch(() => {});
-  fetchStatus();
+  return fetchStatus();
 }
 
 /** Iter v170 (2026-06-28): explicit sign-out marker. Synchroon notify met
@@ -283,6 +286,21 @@ export function setSignedOutStatus(): void {
   const freeStatus: SubscriptionStatus = { active: false };
   notifyAll(freeStatus);
   clearPersistedCache().catch(() => {});
+}
+
+/** Iter v177 (2026-07-02): symmetrische fix voor post-purchase race.
+ *  Na een succesvolle IAP-aankoop moet PRO direct actief zijn in de UI —
+ *  anders ziet de zojuist-betaalde user kort de FREE-view op de Audio Library
+ *  totdat een async fetchStatus is voltooid.
+ *  Deze functie omzeilt de fetch: direct notify {active:true} zodat álle
+ *  consumers (Audio Library tile, player, About/FAQ, etc.) synchroon zien
+ *  dat de user PRO is. Backend-sync loopt daarna alsnog via refreshSubscription
+ *  maar de UI wacht daar niet meer op. */
+export function setProSubscribedStatus(): void {
+  fetchGeneration++;
+  const proStatus: SubscriptionStatus = { active: true };
+  cachedStatus = proStatus;
+  notifyAll(proStatus);
 }
 
 export function useSubscription() {

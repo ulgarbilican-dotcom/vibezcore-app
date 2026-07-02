@@ -947,8 +947,26 @@ export default function BraceletScreen() {
      heeft (early-return), apart van de hoofd-etalage ScrollView. */
   const landingScrollRef = useRef<ScrollView>(null);
   const mainScrollRef = useRef<ScrollView>(null);
+  /* Iter v177 (2026-07-02): image prefetch verplaatst hierheen vanaf root
+     _layout.tsx. Trigger alleen wanneer user daadwerkelijk deze tab opent —
+     bracelet-mode fotos zijn niet nodig op cold-start van Audio-only users.
+     `once`-flag voorkomt herhaalde prefetch bij elk focus-event. */
+  const prefetchedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
+      if (!prefetchedRef.current) {
+        prefetchedRef.current = true;
+        const PREFETCH_URLS = [
+          'https://vibezcore-audio.b-cdn.net/images/gamma%20pic.jpg',
+          'https://vibezcore-audio.b-cdn.net/images/welcome%20new.png',
+          'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg',
+          'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
+          'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg',
+        ];
+        PREFETCH_URLS.forEach((url) => {
+          Image.prefetch(url).catch(() => { /* stil falen */ });
+        });
+      }
       setExploreUnlocked(false);
       /* Scroll beide views naar top — alleen één is in DOM op een gegeven
          moment (op basis van showAudioProLanding && !exploreUnlocked),

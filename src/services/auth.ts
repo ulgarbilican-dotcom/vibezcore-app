@@ -213,21 +213,45 @@ export async function getLastLoginEmail(): Promise<string | null> {
    "Invalid or missing action". Met expliciete query in de client-URL is
    er geen redirect-magie meer nodig. */
 
+/* Iter v177 (2026-07-02): 10-sec network timeout op alle auth-calls.
+   Zonder timeout hangt de ActivityIndicator forever bij airplane-mode of
+   captive-portal. Met timeout → duidelijke error message binnen 10 sec.
+   AbortController is de standaard React Native / fetch-API manier. */
+const AUTH_TIMEOUT_MS = 10_000;
+
 async function postToAuthProxy(
   action: 'login' | 'signup' | 'refresh' | 'google' | 'apple',
   payload: Record<string, unknown>
 ): Promise<{ ok: boolean; status: number; data: SessionPayload & ErrorPayload }> {
-  const res = await fetch(
-    VZ_BACKEND_URL + '/api/auth-proxy?action=' + action,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
-    }
-  );
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(
+      VZ_BACKEND_URL + '/api/auth-proxy?action=' + action,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      }
+    );
+  } catch (e) {
+    clearTimeout(timeoutHandle);
+    /* AbortError van onze eigen timeout → duidelijke offline message.
+       Andere network errors (DNS, TCP reset) → generieke connection message. */
+    const isAbort = (e as Error)?.name === 'AbortError';
+    const msg = isAbort
+      ? 'Request timed out — check your internet connection.'
+      : 'No internet connection — try again when you are online.';
+    return { ok: false, status: 0, data: { error: msg } };
+  }
+  clearTimeout(timeoutHandle);
+
   /* Body altijd als text lezen — bij upstream-errors kan het non-JSON zijn.
      Toleranter zo. */
   const text = await res.text();
