@@ -225,24 +225,19 @@ export default function SubscribeScreen() {
         return;
       }
       setSignedIn(false);
-      /* Iter 9dq v142: returning user (heeft eerder al ingelogd op dit
-         toestel) → pre-fill email + default naar 'signin' mode. Voorkomt
-         dat ze worden gevraagd een account te "maken" voor een email die
-         ze al hebben. Eerste echte first-timers (geen LAST_EMAIL_KEY) zien
-         de standaard 'signup' mode. */
+      /* Iter v178 (2026-07-02): pre-fill email BEHOUDEN, maar setMode('signin')
+         VERWIJDERD. Reden: iter v176 heeft Sign in-mode volledig verwijderd
+         uit Subscribe. Er is geen mode-switcher meer, dus als code hier naar
+         'signin' zou wisselen zit user stuck in "Sign in to continue" scherm
+         — precies de regressie die operator meldde ("nieuwe klant kan geen
+         yearly/monthly kopen, want ziet Sign in ipv Create account").
+         K3-fix (iter v178) handelt duplicate-email server-side af: als user
+         met pre-filled email tap "Create account" en backend zegt "already
+         exists", volgt automatische sign-in poging met opgegeven wachtwoord. */
       const lastEmail = await getLastLoginEmail();
       if (cancelled) return;
       if (lastEmail) {
         setEmail(lastEmail);
-        /* Iter v168 (2026-06-28): bij pre-fill ÓÓK switchen naar signin-mode.
-           Operator-feedback: in 'New account' mode + pre-filled email + groene
-           'Looks good' suggereerde dat een nieuwe gebruiker net andermans
-           email aan het registreren was. Tap "Create account" → "already
-           exists" error → auto-switch alsnog. Beter: direct juist mode tonen.
-           Voor returning users: signin = correct (LAST_EMAIL = hun email).
-           Voor first-timers zonder pre-fill: signup blijft de default.
-           Mode-tabs bovenaan blijven beschikbaar voor wisselen. */
-        setMode('signin');
       }
     })();
     return () => {
