@@ -1570,9 +1570,34 @@ export default function AudioScreen() {
                     android_ripple={{ color: 'rgba(74,222,128,0.10)' }}
                     accessibilityLabel="Free picks — first session of every series"
                   >
-                    {/* Geen achtergrondfoto — groene tint + play-icoon
-                        in het midden zodat het visueel onderscheidt van
-                        de 5 echte pillar-cards eronder. */}
+                    {/* Iter v182 (2026-07-02): achtergrondfoto toegevoegd
+                        (Bunny CDN). Play-icoon overlay blijft in het midden
+                        + zwart-transparante gradient voor leesbaarheid van
+                        FREE-label en Free Picks tekst. */}
+                    <Image
+                      source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/free%20sessions.jpg' }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: 14,
+                      }}
+                      resizeMode="cover"
+                    />
+                    {/* Donkere gradient overlay onderaan voor tekst-contrast. */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.35)',
+                        borderRadius: 14,
+                      }}
+                    />
                     <View
                       style={{
                         position: 'absolute',
@@ -1587,9 +1612,9 @@ export default function AudioScreen() {
                           width: 56,
                           height: 56,
                           borderRadius: 28,
-                          backgroundColor: 'rgba(74,222,128,0.16)',
+                          backgroundColor: 'rgba(74,222,128,0.28)',
                           borderWidth: 1,
-                          borderColor: 'rgba(74,222,128,0.45)',
+                          borderColor: 'rgba(74,222,128,0.65)',
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
