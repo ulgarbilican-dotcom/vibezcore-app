@@ -1581,13 +1581,15 @@ export default function AccountScreen() {
         <Pressable
           style={s.activateBraceletCard}
           onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Activate your bracelet with your code"
+          accessibilityLabel="Smart Bead Bracelet delivered, activate it here"
         >
           <View style={s.activateBraceletCardInner}>
             <View style={s.activateBraceletCardTextWrap}>
-              <Text style={s.activateBraceletCardEyebrow}>ALREADY HAVE ONE</Text>
+              <Text style={s.activateBraceletCardEyebrow}>
+                SMART BEAD BRACELET DELIVERED?
+              </Text>
               <Text style={s.activateBraceletCardLabel}>
-                Activate your bracelet
+                Activate it here
               </Text>
               <Text style={s.activateBraceletCardSub}>
                 Enter your activation code to unlock your bracelet and (for
@@ -1596,6 +1598,21 @@ export default function AccountScreen() {
             </View>
             <Text style={s.activateBraceletCardArrow}>→</Text>
           </View>
+        </Pressable>
+
+        {/* Iter v187 (2026-07-02): externe link naar vibezcore.com voor
+            niet-eigenaars — Oura-stijl "learn more" onder de owner card.
+            Bracelet = fysiek product → mag extern gelinkt worden per Apple/
+            Google store richtlijnen (§3.1.1 fysieke product exemption). */}
+        <Pressable
+          style={s.learnMoreLink}
+          onPress={() => openExternal('https://www.vibezcore.com/')}
+          accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
+        >
+          <Text style={s.learnMoreLinkText}>
+            Don't have a Smart Bead Bracelet yet?{' '}
+            <Text style={s.learnMoreLinkAccent}>Learn more at vibezcore.com →</Text>
+          </Text>
         </Pressable>
 
         {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
@@ -1989,6 +2006,27 @@ const s = StyleSheet.create({
     fontSize: 26,
     fontFamily: BrandFonts.regular,
     lineHeight: 26,
+  },
+  /* Iter v187 (2026-07-02): "Don't have a Smart Bead Bracelet yet? Learn
+     more at vibezcore.com →" — externe link naar marketing site voor
+     niet-eigenaars. Subtiel: dim tekst, accent op link-gedeelte. */
+  learnMoreLink: {
+    marginTop: 4,
+    marginBottom: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  learnMoreLinkText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    textAlign: 'center',
+  },
+  learnMoreLinkAccent: {
+    color: Brand.accent,
+    fontFamily: BrandFonts.semibold,
   },
   authCardLabel: {
     color: 'rgba(255,255,255,0.55)',
