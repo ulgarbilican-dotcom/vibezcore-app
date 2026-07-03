@@ -1625,39 +1625,10 @@ export default function AudioScreen() {
                         borderRadius: 14,
                       }}
                     />
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: 36,
-                        left: 0,
-                        right: 0,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: 28,
-                          backgroundColor: 'rgba(74,222,128,0.28)',
-                          borderWidth: 1,
-                          borderColor: 'rgba(74,222,128,0.65)',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#4ade80',
-                            fontFamily: 'Inter_800ExtraBold',
-                            fontSize: 22,
-                            marginLeft: 3,
-                          }}
-                        >
-                          ▶
-                        </Text>
-                      </View>
-                    </View>
+                    {/* Iter v193 (2026-07-03): center play-badge weggehaald
+                        — operator-feedback foto 5: play icon moet naast
+                        "Free Picks" titel staan, niet centraal. Inline
+                        play-badge nu in de bottom-row (zie hieronder). */}
                     {/* FREE label — top-left, zoals "PILLAR 0X" op de
                         andere cards. */}
                     <Text
@@ -1685,34 +1656,62 @@ export default function AudioScreen() {
                         justifyContent: 'space-between',
                       }}
                     >
-                      <View>
-                        <Text
-                          style={[
-                            s.pillarName,
-                            {
-                              fontSize: 14,
-                              lineHeight: 17,
-                              color: '#fff',
-                              letterSpacing: -0.3,
-                            },
-                          ]}
-                          numberOfLines={2}
-                        >
-                          Free Picks
-                        </Text>
-                        <Text
+                      {/* Iter v193 (2026-07-03): play-badge inline naast
+                          titel ipv center overlay. Kleiner (36px) zodat
+                          hij niet met de tekst botst. */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View
                           style={{
-                            color: 'rgba(255,255,255,0.75)',
-                            fontFamily: 'Inter_500Medium',
-                            fontSize: 11,
-                            marginTop: 3,
-                            letterSpacing: 0.1,
-                            lineHeight: 14,
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: 'rgba(74,222,128,0.28)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(74,222,128,0.65)',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
-                          numberOfLines={1}
                         >
-                          Taste the library
-                        </Text>
+                          <Text
+                            style={{
+                              color: '#4ade80',
+                              fontFamily: 'Inter_800ExtraBold',
+                              fontSize: 14,
+                              marginLeft: 2,
+                            }}
+                          >
+                            ▶
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              s.pillarName,
+                              {
+                                fontSize: 14,
+                                lineHeight: 17,
+                                color: '#fff',
+                                letterSpacing: -0.3,
+                              },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            Free Picks
+                          </Text>
+                          <Text
+                            style={{
+                              color: 'rgba(255,255,255,0.75)',
+                              fontFamily: 'Inter_500Medium',
+                              fontSize: 11,
+                              marginTop: 3,
+                              letterSpacing: 0.1,
+                              lineHeight: 14,
+                            }}
+                            numberOfLines={1}
+                          >
+                            Taste the library
+                          </Text>
+                        </View>
                       </View>
                       <View
                         style={{

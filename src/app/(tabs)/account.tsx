@@ -190,27 +190,42 @@ function FreeEnvironmentCard() {
         <Text style={s.cardCtaArrow}>→</Text>
       </Pressable>
 
-      {/* Pad 2 — Activate your bracelet (DISABLED tot Sep 2026 KS) */}
-      <View style={[s.cardCta, { opacity: 0.55 }]}>
+      {/* Pad 2 — Activate your bracelet (ACTIVE)
+          Iter v193 (2026-07-03): actief gemaakt — ingelogde niet-owner
+          kan KS-code invoeren zodra bracelet arriveert. "Available from
+          September 2026" grijze staat was verwarrend voor early testers
+          + Kickstarter-backers die vroeg hun code krijgen. */}
+      <Pressable
+        style={s.cardCta}
+        onPress={() => router.push('/activate-bracelet' as never)}
+        accessibilityLabel="Activate your Smart Bead Bracelet"
+      >
         <View style={{ flex: 1 }}>
           <Text style={s.cardCtaText}>Activate your bracelet</Text>
-          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
-            Available from September 2026
+          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
+            Enter your activation code
           </Text>
         </View>
-        <Text style={[s.cardCtaArrow, { opacity: 0.5 }]}>—</Text>
-      </View>
+        <Text style={s.cardCtaArrow}>→</Text>
+      </Pressable>
 
-      {/* Pad 3 — Bundle (DISABLED tot Sep 2026 KS) */}
-      <View style={[s.cardCta, { opacity: 0.55 }]}>
+      {/* Pad 3 — Bundle info (ACTIVE, external)
+          Iter v193 (2026-07-03): links naar vibezcore.com voor Bundle
+          pre-order/KS-info (fysiek product = mag externe link per
+          store policy §3.1.1). */}
+      <Pressable
+        style={s.cardCta}
+        onPress={() => Linking.openURL('https://www.vibezcore.com/')}
+        accessibilityLabel="Get the Bundle — Bracelet plus Audio, opens vibezcore.com"
+      >
         <View style={{ flex: 1 }}>
           <Text style={s.cardCtaText}>Get the Bundle — Bracelet + Audio</Text>
-          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
-            Available from September 2026
+          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
+            Learn more at vibezcore.com
           </Text>
         </View>
-        <Text style={[s.cardCtaArrow, { opacity: 0.5 }]}>—</Text>
-      </View>
+        <Text style={s.cardCtaArrow}>→</Text>
+      </Pressable>
     </View>
   );
 }
@@ -380,20 +395,23 @@ function SubscriptionCard() {
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
-      {/* Iter v158: cross-sell naar bracelet voor audio-only users.
-          Disabled tot KS launch sept 2026 — duidelijke "coming soon"
-          framing zodat user weet wat de bedoeling is. Niet getoond
-          voor Full PRO / Bracelet-only users (zij weten al). */}
+      {/* Iter v193 (2026-07-03): cross-sell naar bracelet voor audio-only
+          users — actief gemaakt. Audio-PRO die z'n bracelet ontvangt kan
+          nu meteen activeren zonder te wachten op September 2026. */}
       {!isLoading && isPro && !isBraceletOwner && (
-        <View style={[s.cardCta, { opacity: 0.55 }]}>
+        <Pressable
+          style={s.cardCta}
+          onPress={() => router.push('/activate-bracelet' as never)}
+          accessibilityLabel="Activate your Smart Bead Bracelet"
+        >
           <View style={{ flex: 1 }}>
             <Text style={s.cardCtaText}>Got a bracelet? Activate your bracelet</Text>
-            <Text style={[s.subSmall, { marginTop: 2, opacity: 0.85 }]}>
-              Available from September 2026
+            <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
+              Enter your activation code
             </Text>
           </View>
-          <Text style={[s.cardCtaArrow, { opacity: 0.5 }]}>—</Text>
-        </View>
+          <Text style={s.cardCtaArrow}>→</Text>
+        </Pressable>
       )}
     </View>
   );

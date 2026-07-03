@@ -3093,6 +3093,85 @@ function BraceletHeader({
   );
 }
 
+/* Iter v193 (2026-07-03): inline tab bar voor idle Bracelet Control
+   screens (Connect + Charging). Repliceert de look van (tabs)/_layout.tsx
+   maar rendert INSIDE de bracelet-control screen (die buiten de tab-
+   navigator ligt en dus normaal geen tab bar toont).
+
+   Alleen renderen op idle states — NIET tijdens actieve sessie (daar
+   houden we full-screen focus, spec §6). 4 tabs identiek aan hoofd-nav:
+   Audio Library · Breath · Bracelet · Account.
+
+   Operator-feedback (foto 4, 2026-07-03): "onderaan geen tabbladeren
+   audio breathwork" op Connect-screen was verwarrend. Deze stub geeft
+   directe navigatie zonder eerst back → Bracelet-tab te hoeven. */
+function InlineBraceletTabBar({
+  current,
+}: {
+  current: '/' | '/breath' | '/bracelet' | '/account';
+}) {
+  const insets = useSafeAreaInsets();
+  const tabs: Array<{
+    path: '/' | '/breath' | '/bracelet' | '/account';
+    label: string;
+    glyph: string;
+  }> = [
+    { path: '/', label: 'Audio Library', glyph: '♪' },
+    { path: '/breath', label: 'Breath', glyph: '○' },
+    { path: '/bracelet', label: 'Bracelet', glyph: '◎' },
+    { path: '/account', label: 'Account', glyph: '○' },
+  ];
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: Brand.bg,
+        borderTopColor: Brand.border,
+        borderTopWidth: 1,
+        height: 64 + insets.bottom,
+        paddingBottom: 8 + insets.bottom,
+        paddingTop: 8,
+      }}
+    >
+      {tabs.map((t) => {
+        const focused = t.path === current;
+        return (
+          <Pressable
+            key={t.path}
+            onPress={() => router.navigate(t.path as never)}
+            accessibilityRole="button"
+            accessibilityLabel={t.label}
+            accessibilityState={{ selected: focused }}
+            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+            android_ripple={{ color: 'rgba(255,255,255,0.06)', borderless: true }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                color: focused ? Brand.text : Brand.textDim,
+                fontFamily: BrandFonts.regular,
+              }}
+            >
+              {t.glyph}
+            </Text>
+            <Text
+              style={{
+                fontSize: 11,
+                fontFamily: BrandFonts.semibold,
+                letterSpacing: 0.3,
+                color: focused ? Brand.text : Brand.textDim,
+                marginTop: 2,
+              }}
+            >
+              {t.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function BraceletControl() {
   const bracelet = getBracelet();
   const sim = getSimHooks(); // null on real hardware
@@ -3609,6 +3688,16 @@ export default function BraceletControl() {
 
   const onStop = async () => {
     setBusy(true);
+    /* Iter v193 (2026-07-03): hard-reset lokale UI direct zodat user
+       niet vast zit als sim/BLE status niet snel genoeg reageert.
+       Vorige versie wachtte op requestStatus() teruggave; als die
+       hangt of stale is blijft screen op active-view. Force nu
+       sessionActive=false in state vóór de async BLE-roundtrip;
+       de latere setStatus(st) mag dit corrigeren als de bracelet
+       daadwerkelijk nog actief is (edge case, zeldzaam). */
+    setStatus((prev) =>
+      prev ? { ...prev, sessionActive: false, remainingMinutes: 0 } : prev,
+    );
     try {
       await bracelet.sendCommand({
         mode: selectedMode,
@@ -3939,6 +4028,13 @@ export default function BraceletControl() {
             </Pressable>
           )}
         </View>
+        {/* Iter v193 (2026-07-03): inline tab bar op idle Connect screen.
+            Operator-feedback: geen tab bar onderaan was verwarrend want
+            user kon niet direct naar Audio Library / Breath / Account
+            zonder eerst back → Bracelet-tab. Full-screen focus houden
+            we alleen voor ACTIEVE sessies (active screen); Connect en
+            Charging zijn idle en krijgen de tab bar terug. */}
+        <InlineBraceletTabBar current="/bracelet" />
       </SafeAreaView>
     );
   }
@@ -4017,6 +4113,8 @@ export default function BraceletControl() {
           </View>
         </View>
         {__DEV__ && sim && <SimDemoBar sim={sim} />}
+        {/* Iter v193: inline tab bar op charging idle screen. */}
+        <InlineBraceletTabBar current="/bracelet" />
       </SafeAreaView>
     );
   }
@@ -4907,6 +5005,14 @@ export default function BraceletControl() {
           </Pressable>
         </Pressable>
       </Modal>
+      {/* Iter v193 (2026-07-03): tab bar op idle Choose Mode screen —
+          alleen wanneer géén sessie loopt en geen pause. Active-render
+          (sessionActive || isPaused) is een separate return-branch die
+          deze regel niet bereikt, dus geen risico op tab bar tijdens
+          actieve sessie. */}
+      {!sessionActive && !isPaused && (
+        <InlineBraceletTabBar current="/bracelet" />
+      )}
     </SafeAreaView>
   );
 }

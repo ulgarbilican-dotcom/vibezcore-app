@@ -49,9 +49,14 @@ async function loadOnce(): Promise<void> {
   return loadPromise;
 }
 
-/** Synchroon lezen (na initial load). Voor non-hook callers. */
+/** Synchroon lezen (na initial load). Voor non-hook callers.
+ *  Iter v193 (2026-07-03): __DEV__ guard weggehaald zodat de override
+ *  ook in productie gerespecteerd wordt door bracelet activation mock.
+ *  Zonder deze fix: activate → setDevUserOverride('bracelet') → maar
+ *  getDevUserOverride/useDevUserOverride retourneren null in prod →
+ *  useBraceletOwner() blijft false → Account tab toont "free environment"
+ *  ondanks succesvolle activatie. Root cause van vC 49 foto 1+2 bugs. */
 export function getDevUserOverride(): DevUserOverride {
-  if (!__DEV__) return null;
   return cached;
 }
 
@@ -72,7 +77,8 @@ export function subscribeDevUserOverride(
  *  wordt vóór de token-check beslist of welcome zichtbaar is. In prod
  *  resolved direct (geen override). */
 export function awaitDevUserOverrideLoaded(): Promise<void> {
-  if (!__DEV__) return Promise.resolve();
+  /* Iter v193 (2026-07-03): __DEV__ guard weg — welkomstscherm moet ook
+     in productie op de override wachten (activation-mock flow). */
   if (loaded) return Promise.resolve();
   return loadPromise ?? Promise.resolve();
 }
@@ -126,7 +132,8 @@ export function useDevUserOverride(): DevUserOverride {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return __DEV__ ? value : null;
+  /* Iter v193 (2026-07-03): __DEV__ guard weg — zie getDevUserOverride. */
+  return value;
 }
 
 /* ── Bracelet activation tracking (iter 9dq v89, 2026-06-03) ────────
@@ -225,7 +232,8 @@ export function useDevBraceletActivated(): boolean {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return __DEV__ ? value : false;
+  /* Iter v193 (2026-07-03): __DEV__ guard weg voor activation-mock. */
+  return value;
 }
 
 /* Iter 9dq v90 (2026-06-03): activation-flag GEEN auto-reset meer.
