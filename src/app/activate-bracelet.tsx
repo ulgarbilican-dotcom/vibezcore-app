@@ -20,7 +20,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { getToken } from '@/services/auth';
+import { getToken, signup } from '@/services/auth';
 import {
   activateBracelet,
   normalizeActivationCode,
@@ -45,20 +45,29 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 type Phase = 'form' | 'submitting' | 'success' | 'error';
 
+/** Simple email format check — same rule as subscribe.tsx. */
+function isValidEmail(v: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+
 export default function ActivateBraceletScreen() {
   const safeInsets = useSafeAreaInsets();
   const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  /* Iter 9dq v97 (2026-06-04): auth-guard. Backend
-     /api/bracelet/activate vereist Bearer-token; zonder login krijg je
-     401 → user heeft net 12 chars getypt voor niets. Hier blokkeren
-     we vóór de form: niet ingelogd → "Sign in first"-scherm met knop
-     naar /account. Dev-override 'bracelet'/'pro'/'audio' simuleert
-     signed-in en passeert (zelfde semantiek als useSubscription). */
+  /* Iter v183 (2026-07-02): "Sign in first"-gate verwijderd. Nu gecombineerde
+     form: als user niet ingelogd is toont het scherm email + password + code
+     inputs in één flow (bracelet als main product krijgt een volwaardige
+     signup flow, net als audio). Als user al ingelogd is: alleen code input.
+     Backend flow: signup(email, password) → activateBracelet(code) sequentieel.
+     Voor bestaande accounts (returning users met code): "Already have an
+     account? Sign in" link onderaan navigeert naar Account-tab. */
   const [authChecked, setAuthChecked] = useState(false);
-  const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,14 +80,14 @@ export default function ActivateBraceletScreen() {
         override === 'audio';
       if (overrideSignedIn) {
         if (!cancelled) {
-          setNeedsSignIn(false);
+          setIsSignedIn(true);
           setAuthChecked(true);
         }
         return;
       }
       const t = await getToken();
       if (!cancelled) {
-        setNeedsSignIn(!t);
+        setIsSignedIn(!!t);
         setAuthChecked(true);
       }
     })();
@@ -97,19 +106,46 @@ export default function ActivateBraceletScreen() {
   const onSubmit = async () => {
     setErrMsg(null);
     setPhase('submitting');
+
+    /* Iter v183 (2026-07-02): als user niet ingelogd is → eerst account
+       aanmaken via signup, dan pas code activeren. Bestaande signup helper
+       persisteert session-token in AsyncStorage → activateBracelet daarna
+       heeft direct auth-context. */
+    if (!isSignedIn) {
+      if (!isValidEmail(email)) {
+        setErrMsg('Enter a valid email address.');
+        setPhase('form');
+        return;
+      }
+      if (password.length < 8) {
+        setErrMsg('Password must be at least 8 characters.');
+        setPhase('form');
+        return;
+      }
+      const signupResult = await signup(email.trim(), password);
+      if (!signupResult.ok) {
+        const errBody =
+          typeof signupResult.error === 'string' ? signupResult.error : '';
+        if (
+          errBody.toLowerCase().includes('already') ||
+          errBody.toLowerCase().includes('exists')
+        ) {
+          setErrMsg(
+            'This email already has an account. Sign in first via the Account tab, then activate your bracelet.',
+          );
+        } else {
+          setErrMsg(errBody || 'Could not create account. Please try again.');
+        }
+        setPhase('form');
+        return;
+      }
+    }
+
     const result = await activateBracelet(code);
     if (result.ok) {
-      /* Iter 9dq v89 (2026-06-03): dev-flag setten zodat useBraceletOwner
-         na deze activation true returnt (samen met override = 'bracelet'
-         / 'pro'). Productie wordt afgehandeld door backend has_bracelet
-         in /api/subscription-status — die zet zichzelf na backend-
-         validatie van de code. */
       if (__DEV__) {
         await setDevBraceletActivated(true);
       }
-      /* Iter v177 (2026-07-02): auto-redirect na 1.2s vervangen door manual
-         "Open your bracelet" CTA. Matchet de subscribe-flow (v175): post-
-         success is emotioneel moment — user moet het kunnen absorberen. */
       setPhase('success');
       return;
     }
@@ -129,36 +165,9 @@ export default function ActivateBraceletScreen() {
     );
   }
 
-  /* ── Auth-guard: niet ingelogd ──────────────────────────────────
-     Geen token + geen override-simulatie van sign-in → blokkeer de
-     code-form. User moet eerst account aanmaken/inloggen anders
-     krijgt 'ie van backend toch 401. */
-  if (needsSignIn) {
-    return (
-      <SafeAreaView style={s.root}>
-        <Stack.Screen
-          options={{ title: 'Activate your bracelet', headerBackTitle: 'Back' }}
-        />
-        <View style={s.center}>
-          <View style={s.lockCircle}>
-            <Text style={s.lockText}>🔒</Text>
-          </View>
-          <Text style={s.gateTitle}>Sign in first</Text>
-          <Text style={s.gateSub}>
-            Your bracelet is linked to your VIBEZCORE account. Please sign
-            in or create an account before entering your activation code.
-          </Text>
-          <Pressable
-            style={s.btnPrimary}
-            onPress={() => router.replace('/account' as never)}
-            accessibilityLabel="Go to account sign in"
-          >
-            <Text style={s.btnPrimaryText}>Go to sign in</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  /* Iter v183 (2026-07-02): "Sign in first"-gate verwijderd. Vervangen door
+     één gecombineerd formulier hieronder waar user email + password + code
+     tegelijk invult. Backend flow: signup → activate in één submit. */
 
   /* ── Success-state ─────────────────────────────────────────────── */
   /* Iter v177 (2026-07-02): full confirmation screen met manual CTA — matcht
@@ -218,9 +227,61 @@ export default function ActivateBraceletScreen() {
       >
         <Text style={s.heading}>Activate your bracelet</Text>
         <Text style={s.sub}>
-          Enter the 12-character activation code from the email we sent
-          when your bracelet shipped.
+          {isSignedIn
+            ? 'Enter the 12-character activation code from the email we sent when your bracelet shipped.'
+            : 'Create your VIBEZCORE account and activate your bracelet in one step. Your bracelet is linked to this account for cross-device access.'}
         </Text>
+
+        {/* Iter v183 (2026-07-02): email + password inputs alleen tonen bij
+            niet-ingelogde users. Signed-in users zien direct code-field. */}
+        {!isSignedIn && (
+          <>
+            <Text style={s.label}>Email</Text>
+            <TextInput
+              style={s.inputEmail}
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                if (errMsg) setErrMsg(null);
+              }}
+              placeholder="you@example.com"
+              placeholderTextColor={Brand.textDim}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
+              editable={phase !== 'submitting'}
+            />
+
+            <Text style={s.label}>Password</Text>
+            <View style={s.pwWrap}>
+              <TextInput
+                style={s.inputPw}
+                value={password}
+                onChangeText={(v) => {
+                  setPassword(v);
+                  if (errMsg) setErrMsg(null);
+                }}
+                placeholder="At least 8 characters"
+                placeholderTextColor={Brand.textDim}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry={!showPw}
+                autoComplete="new-password"
+                textContentType="newPassword"
+                editable={phase !== 'submitting'}
+              />
+              <Pressable
+                onPress={() => setShowPw((v) => !v)}
+                hitSlop={8}
+                style={s.pwShow}
+              >
+                <Text style={s.pwShowText}>{showPw ? 'Hide' : 'Show'}</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
 
         <Text style={s.label}>Activation code</Text>
         <TextInput
@@ -252,9 +313,24 @@ export default function ActivateBraceletScreen() {
           {phase === 'submitting' ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={s.btnPrimaryText}>Activate</Text>
+            <Text style={s.btnPrimaryText}>
+              {isSignedIn ? 'Activate' : 'Create account & activate'}
+            </Text>
           )}
         </Pressable>
+
+        {!isSignedIn && (
+          <Pressable
+            onPress={() => router.replace('/account' as never)}
+            style={s.signInLink}
+            hitSlop={8}
+          >
+            <Text style={s.signInLinkText}>
+              Already have an account?{' '}
+              <Text style={s.signInLinkAccent}>Sign in first</Text>
+            </Text>
+          </Pressable>
+        )}
 
         <Text style={s.legal}>
           You'll find your activation code in the shipping confirmation
@@ -310,6 +386,67 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     letterSpacing: 2,
     textAlign: 'center',
+  },
+  /* Iter v183 (2026-07-02): email input met minder letterSpacing en
+     left-aligned (email is niet spaced-uppercase zoals de code). */
+  inputEmail: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0,
+  },
+  /* Password wrap: input met Show-button rechts. */
+  pwWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  inputPw: {
+    backgroundColor: Brand.panel,
+    borderColor: Brand.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingLeft: 14,
+    paddingRight: 70, /* ruimte voor Show-button */
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0,
+  },
+  pwShow: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  pwShowText: {
+    color: Brand.accent,
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.3,
+  },
+  signInLink: {
+    marginTop: 18,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  signInLinkText: {
+    color: Brand.textDim,
+    fontSize: 13.5,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+  },
+  signInLinkAccent: {
+    color: Brand.accent,
+    fontFamily: BrandFonts.bold,
   },
   err: {
     color: Brand.error,
