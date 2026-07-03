@@ -1835,39 +1835,34 @@ export default function BraceletScreen() {
           </View>
         </Pressable>
 
-        {/* Iter v188 (2026-07-02): externe "Learn more at vibezcore.com"
-            link — Oura-stijl voor niet-eigenaars. Bracelet = fysiek
-            product → mag extern gelinkt worden per Apple/Google store
-            policy. */}
+        {/* Iter v190 (2026-07-02): externe "Learn more" link opgewaardeerd
+            van tekst-link naar volwaardige card (parallel aan de Activate
+            card boven). Operator-feedback: was te klein/afwezig, voelde
+            onbelangrijk. Bracelet = fysiek product → mag extern gelinkt
+            worden per Apple/Google store policy §3.1.1 physical exemption. */}
         <Pressable
-          style={s.learnMoreLink}
+          style={s.learnMoreCard}
           onPress={() => openExternal('https://www.vibezcore.com/')}
           accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
         >
-          <Text style={s.learnMoreLinkText}>
-            Don't have a Smart Bead Bracelet yet?{' '}
-            <Text style={s.learnMoreLinkAccent}>
-              Learn more at vibezcore.com →
-            </Text>
-          </Text>
+          <View style={s.learnMoreCardInner}>
+            <View style={s.learnMoreCardTextWrap}>
+              <Text style={s.learnMoreCardEyebrow}>NEW TO VIBEZCORE?</Text>
+              <Text style={s.learnMoreCardLabel}>
+                Don't have a Smart Bead Bracelet yet?
+              </Text>
+              <Text style={s.learnMoreCardSub}>
+                Learn more about the product at vibezcore.com — opens in your browser.
+              </Text>
+            </View>
+            <Text style={s.learnMoreCardArrow}>→</Text>
+          </View>
         </Pressable>
 
-        {/* Iter v149 v3 (2026-06-25): preview-CTA voor uitgelogde users —
-            geen sign-in wall, gewoon verkennen wat de 5 states doen.
-            Operator-feedback punt 1. Discreter dan de Activate-card omdat
-            het info-only is, geen actie. */}
-        <Pressable
-          style={s.previewBraceletEntry}
-          onPress={() => router.push('/bracelet-preview' as never)}
-          accessibilityLabel="See how the bracelet works"
-        >
-          <Text style={s.previewBraceletEntryText}>
-            Just curious?{' '}
-            <Text style={s.previewBraceletEntryLink}>
-              See how it works →
-            </Text>
-          </Text>
-        </Pressable>
+        {/* Iter v190 (2026-07-02): "Just curious? See how it works →" link
+            verwijderd. Was redundant met TRY IT NOW · Preview the bracelet
+            app card hierboven en met de Activate card. Operator-feedback:
+            twee ingangen naar preview + activate creëert cognitieve overload. */}
         </>
         )}
 
@@ -1930,25 +1925,10 @@ export default function BraceletScreen() {
             user niet ingelogd.
             Iter 9q: ook verbergen voor owners (die zijn al ingelogd
             EN hebben geen sign-in-link nodig). */}
-        {/* Iter v185 (2026-07-02): copy uniform gemaakt met welcome.tsx:
-            "Already have a product? Sign in" — universeler dan "account"
-            (users herkennen "product" = hun bracelet of subscription,
-            "account" is te app-technisch). Zelfde tekst overal betekent
-            hetzelfde signaal → geen verwarring welke entry-point te
-            gebruiken. Activation entry zit prominent in de "ALREADY HAVE
-            ONE"-card hierboven, niet in deze sign-in link. */}
-        {isSignedIn === false && !isBraceletOwner && (
-          <Pressable
-            style={s.signInLink}
-            onPress={() => router.navigate('/account')}
-            accessibilityLabel="Sign in if you are already a VIBEZCORE member"
-          >
-            <Text style={s.signInLinkText}>
-              Already a member of VIBEZCORE?{' '}
-              <Text style={s.signInLinkAccent}>Sign in →</Text>
-            </Text>
-          </Pressable>
-        )}
+        {/* Iter v190 (2026-07-02): sign-in link verwijderd van Bracelet tab.
+            Sign-in intent hoort op Account tab. Bracelet tab = preview/purchase
+            context, geen returning-member intent. Bottom nav → Account tab is
+            1 tap voor wie wil inloggen. */}
       </ScrollView>
 
       {/* ── Edition-detail overlay ──────────────────────────────────────
@@ -2170,24 +2150,56 @@ const s = StyleSheet.create({
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
   },
-  /* Iter v188 (2026-07-02): Learn-more externe link naar vibezcore.com. */
-  learnMoreLink: {
-    marginTop: 4,
-    marginBottom: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    alignItems: 'center',
+  /* Iter v190 (2026-07-02): Learn-more upgraded van inline text-link naar
+     volwaardige card (parallel aan Activate card boven). Border-tint iets
+     lichter dan Activate zodat hiërarchie duidelijk blijft (Activate =
+     primair, Learn more = secundair). */
+  learnMoreCard: {
+    marginTop: 6,
+    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
-  learnMoreLinkText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 13,
+  learnMoreCardInner: {
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  learnMoreCardTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  learnMoreCardEyebrow: {
+    color: Brand.textDim,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  learnMoreCardLabel: {
+    color: Brand.text,
+    fontSize: 15,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.15,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  learnMoreCardSub: {
+    color: Brand.textDim,
+    fontSize: 12,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
-    textAlign: 'center',
+    lineHeight: 17,
   },
-  learnMoreLinkAccent: {
-    color: Brand.accent,
-    fontFamily: BrandFonts.semibold,
+  learnMoreCardArrow: {
+    color: 'rgba(255,255,255,0.60)',
+    fontSize: 22,
+    fontFamily: BrandFonts.regular,
   },
 
   /* Free Breathwork discovery card — v4 (2026-06-05): full-bleed hero

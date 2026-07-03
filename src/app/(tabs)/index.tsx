@@ -1586,9 +1586,11 @@ export default function AudioScreen() {
                     {/* Iter v182 (2026-07-02): achtergrondfoto toegevoegd
                         (Bunny CDN). Play-icoon overlay blijft in het midden
                         + zwart-transparante gradient voor leesbaarheid van
-                        FREE-label en Free Picks tekst. */}
-                    <Image
-                      source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/free%20sessions.jpg' }}
+                        FREE-label en Free Picks tekst.
+                        Iter v190 (2026-07-02): foto verschoven omhoog zodat
+                        het onderwerp (man) mooi in lijn ligt met de figuur in
+                        Pillar 05 tile ernaast. */}
+                    <View
                       style={{
                         position: 'absolute',
                         top: 0,
@@ -1596,9 +1598,21 @@ export default function AudioScreen() {
                         right: 0,
                         bottom: 0,
                         borderRadius: 14,
+                        overflow: 'hidden',
                       }}
-                      resizeMode="cover"
-                    />
+                    >
+                      <Image
+                        source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/free%20sessions.jpg' }}
+                        style={{
+                          position: 'absolute',
+                          top: -40,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                        }}
+                        resizeMode="cover"
+                      />
+                    </View>
                     {/* Donkere gradient overlay onderaan voor tekst-contrast. */}
                     <View
                       style={{

@@ -1571,10 +1571,21 @@ export default function AccountScreen() {
 
         {/* Iter v188 (2026-07-02): bracelet-content VERWIJDERD van Account
             tab. Verplaatst naar Bracelet tab waar het contextueel hoort.
-            Account tab wordt cleaner met alleen Sign in + Get Started +
-            Invite + Legal. Bracelet-owner first-time gaat via welcome →
-            "Explore Smart Bead Bracelet" → Bracelet tab → Activate card.
-            Elk tab één primaire purpose. */}
+
+            Iter v190 (2026-07-02): kleine directe link toegevoegd voor
+            bracelet-owner first-time die "Already a member? Sign in" tapt
+            en dan geen account blijkt te hebben. Route rechtstreeks naar
+            /activate-bracelet (form heeft email + password + code combined). */}
+        <Pressable
+          style={s.activateBraceletShortcut}
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+          accessibilityLabel="Just received your Smart Bead Bracelet, activate it here"
+        >
+          <Text style={s.activateBraceletShortcutText}>
+            Just received your Smart Bead Bracelet?{' '}
+            <Text style={s.activateBraceletShortcutAccent}>Activate it here →</Text>
+          </Text>
+        </Pressable>
 
         {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
             een echte sectie-header. Operator-feedback: 'sign up CTA om aan
@@ -2334,6 +2345,32 @@ const s = StyleSheet.create({
   /* Iter v172 (2026-06-29): inline activate-bracelet link onder
      productcards. Sober, niet visueel zwaar — voor backers die hun
      code zoeken. Operator-feedback: was bovenaan verwarrend. */
+  /* Iter v190 (2026-07-02): compacte activate-shortcut voor Account tab
+     uitgelogd. Route direct naar /activate-bracelet ipv naar Bracelet tab. */
+  activateBraceletShortcut: {
+    marginTop: 14,
+    marginBottom: 6,
+    marginHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(58,143,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.22)',
+    alignItems: 'center',
+  },
+  activateBraceletShortcutText: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  activateBraceletShortcutAccent: {
+    color: Brand.accent,
+    fontFamily: BrandFonts.bold,
+  },
   activateBraceletInline: {
     marginTop: 14,
     paddingVertical: 12,
