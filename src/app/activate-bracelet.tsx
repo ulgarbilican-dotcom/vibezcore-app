@@ -29,6 +29,7 @@ import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
   setDevBraceletActivated,
+  setDevUserOverride,
 } from '@/utils/dev-user-override';
 import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -58,6 +59,7 @@ export default function ActivateBraceletScreen() {
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [isBundle, setIsBundle] = useState(false);
 
   /* Iter v183 (2026-07-02): "Sign in first"-gate verwijderd. Nu gecombineerde
      form: als user niet ingelogd is toont het scherm email + password + code
@@ -143,8 +145,13 @@ export default function ActivateBraceletScreen() {
 
     const result = await activateBracelet(code);
     if (result.ok) {
-      if (__DEV__) {
-        await setDevBraceletActivated(true);
+      /* Iter v191 (2026-07-03): __DEV__ guard weggehaald zodat mock-state
+         ook in productie werkt. Bij bundle-code (model === 'bundle') zet
+         ook de audio-override zodat Audio Library naar PRO switcht. */
+      await setDevBraceletActivated(true);
+      if (result.model === 'bundle') {
+        await setDevUserOverride('pro');
+        setIsBundle(true);
       }
       setPhase('success');
       return;
@@ -181,7 +188,9 @@ export default function ActivateBraceletScreen() {
           <View style={s.checkCircle}>
             <Text style={s.checkText}>✓</Text>
           </View>
-          <Text style={s.doneTitle}>Bracelet activated</Text>
+          <Text style={s.doneTitle}>
+            {isBundle ? 'Bundle activated' : 'Bracelet activated'}
+          </Text>
           <Text style={s.doneThanks}>Welcome to VIBEZCORE.</Text>
 
           <View style={s.donePerks}>
@@ -189,14 +198,20 @@ export default function ActivateBraceletScreen() {
             <Text style={s.donePerkLine}>· 5 haptic session modes</Text>
             <Text style={s.donePerkLine}>· Full bracelet controls in the app</Text>
             <Text style={s.donePerkLine}>· Session history and progress tracking</Text>
+            {isBundle && (
+              <>
+                <Text style={s.donePerkLine}>· 144 audio sessions across 4 pillars</Text>
+                <Text style={s.donePerkLine}>· 1 year of Audio Library access</Text>
+              </>
+            )}
           </View>
 
           <Pressable
             style={s.doneBtn}
             onPress={() => router.replace('/bracelet-control' as never)}
-            accessibilityLabel="Open your bracelet control screen"
+            accessibilityLabel="Open Bracelet Control screen"
           >
-            <Text style={s.doneBtnText}>Open your bracelet</Text>
+            <Text style={s.doneBtnText}>Open Bracelet Control</Text>
           </Pressable>
 
           <Text style={s.doneFooter}>

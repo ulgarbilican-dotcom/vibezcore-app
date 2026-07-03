@@ -77,11 +77,13 @@ export function awaitDevUserOverrideLoaded(): Promise<void> {
   return loadPromise ?? Promise.resolve();
 }
 
-/** Set override + persist + broadcast. */
+/** Set override + persist + broadcast.
+ *  Iter v191 (2026-07-03): __DEV__ guard weggehaald — bracelet activation
+ *  mock heeft dit nodig in productie om bundle-owner state te simuleren
+ *  totdat backend endpoint /api/bracelet/activate live is. */
 export async function setDevUserOverride(
   value: DevUserOverride,
 ): Promise<void> {
-  if (!__DEV__) return;
   const prev = cached;
   cached = value;
   notify();
@@ -194,7 +196,10 @@ async function loadActivationOnce(): Promise<void> {
 }
 
 export async function setDevBraceletActivated(value: boolean): Promise<void> {
-  if (!__DEV__) return;
+  /* Iter v191 (2026-07-03): __DEV__ guard weggehaald zodat activation-mock
+     ook in productie de state daadwerkelijk switcht naar bracelet-owner.
+     Bij live backend endpoint: deze functie niet meer nodig — backend zet
+     has_bracelet_activated in /api/subscription-status. */
   activatedCached = value;
   notifyActivation();
   try {

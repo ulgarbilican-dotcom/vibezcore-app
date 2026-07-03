@@ -152,11 +152,16 @@ export async function activateBracelet(
         message: 'This code is not valid. Check the email we sent you.',
       };
     }
+    /* Iter v191 (2026-07-03): bundle mock support. Codes eindigend op
+       "BUNDLE" simuleren bundle-activation (bracelet + 1 jaar audio).
+       Andere codes = bracelet-only. In productie backend detecteert dit
+       via code-type in database. */
+    const isBundle = stripped.endsWith('BUNDLE');
     refreshSubscription();
     return {
       ok: true,
       activatedAt: new Date().toISOString(),
-      model: 'kickstarter',
+      model: isBundle ? 'bundle' : 'kickstarter',
     };
 
     /* Productie-pad — vervang bovenstaande mock zodra endpoint live is:
