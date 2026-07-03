@@ -251,10 +251,10 @@ export const SERIES_PHOTO: Record<string,string> = {
   'Power & Human Nature':      'https://vibezcore-audio.b-cdn.net/images/machiavelli.jpg',
   'Attachment':                'https://vibezcore-audio.b-cdn.net/images/attachment.jpg',
   'Dignity':                   'https://vibezcore-audio.b-cdn.net/images/Dignity.jpg',
-  'Daily Discipline':          'https://vibezcore-audio.b-cdn.net/images/daily%20discipline.jpg',
+  'Daily Discipline':          'https://vibezcore-audio.b-cdn.net/images/Jim%20Rohn.png',
   /* — Pillar: Strategic Execution & Wealth — */
   'Wealth Psychology':         'https://vibezcore-audio.b-cdn.net/images/wealth%20psychology.jpg',
-  'Iron Discipline':           'https://vibezcore-audio.b-cdn.net/images/Iron%20discipline.jpg',
+  'Iron Discipline':           'https://vibezcore-audio.b-cdn.net/images/Iron%20Discipline%20new.jpg',
   'Purpose & Mission':         'https://vibezcore-audio.b-cdn.net/images/puprose%20and%20mission.jpg',
 };
 

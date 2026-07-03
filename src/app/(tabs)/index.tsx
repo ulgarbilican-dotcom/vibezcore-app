@@ -1602,10 +1602,10 @@ export default function AudioScreen() {
                       }}
                     >
                       <Image
-                        source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/free%20sessions.jpg' }}
+                        source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/free%20sessions%20new.jpg' }}
                         style={{
                           position: 'absolute',
-                          top: -40,
+                          top: 0,
                           left: 0,
                           right: 0,
                           bottom: 0,
