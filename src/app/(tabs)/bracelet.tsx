@@ -1816,23 +1816,40 @@ export default function BraceletScreen() {
         <Pressable
           style={s.activateBraceletEntry}
           onPress={() => router.push('/activate-bracelet')}
-          accessibilityLabel="Activate your bracelet with a code"
+          accessibilityLabel="Already have your Smart Bead Bracelet, activate it here"
         >
           <View style={s.activateBraceletEntryInner}>
             <View style={s.activateBraceletEntryTextWrap}>
               <Text style={s.activateBraceletEntryEyebrow}>
-                Already have one
+                ALREADY HAVE YOUR SMART BEAD BRACELET?
               </Text>
               <Text style={s.activateBraceletEntryLabel}>
-                Activate your bracelet
+                Activate it here
               </Text>
               <Text style={s.activateBraceletEntryTitle}>
-                Enter your activation code to unlock your bracelet and
-                (for bundle owners) 1 year of audio library.
+                Enter your activation code. Bundle owners get 1 year of
+                Audio Library too.
               </Text>
             </View>
             <Text style={s.activateBraceletEntryArrow}>→</Text>
           </View>
+        </Pressable>
+
+        {/* Iter v188 (2026-07-02): externe "Learn more at vibezcore.com"
+            link — Oura-stijl voor niet-eigenaars. Bracelet = fysiek
+            product → mag extern gelinkt worden per Apple/Google store
+            policy. */}
+        <Pressable
+          style={s.learnMoreLink}
+          onPress={() => openExternal('https://www.vibezcore.com/')}
+          accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
+        >
+          <Text style={s.learnMoreLinkText}>
+            Don't have a Smart Bead Bracelet yet?{' '}
+            <Text style={s.learnMoreLinkAccent}>
+              Learn more at vibezcore.com →
+            </Text>
+          </Text>
         </Pressable>
 
         {/* Iter v149 v3 (2026-06-25): preview-CTA voor uitgelogde users —
@@ -1924,10 +1941,10 @@ export default function BraceletScreen() {
           <Pressable
             style={s.signInLink}
             onPress={() => router.navigate('/account')}
-            accessibilityLabel="Sign in if you already have a VIBEZCORE product"
+            accessibilityLabel="Sign in if you are already a VIBEZCORE member"
           >
             <Text style={s.signInLinkText}>
-              Already have a product?{' '}
+              Already a member of VIBEZCORE?{' '}
               <Text style={s.signInLinkAccent}>Sign in →</Text>
             </Text>
           </Pressable>
@@ -2150,6 +2167,25 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
   },
   signInLinkAccent: {
+    color: Brand.accent,
+    fontFamily: BrandFonts.semibold,
+  },
+  /* Iter v188 (2026-07-02): Learn-more externe link naar vibezcore.com. */
+  learnMoreLink: {
+    marginTop: 4,
+    marginBottom: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  learnMoreLinkText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.1,
+    textAlign: 'center',
+  },
+  learnMoreLinkAccent: {
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
   },

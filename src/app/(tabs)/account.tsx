@@ -1569,51 +1569,12 @@ export default function AccountScreen() {
 
         </View>
 
-        {/* Iter v186 (2026-07-02): Activate-bracelet card VERPLAATST naar
-            direct onder Sign in — vóór Get Started. Reden: bracelet-owners
-            die net hun code kregen en NOOIT eerder in de app waren, komen
-            binnen via welcome "Already have a product? Sign in". Landen op
-            Account tab → zien Sign in bovenaan (werkt niet want geen account
-            yet) → moeten Activate-card gebruiken. Die stond onder Get Started
-            = te ver naar beneden. Nu direct visible na Sign in form.
-            Hiërarchie: (1) returning user → Sign in, (2) bracelet-owner
-            first-time → Activate, (3) nieuwe bezoeker → Get Started. */}
-        <Pressable
-          style={s.activateBraceletCard}
-          onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Smart Bead Bracelet delivered, activate it here"
-        >
-          <View style={s.activateBraceletCardInner}>
-            <View style={s.activateBraceletCardTextWrap}>
-              <Text style={s.activateBraceletCardEyebrow}>
-                SMART BEAD BRACELET DELIVERED?
-              </Text>
-              <Text style={s.activateBraceletCardLabel}>
-                Activate it here
-              </Text>
-              <Text style={s.activateBraceletCardSub}>
-                Enter your activation code to unlock your bracelet and (for
-                bundle owners) 1 year of audio library.
-              </Text>
-            </View>
-            <Text style={s.activateBraceletCardArrow}>→</Text>
-          </View>
-        </Pressable>
-
-        {/* Iter v187 (2026-07-02): externe link naar vibezcore.com voor
-            niet-eigenaars — Oura-stijl "learn more" onder de owner card.
-            Bracelet = fysiek product → mag extern gelinkt worden per Apple/
-            Google store richtlijnen (§3.1.1 fysieke product exemption). */}
-        <Pressable
-          style={s.learnMoreLink}
-          onPress={() => openExternal('https://www.vibezcore.com/')}
-          accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
-        >
-          <Text style={s.learnMoreLinkText}>
-            Don't have a Smart Bead Bracelet yet?{' '}
-            <Text style={s.learnMoreLinkAccent}>Learn more at vibezcore.com →</Text>
-          </Text>
-        </Pressable>
+        {/* Iter v188 (2026-07-02): bracelet-content VERWIJDERD van Account
+            tab. Verplaatst naar Bracelet tab waar het contextueel hoort.
+            Account tab wordt cleaner met alleen Sign in + Get Started +
+            Invite + Legal. Bracelet-owner first-time gaat via welcome →
+            "Explore Smart Bead Bracelet" → Bracelet tab → Activate card.
+            Elk tab één primaire purpose. */}
 
         {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
             een echte sectie-header. Operator-feedback: 'sign up CTA om aan

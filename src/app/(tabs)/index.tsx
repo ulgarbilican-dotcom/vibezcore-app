@@ -295,8 +295,11 @@ function SessionRow({
      waarvoor het onderscheid niet relevant is. */
   hideTag?: boolean;
 }) {
+  /* Iter v188 (2026-07-02): opacity-dimming voor PRO sessies verwijderd.
+     User kan wel 60-sec preview afspelen, dus "gedimd" is verwarrend.
+     PRO-badge blijft de visuele indicator (via tierBadgeLabel). */
   return (
-    <Pressable style={[s.libRow, !canPlay && s.libRowLocked]} onPress={onPress}>
+    <Pressable style={s.libRow} onPress={onPress}>
       <View style={s.libRowArt}>
         {photo ? <Image source={{ uri: photo }} style={s.libRowArtImg} /> : null}
         <View style={[s.libRowPlay, isActive && s.libRowPlayActive]}>
@@ -308,16 +311,18 @@ function SessionRow({
               style={StyleSheet.absoluteFill}
             />
           ) : null}
-          {!canPlay ? (
-            <Text style={s.libRowPlayGlyph}>🔒</Text>
-          ) : (
-            /* FIX 10: SVG-shape glyph ipv tekst — strakke proporties. */
-            <PlayPauseGlyph
-              size={16}
-              color="#ffffff"
-              playing={isActive && isPlaying}
-            />
-          )}
+          {/* Iter v188 (2026-07-02): 🔒-slot verwijderd voor PRO sessies.
+              Operator-feedback: slot suggereert "kan niet openen", maar user
+              kan wel 60-sec preview afspelen. Verwarrend. Nu: gewone
+              play-icon op ALLE sessies (professioneel + duidelijk dat je kan
+              afspelen). PRO-badge (via tierBadgeLabel elders) blijft de
+              indicator dat het een preview-only sessie is. Player toont
+              "Preview" state met countdown wanneer preview-modus actief is. */}
+          <PlayPauseGlyph
+            size={16}
+            color="#ffffff"
+            playing={isActive && isPlaying}
+          />
         </View>
       </View>
       <View style={{ flex: 1 }}>

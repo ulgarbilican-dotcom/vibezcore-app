@@ -198,7 +198,7 @@ export default function WelcomeScreen() {
             hitSlop={12}
             style={s.signinHit}
           >
-            <Text style={s.signinText}>Already have a product? Sign in</Text>
+            <Text style={s.signinText}>Already a member of VIBEZCORE? Sign in</Text>
           </Pressable>
         </View>
       </SafeAreaView>
