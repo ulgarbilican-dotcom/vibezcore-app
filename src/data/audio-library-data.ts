@@ -29,7 +29,7 @@ export type Session = {
 };
 export type Series = { name:string; sessions:Session[] };
 
-export const SERIES_ORDER: string[] = ['Master Mental Clarity', 'Beast Mode', 'The Inner Blueprint', 'Daily Affirmations Power', 'Meaning Over Comfort', 'Journey to Success', 'Life After Betrayal', 'Identity & Wealth', 'The Freedom Formula', 'The Stoic Mind', 'Fight Or Flight', 'Soundscapes', 'The Father Wound', 'The Mother Wound', 'Time, Death & Legacy', 'Become Who You Are', 'Meaning Through Suffering', 'The Way Of Wu Wei', 'Power & Human Nature', 'Attachment', 'Dignity', 'Daily Discipline', 'Wealth Psychology', 'Iron Discipline', 'Purpose & Mission'];
+export const SERIES_ORDER: string[] = ['Master Mental Clarity', 'Beast Mode', 'The Inner Blueprint', 'Daily Affirmations Power', 'Meaning Over Comfort', 'Journey to Success', 'Life After Betrayal', 'Identity & Wealth', 'The Freedom Formula', 'The Stoic Mind', 'Fight Or Flight', 'Soundscapes', 'The Father Wound', 'The Mother Wound', 'Time, Death & Legacy', 'Become Who You Are', 'Meaning Through Suffering', 'The Way Of Wu Wei', 'Power & Human Nature', 'Attachment', 'Dignity', 'Daily Discipline', 'Wealth Psychology', 'Discipline', 'Purpose & Mission'];
 
 export const SESSIONS: Session[] = [
   { title:'Neural State Control', series:'Master Mental Clarity', subseries:'', free:true, desc:'Learn how to direct your mind instead of chasing it.', num:'01', url:'https://vibezcore-audio.b-cdn.net/Andrew_Huberman_1._Neural_State_Control_How_to_Direct_Your_Mind_Instead_of_Chasing_It_osg0uy.mp3.mp3', added:'2026-05-06' },
@@ -207,11 +207,11 @@ export const SESSIONS: Session[] = [
   { title:'The Wealthy Identity', series:'Wealth Psychology', subseries:'', free:false, desc:'Become it before you build it.', num:'05', url:'https://vibezcore-audio.b-cdn.net/audio-new/11.%20ADLER%2005.%20The%20Wealthy%20Identity.mp3', added:'2026-06-13', accessTier:'pro' },
 
   /* ── Pijler 4: VIBEZCORE Original — Iron Discipline ── */
-  { title:'The Standard You Refuse To Drop', series:'Iron Discipline', subseries:'', free:true, desc:'The floor does not move. You hold it.', num:'01', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2001.%20The%20Standard%20You%20Refuse%20To%20Drop.mp3', added:'2026-06-13', accessTier:'public' },
-  { title:'Voluntary Hardness', series:'Iron Discipline', subseries:'', free:false, desc:'Choose the hard thing. Before life chooses for you.', num:'02', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2002.%20Voluntary%20Hardness.mp3', added:'2026-06-13', accessTier:'pro' },
-  { title:'The Body That Carries Everything', series:'Iron Discipline', subseries:'', free:false, desc:'The body is substrate. Train the carrier.', num:'03', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2003.%20The%20Body%20That%20Carries%20Everything.mp3', added:'2026-06-13', accessTier:'pro' },
-  { title:'The Hard Year You Have Not Yet Met', series:'Iron Discipline', subseries:'', free:false, desc:'Build reserves before the year arrives.', num:'04', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2004.%20The%20Hard%20Year%20You%20Have%20Not%20Yet%20Met.mp3', added:'2026-06-13', accessTier:'pro' },
-  { title:'The Hardness That Protects What You Love', series:'Iron Discipline', subseries:'', free:false, desc:'Strength for them. Made operational through you.', num:'05', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2005.%20The%20Hardness%20That%20Protects%20What%20You%20Love.mp3', added:'2026-06-13', accessTier:'pro' },
+  { title:'The Standard You Refuse To Drop', series:'Discipline', subseries:'', free:true, desc:'The floor does not move. You hold it.', num:'01', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2001.%20The%20Standard%20You%20Refuse%20To%20Drop.mp3', added:'2026-06-13', accessTier:'public' },
+  { title:'Voluntary Hardness', series:'Discipline', subseries:'', free:false, desc:'Choose the hard thing. Before life chooses for you.', num:'02', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2002.%20Voluntary%20Hardness.mp3', added:'2026-06-13', accessTier:'pro' },
+  { title:'The Body That Carries Everything', series:'Discipline', subseries:'', free:false, desc:'The body is substrate. Train the carrier.', num:'03', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2003.%20The%20Body%20That%20Carries%20Everything.mp3', added:'2026-06-13', accessTier:'pro' },
+  { title:'The Hard Year You Have Not Yet Met', series:'Discipline', subseries:'', free:false, desc:'Build reserves before the year arrives.', num:'04', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2004.%20The%20Hard%20Year%20You%20Have%20Not%20Yet%20Met.mp3', added:'2026-06-13', accessTier:'pro' },
+  { title:'The Hardness That Protects What You Love', series:'Discipline', subseries:'', free:false, desc:'Strength for them. Made operational through you.', num:'05', url:'https://vibezcore-audio.b-cdn.net/audio-new/17.%20%20Iron%20Discipline%2005.%20The%20Hardness%20That%20Protects%20What%20You%20Love.mp3', added:'2026-06-13', accessTier:'pro' },
 
   /* ── Pijler 4: VIBEZCORE Original — Purpose & Mission ── */
   { title:'The Quiet Stagnation', series:'Purpose & Mission', subseries:'', free:true, desc:'Life stopped moving. Restart it.', num:'01', url:'https://vibezcore-audio.b-cdn.net/audio-new/2.%20Purpose%20%26%20Mission%2001.%20The%20Quiet%20Stagnation.mp3', added:'2026-06-13', accessTier:'public' },
@@ -254,7 +254,7 @@ export const SERIES_PHOTO: Record<string,string> = {
   'Daily Discipline':          'https://vibezcore-audio.b-cdn.net/images/Jim%20Rohn.png',
   /* — Pillar: Strategic Execution & Wealth — */
   'Wealth Psychology':         'https://vibezcore-audio.b-cdn.net/images/wealth%20psychology.jpg',
-  'Iron Discipline':           'https://vibezcore-audio.b-cdn.net/images/Iron%20Discipline%20new.jpg',
+  'Discipline':           'https://vibezcore-audio.b-cdn.net/images/Iron%20Discipline%20new.jpg',
   'Purpose & Mission':         'https://vibezcore-audio.b-cdn.net/images/puprose%20and%20mission.jpg',
 };
 
@@ -306,7 +306,7 @@ export const SERIES_SUBTITLE: Record<string,string> = {
   'Dignity':                     'IMMANUEL KANT INSPIRED SERIES',
   'Daily Discipline':            'JIM ROHN INSPIRED SERIES',
   'Wealth Psychology':           'ALFRED ADLER INSPIRED SERIES',
-  'Iron Discipline':             'VIBEZCORE ORIGINAL SERIES',
+  'Discipline':             'VIBEZCORE ORIGINAL SERIES',
   'Purpose & Mission':           'VIBEZCORE ORIGINAL SERIES',
 };
 
@@ -379,7 +379,7 @@ export const SERIES_PILLAR: Record<string, Pillar> = {
   'Journey to Success':       'drive',
   'Beast Mode':               'drive',
   'Wealth Psychology':        'drive',
-  'Iron Discipline':          'drive',
+  'Discipline':          'drive',
   'Purpose & Mission':        'drive',
   'Daily Affirmations Power': 'tools',
   'Soundscapes':              'tools',
@@ -394,7 +394,7 @@ export const PILLAR_SERIES_ORDER: Record<Pillar, string[]> = {
      elke pijler: nieuwe binnenkomer aan het eind, rest ongewijzigd. */
   sovereignty: ['Meaning Over Comfort', 'The Stoic Mind', 'The Freedom Formula', 'Time, Death & Legacy', 'Become Who You Are', 'Meaning Through Suffering', 'Life After Betrayal'],
   social:      ['Power & Human Nature', 'Attachment', 'Dignity', 'Daily Discipline', 'The Way Of Wu Wei'],
-  drive:       ['Identity & Wealth', 'Journey to Success', 'Beast Mode', 'Wealth Psychology', 'Iron Discipline', 'Purpose & Mission'],
+  drive:       ['Identity & Wealth', 'Journey to Success', 'Beast Mode', 'Wealth Psychology', 'Discipline', 'Purpose & Mission'],
   tools:       ['Daily Affirmations Power', 'Soundscapes'],
 };
 
@@ -435,6 +435,6 @@ export const SERIES_SUB: Record<string,string> = {
   'Dignity':                     'The worth that does not require earning.',
   'Daily Discipline':            'Small actions. Compound results.',
   'Wealth Psychology':           'Why some build it. Why you have not.',
-  'Iron Discipline':             'The hardness that protects what you love.',
+  'Discipline':             'The hardness that protects what you love.',
   'Purpose & Mission':           'The direction you have been missing.',
 };
