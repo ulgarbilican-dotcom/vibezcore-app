@@ -295,11 +295,13 @@ function SessionRow({
      waarvoor het onderscheid niet relevant is. */
   hideTag?: boolean;
 }) {
-  /* Iter v188 (2026-07-02): opacity-dimming voor PRO sessies verwijderd.
-     User kan wel 60-sec preview afspelen, dus "gedimd" is verwarrend.
-     PRO-badge blijft de visuele indicator (via tierBadgeLabel). */
+  /* Iter v189 (2026-07-02): slot glyph en opacity-dimming BEHOUDEN (operator-
+     beslissing). Slot alleen was ondoorzichtig — nu combineren met "60s
+     preview"-indicator naast de PRO badge zodat user vooraf weet dat er
+     preview beschikbaar is. Combineert de "gate"-signaal met de "preview
+     escape hatch"-info. */
   return (
-    <Pressable style={s.libRow} onPress={onPress}>
+    <Pressable style={[s.libRow, !canPlay && s.libRowLocked]} onPress={onPress}>
       <View style={s.libRowArt}>
         {photo ? <Image source={{ uri: photo }} style={s.libRowArtImg} /> : null}
         <View style={[s.libRowPlay, isActive && s.libRowPlayActive]}>
@@ -311,18 +313,15 @@ function SessionRow({
               style={StyleSheet.absoluteFill}
             />
           ) : null}
-          {/* Iter v188 (2026-07-02): 🔒-slot verwijderd voor PRO sessies.
-              Operator-feedback: slot suggereert "kan niet openen", maar user
-              kan wel 60-sec preview afspelen. Verwarrend. Nu: gewone
-              play-icon op ALLE sessies (professioneel + duidelijk dat je kan
-              afspelen). PRO-badge (via tierBadgeLabel elders) blijft de
-              indicator dat het een preview-only sessie is. Player toont
-              "Preview" state met countdown wanneer preview-modus actief is. */}
+          {!canPlay ? (
+            <Text style={s.libRowPlayGlyph}>🔒</Text>
+          ) : (
           <PlayPauseGlyph
             size={16}
             color="#ffffff"
             playing={isActive && isPlaying}
           />
+          )}
         </View>
       </View>
       <View style={{ flex: 1 }}>
@@ -333,10 +332,19 @@ function SessionRow({
           const tier = getEffectiveTier(session);
           const label = tierBadgeLabel(tier);
           if (!label) return null;
+          /* Iter v189 (2026-07-02): "PREVIEW · 60s" pilletje naast PRO
+             badge wanneer !canPlay (user is geen PRO). Communiceert vooraf
+             dat er 60-sec preview beschikbaar is — Spotify/Apple Music
+             patroon. */
           return (
-            <Text style={[s.libRowTag, { color: tierBadgeColor(tier) }]}>
-              {label}
-            </Text>
+            <View style={s.libRowTagWrap}>
+              <Text style={[s.libRowTag, { color: tierBadgeColor(tier) }]}>
+                {label}
+              </Text>
+              {!canPlay && (
+                <Text style={s.libRowPreviewTag}>PREVIEW · 60s</Text>
+              )}
+            </View>
           );
         })()}
         <Text style={s.libRowTitle}>{session.title}</Text>
@@ -4836,6 +4844,25 @@ const s = StyleSheet.create({
   libRowTag: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 3 },
   libRowTagFree: { color: C.free },
   libRowTagPro: { color: C.faint },
+  /* Iter v189 (2026-07-02): row-tag wrap (voor tier badge + PREVIEW pill
+     naast elkaar) + PREVIEW pill styling. */
+  libRowTagWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 3,
+  },
+  libRowPreviewTag: {
+    color: '#3a8fff',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.45)',
+    borderRadius: 6,
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+  },
   libRowTitle: { color: C.text, fontSize: 14, fontWeight: '700' },
   libRowDesc: { color: C.dim, fontSize: 12, marginTop: 3, lineHeight: 17 },
 

@@ -402,6 +402,14 @@ export default function PlayerScreen() {
             </Pressable>
             <View style={s.timeRow}>
               <Text style={s.time}>{fmt(playerState.positionSec)}</Text>
+              {/* Iter v189 (2026-07-02): "PREVIEW · X sec left" tijdens
+                  preview-mode. Communiceert de 60-sec cap visueel zodat user
+                  niet verrast wordt door de auto-pause. */}
+              {usePreview && (
+                <Text style={s.previewCountdown}>
+                  PREVIEW · {Math.max(0, 60 - Math.floor(playerState.positionSec))}s left
+                </Text>
+              )}
               <Text style={s.time}>{fmt(playerState.durationSec)}</Text>
             </View>
           </View>
@@ -914,6 +922,14 @@ const s = StyleSheet.create({
     marginTop: -2,
   },
   time: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
+  /* Iter v189 (2026-07-02): preview countdown pill tussen huidige tijd en
+     totale duur. Blauw accent voor zichtbaarheid zonder visueel schreeuwend. */
+  previewCountdown: {
+    color: '#3a8fff',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
 
   /* Resume panel */
   resumePanel: {
