@@ -1913,14 +1913,19 @@ export default function BraceletScreen() {
             user niet ingelogd.
             Iter 9q: ook verbergen voor owners (die zijn al ingelogd
             EN hebben geen sign-in-link nodig). */}
+        {/* Iter v184 (2026-07-02): tekst gefixt. Was "Have an activation
+            code? Sign in →" wat verwarrend was — activation code hoort bij
+            /activate-bracelet, sign-in is aparte flow via /account. Nu:
+            zuivere sign-in intent voor bestaande users. Activation entry
+            zit al prominent in de "ALREADY HAVE ONE"-card hierboven. */}
         {isSignedIn === false && !isBraceletOwner && (
           <Pressable
             style={s.signInLink}
             onPress={() => router.navigate('/account')}
-            accessibilityLabel="Sign in if you already have an account or activation code"
+            accessibilityLabel="Sign in to your existing VIBEZCORE account"
           >
             <Text style={s.signInLinkText}>
-              Have an activation code?{' '}
+              Already have an account?{' '}
               <Text style={s.signInLinkAccent}>Sign in →</Text>
             </Text>
           </Pressable>

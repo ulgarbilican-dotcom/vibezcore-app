@@ -1709,18 +1709,24 @@ export default function AccountScreen() {
           </Text>
         </View>
 
-        {/* Iter v172 (2026-06-29): Activate-bracelet als KLEINE rij ONDER
-            de productcards. Voor backers/bundle-owners die hun code willen
-            inwisselen. Niet meer als prominente card bovenaan — dat was
-            verwarrend voor eerste-keer-bezoekers. */}
+        {/* Iter v184 (2026-07-02): Activate-bracelet als volwaardige card
+            (was kleine inline-link). Operator-feedback: activation entry
+            moet even prominent voelen als product cards, en visueel matchen
+            met de bracelet-tab "ALREADY HAVE ONE"-preview card. */}
         <Pressable
-          style={s.activateBraceletInline}
+          style={s.activateBraceletCard}
           onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Activate a bracelet code"
+          accessibilityLabel="Activate your bracelet with your code"
         >
-          <Text style={s.activateBraceletInlineText}>
-            Got a bracelet code? <Text style={s.activateBraceletInlineLink}>Activate it here →</Text>
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.activateBraceletEyebrow}>ALREADY HAVE ONE</Text>
+            <Text style={s.activateBraceletTitle}>Activate your bracelet</Text>
+            <Text style={s.activateBraceletDesc}>
+              Enter your activation code to unlock your bracelet and (for
+              bundle owners) 1 year of audio library.
+            </Text>
+          </View>
+          <Text style={s.activateBraceletArrow}>→</Text>
         </Pressable>
 
         {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-glyph
@@ -2337,6 +2343,49 @@ const s = StyleSheet.create({
   activateBraceletInlineLink: {
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
+  },
+  /* Iter v184 (2026-07-02): activate-bracelet als volwaardige card.
+     Matcht bracelet-tab preview styling. Subtielere blauw-tint dan
+     productCards zodat volgorde-hiërarchie (get started → activate)
+     visueel voelt. */
+  activateBraceletCard: {
+    marginTop: 12,
+    marginHorizontal: 16,
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.32)',
+    backgroundColor: 'rgba(58,143,255,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  activateBraceletEyebrow: {
+    color: Brand.accent,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.8,
+    marginBottom: 6,
+  },
+  activateBraceletTitle: {
+    color: Brand.text,
+    fontSize: 17,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  activateBraceletDesc: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12.5,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.05,
+    lineHeight: 17,
+  },
+  activateBraceletArrow: {
+    color: Brand.accent,
+    fontSize: 22,
+    fontFamily: BrandFonts.bold,
+    paddingHorizontal: 4,
   },
   /* Iter v174 (2026-06-30): Invite-friend CTA voor guests — prominent
      boven info-links. Groen accent matched Free Picks branding (free
