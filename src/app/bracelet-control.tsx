@@ -4360,7 +4360,10 @@ export default function BraceletControl() {
                 busy && s.btnDisabled,
               ]}
               android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-              onPress={onStop}
+              /* Iter v193 (2026-07-03): End-knop opent nu de bestaande
+                 end-session modal ipv direct onStop. Voorkomt per-ongeluk-
+                 stoppen; consistent met back-pijl-gedrag. */
+              onPress={() => setEndSessionVisible(true)}
               disabled={busy}
               accessibilityLabel="End session"
             >

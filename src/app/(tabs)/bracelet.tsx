@@ -1372,6 +1372,29 @@ export default function BraceletScreen() {
           </View>
         </Pressable>
 
+        {/* Iter v193 (2026-07-03): compacte Oura-style CTAs direct onder de
+            preview-card. Voor bezoekers die AL een bracelet hebben (activate)
+            of nog geen (learn more) — kort en helder ipv de oude 2 grote cards
+            onderaan de page die te ver van de context stonden en te druk waren. */}
+        <Pressable
+          style={s.compactActivateBtn}
+          onPress={() => router.push('/activate-bracelet')}
+          android_ripple={{ color: 'rgba(255,255,255,0.20)' }}
+          accessibilityLabel="Activate your Smart Bead Bracelet"
+        >
+          <Text style={s.compactActivateBtnText}>Activate your bracelet</Text>
+          <Text style={s.compactActivateBtnArrow}>→</Text>
+        </Pressable>
+        <Pressable
+          style={s.compactLearnMoreLink}
+          onPress={() => openExternal('https://www.vibezcore.com/')}
+          accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
+        >
+          <Text style={s.compactLearnMoreLinkText}>
+            Don't have one yet? Learn more →
+          </Text>
+        </Pressable>
+
         {/* ── 4. 5 HAPTIC MODES — pill-tabs (underline) + content card.
             Zelfde principe als How it works. Brain-state labels
             (Gamma/Beta/Alpha/Theta/Delta) tonen we BEWUST niet —
@@ -1800,69 +1823,13 @@ export default function BraceletScreen() {
           </View>
         </View>
 
-        {/* Iter v149 (2026-06-25): activatie-entry-point voor users die
-            HUN BRACELET AL HEBBEN. Zichtbaar onder de pricing-cards
-            zodat een Kickstarter-backer die z'n bracelet net heeft
-            ontvangen meteen ziet waar 'ie de code moet invoeren —
-            voorheen alleen verstopt achter signup → Account-tab.
-
-            Twee paden vanuit deze CTA (afgehandeld door
-            /activate-bracelet zelf):
-              - Solo bracelet code → unlocks bracelet
-              - Bundle code (bracelet + 1 jaar audio) → unlocks beide
-
-            Of de user al ingelogd is of niet: /activate-bracelet
-            handelt de signin/signup prompt vóór de code-stap af. */}
-        <Pressable
-          style={s.activateBraceletEntry}
-          onPress={() => router.push('/activate-bracelet')}
-          accessibilityLabel="Already have your Smart Bead Bracelet, activate it here"
-        >
-          <View style={s.activateBraceletEntryInner}>
-            <View style={s.activateBraceletEntryTextWrap}>
-              <Text style={s.activateBraceletEntryEyebrow}>
-                ALREADY HAVE YOUR SMART BEAD BRACELET?
-              </Text>
-              <Text style={s.activateBraceletEntryLabel}>
-                Activate it here
-              </Text>
-              <Text style={s.activateBraceletEntryTitle}>
-                Enter your activation code. Bundle owners get 1 year of
-                Audio Library too.
-              </Text>
-            </View>
-            <Text style={s.activateBraceletEntryArrow}>→</Text>
-          </View>
-        </Pressable>
-
-        {/* Iter v190 (2026-07-02): externe "Learn more" link opgewaardeerd
-            van tekst-link naar volwaardige card (parallel aan de Activate
-            card boven). Operator-feedback: was te klein/afwezig, voelde
-            onbelangrijk. Bracelet = fysiek product → mag extern gelinkt
-            worden per Apple/Google store policy §3.1.1 physical exemption. */}
-        <Pressable
-          style={s.learnMoreCard}
-          onPress={() => openExternal('https://www.vibezcore.com/')}
-          accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
-        >
-          <View style={s.learnMoreCardInner}>
-            <View style={s.learnMoreCardTextWrap}>
-              <Text style={s.learnMoreCardEyebrow}>NEW TO VIBEZCORE?</Text>
-              <Text style={s.learnMoreCardLabel}>
-                Don't have a Smart Bead Bracelet yet?
-              </Text>
-              <Text style={s.learnMoreCardSub}>
-                Learn more about the product at vibezcore.com — opens in your browser.
-              </Text>
-            </View>
-            <Text style={s.learnMoreCardArrow}>→</Text>
-          </View>
-        </Pressable>
-
-        {/* Iter v190 (2026-07-02): "Just curious? See how it works →" link
-            verwijderd. Was redundant met TRY IT NOW · Preview the bracelet
-            app card hierboven en met de Activate card. Operator-feedback:
-            twee ingangen naar preview + activate creëert cognitieve overload. */}
+        {/* Iter v193 (2026-07-03): oude Activate + Learn more cards
+            verwijderd — zijn verhuisd naar compacte CTAs direct onder de
+            TRY IT NOW · Preview-card (Oura-stijl). Operator-feedback:
+            stonden hier te laag na de KS pricing, voelden druk en
+            gescheiden van de context. Nieuwe positie hoger op de pagina
+            geeft KS-backers en nieuwe bezoekers direct 2 duidelijke acties
+            zonder eerst door alle pricing-cards te scrollen. */}
         </>
         )}
 
@@ -2944,6 +2911,48 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontFamily: BrandFonts.bold,
     lineHeight: 22,
+  },
+  /* Iter v193 (2026-07-03): Oura-style compact CTAs direct onder previewCta.
+     Grote gevulde primary knop voor Activate, kleine text-link eronder voor
+     Learn more. Verrangt de 2 grote cards die vroeger onderaan de bracelet
+     preview stonden (na KS pricing) — die stonden te ver van de context en
+     voelden druk aan. */
+  compactActivateBtn: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Brand.accent,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  compactActivateBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.2,
+  },
+  compactActivateBtnArrow: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontFamily: BrandFonts.bold,
+    lineHeight: 20,
+    marginTop: -1,
+  },
+  compactLearnMoreLink: {
+    marginTop: 12,
+    marginBottom: 4,
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  compactLearnMoreLinkText: {
+    color: 'rgba(244,244,244,0.65)',
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.1,
   },
   /* Legacy previewBtn (iter 9o) — niet meer in JSX gebruikt, behouden
      voor referentie/rollback. */
