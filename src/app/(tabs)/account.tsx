@@ -1569,12 +1569,34 @@ export default function AccountScreen() {
 
         </View>
 
-        {/* Iter v172 (2026-06-29): Activate-bracelet card VERPLAATST naar
-            ONDERAAN — eerst Get Started (Audio + Bracelet) zodat een
-            eerste-keer-bezoeker WEET wat VIBEZCORE biedt, daarna pas de
-            code-activation voor bracelet-owners. Operator-feedback:
-            "Activate your bracelet bovenaan is rare vraag, niemand weet
-            wat er aan de hand is als ze bracelet nog niet kennen". */}
+        {/* Iter v186 (2026-07-02): Activate-bracelet card VERPLAATST naar
+            direct onder Sign in — vóór Get Started. Reden: bracelet-owners
+            die net hun code kregen en NOOIT eerder in de app waren, komen
+            binnen via welcome "Already have a product? Sign in". Landen op
+            Account tab → zien Sign in bovenaan (werkt niet want geen account
+            yet) → moeten Activate-card gebruiken. Die stond onder Get Started
+            = te ver naar beneden. Nu direct visible na Sign in form.
+            Hiërarchie: (1) returning user → Sign in, (2) bracelet-owner
+            first-time → Activate, (3) nieuwe bezoeker → Get Started. */}
+        <Pressable
+          style={s.activateBraceletCard}
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+          accessibilityLabel="Activate your bracelet with your code"
+        >
+          <View style={s.activateBraceletCardInner}>
+            <View style={s.activateBraceletCardTextWrap}>
+              <Text style={s.activateBraceletCardEyebrow}>ALREADY HAVE ONE</Text>
+              <Text style={s.activateBraceletCardLabel}>
+                Activate your bracelet
+              </Text>
+              <Text style={s.activateBraceletCardSub}>
+                Enter your activation code to unlock your bracelet and (for
+                bundle owners) 1 year of audio library.
+              </Text>
+            </View>
+            <Text style={s.activateBraceletCardArrow}>→</Text>
+          </View>
+        </Pressable>
 
         {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
             een echte sectie-header. Operator-feedback: 'sign up CTA om aan
@@ -1709,25 +1731,9 @@ export default function AccountScreen() {
           </Text>
         </View>
 
-        {/* Iter v184 (2026-07-02): Activate-bracelet als volwaardige card
-            (was kleine inline-link). Operator-feedback: activation entry
-            moet even prominent voelen als product cards, en visueel matchen
-            met de bracelet-tab "ALREADY HAVE ONE"-preview card. */}
-        <Pressable
-          style={s.activateBraceletCard}
-          onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Activate your bracelet with your code"
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={s.activateBraceletEyebrow}>ALREADY HAVE ONE</Text>
-            <Text style={s.activateBraceletTitle}>Activate your bracelet</Text>
-            <Text style={s.activateBraceletDesc}>
-              Enter your activation code to unlock your bracelet and (for
-              bundle owners) 1 year of audio library.
-            </Text>
-          </View>
-          <Text style={s.activateBraceletArrow}>→</Text>
-        </Pressable>
+        {/* Iter v186: Activate card verplaatst naar direct onder Sign in
+            form (hoger op de pagina, boven Get Started). Voorheen stond deze
+            hier onder. */}
 
         {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-glyph
             voor guests. Operator: "sharing moet duidelijk en altijd zichtbaar".
@@ -2344,49 +2350,10 @@ const s = StyleSheet.create({
     color: Brand.accent,
     fontFamily: BrandFonts.semibold,
   },
-  /* Iter v184 (2026-07-02): activate-bracelet als volwaardige card.
-     Matcht bracelet-tab preview styling. Subtielere blauw-tint dan
-     productCards zodat volgorde-hiërarchie (get started → activate)
-     visueel voelt. */
-  activateBraceletCard: {
-    marginTop: 12,
-    marginHorizontal: 16,
-    padding: 18,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.32)',
-    backgroundColor: 'rgba(58,143,255,0.08)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  activateBraceletEyebrow: {
-    color: Brand.accent,
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 1.8,
-    marginBottom: 6,
-  },
-  activateBraceletTitle: {
-    color: Brand.text,
-    fontSize: 17,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  activateBraceletDesc: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 12.5,
-    fontFamily: BrandFonts.regular,
-    letterSpacing: 0.05,
-    lineHeight: 17,
-  },
-  activateBraceletArrow: {
-    color: Brand.accent,
-    fontSize: 22,
-    fontFamily: BrandFonts.bold,
-    paddingHorizontal: 4,
-  },
+  /* Iter v186 (2026-07-02): duplicate activateBraceletCard styles verwijderd.
+     Bestaande v149 styling (regel 1938+) hergebruikt — die was al gedesigned
+     als "prominent card gelijkwaardig aan SIGN IN card. Accent border + glow
+     zodat bracelet-owners het meteen vinden". Match precies mijn intent. */
   /* Iter v174 (2026-06-30): Invite-friend CTA voor guests — prominent
      boven info-links. Groen accent matched Free Picks branding (free
      sessions = entry-point voor invited users). Share2-icon links van
