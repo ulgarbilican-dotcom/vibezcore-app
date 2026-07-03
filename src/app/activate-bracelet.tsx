@@ -145,13 +145,16 @@ export default function ActivateBraceletScreen() {
 
     const result = await activateBracelet(code);
     if (result.ok) {
-      /* Iter v191 (2026-07-03): __DEV__ guard weggehaald zodat mock-state
-         ook in productie werkt. Bij bundle-code (model === 'bundle') zet
-         ook de audio-override zodat Audio Library naar PRO switcht. */
+      /* Iter v192 (2026-07-03): fix — useBraceletOwner() checkt override,
+         niet activation flag. Bij bracelet-only setDevUserOverride('bracelet')
+         nodig zodat Bracelet tab owner-view toont (niet preview).
+         Bij bundle: 'pro' voor beide entitlements. */
       await setDevBraceletActivated(true);
       if (result.model === 'bundle') {
         await setDevUserOverride('pro');
         setIsBundle(true);
+      } else {
+        await setDevUserOverride('bracelet');
       }
       setPhase('success');
       return;
