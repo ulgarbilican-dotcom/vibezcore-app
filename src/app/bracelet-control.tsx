@@ -3667,8 +3667,18 @@ export default function BraceletControl() {
          volgende sessie). Bij natural completion gebeurt dit in de
          useEffect die de modal triggert. */
       setBreathworkEnabled(false);
-      const st = await bracelet.requestStatus();
-      setStatus(st);
+      /* Iter v195 (2026-07-04): setStatus na Stop-command moet ALTIJD
+         sessionActive=false erin overschrijven. Vroeger vertrouwden we op
+         sim.requestStatus() → maar de sim kan (a) niet direct reageren op
+         Stop of (b) stale sessionActive=true teruggeven → force blijft
+         waar activation was toen operator End tikte. Nu: neem sim's
+         status als basis, dwing sessionActive=false + remainingMinutes=0. */
+      try {
+        const st = await bracelet.requestStatus();
+        setStatus(st ? { ...st, sessionActive: false, remainingMinutes: 0 } : st);
+      } catch {
+        /* swallow — v193 force setStatus vóór de try/catch heeft al gezet */
+      }
     } finally {
       setBusy(false);
     }

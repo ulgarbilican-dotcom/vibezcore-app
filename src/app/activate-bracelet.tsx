@@ -145,17 +145,20 @@ export default function ActivateBraceletScreen() {
 
     const result = await activateBracelet(code);
     if (result.ok) {
-      /* Iter v192 (2026-07-03): fix — useBraceletOwner() checkt override,
-         niet activation flag. Bij bracelet-only setDevUserOverride('bracelet')
-         nodig zodat Bracelet tab owner-view toont (niet preview).
-         Bij bundle: 'pro' voor beide entitlements. */
-      await setDevBraceletActivated(true);
+      /* Iter v195 (2026-07-04): VOLGORDE KRITIEK. setDevUserOverride
+         reset intern setDevBraceletActivated(false) als override wisselt
+         (dev-user-override.ts line 106+). Dus setDevBraceletActivated
+         MOET NA setDevUserOverride komen — anders wordt activatie
+         direct gereset en toont Bracelet Connect "Bracelet not linked"
+         + vraag om opnieuw code in te voeren (dubbele activation-stap
+         die operator zag). */
       if (result.model === 'bundle') {
         await setDevUserOverride('pro');
         setIsBundle(true);
       } else {
         await setDevUserOverride('bracelet');
       }
+      await setDevBraceletActivated(true);
       setPhase('success');
       return;
     }
