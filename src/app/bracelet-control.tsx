@@ -3581,6 +3581,9 @@ export default function BraceletControl() {
 
   const onStart = async () => {
     setBusy(true);
+    /* Iter v197 (2026-07-04): endedLocally reset — nieuwe sessie mag niet
+       geblokkeerd worden door de flag van een vorige End. */
+    setEndedLocally(false);
     try {
       await bracelet.sendCommand({
         mode: selectedMode,
@@ -3616,13 +3619,11 @@ export default function BraceletControl() {
 
   const onStop = async () => {
     setBusy(true);
-    /* Iter v193 (2026-07-03): hard-reset lokale UI direct zodat user
-       niet vast zit als sim/BLE status niet snel genoeg reageert.
-       Vorige versie wachtte op requestStatus() teruggave; als die
-       hangt of stale is blijft screen op active-view. Force nu
-       sessionActive=false in state vóór de async BLE-roundtrip;
-       de latere setStatus(st) mag dit corrigeren als de bracelet
-       daadwerkelijk nog actief is (edge case, zeldzaam). */
+    /* Iter v197 (2026-07-04): endedLocally flag DIRECT true. Overruled
+       de 5s poll die anders na 5s status.sessionActive=true kan zetten
+       (sim race, spec §8.3). setStatus force blijft als fallback voor
+       de eerste render voordat de effect propagert. */
+    setEndedLocally(true);
     setStatus((prev) =>
       prev ? { ...prev, sessionActive: false, remainingMinutes: 0 } : prev,
     );
@@ -3763,6 +3764,8 @@ export default function BraceletControl() {
      min-duration van mode. Tertiaire actie tijdens active/paused. */
   const onRestart = async () => {
     setBusy(true);
+    /* Iter v197: reset endedLocally net als onStart. */
+    setEndedLocally(false);
     try {
       const fullDuration = getModeMeta(selectedMode).minMinutes;
       await bracelet.sendCommand({
@@ -3810,8 +3813,15 @@ export default function BraceletControl() {
     }
   };
 
+  /* Iter v197 (2026-07-04): endedLocally — lokale flag die derived
+     sessionActive overrulen als user End tikte. Zonder deze flag
+     bleef de 5s-poll (line 3448+) status.sessionActive=true zetten
+     als de sim niet meteen Stop verwerkte → user zat 3 builds lang
+     vast op active-screen. Reset bij nieuwe Start/Restart. */
+  const [endedLocally, setEndedLocally] = useState(false);
+
   /* ── Derived state ─────────────────────────────────────────────── */
-  const sessionActive = status?.sessionActive ?? false;
+  const sessionActive = !endedLocally && (status?.sessionActive ?? false);
   const battery = status?.batteryPercent ?? null;
   const charging = status?.charging ?? false;
   const fault = status?.fault ?? false;

@@ -372,10 +372,11 @@ function SubscriptionCard() {
       {showUpgrade && (
         <Pressable
           style={s.cardCta}
-          onPress={() => {
-            requestScrollTo('pricing');
-            router.navigate('/');
-          }}
+          /* Iter v197 (2026-07-04): direct naar /subscribe (tier picker
+             Monthly/Yearly) ipv Audio-tab landing. Operator-feedback:
+             bracelet-owner die "Add Audio Library" tikt, wilde direct
+             naar sales-card, niet eerst nog een landing doorlopen. */
+          onPress={() => router.navigate('/subscribe' as never)}
           accessibilityLabel={upgradeAccessibilityLabel}
         >
           <Text style={s.cardCtaText}>{upgradeCtaText}</Text>
