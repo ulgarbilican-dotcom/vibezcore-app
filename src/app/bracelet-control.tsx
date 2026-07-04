@@ -4425,6 +4425,24 @@ export default function BraceletControl() {
             </Pressable>
           </View>
 
+          {/* Iter v201 (2026-07-04): Close-knop toegevoegd. Verlaat het
+              scherm ZONDER de sessie te stoppen — hardware draait autonoom
+              door op de bracelet (spec §6). User kan Audio Library, Breath
+              of Account openen; sessie loopt gewoon door. Bij terugkomst
+              in Bracelet Control ziet 'ie de sessie nog draaien. */}
+          <Pressable
+            style={({ pressed }) => [
+              s.closeSessionBtn,
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => router.replace('/(tabs)/bracelet' as never)}
+            accessibilityLabel="Close screen — session keeps running"
+          >
+            <Text style={s.closeSessionBtnText}>
+              Close · Session keeps running
+            </Text>
+          </Pressable>
+
           {/* Iter v149 v4 (2026-06-25): Voice toggle prominent op active
               session view. Operator-feedback: dimmer-knop moet hier
               zichtbaar zijn, niet verstopt in Settings (bv. user begint
@@ -4940,9 +4958,14 @@ export default function BraceletControl() {
 
             <Pressable
               style={s.endModalBtnDestructive}
-              onPress={() => {
+              onPress={async () => {
                 setEndSessionVisible(false);
-                onStop();
+                await onStop();
+                /* Iter v201 (2026-07-04): hard-navigate weg van active
+                   screen naar Bracelet-tab owner-view. Vertrouwen op
+                   derived state (endedLocally) faalde volgens operator
+                   op vC 53 → force navigation is 100% betrouwbaar. */
+                router.replace('/(tabs)/bracelet' as never);
               }}
             >
               <Text style={s.endModalBtnDestructiveText}>End session</Text>
@@ -6602,6 +6625,20 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.2,
+  },
+  /* Iter v201 (2026-07-04): Close-knop op active session. Discreet,
+     onder Pause+End rij. Verlaat scherm zonder hardware Stop → sessie
+     draait autonoom door op de bracelet. */
+  closeSessionBtn: {
+    marginTop: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  closeSessionBtnText: {
+    color: Brand.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    letterSpacing: 0.3,
   },
   /* Iter v149 v4 (2026-06-25): Voice toggle row op active session.
      Prominent zichtbaar, niet verstopt — tap-target met label + state.

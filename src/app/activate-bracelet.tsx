@@ -109,13 +109,25 @@ export default function ActivateBraceletScreen() {
     setErrMsg(null);
     setPhase('submitting');
 
+    /* Iter v201 (2026-07-04): 15s safety timeout op de hele submit flow.
+       Als signup of activateBracelet hangt (network, RC, sim) mag user
+       niet eindeloos naar een draaiende knop staren. Force setErrMsg +
+       phase='form' zodat 'ie opnieuw kan proberen. */
+    const submitTimeout = setTimeout(() => {
+      setErrMsg('This is taking longer than expected. Please try again.');
+      setPhase('form');
+    }, 15000);
+    const clearSubmitTimeout = () => clearTimeout(submitTimeout);
+
     /* Iter v200 (2026-07-04): activation-code format check EERST — vóór
        signup poging. Voorheen liep de flow zo: signup → error "already
        exists" of "invalid password" verscheen ALS eerste, ook al was de
        code eigenlijk te kort. User wist niet dat de code de root oorzaak
        was, dacht dat de knop niets deed. Nu direct duidelijk. */
     if (!isValidActivationCodeFormat(code)) {
+      clearSubmitTimeout();
       setErrMsg('Please enter a 12-character activation code.');
+      clearSubmitTimeout();
       setPhase('form');
       return;
     }
@@ -183,9 +195,11 @@ export default function ActivateBraceletScreen() {
       } catch {
         /* swallow */
       }
+      clearSubmitTimeout();
       setPhase('success');
       return;
     }
+    clearSubmitTimeout();
     setErrMsg(result.message);
     setPhase('error');
   };
