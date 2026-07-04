@@ -916,6 +916,13 @@ export default function AccountScreen() {
                clearSession). */
             const lastEmail = await getLastLoginEmail();
             if (lastEmail) setEmailInput(lastEmail);
+            /* Iter v199 (2026-07-04): na sign-out expliciet naar welkomst-
+               scherm. Anders bleef user in Account-tab uitgelogde variant
+               (Subscribe + Reserve + Invite) — operator vond dit
+               onprofessioneel want de app "onthield" niet dat de user
+               net was afgemeld. Welkomstscherm geeft duidelijk pad terug
+               naar sign-in of nieuwe onboarding. */
+            router.replace('/welcome' as never);
           },
         },
       ],
