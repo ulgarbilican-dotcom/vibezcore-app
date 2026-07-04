@@ -159,6 +159,19 @@ export default function ActivateBraceletScreen() {
         await setDevUserOverride('bracelet');
       }
       await setDevBraceletActivated(true);
+      /* Iter v198 (2026-07-04): force refresh na de override-set zodat
+         useSubscription state direct propagert naar alle mounted tabs.
+         Zonder deze call zag operator "Full PRO" pas op Account tab
+         nadat hij eerst Bracelet Connect had geopend (die triggerde
+         zelf een focus-refresh). refreshSubscription() self is idempotent
+         en niet-blocking → geen risico. */
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { refreshSubscription } = require('@/hooks/useSubscription');
+        refreshSubscription();
+      } catch {
+        /* swallow */
+      }
       setPhase('success');
       return;
     }
