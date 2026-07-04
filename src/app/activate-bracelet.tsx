@@ -109,6 +109,17 @@ export default function ActivateBraceletScreen() {
     setErrMsg(null);
     setPhase('submitting');
 
+    /* Iter v200 (2026-07-04): activation-code format check EERST — vóór
+       signup poging. Voorheen liep de flow zo: signup → error "already
+       exists" of "invalid password" verscheen ALS eerste, ook al was de
+       code eigenlijk te kort. User wist niet dat de code de root oorzaak
+       was, dacht dat de knop niets deed. Nu direct duidelijk. */
+    if (!isValidActivationCodeFormat(code)) {
+      setErrMsg('Please enter a 12-character activation code.');
+      setPhase('form');
+      return;
+    }
+
     /* Iter v183 (2026-07-02): als user niet ingelogd is → eerst account
        aanmaken via signup, dan pas code activeren. Bestaande signup helper
        persisteert session-token in AsyncStorage → activateBracelet daarna

@@ -3547,6 +3547,8 @@ export default function BraceletControl() {
           await bracelet.connect();
         }
         const dur = clampDuration(initialMode, getModeMeta(initialMode).minMinutes);
+        /* Iter v200: endedLocally reset op autoStart. */
+        setEndedLocally(false);
         await bracelet.sendCommand({
           mode: initialMode,
           duration: dur,
@@ -3739,6 +3741,10 @@ export default function BraceletControl() {
     const resumeDuration = clampDuration(selectedMode, pausedAt);
     const exactElapsedMs = pausedAtElapsedMsRef.current;
     setBusy(true);
+    /* Iter v200 (2026-07-04): endedLocally reset op Resume. Anders zou
+       een Resume na een Pause + End cycle (edge case) de UI in idle
+       houden ondanks nieuwe actieve sessie. Defensive reset. */
+    setEndedLocally(false);
     try {
       await bracelet.sendCommand({
         mode: selectedMode,
