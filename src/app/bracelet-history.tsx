@@ -980,7 +980,9 @@ export default function BraceletHistory() {
           ),
         }}
       />
-      <PreviewBanner />
+      {/* Iter v194 (2026-07-04): PreviewBanner weg op sessies-historie.
+          Alleen owners bereiken dit scherm (via bracelet-control idle);
+          voor hen is bracelet een echt product, geen preview. */}
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}

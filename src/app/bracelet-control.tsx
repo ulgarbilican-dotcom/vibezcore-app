@@ -3093,84 +3093,12 @@ function BraceletHeader({
   );
 }
 
-/* Iter v193 (2026-07-03): inline tab bar voor idle Bracelet Control
-   screens (Connect + Charging). Repliceert de look van (tabs)/_layout.tsx
-   maar rendert INSIDE de bracelet-control screen (die buiten de tab-
-   navigator ligt en dus normaal geen tab bar toont).
-
-   Alleen renderen op idle states — NIET tijdens actieve sessie (daar
-   houden we full-screen focus, spec §6). 4 tabs identiek aan hoofd-nav:
-   Audio Library · Breath · Bracelet · Account.
-
-   Operator-feedback (foto 4, 2026-07-03): "onderaan geen tabbladeren
-   audio breathwork" op Connect-screen was verwarrend. Deze stub geeft
-   directe navigatie zonder eerst back → Bracelet-tab te hoeven. */
-function InlineBraceletTabBar({
-  current,
-}: {
-  current: '/' | '/breath' | '/bracelet' | '/account';
-}) {
-  const insets = useSafeAreaInsets();
-  const tabs: Array<{
-    path: '/' | '/breath' | '/bracelet' | '/account';
-    label: string;
-    glyph: string;
-  }> = [
-    { path: '/', label: 'Audio Library', glyph: '♪' },
-    { path: '/breath', label: 'Breath', glyph: '○' },
-    { path: '/bracelet', label: 'Bracelet', glyph: '◎' },
-    { path: '/account', label: 'Account', glyph: '○' },
-  ];
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        backgroundColor: Brand.bg,
-        borderTopColor: Brand.border,
-        borderTopWidth: 1,
-        height: 64 + insets.bottom,
-        paddingBottom: 8 + insets.bottom,
-        paddingTop: 8,
-      }}
-    >
-      {tabs.map((t) => {
-        const focused = t.path === current;
-        return (
-          <Pressable
-            key={t.path}
-            onPress={() => router.navigate(t.path as never)}
-            accessibilityRole="button"
-            accessibilityLabel={t.label}
-            accessibilityState={{ selected: focused }}
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-            android_ripple={{ color: 'rgba(255,255,255,0.06)', borderless: true }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                color: focused ? Brand.text : Brand.textDim,
-                fontFamily: BrandFonts.regular,
-              }}
-            >
-              {t.glyph}
-            </Text>
-            <Text
-              style={{
-                fontSize: 11,
-                fontFamily: BrandFonts.semibold,
-                letterSpacing: 0.3,
-                color: focused ? Brand.text : Brand.textDim,
-                marginTop: 2,
-              }}
-            >
-              {t.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
+/* Iter v194 (2026-07-04): InlineBraceletTabBar volledig verwijderd.
+   Bracelet-control wordt inline gerenderd binnen de (tabs) navigator
+   via bracelet-tab owner-view — de systeem tab bar (uit (tabs)/_layout)
+   was daar dus AL zichtbaar. Mijn v193-toevoeging veroorzaakte een
+   dubbele tab bar op operator-scherm en verdrong de Start-knop uit
+   beeld. Verwijderd om aan het echte gedrag terug te komen. */
 
 export default function BraceletControl() {
   const bracelet = getBracelet();
@@ -3957,7 +3885,7 @@ export default function BraceletControl() {
           onBack={fromContext ? navigateBackToSource : () => router.back()}
           backLabel={ctaBackLabel}
         />
-        <PreviewBanner />
+        {!isBraceletOwner && <PreviewBanner />}
         {/* Iter 9dq v93 (2026-06-03): top-banner CTA NIET tonen op
             disconnected-screen wanneer al activation-required is —
             de hele screen wordt dan al de activate-flow (titel +
@@ -4028,13 +3956,11 @@ export default function BraceletControl() {
             </Pressable>
           )}
         </View>
-        {/* Iter v193 (2026-07-03): inline tab bar op idle Connect screen.
-            Operator-feedback: geen tab bar onderaan was verwarrend want
-            user kon niet direct naar Audio Library / Breath / Account
-            zonder eerst back → Bracelet-tab. Full-screen focus houden
-            we alleen voor ACTIEVE sessies (active screen); Connect en
-            Charging zijn idle en krijgen de tab bar terug. */}
-        <InlineBraceletTabBar current="/bracelet" />
+        {/* Iter v194 (2026-07-04): InlineBraceletTabBar toevoeging weer
+            teruggedraaid. Bracelet-control render is intern in de
+            (tabs) navigator (via BraceletControl-inline in bracelet-tab
+            owner-view) → systeem tab bar was al zichtbaar → mijn stub
+            gaf DUBBELE tab bar. Systeem tab bar is genoeg. */}
       </SafeAreaView>
     );
   }
@@ -4048,7 +3974,7 @@ export default function BraceletControl() {
           title="Bracelet error"
           onBack={onDisconnect}
         />
-        <PreviewBanner />
+        {!isBraceletOwner && <PreviewBanner />}
         {showActivationPrompt && <BraceletActivationCta />}
         <View style={s.faultWrap}>
           <View style={s.faultIcon}>
@@ -4093,7 +4019,7 @@ export default function BraceletControl() {
           title="Bracelet charging"
           onBack={onDisconnect}
         />
-        <PreviewBanner />
+        {!isBraceletOwner && <PreviewBanner />}
         {showActivationPrompt && <BraceletActivationCta />}
         <View style={s.chargingWrap}>
           <View style={s.chargingIcon}>
@@ -4113,8 +4039,8 @@ export default function BraceletControl() {
           </View>
         </View>
         {__DEV__ && sim && <SimDemoBar sim={sim} />}
-        {/* Iter v193: inline tab bar op charging idle screen. */}
-        <InlineBraceletTabBar current="/bracelet" />
+        {/* Iter v194 (2026-07-04): InlineBraceletTabBar op charging weg —
+            duplicated systeem tab bar. */}
       </SafeAreaView>
     );
   }
@@ -4619,7 +4545,7 @@ export default function BraceletControl() {
         onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
         backLabel={ctaBackLabel}
       />
-      <PreviewBanner />
+      {!isBraceletOwner && <PreviewBanner />}
       {showActivationPrompt && <BraceletActivationCta />}
       {/* Iter 9ae (2026-05-31): expliciete paddingBottom voor safe-zone.
           Start-button stond op Audio PRO (non-owner standalone) te dicht
@@ -5005,14 +4931,11 @@ export default function BraceletControl() {
           </Pressable>
         </Pressable>
       </Modal>
-      {/* Iter v193 (2026-07-03): tab bar op idle Choose Mode screen —
-          alleen wanneer géén sessie loopt en geen pause. Active-render
-          (sessionActive || isPaused) is een separate return-branch die
-          deze regel niet bereikt, dus geen risico op tab bar tijdens
-          actieve sessie. */}
-      {!sessionActive && !isPaused && (
-        <InlineBraceletTabBar current="/bracelet" />
-      )}
+      {/* Iter v194 (2026-07-04): InlineBraceletTabBar op idle Choose Mode
+          verwijderd. Bracelet-control zit binnen (tabs) navigator (via
+          bracelet-tab inline-render) → systeem tab bar was er al →
+          mijn stub gaf DUBBELE bar op operator-scherm en verdrong
+          zelfs de Start-knop uit beeld. */}
     </SafeAreaView>
   );
 }

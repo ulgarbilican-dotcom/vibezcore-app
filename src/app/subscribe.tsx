@@ -27,7 +27,7 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
-import { refreshSubscription, setProSubscribedStatus } from '@/hooks/useSubscription';
+import { refreshSubscription, setProSubscribedStatus, useSubscription } from '@/hooks/useSubscription';
 import { getIAP } from '@/services/iap';
 import {
   queuePendingVerify,
@@ -183,6 +183,16 @@ export default function SubscribeScreen() {
   const [pw, setPw] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
+  /* Iter v194 (2026-07-04): pre-emptive check — als user al een actieve
+     audio-subscription heeft, skip de aankoop-flow direct naar success.
+     Voorkomt Google Play native "Fout — Je bent al geabonneerd" popup
+     die operator zag in vC 50. */
+  const { isPro: alreadyIsPro } = useSubscription();
+  useEffect(() => {
+    if (alreadyIsPro && phase === 'form') {
+      setPhase('done');
+    }
+  }, [alreadyIsPro, phase]);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   /* Iter v177 (2026-07-02): infoMsg voor positieve transities — bijv. duplicate
      email switch naar signin. Wordt in GROENE banner getoond ipv rood, zodat
@@ -308,6 +318,22 @@ export default function SubscribeScreen() {
           result.error.code,
           result.error.message,
         );
+      }
+      /* Iter v194 (2026-07-04): already_owned = user heeft al een actief
+         abonnement op dit Google/Apple account. Vroeger toonden we een
+         error "You already own this subscription" + user moest handmatig
+         Restore purchases tikken. Nu: silent auto-refresh + welkom-screen.
+         Geen native Play error, geen extra tap. */
+      if (result.error.code === 'already_owned') {
+        try {
+          const { restorePurchases } = require('@/services/restore-purchases');
+          await restorePurchases();
+        } catch {
+          /* swallow — refreshSubscription hieronder is de vangnet */
+        }
+        refreshSubscription();
+        setPhase('done');
+        return;
       }
       setErrMsg(iapErrorMessage(result.error.code, result.error.message));
       setErrDebug(`code=${result.error.code} · ${result.error.message || '(no message)'}`);

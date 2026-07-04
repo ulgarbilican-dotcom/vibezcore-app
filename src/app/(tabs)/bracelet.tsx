@@ -1187,11 +1187,12 @@ export default function BraceletScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
-      {/* Iter 9dq v79 (2026-06-03): preview-banner bovenaan elke bracelet-
-          pagina. Bracelet-hardware is nog niet verzonden (Kickstarter 1 aug
-          2026); deze banner zet correcte verwachtingen voor pre-launch
-          testers en vroege owners wier device nog niet aankomt. */}
-      <PreviewBanner />
+      {/* Iter v194 (2026-07-04): PreviewBanner alleen voor NIET-owners.
+          Echte bracelet-owners (die betaald hebben + code hebben ingevoerd)
+          zien deze banner niet — voor hen is de bracelet een echt product,
+          niet een preview. Guard voorkomt "PREVIEW · Launching September
+          2026" tekst op owner-scherm die suggereert het nep is. */}
+      {!isBraceletOwner && <PreviewBanner />}
       <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={s.scroll}

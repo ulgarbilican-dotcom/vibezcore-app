@@ -136,6 +136,23 @@ type ErrorPayload = {
 
 export async function persistSession(s: SessionPayload): Promise<void> {
   if (!s.access_token) return;
+  /* Iter v194 (2026-07-04): dev-mock override flags wissen wanneer
+     een NIEUWE email inlogt op dit toestel. Zonder deze guard blijft
+     bracelet-activation state van vorige user hangen. clearSession
+     handelt sign-out af; deze branch dekt "andere email logt in
+     zonder eerst uitloggen" (bv. via sign-in modal na signup). */
+  if (s.user?.email) {
+    try {
+      const prevEmail = await AsyncStorage.getItem(EMAIL_KEY);
+      if (prevEmail && prevEmail !== s.user.email) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { clearDevOverridesForAuthEvent } = require('@/utils/dev-user-override');
+        await clearDevOverridesForAuthEvent();
+      }
+    } catch {
+      /* swallow */
+    }
+  }
   const expiresIn = typeof s.expires_in === 'number' ? s.expires_in : 3600;
   const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
   const pairs: [string, string][] = [
@@ -170,6 +187,19 @@ export async function clearSession(): Promise<void> {
      entitlements van de vorige user erft. unlinkRevenueCatUser swallowt
      z'n eigen errors → mag nooit blokkeren op auth-clearance. */
   await unlinkRevenueCatUser();
+  /* Iter v194 (2026-07-04): dev-mock override flags OOK wissen bij
+     sign-out — anders lekt bracelet-activation state tussen accounts
+     (User A activeert → sign out → User B logt in → User B ziet
+     "Bracelet activated"). Root cause van vC 50 cross-account leak.
+     Wanneer productie-backend /api/bracelet/activate live is, kan
+     deze regel weg — backend state is dan account-gescopet. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { clearDevOverridesForAuthEvent } = require('@/utils/dev-user-override');
+    await clearDevOverridesForAuthEvent();
+  } catch {
+    /* swallow */
+  }
   try {
     await AsyncStorage.multiRemove([
       TOKEN_KEY,

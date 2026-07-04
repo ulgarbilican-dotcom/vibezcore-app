@@ -261,5 +261,21 @@ export function useBraceletOwner(): boolean {
   return false;
 }
 
+/* Iter v194 (2026-07-04): centrale helper voor auth flow.
+   ⚠️ KRITIEK: dev-mock werkt in productie zonder email-koppeling
+   → activation-flag lekt tussen accounts (User A activeert → sign
+   out → User B logt in → User B ziet ook "Bracelet activated").
+   Deze helper MOET aangeroepen worden bij ELKE auth-transitie:
+     - sign-out (clearSession)
+     - sign-in van andere email (persistSession waar email wisselt)
+     - account delete
+   Zolang de dev-mock in productie draait (backend endpoint
+   /api/bracelet/activate bestaat nog niet), is dit de enige
+   verdediging tegen cross-account data leak. */
+export async function clearDevOverridesForAuthEvent(): Promise<void> {
+  await setDevUserOverride(null);
+  await setDevBraceletActivated(false);
+}
+
 loadOnce();
 loadActivationOnce();
