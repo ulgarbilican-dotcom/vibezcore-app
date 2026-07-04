@@ -321,10 +321,17 @@ export function useSubscription() {
      in productie. */
   const override = useDevUserOverride();
   const realIsPro = status?.active === true;
+  /* Iter v196 (2026-07-04): 'bracelet' override valt terug op backend-state
+     ipv forced false. Reden: audio-subscriber die z'n bracelet activeert
+     krijgt override='bracelet', maar heeft realIsPro=true via IAP. Vroeger
+     forceerde 'bracelet' isPro=false → Account toonde "Bracelet PRO — Add
+     Audio Library" ipv "Full PRO". Nu: bracelet-only user (geen backend
+     audio_pro) → isPro=false correct; bracelet+audio user → isPro=true
+     via realIsPro → Full PRO detectie werkt. */
   const isPro =
     override === 'audio' || override === 'pro'
       ? true
-      : override === 'guest' || override === 'bracelet'
+      : override === 'guest'
         ? false
         : realIsPro;
 
