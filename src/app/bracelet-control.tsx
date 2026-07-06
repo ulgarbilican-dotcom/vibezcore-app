@@ -3207,10 +3207,7 @@ export default function BraceletControl() {
      breath-tab en Settings menu. */
   const [voiceCues, setVoiceCues] = useSetting('voiceCues');
 
-  /* Iter v149 v5 (2026-06-25): custom End-session modal ipv Alert.alert.
-     Operator-feedback: 'ui moet vibezcore stijl niet statisch lelijk zoals
-     nu'. System Alert voelt vreemd op een dark-themed app. */
-  const [endSessionVisible, setEndSessionVisible] = useState(false);
+  /* Iter v209 (2026-07-04): endSessionVisible state weg — geen modal meer. */
   /* Breathwork toggle — opt-in tijdens active session. False per default
      ("bracelet+haptic is main, breathwork is optioneel" — operator-keuze
      2026-05-27 iter 5). Reset bij sessie-eind via natural-completion
@@ -3867,9 +3864,13 @@ export default function BraceletControl() {
   useFocusEffect(
     useCallback(() => {
       if (!sessionActive && !isPausedRef.current) return;
+      /* Iter v209 (2026-07-04): system-back tijdens actieve sessie doet
+         nu hetzelfde als End-knop: navigate weg + fire-and-forget Stop.
+         Geen modal meer. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        setEndSessionVisible(true);
-        return true; // prevent default until user picks an option
+        router.navigate('/(tabs)/' as never);
+        void onStop();
+        return true;
       });
       return () => handler.remove();
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4410,10 +4411,16 @@ export default function BraceletControl() {
                 busy && s.btnDisabled,
               ]}
               android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-              /* Iter v193 (2026-07-03): End-knop opent nu de bestaande
-                 end-session modal ipv direct onStop. Voorkomt per-ongeluk-
-                 stoppen; consistent met back-pijl-gedrag. */
-              onPress={() => setEndSessionVisible(true)}
+              /* Iter v209 (2026-07-04): End-knop zonder modal. Modal-chain
+                 (setEndSessionVisible → modal → onPress → onStop) faalde
+                 herhaaldelijk in productie. Nu direct: navigate weg +
+                 fire-and-forget onStop. Zelfde patroon als Minimize maar
+                 mét Stop-command. Als user per ongeluk tikt: sessie
+                 stopt, kan opnieuw starten. Simpelheid > confirmatie. */
+              onPress={() => {
+                router.navigate('/(tabs)/' as never);
+                void onStop();
+              }}
               disabled={busy}
               accessibilityLabel="End session"
             >
@@ -4915,65 +4922,10 @@ export default function BraceletControl() {
         />
       )}
 
-      {/* Iter v149 v5 (2026-06-25): End-session confirm modal in VIBEZCORE
-          stijl ipv system Alert.alert. Dark panel + mode-accent border,
-          3 duidelijke CTAs (Cancel / Keep running / End session). */}
-      <Modal
-        visible={endSessionVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEndSessionVisible(false)}
-        statusBarTranslucent
-      >
-        <Pressable
-          style={s.endModalBackdrop}
-          onPress={() => setEndSessionVisible(false)}
-        >
-          <Pressable
-            style={[
-              s.endModalCard,
-              { borderColor: getModeMeta(selectedMode).color + '55' },
-            ]}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text style={s.endModalTitle}>End session?</Text>
-            <Text style={s.endModalBody}>
-              The bracelet will stop and you&apos;ll return to the Bracelet
-              screen.
-            </Text>
-
-            {/* Iter v203 (2026-07-04): "Keep running" knop verwijderd —
-                was dubbel met Cancel, en de tekst beloofde background-
-                continuiteit die we zonder AsyncStorage-persistence van
-                sessionStartedAt niet kunnen waarmaken bij re-mount. */}
-            <Pressable
-              style={s.endModalBtnDestructive}
-              onPress={() => {
-                /* Iter v202 (2026-07-04): navigate EERST, dan
-                   fire-and-forget de Stop-command. Root cause 5 vorige
-                   pogingen faalden: await onStop() hangt op de BLE
-                   sim-roundtrip → router.replace() werd nooit bereikt.
-                   Nu: user is altijd binnen 1 tap uit het active
-                   screen, ook al reageert de sim niet. Stop-command
-                   draait in de achtergrond; als 't lukt gaat de
-                   hardware ook uit, zo niet blijft de sessie op de
-                   bracelet doorlopen (spec §6 — user zag dit al
-                   gedrag bij Close-knop). */
-                setEndSessionVisible(false);
-                router.replace('/(tabs)/bracelet' as never);
-                void onStop();
-              }}
-            >
-              <Text style={s.endModalBtnDestructiveText}>End session</Text>
-            </Pressable>
-
-            {/* Iter v207 (2026-07-04): dismiss-knop volledig verwijderd.
-                Backdrop-tap en Android-back handelen het al af. Extra
-                knop was verwarrend want elke label (Cancel / Continue /
-                Stay) impliceert iets net anders wat het niet is. */}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* Iter v209 (2026-07-04): End-session modal VOLLEDIG VERWIJDERD.
+          6 iteraties (v87, v193, v195, v197, v201-202) faalden in
+          productie. Nu directe End-knop actie zonder modal — navigate
+          weg + fire-and-forget Stop. Simpelheid > confirmatie. */}
       {/* Iter v194 (2026-07-04): InlineBraceletTabBar op idle Choose Mode
           verwijderd. Bracelet-control zit binnen (tabs) navigator (via
           bracelet-tab inline-render) → systeem tab bar was er al →
