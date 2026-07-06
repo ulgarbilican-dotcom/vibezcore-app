@@ -4964,16 +4964,10 @@ export default function BraceletControl() {
               <Text style={s.endModalBtnDestructiveText}>End session</Text>
             </Pressable>
 
-            {/* Iter v206 (2026-07-04): "Continue" → "Stay in session".
-                Continue impliceerde de sessie was gestopt (want continue
-                een gestopte sessie). Stay maakt expliciet: sessie loopt
-                gewoon door, user blijft op active view. */}
-            <Pressable
-              style={s.endModalBtnCancel}
-              onPress={() => setEndSessionVisible(false)}
-            >
-              <Text style={s.endModalBtnCancelText}>Stay in session</Text>
-            </Pressable>
+            {/* Iter v207 (2026-07-04): dismiss-knop volledig verwijderd.
+                Backdrop-tap en Android-back handelen het al af. Extra
+                knop was verwarrend want elke label (Cancel / Continue /
+                Stay) impliceert iets net anders wat het niet is. */}
           </Pressable>
         </Pressable>
       </Modal>
