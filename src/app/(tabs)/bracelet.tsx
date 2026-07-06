@@ -559,8 +559,12 @@ type PriceSet = {
   extra: PriceRow;
 };
 const PRICING: PriceSet = {
+  /* Iter v219 (2026-07-04): bundle retail-waarde herrekend inclusief
+     Audio Library Yearly (€119.88 = ~$130) — was er niet in de old-price.
+     Nieuwe totaal: $299 bracelet + $32 extra + $130 audio = $461.
+     Save $246 = 53% korting t.o.v. gecombineerde retail waarde. */
   bracelet: { main: '$169', old: '$299', save: 'Save $130', eur: '≈ €155' },
-  bundle: { main: '$215', old: '$399', save: 'Save $184', eur: '≈ €198' },
+  bundle: { main: '$215', old: '$461', save: 'Save $246 · 53% off', eur: '≈ €198' },
   extra: { main: '$32', old: '', save: '', eur: '≈ €30' },
 };
 
@@ -1739,8 +1743,8 @@ export default function BraceletScreen() {
             <Text style={s.ksIncludesLbl}>What's included</Text>
             <View>
               <PIncluded text="VIBEZCORE Smart Bead Bracelet" />
-              <PIncluded text="Extra Style Bracelet (8mm)" />
-              <PIncluded text="12-Month Full Audio Library" />
+              <PIncluded text="Extra Interchangeable Bracelet (8mm)" />
+              <PIncluded text="12-Month Full Audio Library (worth €119.88)" />
               <PIncluded text="VIBEZCORE App access" />
             </View>
             <Pressable
@@ -1794,7 +1798,7 @@ export default function BraceletScreen() {
           <View style={s.ksAddon}>
             <View style={{ flex: 1 }}>
               <Text style={s.ksEyebrow}>ADD-ON</Text>
-              <Text style={s.ksAddonName}>Additional Style Bracelet</Text>
+              <Text style={s.ksAddonName}>Additional Interchangeable Bracelet</Text>
               <Text style={s.ksAddonSub}>8mm beads · choice of stone</Text>
             </View>
             <View style={s.ksAddonPrice}>
