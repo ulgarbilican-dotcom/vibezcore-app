@@ -106,39 +106,22 @@ export default function ActivateBraceletScreen() {
   };
 
   const onSubmit = async () => {
+    /* Iter v216 (2026-07-04): VOLLEDIG HERSCHREVEN. Geen timeout meer,
+       geen dubbele calls, geen fire-and-forget refresh. Flat, sequentieel,
+       elke stap wacht op zichzelf. Als iets echt hangt: user kill app.
+       Als iets faalt: user krijgt duidelijke error. Geen valse
+       timeouts meer. */
     setErrMsg(null);
     setPhase('submitting');
 
-    /* Iter v215 (2026-07-04): ECHTE bug gevonden — clearSubmitTimeout()
-       werd niet aangeroepen bij success + signup-error paden. Timer
-       fired ALTIJD na 15s (later 45/90s) na tap Activate, ongeacht of
-       de activate al klaar was. Effect: user zag 'taking longer than
-       expected' ook al was activate al gelukt en zat 'ie op success
-       screen. Nu: timer terug naar 15s (voldoende voor snelle happy path)
-       + clearSubmitTimeout defensief aangeroepen bij ELK exit-pad. */
-    const submitTimeout = setTimeout(() => {
-      setErrMsg('This is taking longer than expected. Please try again.');
-      setPhase('form');
-    }, 15000);
-    const clearSubmitTimeout = () => clearTimeout(submitTimeout);
-
-    /* Iter v200 (2026-07-04): activation-code format check EERST — vóór
-       signup poging. Voorheen liep de flow zo: signup → error "already
-       exists" of "invalid password" verscheen ALS eerste, ook al was de
-       code eigenlijk te kort. User wist niet dat de code de root oorzaak
-       was, dacht dat de knop niets deed. Nu direct duidelijk. */
+    /* 1. Code format check */
     if (!isValidActivationCodeFormat(code)) {
-      clearSubmitTimeout();
       setErrMsg('Please enter a 12-character activation code.');
-      clearSubmitTimeout();
       setPhase('form');
       return;
     }
 
-    /* Iter v183 (2026-07-02): als user niet ingelogd is → eerst account
-       aanmaken via signup, dan pas code activeren. Bestaande signup helper
-       persisteert session-token in AsyncStorage → activateBracelet daarna
-       heeft direct auth-context. */
+    /* 2. Signup als niet ingelogd */
     if (!isSignedIn) {
       if (!isValidEmail(email)) {
         setErrMsg('Enter a valid email address.');
@@ -150,35 +133,48 @@ export default function ActivateBraceletScreen() {
         setPhase('form');
         return;
       }
-      const signupResult = await signup(email.trim(), password);
-      if (!signupResult.ok) {
-        clearSubmitTimeout();
-        const errBody =
-          typeof signupResult.error === 'string' ? signupResult.error : '';
-        if (
-          errBody.toLowerCase().includes('already') ||
-          errBody.toLowerCase().includes('exists')
-        ) {
-          setErrMsg(
-            'This email already has an account. Sign in first via the Account tab, then activate your bracelet.',
-          );
-        } else {
-          setErrMsg(errBody || 'Could not create account. Please try again.');
+      try {
+        const signupResult = await signup(email.trim(), password);
+        if (!signupResult.ok) {
+          const errBody =
+            typeof signupResult.error === 'string' ? signupResult.error : '';
+          if (errBody.toLowerCase().includes('already') || errBody.toLowerCase().includes('exists')) {
+            setErrMsg(
+              'This email already has an account. Sign in first via the Account tab, then activate your bracelet.',
+            );
+          } else {
+            setErrMsg(errBody || 'Could not create account. Please try again.');
+          }
+          setPhase('form');
+          return;
         }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        setErrMsg(`Signup failed: ${message}`);
         setPhase('form');
         return;
       }
     }
 
-    const result = await activateBracelet(code);
-    if (result.ok) {
-      /* Iter v195 (2026-07-04): VOLGORDE KRITIEK. setDevUserOverride
-         reset intern setDevBraceletActivated(false) als override wisselt
-         (dev-user-override.ts line 106+). Dus setDevBraceletActivated
-         MOET NA setDevUserOverride komen — anders wordt activatie
-         direct gereset en toont Bracelet Connect "Bracelet not linked"
-         + vraag om opnieuw code in te voeren (dubbele activation-stap
-         die operator zag). */
+    /* 3. Activate bracelet (mock 600ms, real backend later) */
+    let result;
+    try {
+      result = await activateBracelet(code);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setErrMsg(`Activation failed: ${message}`);
+      setPhase('form');
+      return;
+    }
+
+    if (!result.ok) {
+      setErrMsg(result.message);
+      setPhase('error');
+      return;
+    }
+
+    /* 4. Dev-flags zetten (owner detection). Sequentieel await. */
+    try {
       if (result.model === 'bundle') {
         await setDevUserOverride('pro');
         setIsBundle(true);
@@ -186,27 +182,12 @@ export default function ActivateBraceletScreen() {
         await setDevUserOverride('bracelet');
       }
       await setDevBraceletActivated(true);
-      /* Iter v198 (2026-07-04): force refresh na de override-set zodat
-         useSubscription state direct propagert naar alle mounted tabs.
-         Zonder deze call zag operator "Full PRO" pas op Account tab
-         nadat hij eerst Bracelet Connect had geopend (die triggerde
-         zelf een focus-refresh). refreshSubscription() self is idempotent
-         en niet-blocking → geen risico. */
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { refreshSubscription } = require('@/hooks/useSubscription');
-        refreshSubscription();
-      } catch {
-        /* swallow */
-      }
-      clearSubmitTimeout();
-      clearSubmitTimeout();
-      setPhase('success');
-      return;
+    } catch (e) {
+      /* dev-flag failures mogen niet blokkeren — success screen tonen */
+      if (__DEV__) console.warn('[activate-bracelet] dev-flag error:', e);
     }
-    clearSubmitTimeout();
-    setErrMsg(result.message);
-    setPhase('error');
+
+    setPhase('success');
   };
 
   /* ── Auth-guard loading (heel kort: AsyncStorage-token-check) ──── */
