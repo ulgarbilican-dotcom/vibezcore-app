@@ -549,16 +549,19 @@ const EDITIONS: Edition[] = [
      Bundle:   was $399, now $215, save $184
                 (math: $299 + $69.99 audio + $32 beads ≈ $399 retail)
      Extra bead set: $32 retail (geen losse KS-discount op website) */
-type PriceRow = { main: string; old: string; save: string };
+/* Iter v218 (2026-07-04): eur toegevoegd als secundaire hint onder USD.
+   Kickstarter is USD-native (KS-pagina zelf toont USD), EUR is contextuele
+   conversie voor EU-users. Rate ~0.92 (juli 2026 gemiddeld). */
+type PriceRow = { main: string; old: string; save: string; eur?: string };
 type PriceSet = {
   bracelet: PriceRow;
   bundle: PriceRow;
   extra: PriceRow;
 };
 const PRICING: PriceSet = {
-  bracelet: { main: '$169', old: '$299', save: 'Save $130' },
-  bundle: { main: '$215', old: '$399', save: 'Save $184' },
-  extra: { main: '$32', old: '', save: '' },
+  bracelet: { main: '$169', old: '$299', save: 'Save $130', eur: '≈ €155' },
+  bundle: { main: '$215', old: '$399', save: 'Save $184', eur: '≈ €198' },
+  extra: { main: '$32', old: '', save: '', eur: '≈ €30' },
 };
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
@@ -1729,6 +1732,9 @@ export default function BraceletScreen() {
                 <Text style={s.priceSaveInline}> · {price.bundle.save}</Text>
               </Text>
             </View>
+            {price.bundle.eur && (
+              <Text style={s.priceEur}>{price.bundle.eur}</Text>
+            )}
             <View style={s.ksHairline} />
             <Text style={s.ksIncludesLbl}>What's included</Text>
             <View>
@@ -1760,6 +1766,9 @@ export default function BraceletScreen() {
                 <Text style={s.priceSaveInline}> · {price.bracelet.save}</Text>
               </Text>
             </View>
+            {price.bracelet.eur && (
+              <Text style={s.priceEur}>{price.bracelet.eur}</Text>
+            )}
             <View style={s.ksHairline} />
             <Text style={s.ksIncludesLbl}>What's included</Text>
             <View>
@@ -3593,6 +3602,16 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     textDecorationLine: 'line-through',
+  },
+  /* Iter v218 (2026-07-04): EUR-conversie hint onder USD-hoofdprijs.
+     Subtiel, gedimd, klein — communiceert "voor EU-context, niet
+     de betaalprijs op KS". */
+  priceEur: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    letterSpacing: 0.2,
+    marginTop: 2,
   },
   /* Iter 9: priceSave-pill weggehaald, vervangen door inline text
      "$399 · save $184" met success-kleur op het save-deel. iOS-style
