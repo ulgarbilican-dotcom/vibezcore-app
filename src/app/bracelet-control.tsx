@@ -4433,6 +4433,8 @@ export default function BraceletControl() {
               Bracelet-tab blijft mounted, sessie loopt door in achtergrond.
               User tikt Bracelet-tab en ziet de sessie nog exact zoals hij
               hem verliet. */}
+          {/* Iter v208 (2026-07-04): Minimize subtieler met chevron zodat
+              het als tap-affordance leest, niet als plain label. */}
           <Pressable
             style={({ pressed }) => [
               s.closeSessionBtn,
@@ -4442,45 +4444,7 @@ export default function BraceletControl() {
             accessibilityLabel="Minimize — session keeps running in background"
           >
             <Text style={s.closeSessionBtnText}>
-              Minimize · Session keeps running
-            </Text>
-          </Pressable>
-
-          {/* Iter v149 v4 (2026-06-25): Voice toggle prominent op active
-              session view. Operator-feedback: dimmer-knop moet hier
-              zichtbaar zijn, niet verstopt in Settings (bv. user begint
-              sessie tijdens vergadering en wil meteen kunnen stillen). */}
-          <Pressable
-            style={[
-              s.voiceToggleRow,
-              voiceCues && {
-                borderColor: activeMeta.color + '55',
-                backgroundColor: activeMeta.color + '14',
-              },
-            ]}
-            onPress={() => setVoiceCues(!voiceCues)}
-            accessibilityLabel={`Voice guidance ${voiceCues ? 'on — tap to mute' : 'off — tap to enable'}`}
-          >
-            {voiceCues ? (
-              <Volume2 size={18} color={activeMeta.color} />
-            ) : (
-              <VolumeX size={18} color={Brand.textDim} />
-            )}
-            <Text
-              style={[
-                s.voiceToggleLabel,
-                voiceCues && { color: Brand.text },
-              ]}
-            >
-              Voice guidance
-            </Text>
-            <Text
-              style={[
-                s.voiceToggleState,
-                voiceCues && { color: activeMeta.color },
-              ]}
-            >
-              {voiceCues ? 'ON' : 'OFF'}
+              ↓  Minimize · session keeps running
             </Text>
           </Pressable>
 
@@ -4556,6 +4520,45 @@ export default function BraceletControl() {
               breathCurrentRunRef.current = data;
             }}
           />
+
+          {/* Iter v208 (2026-07-04): Voice guidance verplaatst naar
+              DIRECT ONDER BreathworkStrip. Voorheen zat 'ie boven de
+              breathwork-card wat verwarrend was — user wist niet
+              waar Voice op sloeg. Nu visueel gekoppeld aan het
+              breathwork blok. */}
+          <Pressable
+            style={[
+              s.voiceToggleRow,
+              voiceCues && {
+                borderColor: activeMeta.color + '55',
+                backgroundColor: activeMeta.color + '14',
+              },
+            ]}
+            onPress={() => setVoiceCues(!voiceCues)}
+            accessibilityLabel={`Voice guidance ${voiceCues ? 'on — tap to mute' : 'off — tap to enable'}`}
+          >
+            {voiceCues ? (
+              <Volume2 size={18} color={activeMeta.color} />
+            ) : (
+              <VolumeX size={18} color={Brand.textDim} />
+            )}
+            <Text
+              style={[
+                s.voiceToggleLabel,
+                voiceCues && { color: Brand.text },
+              ]}
+            >
+              Voice guidance
+            </Text>
+            <Text
+              style={[
+                s.voiceToggleState,
+                voiceCues && { color: activeMeta.color },
+              ]}
+            >
+              {voiceCues ? 'ON' : 'OFF'}
+            </Text>
+          </Pressable>
         </View>
 
         {/* Sim demo bar verhuisd naar idle-screen (operator-feedback:
