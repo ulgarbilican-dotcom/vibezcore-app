@@ -109,15 +109,15 @@ export default function ActivateBraceletScreen() {
     setErrMsg(null);
     setPhase('submitting');
 
-    /* Iter v212 (2026-07-04): timeout verhoogd van 15s → 45s. Op traag
-       netwerk of langzame Supabase-signup response triggerde 15s vals
-       terwijl signup nog draait — user zag error terwijl 't eigenlijk
-       gewoon aan het werk was. 45s dekt trage 3G/EU-latency terwijl
-       'echt vast' gedrag nog steeds opgevangen wordt. */
+    /* Iter v214 (2026-07-04): timeout verhoogd van 45s → 90s. Operator
+       zag op vC 60 nog steeds 'taking longer than expected'. Supabase
+       cold-start (project sleep na inactiviteit) kan tot 60s duren
+       voordat de auth-endpoint responds. 90s dekt dat + houdt echt-vast
+       gedrag op de radar (>2 min = duidelijk fout). */
     const submitTimeout = setTimeout(() => {
       setErrMsg('This is taking longer than expected. Please try again.');
       setPhase('form');
-    }, 45000);
+    }, 90000);
     const clearSubmitTimeout = () => clearTimeout(submitTimeout);
 
     /* Iter v200 (2026-07-04): activation-code format check EERST — vóór

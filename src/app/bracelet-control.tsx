@@ -3873,14 +3873,10 @@ export default function BraceletControl() {
   useFocusEffect(
     useCallback(() => {
       if (!sessionActive && !isPausedRef.current) return;
-      /* Iter v213 (2026-07-04): system-back = End met context-aware
-         navigate — zelfde gedrag als End-knop. */
+      /* Iter v214 (2026-07-04): system-back = zelfde als End-knop.
+         Geen navigate — vertrouwen op derived state. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/(tabs)/bracelet' as never);
-        }
+        setEndedLocally(true);
         void onStop();
         return true;
       });
@@ -4423,19 +4419,18 @@ export default function BraceletControl() {
                 busy && s.btnDisabled,
               ]}
               android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-              /* Iter v213 (2026-07-04): End context-aware navigate.
-                 - Push-instance (preview via 'Try it now' CTA): router.back()
-                   → terug naar Choose Mode preview van dezelfde push
-                 - Inline-instance (bracelet-owner): router.replace naar
-                   /(tabs)/bracelet → owner Choose Mode
-                 Zonder deze split landde preview-user na End op de
-                 Kickstarter-marketing van de bracelet-tab. */
+              /* Iter v214 (2026-07-04): End = GEEN navigate meer.
+                 router.back() ging naar Kickstarter marketing (bracelet-
+                 tab main voor non-owner). router.replace idem.
+                 Beide fout omdat user wilde op DEZELFDE bracelet-control
+                 instance blijven, gewoon terug naar Choose Mode idle.
+                 Fix: alleen setEndedLocally + onStop. Derived
+                 sessionActive wordt false → render valt automatisch
+                 terug naar Choose Mode van dezelfde instance
+                 (push voor preview, inline voor owner). Geen navigate
+                 = geen 'verkeerd pad'-risico. */
               onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)/bracelet' as never);
-                }
+                setEndedLocally(true);
                 void onStop();
               }}
               disabled={busy}
