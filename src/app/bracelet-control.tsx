@@ -3391,12 +3391,18 @@ export default function BraceletControl() {
     /* Conditie voor natural-completion recording:
        - sessie was actief, is nu niet meer (transitie)
        - we hebben nog een startedAt-timestamp (= niet expliciet gewist)
-       - we zijn niet in paused state (anders is dit een pause-stop) */
+       - we zijn niet in paused state (anders is dit een pause-stop)
+       Iter v210 (2026-07-04): endedLocally guard — bij manual End tikt
+       user, we zetten setStatus force sessionActive=false + endedLocally=true
+       DIRECT vóór onStop's cleanup runt. Zonder deze guard triggerde deze
+       useEffect kort de natural-completion path → CompletionModal + audio-cue.
+       Als user End tikte, is 't geen natural completion. Skip. */
     if (
       wasActive &&
       !status.sessionActive &&
       sessionStartedAtRef.current !== null &&
-      pausedAt === null
+      pausedAt === null &&
+      !endedLocally
     ) {
       /* Iter 9bl (2026-05-31): duration = ACTIEVE tijd, consistent met
          onStop/onRestart. Voor natural completion (bracelet timer auto-
@@ -3436,7 +3442,7 @@ export default function BraceletControl() {
       setBreathworkEnabled(false);
       resetBreathworkTracking();
     }
-  }, [status, pausedAt, selectedMode, duration, buildBreathworkRecord, resetBreathworkTracking]);
+  }, [status, pausedAt, selectedMode, duration, buildBreathworkRecord, resetBreathworkTracking, endedLocally]);
 
   /* Poll status every 5s while connected (spec §8.3/§11.4).
      Tracking opeenvolgende fouten → na 3× falen (15s) markeren we de
@@ -3864,11 +3870,10 @@ export default function BraceletControl() {
   useFocusEffect(
     useCallback(() => {
       if (!sessionActive && !isPausedRef.current) return;
-      /* Iter v209 (2026-07-04): system-back tijdens actieve sessie doet
-         nu hetzelfde als End-knop: navigate weg + fire-and-forget Stop.
-         Geen modal meer. */
+      /* Iter v210 (2026-07-04): system-back = End = naar bracelet-tab
+         (owner-view), niet Audio Library. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        router.navigate('/(tabs)/' as never);
+        router.replace('/(tabs)/bracelet' as never);
         void onStop();
         return true;
       });
@@ -4411,14 +4416,14 @@ export default function BraceletControl() {
                 busy && s.btnDisabled,
               ]}
               android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-              /* Iter v209 (2026-07-04): End-knop zonder modal. Modal-chain
-                 (setEndSessionVisible → modal → onPress → onStop) faalde
-                 herhaaldelijk in productie. Nu direct: navigate weg +
-                 fire-and-forget onStop. Zelfde patroon als Minimize maar
-                 mét Stop-command. Als user per ongeluk tikt: sessie
-                 stopt, kan opnieuw starten. Simpelheid > confirmatie. */
+              /* Iter v210 (2026-07-04): End → bracelet-tab (owner-view
+                 Choose Mode idle), NIET Audio Library. Sessie is gestopt
+                 → remount is prima want fresh idle-render. Logischer
+                 dan Audio Library want user is in bracelet-context.
+                 Copy-paste van Minimize's navigate('/(tabs)/') was fout —
+                 Minimize moet inline-mount behouden, End niet. */
               onPress={() => {
-                router.navigate('/(tabs)/' as never);
+                router.replace('/(tabs)/bracelet' as never);
                 void onStop();
               }}
               disabled={busy}
