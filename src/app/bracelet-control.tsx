@@ -3873,10 +3873,14 @@ export default function BraceletControl() {
   useFocusEffect(
     useCallback(() => {
       if (!sessionActive && !isPausedRef.current) return;
-      /* Iter v210 (2026-07-04): system-back = End = naar bracelet-tab
-         (owner-view), niet Audio Library. */
+      /* Iter v213 (2026-07-04): system-back = End met context-aware
+         navigate — zelfde gedrag als End-knop. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        router.replace('/(tabs)/bracelet' as never);
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(tabs)/bracelet' as never);
+        }
         void onStop();
         return true;
       });
@@ -4419,14 +4423,19 @@ export default function BraceletControl() {
                 busy && s.btnDisabled,
               ]}
               android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-              /* Iter v210 (2026-07-04): End → bracelet-tab (owner-view
-                 Choose Mode idle), NIET Audio Library. Sessie is gestopt
-                 → remount is prima want fresh idle-render. Logischer
-                 dan Audio Library want user is in bracelet-context.
-                 Copy-paste van Minimize's navigate('/(tabs)/') was fout —
-                 Minimize moet inline-mount behouden, End niet. */
+              /* Iter v213 (2026-07-04): End context-aware navigate.
+                 - Push-instance (preview via 'Try it now' CTA): router.back()
+                   → terug naar Choose Mode preview van dezelfde push
+                 - Inline-instance (bracelet-owner): router.replace naar
+                   /(tabs)/bracelet → owner Choose Mode
+                 Zonder deze split landde preview-user na End op de
+                 Kickstarter-marketing van de bracelet-tab. */
               onPress={() => {
-                router.replace('/(tabs)/bracelet' as never);
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)/bracelet' as never);
+                }
                 void onStop();
               }}
               disabled={busy}
