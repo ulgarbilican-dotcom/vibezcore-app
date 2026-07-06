@@ -109,15 +109,17 @@ export default function ActivateBraceletScreen() {
     setErrMsg(null);
     setPhase('submitting');
 
-    /* Iter v214 (2026-07-04): timeout verhoogd van 45s → 90s. Operator
-       zag op vC 60 nog steeds 'taking longer than expected'. Supabase
-       cold-start (project sleep na inactiviteit) kan tot 60s duren
-       voordat de auth-endpoint responds. 90s dekt dat + houdt echt-vast
-       gedrag op de radar (>2 min = duidelijk fout). */
+    /* Iter v215 (2026-07-04): ECHTE bug gevonden — clearSubmitTimeout()
+       werd niet aangeroepen bij success + signup-error paden. Timer
+       fired ALTIJD na 15s (later 45/90s) na tap Activate, ongeacht of
+       de activate al klaar was. Effect: user zag 'taking longer than
+       expected' ook al was activate al gelukt en zat 'ie op success
+       screen. Nu: timer terug naar 15s (voldoende voor snelle happy path)
+       + clearSubmitTimeout defensief aangeroepen bij ELK exit-pad. */
     const submitTimeout = setTimeout(() => {
       setErrMsg('This is taking longer than expected. Please try again.');
       setPhase('form');
-    }, 90000);
+    }, 15000);
     const clearSubmitTimeout = () => clearTimeout(submitTimeout);
 
     /* Iter v200 (2026-07-04): activation-code format check EERST — vóór
@@ -150,6 +152,7 @@ export default function ActivateBraceletScreen() {
       }
       const signupResult = await signup(email.trim(), password);
       if (!signupResult.ok) {
+        clearSubmitTimeout();
         const errBody =
           typeof signupResult.error === 'string' ? signupResult.error : '';
         if (
@@ -196,6 +199,7 @@ export default function ActivateBraceletScreen() {
       } catch {
         /* swallow */
       }
+      clearSubmitTimeout();
       clearSubmitTimeout();
       setPhase('success');
       return;
