@@ -102,7 +102,13 @@ export function isValidActivationCodeFormat(raw: string): boolean {
   return /^[A-Z0-9]{12}$/.test(stripped);
 }
 
-/** Submit activation code naar backend. */
+/** Submit activation code naar backend.
+ *  Iter v217 (2026-07-04): mock volledig verwijderd. Roept echte
+ *  /api/bracelet/activate endpoint in vibezcore-backend. Endpoint
+ *  valideert code in Supabase bracelet_activations table, markeert
+ *  activation als used, update users.has_bracelet + bracelet_model.
+ *  Sluit UI-loop met refreshSubscription zodat isPro/isBraceletOwner
+ *  direct propageren naar alle mounted schermen. */
 export async function activateBracelet(
   code: string,
 ): Promise<ActivationResult> {
@@ -116,67 +122,18 @@ export async function activateBracelet(
   }
 
   try {
-    /* TODO (backend-dependency): endpoint /api/bracelet/activate bestaat
-       nog niet. Wanneer live, verwijder deze guard. Voor dev/mock-mode
-       returnen we een mock-success na 600ms zodat de UI-flow eind-tot-eind
-       getest kan worden zonder backend.
-
-       Productie-pad zal zijn:
-         const data = await apiCall('/api/bracelet/activate', {
-           method: 'POST',
-           auth: true,
-           body: { code: stripped },
-         });
-         refreshSubscription();
-         return { ok: true, activatedAt: data.activated_at, model: data.model };
-    */
-    /* Iter v180 (2026-07-02): __DEV__ guard verwijderd. Mock werkt nu ook
-       in productie zodat operator + testers de volledige activation-flow kunnen
-       eind-tot-eind testen zonder backend endpoint. Codes eindigend op "FAIL"
-       simuleren nog steeds een error-state. Zodra backend endpoint klaar is
-       (voor productie launch): dit blok vervangen door echte apiCall zoals
-       gedocumenteerd in de TODO-comment hierboven. */
-    if (__DEV__) {
-      console.log(
-        '[bracelet-activation] would POST /api/bracelet/activate with:',
-        stripped,
-      );
-    }
-    /* Mock 600ms delay zodat UI busy-state ziet. */
-    await new Promise((r) => setTimeout(r, 600));
-    /* Codes eindigend op "FAIL" → simuleer fout voor negative-path testing. */
-    if (stripped.endsWith('FAIL')) {
-      return {
-        ok: false,
-        code: 'invalid_code',
-        message: 'This code is not valid. Check the email we sent you.',
-      };
-    }
-    /* Iter v191 (2026-07-03): bundle mock support. Codes eindigend op
-       "BUNDLE" simuleren bundle-activation (bracelet + 1 jaar audio).
-       Andere codes = bracelet-only. In productie backend detecteert dit
-       via code-type in database. */
-    const isBundle = stripped.endsWith('BUNDLE');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { apiCall } = require('@/services/api');
+    const data = await apiCall<Record<string, unknown>>(
+      '/api/bracelet/activate',
+      { method: 'POST', auth: true, body: { code: stripped } },
+    );
     refreshSubscription();
     return {
       ok: true,
-      activatedAt: new Date().toISOString(),
-      model: isBundle ? 'bundle' : 'kickstarter',
+      activatedAt: typeof data.activated_at === 'string' ? data.activated_at : undefined,
+      model: typeof data.model === 'string' ? data.model : undefined,
     };
-
-    /* Productie-pad — vervang bovenstaande mock zodra endpoint live is:
-     *
-     *   const data = await apiCall<Record<string, unknown>>(
-     *     '/api/bracelet/activate',
-     *     { method: 'POST', auth: true, body: { code: stripped } },
-     *   );
-     *   refreshSubscription();
-     *   return {
-     *     ok: true,
-     *     activatedAt: typeof data.activated_at === 'string' ? data.activated_at : undefined,
-     *     model: typeof data.model === 'string' ? data.model : undefined,
-     *   };
-     */
   } catch (e) {
     const body = (e as { body?: string })?.body ?? '';
     if (body.includes('invalid_code') || body.includes('code_not_found')) {
