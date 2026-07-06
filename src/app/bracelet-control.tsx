@@ -4425,21 +4425,24 @@ export default function BraceletControl() {
             </Pressable>
           </View>
 
-          {/* Iter v201 (2026-07-04): Close-knop toegevoegd. Verlaat het
-              scherm ZONDER de sessie te stoppen — hardware draait autonoom
-              door op de bracelet (spec §6). User kan Audio Library, Breath
-              of Account openen; sessie loopt gewoon door. Bij terugkomst
-              in Bracelet Control ziet 'ie de sessie nog draaien. */}
+          {/* Iter v204 (2026-07-04): Close-knop navigeer naar Audio Library
+              (andere tab). Vorige v201 gebruikte router.replace('/(tabs)/bracelet')
+              — user was al op bracelet-tab → replace veroorzaakte remount
+              → BraceletControl unmount + remount → refs reset → sessie
+              'gereset' in UI (operator-feedback). Nu naar Audio Library tab:
+              Bracelet-tab blijft mounted, sessie loopt door in achtergrond.
+              User tikt Bracelet-tab en ziet de sessie nog exact zoals hij
+              hem verliet. */}
           <Pressable
             style={({ pressed }) => [
               s.closeSessionBtn,
               pressed && { opacity: 0.7 },
             ]}
-            onPress={() => router.replace('/(tabs)/bracelet' as never)}
-            accessibilityLabel="Close screen — session keeps running"
+            onPress={() => router.navigate('/(tabs)/' as never)}
+            accessibilityLabel="Minimize — session keeps running in background"
           >
             <Text style={s.closeSessionBtnText}>
-              Close · Session keeps running
+              Minimize · Session keeps running
             </Text>
           </Pressable>
 
