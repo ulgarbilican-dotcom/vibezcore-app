@@ -4964,11 +4964,16 @@ export default function BraceletControl() {
               <Text style={s.endModalBtnDestructiveText}>End session</Text>
             </Pressable>
 
+            {/* Iter v205 (2026-07-04): "Cancel" → "Continue session".
+                Operator-feedback: "Cancel" was dubbelzinnig — user dacht
+                dat het net als End de sessie zou stoppen. "Continue"
+                maakt expliciet dat de sessie doorloopt en de user
+                terugkeert naar het active screen. */}
             <Pressable
               style={s.endModalBtnCancel}
               onPress={() => setEndSessionVisible(false)}
             >
-              <Text style={s.endModalBtnCancelText}>Cancel</Text>
+              <Text style={s.endModalBtnCancelText}>Continue session</Text>
             </Pressable>
           </Pressable>
         </Pressable>
