@@ -109,14 +109,15 @@ export default function ActivateBraceletScreen() {
     setErrMsg(null);
     setPhase('submitting');
 
-    /* Iter v201 (2026-07-04): 15s safety timeout op de hele submit flow.
-       Als signup of activateBracelet hangt (network, RC, sim) mag user
-       niet eindeloos naar een draaiende knop staren. Force setErrMsg +
-       phase='form' zodat 'ie opnieuw kan proberen. */
+    /* Iter v212 (2026-07-04): timeout verhoogd van 15s → 45s. Op traag
+       netwerk of langzame Supabase-signup response triggerde 15s vals
+       terwijl signup nog draait — user zag error terwijl 't eigenlijk
+       gewoon aan het werk was. 45s dekt trage 3G/EU-latency terwijl
+       'echt vast' gedrag nog steeds opgevangen wordt. */
     const submitTimeout = setTimeout(() => {
       setErrMsg('This is taking longer than expected. Please try again.');
       setPhase('form');
-    }, 15000);
+    }, 45000);
     const clearSubmitTimeout = () => clearTimeout(submitTimeout);
 
     /* Iter v200 (2026-07-04): activation-code format check EERST — vóór
