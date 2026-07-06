@@ -3429,14 +3429,17 @@ export default function BraceletControl() {
         status: 'completed',
         breathwork: buildBreathworkRecord(),
       });
-      /* Trigger felicitatie-modal — alleen bij natural completion,
-         niet bij manual End of Restart (die clearen
-         sessionStartedAtRef expliciet en raken deze branch niet). */
-      setCompletedModeForModal(selectedMode);
-      /* Iter v147 (2026-06-25): voice-cue bij natural completion.
-         Mirror van breath-voice's playCompletionCue: niet gegate'd
-         op voiceEnabled — sessie is afgewerkt, closing-reward verdiend. */
-      playBraceletCompletionCue(selectedMode);
+      /* Iter v211 (2026-07-04): popup + audio-cue VERWIJDERD bij
+         natural completion. Operator: bracelet-sessies worden vaak in
+         professionele context (vergadering) gestart en moeten SUBTIEL
+         + STIL zijn. User voelt zelf de haptics stoppen op de pols
+         (echte bracelet firmware) — dat is signaal genoeg. UI valt
+         vanzelf terug naar Choose Mode.
+         Breathwork completion (breath-voice.ts + breath-tab) is een
+         apart pad en behoudt wél popup + audio — daar is expressief
+         gedrag gewenst. */
+      /* setCompletedModeForModal(selectedMode);   ← popup weg */
+      /* playBraceletCompletionCue(selectedMode);  ← audio weg */
       /* Reset breathwork toggle bij natural completion zodat volgende
          sessie weer met breathwork=uit start (opt-in default). */
       setBreathworkEnabled(false);
