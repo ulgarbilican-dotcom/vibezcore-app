@@ -4932,30 +4932,14 @@ export default function BraceletControl() {
           >
             <Text style={s.endModalTitle}>End session?</Text>
             <Text style={s.endModalBody}>
-              The bracelet will stop and you&apos;ll return to the previous
-              screen. To keep the session running in the background, tap
-              &ldquo;Keep running&rdquo;.
+              The bracelet will stop and you&apos;ll return to the Bracelet
+              screen.
             </Text>
 
-            <Pressable
-              style={[
-                s.endModalBtnPrimary,
-                { backgroundColor: getModeMeta(selectedMode).color },
-              ]}
-              onPress={() => setEndSessionVisible(false)}
-            >
-              <Text
-                style={[
-                  s.endModalBtnPrimaryText,
-                  isLightColor(getModeMeta(selectedMode).color) && {
-                    color: '#0a0a0a',
-                  },
-                ]}
-              >
-                Keep running
-              </Text>
-            </Pressable>
-
+            {/* Iter v203 (2026-07-04): "Keep running" knop verwijderd —
+                was dubbel met Cancel, en de tekst beloofde background-
+                continuiteit die we zonder AsyncStorage-persistence van
+                sessionStartedAt niet kunnen waarmaken bij re-mount. */}
             <Pressable
               style={s.endModalBtnDestructive}
               onPress={() => {
