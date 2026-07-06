@@ -4958,14 +4958,20 @@ export default function BraceletControl() {
 
             <Pressable
               style={s.endModalBtnDestructive}
-              onPress={async () => {
+              onPress={() => {
+                /* Iter v202 (2026-07-04): navigate EERST, dan
+                   fire-and-forget de Stop-command. Root cause 5 vorige
+                   pogingen faalden: await onStop() hangt op de BLE
+                   sim-roundtrip → router.replace() werd nooit bereikt.
+                   Nu: user is altijd binnen 1 tap uit het active
+                   screen, ook al reageert de sim niet. Stop-command
+                   draait in de achtergrond; als 't lukt gaat de
+                   hardware ook uit, zo niet blijft de sessie op de
+                   bracelet doorlopen (spec §6 — user zag dit al
+                   gedrag bij Close-knop). */
                 setEndSessionVisible(false);
-                await onStop();
-                /* Iter v201 (2026-07-04): hard-navigate weg van active
-                   screen naar Bracelet-tab owner-view. Vertrouwen op
-                   derived state (endedLocally) faalde volgens operator
-                   op vC 53 → force navigation is 100% betrouwbaar. */
                 router.replace('/(tabs)/bracelet' as never);
+                void onStop();
               }}
             >
               <Text style={s.endModalBtnDestructiveText}>End session</Text>
