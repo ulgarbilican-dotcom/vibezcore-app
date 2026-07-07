@@ -257,8 +257,19 @@ export function useDevBraceletActivated(): boolean {
  *  andere naam. */
 export function useBraceletOwner(): boolean {
   const override = useDevUserOverride();
+  /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+  const { useSubscription } = require('@/hooks/useSubscription');
+  const sub = useSubscription() as { hasBracelet?: boolean };
+  /* Iter v222 (2026-07-07): dev-override eerst (voor local testing),
+     dan backend-state via useSubscription().hasBracelet (productie-pad).
+     Voorheen returned deze functie altijd `false` in productie omdat
+     dev-override niet actief was — daardoor bleef de Account-tab
+     "You're in the free environment" tonen na een geslaagde activatie.
+     Backend snake_case `has_bracelet_activated` wordt in
+     useSubscription.fetchStatus() gemapped naar sub.hasBracelet. */
   if (override === 'bracelet' || override === 'pro') return true;
-  return false;
+  if (override === 'guest' || override === 'audio') return false;
+  return sub.hasBracelet === true;
 }
 
 /* Iter v194 (2026-07-04): centrale helper voor auth flow.

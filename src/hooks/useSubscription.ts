@@ -39,6 +39,15 @@ export type SubscriptionStatus = {
   validUntil?: string;
   /** true = abo verlengt automatisch op `validUntil`. Backend `will_renew`. */
   willRenew?: boolean;
+  /** Iter v222 (2026-07-07): bracelet-ownership uit backend. Backend
+   *  retourneert `has_bracelet_activated` op /api/subscription-status na
+   *  succesvolle POST /api/bracelet/activate. Als backend het veld nog
+   *  niet meegeeft blijft dit undefined → useBraceletOwner()=false, geen
+   *  regressie voor bestaande users. */
+  hasBracelet?: boolean;
+  /** Iter v222 (2026-07-07): 'bracelet' (bracelet only) of 'bundle'
+   *  (bracelet + 1 jaar audio). Uit backend `bracelet_model`. */
+  braceletModel?: 'bracelet' | 'bundle';
   /** Iter 9dq v150 (operator 2026-06-17): Gumroad-veld verwijderd. App is
    *  IAP-only (App Store / Play Store). Geen Gumroad-subscriptions meer
    *  in productie — operator-besluit "GUMROAD NIET MEER VOOR DE APP".
@@ -120,6 +129,8 @@ async function loadCacheOnce(): Promise<void> {
               email: obj.email,
               validUntil: obj.validUntil,
               willRenew: obj.willRenew,
+              hasBracelet: obj.hasBracelet,
+              braceletModel: obj.braceletModel,
             };
             notifyAll(status);
           }
@@ -228,6 +239,16 @@ async function fetchStatus(): Promise<void> {
         typeof raw.valid_until === 'string' ? raw.valid_until : undefined,
       willRenew:
         typeof raw.will_renew === 'boolean' ? raw.will_renew : undefined,
+      /* Iter v222 (2026-07-07): backend snake_case → camelCase. Als het
+         veld ontbreekt in de response blijft dit undefined en
+         useBraceletOwner() geeft false — non-breaking als backend nog
+         niet is uitgebreid. */
+      hasBracelet:
+        raw.has_bracelet_activated === true ? true : undefined,
+      braceletModel:
+        raw.bracelet_model === 'bracelet' || raw.bracelet_model === 'bundle'
+          ? raw.bracelet_model
+          : undefined,
     };
     notifyAll(data);
     persistCache(data);
@@ -352,6 +373,11 @@ export function useSubscription() {
     tier: status?.tier,
     validUntil: status?.validUntil,
     willRenew: status?.willRenew,
+    /* Iter v222 (2026-07-07): bracelet-ownership uit backend. Wordt
+       gelezen door useBraceletOwner() in dev-user-override.ts en levert
+       de bron-van-waarheid in productie. */
+    hasBracelet: status?.hasBracelet === true,
+    braceletModel: status?.braceletModel,
     isLoading: status === null && override === null,
     refresh: refreshSubscription,
   };
