@@ -26,11 +26,10 @@ import { useDevUserOverride } from '@/utils/dev-user-override';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-/* Iter v224 (2026-07-07): bump cache key naar v2. Oude v1-cache bevat
- * `hasBracelet` niet — een user die vanuit vC 65 update en 24h stale
- * cache heeft zag "not linked" ondanks correcte backend-status. Nieuwe
- * key = automatische invalidatie zonder handmatige app-data-wipe. */
-export const SUB_CACHE_KEY = 'vz_sub_v2';
+/* Iter v225 (2026-07-07): bump cache key naar v3 want RC-only cache uit
+ * v2 mist hasBracelet permanent voor audio-subscribers (shortcircuit-bug).
+ * Nieuwe key = auto-invalidatie zodra vC 69 draait. */
+export const SUB_CACHE_KEY = 'vz_sub_v3';
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type SubscriptionStatus = {
@@ -193,47 +192,21 @@ async function tryRevenueCatStatus(): Promise<SubscriptionStatus | null> {
   }
 }
 
-async function fetchStatus(): Promise<void> {
-  /* Iter 9dq v56 (2026-06-03, audit C2): elke fetch claimt z'n eigen
-     generation-nummer. Bij elke yield-point checken we of we nog de
-     "current" generation zijn; zo niet → discard. Hierdoor schrijft
-     een in-flight user-A-fetch nooit meer in user-B's cache. */
-  const myGen = fetchGeneration;
-  if (isFetching) {
-    /* Een eerdere fetch loopt nog. Die heeft een lagere of dezelfde
-       generatie. Als dezelfde → al onderweg, niets dubbel doen. Als
-       lagere → 'ie wordt straks toch gediscard, geen reden om hier
-       te wachten. In beide gevallen: geen nieuwe parallelle fetch. */
-    return;
-  }
-  isFetching = true;
+/* Iter v225 (2026-07-07): backend fetch als aparte helper. Nu altijd
+ * aangeroepen (ook als RC actieve entitlement heeft) omdat de backend
+ * de enige bron is voor bracelet-ownership (has_bracelet_activated).
+ * Voorheen: RC shortcircuit skipte de backend → bundle-users die audio
+ * KOCHTEN via IAP en dan bracelet activeerden zagen "Audio PRO" ipv
+ * "Full PRO" want hasBracelet bleef undefined. */
+async function fetchBackendStatus(): Promise<SubscriptionStatus | null> {
   try {
-    /* Iter v164: probeer RevenueCat eerst. Bij actieve entitlement is
-       dit DE bron-van-waarheid — geen backend round-trip nodig. */
-    const rcStatus = await tryRevenueCatStatus();
-    if (myGen !== fetchGeneration) return;
-    if (rcStatus?.active) {
-      notifyAll(rcStatus);
-      persistCache(rcStatus);
-      return;
-    }
-
-    /* Geen actieve RevenueCat entitlement → check backend voor het geval
-       user al PRO is via een ander pad (bv. handmatige grant). */
     const token = await getToken();
-    if (myGen !== fetchGeneration) return; /* gerevoket — sign-out happened */
-    if (!token) {
-      notifyAll({ active: false });
-      clearPersistedCache();
-      return;
-    }
-
+    if (!token) return null;
     const raw = await apiCall<Record<string, unknown>>(
       '/api/subscription-status',
       { auth: true }
     );
-    if (myGen !== fetchGeneration) return; /* gerevoket midden in fetch */
-    const data: SubscriptionStatus = {
+    return {
       active: raw.active === true,
       tier:
         raw.tier === 'monthly' || raw.tier === 'yearly' ? raw.tier : undefined,
@@ -243,10 +216,6 @@ async function fetchStatus(): Promise<void> {
         typeof raw.valid_until === 'string' ? raw.valid_until : undefined,
       willRenew:
         typeof raw.will_renew === 'boolean' ? raw.will_renew : undefined,
-      /* Iter v222 (2026-07-07): backend snake_case → camelCase. Als het
-         veld ontbreekt in de response blijft dit undefined en
-         useBraceletOwner() geeft false — non-breaking als backend nog
-         niet is uitgebreid. */
       hasBracelet:
         raw.has_bracelet_activated === true ? true : undefined,
       braceletModel:
@@ -254,11 +223,54 @@ async function fetchStatus(): Promise<void> {
           ? raw.bracelet_model
           : undefined,
     };
-    notifyAll(data);
-    persistCache(data);
+  } catch (e) {
+    if (__DEV__) console.warn('[useSubscription] backend fetch failed:', e);
+    return null;
+  }
+}
+
+async function fetchStatus(): Promise<void> {
+  const myGen = fetchGeneration;
+  if (isFetching) return;
+  isFetching = true;
+  try {
+    /* Iter v225 (2026-07-07): parallel RC + backend fetch. Merge: RC is
+       leidend voor audio-subscription state (tier, validUntil, willRenew,
+       active), backend is leidend voor bracelet (hasBracelet,
+       braceletModel). Deze split lost het Full PRO detectie-gat op
+       waar user audio kocht via IAP en dan bracelet activeerde. */
+    const [rcStatus, backendStatus] = await Promise.all([
+      tryRevenueCatStatus(),
+      fetchBackendStatus(),
+    ]);
+    if (myGen !== fetchGeneration) return;
+
+    /* Geen token / user uitgelogd → guest state */
+    if (backendStatus === null && !rcStatus?.active) {
+      notifyAll({ active: false });
+      clearPersistedCache();
+      return;
+    }
+
+    /* Base: RC audio-state als actief, anders backend. */
+    const base: SubscriptionStatus = rcStatus?.active
+      ? rcStatus
+      : (backendStatus ?? { active: false });
+
+    /* Bracelet-info: altijd uit backend (enige bron van waarheid). */
+    const merged: SubscriptionStatus = {
+      ...base,
+      hasBracelet: backendStatus?.hasBracelet === true ? true : undefined,
+      braceletModel: backendStatus?.braceletModel,
+      /* Email fallback: pak wat er beschikbaar is. */
+      email: base.email || backendStatus?.email,
+    };
+
+    notifyAll(merged);
+    persistCache(merged);
   } catch (e: any) {
     if (__DEV__) console.warn('[useSubscription] fetch failed:', e?.message ?? e);
-    if (myGen !== fetchGeneration) return; /* gerevoket — niet schrijven */
+    if (myGen !== fetchGeneration) return;
     if (cachedStatus === null) {
       notifyAll({ active: false });
     }
