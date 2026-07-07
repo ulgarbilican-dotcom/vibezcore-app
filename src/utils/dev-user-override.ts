@@ -17,6 +17,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { clearLastPlayed } from '@/utils/last-played';
+/* Iter v226 (2026-07-07): non-hook subscribe + snapshot voor bracelet-state.
+   Vervangt de circulaire `require('@/hooks/useSubscription')` binnenin
+   useBraceletOwner + useDevBraceletActivated. Nu is de import top-level
+   maar circulair-safe want subscribeSubscription/getCachedSubscription
+   raken géén hook aan module-init tijd. */
+import {
+  getCachedSubscription,
+  subscribeSubscription,
+  type SubscriptionStatus,
+} from '@/hooks/useSubscription';
 
 const KEY = 'vz_dev_user_override_v1';
 
@@ -220,17 +230,31 @@ export async function setDevBraceletActivated(value: boolean): Promise<void> {
   }
 }
 
+/** Iter v226 (2026-07-07): non-hook subscription-state via subscribe
+ *  pattern. Vervangt de require() binnenin useDevBraceletActivated /
+ *  useBraceletOwner die een circulair import-risico gaf op cold-start.
+ *  Retourneert de huidige `hasBracelet` als React-reactive value. */
+function useHasBraceletFromBackend(): boolean {
+  const [has, setHas] = useState<boolean>(
+    () => getCachedSubscription()?.hasBracelet === true,
+  );
+  useEffect(() => {
+    const unsubscribe = subscribeSubscription((sub: SubscriptionStatus | null) => {
+      setHas(sub?.hasBracelet === true);
+    });
+    /* Sync met huidige cache bij mount (in geval cache tussentijds
+       veranderde vóór subscribe). */
+    const snapshot = getCachedSubscription();
+    setHas(snapshot?.hasBracelet === true);
+    return unsubscribe;
+  }, []);
+  return has;
+}
+
 /** Heeft user de activation-code ingevoerd?
- *  Iter v224 (2026-07-07): symmetrisch met useBraceletOwner v222.
- *  Voorheen: alleen dev-flag (v192-) → in prod false. v223 voegde backend
- *  fallback toe MAAR miste de dev-override branch die useBraceletOwner
- *  wél heeft. Gevolg: als AsyncStorage nog een oude override='bracelet'
- *  bevat (pre-v221 activate flow zette die in prod), gaf useBraceletOwner
- *  true (via override) maar useDevBraceletActivated false → Bracelet-tab
- *  toonde "not linked" ondanks "Bracelet PRO" in Subscription-card.
- *  Nu: als override zegt bracelet/pro → activated. Anders lokale flag OR
- *  backend hasBracelet. Één bron van waarheid parallel aan
- *  useBraceletOwner. */
+ *  Iter v226 (2026-07-07): non-hook backend-fetch via subscribeSubscription
+ *  (voorkomt circulair require-crash). Semantics ongewijzigd: override
+ *  bracelet/pro → true, anders local flag OR backend hasBracelet. */
 export function useDevBraceletActivated(): boolean {
   const [value, setValue] = useState<boolean>(activatedCached);
   useEffect(() => {
@@ -243,11 +267,9 @@ export function useDevBraceletActivated(): boolean {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const override = useDevUserOverride();
-  /* eslint-disable-next-line @typescript-eslint/no-require-imports */
-  const { useSubscription } = require('@/hooks/useSubscription');
-  const sub = useSubscription() as { hasBracelet?: boolean };
+  const backendHasBracelet = useHasBraceletFromBackend();
   if (override === 'bracelet' || override === 'pro') return true;
-  return value || sub.hasBracelet === true;
+  return value || backendHasBracelet;
 }
 
 /* Iter 9dq v90 (2026-06-03): activation-flag GEEN auto-reset meer.
@@ -271,19 +293,13 @@ export function useDevBraceletActivated(): boolean {
  *  andere naam. */
 export function useBraceletOwner(): boolean {
   const override = useDevUserOverride();
-  /* eslint-disable-next-line @typescript-eslint/no-require-imports */
-  const { useSubscription } = require('@/hooks/useSubscription');
-  const sub = useSubscription() as { hasBracelet?: boolean };
-  /* Iter v222 (2026-07-07): dev-override eerst (voor local testing),
-     dan backend-state via useSubscription().hasBracelet (productie-pad).
-     Voorheen returned deze functie altijd `false` in productie omdat
-     dev-override niet actief was — daardoor bleef de Account-tab
-     "You're in the free environment" tonen na een geslaagde activatie.
-     Backend snake_case `has_bracelet_activated` wordt in
-     useSubscription.fetchStatus() gemapped naar sub.hasBracelet. */
+  /* Iter v226 (2026-07-07): backend via non-hook subscribe pattern.
+     Voorheen require('@/hooks/useSubscription') binnenin de hook body
+     → circulair. Nu top-level import + subscribe. */
+  const backendHasBracelet = useHasBraceletFromBackend();
   if (override === 'bracelet' || override === 'pro') return true;
   if (override === 'guest' || override === 'audio') return false;
-  return sub.hasBracelet === true;
+  return backendHasBracelet;
 }
 
 /* Iter v194 (2026-07-04): centrale helper voor auth flow.

@@ -123,20 +123,21 @@ async function loadCacheOnce(): Promise<void> {
           typeof obj.cachedAt === 'number' &&
           typeof obj.active === 'boolean'
         ) {
-          const age = Date.now() - obj.cachedAt;
-          if (age < CACHE_MAX_AGE_MS) {
-            const status: SubscriptionStatus = {
-              active: obj.active,
-              tier: obj.tier,
-              status: obj.status,
-              email: obj.email,
-              validUntil: obj.validUntil,
-              willRenew: obj.willRenew,
-              hasBracelet: obj.hasBracelet,
-              braceletModel: obj.braceletModel,
-            };
-            notifyAll(status);
-          }
+          /* Iter v226 (2026-07-07): stale-while-revalidate. Ook verlopen
+             cache tonen (>24h) zodat UI direct wat renderd. fetchStatus
+             overschrijft daarna met verse data. Voorheen bleef "Checking…"
+             flash hangen tot response — 500-1500ms. */
+          const status: SubscriptionStatus = {
+            active: obj.active,
+            tier: obj.tier,
+            status: obj.status,
+            email: obj.email,
+            validUntil: obj.validUntil,
+            willRenew: obj.willRenew,
+            hasBracelet: obj.hasBracelet,
+            braceletModel: obj.braceletModel,
+          };
+          notifyAll(status);
         }
       }
     } catch {
@@ -231,7 +232,12 @@ async function fetchBackendStatus(): Promise<SubscriptionStatus | null> {
 
 async function fetchStatus(): Promise<void> {
   const myGen = fetchGeneration;
-  if (isFetching) return;
+  /* Iter v226 (2026-07-07): isFetching-guard verwijderd. Reden:
+     twee snelle refresh-calls achter elkaar (activate → refresh, dan
+     account.tsx → refresh) gaven eerste in-flight fetch → tweede skipte
+     via isFetching → return, en de eerste werd bij bump-generation
+     verworpen → NUL fetches leverden data → "Checking…" bleef hangen.
+     Dedup nu puur via generation-check bij elke yield-point. */
   isFetching = true;
   try {
     /* Iter v225 (2026-07-07): parallel RC + backend fetch. Merge: RC is
@@ -257,11 +263,22 @@ async function fetchStatus(): Promise<void> {
       ? rcStatus
       : (backendStatus ?? { active: false });
 
-    /* Bracelet-info: altijd uit backend (enige bron van waarheid). */
+    /* Iter v226 (2026-07-07): bracelet-info uit backend WANNEER backend
+       antwoordde. Als backend faalde (backendStatus === null) → behoud
+       de vorige waarde uit cachedStatus. Voorheen stampte v225 hier
+       hasBracelet naar undefined bij transient netwerkfout → Full PRO
+       user regresseerde 24h naar Audio PRO na één slechte refresh. */
+    const preservedHasBracelet = backendStatus === null
+      ? cachedStatus?.hasBracelet
+      : backendStatus.hasBracelet === true ? true : undefined;
+    const preservedBraceletModel = backendStatus === null
+      ? cachedStatus?.braceletModel
+      : backendStatus.braceletModel;
+
     const merged: SubscriptionStatus = {
       ...base,
-      hasBracelet: backendStatus?.hasBracelet === true ? true : undefined,
-      braceletModel: backendStatus?.braceletModel,
+      hasBracelet: preservedHasBracelet,
+      braceletModel: preservedBraceletModel,
       /* Email fallback: pak wat er beschikbaar is. */
       email: base.email || backendStatus?.email,
     };
@@ -283,6 +300,23 @@ async function fetchStatus(): Promise<void> {
  *  Geen fetch, alleen huidige cache. */
 export function getCachedSubscription(): SubscriptionStatus | null {
   return cachedStatus;
+}
+
+/** Iter v226 (2026-07-07): non-hook subscribe voor modules die zonder
+ *  circulaire import de subscription-cache willen volgen. Gebruikt door
+ *  useBraceletOwner + useDevBraceletActivated in dev-user-override.ts.
+ *  Voorheen deden die hooks een require('@/hooks/useSubscription') binnenin
+ *  hun body, wat een circulaire dependency oplevert (useSubscription
+ *  importeert useDevUserOverride terug). Metro handelde het lazy af maar
+ *  gaf op cold-start "useSubscription is not a function" bij bepaalde
+ *  bundling volgordes. Returnt unsubscribe. */
+export function subscribeSubscription(
+  cb: (s: SubscriptionStatus | null) => void,
+): () => void {
+  subscribers.add(cb);
+  return () => {
+    subscribers.delete(cb);
+  };
 }
 
 /** Trigger refresh — bv. vanuit Account.tsx na login of na sign-out.

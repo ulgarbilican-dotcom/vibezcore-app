@@ -20,7 +20,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { getToken, signup } from '@/services/auth';
+import { getToken, login, signup } from '@/services/auth';
 import {
   activateBracelet,
   isValidActivationCodeFormat,
@@ -142,14 +142,26 @@ export default function ActivateBraceletScreen() {
           const errBody =
             typeof signupResult.error === 'string' ? signupResult.error : '';
           if (errBody.toLowerCase().includes('already') || errBody.toLowerCase().includes('exists')) {
-            setErrMsg(
-              'This email already has an account. Sign in first via the Account tab, then activate your bracelet.',
-            );
+            /* Iter v226 (2026-07-07): auto-signin patroon zoals subscribe.tsx.
+               Voorheen werd de user weggejaagd naar de Account-tab om apart
+               in te loggen — Kickstarter-backers kregen dit constant. Nu:
+               probeer meteen login met dezelfde credentials, dan door met
+               activate. Als login ook faalt (verkeerd wachtwoord) → nette
+               error dat 't oude wachtwoord verkeerd is. */
+            const loginResult = await login(email.trim(), password);
+            if (!loginResult.ok) {
+              setErrMsg(
+                'This email already has an account, but that password does not match. Reset your password via the Account tab, then activate your bracelet.',
+              );
+              setPhase('form');
+              return;
+            }
+            /* Login geslaagd → doorloop de rest van de flow (activate) */
           } else {
             setErrMsg(errBody || 'Could not create account. Please try again.');
+            setPhase('form');
+            return;
           }
-          setPhase('form');
-          return;
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
