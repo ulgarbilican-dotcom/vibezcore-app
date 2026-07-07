@@ -29,6 +29,12 @@ export class ApiError extends Error {
   }
 }
 
+/** Iter v221 (2026-07-07): 20s timeout via AbortController.
+ *  Zonder dit hangt fetch() indefinite bij DNS-lag of traag netwerk →
+ *  gebruiker ziet eeuwige spinner. Timeout gooit een ApiError met
+ *  status=0 en body='timeout' zodat callers 'm kunnen herkennen. */
+const REQUEST_TIMEOUT_MS = 20000;
+
 export async function apiCall<T = unknown>(
   path: string,
   options: ApiOptions = {}
@@ -48,16 +54,29 @@ export async function apiCall<T = unknown>(
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new ApiError(path, res.status, txt);
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new ApiError(path, res.status, txt);
+    }
+
+    return (await res.json()) as T;
+  } catch (e) {
+    if ((e as { name?: string })?.name === 'AbortError') {
+      throw new ApiError(path, 0, 'timeout');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return (await res.json()) as T;
 }

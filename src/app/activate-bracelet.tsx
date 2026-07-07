@@ -157,6 +157,19 @@ export default function ActivateBraceletScreen() {
         setPhase('form');
         return;
       }
+
+      /* Iter v221 (2026-07-07): defensive token-check. signup() awaits
+         persistSession() intern, dus dit hoort direct te lukken. Als
+         'ie null returned is de sessie stuk — vragen om apart in te
+         loggen ipv 401 op activateBracelet. */
+      const freshToken = await getToken();
+      if (!freshToken) {
+        setErrMsg(
+          'Account created, but sign-in did not persist. Please sign in from the Account tab and activate again.',
+        );
+        setPhase('form');
+        return;
+      }
     }
 
     /* 3. Activate bracelet (mock 600ms, real backend later) */
@@ -176,26 +189,37 @@ export default function ActivateBraceletScreen() {
       return;
     }
 
-    /* 4. Dev-flags zetten (owner detection). Sequentieel await. */
-    try {
-      if (result.model === 'bundle') {
-        await setDevUserOverride('pro');
-        setIsBundle(true);
-      } else {
-        await setDevUserOverride('bracelet');
+    /* 4. Owner-state.
+       Iter v221 (2026-07-07): dev-flags alleen in __DEV__ zetten.
+       In productie is de backend (via refreshSubscription inside
+       activateBracelet) leidend. setIsBundle() is puur lokale UI-state
+       voor het success-screen en draait altijd. */
+    if (result.model === 'bundle') {
+      setIsBundle(true);
+    }
+
+    if (__DEV__) {
+      try {
+        if (result.model === 'bundle') {
+          await setDevUserOverride('pro');
+        } else {
+          await setDevUserOverride('bracelet');
+        }
+        await setDevBraceletActivated(true);
+      } catch (e) {
+        console.warn('[activate-bracelet] dev-flag error:', e);
       }
-      await setDevBraceletActivated(true);
-    } catch (e) {
-      /* dev-flag failures mogen niet blokkeren — success screen tonen */
-      if (__DEV__) console.warn('[activate-bracelet] dev-flag error:', e);
     }
 
     setPhase('success');
 
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      /* Iter v221 (2026-07-07): gebruikersvriendelijke copy ipv raw
+         error dump. Details worden alleen in __DEV__ console gelogd. */
       if (__DEV__) console.warn('[activate-bracelet] unexpected error:', e);
-      setErrMsg(`Something went wrong: ${message}`);
+      setErrMsg(
+        'Something went wrong on our side. Please try again, or contact support if the problem continues.',
+      );
       setPhase('form');
     }
   };

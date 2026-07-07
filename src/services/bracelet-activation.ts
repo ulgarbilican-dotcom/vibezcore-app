@@ -128,7 +128,9 @@ export async function activateBracelet(
       '/api/bracelet/activate',
       { method: 'POST', auth: true, body: { code: stripped } },
     );
-    refreshSubscription();
+    /* Iter v221 (2026-07-07): AWAIT ipv fire-and-forget. Zonder await
+       zag Account-tab nog stale niet-owner state direct na success. */
+    await refreshSubscription();
     return {
       ok: true,
       activatedAt: typeof data.activated_at === 'string' ? data.activated_at : undefined,
@@ -136,6 +138,13 @@ export async function activateBracelet(
     };
   } catch (e) {
     const body = (e as { body?: string })?.body ?? '';
+    if (body === 'timeout') {
+      return {
+        ok: false,
+        code: 'network',
+        message: 'The request took too long. Check your connection and try again.',
+      };
+    }
     if (body.includes('invalid_code') || body.includes('code_not_found')) {
       return {
         ok: false,
