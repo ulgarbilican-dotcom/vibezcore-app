@@ -331,7 +331,11 @@ export default function SubscribeScreen() {
         } catch {
           /* swallow — refreshSubscription hieronder is de vangnet */
         }
-        refreshSubscription();
+        /* Iter v227 (2026-07-07, audit B5): AWAIT refreshSubscription
+           vóór setPhase('done'). Voorheen unawaited → Welcome-screen
+           rendered met stale null-cache → useSubscription's alreadyIsPro
+           guard werkte niet consistent → user zag briefly FREE state. */
+        await refreshSubscription();
         setPhase('done');
         return;
       }

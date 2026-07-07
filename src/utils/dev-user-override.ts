@@ -240,12 +240,17 @@ function useHasBraceletFromBackend(): boolean {
   );
   useEffect(() => {
     const unsubscribe = subscribeSubscription((sub: SubscriptionStatus | null) => {
-      setHas(sub?.hasBracelet === true);
+      /* Iter v227 (2026-07-07, audit BLE5): behoud vorige waarde als
+         subscription-cache tijdelijk null wordt (refreshSubscription
+         wipeout mid-transition). Voorheen: null → setHas(false) →
+         useBraceletOwner flip naar false → inline BraceletControl in
+         (tabs)/bracelet unmount + remount → actieve sessie UI reset.
+         Nu: alleen updaten als sub effectief bekend is. */
+      if (sub === null) return;
+      setHas(sub.hasBracelet === true);
     });
-    /* Sync met huidige cache bij mount (in geval cache tussentijds
-       veranderde vóór subscribe). */
     const snapshot = getCachedSubscription();
-    setHas(snapshot?.hasBracelet === true);
+    if (snapshot !== null) setHas(snapshot.hasBracelet === true);
     return unsubscribe;
   }, []);
   return has;

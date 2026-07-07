@@ -617,6 +617,40 @@ export default function AccountScreen() {
     };
   }, []);
 
+  /* Iter v227 (2026-07-07, audit A5): post-signin routing per user-type.
+     Voorheen: Google/Apple altijd naar `/` → bracelet-only user landde op
+     Audio ipv Bracelet-tab. Nu: zelfde entitlement-check als email/password
+     flow. Delegeert naar routeByEntitlement() na state-updates. */
+  const routeByEntitlement = async () => {
+    let isBraceletPro = false;
+    let isAudioPro = false;
+    try {
+      const token = await getToken();
+      if (token) {
+        const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const status = await res.json().catch(() => ({}));
+          isAudioPro = status?.active === true;
+          isBraceletPro = status?.has_bracelet_activated === true;
+        }
+      }
+    } catch { /* network hiccup — val terug op override */ }
+    if (!isAudioPro && !isBraceletPro) {
+      await awaitDevUserOverrideLoaded();
+      const override = getDevUserOverride();
+      isBraceletPro = override === 'bracelet' || override === 'pro';
+      if (override === 'pro') isAudioPro = true;
+    }
+    if (isBraceletPro && !isAudioPro) {
+      setTimeout(() => router.replace('/bracelet' as never), 50);
+    } else {
+      requestScrollTo('top');
+      setTimeout(() => router.replace('/'), 50);
+    }
+  };
+
   const onGoogleSignIn = async () => {
     setMsg(null);
     setBusy(true);
@@ -629,18 +663,12 @@ export default function AccountScreen() {
       }
       setEmail(r.email || 'Signed in');
       setPwInput('');
-      /* Iter v177 (2026-07-02): AWAIT refreshSubscription vóór verdere state
-         zodat een snelle vervolgactie (bv. direct naar Subscribe) niet meer
-         een race hit tussen sign-in en subscription cache. */
       await refreshSubscription();
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
-      /* Iter v149 v3 (2026-06-25): operator-feedback — Google sign-in
-         bleef op de Account-tab. Voor consistency met email/password
-         flow: na success → naar Audio Library bovenkant. */
-      requestScrollTo('top');
-      setTimeout(() => router.replace('/'), 50);
+      /* Iter v227: entitlement-based routing (was: altijd '/') */
+      await routeByEntitlement();
     } finally {
       setBusy(false);
     }
@@ -658,14 +686,12 @@ export default function AccountScreen() {
       }
       setEmail(r.email || 'Signed in');
       setPwInput('');
-      /* Iter v177 (2026-07-02): AWAIT refreshSubscription — race-fix Apple */
       await refreshSubscription();
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
-      /* Iter v149 v3: zelfde redirect als Google + email flow. */
-      requestScrollTo('top');
-      setTimeout(() => router.replace('/'), 50);
+      /* Iter v227: entitlement-based routing (was: altijd '/') */
+      await routeByEntitlement();
     } finally {
       setBusy(false);
     }
@@ -873,6 +899,26 @@ export default function AccountScreen() {
           text: 'Sign out',
           style: 'destructive',
           onPress: async () => {
+            /* Iter v227 (2026-07-07, audit A6): stop actieve audio + bracelet
+               VOORDAT session gewist wordt. Voorheen: playback bleef doorlopen
+               na sign-out met dode tokens; bracelet-mode bleef actief zodat
+               een volgende user op dit toestel de vorige sessie zag. Beide
+               calls swallow errors — mogen sign-out nooit blokkeren. */
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              const { unload } = require('@/services/audio-player');
+              await unload({ skipSave: true }).catch(() => {});
+            } catch { /* non-fatal */ }
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              const { getBracelet } = require('@/services/bracelet');
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              const { BleCommand } = require('@/services/ble-contract');
+              await getBracelet()
+                .sendCommand({ mode: 0, duration: 0, command: BleCommand.Stop })
+                .catch(() => {});
+            } catch { /* non-fatal */ }
+
             await clearSession();
             /* Iter 9dq v99 (2026-06-04): bij sign-out óók dev-overrides
                wissen. Anders bleef de override (bv 'bracelet') hangen

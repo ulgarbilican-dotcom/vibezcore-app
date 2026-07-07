@@ -284,7 +284,12 @@ export default function ActivateBraceletScreen() {
 
           <Pressable
             style={s.doneBtn}
-            onPress={() => router.replace('/bracelet-control' as never)}
+            /* Iter v227 (2026-07-07, audit BLE1): route naar (tabs)/bracelet
+               ipv naar stack-route /bracelet-control. Bracelet-tab rendert
+               BraceletControl inline voor owners MET tab-bar; standalone
+               stack-route had geen tab-bar en back-button popte naar
+               welcome. */
+            onPress={() => router.replace('/(tabs)/bracelet' as never)}
             accessibilityLabel="Open Bracelet Control screen"
           >
             <Text style={s.doneBtnText}>Open Bracelet Control</Text>

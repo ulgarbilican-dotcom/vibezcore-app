@@ -358,8 +358,15 @@ export class RealIAPProvider implements IAPProvider {
       return restored;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
+      /* Iter v227 (2026-07-07, audit B7): errors THROWEN ipv return [].
+         Voorheen: netwerkfout / RC SDK issue → return [] → caller in
+         restore-purchases.ts zag length===0 → "Nothing to restore" alert
+         → user zag geen active sub en dacht dat 'ie opnieuw moest kopen
+         → dubbel-betaal risico. Nu: throw → wrapper's try/catch (regel
+         100 in restore-purchases.ts) → { ok:false, error } → UI toont
+         correcte error toast. */
       if (__DEV__) console.warn('[RealIAP] restorePurchases error:', e);
-      return [];
+      throw e;
     }
   }
 

@@ -75,6 +75,15 @@ type SessionPayload = {
 export async function linkRevenueCatUser(userId: string | null | undefined): Promise<void> {
   if (!userId) return;
   try {
+    /* Iter v227 (2026-07-07, audit B8): AWAIT getIAP().init() vóór
+       Purchases.logIn. Voorheen: op deep-link naar /subscribe kon
+       linkRevenueCatUser fired zijn vóór _layout.tsx.init() klaar was →
+       Purchases.configure() nog niet gedraaid → logIn thrown, gecatched,
+       purchase attribueert aan $RCAnonymousID → webhook filtert anon →
+       hasBracelet sync broken voor die user. */
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getIAP } = require('./iap');
+    await getIAP().init();
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;
     if (!Purchases || typeof Purchases.logIn !== 'function') return;
@@ -148,6 +157,29 @@ export async function persistSession(s: SessionPayload): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { clearDevOverridesForAuthEvent } = require('@/utils/dev-user-override');
         await clearDevOverridesForAuthEvent();
+        /* Iter v227 (2026-07-07, audit A2): bucket + last-played + signed-URL
+           caches ook wissen bij email-switch. Voorheen draaide deze cleanup
+           pas in account.tsx callback NA login-return → race-venster waarin
+           BraceletCard/Library nog user-A's history/last-played toonde voor
+           user-B na een re-render. Nu hier synchroon met de sessie-switch. */
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { refreshUserBucket: refreshBraceletBucket } = require('@/utils/bracelet-history');
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { refreshUserBucket: refreshAudioBucket } = require('@/utils/user-bucket');
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { clearLastPlayed } = require('@/utils/last-played');
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { clearSignedUrlCache } = require('@/utils/audio-url');
+          await Promise.all([
+            refreshBraceletBucket().catch(() => {}),
+            refreshAudioBucket().catch(() => {}),
+            clearLastPlayed().catch(() => {}),
+          ]);
+          clearSignedUrlCache();
+        } catch {
+          /* Non-fatal: één of meer helpers ontbreken (defensief) */
+        }
       }
     } catch {
       /* swallow */
@@ -361,8 +393,13 @@ export async function getToken(): Promise<string | null> {
     if (!expiresAt || expiresAt - now < REFRESH_MARGIN_SEC) {
       const fresh = await refreshAccessToken();
       if (fresh) return fresh;
-      /* Refresh faalde (netwerk?) — geef oude token één kans. Als die
-         expired is geeft backend 401 en de UI logt uit. */
+      /* Iter v227 (2026-07-07, audit A4): als token ECHT expired is
+         (niet marginaal binnen REFRESH_MARGIN_SEC), geef null terug ipv
+         de dode oude token. Voorheen: dode token → 401-loop op alle
+         API-calls tot handmatig uitloggen. Bij marginaal (nog binnen
+         window): één laatste kans met oude token — backend 401 → clean
+         clearSession pad via doRefresh regel 320. */
+      if (expiresAt && expiresAt <= now) return null;
       return token;
     }
 
@@ -438,7 +475,14 @@ export async function signup(
 
     if (data.access_token) {
       await persistSession(data);
-      void linkRevenueCatUser(
+      /* Iter v227 (2026-07-07, audit A1): AWAIT linkRevenueCatUser
+         (identiek aan login-flow v166). Voorheen fire-and-forget → race
+         waar direct-na-signup subscribe.tsx Purchases.purchasePackage
+         triggerde vóór RC logIn klaar was → purchase attribueert aan
+         $RCAnonymousID ipv Supabase user → backend webhook filtert
+         anon → user is RC-PRO maar backend weet niks → hasBracelet
+         sync broken voor die user. */
+      await linkRevenueCatUser(
         data.user?.id ?? getAuthUserIdFromToken(data.access_token)
       );
       return {

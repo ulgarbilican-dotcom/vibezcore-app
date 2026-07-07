@@ -234,8 +234,21 @@ export default function RootLayout() {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const Purchases = require('react-native-purchases').default;
         if (!Purchases?.addCustomerInfoUpdateListener) return;
+        /* Iter v227 (2026-07-07, audit B9): guard tegen signout-race.
+           Purchases.logOut() fired een customerInfoUpdate event → handler
+           trigger'de refreshSubscription() ↔ account.tsx setSignedOutStatus()
+           → PRO-flash na sign-out. Fix: skip refresh als geen token
+           (net-signed-out state). */
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const handler = (_info: any) => {
+        const handler = async (_info: any) => {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { getToken } = require('@/services/auth');
+            const token = await getToken();
+            if (!token) return;
+          } catch {
+            return;
+          }
           refreshSubscription();
         };
         Purchases.addCustomerInfoUpdateListener(handler);

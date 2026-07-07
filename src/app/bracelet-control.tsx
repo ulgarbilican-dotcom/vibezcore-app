@@ -3914,9 +3914,13 @@ export default function BraceletControl() {
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
         <Stack.Screen options={{ headerShown: false }} />
+        {/* Iter v227 (2026-07-07, audit BLE2): showBack ALLEEN bij expliciete
+            fromContext. Inline owner-render binnen (tabs)/bracelet had via
+            router.canGoBack() de back-arrow → tap popte de hele tab-stack
+            terug naar welcome. */}
         <BraceletHeader
           title="Bracelet connect"
-          showBack={fromContext !== null || router.canGoBack()}
+          showBack={fromContext !== null}
           onBack={fromContext ? navigateBackToSource : () => router.back()}
           backLabel={ctaBackLabel}
         />

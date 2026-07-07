@@ -26,6 +26,7 @@ import {
 } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useBraceletOwner } from '@/utils/dev-user-override';
 import {
   continueFromSaved,
   dismissEndedPanel,
@@ -165,6 +166,11 @@ export default function PlayerScreen() {
      Voorheen toonde de "Full library access" CTA in PRO override omdat
      realIsPro=false; nu verbergt-ie correct want isPro=true. */
   const { isPro: displayIsPro, realIsPro } = useSubscription();
+  /* Iter v227 (2026-07-07, audit AU3): bracelet-only owner ziet
+     "Add Audio Library" ipv "Get Full Access". Consistent met Account-
+     tab (regel 393: upgradeCtaText = isBraceletOwner ? 'Add Audio Library'
+     : 'Upgrade to full library'). */
+  const isBraceletOwner = useBraceletOwner();
   const hasSubscription = realIsPro;
   const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
 
@@ -235,7 +241,15 @@ export default function PlayerScreen() {
        directlink. We signaleren scroll-intent en sluiten de full-player
        UI. Audio blijft draaien — de mini-player (in (tabs)/_layout)
        is nu de zichtbare ingang voor de actieve sessie. Gebruiker
-       kan zelf via ✕ op mini-player stoppen. */
+       kan zelf via ✕ op mini-player stoppen.
+       Iter v227 (2026-07-07, audit AU3): bracelet-owner routed direct
+       naar /subscribe (tier picker) — consistent met "Add Audio Library"
+       CTA in account.tsx:379. Copy zei "Add Audio Library" maar knop
+       ging vroeger naar homepage-pricing → mismatch. */
+    if (isBraceletOwner && !realIsPro) {
+      router.navigate('/subscribe' as never);
+      return;
+    }
     requestScrollTo('pricing');
     if (router.canGoBack()) router.back();
     else router.navigate('/');
@@ -646,15 +660,23 @@ export default function PlayerScreen() {
                 er 27 gratis sessies bestaan en denkt 'alles is betaald' →
                 conversie-killer. Door Free Picks te noemen blijft de upsell
                 primair (Get Full Access) maar krijgt de gast een eerlijk
-                alternatief. */}
+                alternatief.
+                Iter v227 (2026-07-07, audit AU3): bracelet-owner ziet
+                andere copy — "Add Audio Library" ipv "Get Full Access". */}
             <Text style={s.modalBody}>
-              Get full access to the complete VIBEZCORE library.
+              {isBraceletOwner && !realIsPro
+                ? 'Add the Audio Library to complete your VIBEZCORE system.'
+                : 'Get full access to the complete VIBEZCORE library.'}
               {'\n\n'}
               Not ready? Browse Free Picks to keep listening for free.
             </Text>
             <View style={s.modalBtns}>
               <Pressable style={s.modalPrimary} onPress={openUpgrade}>
-                <Text style={s.modalPrimaryText}>Get Full Access</Text>
+                <Text style={s.modalPrimaryText}>
+                  {isBraceletOwner && !realIsPro
+                    ? 'Add Audio Library'
+                    : 'Get Full Access'}
+                </Text>
               </Pressable>
               <Pressable
                 style={s.modalSecondary}

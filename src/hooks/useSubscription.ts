@@ -62,7 +62,14 @@ type CachedShape = SubscriptionStatus & { cachedAt: number };
 let cachedStatus: SubscriptionStatus | null = null;
 let cacheLoaded = false;
 let cacheLoadPromise: Promise<void> | null = null;
-let isFetching = false;
+/* Iter v227 (2026-07-07, audit B3): dedup fetches per generation ipv
+   simple isFetching boolean. Twee calls binnen dezelfde generation →
+   2e skip (correct, geen nieuwe data). Twee calls met NIEUWE generation
+   (bump door refreshSubscription) → beide runnen (nodig — 1e wordt
+   toch discarded). Voorheen: v226 verwijderde isFetching → RC 429
+   rate-limit risk bij AppState-toggling; v225-en-eerder: isFetching
+   blokkeerde ook NEW-generation fetches → Full PRO detectie faalde. */
+let currentFetchGen: number | null = null;
 /* Iter 9dq v56 (2026-06-03, audit-finding C2): fetchGeneration markeert
    "welke fetch is nu de canonical?". refreshSubscription() bumpt deze
    waarde, wat impliciet alle in-flight fetches met een lagere generatie
@@ -232,13 +239,12 @@ async function fetchBackendStatus(): Promise<SubscriptionStatus | null> {
 
 async function fetchStatus(): Promise<void> {
   const myGen = fetchGeneration;
-  /* Iter v226 (2026-07-07): isFetching-guard verwijderd. Reden:
-     twee snelle refresh-calls achter elkaar (activate → refresh, dan
-     account.tsx → refresh) gaven eerste in-flight fetch → tweede skipte
-     via isFetching → return, en de eerste werd bij bump-generation
-     verworpen → NUL fetches leverden data → "Checking…" bleef hangen.
-     Dedup nu puur via generation-check bij elke yield-point. */
-  isFetching = true;
+  /* Iter v227 (2026-07-07, audit B3): dedup exact op mijn generation.
+     Zelfde-gen tweede call → skip (identieke fetch loopt al).
+     Nieuwe-gen call → doorgaan (oude wordt discarded). Voorheen v226:
+     isFetching-boolean gaf 2-4 parallelle RC-calls per event-burst. */
+  if (currentFetchGen === myGen) return;
+  currentFetchGen = myGen;
   try {
     /* Iter v225 (2026-07-07): parallel RC + backend fetch. Merge: RC is
        leidend voor audio-subscription state (tier, validUntil, willRenew,
@@ -292,7 +298,9 @@ async function fetchStatus(): Promise<void> {
       notifyAll({ active: false });
     }
   } finally {
-    isFetching = false;
+    /* v227: alleen release als 't nog mijn generation is (defensief bij
+       overlappende generation-bumps). */
+    if (currentFetchGen === myGen) currentFetchGen = null;
   }
 }
 
@@ -331,11 +339,17 @@ export function subscribeSubscription(
    callers die niet awaiten blijven werken als fire-and-forget. */
 export function refreshSubscription(): Promise<void> {
   fetchGeneration++;
-  cachedStatus = null;
-  subscribers.forEach((cb) => cb(null));
-  /* Direct preventief cache-wipe zodat een verse load nooit stale
-     user-A data binnenpakt. fetchStatus overschrijft 'm met de echte
-     waarde wanneer 'ie klaar is. */
+  /* Iter v227 (2026-07-07, audit B2): behoud actieve PRO cache tijdens
+     fetch. Voorheen: cachedStatus = null + notify(null) → UI toont
+     "Checking…" flash zelfs voor terugkerende PRO-users. Nu: alleen
+     nullen als er geen actieve PRO-cache is (guest / geen sessie).
+     Persistent cache wordt WEL gewist zodat een sign-out-scenario
+     (setSignedOutStatus zet cachedStatus expliciet naar {active:false})
+     niet oud PRO uit disk kan reïncarneren. */
+  if (cachedStatus?.active !== true) {
+    cachedStatus = null;
+    subscribers.forEach((cb) => cb(null));
+  }
   clearPersistedCache().catch(() => {});
   return fetchStatus();
 }
@@ -369,7 +383,15 @@ export function setSignedOutStatus(): void {
  *  maar de UI wacht daar niet meer op. */
 export function setProSubscribedStatus(): void {
   fetchGeneration++;
-  const proStatus: SubscriptionStatus = { active: true };
+  /* Iter v227 (2026-07-07, audit B6): merge in bestaande cache ipv
+     vervangen. Voorheen: {active:true} zonder andere velden → wist
+     hasBracelet uit → bracelet-owner koopt audio → 1-2s "Audio PRO"
+     ipv "Full PRO" totdat backend-fetch landt. Nu: preserve alle
+     bestaande velden (hasBracelet, braceletModel, email). */
+  const proStatus: SubscriptionStatus = {
+    ...(cachedStatus ?? {}),
+    active: true,
+  };
   cachedStatus = proStatus;
   notifyAll(proStatus);
 }
