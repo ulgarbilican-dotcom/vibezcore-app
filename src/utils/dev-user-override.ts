@@ -220,7 +220,13 @@ export async function setDevBraceletActivated(value: boolean): Promise<void> {
   }
 }
 
-/** Heeft user de activation-code ingevoerd? Dev-only flag. */
+/** Heeft user de activation-code ingevoerd?
+ *  Iter v223 (2026-07-07): backend-fallback toegevoegd. Voorheen alleen
+ *  dev-flag → in productie altijd false → Bracelet-tab bleef "not linked"
+ *  tonen ook na een geslaagde /api/bracelet/activate. Nu: als backend zegt
+ *  `has_bracelet_activated: true` (via useSubscription().hasBracelet),
+ *  dan IS de bracelet activated. In dev kan de lokale flag nog steeds
+ *  waar zijn voor mock-scenarios. */
 export function useDevBraceletActivated(): boolean {
   const [value, setValue] = useState<boolean>(activatedCached);
   useEffect(() => {
@@ -232,8 +238,10 @@ export function useDevBraceletActivated(): boolean {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* Iter v193 (2026-07-03): __DEV__ guard weg voor activation-mock. */
-  return value;
+  /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+  const { useSubscription } = require('@/hooks/useSubscription');
+  const sub = useSubscription() as { hasBracelet?: boolean };
+  return value || sub.hasBracelet === true;
 }
 
 /* Iter 9dq v90 (2026-06-03): activation-flag GEEN auto-reset meer.
