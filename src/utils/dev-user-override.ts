@@ -221,12 +221,16 @@ export async function setDevBraceletActivated(value: boolean): Promise<void> {
 }
 
 /** Heeft user de activation-code ingevoerd?
- *  Iter v223 (2026-07-07): backend-fallback toegevoegd. Voorheen alleen
- *  dev-flag → in productie altijd false → Bracelet-tab bleef "not linked"
- *  tonen ook na een geslaagde /api/bracelet/activate. Nu: als backend zegt
- *  `has_bracelet_activated: true` (via useSubscription().hasBracelet),
- *  dan IS de bracelet activated. In dev kan de lokale flag nog steeds
- *  waar zijn voor mock-scenarios. */
+ *  Iter v224 (2026-07-07): symmetrisch met useBraceletOwner v222.
+ *  Voorheen: alleen dev-flag (v192-) → in prod false. v223 voegde backend
+ *  fallback toe MAAR miste de dev-override branch die useBraceletOwner
+ *  wél heeft. Gevolg: als AsyncStorage nog een oude override='bracelet'
+ *  bevat (pre-v221 activate flow zette die in prod), gaf useBraceletOwner
+ *  true (via override) maar useDevBraceletActivated false → Bracelet-tab
+ *  toonde "not linked" ondanks "Bracelet PRO" in Subscription-card.
+ *  Nu: als override zegt bracelet/pro → activated. Anders lokale flag OR
+ *  backend hasBracelet. Één bron van waarheid parallel aan
+ *  useBraceletOwner. */
 export function useDevBraceletActivated(): boolean {
   const [value, setValue] = useState<boolean>(activatedCached);
   useEffect(() => {
@@ -238,9 +242,11 @@ export function useDevBraceletActivated(): boolean {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const override = useDevUserOverride();
   /* eslint-disable-next-line @typescript-eslint/no-require-imports */
   const { useSubscription } = require('@/hooks/useSubscription');
   const sub = useSubscription() as { hasBracelet?: boolean };
+  if (override === 'bracelet' || override === 'pro') return true;
   return value || sub.hasBracelet === true;
 }
 

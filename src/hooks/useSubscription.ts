@@ -26,7 +26,11 @@ import { useDevUserOverride } from '@/utils/dev-user-override';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-export const SUB_CACHE_KEY = 'vz_sub_v1';
+/* Iter v224 (2026-07-07): bump cache key naar v2. Oude v1-cache bevat
+ * `hasBracelet` niet — een user die vanuit vC 65 update en 24h stale
+ * cache heeft zag "not linked" ondanks correcte backend-status. Nieuwe
+ * key = automatische invalidatie zonder handmatige app-data-wipe. */
+export const SUB_CACHE_KEY = 'vz_sub_v2';
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type SubscriptionStatus = {
