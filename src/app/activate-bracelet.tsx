@@ -23,6 +23,7 @@ import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken, signup } from '@/services/auth';
 import {
   activateBracelet,
+  isValidActivationCodeFormat,
   normalizeActivationCode,
 } from '@/services/bracelet-activation';
 import {
@@ -106,13 +107,15 @@ export default function ActivateBraceletScreen() {
   };
 
   const onSubmit = async () => {
-    /* Iter v216 (2026-07-04): VOLLEDIG HERSCHREVEN. Geen timeout meer,
-       geen dubbele calls, geen fire-and-forget refresh. Flat, sequentieel,
-       elke stap wacht op zichzelf. Als iets echt hangt: user kill app.
-       Als iets faalt: user krijgt duidelijke error. Geen valse
-       timeouts meer. */
+    /* Iter v218 (2026-07-07): outer try/catch als vangnet — een onverwachte
+       TypeError (zoals de ontbrekende isValidActivationCodeFormat-import in
+       v217) mag NOOIT meer de spinner locked achterlaten. Bestaande
+       error-branches returnen nog steeds vóór de catch, dus dit is puur
+       safety. */
     setErrMsg(null);
     setPhase('submitting');
+
+    try {
 
     /* 1. Code format check */
     if (!isValidActivationCodeFormat(code)) {
@@ -188,6 +191,13 @@ export default function ActivateBraceletScreen() {
     }
 
     setPhase('success');
+
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (__DEV__) console.warn('[activate-bracelet] unexpected error:', e);
+      setErrMsg(`Something went wrong: ${message}`);
+      setPhase('form');
+    }
   };
 
   /* ── Auth-guard loading (heel kort: AsyncStorage-token-check) ──── */
