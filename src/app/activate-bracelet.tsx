@@ -20,7 +20,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { getToken, login, signup } from '@/services/auth';
+import { clearSession, getToken, login, signup } from '@/services/auth';
 import {
   activateBracelet,
   isValidActivationCodeFormat,
@@ -124,7 +124,13 @@ export default function ActivateBraceletScreen() {
       return;
     }
 
-    /* 2. Signup als niet ingelogd */
+    /* 2. Signup als niet ingelogd. Iter v228 (2026-07-08, KRITIEK
+       AUTH-FIX): track `justSignedUp` zodat we bij failed activate de
+       zojuist-aangemaakte session kunnen rollbacken (clearSession).
+       Voorheen: foute code met geldig format → signup OK → activate fail
+       → user blijft ingelogd op net-aangemaakt account → app restart
+       landt op live sessie. Dat is auth-persistence-bypass. */
+    let justSignedUp = false;
     if (!isSignedIn) {
       if (!isValidEmail(email)) {
         setErrMsg('Enter a valid email address.');
@@ -156,12 +162,16 @@ export default function ActivateBraceletScreen() {
               setPhase('form');
               return;
             }
-            /* Login geslaagd → doorloop de rest van de flow (activate) */
+            /* Login geslaagd → doorloop de rest van de flow (activate).
+               justSignedUp blijft false — het was een bestaande user. */
           } else {
             setErrMsg(errBody || 'Could not create account. Please try again.');
             setPhase('form');
             return;
           }
+        } else {
+          /* Verse signup — als activate straks faalt, rollback deze session. */
+          justSignedUp = true;
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
@@ -184,11 +194,14 @@ export default function ActivateBraceletScreen() {
       }
     }
 
-    /* 3. Activate bracelet (mock 600ms, real backend later) */
+    /* 3. Activate bracelet. Iter v228 (2026-07-08, KRITIEK AUTH-FIX):
+       bij faal rollback de zojuist-aangemaakte session zodat user niet
+       geauthenticeerd blijft op een net-aangemaakt account met foute code. */
     let result;
     try {
       result = await activateBracelet(code);
     } catch (e) {
+      if (justSignedUp) await clearSession().catch(() => {});
       const message = e instanceof Error ? e.message : String(e);
       setErrMsg(`Activation failed: ${message}`);
       setPhase('form');
@@ -196,6 +209,7 @@ export default function ActivateBraceletScreen() {
     }
 
     if (!result.ok) {
+      if (justSignedUp) await clearSession().catch(() => {});
       setErrMsg(result.message);
       setPhase('error');
       return;
