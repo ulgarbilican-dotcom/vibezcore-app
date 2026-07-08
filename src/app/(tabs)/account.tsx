@@ -14,6 +14,7 @@ import { Brand, BrandFonts } from '@/constants/theme';
 import {
   refreshSubscription,
   setSignedOutStatus,
+  setSigningInStatus,
   useSubscription,
 } from '@/hooks/useSubscription';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
@@ -671,6 +672,9 @@ export default function AccountScreen() {
       }
       setEmail(r.email || 'Signed in');
       setPwInput('');
+      /* Iter v229 (2026-07-08): expliciet cache-clear vóór refresh om
+         free-environment flash te voorkomen bij login met bestaand PRO. */
+      setSigningInStatus();
       await refreshSubscription();
       await refreshUserBucket();
       await clearLastPlayed();
@@ -694,6 +698,9 @@ export default function AccountScreen() {
       }
       setEmail(r.email || 'Signed in');
       setPwInput('');
+      /* Iter v229 (2026-07-08): expliciet cache-clear vóór refresh om
+         free-environment flash te voorkomen bij login met bestaand PRO. */
+      setSigningInStatus();
       await refreshSubscription();
       await refreshUserBucket();
       await clearLastPlayed();
@@ -793,7 +800,10 @@ export default function AccountScreen() {
         setPwInput('');
         /* Iter v177 (2026-07-02): AWAIT refreshSubscription vóór verdere state.
            Vermijdt race conditie waarbij user snel doorklikt naar Subscribe of
-           Audio Library terwijl subscription-cache nog stale is. */
+           Audio Library terwijl subscription-cache nog stale is.
+           Iter v229 (2026-07-08): eerst cache-clear om free-flash te
+           voorkomen bij PRO-account login. */
+        setSigningInStatus();
         await refreshSubscription();
         /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
            token = potentieel nieuwe user = andere local-storage key.

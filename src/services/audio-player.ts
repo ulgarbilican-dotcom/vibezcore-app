@@ -166,14 +166,14 @@ const initialState: PlayerState = {
  */
 function shouldPreview(session: SessionInfo): boolean {
   if (session.isFree) return false;
-  /* Iter v227 (2026-07-07, audit AU1): null-safe check. Voorheen:
-     `!getCachedSubscription()?.active` gaf TRUE als cache null was
-     (refresh in-flight na AppState=active) → PRO user kreeg 60s
-     preview cap midden in serie. Nu: alleen preview als we EXPLICIET
-     weten dat active === false. Bij null (unknown): fall back op
-     huidige session's preview-state (state.preview). */
+  /* Iter v227 (2026-07-07, audit AU1): null-safe check.
+     Iter v229 (2026-07-08): bundle-users hebben audio inclusive
+     (braceletModel === 'bundle') — backend subscriptions-row komt via
+     Netlify commit 31e5d06, maar frontend fallback zorgt dat bundle-
+     users nooit preview krijgen. */
   const sub = getCachedSubscription();
   if (sub === null) return state.preview === true;
+  if (sub.braceletModel === 'bundle') return false;
   return sub.active !== true;
 }
 

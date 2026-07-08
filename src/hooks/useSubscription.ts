@@ -257,8 +257,16 @@ async function fetchStatus(): Promise<void> {
     ]);
     if (myGen !== fetchGeneration) return;
 
-    /* Geen token / user uitgelogd → guest state */
-    if (backendStatus === null && !rcStatus?.active) {
+    /* Iter v229 (2026-07-08, KRITIEK SECURITY): geen token → GUEST, altijd.
+       Voorheen: als backendStatus null was (no token) maar RC customerInfo
+       nog actieve Play Store subscription rapporteerde → user kreeg PRO
+       state ondanks geen VIBEZCORE session. Concrete lek: verse signup +
+       foute code → clearSession wist tokens → app-restart → RC leest
+       device-level Play Store sub (van eerdere test) → app toont
+       "Audio PRO — Monthly" ondanks geen inlog en geen betaling.
+       Nu: geen token = guest, RC entitlements worden genegeerd tot user
+       ingelogd is (dan mag Play Store sub correct doorwerken). */
+    if (backendStatus === null) {
       notifyAll({ active: false });
       clearPersistedCache();
       return;
@@ -369,6 +377,21 @@ export function setSignedOutStatus(): void {
   fetchGeneration++;
   const freeStatus: SubscriptionStatus = { active: false };
   notifyAll(freeStatus);
+  clearPersistedCache().catch(() => {});
+}
+
+/** Iter v229 (2026-07-08): expliciete "loading" state voor sign-in flows.
+ *  Voorheen: bij login met bestaand PRO-account bleef cachedStatus op
+ *  {active:false} van de vorige uitgeloggde sessie tot fetchStatus klaar
+ *  was → user zag 1-2 sec "free environment" flash vóór "Audio PRO
+ *  Monthly" verscheen. Nu: account.tsx roept deze aan direct vóór
+ *  refreshSubscription() → cachedStatus=null → isLoading=true → tabs
+ *  tonen "Checking..." ipv verkeerde free-state. Fetch overschrijft
+ *  straks met correcte data. */
+export function setSigningInStatus(): void {
+  fetchGeneration++;
+  cachedStatus = null;
+  subscribers.forEach((cb) => cb(null));
   clearPersistedCache().catch(() => {});
 }
 

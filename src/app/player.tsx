@@ -165,12 +165,16 @@ export default function PlayerScreen() {
      voor auth (preview-flag), isPro voor display (CTA tonen/verbergen).
      Voorheen toonde de "Full library access" CTA in PRO override omdat
      realIsPro=false; nu verbergt-ie correct want isPro=true. */
-  const { isPro: displayIsPro, realIsPro } = useSubscription();
+  const { isPro: displayIsPro, realIsPro, braceletModel } = useSubscription();
   /* Iter v227 (2026-07-07, audit AU3): bracelet-only owner ziet
      "Add Audio Library" ipv "Get Full Access". Consistent met Account-
      tab (regel 393: upgradeCtaText = isBraceletOwner ? 'Add Audio Library'
-     : 'Upgrade to full library'). */
+     : 'Upgrade to full library').
+     Iter v229 (2026-07-08): bundle-users hebben audio inclusive.
+     Als backend subscriptions-row nog niet gedeployed is, ziet frontend
+     via braceletModel === 'bundle' dat user PRO is — geen paywall copy. */
   const isBraceletOwner = useBraceletOwner();
+  const isBundleUser = braceletModel === 'bundle';
   const hasSubscription = realIsPro;
   const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
 
@@ -664,7 +668,7 @@ export default function PlayerScreen() {
                 Iter v227 (2026-07-07, audit AU3): bracelet-owner ziet
                 andere copy — "Add Audio Library" ipv "Get Full Access". */}
             <Text style={s.modalBody}>
-              {isBraceletOwner && !realIsPro
+              {isBraceletOwner && !realIsPro && !isBundleUser
                 ? 'Add the Audio Library to complete your VIBEZCORE system.'
                 : 'Get full access to the complete VIBEZCORE library.'}
               {'\n\n'}
@@ -673,7 +677,7 @@ export default function PlayerScreen() {
             <View style={s.modalBtns}>
               <Pressable style={s.modalPrimary} onPress={openUpgrade}>
                 <Text style={s.modalPrimaryText}>
-                  {isBraceletOwner && !realIsPro
+                  {isBraceletOwner && !realIsPro && !isBundleUser
                     ? 'Add Audio Library'
                     : 'Get Full Access'}
                 </Text>
