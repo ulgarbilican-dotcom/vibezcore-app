@@ -78,10 +78,14 @@ export async function restorePurchases(): Promise<RestoreResult> {
 
     const purchases = await iap.restorePurchases();
 
-    /* Triggert subscription-status fetch — tryRevenueCatStatus() in
-       useSubscription leest customerInfo lokaal (al bijgewerkt door SDK)
-       en zet PRO direct in UI. Backend Supabase-row volgt via webhook. */
-    refreshSubscription();
+    /* Iter v230 (2026-07-08, audit BUG 5): AWAIT refreshSubscription zodat
+       accountMismatch-detectie hieronder op VERSE state werkt, niet op
+       stale cache. Voorheen unawaited → cachedSubscription kon nog PRO
+       tonen van vóór signout terwijl restore in werkelijkheid niks vond →
+       accountMismatch false-positive. Ook: de backend Supabase-row is
+       nu getest via /api/subscription-status → als RC webhook faalde,
+       vinden we dat direct ipv 24h stille desync. */
+    await refreshSubscription();
 
     /* Iter v168 (2026-06-28): account-mismatch detectie. Operator zag de
        tegenstrijdige UI 'Audio PRO Monthly' (Account) + 'Nothing to restore'

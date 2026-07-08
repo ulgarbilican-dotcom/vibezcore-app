@@ -239,62 +239,56 @@ async function fetchBackendStatus(): Promise<SubscriptionStatus | null> {
 
 async function fetchStatus(): Promise<void> {
   const myGen = fetchGeneration;
-  /* Iter v227 (2026-07-07, audit B3): dedup exact op mijn generation.
-     Zelfde-gen tweede call → skip (identieke fetch loopt al).
-     Nieuwe-gen call → doorgaan (oude wordt discarded). Voorheen v226:
-     isFetching-boolean gaf 2-4 parallelle RC-calls per event-burst. */
   if (currentFetchGen === myGen) return;
   currentFetchGen = myGen;
   try {
-    /* Iter v225 (2026-07-07): parallel RC + backend fetch. Merge: RC is
-       leidend voor audio-subscription state (tier, validUntil, willRenew,
-       active), backend is leidend voor bracelet (hasBracelet,
-       braceletModel). Deze split lost het Full PRO detectie-gat op
-       waar user audio kocht via IAP en dan bracelet activeerde. */
+    /* Iter v230 (2026-07-08, KRITIEK — v229 regressie): guard op TOKEN, niet
+       op backend-response. v229 pakte `backendStatus === null` als proxy
+       voor guest, maar dat vlagt ook backend 5xx / network timeout →
+       PRO-user zakt intermittent naar FREE bij transient backend-fout.
+       Nu: check token eerst; geen token → guest (echte lek van v229 dicht);
+       token aanwezig maar backend faalt → val terug op RC + cachedStatus
+       (geen regressie). */
+    const token = await getToken();
+    if (myGen !== fetchGeneration) return;
+    if (!token) {
+      notifyAll({ active: false });
+      clearPersistedCache();
+      return;
+    }
+
     const [rcStatus, backendStatus] = await Promise.all([
       tryRevenueCatStatus(),
       fetchBackendStatus(),
     ]);
     if (myGen !== fetchGeneration) return;
 
-    /* Iter v229 (2026-07-08, KRITIEK SECURITY): geen token → GUEST, altijd.
-       Voorheen: als backendStatus null was (no token) maar RC customerInfo
-       nog actieve Play Store subscription rapporteerde → user kreeg PRO
-       state ondanks geen VIBEZCORE session. Concrete lek: verse signup +
-       foute code → clearSession wist tokens → app-restart → RC leest
-       device-level Play Store sub (van eerdere test) → app toont
-       "Audio PRO — Monthly" ondanks geen inlog en geen betaling.
-       Nu: geen token = guest, RC entitlements worden genegeerd tot user
-       ingelogd is (dan mag Play Store sub correct doorwerken). */
-    if (backendStatus === null) {
-      notifyAll({ active: false });
-      clearPersistedCache();
-      return;
-    }
-
-    /* Base: RC audio-state als actief, anders backend. */
+    /* Base: RC audio-state als actief, anders backend, anders cachedStatus
+       (transient backend fail → behoud vorige waarheid). */
     const base: SubscriptionStatus = rcStatus?.active
       ? rcStatus
-      : (backendStatus ?? { active: false });
+      : backendStatus
+        ? backendStatus
+        : (cachedStatus ?? { active: false });
 
-    /* Iter v226 (2026-07-07): bracelet-info uit backend WANNEER backend
-       antwoordde. Als backend faalde (backendStatus === null) → behoud
-       de vorige waarde uit cachedStatus. Voorheen stampte v225 hier
-       hasBracelet naar undefined bij transient netwerkfout → Full PRO
-       user regresseerde 24h naar Audio PRO na één slechte refresh. */
-    const preservedHasBracelet = backendStatus === null
-      ? cachedStatus?.hasBracelet
-      : backendStatus.hasBracelet === true ? true : undefined;
-    const preservedBraceletModel = backendStatus === null
-      ? cachedStatus?.braceletModel
-      : backendStatus.braceletModel;
+    /* Bracelet-info uit backend WANNEER backend antwoordde. Backend fail →
+       behoud vorige waarde uit cachedStatus. */
+    const preservedHasBracelet =
+      backendStatus === null
+        ? cachedStatus?.hasBracelet
+        : backendStatus.hasBracelet === true
+          ? true
+          : undefined;
+    const preservedBraceletModel =
+      backendStatus === null
+        ? cachedStatus?.braceletModel
+        : backendStatus.braceletModel;
 
     const merged: SubscriptionStatus = {
       ...base,
       hasBracelet: preservedHasBracelet,
       braceletModel: preservedBraceletModel,
-      /* Email fallback: pak wat er beschikbaar is. */
-      email: base.email || backendStatus?.email,
+      email: base.email || backendStatus?.email || cachedStatus?.email,
     };
 
     notifyAll(merged);
@@ -306,8 +300,6 @@ async function fetchStatus(): Promise<void> {
       notifyAll({ active: false });
     }
   } finally {
-    /* v227: alleen release als 't nog mijn generation is (defensief bij
-       overlappende generation-bumps). */
     if (currentFetchGen === myGen) currentFetchGen = null;
   }
 }

@@ -277,6 +277,21 @@ export default function RootLayout() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         refreshSubscription();
+        /* Iter v230 (2026-07-08, audit BUG 6/8): retry pending RC-link
+           bij foreground. Als linkRevenueCatUser eerder faalde (offline,
+           SDK not ready) zit RC nog op $RCAnonymousID → volgende purchase
+           zou naar anonymous customer routen → webhook filtert dat weg.
+           Fire-and-forget: linkRevenueCatUser is idempotent, marker
+           wordt gewist bij succes. */
+        void (async () => {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { retryPendingRcLink } = require('@/services/auth');
+            await retryPendingRcLink();
+          } catch {
+            /* swallow */
+          }
+        })();
       }
     });
     return () => sub.remove();

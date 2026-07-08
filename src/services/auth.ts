@@ -43,6 +43,13 @@ export const EMAIL_KEY = 'vz_user_email';
    het email-veld kunnen pre-fillen op de login-form → user typt alleen
    nog wachtwoord (standaard UX-pattern voor mobile apps). */
 export const LAST_EMAIL_KEY = 'vz_last_login_email';
+/* Iter v230 (2026-07-08, audit BUG 6/8): pending RC-link marker. Als
+   Purchases.logIn faalt (offline, SDK not ready, transient) tijdens
+   signup/login/deep-link → schrijf de gewenste userId hier. Bij AppState
+   =active + successful auth wordt de link opnieuw geprobeerd zodat de
+   volgende purchase/entitlement-event bij de juiste app_user_id aankomt
+   (geen $RCAnonymousID-lek naar webhook). */
+export const PENDING_RC_LINK_KEY = 'vz_pending_rc_link';
 
 const REFRESH_MARGIN_SEC = 60;
 
@@ -88,6 +95,12 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
     const Purchases = require('react-native-purchases').default;
     if (!Purchases || typeof Purchases.logIn !== 'function') return;
     await Purchases.logIn(userId);
+    /* Iter v230 (2026-07-08): success → clear pending marker. */
+    try {
+      await AsyncStorage.removeItem(PENDING_RC_LINK_KEY);
+    } catch {
+      /* swallow */
+    }
   } catch (e) {
     if (__DEV__) {
       console.warn(
@@ -95,10 +108,41 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
         e instanceof Error ? e.message : String(e)
       );
     }
+    /* Iter v230 (2026-07-08, audit BUG 6/8): mark for retry. Bij falen
+       hier zit RC nog op $RCAnonymousID; volgende purchase zou naar
+       anonymous customer routen → webhook filtert dat weg → user krijgt
+       geen backend PRO. AppState=active + succesvolle auth retryt de link. */
+    try {
+      await AsyncStorage.setItem(PENDING_RC_LINK_KEY, userId);
+    } catch {
+      /* swallow */
+    }
+  }
+}
+
+/** Iter v230 (2026-07-08, audit BUG 6/8): retry link vanaf de pending
+ *  marker. Aangeroepen door _layout.tsx bij AppState=active en na
+ *  succesvolle sessie-restore. Idempotent — als de marker gelinkt kan
+ *  worden, wordt hij gewist door linkRevenueCatUser zelf. */
+export async function retryPendingRcLink(): Promise<void> {
+  try {
+    const pending = await AsyncStorage.getItem(PENDING_RC_LINK_KEY);
+    if (!pending) return;
+    await linkRevenueCatUser(pending);
+  } catch {
+    /* swallow */
   }
 }
 
 export async function unlinkRevenueCatUser(): Promise<void> {
+  /* Iter v230: bij logOut ook pending-link marker wissen (behoort bij
+     de user die net uitgelogd is; retryen zou anders user A koppelen
+     terwijl user B nu actief is). */
+  try {
+    await AsyncStorage.removeItem(PENDING_RC_LINK_KEY);
+  } catch {
+    /* swallow */
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;

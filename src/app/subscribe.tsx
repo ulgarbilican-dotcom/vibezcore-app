@@ -187,12 +187,21 @@ export default function SubscribeScreen() {
      audio-subscription heeft, skip de aankoop-flow direct naar success.
      Voorkomt Google Play native "Fout — Je bent al geabonneerd" popup
      die operator zag in vC 50. */
-  const { isPro: alreadyIsPro } = useSubscription();
+  const { isPro: alreadyIsPro, tier: currentTier } = useSubscription();
   useEffect(() => {
     if (alreadyIsPro && phase === 'form') {
       setPhase('done');
     }
   }, [alreadyIsPro, phase]);
+  /* Iter v230 (2026-07-08, audit BUG 4): tier-switch detectie. Als user
+     al een sub heeft op andere tier (Monthly → Yearly of andersom) en
+     tapt op een pricing-card van de andere tier → RC/Google throwt
+     'already_owned' zonder duidelijke UX. Google Play biedt wél een
+     change-plan flow via storeSubscriptionsUrl(). Detectie: alreadyIsPro
+     + currentTier ≠ tierForCompute → tonen we een aparte info-state in
+     runIapFlow zodat user weet dat 'ie via Play Store moet switchen. */
+  const isTierSwitchAttempt =
+    alreadyIsPro && !!currentTier && currentTier !== tierForCompute;
   const [errMsg, setErrMsg] = useState<string | null>(null);
   /* Iter v177 (2026-07-02): infoMsg voor positieve transities — bijv. duplicate
      email switch naar signin. Wordt in GROENE banner getoond ipv rood, zodat
@@ -283,6 +292,23 @@ export default function SubscribeScreen() {
   /* ── Sub-flow: account-create wanneer nodig, dan IAP popup ─── */
   const runIapFlow = async () => {
     setErrMsg(null);
+    /* Iter v230 (2026-07-08, audit BUG 4): tier-switch attempt → stuur
+       user naar Play Store change-plan flow ipv rauwe already_owned error.
+       Voorheen: user met Monthly tapt Yearly-card → Google Play toonde
+       "You're already subscribed" native popup → onze auto-restore firet
+       maar houdt Monthly (want er is niks te "restoren" — sub is elders).
+       User zit vast met verkeerde tier zonder duidelijke exit. */
+    if (isTierSwitchAttempt) {
+      const otherLabel = currentTier === 'monthly' ? 'Monthly' : 'Yearly';
+      const targetLabel = tierForCompute === 'monthly' ? 'Monthly' : 'Yearly';
+      setErrMsg(
+        `You're already on the ${otherLabel} plan. To switch to ${targetLabel}, ` +
+          `manage your subscription via the ${Platform.OS === 'ios' ? 'App Store' : 'Play Store'}.`,
+      );
+      setErrDebug(`tier-switch · current=${currentTier} · target=${tierForCompute}`);
+      setPhase('error');
+      return;
+    }
     setPhase('iap-popup');
     /* Iter v166 (2026-06-27): defensive RC user-link direct vóór de purchase.
        authSignup/authLogin koppelen al na sessie-persist, maar deze flow kan
@@ -301,8 +327,9 @@ export default function SubscribeScreen() {
         if (authUserId) await linkRevenueCatUser(authUserId);
       }
     } catch {
-      /* swallow — non-fatal; purchase may still succeed and webhook will
-         eventually correct via TRANSFER event when user re-opens app. */
+      /* swallow — non-fatal; auth.ts.linkRevenueCatUser zet nu een
+         pending-marker bij fail (v230 audit BUG 6/8), zodat AppState=
+         active retryt en volgende purchase alsnog op juiste customer land. */
     }
     const result = await purchase(tierForCompute);
     if (!result.ok) {
@@ -325,6 +352,30 @@ export default function SubscribeScreen() {
          Restore purchases tikken. Nu: silent auto-refresh + welkom-screen.
          Geen native Play error, geen extra tap. */
       if (result.error.code === 'already_owned') {
+        /* Iter v230 (2026-07-08, audit BUG 3): force RC-link vóór restore.
+           already_owned komt vaak omdat de user op device X betaalde met
+           account Y, en nu op device X met account Z probeert te kopen —
+           of omdat linkRevenueCatUser stilletjes faalde in runIapFlow
+           hierboven. Zonder een verse logIn routet restorePurchases naar
+           de anonymous customer → backend krijgt geen webhook update →
+           Supabase mist de sub. Force link + retryPendingRcLink. */
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const {
+            getAuthUserIdFromToken,
+            getToken,
+            linkRevenueCatUser,
+            retryPendingRcLink,
+          } = require('@/services/auth');
+          const token = await getToken();
+          if (token) {
+            const authUserId = getAuthUserIdFromToken(token);
+            if (authUserId) await linkRevenueCatUser(authUserId);
+          }
+          await retryPendingRcLink();
+        } catch {
+          /* swallow */
+        }
         try {
           const { restorePurchases } = require('@/services/restore-purchases');
           await restorePurchases();
@@ -378,8 +429,28 @@ export default function SubscribeScreen() {
       const Purchases = require('react-native-purchases').default;
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ENTITLEMENT_AUDIO_PRO } = require('@/services/iap-real');
-      const customerInfo = await Purchases.getCustomerInfo();
-      const isPro = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
+
+      /* Iter v230 (2026-07-08, audit BUG 1): retry customerInfo lookup
+         met sync tussen tries. Purchases.getCustomerInfo() leest een
+         lokale cache die kan achterlopen op de zojuist gepushte entitlement
+         (RC needs a round-trip to hydrate). Voorheen: single call →
+         entitlement null bij traag netwerk → user in "queue for retry"
+         error scherm ondanks succesvolle betaling. Nu: probeer 3x met
+         Purchases.syncPurchases() ertussen om cache te forceren. */
+      let customerInfo = await Purchases.getCustomerInfo();
+      let isPro = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
+      for (let attempt = 1; !isPro && attempt <= 3; attempt++) {
+        try {
+          if (typeof Purchases.syncPurchases === 'function') {
+            await Purchases.syncPurchases();
+          }
+        } catch {
+          /* swallow — sync fail is niet fataal, we retryen sowieso */
+        }
+        await new Promise((r) => setTimeout(r, 700 * attempt));
+        customerInfo = await Purchases.getCustomerInfo();
+        isPro = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
+      }
 
       if (isPro) {
         /* Acknowledge bij store zodat de purchase niet na 3 dagen wordt
