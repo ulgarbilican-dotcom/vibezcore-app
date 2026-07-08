@@ -420,12 +420,21 @@ export function useSubscription() {
      Audio Library" ipv "Full PRO". Nu: bracelet-only user (geen backend
      audio_pro) → isPro=false correct; bracelet+audio user → isPro=true
      via realIsPro → Full PRO detectie werkt. */
+  /* Iter v228 (2026-07-08): bundle-fallback. Backend `/api/bracelet/activate`
+     schrijft momenteel bij `model=bundle` alleen users.has_bracelet=true en
+     bracelet_model='bundle', geen subscriptions-row voor de 1-jaar audio-
+     component. Zonder subscription-row = active:false = isPro=false =
+     Account tab toont "Bracelet PRO" ipv "Full Bundle". Defensive fallback:
+     als braceletModel === 'bundle' → user is per definitie Full PRO. Backend
+     krijgt hopelijk later een subscription-row voor bundle-users, dan wordt
+     realIsPro=true en is deze fallback moot. */
+  const bundleAsPro = status?.braceletModel === 'bundle';
   const isPro =
     override === 'audio' || override === 'pro'
       ? true
       : override === 'guest'
         ? false
-        : realIsPro;
+        : realIsPro || bundleAsPro;
 
   return {
     isPro,

@@ -203,7 +203,10 @@ const PILLARS = [
     name: 'Tools & Practices',
     key: 'tools' as const,
     img: `${CDN}/Workout%20on%20Beach_edited.jpg`,
-    desc: 'Layered over everything.',
+    /* Iter v228 (2026-07-08): tagline concreet — operator: was te
+       abstract, "Soundscapes and daily affirmations" beschrijft precies
+       welke content in deze kaart zit. */
+    desc: 'Soundscapes and daily affirmations.',
   },
 ];
 
@@ -1443,20 +1446,26 @@ export default function AudioScreen() {
                       }}
                       pointerEvents="none"
                     />
-                    {/* PILLAR 0X label — top-left, uppercase tracked tekst */}
-                    <Text
-                      style={{
-                        position: 'absolute',
-                        top: 12,
-                        left: 14,
-                        color: 'rgba(255,255,255,0.85)',
-                        fontFamily: 'Inter_800ExtraBold',
-                        fontSize: 10,
-                        letterSpacing: 2,
-                      }}
-                    >
-                      {`PILLAR ${p.num}`}
-                    </Text>
+                    {/* PILLAR 0X label — alleen voor de 4 pijlers.
+                        Iter v228 (2026-07-08): Tools & Practices (num='05') is
+                        geen pijler maar aparte content-kaart (soundscapes +
+                        daily affirmations), dus geen "PILLAR 05" label.
+                        CLAUDE.md §4 telt 4 pijlers. */}
+                    {p.num !== '05' && (
+                      <Text
+                        style={{
+                          position: 'absolute',
+                          top: 12,
+                          left: 14,
+                          color: 'rgba(255,255,255,0.85)',
+                          fontFamily: 'Inter_800ExtraBold',
+                          fontSize: 10,
+                          letterSpacing: 2,
+                        }}
+                      >
+                        {`PILLAR ${p.num}`}
+                      </Text>
+                    )}
                     {/* Bottom block — vaste hoogte met space-between layout.
                         Top: naam + tagline tight tegen elkaar.
                         Bottom: VIEW X SESSIONS + ↓ pijl.

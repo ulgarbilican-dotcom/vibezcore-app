@@ -243,6 +243,7 @@ function SubscriptionCard() {
     validUntil,
     willRenew,
     isLoading,
+    braceletModel,
   } = useSubscription();
   /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
      PRO + bracelet owner → speciale "Full PRO" label. */
@@ -266,14 +267,21 @@ function SubscriptionCard() {
     subText = '';
   } else if (isPro && isBraceletOwner) {
     /* Full PRO — beide producten actief.
-       Iter 9dq v49 (2026-06-03): operator-feedback — los "Full PRO"
-       voelde te dun naast "Audio PRO — Yearly" voor audio-only. Pakket-
-       scope nu inline in de bigText ("Full PRO — Audio + Bracelet")
-       zodat de status zelf direct vertelt wat erin zit, geen 2e regel
-       nodig om dezelfde info te dragen. subText hergebruikt vervolgens
-       de renew/active-datum van het audio-deel (zelfde format als
-       Audio-PRO-alleen), wat dus écht extra info toevoegt ipv echo. */
-    bigText = 'Full PRO — Audio + Bracelet';
+       Iter v228 (2026-07-08): tier-specifiek label. Voorheen was elke Full
+       PRO user "Full PRO — Audio + Bracelet" onafhankelijk van hoe de audio
+       binnenkwam. Nu: Bundle-users → "Full Bundle" (product-naam),
+       Monthly/Yearly audio + bracelet → "Full PRO — Monthly/Yearly + Bracelet"
+       zodat user in één blik ziet welk audio-tier hij heeft. Fallback naar
+       oude copy als tier én braceletModel beide onbekend zijn. */
+    if (braceletModel === 'bundle') {
+      bigText = 'Full Bundle';
+    } else if (tier === 'monthly') {
+      bigText = 'Full PRO — Monthly + Bracelet';
+    } else if (tier === 'yearly') {
+      bigText = 'Full PRO — Yearly + Bracelet';
+    } else {
+      bigText = 'Full PRO — Audio + Bracelet';
+    }
     bigColor = Brand.accent;
     if (validUntil) {
       const d = new Date(validUntil);
@@ -406,7 +414,7 @@ function SubscriptionCard() {
           accessibilityLabel="Activate your Smart Bead Bracelet"
         >
           <View style={{ flex: 1 }}>
-            <Text style={s.cardCtaText}>Got a bracelet? Activate your bracelet</Text>
+            <Text style={s.cardCtaText}>Got a bracelet? Activate your bracelet or Full Bundle</Text>
             <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
               Enter your activation code
             </Text>
@@ -1651,11 +1659,16 @@ export default function AccountScreen() {
         <Pressable
           style={s.activateBraceletShortcut}
           onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Just received your Smart Bead Bracelet, activate it here"
+          /* Iter v228 (2026-07-08): copy uitgebreid — "Just received" was te
+             specifiek voor recent-gearriveerde backers; user kan bracelet al
+             maanden bezitten zonder activatie. Ook Full Bundle expliciet zodat
+             bundle-backers weten dat ze via dezelfde CTA hun code kunnen
+             invoeren. Backend detecteert model uit code. */
+          accessibilityLabel="Got a Bracelet or Full Bundle, activate here"
         >
           <Text style={s.activateBraceletShortcutText}>
-            Just received your Smart Bead Bracelet?{' '}
-            <Text style={s.activateBraceletShortcutAccent}>Activate it here →</Text>
+            Got a Bracelet or Full Bundle?{' '}
+            <Text style={s.activateBraceletShortcutAccent}>Activate here →</Text>
           </Text>
         </Pressable>
 

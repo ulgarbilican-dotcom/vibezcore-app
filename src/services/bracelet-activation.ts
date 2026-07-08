@@ -149,7 +149,10 @@ export async function activateBracelet(
       return {
         ok: false,
         code: 'invalid_code',
-        message: 'This code is not valid. Check the email we sent you.',
+        /* Iter v228 (2026-07-08): copy zachter — voorheen implied "check the
+           email" wat verwarrend was voor users die een fout typten of geen
+           echte code hebben. Nu: eerste-taps zelf-check, backup email verwijzing. */
+        message: "This code doesn't match. Double-check your entry, or the email we sent when your bracelet shipped.",
       };
     }
     if (body.includes('already_used')) {
