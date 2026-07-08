@@ -339,17 +339,16 @@ export function subscribeSubscription(
    callers die niet awaiten blijven werken als fire-and-forget. */
 export function refreshSubscription(): Promise<void> {
   fetchGeneration++;
-  /* Iter v227 (2026-07-07, audit B2): behoud actieve PRO cache tijdens
-     fetch. Voorheen: cachedStatus = null + notify(null) → UI toont
-     "Checking…" flash zelfs voor terugkerende PRO-users. Nu: alleen
-     nullen als er geen actieve PRO-cache is (guest / geen sessie).
-     Persistent cache wordt WEL gewist zodat een sign-out-scenario
-     (setSignedOutStatus zet cachedStatus expliciet naar {active:false})
-     niet oud PRO uit disk kan reïncarneren. */
-  if (cachedStatus?.active !== true) {
-    cachedStatus = null;
-    subscribers.forEach((cb) => cb(null));
-  }
+  /* Iter v228 (2026-07-08, KRITIEK SECURITY FIX): NOOIT nullen tijdens
+     fetch. Voorheen v227 B2 nulde cachedStatus voor niet-active users
+     → notify(null) → useSubscription().isLoading=true → Audio Library
+     tab code `hasSub = isLoading ? true : isPro` → uitgelogde/free
+     users kregen PRO-behandeling tijdens elke AppState=active refresh
+     → volledige Audio Library toegankelijk voor gasten → premium
+     content lekt. Nu: laat cachedStatus staan; fetchStatus overschrijft
+     met verse data zodra klaar. Persistent cache wordt wel gewist
+     zodat een sign-out expliciet setSignedOutStatus({active:false})
+     kan zetten zonder oude PRO uit disk te reïncarneren. */
   clearPersistedCache().catch(() => {});
   return fetchStatus();
 }
