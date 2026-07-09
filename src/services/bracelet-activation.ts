@@ -159,7 +159,13 @@ export async function activateBracelet(
       return {
         ok: false,
         code: 'already_used',
-        message: 'This code has already been used.',
+        /* Iter v235 (2026-07-09, operator-feedback): oude copy
+           "already been used" liet de user in het duister — welke account,
+           wanneer, wie? Nieuwe copy stuurt duidelijk naar 2 acties:
+           legitieme owner → sign in op bestaand account. Legaal-probleem
+           (code was gestolen / verkeerd verzonden) → support. */
+        message:
+          "This code is already activated. If it's yours, sign in to the account you used before. If you never activated it, contact support at support@vibezcore.com.",
       };
     }
     if (body.includes('expired')) {
