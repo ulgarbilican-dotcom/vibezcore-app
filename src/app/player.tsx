@@ -175,7 +175,15 @@ export default function PlayerScreen() {
      via braceletModel === 'bundle' dat user PRO is — geen paywall copy. */
   const isBraceletOwner = useBraceletOwner();
   const isBundleUser = braceletModel === 'bundle';
-  const hasSubscription = realIsPro;
+  /* Iter v231 (2026-07-09, KRITIEK bundle-paywall bug): bundle-fallback in
+     hasSubscription. Voorheen: `hasSubscription = realIsPro` = pure
+     backend-active check. Backend subscriptions.platform='bundle' faalt op
+     CHECK constraint ('ios','android','gumroad','stripe') → geen row →
+     backend returnt `active: false` voor bundle-users → realIsPro=false →
+     usePreview=true → loadSession met preview=true → paywall na 60s.
+     Fix: `realIsPro || isBundleUser`. Symmetrisch met useSubscription.isPro
+     defensive fallback en audio-player.shouldPreview bundle-check. */
+  const hasSubscription = realIsPro || isBundleUser;
   const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
 
   /* Laden bij mount — driven door urlSession (= de sessie waar dit scherm
@@ -250,7 +258,7 @@ export default function PlayerScreen() {
        naar /subscribe (tier picker) — consistent met "Add Audio Library"
        CTA in account.tsx:379. Copy zei "Add Audio Library" maar knop
        ging vroeger naar homepage-pricing → mismatch. */
-    if (isBraceletOwner && !realIsPro) {
+    if (isBraceletOwner && !realIsPro && !isBundleUser) {
       router.navigate('/subscribe' as never);
       return;
     }
