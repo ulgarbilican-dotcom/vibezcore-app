@@ -174,28 +174,10 @@ function FreeEnvironmentCard() {
         27 of 144 sessions available. Activate full access below:
       </Text>
 
-      {/* Pad 1 — Audio subscribe (ACTIVE NOW)
-          Iter v167 (2026-06-28): geen hardcoded tier — /subscribe zonder
-          query param toont plan-picker (Monthly vs Yearly). */}
-      <Pressable
-        style={s.cardCta}
-        onPress={() => router.navigate('/subscribe' as never)}
-        accessibilityLabel="Subscribe to the audio library"
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Subscribe to Audio Library</Text>
-          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            Full library — €9.99/m intro, then €14.99
-          </Text>
-        </View>
-        <Text style={s.cardCtaArrow}>→</Text>
-      </Pressable>
-
-      {/* Pad 2 — Activate your bracelet (ACTIVE)
-          Iter v193 (2026-07-03): actief gemaakt — ingelogde niet-owner
-          kan KS-code invoeren zodra bracelet arriveert. "Available from
-          September 2026" grijze staat was verwarrend voor early testers
-          + Kickstarter-backers die vroeg hun code krijgen. */}
+      {/* Iter v237e (2026-07-09, operator-feedback): Activate CTA BOVENAAN.
+          Bundle-koper landt hier na aankoop met code in email — Activate
+          moet als eerste zichtbaar zijn, niet onder Audio subscribe.
+          Subscribe zakt naar Pad 2. */}
       <Pressable
         style={s.cardCta}
         onPress={() => router.push('/activate-bracelet' as never)}
@@ -205,6 +187,21 @@ function FreeEnvironmentCard() {
           <Text style={s.cardCtaText}>Activate Bracelet or Full Bundle</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
             Enter your activation code
+          </Text>
+        </View>
+        <Text style={s.cardCtaArrow}>→</Text>
+      </Pressable>
+
+      {/* Pad 2 — Audio subscribe */}
+      <Pressable
+        style={s.cardCta}
+        onPress={() => router.navigate('/subscribe' as never)}
+        accessibilityLabel="Subscribe to the audio library"
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={s.cardCtaText}>Subscribe to Audio Library</Text>
+          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
+            Full library — €9.99/m intro, then €14.99
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
