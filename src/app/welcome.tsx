@@ -191,42 +191,42 @@ export default function WelcomeScreen() {
             <Text style={s.btnLabel}>Explore Smart Bead Bracelet</Text>
           </Pressable>
 
-          {/* Ondergeschikte regels — kleiner, niet even zwaar als de knoppen.
-             Iter v234 (2026-07-09): 2e ondergeschikte lijn voor Bracelet/
-             Full Bundle owners. Operator-feedback: bundle-koper landt op
-             welkomstscherm en heeft geen expliciet pad naar activate — hij
-             ziet enkel "Explore" en "Sign in" wat suggereert dat hij nog
-             moet aanschaffen of dat sign-in enkel voor audio-subscribers is. */}
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.navigate('/account')}
-            hitSlop={12}
-            style={s.signinHit}
-          >
-            <Text style={s.signinText}>Already a member of VIBEZCORE? Sign in</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.navigate('/activate-bracelet' as never)}
-            hitSlop={12}
-            style={s.signinHit}
-          >
-            <Text style={s.signinText}>Have a Bracelet or Full Bundle? Activate here</Text>
-          </Pressable>
-          {/* Iter v235d (2026-07-09, operator-feedback): Breath is een
-             gratis bonus-tool die anders alleen via de tab-bar wordt
-             ontdekt. Ondergeschikte link → directe route naar /breath
-             zonder account/sub-poort. Bewust NIET even prominent als
-             de 2 Explore-knoppen; Audio + Bracelet blijven de 2 kern-
-             producten (CLAUDE.md §3). */}
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.navigate('/breath')}
-            hitSlop={12}
-            style={s.signinHit}
-          >
-            <Text style={s.signinText}>Just want to breathe? Try free breathwork</Text>
-          </Pressable>
+          {/* Iter v237f: 3 links gegroepeerd — divider-lijn, compacte kolom
+             met 2-regelige entries als menu. Sign in + Activate + Breath
+             als gelijkwaardige subtiele opties. Professioneler dan 3 losse
+             regels. */}
+          <View style={s.linksDivider} />
+          <View style={s.linksGroup}>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.navigate('/account')}
+              hitSlop={10}
+              style={s.linkRow}
+            >
+              <Text style={s.linkRowText}>Sign in</Text>
+              <Text style={s.linkRowSub}>Existing VIBEZCORE account</Text>
+            </Pressable>
+            <View style={s.linkRowSep} />
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.navigate('/activate-bracelet' as never)}
+              hitSlop={10}
+              style={s.linkRow}
+            >
+              <Text style={s.linkRowText}>Activate</Text>
+              <Text style={s.linkRowSub}>Bracelet or Full Bundle code</Text>
+            </Pressable>
+            <View style={s.linkRowSep} />
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.navigate('/breath')}
+              hitSlop={10}
+              style={s.linkRow}
+            >
+              <Text style={s.linkRowText}>Free breathwork</Text>
+              <Text style={s.linkRowSub}>No account needed</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -374,6 +374,44 @@ const s = StyleSheet.create({
     textShadowRadius: 4,
     textShadowOffset: { width: 0, height: 1 },
   },
+  /* Iter v237f (2026-07-09): 3 links in nette grouped card met dividers.
+     Voorheen was 't 3 losse text-links wat te druk oogde. Nu: 1 pill met
+     3 rijen gescheiden door hairline dividers — leest als een menu-lijstje. */
+  linksDivider: {
+    height: 1,
+    marginTop: 20,
+    marginBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  linksGroup: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  linkRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  linkRowText: {
+    color: Brand.text,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    letterSpacing: 0.2,
+  },
+  linkRowSub: {
+    color: Brand.textDim,
+    fontFamily: BrandFonts.medium,
+    fontSize: 12,
+    marginTop: 2,
+    letterSpacing: 0.15,
+  },
+  linkRowSep: {
+    height: 1,
+    marginHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  /* Legacy — nog gerefereerd door oude code paths, houd voor safety. */
   signinHit: {
     alignItems: 'center',
     paddingTop: 10,
