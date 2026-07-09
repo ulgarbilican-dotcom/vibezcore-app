@@ -213,6 +213,20 @@ export default function WelcomeScreen() {
           >
             <Text style={s.signinText}>Have a Bracelet or Full Bundle? Activate here</Text>
           </Pressable>
+          {/* Iter v235d (2026-07-09, operator-feedback): Breath is een
+             gratis bonus-tool die anders alleen via de tab-bar wordt
+             ontdekt. Ondergeschikte link → directe route naar /breath
+             zonder account/sub-poort. Bewust NIET even prominent als
+             de 2 Explore-knoppen; Audio + Bracelet blijven de 2 kern-
+             producten (CLAUDE.md §3). */}
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.navigate('/breath')}
+            hitSlop={12}
+            style={s.signinHit}
+          >
+            <Text style={s.signinText}>Just want to breathe? Try free breathwork</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     </View>
