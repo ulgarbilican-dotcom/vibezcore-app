@@ -48,7 +48,7 @@ import {
 import {
   storeSubscriptionsUrl,
 } from '@/services/subscription-actions';
-import { restorePurchases } from '@/services/restore-purchases';
+import { restorePurchases, silentRestoreAfterLogin } from '@/services/restore-purchases';
 import { clearSignedUrlCache } from '@/utils/audio-url';
 import { clearLastPlayed } from '@/utils/last-played';
 import { validateEmail, emailHintText } from '@/utils/validate-email';
@@ -676,6 +676,12 @@ export default function AccountScreen() {
          free-environment flash te voorkomen bij login met bestaand PRO. */
       setSigningInStatus();
       await refreshSubscription();
+      /* Iter v232 (2026-07-09): silent auto-restore. Na herinstall / verse
+         install met bestaand account was handmatige "Restore purchases"-tap
+         nodig om Play Store sub op te pikken — geen enkele user weet dat.
+         Nu: fire-and-forget na login → RC customerInfo sync + backend
+         refresh → PRO-state komt automatisch binnen. */
+      silentRestoreAfterLogin();
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -702,6 +708,8 @@ export default function AccountScreen() {
          free-environment flash te voorkomen bij login met bestaand PRO. */
       setSigningInStatus();
       await refreshSubscription();
+      /* Iter v232 (2026-07-09): silent auto-restore — zie Google-pad. */
+      silentRestoreAfterLogin();
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -805,6 +813,12 @@ export default function AccountScreen() {
            voorkomen bij PRO-account login. */
         setSigningInStatus();
         await refreshSubscription();
+        /* Iter v232 (2026-07-09): silent auto-restore na login (email/pwd
+           pad). Symmetrisch met Google/Apple paden — dekt post-reinstall
+           UX zonder handmatige Restore-tap. */
+        if (mode === 'login') {
+          silentRestoreAfterLogin();
+        }
         /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
            token = potentieel nieuwe user = andere local-storage key.
            Iter 9dq v55 (2026-06-03, audit C5+C6): AWAIT zodat bucket

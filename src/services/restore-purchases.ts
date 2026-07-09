@@ -34,6 +34,47 @@ import { getAuthUserIdFromToken, getToken, linkRevenueCatUser } from './auth';
 import { getIAP } from './iap';
 import type { IapPurchase } from './iap-contract';
 
+/** Iter v232 (2026-07-09): silent auto-restore na login. Voorheen moest
+ *  een user die de app opnieuw installeerde eerst handmatig op
+ *  "Restore purchases" tikken om z'n bestaande Play Store / App Store
+ *  sub terug te krijgen. Operator-feedback: "geen enkele user weet dat
+ *  2de stap restore verplicht is". Nu: sign-in triggert dit fire-and-
+ *  forget. Fouten worden geswallowed — geen UI-modal, geen "Nothing to
+ *  restore" alert. Als de restore lukt updaten cachedSubscription +
+ *  customerInfo listeners de UI automatisch. */
+export function silentRestoreAfterLogin(): void {
+  void (async () => {
+    try {
+      const iap = getIAP();
+      await iap.init();
+      const token = await getToken();
+      if (token) {
+        const authUserId = getAuthUserIdFromToken(token);
+        if (authUserId) {
+          try {
+            await linkRevenueCatUser(authUserId);
+          } catch {
+            /* swallow */
+          }
+        }
+      }
+      try {
+        await iap.restorePurchases();
+      } catch {
+        /* swallow — 'Nothing to restore' throwt niet meer sinds v227,
+           andere errors zijn niet fataal voor login flow */
+      }
+      try {
+        await refreshSubscription();
+      } catch {
+        /* swallow */
+      }
+    } catch {
+      /* swallow — helemaal silent */
+    }
+  })();
+}
+
 export type RestoreResult =
   | {
       ok: true;
