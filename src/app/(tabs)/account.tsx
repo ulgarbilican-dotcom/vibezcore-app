@@ -702,7 +702,17 @@ export default function AccountScreen() {
          nodig om Play Store sub op te pikken — geen enkele user weet dat.
          Nu: fire-and-forget na login → RC customerInfo sync + backend
          refresh → PRO-state komt automatisch binnen. */
-      silentRestoreAfterLogin();
+      /* v237c ROLLBACK v232: silent auto-restore uit login verwijderd.
+         Reden: op device met actieve Play Store sub van andere VIBEZCORE-
+         user (multi-user, refurbished, test-omgeving) trok silent restore
+         die sub AUTOMATISCH naar de nieuwe VIBEZCORE-account. Ronde 21B
+         + vC 76 verse +audio93 test bewees het lek — zelfs met v236
+         already_owned error was er een tweede attributie-pad via RC's
+         auto-TRANSFER bij logIn.
+         Nu: user moet expliciet Restore Purchases tikken via Account tab
+         als hij zijn bestaande sub wil hertrekken. Trade-off: post-
+         reinstall UX minder soepel (extra tap), maar security lek dicht. */
+      // silentRestoreAfterLogin();  // <-- disabled voor launch
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -730,7 +740,17 @@ export default function AccountScreen() {
       setSigningInStatus();
       await refreshSubscription();
       /* Iter v232 (2026-07-09): silent auto-restore — zie Google-pad. */
-      silentRestoreAfterLogin();
+      /* v237c ROLLBACK v232: silent auto-restore uit login verwijderd.
+         Reden: op device met actieve Play Store sub van andere VIBEZCORE-
+         user (multi-user, refurbished, test-omgeving) trok silent restore
+         die sub AUTOMATISCH naar de nieuwe VIBEZCORE-account. Ronde 21B
+         + vC 76 verse +audio93 test bewees het lek — zelfs met v236
+         already_owned error was er een tweede attributie-pad via RC's
+         auto-TRANSFER bij logIn.
+         Nu: user moet expliciet Restore Purchases tikken via Account tab
+         als hij zijn bestaande sub wil hertrekken. Trade-off: post-
+         reinstall UX minder soepel (extra tap), maar security lek dicht. */
+      // silentRestoreAfterLogin();  // <-- disabled voor launch
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -838,7 +858,17 @@ export default function AccountScreen() {
            pad). Symmetrisch met Google/Apple paden — dekt post-reinstall
            UX zonder handmatige Restore-tap. */
         if (mode === 'login') {
-          silentRestoreAfterLogin();
+          /* v237c ROLLBACK v232: silent auto-restore uit login verwijderd.
+         Reden: op device met actieve Play Store sub van andere VIBEZCORE-
+         user (multi-user, refurbished, test-omgeving) trok silent restore
+         die sub AUTOMATISCH naar de nieuwe VIBEZCORE-account. Ronde 21B
+         + vC 76 verse +audio93 test bewees het lek — zelfs met v236
+         already_owned error was er een tweede attributie-pad via RC's
+         auto-TRANSFER bij logIn.
+         Nu: user moet expliciet Restore Purchases tikken via Account tab
+         als hij zijn bestaande sub wil hertrekken. Trade-off: post-
+         reinstall UX minder soepel (extra tap), maar security lek dicht. */
+      // silentRestoreAfterLogin();  // <-- disabled voor launch
         }
         /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
            token = potentieel nieuwe user = andere local-storage key.

@@ -94,6 +94,43 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;
     if (!Purchases || typeof Purchases.logIn !== 'function') return;
+
+    /* Iter v237c (2026-07-09, KRITIEK SECURITY uit vC 76 test):
+       vóór Purchases.logIn(newUserId) checken of de huidige RC customer
+       (anonymous) al actieve entitlements heeft. Zo ja → NIET logIn,
+       want RC's auto-TRANSFER zou de sub van de vorige user aan de
+       nieuwe user attribueren zonder betaling.
+       Legit re-install scenario: anonymous customer is nieuw → geen
+       entitlements → check passes → logIn OK → RC valideert Play Store
+       sub bij expliciete restorePurchases-tap.
+       Multi-user attack scenario: anonymous customer heeft entitlements
+       geërfd van vorige user's Play Store sub → check FAALT → logIn
+       skipped → geen attributie-lek. */
+    try {
+      const currentInfo = await Purchases.getCustomerInfo();
+      const activeEntitlements = currentInfo?.entitlements?.active;
+      const hasActiveEntitlement =
+        activeEntitlements && Object.keys(activeEntitlements).length > 0;
+      const currentId: string = currentInfo?.originalAppUserId ?? '';
+      const isCurrentlyAnonymous =
+        !currentId || currentId.startsWith('$RCAnonymousID');
+      const isSameUser = currentId === userId;
+      if (hasActiveEntitlement && isCurrentlyAnonymous && !isSameUser) {
+        if (__DEV__) {
+          console.warn(
+            '[auth] v237c BLOCKED linkRevenueCatUser: anonymous RC customer has active entitlement — skip logIn to prevent TRANSFER leak. User can tap "Restore purchases" if this is their sub.',
+          );
+        }
+        return;
+      }
+    } catch {
+      /* Als getCustomerInfo faalt: veiliger om NIET te logIn (defensief).
+         Purchase-flow triggert linkRC opnieuw wanneer user explicitely
+         gaat kopen, dan is 't OK om door te gaan. */
+      if (__DEV__) console.warn('[auth] v237c: getCustomerInfo failed, skip logIn');
+      return;
+    }
+
     await Purchases.logIn(userId);
     /* Iter v230 (2026-07-08): success → clear pending marker. */
     try {
