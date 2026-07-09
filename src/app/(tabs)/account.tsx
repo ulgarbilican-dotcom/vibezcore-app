@@ -405,6 +405,27 @@ function SubscriptionCard() {
           <Text style={s.cardCtaArrow}>→</Text>
         </Pressable>
       )}
+      {/* Iter v233 (2026-07-09): upgrade-CTA voor Monthly-subscribers →
+          Yearly. Deep-linkt naar Play Store subscription page waar
+          Google's native change-plan flow zit. Zonder deze CTA had een
+          Monthly-user geen ingang naar Yearly (v230 tier-switch guard
+          was defensief maar onbereikbaar via UI). Bundle-users hebben
+          full access, Yearly-users hebben geen upgrade-pad. */}
+      {!isLoading && isPro && tier === 'monthly' && braceletModel !== 'bundle' && (
+        <Pressable
+          style={s.cardCta}
+          onPress={() => openExternal(storeSubscriptionsUrl('yearly'))}
+          accessibilityLabel="Switch to the Yearly plan via the Play Store"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={s.cardCtaText}>Switch to Yearly</Text>
+            <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
+              Manage the change in the Play Store
+            </Text>
+          </View>
+          <Text style={s.cardCtaArrow}>→</Text>
+        </Pressable>
+      )}
       {/* Iter v193 (2026-07-03): cross-sell naar bracelet voor audio-only
           users — actief gemaakt. Audio-PRO die z'n bracelet ontvangt kan
           nu meteen activeren zonder te wachten op September 2026. */}
