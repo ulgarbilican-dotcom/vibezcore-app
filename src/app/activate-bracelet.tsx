@@ -21,6 +21,7 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { clearSession, getToken, login, signup } from '@/services/auth';
+import { clearLastPlayed } from '@/utils/last-played';
 import {
   activateBracelet,
   isValidActivationCodeFormat,
@@ -192,6 +193,14 @@ export default function ActivateBraceletScreen() {
         setPhase('form');
         return;
       }
+
+      /* Iter v235 (2026-07-09, KRITIEK privacy-fix): wis last-played van
+         vorige user op dit toestel. Zonder deze call zag een verse
+         bracelet-account op re-open de "Welcome back — Continue listening?"
+         modal van de vorige gebruiker (bv. audio-PRO user die eerder
+         luisterde op dit device). Symmetrisch met account.tsx login-pad
+         waar clearLastPlayed al werd aangeroepen na sign-in. */
+      await clearLastPlayed().catch(() => {});
     }
 
     /* 3. Activate bracelet. Iter v228 (2026-07-08, KRITIEK AUTH-FIX):

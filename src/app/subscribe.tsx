@@ -548,6 +548,17 @@ export default function SubscribeScreen() {
        anders kan een snelle IAP-trigger nog naar de oude bucket schrijven. */
     await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
     refreshSubscription();
+    /* Iter v235 (2026-07-09, KRITIEK privacy-fix): wis last-played van
+       vorige user op dit toestel — anders zag een verse account op de
+       "Welcome back — Continue listening?" popup de sessie van een vorige
+       account. Symmetrisch met account.tsx login-pad en activate-bracelet.tsx. */
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { clearLastPlayed } = require('@/utils/last-played');
+      await clearLastPlayed();
+    } catch {
+      /* swallow */
+    }
     /* Iter v144: na geslaagde signup/signin de lokale signedIn-state ook
        updaten. Zonder dit toont het error-scherm (als IAP daarna faalt) de
        "user is gast"-tekst terwijl het account wèl is aangemaakt. Met deze

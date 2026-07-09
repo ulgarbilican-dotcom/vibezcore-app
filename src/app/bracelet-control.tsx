@@ -4176,8 +4176,17 @@ export default function BraceletControl() {
             /* Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
                48 was nog te krap voor Samsung 3-button nav waar de
                inset-API onderrapporteert. 72px = consistent met
-               player.tsx en andere bottom-CTAs. */
-            { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+               player.tsx en andere bottom-CTAs.
+               Iter v235 (2026-07-09): owner-inline mode zit binnen de
+               (tabs) group → tab-bar (60-72px) overlappt de Voice
+               guidance card. Fix: extra ~80px bottom padding voor
+               owner-inline. Non-owner mode (Stack push) heeft geen tab-
+               bar → normale padding. */
+            {
+              paddingBottom: isBraceletOwner
+                ? Math.max(safeInsets.bottom + 100, 150)
+                : Math.max(safeInsets.bottom + 24, 72),
+            },
           ]}
         >
           {/* Iter 9bz (2026-05-31): PAUSED-eyebrow staat nu BOVEN de
