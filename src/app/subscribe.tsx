@@ -346,48 +346,24 @@ export default function SubscribeScreen() {
           result.error.message,
         );
       }
-      /* Iter v194 (2026-07-04): already_owned = user heeft al een actief
-         abonnement op dit Google/Apple account. Vroeger toonden we een
-         error "You already own this subscription" + user moest handmatig
-         Restore purchases tikken. Nu: silent auto-refresh + welkom-screen.
-         Geen native Play error, geen extra tap. */
+      /* Iter v236 (2026-07-09, KRITIEK security fix uit Ronde 21B):
+         already_owned MAG NIET meer auto-restoren. Voorheen: purchase-
+         attempt → Google "already owned" → wij deden silent restore →
+         RC pakte de MEEST RECENTE sub van dit Google account → toewees
+         aan huidige VIBEZCORE user. Lek: familie deelt device, verse
+         account krijgt sub van andere user zonder betaald.
+         Nu: toon expliciete modal die de user informeert dat er al
+         een sub op dit Google/Apple account is en dat 'ie moet inloggen
+         op het VIBEZCORE account waar die aan gekoppeld is. Restore
+         gebeurt alleen op expliciete tap op "Restore purchases" — daar
+         moet de user zelf keuze maken en de accountMismatch-modal
+         zorgt voor UX afhandeling. */
       if (result.error.code === 'already_owned') {
-        /* Iter v230 (2026-07-08, audit BUG 3): force RC-link vóór restore.
-           already_owned komt vaak omdat de user op device X betaalde met
-           account Y, en nu op device X met account Z probeert te kopen —
-           of omdat linkRevenueCatUser stilletjes faalde in runIapFlow
-           hierboven. Zonder een verse logIn routet restorePurchases naar
-           de anonymous customer → backend krijgt geen webhook update →
-           Supabase mist de sub. Force link + retryPendingRcLink. */
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const {
-            getAuthUserIdFromToken,
-            getToken,
-            linkRevenueCatUser,
-            retryPendingRcLink,
-          } = require('@/services/auth');
-          const token = await getToken();
-          if (token) {
-            const authUserId = getAuthUserIdFromToken(token);
-            if (authUserId) await linkRevenueCatUser(authUserId);
-          }
-          await retryPendingRcLink();
-        } catch {
-          /* swallow */
-        }
-        try {
-          const { restorePurchases } = require('@/services/restore-purchases');
-          await restorePurchases();
-        } catch {
-          /* swallow — refreshSubscription hieronder is de vangnet */
-        }
-        /* Iter v227 (2026-07-07, audit B5): AWAIT refreshSubscription
-           vóór setPhase('done'). Voorheen unawaited → Welcome-screen
-           rendered met stale null-cache → useSubscription's alreadyIsPro
-           guard werkte niet consistent → user zag briefly FREE state. */
-        await refreshSubscription();
-        setPhase('done');
+        setErrMsg(
+          "A VIBEZCORE subscription is already active on this Google/Apple account. Sign in to the VIBEZCORE account you used for that purchase, or contact support if you're not sure which account it belongs to."
+        );
+        setErrDebug(`already_owned · no auto-restore (v236 security)`);
+        setPhase('error');
         return;
       }
       setErrMsg(iapErrorMessage(result.error.code, result.error.message));
