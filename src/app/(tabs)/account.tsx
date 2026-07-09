@@ -199,10 +199,10 @@ function FreeEnvironmentCard() {
       <Pressable
         style={s.cardCta}
         onPress={() => router.push('/activate-bracelet' as never)}
-        accessibilityLabel="Activate your Smart Bead Bracelet"
+        accessibilityLabel="Activate your Bracelet or Full Bundle"
       >
         <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Activate your bracelet</Text>
+          <Text style={s.cardCtaText}>Activate Bracelet or Full Bundle</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
             Enter your activation code
           </Text>

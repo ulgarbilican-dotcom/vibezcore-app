@@ -191,7 +191,12 @@ export default function WelcomeScreen() {
             <Text style={s.btnLabel}>Explore Smart Bead Bracelet</Text>
           </Pressable>
 
-          {/* Ondergeschikte regel — kleiner, niet even zwaar als de knoppen. */}
+          {/* Ondergeschikte regels — kleiner, niet even zwaar als de knoppen.
+             Iter v234 (2026-07-09): 2e ondergeschikte lijn voor Bracelet/
+             Full Bundle owners. Operator-feedback: bundle-koper landt op
+             welkomstscherm en heeft geen expliciet pad naar activate — hij
+             ziet enkel "Explore" en "Sign in" wat suggereert dat hij nog
+             moet aanschaffen of dat sign-in enkel voor audio-subscribers is. */}
           <Pressable
             accessibilityRole="link"
             onPress={() => router.navigate('/account')}
@@ -199,6 +204,14 @@ export default function WelcomeScreen() {
             style={s.signinHit}
           >
             <Text style={s.signinText}>Already a member of VIBEZCORE? Sign in</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.navigate('/activate-bracelet' as never)}
+            hitSlop={12}
+            style={s.signinHit}
+          >
+            <Text style={s.signinText}>Have a Bracelet or Full Bundle? Activate here</Text>
           </Pressable>
         </View>
       </SafeAreaView>

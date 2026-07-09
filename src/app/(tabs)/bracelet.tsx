@@ -1388,9 +1388,9 @@ export default function BraceletScreen() {
           style={s.compactActivateBtn}
           onPress={() => router.push('/activate-bracelet')}
           android_ripple={{ color: 'rgba(255,255,255,0.20)' }}
-          accessibilityLabel="Activate your Smart Bead Bracelet"
+          accessibilityLabel="Activate your Bracelet or Full Bundle"
         >
-          <Text style={s.compactActivateBtnText}>Activate your bracelet</Text>
+          <Text style={s.compactActivateBtnText}>Activate Bracelet or Full Bundle</Text>
           <Text style={s.compactActivateBtnArrow}>→</Text>
         </Pressable>
         <Pressable
