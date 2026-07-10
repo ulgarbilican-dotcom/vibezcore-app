@@ -203,7 +203,7 @@ export default function WelcomeScreen() {
               hitSlop={10}
               style={s.linkRow}
             >
-              <Text style={s.linkRowText}>Sign in</Text>
+              <Text style={s.linkRowText}>Already a member? Sign in</Text>
               <Text style={s.linkRowSub}>Existing VIBEZCORE account</Text>
             </Pressable>
             <View style={s.linkRowSep} />
@@ -213,8 +213,8 @@ export default function WelcomeScreen() {
               hitSlop={10}
               style={s.linkRow}
             >
-              <Text style={s.linkRowText}>Activate</Text>
-              <Text style={s.linkRowSub}>Bracelet or Full Bundle code</Text>
+              <Text style={s.linkRowText}>Have a Bracelet or Full Bundle?</Text>
+              <Text style={s.linkRowSub}>Bracelet + Audio · Activate here</Text>
             </Pressable>
             <View style={s.linkRowSep} />
             <Pressable
@@ -223,8 +223,8 @@ export default function WelcomeScreen() {
               hitSlop={10}
               style={s.linkRow}
             >
-              <Text style={s.linkRowText}>Free breathwork</Text>
-              <Text style={s.linkRowSub}>No account needed</Text>
+              <Text style={s.linkRowText}>Reset in minutes</Text>
+              <Text style={s.linkRowSub}>Free professional breathwork sessions</Text>
             </Pressable>
           </View>
         </View>
