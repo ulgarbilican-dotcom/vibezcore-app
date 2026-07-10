@@ -1744,18 +1744,16 @@ export default function AccountScreen() {
           </Text>
         </Pressable>
 
-        {/* Iter v159 (2026-06-26): 'or get started' divider vervangen door
-            een echte sectie-header. Operator-feedback: 'sign up CTA om aan
-            te kopen is zeer onprofessioneel en volgt de flow niet — get
-            started moet onmiddellijk volgen na sign in voor geval user
-            geen abonnement heeft'.
-            Nieuwe styling: sectie-eyebrow + subline zoals andere screens. */}
-        <View style={s.getStartedHeader}>
-          <Text style={s.getStartedEyebrow}>NEW TO VIBEZCORE</Text>
-          <Text style={s.getStartedTitle}>Get started</Text>
-          <Text style={s.getStartedSub}>
-            Choose what fits — sign in is only for returning users.
-          </Text>
+        {/* Iter v238g (2026-07-10, operator-feedback): "in account is blok
+            got a bracelet en new to vibezcore redelijk rommelig".
+            Gesaneerd: eyebrow-title-subline stack verkort tot 1 subtiele
+            divider-header. Activate CTA (hierboven) en product-cards
+            (hieronder) hebben nu een duidelijke visuele scheiding zonder
+            concurrerende eyebrows. */}
+        <View style={s.newHereDivider}>
+          <View style={s.newHereDividerLine} />
+          <Text style={s.newHereDividerText}>NEW TO VIBEZCORE</Text>
+          <View style={s.newHereDividerLine} />
         </View>
 
         {/* ── PRODUCT CARDS — restructured iter 9dq v10 (2026-06-02) ──
@@ -2352,30 +2350,27 @@ const s = StyleSheet.create({
      'or get started' divider. Operator: 'sign up CTA om aan te kopen
      is zeer onprofessioneel — get started moet duidelijk en prominent
      onmiddellijk volgen na sign in'. */
-  getStartedHeader: {
+  /* Iter v238g (2026-07-10): getStartedHeader vervangen door
+     newHereDivider — subtiele lijn+label ipv eyebrow+title+subline stack.
+     Reduceert visuele ruis boven de product-cards. */
+  newHereDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 24,
     marginBottom: 14,
     paddingHorizontal: 4,
+    gap: 12,
   },
-  getStartedEyebrow: {
-    color: Brand.accent,
-    fontSize: 11,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: 1.2,
-    marginBottom: 6,
+  newHereDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
-  getStartedTitle: {
-    color: Brand.text,
-    fontSize: 22,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.3,
-    marginBottom: 6,
-  },
-  getStartedSub: {
+  newHereDividerText: {
     color: Brand.textDim,
-    fontSize: 14,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 20,
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 1.4,
   },
   /* Iter 9lll — Audio btn wrapper voor "AVAILABLE NOW" badge. */
   audioBtnWrap: {
