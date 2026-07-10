@@ -1721,28 +1721,36 @@ export default function AccountScreen() {
 
         </View>
 
-        {/* Iter v188 (2026-07-02): bracelet-content VERWIJDERD van Account
-            tab. Verplaatst naar Bracelet tab waar het contextueel hoort.
-
-            Iter v190 (2026-07-02): kleine directe link toegevoegd voor
-            bracelet-owner first-time die "Already a member? Sign in" tapt
-            en dan geen account blijkt te hebben. Route rechtstreeks naar
-            /activate-bracelet (form heeft email + password + code combined). */}
-        <Pressable
-          style={s.activateBraceletShortcut}
-          onPress={() => router.navigate('/activate-bracelet' as never)}
-          /* Iter v228 (2026-07-08): copy uitgebreid — "Just received" was te
-             specifiek voor recent-gearriveerde backers; user kan bracelet al
-             maanden bezitten zonder activatie. Ook Full Bundle expliciet zodat
-             bundle-backers weten dat ze via dezelfde CTA hun code kunnen
-             invoeren. Backend detecteert model uit code. */
-          accessibilityLabel="Got a Bracelet or Full Bundle, activate here"
-        >
-          <Text style={s.activateBraceletShortcutText}>
-            Got a Bracelet or Full Bundle?{' '}
-            <Text style={s.activateBraceletShortcutAccent}>Activate here →</Text>
+        {/* Iter v238h (2026-07-10, operator-feedback): "activate moet
+            prominenter, dat is geen bijproduct en op gelijke voet met
+            library". Herschreven van subtiele text-link naar volwaardige
+            product-card met eigen eyebrow, titel, one-liner en primary
+            CTA — visueel gelijkwaardig aan Audio Library en Bracelet
+            cards hieronder. Boven de "NEW TO VIBEZCORE" divider want
+            deze card is voor OWNERS (al gekocht), niet voor discovery. */}
+        <View style={s.productCard}>
+          <View style={s.productStatusRow}>
+            <View
+              style={[
+                s.productStatusDot,
+                { backgroundColor: Brand.accent },
+              ]}
+            />
+            <Text style={s.productStatusLabel}>ALREADY OWN A PRODUCT?</Text>
+          </View>
+          <Text style={s.productTitle}>Activate</Text>
+          <Text style={s.productOneLiner}>
+            Bracelet or Full Bundle code
           </Text>
-        </Pressable>
+          <Pressable
+            style={s.productCtaPrimary}
+            onPress={() => router.navigate('/activate-bracelet' as never)}
+            accessibilityLabel="Activate your Bracelet or Full Bundle code"
+          >
+            <Text style={s.productCtaPrimaryText}>Activate</Text>
+            <Text style={s.productCtaPrimaryArrow}>→</Text>
+          </Pressable>
+        </View>
 
         {/* Iter v238g (2026-07-10, operator-feedback): "in account is blok
             got a bracelet en new to vibezcore redelijk rommelig".
