@@ -173,23 +173,26 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={s.bottom}>
-          {/* Twee gelijkwaardige knoppen — bewust identiek qua gewicht.
-             Volgorde per BLAUWDRUK §2: Audio eerst, Bracelet tweede. */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.navigate('/')}
-            style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
-          >
-            <Text style={s.btnLabel}>Explore Audio Library</Text>
-          </Pressable>
+          {/* Twee gelijkwaardige knoppen naast elkaar — halve breedte,
+             identiek qua gewicht. Volgorde per BLAUWDRUK §2:
+             Audio eerst, Bracelet tweede. */}
+          <View style={s.btnRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.navigate('/')}
+              style={({ pressed }) => [s.btn, s.btnHalf, pressed && s.btnPressed]}
+            >
+              <Text style={s.btnLabel} numberOfLines={1}>Audio Library</Text>
+            </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.navigate('/bracelet')}
-            style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
-          >
-            <Text style={s.btnLabel}>Explore Smart Bead Bracelet</Text>
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.navigate('/bracelet')}
+              style={({ pressed }) => [s.btn, s.btnHalf, pressed && s.btnPressed]}
+            >
+              <Text style={s.btnLabel} numberOfLines={1}>Smart Bracelet</Text>
+            </Pressable>
+          </View>
 
           {/* Iter v237f: 3 links gegroepeerd — divider-lijn, compacte kolom
              met 2-regelige entries als menu. Sign in + Activate + Breath
@@ -345,6 +348,14 @@ const s = StyleSheet.create({
   bottom: {
     gap: 10,
   },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  btnHalf: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   btn: {
     /* Halftransparante accentkleur: bracelet schijnt er onderdoor heen.
        Brand.accent = #3a8fff = rgb(58,143,255), 0.55 alpha. Lichte rand
@@ -379,8 +390,8 @@ const s = StyleSheet.create({
      3 rijen gescheiden door hairline dividers — leest als een menu-lijstje. */
   linksDivider: {
     height: 1,
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 10,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   linksGroup: {
@@ -390,26 +401,27 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
   linkRow: {
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   linkRowText: {
     color: Brand.text,
     fontFamily: BrandFonts.semibold,
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 0.2,
   },
   linkRowSub: {
     color: Brand.textDim,
     fontFamily: BrandFonts.medium,
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+    marginTop: 1,
     letterSpacing: 0.15,
+    opacity: 0.75,
   },
   linkRowSep: {
     height: 1,
     marginHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   /* Legacy — nog gerefereerd door oude code paths, houd voor safety. */
   signinHit: {
