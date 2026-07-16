@@ -107,17 +107,11 @@ function mapPurchasesErrorCode(
  *
  *  Werkt in ELKE valuta want Google geeft localized prices direct
  *  terug (geen conversie nodig in code). */
-function extractRegularPriceFromPackage(
-  pkg: PurchasesPackage
+function extractPhasePrice(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  phase: any
 ): { label: string; micros: number } | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const product = pkg.product as any;
-  const opt = product?.defaultOption ?? product?.subscriptionOptions?.[0];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const phases: any[] = opt?.pricingPhases;
-  if (!Array.isArray(phases) || phases.length < 2) return null;
-  const regularPhase = phases[phases.length - 1];
-  const price = regularPhase?.price;
+  const price = phase?.price;
   if (!price) return null;
   const label: string | undefined = price.formatted ?? price.formattedPrice;
   const micros: number | undefined =
@@ -130,19 +124,62 @@ function extractRegularPriceFromPackage(
   return { label, micros };
 }
 
+function extractRegularPriceFromPackage(
+  pkg: PurchasesPackage
+): { label: string; micros: number } | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const product = pkg.product as any;
+  const opt = product?.defaultOption ?? product?.subscriptionOptions?.[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const phases: any[] = opt?.pricingPhases;
+  if (!Array.isArray(phases) || phases.length < 2) return null;
+  return extractPhasePrice(phases[phases.length - 1]);
+}
+
+/** Iter v239 (2026-07-16) KRITIEK: extract intro-offer prijs uit FIRST
+ *  pricing phase. Als offer actief (defaultOption is een offer met
+ *  meerdere phases, eerste = intro), toon die prijs in de paywall.
+ *
+ *  Zonder deze helper viel localizedPrice altijd terug op base price
+ *  (€14.99/€89.99), en zag GEEN ENKELE user het intro-tarief. Torpedeerde
+ *  conversies sinds launch — 355 customers, 0 subscribers. */
+function extractIntroPriceFromPackage(
+  pkg: PurchasesPackage
+): { label: string; micros: number } | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const product = pkg.product as any;
+  const opt = product?.defaultOption ?? product?.subscriptionOptions?.[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const phases: any[] = opt?.pricingPhases;
+  if (!Array.isArray(phases) || phases.length < 2) return null;
+  /* First phase = intro/trial. Only return if it's a paid intro (micros > 0)
+     — free trials (micros = 0) worden apart afgehandeld en zouden de
+     paywall niet mogen tonen als "€0.00/mo". */
+  const intro = extractPhasePrice(phases[0]);
+  if (!intro || intro.micros <= 0) return null;
+  return intro;
+}
+
 function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
   const productId = pkg.product.identifier;
   const tier = tierFromProductId(productId);
   if (!tier) return null;
   const reg = extractRegularPriceFromPackage(pkg);
+  /* v239 fix: als er een actieve intro-offer is voor deze user (eligible),
+     toon die prijs als localizedPrice ipv base price. Google Play stuurt
+     alleen de intro als user eligible is — dus als extractIntroPrice()
+     iets returnt = deze klant KRIJGT het intro-tarief. */
+  const intro = extractIntroPriceFromPackage(pkg);
+  const displayLabel = intro?.label ?? pkg.product.priceString;
+  const displayMicros = intro?.micros ?? Math.round(pkg.product.price * 1_000_000);
   return {
     productId,
     tier,
     title: pkg.product.title || `VIBEZCORE Audio ${tier}`,
     description: pkg.product.description || '',
-    localizedPrice: pkg.product.priceString,
+    localizedPrice: displayLabel,
     currency: pkg.product.currencyCode,
-    priceAmountMicros: Math.round(pkg.product.price * 1_000_000),
+    priceAmountMicros: displayMicros,
     subscriptionPeriod: tier === 'monthly' ? 'P1M' : 'P1Y',
     regularPriceLabel: reg?.label,
     regularPriceMicros: reg?.micros,
