@@ -642,33 +642,22 @@ export default function AudioScreen() {
     return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
   })();
 
-  /* Iter v163 (2026-06-27): strikethroughs komen DIRECT uit Google's
-     pricingPhases (regularPriceLabel). Geen hardcoded waarden per
-     valuta meer. Operator-spec: 'prijzen in app en website moeten in
-     alle valuta ook kloppen met prijzen in google wat de klant
-     betaald'. RevenueCat reads pricingPhases van Google Play Billing
-     en geeft ons de regular post-intro prijs in dezelfde lokale
-     valuta. Werkt in elke regio (EUR, USD, GBP, CAD, AUD, ...) want
-     het is letterlijk wat Google teruggeeft. */
+  /* Iter v239g (2026-07-17): intro-offer mechanisme (Play/Apple
+     regularPriceLabel via pricingPhases) bestaat niet meer sinds de
+     intro-offers verwijderd zijn — €9.99/€69.99 zijn nu de vaste prijs
+     voor iedereen, geen 'regular' fase meer om tegen te vergelijken.
+     Monthly-kaart krijgt daarom GEEN strikethrough meer (zou een
+     verzonnen 'was'-prijs zijn — precies wat we net elders verwijderd
+     hebben).
 
-  /* Intro detectie via aanwezigheid van regularPriceLabel — Google
-     geeft ALLEEN een regular phase terug als er een intro is. */
-  const monthlyHasIntro = !!monthlyProduct?.regularPriceLabel;
-  const yearlyHasIntro = !!yearlyProduct?.regularPriceLabel;
+     Yearly's vergelijking blijft WEL staan, ONGECONDITIONEERD: dat is
+     geen fake-'was'-prijs, maar een eerlijke vergelijking tussen twee
+     ECHTE, gelijktijdig actieve aankoopopties (maandelijks €9.99 vs
+     jaarlijks-per-maand €5.83) — de klant kan letterlijk beide nu
+     kopen. SAVE % is dus altijd correct te tonen. */
+  const yearlyStrikeLabel = monthlyPriceLabel;
 
-  /* Monthly strikethrough: regular price uit Google pricingPhases. */
-  const monthlyStrikeLabel = monthlyHasIntro
-    ? monthlyProduct?.regularPriceLabel ?? null
-    : null;
-
-  /* Yearly strikethrough: monthly intro current price (per website-
-     layout — comparison "yearly per-month vs monthly per-month"). */
-  const yearlyStrikeLabel = yearlyHasIntro ? monthlyPriceLabel : null;
-
-  /* SAVE %: berekend uit monthly per-month vs yearly per-month, alleen
-     wanneer yearly intro actief is. */
   const yearlySavePercentLabel = (() => {
-    if (!yearlyHasIntro) return null;
     if (!monthlyProduct?.priceAmountMicros || !yearlyProduct?.priceAmountMicros) return null;
     const monthlyAmount = monthlyProduct.priceAmountMicros;
     const yearlyPerMonthMicros = yearlyProduct.priceAmountMicros / 12;
@@ -2353,7 +2342,7 @@ export default function AudioScreen() {
                                   const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
                                   const pitch =
                                     'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
-                                    'Launching September 1, 2026 — Smart Bead Bracelet for instant state control.';
+                                    'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
                                   Share.share({
                                     title: 'VIBEZCORE',
                                     message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app: ${url}`,
@@ -2944,15 +2933,12 @@ export default function AudioScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             >
               <View style={[s.cardClip, s.cardClipMonthly]}>
-                {/* Iter v161 (2026-06-27): strikethrough verschijnt ALLEEN
-                    als de klant de intro-prijs ziet — niet voor License
-                    Testers of bestaande klanten die de regular betalen. */}
-                {monthlyStrikeLabel && (
-                  <View style={s.strikeRow}>
-                    <Text style={s.priceStrike}>{monthlyStrikeLabel}</Text>
-                    <Text style={s.regularTag}>REGULAR</Text>
-                  </View>
-                )}
+                {/* v239g: strikethrough weg (was gekoppeld aan het
+                    verwijderde intro-offer-mechanisme, zou nu een
+                    verzonnen 'was'-prijs zijn). Launch offer-tag i.p.v. */}
+                <View style={s.strikeRow}>
+                  <Text style={s.regularTag}>LAUNCH OFFER</Text>
+                </View>
                 <View style={s.priceBig}>
                   <Text style={s.priceBigAmount}>{monthlyPriceLabel}</Text>
                   <Text style={s.priceBigPer}>/month</Text>
