@@ -1280,8 +1280,8 @@ const s = StyleSheet.create({
     borderColor: 'rgba(58, 143, 255, 0.28)',
     borderWidth: 1,
     borderRadius: 14,
-    padding: 18,
-    marginBottom: 28,
+    padding: 14,
+    marginBottom: 14,
     marginTop: 6,
   },
   orderEyebrow: {
@@ -1426,7 +1426,7 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     lineHeight: 20,
-    marginBottom: 22,
+    marginBottom: 12,
   },
   label: {
     color: Brand.textDim,
