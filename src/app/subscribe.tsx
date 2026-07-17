@@ -880,7 +880,7 @@ export default function SubscribeScreen() {
               {yearlyPrice}
               <Text style={s.planCardPeriod}>/year</Text>
             </Text>
-            <Text style={s.planCardSub}>Best value · one payment a year</Text>
+            <Text style={s.planCardSub}>Launch offer · one payment a year</Text>
           </Pressable>
 
           <Pressable
@@ -896,7 +896,7 @@ export default function SubscribeScreen() {
               {monthlyPrice}
               <Text style={s.planCardPeriod}>/month</Text>
             </Text>
-            <Text style={s.planCardSub}>Flexible · cancel anytime</Text>
+            <Text style={s.planCardSub}>Launch offer · cancel anytime</Text>
           </Pressable>
 
           {LegalLine}
@@ -935,9 +935,12 @@ export default function SubscribeScreen() {
           <ActivityIndicator color={Brand.textDim} size="small" />
         ) : null}
       </View>
-      {/* Iter v160 (2026-06-27): orderSave label verwijderd — geen
-          verzonnen 'Save 42%' meer. Klant ziet alleen de werkelijke
-          prijs in priceLabel hierboven. */}
+      {/* Iter v239e (2026-07-17): "Launch offer" label — géén verzonnen
+          'was €X, Save Y%' (blijft verwijderd sinds v160, matcht WYSIWYG-
+          regel: alleen de werkelijke prijs tonen). "Launch offer" is een
+          waar, voorwaarts-kijkend label — prijs verhoogt later, huidige
+          klanten behouden hun tarief (Play/Apple price-grandfathering). */}
+      <Text style={s.orderSave}>Launch offer</Text>
     </View>
   );
 
