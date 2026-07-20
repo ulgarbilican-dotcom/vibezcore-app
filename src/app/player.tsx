@@ -298,14 +298,14 @@ export default function PlayerScreen() {
      (science/philosophy/psychology + bracelet) + Play Store install. */
   const onShare = async () => {
     if (!session) return;
-    const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
+    const url = 'https://www.vibezcore.com/app';
     const pitch =
-      'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
+      "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
       'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
     try {
       await Share.share({
         title: 'VIBEZCORE',
-        message: `I'm listening to "${session.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app: ${url}`,
+        message: `I'm listening to "${session.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to more than 27 free full sessions: ${url}`,
         url,
       });
     } catch {}

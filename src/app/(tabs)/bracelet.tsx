@@ -554,12 +554,14 @@ type PriceSet = {
   extra: PriceRow;
 };
 const PRICING: PriceSet = {
-  /* Iter v219 (2026-07-04): bundle retail-waarde herrekend inclusief
-     Audio Library Yearly (€119.88 = ~$130) — was er niet in de old-price.
-     Nieuwe totaal: $299 bracelet + $32 extra + $130 audio = $461.
-     Save $246 = 53% korting t.o.v. gecombineerde retail waarde. */
+  /* Iter v244 (2026-07-20, operator-correctie): audio-jaarwaarde was
+     nog $130 (foutieve conversie-inschatting) — operator bevestigde
+     rechtstreeks uit Play Console dat de echte regular yearly-prijs
+     $119.88 is (pariteit met EUR, geen losse USD-conversie).
+     Nieuwe totaal: $299 bracelet + $32 extra + $119.88 audio = $450.88.
+     Save $235.88 = 52% korting t.o.v. gecombineerde retail waarde. */
   bracelet: { main: '$169', old: '$299', save: 'Save $130', eur: '≈ €155' },
-  bundle: { main: '$215', old: '$461', save: 'Save $246 · 53% off', eur: '≈ €198' },
+  bundle: { main: '$215', old: '$450.88', save: 'Save $235.88 · 52% off', eur: '≈ €198' },
   extra: { main: '$32', old: '', save: '', eur: '≈ €30' },
 };
 

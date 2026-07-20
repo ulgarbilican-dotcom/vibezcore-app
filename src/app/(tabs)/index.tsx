@@ -655,6 +655,13 @@ export default function AudioScreen() {
      ECHTE, gelijktijdig actieve aankoopopties (maandelijks €9.99 vs
      jaarlijks-per-maand €5.83) — de klant kan letterlijk beide nu
      kopen. SAVE % is dus altijd correct te tonen. */
+  /* Iter v245 (2026-07-20, operator-feedback): alle "regular/was"-prijzen
+     (Monthly én Yearly) geschrapt — te veel discussie over hoe eerlijk/
+     waarmaakbaar die claim is (12-maanden-belofte, forever-suggestie,
+     etc). Simpeler en 100% correct: Monthly krijgt een neutrale "MOST
+     POPULAR"-tag (geen prijsvergelijking nodig), Yearly behoudt ALLEEN
+     de live, echte vergelijking tegen de huidige maandprijs (geen
+     verzonnen oude jaarprijs) + de bestaande "BEST VALUE"-sticker. */
   const yearlyStrikeLabel = monthlyPriceLabel;
 
   const yearlySavePercentLabel = (() => {
@@ -2339,13 +2346,13 @@ export default function AudioScreen() {
                               <Pressable
                                 onPress={(e) => {
                                   e.stopPropagation();
-                                  const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
+                                  const url = 'https://www.vibezcore.com/app';
                                   const pitch =
-                                    'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
+                                    "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
                                     'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
                                   Share.share({
                                     title: 'VIBEZCORE',
-                                    message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app: ${url}`,
+                                    message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to more than 27 free full sessions: ${url}`,
                                     url,
                                   }).catch(() => {});
                                 }}
@@ -2933,11 +2940,10 @@ export default function AudioScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
             >
               <View style={[s.cardClip, s.cardClipMonthly]}>
-                {/* v239g: strikethrough weg (was gekoppeld aan het
-                    verwijderde intro-offer-mechanisme, zou nu een
-                    verzonnen 'was'-prijs zijn). Launch offer-tag i.p.v. */}
+                {/* v245: geen prijsvergelijking meer op Monthly — simpele
+                    neutrale tag i.p.v. een (discutabele) "was"-prijs. */}
                 <View style={s.strikeRow}>
-                  <Text style={s.regularTag}>LAUNCH OFFER</Text>
+                  <Text style={s.regularTag}>MOST POPULAR</Text>
                 </View>
                 <View style={s.priceBig}>
                   <Text style={s.priceBigAmount}>{monthlyPriceLabel}</Text>

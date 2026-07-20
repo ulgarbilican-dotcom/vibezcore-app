@@ -73,24 +73,25 @@ import {
 } from 'react-native';
 import { Share2 } from 'lucide-react-native';
 
-/* Iter v174 (2026-06-30): central constants voor invite-flow. Operator-
-   feedback v173 was te generiek ("free personal development audio"); nu
-   specifieker met grondslag (science / philosophy / psychology) + duidelijke
-   bracelet-value-prop. Single source of truth — bij wijziging hoeven we
+/* Iter v244 (2026-07-20, operator-feedback): pitch herschreven — noemt
+   nu expliciet de denkers/insights ipv generieke "grounded in Science,
+   Philosophy & Psychology", en link is de universele vibezcore.com/app
+   (werkt voor Android + iOS-status) ipv de directe Play Store-link.
+   Single source of truth binnen dit bestand — bij wijziging hoeven we
    maar 1 plek aan te passen. KS-launch: Fall 2026 (operator 2026-07-14
    — sep-datum weg, geen concrete datum meer). */
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
+const APP_LINK_URL = 'https://www.vibezcore.com/app';
 const BRAND_PITCH =
-  'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
+  "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
   'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app: ${PLAY_STORE_URL}`;
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app and listen to more than 27 free full sessions: ${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {
     await Share.share({
       title: 'VIBEZCORE',
       message: INVITE_MESSAGE,
-      url: PLAY_STORE_URL,
+      url: APP_LINK_URL,
     });
   } catch {}
 }
