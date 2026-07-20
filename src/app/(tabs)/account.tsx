@@ -77,11 +77,12 @@ import { Share2 } from 'lucide-react-native';
    feedback v173 was te generiek ("free personal development audio"); nu
    specifieker met grondslag (science / philosophy / psychology) + duidelijke
    bracelet-value-prop. Single source of truth — bij wijziging hoeven we
-   maar 1 plek aan te passen. KS-launch: 1 september 2026. */
+   maar 1 plek aan te passen. KS-launch: Fall 2026 (operator 2026-07-14
+   — sep-datum weg, geen concrete datum meer). */
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
 const BRAND_PITCH =
   'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
-  'Launching September 1, 2026 — Smart Bead Bracelet for instant state control.';
+  'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
 const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app: ${PLAY_STORE_URL}`;
 
 async function shareInvite(): Promise<void> {
@@ -162,7 +163,7 @@ async function openExternal(url: string): Promise<void> {
    bedoeling van die knoppen zijn. misschien onder knop available
    summer 2026'.
 
-   Kickstarter launch: 1 september 2026 — bracelet-paden disabled tot dan. */
+   Kickstarter launch: Fall 2026 — bracelet-paden disabled tot dan. */
 function FreeEnvironmentCard() {
   return (
     <View style={s.card}>
@@ -250,7 +251,7 @@ function SubscriptionCard() {
   /* Iter v158 (2026-06-26, operator-spec): voor ingelogd-zonder-entitlement
      toon NIET de standaard subscription-card maar een aparte "free
      environment" view met 3 paden (Audio/Bracelet/Bundle). Bracelet en
-     Bundle disabled tot September 2026 (KS launch). */
+     Bundle disabled tot Fall 2026 (KS launch). */
   if (!isLoading && !isPro && !isBraceletOwner) {
     return <FreeEnvironmentCard />;
   }
@@ -425,7 +426,7 @@ function SubscriptionCard() {
       )}
       {/* Iter v193 (2026-07-03): cross-sell naar bracelet voor audio-only
           users — actief gemaakt. Audio-PRO die z'n bracelet ontvangt kan
-          nu meteen activeren zonder te wachten op September 2026. */}
+          nu meteen activeren zonder te wachten op Fall 2026. */}
       {!isLoading && isPro && !isBraceletOwner && (
         <Pressable
           style={s.cardCta}

@@ -15,7 +15,7 @@
      5. Technical Specs — 2-koloms grid
      6. The Collection — 15 gemstone-editions, Pure/Premium/Imperial
      7. Pricing — Bracelet/Bundle/Extra, EUR/USD toggle
-     8. Countdown — naar Kickstarter 1 september 2026
+     8. Launch banner — Kickstarter Fall 2026 (static, geen countdown)
      9. Join the Waitlist — link naar vibezcore.com via WebBrowser
 
    Belangrijk:
@@ -110,11 +110,6 @@ const WAITLIST_BRACELET_URL = 'https://www.vibezcore.com/subscribe-bracelet';
    2026-05-26 iter 3, standalone waitlist-sectie weggehaald. Constant
    blijft voor backwards-compat als operator 'm later wil terugroepen. */
 const WAITLIST_URL = 'https://www.vibezcore.com/';
-
-/* Kickstarter-target. Operator-update 2026-06-17: launch verschoven van
-   1 augustus → 1 september 2026. Datum/tijd in lokale tijd (geen 'Z'-
-   suffix) — countdown-cosmetica, geen kritieke precisie. */
-const KICKSTARTER_TARGET = new Date('2026-09-01T00:00:00').getTime();
 
 /* ── Carousel dimensions (How-it-works + Modes) ───────────────────────────
    Apple iPhone-page-style swipe-carousel met peek van de volgende card.
@@ -576,25 +571,6 @@ function splitDesc(desc: string): { head: string; body: string } {
   const idx = desc.indexOf(' — ');
   if (idx < 0) return { head: desc, body: '' };
   return { head: desc.slice(0, idx), body: desc.slice(idx + 3) };
-}
-
-/* Countdown-formatter — geeft DD/HH/MM/SS als string-pairs met
-   leading-zero. Returnt `null` wanneer target al verstreken is, zodat
-   de caller naar "We are live"-state kan overschakelen. */
-function countdownParts(target: number, now: number): {
-  d: string;
-  h: string;
-  m: string;
-  s: string;
-} | null {
-  const diff = target - now;
-  if (diff <= 0) return null;
-  const d = Math.floor(diff / 86_400_000);
-  const h = Math.floor((diff % 86_400_000) / 3_600_000);
-  const m = Math.floor((diff % 3_600_000) / 60_000);
-  const sec = Math.floor((diff % 60_000) / 1000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return { d: pad(d), h: pad(h), m: pad(m), s: pad(sec) };
 }
 
 /* External link — primair via WebBrowser (Custom Tab op Android,
@@ -1063,14 +1039,6 @@ export default function BraceletScreen() {
 
   /* Currency-toggle weggehaald 2026-05-26: alleen USD tonen. */
 
-  /* Countdown — re-render elke seconde. setInterval geannuleerd bij
-     unmount; geen ref-jank want we wijzigen alleen state. */
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
   /* Android hardware-back terwijl de edition-detail overlay open is →
      sluit de overlay (= UX-conventie, back nooit door een overlay
      heen laten propagaderen anders verlaat user de Bracelet-tab). */
@@ -1097,7 +1065,6 @@ export default function BraceletScreen() {
     setSelectedEdition(null);
   };
 
-  const cd = countdownParts(KICKSTARTER_TARGET, now);
   const price = PRICING;
 
   /* Iter 9v: owners krijgen BraceletControl inline binnen de tab.
@@ -1197,7 +1164,7 @@ export default function BraceletScreen() {
       {/* Iter v194 (2026-07-04): PreviewBanner alleen voor NIET-owners.
           Echte bracelet-owners (die betaald hebben + code hebben ingevoerd)
           zien deze banner niet — voor hen is de bracelet een echt product,
-          niet een preview. Guard voorkomt "PREVIEW · Launching September
+          niet een preview. Guard voorkomt "PREVIEW · Launching Fall
           2026" tekst op owner-scherm die suggereert het nep is. */}
       {!isBraceletOwner && <PreviewBanner />}
       <ScrollView
@@ -1681,35 +1648,13 @@ export default function BraceletScreen() {
           Limited units. First reserved — first served.
         </Text>
 
-        {/* ── COUNTDOWN (iter 9o verplaatst) ──────────────────────────
-            Was onderaan; nu vlak onder de Reserve-intro zodat user
-            de tijd-urgency ziet vóór 'ie de pricing-keuze maakt. */}
+        {/* Launch banner — geen countdown meer (operator 2026-07-14:
+            sep 2026 halen we niet, framing verschoven naar Fall 2026
+            zonder concrete datum). */}
         <View style={s.timerWrap}>
           <Text style={s.timerLabel}>
-            KICKSTARTER LAUNCH — 1 SEPTEMBER 2026
+            KICKSTARTER — LAUNCHING FALL 2026
           </Text>
-          {cd ? (
-            <View style={s.timerBlocks}>
-              <View style={s.tBlock}>
-                <Text style={s.tNum}>{cd.d}</Text>
-                <Text style={s.tLbl}>DAYS</Text>
-              </View>
-              <View style={s.tBlock}>
-                <Text style={s.tNum}>{cd.h}</Text>
-                <Text style={s.tLbl}>HOURS</Text>
-              </View>
-              <View style={s.tBlock}>
-                <Text style={s.tNum}>{cd.m}</Text>
-                <Text style={s.tLbl}>MINUTES</Text>
-              </View>
-              <View style={s.tBlock}>
-                <Text style={s.tNum}>{cd.s}</Text>
-                <Text style={s.tLbl}>SECONDS</Text>
-              </View>
-            </View>
-          ) : (
-            <Text style={s.timerLive}>We are live on Kickstarter!</Text>
-          )}
         </View>
 
         <View style={s.ksCard}>
@@ -3784,50 +3729,21 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
   },
 
-  /* ── 8. Countdown (Apple-style: warmer accent-tint ipv hard navy,
-        ruimere blocks, prominentere numerieken) ── */
+  /* ── 8. Launch banner (was countdown — 2026-07-14 gestript) ── */
   timerWrap: {
     marginTop: 16,
     backgroundColor: 'rgba(58,143,255,0.10)',
     borderRadius: 24,
-    padding: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   timerLabel: {
     color: Brand.accent,
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 1.2,
-    marginBottom: 14,
     textTransform: 'uppercase',
-  },
-  timerBlocks: { flexDirection: 'row', gap: 8 },
-  tBlock: {
-    flex: 1,
-    backgroundColor: 'rgba(58,143,255,0.22)',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  tNum: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.8,
-  },
-  tLbl: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 10,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.6,
-    marginTop: 4,
-  },
-  timerLive: {
-    color: Brand.success,
-    fontSize: 17,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.2,
-    textAlign: 'center',
-    paddingVertical: 10,
   },
 
   /* ── 9. Waitlist (Apple-card + softere CTA met subtle shadow) ── */

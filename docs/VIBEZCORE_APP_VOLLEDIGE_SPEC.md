@@ -70,7 +70,7 @@ VIBEZCORE native app: cross-platform (iOS + Android), gebouwd met React Native
 productkernen:
 - **Audio-bibliotheek**: gestructureerde psychologische audiosessies.
 - **Smart Bead Bracelet**: haptisch hardware-product (nRF52832 + DRV2605L),
-  Kickstarter 1 september 2026.
+  Kickstarter Fall 2026.
 
 De native app is een NIEUWE CLIENT op de bestaande backend (Supabase + de
 bestaande API-endpoints). De bestaande webapp (HTML, Gumroad, Bunny CDN) blijft
@@ -163,7 +163,7 @@ Bevat, van boven naar beneden:
    - 07 Guide your state — State Guiding, Calm & Focus, 15–30 min
    Elke stap: nummer, kop, body-tekst met linker-accentrand, 3 tag-chips.
 4. **Register-box**: "Register your bracelet" + uitleg dat registratie opent na
-   de Kickstarter (1 sept 2026), met een uitgeschakelde knop "Available after
+   de Kickstarter (Fall 2026), met een uitgeschakelde knop "Available after
    Kickstarter launch". Geen externe link nu (veilig voor App Store-review).
 5. Footnote [OPERATOR] dat marketing-copy nog gefinaliseerd wordt.
 
@@ -210,7 +210,7 @@ Foutmelding inline. [OPERATOR]-markering voor Terms/Privacy-tekst.
 
 **Ingelogd**: "Signed in as <email>". Kaarten: Subscription (status synct van
 bestaande account; entitlements verschijnen later), Bracelet (activatie opent
-na Kickstarter 1 sept 2026). Knop "Sign out". [OPERATOR]-markering voor
+na Kickstarter Fall 2026). Knop "Sign out". [OPERATOR]-markering voor
 legal/disclaimer-tekst uit de webapp.
 
 Login/signup gebruiken de bestaande `services/auth.ts` (ongewijzigd):

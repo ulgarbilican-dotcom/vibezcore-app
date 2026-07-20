@@ -71,7 +71,8 @@ Cross-platform (iOS + Android), React Native + Expo (SDK 55, Expo Router, dev
 build — geen Expo Go). Twee gelijkwaardige productkernen:
 - **Audio-bibliotheek** — gestructureerde psychologische audiosessies.
 - **Smart Bead Bracelet** — haptisch hardware-product (nRF52832 + DRV2605L),
-  Kickstarter 1 september 2026.
+  Kickstarter Fall 2026 (operator-update 2026-07-14: sep-datum gedropt,
+  geen concrete datum meer — communicatie: "Launching Fall 2026").
 
 "Audio first" = audio is *eerder verkoopbaar* (backend + content bestaan al),
 NIET belangrijker. Beide zijn kern.

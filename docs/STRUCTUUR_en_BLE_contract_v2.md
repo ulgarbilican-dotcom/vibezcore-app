@@ -57,7 +57,7 @@ gelijkwaardig; het welkomstscherm zit ervóór in de root-navigatie.
 6. Firmware bouwen operator + Claude samen, op ditzelfde contract.
 7. 3 gebruikerstypes via entitlements + activatiecodes (apart ontwerpdoc; blokkeert audio niet).
 8. Provider-agnostisch (app praat alleen met eigen backend).
-9. Kickstarter: 1 september 2026.
+9. Kickstarter: Fall 2026.
 10. Wetenschapscommunicatie: app = toestand-taal, geen hersengolf-claims. Operator finaliseert teksten.
 
 ---
@@ -111,7 +111,7 @@ APP (opent direct — geen poort, geen login-muur)
 ├── TAB 2 — BRACELET  (volwaardige eigen sectie)
 │     ├── ETALAGE (gast / niet-geactiveerd):
 │     │     ├── 7-stappen marketingverhaal  [TEKST — OPERATOR finaliseert]
-│     │     ├── Kickstarter: 1 sept 2026
+│     │     ├── Kickstarter: Fall 2026
 │     │     └── "Register your bracelet" → nette "beschikbaar na Kickstarter"-staat
 │     └── BEDIENING (geactiveerd):
 │           ├── Verbinden / status (Connected · batterij%)
@@ -224,7 +224,7 @@ Die leven alleen intern (relevant voor echte firmware, niet voor UI).
 ## 8. Bouwvolgorde (na akkoord op dit document)
 
 1. 3-tab navigatie-skelet (Audio/Bracelet/Account), VIBEZCORE dark theme.
-2. Bracelet-etalage volledig (7-staps verhaal [TEKST—OPERATOR], KS 1 sept 2026).
+2. Bracelet-etalage volledig (7-staps verhaal [TEKST—OPERATOR], KS Fall 2026).
 3. Bracelet-bediening + SimulatedBracelet achter §5-contract, spec-getrouw (§7).
 4. Audio-library placeholder + bestaande auth.ts ingehaakt.
 Daarna: audio-content, activatie/entitlements-backend. Firmware = parallel, zelfde contract.

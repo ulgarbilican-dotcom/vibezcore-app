@@ -301,7 +301,7 @@ export default function PlayerScreen() {
     const url = 'https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp';
     const pitch =
       'Available now — Free Personal Growth Audio Sessions, grounded in Science, Philosophy & Psychology.\n\n' +
-      'Launching September 1, 2026 — Smart Bead Bracelet for instant state control.';
+      'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
     try {
       await Share.share({
         title: 'VIBEZCORE',

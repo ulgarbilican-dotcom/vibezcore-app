@@ -22,7 +22,7 @@ gelijkwaardige productkernen**:
    Soundscapes-subcategorieën). Direct verkoopbaar — backend, content en
    payments bestaan al.
 2. **Smart Bead Bracelet** — hardware-product (nRF52832 + DRV2605L) dat 5
-   haptische modi draait. Kickstarter-launch 1 september 2026; native app
+   haptische modi draait. Kickstarter-launch Fall 2026; native app
    praat via BLE met het apparaat.
 
 De native app is een **nieuwe client op een bestaande backend**. Backend
@@ -762,7 +762,7 @@ Marketing-showcase voor niet-owners:
 - 7-step How-it-works carousel.
 - 5 Haptic Modes accordion.
 - 15 gemstone editions.
-- Pricing + Kickstarter countdown (launch 1 september 2026).
+- Pricing + Kickstarter launch banner (launch Fall 2026).
 
 Owners (override `bracelet`/`pro`) krijgen direct het bedienings-pad
 i.p.v. de etalage; de tab linkt door naar `/bracelet-control`.

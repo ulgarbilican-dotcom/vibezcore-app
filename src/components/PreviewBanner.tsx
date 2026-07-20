@@ -4,7 +4,7 @@
    Smal, oranje banner-stripje dat bovenaan een scherm verschijnt om te
    communiceren dat de getoonde ervaring een PREVIEW is en het echte
    product (de Smart Bead Bracelet) nog niet geleverd is — Kickstarter
-   launch 1 september 2026 (operator-update 2026-06-17, was 1 augustus).
+   launch Fall 2026 (operator 2026-07-14 — geen concrete datum meer).
 
    Gebruikt op alle bracelet-gerelateerde schermen (Bracelet-tab,
    Bracelet-control, Bracelet-history). NIET op audio-schermen — audio

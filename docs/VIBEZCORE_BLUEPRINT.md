@@ -11,7 +11,7 @@
 VIBEZCORE is een twee-zijdig persoonlijke-ontwikkeling-platform met twee gelijkwaardige productkernen:
 
 1. **Audio Library** — gestructureerde psychologische audio-sessies (≈70 sessies, georganiseerd in 4 pijlers), streaming vanaf Bunny CDN, in-app via React-Native + expo-audio. Monetisatie: in-app purchase via Apple StoreKit / Google Play Billing (audio-only abonnement: maandelijks of jaarlijks).
-2. **Smart Bead Bracelet** — fysiek haptisch wearable-product (nRF52832 BLE-microcontroller + DRV2605L haptic driver, 5 modi: Boost / Sharp Focus / Calm Control / Clarity / Rest & Reset). Bedient zich autonoom op hardware-timers, koppelt via BLE met de app voor start/stop en status. Verkoop: Kickstarter-launch 1 september 2026, daarna directe verkoop via Stripe of bundle met audio-jaarsub.
+2. **Smart Bead Bracelet** — fysiek haptisch wearable-product (nRF52832 BLE-microcontroller + DRV2605L haptic driver, 5 modi: Boost / Sharp Focus / Calm Control / Clarity / Rest & Reset). Bedient zich autonoom op hardware-timers, koppelt via BLE met de app voor start/stop en status. Verkoop: Kickstarter-launch Fall 2026, daarna directe verkoop via Stripe of bundle met audio-jaarsub.
 
 Er zijn drie code-artefacten:
 
@@ -1368,7 +1368,7 @@ WYSIWYG: card-prijs is EXACT wat user betaalt (geen "set by store"-disclaimers).
 
 ### 13.2 Bracelet (Stripe)
 
-Post-Kickstarter (1 sept 2026). Stripe Checkout-sessie via backend `/api/stripe-checkout` (TBD).
+Post-Kickstarter (Fall 2026). Stripe Checkout-sessie via backend `/api/stripe-checkout` (TBD).
 
 Pricing (per 2026-06-17 op website + app):
 - Bracelet: $169 (was $299, save $130)
@@ -1711,6 +1711,7 @@ sha256sum CLAUDE.md
 Wijzigingen aan deze blueprint:
 
 - 2026-06-18: Eerste versie. IAP-stack (iap-verify + iap-webhook), Supabase IAP-kolommen, subscription-status IAP-aware. Bracelet PPS-claim correctie ("Backed by science · Bottom-up by design"). Breath voice-cues via expo-audio. Kickstarter datum 1 sept 2026 + bundle pricing $215/$399.
+- 2026-07-14: Kickstarter datum gedropt — framing verschoven naar "Fall 2026" (geen concrete datum, alle countdowns gestript uit app + website).
 
 Volgende wijzigingen: voeg een entry toe met datum + samenvatting + commit-hash.
 
@@ -1752,7 +1753,7 @@ Extra:     $32
 
 Kickstarter
 ─────
-Launch: 1 september 2026
+Launch: Fall 2026
 
 Brand
 ─────
