@@ -535,15 +535,10 @@ const EDITIONS: Edition[] = [
 /* ── Data: Pricing (placeholders — operator past later aan) ──────────────── */
 
 /* USD-only sinds 2026-05-26 (operator-keuze: EUR-toggle weg, alleen
-   USD tonen — eenvoudiger, Kickstarter is USD-first).
-   Iter 9dq v143 (operator 2026-06-15 v3) + v175 (operator 2026-06-18):
-   pricing-audit. Match'd nu de canonical values uit
-   assets/website-content/kickstarter-page.html + shop-bundle-bracelet-
-   compact.html:
-     Bracelet: was $299, now $169, save $130
-     Bundle:   was $399, now $215, save $184
-                (math: $299 + $69.99 audio + $32 beads ≈ $399 retail)
-     Extra bead set: $32 retail (geen losse KS-discount op website) */
+   USD tonen — eenvoudiger, Kickstarter is USD-first). Match't de
+   canonical values uit assets/website-content/kickstarter-page.html +
+   shop-bundle-bracelet-compact.html — zie PRICING-object hieronder
+   voor de actuele, geldende bedragen (laatst gecorrigeerd v244). */
 /* Iter v218 (2026-07-04): eur toegevoegd als secundaire hint onder USD.
    Kickstarter is USD-native (KS-pagina zelf toont USD), EUR is contextuele
    conversie voor EU-users. Rate ~0.92 (juli 2026 gemiddeld). */
@@ -3564,9 +3559,9 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
     marginTop: 2,
   },
-  /* Iter 9: priceSave-pill weggehaald, vervangen door inline text
-     "$399 · save $184" met success-kleur op het save-deel. iOS-style
-     inline-pricing-pattern, geen meer pill. */
+  /* Iter 9: priceSave-pill weggehaald, vervangen door inline
+     "was $X · save $Y" tekst met success-kleur op het save-deel.
+     iOS-style inline-pricing-pattern, geen pill meer. */
   priceSaveInline: {
     color: Brand.success,
     fontSize: 13,
