@@ -852,7 +852,7 @@ export default function SubscribeScreen() {
     const monthlyProduct = getProduct('monthly');
     const yearlyProduct = getProduct('yearly');
     const monthlyPrice = monthlyProduct?.localizedPrice ?? '€9,99';
-    const yearlyPrice = yearlyProduct?.localizedPrice ?? '€89,99';
+    const yearlyPrice = yearlyProduct?.localizedPrice ?? '€69,99';
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
