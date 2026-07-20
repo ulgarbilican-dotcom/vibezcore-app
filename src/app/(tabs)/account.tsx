@@ -203,7 +203,7 @@ function FreeEnvironmentCard() {
         <View style={{ flex: 1 }}>
           <Text style={s.cardCtaText}>Subscribe to Audio Library</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            Full library — €9.99/m intro, then €14.99
+            Full library — €9.99/month
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
