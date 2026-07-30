@@ -39,6 +39,15 @@ export type Settings = {
    *  zodat een ongeplande activatie nooit onverwacht stem laat klinken.
    *  User kan 'm zelf inschakelen via Settings → Voice cues. */
   voiceCues: boolean;
+  /** Iter v??? (breath-onboarding): timestamp (ms) wanneer de gebruiker
+   *  de eerste-run Breath-onboarding heeft afgerond (of geskipt).
+   *  null = nog nooit doorlopen → Breath-tab-focus stuurt naar
+   *  /breath-welcome. Non-null → onboarding voorbij, ga direct naar
+   *  Breath-tab. Bestaande users (die al breath-history hebben vóór dit
+   *  veld bestond) worden herkend op history.length > 0 in de
+   *  Breath-tab-focus-check, dus zij zien de onboarding NIET ondanks
+   *  null-waarde. Geen data-migratie nodig. */
+  breathOnboardingCompletedAt: number | null;
 };
 
 const defaults: Settings = {
@@ -52,6 +61,7 @@ const defaults: Settings = {
   trackHistory: true,
   audioQuality: 'high',
   voiceCues: false,
+  breathOnboardingCompletedAt: null,
 };
 
 let state: Settings = { ...defaults };
@@ -85,6 +95,10 @@ async function loadOnce(): Promise<void> {
               : {}),
             ...(obj.audioQuality === 'high' || obj.audioQuality === 'low'
               ? { audioQuality: obj.audioQuality }
+              : {}),
+            ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
+            obj.breathOnboardingCompletedAt === null
+              ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
               : {}),
           };
         }

@@ -249,6 +249,13 @@ export default function BreathScreen() {
      toggles (Settings, breath-tab pill, bracelet active session) naar
      dezelfde useSetting('voiceCues'). */
   const [voiceOn, setVoiceOn] = useSetting('voiceCues');
+  /* Onboarding-flag — null = nog nooit doorlopen (nieuwe user), non-null =
+     onboarding klaar. Bestaande users (die al breath-history hebben vóór
+     dit veld bestond) worden herkend op history.length > 0 verderop. Geen
+     data-migratie nodig. */
+  const [breathOnboardingCompletedAt] = useSetting(
+    'breathOnboardingCompletedAt',
+  );
   const [roundNum, setRoundNum] = useState(0);
   const [secsLeft, setSecsLeft] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -285,6 +292,36 @@ export default function BreathScreen() {
   const voiceOnRef = useRef(true);
 
   const history = useBreathHistory();
+
+  /* First-run redirect naar /breath-welcome:
+     - alleen als de onboarding-flag null is EN de user geen breath-
+       history heeft (dus echt een nieuwe user, geen bestaande die het
+       flag-veld nog niet had).
+     - 700ms delay geeft AsyncStorage (settings + history) tijd om te
+       laden voor we beslissen — voorkomt dat een bestaande user met
+       history [] initieel per ongeluk naar welcome geredirect wordt
+       vóór z'n data ingeladen is.
+     - Refs zorgen dat we in de setTimeout-callback de LATEST waarden
+       lezen, niet de captured mount-tijd waarden.
+     - Bewust GEEN dep-array trigger op flag/history changes: eenmalige
+       check op mount. Als welcome de flag zet, verandert de flag → de
+       gebruiker is dan al op welcome (via replace), niet meer op deze
+       tab; bij terugkeer via router.back() is de flag non-null en de
+       check zou toch niet triggeren. */
+  const flagRef = useRef(breathOnboardingCompletedAt);
+  flagRef.current = breathOnboardingCompletedAt;
+  const historyLenRef = useRef(history.length);
+  historyLenRef.current = history.length;
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (flagRef.current !== null) return;
+      if (historyLenRef.current > 0) return;
+      router.replace('/breath-welcome');
+    }, 700);
+    return () => clearTimeout(id);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   /* On-mount demo-scroll: cards bewegen 70px naar rechts en daarna terug.
      Maakt onmiskenbaar zichtbaar dat de cards scrollbaar zijn. Alleen
