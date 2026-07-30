@@ -57,6 +57,7 @@ import {
   requestScrollTo,
   subscribeScrollIntent,
 } from '@/utils/scroll-intent';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
@@ -1530,26 +1531,13 @@ export default function AccountScreen() {
           {(googleAvailable || appleAvailable) && (
             <View style={{ marginBottom: 14 }}>
               {appleAvailable && (
-                <Pressable
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: 48,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    marginBottom: 10,
-                    backgroundColor: '#000000',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.18)',
-                  }}
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={12}
+                  style={{ width: '100%', height: 48, marginBottom: 10 }}
                   onPress={() => void onAppleSignIn()}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 18, marginRight: 10 }}></Text>
-                  <Text style={{ color: '#ffffff', fontSize: 14, fontFamily: BrandFonts.semibold }}>
-                    Continue with Apple
-                  </Text>
-                </Pressable>
+                />
               )}
               {googleAvailable && (
                 <Pressable

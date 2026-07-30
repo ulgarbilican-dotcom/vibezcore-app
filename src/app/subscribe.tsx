@@ -52,6 +52,7 @@ import {
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { validateEmail, emailHintText } from '@/utils/validate-email';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -183,16 +184,29 @@ export default function SubscribeScreen() {
   const [pw, setPw] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
+  /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase state.
+     IAP-entitlement leeft op RevenueCat's eigen (anonymous) customer-ID,
+     niet op een VIBEZCORE-account — een account is dus NIET vereist om
+     te kopen. `guestPurchase` markeert dat deze aankoop zonder account
+     gebeurde (voor de optionele post-purchase CTA op het done-scherm).
+     `linkingAccount` markeert de OPTIONELE terugkeer naar het form ná
+     aankoop om alsnog een account te koppelen (cross-device sync) —
+     onSubmit/onAppleSignIn/onGoogleSignIn slaan dan de IAP-call over. */
+  const [guestPurchase, setGuestPurchase] = useState(false);
+  const [linkingAccount, setLinkingAccount] = useState(false);
   /* Iter v194 (2026-07-04): pre-emptive check — als user al een actieve
      audio-subscription heeft, skip de aankoop-flow direct naar success.
      Voorkomt Google Play native "Fout — Je bent al geabonneerd" popup
-     die operator zag in vC 50. */
+     die operator zag in vC 50.
+     linkingAccount-guard: anders flipt deze effect het scherm terug naar
+     'done' zodra alreadyIsPro true is — precies de state tijdens de
+     optionele post-purchase account-link. */
   const { isPro: alreadyIsPro, tier: currentTier } = useSubscription();
   useEffect(() => {
-    if (alreadyIsPro && phase === 'form') {
+    if (alreadyIsPro && phase === 'form' && !linkingAccount) {
       setPhase('done');
     }
-  }, [alreadyIsPro, phase]);
+  }, [alreadyIsPro, phase, linkingAccount]);
   /* Iter v230 (2026-07-08, audit BUG 4): tier-switch detectie. Als user
      al een sub heeft op andere tier (Monthly → Yearly of andersom) en
      tapt op een pricing-card van de andere tier → RC/Google throwt
@@ -372,6 +386,17 @@ export default function SubscribeScreen() {
       return;
     }
     await verifyAndComplete(result.purchase);
+  };
+
+  /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): koop direct zonder
+     account. runIapFlow zelf checkt nergens signedIn — de RC-purchase
+     landt op de anonymous RC customer-ID en verifyAndComplete leest
+     puur client-side Purchases.getCustomerInfo(), dus dit werkt zonder
+     VIBEZCORE-account. Account-creatie wordt NA succesvolle aankoop als
+     optionele CTA aangeboden (zie phase 'done' + linkingAccount). */
+  const onContinueAsGuest = () => {
+    setGuestPurchase(true);
+    void runIapFlow();
   };
 
   const verifyAndComplete = async (purchaseData: IapPurchase) => {
@@ -591,6 +616,16 @@ export default function SubscribeScreen() {
       }
     }
 
+    /* Iter (2026-07-30, Apple 5.1.1v fix): linkingAccount = optionele
+       post-purchase account-koppeling — entitlement bestaat al, dus geen
+       tweede IAP-call. authSignup/authLogin riepen hierboven al
+       linkRevenueCatUser() aan, wat de RC-purchase-historie van de
+       anonymous customer merget naar deze net-aangemaakte user. */
+    if (linkingAccount) {
+      router.replace('/');
+      return;
+    }
+
     /* Door naar IAP-popup. */
     void runIapFlow();
   };
@@ -677,6 +712,13 @@ export default function SubscribeScreen() {
       /* fall through to IAP flow */
     }
 
+    /* Iter (2026-07-30, Apple 5.1.1v fix): zie onSubmit — optionele
+       post-purchase account-link slaat de IAP-call over. */
+    if (linkingAccount) {
+      router.replace('/');
+      return;
+    }
+
     void runIapFlow();
   };
 
@@ -721,6 +763,11 @@ export default function SubscribeScreen() {
       /* fall through to IAP flow */
     }
 
+    if (linkingAccount) {
+      router.replace('/');
+      return;
+    }
+
     void runIapFlow();
   };
 
@@ -729,6 +776,111 @@ export default function SubscribeScreen() {
   const tierLabel = tierForCompute === 'yearly' ? 'Yearly' : 'Monthly';
   const priceLabel = product?.localizedPrice ?? (tierForCompute === 'yearly' ? '€69,99' : '€9,99');
   const periodLabel = tierForCompute === 'yearly' ? '/year' : '/month';
+
+  /* Iter (2026-07-30, bugfix): OrderSummary/LegalLine/RestoreLink MOETEN
+     vóór alle vroege phase-returns gedeclareerd staan — de tier===null
+     plan-picker-return hieronder verwijst ernaar en zat (als const verderop
+     in de functie) in een TDZ-crash ("used before declaration") elke keer
+     dat een user zonder ?tier= param op Subscribe landde. Verplaatst naar
+     hier, vóór het eerste gebruik. */
+  const OrderSummary = (
+    <View style={s.orderCard}>
+      <Text style={s.orderEyebrow}>YOUR SELECTION</Text>
+      <Text style={s.orderTitle}>VIBEZCORE Audio — {tierLabel}</Text>
+      <View style={s.orderPriceRow}>
+        <Text style={s.orderPrice}>
+          {priceLabel}
+          <Text style={s.orderPeriod}>{periodLabel}</Text>
+        </Text>
+        {iapLoading ? (
+          <ActivityIndicator color={Brand.textDim} size="small" />
+        ) : null}
+      </View>
+      {/* Iter v239e (2026-07-17): "Launch offer" label — géén verzonnen
+          'was €X, Save Y%' (blijft verwijderd sinds v160, matcht WYSIWYG-
+          regel: alleen de werkelijke prijs tonen). "Launch offer" is een
+          waar, voorwaarts-kijkend label — prijs verhoogt later, huidige
+          klanten behouden hun tarief (Play/Apple price-grandfathering). */}
+      <Text style={s.orderSave}>Launch offer</Text>
+    </View>
+  );
+
+  /* Gedeelde legal-line onderaan — disclosure voor auto-renew + cancel
+     (Apple- en Google-policy: moet expliciet vermeld vóór purchase).
+     Iter (2026-07-25, Apple 3.1.2(c) rejection-fix): "Terms" en
+     "Privacy Policy" zijn nu FUNCTIONELE TAPBARE LINKS naar de in-app
+     legal-viewer (/legal/terms + /legal/privacy). Apple's guideline
+     eist functionele links naar EULA en Privacy op het purchase-scherm;
+     platte tekst voldeed niet. */
+  const LegalLine = (
+    <Text style={s.legal}>
+      By continuing you agree to our{' '}
+      <Text
+        style={s.legalLink}
+        onPress={() => router.push('/legal/terms')}
+        accessibilityRole="link"
+      >
+        Terms
+      </Text>
+      {' '}and{' '}
+      <Text
+        style={s.legalLink}
+        onPress={() => router.push('/legal/privacy')}
+        accessibilityRole="link"
+      >
+        Privacy Policy
+      </Text>
+      . Subscription auto-renews. Cancel anytime in your Apple ID or
+      Google Play account settings.
+    </Text>
+  );
+
+  /* Iter 9dq v86 (2026-06-03): Restore-purchases link — Apple App Review
+     Guideline 3.1.1 vereist deze knop. Onder de legal-line zodat 'ie
+     beschikbaar is voor terugkerende users zonder de upsell te onderbreken. */
+  const handleRestore = async () => {
+    const result = await restorePurchases();
+    if (result.ok) {
+      if (result.restoredCount > 0) {
+        void showVibezAlert({
+          title: 'Subscription restored',
+          message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
+          buttons: [{ text: 'OK', onPress: () => router.replace('/') }],
+        });
+      } else if (result.accountMismatch) {
+        /* Iter v168 (2026-06-28): account-mismatch — VIBEZCORE-side weet
+           dat user PRO is, maar de Play Store / Apple ID op dit toestel
+           toont geen aankoop. Vermijd het tegenstrijdige 'nothing to
+           restore' bericht; leg uit wat de oorzaak is. */
+        void showVibezAlert({
+          title: 'Active on your account, not on this device',
+          message:
+            "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.",
+        });
+      } else {
+        void showVibezAlert({
+          title: 'Nothing to restore',
+          message:
+            'No active subscriptions were found for this Apple ID or Google account.',
+        });
+      }
+    } else {
+      if (__DEV__) console.warn('[subscribe] restore failed (raw):', result.error);
+      void showVibezAlert({
+        title: 'Could not restore',
+        message: friendlyError(result.error),
+      });
+    }
+  };
+  const RestoreLink = (
+    <Pressable
+      style={s.restoreLink}
+      onPress={() => void handleRestore()}
+      accessibilityLabel="Restore previous purchases"
+    >
+      <Text style={s.restoreLinkText}>Already subscribed? Restore purchases</Text>
+    </Pressable>
+  );
 
   /* Loading/transitional phases — single full-screen state.
      Iter v179 (2026-07-02): creating-account sub-text hangt af van mode.
@@ -784,10 +936,30 @@ export default function SubscribeScreen() {
           </Pressable>
 
           <Text style={s.doneFooter}>
-            You&apos;ll receive a confirmation email from Google Play.
+            You&apos;ll receive a confirmation email from{' '}
+            {Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}.
             {'\n'}
             Manage your subscription anytime in Settings.
           </Text>
+
+          {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele
+              post-purchase account-CTA — alleen zichtbaar als deze aankoop
+              als guest gebeurde. Account is niet vereist (entitlement zit
+              al op de RC anonymous-ID); dit is puur voor cross-device sync. */}
+          {guestPurchase && !signedIn && (
+            <Pressable
+              style={s.linkBtn}
+              onPress={() => {
+                setLinkingAccount(true);
+                setPhase('form');
+              }}
+              accessibilityLabel="Create an account to sync this subscription across your devices"
+            >
+              <Text style={s.linkText}>
+                Save your subscription — create an account
+              </Text>
+            </Pressable>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -919,88 +1091,6 @@ export default function SubscribeScreen() {
     );
   }
 
-  /* Gedeelde order-summary card — toont wat user gaat kopen.
-     Verschijnt boven zowel de signed-in review-flow als de signed-out
-     account-create-form. */
-  const OrderSummary = (
-    <View style={s.orderCard}>
-      <Text style={s.orderEyebrow}>YOUR SELECTION</Text>
-      <Text style={s.orderTitle}>VIBEZCORE Audio — {tierLabel}</Text>
-      <View style={s.orderPriceRow}>
-        <Text style={s.orderPrice}>
-          {priceLabel}
-          <Text style={s.orderPeriod}>{periodLabel}</Text>
-        </Text>
-        {iapLoading ? (
-          <ActivityIndicator color={Brand.textDim} size="small" />
-        ) : null}
-      </View>
-      {/* Iter v239e (2026-07-17): "Launch offer" label — géén verzonnen
-          'was €X, Save Y%' (blijft verwijderd sinds v160, matcht WYSIWYG-
-          regel: alleen de werkelijke prijs tonen). "Launch offer" is een
-          waar, voorwaarts-kijkend label — prijs verhoogt later, huidige
-          klanten behouden hun tarief (Play/Apple price-grandfathering). */}
-      <Text style={s.orderSave}>Launch offer</Text>
-    </View>
-  );
-
-  /* Gedeelde legal-line onderaan — disclosure voor auto-renew + cancel
-     (Apple- en Google-policy: moet expliciet vermeld vóór purchase). */
-  const LegalLine = (
-    <Text style={s.legal}>
-      By continuing you agree to our Terms and Privacy Policy.
-      Subscription auto-renews. Cancel anytime in your Apple ID or
-      Google Play account settings.
-    </Text>
-  );
-
-  /* Iter 9dq v86 (2026-06-03): Restore-purchases link — Apple App Review
-     Guideline 3.1.1 vereist deze knop. Onder de legal-line zodat 'ie
-     beschikbaar is voor terugkerende users zonder de upsell te onderbreken. */
-  const handleRestore = async () => {
-    const result = await restorePurchases();
-    if (result.ok) {
-      if (result.restoredCount > 0) {
-        void showVibezAlert({
-          title: 'Subscription restored',
-          message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
-          buttons: [{ text: 'OK', onPress: () => router.replace('/') }],
-        });
-      } else if (result.accountMismatch) {
-        /* Iter v168 (2026-06-28): account-mismatch — VIBEZCORE-side weet
-           dat user PRO is, maar de Play Store / Apple ID op dit toestel
-           toont geen aankoop. Vermijd het tegenstrijdige 'nothing to
-           restore' bericht; leg uit wat de oorzaak is. */
-        void showVibezAlert({
-          title: 'Active on your account, not on this device',
-          message:
-            "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.",
-        });
-      } else {
-        void showVibezAlert({
-          title: 'Nothing to restore',
-          message:
-            'No active subscriptions were found for this Apple ID or Google account.',
-        });
-      }
-    } else {
-      if (__DEV__) console.warn('[subscribe] restore failed (raw):', result.error);
-      void showVibezAlert({
-        title: 'Could not restore',
-        message: friendlyError(result.error),
-      });
-    }
-  };
-  const RestoreLink = (
-    <Pressable
-      style={s.restoreLink}
-      onPress={() => void handleRestore()}
-      accessibilityLabel="Restore previous purchases"
-    >
-      <Text style={s.restoreLinkText}>Already subscribed? Restore purchases</Text>
-    </Pressable>
-  );
-
   /* ── Signed-in review-flow ─────────────────────────────────────────
      User heeft al een account → geen form. Toon order-summary, hun
      ingelogd-email als context, en een expliciete "Continue to
@@ -1074,15 +1164,23 @@ export default function SubscribeScreen() {
             waarom moet ik inloggen?"). Nu één duidelijke heading +
             prominente mode-tabs zodat user direct ziet dat er twee
             paden zijn: nieuwe account OF bestaande. */}
+        {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): copy aangepast —
+            een account is niet meer VEREIST om te kopen (zie guest-CTA
+            onderaan dit form), alleen aanbevolen voor cross-device sync.
+            linkingAccount = optionele post-purchase koppeling. */}
         <Text style={s.heading}>
-          {mode === 'signup'
-            ? 'One step from your subscription'
-            : 'Sign in to continue'}
+          {linkingAccount
+            ? 'Save your subscription'
+            : mode === 'signup'
+              ? 'One step from your subscription'
+              : 'Sign in to continue'}
         </Text>
         <Text style={s.sub}>
-          {mode === 'signup'
-            ? 'Create your VIBEZCORE account to complete purchase. Your subscription links to this account for access on all your devices.'
-            : 'Enter your existing VIBEZCORE credentials to link this subscription to your account.'}
+          {linkingAccount
+            ? 'Create a free account so this subscription works on all your devices. This step is optional.'
+            : mode === 'signup'
+              ? 'Create a free VIBEZCORE account for the fastest checkout and access on all your devices — or continue as a guest below.'
+              : 'Enter your existing VIBEZCORE credentials to link this subscription to your account.'}
         </Text>
 
         {/* Iter v175 (2026-06-30): tabs "New account" / "I have an account"
@@ -1098,13 +1196,13 @@ export default function SubscribeScreen() {
         {(googleAvailable || appleAvailable) && (
           <View style={s.socialBlock}>
             {appleAvailable && (
-              <Pressable
-                style={[s.socialBtn, s.socialBtnApple]}
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={12}
+                style={s.appleBtn}
                 onPress={() => void onAppleSignIn()}
-              >
-                <Text style={s.socialBtnIconApple}></Text>
-                <Text style={s.socialBtnTextApple}>Continue with Apple</Text>
-              </Pressable>
+              />
             )}
             {googleAvailable && (
               <Pressable
@@ -1241,9 +1339,32 @@ export default function SubscribeScreen() {
 
         <Pressable style={s.btnPrimary} onPress={onSubmit}>
           <Text style={s.btnPrimaryText}>
-            {mode === 'signup' ? 'Create account & continue' : 'Sign in & continue'}
+            {linkingAccount
+              ? 'Create account'
+              : mode === 'signup' ? 'Create account & continue' : 'Sign in & continue'}
           </Text>
         </Pressable>
+
+        {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase
+            entry point / skip-link. Registratie is optioneel — koop direct
+            zonder account, koppel later desgewenst voor cross-device sync. */}
+        {linkingAccount ? (
+          <Pressable
+            style={s.linkBtn}
+            onPress={() => router.replace('/')}
+            accessibilityLabel="Skip creating an account for now"
+          >
+            <Text style={s.linkText}>Skip for now</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={s.linkBtn}
+            onPress={() => void onContinueAsGuest()}
+            accessibilityLabel="Continue without creating an account"
+          >
+            <Text style={s.linkText}>Continue without an account</Text>
+          </Pressable>
+        )}
 
         {/* Iter v175 (2026-06-30): Mode-switcher als secondary link onderaan.
             Signup-mode toont expliciet welke 3 producten een account krijgen
@@ -1258,8 +1379,8 @@ export default function SubscribeScreen() {
             prominenter gemaakt). Users met bestaand account zonder sub
             loggen in via Account tab → keren terug naar subscribe. */}
 
-        {LegalLine}
-        {RestoreLink}
+        {!linkingAccount && LegalLine}
+        {!linkingAccount && RestoreLink}
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -1553,21 +1674,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10,
   },
-  socialBtnApple: {
-    backgroundColor: '#000000',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+  /* Iter (2026-07-30, Apple guideline 4 rejection-fix): de custom Apple-
+     Pressable is vervangen door AppleAuthentication.AppleAuthenticationButton
+     (native HIG-conforme knop — correcte glyph, corner-radius, tekst).
+     Alleen size/spacing blijft hier, styling zelf komt van de native view. */
+  appleBtn: {
+    width: '100%',
+    height: 50,
+    marginBottom: 10,
   },
   socialBtnGoogle: {
     backgroundColor: '#ffffff',
-  },
-  socialBtnIconApple: {
-    color: '#ffffff',
-    fontSize: 18,
-    marginRight: 10,
-    /* Apple-glyph komt direct uit het Unicode  symbool. Past op iOS
-       altijd, op Android valt 't terug op een visueel-vergelijkbaar
-       icoon van de system font. */
   },
   socialBtnIconGoogle: {
     color: '#4285F4',
@@ -1577,12 +1694,6 @@ const s = StyleSheet.create({
     /* Single-letter "G" placeholder. Voor échte Google-brand-compliant
        knop zou je 't 4-kleurige G-logo SVG moeten gebruiken; voor MVP
        is dit acceptabel (geen brand violation). */
-  },
-  socialBtnTextApple: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.1,
   },
   socialBtnTextGoogle: {
     color: '#1f1f1f',
@@ -1670,6 +1781,14 @@ const s = StyleSheet.create({
     lineHeight: 16,
     textAlign: 'center',
     marginTop: 24,
+  },
+  /* Iter 2026-07-25 (Apple 3.1.2(c) fix): tapbare Terms/Privacy-spans
+     binnen de legal-line. Accent-kleur + underline zodat het duidelijk
+     een link is; grootte matcht omringende legal-tekst. */
+  legalLink: {
+    color: Brand.accent,
+    textDecorationLine: 'underline',
+    fontFamily: BrandFonts.semibold,
   },
   /* Iter 9dq v86 (2026-06-03): Restore-purchases link. Subtiel onder
      legal-line, accent-kleur zodat de tap-affordance duidelijk is
