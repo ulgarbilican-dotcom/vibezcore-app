@@ -33,7 +33,7 @@ import {
 import { unload as unloadAudioPlayer } from '@/services/audio-player';
 import { clearHistory } from '@/utils/history';
 import { clearLastPlayed } from '@/utils/last-played';
-import { useSetting } from '@/utils/settings';
+import { setSetting, useSetting } from '@/utils/settings';
 import { clearAllSavedPositions } from '@/utils/vzp';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -334,6 +334,25 @@ export default function SettingsScreen() {
                   <Text style={s.rowTitle}>Subscribe — signed-out form</Text>
                   <Text style={s.rowSub}>
                     Toont email/password form (account-create-pad).
+                  </Text>
+                </View>
+              </Pressable>
+              <View style={s.divider} />
+              {/* Iter breath-onboarding: zet de completed-vlag terug op null
+                 en opent de onboarding direct. Voorkomt dat je de hele
+                 app-data moet wissen om de flow opnieuw te doorlopen. */}
+              <Pressable
+                style={s.row}
+                onPress={async () => {
+                  await setSetting('breathOnboardingCompletedAt', null);
+                  router.push('/breath-welcome' as never);
+                }}
+                accessibilityLabel="Replay breath onboarding"
+              >
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Breath onboarding — opnieuw</Text>
+                  <Text style={s.rowSub}>
+                    Reset de first-run vlag en opent de onboarding meteen.
                   </Text>
                 </View>
               </Pressable>

@@ -1,356 +1,948 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Breath onboarding (first-run intro)
+   VIBEZCORE — Breath onboarding
 
-   Pushed sub-scherm, geen tab. Wordt automatisch geopend door
-   (tabs)/breath.tsx wanneer:
-     - user heeft `breathOnboardingCompletedAt === null` in Settings, EN
-     - user heeft geen bestaande breath-history (nieuwe user).
+   Drie schermen, elk met één taak. Opzet en teksten komen letterlijk van
+   de operator (2026-07-30):
 
-   Twee flows:
-     - GAST (geen actieve subscription, geen bracelet-activatie):
-         4 slides eindigend in "Start 2-min Calm" → /breath-sample.
-     - PRO (audio-sub actief OF bracelet-activated):
-         2 korte slides, geen sample nodig → back naar Breath-tab.
+     1  WAT DIT IS      "Breathe. Build. Become."
+                        "Control your vibe control your life"
+                        Haptisch aangedreven bol + icoonrij
+                        (TOUCH · SILENT · PRECISE · HANDS-FREE)
 
-   Setting-flag wordt gezet bij zowel finish als skip zodat het scherm
-   nooit tweemaal opduikt.
+     2  HOE JE BEGELEID  "Experience different modes."
+        WORDT            "The choice is yours."
+                         Vier modi, standaard INFORMATIEF (allemaal
+                         dezelfde neutrale stijl). Pas bij aantikken
+                         krijgen ze hun eigen kleur en demonstreren ze
+                         zichzelf.
 
-   Design-anker: Brand-tokens (Brand.bg / accent / text), BrandFonts. Sluit
-   aan bij coming.tsx / breath-history.tsx qua sub-screen-patroon.
+     3  DE BRACELET     "World's first Smart Bead Bracelet with
+                         synchronized haptic guidance"
+                        Eigen scherm — dit is de USP en verdient meer dan
+                        een kaartje onderaan scherm 2. Tegelijk houdt het
+                        scherm 2 rustig.
+
+   Daarna: één VOLLEDIGE gratis sessie (Calm Control), niet een uitgeklede
+   proefversie. De vijf states leven op de Breath-tab zelf, niet hier —
+   anders zeg je hetzelfde twee keer.
+
+   Wordt geopend door (tabs)/breath.tsx bij first-run. Setting-vlag
+   `breathOnboardingCompletedAt` voorkomt herhaling; Settings →
+   Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
-import AmbientGlow from '@/components/AmbientGlow';
-import BreathCloud from '@/components/BreathCloud';
-import GuidanceSelector, {
+import BreathMandala from '@/components/BreathMandala';
+import GradientText, {
+  SUB_COLORS,
+  SUB_POSITIONS,
+} from '@/components/GradientText';
+import MandalaBackdrop from '@/components/MandalaBackdrop';
+import PodPulse from '@/components/PodPulse';
+import SelectionGlow from '@/components/SelectionGlow';
+import {
+  GUIDANCE_MODES,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
-import StateLine, { type StateKey } from '@/components/StateLine';
-import { playBreathCue, setVoiceEnabled } from '@/services/breath-voice';
+import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
+import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
+import {
+  claimVoiceSource,
+  playBreathCue,
+  preloadBreathCues,
+  setVoiceEnabled,
+} from '@/services/breath-voice';
 import { setSetting } from '@/utils/settings';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
+import {
+  Clock,
+  Gem,
+  Leaf,
+  Moon,
+  Repeat,
+  Rss,
+  SlidersHorizontal,
+  Smartphone,
+  Sparkles,
+  Volume2,
+  Watch,
+} from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Dimensions,
+  Image,
   Pressable,
   StyleSheet,
   Text,
   Vibration,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/* Visuals moeten schermvullend zijn — 300px op een 411dp-toestel oogde
-   als een postzegel midden in het zwart. */
 const SCREEN_W = Dimensions.get('window').width;
-const VISUAL = Math.min(SCREEN_W * 0.98, 460);
+const SCREEN_H = Dimensions.get('window').height;
+const ORB = Math.min(SCREEN_W * 0.96, 440);
+/* Scherm 2 heeft onder de animatie nog een titel, een subtitel en vier
+   knoppen nodig; vandaar kleiner dan de bol van scherm 1. */
+const HERO = Math.min(SCREEN_W * 0.7, 310);
+/* De mandala achter de kop. Ruimer dan de tekst zelf, zodat de figuur er
+   omheen valt i.p.v. erachter te klemmen. */
+const HEADER_MANDALA = Math.min(SCREEN_W * 0.43, 190);
+/* De mandala op het slotscherm. Kleiner dan op scherm 1, want daar is ze
+   het onderwerp en hier een voorproefje. */
+const START_ORB = Math.min(SCREEN_W * 0.52, 230);
+/* De bracelet mag buiten de tekstmarge treden — het product is hier het
+   onderwerp en formaat telt zwaarder dan uitlijning. */
+const BRACELET_W = SCREEN_W + 40;
+/* Tekstbreedte binnen `slideArea` (paddingHorizontal 26). Skia-tekst
+   centreert zichzelf niet, dus die breedte moet expliciet mee. */
+const CONTENT_W = SCREEN_W - 52;
 
-/* ── State-pills copy voor slide 3 (gast) — kleuren matchen PATTERNS in
-     breath.tsx. Bewust hier gedupliceerd (geen import uit tabs/) om
-     coupling minimaal te houden; wijzigingen in beide plekken bijhouden
-     bij een style-refactor. ── */
-const STATE_PILLS = [
-  { key: 'boost',   name: 'Boost',        color: '#FFFFFF' },
-  { key: 'focus',   name: 'Sharp Focus',  color: '#FF9F0A' },
-  { key: 'calm',    name: 'Calm Control', color: '#0A84FF' },
-  { key: 'clarity', name: 'Clarity',      color: '#BF5AF2' },
-  { key: 'rest',    name: 'Rest & Reset', color: '#4FA46B' },
+/* Twee tegels naast elkaar binnen de tekstbreedte, met een kier ertussen. */
+/* Het raster treedt buiten de tekstmarge: bij deze kaarten telt formaat
+   zwaarder dan uitlijning met de kop, want de omschrijving staat ín het
+   beeld en is anders niet te lezen. */
+/* Kaarten zo groot mogelijk (operator 2026-07-31). Bij twee kolommen is de
+   breedte de bindende beperking, dus marge en kier zijn tot het minimum
+   teruggebracht. De hoogte wordt óók getoetst, zodat het raster op een klein
+   scherm niet onder de knop verdwijnt: wat er na kop, balk en voettekst
+   overblijft, gedeeld door twee rijen.
+
+   RESERVED is een ruime schatting van alles wat níét raster is — statusbalk
+   en veilige zones bovenaan, de kop met subtitel, en onderaan de puntjes en
+   de knop. Liever iets te ruim: een kaart die tien punten kleiner is valt
+   niemand op, een kaart die half achter de knop zit wel. */
+const GRID_GAP = 6;
+const RESERVED = 330;
+const TILE = Math.floor(
+  Math.min(
+    (SCREEN_W - 8 - GRID_GAP) / 2,
+    (SCREEN_H - RESERVED - GRID_GAP) / 2,
+  ),
+);
+const GRID_W = TILE * 2 + GRID_GAP;
+/* Waar de gloed moet staan, in de coördinaten van het raster. */
+const GLOW_CELLS = [0, 1, 2, 3].map((i) => ({
+  x: i % 2 === 0 ? 0 : TILE + GRID_GAP,
+  y: i < 2 ? 0 : TILE + ROW_GAP,
+  w: TILE,
+  h: TILE,
+}));
+/* Bijna de volle tegelbreedte: de animatie IS de kaart, dus lucht eromheen
+   gaat ten koste van waar het om draait. */
+const TILE_HERO = TILE - 8;
+/* Verticale kier tussen de twee rijen. Wordt ook gebruikt om uit te rekenen
+   waar de gloed moet staan, dus één plek. */
+const ROW_GAP = 6;
+
+/* De signatuur-puls: kort tikje, korte stilte, vollere tik. Twee tikken
+   lezen als iets bedoelds; één tik leest als een notificatie. */
+const SIGNATURE_PULSE = [0, 18, 62, 46];
+
+/* De woorden lopen sneller dan de adem, maar niet gehaast. Bewust
+   losgekoppeld van BREATH_CYCLE_MS: op de ademcyclus duurde één ronde zeven
+   seconden en dan ziet een bezoeker die hier even kijkt hooguit één woord
+   opkomen. Van 2,7 naar 3,6 seconden gebracht — rustiger, en nog steeds
+   alle drie binnen de tijd dat iemand hier is. */
+const WORD_CYCLE_MS = 2800;
+
+/* Eén maat voor alle koppen en één voor alle subkoppen. Stonden ze los per
+   scherm, dan lopen ze bij elke wijziging weer uit elkaar — en dat gebeurde
+   ook (operator 2026-07-31: "kop van pagina 2 lijkt groter dan de rest").
+
+   26 punten is de grootste maat waarop óók de langste kop, "SMART BEAD
+   BRACELET", nog binnen de tekstbreedte past. Groter zou die regel
+   automatisch laten krimpen, en dan is hij alsnog kleiner dan de rest. */
+const HEADER_SIZE = 26;
+const HEADER_TRACK = 3.2;
+const SUB_SIZE = 12;
+const SUB_TRACK = 2.2;
+
+/* Operator-geleverde modus-kaarten (2026-07-31). Dit zijn VOLLEDIGE kaarten:
+   foto, kader, label en omschrijving zitten er al in. Ze vervangen dus niet
+   de animatie binnen een tegel maar de tegel zelf — daarom staat er in het
+   raster geen apart label meer onder.
+
+   Alle vier vierkant sinds 2026-07-31, dus ze vullen hun tegel gelijk. Toch
+   `contain` en geen `cover`: mocht er ooit een beeld met een andere
+   verhouding tussen komen, dan wordt het geschaald i.p.v. bijgesneden — en
+   bijsnijden zou de omschrijving eraf halen. */
+const MODE_CARDS: Record<GuidanceMode, string> = {
+  voice: 'https://vibezcore-audio.b-cdn.net/images/voice%202.png',
+  haptic:
+    'https://vibezcore-audio.b-cdn.net/images/smartphone%20haptics.%202png.png',
+  both: 'https://vibezcore-audio.b-cdn.net/images/voice%20%2B%20haptics%201.png',
+  silent: 'https://vibezcore-audio.b-cdn.net/images/silent%20mode%204png.png',
+};
+
+/* Wat de bracelet is, in vijf regels (operator 2026-07-31). Elk met een
+   eigen teken, in dezelfde taal als de rest van de onboarding: klein,
+   gedempt, op één regel.
+
+   VIBEZCORE in hoofdletters — merkregel, overal en altijd. */
+const BRACELET_FEATURES = [
+  { key: 'wrist', Icon: Watch, text: 'Haptic guidance through your wrist' },
+  { key: 'stone', Icon: Gem, text: 'Premium natural stone design' },
+  { key: 'app', Icon: Smartphone, text: 'Powered by the VIBEZCORE app' },
+  {
+    key: 'personal',
+    Icon: SlidersHorizontal,
+    text: 'Personalized haptic experiences',
+  },
+  { key: 'wear', Icon: Clock, text: 'Comfortable all-day wear' },
+  { key: 'core', Icon: Sparkles, text: 'Neuroscience based haptic core' },
+  { key: 'beads', Icon: Repeat, text: 'Interchangeable bead bracelet' },
+] as const;
+
+/* Draagfoto voor scherm 4 (operator 2026-07-31). Staand beeld van 2:3, en
+   dat past niet als geheel — op volle breedte zou het anderhalf keer de
+   schermhoogte innemen. Het wordt daarom bijgesneden tot een brede band.
+
+   Dat kan hier omdat de pols precies op halve hoogte zit: een gecentreerde
+   uitsnede laat de bracelet in beeld en snijdt alleen lucht boven en pols
+   onder weg. Dat is ook waar de foto over gaat — hem dragen terwijl je iets
+   anders doet. */
+const WEAR_H = 176;
+const WEAR_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/bracelet%20new%20correct.png';
+
+/* Operator-geleverd productbeeld (transparante achtergrond). */
+const BRACELET_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/Shattudkite_vzc_fiv%20no%20bg.png';
+
+/* Icoonrij onder de kop. Drie kanalen, geen overlap, past op één regel.
+   Eerder stond hier TOUCH · SILENT · PRECISE · HANDS-FREE — dat brak over
+   twee regels en mengde categorieën: TOUCH en HANDS-FREE zeiden hetzelfde,
+   PRECISE was een kwaliteitsclaim i.p.v. een manier van begeleiden. Deze
+   drie zijn wél de kanalen die je op scherm 2 kunt kiezen. */
+const TRAITS = [
+  { key: 'voice', label: 'VOICE', Icon: Volume2 },
+  /* Zelfde teken als op de kaarten van scherm 2: een punt met golven die
+     eruit lopen (operator 2026-07-31). Het trillende-telefoontje dat hier
+     stond zei iets anders — dat toont het apparaat, dit toont wat je voelt. */
+  { key: 'haptics', label: 'HAPTICS', Icon: Rss },
+  { key: 'silent', label: 'SILENT', Icon: Moon },
 ] as const;
 
 export default function BreathWelcomeScreen() {
   const sub = useSubscription();
-  /* isPro-tier: audio-sub actief OF bracelet-activated. Beide krijgen de
-     korte 2-slide flow, gasten de 4-slide flow met sample-CTA. */
   const isPro = sub.isPro || sub.hasBracelet;
 
-  const totalSlides = isPro ? 2 : 4;
+  const TOTAL = 5;
   const [slide, setSlide] = useState(0);
-  const isLast = slide === totalSlides - 1;
+  const isLast = slide === TOTAL - 1;
 
-  /* Setting flag zetten + navigeren op finish. */
+  /* Scherm 2 — gekozen modus. Standaard geen enkele actief, zodat de
+     knoppen puur informatief ogen tot de gebruiker kiest. */
+  const [demoMode, setDemoMode] = useState<GuidanceMode | null>(null);
+  const [braceletNote, setBraceletNote] = useState(false);
+
+  /* De stemcues alvast inladen. Op dit scherm speelt één losse cue per tik,
+     en een speler die het bestand nog niet heeft blijft stil — in een sessie
+     merk je dat niet omdat de tweede cue het wél doet. */
+  useEffect(() => {
+    preloadBreathCues();
+  }, []);
+
   const finish = () => {
     setSetting('breathOnboardingCompletedAt', Date.now());
   };
 
   const goNext = () => {
     if (!isLast) {
-      setSlide((s) => s + 1);
+      setSlide((n) => n + 1);
       return;
     }
     finish();
     if (isPro) {
-      /* Pro: terug naar Breath-tab (welcome is push'ed, dus back = tab). */
       if (router.canGoBack()) router.back();
       else router.replace('/');
     } else {
-      /* Gast: naar de 2-min Calm-sample. replace() zodat back vanaf sample
-         niet terug in onboarding valt maar naar de Breath-tab. */
-      router.replace('/breath-sample?state=calm');
+      /* Volledige gratis sessie — geen 2-min proefje. */
+      router.replace('/breath-sample');
     }
   };
 
+  /* Skip zet de vlag BEWUST NIET (operator 2026-07-31: "iedereen die skipt
+     of uitlogt en later terugkomt moet altijd terug naar intro"). Alleen wie
+     de drie schermen uitloopt is klaar; wegklikken is uitstel, geen keuze.
+     Anders raakt iemand die per ongeluk op Skip tikt de intro voorgoed
+     kwijt — en die intro is het enige moment waarop we uitleggen wat dit
+     product is. */
   const onSkip = () => {
-    finish();
     if (router.canGoBack()) router.back();
     else router.replace('/');
   };
 
-  /* Slide 3: welke state het karakter van de lichtlijn bepaalt. Tappen op
-     een pill morpht de lijn — dat IS de uitleg, er staat geen tekst bij
-     die het benoemt (art direction: "gebruiker voelt het"). */
-  const [lineState, setLineState] = useState<StateKey>('calm');
-
-  /* Slide 2: gekozen begeleidingsmodus + of de bracelet-uitleg getoond is. */
-  const [demoMode, setDemoMode] = useState<GuidanceMode>('both');
-  const [lockNote, setLockNote] = useState(false);
-
-  /* Elke modus demonstreert zichzelf meteen bij het aantikken — dát maakt
-     het een ervaring in plaats van een uitleg. */
-  const demoModeChange = (m: GuidanceMode) => {
+  /* Elke modus demonstreert zichzelf bij het aantikken: je hoort en voelt
+     wat je kiest, in plaats van het alleen te lezen. */
+  const onPickMode = (m: GuidanceMode) => {
     setDemoMode(m);
     const wantsHaptic = m === 'haptic' || m === 'both';
     const wantsVoice = m === 'voice' || m === 'both';
 
     if (wantsHaptic) {
-      /* Oplopend golfpatroon — simuleert de inhale-crescendo. */
       Vibration.vibrate(
         [0, 60, 90, 90, 90, 130, 90, 180, 90, 230, 90, 180, 90, 130],
         false,
       );
     }
+
     setVoiceEnabled(wantsVoice);
     if (wantsVoice) {
+      /* De stemdienst geeft het woord aan één scherm tegelijk; wie niet
+         geclaimd heeft wordt stilzwijgend genegeerd. Zonder deze regel bleef
+         de demo stil zodra de Breath-tab of de bracelet het woord nog had —
+         precies wat de operator zag (2026-07-31: "bij aanklikken cards
+         gebeurt niets"). */
+      claimVoiceSource('breath');
       playBreathCue('inhale', 'nose', 'calm', 'breath');
     }
   };
 
-  /* CTA-label per slide. */
-  const ctaLabel = !isLast
-    ? 'Next'
-    : isPro
+  /* Hier stond eerder één trilling bij de eerste puls, daarna stilte —
+     "anders wordt een intro die blijft trillen irritant". Dat was de
+     verkeerde afweging: de haptiek IS het kenmerk (operator 2026-07-31),
+     en één keer trillen en dan zwijgen verkoopt geen haptisch product.
+     Vuurt nu bij elke ronde van het licht, gelijk met de kop. */
+  const onOrbPulse = useCallback(() => {
+    Vibration.vibrate(SIGNATURE_PULSE, false);
+  }, []);
+
+  const feelOrb = () => {
+    Vibration.vibrate(SIGNATURE_PULSE, false);
+  };
+
+  /* De knop kondigt aan wat er komt. Na de bracelet volgt het uitleg-scherm,
+     dus daar staat niet "Next" maar waar je heen gaat (operator
+     2026-07-31). */
+  const ctaLabel = isLast
+    ? isPro
       ? 'Enter Breath  →'
-      : 'Start 2-min Calm  →';
+      : 'Start your first session  →'
+    : slide === 2
+      ? 'How it works  →'
+      : 'Next';
+
+  /* "Maybe later" staat alleen op het slotscherm. Elders zou het naast de
+     Skip rechtsboven een tweede uitgang zijn, en twee manieren om hetzelfde
+     te doen maken een scherm rommelig. */
+  const showMaybeLater = isLast && !isPro;
 
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Top-bar met alleen Skip rechts. */}
+      {/* Ruimte-gevoel: stil sterrenveld achter alles. Eén kleur, lage
+         dichtheid, traag individueel fonkelen — diepte, geen decor. */}
+      <Starfield width={SCREEN_W} height={SCREEN_H} />
+
       <View style={s.topbar}>
+        <View style={{ flex: 1 }} />
+        {/* Waar je bent, op élk scherm. Alleen op het laatste tonen leest als
+           een nagedachte; hier weet je vanaf het begin hoe lang het duurt
+           (operator 2026-07-31). De puntjes onderaan konden daarmee weg —
+           twee voortgangsmeters op één scherm is er één te veel. */}
+        <Text style={s.stepEyebrow}>{`STEP ${slide + 1} OF ${TOTAL}`}</Text>
         <View style={{ flex: 1 }} />
         <Pressable onPress={onSkip} hitSlop={14} style={s.skipWrap}>
           <Text style={s.skipTxt}>Skip</Text>
         </Pressable>
       </View>
 
-      {/* Slide-content — één slide zichtbaar per keer, geen horizontal scroll
-         zodat we deterministisch weten waar we zitten (voorspelbare state). */}
-      <View style={s.slideArea}>
-        {isPro ? (
-          slide === 0 ? (
-            <ProSlide1 />
-          ) : (
-            <ProSlide2 />
-          )
-        ) : slide === 0 ? (
-          <GuestSlide1 />
+      <View style={[s.slideArea, slide === 1 && s.slideAreaTop]}>
+        {slide === 0 ? (
+          <SlideIntro onPulse={onOrbPulse} onTapOrb={feelOrb} />
         ) : slide === 1 ? (
-          <GuestSlide2
-            mode={demoMode}
-            onPickMode={demoModeChange}
-            onLocked={() => setLockNote(true)}
-            showLockNote={lockNote}
-          />
+          <SlideGuidance mode={demoMode} onPick={onPickMode} />
         ) : slide === 2 ? (
-          <GuestSlide3 active={lineState} onPick={setLineState} />
+          <SlideBracelet
+            noteVisible={braceletNote}
+            onTap={() => setBraceletNote(true)}
+          />
+        ) : slide === 3 ? (
+          <SlideHowItWorks />
         ) : (
-          <GuestSlide4 />
+          <SlideStart />
         )}
       </View>
 
-      {/* Footer met dots + CTA. */}
       <View style={s.footer}>
-        <View style={s.dots}>
-          {Array.from({ length: totalSlides }).map((_, i) => (
-            <View
-              key={i}
-              style={[s.dot, i === slide && s.dotActive]}
-            />
-          ))}
-        </View>
         <Pressable
-          style={s.cta}
           onPress={goNext}
           android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+          style={s.ctaWrap}
         >
-          <Text style={s.ctaTxt}>{ctaLabel}</Text>
+          {/* Een verloop i.p.v. één vlakke kleur (operator 2026-07-31).
+             Diagonaal, van een helder hemelsblauw naar een dieper koningsblauw
+             — dat geeft de knop volume; één egale vlakke kleur oogt plat. */}
+          <LinearGradient
+            colors={['#5AA9FF', '#2F6BFF', '#1E4FE0']}
+            locations={[0, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.cta}
+          >
+            <Text style={s.ctaTxt}>{ctaLabel}</Text>
+          </LinearGradient>
         </Pressable>
+
+        {showMaybeLater && (
+          <Pressable onPress={onSkip} hitSlop={12} style={s.laterWrap}>
+            <Text style={s.laterTxt}>MAYBE LATER</Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
-/* ── Slide-components — hier gehouden i.p.v. eigen files (klein + alleen
-     hier gebruikt). ── */
+/* ── Scherm 1 — wat dit is ────────────────────────────────────────────── */
 
-function GuestSlide1() {
+function SlideIntro({
+  onPulse,
+  onTapOrb,
+}: {
+  onPulse: () => void;
+  onTapOrb: () => void;
+}) {
+  /* Zelfde klok als de bol: gelijke duur, gelijke easing, gestart in
+     hetzelfde frame. De kop ademt dus mét de ring i.p.v. ernaast. */
+  const breath = useSharedValue(0);
+  useEffect(() => {
+    breath.value = withRepeat(
+      withTiming(1, {
+        duration: BREATH_CYCLE_MS / 2,
+        easing: Easing.inOut(Easing.sin),
+      }),
+      -1,
+      true,
+    );
+  }, [breath]);
+
+  /* De regel ademt als GEHEEL. Dat is één beweging op de laag eromheen —
+     het besturingssysteem verzet die view, er wordt geen letter opnieuw
+     getekend. De vorige beurt-animatie deed het omgekeerde en moest elk
+     frame elke letter aanraken; die is eruit, dit blijft.
+
+     Ruimer gezet dan eerst, want naast de lichtband die eroverheen loopt
+     mag de ademhaling zelf ook voelbaar zijn. */
+  const headBreath = useAnimatedStyle(() => ({
+    opacity: 0.78 + breath.value * 0.22,
+    transform: [{ scale: 0.985 + breath.value * 0.022 }],
+  }));
+
   return (
-    <View style={s.slide}>
-      <AmbientGlow size={VISUAL} />
-      <Text style={s.eyebrow}>VIBEZCORE BREATH</Text>
-      <Text style={s.title}>Feel your breath.</Text>
-      <Text style={s.body}>
-        The first breathwork app that guides you through touch — not just
-        sound. Silent, precise, hands-free.
-      </Text>
+    /* Extra ruimte ONDER het blok. Omdat `slideArea` zijn kind centreert,
+       schuift het zichtbare deel daardoor omhoog — en dat was nodig, want
+       met deze hoge bol bleef er bovenaan merkbaar meer lucht over dan
+       onderaan (operator 2026-07-31). */
+    <View style={[s.slide, s.slideIntro]}>
+      {/* Klein en gedempt: een begroeting hoort niet te concurreren met de
+         kop eronder. Die kop draagt de belofte, dit alleen de toon. */}
+      <Text style={s.welcome}>WELCOME</Text>
+
+      <Pressable onPress={onTapOrb}>
+        <HapticOrb size={ORB} onPulse={onPulse} />
+      </Pressable>
+
+      {/* Wit, met één schuine blauwe lichtband erdoorheen die naar rechts
+         volledig blauw wordt. Niet losse woorden blauw kleuren — het blauw
+         hoort bij het licht, niet bij de letters. De drie woorden komen om
+         de beurt naar voren, één ronde per ademcyclus, dus de golf door de
+         regel loopt gelijk met de golf door de ring. */}
+      <Animated.View style={[s.headlineWrap, headBreath]}>
+        <GradientText
+          text="BREATHE. BUILD. BECOME"
+          size={23}
+          width={CONTENT_W}
+          weight="regular"
+          tracking={3.6}
+          stagger
+          cycleMs={WORD_CYCLE_MS}
+        />
+      </Animated.View>
+
+      {/* Tagline draagt de merkbelofte: één regel, wit, dezelfde schuine
+         band eroverheen. */}
+      {/* Twee regels i.p.v. één. Op één regel met kapitalen en ruime
+         letterafstand valt de punt in het midden weg en lees je het als één
+         lange zin; zo staan de twee beloftes duidelijk náást elkaar. Geen
+         punt aan het eind — koppen zijn labels, geen zinnen. */}
+      <GradientText
+        text="CONTROL YOUR VIBE"
+        size={SUB_SIZE}
+        width={CONTENT_W * 0.94}
+        weight="regular"
+        colors={SUB_COLORS}
+        positions={SUB_POSITIONS}
+        tracking={SUB_TRACK}
+        style={s.taglineWrap}
+      />
+      <GradientText
+        text="CONTROL YOUR LIFE"
+        size={SUB_SIZE}
+        width={CONTENT_W * 0.94}
+        weight="regular"
+        colors={SUB_COLORS}
+        positions={SUB_POSITIONS}
+        tracking={SUB_TRACK}
+        style={s.taglineLine2}
+      />
+
+      <View style={s.traits}>
+        {TRAITS.map(({ key, label, Icon }, i) => (
+          <View key={key} style={s.traitItem}>
+            {i > 0 && <View style={s.traitDivider} />}
+            <Icon size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+            <Text style={s.traitTxt}>{label}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
-/* Slide 2 — GUIDANCE. Vier modi in een 2×2 raster; elke tap demonstreert
-   zichzelf onmiddellijk (haptic trilt, voice spreekt). De bracelet staat
-   eronder als uitgelichte aankondiging, niet als vijfde keuze — hij
-   bestaat nog niet. */
-function GuestSlide2({
+/* ── Scherm 2 — hoe je begeleid wordt ─────────────────────────────────── */
+
+function SlideGuidance({
   mode,
-  onPickMode,
-  onLocked,
-  showLockNote,
+  onPick,
 }: {
-  mode: GuidanceMode;
-  onPickMode: (m: GuidanceMode) => void;
-  onLocked: () => void;
-  showLockNote: boolean;
+  mode: GuidanceMode | null;
+  onPick: (m: GuidanceMode) => void;
+}) {
+  const activeIndex = GUIDANCE_MODES.findIndex((m) => m.key === mode);
+  const activeCfg = GUIDANCE_MODES[activeIndex];
+
+  /* Zelfde ademhaling als op scherm 1, op dezelfde klok. Eén beweging op de
+     laag eromheen; de letters blijven onaangeroerd. */
+  const breath = useSharedValue(0);
+  useEffect(() => {
+    breath.value = withRepeat(
+      withTiming(1, {
+        duration: BREATH_CYCLE_MS / 2,
+        easing: Easing.inOut(Easing.sin),
+      }),
+      -1,
+      true,
+    );
+  }, [breath]);
+
+  const titleBreath = useAnimatedStyle(() => ({
+    opacity: 0.82 + breath.value * 0.18,
+    transform: [{ scale: 0.99 + breath.value * 0.016 }],
+  }));
+
+  return (
+    <View style={s.slide}>
+      {/* Kapitalen op LICHT gewicht met ruime letterafstand, naar de
+         referentie van de operator (2026-07-31). Dat is een andere school
+         dan zwaar-en-strak: het gewicht doet niets, de ruimte doet alles.
+         Twee regels, want zo blijven de letters groot genoeg om dat te
+         dragen — op één regel zou hij tot ruim de helft moeten krimpen.
+
+         De mandala staat erachter als decor: haarlijnen op lage dekking,
+         traag draaiend, zonder de gevulde maanvorm — die zou precies achter
+         de tekst komen en die onleesbaar maken. */}
+      <View style={s.titleBlock}>
+        <MandalaBackdrop size={HEADER_MANDALA} />
+        <Animated.View style={[s.titleLines, titleBreath]}>
+          <GradientText
+            text="CHOOSE YOUR"
+            size={HEADER_SIZE}
+            width={CONTENT_W}
+            weight="regular"
+            tracking={HEADER_TRACK}
+            sweep
+            cycleMs={WORD_CYCLE_MS}
+          />
+          <GradientText
+            text="GUIDANCE"
+            size={HEADER_SIZE}
+            width={CONTENT_W}
+            weight="regular"
+            tracking={HEADER_TRACK}
+            sweep
+            cycleMs={WORD_CYCLE_MS}
+            style={s.titleLine2}
+          />
+        </Animated.View>
+      </View>
+      {/* Smaller meegegeven dan de kop, zodat de subtitel er nooit breder
+         uit kan komen — ook niet als de tekst ooit verandert. */}
+      <GradientText
+        text="YOUR BREATH. YOUR RHYTHM. YOUR CHOICE"
+        size={SUB_SIZE}
+        width={CONTENT_W * 0.94}
+        weight="regular"
+        colors={SUB_COLORS}
+        positions={SUB_POSITIONS}
+        tracking={SUB_TRACK}
+        style={s.subWrap}
+      />
+
+      {/* Geen uitvergroting meer: de omschrijving staat nu groot genoeg in
+         de beelden zelf, dus een tweede scherm voegde niets toe behalve een
+         extra tik (operator 2026-07-31). Aantikken kiest en licht op. */}
+      <View style={s.grid}>
+        {/* Eén gloed die naar de gekozen kaart toe schuift, in de kleur van
+           die kaart zelf. Dat maakt de keuze zichtbaar i.p.v. hem alleen aan
+           te wijzen — en het scheelt drie vervaagde vlakken die toch
+           onzichtbaar zouden zijn. */}
+        <SelectionGlow
+          cells={GLOW_CELLS}
+          activeIndex={activeIndex}
+          color={activeCfg?.color ?? '#ffffff'}
+        />
+        {GUIDANCE_MODES.map((m) => (
+          <ModeTile
+            key={m.key}
+            cfg={m}
+            active={m.key === mode}
+            onPress={() => onPick(m.key)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/* Eén kaart. Eigen component omdat de selectie hooks vraagt.
+
+   De selectie is bewust méér dan een randje: een WITTE halo achter de kaart,
+   de kaart zelf op volle helderheid terwijl de andere drie wegzakken, en een
+   zachte opschaling. Wit en niet de moduskleur — de kaarten zijn al blauw,
+   en nóg meer blauw laat de selectie juist verdwijnen (operator 2026-07-31).
+
+   React Native kent geen echte gloed op Android; twee gestapelde afgeronde
+   vlakken die iets buiten de kaart uitsteken geven dezelfde zachte rand voor
+   vrijwel niets. */
+function ModeTile({
+  cfg,
+  active,
+  onPress,
+}: {
+  cfg: (typeof GUIDANCE_MODES)[number];
+  active: boolean;
+  onPress: () => void;
+}) {
+  const sel = useSharedValue(active ? 1 : 0);
+  useEffect(() => {
+    sel.value = withTiming(active ? 1 : 0, {
+      duration: 340,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [active, sel]);
+
+  /* Welke kaart actief is moet in één oogopslag duidelijk zijn (operator
+     2026-07-31). Drie signalen die samenwerken, want de beelden hebben zélf
+     al een gekleurd kader en één enkel signaal verdrinkt daarin:
+       - de kaart schaalt op en komt naar voren
+       - een dunne rand in de kleur van de modus, ÓVER het beeld heen
+       - de corona erachter, die naar deze kaart toe schuift
+     Het vinkje is eruit: met drie signalen was dat er één te veel, en een
+     badge is nu eenmaal een sticker op een foto (operator 2026-07-31).
+
+     De rand is bewust dun en niet vol: subtiel en elegant, geen keuzevakje.
+     De niet-gekozen kaarten zakken licht terug — niet ver, want op 55% werd
+     het hele scherm te donker. */
+  const cardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.982 + sel.value * 0.038 }],
+    opacity: 0.8 + sel.value * 0.2,
+  }));
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: sel.value * 0.8,
+    borderColor: cfg.color,
+  }));
+
+
+  return (
+    <Pressable onPress={onPress} style={s.tileWrap}>
+      <Animated.View style={cardStyle}>
+        <Image
+          source={{ uri: MODE_CARDS[cfg.key] }}
+          style={s.tileImg}
+          resizeMode="contain"
+        />
+        <Animated.View style={[s.tileRing, ringStyle]} pointerEvents="none" />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+/* ── Scherm 3 — de bracelet ───────────────────────────────────────────── */
+
+function SlideBracelet({
+  noteVisible,
+  onTap,
+}: {
+  noteVisible: boolean;
+  onTap: () => void;
 }) {
   return (
     <View style={s.slide}>
-      <Text style={s.title}>Choose how you feel it.</Text>
-      <Text style={s.body}>
-        Tap any mode to try it right now.
-      </Text>
-
-      <View style={s.selectorWrap}>
-        <GuidanceSelector
-          value={mode}
-          onChange={onPickMode}
-          onBraceletPress={onLocked}
+      {/* Zelfde opzet als scherm 2: kapitalen op licht gewicht met ruime
+         letterafstand, met de mandala als decor erachter. */}
+      <View style={s.titleBlock}>
+        <MandalaBackdrop size={HEADER_MANDALA} />
+        <GradientText
+          text="QUIET GUIDANCE THROUGH THE WRIST"
+          size={SUB_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+        colors={SUB_COLORS}
+        positions={SUB_POSITIONS}
+          tracking={SUB_TRACK}
+        />
+        <GradientText
+          text="SMART BEAD BRACELET"
+          size={HEADER_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+          tracking={HEADER_TRACK}
+          style={s.braceletTitleLine}
         />
       </View>
 
-      {showLockNote && (
-        <Text style={s.lockNote}>
-          Ships with the Smart Bead Bracelet. The rhythm moves to your
-          wrist — silent, invisible, hands-free.
+      {/* Geen gouden gloed meer erachter: die maakte er een vlak van waarop
+         het product LAG. Zonder dat vlak zweeft het in dezelfde ruimte als
+         de rest van de onboarding (operator 2026-07-31). */}
+      <Pressable onPress={onTap} style={s.braceletImgWrap}>
+        {/* `cover` en niet `contain`. Het bestand is VIERKANT met veel lege
+           ruimte boven en onder de bracelet, en bij `contain` bepaalt in een
+           breed vak de hoogte hoe groot het beeld wordt — die lege ruimte
+           telt dan mee en drukt het product klein. `cover` schaalt op de
+           breedte en snijdt boven en onder weg; dat is precies de lege
+           ruimte. Het product wordt daardoor ruim 40% groter zonder dat het
+           vak groeit (operator 2026-07-31). */}
+        <Image
+          source={{ uri: BRACELET_IMG }}
+          style={s.braceletImg}
+          resizeMode="cover"
+        />
+        {/* De haptische klop komt uit het zwarte kastje, iets onder het
+           midden van het beeld. */}
+        <PodPulse
+          width={BRACELET_W}
+          height={BRACELET_W * 0.7}
+          originY={0.605}
+          reach={0.085}
+          intensity={2.4}
+        />
+      </Pressable>
+
+      <View style={s.features}>
+        {BRACELET_FEATURES.map(({ key, Icon, text }) => (
+          <View key={key} style={s.featureRow}>
+            <Icon size={15} color="#7FB2FF" strokeWidth={2} />
+            <Text style={s.featureTxt}>{text}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={s.comingPill}>
+        <Text style={s.comingTxt}>COMING FALL 2026</Text>
+      </View>
+
+      {noteVisible && (
+        <Text style={s.braceletNote}>
+          The rhythm moves from your screen to your wrist. Silent,
+          invisible, hands-free.
         </Text>
       )}
     </View>
   );
 }
 
-function GuestSlide3({
-  active,
-  onPick,
-}: {
-  active: StateKey;
-  onPick: (k: StateKey) => void;
-}) {
+/* ── Scherm 4 — hoe het werkt ─────────────────────────────────────────── */
+
+/* Drie stappen, in de volgorde waarin een gebruiker ze doorloopt. Labels in
+   kapitalen zonder punt (het zijn labels), de uitleg eronder als gewone zin
+   mét punt. VIBEZCORE in hoofdletters — merkregel. */
+const HOW_STEPS = [
+  { key: 'connect', label: 'CONNECT', text: 'Pair your bracelet once.' },
+  {
+    key: 'choose',
+    label: 'CHOOSE',
+    text: 'Select any breathing session in the VIBEZCORE app.',
+  },
+  {
+    key: 'feel',
+    label: 'FEEL',
+    text: 'Every inhale, hold and exhale is delivered through precise haptic guidance.',
+  },
+] as const;
+
+function SlideHowItWorks() {
   return (
     <View style={s.slide}>
-      {/* De lijn IS de uitleg: bij Sharp Focus wordt ze vlak en strak, bij
-         Calm Control breed en rond, bij Rest & Reset traag en wijd. Er
-         staat bewust nergens tekst die dat benoemt. */}
-      <StateLine state={active} width={VISUAL} height={150} />
-      <Text style={s.eyebrowAccent}>STATE-DRIVEN</Text>
-      <Text style={s.title}>Choose your target state.</Text>
-      <Text style={s.body}>
-        Tell us how you want to feel. VIBEZCORE can intelligently recommend
-        the most effective breathing protocol — or you can select one
-        yourself.
+      <View style={s.titleBlock}>
+        <MandalaBackdrop size={HEADER_MANDALA} />
+        <GradientText
+          text="HOW IT WORKS"
+          size={HEADER_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+          tracking={HEADER_TRACK}
+        />
+        {/* De twee regels horen bij elkaar en bij de kop: strak eronder,
+           met nauwelijks lucht ertussen. Stonden ze verder uit elkaar, dan
+           lazen ze als twee losse mededelingen (operator 2026-07-31). */}
+        <GradientText
+          text="ALWAYS WITH YOU. NEVER IN THE WAY"
+          size={SUB_SIZE}
+          width={CONTENT_W * 0.94}
+          weight="regular"
+          colors={SUB_COLORS}
+          positions={SUB_POSITIONS}
+          tracking={SUB_TRACK}
+          style={s.howSub1}
+        />
+      </View>
+
+      <View style={s.wearWrap}>
+        {/* Groter dan de kaart en naar links geschoven: zo komt de pols meer
+           naar het midden i.p.v. rechts weg te vallen. Zonder die overmaat
+           valt er niets te schuiven — een precies passende uitsnede heeft
+           geen speling. */}
+        <Image
+          source={{ uri: WEAR_IMG }}
+          style={s.wearImg}
+          resizeMode="cover"
+        />
+        <PodPulse
+          width={CONTENT_W}
+          height={WEAR_H}
+          originX={0.4}
+          originY={0.49}
+          reach={0.11}
+          intensity={2.4}
+        />
+      </View>
+
+      {/* Onder de foto eerst de belofte, dan pas waar je hem draagt. Die
+         volgorde werkt beter: wat het je oplevert weegt zwaarder dan waar
+         het kan, en de kapitalen maken er een uitspraak van in plaats van
+         een zin (operator 2026-07-31). */}
+      <Text style={s.howClaim}>ALWAYS AVAILABLE. PRIVATE. PERSONAL.</Text>
+      <Text style={s.howWhen}>
+        Work. Travel. Walk. Commute. Study. Pause.
       </Text>
-      <View style={s.pillsRow}>
-        {STATE_PILLS.map((p) => {
-          const on = p.key === active;
-          return (
-            <Pressable
-              key={p.key}
-              onPress={() => onPick(p.key as StateKey)}
-              style={[
-                s.pill,
-                {
-                  borderColor: on
-                    ? 'rgba(255,255,255,0.45)'
-                    : 'rgba(255,255,255,0.12)',
-                  backgroundColor: on
-                    ? 'rgba(255,255,255,0.07)'
-                    : 'transparent',
-                },
-              ]}
-            >
-              <View
-                style={[
-                  s.pillDot,
-                  { backgroundColor: p.color, opacity: on ? 1 : 0.4 },
-                ]}
-              />
-              <Text style={[s.pillTxt, { opacity: on ? 1 : 0.55 }]}>
-                {p.name}
-              </Text>
-            </Pressable>
-          );
-        })}
+
+      <View style={s.howSteps}>
+        {HOW_STEPS.map(({ key, label, text }, i) => (
+          <View key={key} style={s.howStep}>
+            <View style={s.howNumWrap}>
+              <Text style={s.howNum}>{i + 1}</Text>
+            </View>
+            <View style={s.howStepText}>
+              <Text style={s.howLabel}>{label}</Text>
+              <Text style={s.howDesc}>{text}</Text>
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
-function GuestSlide4() {
+/* ── Scherm 5 — de eerste sessie ──────────────────────────────────────── */
+
+/* Wat de gratis sessie inhoudt, in drie regels. Volgorde uit de referentie
+   van de operator: eerst wat je krijgt, dan hoe het voelt, dan wat het
+   kost — dat laatste is niets, en dat hoort als laatste indruk te blijven
+   hangen. */
+const START_POINTS = [
+  {
+    key: 'full',
+    Icon: Clock,
+    label: 'FULL SESSION',
+    text: 'Experience a complete breathing journey.',
+  },
+  {
+    key: 'haptic',
+    Icon: Rss,
+    label: 'HAPTIC GUIDANCE',
+    text: 'Feel every breath with subtle vibrations.',
+  },
+  {
+    key: 'free',
+    Icon: Leaf,
+    label: 'NO COMMITMENT',
+    text: "Explore freely. Upgrade when you're ready.",
+  },
+] as const;
+
+function SlideStart() {
   return (
     <View style={s.slide}>
-      {/* Geen cirkel — de volumetrische wolk uit de sessie zelf, in idle.
-         Zo weet de gebruiker vóór de tap al hoe de sessie eruitziet. */}
-      <BreathCloud phase="idle" phaseDurationMs={9000} size={VISUAL} />
-      <Text style={s.eyebrowAccent}>FIRST SESSION</Text>
-      <Text style={s.title}>Start with 2 minutes of Calm.</Text>
-      <Text style={s.body}>
-        One short sample. See how the guidance feels. If you love it, you
-        can continue with a full practice.
+      {/* Geen mandala achter deze kop: er staat er al een groot exemplaar
+         onder, en twee keer dezelfde figuur op één scherm vecht met zichzelf
+         (operator 2026-07-31). */}
+      <View style={s.titleBlockPlain}>
+        <GradientText
+          text="START YOUR"
+          size={HEADER_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+          tracking={HEADER_TRACK}
+        />
+        <GradientText
+          text="FIRST SESSION"
+          size={HEADER_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+          tracking={HEADER_TRACK}
+          style={s.titleLine2}
+        />
+      </View>
+
+      <Text style={s.startLead}>
+        Begin your journey with a free trial session.
       </Text>
+      <Text style={s.startLead2}>
+        Feel the rhythm. Experience the shift.
+      </Text>
+
+      {/* De mandala uit scherm 1, klein. Hier is ze geen decor maar een
+         belofte: dit is wat er straks op je scherm staat. */}
+      <View style={s.startOrb}>
+        <BreathMandala size={START_ORB} />
+      </View>
+
+      <View style={s.startPoints}>
+        {START_POINTS.map(({ key, Icon, label, text }) => (
+          <View key={key} style={s.startPoint}>
+            <View style={s.startIconWrap}>
+              <Icon size={16} color="#7FB2FF" strokeWidth={2} />
+            </View>
+            <View style={s.startPointText}>
+              <Text style={s.startLabel}>{label}</Text>
+              <Text style={s.startDesc}>{text}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
-function ProSlide1() {
-  return (
-    <View style={s.slide}>
-      <AmbientGlow size={VISUAL} />
-      <Text style={s.eyebrow}>VIBEZCORE BREATH</Text>
-      <Text style={s.title}>Feel your breath.</Text>
-      <Text style={s.body}>
-        Haptic-guided breathwork. 5 states. Silent Mode. Full bracelet
-        integration.
-      </Text>
-    </View>
-  );
-}
-
-function ProSlide2() {
-  return (
-    <View style={s.slide}>
-      <Text style={s.eyebrowAccent}>READY</Text>
-      <Text style={s.title}>Pick your first state.</Text>
-      <Text style={s.body}>
-        Tap any state to begin. Your bracelet (if connected) syncs
-        automatically.
-      </Text>
-    </View>
-  );
-}
-
-/* ── Styles ── */
+/* ── Styles ───────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+
   topbar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -366,118 +958,298 @@ const s = StyleSheet.create({
 
   slideArea: {
     flex: 1,
-    paddingHorizontal: 28,
+    paddingHorizontal: 26,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  slide: {
+  slide: { alignItems: 'center', width: '100%' },
+  /* Scherm 2 begint bovenaan i.p.v. gecentreerd: met vier grote kaarten is
+     er onderaan toch geen ruimte over, en de kop hoort bovenaan te staan. */
+  slideAreaTop: { justifyContent: 'flex-start', paddingTop: 4 },
+  /* Geen extra hoogte meer: het blok wordt gecentreerd, dus boven en onder
+     valt evenveel ruimte. Dat is wat de figuur laat zweven — hem omhoog
+     duwen liet een lege band onderaan achter. */
+  slideIntro: {},
+  welcome: {
+    marginTop: -26,
+    marginBottom: 16,
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 15,
+    letterSpacing: 5,
+  },
+  grid: {
+    marginTop: 42,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: GRID_W,
+  },
+  tileWrap: { width: TILE, marginBottom: ROW_GAP },
+  tileImg: { width: TILE, height: TILE, borderRadius: 22 },
+  tileRing: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 22,
+    borderWidth: 1.5,
+  },
+  titleWrap: { marginTop: 16 },
+  /* De mandala vult dit blok en ligt eronder; de hoogte volgt de tekst. */
+  titleBlock: {
+    marginTop: 10,
+    width: CONTENT_W,
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'center',
+  },
+  titleLines: { alignItems: 'center' },
+  titleLine2: { marginTop: -2 },
+  subWrap: { marginTop: 16 },
+
+  /* Scherm 1 — kop en tagline zijn Skia-tekst (GradientText); die brengen
+     hun eigen hoogte mee, hier alleen de ruimte ertussen. */
+  headlineWrap: { marginTop: 14 },
+  taglineWrap: { marginTop: 12 },
+  taglineLine2: { marginTop: 3 },
+  traits: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 26,
+    flexWrap: 'wrap',
+  },
+  traitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+  },
+  traitDivider: {
+    width: 1,
+    height: 11,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginRight: 9,
+  },
+  traitTxt: {
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.4,
   },
 
-  eyebrow: {
-    color: Brand.textDim,
-    fontFamily: BrandFonts.bold,
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  eyebrowAccent: {
-    color: Brand.accent,
-    fontFamily: BrandFonts.bold,
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
+  /* Scherm 2 */
   title: {
+    marginTop: 14,
     color: Brand.text,
     fontFamily: BrandFonts.bold,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.56,
+    fontSize: 27,
+    lineHeight: 33,
+    letterSpacing: -0.6,
     textAlign: 'center',
-    marginBottom: 6,
   },
   body: {
+    marginTop: 8,
     color: Brand.textDim,
     fontFamily: BrandFonts.medium,
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 21,
     textAlign: 'center',
-    maxWidth: 320,
+  },
+  selectorWrap: {
+    marginTop: 20,
+    alignSelf: 'stretch',
+    marginHorizontal: -26,
   },
 
-  /* Selector krijgt volle breedte binnen de slide-padding. Negatieve
-     marge compenseert de horizontale padding van slideArea zodat het
-     2×2-raster en de bracelet-kaart de volle breedte pakken. */
-  selectorWrap: {
-    marginTop: 18,
-    alignSelf: 'stretch',
-    marginHorizontal: -28,
+  /* Scherm 3 */
+  braceletTitleLine: { marginTop: 2 },
+  braceletImgWrap: {
+    marginTop: -6,
+    width: BRACELET_W,
+    height: BRACELET_W * 0.7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  lockNote: {
+  features: { marginTop: 2, gap: 8 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  featureTxt: {
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 13.5,
+    letterSpacing: 0.1,
+  },
+  braceletImg: { width: '100%', height: '100%' },
+  comingPill: {
+    marginTop: 16,
+    paddingHorizontal: 11,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(224,179,65,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(224,179,65,0.36)',
+  },
+  comingTxt: {
+    color: '#E0B341',
+    fontFamily: BrandFonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.6,
+  },
+  braceletTitle: {
+    marginTop: 16,
+    color: Brand.text,
+    fontFamily: BrandFonts.bold,
+    fontSize: 22,
+    lineHeight: 29,
+    letterSpacing: -0.4,
+    textAlign: 'center',
+  },
+  braceletNote: {
     marginTop: 12,
     color: Brand.textDim,
     fontFamily: BrandFonts.medium,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 13.5,
+    lineHeight: 19,
     textAlign: 'center',
     maxWidth: 300,
   },
 
-  pillsRow: {
+  /* Scherm 4 */
+  howSub1: { marginTop: 6 },
+  wearWrap: {
+    marginTop: 66,
+    width: CONTENT_W,
+    height: WEAR_H,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  wearImg: {
+    width: CONTENT_W * 1.3,
+    height: '100%',
+    marginLeft: -CONTENT_W * 0.18,
+  },
+  howWhen: {
     marginTop: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
-    maxWidth: 340,
+    maxWidth: CONTENT_W,
+    color: 'rgba(255,255,255,0.82)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 14,
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+  /* Groter, strakker en dunner dan de regel erboven: dat is wat een claim
+     laat staan zonder te schreeuwen. Licht gewicht met wat letterafstand
+     leest als rust; vet zou het een reclamekreet maken. */
+  howClaim: {
+    marginTop: 26,
+    maxWidth: CONTENT_W,
+    color: '#ffffff',
+    fontFamily: BrandFonts.regular,
+    fontSize: 16,
+    letterSpacing: 1.4,
+    textAlign: 'center',
+  },
+  howSteps: { marginTop: 32, gap: 17, width: CONTENT_W },
+  howStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  howNumWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(127,178,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pillDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  howNum: {
+    color: '#7FB2FF',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
   },
-  pillTxt: {
-    color: Brand.text,
-    fontFamily: BrandFonts.medium,
-    fontSize: 12,
+  howStepText: { flex: 1 },
+  howLabel: {
+    color: '#7FB2FF',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 2,
+  },
+  howDesc: {
+    marginTop: 3,
+    color: 'rgba(255,255,255,0.78)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 19,
   },
 
-  footer: {
-    paddingHorizontal: 28,
-    paddingBottom: 20,
-    gap: 18,
+  /* Scherm 5 */
+  stepEyebrow: {
+    marginTop: 2,
+    color: '#7FB2FF',
+    fontFamily: BrandFonts.bold,
+    fontSize: 10,
+    letterSpacing: 2.6,
   },
-  dots: {
-    flexDirection: 'row',
-    gap: 6,
+  startLead: {
+    marginTop: 12,
+    maxWidth: CONTENT_W,
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  startLead2: {
+    marginTop: 2,
+    maxWidth: CONTENT_W,
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  titleBlockPlain: { width: CONTENT_W, alignItems: 'center' },
+  startOrb: { marginTop: 10, marginBottom: 10 },
+  startPoints: { width: CONTENT_W, gap: 14 },
+  startPoint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  startIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(127,178,255,0.4)',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  startPointText: { flex: 1 },
+  startLabel: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 1.8,
   },
-  dotActive: {
-    backgroundColor: Brand.accent,
-    width: 18,
+  startDesc: {
+    marginTop: 2,
+    color: 'rgba(255,255,255,0.66)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
   },
+  laterWrap: { alignSelf: 'center', paddingVertical: 4 },
+  laterTxt: {
+    color: '#7FB2FF',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
+    letterSpacing: 2,
+  },
+
+  /* Footer */
+  /* De veilige zone wordt al door SafeAreaView afgetrokken; dit is de marge
+     dáárbovenop. Twintig punten was krap: op een toestel met een gebaarbalk
+     komt de knop dan vlak tegen die balk aan te liggen en tikt je duim er
+     net naast (operator 2026-07-31). */
+  footer: { paddingHorizontal: 26, paddingBottom: 32, gap: 18 },
+  ctaWrap: { borderRadius: 14, overflow: 'hidden' },
   cta: {
-    backgroundColor: Brand.accent,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

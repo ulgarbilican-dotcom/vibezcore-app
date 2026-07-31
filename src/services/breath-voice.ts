@@ -159,6 +159,40 @@ export function playCompletionCue(key: BreathKey): void {
   playUrl(url);
 }
 
+/** Maak de spelers alvast aan zonder te spelen.
+ *
+ *  Nodig op schermen waar één losse cue wordt afgespeeld i.p.v. een reeks.
+ *  Een speler voor een REMOTE bestand moet eerst laden; `play()` op een
+ *  speler die nog niets heeft ingeladen levert stilte op. In een sessie valt
+ *  dat niet op — de tweede cue speelt wél, want dan is het bestand er. Bij
+ *  één enkele tik hoor je gewoon niets.
+ *
+ *  Aanroepen bij het openen van zo'n scherm; daarna is de eerste tik hoorbaar. */
+export function preloadBreathCues(): void {
+  for (const url of Object.values(CUE_URLS)) {
+    try {
+      const player = getOrCreatePlayer(url);
+      /* Stil één keer aantikken zet het ophalen in gang. Of dat lukt is niet
+         zeker — daarom leunt het afspelen zelf er ook niet op, dat probeert
+         het gewoon een paar keer opnieuw. Dit scheelt alleen de eerste
+         wachttijd wanneer het wél werkt. */
+      player.volume = 0;
+      player.play();
+      setTimeout(() => {
+        try {
+          player.pause();
+          player.seekTo(0);
+          player.volume = 1;
+        } catch {
+          /* swallow */
+        }
+      }, 500);
+    } catch {
+      /* swallow — falen mag het scherm niet breken */
+    }
+  }
+}
+
 /** Stop alle ongoing voice playback. Call bij session-cleanup,
  *  voice-toggle-off, of bij tab-unmount. */
 export function stopVoice(): void {
@@ -191,16 +225,74 @@ function playUrl(url: string): void {
     try {
       activePlayer.pause();
       activePlayer.seekTo(0);
-    } catch {}
+    } catch {
+      /* swallow — pause op een al-niet-spelende player is harmless */
+    }
   }
+
   try {
     const player = getOrCreatePlayer(url);
-    /* Rewind voor 't geval deze cue eerder al gespeeld is — zonder
-       seekTo(0) speelt 'ie verder vanaf waar 'ie stopte. */
-    player.seekTo(0);
-    player.play();
     activePlayer = player;
-  } catch {
+
+    /* METEEN starten, en daarna een paar keer opnieuw proberen.
+   
+       Hier stond een versie die eerst wachtte tot `isLoaded` waar werd. Dat
+       leek logisch maar was fout: bij een bestand op afstand blijft die vlag
+       in de praktijk vals staan (we zagen `loaded=false` terwijl de duur al
+       bekend was), waardoor het startsein nóóit kwam en er helemaal geen
+       geluid meer was. Wachten op een toestand die niet betrouwbaar omslaat
+       is erger dan het gewoon proberen.
+
+       Dus: direct spelen. Is het bestand er nog niet, dan doet die eerste
+       poging niets — en dan pakken de herhalingen het op zodra het binnen
+       is. `play()` op iets dat al speelt is onschadelijk, dus dit kan geen
+       dubbel geluid geven. */
+    const attempt = () => {
+      if (activePlayer !== player) return true;
+      try {
+        if (player.playing) return true;
+        player.seekTo(0);
+        player.play();
+      } catch {
+        /* swallow */
+      }
+      return false;
+    };
+
+    attempt();
+
+    /* Oplopende tussenpozen: snel genoeg om niet als vertraging te voelen,
+       ruim genoeg om een trage verbinding op te vangen. */
+    for (const ms of [120, 300, 650, 1200, 2000]) {
+      setTimeout(() => {
+        if (activePlayer !== player) return;
+        if (player.playing) return;
+        try {
+          player.seekTo(0);
+          player.play();
+        } catch {
+          /* swallow */
+        }
+      }, ms);
+    }
+
+    if (__DEV__) {
+      console.log(
+        '[breath-voice] play',
+        url.split('/').pop(),
+        'loaded=',
+        player.isLoaded,
+        'playing=',
+        player.playing,
+      );
+    }
+  } catch (e) {
     /* swallow — audio-failure mag de sessie niet breken */
+    if (__DEV__) {
+      console.warn(
+        '[breath-voice] play FAILED:',
+        e instanceof Error ? e.message : String(e),
+      );
+    }
   }
 }

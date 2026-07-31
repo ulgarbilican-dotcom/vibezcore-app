@@ -3033,15 +3033,24 @@ export default function AudioScreen() {
           </Pressable>
 
           {/* Iter 9dq v135 (operator 2026-06-15): trust-rij onder CTA met
-              ECHTE store-logos (witte Apple-silhouet + Google Play 4-color
-              triangle) i.p.v. brand-neutrale Lucide icons. Beide platforms
-              altijd zichtbaar — versterkt vertrouwen. */}
+              ECHTE store-logo (witte Apple-silhouet / Google Play 4-color
+              triangle) i.p.v. brand-neutrale Lucide icons.
+              Iter (2026-07-30, Apple 2.3.10 rejection-fix): alleen de
+              store van het huidige platform tonen — Apple review flagde
+              "references to third-party platforms not relevant for App
+              Store users" (Google Play-badge zichtbaar in de iOS-build). */}
           <View style={s.billedByRow}>
-            <AppleLogo size={14} />
-            <Text style={s.billedByLine}>App Store</Text>
-            <Text style={s.billedByDot}>·</Text>
-            <GooglePlayLogo size={14} />
-            <Text style={s.billedByLine}>Google Play</Text>
+            {Platform.OS === 'ios' ? (
+              <>
+                <AppleLogo size={14} />
+                <Text style={s.billedByLine}>App Store</Text>
+              </>
+            ) : (
+              <>
+                <GooglePlayLogo size={14} />
+                <Text style={s.billedByLine}>Google Play</Text>
+              </>
+            )}
           </View>
           <Text style={s.billedByMeta}>
             Billed securely by your store account

@@ -2,7 +2,22 @@
 
 > A-tot-Z technical blueprint van het VIBEZCORE-platform: native app, backend, webapp, infrastructuur, datacontracten en operationele procedures. Geschreven zodat een onbekende developer of operator dit document kan oppakken en het volledige systeem identiek kan herbouwen, exploiteren en debuggen zonder verdere context.
 >
-> Versie: 2026-06-18 · Status: living document, blijft synchroon lopen met de codebase.
+> Versie: 2026-05-20 · Status: living document, blijft synchroon lopen met de codebase.
+
+> **Recente iteraties (2026-05, samengevat — details onderaan in Bijlage C):**
+> - Audio Library-tab consolidatie: search-bar met Spotify-stijl autocomplete (Series / Sessions / Inspirators), New/Favorites/Free-nav-knoppen, Your Journey-card.
+> - Sub-pagina's onder `/library/` (`new`, `favorites`, `free`) — platte sessie-lijsten.
+> - Coming-page `/coming` als 13e "card" in de library + fullscreen sub-scherm met 15 Existing Series + 8 New Series (roadmap, pulsende dots, accordion).
+> - Aankoopblok refactor: Spotify-stijl hiërarchie op de prijskaarten, dynamisch CTA-label, `WebBrowser`-primair met `Linking`-fallback voor Gumroad-checkout, in-app Privacy/Terms-links + verplichte subscription-info-visibility voor Apple Guideline 3.1.2(c).
+> - `useFavorites`-schema v2 (`vzf_v1` → per-user bucketed `vzf_{bucket}_v1`, `Map<url, FavEntry>` met title+series+ts).
+> - `isNew`-utility: NEW_DAYS 14 → **30** dagen.
+> - Player Back-knop fix via `SafeAreaView` + `closePlayer`-fallback (`router.canGoBack() ? back() : navigate('/')`).
+> - Welcome-scherm herzien (Apple-stijl: accent-streep, "Stop Drifting. / Start Directing.").
+> - Font-inheritance via `Text.defaultProps` op `Inter` in root `_layout.tsx`.
+> - Hero-, BUILT ON- en EXPLORE SERIES-headers herzien naar Apple-stijl typografie.
+> - Roadmap-card als 13e card in library-list.
+> - FOLLOW-pill op serie-cards verwijderd (Favorites blijft als enige gebruikers-collectie); ❤️-knop op elke sessie-rij.
+> - Sessions data: 9 Daily Affirmations sessies teruggezet naar `added:''` (launch-batch is niet "nieuw").
 
 ---
 
@@ -393,17 +408,25 @@ Hieronder een doel-per-scherm tabel. Voor diepere walkthroughs zie `docs/VIBEZCO
 
 | Route | Bestand | Doel | Auth-tier |
 |---|---|---|---|
-| `/welcome` | `welcome.tsx` | Eerste scherm voor gasten — full-screen bg, 2 knoppen + "Sign in"-regel | Gast |
-| `/` | `(tabs)/index.tsx` | Audio Library: hero-CTA, Pillars-altijd, Free Picks, Continue/Last-played | Gast OK |
+| `/welcome` | `welcome.tsx` | Eerste scherm voor gasten — full-screen bg + wordmark + accent-streep + "Stop Drifting. / Start Directing." + 3 knoppen (Audio Library / Bracelet / Sign in) | Gast |
+| `/` | `(tabs)/index.tsx` | **Audio Library** (major hub, geconsolideerde ex-Library-tab): hero + fasenregel → BUILT ON + 4 pijlers → Emerson-quote → EXPLORE SERIES-header → **search-bar** + **New/Favorites/Free-nav-knoppen** + **Your Journey**-card → 12 serie-cards (accordion inline) → Coming-card (13e) → aankoopblok → disclaimer | Gast OK (pro-view verbergt hero + aankoopblok) |
 | `/breath` | `(tabs)/breath.tsx` | 5 breathing protocols (Boost/Focus/Calm/Clarity/Rest), silhouette + circle UI, voice cues | Gast OK |
-| `/bracelet` | `(tabs)/bracelet.tsx` | Etalage met 5 modes + photos, pricing, KS-CTA, sub-tab voor activate-flow | Gast OK |
+| `/bracelet` | `(tabs)/bracelet.tsx` | Etalage met 5 modes + photos, pricing, KS-CTA, preview-CTA | Gast OK |
 | `/account` | `(tabs)/account.tsx` | Profile-row, sub-state, Activate-bracelet CTA, Settings entry | Gast OK |
-| `/player` | `player.tsx` | Full-screen audio: scrubber, favorite toggle, share, mini-collapse | Gast tot 30s preview |
-| `/bracelet-control` | `bracelet-control.tsx` | Active bracelet sessie: timer, remaining, battery, STOP | Bracelet-owner |
-| `/subscribe` | `subscribe.tsx` | IAP bridge: account-create + IAP-purchase | Iedereen |
+| `/library/new` | `library/new.tsx` | Sub-pagina — platte sessie-lijst van `isNew(sess.added)`-matches, gesorteerd nieuwste-eerst; empty state bij 0 | Gast OK |
+| `/library/favorites` | `library/favorites.tsx` | Sub-pagina — favoriete sessies uit `useFavorites()`; ❤️-knop verwijdert; nieuwste-eerst | Gast OK |
+| `/library/free` | `library/free.tsx` | Sub-pagina — alle 14 gratis sessies (`session.free === true`) | Gast OK |
+| `/coming` | `coming.tsx` | "What's Coming Next"-roadmap — hero + fasenregel + 2 secties met pulserende dots + accordion-rijen (Existing Series 15 items incl. 4 Soundscapes; New Series 8 items met "Show all X sessions"-toggle) | Gast OK |
+| `/history` | `history.tsx` | Placeholder "Your Journey" — komt vanuit Your Journey-card op Audio Library | Iedereen |
+| `/bracelet-history` | `bracelet-history.tsx` | Sessie-historie voor bracelet-gebruikers | Bracelet-owner |
+| `/breath-history` | `breath-history.tsx` | Historie van breath-sessies | Iedereen |
+| `/bracelet-preview` | `bracelet-preview.tsx` | Preview van bracelet-UI zonder echte hardware | Iedereen |
+| `/player` | `player.tsx` | Full-screen audio player (modal Stack.Screen): back-knop (`SafeAreaView edges=['top']` + `closePlayer`-fallback naar `/`), FREE/PRO-branding, progress + play/pause + 30s-preview-blok voor gasten op PRO | Gast tot 30s preview op PRO, volledig op Free / Abo |
+| `/bracelet-control` | `bracelet-control.tsx` | Actieve bracelet-sessie: modusnaam, remaining, battery, STOP | Bracelet-owner |
+| `/subscribe` | `subscribe.tsx` | IAP paywall (Guideline 3.1.2c-compliant): titel/duur/prijs zichtbaar, Privacy Policy + Terms/EULA linked in-app; account-registratie is OPTIONEEL vóór aankoop (5.1.1v-compliant, in progress) | Iedereen |
 | `/activate-bracelet` | `activate-bracelet.tsx` | QR + code redemption (mock-success in dev) | Logged-in |
 | `/settings` | `settings.tsx` | Playback, Privacy, About | Logged-in |
-| `/auth-callback` | `auth-callback.tsx` | Verifies token_hash from email magic-link → Supabase session | Public |
+| `/auth-callback` | `auth-callback.tsx` | Verifies `token_hash` from email magic-link → Supabase session | Public |
 | `/forgot-password` | `forgot-password.tsx` | Form: email → triggert Supabase recovery email | Public |
 | `/reset-password` | `reset-password.tsx` | Deep-link landing voor recovery-email | Public (token-gated) |
 | `/change-password` | `change-password.tsx` | Voor ingelogde users; vereist current-password | Logged-in |
@@ -420,12 +443,14 @@ Hieronder een doel-per-scherm tabel. Voor diepere walkthroughs zie `docs/VIBEZCO
 | `AppLogo.tsx` | Wordmark-render met sizing-presets (`small`/`medium`/`hero`). |
 | `BraceletActivationCta.tsx` | Inline CTA in Account-tab voor users zonder bracelet-entitlement. |
 | `BraceletUpsellModal.tsx` | Sliding modal die bij audio-sessie-end pop-upt met bracelet-upsell. |
-| `ErrorBoundary.tsx` | React error boundary — toont neutrale fallback, logt naar console. |
+| `BreathMiniControl.tsx` | Mini-control bar voor actieve breath-sessie (parallel aan MiniPlayer, sibling-mount). |
+| `ErrorBoundary.tsx` | React error boundary — toont neutrale fallback, verwijst naar `vibezcore.com/support` (geen mail-app-koppeling meer). |
 | `LibraryListRow.tsx` | Standaard rij voor session-lijsten (Library, Favorites, History, Free). |
 | `MiniPlayer.tsx` | Vlakke balk boven tab-bar, draggable horizontaal om sessie te wisselen, tap-to-expand. Native-side audio-state via `audio-player.ts` service. |
 | `PlayPauseGlyph.tsx` | Animated play/pause icoon. |
-| `PreviewBanner.tsx` | "Preview · 30s left" banner in player.tsx voor gasten. |
+| `PreviewBanner.tsx` | "Preview · 30s left" banner in player.tsx voor gasten op PRO-sessies. |
 | `StoreLogos.tsx` | Apple+Google badges (voor "Available on" rows). |
+| `VibezAlert.tsx` | Merk-styled alert/modal component ter vervanging van `Alert.alert()` — dark Brand.bg, BrandFonts, blauw accent. Gebruikt overal in de app voor confirms/errors. |
 | `WelcomeBackPopup.tsx` | Cold-start popup met "Resume your last session" CTA. |
 | `WelcomeBackWarrior.tsx` | Motivationele cold-start variant (>12h gap). |
 | `animated-icon.tsx` | Reanimated wrapper voor scaling glyphs. |
@@ -434,7 +459,7 @@ Hieronder een doel-per-scherm tabel. Voor diepere walkthroughs zie `docs/VIBEZCO
 | `hint-row.tsx` | Settings-row met label+value+chevron. |
 | `themed-text.tsx`, `themed-view.tsx` | Theming wrappers (dark/light). |
 | `web-badge.tsx` | Web-only "Try in app" badge. |
-| `ui/` | Sub-folder met low-level primitives (Button, Pill, Divider). |
+| `ui/` | Sub-folder met low-level primitives (Button, Pill, Divider, Collapsible). |
 
 ### 4.6 Services (`src/services/`)
 
@@ -448,21 +473,26 @@ Services zijn singletons of factories die business-logica isoleren. Importeren v
 | `bracelet-activation.ts` | Local-only mock: leest activation-code, valideert pattern, slaat entitlement op. | Backend endpoint `/api/bracelet/activate` nog te bouwen. |
 | `bracelet-sim.ts` | Simuleert hardware BLE-protocol via setTimeout-loops. | Active wanneer `USE_SIMULATED_BLE === true`. |
 | `bracelet-upsell.ts` | Pub/sub trigger voor BraceletUpsellModal. | Singleton observable. |
+| `bracelet-voice.ts` | Voice cues voor bracelet-sessies (parallel structuur aan `breath-voice.ts`) via expo-audio. | |
 | `bracelet.ts` | Façade die kiest tussen `bracelet-sim` en `bracelet-real` (toekomst). | App-code praat uitsluitend hiermee. |
+| `breath-session-state.ts` | Runtime-state van een actieve breath-sessie: phase, elapsed, protocol-index. Voedt `BreathMiniControl.tsx`. | Module-state + listener-pattern. |
 | `breath-voice.ts` | Voice cues via expo-audio met Bunny CDN-files. Cache per URL, voice-toggle, completion-cue altijd-aan. | Vervangt expo-speech TTS (vereiste rebuild). |
-| `iap-contract.ts` | Product ID's en tier-mapping. | `vibezcore_audio_monthly` / `vibezcore_audio_yearly`. |
+| `iap-contract.ts` | Product ID's en tier-mapping. | `com.ubili.vibezcoreapp.audio.monthly` / `com.ubili.vibezcoreapp.audio.yearly` — zie ook STORE_LAUNCH_CHECKLIST §1.3. |
 | `iap-mock.ts` | Mock IAP voor sim-mode (dev-only). | |
 | `iap-real.ts` | react-native-iap wrapper: init, fetch products, purchase, listener. | Calls `/api/iap-verify` post-purchase. |
+| `iap-recovery.ts` | Hersteltraject wanneer een IAP-verify server-side faalt: retry-queue met exponentiële backoff, geeft user feedback via VibezAlert. | |
 | `iap.ts` | Façade die kiest tussen mock en real. | |
-| `restore-purchases.ts` | Triggert react-native-iap.getAvailablePurchases + re-verify alle receipts. | UI-knop in /settings. |
+| `restore-purchases.ts` | Triggert react-native-iap.getAvailablePurchases + re-verify alle receipts. | UI-knop in /settings + auto-run bij eerste app-load post-install. |
+| `social-auth.ts` | Sign in with Apple + Google-signin abstractie. Voor 4-Design-compliance (Apple HIG-conforme knop) — nog te herzien per Apple-rejection (open task). | Gebruikt `@react-native-google-signin/google-signin` en `expo-apple-authentication`. |
 | `subscription-actions.ts` | Self-service: cancel-renewal, restore, manage-billing deep-links naar store. | |
+| `version-tracker.ts` | Tracked app-version + install-timestamps voor migratie/onboarding-hints. | AsyncStorage-backed. |
 | `welcome-popup.ts` | Pub/sub voor WelcomeBackPopup visibility. | |
 
 ### 4.7 Hooks (`src/hooks/`)
 
 | Hook | Doel |
 |---|---|
-| `useFavorites.ts` | AsyncStorage-backed favorites map (URL→timestamp). Reactive via context. |
+| `useFavorites.ts` | Sessie-favorieten (webapp-parity schema `vzf_v1`). Data: `Map<url, FavEntry>` met `{ url, title, series, ts }`. **Per-user bucketing** (iter 9dq v44): opslag onder `vzf_{bucket}_v1` waar `bucket` uit `utils/user-bucket.ts` komt — verse user krijgt lege Map. **Legacy migratie** (v54, audit C4): pre-vzf_v1 `vibezcore:favorites` Set<url> wordt éénmalig per device geïmporteerd naar de huidige bucket (device-flag `vzf_legacy_migrated_v1` voorkomt cross-user leak bij bucket-switch). API: `favorites: Map<url, FavEntry>` · `toggle(session)` (accepteert Session-object om title/series op te slaan) · `has(url)`. Cross-component sync via module-state + listener-set. |
 | `useIAP.ts` | Bridge naar `services/iap.ts`. Products, loading, purchase, restore. |
 | `useSubscription.ts` | Roept `/api/subscription-status` periodiek + on-focus. Returns `{ active, tier, valid_until, will_renew, platform }`. |
 | `useTheme.ts` | Theme tokens (delegates naar `constants/theme.ts`). |
@@ -478,20 +508,22 @@ Pure functions, geen state, geen side-effects (m.u.v. AsyncStorage-readers).
 | `api.ts` | `fetchApi(path, opts)` met JWT-headers + base URL. |
 | `audio-url.ts` | Resolve session-URL: roept `/api/audio-url?session=...` voor signed Bunny URL. |
 | `bracelet-history-sync.ts` | Reads local bracelet history → POST naar `/api/bracelet/sessions/sync`. |
-| `bracelet-history.ts` | AsyncStorage-backed bracelet sessie historie. |
-| `breath-history.ts` | AsyncStorage-backed breath sessie historie. |
+| `bracelet-history.ts` | AsyncStorage-backed bracelet sessie historie. Bucket-key-pattern zoals useFavorites. |
+| `breath-history.ts` | AsyncStorage-backed breath sessie historie. Bucket-key-pattern. |
 | `dev-user-override.ts` | Tester-tool: lees AsyncStorage-flag voor user-tier simulatie. |
-| `history.ts` | Audio playback history. |
-| `isNew.ts` | Bepaal of sessie 'nieuw' is (toegevoegd < 30 dagen). |
+| `history.ts` | Audio playback history. Bucket-key-pattern. Voedt Your Journey / `/history`-scherm. |
+| `isNew.ts` | `isNew(added: string): boolean` — sessie 'nieuw' als: `added` niet leeg + `>= NEW_BASELINE` (2026-05-10) + binnen **NEW_DAYS = 30** dagen van nu. Single source of truth voor "New"-filter + evt. badges. |
 | `last-played.ts` | Tracking voor WelcomeBackPopup. |
-| `library-reset-intent.ts` | Pub/sub voor "Audio tab reset" effect bij tab-press. |
+| `library-reset-intent.ts` | Pub/sub voor "Audio tab reset" effect bij tab-press (bracelet-only users → bracelet-only landing). |
 | `next-session.ts` | Bepaal volgende-sessie binnen series voor auto-advance. |
 | `openSession.ts` | `useGatedOpenSession` hook: check access-tier, push naar player of /subscribe. |
+| `play-events.ts` | Pub/sub voor globale play-events (sessie-start/-end) — voedt bv. BraceletUpsellModal. |
 | `scroll-intent.ts` | Pub/sub voor scroll-to-top intent. |
 | `settings.ts` | AsyncStorage-backed settings (autoplay, voice-toggle, …). |
 | `url-eq.ts` | Encoded ↔ decoded URL-vergelijking (Bunny URLs hebben `%20`). |
-| `user-bucket.ts` | Deterministisch user-bucketing voor A/B (gebaseerd op user-id hash). |
-| `vzp.ts` | VIBEZCORE-Premium constants (tier-tags). |
+| `user-bucket.ts` | **Per-user storage-bucketing**: elke user-type (guest / logged / bracelet-only / audio / pro) krijgt een eigen bucket-suffix. Alle user-scoped data (favorites, history, play-events) wordt onder `{prefix}_{bucket}_v1`-key opgeslagen zodat cross-user data-lekken op één device onmogelijk zijn. Exports: `ensureBucketLoaded()`, `getCurrentBucket()`, `subscribeUserBucket(callback)`. |
+| `validate-email.ts` | Simpele email-format-validator voor auth-formulieren. |
+| `vzp.ts` | VIBEZCORE-Playback state (last position, sessie-progress) via bucketed storage. Complementair aan `history.ts`. |
 
 ### 4.9 Data (`src/data/`)
 
@@ -499,10 +531,10 @@ Statische content; alleen wijzigen via operator-goedkeuring.
 
 | Data file | Inhoud |
 |---|---|
-| `audio-library-data.ts` | Alle ≈70 sessies: `{ url, title, pillar, tier, duration, series, isFree, … }`. URL wijst naar Bunny CDN met `%20`-encoded paths. |
+| `audio-library-data.ts` | **83 sessies** in **12 series** — schema: `Session = { title, series, subseries, free, desc, num, url, added }`. Extra exports: `SERIES_ORDER` (volgorde 12 series), `SERIES_PHOTO[name]` (Bunny CDN), `SERIES_SUBTITLE[name]` (eyebrow op card, bv. `"Andrew Huberman inspired"`), `SERIES_SUB[name]` (3e-regel tagline, bv. `"Done with excuses"`), `SUBCAT_INFO[subcat]` + `SUBCAT_ORDER` (4 Soundscapes-subcategorieën: Calm Clarity / Rest & Reset / Zen Flow / Harmonic), `SESSIONS` (flat array), `SERIES` (grouped als `Series[]`). Alle 83 sessies hebben nu een gevuld `desc`-veld (audit 2026-05-20; eerder ontbraken die op PRO-sessies). URL wijst naar Bunny CDN met `%20`-encoded paths — vergelijking altijd via `url-eq.ts`. |
 | `breathwork-modes.ts` | 5 protocols: `{ key, label, color, inhaleVia, exhaleVia, beats: { inhale, hold, exhale, holdOut }, durations: [min, default, max] }`. |
 | `faq-content.ts` | FAQ items als `{ q, a, category }`. Synced van vibezcore.com/faq. |
-| `legal-content.ts` | Legal docs: terms, privacy, refund, cookies, health. Markdown-achtige inhoud per `doc`. |
+| `legal-content.ts` | Legal docs: terms, privacy, refund, cookies, health. Markdown-achtige inhoud per `doc`. Exporteert ook `SUPPORT_URL = 'https://www.vibezcore.com/support'` (single source of truth voor het support-pad — ASC Support URL moet **exact** dit zijn, niet `/contact`). |
 
 ### 4.10 Brand tokens (`constants/theme.ts`)
 
@@ -533,19 +565,28 @@ export const BrandFonts = {
 
 ### 4.11 AsyncStorage keys
 
-Alle persisted state-keys, alfabetisch:
+**Bucket-key-pattern (v44, 2026-06-03):** alle user-scoped data staat onder `{prefix}_{bucket}_v1` waar `bucket` uit `utils/user-bucket.ts` komt (elke user-type — guest / logged / bracelet-only / audio / pro — heeft z'n eigen bucket zodat cross-user data-lekken op één device onmogelijk zijn). Bij bucket-switch (sign-in/out, override change) wist elke consumer z'n in-memory cache en herlaadt uit de nieuwe bucket.
 
-| Key | Schema | Geset door |
-|---|---|---|
-| `vibezcore:auth-token` | string (JWT) | `services/auth.ts` |
-| `vibezcore:bracelet-history` | `Array<{ key, startedAt, durationSec }>` | `utils/bracelet-history.ts` |
-| `vibezcore:breath-history` | `Array<{ key, ts, durationSec, completed }>` | `utils/breath-history.ts` |
-| `vibezcore:dev-user-override` | `'guest' | 'audio' | 'bracelet' | 'pro' | null` | `utils/dev-user-override.ts` |
-| `vibezcore:favorites` | `Record<url, { ts: number }>` | `hooks/useFavorites.ts` |
-| `vibezcore:history` | `Array<{ url, ts, completedPct }>` | `utils/history.ts` |
-| `vibezcore:last-played` | `{ url, ts, position } \| null` | `utils/last-played.ts` |
-| `vibezcore:settings` | `{ autoplay, voiceEnabled, restartOnReplay, … }` | `utils/settings.ts` |
-| `vibezcore:welcome-back-shown-at` | `number` (ms) | `services/welcome-popup.ts` |
+**Legacy migratie (v54, audit C4):** pre-vzf_v1 `vibezcore:*`-keys (bv. `vibezcore:favorites`) worden éénmalig per device geïmporteerd naar de huidige bucket. Device-flag (bv. `vzf_legacy_migrated_v1`) voorkomt dat een tweede user op hetzelfde toestel de data van de eerste user erft.
+
+**Actieve keys, alfabetisch:**
+
+| Key-patroon | Schema | Geset door | Bucketed |
+|---|---|---|---|
+| `vibezcore:auth-token` | string (JWT) | `services/auth.ts` | nee (global — 1 sessie per device) |
+| `vibezcore:bracelet-history` | `Array<{ key, startedAt, durationSec }>` | `utils/bracelet-history.ts` | ja (migreert naar bucket-key) |
+| `vibezcore:breath-history` | `Array<{ key, ts, durationSec, completed }>` | `utils/breath-history.ts` | ja |
+| `vibezcore:dev-user-override` | `'guest' | 'audio' | 'bracelet' | 'pro' | null` | `utils/dev-user-override.ts` | nee (dev-tool, per-device) |
+| `vibezcore:favorites` | LEGACY — `Array<url>` (Set<url> geserialiseerd) | pre-v44 `hooks/useFavorites.ts` | migreert naar `vzf_{bucket}_v1` |
+| `vibezcore:history` | `Array<{ url, ts, completedPct }>` | `utils/history.ts` | ja |
+| `vibezcore:last-played` | `{ url, ts, position } \| null` | `utils/last-played.ts` | ja |
+| `vibezcore:settings` | `{ autoplay, voiceEnabled, restartOnReplay, … }` | `utils/settings.ts` | nee (device-instellingen) |
+| `vibezcore:welcome-back-shown-at` | `number` (ms) | `services/welcome-popup.ts` | nee |
+| `vzf_v1` | LEGACY (post-migratie) — `FavEntry[]` | `hooks/useFavorites.ts` | nee (transitional) |
+| `vzf_{bucket}_v1` | `FavEntry[]` — `[{ url, title, series, ts }, …]` | `hooks/useFavorites.ts` | **ja** (huidige) |
+| `vzf_legacy_migrated_v1` | `'1'` (flag) | `hooks/useFavorites.ts` | nee (device-scope, éénmalig) |
+| `vzp_{bucket}_v1` | Playback-state (last position per session) | `utils/vzp.ts` | ja |
+| `vzh_{bucket}_v1` | History (bucketed variant) | `utils/history.ts` | ja |
 
 ---
 
@@ -1712,6 +1753,27 @@ Wijzigingen aan deze blueprint:
 
 - 2026-06-18: Eerste versie. IAP-stack (iap-verify + iap-webhook), Supabase IAP-kolommen, subscription-status IAP-aware. Bracelet PPS-claim correctie ("Backed by science · Bottom-up by design"). Breath voice-cues via expo-audio. Kickstarter datum 1 sept 2026 + bundle pricing $215/$399.
 - 2026-07-14: Kickstarter datum gedropt — framing verschoven naar "Fall 2026" (geen concrete datum, alle countdowns gestript uit app + website).
+
+- **2026-05-20 (samenvatting recente iteraties, blueprint gesynct met huidige codebase):**
+  - **Audio Library-tab** — grote consolidatie: aparte Library-tab weg (`(tabs)/library.tsx` verwijderd, `TabPath` union teruggebracht), Library-functionaliteit geïntegreerd in `(tabs)/index.tsx`. Nieuwe secties in-page: search-bar met Spotify-stijl autocomplete (Series / Sessions / Inspirators, per categorie max 5 + "+ N more"-teller), New/Favorites/Free navigatie-knoppen (route naar sub-pagina's, geen filter-state meer op de hub), Your Journey-card (klok-icoon → `/history`).
+  - **Sub-pagina's `/library/{new,favorites,free}`** — 3 nieuwe screens, platte sessie-lijst met foto+FREE/PRO-tag+titel+series-naam, hartje-toggle (favorites), NEW-pill (new). Volgorde: favorites nieuwste-eerst via Set-insertion-order, new gesorteerd op `added` descending.
+  - **Coming-page** — nieuw sub-scherm `coming.tsx` bereikbaar via 13e card op library-list én via router.push. Bevat hero + fasenregel + 2 secties (Existing Series: 11 + 4 Soundscapes = 15 rijen; New Series: 8 rijen) met pulserende dots (blauw/amber via `Animated.loop`), per-sectie accordion (één rij tegelijk open per sectie), "+ N more"-tags-toggle (default 6 zichtbaar, rest achter show-all). Data 1-op-1 uit `index_2_correct.html`.
+  - **Serie-card visual** — VIEW ALL-pill rechtsboven (linear gradient overlay `[transparent, 0.1, 0.92]`), 200 hoog per bron. FOLLOW-pill verwijderd (operator-besluit: Favorites is enige gebruikers-collectie). ❤️-knop op elke sessie-rij (`useFavorites().toggle(session)`).
+  - **Aankoopblok refactor** — Spotify-stijl hiërarchie: Yearly permanent visueel dominant (blauwe 2px rand + BEST VALUE-sticker + gradient bg + glow), Monthly neutraal; selectie-signaal enkel via ✓-glyph (geen dubbele-rand-verwarring meer). Dynamisch CTA-label "Get Yearly — $7.49/month" / "Get Monthly — $12.90/month". Prijzen $12.90/$7.49 (met strike $16.90/$9.92), yearly `$89.90/year`. `WebBrowser.openBrowserAsync`-primair met `Linking.openURL`-fallback op cancel/dismiss/throw voor AVD's zonder Custom-Tabs. Missiezin ingevuld. Footer: "Prices in USD · 14-day money-back" + "SECURE CHECKOUT · CANCEL ANYTIME".
+  - **Guideline 3.1.2(c) compliance (subscribe.tsx paywall)** — Privacy Policy + Terms/EULA links toegevoegd in-app onder GET FULL ACCESS. Titel/duur/prijs zichtbaar bij purchase-moment.
+  - **Guideline 5.1.1(v)** — nog te fixen: `subscribe.tsx` mag geen verplichte account-registratie vóór IAP-purchase eisen (open task #6).
+  - **Guideline 4 Design (SIWA-knop)** — nog te fixen: Sign in with Apple-knop moet HIG-conforme styling gebruiken (open task #7).
+  - **Guideline 2.1(a) SIWA-bug** — nog te fixen: error bij inloggen met Apple in review (open task #8).
+  - **`useFavorites` v2** — schema `vzf_v1` (was `vibezcore:favorites` Set<url>) → `Map<url, FavEntry>` met `{url, title, series, ts}`. Per-user bucketing v44 (`vzf_{bucket}_v1`). Legacy device-migratie-flag v54 tegen cross-user data-leak (audit C4).
+  - **`utils/isNew.ts`** — `NEW_DAYS` 14 → **30** dagen (operator-keuze: "New"-batches blijven maandelijkse cadans zichtbaar).
+  - **Sessions data** — 9 Daily Affirmations Power-sessies teruggezet naar `added:''` (launch-batch is niet "nieuw", "New"-lijst is bij launch bewust leeg tot echte drops binnenrollen). Alle 83 sessies hebben nu een gevuld `desc`-veld (audit fix — voorheen ontbraken die op PRO-sessies).
+  - **Player Back-knop fix** — `SafeAreaView edges={['top']}` op beide return-takken (paywall + gratis-player) zodat de tap-zone niet onder de Android-statusbar valt. Nieuwe `closePlayer`-helper: `router.canGoBack() ? back() : navigate('/')` zodat gebruiker nooit vastzit.
+  - **Welcome-scherm** — woord "Welcome" verwijderd, accent-streep (34×3, `#3a8fff`), hoofdregel "Stop Drifting." / "Start Directing." (Inter Black 42), caps-ondertekst "CHANGE THE GAME · UNLOCK YOUR FULL POTENTIAL". 3 knoppen ongewijzigd. Achtergrondfoto ongemoeid ([OPERATOR]).
+  - **Font-inheritance** — `Text.defaultProps` gepatched in root `_layout.tsx` op `Inter_400Regular` (BrandFonts.regular) zodat alle schermen Inter erven zonder per-Text expliciete `fontFamily`.
+  - **Hero / BUILT ON / EXPLORE SERIES-headers** — Apple-stijl typografie: hero-titel `42/700/-0.8`, BUILT ON/EXPLORE SERIES ondersteunend `28/600/-0.5`, eyebrows met em-dashes links + rechts ("— BUILT ON —" / "— EXPLORE SERIES —"), gecentreerd + ruime padding.
+  - **Disclaimer** — uitklapbaar blok onderaan Audio Library met `LayoutAnimation` (Android expliciet enabled), 5 paragrafen 1-op-1 uit bron incl. 2 sub-headers ("Educational & Informational Use Only", "No Liability"), `VIBEZCORE` 3× in hoofdletters conform harde regel.
+  - **ScrollView-refs + measureLayout-fallback** — search-tap navigeert nu correct naar de gekozen serie-card via `libListY + cardY - 100`-offset (spotlight, vorige card blijft als peek zichtbaar). Auto-scroll naar zoekbalk bij activatie via `useEffect[searchActive]`. `keyboardShouldPersistTaps="handled"`.
+  - **Bottom bar** — teruggebracht naar **3 tabs**: Audio Library · Bracelet · Account (Breath-tab is 4e in `_layout.tsx` maar was tijdens de Library-consolidatie momentum tijdelijk niet in de UI-flow — verifiëren of Breath actief blijft). Custom `TabButton` (plain Pressable + `router.navigate`) blijft — was fix voor `PlatformPressable`-press-passing bug in RN 0.83 + React 19 + reactCompiler.
 
 Volgende wijzigingen: voeg een entry toe met datum + samenvatting + commit-hash.
 

@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Breath sample (2-min proefsessie)
+   VIBEZCORE — Eerste gratis sessie (volledige Calm Control)
 
-   Gepushed vanuit breath-welcome.tsx (slide 4, gast-flow). Draait Calm
-   Control (box breath 4-4-4-4, 8 rondes ≈ 2:08).
+   Gepushed vanuit breath-welcome.tsx (slide 4, gast-flow). Draait de VOLLEDIGE
+   Calm Control (box breath 4-4-4-4, 19 rondes = 5:04).
 
    Operator-besluit 2026-07-30: de proefsessie moet de ECHTE ervaring
    tonen, niet een uitgeklede versie. Daarom:
@@ -35,10 +35,12 @@ import {
   setVoiceEnabled,
   stopVoice,
 } from '@/services/breath-voice';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Dimensions,
   Easing,
   Modal,
   Pressable,
@@ -49,12 +51,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/* Calm Control — box breath 4-4-4-4, 8 rondes = 128 sec (~2:08). */
+const SCREEN_W = Dimensions.get('window').width;
+
+/* Calm Control — box breath 4-4-4-4, 19 rondes = 304 sec (5:04).
+   Operator 2026-07-30: geen uitgekleed proefje maar de VOLLEDIGE sessie. */
 const INHALE_S = 4;
 const HOLD_IN_S = 4;
 const EXHALE_S = 4;
 const HOLD_OUT_S = 4;
-const ROUNDS = 8;
+const ROUNDS = 19;
 
 type Phase = 'inhale' | 'hold-in' | 'exhale' | 'hold-out';
 
@@ -262,13 +267,38 @@ export default function BreathSampleScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={s.topbar}>
-        <Text style={s.topbarTitle}>2-min Calm sample</Text>
+        <Text style={s.topbarTitle}>Calm Control · 5:04</Text>
         {!finished && (
           <Pressable onPress={stopEarly} hitSlop={14} style={s.stopWrap}>
             <Text style={s.stopTxt}>Stop</Text>
           </Pressable>
         )}
       </View>
+
+      {/* ── Achtergrond-lichtbron (operator-vraag 2026-07-30). Één grote
+         zachte gloed achter de hele sessie zodat het scherm niet plat
+         zwart is. Ademt mee met de cirkel via dezelfde haloAnim, maar veel
+         subtieler en veel groter — het is sfeer, geen tweede visualizer.
+         Ligt absoluut achter alles en vangt geen taps. ── */}
+      <Animated.View
+        style={[
+          s.roomLight,
+          { transform: [{ scale: haloAnim }] },
+        ]}
+        pointerEvents="none"
+      >
+        <LinearGradient
+          colors={[
+            'rgba(10,132,255,0.20)',
+            'rgba(10,132,255,0.07)',
+            'rgba(10,132,255,0)',
+          ]}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0.5, y: 0.5 }}
+          end={{ x: 0.5, y: 1 }}
+          style={s.roomLightFill}
+        />
+      </Animated.View>
 
       {/* ── Visualizer — identiek aan (tabs)/breath.tsx: halo achter,
          cirkel met gekleurde rand ervoor, fase-tekst in het midden. Bij
@@ -395,6 +425,20 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     fontSize: 15,
   },
+
+  /* Achtergrond-lichtbron: groot, zacht, absoluut gepositioneerd achter
+     de hele sessie. Breedte > scherm zodat de randen buiten beeld
+     vervagen en er nergens een cirkelrand zichtbaar is. */
+  roomLight: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '12%',
+    width: SCREEN_W * 1.6,
+    height: SCREEN_W * 1.6,
+    borderRadius: SCREEN_W * 0.8,
+    overflow: 'hidden',
+  },
+  roomLightFill: { flex: 1 },
 
   /* ── Visualizer — waarden 1:1 uit (tabs)/breath.tsx. Bewust GEEN
      shadow/elevation op de cirkel: dat rendert op Android als octagon

@@ -20,7 +20,7 @@
 
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
-import { Sparkles, Vibrate, Volume2, Waves } from 'lucide-react-native';
+import { Volume2 } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -52,27 +52,47 @@ export const GUIDANCE_MODES: GuidanceConfig[] = [
 
 const SPRING = { damping: 17, stiffness: 220, mass: 0.85 };
 
-function ModeIcon({
+/* Symbolen per modus. Operator koos expliciet ◉))) voor haptics en ☾ voor
+   Silent Mode — die dragen meer betekenis dan een generiek icoon, dus we
+   zetten ze als tekst-glyph i.p.v. lucide-icoon. Voice en Voice+Haptics
+   houden wel een icoon omdat daar geen even sterk symbool voor is. */
+function ModeGlyph({
   mode,
   color,
-  size = 17,
 }: {
   mode: GuidanceMode;
   color: string;
-  size?: number;
 }) {
-  const common = { size, color, strokeWidth: 2.4 as const };
   switch (mode) {
     case 'voice':
-      return <Volume2 {...common} />;
+      return <Volume2 size={16} color={color} strokeWidth={2.4} />;
     case 'haptic':
-      return <Vibrate {...common} />;
+      return <Text style={[gs.glyph, { color }]}>◉)))</Text>;
     case 'both':
-      return <Sparkles {...common} />;
+      return (
+        <View style={gs.comboGlyph}>
+          <Volume2 size={14} color={color} strokeWidth={2.4} />
+          <Text style={[gs.glyphSmall, { color }]}>◉))</Text>
+        </View>
+      );
     case 'silent':
-      return <Waves {...common} />;
+      return <Text style={[gs.glyph, { color }]}>☾</Text>;
   }
 }
+
+const gs = StyleSheet.create({
+  glyph: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    letterSpacing: -0.5,
+  },
+  glyphSmall: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 11,
+    letterSpacing: -0.5,
+  },
+  comboGlyph: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+});
 
 function ModeCard({
   cfg,
@@ -128,7 +148,7 @@ function ModeCard({
       <Animated.View style={[s.glow, glowStyle]} pointerEvents="none" />
       <Animated.View style={[s.card, cardStyle]}>
         <Animated.View style={popStyle}>
-          <ModeIcon mode={cfg.key} color={fg} />
+          <ModeGlyph mode={cfg.key} color={fg} />
         </Animated.View>
         <Text
           style={[
@@ -192,13 +212,20 @@ export default function GuidanceSelector({
   value,
   onChange,
   onBraceletPress,
-  showBracelet = true,
+  showBracelet = false,
+  showEyebrow = true,
 }: {
-  value: GuidanceMode;
+  /** `null` = nog niets gekozen; alle knoppen staan dan neutraal
+   *  (informatief). Pas na een tap krijgt één knop zijn eigen kleur. */
+  value: GuidanceMode | null;
   onChange: (m: GuidanceMode) => void;
   onBraceletPress?: () => void;
-  /** Uit voor compacte contexten (bv. tijdens een lopende sessie). */
+  /** De bracelet heeft sinds 2026-07-30 een EIGEN onboarding-scherm.
+   *  Standaard uit; alleen aanzetten waar geen apart scherm bestaat. */
   showBracelet?: boolean;
+  /** Het kopje "GUIDANCE" boven het raster. Uitzetten waar de schermtitel
+   *  dat woord al bevat. */
+  showEyebrow?: boolean;
 }) {
   const handlePress = (cfg: GuidanceConfig) => {
     if (cfg.key === value) return;
@@ -208,7 +235,9 @@ export default function GuidanceSelector({
 
   return (
     <View style={s.wrap}>
-      <Text style={s.sectionEyebrow}>GUIDANCE</Text>
+      {/* Het kopje kan weg zodra de titel erboven al "guidance" zegt —
+         anders staat hetzelfde woord twee keer boven elkaar. */}
+      {showEyebrow && <Text style={s.sectionEyebrow}>GUIDANCE</Text>}
 
       <View style={s.grid}>
         {GUIDANCE_MODES.map((m) => (

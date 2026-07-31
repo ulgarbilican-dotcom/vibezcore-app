@@ -313,6 +313,22 @@ export async function clearSession(): Promise<void> {
   } catch {
     /* swallow */
   }
+  /* Iter breath-onboarding (2026-07-31, operator): de breath-intro is
+     account-onafhankelijk opgeslagen, dus zonder dit zou de VOLGENDE
+     gebruiker op dit toestel de intro nooit zien — die is dan al "voltooid"
+     door zijn voorganger. Uitloggen zet 'm terug op null.
+
+     Lazy require i.p.v. een gewone import: utils/settings leest zelf uit
+     AsyncStorage en dit bestand wordt vroeg in de opstart geladen. Zelfde
+     patroon als de dev-override hierboven, en het mag nooit blokkeren op
+     auth-clearance. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { setSetting } = require('@/utils/settings');
+    await setSetting('breathOnboardingCompletedAt', null);
+  } catch {
+    /* swallow */
+  }
   try {
     await AsyncStorage.multiRemove([
       TOKEN_KEY,
