@@ -1,148 +1,204 @@
 # ONTWERP — Sessieduur per ademsessie
 
 > **Status: VOORSTEL. Nog niet doorgevoerd in de app.**
-> Aangeleverd door de operator op 31 juli 2026.
+> Aangeleverd door de operator op 31 juli 2026, herschreven op dezelfde
+> dag nadat de oorspronkelijke onderbouwing niet houdbaar bleek.
 > De app draait op dit moment nog één vaste lengte per sessie.
-> Zie "Open punten" onderaan — daar staan drie conflicten met de
-> bestaande app en met de projectregels die eerst een beslissing vragen.
+> Zie "Open punten" onderaan voor wat nog een beslissing vraagt.
 
 Doel: de gebruiker kiest zelf hoe lang een sessie duurt, in plaats van
 één vaste lengte per state.
 
 ---
 
+## Wat er in deze versie veranderd is
+
+De eerste opzet zette onder elke sessie een blok **Scientific Basis**
+met daarin varianten van "Recommended durations are based on research
+into...". Dat is niet vol te houden. Er bestaat onderzoek naar
+ademtempo — vijf seconden in, vijf seconden uit, dat soort dingen — maar
+geen onderzoek dat vaststelt dát vijf minuten de juiste sessielengte is.
+Die zin verwart tempo met duur.
+
+Wat er wél te zeggen valt: studies naar langzame ademhaling gebruiken
+doorgaans sessies tussen de vijf en twintig minuten. Dat is een
+beschrijving van wat onderzoekers gedaan hebben, niet van wat ze
+aanbevelen — en dat verschil is precies wat een claim houdbaar maakt.
+
+Daarom in deze versie:
+
+- De per-sessie **Scientific Basis**-blokken zijn weg. Er staat één
+  gedeelde sectie onderaan, en die gaat over tempo en niet over lengte.
+- Termen die een fysiologische werking beweren — *parasympathetic
+  activation*, *autonomic nervous system balance*, *physiological
+  coherence* — zijn eruit. De eerste twee zijn medische taal, de derde
+  is geen gangbare fysiologie maar een merkterm.
+- De duurteksten beschrijven nu waarvoor een lengte praktisch geschikt
+  is, niet wat ze in het lichaam zou doen.
+- Bij BOOST staat een echte waarschuwing in plaats van een vage
+  aanbeveling. Dat is geen effectclaim maar een veiligheidsmelding, en
+  die hoort er wel te staan.
+
+Dit sluit ook aan op de harde regel in `CLAUDE.md` §1: de app gebruikt
+toestand-taal en doet geen wetenschappelijke of medische beweringen.
+
+---
+
 ## 🚀 BOOST
 
 **Purpose**
-Increase alertness, energy and mental readiness.
+Alert and energized — primed for high-output moments.
 
 **Breathing Pattern**
 2s Inhale · 2s Exhale
-A fast-paced breathing rhythm designed for short-term activation.
+Fifteen breaths per minute — deliberately faster than resting pace.
 
 **Session Lengths**
 
 | Duur | Label | Toelichting |
 |------|-------|-------------|
-| 3 min | Quick Boost | Provides a rapid activation response. |
-| 5 min | Recommended | Balances activation while remaining comfortable for most users. |
-| 10 min | Maximum Duration | Longer sessions are generally not recommended with this breathing rhythm due to the increased likelihood of discomfort associated with prolonged rapid breathing. |
-
-**Scientific Basis**
-Recommended durations are based on respiratory physiology and research
-into activation-focused breathing techniques.
+| 3 min | Quick Boost | Short and sharp. Enough to shake off sluggishness before something demanding. |
+| 5 min | Recommended | The longest we suggest at this pace. |
+| 10 min | Maximum | Breathing this fast for this long often brings on light-headedness or tingling in the hands. Stop early if it does. |
 
 ---
 
 ## 🎯 FOCUS
 
 **Purpose**
-Support sustained attention, concentration and cognitive performance.
+Locked-in attention — holding one task without drifting.
 
 **Breathing Pattern**
 4s Inhale · 2s Hold · 6s Exhale
-A controlled breathing rhythm designed to promote focused attention
-while maintaining physiological comfort.
+A longer exhale than inhale, with a brief pause between.
 
 **Session Lengths**
 
 | Duur | Label | Toelichting |
 |------|-------|-------------|
-| 3 min | Quick Reset | A short session to regain focus. |
-| 5 min | Recommended | Suitable for everyday concentration and mental preparation. |
-| 10 min | Deep Focus | Supports longer periods of sustained attention. |
-| 20 min | Extended Focus | Designed for prolonged focus sessions and deep work. |
-
-**Scientific Basis**
-Recommended durations are based on research into paced breathing,
-attention regulation and autonomic nervous system function.
+| 3 min | Quick Reset | Between tasks, or after an interruption. |
+| 5 min | Recommended | The everyday length — before a work block or a meeting. |
+| 10 min | Deep Focus | For longer stretches of concentration. |
+| 20 min | Extended Focus | A full session for deep work. |
 
 ---
 
 ## 🧘 CALM
 
 **Purpose**
-Reduce stress and support emotional regulation.
+Steady and composed — alert without being wound up.
 
 **Breathing Pattern**
 4s Inhale · 4s Hold · 4s Exhale · 4s Hold
-Classic Box Breathing.
+Box breathing. Four equal phases, also known as square breathing.
 
 **Session Lengths**
 
 | Duur | Label | Toelichting |
 |------|-------|-------------|
-| 3 min | Quick Calm | Helps reduce acute tension. |
-| 5 min | Recommended | Suitable for daily stress regulation. |
-| 10 min | Deep Calm | Supports longer periods of relaxation. |
-| 20 min | Extended Calm | Designed for prolonged relaxation and stress management. |
-
-**Scientific Basis**
-Box Breathing has been studied as a paced breathing technique for stress
-regulation and autonomic nervous system balance.
+| 3 min | Quick Calm | When tension needs to come off quickly. |
+| 5 min | Recommended | The everyday length. |
+| 10 min | Deep Calm | When there is time to settle properly. |
+| 20 min | Extended Calm | A full session. |
 
 ---
 
 ## 🧠 CLARITY
 
 **Purpose**
-Promote mental clarity and physiological coherence.
+A quieter mind — room to think.
 
 **Breathing Pattern**
 5s Inhale · 5s Exhale
-Coherent (Resonant) Breathing.
+Six breaths per minute. Known as coherent or resonant breathing, and
+the most extensively studied slow-breathing pace.
 
 **Session Lengths**
 
 | Duur | Label | Toelichting |
 |------|-------|-------------|
-| 3 min | Mental Reset | A brief session to restore clarity. |
-| 5 min | Recommended | Suitable for everyday mental reset. |
-| 10 min | Deep Clarity | Supports sustained physiological coherence. |
-| 20 min | Extended Clarity | Frequently used in research investigating heart rate variability (HRV) and autonomic regulation. |
-
-**Scientific Basis**
-Recommended durations are based on research into resonance frequency
-breathing and heart rate variability.
+| 3 min | Mental Reset | A brief pause to clear the deck. |
+| 5 min | Recommended | The everyday length. |
+| 10 min | Deep Clarity | When thinking needs more room. |
+| 20 min | Extended Clarity | The length most commonly used in studies of this pace. |
 
 ---
 
 ## 😴 REST
 
 **Purpose**
-Prepare body and mind for recovery and sleep.
+Winding down — recovery, and the hour before sleep.
 
 **Breathing Pattern**
 4s Inhale · 6s Exhale
-A slow breathing rhythm designed to encourage relaxation.
+Slow, with the exhale longer than the inhale.
 
 **Session Lengths**
 
 | Duur | Label | Toelichting |
 |------|-------|-------------|
-| 5 min | Wind Down | Begin transitioning into a relaxed state. |
-| 10 min | Recommended | Suitable for evening relaxation. |
-| 20 min | Deep Rest | Provides additional time for gradual physiological relaxation before sleep. |
-
-**Scientific Basis**
-Recommended durations are based on research into slow breathing,
-parasympathetic activation and relaxation before sleep.
+| 5 min | Wind Down | A short transition out of the day. |
+| 10 min | Recommended | The evening length. |
+| 20 min | Deep Rest | Unhurried, for when there is no reason to rush. |
 
 ---
 
-## Aanvullend voorstel — "Why these durations?"
+## "Why these lengths?"
 
-Op elke sessiepagina een kleine knop **"Why these durations?"**. Bij een
-tik verschijnt een compacte uitleg zoals hierboven, met onderaan:
+Op elke sessiepagina een kleine knop **"Why these lengths?"**. Bij een
+tik verschijnt één korte tekst — dezelfde voor alle vijf, want het
+antwoord is voor alle vijf hetzelfde:
 
-> Based on published research in respiratory physiology, autonomic
-> nervous system regulation and heart rate variability (HRV).
+> **Why these lengths**
+>
+> There is no single correct length for a breathing session. Research
+> into slow paced breathing generally uses sessions of five to twenty
+> minutes, so that is the range we offer. Shorter sessions fit into a
+> day more easily; longer ones give the rhythm more time to settle.
+>
+> Pick what fits the moment. A short session you actually do beats a
+> long one you skip.
 
-Op een aparte **Science-pagina** komen de volledige referenties — onder
-meer werk van Paul Lehrer over resonant breathing, Stephen Porges over
-autonome regulatie waar relevant, en onderzoek naar paced breathing en
-HRV. Zo blijft de sessie-interface leeg en staat de onderbouwing op één
-plek.
+Twee dingen die deze tekst bewust wél doet: hij geeft toe dat er geen
+juiste lengte is, en hij verwijst naar wat onderzoek gebrúikt in plaats
+van wat het aanbeveelt. Dat eerste kost niets aan geloofwaardigheid en
+levert er veel op — het is precies het soort eerlijkheid dat een
+gebruiker niet verwacht van een app die iets wil verkopen.
+
+---
+
+## Science-pagina
+
+Een aparte pagina, bereikbaar vanuit Settings of vanuit bovenstaande
+uitleg. Hier hoort de onderbouwing die er wél is. Regels voor die
+pagina:
+
+**Wel:**
+
+- Langzaam ademen rond zes ademhalingen per minuut is het best
+  onderzochte tempo. Het werk van Paul Lehrer en Richard Gevirtz over
+  resonantiefrequentie is daar het bekendste voorbeeld van.
+- Box breathing is een veelgebruikte techniek met vier gelijke fasen.
+  Ruim in gebruik, minder uitgebreid onderzocht dan het tempo hierboven
+  — en zo mag het er ook staan.
+- Snel ademen verlaagt het CO₂-gehalte in het bloed. Dat verklaart de
+  tintelingen en de lichte duizeligheid die sommige mensen bij BOOST
+  ervaren. Dit is basale fysiologie en geen effectclaim.
+
+**Niet:**
+
+- Geen bewering dat een bepaalde duur aanbevolen of onderzocht is.
+- Geen *treatment*, geen aandoeningen, geen "helpt tegen".
+- Niets over de hersenen. Dat geldt voor de audio én voor de bracelet.
+- Geen namen van onderzoekers als keurmerk. Een verwijzing is een bron,
+  geen aanbeveling van die persoon voor VIBEZCORE.
+
+Onderaan de pagina één regel, en die is niet optioneel:
+
+> VIBEZCORE is not a medical device and does not diagnose, treat or
+> prevent any condition. If you are pregnant, have a respiratory or
+> cardiovascular condition, or are prone to fainting, check with a
+> doctor before practising breathing techniques.
 
 ---
 
@@ -150,59 +206,48 @@ plek.
 
 ### 1. FOCUS en CLARITY zijn omgewisseld ten opzichte van de app
 
-De app draait vandaag:
-
 | Sessie | App nu | Voorstel |
 |--------|--------|----------|
 | Sharp Focus | 5-0-5-0 (coherent breath) | 4-2-6 (long exhale) |
 | Clarity | 4-2-6-0 (long exhale) | 5-5 (coherent breathing) |
 
-De twee patronen wisselen dus van naam. Inhoudelijk is daar iets voor te
-zeggen — coherent breathing past goed bij "clarity" — maar het is geen
-detail: de stemcues, de duurteksten en de sessiebeschrijvingen in
-`src/app/(tabs)/breath.tsx` hangen er allemaal aan vast. Bevestigen of
-dit bedoeld is, of dat het per ongeluk verwisseld is.
+De twee patronen wisselen van naam. Inhoudelijk valt daar iets voor te
+zeggen, maar het is geen detail: de stemcues, de rondes en de
+sessiebeschrijvingen in `src/app/(tabs)/breath.tsx` hangen eraan vast.
+Bevestigen of dit bedoeld is.
 
 ### 2. REST verliest 4-7-8
 
 App nu: 4-7-8 (inhale 4, hold 7, exhale 8). Voorstel: 4-6, zonder hold.
-Dat is een rustiger en toegankelijker patroon, maar het schrapt de
-techniek die nu in de app én in de sessiebeschrijving staat.
+Rustiger en toegankelijker, maar het schrapt de techniek die nu in de
+app staat.
 
-### 3. De "Scientific Basis"-teksten botsen met CLAUDE.md
+Kanttekening bij het schrappen: 4-7-8 met twintig minuten aanbieden zou
+sowieso niet verstandig zijn geweest. De bedenker ervan adviseert
+beginners bij vier cycli te blijven, en de app doet er nu al twaalf. Als
+REST langere sessies krijgt, is 4-6 daar de betere kandidaat voor.
 
-`CLAUDE.md` §1 stelt als harde regel: *geen wetenschaps-/medische
-claims, de app gebruikt uitsluitend toestand-taal.* De voorgestelde
-teksten doen het tegenovergestelde — "autonomic nervous system
-function", "parasympathetic activation", "heart rate variability",
-plus verwijzingen naar Lehrer en Porges.
+### 3. Niet elke duur landt op een hele minuut
 
-Twee losse bezwaren:
+De cycluslengte bepaalt wat mogelijk is:
 
-**Regelconflict.** Ofwel de regel in CLAUDE.md wordt aangepast, ofwel
-deze teksten gaan eruit. Beide kan, maar ze kunnen niet naast elkaar
-bestaan.
+| Sessie | Cyclus | Landt op hele minuten |
+|--------|--------|-----------------------|
+| BOOST | 4 s | ja |
+| FOCUS | 12 s | ja |
+| CALM | 16 s | alleen viervouden (4, 8, 12, 16, 20 min) |
+| CLARITY | 10 s | ja |
+| REST | 10 s | ja |
 
-**Houdbaarheid.** "Recommended durations are based on respiratory
-physiology and research into activation-focused breathing techniques"
-is niet waar te maken. Er bestaat geen onderzoek dat vaststelt dát vijf
-minuten de aanbevolen duur is voor 2-2 ademhaling. Het bestaande
-onderzoek gaat over ademtempo, niet over sessielengte. Dit is de
-formulering die een reviewer of een kritische gebruiker als eerste
-aanvalt.
+Alleen CALM valt buiten de boot: 5 minuten wordt 5:04, 10 minuten wordt
+10:08. Twintig minuten klopt wel precies (75 ronden).
 
-Wat wél houdbaar is: 5-5 komt neer op zes ademhalingen per minuut, en
-dát tempo is uitgebreid onderzocht. Dat is de enige van de vijf waarbij
-een verwijzing naar onderzoek stand houdt.
+Advies: toon de exacte tijd zoals de app nu al doet ("5:04 total"), dan
+klopt het label altijd en hoeft er niets te worden afgerond.
 
-Voorstel: laat de duurteksten beschrijven wat ze doen ("suitable for
-everyday stress regulation") zonder ze als onderzoeksuitkomst te
-presenteren, en bewaar de onderbouwing voor de Science-pagina, waar ze
-over het ademtempo gaat en niet over de lengte.
+### 4. Nog na te lopen buiten dit document
 
-### 4. Praktisch — niet elke duur landt op een hele minuut
-
-De cycluslengte bepaalt wat mogelijk is. 16 seconden (Calm) past niet in
-60, dus 5 minuten wordt 5:04. 19 seconden (huidige Rest) past nergens
-in. Advies: toon de exacte tijd zoals de app nu al doet ("5:04 total"),
-dan klopt het label altijd.
+In `src/app/(tabs)/breath.tsx` staat bij Calm Control de zin *"Used by
+special forces for stress recovery"*. Dat is hetzelfde soort bewering
+als de blokken die hier net geschrapt zijn — een veelherhaald verhaal
+zonder bron. Die staat er nog en valt buiten dit ontwerp.
