@@ -10,15 +10,18 @@
    "Crystal Grid" verving "Hexagonal Grid" — dat laatste klonk als een
    wiskundeterm en niet als een toestand.
 
-   ── Twee dingen die nog een beslissing vragen ────────────────────────
-   1. FOCUS en CLARITY hebben hun adempatroon GERUILD ten opzichte van de
-      Breath-tab. Daar draait Sharp Focus 5-5 en Clarity 4-2-6; hier is het
-      omgekeerd, volgens de opgave van de operator. Inhoudelijk verdedigbaar
-      — coherent ademen past bij helderheid — maar de stemcues en de
-      beschrijvingen op die tab hangen er nog aan vast.
-   2. REST heeft nog geen definitief beeld. De buddha is aangeleverd, maar
-      dan kloppen de naam "Soft Orb" en de beschrijving over een uitzettende
-      bol niet meer. Zie `art` hieronder.
+   ── Beslist door de operator, 2 augustus 2026 ────────────────────────
+   FOCUS en CLARITY stonden in de opgave met hun adempatroon geruild. Het
+   principe moet kloppen, dus ze staan hier zoals de Breath-tab het al doet:
+   FOCUS krijgt 5-5 en CLARITY krijgt 4-2-6.
+
+   Waarom die kant op: 5-5 is coherent ademen, zes ademhalingen per minuut —
+   gelijk en ritmisch, precies wat de eigen beschrijving van FOCUS zegt
+   ("a precise and balanced rhythm"). 4-2-6 heeft een langere uitademing en
+   laat ruis zakken; dat is wat CLARITY moet doen.
+
+   REST houdt de buddha als beeld. Het principe blijft hetzelfde: een vorm
+   die rustig uitzet en krimpt, zonder patroon om naar te kijken.
 
    Rondes zijn leidend, minuten zijn het label: alleen waar de cycluslengte
    in zestig past vallen die samen. Daarom staat de exacte tijd altijd naast
@@ -145,8 +148,9 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
   },
 
   /* ── FOCUS ──────────────────────────────────────────────────────────
-     Langer uit dan in, met een korte pauze ertussen. LET OP: de Breath-tab
-     draait voor Sharp Focus nog 5-5. Zie de kop van dit bestand. */
+     Coherent ademen: vijf in, vijf uit, zes ademhalingen per minuut. Gelijk
+     en ritmisch — dit is het best onderzochte langzame ademtempo, en het
+     enige waarbij een verwijzing naar onderzoek stand houdt. */
   focus: {
     key: 'focus',
     eyebrow: 'FOCUS',
@@ -160,35 +164,31 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#1554B8', '#3E9BFF', '#A9D3FF'],
     art: 'flower',
     focusY: 0.5,
-    phases: [
-      inhale(4, 'Nose'),
-      hold(2, 'hold-in'),
-      exhale(6, 'Mouth'),
-    ],
-    technique: 'Long exhale · 4-2-6',
+    phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
+    technique: 'Coherent breathing · 5-5',
     durations: [
       {
         minutes: 3,
-        rounds: 15,
+        rounds: 18,
         name: 'Quick Reset',
         why: 'Between tasks, or after an interruption pulled you out of something.',
       },
       {
         minutes: 5,
-        rounds: 25,
+        rounds: 30,
         name: 'Daily Focus',
-        why: 'The everyday length — before a work block or a meeting.',
+        why: 'The everyday length, at six breaths per minute — the pace slow-breathing research keeps coming back to. Before a work block or a meeting.',
         recommended: true,
       },
       {
         minutes: 10,
-        rounds: 50,
+        rounds: 60,
         name: 'Deep Focus',
         why: 'For longer stretches of concentration, when there is a real block of work ahead.',
       },
       {
         minutes: 20,
-        rounds: 100,
+        rounds: 120,
         name: 'Extended Focus',
         why: 'A full session. There is no evidence that longer works better — this is simply the far end of the range used in studies of slow breathing.',
       },
@@ -251,10 +251,8 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
   },
 
   /* ── CLARITY ────────────────────────────────────────────────────────
-     Vijf in, vijf uit — zes ademhalingen per minuut. Dit is het best
-     onderzochte langzame ademtempo; de enige van de vijf waarbij een
-     verwijzing naar onderzoek stand houdt. LET OP: de Breath-tab draait
-     dit patroon nog onder de naam Sharp Focus. */
+     Langer uit dan in, met een korte pauze ertussen. Die langere uitademing
+     is wat mentale ruis laat zakken in plaats van laten rondcirkelen. */
   clarity: {
     key: 'clarity',
     eyebrow: 'CLARITY',
@@ -268,33 +266,33 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#0F7A90', '#5FE3F0', '#C2F6FC'],
     art: 'clarity',
     focusY: 0.5,
-    phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
-    technique: 'Coherent breathing · 5-5',
+    phases: [inhale(4, 'Nose'), hold(2, 'hold-in'), exhale(6, 'Mouth')],
+    technique: 'Long exhale · 4-2-6',
     durations: [
       {
         minutes: 3,
-        rounds: 18,
+        rounds: 15,
         name: 'Mental Reset',
         why: 'A brief pause to clear the deck before you pick the next thing up.',
       },
       {
         minutes: 5,
-        rounds: 30,
+        rounds: 25,
         name: 'Daily Clarity',
-        why: 'The everyday length, at six breaths per minute — the pace that slow-breathing research keeps coming back to.',
+        why: 'The everyday length. A longer exhale than inhale, which is what lets mental noise settle instead of circling.',
         recommended: true,
       },
       {
         minutes: 10,
-        rounds: 60,
+        rounds: 50,
         name: 'Deep Clarity',
         why: 'When thinking needs more room than a short pause can give it.',
       },
       {
         minutes: 20,
-        rounds: 120,
+        rounds: 100,
         name: 'Extended Clarity',
-        why: 'The length most commonly used in studies of this pace. That says what researchers did, not that twenty minutes is better than ten.',
+        why: 'A full session. Long enough that the longer exhale stops being something you count and starts being how you breathe.',
       },
     ],
     defaultDuration: 1,
