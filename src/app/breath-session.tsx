@@ -483,7 +483,17 @@ export default function BreathSessionScreen() {
 
       <View style={s.topbar}>
         <Pressable
-          onPress={() => (running ? stop() : router.back())}
+          /* De onboarding komt hier binnen met `replace`, dus er is geen
+             geschiedenis om naar terug te keren — `back()` deed dan niets
+             en je zat vast op dit scherm. Vandaar de val naar de Breath-tab. */
+          onPress={() => {
+            if (running) {
+              stop();
+              return;
+            }
+            if (router.canGoBack()) router.back();
+            else router.replace('/breath');
+          }}
           hitSlop={12}
           style={s.iconBtn}
         >
@@ -1156,9 +1166,16 @@ const s = StyleSheet.create({
      hoogte alleen uit een kind haalt, meet met tussenpozen nul en verdwijnt
      dan volledig. Dat verklaart ook waarom END SESSION nooit wegviel — dat
      is een gewone View met rand, geen verloop. */
-  startWrap: { borderRadius: 15, overflow: 'hidden', height: BTN_H },
+  /* GEEN `overflow: hidden` met borderRadius eromheen. Dat was de echte
+     oorzaak van de verdwijnende knop: een verloop dat door een afgeronde
+     ouder geclipt moet worden, komt er op deze renderer soms helemaal niet
+     uit. De scrim — hetzelfde verloop, maar zonder clip — verscheen altijd
+     wél, en dat verschil wees de weg. De ronding zit nu op het verloop
+     zelf, dus er valt niets te clippen. */
+  startWrap: { height: BTN_H },
   startBtn: {
     height: BTN_H,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
