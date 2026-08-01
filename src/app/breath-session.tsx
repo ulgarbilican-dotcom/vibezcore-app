@@ -73,7 +73,10 @@ import {
   Vibration,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import {
   cancelAnimation,
   Easing,
@@ -95,6 +98,11 @@ const SCREEN_H = Dimensions.get('window').height;
    Tijdens de sessie mag hij groter: de titeltekst is dan weg. */
 const ART_IDLE = SCREEN_W * 1.04;
 const ART_RUN = SCREEN_W * 1.38;
+
+/* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
+   toestel-inzet vrij, zodat de laatste kaart nooit onder de knop verdwijnt
+   en er ook geen willekeurig gat overblijft. */
+const FOOTER_H = 56;
 /* Waar de bloem verticaal in haar eigen bestand staat. Niet in het midden. */
 const ART_FOCUS_Y = 0.43;
 
@@ -248,6 +256,12 @@ function PhaseArc({
 /* ── Scherm ──────────────────────────────────────────────────────────── */
 
 export default function BreathSessionScreen() {
+  /* De onderrand komt van het TOESTEL, niet van een gok. SafeAreaView deed
+     de onderkant eerder zelf, maar een vastgezette voet valt buiten die
+     opvulling — vandaar dat de knop tegen de home-balk aan lag. Nu rekenen
+     we de inzet expliciet mee, op de enige plek waar hij telt. */
+  const insets = useSafeAreaInsets();
+
   const [durationIdx, setDurationIdx] = useState<number>(DEFAULT_DURATION);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
@@ -431,7 +445,7 @@ export default function BreathSessionScreen() {
   const leftSec = Math.max(0, totalSec - elapsed);
 
   return (
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+    <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Ruimte achter alles. Eén kleur, lage dichtheid, traag fonkelen —
@@ -470,7 +484,11 @@ export default function BreathSessionScreen() {
           soms verdween en er geen manier meer was om opnieuw te beginnen. */}
       <ScrollView
         style={s.scrollView}
-        contentContainerStyle={[s.scroll, running && s.scrollRunning]}
+        contentContainerStyle={[
+          s.scroll,
+          running && s.scrollRunning,
+          { paddingBottom: FOOTER_H + insets.bottom + 18 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.title}>Lotus</Text>
@@ -659,7 +677,18 @@ export default function BreathSessionScreen() {
         )}
       </ScrollView>
 
-      <View style={s.footer}>
+      {/* Verloop onder de knop. Zonder dit lijkt de laatste kaart door de
+          knop doorgesneden; nu vervaagt de inhoud eronder en leest de knop
+          als iets dat ervóór zweeft. Dat verschil is het hele verschil
+          tussen "afgekapt" en "afgewerkt". */}
+      <ExpoGradient
+        colors={['rgba(10,10,10,0)', Brand.bg, Brand.bg]}
+        locations={[0, 0.55, 1]}
+        pointerEvents="none"
+        style={[s.footerScrim, { height: FOOTER_H + insets.bottom + 72 }]}
+      />
+
+      <View style={[s.footer, { paddingBottom: insets.bottom + 10 }]}>
         {running ? (
           <Pressable onPress={stop} style={s.endBtn}>
             <Text style={s.endTxt}>END SESSION</Text>
@@ -745,25 +774,30 @@ const s = StyleSheet.create({
   },
 
   scrollView: { flex: 1 },
-  /* Onderaan ruimte vrijhouden voor de vastgezette knop — zie `footer`. */
-  scroll: { paddingBottom: 96, alignItems: 'center' },
+  /* De ruimte onderaan wordt bij het renderen gezet: FOOTER_H plus de
+     toestel-inzet. Een vast getal zou op het ene toestel een gat geven en
+     op het andere de laatste kaart afsnijden. */
+  scroll: { alignItems: 'center' },
   /* Tijdens de sessie vallen de tagline en de beschrijving weg, en dan
      bleef er onderaan een gat van een kwart scherm staan. De vier blokken
      verdelen zich nu over de hoogte in plaats van bovenaan te klitten. */
   scrollRunning: { flexGrow: 1, justifyContent: 'space-evenly' },
 
+  /* Eén ritme voor het hele scherm: 6 binnen een blok, 18 tussen blokken,
+     26 rond de figuur. Afstanden die per onderdeel apart gekozen zijn
+     lezen als rommel, ook als geen enkele afzonderlijk fout is. */
   title: {
     fontFamily: BrandFonts.extrabold,
-    fontSize: 32,
+    fontSize: 30,
     letterSpacing: -0.7,
     color: '#ffffff',
-    marginTop: 4,
+    marginTop: 6,
   },
   tagline: {
     fontFamily: BrandFonts.medium,
-    fontSize: 14.5,
+    fontSize: 14,
     color: ACCENT,
-    marginTop: 3,
+    marginTop: 6,
   },
   desc: {
     fontFamily: BrandFonts.regular,
@@ -771,7 +805,7 @@ const s = StyleSheet.create({
     lineHeight: 19,
     color: 'rgba(255,255,255,0.58)',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
 
   /* Het beeld is breder dan het scherm; hier wordt het bijgesneden.
@@ -783,8 +817,8 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
-    marginBottom: 22,
+    marginTop: 26,
+    marginBottom: 26,
   },
 
   sectionEyebrow: {
@@ -870,15 +904,15 @@ const s = StyleSheet.create({
   /* ── Ademritme vooraf ── */
   patternCard: {
     width: SCREEN_W - 28,
-    marginTop: 12,
-    paddingVertical: 12,
+    marginTop: 18,
+    paddingVertical: 14,
     paddingHorizontal: 10,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
     backgroundColor: 'rgba(255,255,255,0.035)',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   cardEyebrow: {
     fontFamily: BrandFonts.bold,
@@ -990,8 +1024,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     width: SCREEN_W - 28,
-    marginTop: 10,
-    paddingVertical: 9,
+    marginTop: 12,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 1,
@@ -1019,6 +1053,7 @@ const s = StyleSheet.create({
   },
 
   /* ── Voet ── */
+  footerScrim: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   /* Vast onderaan, NIET als derde blok in de kolom. Als sibling van de
      ScrollView werd de knop bij tijd en wijle onder de schermrand geduwd —
      dan stond er geen enkele manier meer op het scherm om te beginnen of te
@@ -1033,24 +1068,26 @@ const s = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 12,
   },
-  startWrap: { borderRadius: 16, overflow: 'hidden' },
-  startBtn: { paddingVertical: 18, alignItems: 'center' },
+  /* Bewust lager dan eerst. Een knop van bijna zestig punten hoog domineert
+     een scherm dat over rust gaat; vijftig is ruim genoeg om te raken. */
+  startWrap: { borderRadius: 15, overflow: 'hidden' },
+  startBtn: { paddingVertical: 15, alignItems: 'center' },
   startTxt: {
     fontFamily: BrandFonts.bold,
-    fontSize: 15,
+    fontSize: 13.5,
     letterSpacing: 2.2,
     color: '#ffffff',
   },
   endBtn: {
-    paddingVertical: 18,
+    paddingVertical: 15,
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
   },
   endTxt: {
     fontFamily: BrandFonts.semibold,
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 2.2,
     color: 'rgba(255,255,255,0.72)',
   },
