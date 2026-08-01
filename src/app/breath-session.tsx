@@ -39,6 +39,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
+import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   claimVoiceSource,
@@ -84,7 +85,18 @@ import {
 } from 'react-native-reanimated';
 
 const SCREEN_W = Dimensions.get('window').width;
-const VISUAL = Math.min(SCREEN_W * 0.66, 272);
+const SCREEN_H = Dimensions.get('window').height;
+
+/* Het BEELD is breder dan het scherm. De aangeleverde PNG's hebben een
+   royale lege rand — bij de lotus vult de bloem maar zo'n tweederde van de
+   breedte en veertig procent van de hoogte. Door het beeld ruim over de
+   schermbreedte heen te schalen en het zichtbare vlak eromheen smal te
+   houden, vult het ONDERWERP het scherm in plaats van de rand.
+   Tijdens de sessie mag hij groter: de titeltekst is dan weg. */
+const ART_IDLE = SCREEN_W * 1.04;
+const ART_RUN = SCREEN_W * 1.38;
+/* Waar de bloem verticaal in haar eigen bestand staat. Niet in het midden. */
+const ART_FOCUS_Y = 0.43;
 
 /* ── Kleur van deze toestand ─────────────────────────────────────────────
    Let op: CLAUDE.md §5 geeft de bracelet-modus Calm Control blauw
@@ -422,6 +434,18 @@ export default function BreathSessionScreen() {
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Ruimte achter alles. Eén kleur, lage dichtheid, traag fonkelen —
+          het geeft diepte zodat de figuur ergens IN hangt in plaats van
+          op een zwart vlak te liggen. Ligt onder alle content. */}
+      <View style={s.stars} pointerEvents="none">
+        <Starfield
+          width={SCREEN_W}
+          height={SCREEN_H}
+          count={70}
+          color="#C9A7FF"
+        />
+      </View>
+
       <View style={s.topbar}>
         <Pressable
           onPress={() => (running ? stop() : router.back())}
@@ -446,7 +470,7 @@ export default function BreathSessionScreen() {
           soms verdween en er geen manier meer was om opnieuw te beginnen. */}
       <ScrollView
         style={s.scrollView}
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, running && s.scrollRunning]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.title}>Lotus</Text>
@@ -469,11 +493,13 @@ export default function BreathSessionScreen() {
             aan niets te besteden. */}
         <View style={s.visualWrap}>
           <SessionArt
-            size={VISUAL}
+            size={running ? ART_RUN : ART_IDLE}
             art="lotus"
             breath={breath}
             glow={GLOW}
-            heightRatio={0.78}
+            heightRatio={running ? 0.4 : 0.42}
+            focusY={ART_FOCUS_Y}
+            rings={running}
           />
         </View>
 
@@ -693,6 +719,7 @@ export default function BreathSessionScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  stars: { ...StyleSheet.absoluteFillObject },
 
   topbar: {
     flexDirection: 'row',
@@ -718,7 +745,12 @@ const s = StyleSheet.create({
   },
 
   scrollView: { flex: 1 },
-  scroll: { paddingBottom: 16, alignItems: 'center' },
+  /* Onderaan ruimte vrijhouden voor de vastgezette knop — zie `footer`. */
+  scroll: { paddingBottom: 96, alignItems: 'center' },
+  /* Tijdens de sessie vallen de tagline en de beschrijving weg, en dan
+     bleef er onderaan een gat van een kwart scherm staan. De vier blokken
+     verdelen zich nu over de hoogte in plaats van bovenaan te klitten. */
+  scrollRunning: { flexGrow: 1, justifyContent: 'space-evenly' },
 
   title: {
     fontFamily: BrandFonts.extrabold,
@@ -742,7 +774,18 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
 
-  visualWrap: { alignItems: 'center', justifyContent: 'center' },
+  /* Het beeld is breder dan het scherm; hier wordt het bijgesneden.
+     De marges zijn niet optioneel: zonder ademruimte plakte "SESSION
+     DURATION" tegen de onderste blaadjes. Een figuur die het moet hebben
+     van rust kan geen tekst tegen zich aan hebben staan. */
+  visualWrap: {
+    width: SCREEN_W,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    marginBottom: 22,
+  },
 
   sectionEyebrow: {
     fontFamily: BrandFonts.bold,
@@ -976,7 +1019,20 @@ const s = StyleSheet.create({
   },
 
   /* ── Voet ── */
-  footer: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 4 },
+  /* Vast onderaan, NIET als derde blok in de kolom. Als sibling van de
+     ScrollView werd de knop bij tijd en wijle onder de schermrand geduwd —
+     dan stond er geen enkele manier meer op het scherm om te beginnen of te
+     stoppen. Een vastgezette voet kan niet weggedrukt worden, wat de inhoud
+     ook doet. */
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 12,
+  },
   startWrap: { borderRadius: 16, overflow: 'hidden' },
   startBtn: { paddingVertical: 18, alignItems: 'center' },
   startTxt: {

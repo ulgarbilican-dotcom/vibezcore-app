@@ -32,7 +32,9 @@
 import {
   Canvas,
   Circle,
+  Oval,
   RadialGradient,
+  rect,
   vec,
 } from '@shopify/react-native-skia';
 import { Image, StyleSheet, View } from 'react-native';
@@ -46,7 +48,7 @@ export const SESSION_ART = {
   lotus:
     'https://vibezcore-audio.b-cdn.net/images/lotusbloem-removebg-preview.png',
   sun: 'https://vibezcore-audio.b-cdn.net/images/sun-removebg-preview.png',
-  orb: 'https://vibezcore-audio.b-cdn.net/images/bol-removebg-preview.png',
+  orb: 'https://vibezcore-audio.b-cdn.net/images/Soft_Orb-removebg-preview.png',
 } as const;
 
 export type SessionArtKey = keyof typeof SESSION_ART;
@@ -61,15 +63,24 @@ export function prefetchSessionArt() {
 }
 
 type Props = {
+  /** Breedte van het BEELD, niet van het zichtbare vlak. De aangeleverde
+   *  PNG's hebben een royale lege rand; door hier ruim over de schermbreedte
+   *  heen te gaan en het vlak eromheen kleiner te houden, vult het onderwerp
+   *  het scherm in plaats van de rand. */
   size: number;
   art: SessionArtKey;
   /** 0 = volledig uitgeademd, 1 = volledig ingeademd. */
   breath: SharedValue<number>;
   /** Kleur van de lichtbron erachter. */
   glow: string;
-  /** Hoeveel van de hoogte zichtbaar blijft. Een lotus is breder dan hoog;
-   *  het vierkant eronder en erboven is leeg en mag weg. */
+  /** Zichtbare hoogte, als deel van `size`. Een lotus is breder dan hoog. */
   heightRatio?: number;
+  /** Waar het onderwerp verticaal in het beeld zit (0 = boven, 1 = onder).
+   *  Zonder dit snijdt een symmetrische uitsnede de top eraf, want een
+   *  bloem staat zelden precies in het midden van zijn eigen bestand. */
+  focusY?: number;
+  /** Ademringen rond de figuur. */
+  rings?: boolean;
 };
 
 export default function SessionArt({
@@ -78,9 +89,18 @@ export default function SessionArt({
   breath,
   glow,
   heightRatio = 1,
+  focusY = 0.5,
+  rings = false,
 }: Props) {
+  const boxH = size * heightRatio;
+  const c = size / 2;
+  const cy = boxH / 2;
+
   const imgStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.87 + breath.value * 0.13 }],
+    transform: [
+      { translateY: (0.5 - focusY) * size },
+      { scale: 0.87 + breath.value * 0.13 },
+    ],
     opacity: 0.8 + breath.value * 0.2,
   }));
 
@@ -89,16 +109,29 @@ export default function SessionArt({
      hangen. */
   const glowStyle = useAnimatedStyle(() => ({
     opacity: 0.14 + breath.value * 0.2,
-    transform: [{ scale: 0.85 + breath.value * 0.3 }],
+    transform: [{ scale: 0.88 + breath.value * 0.17 }],
   }));
 
-  const c = size / 2;
+  /* De gloed moet UITGEDOOFD zijn vóór de rand van de uitsnede. Stond hij
+     op de halve breedte, dan sneed het bijgesneden vlak er dwars doorheen
+     en zag je een rechthoek om de figuur staan — precies wat een gloed niet
+     mag doen. Vandaar de hoogte als maat, met marge voor het uitzetten. */
+  const glowR = boxH * 0.46;
+
+  /* Ringen die met de adem mee uitzetten. Ze staan er niet voor de sier:
+     bij het inademen dijen ze uit en worden ze zichtbaarder, bij het
+     uitademen trekken ze samen en doven ze. Zo zie je de beweging ook in
+     je ooghoek, zonder naar de bloem te hoeven kijken. */
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: rings ? 0.1 + breath.value * 0.26 : 0,
+    transform: [{ scale: 0.86 + breath.value * 0.2 }],
+  }));
 
   return (
     <View
       style={{
         width: size,
-        height: size * heightRatio,
+        height: boxH,
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
@@ -110,16 +143,41 @@ export default function SessionArt({
         pointerEvents="none"
       >
         <Canvas style={{ flex: 1 }}>
-          <Circle cx={c} cy={(size * heightRatio) / 2} r={c}>
+          <Circle cx={c} cy={cy} r={glowR}>
             <RadialGradient
-              c={vec(c, (size * heightRatio) / 2)}
-              r={c}
+              c={vec(c, cy)}
+              r={glowR}
               colors={[glow, glow, '#00000000']}
-              positions={[0, 0.18, 1]}
+              positions={[0, 0.14, 1]}
             />
           </Circle>
         </Canvas>
       </Animated.View>
+
+      {rings && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, ringStyle]}
+          pointerEvents="none"
+        >
+          <Canvas style={{ flex: 1 }}>
+            {[0.56, 0.74, 0.92].map((f, i) => (
+              <Oval
+                key={i}
+                rect={rect(
+                  c - c * f,
+                  cy - boxH * 0.5 * f,
+                  c * f * 2,
+                  boxH * f,
+                )}
+                style="stroke"
+                strokeWidth={1}
+                color={glow}
+                opacity={1 - i * 0.26}
+              />
+            ))}
+          </Canvas>
+        </Animated.View>
+      )}
 
       <Animated.Image
         source={{ uri: SESSION_ART[art] }}
