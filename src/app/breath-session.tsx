@@ -537,13 +537,19 @@ export default function BreathSessionScreen() {
           />
         </View>
 
+        {/* Voortgang: ÉÉN regel in plaats van vier blokken boven elkaar.
+            Stond hier eerder als ROUND / tijd / LEFT / balk onder elkaar,
+            samen bijna negentig punten hoog — dat drukte tegen de figuur
+            aan. Een rondeteller is bijzaak tijdens het ademen; hij hoort
+            leesbaar te zijn, niet groot. */}
         {running ? (
           <View style={s.progressWrap}>
-            <Text style={s.sectionEyebrow}>
-              ROUND {round} OF {chosen.rounds}
-            </Text>
-            <Text style={s.progressTime}>{fmt(leftSec)}</Text>
-            <Text style={s.progressSub}>left</Text>
+            <View style={s.progressRow}>
+              <Text style={s.progressRound}>
+                ROUND {round} / {chosen.rounds}
+              </Text>
+              <Text style={s.progressLeft}>{fmt(leftSec)} left</Text>
+            </View>
             <View style={s.bar}>
               <View
                 style={[
@@ -944,30 +950,32 @@ const s = StyleSheet.create({
   },
 
   /* ── Voortgang tijdens de sessie ── */
-  /* Compacter dan eerst — het blok nam onnodig hoogte in en drukte de
-     figuur en de teller tegen elkaar aan. */
-  progressWrap: { alignItems: 'center', gap: 1, width: '100%' },
-  progressTime: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 26,
-    lineHeight: 31,
-    color: '#ffffff',
-    letterSpacing: -0.5,
-    marginTop: 2,
+  progressWrap: { width: SCREEN_W - 28, alignItems: 'center' },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 2,
   },
-  progressSub: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: 'rgba(255,255,255,0.38)',
-    textTransform: 'uppercase',
+  progressRound: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.46)',
+  },
+  progressLeft: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.2,
+    color: '#ffffff',
   },
   bar: {
-    width: SCREEN_W * 0.62,
+    width: '100%',
     height: 3,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.10)',
-    marginTop: 8,
+    marginTop: 9,
     overflow: 'hidden',
   },
   barFill: { height: 3, borderRadius: 2, backgroundColor: ACCENT },
