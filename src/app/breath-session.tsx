@@ -73,7 +73,12 @@ import {
 } from 'react-native-reanimated';
 
 const SCREEN_W = Dimensions.get('window').width;
-const VISUAL = Math.min(SCREEN_W * 0.86, 350);
+
+/* De figuur is vierkant, dus elke pixel breedte kost evenveel hoogte. Op
+   0.86 van de schermbreedte duwde hij de bracelet-kaart onder de rand en
+   moest je scrollen om START te vinden — op een scherm dat je opent om te
+   beginnen is dat de verkeerde volgorde. Alles past nu in één beeld. */
+const VISUAL = Math.min(SCREEN_W * 0.66, 272);
 
 /* ── Het patroon ─────────────────────────────────────────────────────── */
 
@@ -145,7 +150,7 @@ function fmt(sec: number) {
    Een halve cirkel die zich vult over de duur van de huidige fase, met een
    lichtpunt op de kop. De boog vertelt hoe ver je bent zonder dat je hoeft
    te lezen — het getal eronder is voor wie wél leest. */
-const ARC_H = 92;
+const ARC_H = 104;
 
 function PhaseArc({
   width,
@@ -155,8 +160,10 @@ function PhaseArc({
   progress: SharedValue<number>;
 }) {
   const cx = width / 2;
-  const r = Math.min(width * 0.3, 118);
-  const cy = ARC_H - 4;
+  /* Ruim genoeg zodat het getal ERIN past en niet erover. Op een kleinere
+     straal sneed de boog dwars door de cijfers heen. */
+  const r = Math.min(width * 0.46, 96);
+  const cy = ARC_H - 6;
 
   const track = useMemo(() => {
     const p = Skia.Path.Make();
@@ -425,12 +432,16 @@ export default function BreathSessionScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.title}>Lotus Mandala</Text>
-        <Text style={s.desc}>
-          Even on all sides.{'\n'}
-          Twenty petals open and close as one, on{'\n'}
-          four equal counts — the steady rhythm{'\n'}
-          of box breathing.
-        </Text>
+        {/* Weg zodra de sessie loopt. Wie aan het ademen is, leest niet —
+            en het ritmeblok is in die toestand hoger, dus deze regels
+            zouden de bracelet-kaart onder de rand duwen. */}
+        {!running && (
+          <Text style={s.desc}>
+            Even on all sides.{'\n'}
+            Twenty petals open and close as one, on the{'\n'}
+            four equal counts of box breathing.
+          </Text>
+        )}
 
         <View style={s.visualWrap}>
           <SessionVisual size={VISUAL} figure="lotus" breath={breath} />
@@ -622,7 +633,7 @@ const s = StyleSheet.create({
     color: ACCENT,
   },
 
-  scroll: { paddingBottom: 18, alignItems: 'center' },
+  scroll: { paddingBottom: 20, alignItems: 'center' },
 
   title: {
     fontFamily: BrandFonts.extrabold,
@@ -641,7 +652,8 @@ const s = StyleSheet.create({
   },
 
   visualWrap: {
-    marginTop: 6,
+    marginTop: 2,
+    marginBottom: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -654,7 +666,7 @@ const s = StyleSheet.create({
   },
 
   /* ── Voorkeuzes ── */
-  durationWrap: { alignItems: 'center', gap: 11, marginTop: 2 },
+  durationWrap: { alignItems: 'center', gap: 7, marginTop: 2 },
   chips: { flexDirection: 'row', gap: 9 },
   chip: {
     width: 68,
@@ -723,8 +735,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: SCREEN_W - 28,
-    marginTop: 16,
-    paddingVertical: 16,
+    marginTop: 12,
+    paddingVertical: 14,
     paddingHorizontal: 10,
     borderRadius: 18,
     borderWidth: 1,
@@ -754,7 +766,7 @@ const s = StyleSheet.create({
   rhythmCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   arcOverlay: {
     position: 'absolute',
-    top: 16,
+    top: 26,
     alignItems: 'center',
   },
   phaseLabel: {
@@ -810,16 +822,16 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     width: SCREEN_W - 28,
-    marginTop: 12,
-    paddingVertical: 12,
+    marginTop: 10,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
     backgroundColor: 'rgba(255,255,255,0.035)',
   },
-  braceletImg: { width: 76, height: 60 },
-  braceletTxt: { flex: 1, gap: 3 },
+  braceletImg: { width: 62, height: 50 },
+  braceletTxt: { flex: 1, gap: 1 },
   braceletEyebrow: {
     fontFamily: BrandFonts.bold,
     fontSize: 10.5,

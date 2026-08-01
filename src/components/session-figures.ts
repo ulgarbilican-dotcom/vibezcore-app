@@ -116,18 +116,26 @@ function lotus(R: number): Figure {
     p.close();
   };
 
+  /* De twee kransen raken elkaar maar overlappen NIET. Eerder liep de
+     binnenste tot 0.5R en de buitenste vanaf 0.3R; in die overlap kruisten
+     twintig bogen elkaar en werd het midden een kluwen. Een lotus moet
+     gelaagd lezen, niet verward — dus de binnenste stopt waar de buitenste
+     begint. */
   const outerPetals = 12;
+  const OUTER_FROM = 0.32;
+  const OUTER_TO = 0.94;
   for (let i = 0; i < outerPetals; i++) {
-    petal(web, (i / outerPetals) * TAU, R * 0.3, R * 0.94, R * 0.1);
+    petal(web, (i / outerPetals) * TAU, R * OUTER_FROM, R * OUTER_TO, R * 0.1);
   }
   const innerPetals = 8;
+  const INNER_TO = 0.3;
   for (let i = 0; i < innerPetals; i++) {
     petal(
       web,
       (i / innerPetals) * TAU + TAU / (innerPetals * 2),
-      R * 0.08,
-      R * 0.5,
-      R * 0.075,
+      R * 0.04,
+      R * INNER_TO,
+      R * 0.055,
     );
   }
 
@@ -140,11 +148,11 @@ function lotus(R: number): Figure {
   const nodes = [
     ...Array.from({ length: outerPetals }, (_, i) => {
       const a = (i / outerPetals) * TAU;
-      return { x: Math.cos(a) * R * 0.94, y: Math.sin(a) * R * 0.94 };
+      return { x: Math.cos(a) * R * OUTER_TO, y: Math.sin(a) * R * OUTER_TO };
     }),
     ...Array.from({ length: innerPetals }, (_, i) => {
       const a = (i / innerPetals) * TAU + TAU / (innerPetals * 2);
-      return { x: Math.cos(a) * R * 0.5, y: Math.sin(a) * R * 0.5 };
+      return { x: Math.cos(a) * R * INNER_TO, y: Math.sin(a) * R * INNER_TO };
     }),
   ];
 

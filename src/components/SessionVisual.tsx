@@ -35,8 +35,8 @@ import {
 } from 'react-native-reanimated';
 import { buildFigure, type FigureKey } from './session-figures';
 
-const C_WEB = '#5c9ae8';
-const C_RIM = '#cfe4ff';
+const C_WEB = '#79B4FF';
+const C_RIM = '#DCEBFF';
 const C_NODE = '#ffffff';
 const C_HALO = '#3f8ce8';
 
@@ -79,15 +79,21 @@ function Node({
   return (
     <>
       {/* Halo eromheen, harde kern erbinnen. Zonder halo leest een wit
-          puntje als een stofje op het scherm. */}
-      <Circle cx={x} cy={y} r={radius} opacity={haloOpacity}>
+          puntje als een stofje op het scherm.
+
+          De halo heeft BEWUST geen BlurMask. Een radiale verloop dooft al
+          uit naar de rand — daar nog een vervaging overheen leggen doet
+          hetzelfde werk twee keer, en vervaging is de duurste tekening die
+          er is. Met eenentwintig knopen scheelde dat eenentwintig
+          filterpassages per frame; genoeg om de tekenlaag te laten
+          vastlopen. Het verschil is met het blote oog niet te zien. */}
+      <Circle cx={x} cy={y} r={r * 2.2} opacity={haloOpacity}>
         <RadialGradient
           c={vec(x, y)}
-          r={r * 2.4}
-          colors={[C_HALO, C_HALO, '#00000000']}
-          positions={[0, 0.12, 1]}
+          r={r * 2.2}
+          colors={[C_HALO, 'rgba(63,140,232,0.55)', '#00000000']}
+          positions={[0, 0.3, 1]}
         />
-        <BlurMask blur={r * 1.6} style="normal" />
       </Circle>
       <Circle cx={x} cy={y} r={radius} color={C_NODE} opacity={opacity}>
         <BlurMask blur={r * 0.5} style="normal" />
@@ -100,7 +106,7 @@ export default function SessionVisual({ size, figure, breath }: Props) {
   const cx = size / 2;
   const cy = size / 2;
   const R = size * 0.44;
-  const thin = size * 0.0032;
+  const thin = size * 0.0042;
 
   const geo = useMemo(() => buildFigure(figure, R), [figure, R]);
 
@@ -112,9 +118,11 @@ export default function SessionVisual({ size, figure, breath }: Props) {
     { scale: 0.9 + breath.value * 0.1 },
   ]);
 
-  const webOpacity = useDerivedValue(() => 0.3 + breath.value * 0.22);
-  const rimOpacity = useDerivedValue(() => 0.55 + breath.value * 0.35);
-  const glowOpacity = useDerivedValue(() => 0.07 + breath.value * 0.09);
+  const webOpacity = useDerivedValue(() => 0.62 + breath.value * 0.3);
+  const rimOpacity = useDerivedValue(() => 0.7 + breath.value * 0.28);
+  const glowOpacity = useDerivedValue(() => 0.09 + breath.value * 0.1);
+  /* De bloem eromheen. Zie de opmerking bij de tekening zelf. */
+  const bloomOpacity = useDerivedValue(() => 0.16 + breath.value * 0.16);
 
   const nodeR = size * 0.009;
 
@@ -135,6 +143,30 @@ export default function SessionVisual({ size, figure, breath }: Props) {
           </Circle>
 
           <Group transform={transform}>
+            {/* Bloem: dezelfde lijnen nog eens, breed en vervaagd, eronder.
+                Zo lijkt het licht ván de lijn te komen in plaats van dat
+                de lijn getekend is. Twee vervagingspassages voor de hele
+                figuur — dat is de goedkope plek om ze te betalen, want
+                per lichtpunt zou het er eenentwintig zijn. */}
+            <Path
+              path={geo.web}
+              style="stroke"
+              strokeWidth={thin * 3.4}
+              color={C_WEB}
+              opacity={bloomOpacity}
+            >
+              <BlurMask blur={size * 0.014} style="normal" />
+            </Path>
+            <Path
+              path={geo.rim}
+              style="stroke"
+              strokeWidth={thin * 4}
+              color={C_WEB}
+              opacity={bloomOpacity}
+            >
+              <BlurMask blur={size * 0.016} style="normal" />
+            </Path>
+
             <Path
               path={geo.web}
               style="stroke"
@@ -145,7 +177,7 @@ export default function SessionVisual({ size, figure, breath }: Props) {
             <Path
               path={geo.rim}
               style="stroke"
-              strokeWidth={thin * 1.6}
+              strokeWidth={thin * 1.5}
               color={C_RIM}
               opacity={rimOpacity}
             />
