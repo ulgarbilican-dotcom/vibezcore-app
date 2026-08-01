@@ -38,7 +38,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
-import SessionVisual, { type Tint } from '@/components/SessionVisual';
+import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   claimVoiceSource,
@@ -93,7 +93,7 @@ const VISUAL = Math.min(SCREEN_W * 0.66, 272);
    bewust, en te herzien als de bracelet mee moet. */
 const ACCENT = '#B478FF';
 const ACCENT_SOFT = 'rgba(180,120,255,0.15)';
-const TINT: Tint = { line: '#B478FF', rim: '#E7D4FF', halo: '#8B3DF0' };
+const GLOW = '#7B2FE0';
 
 /* ── Het patroon ─────────────────────────────────────────────────────── */
 
@@ -287,6 +287,7 @@ export default function BreathSessionScreen() {
 
   useEffect(() => {
     idleBreathing();
+    prefetchSessionArt();
   }, [idleBreathing]);
 
   const clearTimers = useCallback(() => {
@@ -439,7 +440,12 @@ export default function BreathSessionScreen() {
         </Pressable>
       </View>
 
+      {/* `flex: 1` is hier niet cosmetisch. Zonder dat krimpt een ScrollView
+          in React Native niet mee — hij groeit met zijn inhoud en duwt de
+          voet onder de schermrand. Dat was precies waarom START SESSION
+          soms verdween en er geen manier meer was om opnieuw te beginnen. */}
       <ScrollView
+        style={s.scrollView}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
@@ -457,16 +463,17 @@ export default function BreathSessionScreen() {
           </>
         )}
 
-        {/* Het doek is vierkant, maar een lotus is breder dan hoog: de
+        {/* Het beeld is vierkant, maar een lotus is breder dan hoog: de
             bovenste en onderste marge blijven leeg. Die snijden we weg,
             zodat de bloem groot blijft zonder een vijfde van het scherm
             aan niets te besteden. */}
         <View style={s.visualWrap}>
-          <SessionVisual
+          <SessionArt
             size={VISUAL}
-            figure="lotus"
+            art="lotus"
             breath={breath}
-            tint={TINT}
+            glow={GLOW}
+            heightRatio={0.78}
           />
         </View>
 
@@ -511,8 +518,9 @@ export default function BreathSessionScreen() {
             </View>
             <Text style={s.exact}>
               {fmt(totalSec)} · {chosen.rounds} rounds
-              {chosen.recommended ? ' · recommended' : ''} — tap again for why
+              {chosen.recommended ? ' · recommended' : ''}
             </Text>
+            <Text style={s.hint}>Double tap for more info</Text>
           </View>
         )}
 
@@ -528,7 +536,9 @@ export default function BreathSessionScreen() {
                   <Text style={s.phaseName}>{p.label}</Text>
                   {/* Dit ontbrak: nergens was af te lezen of je door de
                       neus of door de mond ademt. */}
-                  <Text style={s.phaseVia}>{p.via ?? '·'}</Text>
+                  <Text style={p.via ? s.phaseVia : s.phaseViaNone}>
+                    {p.via ?? '—'}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -707,6 +717,7 @@ const s = StyleSheet.create({
     color: ACCENT,
   },
 
+  scrollView: { flex: 1 },
   scroll: { paddingBottom: 16, alignItems: 'center' },
 
   title: {
@@ -731,12 +742,7 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
 
-  visualWrap: {
-    height: VISUAL * 0.78,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  visualWrap: { alignItems: 'center', justifyContent: 'center' },
 
   sectionEyebrow: {
     fontFamily: BrandFonts.bold,
@@ -779,10 +785,17 @@ const s = StyleSheet.create({
   },
   chipNameActive: { color: ACCENT },
   exact: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12.5,
+    letterSpacing: 0.1,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  hint: {
     fontFamily: BrandFonts.medium,
     fontSize: 11,
-    letterSpacing: 0.1,
-    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 0.4,
+    color: ACCENT,
+    marginTop: -2,
   },
 
   /* ── Voortgang tijdens de sessie ── */
@@ -839,22 +852,31 @@ const s = StyleSheet.create({
     lineHeight: 23,
   },
   phaseName: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 9.5,
-    letterSpacing: 1.2,
-    color: 'rgba(255,255,255,0.62)',
+    fontFamily: BrandFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1.3,
+    color: '#ffffff',
   },
+  /* Door welke opening je ademt. Stond eerst klein en violet en was
+     daardoor niet af te lezen — juist dít is de instructie. */
   phaseVia: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 9.5,
-    letterSpacing: 0.6,
-    color: ACCENT,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    color: '#ffffff',
+    marginTop: 2,
+  },
+  phaseViaNone: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.26)',
+    marginTop: 2,
   },
   patternFoot: {
     fontFamily: BrandFonts.medium,
-    fontSize: 11,
+    fontSize: 11.5,
     letterSpacing: 0.4,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
 
   /* ── Ritmeblok tijdens de sessie ── */
