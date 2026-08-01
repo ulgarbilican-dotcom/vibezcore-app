@@ -305,7 +305,11 @@ export default function BreathWelcomeScreen() {
          precies wat de operator zag (2026-07-31: "bij aanklikken cards
          gebeurt niets"). */
       claimVoiceSource('breath');
-      playBreathCue('inhale', 'nose', 'calm', 'breath');
+      /* Met `force`: de gebruiker heeft NET op "Voice" getikt, dat is de
+         toestemming. De globale voorkeur staat standaard uit en wordt door
+         de root-layout asynchroon opnieuw doorgezet — precies daardoor viel
+         het geluid hier telkens weg. */
+      playBreathCue('inhale', 'nose', 'calm', 'breath', true);
     }
   };
 

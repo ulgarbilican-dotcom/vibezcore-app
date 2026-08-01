@@ -45,7 +45,6 @@ import {
   claimVoiceSource,
   playBreathCue,
   releaseVoiceSource,
-  setVoiceEnabled,
   stopVoice,
 } from '@/services/breath-voice';
 import {
@@ -97,12 +96,15 @@ const SCREEN_H = Dimensions.get('window').height;
    houden, vult het ONDERWERP het scherm in plaats van de rand.
    Tijdens de sessie mag hij groter: de titeltekst is dan weg. */
 const ART_IDLE = SCREEN_W * 1.04;
-const ART_RUN = SCREEN_W * 1.38;
+/* Kleiner dan eerst: tijdens de sessie stond de bloem te dicht op de
+   rondeteller eronder. */
+const ART_RUN = SCREEN_W * 1.2;
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
    toestel-inzet vrij, zodat de laatste kaart nooit onder de knop verdwijnt
    en er ook geen willekeurig gat overblijft. */
-const FOOTER_H = 56;
+const BTN_H = 50;
+const FOOTER_H = BTN_H + 6;
 /* Waar de bloem verticaal in haar eigen bestand staat. Niet in het midden. */
 const ART_FOCUS_Y = 0.43;
 
@@ -282,9 +284,13 @@ export default function BreathSessionScreen() {
   const voiceRef = useRef(voiceOn);
   const hapticRef = useRef(hapticsOn);
   const roundsRef = useRef(chosen.rounds);
+  /* Bewust GEEN setVoiceEnabled hier. Dit scherm heeft een eigen knop; die
+     hoort de globale voorkeur in Settings niet stilletjes te overschrijven.
+     Deed het dat wel, dan bleef de app na één keer uitzetten overal stil —
+     ook in de onboarding, zonder dat iemand snapte waarom. */
   useEffect(() => {
     voiceRef.current = voiceOn;
-    setVoiceEnabled(voiceOn);
+    if (!voiceOn) stopVoice();
   }, [voiceOn]);
   useEffect(() => {
     hapticRef.current = hapticsOn;
@@ -355,7 +361,10 @@ export default function BreathSessionScreen() {
         } catch {}
       }
       if (voiceRef.current) {
-        playBreathCue(k, 'nose', 'calm', 'breath');
+        /* `force`, want dit scherm heeft een eigen zichtbare Voice-knop.
+           Staat die op ON, dan is dat de keuze van de gebruiker — die hoort
+           niet alsnog overruled te worden door een instelling elders. */
+        playBreathCue(k, 'nose', 'calm', 'breath', true);
       }
 
       /* Beeld: alleen in- en uitademen bewegen. Tijdens het vasthouden
@@ -515,7 +524,7 @@ export default function BreathSessionScreen() {
             art="lotus"
             breath={breath}
             glow={GLOW}
-            heightRatio={running ? 0.4 : 0.42}
+            heightRatio={running ? 0.38 : 0.42}
             focusY={ART_FOCUS_Y}
             rings={running}
           />
@@ -876,17 +885,20 @@ const s = StyleSheet.create({
   },
 
   /* ── Voortgang tijdens de sessie ── */
-  progressWrap: { alignItems: 'center', gap: 3, width: '100%' },
+  /* Compacter dan eerst — het blok nam onnodig hoogte in en drukte de
+     figuur en de teller tegen elkaar aan. */
+  progressWrap: { alignItems: 'center', gap: 1, width: '100%' },
   progressTime: {
     fontFamily: BrandFonts.bold,
-    fontSize: 30,
+    fontSize: 26,
+    lineHeight: 31,
     color: '#ffffff',
     letterSpacing: -0.5,
-    marginTop: 4,
+    marginTop: 2,
   },
   progressSub: {
     fontFamily: BrandFonts.medium,
-    fontSize: 10.5,
+    fontSize: 10,
     letterSpacing: 1.6,
     color: 'rgba(255,255,255,0.38)',
     textTransform: 'uppercase',
@@ -896,7 +908,7 @@ const s = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.10)',
-    marginTop: 10,
+    marginTop: 8,
     overflow: 'hidden',
   },
   barFill: { height: 3, borderRadius: 2, backgroundColor: ACCENT },
@@ -1069,9 +1081,19 @@ const s = StyleSheet.create({
     paddingBottom: 12,
   },
   /* Bewust lager dan eerst. Een knop van bijna zestig punten hoog domineert
-     een scherm dat over rust gaat; vijftig is ruim genoeg om te raken. */
-  startWrap: { borderRadius: 15, overflow: 'hidden' },
-  startBtn: { paddingVertical: 15, alignItems: 'center' },
+     een scherm dat over rust gaat; vijftig is ruim genoeg om te raken.
+
+     De hoogte staat EXPLICIET, niet via de padding van de tekst erin. Dit
+     was de oorzaak van de verdwijnende knop: een LinearGradient die zijn
+     hoogte alleen uit een kind haalt, meet met tussenpozen nul en verdwijnt
+     dan volledig. Dat verklaart ook waarom END SESSION nooit wegviel — dat
+     is een gewone View met rand, geen verloop. */
+  startWrap: { borderRadius: 15, overflow: 'hidden', height: BTN_H },
+  startBtn: {
+    height: BTN_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   startTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 13.5,
@@ -1079,8 +1101,9 @@ const s = StyleSheet.create({
     color: '#ffffff',
   },
   endBtn: {
-    paddingVertical: 15,
+    height: BTN_H,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',

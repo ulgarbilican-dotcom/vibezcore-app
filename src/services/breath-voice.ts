@@ -122,8 +122,22 @@ export function playBreathCue(
   exhaleVia: ExhaleVia,
   key?: BreathKey,
   source?: VoiceSource,
+  /** Negeer de globale voorkeur `voiceCues`.
+   *
+   *  Nodig voor schermen die een EIGEN zichtbare Voice-schakelaar hebben,
+   *  of waar de gebruiker net zelf op "Voice" getikt heeft. Die tik ís de
+   *  toestemming; hem dan alsnog tegen een instelling in Settings houden
+   *  levert stilte op zonder uitleg.
+   *
+   *  Dit was de oorzaak van het steeds terugkerende "geen geluid":
+   *  `voiceCues` staat standaard UIT, en de root-layout zet die waarde bij
+   *  elke start opnieuw door. Die effect-keten is asynchroon, dus tikte je
+   *  vlak na het openen op een kaart, dan zette het scherm de vlag aan,
+   *  begon de cue, en zette de root hem een tel later weer uit. Vandaar dat
+   *  het de ene keer wel werkte en de andere keer niet. */
+  force = false,
 ): void {
-  if (!voiceEnabled) return;
+  if (!voiceEnabled && !force) return;
   /* Iter v170: silently no-op als er een andere source de voice claimt.
      Voorkomt dat breath-tab cues door bracelet active heen spelen of
      vice versa. Calls zonder source parameter blijven backwards-compat
