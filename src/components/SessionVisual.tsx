@@ -66,12 +66,21 @@ function Node({
   const grow = center ? 0.55 : 0.3;
   const radius = useDerivedValue(() => r * (1 + breath.value * grow));
   const opacity = useDerivedValue(() => 0.5 + breath.value * 0.5);
+  /* De halo mag niet even hard meelichten als de kern, anders wordt het
+     één wazige vlek zodra er twintig van deze punten naast elkaar staan. */
+  const haloOpacity = useDerivedValue(() => (0.5 + breath.value * 0.5) * 0.75);
 
+  /* De dekking staat op de cirkels zelf en NIET op een <Group opacity>.
+     Een groep met dekking dwingt Skia om een volledig scherm aan
+     tussengeheugen te reserveren; op een vorm is het niets meer dan de
+     alpha van de verf. Bij twintig knopen scheelt dat twintig
+     schermbuffers per frame — dat is het verschil tussen soepel en
+     onbruikbaar. */
   return (
-    <Group opacity={opacity}>
+    <>
       {/* Halo eromheen, harde kern erbinnen. Zonder halo leest een wit
           puntje als een stofje op het scherm. */}
-      <Circle cx={x} cy={y} r={radius}>
+      <Circle cx={x} cy={y} r={radius} opacity={haloOpacity}>
         <RadialGradient
           c={vec(x, y)}
           r={r * 2.4}
@@ -80,10 +89,10 @@ function Node({
         />
         <BlurMask blur={r * 1.6} style="normal" />
       </Circle>
-      <Circle cx={x} cy={y} r={radius} color={C_NODE}>
+      <Circle cx={x} cy={y} r={radius} color={C_NODE} opacity={opacity}>
         <BlurMask blur={r * 0.5} style="normal" />
       </Circle>
-    </Group>
+    </>
   );
 }
 

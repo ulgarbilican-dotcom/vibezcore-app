@@ -134,10 +134,19 @@ function lotus(R: number): Figure {
   const rim = Skia.Path.Make();
   rim.addCircle(0, 0, R);
 
-  const nodes = Array.from({ length: outerPetals }, (_, i) => {
-    const a = (i / outerPetals) * TAU;
-    return { x: Math.cos(a) * R * 0.94, y: Math.sin(a) * R * 0.94 };
-  });
+  /* Licht op elke bladpunt — buitenste krans én binnenste. Twintig punten
+     in twee ringen die een halve stap verspringen; dat verspringen is wat
+     de figuur laat sprankelen in plaats van als een wiel te lezen. */
+  const nodes = [
+    ...Array.from({ length: outerPetals }, (_, i) => {
+      const a = (i / outerPetals) * TAU;
+      return { x: Math.cos(a) * R * 0.94, y: Math.sin(a) * R * 0.94 };
+    }),
+    ...Array.from({ length: innerPetals }, (_, i) => {
+      const a = (i / innerPetals) * TAU + TAU / (innerPetals * 2);
+      return { x: Math.cos(a) * R * 0.5, y: Math.sin(a) * R * 0.5 };
+    }),
+  ];
 
   return { web, rim, nodes, core: true };
 }
