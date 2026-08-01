@@ -35,16 +35,32 @@ import {
 } from 'react-native-reanimated';
 import { buildFigure, type FigureKey } from './session-figures';
 
-const C_WEB = '#79B4FF';
-const C_RIM = '#DCEBFF';
 const C_NODE = '#ffffff';
-const C_HALO = '#3f8ce8';
+
+/* Operator 2026-08-01: elke toestand krijgt een eigen kleur, zodat je aan
+   het beeld al ziet waar je bent voordat je de titel leest. De kleur komt
+   van buiten mee — de figuur kent zijn eigen betekenis niet. */
+export type Tint = {
+  /** De lijnen. */
+  line: string;
+  /** De rand en de accenten; lichter dan de lijn. */
+  rim: string;
+  /** Gloed en halo's. Verzadigd, want hij wordt op lage dekking gebruikt. */
+  halo: string;
+};
+
+export const TINT_CALM: Tint = {
+  line: '#B478FF',
+  rim: '#E7D4FF',
+  halo: '#8B3DF0',
+};
 
 type Props = {
   size: number;
   figure: FigureKey;
   /** 0 = volledig uitgeademd, 1 = volledig ingeademd. */
   breath: SharedValue<number>;
+  tint?: Tint;
 };
 
 /* Eén lichtpunt. Eigen component omdat er hooks in zitten en die niet in een
@@ -54,12 +70,14 @@ function Node({
   y,
   r,
   breath,
+  halo,
   center = false,
 }: {
   x: number;
   y: number;
   r: number;
   breath: SharedValue<number>;
+  halo: string;
   center?: boolean;
 }) {
   /* Het hart zwelt sterker dan de buitenknopen — daar begint de adem. */
@@ -91,8 +109,8 @@ function Node({
         <RadialGradient
           c={vec(x, y)}
           r={r * 2.2}
-          colors={[C_HALO, 'rgba(63,140,232,0.55)', '#00000000']}
-          positions={[0, 0.3, 1]}
+          colors={[halo, halo, '#00000000']}
+          positions={[0, 0.28, 1]}
         />
       </Circle>
       <Circle cx={x} cy={y} r={radius} color={C_NODE} opacity={opacity}>
@@ -102,7 +120,13 @@ function Node({
   );
 }
 
-export default function SessionVisual({ size, figure, breath }: Props) {
+export default function SessionVisual({
+  size,
+  figure,
+  breath,
+  tint = TINT_CALM,
+}: Props) {
+  const { line: C_WEB, rim: C_RIM, halo: C_HALO } = tint;
   const cx = size / 2;
   const cy = size / 2;
   const R = size * 0.44;
@@ -118,11 +142,19 @@ export default function SessionVisual({ size, figure, breath }: Props) {
     { scale: 0.9 + breath.value * 0.1 },
   ]);
 
+  /* Bij een figuur zonder omsluitende cirkel is de rand decor. Op volle
+     sterkte werd hij het luidste element op het scherm. */
+  const rimScale = geo.rimSoft ? 0.3 : 1;
   const webOpacity = useDerivedValue(() => 0.62 + breath.value * 0.3);
-  const rimOpacity = useDerivedValue(() => 0.7 + breath.value * 0.28);
+  const rimOpacity = useDerivedValue(
+    () => (0.7 + breath.value * 0.28) * rimScale,
+  );
   const glowOpacity = useDerivedValue(() => 0.09 + breath.value * 0.1);
   /* De bloem eromheen. Zie de opmerking bij de tekening zelf. */
   const bloomOpacity = useDerivedValue(() => 0.16 + breath.value * 0.16);
+  const rimBloom = useDerivedValue(
+    () => (0.16 + breath.value * 0.16) * rimScale,
+  );
 
   const nodeR = size * 0.009;
 
@@ -162,7 +194,7 @@ export default function SessionVisual({ size, figure, breath }: Props) {
               style="stroke"
               strokeWidth={thin * 4}
               color={C_WEB}
-              opacity={bloomOpacity}
+              opacity={rimBloom}
             >
               <BlurMask blur={size * 0.016} style="normal" />
             </Path>
@@ -183,10 +215,24 @@ export default function SessionVisual({ size, figure, breath }: Props) {
             />
 
             {geo.nodes.map((n, i) => (
-              <Node key={i} x={n.x} y={n.y} r={nodeR} breath={breath} />
+              <Node
+                key={i}
+                x={n.x}
+                y={n.y}
+                r={nodeR}
+                breath={breath}
+                halo={C_HALO}
+              />
             ))}
             {geo.core && (
-              <Node x={0} y={0} r={nodeR * 1.6} breath={breath} center />
+              <Node
+                x={0}
+                y={geo.coreY ?? 0}
+                r={nodeR * 1.6}
+                breath={breath}
+                halo={C_HALO}
+                center
+              />
             )}
           </Group>
         </Group>

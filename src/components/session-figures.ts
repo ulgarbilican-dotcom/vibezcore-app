@@ -45,6 +45,12 @@ export type Figure = {
   nodes: { x: number; y: number }[];
   /** Of het hart een eigen lichtpunt krijgt. */
   core: boolean;
+  /** Waar dat hart zit. Bij een lotus is dat niet het middelpunt maar de
+   *  voet waar alle blaadjes samenkomen. Weglaten = de oorsprong. */
+  coreY?: number;
+  /** De rand is decor in plaats van begrenzing, en hoort dus veel flauwer
+   *  getekend te worden. Geldt voor figuren zonder omsluitende cirkel. */
+  rimSoft?: boolean;
 };
 
 /* ── Flower of Life ────────────────────────────────────────────────────
@@ -83,80 +89,96 @@ function flower(R: number): Figure {
 }
 
 /* ── Lotus ─────────────────────────────────────────────────────────────
-   Twee kransen bloembladen, de buitenste een halve stap verdraaid. Elk blad
-   is een amandel van twee bogen — dat is de vorm die een lotusblad maakt en
-   die je met twee kwadratische curven exact kunt leggen. */
+   Operator 2026-08-01: "de mandala is niet echt heel mooi" — en terecht.
+   Hier stond een radiaal rozet: twintig blaadjes gelijkmatig rond een
+   middelpunt. Dat is een mandala, geen lotus.
+
+   Een lotus zie je van VOREN. De blaadjes waaieren omhoog vanuit één punt
+   onderaan, in lagen: de achterste rij breed en laag uitgespreid, de
+   voorste rij smal en rechtop. Dat overlappen ís de bloem — een bloem
+   waarvan alle blaadjes even ver van het hart liggen bestaat niet.
+
+   Vandaar ook geen omsluitende cirkel. De referentie heeft er geen; een
+   lotus hangt in de ruimte, hij zit niet in een wiel. Wat ervoor in de
+   plaats komt zijn een paar heel platte ellipsen erachter, die geven
+   diepte zonder de vorm te begrenzen. */
 function lotus(R: number): Figure {
   const web = Skia.Path.Make();
 
+  /* Eén blad: van de voet naar buiten, met twee zijden die uitbollen. De
+     bolling zit op tweederde en niet op de helft — dat maakt het verschil
+     tussen een blaadje en een ruit. */
   const petal = (
     p: SkPath,
+    bx: number,
+    by: number,
     angle: number,
-    inner: number,
-    outer: number,
-    width: number,
+    len: number,
+    halfW: number,
   ) => {
-    const ca = Math.cos(angle);
-    const sa = Math.sin(angle);
-    /* Punt aan de binnenkant, punt aan de buitenkant, en twee zijden die
-       daartussen uitbollen. */
-    const ix = ca * inner;
-    const iy = sa * inner;
-    const ox = ca * outer;
-    const oy = sa * outer;
-    const mx = ca * (inner + outer) * 0.5;
-    const my = sa * (inner + outer) * 0.5;
-    /* Loodrecht op de straal, want daar moet het blad breed zijn. */
-    const px = -sa * width;
-    const py = ca * width;
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    const tx = bx + dx * len;
+    const ty = by + dy * len;
+    /* Loodrecht op de lengterichting — daar is het blad breed. */
+    const px = -dy * halfW;
+    const py = dx * halfW;
+    const mx = bx + dx * len * 0.62;
+    const my = by + dy * len * 0.62;
 
-    p.moveTo(ix, iy);
-    p.quadTo(mx + px * 2, my + py * 2, ox, oy);
-    p.quadTo(mx - px * 2, my - py * 2, ix, iy);
+    p.moveTo(bx, by);
+    p.quadTo(mx + px, my + py, tx, ty);
+    p.quadTo(mx - px, my - py, bx, by);
     p.close();
   };
 
-  /* De twee kransen raken elkaar maar overlappen NIET. Eerder liep de
-     binnenste tot 0.5R en de buitenste vanaf 0.3R; in die overlap kruisten
-     twintig bogen elkaar en werd het midden een kluwen. Een lotus moet
-     gelaagd lezen, niet verward — dus de binnenste stopt waar de buitenste
-     begint. */
-  const outerPetals = 12;
-  const OUTER_FROM = 0.32;
-  const OUTER_TO = 0.94;
-  for (let i = 0; i < outerPetals; i++) {
-    petal(web, (i / outerPetals) * TAU, R * OUTER_FROM, R * OUTER_TO, R * 0.1);
+  /* De voet ligt onder het midden: daar komen alle blaadjes samen. */
+  const bx = 0;
+  const by = R * 0.58;
+
+  /* Drie lagen. Naar voren toe: minder blaadjes, korter, rechter op. De
+     hoeken zijn gespiegeld rond recht-omhoog (−90°). */
+  const rows = [
+    { n: 9, spread: 168, len: 0.94, w: 0.15 },
+    { n: 7, spread: 126, len: 0.74, w: 0.14 },
+    { n: 5, spread: 84, len: 0.52, w: 0.125 },
+  ];
+
+  const tips: { x: number; y: number }[] = [];
+
+  for (const row of rows) {
+    for (let i = 0; i < row.n; i++) {
+      const t = row.n === 1 ? 0.5 : i / (row.n - 1);
+      const deg = -90 - row.spread / 2 + t * row.spread;
+      const a = (deg * Math.PI) / 180;
+      petal(web, bx, by, a, R * row.len, R * row.w);
+      tips.push({
+        x: bx + Math.cos(a) * R * row.len,
+        y: by + Math.sin(a) * R * row.len,
+      });
+    }
   }
-  const innerPetals = 8;
-  const INNER_TO = 0.3;
-  for (let i = 0; i < innerPetals; i++) {
-    petal(
-      web,
-      (i / innerPetals) * TAU + TAU / (innerPetals * 2),
-      R * 0.04,
-      R * INNER_TO,
-      R * 0.055,
+
+  /* Diepte erachter: platte ellipsen, geen cirkel. Ze moeten de bloem
+     omvatten en niet eronder liggen — twee smalle ellipsen ónder de voet
+     lazen als een schoteltje, alsof de lotus op een bordje stond. Nu drie
+     ruime ringen rond het hart, die met `rimSoft` heel flauw getekend
+     worden. Ze mogen de blaadjes kruisen; op die dekking leest dat als
+     ruimte erachter in plaats van als een lijn eroverheen. */
+  const rim = Skia.Path.Make();
+  const ringY = by - R * 0.06;
+  for (const w of [1.16, 0.88, 0.6]) {
+    rim.addOval(
+      Skia.XYWHRect(-R * w, ringY - R * w * 0.3, R * w * 2, R * w * 0.6),
     );
   }
 
-  const rim = Skia.Path.Make();
-  rim.addCircle(0, 0, R);
+  /* Licht op de punten van de voorste twee lagen — de achterste rij ligt
+     visueel het verst weg en hoort niet even hard mee te schitteren. */
+  const nodes = tips.slice(rows[0].n);
 
-  /* Licht op elke bladpunt — buitenste krans én binnenste. Twintig punten
-     in twee ringen die een halve stap verspringen; dat verspringen is wat
-     de figuur laat sprankelen in plaats van als een wiel te lezen. */
-  const nodes = [
-    ...Array.from({ length: outerPetals }, (_, i) => {
-      const a = (i / outerPetals) * TAU;
-      return { x: Math.cos(a) * R * OUTER_TO, y: Math.sin(a) * R * OUTER_TO };
-    }),
-    ...Array.from({ length: innerPetals }, (_, i) => {
-      const a = (i / innerPetals) * TAU + TAU / (innerPetals * 2);
-      return { x: Math.cos(a) * R * INNER_TO, y: Math.sin(a) * R * INNER_TO };
-    }),
-  ];
-
-  return { web, rim, nodes, core: true };
+  /* Het hart zit in de voet, niet in het midden van het doek. */
+  return { web, rim, nodes, core: true, coreY: by, rimSoft: true };
 }
 
 /* ── Concentric Ripples ────────────────────────────────────────────────
