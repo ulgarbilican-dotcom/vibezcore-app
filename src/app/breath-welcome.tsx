@@ -267,8 +267,11 @@ export default function BreathWelcomeScreen() {
       if (router.canGoBack()) router.back();
       else router.replace('/');
     } else {
-      /* Volledige gratis sessie — geen 2-min proefje. */
-      router.replace('/breath-sample');
+      /* Volledige gratis sessie — geen 2-min proefje.
+         Sinds 1 augustus 2026 is dat het nieuwe sessiescherm (CALM · Lotus)
+         i.p.v. breath-sample: zelfde sessie, maar met duurkeuze, het
+         ademritme in beeld en de echte illustratie. */
+      router.replace('/breath-session');
     }
   };
 

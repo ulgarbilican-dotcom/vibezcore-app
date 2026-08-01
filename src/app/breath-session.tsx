@@ -41,6 +41,7 @@
 import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
 import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
   playBreathCue,
@@ -267,6 +268,9 @@ export default function BreathSessionScreen() {
   const [durationIdx, setDurationIdx] = useState<number>(DEFAULT_DURATION);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const sub = useSubscription();
+  const isPro = sub.isPro || sub.hasBracelet;
 
   const [voiceOn, setVoiceOn] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
@@ -337,9 +341,12 @@ export default function BreathSessionScreen() {
     arc.value = 0;
   }, [arc, clearTimers]);
 
-  /* Staat bewust vóór runPhase: de laatste ronde roept dit aan. */
-  const finish = useCallback(() => {
+  /* Staat bewust vóór runPhase: de laatste ronde roept dit aan.
+     `completed` onderscheidt uitgelopen van afgebroken — alleen een
+     afgemaakte sessie verdient een afsluitscherm. */
+  const finish = useCallback((completed = false) => {
     stopAll();
+    if (completed) setDone(true);
     setRunning(false);
     setRound(1);
     setPhase('inhale');
@@ -396,7 +403,7 @@ export default function BreathSessionScreen() {
             if (k === 'hold-out') {
               const n = r + 1;
               if (n > roundsRef.current) {
-                finish();
+                finish(true);
                 return;
               }
               setRound(n);
@@ -750,6 +757,58 @@ export default function BreathSessionScreen() {
             )}
           </Pressable>
         </Pressable>
+      </Modal>
+
+      {/* ── Sessie afgerond ──────────────────────────────────────────────
+          Overgenomen uit breath-sample, want de onboarding eindigt sinds
+          1 augustus 2026 hier. Zonder dit zou de zachte paywall na de
+          gratis sessie wegvallen — die hoort bij de flow, niet bij het
+          oude scherm. Tekst ONGEWIJZIGD gelaten: het is operator-copy.
+          (Wel eerder gemeld: "That was a taste" klopt niet meer nu dit een
+          volledige sessie is, en "full-length sessions" als premium-belofte
+          evenmin. Nog te beslissen.) */}
+      <Modal visible={done} transparent animationType="fade">
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <Text style={s.modalEyebrow}>SESSION COMPLETE</Text>
+            <Text style={s.modalTitle}>{isPro ? 'Nice.' : 'Loved it?'}</Text>
+            <Text style={s.modalBody}>
+              {isPro
+                ? 'That was a taste. All five states, full-length sessions and bracelet guidance are already unlocked in your account.'
+                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all five states, full-length sessions and the complete audio library.'}
+            </Text>
+
+            {isPro ? (
+              <Pressable
+                style={s.modalBtn}
+                onPress={() => setDone(false)}
+                android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+              >
+                <Text style={s.modalBtnTxt}>Enter Breath →</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  style={s.modalBtn}
+                  onPress={() => {
+                    setDone(false);
+                    router.replace('/subscribe');
+                  }}
+                  android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+                >
+                  <Text style={s.modalBtnTxt}>Continue with Premium</Text>
+                </Pressable>
+                <Pressable
+                  style={s.modalSecondary}
+                  onPress={() => setDone(false)}
+                  hitSlop={8}
+                >
+                  <Text style={s.modalSecondaryTxt}>Not yet</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -1172,5 +1231,11 @@ const s = StyleSheet.create({
     fontSize: 13.5,
     letterSpacing: 1.4,
     color: ACCENT,
+  },
+  modalSecondary: { paddingVertical: 12, alignItems: 'center' },
+  modalSecondaryTxt: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
   },
 });
