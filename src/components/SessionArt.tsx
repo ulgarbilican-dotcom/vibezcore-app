@@ -49,12 +49,12 @@ export const SESSION_ART = {
     'https://vibezcore-audio.b-cdn.net/images/lotusbloem-removebg-preview.png',
   sun: 'https://vibezcore-audio.b-cdn.net/images/sun-removebg-preview.png',
   orb: 'https://vibezcore-audio.b-cdn.net/images/Soft_Orb-removebg-preview.png',
-  /* Operator 1 augustus 2026, voor REST. Let op: dit is géén bol meer, dus
-     de naam "Soft Orb" en de beschrijving "a gentle sphere slowly expands
-     and contracts" kloppen niet meer bij dit beeld. Nog te beslissen welke
-     van de twee REST krijgt. */
+  /* REST, operator 1 augustus 2026. Let op: dit is géén bol, dus de naam
+     "Soft Orb" past er niet meer bij. Zie breath-states.ts. */
   buddha:
     'https://vibezcore-audio.b-cdn.net/images/buddha-removebg-preview%20(1).png',
+  clarity:
+    'https://vibezcore-audio.b-cdn.net/images/clarity-removebg-preview.png',
 } as const;
 
 export type SessionArtKey = keyof typeof SESSION_ART;

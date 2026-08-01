@@ -269,8 +269,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     accentSoft: 'rgba(95,227,240,0.14)',
     glow: '#1590A8',
     gradient: ['#0F7A90', '#5FE3F0', '#C2F6FC'],
-    /* TIJDELIJK, net als bij FOCUS — er is nog geen Crystal Grid. */
-    art: 'orb',
+    art: 'clarity',
     focusY: 0.5,
     phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
     technique: 'Coherent breathing · 5-5',
@@ -319,10 +318,11 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     accentSoft: 'rgba(142,151,255,0.15)',
     glow: '#3A45C7',
     gradient: ['#2E38A8', '#8E97FF', '#C6CBFF'],
-    /* De operator leverde ook een buddha voor REST. Nog niet doorgevoerd:
-       dan kloppen de naam "Soft Orb" en de beschrijving over een uitzettende
-       vorm niet meer. Wisselen op `'buddha'` zodra naam en tekst mee zijn. */
-    art: 'orb',
+    /* Operator 2 augustus 2026: REST krijgt de buddha.
+       OPEN PUNT: de titel hierboven zegt nog "Soft Orb". Dat is een bol, en
+       dit is er geen. Naam en beeld spreken elkaar dus tegen op het scherm —
+       operator-beslissing welke van de twee wijkt. */
+    art: 'buddha',
     focusY: 0.5,
     phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],
     technique: 'Slow breathing · 4-6',
