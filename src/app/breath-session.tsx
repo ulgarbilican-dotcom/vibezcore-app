@@ -549,12 +549,10 @@ export default function BreathSessionScreen() {
             leesbaar te zijn, niet groot. */}
         {running ? (
           <View style={s.progressWrap}>
-            <View style={s.progressRow}>
-              <Text style={s.progressRound}>
-                ROUND {round} / {chosen.rounds}
-              </Text>
-              <Text style={s.progressLeft}>{fmt(leftSec)} left</Text>
-            </View>
+            <Text style={s.progressRound}>
+              ROUND {round} / {chosen.rounds}
+            </Text>
+            <Text style={s.progressLeft}>{fmt(leftSec)} left</Text>
             <View style={s.bar}>
               <View
                 style={[
@@ -955,25 +953,23 @@ const s = StyleSheet.create({
   },
 
   /* ── Voortgang tijdens de sessie ── */
+  /* Gecentreerd, zoals het hoort onder een symmetrische figuur — maar op
+     twee regels in plaats van de oude vier. De hoogte was nooit de
+     boosdoener; dat was de uitsnede van het beeld. */
   progressWrap: { width: SCREEN_W - 28, alignItems: 'center' },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 2,
-  },
   progressRound: {
     fontFamily: BrandFonts.bold,
     fontSize: 11,
-    letterSpacing: 2,
+    letterSpacing: 2.4,
     color: 'rgba(255,255,255,0.46)',
   },
   progressLeft: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 13,
-    letterSpacing: 0.2,
+    fontFamily: BrandFonts.bold,
+    fontSize: 22,
+    lineHeight: 27,
+    letterSpacing: -0.2,
     color: '#ffffff',
+    marginTop: 3,
   },
   bar: {
     width: '100%',
