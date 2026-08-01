@@ -96,10 +96,15 @@ const SCREEN_H = Dimensions.get('window').height;
    schermbreedte heen te schalen en het zichtbare vlak eromheen smal te
    houden, vult het ONDERWERP het scherm in plaats van de rand.
    Tijdens de sessie mag hij groter: de titeltekst is dan weg. */
-const ART_IDLE = SCREEN_W * 1.04;
-/* Kleiner dan eerst: tijdens de sessie stond de bloem te dicht op de
-   rondeteller eronder. */
-const ART_RUN = SCREEN_W * 1.2;
+const ART_IDLE = SCREEN_W * 1.0;
+const ART_RUN = SCREEN_W * 1.18;
+
+/* Zichtbare hoogte, als deel van de beeldbreedte.
+   MOET groter zijn dan wat het onderwerp zelf inneemt — de lotus vult
+   ongeveer 42% van de beeldhoogte, en bij 38% werden de onderste blaadjes
+   er recht afgesneden. 52% laat er aan beide kanten marge omheen, ook op
+   het hoogtepunt van de inademing wanneer de bloem het grootst is. */
+const ART_H_RATIO = 0.52;
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
    toestel-inzet vrij, zodat de laatste kaart nooit onder de knop verdwijnt
@@ -531,7 +536,7 @@ export default function BreathSessionScreen() {
             art="lotus"
             breath={breath}
             glow={GLOW}
-            heightRatio={running ? 0.38 : 0.42}
+            heightRatio={ART_H_RATIO}
             focusY={ART_FOCUS_Y}
             rings={running}
           />
