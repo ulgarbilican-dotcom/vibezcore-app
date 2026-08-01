@@ -700,6 +700,16 @@ export default function BreathScreen() {
         return;
       }
       setCurrentKey(key);
+      /* Iter 2026-08-02 (operator-goedkeuring): een kaart-tap opent nu het
+         eigen sessiescherm van die toestand — tab → kaart → sessie. De
+         selectie hierboven blijft staan zodat Details en History op deze
+         tab bij de laatst gekozen toestand horen.
+         Tijdens een lopende sessie IN deze tab gebeurt dat bewust niet;
+         daar geldt nog de switch-banner hierboven. */
+      router.push({
+        pathname: '/breath-session',
+        params: { state: key },
+      });
     },
     [running, currentKey],
   );
