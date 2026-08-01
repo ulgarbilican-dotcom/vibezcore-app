@@ -158,10 +158,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     accentSoft: 'rgba(62,155,255,0.15)',
     glow: '#0B4FBF',
     gradient: ['#1554B8', '#3E9BFF', '#A9D3FF'],
-    /* TIJDELIJK. De aangeleverde Flower of Life haalde het niveau van de
-       lotus niet — bleek en schetsmatig. Tot er een nieuwe is staat hier de
-       zon, zodat het scherm werkt; hij hoort NIET bij deze toestand. */
-    art: 'sun',
+    art: 'flower',
     focusY: 0.5,
     phases: [
       inhale(4, 'Nose'),

@@ -55,6 +55,9 @@ export const SESSION_ART = {
     'https://vibezcore-audio.b-cdn.net/images/buddha-removebg-preview%20(1).png',
   clarity:
     'https://vibezcore-audio.b-cdn.net/images/clarity-removebg-preview.png',
+  /* FOCUS. Het bestand heet "bol", maar het IS de Flower of Life — niet
+     achter de naam aanlopen bij het opruimen. */
+  flower: 'https://vibezcore-audio.b-cdn.net/images/bol-removebg-preview.png',
 } as const;
 
 export type SessionArtKey = keyof typeof SESSION_ART;
