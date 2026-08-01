@@ -41,6 +41,15 @@
 import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
 import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
+import {
+  BREATH_STATES,
+  cycleSeconds,
+  nextPhase,
+  phaseAt,
+  type BreathState,
+  type BreathStateKey,
+  type PhaseKey,
+} from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
@@ -59,7 +68,7 @@ import {
 } from '@shopify/react-native-skia';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronRight, Settings, Volume2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -112,83 +121,19 @@ const ART_H_RATIO = 0.52;
 const BTN_H = 50;
 const FOOTER_H = BTN_H + 6;
 /* Waar de bloem verticaal in haar eigen bestand staat. Niet in het midden. */
-const ART_FOCUS_Y = 0.43;
+
 
 /* ── Kleur van deze toestand ─────────────────────────────────────────────
    Let op: CLAUDE.md §5 geeft de bracelet-modus Calm Control blauw
    (#0A84FF). De ademsessie draait vanaf nu violet, op verzoek van de
    operator. Die twee lopen dus uiteen terwijl ze dezelfde naam dragen —
    bewust, en te herzien als de bracelet mee moet. */
-const ACCENT = '#B478FF';
-const ACCENT_SOFT = 'rgba(180,120,255,0.15)';
-const GLOW = '#7B2FE0';
+/* Kleuren, teksten en patronen komen uit breath-states.ts. Dit scherm kent
+   zijn eigen inhoud niet — het krijgt `?state=` mee en tekent wat daar
+   staat. Zonder sleutel valt het terug op CALM, want dat is de toestand
+   die de onboarding en de gratis sessie gebruiken. */
 
-/* ── Het patroon ─────────────────────────────────────────────────────── */
-
-type Phase = 'inhale' | 'hold-in' | 'exhale' | 'hold-out';
-
-type PhaseDef = {
-  key: Phase;
-  label: string;
-  secs: number;
-  /** Waar de lucht langs gaat. Leeg tijdens vasthouden. */
-  via: 'Nose' | 'Mouth' | null;
-  /** Trillingsduur, gelijk aan (tabs)/breath.tsx. */
-  vib: number;
-};
-
-/* Box breathing: vier gelijke fasen, alles door de neus. */
-const PHASES: PhaseDef[] = [
-  { key: 'inhale', label: 'INHALE', secs: 4, via: 'Nose', vib: 60 },
-  { key: 'hold-in', label: 'HOLD', secs: 4, via: null, vib: 30 },
-  { key: 'exhale', label: 'EXHALE', secs: 4, via: 'Nose', vib: 80 },
-  { key: 'hold-out', label: 'HOLD', secs: 4, via: null, vib: 30 },
-];
-
-const CYCLE_S = PHASES.reduce((s, p) => s + p.secs, 0);
-const byKey = (k: Phase) => PHASES.find((p) => p.key === k)!;
-const nextOf = (k: Phase) =>
-  PHASES[(PHASES.findIndex((p) => p.key === k) + 1) % PHASES.length];
-
-/* ── De vier lengtes ─────────────────────────────────────────────────── */
-
-type Duration = {
-  minutes: number;
-  rounds: number;
-  name: string;
-  why: string;
-  recommended?: boolean;
-};
-
-const DURATIONS: Duration[] = [
-  {
-    minutes: 3,
-    rounds: 11,
-    name: 'Quick Calm',
-    why: 'For when tension needs to come off and there is no time to sit down for it. Eleven rounds is enough to notice the rhythm take over.',
-  },
-  {
-    minutes: 5,
-    rounds: 19,
-    name: 'Daily Calm',
-    why: 'The everyday length. Long enough to settle into, short enough that you keep coming back to it — which matters more than any single session.',
-    recommended: true,
-  },
-  {
-    minutes: 10,
-    rounds: 38,
-    name: 'Deep Calm',
-    why: 'For when there is time. Somewhere past the halfway mark the counting stops being something you follow and starts running by itself.',
-  },
-  {
-    minutes: 20,
-    rounds: 75,
-    name: 'Extended Calm',
-    why: 'A full session, and the length most often used in studies of slow paced breathing. There is no evidence that longer is better — this is simply the far end of the range.',
-  },
-];
-
-const DEFAULT_DURATION = 1;
+type Phase = PhaseKey;
 
 const BRACELET_IMG =
   'https://vibezcore-audio.b-cdn.net/images/Shattudkite_vzc_fiv%20no%20bg.png';
@@ -205,9 +150,13 @@ const ARC_H = 104;
 function PhaseArc({
   width,
   progress,
+  accent,
+  gradient,
 }: {
   width: number;
   progress: SharedValue<number>;
+  accent: string;
+  gradient: [string, string, string];
 }) {
   const cx = width / 2;
   /* Ruim genoeg zodat het getal ERIN past en niet erover. */
@@ -250,10 +199,10 @@ function PhaseArc({
         <LinearGradient
           start={vec(cx - r, cy)}
           end={vec(cx + r, cy)}
-          colors={['#6B2FBF', ACCENT, '#E2C6FF']}
+          colors={gradient}
         />
       </Path>
-      <Circle cx={dotX} cy={dotY} r={7} color={ACCENT} opacity={0.5}>
+      <Circle cx={dotX} cy={dotY} r={7} color={accent} opacity={0.5}>
         <BlurMask blur={7} style="normal" />
       </Circle>
       <Circle cx={dotX} cy={dotY} r={3.6} color="#ffffff" />
@@ -270,7 +219,17 @@ export default function BreathSessionScreen() {
      we de inzet expliciet mee, op de enige plek waar hij telt. */
   const insets = useSafeAreaInsets();
 
-  const [durationIdx, setDurationIdx] = useState<number>(DEFAULT_DURATION);
+  const params = useLocalSearchParams<{ state?: string }>();
+  const st: BreathState =
+    BREATH_STATES[(params.state as BreathStateKey) ?? 'calm'] ??
+    BREATH_STATES.calm;
+  const s = useMemo(() => makeStyles(st), [st]);
+  const CYCLE_S = useMemo(() => cycleSeconds(st), [st]);
+  const byKey = useCallback((k: Phase) => phaseAt(st, k), [st]);
+  const nextOf = useCallback((k: Phase) => nextPhase(st, k), [st]);
+  const DURATIONS = st.durations;
+
+  const [durationIdx, setDurationIdx] = useState<number>(st.defaultDuration);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
@@ -281,7 +240,7 @@ export default function BreathSessionScreen() {
   const [hapticsOn, setHapticsOn] = useState(true);
 
   const [phase, setPhase] = useState<Phase>('inhale');
-  const [secsLeft, setSecsLeft] = useState(PHASES[0].secs);
+  const [secsLeft, setSecsLeft] = useState(st.phases[0].secs);
   const [round, setRound] = useState(1);
 
   const chosen = DURATIONS[durationIdx];
@@ -355,7 +314,7 @@ export default function BreathSessionScreen() {
     setRunning(false);
     setRound(1);
     setPhase('inhale');
-    setSecsLeft(PHASES[0].secs);
+    setSecsLeft(st.phases[0].secs);
     idleBreathing();
     releaseVoiceSource('breath');
   }, [idleBreathing, stopAll]);
@@ -376,7 +335,13 @@ export default function BreathSessionScreen() {
         /* `force`, want dit scherm heeft een eigen zichtbare Voice-knop.
            Staat die op ON, dan is dat de keuze van de gebruiker — die hoort
            niet alsnog overruled te worden door een instelling elders. */
-        playBreathCue(k, 'nose', 'calm', 'breath', true);
+        playBreathCue(
+          k,
+          def.via === 'Mouth' ? 'mouth' : 'nose',
+          st.key === 'boost' ? 'boost' : 'calm',
+          'breath',
+          true,
+        );
       }
 
       /* Beeld: alleen in- en uitademen bewegen. Tijdens het vasthouden
@@ -458,10 +423,10 @@ export default function BreathSessionScreen() {
 
   /* Verstreken tijd wordt AFGELEID uit de fase-lus, niet apart geteld. Een
      tweede timer naast de eerste loopt onvermijdelijk uit de pas. */
-  const idx = PHASES.findIndex((p) => p.key === phase);
+  const idx = st.phases.findIndex((p) => p.key === phase);
   const elapsed =
     (round - 1) * CYCLE_S +
-    PHASES.slice(0, idx).reduce((s, p) => s + p.secs, 0) +
+    st.phases.slice(0, idx).reduce((s, p) => s + p.secs, 0) +
     (byKey(phase).secs - secsLeft);
   const leftSec = Math.max(0, totalSec - elapsed);
 
@@ -499,7 +464,7 @@ export default function BreathSessionScreen() {
         >
           <X size={18} color="rgba(255,255,255,0.72)" strokeWidth={2.2} />
         </Pressable>
-        <Text style={s.eyebrow}>CALM</Text>
+        <Text style={s.eyebrow}>{st.eyebrow}</Text>
         <Pressable
           onPress={() => router.push('/settings')}
           hitSlop={12}
@@ -522,17 +487,13 @@ export default function BreathSessionScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.title}>Lotus</Text>
+        <Text style={s.title}>{st.title}</Text>
 
         {/* Weg zodra de sessie loopt. Wie ademt leest niet. */}
         {!running && (
           <>
-            <Text style={s.tagline}>Stillness in motion.</Text>
-            <Text style={s.desc}>
-              Soft petals gently unfold with each breath,{'\n'}
-              encouraging relaxation, emotional balance{'\n'}
-              and a growing sense of calm.
-            </Text>
+            <Text style={s.tagline}>{st.tagline}</Text>
+            <Text style={s.desc}>{st.description}</Text>
           </>
         )}
 
@@ -543,11 +504,11 @@ export default function BreathSessionScreen() {
         <View style={s.visualWrap}>
           <SessionArt
             size={running ? ART_RUN : ART_IDLE}
-            art="lotus"
+            art={st.art}
             breath={breath}
-            glow={GLOW}
+            glow={st.glow}
             heightRatio={ART_H_RATIO}
-            focusY={ART_FOCUS_Y}
+            focusY={st.focusY}
             rings={running}
           />
         </View>
@@ -589,7 +550,7 @@ export default function BreathSessionScreen() {
                       <Text style={s.chipUnit}> MIN</Text>
                     </Text>
                     <Text style={[s.chipName, active && s.chipNameActive]}>
-                      {d.name.replace(' Calm', '')}
+                      {d.name.split(' ')[0]}
                     </Text>
                   </Pressable>
                 );
@@ -609,7 +570,7 @@ export default function BreathSessionScreen() {
           <View style={s.patternCard}>
             <Text style={s.cardEyebrow}>BREATHING PATTERN</Text>
             <View style={s.phaseRow}>
-              {PHASES.map((p, i) => (
+              {st.phases.map((p, i) => (
                 <View key={i} style={s.phaseCol}>
                   <Text style={s.phaseSecsSmall}>{p.secs}s</Text>
                   <Text style={s.phaseName}>{p.label}</Text>
@@ -621,7 +582,7 @@ export default function BreathSessionScreen() {
                 </View>
               ))}
             </View>
-            <Text style={s.patternFoot}>Box Breathing · 4-4-4-4</Text>
+            <Text style={s.patternFoot}>{st.technique}</Text>
           </View>
         ) : (
           <View style={s.rhythmCard}>
@@ -632,7 +593,7 @@ export default function BreathSessionScreen() {
             >
               <Volume2
                 size={19}
-                color={voiceOn ? ACCENT : 'rgba(255,255,255,0.3)'}
+                color={voiceOn ? st.accent : 'rgba(255,255,255,0.3)'}
                 strokeWidth={2.2}
               />
               <Text style={[s.channelLabel, !voiceOn && s.channelOff]}>
@@ -644,7 +605,12 @@ export default function BreathSessionScreen() {
             </Pressable>
 
             <View style={s.rhythmCenter}>
-              <PhaseArc width={SCREEN_W * 0.44} progress={arc} />
+              <PhaseArc
+                  width={SCREEN_W * 0.44}
+                  progress={arc}
+                  accent={st.accent}
+                  gradient={st.gradient}
+                />
               <View style={s.arcOverlay}>
                 <Text style={s.phaseLabel}>{byKey(phase).label}</Text>
                 <Text style={s.phaseBig}>
@@ -669,7 +635,7 @@ export default function BreathSessionScreen() {
               <Text
                 style={[
                   s.hapticGlyph,
-                  { color: hapticsOn ? ACCENT : 'rgba(255,255,255,0.3)' },
+                  { color: hapticsOn ? st.accent : 'rgba(255,255,255,0.3)' },
                 ]}
               >
                 ◉)))
@@ -731,7 +697,7 @@ export default function BreathSessionScreen() {
         ) : (
           <Pressable onPress={start} style={s.startWrap}>
             <ExpoGradient
-              colors={['#8B3DF0', ACCENT, '#D0A2FF']}
+              colors={st.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={s.startBtn}
@@ -833,7 +799,8 @@ export default function BreathSessionScreen() {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(st: BreathState) {
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   stars: { ...StyleSheet.absoluteFillObject },
 
@@ -857,7 +824,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 12,
     letterSpacing: 3.6,
-    color: ACCENT,
+    color: st.accent,
   },
 
   scrollView: { flex: 1 },
@@ -883,7 +850,7 @@ const s = StyleSheet.create({
   tagline: {
     fontFamily: BrandFonts.medium,
     fontSize: 14,
-    color: ACCENT,
+    color: st.accent,
     marginTop: 6,
   },
   desc: {
@@ -927,7 +894,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center',
   },
-  chipActive: { borderColor: ACCENT, backgroundColor: ACCENT_SOFT },
+  chipActive: { borderColor: st.accent, backgroundColor: st.accentSoft },
   chipTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 18,
@@ -947,7 +914,7 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.38)',
     marginTop: 1,
   },
-  chipNameActive: { color: ACCENT },
+  chipNameActive: { color: st.accent },
   exact: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12.5,
@@ -958,7 +925,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     fontSize: 11,
     letterSpacing: 0.4,
-    color: ACCENT,
+    color: st.accent,
     marginTop: -2,
   },
 
@@ -989,7 +956,7 @@ const s = StyleSheet.create({
     marginTop: 9,
     overflow: 'hidden',
   },
-  barFill: { height: 3, borderRadius: 2, backgroundColor: ACCENT },
+  barFill: { height: 3, borderRadius: 2, backgroundColor: st.accent },
 
   /* ── Ademritme vooraf ── */
   patternCard: {
@@ -1008,7 +975,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
     letterSpacing: 2.2,
-    color: ACCENT,
+    color: st.accent,
   },
   phaseRow: { flexDirection: 'row', width: '100%' },
   phaseCol: { flex: 1, alignItems: 'center', gap: 1 },
@@ -1064,14 +1031,14 @@ const s = StyleSheet.create({
   channelLabel: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12,
-    color: ACCENT,
+    color: st.accent,
     marginTop: 2,
   },
   channelState: {
     fontFamily: BrandFonts.bold,
     fontSize: 11,
     letterSpacing: 0.8,
-    color: ACCENT,
+    color: st.accent,
   },
   channelOff: { color: 'rgba(255,255,255,0.3)' },
   hapticGlyph: {
@@ -1086,7 +1053,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 13,
     letterSpacing: 2.4,
-    color: ACCENT,
+    color: st.accent,
   },
   phaseBig: {
     fontFamily: BrandFonts.bold,
@@ -1128,7 +1095,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 10.5,
     letterSpacing: 1.6,
-    color: ACCENT,
+    color: st.accent,
   },
   braceletBody: {
     fontFamily: BrandFonts.regular,
@@ -1212,7 +1179,7 @@ const s = StyleSheet.create({
     width: '100%',
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(180,120,255,0.34)',
+    borderColor: st.accentSoft,
     backgroundColor: '#141018',
     paddingVertical: 22,
     paddingHorizontal: 22,
@@ -1222,7 +1189,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
     letterSpacing: 1.8,
-    color: ACCENT,
+    color: st.accent,
   },
   modalTitle: {
     fontFamily: BrandFonts.extrabold,
@@ -1248,15 +1215,15 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: ACCENT_SOFT,
+    backgroundColor: st.accentSoft,
     borderWidth: 1,
-    borderColor: 'rgba(180,120,255,0.4)',
+    borderColor: st.accent,
   },
   modalBtnTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 13.5,
     letterSpacing: 1.4,
-    color: ACCENT,
+    color: st.accent,
   },
   modalSecondary: { paddingVertical: 12, alignItems: 'center' },
   modalSecondaryTxt: {
@@ -1264,4 +1231,5 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
   },
-});
+  });
+}
