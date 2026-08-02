@@ -12,6 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import { BREATH_STATES } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
@@ -25,16 +26,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showVibezAlert } from '@/components/VibezAlert';
 
-/* Pattern-metadata voor lookup (kleur + display-naam) — duplicate van
-   breath.tsx PATTERNS om geen cross-file dep te creëren. Bij toevoegen
-   van een 6e pattern: ook hier toevoegen. */
-const PATTERN_INFO: Record<string, { name: string; color: string }> = {
-  boost:   { name: 'Boost',         color: '#FFFFFF' },
-  focus:   { name: 'Sharp Focus',   color: '#FF9F0A' },
-  calm:    { name: 'Calm Control',  color: '#0A84FF' },
-  clarity: { name: 'Clarity',       color: '#BF5AF2' },
-  rest:    { name: 'Rest & Reset',  color: '#4FA46B' },
-};
+/* Naam en kleur per modus komen uit dezelfde bron als de keuzepagina en het
+   sessiescherm. Hier stond een handgeschreven kopie "om geen cross-file dep
+   te creëren", en die kopie liep uit de pas: ze droeg nog de kleuren van de
+   bracelet (CLAUDE.md §5) en de oude namen, terwijl de ademsessies sinds
+   1 augustus 2026 hun eigen palet hebben. Eén afhankelijkheid is goedkoper
+   dan vijf regels die stilletjes verouderen. */
+const PATTERN_INFO: Record<string, { name: string; color: string }> =
+  Object.fromEntries(
+    Object.values(BREATH_STATES).map((st) => [
+      st.key,
+      { name: st.eyebrow, color: st.accent },
+    ]),
+  );
 
 /* ── Formatters ──────────────────────────────────────────────────── */
 function formatMMSS(sec: number): string {

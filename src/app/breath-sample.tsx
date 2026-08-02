@@ -84,9 +84,12 @@ const CIRCLE_MAX = 1.0;
 const HALO_MIN = 0.50;
 const HALO_MAX = 1.15;
 
-/* Calm Control-kleuren uit PATTERNS in breath.tsx. */
-const CALM_COLOR = '#0A84FF';
-const CALM_COLOR_SOFT = 'rgba(10,132,255,0.30)';
+/* CALM CONTROL, in de kleur die de modus overal draagt: het violet uit
+   BREATH_STATES.calm. Stond hier op het blauw van de bracelet-modus met
+   dezelfde naam — twee producten, twee tabellen, en die van de bracelet
+   hoort niet in een ademsessie. */
+const CALM_COLOR = '#B478FF';
+const CALM_COLOR_SOFT = 'rgba(180,120,255,0.30)';
 
 /* Modi-definities leven in GuidanceSelector zodat de Breath-tab straks
    exact dezelfde set gebruikt (één bron van waarheid). */

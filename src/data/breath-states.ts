@@ -26,6 +26,18 @@
    Rondes zijn leidend, minuten zijn het label: alleen waar de cycluslengte
    in zestig past vallen die samen. Daarom staat de exacte tijd altijd naast
    de keuze in beeld.
+
+   ── Modusnamen gelijkgetrokken, 2 augustus 2026 ──────────────────────
+   De keuzepagina noemde twee toestanden anders dan het sessiescherm:
+   CALM tegenover Calm Control, REST tegenover Rest & Reset. Dezelfde
+   modus onder twee namen is geen nuance maar een fout. De namen uit de
+   mockup van de operator zijn nu de enige: BOOST · FOCUS · CALM CONTROL ·
+   CLARITY · REST & RESET, hier in `eyebrow`, en beide schermen lezen die.
+
+   Kleur hoort óók bij de modus en staat daarom hier: `accent` en
+   `gradient` sturen zowel de keuzepagina als de knop als het sessiescherm.
+   De bracelet houdt zijn eigen tabel (CLAUDE.md §5) — dat is hardware en
+   een ander product; ademen kleurt naar de illustratie.
    ───────────────────────────────────────────────────────────────────────── */
 
 import type { SessionArtKey } from '@/components/SessionArt';
@@ -54,7 +66,8 @@ export type DurationDef = {
 
 export type BreathState = {
   key: BreathStateKey;
-  /** Boven de titel, in hoofdletters. */
+  /** De naam van de MODUS, in hoofdletters. Staat boven de titel op het
+   *  sessiescherm en is de kop op de keuzepagina — één naam, twee plekken. */
   eyebrow: string;
   /** De naam van het figuur — dit is de kop van het scherm. */
   title: string;
@@ -209,7 +222,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
      en worden de andere 2:56, 5:04 en 10:08. */
   calm: {
     key: 'calm',
-    eyebrow: 'CALM',
+    eyebrow: 'CALM CONTROL',
     title: 'Lotus',
     tagline: 'Stillness in motion.',
     description:
@@ -313,7 +326,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
      vier cycli te blijven — dat verdraagt geen sessie van twintig minuten. */
   rest: {
     key: 'rest',
-    eyebrow: 'REST',
+    eyebrow: 'REST & RESET',
     title: 'Soft Orb',
     tagline: 'Nothing to think about.',
     description:
@@ -325,8 +338,11 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     /* Operator 2 augustus 2026: REST krijgt de Tree of Life.
        OPEN PUNT: de titel hierboven zegt nog "Soft Orb". Dat is een bol, en
        een boom is er geen. Naam en beeld spreken elkaar dus tegen op het
-       scherm — operator-beslissing welke van de twee wijkt. */
-    artScale: 0.88,
+       scherm — operator-beslissing welke van de twee wijkt.
+       Nog eens 20% kleiner (operator, 2 augustus 2026): 0.88 → 0.70. De boom
+       is hoog en smal en vulde het beeldvak tot aan de rand, waar de andere
+       vier lucht om zich heen hebben. */
+    artScale: 0.7,
     art: 'tree',
     focusY: 0.5,
     phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],

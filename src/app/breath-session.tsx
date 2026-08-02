@@ -1,13 +1,14 @@
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Sessiescherm (CALM · Lotus)
 
-   Namen, teksten en kleur volgens de operator, 1 augustus 2026:
+   Namen, teksten en kleur volgens de operator, 1 augustus 2026; de
+   modusnamen op 2 augustus gelijkgetrokken met de keuzepagina:
 
-     BOOST    Radiating Sun    Amber / goud
-     FOCUS    Flower of Life   Electric blue
-     CALM     Lotus            Violet          ← dit scherm
-     CLARITY  Crystal Grid     Cyan / ijsblauw
-     REST     Soft Orb         Zacht indigo
+     BOOST         Radiating Sun    Amber / goud
+     FOCUS         Flower of Life   Electric blue
+     CALM CONTROL  Lotus            Violet          ← dit scherm
+     CLARITY       Crystal Grid     Cyan / ijsblauw
+     REST & RESET  Soft Orb         Zacht indigo
 
    "Crystal Grid" verving "Hexagonal Grid" — dat laatste klonk als een
    wiskundeterm en niet als een toestand.
