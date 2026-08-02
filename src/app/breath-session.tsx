@@ -105,15 +105,15 @@ const SCREEN_H = Dimensions.get('window').height;
    schermbreedte heen te schalen en het zichtbare vlak eromheen smal te
    houden, vult het ONDERWERP het scherm in plaats van de rand.
    Tijdens de sessie mag hij groter: de titeltekst is dan weg. */
-const ART_IDLE = SCREEN_W * 1.0;
-const ART_RUN = SCREEN_W * 1.18;
+const ART_IDLE = SCREEN_W * 0.94;
+const ART_RUN = SCREEN_W * 1.04;
 
 /* Zichtbare hoogte, als deel van de beeldbreedte.
    MOET groter zijn dan wat het onderwerp zelf inneemt — de lotus vult
    ongeveer 42% van de beeldhoogte, en bij 38% werden de onderste blaadjes
    er recht afgesneden. 52% laat er aan beide kanten marge omheen, ook op
    het hoogtepunt van de inademing wanneer de bloem het grootst is. */
-const ART_H_RATIO = 0.52;
+const ART_H_RATIO = 0.64;
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
    toestel-inzet vrij, zodat de laatste kaart nooit onder de knop verdwijnt
@@ -483,19 +483,18 @@ export default function BreathSessionScreen() {
         contentContainerStyle={[
           s.scroll,
           running && s.scrollRunning,
-          { paddingBottom: FOOTER_H + insets.bottom + 18 },
+          { paddingBottom: FOOTER_H + Math.max(insets.bottom, 10) + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.title}>{st.title}</Text>
 
         {/* Weg zodra de sessie loopt. Wie ademt leest niet. */}
-        {!running && (
-          <>
-            <Text style={s.tagline}>{st.tagline}</Text>
-            <Text style={s.desc}>{st.description}</Text>
-          </>
-        )}
+        {/* De beschrijving is eruit (operator 2 augustus 2026): drie regels
+            kostten zoveel hoogte dat alles eronder opgekropt raakte en het
+            scherm moest scrollen. De tagline blijft — die is één regel en
+            zegt waar de toestand over gaat. */}
+        {!running && <Text style={s.tagline}>{st.tagline}</Text>}
 
         {/* Het beeld is vierkant, maar een lotus is breder dan hoog: de
             bovenste en onderste marge blijven leeg. Die snijden we weg,
@@ -686,10 +685,10 @@ export default function BreathSessionScreen() {
         colors={['rgba(10,10,10,0)', Brand.bg, Brand.bg]}
         locations={[0, 0.55, 1]}
         pointerEvents="none"
-        style={[s.footerScrim, { height: FOOTER_H + insets.bottom + 72 }]}
+        style={[s.footerScrim, { height: FOOTER_H + Math.max(insets.bottom, 10) + 88 }]}
       />
 
-      <View style={[s.footer, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 16 }]}>
         {running ? (
           <Pressable onPress={stop} style={s.endBtn}>
             <Text style={s.endTxt}>END SESSION</Text>
@@ -842,8 +841,8 @@ function makeStyles(st: BreathState) {
      lezen als rommel, ook als geen enkele afzonderlijk fout is. */
   title: {
     fontFamily: BrandFonts.extrabold,
-    fontSize: 30,
-    letterSpacing: -0.7,
+    fontSize: 27,
+    letterSpacing: -0.6,
     color: '#ffffff',
     marginTop: 6,
   },
@@ -871,8 +870,8 @@ function makeStyles(st: BreathState) {
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 26,
-    marginBottom: 26,
+    marginTop: 14,
+    marginBottom: 16,
   },
 
   sectionEyebrow: {
@@ -961,8 +960,8 @@ function makeStyles(st: BreathState) {
   /* ── Ademritme vooraf ── */
   patternCard: {
     width: SCREEN_W - 28,
-    marginTop: 18,
-    paddingVertical: 14,
+    marginTop: 14,
+    paddingVertical: 12,
     paddingHorizontal: 10,
     borderRadius: 18,
     borderWidth: 1,
