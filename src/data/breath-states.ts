@@ -313,11 +313,11 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     accentSoft: 'rgba(142,151,255,0.15)',
     glow: '#3A45C7',
     gradient: ['#2E38A8', '#8E97FF', '#C6CBFF'],
-    /* Operator 2 augustus 2026: REST krijgt de buddha.
+    /* Operator 2 augustus 2026: REST krijgt de Tree of Life.
        OPEN PUNT: de titel hierboven zegt nog "Soft Orb". Dat is een bol, en
-       dit is er geen. Naam en beeld spreken elkaar dus tegen op het scherm —
-       operator-beslissing welke van de twee wijkt. */
-    art: 'buddha',
+       een boom is er geen. Naam en beeld spreken elkaar dus tegen op het
+       scherm — operator-beslissing welke van de twee wijkt. */
+    art: 'tree',
     focusY: 0.5,
     phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],
     technique: 'Slow breathing · 4-6',

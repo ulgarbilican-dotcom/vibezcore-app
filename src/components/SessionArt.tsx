@@ -49,12 +49,13 @@ export const SESSION_ART = {
     'https://vibezcore-audio.b-cdn.net/images/lotusbloem-removebg-preview.png',
   sun: 'https://vibezcore-audio.b-cdn.net/images/sun-removebg-preview.png',
   orb: 'https://vibezcore-audio.b-cdn.net/images/Soft_Orb-removebg-preview.png',
-  /* REST, operator 1 augustus 2026. Let op: dit is géén bol, dus de naam
-     "Soft Orb" past er niet meer bij. Zie breath-states.ts. */
   buddha:
     'https://vibezcore-audio.b-cdn.net/images/buddha-removebg-preview%20(1).png',
+  /* REST, operator 2 augustus 2026 — vervangt de buddha. Ook dit is geen
+     bol, dus de naam "Soft Orb" past er nog steeds niet bij. */
+  tree: 'https://vibezcore-audio.b-cdn.net/images/tree_of_life-removebg-preview%20(1).png',
   clarity:
-    'https://vibezcore-audio.b-cdn.net/images/clarity-removebg-preview.png',
+    'https://vibezcore-audio.b-cdn.net/images/cristal-removebg-preview.png',
   /* FOCUS. Het bestand heet "bol", maar het IS de Flower of Life — niet
      achter de naam aanlopen bij het opruimen. */
   flower: 'https://vibezcore-audio.b-cdn.net/images/bol-removebg-preview.png',

@@ -105,8 +105,10 @@ const SCREEN_H = Dimensions.get('window').height;
    schermbreedte heen te schalen en het zichtbare vlak eromheen smal te
    houden, vult het ONDERWERP het scherm in plaats van de rand.
    Tijdens de sessie mag hij groter: de titeltekst is dan weg. */
-const ART_IDLE = SCREEN_W * 0.94;
-const ART_RUN = SCREEN_W * 1.04;
+/* Vooraf kleiner dan tijdens de sessie: daar staan nog de duurkeuze,
+   het ritmeblok en de bracelet-kaart onder. */
+const ART_IDLE = SCREEN_W * 0.8;
+const ART_RUN = SCREEN_W * 0.98;
 
 /* Zichtbare hoogte, als deel van de beeldbreedte.
    MOET groter zijn dan wat het onderwerp zelf inneemt — de lotus vult
@@ -831,10 +833,10 @@ function makeStyles(st: BreathState) {
      toestel-inzet. Een vast getal zou op het ene toestel een gat geven en
      op het andere de laatste kaart afsnijden. */
   scroll: { alignItems: 'center' },
-  /* Tijdens de sessie vallen de tagline en de beschrijving weg, en dan
-     bleef er onderaan een gat van een kwart scherm staan. De vier blokken
-     verdelen zich nu over de hoogte in plaats van bovenaan te klitten. */
-  scrollRunning: { flexGrow: 1, justifyContent: 'space-evenly' },
+  /* Tijdens de sessie pakt de inhoud van BOVEN af, met de slack onderaan.
+     Met `space-evenly` werden de gaten even groot verdeeld en zakte het
+     blok vanaf de figuur te ver naar beneden. */
+  scrollRunning: { flexGrow: 1, justifyContent: 'flex-start' },
 
   /* Eén ritme voor het hele scherm: 6 binnen een blok, 18 tussen blokken,
      26 rond de figuur. Afstanden die per onderdeel apart gekozen zijn
