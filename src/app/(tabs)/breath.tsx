@@ -98,6 +98,20 @@ const THUMB_COL = Math.floor((SCREEN_W - 8 - THUMB_GAP * 4) / 5);
    moet niet in die van de buren lopen. */
 const THUMB = Math.min(THUMB_COL - 12, 62);
 
+/* Even groot IN BEELD, niet even groot als bestand.
+   Elke illustratie heeft een andere lege rand: de zon en de lotus staan
+   klein in hun eigen bestand, de flower of life en het kristal vullen het
+   hunne bijna helemaal. Tekende de rij alle vijf op dezelfde maat, dan
+   stonden zon en lotus zichtbaar kleiner dan de rest — en dat is precies
+   wat de operator zag.
+   Diezelfde ongelijkheid is bij het grote beeld al gemeten en staat als
+   `artScale` per toestand. Hier wordt hij hergebruikt in plaats van
+   overgeschreven: één getal per illustratie, twee plekken die het volgen.
+   0.72 is de ijkwaarde (FOCUS) — die stond al goed, dus die blijft 1×. */
+const THUMB_REF = 0.72;
+const thumbSize = (artScale?: number) =>
+  THUMB * Math.min(1.7, (artScale ?? 1) / THUMB_REF);
+
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -384,7 +398,10 @@ export default function BreathScreen() {
                 {on && <View style={[s.thumbRing, { borderColor: t.accent }]} />}
                 <Image
                   source={{ uri: SESSION_ART[t.art] }}
-                  style={s.thumbImg}
+                  style={{
+                    width: thumbSize(t.artScale),
+                    height: thumbSize(t.artScale),
+                  }}
                   resizeMode="contain"
                 />
               </View>
@@ -559,7 +576,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbImg: { width: THUMB, height: THUMB },
   halo: { position: 'absolute', borderRadius: THUMB },
   haloOuter: { width: THUMB * 1.28, height: THUMB * 1.28 },
   haloMid: { width: THUMB * 1.04, height: THUMB * 1.04 },
