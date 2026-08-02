@@ -55,8 +55,10 @@ import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
   playBreathCue,
+  playCompletionCue,
   releaseVoiceSource,
   stopVoice,
+  type BreathKey,
 } from '@/services/breath-voice';
 import {
   BlurMask,
@@ -415,6 +417,31 @@ export default function BreathSessionScreen() {
     },
     [stopAll],
   );
+
+  /* ── De afsluitende monoloog ────────────────────────────────────────
+     Eén opname per toestand, ingesproken door de operator. Die hoorde bij
+     het afsluitscherm van de oude Breath-tab, en die tab is op 2 augustus
+     2026 vervangen door de keuzepagina — daarmee riep niemand hem nog aan
+     en eindigde een afgemaakte sessie in stilte. De bestanden zijn nooit
+     weg geweest; de aanroep wel.
+
+     Volgt de Voice-knop van dit scherm: staat die uit, dan blijft het stil.
+     Bij het wegtikken van het scherm stopt de opname, anders praat hij door
+     over een scherm dat er niet meer is. */
+  useEffect(() => {
+    if (!done) return;
+    if (!voiceRef.current) return;
+    try {
+      playCompletionCue(st.key as BreathKey);
+    } catch {
+      /* een haperende afsluiting mag de sessie niet alsnog laten stuklopen */
+    }
+  }, [done, st.key]);
+
+  const dismissDone = useCallback(() => {
+    stopVoice();
+    setDone(false);
+  }, []);
 
   /* Eerste tik kiest, tweede tik legt uit. Zo hoeft er geen extra
      info-knopje naast te staan. */
@@ -778,7 +805,7 @@ export default function BreathSessionScreen() {
             {isPro ? (
               <Pressable
                 style={s.modalBtn}
-                onPress={() => setDone(false)}
+                onPress={dismissDone}
                 android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
               >
                 <Text style={s.modalBtnTxt}>Enter Breath →</Text>
@@ -788,7 +815,7 @@ export default function BreathSessionScreen() {
                 <Pressable
                   style={s.modalBtn}
                   onPress={() => {
-                    setDone(false);
+                    dismissDone();
                     router.replace('/subscribe');
                   }}
                   android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
@@ -797,7 +824,7 @@ export default function BreathSessionScreen() {
                 </Pressable>
                 <Pressable
                   style={s.modalSecondary}
-                  onPress={() => setDone(false)}
+                  onPress={dismissDone}
                   hitSlop={8}
                 >
                   <Text style={s.modalSecondaryTxt}>Not yet</Text>
