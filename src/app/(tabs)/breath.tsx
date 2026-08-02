@@ -80,7 +80,9 @@ const DEFAULT_INDEX = ORDER.indexOf('calm');
 /* Het beeldvak. VASTE hoogte, want de tekst eronder mag niet verspringen
    zodra een illustratie groter of kleiner staat — daarvoor bestaat
    `artScale` per toestand. */
-const BOX_H = Math.min(Math.round(SCREEN_H * 0.32), 290);
+/* Het beeldvak levert hoogte in aan de rij eronder: die draagt nu twee
+   leesbare regels per toestand in plaats van één onleesbare. */
+const BOX_H = Math.min(Math.round(SCREEN_H * 0.28), 252);
 const ART_W = SCREEN_W * 1.02;
 
 /* Vijf naast elkaar binnen de schermbreedte, met naam en ondertitel eronder.
@@ -386,12 +388,17 @@ export default function BreathScreen() {
                   resizeMode="contain"
                 />
               </View>
+              {/* Twee regels toegestaan, en dát is wat de letter groot maakt.
+                  Op één regel moest "CALM CONTROL" binnen 79 punt passen en
+                  kwam de tekst niet boven de tien punt uit — onleesbaar. Over
+                  twee regels is "CONTROL" de langste eenheid, en die past
+                  ruim op dertien. */}
               <Text
                 style={[
                   s.thumbName,
-                  { color: on ? t.accent : 'rgba(255,255,255,0.68)' },
+                  { color: on ? t.accent : 'rgba(255,255,255,0.8)' },
                 ]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
                 {t.eyebrow}
               </Text>
@@ -565,20 +572,24 @@ const s = StyleSheet.create({
     borderWidth: 1,
     opacity: 0.9,
   },
+  /* Vaste hoogte van twee regels, ook voor de namen die er één nodig hebben.
+     Anders begint de ondertitel per kolom op een andere hoogte en golft de
+     hele rij. */
   thumbName: {
     marginTop: 8,
+    height: 30,
     fontFamily: BrandFonts.bold,
-    fontSize: 10,
-    lineHeight: 12,
-    letterSpacing: 0.1,
+    fontSize: 13,
+    lineHeight: 15,
+    letterSpacing: 0,
     textAlign: 'center',
   },
   thumbSub: {
-    marginTop: 2,
+    marginTop: 3,
     fontFamily: BrandFonts.regular,
-    fontSize: 8.5,
-    lineHeight: 11,
-    color: 'rgba(255,255,255,0.48)',
+    fontSize: 10.5,
+    lineHeight: 13,
+    color: 'rgba(255,255,255,0.58)',
     textAlign: 'center',
   },
 
