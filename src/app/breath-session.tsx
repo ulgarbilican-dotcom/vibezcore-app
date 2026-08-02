@@ -614,19 +614,28 @@ export default function BreathSessionScreen() {
                   accent={st.accent}
                   gradient={st.gradient}
                 />
+              {/* In de boog staat alleen nog de tijd. De naam van de fase
+                  paste er niet meer bij zodra de opening erbij kwam —
+                  "EXHALE · NOSE" liep dwars door de boog heen, en een
+                  instructie die over zijn eigen meter valt is geen
+                  instructie. */}
               <View style={s.arcOverlay}>
-                <Text style={s.phaseLabel}>{byKey(phase).label}</Text>
                 <Text style={s.phaseBig}>
                   {Math.max(0, secsLeft).toFixed(1)}
                 </Text>
-                <Text style={s.phaseUnit}>
-                  {byKey(phase).via ? `SEC · ${byKey(phase).via}` : 'SEC'}
-                </Text>
+                <Text style={s.phaseUnit}>SEC</Text>
               </View>
-              <Text style={s.nextLine}>
-                Next: {nextOf(phase).label.charAt(0)}
-                {nextOf(phase).label.slice(1).toLowerCase()} ·{' '}
-                {nextOf(phase).secs}.0 sec
+              {/* Onder de boog, over de volle breedte, in de kleur van de
+                  toestand: wat je NU doet en waar de lucht langs gaat. Hier
+                  stond "Next: …", en die is eruit — de sessie stuurt elke
+                  fase live aan met stem en trilling, dus vooruitlezen wat er
+                  zo komt voegt niets toe en trekt de aandacht juist weg van
+                  wat er op dit moment moet gebeuren. */}
+              <Text style={s.phaseLine}>
+                {byKey(phase).label}
+                {byKey(phase).via
+                  ? ` · ${byKey(phase).via!.toUpperCase()}`
+                  : ''}
               </Text>
             </View>
 
@@ -1053,12 +1062,18 @@ function makeStyles(st: BreathState) {
   },
 
   rhythmCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  arcOverlay: { position: 'absolute', top: 26, alignItems: 'center' },
-  phaseLabel: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 13,
-    letterSpacing: 2.4,
+  /* Lager dan eerst: in de boog staat nu alleen de tijd, dus die hoort in
+     het midden van de boog te hangen en niet tegen de bovenrand. */
+  arcOverlay: { position: 'absolute', top: 34, alignItems: 'center' },
+  /* De fase-regel onder de boog. Krijgt de volle breedte van het blok, dus
+     "EXHALE · MOUTH" past zonder ergens tegenaan te lopen. */
+  phaseLine: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 14,
+    letterSpacing: 1.8,
     color: st.accent,
+    textAlign: 'center',
+    marginTop: 2,
   },
   phaseBig: {
     fontFamily: BrandFonts.bold,
@@ -1072,12 +1087,6 @@ function makeStyles(st: BreathState) {
     fontSize: 9.5,
     letterSpacing: 1.6,
     color: 'rgba(255,255,255,0.5)',
-  },
-  nextLine: {
-    fontFamily: BrandFonts.regular,
-    fontSize: 11.5,
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: 2,
   },
 
   /* ── Bracelet ── */
