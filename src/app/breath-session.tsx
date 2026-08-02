@@ -7,8 +7,8 @@
      BOOST         Radiating Sun    Amber / goud
      FOCUS         Flower of Life   Electric blue
      CALM CONTROL  Lotus            Violet          ← dit scherm
-     CLARITY       Crystal Grid     Cyan / ijsblauw
-     REST & RESET  Soft Orb         Zacht indigo
+     CLARITY       Crystal          Wit
+     REST & RESET  Tree of Life     Groen
 
    "Crystal Grid" verving "Hexagonal Grid" — dat laatste klonk als een
    wiskundeterm en niet als een toestand.

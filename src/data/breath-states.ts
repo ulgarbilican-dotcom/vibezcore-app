@@ -20,8 +20,10 @@
    ("a precise and balanced rhythm"). 4-2-6 heeft een langere uitademing en
    laat ruis zakken; dat is wat CLARITY moet doen.
 
-   REST houdt de buddha als beeld. Het principe blijft hetzelfde: een vorm
-   die rustig uitzet en krimpt, zonder patroon om naar te kijken.
+   ── Kleur per toestand, operator 2 augustus 2026 ─────────────────────
+   De kleur volgt de ILLUSTRATIE, niet andersom. Twee liepen daarop achter:
+   CLARITY stond ijsblauw terwijl het kristal kleurloos is (nu wit), en REST
+   stond indigo van de bol die er niet meer is (nu groen, als de boom).
 
    Rondes zijn leidend, minuten zijn het label: alleen waar de cycluslengte
    in zestig past vallen die samen. Daarom staat de exacte tijd altijd naast
@@ -72,6 +74,11 @@ export type BreathState = {
   /** De naam van het figuur — dit is de kop van het scherm. */
   title: string;
   tagline: string;
+  /** Korte naam onder de miniatuur, uit de mockup van de operator. Niet
+   *  altijd de figuurnaam: alleen BOOST heet daar hetzelfde. */
+  subtitle: string;
+  /** Wat de toestand doet, in twee zinnen. Operator-copy, 2 augustus 2026 —
+   *  woord voor woord zoals aangeleverd. Staat op de keuzepagina. */
   description: string;
   /** Accentkleur: tekst, randen, de boog. */
   accent: string;
@@ -131,8 +138,9 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     eyebrow: 'BOOST',
     title: 'Radiating Sun',
     tagline: 'Energy moves outward.',
+    subtitle: 'Radiating Sun',
     description:
-      'A radiant pattern that expands with every breath,\ncreating a feeling of activation, momentum\nand forward motion.',
+      'Activate energy. Increase intensity, motivation and physical drive.',
     accent: '#F5A524',
     accentSoft: 'rgba(245,165,36,0.15)',
     glow: '#C8760A',
@@ -175,8 +183,9 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     eyebrow: 'FOCUS',
     title: 'Flower of Life',
     tagline: 'Perfect order.',
+    subtitle: 'Clarity Mind',
     description:
-      'Nineteen interconnected circles move as one,\ncreating a precise and balanced rhythm\nthat holds your attention in place.',
+      'Sharpen attention. Improve concentration and reduce distractions.',
     accent: '#3E9BFF',
     accentSoft: 'rgba(62,155,255,0.15)',
     glow: '#0B4FBF',
@@ -225,8 +234,9 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     eyebrow: 'CALM CONTROL',
     title: 'Lotus',
     tagline: 'Stillness in motion.',
+    subtitle: 'Balance & Composure',
     description:
-      'Soft petals gently unfold with each breath,\nencouraging relaxation, emotional balance\nand a growing sense of calm.',
+      'Reduce stress. Restore balance, composure and emotional control.',
     accent: '#B478FF',
     accentSoft: 'rgba(180,120,255,0.15)',
     glow: '#7B2FE0',
@@ -277,14 +287,21 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
   clarity: {
     key: 'clarity',
     eyebrow: 'CLARITY',
-    title: 'Crystal Grid',
+    title: 'Crystal',
     tagline: 'Order from complexity.',
+    subtitle: 'Clear Mind',
     description:
-      'A clean geometric structure gradually becomes\nmore defined as you breathe, a picture of\nmental clarity and focused awareness.',
-    accent: '#5FE3F0',
-    accentSoft: 'rgba(95,227,240,0.14)',
-    glow: '#1590A8',
-    gradient: ['#0F7A90', '#5FE3F0', '#C2F6FC'],
+      'Clear the mind. Organize thoughts and improve mental clarity.',
+    /* Operator 2 augustus 2026: CLARITY is WIT, niet cyaan. Het kristal is
+       kleurloos; een ijsblauwe naam ernaast maakte er een zesde kleur van
+       die nergens in het beeld zit.
+       Het verloop blijft wél getint staal: dat verloop draagt de knop van
+       het sessiescherm, en daar staat witte tekst op. Wit op wit is geen
+       knop meer. De naam, de rand en de omtrek zijn het wit. */
+    accent: '#FFFFFF',
+    accentSoft: 'rgba(255,255,255,0.13)',
+    glow: '#6E86AB',
+    gradient: ['#2F4059', '#7A93B6', '#CBD9EA'],
     art: 'clarity',
     focusY: 0.5,
     artScale: 0.7,
@@ -327,21 +344,22 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
   rest: {
     key: 'rest',
     eyebrow: 'REST & RESET',
-    title: 'Soft Orb',
+    /* Operator 2 augustus 2026: REST krijgt de Tree of Life, en daarmee ook
+       die naam — "Soft Orb" hoorde bij een bol die er niet meer is. De kleur
+       gaat mee: de boom is groen, dus de toestand is groen. Het indigo dat
+       hier stond kwam nog van de bol. */
+    title: 'Tree of Life',
     tagline: 'Nothing to think about.',
+    subtitle: 'Restore & Replenish',
     description:
-      'A gentle shape slowly expands and contracts\nwithout patterns or distractions, helping your\nmind settle naturally into rest.',
-    accent: '#8E97FF',
-    accentSoft: 'rgba(142,151,255,0.15)',
-    glow: '#3A45C7',
-    gradient: ['#2E38A8', '#8E97FF', '#C6CBFF'],
-    /* Operator 2 augustus 2026: REST krijgt de Tree of Life.
-       OPEN PUNT: de titel hierboven zegt nog "Soft Orb". Dat is een bol, en
-       een boom is er geen. Naam en beeld spreken elkaar dus tegen op het
-       scherm — operator-beslissing welke van de twee wijkt.
-       Nog eens 20% kleiner (operator, 2 augustus 2026): 0.88 → 0.70. De boom
-       is hoog en smal en vulde het beeldvak tot aan de rand, waar de andere
-       vier lucht om zich heen hebben. */
+      'Restore deeply. Support recovery, relaxation and restful sleep.',
+    accent: '#8FD94A',
+    accentSoft: 'rgba(143,217,74,0.15)',
+    glow: '#3B7A1C',
+    gradient: ['#3F7D1F', '#8FD94A', '#D8F5A5'],
+    /* 20% kleiner dan eerst (operator, 2 augustus 2026): 0.88 → 0.70. De
+       boom is hoog en breed en vulde het beeldvak tot aan de rand, waar de
+       andere vier lucht om zich heen hebben. */
     artScale: 0.7,
     art: 'tree',
     focusY: 0.5,

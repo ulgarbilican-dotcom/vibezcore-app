@@ -40,9 +40,8 @@ import {
 import { useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -81,10 +80,15 @@ const DEFAULT_INDEX = ORDER.indexOf('calm');
 /* Het beeldvak. VASTE hoogte, want de tekst eronder mag niet verspringen
    zodra een illustratie groter of kleiner staat — daarvoor bestaat
    `artScale` per toestand. */
-const BOX_H = Math.min(Math.round(SCREEN_H * 0.3), 260);
-const ART_W = SCREEN_W * 0.92;
+const BOX_H = Math.min(Math.round(SCREEN_H * 0.32), 290);
+const ART_W = SCREEN_W * 1.02;
 
-const THUMB = 54;
+/* Vijf naast elkaar binnen de schermbreedte, met naam en ondertitel eronder.
+   De kolombreedte staat vast zodat de langste naam — CALM CONTROL — de rij
+   niet scheeftrekt. */
+const THUMB_GAP = 6;
+const THUMB_COL = Math.floor((SCREEN_W - 20 - THUMB_GAP * 4) / 5);
+const THUMB = Math.min(THUMB_COL, 70);
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
@@ -210,7 +214,7 @@ export default function BreathScreen() {
 
       <View style={s.header}>
         <Text style={s.kicker}>CHOOSE YOUR MODE</Text>
-        <Text style={s.lead}>Five states. One breath at a time.</Text>
+        <Text style={s.lead}>Select your state. Activate transformation.</Text>
       </View>
 
       {/* Alles onder de kop staat als ÉÉN blok gecentreerd in wat er
@@ -261,62 +265,75 @@ export default function BreathScreen() {
           ))}
         </ScrollView>
 
-        {/* De pijlen staan ná de pager, dus ze vangen hun eigen tik. Aan de
-            uiteinden verdwijnen ze in plaats van grijs te worden: een pijl
-            die er staat maar niets doet is erger dan geen pijl. */}
+        {/* De pijlen staan ná de pager, dus ze vangen hun eigen tik. Kale
+            haken tegen de schermrand, geen knopjes: het beeld is het
+            onderwerp, en een omcirkelde pijl ernaast wordt vanzelf een
+            tweede. Aan de uiteinden verdwijnen ze — een pijl die er staat
+            maar niets doet is erger dan geen pijl. */}
         {index > 0 && (
           <Pressable
             onPress={() => goTo(index - 1)}
-            hitSlop={16}
+            hitSlop={20}
             style={[s.arrow, s.arrowLeft]}
             accessibilityLabel="Previous mode"
           >
             <ChevronLeft
-              size={22}
-              color="rgba(255,255,255,0.8)"
-              strokeWidth={2.4}
+              size={30}
+              color="rgba(255,255,255,0.55)"
+              strokeWidth={1.5}
             />
           </Pressable>
         )}
         {index < ORDER.length - 1 && (
           <Pressable
             onPress={() => goTo(index + 1)}
-            hitSlop={16}
+            hitSlop={20}
             style={[s.arrow, s.arrowRight]}
             accessibilityLabel="Next mode"
           >
             <ChevronRight
-              size={22}
-              color="rgba(255,255,255,0.8)"
-              strokeWidth={2.4}
+              size={30}
+              color="rgba(255,255,255,0.55)"
+              strokeWidth={1.5}
             />
           </Pressable>
         )}
       </View>
 
-      {/* ── Wie dit is ── */}
+      {/* ── Wie dit is ──
+          Modus en figuur dragen béíde de kleur van de toestand, met een kort
+          streepje ertussen en de omschrijving eronder in wit. Niet de naam
+          wit en de rest gekleurd: de kleur IS hier de modus, dus die hoort
+          bij zijn naam te staan. */}
       <Animated.View style={[s.copy, fadeStyle]}>
         <Text style={[s.mode, { color: st.accent }]}>{st.eyebrow}</Text>
-        <Text style={s.figure}>{st.title}</Text>
-        <Text style={s.tagline}>{st.tagline}</Text>
+        <Text style={[s.figure, { color: st.accent }]}>{st.title}</Text>
+        <View style={[s.rule, { backgroundColor: st.accent }]} />
+        <Text style={s.desc}>{st.description}</Text>
         <Text style={s.spec}>
           {st.technique} · {fmt(suggested.rounds * cycleSeconds(st))}
         </Text>
       </Animated.View>
 
-      {/* ── De knop draagt de kleur van de modus ── */}
-      <Pressable onPress={open} style={s.ctaWrap}>
-        <LinearGradient
-          colors={st.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.cta}
+      {/* ── De knop draagt de kleur van de modus ──
+          Omlijnd en niet gevuld: op een scherm dat verder uit één lichtgevend
+          beeld op zwart bestaat, is een vol vlak het zwaarste element in
+          beeld — en dat hoort de illustratie te zijn. */}
+      <Animated.View style={fadeStyle}>
+        <Pressable
+          onPress={open}
+          style={[s.cta, { borderColor: st.accent }]}
+          android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
         >
-          <Text style={s.ctaTxt}>SELECT MODE</Text>
-        </LinearGradient>
-      </Pressable>
+          <Text style={[s.ctaTxt, { color: st.accent }]}>SELECT MODE</Text>
+          <ArrowRight size={17} color={st.accent} strokeWidth={2} />
+        </Pressable>
+      </Animated.View>
 
-      {/* ── De vijf, altijd zichtbaar ── */}
+      {/* ── De vijf, altijd zichtbaar ──
+          Op volle kleur, niet weggedimd. Ze zijn hier geen knopjes maar de
+          vijf beelden zelf; wat de keuze aanwijst is de ring en de naam
+          eronder, niet dat de andere vier uitgaan. */}
       <View style={s.thumbs}>
         {ORDER.map((k, i) => {
           const t = BREATH_STATES[k];
@@ -325,35 +342,65 @@ export default function BreathScreen() {
             <Pressable
               key={k}
               onPress={() => goTo(i)}
-              style={[
-                s.thumb,
-                on && { borderColor: t.accent, backgroundColor: t.accentSoft },
-              ]}
+              style={s.thumbCol}
               accessibilityLabel={t.eyebrow}
             >
-              <Image
-                source={{ uri: SESSION_ART[t.art] }}
-                style={[s.thumbImg, !on && s.thumbImgOff]}
-                resizeMode="contain"
-              />
+              <View
+                style={[
+                  s.thumb,
+                  on && {
+                    borderColor: t.accent,
+                    backgroundColor: t.accentSoft,
+                  },
+                ]}
+              >
+                <Image
+                  source={{ uri: SESSION_ART[t.art] }}
+                  style={[s.thumbImg, !on && s.thumbImgOff]}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text
+                style={[
+                  s.thumbName,
+                  { color: on ? t.accent : 'rgba(255,255,255,0.68)' },
+                ]}
+                numberOfLines={1}
+              >
+                {t.eyebrow}
+              </Text>
+              <Text style={s.thumbSub} numberOfLines={1}>
+                {t.subtitle}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Pressable
-        onPress={() => router.push('/breath-history')}
-        hitSlop={10}
-        style={s.historyWrap}
-      >
-        <Text style={s.historyTxt}>
-          {history.length > 0
-            ? `YOUR PRACTICE · ${history.length} SESSION${
-                history.length === 1 ? '' : 'S'
-              }`
-            : 'YOUR PRACTICE'}
-        </Text>
-      </Pressable>
+      {/* Waar je bent in de rij van vijf, in de kleur van waar je staat. */}
+      <View style={s.dots}>
+        {ORDER.map((k, i) => (
+          <View
+            key={k}
+            style={[
+              s.dot,
+              i === index && { width: 18, backgroundColor: st.accent },
+            ]}
+          />
+        ))}
+      </View>
+
+      <View style={s.footRow}>
+        <Text style={s.swipeTxt}>SWIPE TO EXPLORE</Text>
+        <Text style={s.footSep}>·</Text>
+        <Pressable onPress={() => router.push('/breath-history')} hitSlop={10}>
+          <Text style={s.historyTxt}>
+            {history.length > 0
+              ? `YOUR PRACTICE (${history.length})`
+              : 'YOUR PRACTICE'}
+          </Text>
+        </Pressable>
+      </View>
       </View>
     </SafeAreaView>
   );
@@ -363,19 +410,24 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   stars: { ...StyleSheet.absoluteFillObject },
 
-  header: { alignItems: 'center', marginTop: 10 },
+  /* De zijmarge is niet cosmetisch: rechtsboven zweeft het instellingen-
+     icoon van de app over élk scherm heen, en zonder deze marge liep de
+     laatste letter van de kop eronder door. */
+  header: { alignItems: 'center', marginTop: 8, paddingHorizontal: 54 },
+  /* Licht gewicht met veel letterafstand, zoals de koppen in de onboarding.
+     Het gewicht doet niets, de ruimte doet alles. */
   kicker: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 15,
-    letterSpacing: 4.4,
+    fontFamily: BrandFonts.regular,
+    fontSize: 16.5,
+    letterSpacing: 4.2,
     color: '#ffffff',
   },
   lead: {
-    marginTop: 6,
+    marginTop: 7,
     fontFamily: BrandFonts.regular,
-    fontSize: 12.5,
-    letterSpacing: 0.4,
-    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    letterSpacing: 0.2,
+    color: 'rgba(255,255,255,0.52)',
   },
 
   body: { flex: 1, justifyContent: 'center', paddingBottom: 8 },
@@ -391,89 +443,139 @@ const s = StyleSheet.create({
      over de figuur liggen, en die figuur is waar het scherm om draait. */
   arrow: {
     position: 'absolute',
-    top: BOX_H / 2 - 21,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    top: BOX_H / 2 - 20,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowLeft: { left: 10 },
-  arrowRight: { right: 10 },
+  arrowLeft: { left: 4 },
+  arrowRight: { right: 4 },
 
-  copy: { alignItems: 'center', marginTop: 20, paddingHorizontal: 24 },
+  copy: { alignItems: 'center', marginTop: 14, paddingHorizontal: 26 },
   mode: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 13,
-    letterSpacing: 3.6,
+    fontFamily: BrandFonts.regular,
+    fontSize: 26,
+    letterSpacing: 6,
   },
   figure: {
-    marginTop: 8,
-    fontFamily: BrandFonts.extrabold,
-    fontSize: 30,
-    letterSpacing: -0.7,
-    color: '#ffffff',
+    marginTop: 9,
+    fontFamily: BrandFonts.medium,
+    fontSize: 18,
+    letterSpacing: 0.2,
     textAlign: 'center',
   },
-  tagline: {
-    marginTop: 6,
-    fontFamily: BrandFonts.medium,
+  /* Het streepje scheidt de naam van de omschrijving. Kort, in de kleur van
+     de toestand — zonder dat lopen naam en tekst als één blok in elkaar. */
+  rule: { width: 34, height: 1.5, borderRadius: 1, marginTop: 12, opacity: 0.8 },
+  desc: {
+    marginTop: 12,
+    maxWidth: 320,
+    fontFamily: BrandFonts.regular,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.66)',
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
   },
   spec: {
-    marginTop: 10,
+    marginTop: 9,
     fontFamily: BrandFonts.semibold,
-    fontSize: 11.5,
+    fontSize: 11,
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(255,255,255,0.36)',
   },
 
-  ctaWrap: { marginTop: 24, marginHorizontal: 22, borderRadius: 15 },
   cta: {
-    height: 52,
-    borderRadius: 15,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
+    alignSelf: 'center',
+    marginTop: 20,
+    paddingHorizontal: 30,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
   },
   ctaTxt: {
-    fontFamily: BrandFonts.bold,
+    fontFamily: BrandFonts.semibold,
     fontSize: 13.5,
-    letterSpacing: 2.4,
-    color: '#ffffff',
+    letterSpacing: 2.2,
   },
 
   thumbs: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginTop: 22,
+    gap: THUMB_GAP,
+    marginTop: 26,
   },
+  thumbCol: { width: THUMB_COL, alignItems: 'center' },
+  /* Geen kader om de vier die je niet gekozen hebt. In de referentie staan
+     de beelden vrij op het zwart; een rondje eromheen maakt er knopjes van
+     en dan concurreren vijf randen met de figuur erboven. Alleen de gekozen
+     krijgt zijn ring. */
   thumb: {
     width: THUMB,
     height: THUMB,
     borderRadius: THUMB / 2,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  thumbImg: { width: THUMB * 0.82, height: THUMB * 0.82 },
-  /* De niet-gekozen vier zakken terug, maar niet weg: ze moeten leesbaar
-     blijven als rij, anders is het geen keuze meer maar een versiering. */
-  thumbImgOff: { opacity: 0.42 },
+  thumbImg: { width: THUMB * 0.94, height: THUMB * 0.94 },
+  /* De vier die niet gekozen zijn blijven op kleur staan en zakken maar
+     licht terug. Uitzetten maakte er grijze knopjes van, en dan verdwijnt
+     precies waar deze rij voor bestaat: zien wat de andere vier zíjn. */
+  thumbImgOff: { opacity: 0.72 },
+  thumbName: {
+    marginTop: 7,
+    fontFamily: BrandFonts.bold,
+    fontSize: 7.5,
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  thumbSub: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 6.5,
+    color: 'rgba(255,255,255,0.38)',
+    textAlign: 'center',
+  },
 
-  historyWrap: { alignSelf: 'center', marginTop: 26, paddingVertical: 8 },
+  dots: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 16,
+  },
+  dot: {
+    width: 5,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+
+  footRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  swipeTxt: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 9,
+    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.3)',
+  },
+  footSep: { fontSize: 9, color: 'rgba(255,255,255,0.22)' },
   historyTxt: {
     fontFamily: BrandFonts.bold,
-    fontSize: 10,
-    letterSpacing: 2.2,
+    fontSize: 9,
+    letterSpacing: 2,
     color: 'rgba(255,255,255,0.42)',
   },
 });
