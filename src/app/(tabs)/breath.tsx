@@ -88,7 +88,9 @@ const ART_W = SCREEN_W * 1.02;
    niet scheeftrekt. */
 const THUMB_GAP = 6;
 const THUMB_COL = Math.floor((SCREEN_W - 20 - THUMB_GAP * 4) / 5);
-const THUMB = Math.min(THUMB_COL, 70);
+/* Iets smaller dan de kolom: de lichtkrans steekt buiten het beeld uit en
+   moet niet in die van de buren lopen. */
+const THUMB = Math.min(THUMB_COL - 8, 64);
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
@@ -345,18 +347,38 @@ export default function BreathScreen() {
               style={s.thumbCol}
               accessibilityLabel={t.eyebrow}
             >
-              <View
-                style={[
-                  s.thumb,
-                  on && {
-                    borderColor: t.accent,
-                    backgroundColor: t.accentSoft,
-                  },
-                ]}
-              >
+              <View style={s.thumb}>
+                {/* De lichtkrans. Drie cirkels in de kleur van de toestand,
+                    van groot en bijna doorzichtig naar klein en sterker —
+                    samen lezen ze als één zachte gloed. Zonder dit liggen de
+                    beelden dof op het zwart terwijl ze in de referentie
+                    lichtgeven. Bewust géén Skia: vijf verlooptekeningen naast
+                    elkaar voor iets van zeventig punten is verspilling. */}
+                <View
+                  style={[
+                    s.halo,
+                    s.haloOuter,
+                    { backgroundColor: t.accent, opacity: on ? 0.07 : 0.03 },
+                  ]}
+                />
+                <View
+                  style={[
+                    s.halo,
+                    s.haloMid,
+                    { backgroundColor: t.accent, opacity: on ? 0.09 : 0.04 },
+                  ]}
+                />
+                <View
+                  style={[
+                    s.halo,
+                    s.haloInner,
+                    { backgroundColor: t.accent, opacity: on ? 0.13 : 0.06 },
+                  ]}
+                />
+                {on && <View style={[s.thumbRing, { borderColor: t.accent }]} />}
                 <Image
                   source={{ uri: SESSION_ART[t.art] }}
-                  style={[s.thumbImg, !on && s.thumbImgOff]}
+                  style={s.thumbImg}
                   resizeMode="contain"
                 />
               </View>
@@ -510,25 +532,31 @@ const s = StyleSheet.create({
     marginTop: 26,
   },
   thumbCol: { width: THUMB_COL, alignItems: 'center' },
-  /* Geen kader om de vier die je niet gekozen hebt. In de referentie staan
-     de beelden vrij op het zwart; een rondje eromheen maakt er knopjes van
-     en dan concurreren vijf randen met de figuur erboven. Alleen de gekozen
-     krijgt zijn ring. */
+  /* Geen kader om de vier die je niet gekozen hebt, en géén `overflow:
+     hidden`: de zonnestralen en de punten van het kristal steken buiten hun
+     cirkel uit, en afgesneden stralen zijn precies wat een illustratie tot
+     een pictogram maakt. Alleen de gekozen krijgt zijn ring.
+     De vier andere staan op VOLLE kleur — wegdimmen maakte er grijze knopjes
+     van, en dan verdwijnt waar deze rij voor bestaat: zien wat ze zíjn. */
   thumb: {
     width: THUMB,
     height: THUMB,
-    borderRadius: THUMB / 2,
-    borderWidth: 1,
-    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  thumbImg: { width: THUMB * 0.94, height: THUMB * 0.94 },
-  /* De vier die niet gekozen zijn blijven op kleur staan en zakken maar
-     licht terug. Uitzetten maakte er grijze knopjes van, en dan verdwijnt
-     precies waar deze rij voor bestaat: zien wat de andere vier zíjn. */
-  thumbImgOff: { opacity: 0.72 },
+  thumbImg: { width: THUMB, height: THUMB },
+  halo: { position: 'absolute', borderRadius: THUMB },
+  haloOuter: { width: THUMB * 1.28, height: THUMB * 1.28 },
+  haloMid: { width: THUMB * 1.04, height: THUMB * 1.04 },
+  haloInner: { width: THUMB * 0.7, height: THUMB * 0.7 },
+  thumbRing: {
+    position: 'absolute',
+    width: THUMB * 1.26,
+    height: THUMB * 1.26,
+    borderRadius: THUMB,
+    borderWidth: 1,
+    opacity: 0.9,
+  },
   thumbName: {
     marginTop: 7,
     fontFamily: BrandFonts.bold,

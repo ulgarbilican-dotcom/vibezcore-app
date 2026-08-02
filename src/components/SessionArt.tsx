@@ -109,19 +109,27 @@ export default function SessionArt({
   const c = size / 2;
   const cy = boxH / 2;
 
+  /* De ondergrens is omhoog (operator, 2 augustus 2026: "de foto's zijn bij
+     ons niet zo levendig"). Op tachtig procent stond de illustratie het
+     grootste deel van de cyclus dof op het zwart — je zag de ademhaling
+     vooral als DOVEN, en een beeld dat halve tijd wegzakt oogt gebleekt.
+     Nu ademt hij tussen 90 en 100 procent: de beweging blijft zichtbaar,
+     maar het beeld staat altijd op kleur. */
   const imgStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: (0.5 - focusY) * size },
       { scale: 0.87 + breath.value * 0.13 },
     ],
-    opacity: 0.8 + breath.value * 0.2,
+    opacity: 0.9 + breath.value * 0.1,
   }));
 
   /* De gloed loopt verder uit dan het beeld en zwelt sterker aan. Daardoor
      lijkt het licht van de figuur af te komen in plaats van erachter te
-     hangen. */
+     hangen. Ook hier meer bodem: zonder gloed ligt een PNG op het zwart in
+     plaats van erin te hangen, en dat is precies wat een illustratie levenloos
+     maakt. */
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.14 + breath.value * 0.2,
+    opacity: 0.22 + breath.value * 0.2,
     transform: [{ scale: 0.88 + breath.value * 0.17 }],
   }));
 
