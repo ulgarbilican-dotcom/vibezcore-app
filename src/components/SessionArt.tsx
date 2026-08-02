@@ -83,8 +83,11 @@ type Props = {
   breath: SharedValue<number>;
   /** Kleur van de lichtbron erachter. */
   glow: string;
-  /** Zichtbare hoogte, als deel van `size`. Een lotus is breder dan hoog. */
-  heightRatio?: number;
+  /** Zichtbare hoogte in punten. VAST per scherm-toestand, niet afgeleid
+   *  van de beeldbreedte: alleen zo staat elk blok eronder op alle vijf de
+   *  pagina's op precies dezelfde hoogte. De grootte van de illustratie
+   *  regelt de aanroeper apart via `size`. */
+  boxHeight: number;
   /** Waar het onderwerp verticaal in het beeld zit (0 = boven, 1 = onder).
    *  Zonder dit snijdt een symmetrische uitsnede de top eraf, want een
    *  bloem staat zelden precies in het midden van zijn eigen bestand. */
@@ -98,11 +101,11 @@ export default function SessionArt({
   art,
   breath,
   glow,
-  heightRatio = 1,
+  boxHeight,
   focusY = 0.5,
   rings = false,
 }: Props) {
-  const boxH = size * heightRatio;
+  const boxH = boxHeight;
   const c = size / 2;
   const cy = boxH / 2;
 

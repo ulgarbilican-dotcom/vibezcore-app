@@ -126,6 +126,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#B8720A', '#F5A524', '#FFD98A'],
     art: 'sun',
     focusY: 0.5,
+    artScale: 1,
     phases: [inhale(2, 'Nose'), exhale(2, 'Mouth')],
     technique: 'Energizing breath · 2-2',
     durations: [
@@ -169,10 +170,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#1554B8', '#3E9BFF', '#A9D3FF'],
     art: 'flower',
     focusY: 0.5,
-    /* Operator 2 augustus 2026: dertig procent kleiner. De flower of life
-       loopt tot de rand van zijn bestand door, waar de andere beelden een
-       ruime marge hebben. */
-    artScale: 0.7,
+    artScale: 0.72,
     phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
     technique: 'Coherent breathing · 5-5',
     durations: [
@@ -222,6 +220,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#8B3DF0', '#B478FF', '#D0A2FF'],
     art: 'lotus',
     focusY: 0.43,
+    artScale: 1.14,
     phases: [
       inhale(4, 'Nose'),
       hold(4, 'hold-in'),
@@ -275,6 +274,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#0F7A90', '#5FE3F0', '#C2F6FC'],
     art: 'clarity',
     focusY: 0.5,
+    artScale: 0.7,
     phases: [inhale(4, 'Nose'), hold(2, 'hold-in'), exhale(6, 'Mouth')],
     technique: 'Long exhale · 4-2-6',
     durations: [
@@ -326,6 +326,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
        OPEN PUNT: de titel hierboven zegt nog "Soft Orb". Dat is een bol, en
        een boom is er geen. Naam en beeld spreken elkaar dus tegen op het
        scherm — operator-beslissing welke van de twee wijkt. */
+    artScale: 0.88,
     art: 'tree',
     focusY: 0.5,
     phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],

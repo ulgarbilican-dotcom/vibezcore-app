@@ -110,12 +110,13 @@ const SCREEN_H = Dimensions.get('window').height;
 const ART_IDLE = SCREEN_W * 0.8;
 const ART_RUN = SCREEN_W * 0.98;
 
-/* Zichtbare hoogte, als deel van de beeldbreedte.
-   MOET groter zijn dan wat het onderwerp zelf inneemt — de lotus vult
-   ongeveer 42% van de beeldhoogte, en bij 38% werden de onderste blaadjes
-   er recht afgesneden. 52% laat er aan beide kanten marge omheen, ook op
-   het hoogtepunt van de inademing wanneer de bloem het grootst is. */
-const ART_H_RATIO = 0.64;
+/* VASTE hoogte van het beeldvak, gelijk voor alle vijf de toestanden.
+   Hing die aan de beeldbreedte, dan verschoof alles eronder zodra een
+   illustratie groter of kleiner stond — en dan staat geen enkele pagina op
+   dezelfde plek. Nu ligt de indeling vast en regelt `artScale` per toestand
+   alleen hoe groot de illustratie BINNEN dat vak is. */
+const BOX_IDLE = 208;
+const BOX_RUN = 268;
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
    toestel-inzet vrij, zodat de laatste kaart nooit onder de knop verdwijnt
@@ -508,7 +509,7 @@ export default function BreathSessionScreen() {
             art={st.art}
             breath={breath}
             glow={st.glow}
-            heightRatio={ART_H_RATIO}
+            boxHeight={running ? BOX_RUN : BOX_IDLE}
             focusY={st.focusY}
             rings={running}
           />
@@ -690,7 +691,7 @@ export default function BreathSessionScreen() {
         style={[s.footerScrim, { height: FOOTER_H + Math.max(insets.bottom, 10) + 88 }]}
       />
 
-      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 16 }]}>
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 24 }]}>
         {running ? (
           <Pressable onPress={stop} style={s.endBtn}>
             <Text style={s.endTxt}>END SESSION</Text>
@@ -833,10 +834,12 @@ function makeStyles(st: BreathState) {
      toestel-inzet. Een vast getal zou op het ene toestel een gat geven en
      op het andere de laatste kaart afsnijden. */
   scroll: { alignItems: 'center' },
-  /* Tijdens de sessie pakt de inhoud van BOVEN af, met de slack onderaan.
-     Met `space-evenly` werden de gaten even groot verdeeld en zakte het
-     blok vanaf de figuur te ver naar beneden. */
-  scrollRunning: { flexGrow: 1, justifyContent: 'flex-start' },
+  /* Tijdens de sessie staat het blok GECENTREERD. Bovenaan pakken liet een
+     kwart scherm leeg onderaan; gelijk verdelen trok de onderdelen uit
+     elkaar. Centreren zet de overgebleven ruimte gelijk boven en onder, en
+     omdat het beeldvak een vaste hoogte heeft staat dat blok op elke
+     toestand op precies dezelfde plek. */
+  scrollRunning: { flexGrow: 1, justifyContent: 'center' },
 
   /* Eén ritme voor het hele scherm: 6 binnen een blok, 18 tussen blokken,
      26 rond de figuur. Afstanden die per onderdeel apart gekozen zijn
@@ -872,8 +875,8 @@ function makeStyles(st: BreathState) {
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
-    marginBottom: 16,
+    marginTop: 18,
+    marginBottom: 20,
   },
 
   sectionEyebrow: {
