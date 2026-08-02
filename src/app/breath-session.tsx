@@ -425,7 +425,18 @@ export default function BreathSessionScreen() {
      en eindigde een afgemaakte sessie in stilte. De bestanden zijn nooit
      weg geweest; de aanroep wel.
 
-     Volgt de Voice-knop van dit scherm: staat die uit, dan blijft het stil.
+     Twee sloten, en beide moeten open (operator, 3 augustus 2026). De
+     Voice-knop van dit scherm ÉN de voorkeur van de app zelf: wie het geluid
+     uit heeft staan, of alleen via trillingen begeleid wordt, hoort ook geen
+     afsluiting. Vandaar bewust ZONDER `force` — anders overstemt dit scherm
+     precies de keuze die hij moet respecteren.
+
+     Let op het verschil met de fasecues hierboven: die draaien wél met
+     `force`, omdat ze de zichtbare knop van dit scherm volgen. Dat betekent
+     dat een sessie kan praten terwijl de afsluiting stil blijft. Zo hoort
+     het niet, maar die force-uitzondering weghalen maakt de ademsessie voor
+     iedereen standaard stil — een productbeslissing, geen opruimklus.
+
      Bij het wegtikken van het scherm stopt de opname, anders praat hij door
      over een scherm dat er niet meer is. */
   useEffect(() => {

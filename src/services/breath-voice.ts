@@ -162,12 +162,21 @@ export function playBreathCue(
 }
 
 /** Speel het completion-bestand voor het juiste protocol.
- *  Iter 9dq v186 (operator-fix 2026-06-18): NIET gegate'd op voiceEnabled.
- *  Completion is een speciaal "always-play" moment — de gebruiker heeft
- *  z'n sessie afgemaakt en verdient z'n motiverende reward, ook als 'ie
- *  de toggle uitgezet had tijdens het ademen (typisch om mid-sessie
- *  verbal guidance uit te schakelen). */
-export function playCompletionCue(key: BreathKey): void {
+ *
+ *  TERUGGEDRAAID op 3 augustus 2026 (operator): dit was een "always-play"
+ *  moment dat `voiceEnabled` bewust negeerde — de redenering was dat wie
+ *  z'n sessie afmaakt z'n afsluiting verdient, ook met de stem uit. Dat
+ *  klopt niet. Wie het geluid uitzet, of alleen via trillingen begeleid
+ *  wordt (telefoon of bracelet), heeft dat niet gezegd over de ademcues
+ *  maar over de APP. Onaangekondigd een minuut spraak starten aan het eind
+ *  van een stille sessie is precies wat zo iemand niet wil — 's avonds,
+ *  naast een slapende partner, of met de telefoon in gezelschap.
+ *
+ *  Stilte is nu de veilige stand. `force` blijft bestaan voor schermen met
+ *  een EIGEN zichtbare stemknop, zodat die knop leidend blijft; zie
+ *  playBreathCue hierboven voor waarom die uitzondering nodig is. */
+export function playCompletionCue(key: BreathKey, force = false): void {
+  if (!voiceEnabled && !force) return;
   const url = COMPLETION_URLS[key];
   if (!url) return;
   playUrl(url);

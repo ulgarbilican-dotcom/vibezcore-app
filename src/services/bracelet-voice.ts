@@ -121,10 +121,12 @@ export function playBraceletStartCue(
   /* intentionally empty */
 }
 
-/** Speel de completion-cue. NIET gegate'd op voiceEnabled: completion is
- *  een speciaal "always-play" moment (mirror van breath-voice.ts
- *  playCompletionCue). User heeft z'n sessie afgemaakt en verdient z'n
- *  closing-reward, ook als 'ie mid-sessie de toggle uitzette.
+/** Speel de completion-cue.
+ *
+ *  Was "always-play", net als bij breath. Teruggedraaid op 3 augustus 2026
+ *  (operator): wie de bracelet stil draagt of het geluid uit heeft staan,
+ *  hoort ook geen afsluiting. De poort zit in breath-voice.ts
+ *  playCompletionCue; hier wordt niet geforceerd, dus die geldt.
  *
  *  Iter v168 (2026-06-28): NU gebruikt dezelfde ElevenLabs MP3 als de
  *  breath-tab — `boost finished .mp3`, `calm finished.mp3`, etc. Voorheen
