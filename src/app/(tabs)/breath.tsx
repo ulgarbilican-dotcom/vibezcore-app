@@ -86,11 +86,15 @@ const ART_W = SCREEN_W * 1.02;
 /* Vijf naast elkaar binnen de schermbreedte, met naam en ondertitel eronder.
    De kolombreedte staat vast zodat de langste naam — CALM CONTROL — de rij
    niet scheeftrekt. */
-const THUMB_GAP = 6;
-const THUMB_COL = Math.floor((SCREEN_W - 20 - THUMB_GAP * 4) / 5);
+/* De kier is bewust klein en de zijmarge ook: elke punt die hier overblijft
+   gaat naar de KOLOM, en de kolombreedte bepaalt hoe groot de naam eronder
+   mag staan. Op 6 punt kier bleef er 73 over en paste CALM CONTROL alleen op
+   zeven en een halve punt — onleesbaar. */
+const THUMB_GAP = 4;
+const THUMB_COL = Math.floor((SCREEN_W - 8 - THUMB_GAP * 4) / 5);
 /* Iets smaller dan de kolom: de lichtkrans steekt buiten het beeld uit en
    moet niet in die van de buren lopen. */
-const THUMB = Math.min(THUMB_COL - 8, 64);
+const THUMB = Math.min(THUMB_COL - 12, 62);
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
@@ -391,7 +395,10 @@ export default function BreathScreen() {
               >
                 {t.eyebrow}
               </Text>
-              <Text style={s.thumbSub} numberOfLines={1}>
+              {/* Twee regels toegestaan: "Balance & Composure" past niet op
+                  één kolombreedte, en afkappen met een puntje maakt van een
+                  naam een raadsel. */}
+              <Text style={s.thumbSub} numberOfLines={2}>
                 {t.subtitle}
               </Text>
             </Pressable>
@@ -529,7 +536,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: THUMB_GAP,
-    marginTop: 26,
+    marginTop: 22,
+    alignItems: 'flex-start',
   },
   thumbCol: { width: THUMB_COL, alignItems: 'center' },
   /* Geen kader om de vier die je niet gekozen hebt, en géén `overflow:
@@ -558,17 +566,19 @@ const s = StyleSheet.create({
     opacity: 0.9,
   },
   thumbName: {
-    marginTop: 7,
+    marginTop: 8,
     fontFamily: BrandFonts.bold,
-    fontSize: 7.5,
-    letterSpacing: 0.3,
+    fontSize: 10,
+    lineHeight: 12,
+    letterSpacing: 0.1,
     textAlign: 'center',
   },
   thumbSub: {
     marginTop: 2,
     fontFamily: BrandFonts.regular,
-    fontSize: 6.5,
-    color: 'rgba(255,255,255,0.38)',
+    fontSize: 8.5,
+    lineHeight: 11,
+    color: 'rgba(255,255,255,0.48)',
     textAlign: 'center',
   },
 
@@ -577,7 +587,7 @@ const s = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     gap: 5,
-    marginTop: 16,
+    marginTop: 14,
   },
   dot: {
     width: 5,
