@@ -71,6 +71,11 @@ export type BreathState = {
   art: SessionArtKey;
   /** Waar het onderwerp verticaal in zijn eigen bestand staat. */
   focusY: number;
+  /** Correctie op de beeldgrootte. Elk bestand heeft een andere lege rand:
+   *  de flower of life vult het zijne bijna helemaal, de lotus maar
+   *  tweederde. Zonder deze factor is één maat voor alle vijf altijd voor
+   *  iemand fout. 1 = ongewijzigd. */
+  artScale?: number;
   phases: PhaseDef[];
   /** Naam van de techniek, onder het ritmeblok. */
   technique: string;
@@ -164,6 +169,10 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#1554B8', '#3E9BFF', '#A9D3FF'],
     art: 'flower',
     focusY: 0.5,
+    /* Operator 2 augustus 2026: dertig procent kleiner. De flower of life
+       loopt tot de rand van zijn bestand door, waar de andere beelden een
+       ruime marge hebben. */
+    artScale: 0.7,
     phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
     technique: 'Coherent breathing · 5-5',
     durations: [

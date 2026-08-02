@@ -504,7 +504,7 @@ export default function BreathSessionScreen() {
             aan niets te besteden. */}
         <View style={s.visualWrap}>
           <SessionArt
-            size={running ? ART_RUN : ART_IDLE}
+            size={(running ? ART_RUN : ART_IDLE) * (st.artScale ?? 1)}
             art={st.art}
             breath={breath}
             glow={st.glow}
