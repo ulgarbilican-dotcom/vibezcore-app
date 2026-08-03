@@ -52,7 +52,11 @@ import {
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useRSXformBuffer } from '@shopify/react-native-skia';
-import { useSharedValue, type SharedValue } from 'react-native-reanimated';
+import {
+  useDerivedValue,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 /* Het raster waarop een bronbeeld wordt afgetast. 128×128 is ruim genoeg om
    een gezicht te herkennen en klein genoeg om in één keer uit te lezen. */
@@ -163,23 +167,23 @@ function order(cloud: Cloud): Cloud {
 
 /* ── Component ────────────────────────────────────────────────────────── */
 
+const TAU = Math.PI * 2;
+
 type Props = {
-  /** De eindbeelden: waar de punten naartoe trekken bij volledig inademen.
-   *  Meerdere betekent afwisselen — `targetIndex` bepaalt welke. Ze worden
-   *  alle bij het openen één keer afgetast, want opnieuw aftasten tijdens het
-   *  wisselen zou een beeld van anderhalf miljoen pixels opnieuw uitlezen. */
-  orderedUris: string[];
-  /** Welk eindbeeld nu geldt. Wissel hem op het moment dat de wolk volledig
-   *  uiteen staat: dan is er niets te zien dat kan verspringen. */
-  targetIndex?: SharedValue<number>;
-  /** De vorm waar de wolk onderweg doorheen gaat. */
-  modeUri: string;
-  /** Zelfde rol als `modeUri`, maar berekend in plaats van uit een beeld
-   *  gelezen. Nodig voor de mandala: die bestaat als meetkunde en niet als
-   *  bestand, en aftasten van een plaatje ervan zou een benadering opleveren
-   *  waar de echte figuur beschikbaar is. Gaat vóór op `modeUri`. */
-  midBuilder?: (count: number) => number[];
-  /** 0 = volledig uitgeademd (chaos), 1 = volledig ingeademd (orde). */
+  /** Waar de punten VANDAAN komen bij t = 0, uit een beeld. */
+  restUri?: string;
+  /** Zelfde rol, maar berekend. Gaat vóór op `restUri`. */
+  restBuilder?: (count: number) => number[];
+  /** Waar ze NAARTOE gaan bij t = 1, uit een beeld. */
+  endUri?: string;
+  /** Zelfde rol, maar berekend. Gaat vóór op `endUri`. */
+  endBuilder?: (count: number) => number[];
+  /** Draaiing van de EINDvorm, in omwentelingen. Alleen het eindbeeld draait
+   *  mee; het beginbeeld blijft staan. Zo is de rozet al aan het draaien
+   *  terwijl de punten hem nog aan het vormen zijn, in plaats van pas te
+   *  beginnen zodra de getekende versie verschijnt. */
+  spin?: SharedValue<number>;
+  /** 0 = de beginvorm, 1 = de eindvorm. */
   breath: SharedValue<number>;
   size: number;
   /** Kleur van de punten — de accentkleur van de toestand. */
@@ -191,26 +195,27 @@ type Props = {
 };
 
 export default function SplatField({
-  orderedUris,
-  targetIndex,
-  modeUri,
-  midBuilder,
+  restUri,
+  restBuilder,
+  endUri,
+  endBuilder,
+  spin,
   breath,
   size,
   color,
   count = 2600,
 }: Props) {
-  /* Ten hoogste twee eindbeelden; meer heeft geen enkele aanroep nodig en
-     `useImage` is een hook, dus het aantal moet vaststaan. */
-  const imgA = useImage(orderedUris[0]);
-  const imgB = useImage(orderedUris[1] ?? orderedUris[0]);
-  const modeImg = useImage(modeUri);
+  /* `useImage` is een hook, dus beide aanroepen moeten er altijd staan, ook
+     als die kant een berekende vorm gebruikt. Een lege bron levert `null` en
+     dat vangt de samenstelling hieronder af. */
+  const restImg = useImage(restUri ?? '');
+  const endImg = useImage(endUri ?? '');
 
   /* Altijd een eigen waarde bij de hand, ook als de aanroeper er geen
      meegeeft: een worklet die soms wel en soms geen gedeelde waarde ziet is
      een bron van fouten die pas op een toestel opduiken. */
-  const fallbackIndex = useSharedValue(0);
-  const which = targetIndex ?? fallbackIndex;
+  const fallbackSpin = useSharedValue(0);
+  const turn = spin ?? fallbackSpin;
 
   /* Eén zacht rond puntje, één keer getekend en daarna duizenden keren
      hergebruikt. Dat is het hele idee achter Atlas.
@@ -254,32 +259,30 @@ export default function SplatField({
   }, [color]);
 
   const clouds = useMemo(() => {
-    if (!imgA || !imgB) return null;
-    if (!midBuilder && !modeImg) return null;
-    const a = sampleImage(imgA, count);
-    const b = sampleImage(imgB, count);
-    const mod = midBuilder
-      ? midBuilder(count)
-      : modeImg
-        ? sampleImage(modeImg, count)
+    const rest = restBuilder
+      ? restBuilder(count)
+      : restImg
+        ? sampleImage(restImg, count)
         : null;
-    if (!a || !b || !mod) return null;
-    /* `rest` is de stand waar de punten VANDAAN komen — de rozet — en niet
-       langer een tussenstop. De uiteengewaaierde derde stand is vervallen:
-       die maakte het pad krom (zie de worklet hieronder). */
-    return { a: order(a), b: order(b), rest: order(mod) };
-  }, [imgA, imgB, modeImg, midBuilder, count]);
+    const end = endBuilder
+      ? endBuilder(count)
+      : endImg
+        ? sampleImage(endImg, count)
+        : null;
+    if (!rest || !end) return null;
+    return { rest: order(rest), end: order(end) };
+  }, [restImg, restBuilder, endImg, endBuilder, count]);
 
   /* Stil falen is hier het ergste wat kan: je kijkt naar zwart en weet niet
      of het laadt, of stuk is, of dat de punten buiten beeld staan. Elke
      mislukking zegt daarom WAAR hij zit. */
   if (!sprite || !clouds) {
-    const why =
-      !imgA || !imgB || !modeImg
-        ? 'laden…'
-        : !sprite
-          ? 'sprite mislukt'
-          : 'aftasten mislukt';
+    const waiting = (restUri && !restImg) || (endUri && !endImg);
+    const why = waiting
+      ? 'laden…'
+      : !sprite
+        ? 'sprite mislukt'
+        : 'aftasten mislukt';
     return (
       <View
         style={{
@@ -299,7 +302,7 @@ export default function SplatField({
   return (
     <PointCloud
       clouds={clouds}
-      which={which}
+      turn={turn}
       breath={breath}
       size={size}
       sprite={sprite}
@@ -324,14 +327,14 @@ export default function SplatField({
 
 function PointCloud({
   clouds,
-  which,
+  turn,
   breath,
   size,
   sprite,
   count,
 }: {
-  clouds: { a: Cloud; b: Cloud; rest: Cloud };
-  which: SharedValue<number>;
+  clouds: { rest: Cloud; end: Cloud };
+  turn: SharedValue<number>;
   breath: SharedValue<number>;
   size: number;
   sprite: SkImage;
@@ -342,74 +345,44 @@ function PointCloud({
     [count],
   );
 
+  /* Sinus en cosinus ÉÉN keer per beeldje, niet per punt. Per punt zou het
+     bij tweeduizend punten ruim tweehonderdduizend berekeningen per seconde
+     opleveren op de tekendraad — precies het soort last dat een instapmodel
+     laat haperen. */
+  const rot = useDerivedValue(() => {
+    const a = turn.value * TAU;
+    return { c: Math.cos(a), s: Math.sin(a) };
+  });
+
   const transforms = useRSXformBuffer(count, (val, i) => {
     'worklet';
-    /* De ademwaarde draagt de versnelling al — die komt uit de easing van de
-       animatie zelf. Hier stond nóg een verzachting bovenop, en twee keer
-       vertragen aan begin en eind geeft geen rustiger beweging maar een
-       onregelmatige: traag, dan ineens snel, dan weer traag. Recht
-       evenredig is hier het juiste. */
+    /* Recht evenredig van begin- naar eindvorm. De ademwaarde draagt de
+       versnelling al; een tweede verzachting bovenop maakt de beweging niet
+       rustiger maar onregelmatig.
+
+       Er zit geen schaaltruc meer in. Die was er om een keerpunt te maken,
+       maar het keerpunt hoort in de ADEM te zitten en niet in dit onderdeel:
+       één waarde op en neer, en de heenweg is vanzelf het spiegelbeeld van
+       de terugweg. Zolang hier eigen bochten in zaten, kon de getekende rozet
+       er nooit precies op passen — en dat was de sprong die de operator zag:
+       groot, plof, echte maat. */
     const t = breath.value;
     const ix = i * 2;
-    const end = Math.round(which.value) % 2 === 1 ? clouds.b : clouds.a;
 
-    /* ── Openen, dan aandichten ─────────────────────────────────────────
-       De beweging heeft een KEERPUNT (operator, 3 augustus 2026). Eerst zet
-       de rozet open — verder dan de gezichten straks reiken — en pas wanneer
-       hij begint terug te komen, dicht hij aan tot de gezichten. De morph is
-       daarmee een samentrekking en geen tweede uitzetting.
+    /* Alleen de EINDvorm draait. Het beginbeeld — de gezichten — hoort stil te
+       staan; die zouden anders scheef hangen. */
+    const ex = clouds.end[ix] - 0.5;
+    const ey = clouds.end[ix + 1] - 0.5;
+    const c = rot.value.c;
+    const sn = rot.value.s;
+    const exr = 0.5 + ex * c - ey * sn;
+    const eyr = 0.5 + ex * sn + ey * c;
 
-       Waarom dat beter is dan één rechte lijn: zonder keerpunt groeit alles
-       aan één stuk door en heeft niets een aanleiding. Nu opent het beeld,
-       houdt heel even in, en wat terugkomt is niet meer dezelfde figuur.
+    const x = clouds.rest[ix] + (exr - clouds.rest[ix]) * t;
+    const y = clouds.rest[ix + 1] + (eyr - clouds.rest[ix + 1]) * t;
 
-       TOT 0.28 volgt de wolk exact de schaal van de getekende rozet
-       (0.87 + t × 0.17 — diezelfde formule staat in HapticOrb). Dat moet,
-       want in dat venster wisselen de twee lagen elkaar af; liepen ze daar
-       een paar procent uiteen, dan zie je de figuur verspringen op precies
-       het moment dat de overgang onzichtbaar hoort te zijn. Pas daarna gaat
-       hij zijn eigen gang en opent verder.
-
-       De easing per helft is bewust omgekeerd: openen loopt UIT (snelheid
-       naar nul aan de top), aandichten zet AAN vanaf nul. Zonder dat zou het
-       keerpunt een scherpe hoek zijn — het oog ziet dan een botsing in
-       plaats van een ommekeer. */
-    const HANDOVER = 0.28;
-    const ORB_AT_HANDOVER = 0.87 + HANDOVER * 0.17;
-    /* Ruim voorbij de gezichten. Die reiken tot ongeveer 0.48 vanuit het
-       midden; de rozet moet daar overheen, anders is aandichten geen
-       samentrekking maar een zijwaartse verschuiving en zie je niet wat er
-       gebeurt. 1.42 × 0.36 = 0.51 — net buiten het beeldvak, wat de opening
-       ook echt als opening laat voelen. */
-    const OPEN_MAX = 1.42;
-
-    let s: number;
-    let k: number;
-    if (t <= HANDOVER) {
-      s = 0.87 + t * 0.17;
-      k = 0;
-    } else if (t <= 0.5) {
-      const u = (t - HANDOVER) / (0.5 - HANDOVER);
-      s = ORB_AT_HANDOVER + (OPEN_MAX - ORB_AT_HANDOVER) * Math.sin(u * 1.5708);
-      k = 0;
-    } else {
-      /* De rozet KRIMPT terwijl hij naar de gezichten morpht — hij blijft niet
-         op zijn wijdste staan wachten. Daardoor is de hele tweede helft één
-         beweging naar binnen: de figuur trekt samen én verandert tegelijk,
-         in plaats van eerst stil te staan en dan te veranderen. */
-      const u = (t - 0.5) / 0.5;
-      k = 1 - Math.cos(u * 1.5708);
-      s = OPEN_MAX + (1 - OPEN_MAX) * k;
-    }
-
-    const rx = 0.5 + (clouds.rest[ix] - 0.5) * s;
-    const ry = 0.5 + (clouds.rest[ix + 1] - 0.5) * s;
-    const x = rx + (end[ix] - rx) * k;
-    const y = ry + (end[ix + 1] - ry) * k;
-
-    /* Iets kleinere punten naarmate de wolk uitzet: bij de rozet staan ze
-       dicht op elkaar, bij de gezichten verder uiteen. */
-    const scale = (0.17 + t * 0.08) * (size / 320);
+    /* Dichter opeen wanneer ze de rozet vormen, iets ijler in het gezicht. */
+    const scale = (0.25 - t * 0.08) * (size / 320);
     val.set(scale, 0, x * size, y * size);
   });
 

@@ -511,31 +511,46 @@ function SlideIntro({
 
      Omlaag gebeurt hetzelfde in omgekeerde volgorde, dus je eindigt weer bij
      de mandala waar je begon. */
+  /* Eén draaiing voor beide lagen. De getekende rozet draaide op zijn eigen
+     klok en de puntenversie draaide helemaal niet — dus zag je de draaiing
+     "beginnen" op het moment dat de getekende erin kwam. Nu draait de wolk al
+     mee terwijl hij de rozet nog aan het vormen is, en neemt de getekende
+     versie die beweging naadloos over. */
+  const spin = useSharedValue(0);
+  useEffect(() => {
+    spin.value = withRepeat(
+      withTiming(1, { duration: 20000, easing: Easing.linear }),
+      -1,
+      false,
+    );
+  }, [spin]);
+
+  /* De getekende rozet hoort bij het KEERPUNT, dus hij komt op tegen het
+     einde van de beweging en niet aan het begin. */
   const orbFade = useAnimatedStyle(() => ({
-    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.06) / 0.22)),
+    opacity: Math.min(1, Math.max(0, (breath.value - 0.72) / 0.22)),
   }));
   /* De punten dragen het middenstuk. Ze komen op zodra de rozet wegvalt en
      gaan zelf weg zodra de foto het overneemt — nooit alle drie tegelijk in
      beeld, want dan zie je lagen in plaats van één beweging. */
+  /* De punten dragen het hele middenstuk. Ze komen op zodra de foto begint op
+     te lossen en verdwijnen pas als de getekende rozet er al staat — nooit
+     een moment waarop geen van de drie lagen iets toont, en nooit een moment
+     waarop je ze alle drie los ziet liggen. */
   const dustFade = useAnimatedStyle(() => {
-    const inn = Math.min(1, Math.max(0, (breath.value - 0.06) / 0.22));
-    /* De punten blijven staan terwijl de foto opkomt en gaan pas op het
-       laatst weg. Wisselden ze tegelijk, dan zie je twee lagen elkaar
-       aflossen; nu ligt het beeld even ÍN de punten en lijkt het eruit
-       voort te komen — dat is wat de operator bedoelde met "alsof de
-       lichtbronnen de foto genereren". */
-    const out = Math.min(1, Math.max(0, (breath.value - 0.9) / 0.1));
+    const inn = Math.min(1, Math.max(0, (breath.value - 0.1) / 0.2));
+    const out = Math.min(1, Math.max(0, (breath.value - 0.82) / 0.18));
     return { opacity: inn * (1 - out) };
   });
   /* En op het hoogtepunt de FOTO zelf. Punten alleen blijven een schets;
      de operator wil aan het eind het echte beeld zien. Hij komt op precies
      wanneer de wolk al in de vorm van de gezichten staat, dus je ziet geen
      tweede beeld verschijnen maar dezelfde vorm scherp worden. */
-  /* De foto komt op vanaf het moment dat de punten al in de vorm van de
-     gezichten staan, en heeft de tijd tot het einde van de beweging. Traag
-     genoeg om te ontstaan in plaats van te verschijnen. */
+  /* De foto is het BEGINBEELD: vol in rust, en hij lost op zodra de beweging
+     inzet. Hij verdwijnt langzamer dan de punten opkomen, zodat het beeld
+     even ín de punten ligt en er niet onderuit wordt geschoven. */
   const photoFade = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.max(0, (breath.value - 0.7) / 0.28)),
+    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.04) / 0.26)),
   }));
 
   /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
@@ -579,12 +594,15 @@ function SlideIntro({
           <HapticOrb size={ORB} breath={breath} onPulse={onPulse} />
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
+          {/* De GEZICHTEN zijn de ruststand en de rozet het keerpunt — niet
+              andersom. Wie het scherm opent moet de twee mensen zien; van
+              daaruit waaieren de punten naar buiten, vormen de rozet, en
+              komen weer terug. Dat stond omgekeerd, en daarom begon de
+              onboarding op een figuur in plaats van op een gezicht. */}
           <SplatField
-            orderedUris={[FACES]}
-            /* De mandala is waar de punten VANDAAN komen. Als meetkunde en
-               niet als afbeelding — zie mandalaCloud. */
-            midBuilder={mandalaCloud}
-            modeUri={FACES}
+            restUri={FACES}
+            endBuilder={mandalaCloud}
+            spin={spin}
             breath={breath}
             size={ORB}
             color="#7FB2FF"

@@ -181,8 +181,10 @@ export default function BreathSplatScreen() {
 
       <View style={s.stage}>
         <SplatField
-          orderedUris={[PORTRAIT ?? SESSION_ART[st.art]]}
-          modeUri={SESSION_ART[st.art]}
+          /* Rust = de gezichten, keerpunt = de figuur van de toestand. Zelfde
+             volgorde als op het welkomstscherm: je begint bij een gezicht. */
+          restUri={PORTRAIT ?? SESSION_ART[st.art]}
+          endUri={SESSION_ART[st.art]}
           breath={breath}
           size={FIELD}
           color={st.accent}
