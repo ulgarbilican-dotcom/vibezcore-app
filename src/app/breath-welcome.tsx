@@ -550,7 +550,11 @@ function SlideIntro({
      een moment waarop geen van de drie lagen iets toont, en nooit een moment
      waarop je ze alle drie los ziet liggen. */
   const dustFade = useAnimatedStyle(() => {
-    const inn = Math.min(1, Math.max(0, (breath.value - 0.03) / 0.17));
+    /* Onderaan doven de punten pas NA de foto: tussen 0.12 en 0.02, en de
+       foto staat al vol vanaf 0.12. Er is dus een moment waarop het beeld
+       compleet is en de punten er nog liggen — dat is precies het moment
+       waarop het lijkt of het beeld uit die punten is opgebouwd. */
+    const inn = Math.min(1, Math.max(0, (breath.value - 0.02) / 0.1));
     const out = Math.min(1, Math.max(0, (breath.value - 0.83) / 0.17));
     return { opacity: inn * (1 - out) };
   });
@@ -561,8 +565,15 @@ function SlideIntro({
   /* De foto is het BEGINBEELD: vol in rust, en hij lost op zodra de beweging
      inzet. Hij verdwijnt langzamer dan de punten opkomen, zodat het beeld
      even ín de punten ligt en er niet onderuit wordt geschoven. */
+  /* De foto heeft de langste aanloop van de drie lagen en is VOLLEDIG in
+     beeld voordat de punten weggaan (operator, 3 augustus 2026). Die volgorde
+     is het hele punt: eerst staat het beeld er, dán pas verdwijnt waar het uit
+     ontstond. Andersom — punten weg terwijl de foto nog opkomt — laat een gat
+     vallen waarin je naar een half beeld kijkt.
+     Vol vanaf 0.12 en niet vanaf 0, zodat er ná de voltooiing nog een stukje
+     beweging over is waarin de punten kunnen oplossen. */
   const photoFade = useAnimatedStyle(() => ({
-    opacity: 1 - Math.min(1, Math.max(0, breath.value / 0.42)),
+    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.12) / 0.46)),
   }));
 
   /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
