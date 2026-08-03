@@ -345,9 +345,12 @@ export default function BreathSessionScreen() {
       setSecsLeft(def.secs);
 
       if (hapticRef.current) {
-        /* Eén trilling per fase zei niets: alle drie voelden hetzelfde. Nu
-           heeft elke fase een eigen ritme — zie breath-haptics.ts. */
-        playPhaseHaptic(k);
+        /* De trilling draagt de HELE fase, niet alleen de overgang: een tik
+           aan het begin zegt niets over de vier seconden erna. In- en
+           uitademen krijgen een reeks die respectievelijk aanzwelt en
+           uitdooft, vasthouden drie tikjes en dan stilte. Zie
+           breath-haptics.ts — de duur bepaalt de vorm, dus die gaat mee. */
+        playPhaseHaptic(k, def.secs);
       }
       if (voiceRef.current) {
         /* Geen `force` meer. De knop op dit scherm is de instelling zelf,

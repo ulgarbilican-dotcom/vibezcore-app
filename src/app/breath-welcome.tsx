@@ -712,24 +712,29 @@ function SlideBracelet({
     <View style={s.slide}>
       {/* Zelfde opzet als scherm 2: kapitalen op licht gewicht met ruime
          letterafstand, met de mandala als decor erachter. */}
+      {/* Omgedraaid (operator, 3 augustus 2026): de PRODUCTNAAM staat boven,
+          de belofte eronder. Zo stond het als enige scherm andersom — de
+          overige vier zetten hun kop eerst. En belangrijker: dit scherm gaat
+          over een product dat nog niemand kent. Dan moet eerst vaststaan
+          waar je naar kijkt, en pas daarna wat het voor je doet. */}
       <View style={s.titleBlock}>
         <MandalaBackdrop size={HEADER_MANDALA} />
-        <GradientText
-          text="QUIET GUIDANCE THROUGH THE WRIST"
-          size={SUB_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-        colors={SUB_COLORS}
-        positions={SUB_POSITIONS}
-          tracking={SUB_TRACK}
-        />
         <GradientText
           text="SMART BEAD BRACELET"
           size={HEADER_SIZE}
           width={CONTENT_W}
           weight="regular"
           tracking={HEADER_TRACK}
-          style={s.braceletTitleLine}
+        />
+        <GradientText
+          text="QUIET GUIDANCE THROUGH THE WRIST"
+          size={SUB_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+          colors={SUB_COLORS}
+          positions={SUB_POSITIONS}
+          tracking={SUB_TRACK}
+          style={s.braceletSubLine}
         />
       </View>
 
@@ -1082,7 +1087,8 @@ const s = StyleSheet.create({
   },
 
   /* Scherm 3 */
-  braceletTitleLine: { marginTop: 2 },
+  /* Strak onder de kop, zoals de subtitels op de andere schermen. */
+  braceletSubLine: { marginTop: 4 },
   braceletImgWrap: {
     marginTop: -6,
     width: BRACELET_W,
