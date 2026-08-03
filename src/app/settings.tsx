@@ -307,6 +307,24 @@ export default function SettingsScreen() {
           <>
             <Text style={s.sectionLabel}>Developer · screen previews</Text>
             <View style={s.card}>
+              {/* Puntenveld-prototype (3 augustus 2026). Stond alleen achter
+                  een deeplink, en die moet je met een commando afvuren — dat
+                  is geen manier om iets te beoordelen. */}
+              <Pressable
+                style={s.row}
+                onPress={() => router.push('/breath-splat' as never)}
+                accessibilityLabel="Open the point-field prototype"
+              >
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Puntenveld — prototype</Text>
+                  <Text style={s.rowSub}>
+                    Punten trekken samen tot de gezichten bij het inademen en
+                    waaieren uiteen bij het uitademen. Kies een modus, druk
+                    START.
+                  </Text>
+                </View>
+              </Pressable>
+              <View style={s.divider} />
               <Pressable
                 style={s.row}
                 onPress={() =>
