@@ -84,6 +84,10 @@ export const BREATH_CYCLE_MS = 7000;
 
 type Props = {
   size?: number;
+  /** Adem van buitenaf, 0 = samengetrokken, 1 = uitgezet. Meegeven wanneer
+   *  dit beeld samen met iets anders moet bewegen; zonder dit houdt de figuur
+   *  zijn eigen klok aan. */
+  breath?: SharedValue<number>;
   /** De meteoor doet er precies één ronde over, zodat beeld en adem
    *  synchroon lopen. */
   breathCycleMs?: number;
@@ -261,6 +265,7 @@ function Seed({
 
 export default function HapticOrb({
   size = 320,
+  breath: externalBreath,
   breathCycleMs = BREATH_CYCLE_MS,
   onPulse,
 }: Props) {
@@ -278,8 +283,16 @@ export default function HapticOrb({
      kanteling gaat er per frame als transformatie overheen. ── */
   const geo = useMemo(() => buildMandala(baseR), [baseR]);
 
-  /* `breath` 0→1→0 — de figuur zet uit bij inademen, krimpt bij uitademen. */
-  const breath = useSharedValue(0);
+  /* `breath` 0→1→0 — de figuur zet uit bij inademen, krimpt bij uitademen.
+     Van BUITEN als de aanroeper er een meegeeft (3 augustus 2026). Op het
+     welkomstscherm gaat de rozet over in een puntenwolk, en die wolk loopt op
+     de ademwaarde van dat scherm. Bleef de rozet ondertussen op zijn eigen
+     klok ademen, dan zetten de twee tegen elkaar in: de getekende figuur nog
+     aan het uitzetten terwijl de punten al krimpen. Dat is niet als schok te
+     zien maar wél te voelen — de beweging klopt niet. Eén waarde voor alles
+     wat beweegt is het enige wat dat oplost. */
+  const ownBreath = useSharedValue(0);
+  const breath = externalBreath ?? ownBreath;
   /* `spin` = richting van de kanteling. Laat de figuur om haar as tollen. */
   const spin = useSharedValue(0);
   /* `orbit` 0→6 = de meteoor legt zes ronden af, één per ademcyclus, elke
@@ -292,14 +305,19 @@ export default function HapticOrb({
   const flash = useSharedValue(0);
 
   useEffect(() => {
-    breath.value = withRepeat(
-      withTiming(1, {
-        duration: breathCycleMs / 2,
-        easing: Easing.inOut(Easing.sin),
-      }),
-      -1,
-      true,
-    );
+    /* Alleen de eigen klok opwinden. Krijgt de figuur zijn adem van buiten,
+       dan zou dit die waarde overschrijven — en dan stuurt hij zichzelf weer,
+       precies wat we willen voorkomen. */
+    if (!externalBreath) {
+      ownBreath.value = withRepeat(
+        withTiming(1, {
+          duration: breathCycleMs / 2,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        -1,
+        true,
+      );
+    }
     spin.value = withRepeat(
       withTiming(1, { duration: 20000, easing: Easing.linear }),
       -1,
@@ -318,7 +336,7 @@ export default function HapticOrb({
       -1,
       false,
     );
-  }, [breath, spin, orbit, mist, breathCycleMs]);
+  }, [ownBreath, externalBreath, spin, orbit, mist, breathCycleMs]);
 
   const notify = useCallback(() => {
     onPulse?.();

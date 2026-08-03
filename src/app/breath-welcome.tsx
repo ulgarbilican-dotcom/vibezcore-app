@@ -43,6 +43,15 @@ import {
   GUIDANCE_MODES,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
+import {
+  Canvas,
+  Group,
+  Image as SkiaImage,
+  LinearGradient as SkGradient,
+  Rect,
+  useImage,
+  vec,
+} from '@shopify/react-native-skia';
 import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
 import SplatField from '@/components/SplatField';
 import { mandalaCloud } from '@/components/mandala-geometry';
@@ -219,15 +228,29 @@ const WEAR_H = 176;
 const WEAR_IMG =
   'https://vibezcore-audio.b-cdn.net/images/bracelet%20new%20correct.png';
 
-/* De twee gezichten. Dezelfde foto die het puntenveld tot beeld brengt. */
+/* De twee gezichten, in TWEE versies — en dat is geen slordigheid.
+   AFTASTEN gebeurt op de originele foto: die heeft ruim twee keer zoveel
+   detail (1535×1024 tegen 612×408) en zachte overgangen in de schaduw, en
+   daar leeft de puntenwolk van.
+   TONEN gebeurt op de uitgeknipte versie. De originele draagt een eigen
+   zwart vlak dat net niet het zwart van de app is, en dat zie je als een
+   rechthoek zodra hij opkomt — een blok op het scherm in plaats van een
+   gezicht dat verschijnt. Zonder achtergrond is er geen rand om te verraden. */
 const FACES = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
+const FACES_CUTOUT =
+  'https://vibezcore-audio.b-cdn.net/images/faces-removebg-preview.png';
 
 /* Het ritme van het welkomstscherm. Opgaan en neergaan duren even lang; de
-   stilstanden erna zijn wat het beeld leesbaar maakt. Eén cyclus is de som
-   van de vier, en de wissel tussen gezichten en figuur loopt daarop mee. */
-const RISE_MS = 5000;
-const FULL_MS = 1500;
-const EMPTY_MS = 1000;
+   stilstanden erna zijn wat het beeld leesbaar maakt.
+
+   Vlotter dan eerst (operator, 3 augustus 2026): de overgang mag sneller,
+   als hij maar schoon is. Vijf tellen was traag genoeg om te gaan wachten;
+   drie en een half leest als een beweging in plaats van een vertraging.
+   De stilstand op vol is juist LANGER geworden — dat is het moment waarop de
+   foto scherp staat, en daar hoort het oog even te mogen rusten. */
+const RISE_MS = 3400;
+const FULL_MS = 1900;
+const EMPTY_MS = 1100;
 const CYCLE_MS = RISE_MS * 2 + FULL_MS + EMPTY_MS;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
@@ -489,11 +512,28 @@ function SlideIntro({
      Omlaag gebeurt hetzelfde in omgekeerde volgorde, dus je eindigt weer bij
      de mandala waar je begon. */
   const orbFade = useAnimatedStyle(() => ({
-    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.15) / 0.3)),
+    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.06) / 0.22)),
   }));
-  const dustFade = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.max(0, (breath.value - 0.15) / 0.3)),
+  /* De punten dragen het middenstuk. Ze komen op zodra de rozet wegvalt en
+     gaan zelf weg zodra de foto het overneemt — nooit alle drie tegelijk in
+     beeld, want dan zie je lagen in plaats van één beweging. */
+  const dustFade = useAnimatedStyle(() => {
+    const inn = Math.min(1, Math.max(0, (breath.value - 0.06) / 0.22));
+    const out = Math.min(1, Math.max(0, (breath.value - 0.72) / 0.2));
+    return { opacity: inn * (1 - out) };
+  });
+  /* En op het hoogtepunt de FOTO zelf. Punten alleen blijven een schets;
+     de operator wil aan het eind het echte beeld zien. Hij komt op precies
+     wanneer de wolk al in de vorm van de gezichten staat, dus je ziet geen
+     tweede beeld verschijnen maar dezelfde vorm scherp worden. */
+  const photoFade = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, (breath.value - 0.72) / 0.2)),
   }));
+
+  /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
+     laadt hem één keer en deelt hem; er staat dus geen tweede kopie in het
+     geheugen. */
+  const facesImg = useImage(FACES);
 
   /* De regel ademt als GEHEEL. Dat is één beweging op de laag eromheen —
      het besturingssysteem verzet die view, er wordt geen letter opnieuw
@@ -526,19 +566,85 @@ function SlideIntro({
           zoals hij was, en de puntenwolk die hem overneemt. */}
       <Pressable onPress={onTapOrb} style={{ width: ORB, height: ORB }}>
         <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
-          <HapticOrb size={ORB} onPulse={onPulse} />
+          {/* Op ONZE ademwaarde, niet op zijn eigen. Anders zet de rozet uit
+              terwijl de punten al krimpen en klopt de beweging niet meer. */}
+          <HapticOrb size={ORB} breath={breath} onPulse={onPulse} />
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
           <SplatField
             orderedUris={[FACES]}
-            /* De mandala is de halte onderweg. Als meetkunde, niet als
-               afbeelding — zie mandalaCloud. */
+            /* De mandala is waar de punten VANDAAN komen. Als meetkunde en
+               niet als afbeelding — zie mandalaCloud. */
             midBuilder={mandalaCloud}
             modeUri={FACES}
             breath={breath}
             size={ORB}
             color="#7FB2FF"
           />
+        </Animated.View>
+        {/* De foto zelf, op het hoogtepunt.
+
+            Niet als gewone afbeelding maar OPTELLEND gemengd. De originele
+            foto draagt een eigen zwart vlak dat net niet het zwart van de app
+            is; als gewone afbeelding zie je dus een rechthoek opkomen in
+            plaats van een gezicht. Optellend gemengd voegt zwart niets toe —
+            het vlak verdwijnt volledig en alleen de gezichten lichten op.
+
+            Daarmee kan de ORIGINELE gebruikt worden en niet de uitgeknipte:
+            die laatste is 612×408 en wordt zacht zodra hij op bijna duizend
+            beeldpunten breed staat, precies op het moment dat het beeld
+            scherp hóórt te zijn. De originele heeft 1535×1024 en houdt zijn
+            detail, zonder uitknipranden.
+
+            `fit="contain"` is exact dezelfde inpassing als waarmee het
+            puntenveld is afgetast, dus de gezichten van de foto vallen
+            samen met die van de wolk. */}
+        <Animated.View style={[StyleSheet.absoluteFill, photoFade]}>
+          <Canvas style={{ width: ORB, height: ORB }}>
+            {facesImg && (
+              <Group>
+                <SkiaImage
+                  image={facesImg}
+                  x={0}
+                  y={0}
+                  width={ORB}
+                  height={ORB}
+                  fit="contain"
+                  blendMode="plus"
+                />
+                {/* De hals loopt uit in zwart.
+
+                    De foto houdt onderaan gewoon op: schouders, dan een
+                    rechte rand. Op een zwart scherm leest dat als een
+                    afgesneden beeld en niet als een gezicht dat uit het
+                    donker komt — en het maakt het geheel hard, precies zoals
+                    de operator zei.
+
+                    Dit is geen zwart vlak eroverheen: `dstIn` gumt weg wat
+                    hier doorzichtig is, dus de foto zelf lóst op. Een vlak
+                    zou de sterren erachter meedoven; nu blijft alles
+                    eromheen intact.
+
+                    De grenzen volgen de foto: bij verhouding 1535×1024 in een
+                    vierkant vak staat het beeld tussen 0.17 en 0.83, en de
+                    hals begint rond driekwart. Vandaar 0.66 tot 0.86. */}
+                <Rect
+                  x={0}
+                  y={0}
+                  width={ORB}
+                  height={ORB}
+                  blendMode="dstIn"
+                >
+                  <SkGradient
+                    start={vec(0, 0)}
+                    end={vec(0, ORB)}
+                    colors={['white', 'white', 'transparent']}
+                    positions={[0, 0.66, 0.86]}
+                  />
+                </Rect>
+              </Group>
+            )}
+          </Canvas>
         </Animated.View>
       </Pressable>
 

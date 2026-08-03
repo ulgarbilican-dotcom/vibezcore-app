@@ -161,31 +161,6 @@ function order(cloud: Cloud): Cloud {
   return out;
 }
 
-/** De chaos-stand. Afgeleid VAN de geordende stand, niet willekeurig
- *  gestrooid: elk punt vliegt naar buiten langs zijn eigen hoek. Daardoor
- *  ziet uiteenvallen eruit als loslaten en niet als sneeuw. */
-function scatter(ordered: Cloud): Cloud {
-  const n = ordered.length / 2;
-  const out: Cloud = [];
-  for (let i = 0; i < n; i += 1) {
-    const dx = ordered[i * 2] - 0.5;
-    const dy = ordered[i * 2 + 1] - 0.5;
-    const a = Math.atan2(dy, dx);
-    /* Vaste pseudo-toevalligheid op de index: elke start ziet er hetzelfde
-       uit, en er is geen Math.random in beeld die per frame verspringt. */
-    const h = Math.sin(i * 12.9898) * 43758.5453;
-    const jitter = h - Math.floor(h);
-    /* Blijft BINNEN het vlak. Hier stond 0.55 tot 1.30, en dat is precies
-       waarom het scherm leeg was: het veld is één vierkant van 0 tot 1, dus
-       op afstand 1.30 vanuit het midden staat vrijwel elk punt buiten beeld.
-       Uiteenvallen zag je daardoor niet als uiteenvallen maar als verdwijnen.
-       0.46 is de grootste afstand die in alle richtingen nog past. */
-    const reach = 0.2 + jitter * 0.26;
-    out.push(0.5 + Math.cos(a) * reach, 0.5 + Math.sin(a) * reach);
-  }
-  return out;
-}
-
 /* ── Component ────────────────────────────────────────────────────────── */
 
 type Props = {
@@ -289,11 +264,10 @@ export default function SplatField({
         ? sampleImage(modeImg, count)
         : null;
     if (!a || !b || !mod) return null;
-    const oa = order(a);
-    const ob = order(b);
-    /* De uiteengewaaierde stand hoort bij ÉÉN wolk, anders springen de punten
-       bij het wisselen van eindbeeld ook nog eens van hun rustplek. */
-    return { a: oa, b: ob, mode: order(mod), chaos: scatter(oa) };
+    /* `rest` is de stand waar de punten VANDAAN komen — de rozet — en niet
+       langer een tussenstop. De uiteengewaaierde derde stand is vervallen:
+       die maakte het pad krom (zie de worklet hieronder). */
+    return { a: order(a), b: order(b), rest: order(mod) };
   }, [imgA, imgB, modeImg, midBuilder, count]);
 
   const sprites: SkRect[] = useMemo(
@@ -309,23 +283,23 @@ export default function SplatField({
     }
     const t = breath.value;
     const ix = i * 2;
+
+    /* ÉÉN beweging, van rustvorm naar eindbeeld. Hier zaten drie haltes —
+       uiteen, dan de rozet, dan de gezichten — en dat was zichtbaar fout: de
+       rozet heeft een kleinere straal dan de gezichten, dus de punten gingen
+       eerst naar binnen en daarna weer naar buiten. Eén knikje in het midden
+       van elke ademhaling, precies wat een overgang niet mag doen.
+       De rustvorm is nu het BEGIN en niet een tussenstop, en daarmee is het
+       pad in beide richtingen doorlopend. */
     const end = Math.round(which.value) % 2 === 1 ? clouds.b : clouds.a;
 
-    /* Twee etappes: chaos → modusvorm → orde. De modusvorm ligt op 0.45,
-       zodat hij dicht bij het uitgeademde einde zit en je hem passeert
-       zonder dat hij ooit het eindbeeld verdringt. */
-    const MID = 0.45;
-    let x: number;
-    let y: number;
-    if (t <= MID) {
-      const k = t / MID;
-      x = clouds.chaos[ix] + (clouds.mode[ix] - clouds.chaos[ix]) * k;
-      y = clouds.chaos[ix + 1] + (clouds.mode[ix + 1] - clouds.chaos[ix + 1]) * k;
-    } else {
-      const k = (t - MID) / (1 - MID);
-      x = clouds.mode[ix] + (end[ix] - clouds.mode[ix]) * k;
-      y = clouds.mode[ix + 1] + (end[ix + 1] - clouds.mode[ix + 1]) * k;
-    }
+    /* Zachte in- en uitloop op de POSITIE zelf, bovenop de easing van de
+       ademwaarde. Zonder dit zetten duizenden punten tegelijk in en stoppen
+       ze tegelijk — wiskundig correct en toch schokkerig, omdat het oog een
+       massa ziet vertrekken in plaats van op gang komen. */
+    const k = t * t * (3 - 2 * t);
+    const x = clouds.rest[ix] + (end[ix] - clouds.rest[ix]) * k;
+    const y = clouds.rest[ix + 1] + (end[ix + 1] - clouds.rest[ix + 1]) * k;
 
     /* Punten worden kleiner naarmate ze verder uit elkaar staan. Zonder dat
        lijkt uiteenvallen op uitvergroten in plaats van vervliegen.
