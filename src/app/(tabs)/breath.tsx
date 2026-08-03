@@ -220,6 +220,23 @@ export default function BreathScreen() {
     router.push({ pathname: '/breath-session', params: { state: st.key } });
   }, [st.key]);
 
+  /* ── Een halve centimeter lager ─────────────────────────────────────────
+     Vier van de vijf figuren hingen te hoog in hun vak (operator, 3 augustus
+     2026); alleen de lotus stond goed. Dat is geen toeval: die heeft als
+     enige `focusY 0.43` en zit dus al lager, precies omdat het onderwerp
+     anders in zijn bestand staat dan bij de andere vier.
+
+     De correctie gebeurt HIER en niet in de gegevens, want `focusY` zegt waar
+     het onderwerp in het bestand zit — dat is een eigenschap van het beeld en
+     die verandert niet omdat één scherm anders is ingedeeld. Het sessiescherm
+     heeft een ander vak en moet ongemoeid blijven.
+
+     Omgerekend via de beeldmaat, zodat elke figuur exact evenveel zakt: op
+     een scherm van 160 punten per inch is een halve centimeter ruim dertig
+     punten, en `translateY` in SessionArt is (0.5 − focusY) × maat. */
+  const artSize = ART_W * (st.artScale ?? 1);
+  const drop = st.key === 'calm' ? 0 : 31 / artSize;
+
   /* De aanbevolen lengte staat op de regel boven de knop, niet als keuze.
      Wie nog niets gekozen heeft wil weten waar hij aan begint; de vier
      lengtes staan een scherm verder. */
@@ -252,12 +269,12 @@ export default function BreathScreen() {
       <View style={s.stage}>
         <Animated.View style={[s.artWrap, fadeStyle]} pointerEvents="none">
           <SessionArt
-            size={ART_W * (st.artScale ?? 1)}
+            size={artSize}
             art={st.art}
             breath={breath}
             glow={st.glow}
             boxHeight={BOX_H}
-            focusY={st.focusY}
+            focusY={st.focusY - drop}
           />
         </Animated.View>
 
