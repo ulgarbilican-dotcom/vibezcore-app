@@ -600,9 +600,25 @@ function SlideIntro({
      vallen waarin je naar een half beeld kijkt.
      Vol vanaf 0.12 en niet vanaf 0, zodat er ná de voltooiing nog een stukje
      beweging over is waarin de punten kunnen oplossen. */
-  const photoFade = useAnimatedStyle(() => ({
-    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.12) / 0.46)),
-  }));
+  const photoFade = useAnimatedStyle(() => {
+    /* Niet symmetrisch, en dat is de bedoeling.
+
+       OMHOOG moet de foto meteen wijken. Hij bleef tot ver in de beweging
+       staan en dekte daarmee de punten af — daarom leek de morph van foto
+       naar rozet te ontbreken: hij gebeurde achter een beeld dat er nog
+       grotendeels stond.
+
+       OMLAAG moet hij juist zo lang mogelijk opbouwen en pas op het laatst
+       compleet zijn, zodat de reis niet wordt afgedekt maar afgemaakt.
+
+       Eén formule voor beide richtingen kan dat niet; vandaar dat de
+       stijgen-of-dalen-vlag hier ook gelezen wordt. */
+    const rising = flow.value < 0.5;
+    const from = rising ? 0.0 : 0.12;
+    const to = rising ? 0.16 : 0.58;
+    const p = (breath.value - from) / (to - from);
+    return { opacity: 1 - Math.min(1, Math.max(0, p)) };
+  });
 
   /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
      laadt hem één keer en deelt hem; er staat dus geen tweede kopie in het

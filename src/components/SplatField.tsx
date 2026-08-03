@@ -427,11 +427,22 @@ function PointCloud({
        resterende stuk van dezelfde cirkel verder uit, tot het weer bij zijn
        beginhoek is. Heen en terug samen: precies één omwenteling, en beide
        keren met de klok mee. */
+    /* De HOEK loopt vóór op de STRAAL. Liepen ze gelijk, dan bleef de figuur
+       bijna de hele reis de vorm van waar hij vandaan kwam en klapte hij pas
+       op het eind om — precies wat de operator zag: "de vorm is nog de
+       mandala, en dan de morph naar de gezichten".
+
+       Nu is de draaiing vroeg klaar terwijl de straal doorloopt. Halverwege
+       staan de punten dus al op de hoeken van het gezicht met de afstanden
+       van de rozet: de vorm is dan al aan het worden wat hij wordt, terwijl
+       hij nog draait. */
+    const u = dir.value < 0.5 ? t : 1 - t;
+    const lead = u * (2 - u);
     const r = polar.rr[i] + (polar.er[i] - polar.rr[i]) * t;
     const ang =
       dir.value < 0.5
-        ? polar.ea[i] * t
-        : polar.ea[i] + (TAU - polar.ea[i]) * (1 - t);
+        ? polar.ea[i] * lead
+        : polar.ea[i] + (TAU - polar.ea[i]) * lead;
     const a = polar.ra[i] + ang + turn.value * TAU;
     const x = 0.5 + Math.cos(a) * r;
     const y = 0.5 + Math.sin(a) * r;
