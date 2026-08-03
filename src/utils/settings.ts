@@ -33,11 +33,18 @@ export type Settings = {
    *  Comment-stub: audio-player respecteert deze nog niet (pas nodig
    *  wanneer backend multi-bitrate ondersteunt). */
   audioQuality: 'high' | 'low';
-  /** Iter v149 v3 (2026-06-25): voice cues aan/uit voor breath + bracelet
-   *  sessies. Operator-feedback: bracelet stem te luid + AI-achtig, user
-   *  wil 'm kunnen dimmen wanneer hij in vergadering zit. Default OFF
-   *  zodat een ongeplande activatie nooit onverwacht stem laat klinken.
-   *  User kan 'm zelf inschakelen via Settings → Voice cues. */
+  /** Voice cues aan/uit voor breath- én bracelet-sessies. Eén schakelaar
+   *  voor alles wat spreekt: de fasecues tijdens een sessie én de
+   *  afsluitende monoloog bij het eindscherm. De knoppen op het
+   *  sessiescherm en bij de bracelet zijn deze waarde — geen kopie ervan.
+   *
+   *  Default AAN (operator, 3 augustus 2026). Stond sinds 25 juni op UIT,
+   *  zodat een ongeplande bracelet-activatie nooit onverwacht zou praten.
+   *  Dat kostte meer dan het opleverde: begeleiding met stem is waar het
+   *  product om draait, en een gebruiker die niets instelt hoorde niets.
+   *  Wie stilte wil zet 'm uit — in Settings, met de knop in de sessie, of
+   *  door in de onboarding voor trillingen of stil te kiezen — en dan is
+   *  álles stil, tot en met het eindscherm. */
   voiceCues: boolean;
   /** Iter v??? (breath-onboarding): timestamp (ms) wanneer de gebruiker
    *  de eerste-run Breath-onboarding heeft afgerond (of geskipt).
@@ -60,7 +67,7 @@ const defaults: Settings = {
   saveProgress: true,
   trackHistory: true,
   audioQuality: 'high',
-  voiceCues: false,
+  voiceCues: true,
   breathOnboardingCompletedAt: null,
 };
 
