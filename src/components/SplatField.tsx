@@ -345,14 +345,44 @@ function PointCloud({
     [count],
   );
 
-  /* Sinus en cosinus ÉÉN keer per beeldje, niet per punt. Per punt zou het
-     bij tweeduizend punten ruim tweehonderdduizend berekeningen per seconde
-     opleveren op de tekendraad — precies het soort last dat een instapmodel
-     laat haperen. */
-  const rot = useDerivedValue(() => {
-    const a = turn.value * TAU;
-    return { c: Math.cos(a), s: Math.sin(a) };
-  });
+  /* ── Hoek en straal, niet x en y ──────────────────────────────────────
+     De reis zelf moet een DRAAIING zijn (operator, 3 augustus 2026). Reken je
+     in x en y, dan schuift elk punt langs een rechte lijn van de ene vorm
+     naar de andere; een draaiing die je daaroverheen legt beweegt het hele
+     veld, maar de reis blijft recht. Dat is wat er niet klopte.
+
+     In poolcoördinaten is de reis vanzelf een boog: de straal krimpt of groeit
+     terwijl de hoek meedraait, en dan krult het punt naar binnen in plaats van
+     ernaartoe te schuiven.
+
+     Eén keer uitrekenen bij het opbouwen, niet per beeldje — het zijn vaste
+     vormen. ── */
+  const polar = useMemo(() => {
+    const n = count;
+    const rr = new Array<number>(n);
+    const ra = new Array<number>(n);
+    const er = new Array<number>(n);
+    const ea = new Array<number>(n);
+    for (let i = 0; i < n; i += 1) {
+      const rx = clouds.rest[i * 2] - 0.5;
+      const ry = clouds.rest[i * 2 + 1] - 0.5;
+      const ex = clouds.end[i * 2] - 0.5;
+      const ey = clouds.end[i * 2 + 1] - 0.5;
+      rr[i] = Math.hypot(rx, ry);
+      ra[i] = Math.atan2(ry, rx);
+      er[i] = Math.hypot(ex, ey);
+      /* De EINDhoek altijd MET DE KLOK MEE vanaf de beginhoek benaderen: het
+         verschil wordt naar het bereik 0…2π gebracht, dus de kortste weg
+         tegen de klok in bestaat niet meer als optie. Heen krult het punt
+         daarmee met de klok mee naar de rozet, en terug loopt hij dezelfde
+         boog verder uit in dezelfde richting. */
+      let d = Math.atan2(ey, ex) - ra[i];
+      while (d < 0) d += TAU;
+      while (d >= TAU) d -= TAU;
+      ea[i] = d;
+    }
+    return { rr, ra, er, ea };
+  }, [clouds, count]);
 
   const transforms = useRSXformBuffer(count, (val, i) => {
     'worklet';
@@ -367,25 +397,20 @@ function PointCloud({
        er nooit precies op passen — en dat was de sprong die de operator zag:
        groot, plof, echte maat. */
     const t = breath.value;
-    const ix = i * 2;
 
-    /* ── Altijd met de klok mee ─────────────────────────────────────────
-       Eerst mengen, DAN draaien. Andersom ging het mis: draaide alleen de
-       eindvorm, dan werd die draaiing op de terugweg weer afgepeld — de
-       figuur leek terug te draaien terwijl de hoek in werkelijkheid gewoon
-       vooruit liep. Nu draait de hele wolk om één hoek die alleen maar
-       toeneemt, dus de richting kán niet omkeren.
+    /* ── De reis IS de draaiing ──────────────────────────────────────────
+       De straal loopt recht van de ene vorm naar de andere; de hoek loopt de
+       volle boog MET DE KLOK MEE. Daar bovenop komt de doorlopende draaiing
+       van de figuur zelf, zodat de rozet blijft tollen ook wanneer er niets
+       morpht.
 
-       Dat de gezichten daarmee ook meedraaien is geen bezwaar: op het moment
-       dat de wolk de gezichten vormt is ze al doorzichtig en heeft de foto
-       het overgenomen. Je ziet die stand dus niet. */
-    const mx = clouds.rest[ix] + (clouds.end[ix] - clouds.rest[ix]) * t - 0.5;
-    const my =
-      clouds.rest[ix + 1] + (clouds.end[ix + 1] - clouds.rest[ix + 1]) * t - 0.5;
-    const c = rot.value.c;
-    const sn = rot.value.s;
-    const x = 0.5 + mx * c - my * sn;
-    const y = 0.5 + mx * sn + my * c;
+       Beide tellen OP bij de hoek — er wordt nergens iets afgetrokken, en
+       daarom kan geen enkele beweging tegen de klok in gaan, in welke
+       richting de adem ook loopt. */
+    const r = polar.rr[i] + (polar.er[i] - polar.rr[i]) * t;
+    const a = polar.ra[i] + polar.ea[i] * t + turn.value * TAU;
+    const x = 0.5 + Math.cos(a) * r;
+    const y = 0.5 + Math.sin(a) * r;
 
     /* Dichter opeen wanneer ze de rozet vormen, iets ijler in het gezicht. */
     const scale = (0.25 - t * 0.08) * (size / 320);
