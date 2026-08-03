@@ -181,7 +181,7 @@ export default function BreathSplatScreen() {
 
       <View style={s.stage}>
         <SplatField
-          orderedUri={PORTRAIT ?? SESSION_ART[st.art]}
+          orderedUris={[PORTRAIT ?? SESSION_ART[st.art]]}
           modeUri={SESSION_ART[st.art]}
           breath={breath}
           size={FIELD}

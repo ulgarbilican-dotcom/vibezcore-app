@@ -43,9 +43,9 @@ import {
   GUIDANCE_MODES,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
-import { BREATH_CYCLE_MS } from '@/components/HapticOrb';
+import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
 import SplatField from '@/components/SplatField';
-import { SESSION_ART } from '@/components/SessionArt';
+import { mandalaCloud } from '@/components/mandala-geometry';
 import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -85,7 +85,9 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -219,6 +221,14 @@ const WEAR_IMG =
 
 /* De twee gezichten. Dezelfde foto die het puntenveld tot beeld brengt. */
 const FACES = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
+
+/* Het ritme van het welkomstscherm. Opgaan en neergaan duren even lang; de
+   stilstanden erna zijn wat het beeld leesbaar maakt. Eén cyclus is de som
+   van de vier, en de wissel tussen gezichten en figuur loopt daarop mee. */
+const RISE_MS = 5000;
+const FULL_MS = 1500;
+const EMPTY_MS = 1000;
+const CYCLE_MS = RISE_MS * 2 + FULL_MS + EMPTY_MS;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
 const BRACELET_IMG =
@@ -438,28 +448,52 @@ function SlideIntro({
   onPulse: () => void;
   onTapOrb: () => void;
 }) {
-  /* Zelfde klok als de bol: gelijke duur, gelijke easing, gestart in
-     hetzelfde frame. De kop ademt dus mét de ring i.p.v. ernaast. */
+  /* Eén klok voor het beeld én de kop eronder — daarom staat hij hier en
+     niet in het beeldonderdeel. De regel ademt mét de wolk in plaats van
+     ernaast, inclusief de stilstanden.
+
+     Rustiger, en met twee STILSTANDEN (operator, 3 augustus 2026). Hiervoor
+     gleed de waarde in één beweging op en neer, dus stond het beeld nooit
+     vol: je zag de gezichten zich vormen en meteen weer uiteenvallen. Nu
+     blijft hij anderhalve seconde boven staan — dát is het moment waarop je
+     het gezicht compleet ziet — en een seconde onder, waarin de wolk
+     helemaal uiteen is. */
   const breath = useSharedValue(0);
   useEffect(() => {
     breath.value = withRepeat(
-      withTiming(1, {
-        duration: BREATH_CYCLE_MS / 2,
-        easing: Easing.inOut(Easing.sin),
-      }),
+      withSequence(
+        withTiming(1, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
+        /* Een ECHTE vertraging, geen beweging naar dezelfde waarde: die laatste
+           heeft niets te doen en eindigt meteen, waardoor de stilstand wegviel
+           en het gezicht nooit compleet in beeld kwam. */
+        withDelay(FULL_MS, withTiming(1, { duration: 1 })),
+        withTiming(0, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
+        withDelay(EMPTY_MS, withTiming(0, { duration: 1 })),
+      ),
       -1,
-      true,
+      false,
     );
   }, [breath]);
 
-  /* De haptische klop hing aan de bol, die riep `onPulse` bij elke ronde.
-     Nu de gezichten die plek innemen wordt hij hier aangeslagen, op dezelfde
-     klok. Zonder dit zou het scherm er alleen nog uitzien als haptiek en niet
-     meer voelen als haptiek — en dat is precies waar deze pagina over gaat. */
-  useEffect(() => {
-    const id = setInterval(onPulse, BREATH_CYCLE_MS);
-    return () => clearInterval(id);
-  }, [onPulse]);
+  /* ── De overgave ────────────────────────────────────────────────────────
+     De mandala mag niet verloren gaan, dus hij blijft staan zoals hij is —
+     mét zijn lopende lichtje, zijn sterren en zijn eigen adem. De punten
+     nemen het van hem over in plaats van zijn plaats in te nemen.
+
+     Dat kan ongemerkt, omdat de wolk halverwege exact ZIJN vorm aanneemt: de
+     rozet in punten, op dezelfde straal en op dezelfde plek. Tussen 0.15 en
+     0.45 vervaagt de getekende figuur terwijl de puntenversie opkomt, en op
+     het moment dat de wissel klaar is staan ze allebei op precies dezelfde
+     vorm. Pas daarna morphen de punten door naar de gezichten.
+
+     Omlaag gebeurt hetzelfde in omgekeerde volgorde, dus je eindigt weer bij
+     de mandala waar je begon. */
+  const orbFade = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.15) / 0.3)),
+  }));
+  const dustFade = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, (breath.value - 0.15) / 0.3)),
+  }));
 
   /* De regel ademt als GEHEEL. Dat is één beweging op de laag eromheen —
      het besturingssysteem verzet die view, er wordt geen letter opnieuw
@@ -488,14 +522,24 @@ function SlideIntro({
           dus de regel en de wolk lopen exact gelijk. De klop die je voelt
           blijft: die hing aan de bol en wordt nu apart aangeslagen, één keer
           per ademcyclus. */}
-      <Pressable onPress={onTapOrb}>
-        <SplatField
-          orderedUri={FACES}
-          modeUri={SESSION_ART.flower}
-          breath={breath}
-          size={ORB}
-          color="#7FB2FF"
-        />
+      {/* Twee lagen op elkaar, even groot en op dezelfde plek: de mandala
+          zoals hij was, en de puntenwolk die hem overneemt. */}
+      <Pressable onPress={onTapOrb} style={{ width: ORB, height: ORB }}>
+        <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
+          <HapticOrb size={ORB} onPulse={onPulse} />
+        </Animated.View>
+        <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
+          <SplatField
+            orderedUris={[FACES]}
+            /* De mandala is de halte onderweg. Als meetkunde, niet als
+               afbeelding — zie mandalaCloud. */
+            midBuilder={mandalaCloud}
+            modeUri={FACES}
+            breath={breath}
+            size={ORB}
+            color="#7FB2FF"
+          />
+        </Animated.View>
       </Pressable>
 
       {/* Wit, met één schuine blauwe lichtband erdoorheen die naar rechts

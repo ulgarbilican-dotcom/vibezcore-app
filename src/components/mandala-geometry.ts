@@ -109,3 +109,50 @@ export function buildMandala(R: number): Mandala {
 
   return { outer, seeds, seedsAll, oRing, oFill };
 }
+
+/* ── Dezelfde figuur, maar als losse lichtpunten ──────────────────────────
+   Voor het puntenveld op het welkomstscherm, waar de mandala overgaat in de
+   twee gezichten (operator, 3 augustus 2026: "het is heel belangrijk dat die
+   niet verloren gaat").
+
+   Bewust AFGELEID van dezelfde maten als hierboven en niet nagetekend: het is
+   de figuur zelf, uitgedrukt in punten in plaats van in lijnen. Verandert de
+   rozet ooit, dan verandert deze mee.
+
+   Coördinaten lopen van 0 tot 1, met het hart op (0.5, 0.5) — dat is wat het
+   puntenveld verwacht. */
+export function mandalaCloud(count: number): number[] {
+  /* Exact de straal die HapticOrb aanhoudt (`baseR = size * 0.36`). Dat moet
+     kloppen tot op de punt: de getekende mandala vervaagt terwijl deze
+     puntenversie opkomt, en staan ze niet precies over elkaar, dan zie je de
+     figuur verspringen op het moment dat hij juist ongemerkt hoort over te
+     gaan. */
+  const R = 0.36;
+
+  const rings: { cx: number; cy: number; r: number }[] = [
+    { cx: 0, cy: 0, r: R },
+    ...Array.from({ length: SEEDS }, (_, i) => {
+      const a = (i / SEEDS) * TAU;
+      return { cx: (Math.cos(a) * R) / 2, cy: (Math.sin(a) * R) / 2, r: R / 2 };
+    }),
+    { cx: 0, cy: 0, r: R * 0.53 },
+  ];
+
+  /* Punten verdelen naar omtrek: een grote cirkel hoort er meer te krijgen,
+     anders staan de kleine dicht en de grote ijl. */
+  const total = rings.reduce((s, c) => s + c.r, 0);
+  const out: number[] = [];
+  rings.forEach((c, idx) => {
+    const last = idx === rings.length - 1;
+    const n = last
+      ? count - out.length / 2
+      : Math.max(1, Math.round((count * c.r) / total));
+    for (let i = 0; i < n; i += 1) {
+      /* De verschuiving per ring voorkomt dat punten van verschillende
+         cirkels op één lijn gaan staan waar ze elkaar snijden. */
+      const t = (i / n) * TAU + idx * 0.7;
+      out.push(0.5 + c.cx + Math.cos(t) * c.r, 0.5 + c.cy + Math.sin(t) * c.r);
+    }
+  });
+  return out;
+}

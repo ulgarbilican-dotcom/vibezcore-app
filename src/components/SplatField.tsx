@@ -52,7 +52,7 @@ import {
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useRSXformBuffer } from '@shopify/react-native-skia';
-import type { SharedValue } from 'react-native-reanimated';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 
 /* Het raster waarop een bronbeeld wordt afgetast. 128×128 is ruim genoeg om
    een gezicht te herkennen en klein genoeg om in één keer uit te lezen. */
@@ -189,10 +189,21 @@ function scatter(ordered: Cloud): Cloud {
 /* ── Component ────────────────────────────────────────────────────────── */
 
 type Props = {
-  /** Het eindbeeld: waar de punten naartoe trekken bij volledig inademen. */
-  orderedUri: string;
-  /** De vorm van de gekozen modus, waar de wolk onderweg doorheen gaat. */
+  /** De eindbeelden: waar de punten naartoe trekken bij volledig inademen.
+   *  Meerdere betekent afwisselen — `targetIndex` bepaalt welke. Ze worden
+   *  alle bij het openen één keer afgetast, want opnieuw aftasten tijdens het
+   *  wisselen zou een beeld van anderhalf miljoen pixels opnieuw uitlezen. */
+  orderedUris: string[];
+  /** Welk eindbeeld nu geldt. Wissel hem op het moment dat de wolk volledig
+   *  uiteen staat: dan is er niets te zien dat kan verspringen. */
+  targetIndex?: SharedValue<number>;
+  /** De vorm waar de wolk onderweg doorheen gaat. */
   modeUri: string;
+  /** Zelfde rol als `modeUri`, maar berekend in plaats van uit een beeld
+   *  gelezen. Nodig voor de mandala: die bestaat als meetkunde en niet als
+   *  bestand, en aftasten van een plaatje ervan zou een benadering opleveren
+   *  waar de echte figuur beschikbaar is. Gaat vóór op `modeUri`. */
+  midBuilder?: (count: number) => number[];
   /** 0 = volledig uitgeademd (chaos), 1 = volledig ingeademd (orde). */
   breath: SharedValue<number>;
   size: number;
@@ -205,15 +216,26 @@ type Props = {
 };
 
 export default function SplatField({
-  orderedUri,
+  orderedUris,
+  targetIndex,
   modeUri,
+  midBuilder,
   breath,
   size,
   color,
   count = 2600,
 }: Props) {
-  const orderedImg = useImage(orderedUri);
+  /* Ten hoogste twee eindbeelden; meer heeft geen enkele aanroep nodig en
+     `useImage` is een hook, dus het aantal moet vaststaan. */
+  const imgA = useImage(orderedUris[0]);
+  const imgB = useImage(orderedUris[1] ?? orderedUris[0]);
   const modeImg = useImage(modeUri);
+
+  /* Altijd een eigen waarde bij de hand, ook als de aanroeper er geen
+     meegeeft: een worklet die soms wel en soms geen gedeelde waarde ziet is
+     een bron van fouten die pas op een toestel opduiken. */
+  const fallbackIndex = useSharedValue(0);
+  const which = targetIndex ?? fallbackIndex;
 
   /* Eén zacht rond puntje, één keer getekend en daarna duizenden keren
      hergebruikt. Dat is het hele idee achter Atlas.
@@ -257,13 +279,22 @@ export default function SplatField({
   }, [color]);
 
   const clouds = useMemo(() => {
-    if (!orderedImg || !modeImg) return null;
-    const ord = sampleImage(orderedImg, count);
-    const mod = sampleImage(modeImg, count);
-    if (!ord || !mod) return null;
-    const o = order(ord);
-    return { ordered: o, mode: order(mod), chaos: scatter(o) };
-  }, [orderedImg, modeImg, count]);
+    if (!imgA || !imgB) return null;
+    if (!midBuilder && !modeImg) return null;
+    const a = sampleImage(imgA, count);
+    const b = sampleImage(imgB, count);
+    const mod = midBuilder
+      ? midBuilder(count)
+      : modeImg
+        ? sampleImage(modeImg, count)
+        : null;
+    if (!a || !b || !mod) return null;
+    const oa = order(a);
+    const ob = order(b);
+    /* De uiteengewaaierde stand hoort bij ÉÉN wolk, anders springen de punten
+       bij het wisselen van eindbeeld ook nog eens van hun rustplek. */
+    return { a: oa, b: ob, mode: order(mod), chaos: scatter(oa) };
+  }, [imgA, imgB, modeImg, midBuilder, count]);
 
   const sprites: SkRect[] = useMemo(
     () => new Array(count).fill(0).map(() => Skia.XYWHRect(0, 0, 24, 24)),
@@ -278,6 +309,7 @@ export default function SplatField({
     }
     const t = breath.value;
     const ix = i * 2;
+    const end = Math.round(which.value) % 2 === 1 ? clouds.b : clouds.a;
 
     /* Twee etappes: chaos → modusvorm → orde. De modusvorm ligt op 0.45,
        zodat hij dicht bij het uitgeademde einde zit en je hem passeert
@@ -291,8 +323,8 @@ export default function SplatField({
       y = clouds.chaos[ix + 1] + (clouds.mode[ix + 1] - clouds.chaos[ix + 1]) * k;
     } else {
       const k = (t - MID) / (1 - MID);
-      x = clouds.mode[ix] + (clouds.ordered[ix] - clouds.mode[ix]) * k;
-      y = clouds.mode[ix + 1] + (clouds.ordered[ix + 1] - clouds.mode[ix + 1]) * k;
+      x = clouds.mode[ix] + (end[ix] - clouds.mode[ix]) * k;
+      y = clouds.mode[ix + 1] + (end[ix + 1] - clouds.mode[ix + 1]) * k;
     }
 
     /* Punten worden kleiner naarmate ze verder uit elkaar staan. Zonder dat
@@ -307,7 +339,12 @@ export default function SplatField({
      of het laadt, of stuk is, of dat de punten buiten beeld staan. Elke
      mislukking zegt daarom WAAR hij zit. */
   if (!sprite || !clouds) {
-    const why = !orderedImg || !modeImg ? 'laden…' : !sprite ? 'sprite mislukt' : 'aftasten mislukt';
+    const why =
+      !imgA || !imgB || !modeImg
+        ? 'laden…'
+        : !sprite
+          ? 'sprite mislukt'
+          : 'aftasten mislukt';
     return (
       <View
         style={{
