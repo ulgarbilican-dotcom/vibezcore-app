@@ -46,6 +46,16 @@ export type Settings = {
    *  door in de onboarding voor trillingen of stil te kiezen — en dan is
    *  álles stil, tot en met het eindscherm. */
   voiceCues: boolean;
+  /** Heeft de gebruiker de stem OOIT zelf aan- of uitgezet?
+   *
+   *  Nodig om een bewaarde `false` te kunnen onderscheiden van een `false`
+   *  die er alleen stond omdat dat vroeger de standaard was. Zonder dit
+   *  onderscheid zou het omzetten van de standaard (3 augustus 2026) iedereen
+   *  die de app al draaide in stilte achterlaten — en juist die mensen hebben
+   *  nooit om stilte gevraagd.
+   *  Wordt door `setSetting('voiceCues', …)` automatisch op true gezet; vanaf
+   *  dat moment is de bewaarde waarde leidend en raakt hij nooit meer kwijt. */
+  voiceCuesChosen: boolean;
   /** Iter v??? (breath-onboarding): timestamp (ms) wanneer de gebruiker
    *  de eerste-run Breath-onboarding heeft afgerond (of geskipt).
    *  null = nog nooit doorlopen → Breath-tab-focus stuurt naar
@@ -68,6 +78,7 @@ const defaults: Settings = {
   trackHistory: true,
   audioQuality: 'high',
   voiceCues: true,
+  voiceCuesChosen: false,
   breathOnboardingCompletedAt: null,
 };
 
@@ -102,6 +113,17 @@ async function loadOnce(): Promise<void> {
               : {}),
             ...(obj.audioQuality === 'high' || obj.audioQuality === 'low'
               ? { audioQuality: obj.audioQuality }
+              : {}),
+            /* Deze regel ONTBRAK (gevonden 3 augustus 2026). `voiceCues`
+               werd wel weggeschreven maar nooit teruggelezen, dus viel hij
+               bij elke start terug op de standaard: wie de stem uitzette had
+               hem na herstart weer aan staan. Dat verklaart ook waarom de
+               schermen een eigen kopie van die knop bijhielden — de
+               instelling zelf hield niets vast.
+               Alleen leidend als de gebruiker hem ooit zelf heeft omgezet;
+               anders geldt de standaard van vandaag, niet die van toen. */
+            ...(obj.voiceCuesChosen === true && typeof obj.voiceCues === 'boolean'
+              ? { voiceCues: obj.voiceCues, voiceCuesChosen: true }
               : {}),
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
@@ -141,6 +163,9 @@ export async function setSetting<K extends keyof Settings>(
   await loadOnce();
   if (state[key] === value) return;
   state = { ...state, [key]: value };
+  /* Wie de stem omzet, doet dat bewust — en vanaf dat moment is zijn keuze
+     leidend, ook als een latere versie een andere standaard kiest. */
+  if (key === 'voiceCues') state = { ...state, voiceCuesChosen: true };
   notify();
   persist();
 }
