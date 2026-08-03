@@ -122,22 +122,16 @@ export function playBreathCue(
   exhaleVia: ExhaleVia,
   key?: BreathKey,
   source?: VoiceSource,
-  /** Negeer de globale voorkeur `voiceCues`.
-   *
-   *  Nodig voor schermen die een EIGEN zichtbare Voice-schakelaar hebben,
-   *  of waar de gebruiker net zelf op "Voice" getikt heeft. Die tik ís de
-   *  toestemming; hem dan alsnog tegen een instelling in Settings houden
-   *  levert stilte op zonder uitleg.
-   *
-   *  Dit was de oorzaak van het steeds terugkerende "geen geluid":
-   *  `voiceCues` staat standaard UIT, en de root-layout zet die waarde bij
-   *  elke start opnieuw door. Die effect-keten is asynchroon, dus tikte je
-   *  vlak na het openen op een kaart, dan zette het scherm de vlag aan,
-   *  begon de cue, en zette de root hem een tel later weer uit. Vandaar dat
-   *  het de ene keer wel werkte en de andere keer niet. */
-  force = false,
 ): void {
-  if (!voiceEnabled && !force) return;
+  /* Er is GEEN ontsnapping meer (3 augustus 2026). Hier zat een `force`-vlag
+     waarmee een scherm langs de voorkeur van de gebruiker kon spelen. Die
+     bestond omdat schermen een eigen stemknop hadden náást de instelling:
+     twee waarheden, dus moest er één winnen, en dat werd steeds degene die
+     geluid maakte.
+     De knoppen ZIJN nu de instelling — op het sessiescherm, bij de bracelet
+     en in de onboarding. Daarmee valt er niets meer te omzeilen, en zonder
+     vlag kan niemand het per ongeluk opnieuw invoeren. */
+  if (!voiceEnabled) return;
   /* Iter v170: silently no-op als er een andere source de voice claimt.
      Voorkomt dat breath-tab cues door bracelet active heen spelen of
      vice versa. Calls zonder source parameter blijven backwards-compat
@@ -172,11 +166,10 @@ export function playBreathCue(
  *  van een stille sessie is precies wat zo iemand niet wil — 's avonds,
  *  naast een slapende partner, of met de telefoon in gezelschap.
  *
- *  Stilte is nu de veilige stand. `force` blijft bestaan voor schermen met
- *  een EIGEN zichtbare stemknop, zodat die knop leidend blijft; zie
- *  playBreathCue hierboven voor waarom die uitzondering nodig is. */
-export function playCompletionCue(key: BreathKey, force = false): void {
-  if (!voiceEnabled && !force) return;
+ *  Stilte is de veilige stand, en er is geen uitzondering — zie
+ *  playBreathCue hierboven. */
+export function playCompletionCue(key: BreathKey): void {
+  if (!voiceEnabled) return;
   const url = COMPLETION_URLS[key];
   if (!url) return;
   playUrl(url);

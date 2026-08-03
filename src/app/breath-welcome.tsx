@@ -300,6 +300,17 @@ export default function BreathWelcomeScreen() {
       );
     }
 
+    /* De keuze wordt nu BEWAARD, niet alleen toegepast (3 augustus 2026).
+       Hier stond enkel `setVoiceEnabled`, en dat is een vlag in het geheugen:
+       wie "Silent" of "Smartphone Haptics" koos, kreeg bij de eerstvolgende
+       start van de app alsnog een pratende sessie. Het scherm heet "CHOOSE
+       YOUR GUIDANCE" en belooft "The choice is yours" — dan moet die keuze
+       de app ook overleven.
+       `setVoiceEnabled` blijft ernaast staan omdat de demo-cue hieronder
+       ONMIDDELLIJK moet klinken; de bewaarde waarde bereikt de dienst pas
+       een render later via de root-layout. Beide zetten dezelfde waarde,
+       dus er valt niets te winnen of te verliezen. */
+    setSetting('voiceCues', wantsVoice);
     setVoiceEnabled(wantsVoice);
     if (wantsVoice) {
       /* De stemdienst geeft het woord aan één scherm tegelijk; wie niet
@@ -308,11 +319,11 @@ export default function BreathWelcomeScreen() {
          precies wat de operator zag (2026-07-31: "bij aanklikken cards
          gebeurt niets"). */
       claimVoiceSource('breath');
-      /* Met `force`: de gebruiker heeft NET op "Voice" getikt, dat is de
-         toestemming. De globale voorkeur staat standaard uit en wordt door
-         de root-layout asynchroon opnieuw doorgezet — precies daardoor viel
-         het geluid hier telkens weg. */
-      playBreathCue('inhale', 'nose', 'calm', 'breath', true);
+      /* Zonder `force`. Die was nodig zolang de tik alleen een vlag in het
+         geheugen zette die de root-layout even later terugdraaide. Nu wordt
+         de keuze bewaard en zet de regel hierboven de dienst meteen aan, dus
+         er is niets meer om langs te gaan. */
+      playBreathCue('inhale', 'nose', 'calm', 'breath');
     }
   };
 

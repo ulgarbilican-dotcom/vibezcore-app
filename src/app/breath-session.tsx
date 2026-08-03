@@ -52,6 +52,7 @@ import {
   type PhaseKey,
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useSetting } from '@/utils/settings';
 import {
   claimVoiceSource,
   playBreathCue,
@@ -242,7 +243,15 @@ export default function BreathSessionScreen() {
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
 
-  const [voiceOn, setVoiceOn] = useState(true);
+  /* De Voice-knop op dit scherm ÍS de instelling, niet een tweede knop die
+     er toevallig op lijkt (3 augustus 2026). Hier stond een eigen
+     useState(true), en dat was de bron van alle ellende: het scherm zei
+     "Voice ON" terwijl de app op stil stond, de cues moesten met een
+     force-vlag langs die instelling heen, en de root-layout zette 'm
+     ondertussen weer terug. Twee waarheden over één ding leveren altijd een
+     verliezer op, en dat was de gebruiker.
+     bracelet-control.tsx doet dit al zo; nu de ademkant ook. */
+  const [voiceOn, setVoiceOn] = useSetting('voiceCues');
   const [hapticsOn, setHapticsOn] = useState(true);
 
   const [phase, setPhase] = useState<Phase>('inhale');
@@ -258,10 +267,12 @@ export default function BreathSessionScreen() {
   const voiceRef = useRef(voiceOn);
   const hapticRef = useRef(hapticsOn);
   const roundsRef = useRef(chosen.rounds);
-  /* Bewust GEEN setVoiceEnabled hier. Dit scherm heeft een eigen knop; die
-     hoort de globale voorkeur in Settings niet stilletjes te overschrijven.
-     Deed het dat wel, dan bleef de app na één keer uitzetten overal stil —
-     ook in de onboarding, zonder dat iemand snapte waarom. */
+  /* De knop schrijft nu wél door naar de voorkeur — dat is het punt van één
+     waarheid. Zet je hier de stem uit, dan is hij ook uit in de onboarding,
+     bij de bracelet en in Settings. Dat is geen bijwerking maar precies wat
+     iemand bedoelt die op een luidsprekertje met een streep tikt.
+     De root-layout dient diezelfde waarde uit; die twee vechten dus niet
+     meer, en de force-vlag die dat gevecht moest omzeilen is weg. */
   useEffect(() => {
     voiceRef.current = voiceOn;
     if (!voiceOn) stopVoice();
@@ -338,15 +349,14 @@ export default function BreathSessionScreen() {
         } catch {}
       }
       if (voiceRef.current) {
-        /* `force`, want dit scherm heeft een eigen zichtbare Voice-knop.
-           Staat die op ON, dan is dat de keuze van de gebruiker — die hoort
-           niet alsnog overruled te worden door een instelling elders. */
+        /* Geen `force` meer. De knop op dit scherm is de instelling zelf,
+           dus er valt niets meer te omzeilen — staat hij aan, dan staat de
+           app aan. */
         playBreathCue(
           k,
           def.via === 'Mouth' ? 'mouth' : 'nose',
           st.key === 'boost' ? 'boost' : 'calm',
           'breath',
-          true,
         );
       }
 
@@ -425,17 +435,11 @@ export default function BreathSessionScreen() {
      en eindigde een afgemaakte sessie in stilte. De bestanden zijn nooit
      weg geweest; de aanroep wel.
 
-     Twee sloten, en beide moeten open (operator, 3 augustus 2026). De
-     Voice-knop van dit scherm ÉN de voorkeur van de app zelf: wie het geluid
-     uit heeft staan, of alleen via trillingen begeleid wordt, hoort ook geen
-     afsluiting. Vandaar bewust ZONDER `force` — anders overstemt dit scherm
-     precies de keuze die hij moet respecteren.
-
-     Let op het verschil met de fasecues hierboven: die draaien wél met
-     `force`, omdat ze de zichtbare knop van dit scherm volgen. Dat betekent
-     dat een sessie kan praten terwijl de afsluiting stil blijft. Zo hoort
-     het niet, maar die force-uitzondering weghalen maakt de ademsessie voor
-     iedereen standaard stil — een productbeslissing, geen opruimklus.
+     Volgt exact dezelfde schakelaar als de fasecues (operator, 3 augustus
+     2026): staat de stem uit — hier, in Settings, of doordat de onboarding
+     op trillingen of stil is gezet — dan blijft ook de afsluiting stil. Eén
+     schakelaar voor alles wat geluid maakt; er is geen pad meer dat er
+     omheen loopt.
 
      Bij het wegtikken van het scherm stopt de opname, anders praat hij door
      over een scherm dat er niet meer is. */
@@ -628,7 +632,10 @@ export default function BreathSessionScreen() {
         ) : (
           <View style={s.rhythmCard}>
             <Pressable
-              onPress={() => setVoiceOn((v) => !v)}
+              /* Directe waarde, geen updater-functie: de setter van
+                 useSetting neemt een waarde aan. Deze regel staat in de JSX,
+                 dus `voiceOn` is die van de huidige render — vers per tik. */
+              onPress={() => setVoiceOn(!voiceOn)}
               style={s.channel}
               hitSlop={8}
             >
