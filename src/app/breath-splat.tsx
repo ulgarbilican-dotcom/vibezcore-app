@@ -45,6 +45,7 @@ import {
   cancelAnimation,
   Easing,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -86,16 +87,30 @@ export default function BreathSplatScreen() {
     hop.current = null;
   }, []);
 
+  /* Vóór de start ademt het veld rustig door, zonder patroon. Stond het stil
+     op nul, dan keek je naar een uitgewaaierde wolk die niets deed en wist je
+     niet of het scherm kapot was of gewoon wachtte. */
+  const idle = useCallback(() => {
+    cancelAnimation(breath);
+    breath.value = withRepeat(
+      withTiming(0.72, { duration: 3800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [breath]);
+
+  useEffect(() => {
+    idle();
+  }, [idle]);
+
   const stop = useCallback(() => {
     runningRef.current = false;
     setRunning(false);
     clear();
-    cancelAnimation(breath);
-    /* Rustig terug naar uiteen, niet met een klap. */
-    breath.value = withTiming(0, { duration: 900, easing: Easing.out(Easing.cubic) });
+    idle();
     setPhase('inhale');
     setSecsLeft(0);
-  }, [breath, clear]);
+  }, [clear, idle]);
 
   const runPhase = useCallback(
     (k: PhaseKey) => {

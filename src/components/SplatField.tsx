@@ -170,7 +170,12 @@ function scatter(ordered: Cloud): Cloud {
        uit, en er is geen Math.random in beeld die per frame verspringt. */
     const h = Math.sin(i * 12.9898) * 43758.5453;
     const jitter = h - Math.floor(h);
-    const reach = 0.55 + jitter * 0.75;
+    /* Blijft BINNEN het vlak. Hier stond 0.55 tot 1.30, en dat is precies
+       waarom het scherm leeg was: het veld is één vierkant van 0 tot 1, dus
+       op afstand 1.30 vanuit het midden staat vrijwel elk punt buiten beeld.
+       Uiteenvallen zag je daardoor niet als uiteenvallen maar als verdwijnen.
+       0.46 is de grootste afstand die in alle richtingen nog past. */
+    const reach = 0.2 + jitter * 0.26;
     out.push(0.5 + Math.cos(a) * reach, 0.5 + Math.sin(a) * reach);
   }
   return out;
@@ -271,8 +276,10 @@ export default function SplatField({
     }
 
     /* Punten worden kleiner naarmate ze verder uit elkaar staan. Zonder dat
-       lijkt uiteenvallen op uitvergroten in plaats van vervliegen. */
-    const scale = (0.14 + t * 0.16) * (size / 320);
+       lijkt uiteenvallen op uitvergroten in plaats van vervliegen.
+       De ondergrens is omhoog: op de oude waarde was een los punt nog geen
+       vier beeldpunten groot en dus nauwelijks te zien. */
+    const scale = (0.3 + t * 0.25) * (size / 320);
     val.set(scale, 0, x * size, y * size);
   });
 
