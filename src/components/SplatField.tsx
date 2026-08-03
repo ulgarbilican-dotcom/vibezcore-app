@@ -40,14 +40,17 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import {
+  AlphaType,
   Atlas,
   Canvas,
+  ColorType,
   Skia,
   useImage,
   type SkImage,
   type SkRect,
 } from '@shopify/react-native-skia';
 import { useMemo } from 'react';
+import { Text, View } from 'react-native';
 import { useRSXformBuffer } from '@shopify/react-native-skia';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -68,45 +71,47 @@ type Cloud = number[]; // [x0, y0, x1, y1, …] genormaliseerd naar 0…1
  *  ophopen waar het beeld licht geeft — bij een gezicht dus in de trekken
  *  en niet in de schaduw. */
 function sampleImage(img: SkImage, count: number): Cloud | null {
-  const surface = Skia.Surface.MakeOffscreen(GRID, GRID);
-  if (!surface) return null;
-  const canvas = surface.getCanvas();
-  canvas.clear(Skia.Color('#000000'));
-  /* Verhouding behouden. Het portret is breder dan hoog (1535×1024); zou het
-     in het vierkante raster geperst worden, dan worden de gezichten smal en
-     lang. De zwarte banden die daardoor boven en onder overblijven leveren
-     vanzelf geen punten op — die halen de helderheidsdrempel niet. */
+  /* Rechtstreeks uit het geladen beeld lezen, ZONDER offscreen tekenvlak.
+     Dat vlak stond hier eerst en is precies wat op een emulator zonder
+     werkende GPU-laag stilletjes niets teruggeeft — en dan tekende dit
+     onderdeel een leeg scherm zonder iets te melden. Uitlezen en verkleinen
+     doen we nu zelf: kost eenmalig wat rekenwerk, maar het kán niet mislukken
+     door een grafische laag die er niet is. */
   const iw = img.width();
   const ih = img.height();
-  const k = Math.min(GRID / iw, GRID / ih);
-  const dw = iw * k;
-  const dh = ih * k;
-  canvas.drawImageRect(
-    img,
-    Skia.XYWHRect(0, 0, iw, ih),
-    Skia.XYWHRect((GRID - dw) / 2, (GRID - dh) / 2, dw, dh),
-    Skia.Paint(),
-  );
-  const snapshot = surface.makeImageSnapshot();
-  const pixels = snapshot.readPixels(0, 0, {
-    width: GRID,
-    height: GRID,
-    colorType: snapshot.getImageInfo().colorType,
-    alphaType: snapshot.getImageInfo().alphaType,
+  const pixels = img.readPixels(0, 0, {
+    width: iw,
+    height: ih,
+    colorType: ColorType.RGBA_8888,
+    alphaType: AlphaType.Unpremul,
   });
   if (!pixels) return null;
 
-  /* Kandidaten verzamelen met hun helderheid als gewicht. */
+  /* Verhouding behouden: het portret is breder dan hoog (1535×1024). Zou het
+     in het vierkante veld geperst worden, dan worden de gezichten smal en
+     lang. De lege banden boven en onder leveren vanzelf geen punten op. */
+  const k = Math.min(1 / iw, 1 / ih);
+  const fw = iw * k;
+  const fh = ih * k;
+  const ox = (1 - fw) / 2;
+  const oy = (1 - fh) / 2;
+
+  /* Verkleinen door stapsgewijs te bemonsteren in plaats van te schalen. */
+  const stepX = Math.max(1, Math.floor(iw / GRID));
+  const stepY = Math.max(1, Math.floor(ih / GRID));
+
   const cand: { x: number; y: number; w: number }[] = [];
-  for (let y = 0; y < GRID; y += 1) {
-    for (let x = 0; x < GRID; x += 1) {
-      const i = (y * GRID + x) * 4;
+  for (let y = 0; y < ih; y += stepY) {
+    for (let x = 0; x < iw; x += stepX) {
+      const i = (y * iw + x) * 4;
       const r = (pixels[i] as number) / 255;
       const g = (pixels[i + 1] as number) / 255;
       const b = (pixels[i + 2] as number) / 255;
       const a = (pixels[i + 3] as number) / 255;
       const luma = (0.299 * r + 0.587 * g + 0.114 * b) * a;
-      if (luma > LUMA_MIN) cand.push({ x: x / GRID, y: y / GRID, w: luma });
+      if (luma > LUMA_MIN) {
+        cand.push({ x: ox + (x / iw) * fw, y: oy + (y / ih) * fh, w: luma });
+      }
     }
   }
   if (cand.length === 0) return null;
@@ -205,7 +210,7 @@ export default function SplatField({
   breath,
   size,
   color,
-  count = 1200,
+  count = 2600,
 }: Props) {
   const orderedImg = useImage(orderedUri);
   const modeImg = useImage(modeUri);
@@ -217,23 +222,38 @@ export default function SplatField({
      dezelfde waarde doorgeven aan de tekenlaag, met alle risico van dien —
      terwijl elk punt hier toch dezelfde kleur heeft. */
   const sprite = useMemo(() => {
+    /* Zelf pixel voor pixel opgebouwd en dan tot beeld gemaakt — ook hier
+       geen offscreen tekenvlak, om dezelfde reden als bij het aftasten. Een
+       rond verloop van vol naar doorzichtig, 24 bij 24. */
     const S = 24;
-    const surface = Skia.Surface.MakeOffscreen(S, S);
-    if (!surface) return null;
-    const canvas = surface.getCanvas();
-    canvas.clear(Skia.Color('#00000000'));
-    const paint = Skia.Paint();
-    paint.setShader(
-      Skia.Shader.MakeRadialGradient(
-        { x: S / 2, y: S / 2 },
-        S / 2,
-        [Skia.Color(color), Skia.Color('#00000000')],
-        [0, 1],
-        0,
-      ),
+    const c = Skia.Color(color);
+    const r0 = Math.round((c[0] ?? 1) * 255);
+    const g0 = Math.round((c[1] ?? 1) * 255);
+    const b0 = Math.round((c[2] ?? 1) * 255);
+    const bytes = new Uint8Array(S * S * 4);
+    const half = S / 2;
+    for (let y = 0; y < S; y += 1) {
+      for (let x = 0; x < S; x += 1) {
+        const d = Math.hypot(x + 0.5 - half, y + 0.5 - half) / half;
+        /* Kwadratisch uitdovend: een zachte kern in plaats van een schijf. */
+        const a = d >= 1 ? 0 : Math.round((1 - d) * (1 - d) * 255);
+        const i = (y * S + x) * 4;
+        bytes[i] = r0;
+        bytes[i + 1] = g0;
+        bytes[i + 2] = b0;
+        bytes[i + 3] = a;
+      }
+    }
+    return Skia.Image.MakeImage(
+      {
+        width: S,
+        height: S,
+        colorType: ColorType.RGBA_8888,
+        alphaType: AlphaType.Unpremul,
+      },
+      Skia.Data.fromBytes(bytes),
+      S * 4,
     );
-    canvas.drawCircle(S / 2, S / 2, S / 2, paint);
-    return surface.makeImageSnapshot();
   }, [color]);
 
   const clouds = useMemo(() => {
@@ -279,12 +299,29 @@ export default function SplatField({
        lijkt uiteenvallen op uitvergroten in plaats van vervliegen.
        De ondergrens is omhoog: op de oude waarde was een los punt nog geen
        vier beeldpunten groot en dus nauwelijks te zien. */
-    const scale = (0.3 + t * 0.25) * (size / 320);
+    const scale = (0.17 + t * 0.08) * (size / 320);
     val.set(scale, 0, x * size, y * size);
   });
 
+  /* Stil falen is hier het ergste wat kan: je kijkt naar zwart en weet niet
+     of het laadt, of stuk is, of dat de punten buiten beeld staan. Elke
+     mislukking zegt daarom WAAR hij zit. */
   if (!sprite || !clouds) {
-    return <Canvas style={{ width: size, height: size }} />;
+    const why = !orderedImg || !modeImg ? 'laden…' : !sprite ? 'sprite mislukt' : 'aftasten mislukt';
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>
+          {why}
+        </Text>
+      </View>
+    );
   }
 
   return (
