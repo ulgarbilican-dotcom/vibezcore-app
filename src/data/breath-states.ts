@@ -54,8 +54,9 @@ export type PhaseDef = {
   secs: number;
   /** Waar de lucht langs gaat. `null` tijdens vasthouden. */
   via: 'Nose' | 'Mouth' | null;
-  /** Trillingsduur, gelijk aan (tabs)/breath.tsx. */
-  vib: number;
+  /* Hier stond `vib`: één trillingsduur per fase. Vervangen door een
+     patroon per fase in services/breath-haptics.ts — met alleen een duur
+     voelen de fasen identiek, en dan moet je toch kijken. */
 };
 
 export type DurationDef = {
@@ -110,21 +111,18 @@ const inhale = (secs: number, via: 'Nose' | 'Mouth'): PhaseDef => ({
   label: 'INHALE',
   secs,
   via,
-  vib: 60,
 });
 const exhale = (secs: number, via: 'Nose' | 'Mouth'): PhaseDef => ({
   key: 'exhale',
   label: 'EXHALE',
   secs,
   via,
-  vib: 80,
 });
 const hold = (secs: number, which: 'hold-in' | 'hold-out'): PhaseDef => ({
   key: which,
   label: 'HOLD',
   secs,
   via: null,
-  vib: 30,
 });
 
 export const BREATH_STATES: Record<BreathStateKey, BreathState> = {

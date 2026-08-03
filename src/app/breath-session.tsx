@@ -52,6 +52,7 @@ import {
   type PhaseKey,
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
+import { playPhaseHaptic } from '@/services/breath-haptics';
 import { useSetting } from '@/utils/settings';
 import {
   claimVoiceSource,
@@ -344,9 +345,9 @@ export default function BreathSessionScreen() {
       setSecsLeft(def.secs);
 
       if (hapticRef.current) {
-        try {
-          Vibration.vibrate(def.vib);
-        } catch {}
+        /* Eén trilling per fase zei niets: alle drie voelden hetzelfde. Nu
+           heeft elke fase een eigen ritme — zie breath-haptics.ts. */
+        playPhaseHaptic(k);
       }
       if (voiceRef.current) {
         /* Geen `force` meer. De knop op dit scherm is de instelling zelf,
