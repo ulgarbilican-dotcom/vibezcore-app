@@ -92,6 +92,7 @@ import {
 } from 'react-native';
 import Animated, {
   Easing,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -534,24 +535,23 @@ function SlideIntro({
     );
   }, [spin]);
 
-  /* Stijgt de adem of daalt hij? Het puntenveld heeft dat nodig om op de
-     terugweg de ándere helft van de cirkel te nemen; zonder deze vlag zou het
-     dezelfde boog teruglopen en dus tegen de klok in draaien.
-     Loopt op exact dezelfde tijden als de adem hieronder: nul zodra het
-     openen begint, één zodra het terugkomen begint. */
+  /* Stijgt de adem of daalt hij? Nodig omdat de foto omhoog meteen moet wijken
+     en omlaag juist zo lang mogelijk moet opbouwen — één formule kan die twee
+     niet allebei.
+
+     AFGELEZEN aan de ademwaarde zelf, niet apart geanimeerd. Dat stond hier
+     eerst als een eigen reeks met dezelfde tijden, en die liep niet betrouwbaar
+     gelijk; het gevolg was dat beide richtingen zich als "dalend" gedroegen en
+     de morph omhoog daardoor onzichtbaar bleef. Wat de waarde werkelijk doet
+     is de enige bron die niet uit de pas kan lopen. */
   const flow = useSharedValue(0);
-  useEffect(() => {
-    flow.value = withRepeat(
-      withSequence(
-        withTiming(0, { duration: 1 }),
-        withDelay(RISE_MS + FULL_MS, withTiming(0, { duration: 1 })),
-        withTiming(1, { duration: 1 }),
-        withDelay(RISE_MS + EMPTY_MS, withTiming(1, { duration: 1 })),
-      ),
-      -1,
-      false,
-    );
-  }, [flow]);
+  useAnimatedReaction(
+    () => breath.value,
+    (cur, prev) => {
+      if (prev === null || cur === prev) return;
+      flow.value = cur < prev ? 1 : 0;
+    },
+  );
 
   /* ── Waar de lagen elkaar aflossen ──────────────────────────────────────
      Alle drie de vensters lopen tot HELEMAAL aan het einde door (operator,

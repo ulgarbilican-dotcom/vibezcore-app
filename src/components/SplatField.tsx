@@ -169,6 +169,11 @@ function order(cloud: Cloud): Cloud {
 
 const TAU = Math.PI * 2;
 
+/* Hoeveel extra draaiing de reis zelf meekrijgt, in radialen. Ruim een
+   achtste slag: genoeg om de beweging de draaiing in te laten krullen, te
+   weinig om op de terugweg als terugdraaien te lezen. */
+const SWIRL = 0.85;
+
 type Props = {
   /** Waar de punten VANDAAN komen bij t = 0, uit een beeld. */
   restUri?: string;
@@ -391,9 +396,15 @@ function PointCloud({
          tegen de klok in bestaat niet meer als optie. Heen krult het punt
          daarmee met de klok mee naar de rozet, en terug loopt hij dezelfde
          boog verder uit in dezelfde richting. */
+      /* De KORTSTE weg tussen begin- en eindhoek, dus tussen −π en π.
+         Hier stond eerst de gedwongen route met de klok mee (0…2π). Dat gaf
+         punten die bijna een volledige omwenteling moesten maken om een paar
+         graden op te schuiven — en dat is wat de operator zag: een rozet die
+         eindeloos ronddraait voordat er iets van een vorm ontstaat.
+         De draaiing zit nu in de losse term hieronder, niet in de route. */
       let d = Math.atan2(ey, ex) - ra[i];
-      while (d < 0) d += TAU;
-      while (d >= TAU) d -= TAU;
+      while (d < -Math.PI) d += TAU;
+      while (d > Math.PI) d -= TAU;
       ea[i] = d;
     }
     return { rr, ra, er, ea };
@@ -427,23 +438,23 @@ function PointCloud({
        resterende stuk van dezelfde cirkel verder uit, tot het weer bij zijn
        beginhoek is. Heen en terug samen: precies één omwenteling, en beide
        keren met de klok mee. */
-    /* De HOEK loopt vóór op de STRAAL. Liepen ze gelijk, dan bleef de figuur
-       bijna de hele reis de vorm van waar hij vandaan kwam en klapte hij pas
-       op het eind om — precies wat de operator zag: "de vorm is nog de
-       mandala, en dan de morph naar de gezichten".
+    /* ── Recht en vloeiend, met een krul erin ───────────────────────────
+       De vorige opzet dwong beide richtingen met de klok mee door de terugweg
+       de lange kant van de cirkel te laten nemen. Dat werkte op papier en
+       niet in het echt: punten die een paar graden moesten opschuiven legden
+       een bijna volledige omwenteling af, en dus zag je een rozet die lang
+       ronddraaide voordat er een vorm ontstond.
 
-       Nu is de draaiing vroeg klaar terwijl de straal doorloopt. Halverwege
-       staan de punten dus al op de hoeken van het gezicht met de afstanden
-       van de rozet: de vorm is dan al aan het worden wat hij wordt, terwijl
-       hij nog draait. */
-    const u = dir.value < 0.5 ? t : 1 - t;
-    const lead = u * (2 - u);
+       Nu neemt elk punt de KORTSTE weg naar zijn eindhoek — dat is de rechte,
+       vloeiende overgang waar de operator om vroeg. De draaiing zit in een
+       APARTE term die met de reis meegroeit: op de heenweg krult het punt
+       daarmee de draaiing in, op de terugweg lost dat weer op. Klein genoeg
+       om nergens als terugdraaien te lezen, groot genoeg om te voelen.
+
+       Daar bovenop loopt de doorlopende draaiing van de figuur zelf, die
+       altijd vooruit gaat. */
     const r = polar.rr[i] + (polar.er[i] - polar.rr[i]) * t;
-    const ang =
-      dir.value < 0.5
-        ? polar.ea[i] * lead
-        : polar.ea[i] + (TAU - polar.ea[i]) * lead;
-    const a = polar.ra[i] + ang + turn.value * TAU;
+    const a = polar.ra[i] + polar.ea[i] * t + SWIRL * t + turn.value * TAU;
     const x = 0.5 + Math.cos(a) * r;
     const y = 0.5 + Math.sin(a) * r;
 
