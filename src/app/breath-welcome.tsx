@@ -43,7 +43,9 @@ import {
   GUIDANCE_MODES,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
-import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
+import { BREATH_CYCLE_MS } from '@/components/HapticOrb';
+import SplatField from '@/components/SplatField';
+import { SESSION_ART } from '@/components/SessionArt';
 import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -214,6 +216,9 @@ const BRACELET_FEATURES = [
 const WEAR_H = 176;
 const WEAR_IMG =
   'https://vibezcore-audio.b-cdn.net/images/bracelet%20new%20correct.png';
+
+/* De twee gezichten. Dezelfde foto die het puntenveld tot beeld brengt. */
+const FACES = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
 const BRACELET_IMG =
@@ -447,6 +452,15 @@ function SlideIntro({
     );
   }, [breath]);
 
+  /* De haptische klop hing aan de bol, die riep `onPulse` bij elke ronde.
+     Nu de gezichten die plek innemen wordt hij hier aangeslagen, op dezelfde
+     klok. Zonder dit zou het scherm er alleen nog uitzien als haptiek en niet
+     meer voelen als haptiek — en dat is precies waar deze pagina over gaat. */
+  useEffect(() => {
+    const id = setInterval(onPulse, BREATH_CYCLE_MS);
+    return () => clearInterval(id);
+  }, [onPulse]);
+
   /* De regel ademt als GEHEEL. Dat is één beweging op de laag eromheen —
      het besturingssysteem verzet die view, er wordt geen letter opnieuw
      getekend. De vorige beurt-animatie deed het omgekeerde en moest elk
@@ -469,8 +483,19 @@ function SlideIntro({
          kop eronder. Die kop draagt de belofte, dit alleen de toon. */}
       <Text style={s.welcome}>WELCOME</Text>
 
+      {/* De twee gezichten in plaats van de bol (operator, 3 augustus 2026).
+          Ze ademen op dezelfde klok als de kop eronder — één gedeelde waarde,
+          dus de regel en de wolk lopen exact gelijk. De klop die je voelt
+          blijft: die hing aan de bol en wordt nu apart aangeslagen, één keer
+          per ademcyclus. */}
       <Pressable onPress={onTapOrb}>
-        <HapticOrb size={ORB} onPulse={onPulse} />
+        <SplatField
+          orderedUri={FACES}
+          modeUri={SESSION_ART.flower}
+          breath={breath}
+          size={ORB}
+          color="#7FB2FF"
+        />
       </Pressable>
 
       {/* Wit, met één schuine blauwe lichtband erdoorheen die naar rechts
