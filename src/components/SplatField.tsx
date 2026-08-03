@@ -369,17 +369,23 @@ function PointCloud({
     const t = breath.value;
     const ix = i * 2;
 
-    /* Alleen de EINDvorm draait. Het beginbeeld — de gezichten — hoort stil te
-       staan; die zouden anders scheef hangen. */
-    const ex = clouds.end[ix] - 0.5;
-    const ey = clouds.end[ix + 1] - 0.5;
+    /* ── Altijd met de klok mee ─────────────────────────────────────────
+       Eerst mengen, DAN draaien. Andersom ging het mis: draaide alleen de
+       eindvorm, dan werd die draaiing op de terugweg weer afgepeld — de
+       figuur leek terug te draaien terwijl de hoek in werkelijkheid gewoon
+       vooruit liep. Nu draait de hele wolk om één hoek die alleen maar
+       toeneemt, dus de richting kán niet omkeren.
+
+       Dat de gezichten daarmee ook meedraaien is geen bezwaar: op het moment
+       dat de wolk de gezichten vormt is ze al doorzichtig en heeft de foto
+       het overgenomen. Je ziet die stand dus niet. */
+    const mx = clouds.rest[ix] + (clouds.end[ix] - clouds.rest[ix]) * t - 0.5;
+    const my =
+      clouds.rest[ix + 1] + (clouds.end[ix + 1] - clouds.rest[ix + 1]) * t - 0.5;
     const c = rot.value.c;
     const sn = rot.value.s;
-    const exr = 0.5 + ex * c - ey * sn;
-    const eyr = 0.5 + ex * sn + ey * c;
-
-    const x = clouds.rest[ix] + (exr - clouds.rest[ix]) * t;
-    const y = clouds.rest[ix + 1] + (eyr - clouds.rest[ix + 1]) * t;
+    const x = 0.5 + mx * c - my * sn;
+    const y = 0.5 + mx * sn + my * c;
 
     /* Dichter opeen wanneer ze de rozet vormen, iets ijler in het gezicht. */
     const scale = (0.25 - t * 0.08) * (size / 320);

@@ -88,6 +88,10 @@ type Props = {
    *  dit beeld samen met iets anders moet bewegen; zonder dit houdt de figuur
    *  zijn eigen klok aan. */
   breath?: SharedValue<number>;
+  /** Draaiing van buitenaf, in omwentelingen. Meegeven wanneer een andere
+   *  laag dezelfde figuur tekent en mee moet draaien; zonder dit houdt de
+   *  figuur zijn eigen klok aan. */
+  spin?: SharedValue<number>;
   /** De meteoor doet er precies één ronde over, zodat beeld en adem
    *  synchroon lopen. */
   breathCycleMs?: number;
@@ -266,6 +270,7 @@ function Seed({
 export default function HapticOrb({
   size = 320,
   breath: externalBreath,
+  spin: externalSpin,
   breathCycleMs = BREATH_CYCLE_MS,
   onPulse,
 }: Props) {
@@ -293,8 +298,11 @@ export default function HapticOrb({
      wat beweegt is het enige wat dat oplost. */
   const ownBreath = useSharedValue(0);
   const breath = externalBreath ?? ownBreath;
-  /* `spin` = richting van de kanteling. Laat de figuur om haar as tollen. */
-  const spin = useSharedValue(0);
+  /* `spin` = richting van de kanteling. Laat de figuur om haar as tollen.
+     Ook deze mag van buiten komen, om dezelfde reden als de adem: tekent een
+     tweede laag dezelfde figuur, dan moeten ze op één hoek staan. */
+  const ownSpin = useSharedValue(0);
+  const spin = externalSpin ?? ownSpin;
   /* `orbit` 0→6 = de meteoor legt zes ronden af, één per ademcyclus, elke
      ronde op een volgende cirkel van de rozet. Het gehele deel zegt welke
      cirkel, het cijfer erachter waar op die cirkel. */
@@ -318,11 +326,13 @@ export default function HapticOrb({
         true,
       );
     }
-    spin.value = withRepeat(
-      withTiming(1, { duration: 20000, easing: Easing.linear }),
-      -1,
-      false,
-    );
+    if (!externalSpin) {
+      ownSpin.value = withRepeat(
+        withTiming(1, { duration: 20000, easing: Easing.linear }),
+        -1,
+        false,
+      );
+    }
     orbit.value = withRepeat(
       withTiming(SEEDS, {
         duration: breathCycleMs * SEEDS,
@@ -336,7 +346,7 @@ export default function HapticOrb({
       -1,
       false,
     );
-  }, [ownBreath, externalBreath, spin, orbit, mist, breathCycleMs]);
+  }, [ownBreath, externalBreath, ownSpin, externalSpin, orbit, mist, breathCycleMs]);
 
   const notify = useCallback(() => {
     onPulse?.();

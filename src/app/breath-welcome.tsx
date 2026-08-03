@@ -525,10 +525,22 @@ function SlideIntro({
     );
   }, [spin]);
 
-  /* De getekende rozet hoort bij het KEERPUNT, dus hij komt op tegen het
-     einde van de beweging en niet aan het begin. */
+  /* ── Waar de lagen elkaar aflossen ──────────────────────────────────────
+     Alle drie de vensters lopen tot HELEMAAL aan het einde door (operator,
+     3 augustus 2026: "de foto en mandala verschijnen te snel volledig
+     waardoor de morph niet afgemaakt lijkt").
+
+     Dat was precies wat er gebeurde. De rozet stond al vol op 0.94 en de
+     foto al vol op 0.30, terwijl de punten nog tot 1.0 respectievelijk 0.0
+     doorreisden. Het laatste stuk van de reis speelde zich dus af achter een
+     beeld dat er al helemaal stond — de beweging werd afgedekt in plaats van
+     afgemaakt.
+
+     Nu bereikt elke laag zijn volle sterkte pas op het uiterste punt, waar de
+     adem toch al stilstaat. Wat je ziet is dan het einde van de beweging, en
+     niet het begin van de stilstand. */
   const orbFade = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.max(0, (breath.value - 0.72) / 0.22)),
+    opacity: Math.min(1, Math.max(0, (breath.value - 0.58) / 0.42)),
   }));
   /* De punten dragen het middenstuk. Ze komen op zodra de rozet wegvalt en
      gaan zelf weg zodra de foto het overneemt — nooit alle drie tegelijk in
@@ -538,8 +550,8 @@ function SlideIntro({
      een moment waarop geen van de drie lagen iets toont, en nooit een moment
      waarop je ze alle drie los ziet liggen. */
   const dustFade = useAnimatedStyle(() => {
-    const inn = Math.min(1, Math.max(0, (breath.value - 0.1) / 0.2));
-    const out = Math.min(1, Math.max(0, (breath.value - 0.82) / 0.18));
+    const inn = Math.min(1, Math.max(0, (breath.value - 0.03) / 0.17));
+    const out = Math.min(1, Math.max(0, (breath.value - 0.83) / 0.17));
     return { opacity: inn * (1 - out) };
   });
   /* En op het hoogtepunt de FOTO zelf. Punten alleen blijven een schets;
@@ -550,7 +562,7 @@ function SlideIntro({
      inzet. Hij verdwijnt langzamer dan de punten opkomen, zodat het beeld
      even ín de punten ligt en er niet onderuit wordt geschoven. */
   const photoFade = useAnimatedStyle(() => ({
-    opacity: 1 - Math.min(1, Math.max(0, (breath.value - 0.04) / 0.26)),
+    opacity: 1 - Math.min(1, Math.max(0, breath.value / 0.42)),
   }));
 
   /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
@@ -591,7 +603,15 @@ function SlideIntro({
         <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
           {/* Op ONZE ademwaarde, niet op zijn eigen. Anders zet de rozet uit
               terwijl de punten al krimpen en klopt de beweging niet meer. */}
-          <HapticOrb size={ORB} breath={breath} onPulse={onPulse} />
+          {/* Op ONZE adem én ONZE draaiing. Op zijn eigen klokken liep hij
+              tegen de puntenwolk in — dat is wat de operator zag als een
+              figuur die verkeerd om draaide. */}
+          <HapticOrb
+            size={ORB}
+            breath={breath}
+            spin={spin}
+            onPulse={onPulse}
+          />
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
           {/* De GEZICHTEN zijn de ruststand en de rozet het keerpunt — niet
