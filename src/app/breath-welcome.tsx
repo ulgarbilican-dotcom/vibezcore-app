@@ -248,9 +248,13 @@ const FACES_CUTOUT =
    drie en een half leest als een beweging in plaats van een vertraging.
    De stilstand op vol is juist LANGER geworden — dat is het moment waarop de
    foto scherp staat, en daar hoort het oog even te mogen rusten. */
-const RISE_MS = 3400;
-const FULL_MS = 1900;
-const EMPTY_MS = 1100;
+/* Trager dan de vorige ronde (operator, 3 augustus 2026: "de morph gaat te
+   snel"). Sinds de punten in bogen reizen in plaats van in rechte lijnen,
+   leggen ze een langere weg af in dezelfde tijd — en dat leest als haast.
+   Vijf seconden per beweging geeft de boog de ruimte die hij nodig heeft. */
+const RISE_MS = 5000;
+const FULL_MS = 2000;
+const EMPTY_MS = 1200;
 const CYCLE_MS = RISE_MS * 2 + FULL_MS + EMPTY_MS;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
@@ -530,6 +534,25 @@ function SlideIntro({
     );
   }, [spin]);
 
+  /* Stijgt de adem of daalt hij? Het puntenveld heeft dat nodig om op de
+     terugweg de ándere helft van de cirkel te nemen; zonder deze vlag zou het
+     dezelfde boog teruglopen en dus tegen de klok in draaien.
+     Loopt op exact dezelfde tijden als de adem hieronder: nul zodra het
+     openen begint, één zodra het terugkomen begint. */
+  const flow = useSharedValue(0);
+  useEffect(() => {
+    flow.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 1 }),
+        withDelay(RISE_MS + FULL_MS, withTiming(0, { duration: 1 })),
+        withTiming(1, { duration: 1 }),
+        withDelay(RISE_MS + EMPTY_MS, withTiming(1, { duration: 1 })),
+      ),
+      -1,
+      false,
+    );
+  }, [flow]);
+
   /* ── Waar de lagen elkaar aflossen ──────────────────────────────────────
      Alle drie de vensters lopen tot HELEMAAL aan het einde door (operator,
      3 augustus 2026: "de foto en mandala verschijnen te snel volledig
@@ -641,6 +664,7 @@ function SlideIntro({
             restUri={FACES}
             endBuilder={mandalaCloud}
             spin={spin}
+            flow={flow}
             breath={breath}
             size={ORB}
             color="#7FB2FF"

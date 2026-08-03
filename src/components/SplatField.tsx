@@ -183,6 +183,15 @@ type Props = {
    *  terwijl de punten hem nog aan het vormen zijn, in plaats van pas te
    *  beginnen zodra de getekende versie verschijnt. */
   spin?: SharedValue<number>;
+  /** 0 = de adem stijgt, 1 = hij daalt.
+   *
+   *  Nodig omdat een menging die heen loopt, terug automatisch de andere kant
+   *  op gaat — en dan draait de morph op de terugweg tegen de klok in. Met
+   *  deze vlag neemt de terugweg de ANDERE helft van de cirkel: heen loopt het
+   *  punt de boog naar zijn eindhoek, terug loopt het diezelfde cirkel verder
+   *  uit tot het weer bij zijn beginhoek is. Beide keren met de klok mee, en
+   *  samen precies één volledige omwenteling per ademcyclus. */
+  flow?: SharedValue<number>;
   /** 0 = de beginvorm, 1 = de eindvorm. */
   breath: SharedValue<number>;
   size: number;
@@ -200,6 +209,7 @@ export default function SplatField({
   endUri,
   endBuilder,
   spin,
+  flow,
   breath,
   size,
   color,
@@ -216,6 +226,8 @@ export default function SplatField({
      een bron van fouten die pas op een toestel opduiken. */
   const fallbackSpin = useSharedValue(0);
   const turn = spin ?? fallbackSpin;
+  const fallbackFlow = useSharedValue(0);
+  const dir = flow ?? fallbackFlow;
 
   /* Eén zacht rond puntje, één keer getekend en daarna duizenden keren
      hergebruikt. Dat is het hele idee achter Atlas.
@@ -303,6 +315,7 @@ export default function SplatField({
     <PointCloud
       clouds={clouds}
       turn={turn}
+      dir={dir}
       breath={breath}
       size={size}
       sprite={sprite}
@@ -328,6 +341,7 @@ export default function SplatField({
 function PointCloud({
   clouds,
   turn,
+  dir,
   breath,
   size,
   sprite,
@@ -335,6 +349,7 @@ function PointCloud({
 }: {
   clouds: { rest: Cloud; end: Cloud };
   turn: SharedValue<number>;
+  dir: SharedValue<number>;
   breath: SharedValue<number>;
   size: number;
   sprite: SkImage;
@@ -407,8 +422,17 @@ function PointCloud({
        Beide tellen OP bij de hoek — er wordt nergens iets afgetrokken, en
        daarom kan geen enkele beweging tegen de klok in gaan, in welke
        richting de adem ook loopt. */
+    /* Heen loopt het punt de boog naar zijn eindhoek. Terug loopt het NIET
+       diezelfde boog terug — dan zou het tegen de klok in gaan — maar het
+       resterende stuk van dezelfde cirkel verder uit, tot het weer bij zijn
+       beginhoek is. Heen en terug samen: precies één omwenteling, en beide
+       keren met de klok mee. */
     const r = polar.rr[i] + (polar.er[i] - polar.rr[i]) * t;
-    const a = polar.ra[i] + polar.ea[i] * t + turn.value * TAU;
+    const ang =
+      dir.value < 0.5
+        ? polar.ea[i] * t
+        : polar.ea[i] + (TAU - polar.ea[i]) * (1 - t);
+    const a = polar.ra[i] + ang + turn.value * TAU;
     const x = 0.5 + Math.cos(a) * r;
     const y = 0.5 + Math.sin(a) * r;
 
