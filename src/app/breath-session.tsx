@@ -146,6 +146,10 @@ type Phase = PhaseKey;
 const BRACELET_IMG =
   'https://vibezcore-audio.b-cdn.net/images/Shattudkite_vzc_fiv%20no%20bg.png';
 
+/* Dezelfde figuur die de bracelet-sessie afsluit. Eén beeld voor beide, want
+   het is hetzelfde moment. */
+const BUDDHA_IMG = 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png';
+
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -227,7 +231,7 @@ export default function BreathSessionScreen() {
      we de inzet expliciet mee, op de enige plek waar hij telt. */
   const insets = useSafeAreaInsets();
 
-  const params = useLocalSearchParams<{ state?: string }>();
+  const params = useLocalSearchParams<{ state?: string; from?: string }>();
   const st: BreathState =
     BREATH_STATES[(params.state as BreathStateKey) ?? 'calm'] ??
     BREATH_STATES.calm;
@@ -243,6 +247,9 @@ export default function BreathSessionScreen() {
   const [done, setDone] = useState(false);
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
+  /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te
+     kopen valt. */
+  const askPremium = params.from === 'onboarding' && !isPro;
 
   /* De Voice-knop op dit scherm ÍS de instelling, niet een tweede knop die
      er toevallig op lijkt (3 augustus 2026). Hier stond een eigen
@@ -806,33 +813,37 @@ export default function BreathSessionScreen() {
       </Modal>
 
       {/* ── Sessie afgerond ──────────────────────────────────────────────
-          Overgenomen uit breath-sample, want de onboarding eindigt sinds
-          1 augustus 2026 hier. Zonder dit zou de zachte paywall na de
-          gratis sessie wegvallen — die hoort bij de flow, niet bij het
-          oude scherm. Tekst ONGEWIJZIGD gelaten: het is operator-copy.
-          (Wel eerder gemeld: "That was a taste" klopt niet meer nu dit een
-          volledige sessie is, en "full-length sessions" als premium-belofte
-          evenmin. Nog te beslissen.) */}
+          De Buddha is terug (operator, 3 augustus 2026). Hij hoorde bij het
+          afsluitscherm van de oude Breath-tab en verdween met dat scherm;
+          nu sluit ELKE afgemaakte sessie er weer mee af, net als bij de
+          bracelet — dezelfde figuur, dezelfde woorden.
+
+          De vraag om Premium staat er ALLEEN bij de eerste sessie uit de
+          onboarding. Binnen de app zelf is dat verkeerd getimed: iemand die
+          net vijf minuten heeft geademd verdient een afsluiting, geen
+          verkooppraatje. In de onboarding is het wél op zijn plaats, want
+          daar is de gratis sessie het aanbod.
+
+          Herkend aan `from=onboarding` in de route, niet aan de toestand:
+          welke toestand de onboarding gebruikt kan veranderen, waar de
+          gebruiker vandaan komt niet. */}
       <Modal visible={done} transparent animationType="fade">
         <View style={s.modalBackdrop}>
-          <View style={s.modalCard}>
-            <Text style={s.modalEyebrow}>SESSION COMPLETE</Text>
-            <Text style={s.modalTitle}>{isPro ? 'Nice.' : 'Loved it?'}</Text>
+          <View style={s.doneCard}>
+            <View style={s.doneStrip} />
+            <Image
+              source={{ uri: BUDDHA_IMG }}
+              resizeMode="contain"
+              style={s.doneBuddha}
+            />
+            <Text style={s.modalEyebrow}>✦ CONGRATULATIONS ✦</Text>
+            <Text style={s.modalTitle}>Well done.</Text>
             <Text style={s.modalBody}>
-              {isPro
-                ? 'That was a taste. All five states, full-length sessions and bracelet guidance are already unlocked in your account.'
-                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all five states, full-length sessions and the complete audio library.'}
+              You completed {chosen.rounds} rounds of {st.title}. Carry the
+              breath with you.
             </Text>
 
-            {isPro ? (
-              <Pressable
-                style={s.modalBtn}
-                onPress={dismissDone}
-                android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
-              >
-                <Text style={s.modalBtnTxt}>Enter Breath →</Text>
-              </Pressable>
-            ) : (
+            {askPremium ? (
               <>
                 <Pressable
                   style={s.modalBtn}
@@ -852,6 +863,14 @@ export default function BreathSessionScreen() {
                   <Text style={s.modalSecondaryTxt}>Not yet</Text>
                 </Pressable>
               </>
+            ) : (
+              <Pressable
+                style={s.modalBtn}
+                onPress={dismissDone}
+                android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+              >
+                <Text style={s.modalBtnTxt}>I'M DONE</Text>
+              </Pressable>
             )}
           </View>
         </View>
@@ -1288,6 +1307,31 @@ function makeStyles(st: BreathState) {
     letterSpacing: 1.4,
     color: st.accent,
   },
+  /* ── Het afsluitscherm ── */
+  doneCard: {
+    width: '100%',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: st.accentSoft,
+    backgroundColor: '#141018',
+    paddingTop: 26,
+    paddingBottom: 22,
+    paddingHorizontal: 22,
+    gap: 9,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  /* Een streep in de kleur van de toestand, zoals bij de bracelet. Geeft het
+     scherm zijn identiteit terug zonder er een gekleurd vlak van te maken. */
+  doneStrip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: st.accent,
+  },
+  doneBuddha: { width: 132, height: 132, marginBottom: 2 },
   modalSecondary: { paddingVertical: 12, alignItems: 'center' },
   modalSecondaryTxt: {
     fontFamily: BrandFonts.medium,

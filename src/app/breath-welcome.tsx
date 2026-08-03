@@ -314,7 +314,12 @@ export default function BreathWelcomeScreen() {
          Sinds 1 augustus 2026 is dat het nieuwe sessiescherm (CALM · Lotus)
          i.p.v. breath-sample: zelfde sessie, maar met duurkeuze, het
          ademritme in beeld en de echte illustratie. */
-      router.replace('/breath-session');
+      /* `from=onboarding` bepaalt of het afsluitscherm om Premium vraagt. Die
+         vraag hoort ALLEEN hier: dit is de gratis kennismakingssessie, dus
+         dan is het aanbod op zijn plaats. Binnen de app is het verkeerd
+         getimed — wie net vijf minuten heeft geademd verdient een afsluiting,
+         geen verkooppraatje. */
+      router.replace('/breath-session?from=onboarding');
     }
   };
 
