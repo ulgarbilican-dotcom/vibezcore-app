@@ -255,7 +255,7 @@ const FACES_CUTOUT =
    Vijf seconden per beweging geeft de boog de ruimte die hij nodig heeft. */
 /* Hoe lang de gezichten blijven staan voor de overgang begint, en hoe lang
    die overgang duurt. Er is geen terugweg meer, dus verder niets. */
-const LOOK_MS = 1600;
+const LOOK_MS = 3600;
 const RISE_MS = 5000;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */

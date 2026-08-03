@@ -27,8 +27,12 @@ import {
 
 const RINGS = 4;
 /* Rustiger dan de ringen op scherm 2: dit ligt over een foto en mag die niet
-   overstemmen (operator 2026-07-31). */
-const PULSE_MS = 3400;
+   overstemmen (operator 2026-07-31).
+   Nog trager gezet op 3 augustus 2026, voor scherm 3 en 4. Deze golven staan
+   voor haptiek die je aan je pols voelt, en dat is geen snelle tik maar een
+   trage deining — op ruim drie seconden las het als een signaal in plaats van
+   als een gevoel. */
+const PULSE_MS = 5200;
 
 type Props = {
   /** Maat van het vlak waarop de foto ligt. */
