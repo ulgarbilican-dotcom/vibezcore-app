@@ -515,7 +515,12 @@ function SlideIntro({
      klok en de puntenversie draaide helemaal niet — dus zag je de draaiing
      "beginnen" op het moment dat de getekende erin kwam. Nu draait de wolk al
      mee terwijl hij de rozet nog aan het vormen is, en neemt de getekende
-     versie die beweging naadloos over. */
+     versie die beweging over.
+
+     Dezelfde omlooptijd van twintig seconden als HapticOrb aanhoudt, en
+     allebei beginnen ze bij het openen van het scherm — dus lopen ze gelijk.
+     Bewust GEEN gedeelde waarde: die had ik erin gezet en daarmee de
+     draaiing van de getekende rozet stukgemaakt, terwijl die het prima deed. */
   const spin = useSharedValue(0);
   useEffect(() => {
     spin.value = withRepeat(
@@ -614,15 +619,17 @@ function SlideIntro({
         <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
           {/* Op ONZE ademwaarde, niet op zijn eigen. Anders zet de rozet uit
               terwijl de punten al krimpen en klopt de beweging niet meer. */}
-          {/* Op ONZE adem én ONZE draaiing. Op zijn eigen klokken liep hij
-              tegen de puntenwolk in — dat is wat de operator zag als een
-              figuur die verkeerd om draaide. */}
-          <HapticOrb
-            size={ORB}
-            breath={breath}
-            spin={spin}
-            onPulse={onPulse}
-          />
+          {/* Op onze ADEM, maar op zijn EIGEN draaiing.
+
+              Ik had hem ook van zijn draaiing afgehaald, en dat was fout: die
+              werkte al en heeft niets te maken met het probleem dat ik wilde
+              oplossen. Hier hoort alleen de adem gedeeld te worden, want die
+              bepaalt of de figuur uitzet of krimpt — en dáár liep hij tegen
+              de puntenwolk in.
+
+              De draaiing van de wolk staat los en heeft dezelfde omlooptijd,
+              zodat er al beweging in zit voordat deze laag verschijnt. */}
+          <HapticOrb size={ORB} breath={breath} onPulse={onPulse} />
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
           {/* De GEZICHTEN zijn de ruststand en de rozet het keerpunt — niet
