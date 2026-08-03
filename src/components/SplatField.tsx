@@ -353,8 +353,59 @@ function PointCloud({
     const ix = i * 2;
     const end = Math.round(which.value) % 2 === 1 ? clouds.b : clouds.a;
 
-    const x = clouds.rest[ix] + (end[ix] - clouds.rest[ix]) * t;
-    const y = clouds.rest[ix + 1] + (end[ix + 1] - clouds.rest[ix + 1]) * t;
+    /* ── Openen, dan aandichten ─────────────────────────────────────────
+       De beweging heeft een KEERPUNT (operator, 3 augustus 2026). Eerst zet
+       de rozet open — verder dan de gezichten straks reiken — en pas wanneer
+       hij begint terug te komen, dicht hij aan tot de gezichten. De morph is
+       daarmee een samentrekking en geen tweede uitzetting.
+
+       Waarom dat beter is dan één rechte lijn: zonder keerpunt groeit alles
+       aan één stuk door en heeft niets een aanleiding. Nu opent het beeld,
+       houdt heel even in, en wat terugkomt is niet meer dezelfde figuur.
+
+       TOT 0.28 volgt de wolk exact de schaal van de getekende rozet
+       (0.87 + t × 0.17 — diezelfde formule staat in HapticOrb). Dat moet,
+       want in dat venster wisselen de twee lagen elkaar af; liepen ze daar
+       een paar procent uiteen, dan zie je de figuur verspringen op precies
+       het moment dat de overgang onzichtbaar hoort te zijn. Pas daarna gaat
+       hij zijn eigen gang en opent verder.
+
+       De easing per helft is bewust omgekeerd: openen loopt UIT (snelheid
+       naar nul aan de top), aandichten zet AAN vanaf nul. Zonder dat zou het
+       keerpunt een scherpe hoek zijn — het oog ziet dan een botsing in
+       plaats van een ommekeer. */
+    const HANDOVER = 0.28;
+    const ORB_AT_HANDOVER = 0.87 + HANDOVER * 0.17;
+    /* Ruim voorbij de gezichten. Die reiken tot ongeveer 0.48 vanuit het
+       midden; de rozet moet daar overheen, anders is aandichten geen
+       samentrekking maar een zijwaartse verschuiving en zie je niet wat er
+       gebeurt. 1.42 × 0.36 = 0.51 — net buiten het beeldvak, wat de opening
+       ook echt als opening laat voelen. */
+    const OPEN_MAX = 1.42;
+
+    let s: number;
+    let k: number;
+    if (t <= HANDOVER) {
+      s = 0.87 + t * 0.17;
+      k = 0;
+    } else if (t <= 0.5) {
+      const u = (t - HANDOVER) / (0.5 - HANDOVER);
+      s = ORB_AT_HANDOVER + (OPEN_MAX - ORB_AT_HANDOVER) * Math.sin(u * 1.5708);
+      k = 0;
+    } else {
+      /* De rozet KRIMPT terwijl hij naar de gezichten morpht — hij blijft niet
+         op zijn wijdste staan wachten. Daardoor is de hele tweede helft één
+         beweging naar binnen: de figuur trekt samen én verandert tegelijk,
+         in plaats van eerst stil te staan en dan te veranderen. */
+      const u = (t - 0.5) / 0.5;
+      k = 1 - Math.cos(u * 1.5708);
+      s = OPEN_MAX + (1 - OPEN_MAX) * k;
+    }
+
+    const rx = 0.5 + (clouds.rest[ix] - 0.5) * s;
+    const ry = 0.5 + (clouds.rest[ix + 1] - 0.5) * s;
+    const x = rx + (end[ix] - rx) * k;
+    const y = ry + (end[ix + 1] - ry) * k;
 
     /* Iets kleinere punten naarmate de wolk uitzet: bij de rozet staan ze
        dicht op elkaar, bij de gezichten verder uiteen. */

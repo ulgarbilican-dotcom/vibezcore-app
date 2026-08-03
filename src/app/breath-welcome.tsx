@@ -519,15 +519,23 @@ function SlideIntro({
      beeld, want dan zie je lagen in plaats van één beweging. */
   const dustFade = useAnimatedStyle(() => {
     const inn = Math.min(1, Math.max(0, (breath.value - 0.06) / 0.22));
-    const out = Math.min(1, Math.max(0, (breath.value - 0.72) / 0.2));
+    /* De punten blijven staan terwijl de foto opkomt en gaan pas op het
+       laatst weg. Wisselden ze tegelijk, dan zie je twee lagen elkaar
+       aflossen; nu ligt het beeld even ÍN de punten en lijkt het eruit
+       voort te komen — dat is wat de operator bedoelde met "alsof de
+       lichtbronnen de foto genereren". */
+    const out = Math.min(1, Math.max(0, (breath.value - 0.9) / 0.1));
     return { opacity: inn * (1 - out) };
   });
   /* En op het hoogtepunt de FOTO zelf. Punten alleen blijven een schets;
      de operator wil aan het eind het echte beeld zien. Hij komt op precies
      wanneer de wolk al in de vorm van de gezichten staat, dus je ziet geen
      tweede beeld verschijnen maar dezelfde vorm scherp worden. */
+  /* De foto komt op vanaf het moment dat de punten al in de vorm van de
+     gezichten staan, en heeft de tijd tot het einde van de beweging. Traag
+     genoeg om te ontstaan in plaats van te verschijnen. */
   const photoFade = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.max(0, (breath.value - 0.72) / 0.2)),
+    opacity: Math.min(1, Math.max(0, (breath.value - 0.7) / 0.28)),
   }));
 
   /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
