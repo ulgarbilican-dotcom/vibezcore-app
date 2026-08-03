@@ -72,10 +72,19 @@ function sampleImage(img: SkImage, count: number): Cloud | null {
   if (!surface) return null;
   const canvas = surface.getCanvas();
   canvas.clear(Skia.Color('#000000'));
+  /* Verhouding behouden. Het portret is breder dan hoog (1535×1024); zou het
+     in het vierkante raster geperst worden, dan worden de gezichten smal en
+     lang. De zwarte banden die daardoor boven en onder overblijven leveren
+     vanzelf geen punten op — die halen de helderheidsdrempel niet. */
+  const iw = img.width();
+  const ih = img.height();
+  const k = Math.min(GRID / iw, GRID / ih);
+  const dw = iw * k;
+  const dh = ih * k;
   canvas.drawImageRect(
     img,
-    Skia.XYWHRect(0, 0, img.width(), img.height()),
-    Skia.XYWHRect(0, 0, GRID, GRID),
+    Skia.XYWHRect(0, 0, iw, ih),
+    Skia.XYWHRect((GRID - dw) / 2, (GRID - dh) / 2, dw, dh),
     Skia.Paint(),
   );
   const snapshot = surface.makeImageSnapshot();

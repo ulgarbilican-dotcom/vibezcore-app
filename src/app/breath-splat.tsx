@@ -52,10 +52,15 @@ const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 const FIELD = Math.min(SCREEN_W, 420);
 
-/* [OPERATOR] Vervang dit door het portret zodra het op Bunny staat. Tot dan
-   dient de illustratie van de toestand als eindbeeld, zodat het mechanisme
-   te beoordelen is zonder op het bestand te wachten. */
-const PORTRAIT: string | null = null;
+/* Het eindbeeld: één foto met beide gezichten (operator, 3 augustus 2026).
+   Bewust de ORIGINELE en niet de uitgeknipte versie. Deze techniek plakt het
+   beeld nergens overheen — ze leest alleen helderheid — dus een verwijderde
+   achtergrond levert niets op. De originele staat al op zwart, heeft ruim
+   twee keer zoveel detail (1535×1024 tegen 612×408, en dat is de reserve
+   voor méér punten), en mist de halfdoorzichtige waas die het uitknippen
+   langs de randen achterliet. */
+const PORTRAIT: string | null =
+  'https://vibezcore-audio.b-cdn.net/images/faces.png';
 
 const ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
 
