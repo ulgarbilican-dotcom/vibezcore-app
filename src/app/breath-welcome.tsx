@@ -253,10 +253,10 @@ const FACES_CUTOUT =
    snel"). Sinds de punten in bogen reizen in plaats van in rechte lijnen,
    leggen ze een langere weg af in dezelfde tijd — en dat leest als haast.
    Vijf seconden per beweging geeft de boog de ruimte die hij nodig heeft. */
+/* Hoe lang de gezichten blijven staan voor de overgang begint, en hoe lang
+   die overgang duurt. Er is geen terugweg meer, dus verder niets. */
+const LOOK_MS = 1600;
 const RISE_MS = 5000;
-const FULL_MS = 2000;
-const EMPTY_MS = 1200;
-const CYCLE_MS = RISE_MS * 2 + FULL_MS + EMPTY_MS;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
 const BRACELET_IMG =
@@ -370,15 +370,15 @@ export default function BreathWelcomeScreen() {
     }
   };
 
-  /* Hier stond eerder één trilling bij de eerste puls, daarna stilte —
-     "anders wordt een intro die blijft trillen irritant". Dat was de
-     verkeerde afweging: de haptiek IS het kenmerk (operator 2026-07-31),
-     en één keer trillen en dan zwijgen verkoopt geen haptisch product.
-     Vuurt nu bij elke ronde van het licht, gelijk met de kop. */
-  const onOrbPulse = useCallback(() => {
-    Vibration.vibrate(SIGNATURE_PULSE, false);
-  }, []);
+  /* De automatische klop is eruit (operator, 3 augustus 2026): de overgang
+     naar de rozet is alleen visueel. Hier stond eerst één trilling per ronde
+     van het licht — het argument was dat de haptiek hét kenmerk is en dat een
+     stille intro dat niet verkoopt. Dat klopt, maar niet tijdens deze
+     overgang: een telefoon die uit zichzelf begint te trillen terwijl je nog
+     kijkt, onderbreekt precies het moment dat het beeld moet dragen.
 
+     Wat blijft is de trilling op AANRAKING hieronder. Die vraagt de bezoeker
+     zelf, en dan is het een antwoord in plaats van een onderbreking. */
   const feelOrb = () => {
     Vibration.vibrate(SIGNATURE_PULSE, false);
   };
@@ -428,7 +428,7 @@ export default function BreathWelcomeScreen() {
 
       <View style={[s.slideArea, slide === 1 && s.slideAreaTop]}>
         {slide === 0 ? (
-          <SlideIntro onPulse={onOrbPulse} onTapOrb={feelOrb} />
+          <SlideIntro onTapOrb={feelOrb} />
         ) : slide === 1 ? (
           <SlideGuidance mode={demoMode} onPick={onPickMode} />
         ) : slide === 2 ? (
@@ -475,13 +475,7 @@ export default function BreathWelcomeScreen() {
 
 /* ── Scherm 1 — wat dit is ────────────────────────────────────────────── */
 
-function SlideIntro({
-  onPulse,
-  onTapOrb,
-}: {
-  onPulse: () => void;
-  onTapOrb: () => void;
-}) {
+function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
   /* Eén klok voor het beeld én de kop eronder — daarom staat hij hier en
      niet in het beeldonderdeel. De regel ademt mét de wolk in plaats van
      ernaast, inclusief de stilstanden.
@@ -492,20 +486,25 @@ function SlideIntro({
      blijft hij anderhalve seconde boven staan — dát is het moment waarop je
      het gezicht compleet ziet — en een seconde onder, waarin de wolk
      helemaal uiteen is. */
+  /* ── Eén keer, en dan blijft het staan ──────────────────────────────────
+     Geen herhalende cyclus meer (operator, 3 augustus 2026). De bezoeker
+     landt op de twee gezichten, ziet ze overgaan in de rozet, en daar blijft
+     het. Dat is sterker dan heen en weer: een overgang die zich herhaalt
+     wordt een animatie, een overgang die één keer gebeurt is een aankomst.
+
+     Het scheelt ook alle problemen van de terugweg — die was nooit met de
+     klok mee te krijgen zonder ergens een omweg te maken. Die weg is er nu
+     domweg niet meer.
+
+     De rozet leeft daarna gewoon door: hij draait, zijn meteoor loopt rond en
+     zijn sterren bewegen. Alleen de morph is af. */
   const breath = useSharedValue(0);
   useEffect(() => {
-    breath.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
-        /* Een ECHTE vertraging, geen beweging naar dezelfde waarde: die laatste
-           heeft niets te doen en eindigt meteen, waardoor de stilstand wegviel
-           en het gezicht nooit compleet in beeld kwam. */
-        withDelay(FULL_MS, withTiming(1, { duration: 1 })),
-        withTiming(0, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
-        withDelay(EMPTY_MS, withTiming(0, { duration: 1 })),
-      ),
-      -1,
-      false,
+    breath.value = withDelay(
+      /* Even wachten voor de gezichten oplossen. Zonder die stilte begint de
+         beweging voordat de bezoeker heeft gezien waar hij naar kijkt. */
+      LOOK_MS,
+      withTiming(1, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
     );
   }, [breath]);
 
@@ -674,7 +673,14 @@ function SlideIntro({
 
               De draaiing van de wolk staat los en heeft dezelfde omlooptijd,
               zodat er al beweging in zit voordat deze laag verschijnt. */}
-          <HapticOrb size={ORB} breath={breath} onPulse={onPulse} />
+          {/* GEEN `onPulse` meer (operator, 3 augustus 2026): de overgang is
+              alleen visueel. Een telefoon die uit zichzelf begint te trillen
+              terwijl je nog aan het kijken bent, onderbreekt precies het
+              moment dat het beeld moet dragen.
+              Tikken op de figuur trilt nog wél — dat vraagt de bezoeker zelf,
+              en dan is het antwoord op een handeling in plaats van een
+              onderbreking. */}
+          <HapticOrb size={ORB} breath={breath} />
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
           {/* De GEZICHTEN zijn de ruststand en de rozet het keerpunt — niet
