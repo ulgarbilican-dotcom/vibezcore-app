@@ -407,13 +407,19 @@ export default function BreathWelcomeScreen() {
          dichtheid, traag individueel fonkelen — diepte, geen decor. */}
       <Starfield width={SCREEN_W} height={SCREEN_H} />
 
+      {/* De stapregel staat ABSOLUUT in het midden van de balk, niet tussen
+          twee rekbare vlakken in. Zo lag hij namelijk nooit echt in het
+          midden: "Skip" neemt rechts ruimte in, en de tekst schoof dus een
+          halve knopbreedte naar links. Op elk scherm even scheef, en precies
+          zichtbaar omdat de kop eronder wél gecentreerd staat. */}
       <View style={s.topbar}>
-        <View style={{ flex: 1 }} />
+        <View style={s.stepCenter} pointerEvents="none">
+          <Text style={s.stepEyebrow}>{`STEP ${slide + 1} OF ${TOTAL}`}</Text>
+        </View>
         {/* Waar je bent, op élk scherm. Alleen op het laatste tonen leest als
            een nagedachte; hier weet je vanaf het begin hoe lang het duurt
            (operator 2026-07-31). De puntjes onderaan konden daarmee weg —
            twee voortgangsmeters op één scherm is er één te veel. */}
-        <Text style={s.stepEyebrow}>{`STEP ${slide + 1} OF ${TOTAL}`}</Text>
         <View style={{ flex: 1 }} />
         <Pressable onPress={onSkip} hitSlop={14} style={s.skipWrap}>
           <Text style={s.skipTxt}>Skip</Text>
@@ -1250,6 +1256,15 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 18,
     paddingVertical: 10,
+  },
+  /* Over de volle breedte van de balk en gecentreerd — daardoor ligt de
+     stapregel in het midden van het SCHERM en niet in het midden van wat er
+     naast "Skip" overblijft. `pointerEvents` staat uit, dus hij vangt geen
+     tikken weg van de knop eronder. */
+  stepCenter: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: {

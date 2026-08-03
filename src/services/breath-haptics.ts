@@ -52,21 +52,48 @@ import { Vibration } from 'react-native';
    het einde van de ene fase over het begin van de volgende heen. */
 const FILL = 0.9;
 
-/* De korrel van het uitademen. 130 aan / 55 uit is dicht genoeg om als
-   doorlopend te voelen, maar grof genoeg om merkbaar te verschillen van de
-   gladde inademing. Fijner dan ~40 ms uit en de motor haalt het niet meer;
-   dan wordt het alsnog één egale trilling. */
-const RIPPLE_ON = 130;
-const RIPPLE_OFF = 55;
+/* De korrel van het uitademen. Grover dan het inademen — dat is het hele
+   onderscheid — en met langere stiltes, wat het tegelijk zachter maakt.
+   Uitademen hoort ook zachter te zijn dan inademen: het is loslaten. */
+const RIPPLE_ON = 150;
+const RIPPLE_OFF = 120;
 
-/* De tik van het vasthouden. Kort en droog — het mag geen zoem worden. */
-const TICK = 34;
+/* De tik van het vasthouden. Was 34 ms en daarmee nauwelijks te voelen: een
+   trilmotor heeft tijd nodig om op gang te komen, dus onder ongeveer 60 ms
+   voel je vooral het aanlopen en niet de tik zelf. Nu lang genoeg om aan te
+   komen, kort genoeg om geen zoem te worden. */
+const TICK = 85;
 const TICK_PERIOD = 1000;
 
-/** Eén ononderbroken trilling over de hele fase. */
+/* Hoe fijn het inademen trilt. Geen onafgebroken trilling meer (operator,
+   3 augustus 2026: "de haptics voor in- en uitademen zijn heel hard").
+
+   De reden dat het zo hard aanvoelde is bouwkundig: geen van beide platformen
+   laat de STERKTE regelen via deze weg, dus stond de motor vijf seconden lang
+   voluit aan. Het enige wat wél te regelen valt is hoeveel van de tijd hij
+   aanstaat. Met korte onderbrekingen komt de motor telkens net niet op volle
+   uitslag, en dat scheelt in wat je voelt zonder dat het onderbroken lijkt.
+
+   90 aan / 55 uit blijft ruim boven de drempel waarop losse pulsen als één
+   doorlopende trilling samensmelten, dus het verschil met het KORRELIGE
+   uitademen (150/120) blijft staan: fijn tegenover grof. */
+const SMOOTH_ON = 90;
+const SMOOTH_OFF = 55;
+
+/** Doorlopend en glad — maar met fijne onderbrekingen, zodat de motor niet
+ *  de hele fase op volle kracht staat. */
 function steady(secs: number): number[] {
-  /* Android leest [wachten, trillen, …]; de eerste waarde is de aanloop. */
-  return [0, Math.max(400, Math.round(secs * 1000 * FILL))];
+  const span = Math.max(400, Math.round(secs * 1000 * FILL));
+  const out: number[] = [0];
+  let used = 0;
+  while (used + SMOOTH_ON <= span) {
+    out.push(SMOOTH_ON);
+    used += SMOOTH_ON;
+    if (used + SMOOTH_OFF >= span) break;
+    out.push(SMOOTH_OFF);
+    used += SMOOTH_OFF;
+  }
+  return out;
 }
 
 /** Doorlopend, maar met korrel: aan/uit tot de fase vol is. */

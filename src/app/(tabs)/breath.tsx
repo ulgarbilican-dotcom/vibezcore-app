@@ -83,7 +83,10 @@ const DEFAULT_INDEX = ORDER.indexOf('calm');
 /* Het beeldvak levert hoogte in aan de rij eronder: die draagt nu twee
    leesbare regels per toestand in plaats van één onleesbare. */
 const BOX_H = Math.min(Math.round(SCREEN_H * 0.28), 252);
-const ART_W = SCREEN_W * 1.02;
+/* 20% kleiner (operator, 3 augustus 2026): op een smaller toestel dan de
+   emulator liepen de illustraties tot tegen de kop en de naam eronder aan.
+   Tekst hoort vrij te staan, dus de figuur wijkt — niet andersom. */
+const ART_W = SCREEN_W * 0.82;
 
 /* Vijf naast elkaar binnen de schermbreedte, met naam en ondertitel eronder.
    De kolombreedte staat vast zodat de langste naam — CALM CONTROL — de rij
