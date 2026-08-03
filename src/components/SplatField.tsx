@@ -270,45 +270,6 @@ export default function SplatField({
     return { a: order(a), b: order(b), rest: order(mod) };
   }, [imgA, imgB, modeImg, midBuilder, count]);
 
-  const sprites: SkRect[] = useMemo(
-    () => new Array(count).fill(0).map(() => Skia.XYWHRect(0, 0, 24, 24)),
-    [count],
-  );
-
-  const transforms = useRSXformBuffer(count, (val, i) => {
-    'worklet';
-    if (!clouds) {
-      val.set(0, 0, -100, -100);
-      return;
-    }
-    const t = breath.value;
-    const ix = i * 2;
-
-    /* ÉÉN beweging, van rustvorm naar eindbeeld. Hier zaten drie haltes —
-       uiteen, dan de rozet, dan de gezichten — en dat was zichtbaar fout: de
-       rozet heeft een kleinere straal dan de gezichten, dus de punten gingen
-       eerst naar binnen en daarna weer naar buiten. Eén knikje in het midden
-       van elke ademhaling, precies wat een overgang niet mag doen.
-       De rustvorm is nu het BEGIN en niet een tussenstop, en daarmee is het
-       pad in beide richtingen doorlopend. */
-    const end = Math.round(which.value) % 2 === 1 ? clouds.b : clouds.a;
-
-    /* Zachte in- en uitloop op de POSITIE zelf, bovenop de easing van de
-       ademwaarde. Zonder dit zetten duizenden punten tegelijk in en stoppen
-       ze tegelijk — wiskundig correct en toch schokkerig, omdat het oog een
-       massa ziet vertrekken in plaats van op gang komen. */
-    const k = t * t * (3 - 2 * t);
-    const x = clouds.rest[ix] + (end[ix] - clouds.rest[ix]) * k;
-    const y = clouds.rest[ix + 1] + (end[ix + 1] - clouds.rest[ix + 1]) * k;
-
-    /* Punten worden kleiner naarmate ze verder uit elkaar staan. Zonder dat
-       lijkt uiteenvallen op uitvergroten in plaats van vervliegen.
-       De ondergrens is omhoog: op de oude waarde was een los punt nog geen
-       vier beeldpunten groot en dus nauwelijks te zien. */
-    const scale = (0.17 + t * 0.08) * (size / 320);
-    val.set(scale, 0, x * size, y * size);
-  });
-
   /* Stil falen is hier het ergste wat kan: je kijkt naar zwart en weet niet
      of het laadt, of stuk is, of dat de punten buiten beeld staan. Elke
      mislukking zegt daarom WAAR hij zit. */
@@ -334,6 +295,72 @@ export default function SplatField({
       </View>
     );
   }
+
+  return (
+    <PointCloud
+      clouds={clouds}
+      which={which}
+      breath={breath}
+      size={size}
+      sprite={sprite}
+      count={count}
+    />
+  );
+}
+
+/* ── De tekenlaag ─────────────────────────────────────────────────────────
+   Apart, en dat is geen opsmuk maar de oplossing van een echte fout.
+
+   `useRSXformBuffer` maakt zijn buffer ÉÉN keer aan en houdt de functie vast
+   die hij bij die eerste keer meekreeg. Stond die functie hierboven, dan las
+   ze de wolken zoals die er op dat moment waren — en de foto's laden later.
+   Was de buffer eerder klaar dan de gegevens, dan bleef hij voor altijd naar
+   niets wijzen: geen beweging, geen morph, een leeg vlak. En omdat het van
+   laadtijden afhing, gebeurde het de ene keer wel en de andere keer niet.
+   Precies wat de operator zag.
+
+   Dit onderdeel bestaat pas zodra álles er is. Daarmee kan de functie geen
+   half gevulde toestand vastpakken; de vraag komt niet meer voor. ── */
+
+function PointCloud({
+  clouds,
+  which,
+  breath,
+  size,
+  sprite,
+  count,
+}: {
+  clouds: { a: Cloud; b: Cloud; rest: Cloud };
+  which: SharedValue<number>;
+  breath: SharedValue<number>;
+  size: number;
+  sprite: SkImage;
+  count: number;
+}) {
+  const sprites: SkRect[] = useMemo(
+    () => new Array(count).fill(0).map(() => Skia.XYWHRect(0, 0, 24, 24)),
+    [count],
+  );
+
+  const transforms = useRSXformBuffer(count, (val, i) => {
+    'worklet';
+    /* De ademwaarde draagt de versnelling al — die komt uit de easing van de
+       animatie zelf. Hier stond nóg een verzachting bovenop, en twee keer
+       vertragen aan begin en eind geeft geen rustiger beweging maar een
+       onregelmatige: traag, dan ineens snel, dan weer traag. Recht
+       evenredig is hier het juiste. */
+    const t = breath.value;
+    const ix = i * 2;
+    const end = Math.round(which.value) % 2 === 1 ? clouds.b : clouds.a;
+
+    const x = clouds.rest[ix] + (end[ix] - clouds.rest[ix]) * t;
+    const y = clouds.rest[ix + 1] + (end[ix + 1] - clouds.rest[ix + 1]) * t;
+
+    /* Iets kleinere punten naarmate de wolk uitzet: bij de rozet staan ze
+       dicht op elkaar, bij de gezichten verder uiteen. */
+    const scale = (0.17 + t * 0.08) * (size / 320);
+    val.set(scale, 0, x * size, y * size);
+  });
 
   return (
     <Canvas style={{ width: size, height: size }} pointerEvents="none">
