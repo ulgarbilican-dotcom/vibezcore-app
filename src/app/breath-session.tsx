@@ -397,14 +397,30 @@ export default function BreathSessionScreen() {
           /* Nul laten renderen vóór de fase wisselt, anders blijft "1"
              even hangen op de overgang. */
           nextRef.current = setTimeout(() => {
-            if (k === 'hold-out') {
+            /* Een ronde is voorbij zodra de LAATSTE fase van deze toestand
+               is afgelopen — welke fase dat ook is.
+
+               Hier stond `k === 'hold-out'`, en dat gold maar voor één van de
+               vijf: alleen CALM heeft een tweede vasthoudmoment. BOOST, FOCUS,
+               CLARITY en REST eindigen op uitademen, dus daar telde de ronde
+               NOOIT op. Die sessies bleven eeuwig in ronde één hangen: de
+               teller sprong elke paar seconden terug naar het begin, de tijd
+               liep niet door en de sessie kon niet aflopen. Precies wat de
+               operator zag.
+
+               Nu wordt het einde van de ronde afgeleid uit de fasenlijst
+               zelf, dus het klopt ook voor een toestand die er later bijkomt
+               met een heel ander ritme. */
+            const idx = st.phases.findIndex((p) => p.key === k);
+            const lastOfRound = idx === st.phases.length - 1;
+            if (lastOfRound) {
               const n = r + 1;
               if (n > roundsRef.current) {
                 finish(true);
                 return;
               }
               setRound(n);
-              runPhase('inhale', n);
+              runPhase(st.phases[0].key, n);
             } else {
               runPhase(nextOf(k).key, r);
             }

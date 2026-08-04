@@ -264,6 +264,31 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* De intro opnieuw kunnen bekijken (operator, 3 augustus 2026). Hij
+            liep maar één keer en zat daarna achter een ontwikkelaarsschakelaar
+            — onbereikbaar voor wie de app gewoon gebruikt, terwijl juist die
+            intro uitlegt wát dit product is. Iemand die hem oversloeg of hem
+            aan een ander wil tonen moet erbij kunnen. */}
+        <Text style={s.sectionLabel}>Breathwork</Text>
+        <View style={s.card}>
+          <Pressable
+            style={s.row}
+            onPress={async () => {
+              await setSetting('breathOnboardingCompletedAt', null);
+              router.push('/breath-welcome' as never);
+            }}
+            accessibilityLabel="Watch the breathwork intro again"
+          >
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Watch the intro again</Text>
+              <Text style={s.rowSub}>
+                The five-screen walkthrough, from the start.
+              </Text>
+            </View>
+            <Text style={s.versionText}>›</Text>
+          </Pressable>
+        </View>
+
         <Pressable
           style={s.dangerRow}
           onPress={onClearData}
