@@ -1894,7 +1894,21 @@ export default function AccountScreen() {
             guests. Settings & Help blok zat verstopt achter sign-in;
             operator-feedback dat About/FAQ/Support pre-purchase ook
             vindbaar moeten zijn. Inline link-row, subtle. */}
+        {/* Settings hoort hier óók (operator, 4 augustus 2026). Het stond
+            alleen in de ingelogde versie van dit scherm, en dat is precies de
+            verkeerde helft: een gast is degene die de intro nog wil zien, het
+            geluid wil uitzetten of de app wil leren kennen. Wie al betaalt
+            heeft die knoppen het minst nodig.
+            Zelfde ongeluk als bij About en FAQ hierboven, en om dezelfde reden
+            opgelost. */}
         <View style={s.guestInfoLinks}>
+          <Pressable
+            onPress={() => router.navigate('/settings' as never)}
+            hitSlop={8}
+          >
+            <Text style={s.guestInfoLink}>Settings</Text>
+          </Pressable>
+          <Text style={s.guestInfoLinkSep}>·</Text>
           <Pressable
             onPress={() => router.navigate('/about' as never)}
             hitSlop={8}
