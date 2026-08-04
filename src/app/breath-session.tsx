@@ -294,6 +294,27 @@ export default function BreathSessionScreen() {
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* De vooruitlopende stemcue heeft een eigen wekker: hij vuurt vóór het
+     einde van de lopende fase en mag dus niet aan de fase-wissel hangen. */
+  const preRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Hoeveel eerder het geluidsbestand start dan de fase waar het bij hoort.
+     Ruim genoeg om de trage aanzet van de opnames op te vangen, kort genoeg
+     om niet vóór de vorige fase uit te lopen. */
+  const CUE_LEAD_MS = 400;
+
+  const speak = useCallback(
+    (p: { key: PhaseKey; via: 'Nose' | 'Mouth' | null }) => {
+      if (!voiceRef.current) return;
+      playBreathCue(
+        p.key,
+        p.via === 'Mouth' ? 'mouth' : 'nose',
+        st.key === 'boost' ? 'boost' : 'calm',
+        'breath',
+      );
+    },
+    [st.key],
+  );
 
   /* Eén ademwaarde stuurt de hele figuur. Vóór de start loopt hij rustig
      rond zodat het scherm leeft; bij de start neemt het echte patroon het
@@ -318,8 +339,10 @@ export default function BreathSessionScreen() {
   const clearTimers = useCallback(() => {
     if (tickRef.current) clearInterval(tickRef.current);
     if (nextRef.current) clearTimeout(nextRef.current);
+    if (preRef.current) clearTimeout(preRef.current);
     tickRef.current = null;
     nextRef.current = null;
+    preRef.current = null;
   }, []);
 
   const stopAll = useCallback(() => {
@@ -359,17 +382,25 @@ export default function BreathSessionScreen() {
            breath-haptics.ts — de duur bepaalt de vorm, dus die gaat mee. */
         playPhaseHaptic(k, def.secs);
       }
-      if (voiceRef.current) {
-        /* Geen `force` meer. De knop op dit scherm is de instelling zelf,
-           dus er valt niets meer te omzeilen — staat hij aan, dan staat de
-           app aan. */
-        playBreathCue(
-          k,
-          def.via === 'Mouth' ? 'mouth' : 'nose',
-          st.key === 'boost' ? 'boost' : 'calm',
-          'breath',
-        );
-      }
+      /* ── De stem loopt vóór ─────────────────────────────────────────────
+         De cue van de VOLGENDE fase wordt een fractie vóór de overgang
+         ingezet, niet op het moment zelf.
+
+         Reden (operator, 3 augustus 2026): de opnames zetten traag in. Startte
+         het bestand precies op de overgang, dan was er al bijna een seconde
+         voorbij voordat het eerste woord klonk — en dan loopt de instructie
+         achter de beweging aan in plaats van hem aan te kondigen. Er zit geen
+         stilte in de bestanden die weggeknipt kan worden; het is de aanzet
+         van de stem zelf.
+
+         Vandaar de voorsprong: het bestand begint eerder, zodat het eerste
+         WOORD op de overgang valt. Dat is waar de gebruiker op reageert. */
+      const upcoming = nextOf(k);
+      if (preRef.current) clearTimeout(preRef.current);
+      preRef.current = setTimeout(
+        () => speak(upcoming),
+        Math.max(0, def.secs * 1000 - CUE_LEAD_MS),
+      );
 
       /* Beeld: alleen in- en uitademen bewegen. Tijdens het vasthouden
          blijft de vorm staan waar hij staat — dat is wat vasthouden ís. */
@@ -439,7 +470,10 @@ export default function BreathSessionScreen() {
     setRound(1);
     cancelAnimation(breath);
     breath.value = 0;
-    runPhase('inhale', 1);
+    /* De allereerste cue kan per definitie niet vooruitlopen — er is geen
+       fase vóór deze. Die klinkt dus gelijk met de start. */
+    speak(st.phases[0]);
+    runPhase(st.phases[0].key, 1);
   }, [breath, runPhase]);
 
   const stop = useCallback(() => {
