@@ -58,6 +58,7 @@ import { playPhaseHaptic } from '@/services/breath-haptics';
 import { useSetting } from '@/utils/settings';
 import {
   GROUP_ORDER,
+  GROUP_TINT,
   SOUNDSCAPES,
   soundscapeByKey,
 } from '@/data/soundscapes';

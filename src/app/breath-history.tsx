@@ -40,6 +40,41 @@ const PATTERN_INFO: Record<string, { name: string; color: string }> =
     ]),
   );
 
+/* ── De laatste zeven dagen ─────────────────────────────────────────────
+   Van oud naar nieuw, met vandaag rechts. Berekend uit dezelfde historiek als
+   de rest; niets extra opgeslagen. De hoogste dag bepaalt de schaal, dus de
+   vorm klopt ook in een week van drie minuten. */
+function buildWeek(history: BreathHistoryEntry[]) {
+  const out: {
+    label: string;
+    min: number;
+    frac: number;
+    color: string;
+    today: boolean;
+  }[] = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toDateString();
+    const mine = history.filter((e) => new Date(e.ts).toDateString() === key);
+    const sec = mine.reduce((a, e) => a + e.durSec, 0);
+    const byKey: Record<string, number> = {};
+    for (const e of mine) byKey[e.key] = (byKey[e.key] ?? 0) + e.durSec;
+    const top = Object.entries(byKey).sort((a, b) => b[1] - a[1])[0]?.[0];
+    out.push({
+      label: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()],
+      min: Math.round(sec / 60),
+      frac: 0,
+      color: top ? (PATTERN_INFO[top]?.color ?? Brand.accent) : Brand.border,
+      today: i === 0,
+    });
+  }
+  const max = Math.max(...out.map((o) => o.min), 1);
+  for (const o of out) o.frac = o.min / max;
+  return out;
+}
+
 /* ── Formatters ──────────────────────────────────────────────────── */
 function formatMMSS(sec: number): string {
   const total = Math.max(0, Math.round(sec));
@@ -152,6 +187,7 @@ function computeStats(history: BreathHistoryEntry[]): StatsResult {
    ════════════════════════════════════════════════════════════════════ */
 export default function BreathHistoryScreen() {
   const history = useBreathHistory();
+  const week7 = useMemo(() => buildWeek(history), [history]);
   const stats = useMemo(() => computeStats(history), [history]);
   const totalTime = formatTotalTime(stats.totalSec);
 
@@ -220,6 +256,42 @@ export default function BreathHistoryScreen() {
                 </Text>
                 <Text style={styles.statLbl}>AVG SESSION</Text>
               </View>
+            </View>
+
+            {/* ── DE WEEK ────────────────────────────────────────────
+                Zeven balkjes, één per dag, in de kleur van de toestand waar
+                die dag het langst aan besteed is. Dit is wat er ontbrak: de
+                cijfers erboven zeggen hoeveel je in totaal deed, maar niet
+                hoe het verloopt. Een reeks van vier dagen en dan drie lege
+                zie je hier in één oogopslag, en dat is precies de informatie
+                waar iemand zijn gewoonte op bijstuurt.
+
+                De hoogste dag bepaalt de schaal, dus de vorm klopt altijd —
+                ook in een week van drie minuten. Lege dagen krijgen een
+                streepje in plaats van niets: een gat hoort zichtbaar te zijn,
+                anders lijkt de week korter dan hij was. */}
+            <Text style={styles.sectionLbl}>LAST 7 DAYS</Text>
+            <View style={styles.week}>
+              {week7.map((d) => (
+                <View key={d.label} style={styles.weekCol}>
+                  <View style={styles.weekBarBox}>
+                    <View
+                      style={[
+                        styles.weekBar,
+                        {
+                          height: Math.max(3, d.frac * 76),
+                          backgroundColor: d.color,
+                          opacity: d.min > 0 ? 1 : 0.22,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.weekMin}>{d.min > 0 ? d.min : ''}</Text>
+                  <Text style={[styles.weekDay, d.today && styles.weekToday]}>
+                    {d.label}
+                  </Text>
+                </View>
+              ))}
             </View>
 
             {/* ── Per-pattern breakdown ── */}
@@ -444,6 +516,30 @@ const styles = StyleSheet.create({
   },
 
   /* Per-pattern */
+  week: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 4,
+    marginBottom: 22,
+  },
+  weekCol: { alignItems: 'center', flex: 1, gap: 4 },
+  weekBarBox: { height: 76, justifyContent: 'flex-end' },
+  weekBar: { width: 18, borderRadius: 4 },
+  weekMin: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 10,
+    color: Brand.textDim,
+    height: 12,
+  },
+  weekDay: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 10,
+    letterSpacing: 0.6,
+    color: 'rgba(255,255,255,0.34)',
+  },
+  weekToday: { color: Brand.text },
+
   patternList: {
     backgroundColor: Brand.panel,
     borderWidth: 1, borderColor: Brand.border,

@@ -482,7 +482,11 @@ export default function BreathWelcomeScreen() {
 
 /* ── Scherm 1 — wat dit is ────────────────────────────────────────────── */
 
-function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
+/* Ook gebruikt door de Breath-tab, die hem als welkomstbeeld toont voordat
+   je bij de vijf toestanden komt (operator, 5 augustus 2026). Daarom
+   geëxporteerd in plaats van gekopieerd: één beeld, één plek waar het
+   verandert. */
+export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
   /* Eén klok voor het beeld én de kop eronder — daarom staat hij hier en
      niet in het beeldonderdeel. De regel ademt mét de wolk in plaats van
      ernaast, inclusief de stilstanden.

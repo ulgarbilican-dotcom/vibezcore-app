@@ -192,6 +192,20 @@ export const SOUNDSCAPES: Soundscape[] = [
   },
 ];
 
+/* Kleur per GROEP, niet per geluid (operator, 5 augustus 2026: "de
+   soundscape icoontjes moeten in kleur"). Dertien losse kleuren worden een
+   snoepzak; vier laten je in één oogopslag zien dat Rain en Storm familie van
+   elkaar zijn en Ember en Night niet. De tinten volgen wat ze zijn: ruis is
+   koel staal, water is blauw, aarde is warm, toon is violet — dezelfde
+   violet als CALM CONTROL, want een klankschaal is het meest "merk" van de
+   dertien. */
+export const GROUP_TINT: Record<SoundscapeGroup, string> = {
+  NOISE: '#8FA3BE',
+  WATER: '#3E9BFF',
+  EARTH: '#F5A524',
+  TONE: '#B478FF',
+};
+
 export const GROUP_ORDER: SoundscapeGroup[] = [
   'NOISE',
   'WATER',

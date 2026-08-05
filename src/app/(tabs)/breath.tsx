@@ -31,6 +31,7 @@ import SessionArt, {
   prefetchSessionArt,
 } from '@/components/SessionArt';
 import Starfield from '@/components/Starfield';
+import { SlideIntro } from '@/app/breath-welcome';
 import { assetUri } from '@/services/asset-cache';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
@@ -42,8 +43,13 @@ import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { router, useFocusEffect } from 'expo-router';
+import {
+  ArrowRight,
+  ChartNoAxesColumn,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -144,6 +150,22 @@ export default function BreathScreen() {
 
   const [index, setIndex] = useState(FALLBACK_INDEX);
   const [infoOpen, setInfoOpen] = useState(false);
+
+  /* ── Het welkomstbeeld gaat vooraf ──────────────────────────────────
+     Wie op de Breath-tab tikt ziet eerst de gezichten die in de mandala
+     overgaan, en klikt dan door naar de vijf toestanden (operator, 5 augustus
+     2026). Het is het mooiste beeld dat de app heeft en het stond alleen in
+     de onboarding, die je één keer ziet en daarna nooit meer.
+
+     Terug naar dit beeld bij ELKE keer dat de tab de aandacht krijgt — ook
+     als je van een sessie terugkomt. Dat is de bedoeling: het is een drempel
+     die je even laat landen, geen scherm dat je één keer wegklikt. */
+  const [intro, setIntro] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setIntro(true);
+    }, []),
+  );
 
   /* Twee getallen uit de historiek. Berekend en niet opgeslagen: een streak
      die als getal wordt bewaard loopt uit de pas zodra iemand een dag mist en
@@ -308,8 +330,46 @@ export default function BreathScreen() {
           ertussen. Die hoogte gaat naar de illustratie, want daar kijk je
           naar. De naam staat nu bovenaan in plaats van eronder — dan weet je
           wat je ziet vóór je het ziet. */}
+      {intro ? (
+        <View style={s.introWrap}>
+          <SlideIntro onTapOrb={() => {}} />
+          <Pressable
+            onPress={() => setIntro(false)}
+            style={[s.cta, { borderColor: st.accent, marginTop: 28 }]}
+            android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+          >
+            <Text style={[s.ctaTxt, { color: st.accent }]}>CHOOSE YOUR MODE</Text>
+            <ArrowRight size={17} color={st.accent} strokeWidth={2} />
+          </Pressable>
+        </View>
+      ) : (
+        <>
+      {/* Een ZICHTBARE ingang naar de historiek (operator, 5 augustus 2026:
+          "waar staat die history, ik zie geen knop"). Hij stond alleen als
+          gedimde tekstregel onderaan, en dat leest niet als een knop — zeker
+          niet op een scherm waar de rest van de aandacht naar de figuur gaat.
+          Linksboven, tegenover niets, zodat hij nooit met de kop botst. */}
+      <Pressable
+        onPress={() => router.push('/breath-history')}
+        hitSlop={14}
+        style={s.histBtn}
+        accessibilityLabel="Your practice"
+      >
+        <ChartNoAxesColumn size={19} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+      </Pressable>
+
       <Animated.View style={[s.header, fadeStyle]}>
-        <Text style={[s.mode, { color: st.accent }]}>{st.eyebrow}</Text>
+        {/* Eén regel, altijd. "CALM CONTROL" brak op twee regels doordat de
+            letterafstand hem breder maakte dan de ruimte tussen de marges —
+            en een kop die afbreekt op een woordgrens die niets betekent leest
+            als een fout. Krimpt liever een fractie dan te breken. */}
+        <Text
+          style={[s.mode, { color: st.accent }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {st.eyebrow}
+        </Text>
       </Animated.View>
 
       {/* Alles onder de kop staat als ÉÉN blok gecentreerd in wat er
@@ -596,6 +656,8 @@ export default function BreathScreen() {
         </Text>
       </Pressable>
       </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -607,7 +669,23 @@ const s = StyleSheet.create({
   /* De zijmarge is niet cosmetisch: rechtsboven zweeft het instellingen-
      icoon van de app over élk scherm heen, en zonder deze marge liep de
      laatste letter van de kop eronder door. */
-  header: { alignItems: 'center', marginTop: 6, paddingHorizontal: 54 },
+  header: { alignItems: 'center', marginTop: 6, paddingHorizontal: 30 },
+  introWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 26,
+  },
+  histBtn: {
+    position: 'absolute',
+    left: 10,
+    top: 4,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
   /* Licht gewicht met veel letterafstand, zoals de koppen in de onboarding.
      Het gewicht doet niets, de ruimte doet alles. */
   kicker: {
@@ -649,8 +727,9 @@ const s = StyleSheet.create({
   copy: { alignItems: 'center', marginTop: 14, paddingHorizontal: 26 },
   mode: {
     fontFamily: BrandFonts.regular,
-    fontSize: 26,
-    letterSpacing: 6,
+    fontSize: 23,
+    letterSpacing: 4.5,
+    textAlign: 'center',
   },
   figure: {
     marginTop: 9,
