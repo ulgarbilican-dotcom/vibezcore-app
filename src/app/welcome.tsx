@@ -11,6 +11,7 @@
      voorgeschreven. Verzin hier niets bij — overige copy = [OPERATOR].
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { AUDIO_ENABLED } from '@/constants/features';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import {
@@ -176,14 +177,40 @@ export default function WelcomeScreen() {
           {/* Twee gelijkwaardige knoppen naast elkaar — halve breedte,
              identiek qua gewicht. Volgorde per BLAUWDRUK §2:
              Audio eerst, Bracelet tweede. */}
+          {/* Twee gelijkwaardige knoppen zolang audio meedoet; staat die uit,
+              dan zijn Breath en Bracelet de twee kernen en krijgen zij de
+              volle breedte. Geen halflege rij met één knop erin — dat leest
+              als een scherm waar iets van weggehaald is. */}
           <View style={s.btnRow}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.navigate('/')}
-              style={({ pressed }) => [s.btn, s.btnHalf, pressed && s.btnPressed]}
-            >
-              <Text style={s.btnLabel} numberOfLines={1}>Audio Library</Text>
-            </Pressable>
+            {AUDIO_ENABLED ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.navigate('/')}
+                style={({ pressed }) => [
+                  s.btn,
+                  s.btnHalf,
+                  pressed && s.btnPressed,
+                ]}
+              >
+                <Text style={s.btnLabel} numberOfLines={1}>
+                  Audio Library
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.navigate('/breath')}
+                style={({ pressed }) => [
+                  s.btn,
+                  s.btnHalf,
+                  pressed && s.btnPressed,
+                ]}
+              >
+                <Text style={s.btnLabel} numberOfLines={1}>
+                  Breathwork
+                </Text>
+              </Pressable>
+            )}
 
             <Pressable
               accessibilityRole="button"

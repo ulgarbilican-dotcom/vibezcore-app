@@ -23,6 +23,7 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { AUDIO_ENABLED } from '@/constants/features';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
 import { router, Tabs } from 'expo-router';
@@ -130,9 +131,15 @@ export default function TabLayout() {
           },
         }}
       >
+        {/* De audiobibliotheek is VERBORGEN, niet verwijderd (operator,
+            5 augustus 2026). `href: null` haalt het tabblad uit de balk maar
+            laat het scherm bestaan: bestaande abonnementen, voortgang en de
+            speler blijven werken, en wie er via een deeplink komt krijgt het
+            gewoon te zien. Terugzetten is één waarde in constants/features. */}
         <Tabs.Screen
           name="index"
           options={{
+            href: AUDIO_ENABLED ? undefined : null,
             title: 'Audio Library',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
               <TabGlyph label="♪" focused={focused} />
