@@ -62,7 +62,6 @@ import {
   soundscapeByKey,
 } from '@/data/soundscapes';
 import { playScape, stopScape } from '@/services/soundscape';
-import { CHANNELS, channelByKey, type GuidanceChannel } from '@/data/guidance';
 import {
   claimVoiceSource,
   playBreathCue,
@@ -87,8 +86,10 @@ import {
   ArrowRight,
   ChevronRight,
   Settings,
+  Smartphone,
   Volume2,
   VolumeX,
+  Watch,
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -277,27 +278,20 @@ export default function BreathSessionScreen() {
      kanaal, en privé is dat kanaal zonder scherm en zonder geluid.
      Zolang er geen bracelet verbonden is, valt alles terug op de telefoon —
      stil falen zou hier betekenen dat iemand een sessie start die niets doet. */
-  const [channelDefault, setChannelDefault] = useSetting('guidanceChannel');
-  const [channelKey, setChannelLocal] = useState(channelDefault);
-  const tookChannel = useRef(false);
-  useEffect(() => {
-    if (tookChannel.current) return;
-    tookChannel.current = true;
-    setChannelLocal(channelDefault);
-  }, [channelDefault]);
+  /* Geen kanaal-KEUZE meer maar twee losse schakelaars (operator, 5 augustus
+     2026). Een keuzemenu achter één knop verstopte wat er te kiezen valt; nu
+     staat alles wat aan of uit kan in dezelfde rij. Privé is daarmee geen
+     aparte stand meer maar wat je krijgt als je de bracelet aanzet en de stem
+     uit — precies zoals het in het echt werkt. */
+  const [braceletOn, setBraceletOn] = useState(false);
+  const braceletReady = false; /* [HARDWARE] Fall 2026 — nog geen verbinding. */
 
   /* Wat er gevraagd wordt zodra iets afwijkt van de opgeslagen stand. */
   const [askDefault, setAskDefault] = useState<null | {
     apply: () => void;
     what: string;
   }>(null);
-  const braceletReady = false; /* [HARDWARE] Fall 2026 — nog geen verbinding. */
-  const channel: GuidanceChannel =
-    channelByKey(channelKey).needsBracelet && !braceletReady
-      ? 'phone'
-      : channelKey;
-  const isPrivate = channel === 'private';
-  const [chanOpen, setChanOpen] = useState(false);
+
 
   const pickScape = useCallback(
     (k: string | null) => {
@@ -367,7 +361,16 @@ export default function BreathSessionScreen() {
     tookVoice.current = true;
     setVoiceOnLocal(voiceDefault);
   }, [voiceDefault]);
-  const [hapticsOn, setHapticsOn] = useState(true);
+  /* Telefoon-trilling: opgeslagen stand plus die van deze sessie, net als de
+     stem. Zelfde autostoel-regel. */
+  const [hapticDefault, setHapticDefault] = useSetting('hapticsPhone');
+  const [hapticsOn, setHapticsOn] = useState(hapticDefault);
+  const tookHaptic = useRef(false);
+  useEffect(() => {
+    if (tookHaptic.current) return;
+    tookHaptic.current = true;
+    setHapticsOn(hapticDefault);
+  }, [hapticDefault]);
 
   const [phase, setPhase] = useState<Phase>('inhale');
   const [secsLeft, setSecsLeft] = useState(st.techniques[0].phases[0].secs);
@@ -383,8 +386,6 @@ export default function BreathSessionScreen() {
   /* De fase-loop draait buiten React om, dus de actuele instellingen komen
      uit refs. Anders leest een lopende sessie de waarden van de render
      waarin hij begon. */
-  const channelRef = useRef<GuidanceChannel>('phone');
-  channelRef.current = channel;
   const voiceRef = useRef(voiceOn);
   const hapticRef = useRef(hapticsOn);
   const roundsRef = useRef(rounds);
@@ -490,7 +491,7 @@ export default function BreathSessionScreen() {
 
       /* Bij bracelet en privé zwijgt de telefoon: het ritme zit dan op de
          pols en twee bronnen tegelijk is geen begeleiding maar ruis. */
-      if (hapticRef.current && channelRef.current === 'phone') {
+      if (hapticRef.current) {
         /* De trilling draagt de HELE fase, niet alleen de overgang: een tik
            aan het begin zegt niets over de vier seconden erna. In- en
            uitademen krijgen een reeks die respectievelijk aanzwelt en
@@ -941,27 +942,54 @@ export default function BreathSessionScreen() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setChanOpen(true)}
-              onLongPress={() => setHapticsOn((h) => !h)}
+              onPress={() => {
+                const v = !hapticsOn;
+                setHapticsOn(v);
+                if (v !== hapticDefault) {
+                  setAskDefault({
+                    what: `Phone haptics ${v ? 'on' : 'off'}`,
+                    apply: () => void setHapticDefault(v),
+                  });
+                }
+              }}
               style={s.channel}
               hitSlop={8}
             >
-              <Text
-                style={[
-                  s.hapticGlyph,
-                  { color: hapticsOn ? st.accent : 'rgba(255,255,255,0.3)' },
-                ]}
-              >
-                ◉)))
-              </Text>
+              <Smartphone
+                size={19}
+                color={hapticsOn ? st.accent : 'rgba(255,255,255,0.3)'}
+                strokeWidth={2.2}
+              />
               <Text style={[s.channelLabel, !hapticsOn && s.channelOff]}>
-                Guidance
+                Phone
               </Text>
-              <Text
-                style={[s.channelState, !hapticsOn && s.channelOff]}
-                numberOfLines={1}
-              >
-                {hapticsOn ? channelByKey(channel).name.toUpperCase() : 'OFF'}
+              <Text style={[s.channelState, !hapticsOn && s.channelOff]}>
+                {hapticsOn ? 'ON' : 'OFF'}
+              </Text>
+            </Pressable>
+
+            {/* De bracelet staat er AL, gedimd, met zijn datum. Dit is het
+                moment waarop iemand merkt dat zijn telefoon in zijn hand moet
+                blijven trillen — en dan is het eerlijk om te tonen dat daar
+                iets voor komt. Aanzetten kan pas als er hardware is. */}
+            <Pressable
+              disabled={!braceletReady}
+              onPress={() => setBraceletOn((b) => !b)}
+              style={s.channel}
+              hitSlop={8}
+            >
+              <Watch
+                size={19}
+                color={
+                  braceletOn && braceletReady
+                    ? st.accent
+                    : 'rgba(255,255,255,0.22)'
+                }
+                strokeWidth={2.2}
+              />
+              <Text style={[s.channelLabel, s.channelLocked]}>Bracelet</Text>
+              <Text style={[s.channelState, s.channelLocked]}>
+                {braceletReady ? (braceletOn ? 'ON' : 'OFF') : 'FALL 2026'}
               </Text>
             </Pressable>
             </View>
@@ -1067,77 +1095,6 @@ export default function BreathSessionScreen() {
               hitSlop={8}
             >
               <Text style={s.modalSecondaryTxt}>Just this time</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── Waar de begeleiding vandaan komt ─────────────────────────────
-           Zelfde vel als bij het geluid, zodat er één manier van kiezen is.
-           De bracelet-kanalen staan er AL, gedimd, met hun datum erbij. Dat
-           is geen reclame op een verkeerde plek: dit is precies het moment
-           waarop iemand merkt dat zijn telefoon in zijn hand moet blijven —
-           en dan is het eerlijk om te tonen dat daar iets voor komt. */}
-      <Modal
-        visible={chanOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setChanOpen(false)}
-      >
-        <Pressable style={s.sheetBackdrop} onPress={() => setChanOpen(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
-            <View style={s.sheetGrip} />
-            <Text style={s.sheetTitle}>Guidance</Text>
-            {CHANNELS.map((c) => {
-              const locked = c.needsBracelet && !braceletReady;
-              const on = c.key === channel && !locked;
-              return (
-                <Pressable
-                  key={c.key}
-                  disabled={locked}
-                  style={[s.scapeRow, on && s.scapeRowOn]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setChannelLocal(c.key);
-                    setChanOpen(false);
-                    if (c.key !== channelDefault) {
-                      setAskDefault({
-                        what: `Guidance: ${c.name}`,
-                        apply: () => void setChannelDefault(c.key),
-                      });
-                    }
-                  }}
-                >
-                  <c.Icon
-                    size={19}
-                    color={
-                      on
-                        ? st.accent
-                        : locked
-                          ? 'rgba(255,255,255,0.22)'
-                          : 'rgba(255,255,255,0.45)'
-                    }
-                    strokeWidth={2.2}
-                  />
-                  <View style={s.scapeText}>
-                    <Text
-                      style={[
-                        s.scapeName,
-                        on && { color: st.accent },
-                        locked && { color: 'rgba(255,255,255,0.32)' },
-                      ]}
-                    >
-                      {c.name}
-                    </Text>
-                    <Text style={s.scapeHint}>
-                      {locked ? `${c.hint} · Fall 2026` : c.hint}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-            <Pressable style={s.modalBtn} onPress={() => setChanOpen(false)}>
-              <Text style={s.modalBtnTxt}>Done</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -1603,6 +1560,9 @@ function makeStyles(st: BreathState) {
     color: st.accent,
   },
   channelOff: { color: 'rgba(255,255,255,0.3)' },
+  /* Nog niet te bedienen: dieper weggezet dan gewoon UIT, zodat het verschil
+     tussen "staat uit" en "kan nog niet" zichtbaar is. */
+  channelLocked: { color: 'rgba(255,255,255,0.22)' },
   hapticGlyph: {
     fontFamily: BrandFonts.medium,
     fontSize: 15,

@@ -73,7 +73,9 @@ export type Settings = {
   /** Waar de begeleiding vandaan komt: telefoon, bracelet, of privé.
    *  Zie data/guidance.ts — de bracelet-kanalen vragen hardware die er nog
    *  niet is, dus tot die tijd valt alles terug op de telefoon. */
-  guidanceChannel: 'phone' | 'bracelet' | 'private';
+  /** Telefoon-trilling aan of uit. Standaard AAN: samen met de stem is dit
+   *  wat een sessie begeleidt. */
+  hapticsPhone: boolean;
   /** Welke dagelijkse herinneringen aan staan. Zie services/reminders.ts —
    *  drie vaste momenten, geen vrije tijdkiezer. Standaard alle drie UIT:
    *  een app die ongevraagd begint te porren verliest precies de mensen die
@@ -95,7 +97,7 @@ const defaults: Settings = {
   voiceCuesChosen: false,
   breathOnboardingCompletedAt: null,
   soundscapeByState: {},
-  guidanceChannel: 'phone',
+  hapticsPhone: true,
   reminders: {},
 };
 
@@ -151,10 +153,8 @@ async function loadOnce(): Promise<void> {
             !Array.isArray(obj.reminders)
               ? { reminders: obj.reminders }
               : {}),
-            ...(obj.guidanceChannel === 'phone' ||
-            obj.guidanceChannel === 'bracelet' ||
-            obj.guidanceChannel === 'private'
-              ? { guidanceChannel: obj.guidanceChannel }
+            ...(typeof obj.hapticsPhone === 'boolean'
+              ? { hapticsPhone: obj.hapticsPhone }
               : {}),
             ...(obj.soundscapeByState &&
             typeof obj.soundscapeByState === 'object' &&
