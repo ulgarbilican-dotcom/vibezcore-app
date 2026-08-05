@@ -841,12 +841,54 @@ export default function BreathSessionScreen() {
           </View>
         ) : null}
 
-        {/* Voice, Soundscape en Guidance staan er NU AL, en niet pas zodra de
-            sessie loopt (operator, 4 augustus 2026). Wie op START drukt hoort
-            zijn keuzes al gemaakt te hebben — ze halverwege moeten zoeken is
-            precies het moment waarop je uit je ademhaling valt. */}
-        {(
-          <View style={[s.rhythmCard, !running && s.rhythmCardIdle]}>
+        {/* Alleen tijdens de sessie (operator, 4 augustus 2026). Vooraf
+            stond dit blok er ook, maar daar hoort het niet: op de
+            startpagina kies je je ritme en je duur, en de kanalen zitten een
+            tik verder. Twee keer hetzelfde blok op twee schermen maakt geen
+            van beide duidelijker.
+
+            De opbouw is nu VERTICAAL. De knoppen stonden links en rechts van
+            de boog en liepen er zichtbaar tegenaan; nu staat de boog boven en
+            staan de drie er netjes onder, naast elkaar. Alles krijgt lucht,
+            en niets overlapt meer. */}
+        {running && (
+          <View style={s.rhythmCard}>
+                        <View style={s.rhythmCenter}>
+              <PhaseArc
+                  width={SCREEN_W * 0.44}
+                  progress={arc}
+                  accent={st.accent}
+                  gradient={st.gradient}
+                />
+              {/* In de boog staat alleen nog de tijd. De naam van de fase
+                  paste er niet meer bij zodra de opening erbij kwam —
+                  "EXHALE · NOSE" liep dwars door de boog heen, en een
+                  instructie die over zijn eigen meter valt is geen
+                  instructie. */}
+              <View style={s.arcOverlay}>
+                <Text style={s.phaseBig}>
+                  {Math.max(0, secsLeft).toFixed(1)}
+                </Text>
+                <Text style={s.phaseUnit}>SEC</Text>
+              </View>
+              {/* Onder de boog, over de volle breedte, in de kleur van de
+                  toestand: wat je NU doet en waar de lucht langs gaat. Hier
+                  stond "Next: …", en die is eruit — de sessie stuurt elke
+                  fase live aan met stem en trilling, dus vooruitlezen wat er
+                  zo komt voegt niets toe en trekt de aandacht juist weg van
+                  wat er op dit moment moet gebeuren. */}
+              <Text style={s.phaseLine}>
+                {byKey(phase).label}
+                {byKey(phase).via
+                  ? ` · ${byKey(phase).via!.toUpperCase()}`
+                  : ''}
+              </Text>
+            </View>
+
+            {/* Wat je hoort ONDER de stem. Eén regel — icoon plus naam —
+                want dertien namen horen niet op het scherm te staan waarop
+                je ademt. Tikken opent het vel. */}
+            <View style={s.channelRow}>
             <Pressable
               /* Directe waarde, geen updater-functie: de setter van
                  useSetting neemt een waarde aan. Deze regel staat in de JSX,
@@ -878,52 +920,6 @@ export default function BreathSessionScreen() {
                 {voiceOn ? 'ON' : 'OFF'}
               </Text>
             </Pressable>
-
-            {running ? (
-            <View style={s.rhythmCenter}>
-              <PhaseArc
-                  width={SCREEN_W * 0.44}
-                  progress={arc}
-                  accent={st.accent}
-                  gradient={st.gradient}
-                />
-              {/* In de boog staat alleen nog de tijd. De naam van de fase
-                  paste er niet meer bij zodra de opening erbij kwam —
-                  "EXHALE · NOSE" liep dwars door de boog heen, en een
-                  instructie die over zijn eigen meter valt is geen
-                  instructie. */}
-              <View style={s.arcOverlay}>
-                <Text style={s.phaseBig}>
-                  {Math.max(0, secsLeft).toFixed(1)}
-                </Text>
-                <Text style={s.phaseUnit}>SEC</Text>
-              </View>
-              {/* Onder de boog, over de volle breedte, in de kleur van de
-                  toestand: wat je NU doet en waar de lucht langs gaat. Hier
-                  stond "Next: …", en die is eruit — de sessie stuurt elke
-                  fase live aan met stem en trilling, dus vooruitlezen wat er
-                  zo komt voegt niets toe en trekt de aandacht juist weg van
-                  wat er op dit moment moet gebeuren. */}
-              <Text style={s.phaseLine}>
-                {byKey(phase).label}
-                {byKey(phase).via
-                  ? ` · ${byKey(phase).via!.toUpperCase()}`
-                  : ''}
-              </Text>
-            </View>
-            ) : (
-              /* Vóór de start staat hier geen boog maar de uitleg waaróm deze
-                 drie knoppen er zijn. Zonder dat leest de rij als drie losse
-                 schakelaars in plaats van als de keuze die de sessie bepaalt. */
-              <View style={s.rhythmCenter}>
-                <Text style={s.sectionEyebrow}>GUIDANCE</Text>
-                <Text style={s.idleHint}>How you want to be led</Text>
-              </View>
-            )}
-
-            {/* Wat je hoort ONDER de stem. Eén regel — icoon plus naam —
-                want dertien namen horen niet op het scherm te staan waarop
-                je ademt. Tikken opent het vel. */}
             <Pressable
               onPress={() => setScapeOpen(true)}
               style={s.channel}
@@ -944,7 +940,6 @@ export default function BreathSessionScreen() {
                 {scape ? scape.name.toUpperCase() : 'OFF'}
               </Text>
             </Pressable>
-
             <Pressable
               onPress={() => setChanOpen(true)}
               onLongPress={() => setHapticsOn((h) => !h)}
@@ -969,6 +964,7 @@ export default function BreathSessionScreen() {
                 {hapticsOn ? channelByKey(channel).name.toUpperCase() : 'OFF'}
               </Text>
             </Pressable>
+            </View>
           </View>
         )}
 
@@ -1370,7 +1366,12 @@ function makeStyles(st: BreathState) {
      elkaar. Centreren zet de overgebleven ruimte gelijk boven en onder, en
      omdat het beeldvak een vaste hoogte heeft staat dat blok op elke
      toestand op precies dezelfde plek. */
-  scrollRunning: { flexGrow: 1, justifyContent: 'center' },
+  /* Tijdens de sessie begint het blok BOVENAAN in plaats van gecentreerd
+     (operator, 4 augustus 2026: "de animatie kan nog naar boven"). Met het
+     kanalenblok eronder werd het geheel zo hoog dat centreren de figuur naar
+     beneden duwde; nu staat hij waar je hem het eerst ziet en valt de
+     overgebleven ruimte onderaan. */
+  scrollRunning: { flexGrow: 1, justifyContent: 'flex-start', paddingTop: 4 },
 
   /* Eén ritme voor het hele scherm: 6 binnen een blok, 18 tussen blokken,
      26 rond de figuur. Afstanden die per onderdeel apart gekozen zijn
@@ -1406,8 +1407,8 @@ function makeStyles(st: BreathState) {
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 16,
   },
 
   sectionEyebrow: {
@@ -1568,9 +1569,10 @@ function makeStyles(st: BreathState) {
 
   /* ── Ritmeblok tijdens de sessie ── */
   rhythmCard: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    /* Ruimer dan eerst: hier staan nu een boog én drie kanalen onder elkaar,
+       en alles moet lucht hebben. */
+    paddingTop: 16,
     width: SCREEN_W - 28,
     marginTop: 12,
     paddingVertical: 14,
@@ -1580,7 +1582,14 @@ function makeStyles(st: BreathState) {
     borderColor: 'rgba(255,255,255,0.09)',
     backgroundColor: 'rgba(255,255,255,0.035)',
   },
-  channel: { alignItems: 'center', gap: 3, width: 74 },
+  channel: { alignItems: 'center', gap: 3, flex: 1 },
+  /* De drie kanalen onder de boog, gelijk verdeeld over de breedte. */
+  channelRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+    marginTop: 14,
+  },
   channelLabel: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12,
