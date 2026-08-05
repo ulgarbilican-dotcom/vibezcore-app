@@ -67,6 +67,7 @@ import {
   playBreathCue,
   playCompletionCue,
   releaseVoiceSource,
+  setVoiceEnabled,
   stopVoice,
   type BreathKey,
 } from '@/services/breath-voice';
@@ -351,7 +352,25 @@ export default function BreathSessionScreen() {
      Vandaar twee waarden naast elkaar. Schreef een tik meteen door naar de
      instelling, dan was elke tijdelijke aanpassing meteen permanent en had de
      vraag geen betekenis meer. */
-  const [voiceDefault, setVoiceDefault] = useSetting('voiceCues');
+  /* ── Voorkeur per toestand ──────────────────────────────────────────
+     Iemand wil bij CALM CONTROL de stem aan en bij REST & RESET alleen
+     trilling (operator, 5 augustus 2026). De opgeslagen stand is daarom niet
+     één waarde voor de hele app maar één per toestand, met de algemene stand
+     als terugval. Wie nooit iets per toestand instelt merkt van deze laag
+     niets. */
+  const [prefs, setPrefs] = useSetting('breathPrefs');
+  const [voiceGlobal] = useSetting('voiceCues');
+  const [hapticGlobal] = useSetting('hapticsPhone');
+  const pref = prefs[st.key] ?? {};
+  const voiceDefault = pref.voice ?? voiceGlobal;
+  const hapticDefault = pref.haptics ?? hapticGlobal;
+  const remember = useCallback(
+    (patch: { voice?: boolean; haptics?: boolean }) => {
+      void setPrefs({ ...prefs, [st.key]: { ...pref, ...patch } });
+    },
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    [prefs, st.key],
+  );
   const [voiceOn, setVoiceOnLocal] = useState(voiceDefault);
   /* Één keer overnemen zodra de opgeslagen waarde binnen is; daarna niet meer,
      anders overschrijft een late lading je keuze van dit moment. */
@@ -363,7 +382,6 @@ export default function BreathSessionScreen() {
   }, [voiceDefault]);
   /* Telefoon-trilling: opgeslagen stand plus die van deze sessie, net als de
      stem. Zelfde autostoel-regel. */
-  const [hapticDefault, setHapticDefault] = useSetting('hapticsPhone');
   const [hapticsOn, setHapticsOn] = useState(hapticDefault);
   const tookHaptic = useRef(false);
   useEffect(() => {
@@ -397,6 +415,11 @@ export default function BreathSessionScreen() {
      meer, en de force-vlag die dat gevecht moest omzeilen is weg. */
   useEffect(() => {
     voiceRef.current = voiceOn;
+    /* De dienst volgt de stand van DEZE toestand, niet de algemene. Anders
+       zou "stem uit bij REST" ook de stem bij CALM blokkeren, want de poort
+       in breath-voice.ts kent maar één vlag. Bij het verlaten van het scherm
+       gaat hij terug naar de algemene stand — zie de opruiming hieronder. */
+    setVoiceEnabled(voiceOn);
     if (!voiceOn) stopVoice();
   }, [voiceOn]);
   useEffect(() => {
@@ -605,6 +628,7 @@ export default function BreathSessionScreen() {
     () => () => {
       stopAll();
       stopScape();
+      setVoiceEnabled(voiceGlobal);
       releaseVoiceSource('breath');
     },
     [stopAll],
@@ -901,8 +925,8 @@ export default function BreathSessionScreen() {
                    terug naar de standaard, dan is er niets veranderd. */
                 if (v !== voiceDefault) {
                   setAskDefault({
-                    what: `Voice ${v ? 'on' : 'off'}`,
-                    apply: () => void setVoiceDefault(v),
+                    what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
+                    apply: () => remember({ voice: v }),
                   });
                 }
               }}
@@ -947,8 +971,8 @@ export default function BreathSessionScreen() {
                 setHapticsOn(v);
                 if (v !== hapticDefault) {
                   setAskDefault({
-                    what: `Phone haptics ${v ? 'on' : 'off'}`,
-                    apply: () => void setHapticDefault(v),
+                    what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
+                    apply: () => remember({ haptics: v }),
                   });
                 }
               }}
@@ -1077,8 +1101,8 @@ export default function BreathSessionScreen() {
             <Text style={s.modalEyebrow}>{askDefault?.what.toUpperCase()}</Text>
             <Text style={s.modalTitle}>Make this your default?</Text>
             <Text style={s.modalBody}>
-              Every session will start this way. You can always change it
-              again.
+              Every {st.eyebrow} session will start this way. Other modes keep
+              their own settings.
             </Text>
             <Pressable
               style={s.modalBtn}

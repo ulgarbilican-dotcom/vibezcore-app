@@ -74,8 +74,17 @@ export type Settings = {
    *  Zie data/guidance.ts — de bracelet-kanalen vragen hardware die er nog
    *  niet is, dus tot die tijd valt alles terug op de telefoon. */
   /** Telefoon-trilling aan of uit. Standaard AAN: samen met de stem is dit
-   *  wat een sessie begeleidt. */
+   *  wat een sessie begeleidt. Dit is de ALGEMENE stand; per toestand kan er
+   *  een eigen voorkeur overheen staan — zie `breathPrefs`. */
   hapticsPhone: boolean;
+  /** Voorkeur PER TOESTAND (operator, 5 augustus 2026).
+   *
+   *  Iemand wil bij CALM CONTROL de stem aan en bij REST & RESET alleen
+   *  trilling. Eén stand voor alles kan dat niet, en dwingt hem elke sessie
+   *  opnieuw te sleutelen. Ontbreekt er een sleutel, dan geldt de algemene
+   *  stand hierboven — dus wie nooit iets per toestand instelt merkt niets
+   *  van deze laag. */
+  breathPrefs: Record<string, { voice?: boolean; haptics?: boolean }>;
   /** Welke dagelijkse herinneringen aan staan. Zie services/reminders.ts —
    *  drie vaste momenten, geen vrije tijdkiezer. Standaard alle drie UIT:
    *  een app die ongevraagd begint te porren verliest precies de mensen die
@@ -98,6 +107,7 @@ const defaults: Settings = {
   breathOnboardingCompletedAt: null,
   soundscapeByState: {},
   hapticsPhone: true,
+  breathPrefs: {},
   reminders: {},
 };
 
@@ -155,6 +165,11 @@ async function loadOnce(): Promise<void> {
               : {}),
             ...(typeof obj.hapticsPhone === 'boolean'
               ? { hapticsPhone: obj.hapticsPhone }
+              : {}),
+            ...(obj.breathPrefs &&
+            typeof obj.breathPrefs === 'object' &&
+            !Array.isArray(obj.breathPrefs)
+              ? { breathPrefs: obj.breathPrefs }
               : {}),
             ...(obj.soundscapeByState &&
             typeof obj.soundscapeByState === 'object' &&
