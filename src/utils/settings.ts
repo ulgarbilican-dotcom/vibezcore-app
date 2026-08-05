@@ -65,6 +65,11 @@ export type Settings = {
    *  Breath-tab-focus-check, dus zij zien de onboarding NIET ondanks
    *  null-waarde. Geen data-migratie nodig. */
   breathOnboardingCompletedAt: number | null;
+  /** Welk achtergrondgeluid bij welke toestand hoort. Per TOESTAND, want wie
+   *  voor slapen Deep wil en voor focus Rain hoort dat niet elke keer opnieuw
+   *  te kiezen. `null` als waarde betekent bewust GEEN geluid; ontbreekt de
+   *  sleutel, dan geldt de standaard uit soundscapes.ts. */
+  soundscapeByState: Record<string, string | null>;
 };
 
 const defaults: Settings = {
@@ -80,6 +85,7 @@ const defaults: Settings = {
   voiceCues: true,
   voiceCuesChosen: false,
   breathOnboardingCompletedAt: null,
+  soundscapeByState: {},
 };
 
 let state: Settings = { ...defaults };
@@ -128,6 +134,11 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
+              : {}),
+            ...(obj.soundscapeByState &&
+            typeof obj.soundscapeByState === 'object' &&
+            !Array.isArray(obj.soundscapeByState)
+              ? { soundscapeByState: obj.soundscapeByState }
               : {}),
           };
         }

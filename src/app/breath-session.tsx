@@ -57,6 +57,13 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { useSetting } from '@/utils/settings';
 import {
+  DEFAULT_SCAPE,
+  GROUP_ORDER,
+  SOUNDSCAPES,
+  soundscapeByKey,
+} from '@/data/soundscapes';
+import { playScape, stopScape } from '@/services/soundscape';
+import {
   claimVoiceSource,
   playBreathCue,
   playCompletionCue,
@@ -76,7 +83,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ChevronRight, Settings, Volume2, X } from 'lucide-react-native';
+import { ChevronRight, Settings, Volume2, VolumeX, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -245,6 +252,24 @@ export default function BreathSessionScreen() {
   const [techIdx, setTechIdx] = useState(0);
   const tech = st.techniques[techIdx] ?? st.techniques[0];
 
+  /* Het achtergrondgeluid. Per TOESTAND onthouden: wie voor slapen Deep wil
+     en voor focus Rain, hoort dat niet elke keer opnieuw te kiezen. */
+  const [scapes, setScapes] = useSetting('soundscapeByState');
+  const scapeKey = scapes[st.key] ?? DEFAULT_SCAPE[st.key];
+  const scape = soundscapeByKey(scapeKey);
+  const [scapeOpen, setScapeOpen] = useState(false);
+
+  const pickScape = useCallback(
+    (k: string | null) => {
+      Haptics.selectionAsync();
+      setScapes({ ...scapes, [st.key]: k });
+      /* Meteen laten horen wat je kiest — ook vóór de sessie. Anders kies je
+         blind en merk je pas halverwege dat het niet is wat je wilde. */
+      void playScape(k);
+    },
+    [scapes, setScapes, st.key],
+  );
+
   const CYCLE_S = useMemo(() => cycleSeconds(tech), [tech]);
   const byKey = useCallback((k: Phase) => phaseAt(tech, k), [tech]);
   const nextOf = useCallback((k: Phase) => nextPhase(tech, k), [tech]);
@@ -380,6 +405,7 @@ export default function BreathSessionScreen() {
      afgemaakte sessie verdient een afsluitscherm. */
   const finish = useCallback((completed = false) => {
     stopAll();
+    stopScape();
     if (completed) setDone(true);
     setRunning(false);
     setRound(1);
@@ -488,6 +514,9 @@ export default function BreathSessionScreen() {
   const start = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     claimVoiceSource('breath');
+    /* Het achtergrondgeluid hoort bij de sessie, niet bij het scherm: het komt
+       op met START en gaat weg met END. */
+    void playScape(scapeKey);
     setRunning(true);
     setRound(1);
     cancelAnimation(breath);
@@ -506,6 +535,7 @@ export default function BreathSessionScreen() {
   useEffect(
     () => () => {
       stopAll();
+      stopScape();
       releaseVoiceSource('breath');
     },
     [stopAll],
@@ -791,6 +821,28 @@ export default function BreathSessionScreen() {
               </Text>
             </View>
 
+            {/* Wat je hoort ONDER de stem. Eén regel — icoon plus naam —
+                want dertien namen horen niet op het scherm te staan waarop
+                je ademt. Tikken opent het vel. */}
+            <Pressable
+              onPress={() => setScapeOpen(true)}
+              style={s.channel}
+              hitSlop={8}
+            >
+              {scape ? (
+                <scape.Icon size={19} color={st.accent} strokeWidth={2.2} />
+              ) : (
+                <VolumeX size={19} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
+              )}
+              <Text style={[s.channelLabel, !scape && s.channelOff]}>Sound</Text>
+              <Text
+                style={[s.channelState, !scape && s.channelOff]}
+                numberOfLines={1}
+              >
+                {scape ? scape.name.toUpperCase() : 'OFF'}
+              </Text>
+            </Pressable>
+
             <Pressable
               onPress={() => setHapticsOn((h) => !h)}
               style={s.channel}
@@ -871,6 +923,88 @@ export default function BreathSessionScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* ── Welk geluid eronder ──────────────────────────────────────────
+           Dertien opties passen niet in een rij, dus een vel met de vier
+           groepen als kopjes. Off staat bovenaan en los: dat is geen geluid
+           maar een keuze. Tikken speelt meteen, zodat je hoort wat je pakt
+           in plaats van dertien namen te moeten raden. */}
+      <Modal
+        visible={scapeOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setScapeOpen(false)}
+      >
+        <Pressable style={s.sheetBackdrop} onPress={() => setScapeOpen(false)}>
+          <Pressable style={s.sheet} onPress={() => {}}>
+            <View style={s.sheetGrip} />
+            <Text style={s.sheetTitle}>Background sound</Text>
+
+            <Pressable
+              style={[s.scapeRow, !scape && s.scapeRowOn]}
+              onPress={() => pickScape(null)}
+            >
+              <VolumeX
+                size={19}
+                color={!scape ? st.accent : 'rgba(255,255,255,0.45)'}
+                strokeWidth={2.2}
+              />
+              <View style={s.scapeText}>
+                <Text style={[s.scapeName, !scape && { color: st.accent }]}>
+                  Off
+                </Text>
+                <Text style={s.scapeHint}>Voice and haptics only</Text>
+              </View>
+            </Pressable>
+
+            <ScrollView style={s.sheetList} showsVerticalScrollIndicator={false}>
+              {GROUP_ORDER.map((g) => (
+                <View key={g}>
+                  <Text style={s.scapeGroup}>{g}</Text>
+                  {SOUNDSCAPES.filter((x) => x.group === g).map((x) => {
+                    const on = x.key === scapeKey;
+                    return (
+                      <Pressable
+                        key={x.key}
+                        style={[s.scapeRow, on && s.scapeRowOn]}
+                        onPress={() => pickScape(x.key)}
+                      >
+                        <x.Icon
+                          size={19}
+                          color={on ? st.accent : 'rgba(255,255,255,0.45)'}
+                          strokeWidth={2.2}
+                        />
+                        <View style={s.scapeText}>
+                          <Text
+                            style={[s.scapeName, on && { color: st.accent }]}
+                          >
+                            {x.name}
+                          </Text>
+                          <Text style={s.scapeHint}>{x.hint}</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+              <View style={{ height: 18 }} />
+            </ScrollView>
+
+            <Pressable
+              style={s.modalBtn}
+              onPress={() => {
+                /* Voorbeluisteren stopt bij het sluiten; hij komt terug bij
+                   START. Anders speelt er geluid op een scherm waar niets
+                   loopt. */
+                if (!running) stopScape();
+                setScapeOpen(false);
+              }}
+            >
+              <Text style={s.modalBtnTxt}>Done</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Waarom deze lengte ── */}
       <Modal
@@ -1446,6 +1580,69 @@ function makeStyles(st: BreathState) {
     backgroundColor: st.accent,
   },
   doneBuddha: { width: 132, height: 132, marginBottom: 2 },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    maxHeight: '78%',
+    backgroundColor: '#141018',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: st.accentSoft,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 18,
+  },
+  sheetGrip: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 17,
+    letterSpacing: -0.2,
+    color: '#ffffff',
+    marginBottom: 10,
+  },
+  sheetList: { flexGrow: 0 },
+  scapeGroup: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 9.5,
+    letterSpacing: 2.2,
+    color: 'rgba(255,255,255,0.38)',
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  scapeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  scapeRowOn: { borderColor: st.accent, backgroundColor: st.accentSoft },
+  scapeText: { flex: 1 },
+  scapeName: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14.5,
+    color: '#ffffff',
+  },
+  scapeHint: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.42)',
+    marginTop: 1,
+  },
   modalSecondary: { paddingVertical: 12, alignItems: 'center' },
   modalSecondaryTxt: {
     fontFamily: BrandFonts.medium,
