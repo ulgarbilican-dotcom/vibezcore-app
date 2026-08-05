@@ -70,6 +70,10 @@ export type Settings = {
    *  te kiezen. `null` als waarde betekent bewust GEEN geluid; ontbreekt de
    *  sleutel, dan geldt de standaard uit soundscapes.ts. */
   soundscapeByState: Record<string, string | null>;
+  /** Waar de begeleiding vandaan komt: telefoon, bracelet, of privé.
+   *  Zie data/guidance.ts — de bracelet-kanalen vragen hardware die er nog
+   *  niet is, dus tot die tijd valt alles terug op de telefoon. */
+  guidanceChannel: 'phone' | 'bracelet' | 'private';
 };
 
 const defaults: Settings = {
@@ -86,6 +90,7 @@ const defaults: Settings = {
   voiceCuesChosen: false,
   breathOnboardingCompletedAt: null,
   soundscapeByState: {},
+  guidanceChannel: 'phone',
 };
 
 let state: Settings = { ...defaults };
@@ -134,6 +139,11 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
+              : {}),
+            ...(obj.guidanceChannel === 'phone' ||
+            obj.guidanceChannel === 'bracelet' ||
+            obj.guidanceChannel === 'private'
+              ? { guidanceChannel: obj.guidanceChannel }
               : {}),
             ...(obj.soundscapeByState &&
             typeof obj.soundscapeByState === 'object' &&

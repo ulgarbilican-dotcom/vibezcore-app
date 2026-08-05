@@ -63,6 +63,7 @@ import {
   soundscapeByKey,
 } from '@/data/soundscapes';
 import { playScape, stopScape } from '@/services/soundscape';
+import { CHANNELS, channelByKey, type GuidanceChannel } from '@/data/guidance';
 import {
   claimVoiceSource,
   playBreathCue,
@@ -259,6 +260,20 @@ export default function BreathSessionScreen() {
   const scape = soundscapeByKey(scapeKey);
   const [scapeOpen, setScapeOpen] = useState(false);
 
+  /* ── Waar de begeleiding vandaan komt ───────────────────────────────
+     De haptiek die er stond is die van de TELEFOON. De bracelet is een ander
+     kanaal, en privé is dat kanaal zonder scherm en zonder geluid.
+     Zolang er geen bracelet verbonden is, valt alles terug op de telefoon —
+     stil falen zou hier betekenen dat iemand een sessie start die niets doet. */
+  const [channelKey, setChannelKey] = useSetting('guidanceChannel');
+  const braceletReady = false; /* [HARDWARE] Fall 2026 — nog geen verbinding. */
+  const channel: GuidanceChannel =
+    channelByKey(channelKey).needsBracelet && !braceletReady
+      ? 'phone'
+      : channelKey;
+  const isPrivate = channel === 'private';
+  const [chanOpen, setChanOpen] = useState(false);
+
   const pickScape = useCallback(
     (k: string | null) => {
       Haptics.selectionAsync();
@@ -286,7 +301,13 @@ export default function BreathSessionScreen() {
      inademing, en dan moet je hem wakker tikken terwijl je juist niets
      hoort te doen. Het is de meest zichtbare fout in een sessie en hij kost
      één regel. Wordt automatisch opgeheven zodra je het scherm verlaat. */
-  useKeepAwake();
+  /* Het scherm blijft aan tijdens élke sessie, ook in privé.
+     Ik had privé eerst als "scherm uit" gebouwd en dat was fout (operator,
+     4 augustus 2026): het beeld blijft gewoon meelopen. Het verschil is dat
+     je er niet naar hóéft te kijken en de telefoon niet hoeft vast te houden
+     — kijk je toch, dan staat het er. Een scherm dat halverwege uitvalt zou
+     dat juist onmogelijk maken. */
+  useKeepAwake('breath-session');
 
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
@@ -319,6 +340,8 @@ export default function BreathSessionScreen() {
   /* De fase-loop draait buiten React om, dus de actuele instellingen komen
      uit refs. Anders leest een lopende sessie de waarden van de render
      waarin hij begon. */
+  const channelRef = useRef<GuidanceChannel>('phone');
+  channelRef.current = channel;
   const voiceRef = useRef(voiceOn);
   const hapticRef = useRef(hapticsOn);
   const roundsRef = useRef(rounds);
@@ -422,7 +445,9 @@ export default function BreathSessionScreen() {
       setPhase(k);
       setSecsLeft(def.secs);
 
-      if (hapticRef.current) {
+      /* Bij bracelet en privé zwijgt de telefoon: het ritme zit dan op de
+         pols en twee bronnen tegelijk is geen begeleiding maar ruis. */
+      if (hapticRef.current && channelRef.current === 'phone') {
         /* De trilling draagt de HELE fase, niet alleen de overgang: een tik
            aan het begin zegt niets over de vier seconden erna. In- en
            uitademen krijgen een reeks die respectievelijk aanzwelt en
@@ -844,7 +869,8 @@ export default function BreathSessionScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => setHapticsOn((h) => !h)}
+              onPress={() => setChanOpen(true)}
+              onLongPress={() => setHapticsOn((h) => !h)}
               style={s.channel}
               hitSlop={8}
             >
@@ -857,10 +883,13 @@ export default function BreathSessionScreen() {
                 ◉)))
               </Text>
               <Text style={[s.channelLabel, !hapticsOn && s.channelOff]}>
-                Haptics
+                Guidance
               </Text>
-              <Text style={[s.channelState, !hapticsOn && s.channelOff]}>
-                {hapticsOn ? 'ON' : 'OFF'}
+              <Text
+                style={[s.channelState, !hapticsOn && s.channelOff]}
+                numberOfLines={1}
+              >
+                {hapticsOn ? channelByKey(channel).name.toUpperCase() : 'OFF'}
               </Text>
             </Pressable>
           </View>
@@ -923,6 +952,71 @@ export default function BreathSessionScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* ── Waar de begeleiding vandaan komt ─────────────────────────────
+           Zelfde vel als bij het geluid, zodat er één manier van kiezen is.
+           De bracelet-kanalen staan er AL, gedimd, met hun datum erbij. Dat
+           is geen reclame op een verkeerde plek: dit is precies het moment
+           waarop iemand merkt dat zijn telefoon in zijn hand moet blijven —
+           en dan is het eerlijk om te tonen dat daar iets voor komt. */}
+      <Modal
+        visible={chanOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setChanOpen(false)}
+      >
+        <Pressable style={s.sheetBackdrop} onPress={() => setChanOpen(false)}>
+          <Pressable style={s.sheet} onPress={() => {}}>
+            <View style={s.sheetGrip} />
+            <Text style={s.sheetTitle}>Guidance</Text>
+            {CHANNELS.map((c) => {
+              const locked = c.needsBracelet && !braceletReady;
+              const on = c.key === channel && !locked;
+              return (
+                <Pressable
+                  key={c.key}
+                  disabled={locked}
+                  style={[s.scapeRow, on && s.scapeRowOn]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setChannelKey(c.key);
+                    setChanOpen(false);
+                  }}
+                >
+                  <c.Icon
+                    size={19}
+                    color={
+                      on
+                        ? st.accent
+                        : locked
+                          ? 'rgba(255,255,255,0.22)'
+                          : 'rgba(255,255,255,0.45)'
+                    }
+                    strokeWidth={2.2}
+                  />
+                  <View style={s.scapeText}>
+                    <Text
+                      style={[
+                        s.scapeName,
+                        on && { color: st.accent },
+                        locked && { color: 'rgba(255,255,255,0.32)' },
+                      ]}
+                    >
+                      {c.name}
+                    </Text>
+                    <Text style={s.scapeHint}>
+                      {locked ? `${c.hint} · Fall 2026` : c.hint}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+            <Pressable style={s.modalBtn} onPress={() => setChanOpen(false)}>
+              <Text style={s.modalBtnTxt}>Done</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Welk geluid eronder ──────────────────────────────────────────
            Dertien opties passen niet in een rij, dus een vel met de vier
