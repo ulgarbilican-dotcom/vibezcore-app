@@ -39,11 +39,12 @@ import {
   type BreathStateKey,
 } from '@/data/breath-states';
 import { useBreathHistory } from '@/utils/breath-history';
+import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -73,10 +74,10 @@ const SCREEN_H = Dimensions.get('window').height;
    dus hij hoort niet per scherm te verschillen. */
 const ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
 
-/* CALM CONTROL staat vooraan geselecteerd: dat is de toestand van de
-   onboarding en van de gratis sessie, dus wie hier voor het eerst komt ziet
-   wat hij net gedaan heeft. */
-const DEFAULT_INDEX = ORDER.indexOf('calm');
+/* Waar de pagina op opent als er nog niets te suggereren valt: CALM CONTROL,
+   de toestand van de onboarding en van de gratis sessie. Zodra er historiek
+   is neemt de suggestie het over — zie `suggestion` hieronder. */
+const FALLBACK_INDEX = ORDER.indexOf('calm');
 
 /* Het beeldvak. VASTE hoogte, want de tekst eronder mag niet verspringen
    zodra een illustratie groter of kleiner staat — daarvoor bestaat
@@ -123,13 +124,29 @@ function fmt(sec: number) {
 }
 
 export default function BreathScreen() {
-  const [index, setIndex] = useState(DEFAULT_INDEX);
+  /* De suggestie bepaalt waar de pagina op OPENT. Bewust geen extra balk of
+     kaart erbij: het scherm ziet er precies hetzelfde uit, hij staat alleen
+     al op de juiste deur. Dat is de rustigste vorm die een aanbeveling kan
+     hebben — je hoeft hem niet weg te klikken als je iets anders wil, je
+     veegt gewoon door.
+     Eén keer bepaald bij het openen; hem laten meebewegen met de klok zou
+     de pagina onder je handen laten verspringen. */
+  const history = useBreathHistory();
+  const suggestion = useMemo(
+    () => (history.length > 0 ? suggestBreath(history, new Date()) : null),
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    [history.length > 0],
+  );
+  const startIndex = suggestion
+    ? ORDER.indexOf(suggestion.state)
+    : FALLBACK_INDEX;
+
+  const [index, setIndex] = useState(FALLBACK_INDEX);
   const st = BREATH_STATES[ORDER[index]];
 
   const pagerRef = useRef<ScrollView | null>(null);
   const didPlace = useRef(false);
   const pagerReady = useRef(false);
-  const history = useBreathHistory();
 
   /* ── Eerste keer: naar de onboarding ────────────────────────────────
      Ongewijzigd overgenomen van de vorige versie van dit scherm. De vlag is
@@ -294,9 +311,10 @@ export default function BreathScreen() {
             if (didPlace.current) return;
             didPlace.current = true;
             pagerRef.current?.scrollTo({
-              x: DEFAULT_INDEX * SCREEN_W,
+              x: startIndex * SCREEN_W,
               animated: false,
             });
+            setIndex(startIndex);
             setTimeout(() => {
               pagerReady.current = true;
             }, 120);
