@@ -161,9 +161,15 @@ export default function BreathScreen() {
      als je van een sessie terugkomt. Dat is de bedoeling: het is een drempel
      die je even laat landen, geen scherm dat je één keer wegklikt. */
   const [intro, setIntro] = useState(true);
+  /* De teller dwingt een VERSE opbouw van het beeld bij elke terugkeer. Zonder
+     dat blijft het onderdeel staan waar het stond — op de mandala — en zie je
+     de gezichten nooit meer terug. Nu begint de reeks elke keer opnieuw bij de
+     foto (operator, 5 augustus 2026). */
+  const [introRun, setIntroRun] = useState(0);
   useFocusEffect(
     useCallback(() => {
       setIntro(true);
+      setIntroRun((n) => n + 1);
     }, []),
   );
 
@@ -332,14 +338,23 @@ export default function BreathScreen() {
           wat je ziet vóór je het ziet. */}
       {intro ? (
         <View style={s.introWrap}>
-          <SlideIntro onTapOrb={() => {}} />
+          <SlideIntro key={introRun} onTapOrb={() => {}} />
           <Pressable
             onPress={() => setIntro(false)}
-            style={[s.cta, { borderColor: st.accent, marginTop: 28 }]}
+            /* Wit en VOL, niet omlijnd in de kleur van de toestand (operator,
+               5 augustus 2026). Dit is het enige wat je hier kunt doen, en op
+               een scherm dat verder uit één lichtgevend beeld op zwart bestaat
+               is wit het enige dat harder spreekt dan die figuur. Verderop, bij
+               de vijf toestanden, blijven de knoppen omlijnd — daar concurreert
+               de kleur van de toestand niet met een enkel beeld maar draagt ze
+               betekenis. */
+            style={[s.cta, s.ctaSolid, { marginTop: 28 }]}
             android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
           >
-            <Text style={[s.ctaTxt, { color: st.accent }]}>CHOOSE YOUR MODE</Text>
-            <ArrowRight size={17} color={st.accent} strokeWidth={2} />
+            <Text style={[s.ctaTxt, { color: '#0a0a0a' }]}>
+              CHOOSE YOUR MODE
+            </Text>
+            <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
           </Pressable>
         </View>
       ) : (
@@ -670,6 +685,10 @@ const s = StyleSheet.create({
      icoon van de app over élk scherm heen, en zonder deze marge liep de
      laatste letter van de kop eronder door. */
   header: { alignItems: 'center', marginTop: 6, paddingHorizontal: 30 },
+  ctaSolid: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
   introWrap: {
     flex: 1,
     alignItems: 'center',
