@@ -52,6 +52,17 @@ export type Soundscape = {
   group: SoundscapeGroup;
   Icon: LucideIcon;
   url: string;
+  /** Correctie op het volume, gemeten met ffmpeg (5 augustus 2026).
+   *
+   *  De dertien opnames komen van dertien makers en staan 33 decibel uit
+   *  elkaar: Depths meet -10,7 LUFS en Night -43,7. Dat is een factor 45 in
+   *  amplitude, dus geen enkele instelling kan voor alle dertien kloppen —
+   *  wie Depths op een prettig niveau zet, hoort Night niet meer.
+   *
+   *  Deze factor brengt ze allemaal op ongeveer -30 LUFS. Gemeten over de
+   *  eerste dertig seconden; vervang je een bestand, dan hoort dit getal
+   *  opnieuw gemeten te worden. */
+  gain: number;
 };
 
 export const SOUNDSCAPES: Soundscape[] = [
@@ -63,6 +74,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'NOISE',
     Icon: AudioWaveform,
     url: `${CDN}/cosmic-scapes-relaxing-layered-brown-noise-304725.mp3`,
+    gain: 0.14,
   },
   {
     key: 'soft',
@@ -71,6 +83,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'NOISE',
     Icon: AudioLines,
     url: `${CDN}/danevaer-low-pink-noise-434732.mp3`,
+    gain: 1.41,
   },
   {
     key: 'static',
@@ -79,6 +92,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'NOISE',
     Icon: Antenna,
     url: `${CDN}/themediaguy-soft-soothing-deep-white-noise-378857.mp3`,
+    gain: 0.19,
   },
   {
     key: 'fan',
@@ -87,6 +101,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'NOISE',
     Icon: Fan,
     url: `${CDN}/u_sqbdol9i82-fan-noise-to-fall-asleep-573497.mp3`,
+    gain: 0.89,
   },
 
   /* ── WATER ────────────────────────────────────────────────────────── */
@@ -97,6 +112,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'WATER',
     Icon: CloudRain,
     url: `${CDN}/eryliaa-gentle-rain-for-relaxation-and-sleep-337279.mp3`,
+    gain: 2.16,
   },
   {
     key: 'storm',
@@ -105,6 +121,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'WATER',
     Icon: CloudLightning,
     url: `${CDN}/lofivision-rain-and-thunder-321270.mp3`,
+    gain: 0.49,
   },
   {
     key: 'shore',
@@ -113,6 +130,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'WATER',
     Icon: WavesHorizontal,
     url: `${CDN}/freesound_community-waves-53479.mp3`,
+    gain: 1.00,
   },
   {
     key: 'depths',
@@ -121,6 +139,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'WATER',
     Icon: Anchor,
     url: `${CDN}/dragon-studio-deep-sea-underwater-ambience-472383.mp3`,
+    gain: 0.11,
   },
 
   /* ── EARTH ────────────────────────────────────────────────────────── */
@@ -131,6 +150,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'EARTH',
     Icon: Flame,
     url: `${CDN}/soundreality-fire-ambience-528618.mp3`,
+    gain: 0.79,
   },
   {
     key: 'dawn',
@@ -139,6 +159,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'EARTH',
     Icon: Sunrise,
     url: `${CDN}/freesound_community-amazon-jungle-morning-24939.mp3`,
+    gain: 0.33,
   },
   {
     key: 'canopy',
@@ -147,6 +168,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'EARTH',
     Icon: Bird,
     url: `${CDN}/placidplace-nature-soundstropicaljunglebirds-108380.mp3`,
+    gain: 0.91,
   },
   {
     key: 'night',
@@ -155,6 +177,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'EARTH',
     Icon: Moon,
     url: `${CDN}/freesound_community-cricketsandfrogs-19596.mp3`,
+    gain: 4.00,
   },
 
   /* ── TONE ─────────────────────────────────────────────────────────── */
@@ -165,6 +188,7 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'TONE',
     Icon: Bell,
     url: `${CDN}/freesound_community-singing-bowl-deep-sound-27532.mp3`,
+    gain: 0.17,
   },
 ];
 

@@ -31,7 +31,21 @@ import { soundscapeByKey } from '@/data/soundscapes';
 
 /* Volume waarop een soundscape ONDER de stem hoort te liggen. Hoger en de
    cues verdrinken; lager en je hoort hem niet meer. */
-const LEVEL = 0.55;
+/* Drie standen voor de gebruiker. De middelste is de standaard: ongeveer
+   negen decibel onder de stem, midden in wat in deze categorie gebruikelijk
+   is (twaalf tot achttien onder). Op 0,55 stond hij vijf decibel eronder en
+   dat is te luid — dan concurreert de achtergrond met de instructie. */
+export const SCAPE_LEVELS = { soft: 0.2, medium: 0.35, loud: 0.55 } as const;
+export type ScapeLevel = keyof typeof SCAPE_LEVELS;
+let level: number = SCAPE_LEVELS.medium;
+
+/** Zet de sterkte, ook terwijl er iets speelt. */
+export function setScapeLevel(l: ScapeLevel): void {
+  level = SCAPE_LEVELS[l];
+  const p = player;
+  if (p) rampTo(p, Math.min(1, level * (currentGain || 1)), 300);
+}
+let currentGain = 1;
 const FADE_IN_MS = 2000;
 const FADE_OUT_MS = 1500;
 const STEP_MS = 60;
@@ -105,16 +119,29 @@ export async function playScape(key: string | null): Promise<void> {
     return;
   }
 
+  /* ── De oude gaat er DIRECT uit ─────────────────────────────────────
+     Hier stond een uitvaging van 400 ms terwijl de nieuwe alvast begon. Dat
+     was fout op twee manieren. Ten eerste deelden alle vervagingen één timer,
+     dus de opkomst van de nieuwe annuleerde het uitvagen van de oude — en die
+     bleef op halve sterkte doorspelen. Zo hoorde je twee, soms drie geluiden
+     door elkaar. Ten tweede is overvloeien hier niet eens gewenst: wie een
+     ander geluid kiest wil dát geluid horen, meteen, om te beoordelen of het
+     bevalt.
+     Dus: stoppen, opruimen, en pas dan de volgende aanmaken. */
+  stopFade();
   const old = player;
+  player = null;
   if (old) {
-    rampTo(old, 0, 400, () => {
-      try {
-        old.remove();
-      } catch {}
-    });
+    try {
+      old.pause();
+    } catch {}
+    try {
+      old.remove();
+    } catch {}
   }
 
   playingKey = scape.key;
+  currentGain = scape.gain ?? 1;
   const src = await localOrRemote(scape.key, scape.url);
 
   /* Tussen het opvragen en het aankomen kan de gebruiker iets anders hebben
@@ -127,7 +154,11 @@ export async function playScape(key: string | null): Promise<void> {
     p.volume = 0;
     p.play();
     player = p;
-    rampTo(p, LEVEL, FADE_IN_MS);
+    /* Doelsterkte = het gekozen niveau maal de correctie van dít bestand.
+       De dertien opnames komen van dertien makers en staan niet op gelijk
+       niveau; zonder die correctie klopt geen enkele instelling voor alle
+       dertien. Zie `gain` in data/soundscapes.ts. */
+    rampTo(p, Math.min(1, level * (scape.gain ?? 1)), FADE_IN_MS);
   } catch {
     playingKey = null;
   }

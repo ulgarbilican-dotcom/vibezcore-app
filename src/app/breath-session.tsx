@@ -61,7 +61,12 @@ import {
   SOUNDSCAPES,
   soundscapeByKey,
 } from '@/data/soundscapes';
-import { playScape, stopScape } from '@/services/soundscape';
+import {
+  playScape,
+  setScapeLevel,
+  stopScape,
+  type ScapeLevel,
+} from '@/services/soundscape';
 import {
   claimVoiceSource,
   playBreathCue,
@@ -273,6 +278,7 @@ export default function BreathSessionScreen() {
   const [scapeKey, setScapeKey] = useState<string | null>(null);
   const scape = soundscapeByKey(scapeKey);
   const [scapeOpen, setScapeOpen] = useState(false);
+  const [scapeLevel, setScapeLevelLocal] = useState<ScapeLevel>('medium');
 
   /* ── Waar de begeleiding vandaan komt ───────────────────────────────
      De haptiek die er stond is die van de TELEFOON. De bracelet is een ander
@@ -1139,6 +1145,39 @@ export default function BreathSessionScreen() {
           <Pressable style={s.sheet} onPress={() => {}}>
             <View style={s.sheetGrip} />
             <Text style={s.sheetTitle}>Background sound</Text>
+            {/* Drie standen, geen schuifregelaar. Die vraagt een extra pakket,
+                is lastig te raken terwijl je ademt, en het verschil tussen
+                0,30 en 0,35 hoort niemand. De stem blijft ongeregeld: die is
+                de instructie, en wie die zachter zet mist cues en wijt dat aan
+                de app. Het volume van het toestel regelt het geheel al. */}
+            <View style={s.levelRow}>
+              {(['soft', 'medium', 'loud'] as const).map((l) => {
+                const on = l === scapeLevel;
+                return (
+                  <Pressable
+                    key={l}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setScapeLevelLocal(l);
+                      setScapeLevel(l);
+                    }}
+                    style={[
+                      s.levelChip,
+                      on && { borderColor: st.accent, backgroundColor: st.accentSoft },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.levelTxt,
+                        on && { color: st.accent },
+                      ]}
+                    >
+                      {l.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             <Pressable
               style={[s.scapeRow, !scape && s.scapeRowOn]}
@@ -1840,6 +1879,21 @@ function makeStyles(st: BreathState) {
     marginBottom: 10,
   },
   sheetList: { flexGrow: 0 },
+  levelRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  levelChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+  },
+  levelTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.5)',
+  },
   scapeGroup: {
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
