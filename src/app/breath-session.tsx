@@ -1142,7 +1142,16 @@ export default function BreathSessionScreen() {
         onRequestClose={() => setScapeOpen(false)}
       >
         <Pressable style={s.sheetBackdrop} onPress={() => setScapeOpen(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+          <Pressable
+            style={[
+              s.sheet,
+              /* De navigatiebalk van het toestel hoort er NIET overheen te
+                 vallen. Zonder deze inzet stond Done half onder de balk en was
+                 niet te lezen wat er stond. */
+              { paddingBottom: Math.max(insets.bottom, 12) + 12 },
+            ]}
+            onPress={() => {}}
+          >
             <View style={s.sheetGrip} />
             <Text style={s.sheetTitle}>Background sound</Text>
             {/* Drie standen, geen schuifregelaar. Die vraagt een extra pakket,
@@ -1179,6 +1188,7 @@ export default function BreathSessionScreen() {
               })}
             </View>
 
+            <ScrollView style={s.sheetList} showsVerticalScrollIndicator={false}>
             <Pressable
               style={[s.scapeRow, !scape && s.scapeRowOn]}
               onPress={() => pickScape(null)}
@@ -1196,7 +1206,6 @@ export default function BreathSessionScreen() {
               </View>
             </Pressable>
 
-            <ScrollView style={s.sheetList} showsVerticalScrollIndicator={false}>
               {GROUP_ORDER.map((g) => (
                 <View key={g}>
                   <Text style={s.scapeGroup}>{g}</Text>
@@ -1853,7 +1862,7 @@ function makeStyles(st: BreathState) {
     justifyContent: 'flex-end',
   },
   sheet: {
-    maxHeight: '78%',
+    maxHeight: '84%',
     backgroundColor: '#141018',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -1861,7 +1870,6 @@ function makeStyles(st: BreathState) {
     borderColor: st.accentSoft,
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 18,
   },
   sheetGrip: {
     alignSelf: 'center',
@@ -1878,7 +1886,12 @@ function makeStyles(st: BreathState) {
     color: '#ffffff',
     marginBottom: 10,
   },
-  sheetList: { flexGrow: 0 },
+  /* `flexShrink` in plaats van een vrije hoogte. Zonder dit groeit de lijst
+     met dertien regels tot voorbij het vel en duwt hij de Done-knop onder de
+     navigatiebalk van het toestel — precies wat de operator zag: een knop die
+     half onzichtbaar onderaan bleef hangen. Nu krimpt de lijst en houdt de
+     knop zijn plek. */
+  sheetList: { flexShrink: 1 },
   levelRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
   levelChip: {
     flex: 1,
