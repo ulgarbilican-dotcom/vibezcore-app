@@ -256,8 +256,17 @@ const FACES_CUTOUT =
    leggen ze een langere weg af in dezelfde tijd — en dat leest als haast.
    Vijf seconden per beweging geeft de boog de ruimte die hij nodig heeft. */
 /* Hoe lang de gezichten blijven staan voor de overgang begint, en hoe lang
-   die overgang duurt. Er is geen terugweg meer, dus verder niets. */
-const LOOK_MS = 3600;
+   die overgang duurt. Er is geen terugweg meer, dus verder niets.
+
+   Twee seconden kijken (operator, 5 augustus 2026, was 3,6). Sinds dit beeld
+   niet meer alleen in de onboarding staat maar bij ELKE keer dat je de
+   Breath-tab opent, telt de wachttijd anders: één keer is 3,6 seconden een
+   rustig begin, tien keer per dag is het een drempel. Twee seconden is nog
+   altijd lang genoeg om de gezichten te zien staan.
+
+   De overgang zelf blijft vijf tellen: die duur gaat over de beweging, en
+   die is niet minder mooi geworden omdat je hem vaker ziet. */
+const LOOK_MS = 2000;
 const RISE_MS = 5000;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
