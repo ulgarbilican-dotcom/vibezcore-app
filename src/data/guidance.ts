@@ -5,18 +5,22 @@
    is er één van: die van de TELEFOON. De operator wees er terecht op dat dat
    iets anders is dan de bracelet (4 augustus 2026).
 
-   ── Waarom de bracelet geen "telefoon aan je pols" is ─────────────────
-   Volgens het BLE-contract (CLAUDE.md §6) draait de bracelet AUTONOOM: de app
-   stuurt één commando — modus, duur, START — en de hardware houdt het ritme
-   daarna zelf bij op eigen timers. Verbindingsverlies stopt de sessie niet.
+   ── De bracelet-kanalen bestaan nog NIET in het BLE-contract ──────────
+   Let op, want ik had dit eerst fout: spec v2.3 §8 (CLAUDE.md §6) beschrijft
+   de EIGEN modi van de bracelet — Boost, Sharp Focus, Calm Control en de rest
+   als losstaande haptische sessies. Daar stuurt de app één commando (modus,
+   duur, START) en draait de hardware autonoom verder op eigen timers.
 
-   Er gaat dus geen trilling per ademfase over de lijn. Dat is geen beperking
-   die we omzeilen maar het ontwerp: een armband die op zichzelf doorloopt is
-   betrouwbaarder dan één die aan een telefoonverbinding hangt, en hij werkt
-   als je toestel in je tas zit.
+   Dat contract gaat NIET over ademhaling. Een ademsessie vanuit de app laten
+   begeleiden op de pols is een nieuwe functie, en het commando daarvoor
+   bestaat nog niet: het vraagt een uitbreiding van het contract én firmware
+   die per fase een puls kan geven. Dat is een operator- en hardwarebeslissing
+   (CLAUDE.md §1: nooit zelf een BLE-contract verzinnen), en tot die er is
+   staan deze twee kanalen gedimd in beeld.
 
-   Gevolg voor dit bestand: bij BRACELET stuurt de app het commando en houdt
-   ze verder haar mond.
+   Wat de app-kant betreft is alles er wel klaar voor: kanaalkeuze, de terugval
+   naar de telefoon, en het zwijgen van telefoon en stem zodra de pols het
+   overneemt. Zodra het commando bestaat is het aansluiten ervan klein werk.
 
    PRIVATE gaat één stap verder, maar niet de stap die ik er eerst in bouwde.
    Het scherm blijft gewoon meelopen — je hóéft er alleen niet naar te kijken,
