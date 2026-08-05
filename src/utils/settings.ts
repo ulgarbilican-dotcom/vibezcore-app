@@ -74,6 +74,11 @@ export type Settings = {
    *  Zie data/guidance.ts — de bracelet-kanalen vragen hardware die er nog
    *  niet is, dus tot die tijd valt alles terug op de telefoon. */
   guidanceChannel: 'phone' | 'bracelet' | 'private';
+  /** Welke dagelijkse herinneringen aan staan. Zie services/reminders.ts —
+   *  drie vaste momenten, geen vrije tijdkiezer. Standaard alle drie UIT:
+   *  een app die ongevraagd begint te porren verliest precies de mensen die
+   *  hij wil houden. */
+  reminders: Record<string, boolean>;
 };
 
 const defaults: Settings = {
@@ -91,6 +96,7 @@ const defaults: Settings = {
   breathOnboardingCompletedAt: null,
   soundscapeByState: {},
   guidanceChannel: 'phone',
+  reminders: {},
 };
 
 let state: Settings = { ...defaults };
@@ -139,6 +145,11 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
+              : {}),
+            ...(obj.reminders &&
+            typeof obj.reminders === 'object' &&
+            !Array.isArray(obj.reminders)
+              ? { reminders: obj.reminders }
               : {}),
             ...(obj.guidanceChannel === 'phone' ||
             obj.guidanceChannel === 'bracelet' ||

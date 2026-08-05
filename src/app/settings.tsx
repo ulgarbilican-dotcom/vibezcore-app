@@ -24,6 +24,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import { SLOTS, ensurePermission, syncReminders } from '@/services/reminders';
 import {
   DevUserOverride,
   setDevBraceletActivated,
@@ -58,6 +59,7 @@ export default function SettingsScreen() {
      naar Settings (operator-feedback "library is content-focused,
      preferences horen hier"). */
   const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
+  const [reminders, setReminders] = useSetting('reminders');
   /* Iter v170: voice cues toggle verplaatst naar in-context (Breath tab +
      Bracelet active). Setting key blijft bestaan in storage; Breath tab
      leest 'm via z'n eigen useSetting('voiceCues'). */
@@ -156,6 +158,45 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.title}>Settings</Text>
+
+        {/* ── HERINNERINGEN ─────────────────────────────────────────
+            Het grootste gat tegenover de concurrentie: die sturen dagelijks
+            iets, wij stuurden niets. Drie vaste momenten in plaats van een
+            vrije tijdkiezer — dat scheelt een pakket en een scherm, en het
+            sluit aan op de tijdstippen waar de suggestie al mee rekent.
+            Standaard alle drie UIT. Een app die ongevraagd begint te porren
+            verliest precies de mensen die hij wil houden. */}
+        <Text style={s.sectionLabel}>Daily reminders</Text>
+        <View style={s.card}>
+          {SLOTS.map((slot, i) => (
+            <View key={slot.slot}>
+              {i > 0 && <View style={s.divider} />}
+              <View style={s.row}>
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>
+                    {slot.label} · {slot.when}
+                  </Text>
+                  <Text style={s.rowSub}>{slot.body}</Text>
+                </View>
+                <Switch
+                  value={reminders[slot.slot] === true}
+                  onValueChange={async (v) => {
+                    const next = { ...reminders, [slot.slot]: v };
+                    /* Toestemming eerst. Wordt die geweigerd, dan springt de
+                       schakelaar terug in plaats van te doen alsof er iets
+                       gepland staat. */
+                    if (v && !(await ensurePermission())) return;
+                    await setReminders(next);
+                    void syncReminders(next);
+                  }}
+                  trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                  thumbColor="#ffffff"
+                  ios_backgroundColor="#3a3a3a"
+                />
+              </View>
+            </View>
+          ))}
+        </View>
 
         {/* ── PLAYBACK ────────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>Playback</Text>
