@@ -254,11 +254,14 @@ export default function BreathSessionScreen() {
 
   /* Het achtergrondgeluid. Per TOESTAND onthouden: wie voor slapen Deep wil
      en voor focus Rain, hoort dat niet elke keer opnieuw te kiezen. */
-  const [scapes, setScapes] = useSetting('soundscapeByState');
+  /* Soundscape wordt NIET onthouden (operator, 4 augustus 2026). Anders dan
+     stem en begeleiding is dit geen instelling maar een keuze van het moment:
+     elke sessie begint stil, en wie iets wil zet het aan. Daarom ook geen
+     vraag om het als standaard te bewaren. */
   /* Geen `??` met een standaard: ontbreekt de sleutel, dan is er bewust GEEN
      geluid. Een achtergrondgeluid dat vanzelf begint is een verrassing, en
      een sessie hoort niet te verrassen. */
-  const scapeKey = scapes[st.key] ?? null;
+  const [scapeKey, setScapeKey] = useState<string | null>(null);
   const scape = soundscapeByKey(scapeKey);
   const [scapeOpen, setScapeOpen] = useState(false);
 
@@ -267,7 +270,20 @@ export default function BreathSessionScreen() {
      kanaal, en privé is dat kanaal zonder scherm en zonder geluid.
      Zolang er geen bracelet verbonden is, valt alles terug op de telefoon —
      stil falen zou hier betekenen dat iemand een sessie start die niets doet. */
-  const [channelKey, setChannelKey] = useSetting('guidanceChannel');
+  const [channelDefault, setChannelDefault] = useSetting('guidanceChannel');
+  const [channelKey, setChannelLocal] = useState(channelDefault);
+  const tookChannel = useRef(false);
+  useEffect(() => {
+    if (tookChannel.current) return;
+    tookChannel.current = true;
+    setChannelLocal(channelDefault);
+  }, [channelDefault]);
+
+  /* Wat er gevraagd wordt zodra iets afwijkt van de opgeslagen stand. */
+  const [askDefault, setAskDefault] = useState<null | {
+    apply: () => void;
+    what: string;
+  }>(null);
   const braceletReady = false; /* [HARDWARE] Fall 2026 — nog geen verbinding. */
   const channel: GuidanceChannel =
     channelByKey(channelKey).needsBracelet && !braceletReady
@@ -279,12 +295,12 @@ export default function BreathSessionScreen() {
   const pickScape = useCallback(
     (k: string | null) => {
       Haptics.selectionAsync();
-      setScapes({ ...scapes, [st.key]: k });
+      setScapeKey(k);
       /* Meteen laten horen wat je kiest — ook vóór de sessie. Anders kies je
          blind en merk je pas halverwege dat het niet is wat je wilde. */
       void playScape(k);
     },
-    [scapes, setScapes, st.key],
+    [],
   );
 
   const CYCLE_S = useMemo(() => cycleSeconds(tech), [tech]);
@@ -325,7 +341,25 @@ export default function BreathSessionScreen() {
      ondertussen weer terug. Twee waarheden over één ding leveren altijd een
      verliezer op, en dat was de gebruiker.
      bracelet-control.tsx doet dit al zo; nu de ademkant ook. */
-  const [voiceOn, setVoiceOn] = useSetting('voiceCues');
+  /* ── De autostoel ───────────────────────────────────────────────────
+     Stem en begeleiding hebben een OPGESLAGEN stand en een stand voor DEZE
+     sessie. Je stapt in met je eigen instelling; verzet je iets, dan vraagt
+     de app één keer of dat voortaan zo moet. Zeg je nee, dan geldt het alleen
+     nu — en pas als je het ooit wéér verzet komt de vraag opnieuw.
+
+     Vandaar twee waarden naast elkaar. Schreef een tik meteen door naar de
+     instelling, dan was elke tijdelijke aanpassing meteen permanent en had de
+     vraag geen betekenis meer. */
+  const [voiceDefault, setVoiceDefault] = useSetting('voiceCues');
+  const [voiceOn, setVoiceOnLocal] = useState(voiceDefault);
+  /* Één keer overnemen zodra de opgeslagen waarde binnen is; daarna niet meer,
+     anders overschrijft een late lading je keuze van dit moment. */
+  const tookVoice = useRef(false);
+  useEffect(() => {
+    if (tookVoice.current) return;
+    tookVoice.current = true;
+    setVoiceOnLocal(voiceDefault);
+  }, [voiceDefault]);
   const [hapticsOn, setHapticsOn] = useState(true);
 
   const [phase, setPhase] = useState<Phase>('inhale');
@@ -810,7 +844,18 @@ export default function BreathSessionScreen() {
               /* Directe waarde, geen updater-functie: de setter van
                  useSetting neemt een waarde aan. Deze regel staat in de JSX,
                  dus `voiceOn` is die van de huidige render — vers per tik. */
-              onPress={() => setVoiceOn(!voiceOn)}
+              onPress={() => {
+                const v = !voiceOn;
+                setVoiceOnLocal(v);
+                /* Alleen vragen als je AFWIJKT van je eigen stand. Zet je hem
+                   terug naar de standaard, dan is er niets veranderd. */
+                if (v !== voiceDefault) {
+                  setAskDefault({
+                    what: `Voice ${v ? 'on' : 'off'}`,
+                    apply: () => void setVoiceDefault(v),
+                  });
+                }
+              }}
               style={s.channel}
               hitSlop={8}
             >
@@ -978,6 +1023,48 @@ export default function BreathSessionScreen() {
         )}
       </View>
 
+      {/* ── Zal ik dit onthouden? ─────────────────────────────────────────
+           Verschijnt alleen als je iets verzet dat AFWIJKT van je opgeslagen
+           stand. Zeg je nee, dan geldt de wijziging alleen deze sessie en
+           zwijgt de app tot je het ooit weer verzet.
+
+           Bewust niet na afloop van de sessie: dan is het moment voorbij en
+           weet je niet meer waar de vraag over gaat. En bewust niet bij
+           soundscapes — die zijn per sessie en hebben geen standaard. */}
+      <Modal
+        visible={askDefault !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAskDefault(null)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setAskDefault(null)}>
+          <Pressable style={s.modalCard} onPress={() => {}}>
+            <Text style={s.modalEyebrow}>{askDefault?.what.toUpperCase()}</Text>
+            <Text style={s.modalTitle}>Make this your default?</Text>
+            <Text style={s.modalBody}>
+              Every session will start this way. You can always change it
+              again.
+            </Text>
+            <Pressable
+              style={s.modalBtn}
+              onPress={() => {
+                askDefault?.apply();
+                setAskDefault(null);
+              }}
+            >
+              <Text style={s.modalBtnTxt}>Yes, remember it</Text>
+            </Pressable>
+            <Pressable
+              style={s.modalSecondary}
+              onPress={() => setAskDefault(null)}
+              hitSlop={8}
+            >
+              <Text style={s.modalSecondaryTxt}>Just this time</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ── Waar de begeleiding vandaan komt ─────────────────────────────
            Zelfde vel als bij het geluid, zodat er één manier van kiezen is.
            De bracelet-kanalen staan er AL, gedimd, met hun datum erbij. Dat
@@ -1004,8 +1091,14 @@ export default function BreathSessionScreen() {
                   style={[s.scapeRow, on && s.scapeRowOn]}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    setChannelKey(c.key);
+                    setChannelLocal(c.key);
                     setChanOpen(false);
+                    if (c.key !== channelDefault) {
+                      setAskDefault({
+                        what: `Guidance: ${c.name}`,
+                        apply: () => void setChannelDefault(c.key),
+                      });
+                    }
                   }}
                 >
                   <c.Icon
