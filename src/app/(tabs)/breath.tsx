@@ -144,6 +144,33 @@ export default function BreathScreen() {
 
   const [index, setIndex] = useState(FALLBACK_INDEX);
   const [infoOpen, setInfoOpen] = useState(false);
+
+  /* Twee getallen uit de historiek. Berekend en niet opgeslagen: een streak
+     die als getal wordt bewaard loopt uit de pas zodra iemand een dag mist en
+     de app die dag niet opent. */
+  const practice = useMemo(() => {
+    const now = new Date();
+    const weekAgo = now.getTime() - 7 * 864e5;
+    const weekMin = Math.round(
+      history
+        .filter((e) => e.ts >= weekAgo)
+        .reduce((sum, e) => sum + e.durSec, 0) / 60,
+    );
+
+    /* Aaneengesloten dagen terug vanaf vandaag. Vandaag nog niets gedaan
+       breekt de reeks NIET — de dag is nog niet voorbij. */
+    const days = new Set(
+      history.map((e) => new Date(e.ts).toDateString()),
+    );
+    let streak = 0;
+    const d = new Date(now);
+    if (!days.has(d.toDateString())) d.setDate(d.getDate() - 1);
+    while (days.has(d.toDateString())) {
+      streak += 1;
+      d.setDate(d.getDate() - 1);
+    }
+    return { weekMin, streak };
+  }, [history]);
   const st = BREATH_STATES[ORDER[index]];
 
   const pagerRef = useRef<ScrollView | null>(null);
@@ -530,17 +557,44 @@ export default function BreathScreen() {
         ))}
       </View>
 
-      <View style={s.footRow}>
-        <Text style={s.swipeTxt}>SWIPE TO EXPLORE</Text>
-        <Text style={s.footSep}>·</Text>
-        <Pressable onPress={() => router.push('/breath-history')} hitSlop={10}>
-          <Text style={s.historyTxt}>
-            {history.length > 0
-              ? `YOUR PRACTICE (${history.length})`
-              : 'YOUR PRACTICE'}
-          </Text>
-        </Pressable>
-      </View>
+      {/* ── Wat je gedaan hebt ───────────────────────────────────────────
+           Hier stond alleen "YOUR PRACTICE (4)" — een teller die niets zegt.
+           Vier sessies kunnen vier dagen op rij zijn of vier keer in maart.
+           Nu staat er wat iemand daadwerkelijk wil weten: hoe lang de reeks
+           is en hoeveel er deze week in zit. Beide leeg? Dan blijft het bij
+           de uitnodiging, want een streak van nul tonen ontmoedigt.
+
+           Bewust één regel en geen kaart: dit is de laatste regel van een
+           keuzescherm, niet het onderwerp ervan. */}
+      <Pressable
+        onPress={() => router.push('/breath-history')}
+        hitSlop={10}
+        style={s.footRow}
+      >
+        {practice.streak > 0 && (
+          <>
+            <Text style={[s.statNum, { color: st.accent }]}>
+              {practice.streak}
+            </Text>
+            <Text style={s.statLbl}>
+              DAY{practice.streak === 1 ? '' : 'S'}
+            </Text>
+            <Text style={s.footSep}>·</Text>
+          </>
+        )}
+        {practice.weekMin > 0 && (
+          <>
+            <Text style={[s.statNum, { color: st.accent }]}>
+              {practice.weekMin}
+            </Text>
+            <Text style={s.statLbl}>MIN THIS WEEK</Text>
+            <Text style={s.footSep}>·</Text>
+          </>
+        )}
+        <Text style={s.historyTxt}>
+          {history.length > 0 ? 'YOUR PRACTICE' : 'START YOUR PRACTICE'}
+        </Text>
+      </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -774,14 +828,20 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    gap: 8,
+    gap: 6,
     marginTop: 14,
+    paddingHorizontal: 12,
   },
-  swipeTxt: {
-    fontFamily: BrandFonts.medium,
+  statNum: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
+    letterSpacing: -0.2,
+  },
+  statLbl: {
+    fontFamily: BrandFonts.bold,
     fontSize: 9,
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 1.6,
+    color: 'rgba(255,255,255,0.42)',
   },
   footSep: { fontSize: 9, color: 'rgba(255,255,255,0.22)' },
   historyTxt: {

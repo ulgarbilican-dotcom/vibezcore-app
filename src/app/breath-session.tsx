@@ -83,7 +83,14 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ChevronRight, Settings, Volume2, VolumeX, X } from 'lucide-react-native';
+import {
+  ArrowRight,
+  ChevronRight,
+  Settings,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -1010,15 +1017,19 @@ export default function BreathSessionScreen() {
             <Text style={s.endTxt}>END SESSION</Text>
           </Pressable>
         ) : (
-          <Pressable onPress={start} style={s.startWrap}>
-            <ExpoGradient
-              colors={st.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.startBtn}
-            >
-              <Text style={s.startTxt}>START SESSION</Text>
-            </ExpoGradient>
+          /* Omlijnd, niet gevuld — dezelfde vorm als SELECT MODE op de
+             keuzepagina (operator, 4 augustus 2026: "start session is ook
+             niet mooi"). Een volle balk van vijftig punten is het zwaarste
+             element op een scherm dat verder uit één lichtgevende figuur op
+             zwart bestaat, en dat hoort de figuur te zijn. Twee schermen na
+             elkaar met dezelfde knopvorm lezen bovendien als één product. */
+          <Pressable
+            onPress={start}
+            style={[s.startBtn, { borderColor: st.accent }]}
+            android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+          >
+            <Text style={[s.startTxt, { color: st.accent }]}>START SESSION</Text>
+            <ArrowRight size={17} color={st.accent} strokeWidth={2} />
           </Pressable>
         )}
       </View>
@@ -1690,18 +1701,21 @@ function makeStyles(st: BreathState) {
      uit. De scrim — hetzelfde verloop, maar zonder clip — verscheen altijd
      wél, en dat verschil wees de weg. De ronding zit nu op het verloop
      zelf, dus er valt niets te clippen. */
-  startWrap: { height: BTN_H },
   startBtn: {
-    height: BTN_H,
-    borderRadius: 15,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
+    alignSelf: 'center',
+    paddingHorizontal: 30,
+    height: BTN_H,
+    borderRadius: BTN_H / 2,
+    borderWidth: 1,
   },
   startTxt: {
-    fontFamily: BrandFonts.bold,
+    fontFamily: BrandFonts.semibold,
     fontSize: 13.5,
     letterSpacing: 2.2,
-    color: '#ffffff',
   },
   endBtn: {
     height: BTN_H,
