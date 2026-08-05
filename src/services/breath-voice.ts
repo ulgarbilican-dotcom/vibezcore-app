@@ -22,6 +22,7 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { assetUri } from '@/services/asset-cache';
 
 /* ── Asset URLs op Bunny CDN ───────────────────────────────────────── */
 
@@ -58,6 +59,16 @@ const COMPLETION_URLS: Record<BreathKey, string> = {
   clarity: `${CDN_BASE}/clarity%20finished.mp3`,
   rest:    `${CDN_BASE}/rest%20finished.mp3`,
 };
+
+
+/** Alles wat deze dienst kan afspelen, als platte lijst.
+ *  Bestaat zodat de offline-laag weet wat er binnengehaald moet worden — en
+ *  zodat die lijst niet ergens anders met de hand wordt nagetypt en dan bij
+ *  de volgende opname stilletjes achterloopt. */
+export const VOICE_ASSET_URLS: string[] = [
+  ...Object.values(CUE_URLS),
+  ...Object.values(COMPLETION_URLS),
+];
 
 export type BreathKey = 'boost' | 'focus' | 'calm' | 'clarity' | 'rest';
 export type BreathPhase = 'inhale' | 'hold-in' | 'exhale' | 'hold-out';
@@ -225,7 +236,11 @@ export function stopVoice(): void {
 
 /* ── Internals ─────────────────────────────────────────────────────── */
 
-function getOrCreatePlayer(url: string): AudioPlayer {
+/** Alle stembestanden lopen hierlangs, en dus ook langs de offline-laag:
+ *  staat het bestand op het toestel, dan speelt dat en niet de CDN-versie.
+ *  Eén plek, want elke cue komt hier voorbij. */
+function getOrCreatePlayer(remote: string): AudioPlayer {
+  const url = assetUri(remote);
   let player = playerCache.get(url);
   if (!player) {
     player = createAudioPlayer({ uri: url });

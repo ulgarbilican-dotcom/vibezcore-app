@@ -55,6 +55,8 @@ import {
 import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
 import SplatField from '@/components/SplatField';
 import { mandalaCloud } from '@/components/mandala-geometry';
+import { assetUri } from '@/services/asset-cache';
+import { FACES_URL } from '@/services/offline-assets';
 import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -237,7 +239,7 @@ const WEAR_IMG =
    zwart vlak dat net niet het zwart van de app is, en dat zie je als een
    rechthoek zodra hij opkomt — een blok op het scherm in plaats van een
    gezicht dat verschijnt. Zonder achtergrond is er geen rand om te verraden. */
-const FACES = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
+const FACES = assetUri(FACES_URL);
 const FACES_CUTOUT =
   'https://vibezcore-audio.b-cdn.net/images/faces-removebg-preview.png';
 

@@ -31,6 +31,7 @@ import SessionArt, {
   prefetchSessionArt,
 } from '@/components/SessionArt';
 import Starfield from '@/components/Starfield';
+import { assetUri } from '@/services/asset-cache';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   BREATH_STATES,
@@ -417,7 +418,7 @@ export default function BreathScreen() {
                 />
                 {on && <View style={[s.thumbRing, { borderColor: t.accent }]} />}
                 <Image
-                  source={{ uri: SESSION_ART[t.art] }}
+                  source={{ uri: assetUri(SESSION_ART[t.art]) }}
                   style={{
                     width: thumbSize(t.artScale),
                     height: thumbSize(t.artScale),

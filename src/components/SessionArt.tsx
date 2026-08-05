@@ -29,6 +29,7 @@
    schalen.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { assetUri } from '@/services/asset-cache';
 import {
   Canvas,
   Circle,
@@ -201,7 +202,7 @@ export default function SessionArt({
       )}
 
       <Animated.Image
-        source={{ uri: SESSION_ART[art] }}
+        source={{ uri: assetUri(SESSION_ART[art]) }}
         style={[{ width: size, height: size }, imgStyle]}
         resizeMode="contain"
       />

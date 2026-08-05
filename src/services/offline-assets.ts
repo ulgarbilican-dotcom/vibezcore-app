@@ -1,0 +1,25 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   VIBEZCORE — Wat er offline moet staan
+
+   Eén lijst, samengesteld uit de bronnen zelf en niet met de hand nagetypt.
+   Dat is het punt van dit bestand: voegt iemand een zesde illustratie of een
+   nieuwe stemopname toe, dan staat die er automatisch bij. Een lijst die
+   apart onderhouden moet worden, loopt binnen een maand achter — en dan mist
+   uitgerekend het nieuwste bestand wanneer er geen netwerk is.
+   ───────────────────────────────────────────────────────────────────────── */
+
+import { SESSION_ART } from '@/components/SessionArt';
+import { VOICE_ASSET_URLS } from '@/services/breath-voice';
+
+/** De twee gezichten van het welkomstscherm. Staat hier en niet in het
+ *  scherm zelf, zodat de offline-laag er ook bij kan zonder een scherm te
+ *  hoeven importeren. */
+export const FACES_URL = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
+
+/** Alles wat een ademsessie nodig heeft om zonder netwerk te werken:
+ *  de illustraties, de gezichten en elke stemopname. */
+export const OFFLINE_ASSETS: string[] = [
+  ...Object.values(SESSION_ART),
+  FACES_URL,
+  ...VOICE_ASSET_URLS,
+];

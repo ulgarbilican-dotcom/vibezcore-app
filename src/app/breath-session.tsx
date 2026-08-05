@@ -52,6 +52,7 @@ import {
   type PhaseKey,
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { useSetting } from '@/utils/settings';
 import {
@@ -245,6 +246,15 @@ export default function BreathSessionScreen() {
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
+  /* Het scherm mag niet in slaap vallen zolang dit scherm open staat.
+     Een ademsessie is het enige moment waarop iemand mínutenlang naar een
+     telefoon kijkt zonder hem aan te raken — precies wat een toestel als
+     "niet in gebruik" leest. Zonder dit dooft het beeld midden in een
+     inademing, en dan moet je hem wakker tikken terwijl je juist niets
+     hoort te doen. Het is de meest zichtbare fout in een sessie en hij kost
+     één regel. Wordt automatisch opgeheven zodra je het scherm verlaat. */
+  useKeepAwake();
+
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
   /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te

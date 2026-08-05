@@ -38,6 +38,8 @@ import { clearSessionIfBuildChanged } from '@/services/version-tracker';
 import { setVoiceEnabled as setBreathVoiceEnabled } from '@/services/breath-voice';
 import { setVoiceEnabled as setBraceletVoiceEnabled } from '@/services/bracelet-voice';
 import { getSetting, ensureSettingsLoaded, useSetting } from '@/utils/settings';
+import { cacheAssets } from '@/services/asset-cache';
+import { OFFLINE_ASSETS } from '@/services/offline-assets';
 import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
@@ -301,6 +303,15 @@ export default function RootLayout() {
      voice-services (breath + bracelet). Voorheen had elke service een
      eigen default; nu is Settings → Voice cues de single source of truth.
      User toggle wordt live doorgevoerd in beide services. */
+  /* Beeld en stem één keer naar het toestel halen. Draait op de achtergrond
+     en houdt niets tegen: lukt het niet, dan streamt de app zoals vroeger.
+     Vanaf de tweede start werkt een ademsessie zonder netwerk — en dat is de
+     belofte die de app doet ("always available"), dus die hoort niet aan
+     wifi te hangen. */
+  useEffect(() => {
+    void cacheAssets(OFFLINE_ASSETS);
+  }, []);
+
   const voiceCuesSetting = useSetting('voiceCues')[0];
   useEffect(() => {
     void (async () => {
