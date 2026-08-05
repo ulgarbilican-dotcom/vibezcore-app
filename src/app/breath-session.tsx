@@ -45,6 +45,7 @@ import { Brand, BrandFonts } from '@/constants/theme';
 import {
   BREATH_STATES,
   cycleSeconds,
+  roundsFor,
   nextPhase,
   phaseAt,
   type BreathState,
@@ -237,9 +238,16 @@ export default function BreathSessionScreen() {
     BREATH_STATES[(params.state as BreathStateKey) ?? 'calm'] ??
     BREATH_STATES.calm;
   const s = useMemo(() => makeStyles(st), [st]);
-  const CYCLE_S = useMemo(() => cycleSeconds(st), [st]);
-  const byKey = useCallback((k: Phase) => phaseAt(st, k), [st]);
-  const nextOf = useCallback((k: Phase) => nextPhase(st, k), [st]);
+  /* Welk ritme binnen deze toestand. De eerste is de standaard; wie niets
+     kiest merkt van deze laag niets. Alles hieronder rekent vanaf `tech` en
+     niet meer vanaf `st` — dat is het hele verschil tussen "een toestand
+     heeft een ritme" en "een toestand heeft ritmes". */
+  const [techIdx, setTechIdx] = useState(0);
+  const tech = st.techniques[techIdx] ?? st.techniques[0];
+
+  const CYCLE_S = useMemo(() => cycleSeconds(tech), [tech]);
+  const byKey = useCallback((k: Phase) => phaseAt(tech, k), [tech]);
+  const nextOf = useCallback((k: Phase) => nextPhase(tech, k), [tech]);
   const DURATIONS = st.durations;
 
   const [durationIdx, setDurationIdx] = useState<number>(st.defaultDuration);
@@ -273,18 +281,22 @@ export default function BreathSessionScreen() {
   const [hapticsOn, setHapticsOn] = useState(true);
 
   const [phase, setPhase] = useState<Phase>('inhale');
-  const [secsLeft, setSecsLeft] = useState(st.phases[0].secs);
+  const [secsLeft, setSecsLeft] = useState(st.techniques[0].phases[0].secs);
   const [round, setRound] = useState(1);
 
   const chosen = DURATIONS[durationIdx];
-  const totalSec = chosen.rounds * CYCLE_S;
+  /* Berekend uit het gekozen ritme, niet meer uit een vast getal per
+     toestand: twintig minuten van een cyclus van tien seconden is nu eenmaal
+     een ander aantal rondes dan van een cyclus van zestien. */
+  const rounds = roundsFor(tech, chosen.minutes);
+  const totalSec = rounds * CYCLE_S;
 
   /* De fase-loop draait buiten React om, dus de actuele instellingen komen
      uit refs. Anders leest een lopende sessie de waarden van de render
      waarin hij begon. */
   const voiceRef = useRef(voiceOn);
   const hapticRef = useRef(hapticsOn);
-  const roundsRef = useRef(chosen.rounds);
+  const roundsRef = useRef(rounds);
   /* De knop schrijft nu wél door naar de voorkeur — dat is het punt van één
      waarheid. Zet je hier de stem uit, dan is hij ook uit in de onboarding,
      bij de bracelet en in Settings. Dat is geen bijwerking maar precies wat
@@ -299,8 +311,8 @@ export default function BreathSessionScreen() {
     hapticRef.current = hapticsOn;
   }, [hapticsOn]);
   useEffect(() => {
-    roundsRef.current = chosen.rounds;
-  }, [chosen.rounds]);
+    roundsRef.current = rounds;
+  }, [rounds]);
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -372,7 +384,7 @@ export default function BreathSessionScreen() {
     setRunning(false);
     setRound(1);
     setPhase('inhale');
-    setSecsLeft(st.phases[0].secs);
+    setSecsLeft(tech.phases[0].secs);
     idleBreathing();
     releaseVoiceSource('breath');
   }, [idleBreathing, stopAll]);
@@ -452,8 +464,8 @@ export default function BreathSessionScreen() {
                Nu wordt het einde van de ronde afgeleid uit de fasenlijst
                zelf, dus het klopt ook voor een toestand die er later bijkomt
                met een heel ander ritme. */
-            const idx = st.phases.findIndex((p) => p.key === k);
-            const lastOfRound = idx === st.phases.length - 1;
+            const idx = tech.phases.findIndex((p) => p.key === k);
+            const lastOfRound = idx === tech.phases.length - 1;
             if (lastOfRound) {
               const n = r + 1;
               if (n > roundsRef.current) {
@@ -461,7 +473,7 @@ export default function BreathSessionScreen() {
                 return;
               }
               setRound(n);
-              runPhase(st.phases[0].key, n);
+              runPhase(tech.phases[0].key, n);
             } else {
               runPhase(nextOf(k).key, r);
             }
@@ -482,8 +494,8 @@ export default function BreathSessionScreen() {
     breath.value = 0;
     /* De allereerste cue kan per definitie niet vooruitlopen — er is geen
        fase vóór deze. Die klinkt dus gelijk met de start. */
-    speak(st.phases[0]);
-    runPhase(st.phases[0].key, 1);
+    speak(tech.phases[0]);
+    runPhase(tech.phases[0].key, 1);
   }, [breath, runPhase]);
 
   const stop = useCallback(() => {
@@ -540,10 +552,10 @@ export default function BreathSessionScreen() {
 
   /* Verstreken tijd wordt AFGELEID uit de fase-lus, niet apart geteld. Een
      tweede timer naast de eerste loopt onvermijdelijk uit de pas. */
-  const idx = st.phases.findIndex((p) => p.key === phase);
+  const idx = tech.phases.findIndex((p) => p.key === phase);
   const elapsed =
     (round - 1) * CYCLE_S +
-    st.phases.slice(0, idx).reduce((s, p) => s + p.secs, 0) +
+    tech.phases.slice(0, idx).reduce((s, p) => s + p.secs, 0) +
     (byKey(phase).secs - secsLeft);
   const leftSec = Math.max(0, totalSec - elapsed);
 
@@ -637,7 +649,7 @@ export default function BreathSessionScreen() {
         {running ? (
           <View style={s.progressWrap}>
             <Text style={s.progressRound}>
-              ROUND {round} / {chosen.rounds}
+              ROUND {round} / {rounds}
             </Text>
             <Text style={s.progressLeft}>{fmt(leftSec)} left</Text>
             <View style={s.bar}>
@@ -651,6 +663,30 @@ export default function BreathSessionScreen() {
           </View>
         ) : (
           <View style={s.durationWrap}>
+            {st.techniques.length > 1 && (
+              <>
+                <Text style={s.sectionEyebrow}>BREATHING RHYTHM</Text>
+                <View style={s.chips}>
+                  {st.techniques.map((t, i) => {
+                    const on = i === techIdx;
+                    return (
+                      <Pressable
+                        key={t.key}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setTechIdx(i);
+                        }}
+                        style={[s.techChip, on && s.chipActive]}
+                      >
+                        <Text style={[s.techTxt, on && s.chipTxtActive]}>
+                          {t.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
             <Text style={s.sectionEyebrow}>SESSION DURATION</Text>
             <View style={s.chips}>
               {DURATIONS.map((d, i) => {
@@ -673,7 +709,7 @@ export default function BreathSessionScreen() {
               })}
             </View>
             <Text style={s.exact}>
-              {fmt(totalSec)} · {chosen.rounds} rounds
+              {fmt(totalSec)} · {rounds} rounds
               {chosen.recommended ? ' · recommended' : ''}
             </Text>
             <Text style={s.hint}>Double tap for more info</Text>
@@ -686,7 +722,7 @@ export default function BreathSessionScreen() {
           <View style={s.patternCard}>
             <Text style={s.cardEyebrow}>BREATHING PATTERN</Text>
             <View style={s.phaseRow}>
-              {st.phases.map((p, i) => (
+              {tech.phases.map((p, i) => (
                 <View key={i} style={s.phaseCol}>
                   <Text style={s.phaseSecsSmall}>{p.secs}s</Text>
                   <Text style={s.phaseName}>{p.label}</Text>
@@ -698,7 +734,7 @@ export default function BreathSessionScreen() {
                 </View>
               ))}
             </View>
-            <Text style={s.patternFoot}>{st.technique}</Text>
+            <Text style={s.patternFoot}>{tech.name}</Text>
           </View>
         ) : (
           <View style={s.rhythmCard}>
@@ -899,7 +935,7 @@ export default function BreathSessionScreen() {
             <Text style={s.modalEyebrow}>✦ CONGRATULATIONS ✦</Text>
             <Text style={s.modalTitle}>Well done.</Text>
             <Text style={s.modalBody}>
-              You completed {chosen.rounds} rounds of {st.title}. Carry the
+              You completed {rounds} rounds of {st.title}. Carry the
               breath with you.
             </Text>
 
@@ -1037,6 +1073,24 @@ function makeStyles(st: BreathState) {
     alignItems: 'center',
   },
   chipActive: { borderColor: st.accent, backgroundColor: st.accentSoft },
+  /* Breder dan de duurknoppen: hier staat een naam met een ritme erin
+     ("Long Exhale 4-2-6"), geen getal van twee tekens. */
+  techChip: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
+  },
+  techTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.2,
+    color: 'rgba(255,255,255,0.72)',
+  },
   chipTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 18,

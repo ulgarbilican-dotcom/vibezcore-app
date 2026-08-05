@@ -59,6 +59,20 @@ export type PhaseDef = {
      voelen de fasen identiek, en dan moet je toch kijken. */
 };
 
+/** Eén ademritme binnen een toestand.
+ *
+ *  De NAAM is bewust zakelijk en draagt het ritme in zich — "Box 4-4-4-4",
+ *  "Slow 4-6". De toestand eromheen draagt al de sfeer (BOOST, REST & RESET);
+ *  zou de techniek dat ook doen, dan staan er twee lagen stemming boven
+ *  elkaar en is niet meer te zien wát er verschilt tussen twee keuzes. Op dit
+ *  niveau wil iemand feiten. Het getal is dus de naam, en dat schaalt: een
+ *  zesde ritme heeft geen nieuwe metafoor nodig. */
+export type TechniqueDef = {
+  key: string;
+  name: string;
+  phases: PhaseDef[];
+};
+
 export type DurationDef = {
   minutes: number;
   rounds: number;
@@ -100,6 +114,12 @@ export type BreathState = {
   phases: PhaseDef[];
   /** Naam van de techniek, onder het ritmeblok. */
   technique: string;
+  /** De ritmes die binnen deze toestand te kiezen zijn (operator, 4 augustus
+   *  2026). De eerste is de standaard en draagt dezelfde fasen als `phases`
+   *  hierboven — dat veld blijft bestaan zodat schermen die maar één ritme
+   *  nodig hebben, zoals de keuzepagina, niets hoeven te weten van deze
+   *  lijst. */
+  techniques: TechniqueDef[];
   durations: DurationDef[];
   /** Welke duur standaard geselecteerd is. */
   defaultDuration: number;
@@ -147,6 +167,22 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     focusY: 0.5,
     artScale: 1,
     phases: [inhale(2, 'Nose'), exhale(2, 'Mouth')],
+    /* Power 3-3 is bewust TRAGER dan Energize. BOOST is de enige toestand
+       waar sneller niet beter is: te snel ademen verlaagt het CO2-gehalte en
+       geeft tintelingen. Wie dat merkt had geen alternatief binnen dezelfde
+       toestand; nu wel. */
+    techniques: [
+      {
+        key: 'energize',
+        name: 'Energize 2-2',
+        phases: [inhale(2, 'Nose'), exhale(2, 'Mouth')],
+      },
+      {
+        key: 'power',
+        name: 'Power 3-3',
+        phases: [inhale(3, 'Nose'), exhale(3, 'Mouth')],
+      },
+    ],
     technique: 'Energizing breath · 2-2',
     durations: [
       {
@@ -192,6 +228,18 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     focusY: 0.5,
     artScale: 0.72,
     phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
+    techniques: [
+      {
+        key: 'coherent',
+        name: 'Coherent 5-5',
+        phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
+      },
+      {
+        key: 'resonant',
+        name: 'Resonant 6-6',
+        phases: [inhale(6, 'Nose'), exhale(6, 'Nose')],
+      },
+    ],
     technique: 'Coherent breathing · 5-5',
     durations: [
       {
@@ -247,6 +295,23 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       hold(4, 'hold-in'),
       exhale(4, 'Nose'),
       hold(4, 'hold-out'),
+    ],
+    techniques: [
+      {
+        key: 'box',
+        name: 'Box 4-4-4-4',
+        phases: [
+          inhale(4, 'Nose'),
+          hold(4, 'hold-in'),
+          exhale(4, 'Nose'),
+          hold(4, 'hold-out'),
+        ],
+      },
+      {
+        key: 'triangle',
+        name: 'Triangle 4-4-4',
+        phases: [inhale(4, 'Nose'), hold(4, 'hold-in'), exhale(4, 'Nose')],
+      },
     ],
     technique: 'Box Breathing · 4-4-4-4',
     durations: [
@@ -304,6 +369,18 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     focusY: 0.5,
     artScale: 0.7,
     phases: [inhale(4, 'Nose'), hold(2, 'hold-in'), exhale(6, 'Mouth')],
+    techniques: [
+      {
+        key: 'long-exhale',
+        name: 'Long Exhale 4-2-6',
+        phases: [inhale(4, 'Nose'), hold(2, 'hold-in'), exhale(6, 'Mouth')],
+      },
+      {
+        key: 'extended',
+        name: 'Extended 4-8',
+        phases: [inhale(4, 'Nose'), exhale(8, 'Mouth')],
+      },
+    ],
     technique: 'Long exhale · 4-2-6',
     durations: [
       {
@@ -362,6 +439,18 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     art: 'tree',
     focusY: 0.5,
     phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],
+    techniques: [
+      {
+        key: 'slow',
+        name: 'Slow 4-6',
+        phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],
+      },
+      {
+        key: '478',
+        name: '4-7-8',
+        phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
+      },
+    ],
     technique: 'Slow breathing · 4-6',
     durations: [
       {
@@ -388,13 +477,32 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
   },
 };
 
-export const cycleSeconds = (st: BreathState) =>
-  st.phases.reduce((s, p) => s + p.secs, 0);
+/* De drie helpers vragen niet langer een hele TOESTAND maar alleen iets met
+   fasen. Zowel een BreathState als een TechniqueDef voldoet daaraan, dus
+   bestaande aanroepen blijven werken én een scherm kan er een gekozen ritme
+   in stoppen. Dat scheelt vijf plekken waar anders een tweede versie van
+   dezelfde functie zou ontstaan. */
+type HasPhases = { phases: PhaseDef[] };
 
-export const phaseAt = (st: BreathState, k: PhaseKey) =>
-  st.phases.find((p) => p.key === k) ?? st.phases[0];
+export const cycleSeconds = (x: HasPhases) =>
+  x.phases.reduce((s, p) => s + p.secs, 0);
 
-export const nextPhase = (st: BreathState, k: PhaseKey) => {
-  const i = st.phases.findIndex((p) => p.key === k);
-  return st.phases[(i + 1) % st.phases.length];
+export const phaseAt = (x: HasPhases, k: PhaseKey) =>
+  x.phases.find((p) => p.key === k) ?? x.phases[0];
+
+export const nextPhase = (x: HasPhases, k: PhaseKey) => {
+  const i = x.phases.findIndex((p) => p.key === k);
+  return x.phases[(i + 1) % x.phases.length];
 };
+
+/** Hoeveel rondes er in een gekozen aantal minuten passen.
+ *
+ *  BEREKEND en niet meer per toestand met de hand ingevuld. Dat kon toen elke
+ *  toestand één ritme had; nu een toestand er meerdere draagt, zou elk
+ *  vastgezet getal bij het tweede ritme fout staan — twintig minuten van een
+ *  cyclus van tien seconden is nu eenmaal een ander aantal rondes dan van een
+ *  cyclus van zestien.
+ *
+ *  Minstens één ronde, want een sessie van nul rondes is geen sessie. */
+export const roundsFor = (x: HasPhases, minutes: number) =>
+  Math.max(1, Math.round((minutes * 60) / cycleSeconds(x)));
