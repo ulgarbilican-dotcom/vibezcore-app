@@ -57,7 +57,6 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { useSetting } from '@/utils/settings';
 import {
-  DEFAULT_SCAPE,
   GROUP_ORDER,
   SOUNDSCAPES,
   soundscapeByKey,
@@ -256,7 +255,10 @@ export default function BreathSessionScreen() {
   /* Het achtergrondgeluid. Per TOESTAND onthouden: wie voor slapen Deep wil
      en voor focus Rain, hoort dat niet elke keer opnieuw te kiezen. */
   const [scapes, setScapes] = useSetting('soundscapeByState');
-  const scapeKey = scapes[st.key] ?? DEFAULT_SCAPE[st.key];
+  /* Geen `??` met een standaard: ontbreekt de sleutel, dan is er bewust GEEN
+     geluid. Een achtergrondgeluid dat vanzelf begint is een verrassing, en
+     een sessie hoort niet te verrassen. */
+  const scapeKey = scapes[st.key] ?? null;
   const scape = soundscapeByKey(scapeKey);
   const [scapeOpen, setScapeOpen] = useState(false);
 
@@ -671,14 +673,19 @@ export default function BreathSessionScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.title}>{st.title}</Text>
+        {/* De figuurnaam ("Lotus") en de tagline zijn weg (operator, 4
+            augustus 2026). Ze stonden bovenaan en duwden de illustratie zo ver
+            omlaag dat je moest scrollen om de knop te zien. De naam van de
+            TOESTAND staat al in de balk erboven; dat is wat iemand hier nodig
+            heeft. Alles wat je niet leest kost hier hoogte, en hoogte is het
+            schaarse goed op dit scherm. */}
 
         {/* Weg zodra de sessie loopt. Wie ademt leest niet. */}
         {/* De beschrijving is eruit (operator 2 augustus 2026): drie regels
             kostten zoveel hoogte dat alles eronder opgekropt raakte en het
             scherm moest scrollen. De tagline blijft — die is één regel en
             zegt waar de toestand over gaat. */}
-        {!running && <Text style={s.tagline}>{st.tagline}</Text>}
+
 
         {/* Het beeld is vierkant, maar een lotus is breder dan hoog: de
             bovenste en onderste marge blijven leeg. Die snijden we weg,
@@ -791,8 +798,14 @@ export default function BreathSessionScreen() {
             </View>
             <Text style={s.patternFoot}>{tech.name}</Text>
           </View>
-        ) : (
-          <View style={s.rhythmCard}>
+        ) : null}
+
+        {/* Voice, Soundscape en Guidance staan er NU AL, en niet pas zodra de
+            sessie loopt (operator, 4 augustus 2026). Wie op START drukt hoort
+            zijn keuzes al gemaakt te hebben — ze halverwege moeten zoeken is
+            precies het moment waarop je uit je ademhaling valt. */}
+        {(
+          <View style={[s.rhythmCard, !running && s.rhythmCardIdle]}>
             <Pressable
               /* Directe waarde, geen updater-functie: de setter van
                  useSetting neemt een waarde aan. Deze regel staat in de JSX,
@@ -814,6 +827,7 @@ export default function BreathSessionScreen() {
               </Text>
             </Pressable>
 
+            {running ? (
             <View style={s.rhythmCenter}>
               <PhaseArc
                   width={SCREEN_W * 0.44}
@@ -845,6 +859,15 @@ export default function BreathSessionScreen() {
                   : ''}
               </Text>
             </View>
+            ) : (
+              /* Vóór de start staat hier geen boog maar de uitleg waaróm deze
+                 drie knoppen er zijn. Zonder dat leest de rij als drie losse
+                 schakelaars in plaats van als de keuze die de sessie bepaalt. */
+              <View style={s.rhythmCenter}>
+                <Text style={s.sectionEyebrow}>GUIDANCE</Text>
+                <Text style={s.idleHint}>How you want to be led</Text>
+              </View>
+            )}
 
             {/* Wat je hoort ONDER de stem. Eén regel — icoon plus naam —
                 want dertien namen horen niet op het scherm te staan waarop
@@ -859,7 +882,9 @@ export default function BreathSessionScreen() {
               ) : (
                 <VolumeX size={19} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
               )}
-              <Text style={[s.channelLabel, !scape && s.channelOff]}>Sound</Text>
+              <Text style={[s.channelLabel, !scape && s.channelOff]}>
+                Soundscape
+              </Text>
               <Text
                 style={[s.channelState, !scape && s.channelOff]}
                 numberOfLines={1}
@@ -1472,6 +1497,15 @@ function makeStyles(st: BreathState) {
   },
 
   rhythmCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  /* Vóór de sessie hoeft dit blok niet zo hoog: er staat geen boog in. */
+  rhythmCardIdle: { paddingVertical: 12 },
+  idleHint: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    marginTop: 4,
+  },
   /* Lager dan eerst: in de boog staat nu alleen de tijd, dus die hoort in
      het midden van de boog te hangen en niet tegen de bovenrand. */
   arcOverlay: { position: 'absolute', top: 34, alignItems: 'center' },

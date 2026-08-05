@@ -182,7 +182,14 @@ export const soundscapeByKey = (k: string | null) =>
  *  dertien blijven overal kiesbaar. Wie zelf iets kiest krijgt dat terug,
  *  per toestand onthouden — voor slapen wil iemand iets anders dan voor
  *  focus, en dat hoort de app niet elke keer opnieuw te vragen. */
-export const DEFAULT_SCAPE: Record<BreathStateKey, string> = {
+/* STANDAARD UIT (operator, 4 augustus 2026). Stem en telefoon-trilling staan
+   aan omdat die begeleiden; een achtergrondgeluid is smaak, en smaak hoort
+   niet ongevraagd te beginnen. Wie er één kiest krijgt hem voortaan terug —
+   per toestand, want voor slapen wil iemand iets anders dan voor focus.
+
+   Deze tabel blijft bestaan als SUGGESTIE: hij bepaalt welke regel voorop
+   staat zodra iemand het vel opent, niet wat er zonder keuze speelt. */
+export const SUGGESTED_SCAPE: Record<BreathStateKey, string> = {
   boost: 'dawn',
   focus: 'rain',
   calm: 'soft',
