@@ -48,6 +48,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -142,6 +143,7 @@ export default function BreathScreen() {
     : FALLBACK_INDEX;
 
   const [index, setIndex] = useState(FALLBACK_INDEX);
+  const [infoOpen, setInfoOpen] = useState(false);
   const st = BREATH_STATES[ORDER[index]];
 
   const pagerRef = useRef<ScrollView | null>(null);
@@ -272,10 +274,16 @@ export default function BreathScreen() {
         />
       </View>
 
-      <View style={s.header}>
-        <Text style={s.kicker}>CHOOSE YOUR MODE</Text>
-        <Text style={s.lead}>Select your state. Activate transformation.</Text>
-      </View>
+      {/* Alleen de naam van de toestand (operator, 4 augustus 2026).
+          "CHOOSE YOUR MODE" en "Select your state" stonden hier als kop en
+          onderkop, samen zo'n zestig punten hoog, en ze vertelden niets wat
+          het scherm niet al laat zien: er staan vijf beelden en je veegt
+          ertussen. Die hoogte gaat naar de illustratie, want daar kijk je
+          naar. De naam staat nu bovenaan in plaats van eronder — dan weet je
+          wat je ziet vóór je het ziet. */}
+      <Animated.View style={[s.header, fadeStyle]}>
+        <Text style={[s.mode, { color: st.accent }]}>{st.eyebrow}</Text>
+      </Animated.View>
 
       {/* Alles onder de kop staat als ÉÉN blok gecentreerd in wat er
           overblijft. Stond de praktijkregel onderaan vastgeprikt, dan viel
@@ -367,13 +375,13 @@ export default function BreathScreen() {
           wit en de rest gekleurd: de kleur IS hier de modus, dus die hoort
           bij zijn naam te staan. */}
       <Animated.View style={[s.copy, fadeStyle]}>
-        <Text style={[s.mode, { color: st.accent }]}>{st.eyebrow}</Text>
-        <Text style={[s.figure, { color: st.accent }]}>{st.title}</Text>
         <View style={[s.rule, { backgroundColor: st.accent }]} />
         <Text style={s.desc}>{st.description}</Text>
-        <Text style={s.spec}>
-          {st.technique} · {fmt(suggested.rounds * cycleSeconds(st))}
-        </Text>
+        <Pressable onPress={() => setInfoOpen(true)} hitSlop={10}>
+          <Text style={[s.spec, { color: st.accent }]}>
+            {st.technique} · What is this?
+          </Text>
+        </Pressable>
       </Animated.View>
 
       {/* ── De knop draagt de kleur van de modus ──
@@ -390,6 +398,46 @@ export default function BreathScreen() {
           <ArrowRight size={17} color={st.accent} strokeWidth={2} />
         </Pressable>
       </Animated.View>
+
+      {/* ── Wat deze toestand is ─────────────────────────────────────────
+           "Coherent 5-5" of "Resonant 6-6" zegt niets tegen wie de term niet
+           kent, en dat is vrijwel iedereen (operator, 4 augustus 2026). Hier
+           staat per toestand wat hij doet én wat elk van zijn ritmes is, in
+           één zin per stuk. Niet op het scherm zelf: wie het al weet hoeft
+           het niet elke keer te lezen. */}
+      <Modal
+        visible={infoOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInfoOpen(false)}
+      >
+        <Pressable style={s.infoBackdrop} onPress={() => setInfoOpen(false)}>
+          <Pressable style={s.infoCard} onPress={() => {}}>
+            <Text style={[s.infoEyebrow, { color: st.accent }]}>
+              {st.eyebrow}
+            </Text>
+            <Text style={s.infoTitle}>{st.title}</Text>
+            <Text style={s.infoBody}>{st.description}</Text>
+
+            <Text style={[s.infoSection, { color: st.accent }]}>
+              RHYTHMS
+            </Text>
+            {st.techniques.map((t) => (
+              <View key={t.key} style={s.infoTech}>
+                <Text style={s.infoTechName}>{t.name}</Text>
+                <Text style={s.infoTechBody}>{t.explain}</Text>
+              </View>
+            ))}
+
+            <Pressable
+              style={[s.infoBtn, { borderColor: st.accent }]}
+              onPress={() => setInfoOpen(false)}
+            >
+              <Text style={[s.infoBtnTxt, { color: st.accent }]}>Got it</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── De vijf, altijd zichtbaar ──
           Op volle kleur, niet weggedimd. Ze zijn hier geen knopjes maar de
@@ -505,7 +553,7 @@ const s = StyleSheet.create({
   /* De zijmarge is niet cosmetisch: rechtsboven zweeft het instellingen-
      icoon van de app over élk scherm heen, en zonder deze marge liep de
      laatste letter van de kop eronder door. */
-  header: { alignItems: 'center', marginTop: 8, paddingHorizontal: 54 },
+  header: { alignItems: 'center', marginTop: 6, paddingHorizontal: 54 },
   /* Licht gewicht met veel letterafstand, zoals de koppen in de onboarding.
      Het gewicht doet niets, de ruimte doet alles. */
   kicker: {
@@ -576,6 +624,66 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     color: 'rgba(255,255,255,0.36)',
   },
+
+  /* ── De uitleg-popup ── */
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  infoCard: {
+    width: '100%',
+    borderRadius: 22,
+    backgroundColor: '#141018',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    padding: 22,
+  },
+  infoEyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 3 },
+  infoTitle: {
+    marginTop: 6,
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 24,
+    letterSpacing: -0.4,
+    color: '#ffffff',
+  },
+  infoBody: {
+    marginTop: 10,
+    fontFamily: BrandFonts.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.78)',
+  },
+  infoSection: {
+    marginTop: 20,
+    fontFamily: BrandFonts.bold,
+    fontSize: 10,
+    letterSpacing: 2.4,
+  },
+  infoTech: { marginTop: 10 },
+  infoTechName: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13.5,
+    color: '#ffffff',
+  },
+  infoTechBody: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  infoBtn: {
+    marginTop: 22,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.8 },
 
   cta: {
     flexDirection: 'row',

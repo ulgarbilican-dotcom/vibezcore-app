@@ -70,6 +70,15 @@ export type PhaseDef = {
 export type TechniqueDef = {
   key: string;
   name: string;
+  /** Eén zin: wát het is en waar het vandaan komt.
+   *
+   *  Nodig omdat een naam als "Coherent 5-5" of "Resonant 6-6" niets zegt
+   *  tegen wie de term niet kent (operator, 4 augustus 2026) — en dat is
+   *  vrijwel iedereen. Toestand-taal, geen claims over wat het met je lichaam
+   *  doet (CLAUDE.md §1): wat het RITME is, niet wat het met je zenuwstelsel
+   *  zou doen. [OPERATOR] mag deze zinnen herschrijven; ze zijn functioneel
+   *  bedoeld, niet als merkcopy. */
+  explain: string;
   phases: PhaseDef[];
 };
 
@@ -175,11 +184,15 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: 'energize',
         name: 'Energize 2-2',
+        explain:
+          'Fast and even, fifteen breaths a minute. Short in through the nose, short out through the mouth.',
         phases: [inhale(2, 'Nose'), exhale(2, 'Mouth')],
       },
       {
         key: 'power',
         name: 'Power 3-3',
+        explain:
+          'The same pattern at a calmer pace. Use this one if the faster rhythm makes you light-headed.',
         phases: [inhale(3, 'Nose'), exhale(3, 'Mouth')],
       },
     ],
@@ -232,11 +245,15 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: 'coherent',
         name: 'Coherent 5-5',
+        explain:
+          'Five seconds in, five out — six breaths a minute. Equal halves, nothing held.',
         phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
       },
       {
         key: 'resonant',
         name: 'Resonant 6-6',
+        explain:
+          'Slower than coherent, at five breaths a minute. The longest even rhythm most people can hold comfortably.',
         phases: [inhale(6, 'Nose'), exhale(6, 'Nose')],
       },
     ],
@@ -300,6 +317,8 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: 'box',
         name: 'Box 4-4-4-4',
+        explain:
+          'Four equal parts: in, hold, out, hold. Used by people who need to stay sharp under pressure.',
         phases: [
           inhale(4, 'Nose'),
           hold(4, 'hold-in'),
@@ -310,6 +329,8 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: 'triangle',
         name: 'Triangle 4-4-4',
+        explain:
+          'Box breathing without the second hold. Three sides instead of four, so it moves along faster.',
         phases: [inhale(4, 'Nose'), hold(4, 'hold-in'), exhale(4, 'Nose')],
       },
     ],
@@ -373,11 +394,15 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: 'long-exhale',
         name: 'Long Exhale 4-2-6',
+        explain:
+          'The exhale runs longer than the inhale, with a short pause at the top.',
         phases: [inhale(4, 'Nose'), hold(2, 'hold-in'), exhale(6, 'Mouth')],
       },
       {
         key: 'extended',
         name: 'Extended 4-8',
+        explain:
+          'Twice as long out as in, and no pause. The plainest form of a long exhale.',
         phases: [inhale(4, 'Nose'), exhale(8, 'Mouth')],
       },
     ],
@@ -443,11 +468,15 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: 'slow',
         name: 'Slow 4-6',
+        explain:
+          'Four in, six out, at six breaths a minute. Slow enough to lie down to.',
         phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],
       },
       {
         key: '478',
         name: '4-7-8',
+        explain:
+          'Four in, seven held, eight out. The longest hold of all ten rhythms.',
         phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
       },
     ],
