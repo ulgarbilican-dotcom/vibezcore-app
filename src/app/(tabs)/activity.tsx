@@ -21,15 +21,14 @@ import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
-import { GOALS, goalByKey } from '@/data/goals';
+import { goalByKey } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
 import { ChevronRight, Settings } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Dimensions,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,7 +46,6 @@ const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 export default function ActivityScreen() {
   const history = useBreathHistory();
   const [goal, setGoal] = useSetting('goal');
-  const [goalOpen, setGoalOpen] = useState(false);
   const sub = useSubscription();
 
   const stats = useMemo(() => {
@@ -215,8 +213,12 @@ export default function ActivityScreen() {
              voortgang, niet bij je voorkeuren. Wie hier kijkt vraagt zich af
              of het ergens toe leidt — dan is dit de plek om te zeggen waar
              naartoe. */}
-        <Text style={s.section}>YOUR GOAL</Text>
-        <Pressable style={s.link} onPress={() => setGoalOpen(true)}>
+        {/* Twee echte pagina's in plaats van vensters (operator, 6 augustus
+             2026). Een tabblad is een PLEK; alles wat een eigen pagina
+             verdient wordt van hieruit gepusht. Zo krijgt elk onderdeel
+             ruimte om zichzelf uit te leggen zonder dat de balk volloopt. */}
+        <Text style={s.section}>YOUR PRACTICE</Text>
+        <Pressable style={s.link} onPress={() => router.push('/goal' as never)}>
           <View>
             <Text style={s.linkTxt}>
               {goalByKey(goal)?.name ?? 'Choose a goal'}
@@ -225,6 +227,14 @@ export default function ActivityScreen() {
               {goalByKey(goal)?.hint ??
                 'Shapes what gets suggested, and when'}
             </Text>
+          </View>
+          <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
+        </Pressable>
+
+        <Pressable style={s.link} onPress={() => router.push('/plan' as never)}>
+          <View>
+            <Text style={s.linkTxt}>Your plan</Text>
+            <Text style={s.linkSub}>Two moments a day, and what you did</Text>
           </View>
           <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
         </Pressable>
@@ -267,46 +277,6 @@ export default function ActivityScreen() {
         </Pressable>
       </ScrollView>
 
-      <Modal
-        visible={goalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setGoalOpen(false)}
-      >
-        <Pressable style={s.backdrop} onPress={() => setGoalOpen(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
-            <Text style={s.sheetTitle}>What are you working on?</Text>
-            <Text style={s.sheetSub}>
-              It shapes what gets suggested, and when. All five modes stay
-              open.
-            </Text>
-            {GOALS.map((g) => {
-              const on = g.key === goal;
-              return (
-                <Pressable
-                  key={g.key}
-                  onPress={() => {
-                    void setGoal(on ? null : g.key);
-                    setGoalOpen(false);
-                  }}
-                  style={[
-                    s.goalRow,
-                    on && { borderColor: g.accent, backgroundColor: `${g.accent}14` },
-                  ]}
-                >
-                  <View style={[s.goalDot, { backgroundColor: g.accent }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.goalName, on && { color: g.accent }]}>
-                      {g.name}
-                    </Text>
-                    <Text style={s.goalHint}>{g.hint}</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }

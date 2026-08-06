@@ -1,0 +1,191 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   VIBEZCORE — Your goal
+
+   Eigen pagina in plaats van een uitschuifvenster (operator, 6 augustus
+   2026). Een doel stuurt wat de app voorstelt en hoe je dagplan eruitziet;
+   dat verdient een scherm waar ook uitgelegd staat wát het doet, niet een
+   lijstje dat over je scherm schuift.
+
+   Waarom vier en niet meer: alle vier zijn TOESTANDEN waar één sessie iets
+   aan kan doen. Zelfvertrouwen en zelfbeheersing staan er bewust niet bij —
+   dat zijn eigenschappen, en die verander je niet in vijf minuten. Ze als
+   doel aanbieden belooft iets wat de app niet waarmaakt.
+   ───────────────────────────────────────────────────────────────────────── */
+
+import { Brand, BrandFonts } from '@/constants/theme';
+import { BREATH_STATES } from '@/data/breath-states';
+import { GOALS } from '@/data/goals';
+import { useSetting } from '@/utils/settings';
+import { router, Stack } from 'expo-router';
+import { Check, ChevronLeft } from 'lucide-react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export default function GoalScreen() {
+  const [goal, setGoal] = useSetting('goal');
+
+  return (
+    <SafeAreaView style={s.root} edges={['top']}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <View style={s.bar}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
+          <ChevronLeft size={22} color="rgba(255,255,255,0.75)" strokeWidth={2.2} />
+        </Pressable>
+        <Text style={s.title}>Your goal</Text>
+        <View style={s.back} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={s.lead}>
+          What you pick shapes which state gets suggested, and when. All five
+          modes stay open — a goal is a preference, not a route.
+        </Text>
+
+        {GOALS.map((g) => {
+          const on = g.key === goal;
+          return (
+            <Pressable
+              key={g.key}
+              onPress={() => void setGoal(on ? null : g.key)}
+              style={[
+                s.card,
+                on && {
+                  borderColor: g.accent,
+                  backgroundColor: `${g.accent}12`,
+                },
+              ]}
+            >
+              <View style={s.head}>
+                <View style={[s.dot, { backgroundColor: g.accent }]} />
+                <Text style={[s.name, on && { color: g.accent }]}>
+                  {g.name}
+                </Text>
+                {on && (
+                  <View style={[s.tick, { backgroundColor: g.accent }]}>
+                    <Check size={12} color="#0a0a0a" strokeWidth={3} />
+                  </View>
+                )}
+              </View>
+
+              <Text style={s.hint}>{g.hint}</Text>
+
+              {/* Wat het CONCREET betekent. Zonder dit is een doel een woord
+                  waar je op tikt zonder te weten wat er verandert. */}
+              <Text style={s.leans}>
+                Leans on{' '}
+                {g.states
+                  .slice(0, 2)
+                  .map((k) => BREATH_STATES[k].eyebrow)
+                  .join(' and ')}
+              </Text>
+            </Pressable>
+          );
+        })}
+
+        <Text style={s.foot}>
+          Tap your goal again to clear it. Without one, suggestions follow the
+          time of day and what you actually do.
+        </Text>
+
+        <Pressable style={s.planCta} onPress={() => router.push('/plan' as never)}>
+          <Text style={s.planCtaTxt}>SEE YOUR PLAN</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Brand.bg },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  title: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 18,
+    color: '#ffffff',
+    letterSpacing: -0.2,
+  },
+  scroll: { paddingHorizontal: 16, paddingBottom: 30 },
+  lead: {
+    marginTop: 6,
+    marginBottom: 18,
+    fontFamily: BrandFonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.6)',
+  },
+
+  card: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 16,
+    marginBottom: 10,
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dot: { width: 9, height: 9, borderRadius: 5 },
+  name: {
+    flex: 1,
+    fontFamily: BrandFonts.bold,
+    fontSize: 17,
+    color: Brand.text,
+    letterSpacing: -0.2,
+  },
+  tick: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hint: {
+    marginTop: 6,
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: 'rgba(255,255,255,0.62)',
+  },
+  leans: {
+    marginTop: 8,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    color: 'rgba(255,255,255,0.38)',
+  },
+
+  foot: {
+    marginTop: 14,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.35)',
+  },
+  planCta: {
+    marginTop: 22,
+    alignSelf: 'center',
+    paddingHorizontal: 26,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planCtaTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 2,
+    color: '#ffffff',
+  },
+});
