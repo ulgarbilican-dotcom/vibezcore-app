@@ -15,7 +15,7 @@
    door op deze stack (RN 0.83 + expo-router 55 + react 19 + reactCompiler).
    Tikken op een tab triggerde geen onPress en dus ook geen tabPress-listener
    — vandaar dat Library "dood" leek. We vervangen de button daarom door een
-   gewone `Pressable` uit react-native met directe `router.navigate(path)`.
+   gewone `Pressable` uit react-native met directe `router.navigate(path as never)`.
    Daarmee gaat de navigatie buiten het navigator-event-systeem om en is ze
    onafhankelijk van welke optimalisatie er ook bovenop ligt.
 
@@ -30,7 +30,7 @@ import { router, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type TabPath = '/' | '/breath' | '/bracelet' | '/account';
+type TabPath = '/' | '/breath' | '/bracelet' | '/activity' | '/account';
 
 /* Eigen tab-button. Wraps de bestaande icon+label-children van de navigator
    in een gewone Pressable; onPress doet één ding: navigeer naar path. */
@@ -60,7 +60,11 @@ function TabButton({
         if (path === '/') {
           requestLibraryReset();
         }
-        router.navigate(path);
+        /* `as never`: expo-router genereert zijn routetypes uit de mappen,
+           en een net toegevoegd scherm staat pas in dat bestand na de
+           volgende build. De route bestaat wel — hij staat hieronder als
+           Tabs.Screen. */
+        router.navigate(path as never);
       }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -183,6 +187,20 @@ export default function TabLayout() {
               <TabGlyph label="◎" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
+          }}
+        />
+        {/* Wat je gedaan hebt verdient een eigen plek in de balk (operator,
+            6 augustus 2026), niet een icoontje op een ander scherm. Hier komt
+            ook de ingang naar Settings, want dat is waar iemand hem zoekt
+            zodra hij naar zijn eigen cijfers kijkt. */}
+        <Tabs.Screen
+          name="activity"
+          options={{
+            title: 'Activity',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph label="◔" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/activity" {...props} />,
           }}
         />
         <Tabs.Screen
