@@ -72,7 +72,14 @@ export default function GoalScreen() {
               ]}
             >
               <View style={s.head}>
-                <View style={[s.dot, { backgroundColor: g.accent }]} />
+                <View
+                  style={[
+                    s.iconWrap,
+                    { backgroundColor: `${g.accent}1F`, borderColor: `${g.accent}55` },
+                  ]}
+                >
+                  <g.Icon size={18} color={g.accent} strokeWidth={2.2} />
+                </View>
                 <Text style={[s.name, on && { color: g.accent }]}>
                   {g.name}
                 </Text>
@@ -142,11 +149,18 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
     backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: 16,
-    marginBottom: 10,
+    padding: 18,
+    marginBottom: 12,
   },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dot: { width: 9, height: 9, borderRadius: 5 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  iconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   name: {
     flex: 1,
     fontFamily: BrandFonts.bold,

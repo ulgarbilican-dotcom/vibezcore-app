@@ -120,7 +120,8 @@ async function cancel(kind: ReminderKind, slot: ReminderSlot): Promise<void> {
  *  niet na een herinstallatie of een geweigerde toestemming. */
 export async function syncReminders(
   enabled: Record<string, boolean>,
-  hours: Record<string, number> = {},
+  /** Minuten na middernacht per sleutel. */
+  at: Record<string, number> = {},
 ): Promise<void> {
   const kinds: ReminderKind[] = ['breath', 'bracelet'];
   const wantsAny = kinds.some((k) =>
@@ -162,9 +163,9 @@ export async function syncReminders(
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          /* Het gekozen uur, anders het standaarduur van dit moment. */
-          hour: hours[reminderKey(k, s.slot)] ?? s.hour,
-          minute: 0,
+          /* De gekozen tijd, anders het standaarduur van dit moment. */
+          hour: Math.floor((at[reminderKey(k, s.slot)] ?? s.hour * 60) / 60),
+          minute: (at[reminderKey(k, s.slot)] ?? s.hour * 60) % 60,
         },
       });
     } catch {

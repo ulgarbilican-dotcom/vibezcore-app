@@ -104,6 +104,11 @@ export type Settings = {
    *  alleen hele uren: een keuze uit 24 dingen is te doen, een keuze uit
    *  1440 minuten is een formulier. */
   reminderHours: Record<string, number>;
+  /** Wanneer een herinnering valt, in MINUTEN na middernacht. Vervangt
+   *  `reminderHours`, dat alleen hele uren kon — iemand die om 7:15 opstaat
+   *  hoort geen keuze te maken tussen 7 en 8. De oude sleutel wordt nog
+   *  gelezen zodat een bestaande instelling niet verdwijnt. */
+  reminderAt: Record<string, number>;
 };
 
 const defaults: Settings = {
@@ -125,6 +130,7 @@ const defaults: Settings = {
   goals: [],
   reminders: {},
   reminderHours: {},
+  reminderAt: {},
 };
 
 let state: Settings = { ...defaults };
@@ -173,6 +179,11 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
+              : {}),
+            ...(obj.reminderAt &&
+            typeof obj.reminderAt === 'object' &&
+            !Array.isArray(obj.reminderAt)
+              ? { reminderAt: obj.reminderAt }
               : {}),
             ...(obj.reminderHours &&
             typeof obj.reminderHours === 'object' &&

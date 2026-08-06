@@ -16,12 +16,24 @@
    Toestand-taal, geen claims over het lichaam (CLAUDE.md §1).
    ───────────────────────────────────────────────────────────────────────── */
 
+import {
+  Crosshair,
+  Moon,
+  Waves,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 
 export type GoalKey = 'sleep' | 'stress' | 'energy' | 'focus';
 
 export type Goal = {
   key: GoalKey;
+  /* Een icoon in plaats van een bolletje (operator, 6 augustus 2026). Vier
+     bolletjes in vier kleuren zeggen alleen "dit zijn er vier"; een maan, een
+     golf, een vonk en een schijf zeggen waar het over gaat nog voor je leest.
+     Allemaal uit Lucide, dezelfde familie als de rest van de app. */
+  Icon: LucideIcon;
   name: string;
   /** Eén regel: wat je ervan merkt, niet wat het met je doet. */
   hint: string;
@@ -35,6 +47,7 @@ export type Goal = {
 export const GOALS: Goal[] = [
   {
     key: 'sleep',
+    Icon: Moon,
     name: 'Sleep better',
     hint: 'Wind down at the end of the day',
     states: ['rest', 'clarity', 'calm'],
@@ -42,6 +55,7 @@ export const GOALS: Goal[] = [
   },
   {
     key: 'stress',
+    Icon: Waves,
     name: 'Less stress',
     hint: 'Come back to steady when it builds',
     states: ['calm', 'clarity', 'rest'],
@@ -49,6 +63,7 @@ export const GOALS: Goal[] = [
   },
   {
     key: 'energy',
+    Icon: Zap,
     name: 'More energy',
     hint: 'Start moving when you feel flat',
     states: ['boost', 'focus', 'clarity'],
@@ -56,6 +71,7 @@ export const GOALS: Goal[] = [
   },
   {
     key: 'focus',
+    Icon: Crosshair,
     name: 'Sharper focus',
     hint: 'Hold your attention on one thing',
     states: ['focus', 'clarity', 'calm'],
