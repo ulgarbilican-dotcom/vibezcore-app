@@ -16,7 +16,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
-import { goalByKey } from '@/data/goals';
+import { goalRank } from '@/data/goals';
 import type { BreathHistoryEntry } from '@/utils/breath-history';
 
 export type Suggestion = {
@@ -48,7 +48,7 @@ const REASON: Record<BreathStateKey, string> = {
 export function suggestBreath(
   history: BreathHistoryEntry[],
   now: Date,
-  goalKey?: string | null,
+  goalKeys?: string[],
 ): Suggestion {
   const hour = now.getHours();
   const fits = byHour(hour);
@@ -78,14 +78,11 @@ export function suggestBreath(
      "meer energie" kiest krijgt geen BOOST om elf uur 's avonds — de klok
      blijft leidend, en één absurde suggestie kost meer vertrouwen dan tien
      goede opleveren. */
-  const goal = goalByKey(goalKey ?? null);
-  const ranked = goal
-    ? [...fits].sort(
-        (a, b) =>
-          (goal.states.indexOf(a) + 1 || 99) -
-          (goal.states.indexOf(b) + 1 || 99),
-      )
-    : fits;
+  const keys = goalKeys ?? [];
+  const ranked =
+    keys.length > 0
+      ? [...fits].sort((a, b) => goalRank(keys, a) - goalRank(keys, b))
+      : fits;
 
   let state =
     ranked.find((k) => k !== lastTwoSame && !abandoned.has(k)) ??

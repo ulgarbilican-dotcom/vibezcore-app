@@ -85,11 +85,15 @@ export type Settings = {
    *  stand hierboven — dus wie nooit iets per toestand instelt merkt niets
    *  van deze laag. */
   breathPrefs: Record<string, { voice?: boolean; haptics?: boolean }>;
-  /** Waar iemand naartoe werkt. `null` = nog niet gekozen, en dan gedraagt
-   *  de app zich precies zoals nu: de klok en de historiek bepalen de
-   *  suggestie. Een doel is een VOORKEUR, geen route — alle vijf de deuren
-   *  blijven altijd open. */
-  goal: string | null;
+  /** Waar iemand naartoe werkt. Leeg = niet gekozen, en dan gedraagt de app
+   *  zich zoals zonder doel: klok en historiek bepalen de suggestie.
+   *
+   *  Hoogstens TWEE (operator, 6 augustus 2026). Bij drie of vier wegen alle
+   *  vijf de toestanden even zwaar en valt de suggestie terug op puur de
+   *  klok — dan doet de functie stilletjes niets meer terwijl de gebruiker
+   *  denkt dat hij iets heeft ingesteld. Twee dekt wél de combinatie die
+   *  mensen echt hebben, zoals slapen én minder stress. */
+  goals: string[];
   /** Welke dagelijkse herinneringen aan staan. Zie services/reminders.ts —
    *  drie vaste momenten, geen vrije tijdkiezer. Standaard alle drie UIT:
    *  een app die ongevraagd begint te porren verliest precies de mensen die
@@ -113,7 +117,7 @@ const defaults: Settings = {
   soundscapeByState: {},
   hapticsPhone: true,
   breathPrefs: {},
-  goal: null,
+  goals: [],
   reminders: {},
 };
 
@@ -172,9 +176,13 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.hapticsPhone === 'boolean'
               ? { hapticsPhone: obj.hapticsPhone }
               : {}),
-            ...(typeof obj.goal === 'string' || obj.goal === null
-              ? { goal: obj.goal }
-              : {}),
+            /* Leest ook de oude enkelvoudige sleutel, zodat wie al een doel
+               had het niet kwijtraakt. */
+            ...(Array.isArray(obj.goals)
+              ? { goals: obj.goals.filter((g: unknown) => typeof g === 'string') }
+              : typeof obj.goal === 'string'
+                ? { goals: [obj.goal] }
+                : {}),
             ...(obj.breathPrefs &&
             typeof obj.breathPrefs === 'object' &&
             !Array.isArray(obj.breathPrefs)

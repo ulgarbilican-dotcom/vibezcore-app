@@ -65,3 +65,24 @@ export const GOALS: Goal[] = [
 
 export const goalByKey = (k: string | null): Goal | null =>
   k ? (GOALS.find((g) => g.key === k) ?? null) : null;
+
+/** Hoogstens twee — zie de toelichting bij `goals` in utils/settings.ts. */
+export const MAX_GOALS = 2;
+
+export const goalsByKeys = (keys: string[]): Goal[] =>
+  keys.map((k) => goalByKey(k)).filter((g): g is Goal => g !== null);
+
+/** Hoe zwaar een toestand weegt over ALLE gekozen doelen heen. Lager is
+ *  belangrijker; 99 = komt bij geen enkel doel voor. Bij twee doelen telt de
+ *  BESTE positie, zodat een toestand die bij allebei hoort vooropgaat zonder
+ *  dat de rest gelijk komt te staan. */
+export const goalRank = (keys: string[], state: string): number => {
+  const gs = goalsByKeys(keys);
+  if (gs.length === 0) return 99;
+  return Math.min(
+    ...gs.map((g) => {
+      const i = g.states.indexOf(state as never);
+      return i === -1 ? 99 : i + 1;
+    }),
+  );
+};

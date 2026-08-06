@@ -22,12 +22,17 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, cycleSeconds, roundsFor } from '@/data/breath-states';
-import { goalByKey, type Goal } from '@/data/goals';
+import { goalsByKeys } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
+import {
+  ensurePermission,
+  reminderKey,
+  syncReminders,
+} from '@/services/reminders';
 import { router, Stack } from 'expo-router';
-import { Check, ChevronLeft } from 'lucide-react-native';
+import { Bell, Check, ChevronLeft } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,8 +48,14 @@ const MOMENTS = [
 
 export default function PlanScreen() {
   const history = useBreathHistory();
-  const [goalKey] = useSetting('goal');
-  const goal = goalByKey(goalKey);
+  const [goalKeys] = useSetting('goals');
+  const [reminders, setReminders] = useSetting('reminders');
+  /* Gepland als BEIDE momenten aanstaan. Half aan is geen plan, dus dan blijft
+     de knop uitnodigen in plaats van te doen alsof het geregeld is. */
+  const planned = MOMENTS.every(
+    (m) => reminders[reminderKey('breath', m.key)] === true,
+  );
+  const chosen = goalsByKeys(goalKeys);
 
   const items = useMemo(() => {
     const now = new Date();
@@ -56,7 +67,7 @@ export default function PlanScreen() {
          wat je vanavond gaat doen, in plaats van twee keer hetzelfde. */
       const at = new Date(now);
       at.setHours(m.hour, 0, 0, 0);
-      const sug = suggestBreath(history, at, goalKey);
+      const sug = suggestBreath(history, at, goalKeys);
       const st = BREATH_STATES[sug.state];
       const tech = st.techniques[0];
       const dur = st.durations[sug.durationIdx];
@@ -79,7 +90,7 @@ export default function PlanScreen() {
         done,
       };
     });
-  }, [history, goalKey]);
+  }, [history, goalKeys]);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -98,8 +109,10 @@ export default function PlanScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lead}>
-          {goal
-            ? `Two moments a day, shaped around ${goal.name.toLowerCase()}.`
+          {chosen.length > 0
+            ? `Two moments a day, shaped around ${chosen
+                .map((g) => g.name.toLowerCase())
+                .join(' and ')}.`
             : 'Two moments a day. Pick a goal to shape them around what you want.'}
         </Text>
 
@@ -147,7 +160,37 @@ export default function PlanScreen() {
           </View>
         ))}
 
-        {!goal && (
+        {/* ── Van voorstel naar afspraak ─────────────────────────────────
+             Een plan dat niets plant is een lijstje (operator, 6 augustus
+             2026). Deze knop zet de herinneringen voor precies deze twee
+             momenten aan — dezelfde die in Settings staan, want twee plekken
+             die hetzelfde regelen lopen altijd uit elkaar.
+
+             De melding IS de vraag: tikken opent de sessie, wegvegen is nee.
+             Geen tweede bevestiging in de app. */}
+        <Pressable
+          style={[s.remind, planned && s.remindOn]}
+          onPress={async () => {
+            const next = { ...reminders };
+            for (const m of MOMENTS) {
+              next[reminderKey('breath', m.key)] = !planned;
+            }
+            if (!planned && !(await ensurePermission())) return;
+            await setReminders(next);
+            void syncReminders(next);
+          }}
+        >
+          <Bell
+            size={17}
+            color={planned ? '#0a0a0a' : 'rgba(255,255,255,0.8)'}
+            strokeWidth={2.2}
+          />
+          <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
+            {planned ? 'REMINDERS ON · 08:00 · 21:00' : 'REMIND ME AT THESE TIMES'}
+          </Text>
+        </Pressable>
+
+        {chosen.length === 0 && (
           <Pressable style={s.goalCta} onPress={() => router.push('/goal' as never)}>
             <Text style={s.goalCtaTxt}>CHOOSE A GOAL</Text>
           </Pressable>
@@ -241,6 +284,26 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 12.5,
     color: 'rgba(255,255,255,0.45)',
+  },
+
+  remind: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  remindOn: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
+  remindTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 1.6,
+    color: '#ffffff',
   },
 
   goalCta: {

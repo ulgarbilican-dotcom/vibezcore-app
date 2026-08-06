@@ -21,7 +21,7 @@ import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
-import { goalByKey } from '@/data/goals';
+import { goalsByKeys } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
@@ -45,7 +45,7 @@ const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ActivityScreen() {
   const history = useBreathHistory();
-  const [goal, setGoal] = useSetting('goal');
+  const [goals] = useSetting('goals');
   const sub = useSubscription();
 
   const stats = useMemo(() => {
@@ -221,11 +221,14 @@ export default function ActivityScreen() {
         <Pressable style={s.link} onPress={() => router.push('/goal' as never)}>
           <View>
             <Text style={s.linkTxt}>
-              {goalByKey(goal)?.name ?? 'Choose a goal'}
+              {goalsByKeys(goals)
+                .map((g) => g.name)
+                .join(' · ') || 'Choose a goal'}
             </Text>
             <Text style={s.linkSub}>
-              {goalByKey(goal)?.hint ??
-                'Shapes what gets suggested, and when'}
+              {goals.length > 0
+                ? 'Shapes what gets suggested, and when'
+                : 'Pick one or two to shape your suggestions'}
             </Text>
           </View>
           <ChevronRight size={17} color="rgba(255,255,255,0.35)" />

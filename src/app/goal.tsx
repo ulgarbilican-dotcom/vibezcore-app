@@ -14,7 +14,7 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
-import { GOALS } from '@/data/goals';
+import { GOALS, MAX_GOALS } from '@/data/goals';
 import { useSetting } from '@/utils/settings';
 import { router, Stack } from 'expo-router';
 import { Check, ChevronLeft } from 'lucide-react-native';
@@ -22,7 +22,18 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GoalScreen() {
-  const [goal, setGoal] = useSetting('goal');
+  const [goals, setGoals] = useSetting('goals');
+
+  /* Aan- of uitzetten, met een grens. Zit je al op twee en kies je een derde,
+     dan vervangt die de OUDSTE — dat is prettiger dan een melding "je mag er
+     maar twee", want de gebruiker krijgt gewoon wat hij aantikte. */
+  const toggle = (key: string) => {
+    const has = goals.includes(key);
+    const next = has
+      ? goals.filter((g) => g !== key)
+      : [...goals, key].slice(-MAX_GOALS);
+    void setGoals(next);
+  };
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -41,16 +52,17 @@ export default function GoalScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lead}>
-          What you pick shapes which state gets suggested, and when. All five
-          modes stay open — a goal is a preference, not a route.
+          Pick one or two. What you choose shapes which state gets suggested,
+          and when — all five modes stay open. Pick more than two and nothing
+          stands out, so a third replaces the oldest.
         </Text>
 
         {GOALS.map((g) => {
-          const on = g.key === goal;
+          const on = goals.includes(g.key);
           return (
             <Pressable
               key={g.key}
-              onPress={() => void setGoal(on ? null : g.key)}
+              onPress={() => toggle(g.key)}
               style={[
                 s.card,
                 on && {
@@ -87,7 +99,7 @@ export default function GoalScreen() {
         })}
 
         <Text style={s.foot}>
-          Tap your goal again to clear it. Without one, suggestions follow the
+          Tap a goal again to clear it. Without one, suggestions follow the
           time of day and what you actually do.
         </Text>
 

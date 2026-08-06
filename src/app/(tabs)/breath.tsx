@@ -141,10 +141,10 @@ export default function BreathScreen() {
   const history = useBreathHistory();
   /* MOET boven de suggestie staan: die leest hem. Stond hij eronder, dan is
      de waarde er nog niet op het moment dat de berekening loopt. */
-  const [goal] = useSetting('goal');
+  const [goals] = useSetting('goals');
   const suggestion = useMemo(
     () =>
-      history.length > 0 ? suggestBreath(history, new Date(), goal) : null,
+      history.length > 0 ? suggestBreath(history, new Date(), goals) : null,
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
     [history.length > 0],
   );
