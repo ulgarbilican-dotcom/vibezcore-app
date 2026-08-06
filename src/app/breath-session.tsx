@@ -856,6 +856,14 @@ export default function BreathSessionScreen() {
                     );
                   })}
                 </View>
+                {/* Wat het VERSCHIL is, meteen zichtbaar (operator, 6 augustus
+                    2026). "Box 4-4-4-4" en "Triangle 4-4-4" zeggen niets tegen
+                    wie de termen niet kent — en dat is vrijwel iedereen. De
+                    uitleg stond wel geschreven, maar alleen in een venster op
+                    een ander scherm; hier moet hij staan, want hier kies je.
+                    Geen tik nodig: een keuze die je eerst moet openen om te
+                    snappen, is geen keuze. */}
+                <Text style={s.techExplain}>{tech.explain}</Text>
               </>
             )}
             <Text style={s.sectionEyebrow}>SESSION DURATION</Text>
@@ -1508,6 +1516,16 @@ function makeStyles(st: BreathState) {
     borderColor: 'rgba(255,255,255,0.12)',
     backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center',
+  },
+  techExplain: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    marginTop: 8,
+    marginBottom: 4,
   },
   techTxt: {
     fontFamily: BrandFonts.semibold,
