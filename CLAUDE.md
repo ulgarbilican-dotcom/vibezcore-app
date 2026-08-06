@@ -144,11 +144,20 @@ Volgorde en taglines zijn bindend en consistent over de hele webapp.
 
 | Idx | Intern | App-naam (voorlopig) | Kleur | Duur (min=default – max) |
 |-----|--------|----------------------|-------|--------------------------|
-| 0 | Gamma | Boost | Wit #FFFFFF (was Rood #FF453A — operator 27 mei 2026: rood te agressief) | 8 – 15 min |
-| 1 | Beta | Sharp Focus | Oranje #FF9F0A | 15 – 30 min |
-| 2 | Alpha | Calm Control | Blauw #0A84FF | 15 – 30 min |
-| 3 | Theta | Clarity | Paars #BF5AF2 | 15 – 30 min |
-| 4 | Delta | Rest & Reset | Sage #4FA46B (was #30D158 — operator 27 mei 2026: te flashy) | 25 – 45 min |
+| 0 | Gamma | Boost | Amber #F5A524 | 8 – 15 min |
+| 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min |
+| 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min |
+| 3 | Theta | Clarity | Wit #FFFFFF | 15 – 30 min |
+| 4 | Delta | Rest & Reset | Groen #8FD94A | 25 – 45 min |
+
+**GEWIJZIGD 5 augustus 2026 (operator): de bracelet draagt nu DEZELFDE
+kleuren als de vijf ademtoestanden.** Reden: het wordt één product. Wie van
+een ademsessie naar een bracelet-sessie gaat ziet dezelfde toestand, en die
+hoort niet halverwege van kleur te wisselen.
+
+Vervangt de vorige tabel (wit / oranje / blauw / paars / sage). De bron van
+waarheid is `src/data/breath-states.ts`; `services/ble-contract.ts` volgt
+die. Wijzigt een kleur daar, dan hoort deze tabel mee te veranderen.
 
 App toont NOOIT technische parameters (PPS, burst_ms, amplitude, RTP) — spec §11.5.
 Alleen modusnaam, duur, resterende tijd, batterij, status.

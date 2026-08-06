@@ -119,9 +119,18 @@ export default function SessionArt({
   const imgStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: (0.5 - focusY) * size },
-      { scale: 0.87 + breath.value * 0.13 },
+      /* UITGESPROKEN, niet subtiel (operator, 5 augustus 2026). Dit stond op
+         0.87 tot 1.00: dertien procent verschil tussen volledig uitgeademd en
+         volledig ingeademd. Dat is minder dan de ademhaling van de figuur
+         zelf suggereert en je ziet het simpelweg niet — zeker niet als je
+         probeert mee te ademen in plaats van te staren.
+         Nu 0.70 tot 1.00, dus ruim veertig procent. De bovengrens blijft op
+         één: het beeldvak snijdt bij, en een figuur die tegen zijn eigen rand
+         aan groeit oogt afgekapt in plaats van vol. Groeien doen we dus door
+         KLEINER te beginnen. */
+      { scale: 0.7 + breath.value * 0.3 },
     ],
-    opacity: 0.9 + breath.value * 0.1,
+    opacity: 0.74 + breath.value * 0.26,
   }));
 
   /* De gloed loopt verder uit dan het beeld en zwelt sterker aan. Daardoor
@@ -130,8 +139,11 @@ export default function SessionArt({
      plaats van erin te hangen, en dat is precies wat een illustratie levenloos
      maakt. */
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.22 + breath.value * 0.2,
-    transform: [{ scale: 0.88 + breath.value * 0.17 }],
+    /* De gloed zwelt harder mee dan het beeld zelf. Dat is wat een figuur
+       laat ademen in plaats van alleen schalen: het licht komt op en zakt
+       weg, en dat leest het oog eerder dan een maatverschil. */
+    opacity: 0.1 + breath.value * 0.38,
+    transform: [{ scale: 0.74 + breath.value * 0.34 }],
   }));
 
   /* De gloed moet UITGEDOOFD zijn vóór de rand van de uitsnede. Stond hij
@@ -145,8 +157,8 @@ export default function SessionArt({
      uitademen trekken ze samen en doven ze. Zo zie je de beweging ook in
      je ooghoek, zonder naar de bloem te hoeven kijken. */
   const ringStyle = useAnimatedStyle(() => ({
-    opacity: rings ? 0.1 + breath.value * 0.26 : 0,
-    transform: [{ scale: 0.86 + breath.value * 0.2 }],
+    opacity: rings ? 0.06 + breath.value * 0.34 : 0,
+    transform: [{ scale: 0.72 + breath.value * 0.36 }],
   }));
 
   return (

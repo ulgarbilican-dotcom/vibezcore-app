@@ -1,3 +1,17 @@
+/* ── KLEUREN GELIJKGETROKKEN MET BREATHWORK ────────────────────────────
+   Operator, 5 augustus 2026. De vijf bracelet-modi dragen nu dezelfde
+   kleuren als de vijf ademtoestanden:
+
+     BOOST   amber  #F5A524      CLARITY  wit    #FFFFFF
+     FOCUS   blauw  #3E9BFF      REST     groen  #8FD94A
+     CALM    violet #B478FF
+
+   Dit VERVANGT de tabel in CLAUDE.md §5, die daar is bijgewerkt. De reden:
+   het wordt één product. Wie in de app van een ademsessie naar een
+   bracelet-sessie gaat ziet dezelfde toestand, en die hoort dan niet
+   halverwege van kleur te wisselen.
+   ───────────────────────────────────────────────────────────────────── */
+
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — BLE Contract (spec v2.3 §8)
 
@@ -69,7 +83,7 @@ export const MODES: ModeMeta[] = [
        agressief"). Voelt als monochrome/premium "kracht in eenvoud"-
        look, niet aggressief. Op donkere bg leest 't als wit-met-
        outline, op cards als wit-fill-met-donker-text. */
-    color: '#FFFFFF',
+    color: '#F5A524',
     minMinutes: 8,
     maxMinutes: 15,
   },
@@ -77,7 +91,7 @@ export const MODES: ModeMeta[] = [
     mode: BraceletMode.Beta,
     name: 'Sharp Focus',
     blurb: 'Clear, active attention — work mode.',
-    color: '#FF9F0A', // orange
+    color: '#3E9BFF', // FOCUS-blauw, gelijk aan breathwork
     minMinutes: 15,
     maxMinutes: 30,
   },
@@ -85,7 +99,7 @@ export const MODES: ModeMeta[] = [
     mode: BraceletMode.Alpha,
     name: 'Calm Control',
     blurb: 'Relaxed but focused — flow.',
-    color: '#0A84FF', // blue
+    color: '#B478FF', // CALM-violet, gelijk aan breathwork
     minMinutes: 15,
     maxMinutes: 30,
   },
@@ -93,7 +107,7 @@ export const MODES: ModeMeta[] = [
     mode: BraceletMode.Theta,
     name: 'Clarity',
     blurb: 'Deep relaxation and letting go.',
-    color: '#BF5AF2', // purple
+    color: '#FFFFFF', // CLARITY-wit, gelijk aan breathwork
     minMinutes: 15,
     maxMinutes: 30,
   },
@@ -104,7 +118,7 @@ export const MODES: ModeMeta[] = [
     /* Iter 8c: groen #30D158 → zachter #4FA46B (operator-feedback
        "flashy, te fel"). Mossier/sage-tint, leest rustiger en past
        beter bij de "rest & reset"-intentie. */
-    color: '#4FA46B',
+    color: '#8FD94A', // REST-groen, gelijk aan breathwork
     minMinutes: 25,
     maxMinutes: 45,
   },
