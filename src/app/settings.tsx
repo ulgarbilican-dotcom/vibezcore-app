@@ -23,7 +23,9 @@
      beschikbaar is.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { AUDIO_ENABLED } from '@/constants/features';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { useSubscription } from '@/hooks/useSubscription';
 import { SLOTS, ensurePermission, syncReminders } from '@/services/reminders';
 import {
   DevUserOverride,
@@ -60,6 +62,9 @@ export default function SettingsScreen() {
      preferences horen hier"). */
   const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
   const [reminders, setReminders] = useSetting('reminders');
+  const [voiceCues, setVoiceCues] = useSetting('voiceCues');
+  const sub = useSubscription();
+  const hasBracelet = sub.hasBracelet;
   /* Iter v170: voice cues toggle verplaatst naar in-context (Breath tab +
      Bracelet active). Setting key blijft bestaan in storage; Breath tab
      leest 'm via z'n eigen useSetting('voiceCues'). */
@@ -166,38 +171,10 @@ export default function SettingsScreen() {
             sluit aan op de tijdstippen waar de suggestie al mee rekent.
             Standaard alle drie UIT. Een app die ongevraagd begint te porren
             verliest precies de mensen die hij wil houden. */}
-        <Text style={s.sectionLabel}>Daily reminders</Text>
-        <View style={s.card}>
-          {SLOTS.map((slot, i) => (
-            <View key={slot.slot}>
-              {i > 0 && <View style={s.divider} />}
-              <View style={s.row}>
-                <View style={s.rowText}>
-                  <Text style={s.rowTitle}>
-                    {slot.label} · {slot.when}
-                  </Text>
-                  <Text style={s.rowSub}>{slot.body}</Text>
-                </View>
-                <Switch
-                  value={reminders[slot.slot] === true}
-                  onValueChange={async (v) => {
-                    const next = { ...reminders, [slot.slot]: v };
-                    /* Toestemming eerst. Wordt die geweigerd, dan springt de
-                       schakelaar terug in plaats van te doen alsof er iets
-                       gepland staat. */
-                    if (v && !(await ensurePermission())) return;
-                    await setReminders(next);
-                    void syncReminders(next);
-                  }}
-                  trackColor={{ false: '#3a3a3a', true: Brand.accent }}
-                  thumbColor="#ffffff"
-                  ios_backgroundColor="#3a3a3a"
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-
+        {/* Alleen zolang de audiobibliotheek meedoet. Instellingen voor een
+            onderdeel dat niet in beeld is, zijn ruis. */}
+        {AUDIO_ENABLED && (
+        <>
         {/* ── PLAYBACK ────────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>Playback</Text>
         <View style={s.card}>
@@ -286,6 +263,9 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── PRIVACY ─────────────────────────────────────────────── */}
+        </>
+        )}
+
         <Text style={s.sectionLabel}>Privacy</Text>
         <View style={s.card}>
           <View style={s.row}>
@@ -310,7 +290,46 @@ export default function SettingsScreen() {
             — onbereikbaar voor wie de app gewoon gebruikt, terwijl juist die
             intro uitlegt wát dit product is. Iemand die hem oversloeg of hem
             aan een ander wil tonen moet erbij kunnen. */}
+        {/* ── BREATHWORK ───────────────────────────────────────────────
+            Alles wat met ademsessies te maken heeft staat bij elkaar, en niets
+            ervan raakt de bracelet. Die scheiding is niet cosmetisch: lang
+            niet iedereen heeft een bracelet, en instellingen voor iets dat je
+            niet bezit maken een scherm onbegrijpelijk (operator, 5 augustus
+            2026). */}
         <Text style={s.sectionLabel}>Breathwork</Text>
+        <Text style={s.subLabel}>Daily reminders</Text>
+        <View style={s.card}>
+          {SLOTS.map((slot, i) => (
+            <View key={slot.slot}>
+              {i > 0 && <View style={s.divider} />}
+              <View style={s.row}>
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>
+                    {slot.label} · {slot.when}
+                  </Text>
+                  <Text style={s.rowSub}>{slot.body}</Text>
+                </View>
+                <Switch
+                  value={reminders[slot.slot] === true}
+                  onValueChange={async (v) => {
+                    const next = { ...reminders, [slot.slot]: v };
+                    /* Toestemming eerst. Wordt die geweigerd, dan springt de
+                       schakelaar terug in plaats van te doen alsof er iets
+                       gepland staat. */
+                    if (v && !(await ensurePermission())) return;
+                    await setReminders(next);
+                    void syncReminders(next);
+                  }}
+                  trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                  thumbColor="#ffffff"
+                  ios_backgroundColor="#3a3a3a"
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <Text style={s.subLabel}>General</Text>
         <View style={s.card}>
           <Pressable
             style={s.row}
@@ -329,6 +348,35 @@ export default function SettingsScreen() {
             <Text style={s.versionText}>›</Text>
           </Pressable>
         </View>
+
+        {/* ── SMART BEAD BRACELET ──────────────────────────────────────
+            Verschijnt alleen voor wie er een heeft. Een gast ziet de etalage
+            op het Bracelet-tabblad, geen instellingen voor hardware die hij
+            niet bezit — dat is het verschil tussen een app die meedenkt en
+            een lijst met dode knoppen. */}
+        {hasBracelet && (
+          <>
+            <Text style={s.sectionLabel}>Smart Bead Bracelet</Text>
+            <View style={s.card}>
+              <View style={s.row}>
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Voice during sessions</Text>
+                  <Text style={s.rowSub}>
+                    Spoken guidance while a bracelet session runs. The wrist
+                    keeps working either way.
+                  </Text>
+                </View>
+                <Switch
+                  value={voiceCues}
+                  onValueChange={setVoiceCues}
+                  trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                  thumbColor="#ffffff"
+                  ios_backgroundColor="#3a3a3a"
+                />
+              </View>
+            </View>
+          </>
+        )}
 
         <Pressable
           style={s.dangerRow}
@@ -603,6 +651,15 @@ const s = StyleSheet.create({
     letterSpacing: -0.6,
     marginTop: 8,
     marginBottom: 20,
+  },
+  subLabel: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.38)',
+    marginTop: 14,
+    marginBottom: 6,
+    marginLeft: 4,
   },
   sectionLabel: {
     color: Brand.textDim,
