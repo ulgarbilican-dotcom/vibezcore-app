@@ -146,14 +146,24 @@ export default function TabLayout() {
             gewoon te zien. Terugzetten is één waarde in constants/features. */}
         <Tabs.Screen
           name="index"
-          options={{
-            href: AUDIO_ENABLED ? undefined : null,
-            title: 'Audio Library',
-            tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph label="♪" focused={focused} />
-            ),
-            tabBarButton: (props) => <TabButton path="/" {...props} />,
-          }}
+          options={
+            /* ÉÉN van de twee, nooit allebei. Expo Router weigert `href` en
+               `tabBarButton` samen en gooit dan de hele tab-groep om — niet
+               alleen dit tabblad. Dat was de foutmelding die elke knop naar
+               de tabs stuk maakte: het scherm bestond nog, maar de groep
+               waarin het zat weigerde te bouwen.
+               Verbergen doet `href: null` in zijn eentje; de eigen knop is
+               daar dan niet meer voor nodig, want er is niets te tonen. */
+            AUDIO_ENABLED
+              ? {
+                  title: 'Audio Library',
+                  tabBarIcon: ({ focused }: { focused: boolean }) => (
+                    <TabGlyph label="♪" focused={focused} />
+                  ),
+                  tabBarButton: (props) => <TabButton path="/" {...props} />,
+                }
+              : { href: null }
+          }
         />
         <Tabs.Screen
           name="breath"
