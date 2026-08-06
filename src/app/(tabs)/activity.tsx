@@ -188,17 +188,33 @@ export default function ActivityScreen() {
           <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
         </Pressable>
 
-        {/* Alleen met bracelet. Bracelet-gebruik staat bewust APART van de
-            cijfers hierboven: dat is gebruik, geen groei. */}
-        {sub.hasBracelet && (
-          <Pressable
-            style={s.link}
-            onPress={() => router.push('/bracelet-history')}
-          >
-            <Text style={s.linkTxt}>Bracelet sessions</Text>
-            <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
-          </Pressable>
-        )}
+        {/* De bracelet staat er ALTIJD, ook zonder (operator, 6 augustus
+            2026). Weglaten leek netjes — geen dode knoppen — maar het maakt
+            de helft van het product onzichtbaar voor precies de mensen die
+            hem nog moeten leren kennen. Wie er geen heeft ziet dat er iets
+            komt; wie er wel een heeft tikt erop. */}
+        <Pressable
+          style={[s.link, !sub.hasBracelet && s.linkLocked]}
+          disabled={!sub.hasBracelet}
+          onPress={() => router.push('/bracelet-history')}
+        >
+          <View>
+            <Text
+              style={[s.linkTxt, !sub.hasBracelet && s.linkTxtLocked]}
+            >
+              Bracelet sessions
+            </Text>
+            {!sub.hasBracelet && (
+              <Text style={s.linkSub}>Available Fall 2026</Text>
+            )}
+          </View>
+          <ChevronRight
+            size={17}
+            color={
+              sub.hasBracelet ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)'
+            }
+          />
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -331,6 +347,14 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 14,
     color: Brand.text,
+  },
+  linkLocked: { opacity: 0.55 },
+  linkTxtLocked: { color: 'rgba(255,255,255,0.6)' },
+  linkSub: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.34)',
   },
 
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 20 },

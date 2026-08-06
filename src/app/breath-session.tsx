@@ -55,6 +55,7 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
+import { addBreathSession } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
 import {
   GROUP_ORDER,
@@ -436,6 +437,11 @@ export default function BreathSessionScreen() {
     roundsRef.current = rounds;
   }, [rounds]);
 
+  /* Hoeveel seconden er ECHT geademd is. Bijgehouden in de fase-lus zelf en
+     niet afgeleid uit de render-waarden: die zijn in een callback verouderd,
+     en dan schrijf je de duur van een paar tellen geleden weg. */
+  const elapsedRef = useRef(0);
+  const roundRef = useRef(1);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /* De vooruitlopende stemcue heeft een eigen wekker: hij vuurt vóór het
@@ -503,6 +509,32 @@ export default function BreathSessionScreen() {
   const finish = useCallback((completed = false) => {
     stopAll();
     stopScape();
+
+    /* ── De sessie WEGSCHRIJVEN ──────────────────────────────────────────
+       Dit ontbrak volledig (hersteld 6 augustus 2026). De oude inline-sessie
+       op de Breath-tab schreef elke sessie weg; die tab is op 2 augustus
+       vervangen door het keuzescherm, en de aanroep verhuisde niet mee. Sinds
+       die dag is er geen enkele ademsessie opgeslagen — en alles wat daarna op
+       die historiek gebouwd is (de suggestie, de praktijkregel, het hele
+       Activity-tabblad) las dus een lege lijst.
+
+       Ook een afgebroken sessie telt mee, met de tijd die je wél gedaan hebt.
+       Wie na drie van de tien minuten stopt heeft drie minuten geademd, en die
+       niet meetellen maakt de cijfers een beloning voor doorzetten in plaats
+       van een verslag van wat er gebeurd is. Onder de tien seconden slaan we
+       niets op: dat is een vergissing, geen sessie. */
+    const doneSec = Math.round(elapsedRef.current);
+    if (doneSec >= 10) {
+      void addBreathSession({
+        key: st.key,
+        name: st.eyebrow,
+        durSec: doneSec,
+        rounds: completed ? roundsRef.current : Math.max(1, roundRef.current),
+        completed,
+      });
+    }
+    elapsedRef.current = 0;
+
     if (completed) setDone(true);
     setRunning(false);
     setRound(1);
@@ -568,6 +600,7 @@ export default function BreathSessionScreen() {
       if (tickRef.current) clearInterval(tickRef.current);
       tickRef.current = setInterval(() => {
         left -= 1;
+        elapsedRef.current += 1;
         setSecsLeft(left);
         if (left <= 0) {
           if (tickRef.current) clearInterval(tickRef.current);
@@ -598,6 +631,7 @@ export default function BreathSessionScreen() {
                 return;
               }
               setRound(n);
+              roundRef.current = n;
               runPhase(tech.phases[0].key, n);
             } else {
               runPhase(nextOf(k).key, r);
@@ -618,6 +652,8 @@ export default function BreathSessionScreen() {
     void playScape(scapeKey);
     setRunning(true);
     setRound(1);
+    roundRef.current = 1;
+    elapsedRef.current = 0;
     cancelAnimation(breath);
     breath.value = 0;
     /* De allereerste cue kan per definitie niet vooruitlopen — er is geen
