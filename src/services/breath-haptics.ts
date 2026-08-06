@@ -140,6 +140,13 @@ export function phaseHapticPattern(phase: PhaseKey, secs: number): number[] {
  *  onderbreken. */
 export function playPhaseHaptic(phase: PhaseKey, secs: number): void {
   try {
+    /* Eerst STOPPEN, dan starten (operator, 5 augustus 2026: de haptiek moet
+       het beeld en de stem exact volgen). Android vervangt een lopend patroon
+       meestal vanzelf, maar "meestal" is hier niet genoeg: loopt er nog iets
+       van de vorige fase, dan trilt de nieuwe fase op het ritme van de oude
+       en klopt niets meer met wat je ziet en hoort. Eén regel die dat
+       uitsluit. */
+    Vibration.cancel();
     /* `false` = niet herhalen. Zonder die tweede parameter blijft het
        patroon op sommige Android-versies eeuwig doorlopen. */
     Vibration.vibrate(phaseHapticPattern(phase, secs), false);
