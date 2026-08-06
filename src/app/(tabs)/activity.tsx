@@ -219,16 +219,16 @@ export default function ActivityScreen() {
              ruimte om zichzelf uit te leggen zonder dat de balk volloopt. */}
         <Text style={s.section}>YOUR PRACTICE</Text>
         <Pressable style={s.link} onPress={() => router.push('/goal' as never)}>
+          {/* De rij heet naar wat hij IS, niet naar wat erin staat (operator,
+              6 augustus 2026). Stond de gekozen waarde als titel, dan las
+              "Less stress" als een mededeling en niet als een knop waarmee je
+              hem instelt of wijzigt. De waarde hoort eronder. */}
           <View>
-            <Text style={s.linkTxt}>
+            <Text style={s.linkTxt}>Your goal</Text>
+            <Text style={s.linkSub}>
               {goalsByKeys(goals)
                 .map((g) => g.name)
-                .join(' · ') || 'Choose a goal'}
-            </Text>
-            <Text style={s.linkSub}>
-              {goals.length > 0
-                ? 'Shapes what gets suggested, and when'
-                : 'Pick one or two to shape your suggestions'}
+                .join(' · ') || 'Not set — tap to choose'}
             </Text>
           </View>
           <ChevronRight size={17} color="rgba(255,255,255,0.35)" />

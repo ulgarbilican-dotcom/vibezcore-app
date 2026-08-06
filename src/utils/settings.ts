@@ -99,6 +99,11 @@ export type Settings = {
    *  een app die ongevraagd begint te porren verliest precies de mensen die
    *  hij wil houden. */
   reminders: Record<string, boolean>;
+  /** Op welk UUR een herinnering valt, per sleutel (`breath:morning`).
+   *  Ontbreekt er een, dan geldt het standaarduur van dat moment. Bewust
+   *  alleen hele uren: een keuze uit 24 dingen is te doen, een keuze uit
+   *  1440 minuten is een formulier. */
+  reminderHours: Record<string, number>;
 };
 
 const defaults: Settings = {
@@ -119,6 +124,7 @@ const defaults: Settings = {
   breathPrefs: {},
   goals: [],
   reminders: {},
+  reminderHours: {},
 };
 
 let state: Settings = { ...defaults };
@@ -167,6 +173,11 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
+              : {}),
+            ...(obj.reminderHours &&
+            typeof obj.reminderHours === 'object' &&
+            !Array.isArray(obj.reminderHours)
+              ? { reminderHours: obj.reminderHours }
               : {}),
             ...(obj.reminders &&
             typeof obj.reminders === 'object' &&

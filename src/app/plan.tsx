@@ -27,6 +27,7 @@ import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import {
+  SLOT_RANGE,
   ensurePermission,
   reminderKey,
   syncReminders,
@@ -50,6 +51,16 @@ export default function PlanScreen() {
   const history = useBreathHistory();
   const [goalKeys] = useSetting('goals');
   const [reminders, setReminders] = useSetting('reminders');
+  const [hours, setHours] = useSetting('reminderHours');
+
+  const hourFor = (slot: 'morning' | 'evening') =>
+    hours[reminderKey('breath', slot)] ??
+    (MOMENTS.find((m) => m.key === slot)?.hour as number);
+
+  const hourChoices = (slot: 'morning' | 'evening') => {
+    const [from, to] = SLOT_RANGE[slot];
+    return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  };
   /* Gepland als BEIDE momenten aanstaan. Half aan is geen plan, dus dan blijft
      de knop uitnodigen in plaats van te doen alsof het geregeld is. */
   const planned = MOMENTS.every(
@@ -140,6 +151,43 @@ export default function PlanScreen() {
               {it.techName} · {it.minutes} min
             </Text>
 
+            {/* Het uur kies je HIER, op de kaart van dat moment (operator,
+                6 augustus 2026). Binnen grenzen: ochtend loopt van vijf tot
+                elf, avond van vijf tot elf 's avonds. Alleen hele uren — een
+                keuze uit zeven dingen is te doen, een keuze uit 1440 minuten
+                is een formulier. */}
+            <View style={s.hours}>
+              {hourChoices(it.moment.key).map((h) => {
+                const on = hourFor(it.moment.key) === h;
+                return (
+                  <Pressable
+                    key={h}
+                    onPress={async () => {
+                      const next = {
+                        ...hours,
+                        [reminderKey('breath', it.moment.key)]: h,
+                      };
+                      await setHours(next);
+                      if (planned) void syncReminders(reminders, next);
+                    }}
+                    style={[
+                      s.hour,
+                      on && {
+                        borderColor: it.state.accent,
+                        backgroundColor: `${it.state.accent}1A`,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[s.hourTxt, on && { color: it.state.accent }]}
+                    >
+                      {String(h).padStart(2, '0')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             {it.done ? (
               <Text style={s.doneTxt}>Done today</Text>
             ) : (
@@ -177,7 +225,7 @@ export default function PlanScreen() {
             }
             if (!planned && !(await ensurePermission())) return;
             await setReminders(next);
-            void syncReminders(next);
+            void syncReminders(next, hours);
           }}
         >
           <Bell
@@ -186,7 +234,11 @@ export default function PlanScreen() {
             strokeWidth={2.2}
           />
           <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
-            {planned ? 'REMINDERS ON · 08:00 · 21:00' : 'REMIND ME AT THESE TIMES'}
+            {planned
+              ? `REMINDERS ON · ${String(hourFor('morning')).padStart(2, '0')}:00 · ${String(
+                  hourFor('evening'),
+                ).padStart(2, '0')}:00`
+              : 'REMIND ME AT THESE TIMES'}
           </Text>
         </Pressable>
 
@@ -284,6 +336,20 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 12.5,
     color: 'rgba(255,255,255,0.45)',
+  },
+
+  hours: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
+  hour: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  hourTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
   },
 
   remind: {

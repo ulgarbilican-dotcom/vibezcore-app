@@ -48,6 +48,15 @@ type SlotDef = {
   body: string;
 };
 
+/* Binnen welke uren een moment mag vallen. Grenzen, geen vrije keuze: een
+   "ochtend"-herinnering om elf uur 's avonds is geen instelling maar een
+   fout, en die hoort de app niet mogelijk te maken. */
+export const SLOT_RANGE: Record<ReminderSlot, [number, number]> = {
+  morning: [5, 11],
+  midday: [11, 17],
+  evening: [17, 23],
+};
+
 export const SLOTS: SlotDef[] = [
   {
     slot: 'morning',
@@ -111,6 +120,7 @@ async function cancel(kind: ReminderKind, slot: ReminderSlot): Promise<void> {
  *  niet na een herinstallatie of een geweigerde toestemming. */
 export async function syncReminders(
   enabled: Record<string, boolean>,
+  hours: Record<string, number> = {},
 ): Promise<void> {
   const kinds: ReminderKind[] = ['breath', 'bracelet'];
   const wantsAny = kinds.some((k) =>
@@ -152,7 +162,8 @@ export async function syncReminders(
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: s.hour,
+          /* Het gekozen uur, anders het standaarduur van dit moment. */
+          hour: hours[reminderKey(k, s.slot)] ?? s.hour,
           minute: 0,
         },
       });
