@@ -27,6 +27,18 @@ import { Platform } from 'react-native';
 
 export type ReminderSlot = 'morning' | 'midday' | 'evening';
 
+/* Voor welke ACTIVITEIT een herinnering geldt (operator, 6 augustus 2026).
+   Breathwork en bracelet zijn twee verschillende dingen om aan herinnerd te
+   worden: het ene vraagt vijf minuten en aandacht, het andere vraagt dat je
+   op één knop drukt. Ze delen dus geen schakelaar.
+
+   De sleutel in Settings wordt `breath:evening` of `bracelet:morning`, zodat
+   beide onafhankelijk aan en uit kunnen. */
+export type ReminderKind = 'breath' | 'bracelet';
+
+export const reminderKey = (kind: ReminderKind, slot: ReminderSlot) =>
+  `${kind}:${slot}`;
+
 type SlotDef = {
   slot: ReminderSlot;
   hour: number;
@@ -66,7 +78,8 @@ export const SLOTS: SlotDef[] = [
 /* Eén vaste sleutel per moment, zodat opnieuw plannen de oude vervangt in
    plaats van er een tweede naast te zetten. Zonder dit krijgt iemand na een
    week zeven avondberichten. */
-const idFor = (slot: ReminderSlot) => `vzc-breath-${slot}`;
+const idFor = (kind: ReminderKind, slot: ReminderSlot) =>
+  `vzc-${kind}-${slot}`;
 
 /** Vraagt toestemming. Geeft `false` terug als de gebruiker weigert — dan
  *  hoort de schakelaar in Settings terug te springen in plaats van te doen
@@ -83,9 +96,9 @@ export async function ensurePermission(): Promise<boolean> {
   }
 }
 
-async function cancel(slot: ReminderSlot): Promise<void> {
+async function cancel(kind: ReminderKind, slot: ReminderSlot): Promise<void> {
   try {
-    await Notifications.cancelScheduledNotificationAsync(idFor(slot));
+    await Notifications.cancelScheduledNotificationAsync(idFor(kind, slot));
   } catch {
     /* stond er niet — prima */
   }
@@ -99,7 +112,10 @@ async function cancel(slot: ReminderSlot): Promise<void> {
 export async function syncReminders(
   enabled: Record<string, boolean>,
 ): Promise<void> {
-  const wantsAny = SLOTS.some((s) => enabled[s.slot]);
+  const kinds: ReminderKind[] = ['breath', 'bracelet'];
+  const wantsAny = kinds.some((k) =>
+    SLOTS.some((s) => enabled[reminderKey(k, s.slot)]),
+  );
   if (wantsAny && !(await ensurePermission())) return;
 
   if (Platform.OS === 'android') {
@@ -115,15 +131,23 @@ export async function syncReminders(
     } catch {}
   }
 
-  for (const s of SLOTS) {
-    await cancel(s.slot);
-    if (!enabled[s.slot]) continue;
+  for (const k of kinds) {
+   for (const s of SLOTS) {
+    await cancel(k, s.slot);
+    if (!enabled[reminderKey(k, s.slot)]) continue;
     try {
       await Notifications.scheduleNotificationAsync({
-        identifier: idFor(s.slot),
+        identifier: idFor(k, s.slot),
         content: {
-          title: s.title,
-          body: s.body,
+          /* De melding ÍS de vraag: tikken opent meteen de juiste sessie.
+             Geen bevestiging in de app erna — wie niet wil, veegt hem weg, en
+             dat is het antwoord "nee". */
+          title: k === 'breath' ? s.title : 'Your bracelet is ready',
+          body:
+            k === 'breath'
+              ? s.body
+              : 'One press. No screen, no sound, no effort.',
+          data: { kind: k },
           ...(Platform.OS === 'android' ? { channelId: 'breath' } : {}),
         },
         trigger: {
@@ -133,7 +157,8 @@ export async function syncReminders(
         },
       });
     } catch {
-      /* Eén moment dat niet lukt mag de andere twee niet meeslepen. */
+      /* Eén moment dat niet lukt mag de andere niet meeslepen. */
     }
+   }
   }
 }

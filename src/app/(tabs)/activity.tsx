@@ -17,6 +17,7 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
+import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -24,8 +25,18 @@ import { useBreathHistory } from '@/utils/breath-history';
 import { router } from 'expo-router';
 import { ChevronRight, Settings } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const SCREEN_W = Dimensions.get('window').width;
+const SCREEN_H = Dimensions.get('window').height;
 
 const DAY = 864e5;
 const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -92,8 +103,23 @@ export default function ActivityScreen() {
     return { days, peak, streak, totalMin, byState, count: history.length };
   }, [history]);
 
+  /* De kleur van de toestand waar je het vaakst naartoe gaat. Die draagt het
+     hele scherm — cijfers, balken, gloed. Zo ziet je activiteit eruit als
+     JOUW activiteit en niet als een rapport (operator, 6 augustus 2026: "te
+     saai en zakelijk"). Zonder historiek valt hij terug op het violet van
+     CALM CONTROL. */
+  const tone = stats.byState[0]?.accent ?? BREATH_STATES.calm.accent;
+
   return (
     <SafeAreaView style={s.root} edges={['top']}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Starfield width={SCREEN_W} height={SCREEN_H} count={46} color={tone} />
+      </View>
+
+      {/* Een zachte lichtbron achter de kop. Zonder dit is het vlak zwart en
+          leest alles eronder als een tabel. */}
+      <View style={[s.halo, { backgroundColor: tone }]} pointerEvents="none" />
+
       <View style={s.bar}>
         <Text style={s.title}>ACTIVITY</Text>
         <Pressable
@@ -129,9 +155,9 @@ export default function ActivityScreen() {
         ) : (
           <>
             <View style={s.row3}>
-              <Stat n={String(stats.streak)} l="DAY STREAK" />
-              <Stat n={String(stats.count)} l="SESSIONS" />
-              <Stat n={String(stats.totalMin)} l="MINUTES" />
+              <Stat n={String(stats.streak)} l="DAY STREAK" c={tone} />
+              <Stat n={String(stats.count)} l="SESSIONS" c={tone} />
+              <Stat n={String(stats.totalMin)} l="MINUTES" c={tone} />
             </View>
 
             <Text style={s.section}>THIS WEEK</Text>
@@ -220,10 +246,10 @@ export default function ActivityScreen() {
   );
 }
 
-function Stat({ n, l }: { n: string; l: string }) {
+function Stat({ n, l, c }: { n: string; l: string; c: string }) {
   return (
-    <View style={s.stat}>
-      <Text style={s.statNum}>{n}</Text>
+    <View style={[s.stat, { borderColor: `${c}33` }]}>
+      <Text style={[s.statNum, { color: c }]}>{n}</Text>
       <Text style={s.statLbl}>{l}</Text>
     </View>
   );
@@ -231,6 +257,15 @@ function Stat({ n, l }: { n: string; l: string }) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  halo: {
+    position: 'absolute',
+    top: -190,
+    alignSelf: 'center',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    opacity: 0.16,
+  },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',

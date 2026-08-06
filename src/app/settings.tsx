@@ -26,7 +26,12 @@
 import { AUDIO_ENABLED } from '@/constants/features';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
-import { SLOTS, ensurePermission, syncReminders } from '@/services/reminders';
+import {
+  SLOTS,
+  ensurePermission,
+  reminderKey,
+  syncReminders,
+} from '@/services/reminders';
 import {
   DevUserOverride,
   setDevBraceletActivated,
@@ -310,12 +315,12 @@ export default function SettingsScreen() {
                   <Text style={s.rowSub}>{slot.body}</Text>
                 </View>
                 <Switch
-                  value={reminders[slot.slot] === true}
+                  value={reminders[reminderKey('breath', slot.slot)] === true}
                   onValueChange={async (v) => {
-                    const next = { ...reminders, [slot.slot]: v };
-                    /* Toestemming eerst. Wordt die geweigerd, dan springt de
-                       schakelaar terug in plaats van te doen alsof er iets
-                       gepland staat. */
+                    const next = {
+                      ...reminders,
+                      [reminderKey('breath', slot.slot)]: v,
+                    };
                     if (v && !(await ensurePermission())) return;
                     await setReminders(next);
                     void syncReminders(next);
@@ -357,6 +362,45 @@ export default function SettingsScreen() {
         {hasBracelet && (
           <>
             <Text style={s.sectionLabel}>Smart Bead Bracelet</Text>
+            {/* Eigen herinneringen. Breathwork vraagt vijf minuten en
+                aandacht; de bracelet vraagt dat je op één knop drukt. Twee
+                verschillende dingen om aan herinnerd te worden, dus twee
+                schakelaars — nooit één die beide aanzet. */}
+            <Text style={s.subLabel}>Daily reminders</Text>
+            <View style={s.card}>
+              {SLOTS.map((slot, i) => (
+                <View key={slot.slot}>
+                  {i > 0 && <View style={s.divider} />}
+                  <View style={s.row}>
+                    <View style={s.rowText}>
+                      <Text style={s.rowTitle}>
+                        {slot.label} · {slot.when}
+                      </Text>
+                      <Text style={s.rowSub}>One press. No screen, no sound.</Text>
+                    </View>
+                    <Switch
+                      value={
+                        reminders[reminderKey('bracelet', slot.slot)] === true
+                      }
+                      onValueChange={async (v) => {
+                        const next = {
+                          ...reminders,
+                          [reminderKey('bracelet', slot.slot)]: v,
+                        };
+                        if (v && !(await ensurePermission())) return;
+                        await setReminders(next);
+                        void syncReminders(next);
+                      }}
+                      trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                      thumbColor="#ffffff"
+                      ios_backgroundColor="#3a3a3a"
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            <Text style={s.subLabel}>General</Text>
             <View style={s.card}>
               <View style={s.row}>
                 <View style={s.rowText}>
