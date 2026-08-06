@@ -181,50 +181,32 @@ export default function WelcomeScreen() {
               dan zijn Breath en Bracelet de twee kernen en krijgen zij de
               volle breedte. Geen halflege rij met één knop erin — dat leest
               als een scherm waar iets van weggehaald is. */}
-          <View style={s.btnRow}>
-            {AUDIO_ENABLED ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.navigate('/')}
-                style={({ pressed }) => [
-                  s.btn,
-                  s.btnHalf,
-                  pressed && s.btnPressed,
-                ]}
-              >
-                <Text style={s.btnLabel} numberOfLines={1}>
-                  Audio Library
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.navigate('/breath')}
-                style={({ pressed }) => [
-                  s.btn,
-                  s.btnHalf,
-                  pressed && s.btnPressed,
-                ]}
-              >
-                <Text style={s.btnLabel} numberOfLines={1}>
-                  Breathwork
-                </Text>
-              </Pressable>
-            )}
+          {/* De bracelet is de HOOFDROL (operator, 5 augustus 2026). Twee
+              even grote knoppen zeiden dat beide even belangrijk waren; dat
+              was waar toen audio meedeed, en het is niet meer waar nu het
+              product de bracelet is. Eén volle knop en één ondergeschikte
+              regel zeggen in één oogopslag wat je hier komt doen. */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.navigate('/bracelet')}
+            style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
+          >
+            <Text style={s.btnLabel} numberOfLines={1}>
+              Smart Bead Bracelet
+            </Text>
+          </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.navigate('/bracelet')}
-              style={({ pressed }) => [s.btn, s.btnHalf, pressed && s.btnPressed]}
-            >
-              <Text style={s.btnLabel} numberOfLines={1}>Smart Bracelet</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.navigate('/breath')}
+            style={s.secondaryBtn}
+            hitSlop={8}
+          >
+            <Text style={s.secondaryLabel} numberOfLines={1}>
+              Try Breathwork — free
+            </Text>
+          </Pressable>
 
-          {/* Iter v237f: 3 links gegroepeerd — divider-lijn, compacte kolom
-             met 2-regelige entries als menu. Sign in + Activate + Breath
-             als gelijkwaardige subtiele opties. Professioneler dan 3 losse
-             regels. */}
           <View style={s.linksDivider} />
           <View style={s.linksGroup}>
             <Pressable
@@ -415,6 +397,13 @@ const s = StyleSheet.create({
   /* Iter v237f (2026-07-09): 3 links in nette grouped card met dividers.
      Voorheen was 't 3 losse text-links wat te druk oogde. Nu: 1 pill met
      3 rijen gescheiden door hairline dividers — leest als een menu-lijstje. */
+  secondaryBtn: { alignSelf: 'center', paddingVertical: 14 },
+  secondaryLabel: {
+    color: Brand.text,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
   linksDivider: {
     height: 1,
     marginTop: 16,

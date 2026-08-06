@@ -96,6 +96,14 @@ function TabGlyph({ label, focused }: { label: string; focused: boolean }) {
   );
 }
 
+/* Welk scherm de tab-groep als eerste opent.
+   MOET expliciet sinds het audio-tabblad verborgen is (5 augustus 2026): dat
+   was het eerste scherm in de map en dus vanzelf de startroute. Met `href:
+   null` bestaat die route nog wel maar is hij niet meer bereikbaar, en dan
+   loopt navigeren naar de groep stuk — precies de fout die de operator zag op
+   het welkomstscherm. */
+export const unstable_settings = { initialRouteName: 'breath' };
+
 export default function TabLayout() {
   /* Bottom safe-area inset → tab-bar krijgt extra paddingBottom zodat
      labels niet onder de Android nav-bar / iPhone home-indicator vallen.
