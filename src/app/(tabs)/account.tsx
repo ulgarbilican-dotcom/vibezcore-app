@@ -540,7 +540,12 @@ function BraceletCard() {
       <Pressable
         style={s.cardCtaSecondary}
         onPress={() =>
-          openExternal('https://www.vibezcore.com/shop/beadbands')
+          /* /shop/beadbands bestond niet en gaf een 404 in de browser — dat
+             was de "foutmelding" die de operator zag. De app deed het goed en
+             opende netjes de website; de pagina was er alleen niet.
+             Nu naar /shop, dat wél bestaat. Komt er ooit een eigen
+             beadband-pagina, dan kan dit terug. */
+          openExternal(BRACELET_SHOP_URL)
         }
         accessibilityLabel="Order new beadband"
       >

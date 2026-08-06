@@ -203,7 +203,7 @@ export default function WelcomeScreen() {
             hitSlop={8}
           >
             <Text style={s.secondaryLabel} numberOfLines={1}>
-              Try Breathwork — free
+              Explore Breathwork
             </Text>
           </Pressable>
 
