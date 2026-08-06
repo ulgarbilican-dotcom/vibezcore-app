@@ -21,12 +21,15 @@ import Starfield from '@/components/Starfield';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
+import { GOALS, goalByKey } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
+import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
 import { ChevronRight, Settings } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dimensions,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +46,8 @@ const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ActivityScreen() {
   const history = useBreathHistory();
+  const [goal, setGoal] = useSetting('goal');
+  const [goalOpen, setGoalOpen] = useState(false);
   const sub = useSubscription();
 
   const stats = useMemo(() => {
@@ -205,6 +210,25 @@ export default function ActivityScreen() {
           </>
         )}
 
+        {/* ── Waar je naartoe werkt ───────────────────────────────────
+             Bovenaan de historiek en niet in Settings: een doel hoort bij je
+             voortgang, niet bij je voorkeuren. Wie hier kijkt vraagt zich af
+             of het ergens toe leidt — dan is dit de plek om te zeggen waar
+             naartoe. */}
+        <Text style={s.section}>YOUR GOAL</Text>
+        <Pressable style={s.link} onPress={() => setGoalOpen(true)}>
+          <View>
+            <Text style={s.linkTxt}>
+              {goalByKey(goal)?.name ?? 'Choose a goal'}
+            </Text>
+            <Text style={s.linkSub}>
+              {goalByKey(goal)?.hint ??
+                'Shapes what gets suggested, and when'}
+            </Text>
+          </View>
+          <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
+        </Pressable>
+
         <Text style={s.section}>HISTORY</Text>
         <Pressable
           style={s.link}
@@ -242,6 +266,47 @@ export default function ActivityScreen() {
           />
         </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={goalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGoalOpen(false)}
+      >
+        <Pressable style={s.backdrop} onPress={() => setGoalOpen(false)}>
+          <Pressable style={s.sheet} onPress={() => {}}>
+            <Text style={s.sheetTitle}>What are you working on?</Text>
+            <Text style={s.sheetSub}>
+              It shapes what gets suggested, and when. All five modes stay
+              open.
+            </Text>
+            {GOALS.map((g) => {
+              const on = g.key === goal;
+              return (
+                <Pressable
+                  key={g.key}
+                  onPress={() => {
+                    void setGoal(on ? null : g.key);
+                    setGoalOpen(false);
+                  }}
+                  style={[
+                    s.goalRow,
+                    on && { borderColor: g.accent, backgroundColor: `${g.accent}14` },
+                  ]}
+                >
+                  <View style={[s.goalDot, { backgroundColor: g.accent }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.goalName, on && { color: g.accent }]}>
+                      {g.name}
+                    </Text>
+                    <Text style={s.goalHint}>{g.hint}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -390,6 +455,55 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 11.5,
     color: 'rgba(255,255,255,0.34)',
+  },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#141018',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 34,
+  },
+  sheetTitle: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 20,
+    color: '#ffffff',
+    letterSpacing: -0.3,
+  },
+  sheetSub: {
+    marginTop: 6,
+    marginBottom: 16,
+    fontFamily: BrandFonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  goalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    marginBottom: 8,
+  },
+  goalDot: { width: 9, height: 9, borderRadius: 5 },
+  goalName: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
+    color: Brand.text,
+  },
+  goalHint: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.5)',
   },
 
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 20 },

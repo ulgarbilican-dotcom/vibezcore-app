@@ -139,8 +139,12 @@ export default function BreathScreen() {
      Eén keer bepaald bij het openen; hem laten meebewegen met de klok zou
      de pagina onder je handen laten verspringen. */
   const history = useBreathHistory();
+  /* MOET boven de suggestie staan: die leest hem. Stond hij eronder, dan is
+     de waarde er nog niet op het moment dat de berekening loopt. */
+  const [goal] = useSetting('goal');
   const suggestion = useMemo(
-    () => (history.length > 0 ? suggestBreath(history, new Date()) : null),
+    () =>
+      history.length > 0 ? suggestBreath(history, new Date(), goal) : null,
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
     [history.length > 0],
   );

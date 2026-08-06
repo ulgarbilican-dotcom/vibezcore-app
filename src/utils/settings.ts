@@ -85,6 +85,11 @@ export type Settings = {
    *  stand hierboven — dus wie nooit iets per toestand instelt merkt niets
    *  van deze laag. */
   breathPrefs: Record<string, { voice?: boolean; haptics?: boolean }>;
+  /** Waar iemand naartoe werkt. `null` = nog niet gekozen, en dan gedraagt
+   *  de app zich precies zoals nu: de klok en de historiek bepalen de
+   *  suggestie. Een doel is een VOORKEUR, geen route — alle vijf de deuren
+   *  blijven altijd open. */
+  goal: string | null;
   /** Welke dagelijkse herinneringen aan staan. Zie services/reminders.ts —
    *  drie vaste momenten, geen vrije tijdkiezer. Standaard alle drie UIT:
    *  een app die ongevraagd begint te porren verliest precies de mensen die
@@ -108,6 +113,7 @@ const defaults: Settings = {
   soundscapeByState: {},
   hapticsPhone: true,
   breathPrefs: {},
+  goal: null,
   reminders: {},
 };
 
@@ -165,6 +171,9 @@ async function loadOnce(): Promise<void> {
               : {}),
             ...(typeof obj.hapticsPhone === 'boolean'
               ? { hapticsPhone: obj.hapticsPhone }
+              : {}),
+            ...(typeof obj.goal === 'string' || obj.goal === null
+              ? { goal: obj.goal }
               : {}),
             ...(obj.breathPrefs &&
             typeof obj.breathPrefs === 'object' &&
