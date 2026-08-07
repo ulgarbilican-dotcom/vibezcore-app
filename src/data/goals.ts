@@ -58,7 +58,15 @@ export const GOALS: Goal[] = [
     Icon: Waves,
     name: 'Less stress',
     hint: 'Come back to steady when it builds',
-    states: ['calm', 'clarity', 'rest'],
+    /* Herzien op bewijs (8 augustus 2026). CLARITY eerst: dat zijn de
+       ritmes met een langere uitademing dan inademing (4-2-6 en 4-8), en
+       daar wijst het onderzoek naar spanning het duidelijkst heen. Daarna
+       FOCUS, want dat draagt Coherent Breathing — de techniek met de
+       meeste literatuur rond spanning en HRV. Box breathing (CALM) staat
+       lager: dat is van oorsprong een techniek om scherp te blijven ONDER
+       druk, niet om druk af te bouwen. REST sluit de rij; dat is afbouwen
+       naar slaap, en dat is iets anders dan kalmeren overdag. */
+    states: ['clarity', 'focus', 'calm', 'rest'],
     accent: BREATH_STATES.calm.accent,
   },
   {
@@ -74,7 +82,10 @@ export const GOALS: Goal[] = [
     Icon: Crosshair,
     name: 'Sharper focus',
     hint: 'Hold your attention on one thing',
-    states: ['focus', 'clarity', 'calm'],
+    /* FOCUS (Coherent Breathing) eerst, dan CALM: box breathing is de
+       klassieke techniek om scherp te blijven onder druk. CLARITY sluit
+       aan — een lange uitademing haalt de ruis weg voor je begint. */
+    states: ['focus', 'calm', 'clarity'],
     accent: BREATH_STATES.focus.accent,
   },
 ];

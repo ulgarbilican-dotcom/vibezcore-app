@@ -12,16 +12,24 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { AUDIO_ENABLED } from '@/constants/features';
+import EnergyField from '@/components/EnergyField';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
 } from '@/utils/dev-user-override';
+import {
+  AudioWaveform,
+  ChevronRight,
+  CircleDot,
+  User,
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Dimensions,
   Image,
   Pressable,
   StyleSheet,
@@ -110,15 +118,12 @@ export default function WelcomeScreen() {
          Iter 9al (2026-05-31): operator probeert "master-mental-clarity"
          als welcome — testen of de "arrival energy" sterker leest dan
          de vorige Sharp Focus / Beta crop. */}
+      {/* Een bewegend energieveld in plaats van een foto (operator,
+          8 augustus 2026). Een foto van een gezicht zegt iets over een
+          persoon; dit zegt iets over wat de app doet. Zie
+          components/EnergyField.tsx. */}
       <View style={s.bgPhotoWrap}>
-        <Image
-          source={{
-            uri: 'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg',
-          }}
-          style={s.bgPhoto}
-          resizeMode="cover"
-          accessibilityIgnoresInvertColors
-        />
+        <EnergyField width={SCREEN_W} height={FIELD_H} />
       </View>
 
       {/* Top scrim — subtiele donkere fade voor status bar + wordmark.
@@ -166,11 +171,12 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={s.middle}>
-          <Text style={s.header} numberOfLines={2}>
-            Stop Drifting.
+          {/* Operator-mockup, 8 augustus 2026. */}
+          <Text style={s.header} numberOfLines={1}>
+            Control Your Vibe
           </Text>
-          <Text style={s.header} numberOfLines={2}>
-            Start Directing.
+          <Text style={s.header} numberOfLines={1}>
+            Control Your Life
           </Text>
           {/* Accent-streepje tussen hoofdregel en caps-ondertekst (#3a8fff). */}
           <View style={s.accentBar} />
@@ -192,57 +198,81 @@ export default function WelcomeScreen() {
               was waar toen audio meedeed, en het is niet meer waar nu het
               product de bracelet is. Eén volle knop en één ondergeschikte
               regel zeggen in één oogopslag wat je hier komt doen. */}
+          {/* Twee kaarten in plaats van een knop en een regel (operator-
+              mockup, 8 augustus 2026). Ze zijn gelijkwaardig van vorm maar
+              niet van gewicht: de bracelet draagt een foto van het product
+              zelf, breathwork een teken. Dat verschil zegt genoeg zonder dat
+              de tweede een bijzin wordt.
+
+              Wat elke kaart moet doen: in twee regels vertellen wat je
+              krijgt. Alleen een naam laat de bezoeker raden, en dit is het
+              scherm waar iemand beslist of hij verder kijkt. */}
           <Pressable
             accessibilityRole="button"
             onPress={() => router.navigate('/bracelet')}
-            style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
+            style={({ pressed }) => [s.card, pressed && s.cardPressed]}
           >
-            <Text style={s.btnLabel} numberOfLines={1}>
-              Smart Bead Bracelet
-            </Text>
+            <Image
+              source={{ uri: BRACELET_IMG }}
+              style={s.cardImg}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
+            <View style={s.cardTxt}>
+              <Text style={s.cardTitle}>Smart Bead Bracelet</Text>
+              <Text style={s.cardBody}>
+                Instant state control through precision haptics.
+              </Text>
+            </View>
+            <ChevronRight size={20} color={Brand.accent} strokeWidth={2.2} />
           </Pressable>
 
           <Pressable
             accessibilityRole="button"
             onPress={() => router.navigate('/breath')}
-            style={s.secondaryBtn}
-            hitSlop={8}
+            style={({ pressed }) => [s.card, pressed && s.cardPressed]}
           >
-            <Text style={s.secondaryLabel} numberOfLines={1}>
-              Explore Breathwork
-            </Text>
+            <View style={s.cardGlyph}>
+              <AudioWaveform size={26} color={Brand.accent} strokeWidth={2} />
+            </View>
+            <View style={s.cardTxt}>
+              <Text style={s.cardTitle}>Guided Breathwork</Text>
+              <Text style={s.cardBody}>
+                Recognised techniques for energy, focus and recovery.
+              </Text>
+            </View>
+            <ChevronRight size={20} color={Brand.accent} strokeWidth={2.2} />
           </Pressable>
 
+          {/* Twee regels, niet drie. "Reset in minutes" wees naar breathwork
+              en dat staat nu als kaart hierboven — dezelfde bestemming twee
+              keer aanbieden maakt een scherm langer, niet duidelijker. */}
           <View style={s.linksDivider} />
           <View style={s.linksGroup}>
-            <Pressable
-              accessibilityRole="link"
-              onPress={() => router.navigate('/account')}
-              hitSlop={10}
-              style={s.linkRow}
-            >
-              <Text style={s.linkRowText}>Already a member? Sign in</Text>
-              <Text style={s.linkRowSub}>Existing VIBEZCORE account</Text>
-            </Pressable>
-            <View style={s.linkRowSep} />
             <Pressable
               accessibilityRole="link"
               onPress={() => router.navigate('/activate-bracelet' as never)}
               hitSlop={10}
               style={s.linkRow}
             >
-              <Text style={s.linkRowText}>Have a Bracelet or Full Bundle?</Text>
-              <Text style={s.linkRowSub}>Bracelet + Audio · Activate here</Text>
+              <CircleDot size={16} color="rgba(255,255,255,0.45)" strokeWidth={2} />
+              <Text style={s.linkRowText}>
+                Have a bracelet? <Text style={s.linkAction}>Activate now</Text>
+              </Text>
+              <ChevronRight size={16} color={Brand.accent} strokeWidth={2.2} />
             </Pressable>
             <View style={s.linkRowSep} />
             <Pressable
               accessibilityRole="link"
-              onPress={() => router.navigate('/breath')}
+              onPress={() => router.navigate('/account')}
               hitSlop={10}
               style={s.linkRow}
             >
-              <Text style={s.linkRowText}>Reset in minutes</Text>
-              <Text style={s.linkRowSub}>Guided breathwork sessions</Text>
+              <User size={16} color="rgba(255,255,255,0.45)" strokeWidth={2} />
+              <Text style={s.linkRowText}>
+                Already a member? <Text style={s.linkAction}>Sign in</Text>
+              </Text>
+              <ChevronRight size={16} color={Brand.accent} strokeWidth={2.2} />
             </Pressable>
           </View>
         </View>
@@ -250,6 +280,16 @@ export default function WelcomeScreen() {
     </View>
   );
 }
+
+/* De bracelet zelf, vrijstaand op zwart — dezelfde render als op de
+   Bracelet-tab, zodat het product er op beide plekken gelijk uitziet. */
+const BRACELET_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/vzc-bracelet%20no%20bg.png';
+
+/* Het veld vult de bovenste helft; daaronder loopt het via de bestaande
+   gradient in het zwart over. */
+const SCREEN_W = Dimensions.get('window').width;
+const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
 
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
@@ -315,12 +355,13 @@ const s = StyleSheet.create({
   },
   middle: {
     flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 8,
-    /* Iter 9ao (2026-05-31): 1 cm naar beneden geschoven (≈38px op
-       standaard density). Houdt de headline weg van VIBEZCORE-wordmark
-       en geeft de foto meer eigen ademruimte boven de tekst. */
-    transform: [{ translateY: 38 }],
+    /* Naar BOVEN in plaats van naar beneden (operator, 8 augustus 2026:
+       "hoger zetten"). De kop stond 38 punten omlaag om de foto lucht te
+       geven; nu de twee kaarten eronder staan is die ruimte juist nodig
+       onderaan. De kop klimt het beeld in, waar hij op de mockup ook staat. */
+    justifyContent: 'flex-end',
+    paddingBottom: 6,
   },
   accentBar: {
     width: 34,
@@ -338,8 +379,12 @@ const s = StyleSheet.create({
        extra-smalle toestellen tegen wrap. */
     color: Brand.text,
     fontFamily: BrandFonts.black,
-    fontSize: 42,
-    lineHeight: 48,
+    /* 42 → 34. "Control Your Vibe" is langer dan "Stop Drifting." en werd op
+       42 afgekapt tot "Control Your …" (gezien op het toestel, 8 augustus
+       2026). Op 34 past de langste regel met marge, ook op smallere
+       toestellen. */
+    fontSize: 34,
+    lineHeight: 40,
     letterSpacing: -0.5,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.85)',
@@ -363,6 +408,49 @@ const s = StyleSheet.create({
   bottom: {
     gap: 10,
   },
+  /* ── De twee kaarten ── */
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.28)',
+    backgroundColor: 'rgba(12,24,44,0.72)',
+  },
+  cardPressed: {
+    borderColor: 'rgba(58,143,255,0.55)',
+    backgroundColor: 'rgba(16,32,58,0.85)',
+  },
+  cardImg: { width: 62, height: 62 },
+  /* Zelfde vak als de foto, zodat de twee kaarten even hoog beginnen en de
+     titels op één lijn staan. */
+  cardGlyph: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTxt: { flex: 1 },
+  cardTitle: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 18,
+    color: Brand.text,
+    letterSpacing: -0.2,
+  },
+  cardBody: {
+    marginTop: 4,
+    fontFamily: BrandFonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.62)',
+  },
+  linkAction: { color: Brand.accent, fontFamily: BrandFonts.semibold },
   btnRow: {
     flexDirection: 'row',
     gap: 10,
@@ -422,15 +510,21 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.10)',
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
+  /* Icoon, tekst en pijl op ÉÉN regel. Zonder richting stapelde React Native
+     ze onder elkaar en werd van twee regels een blok van zes. */
   linkRow: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   linkRowText: {
-    color: Brand.text,
-    fontFamily: BrandFonts.semibold,
-    fontSize: 13,
-    letterSpacing: 0.2,
+    flex: 1,
+    color: 'rgba(255,255,255,0.72)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 14,
+    letterSpacing: 0.1,
   },
   linkRowSub: {
     color: Brand.textDim,

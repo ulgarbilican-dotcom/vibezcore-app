@@ -30,11 +30,21 @@ export type Suggestion = {
 /* Wat past bij welk uur. De avondgrens is hard: na negenen is REST & RESET
    het enige juiste antwoord, wat de historiek ook zegt. */
 function byHour(h: number): BreathStateKey[] {
-  if (h < 6) return ['rest'];
-  if (h < 11) return ['boost', 'focus'];
-  if (h < 15) return ['focus', 'clarity'];
-  if (h < 21) return ['calm', 'clarity'];
-  return ['rest'];
+  /* De avond sloot alles af behalve REST. Gevolg: wie "minder stress" als
+     doel had, kreeg elke avond REST & RESET voorgeschoteld — het doel deed
+     niets meer, want er viel niets te kiezen (operator, 8 augustus 2026).
+
+     De klok hoort te zeggen wat NIET past, niet wat er als enige overblijft.
+     's Avonds is dat activeren: BOOST (vijftien ademhalingen per minuut) om
+     elf uur is onzin. Maar CLARITY en CALM CONTROL zijn 's avonds prima —
+     het zijn allebei langzame ritmes, en een lange uitademing is juist waar
+     de literatuur naar wijst voor spanning. Ze staan achter REST, dus wie
+     geen doel kiest merkt van deze verruiming niets. */
+  if (h < 6) return ['rest', 'clarity'];
+  if (h < 11) return ['boost', 'focus', 'clarity'];
+  if (h < 15) return ['focus', 'clarity', 'calm'];
+  if (h < 21) return ['calm', 'clarity', 'focus', 'rest'];
+  return ['rest', 'clarity', 'calm'];
 }
 
 const REASON: Record<BreathStateKey, string> = {
