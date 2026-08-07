@@ -137,11 +137,26 @@ const SHORTCUT_ROUTES: Record<string, string> = {
   bracelet: '/bracelet',
 };
 
+/* Waar het pad in een deeplink terechtkomt.
+   Bij `vibezcoreapp://breath-session?state=calm` is er geen host én pad —
+   Expo zet `breath-session` in `hostname` en laat `path` leeg. Bij een link
+   mét schuine streep staat het juist in `path`. Wie maar één van de twee
+   leest, mist de helft.
+
+   Dat was de fout achter "alle drie gaan naar Stop Drifting" (operator,
+   7 augustus 2026): het pad kwam leeg terug, de app dacht dat er geen
+   deeplink was, en het welkomstscherm kwam over de bestemming heen. Expo
+   Router had ondertussen zelf al goed gerouteerd. */
+function linkPath(url: string): string {
+  const parsed = Linking.parse(url);
+  return (parsed.path || parsed.hostname || '').replace(/^\/+/, '');
+}
+
 async function hasPendingAuthDeepLink(): Promise<boolean> {
   try {
     const initialUrl = await Linking.getInitialURL();
     if (!initialUrl) return false;
-    const path = Linking.parse(initialUrl).path ?? '';
+    const path = linkPath(initialUrl);
     /* Ook een snelkoppeling moet het welkomstscherm overslaan, anders komt
        die eroverheen en strandt je waar je niet heen wilde. */
     return AUTH_DEEP_LINK_PATHS.has(path) || path in SHORTCUT_ROUTES;
@@ -507,7 +522,7 @@ export default function RootLayout() {
       if (!url) return;
       try {
         const parsed = Linking.parse(url);
-        const path = parsed.path ?? '';
+        const path = linkPath(url);
         const params = parsed.queryParams ?? {};
 
         /* Route per deep-link-pad. Onbekende paden negeren we
