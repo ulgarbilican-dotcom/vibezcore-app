@@ -357,8 +357,21 @@ export default function RootLayout() {
     const treatAsGuest = override === 'guest';
     const treatAsSignedIn =
       override === 'audio' || override === 'bracelet' || override === 'pro';
-    const showWelcome =
-      !pendingAuthLink && (treatAsGuest || (!treatAsSignedIn && auth === null));
+    /* ALTIJD het welkomstscherm (operator, 7 augustus 2026: "stop drifting
+       moet wel altijd welcome scherm zijn").
+
+       Dit vervangt de regel uit CLAUDE.md §3, waar stond dat een reeds
+       ingelogde gebruiker het scherm overslaat. Die regel kwam uit de tijd dat
+       welcome vooral een poort naar Audio of Bracelet was; nu is het het
+       merkbeeld waarmee de app opent, en dat hoort iedereen te zien — of je nu
+       betaalt of niet.
+
+       De uitzondering die BLIJFT: een openstaande auth-deeplink. Zou welcome
+       daar overheen komen, dan slokt hij het verify-scherm op en strandt
+       iemand midden in het aanmelden. */
+    const showWelcome = !pendingAuthLink;
+    void treatAsGuest;
+    void treatAsSignedIn;
     if (showWelcome) {
       router.replace('/welcome');
     } else if (
