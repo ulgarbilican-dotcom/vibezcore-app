@@ -44,7 +44,10 @@ const SHORTCUTS = [
     id: 'all_modes',
     short: 'All modes',
     long: 'Pick your own state',
-    uri: 'vibezcoreapp://breath',
+    /* Met `from`, want anders kom je op het welkomstbeeld uit en moet je
+       alsnog doorklikken. Wie "All modes" kiest heeft die keuze al gemaakt
+       (operator, 7 augustus 2026). */
+    uri: 'vibezcoreapp://breath?from=shortcut',
   },
   {
     id: 'bracelet',

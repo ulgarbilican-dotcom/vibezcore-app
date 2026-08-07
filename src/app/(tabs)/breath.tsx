@@ -178,7 +178,9 @@ export default function BreathScreen() {
      Eenmalig: veeg je hem weg en kom je later terug, dan is het beeld er
      gewoon weer. */
   const entry = useLocalSearchParams<{ from?: string }>();
-  const skipIntroRef = useRef(entry.from === 'reminder');
+  const skipIntroRef = useRef(
+    entry.from === 'reminder' || entry.from === 'shortcut',
+  );
   useFocusEffect(
     useCallback(() => {
       if (skipIntroRef.current) {
