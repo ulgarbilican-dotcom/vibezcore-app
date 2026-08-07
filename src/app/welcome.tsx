@@ -33,8 +33,11 @@ import { useEffect, useState } from 'react';
 import {
   Easing,
   cancelAnimation,
+  useDerivedValue,
   useSharedValue,
+  withDelay,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import {
@@ -85,23 +88,55 @@ export default function WelcomeScreen() {
      je juist even moet landen; langer en zie je bij een kort bezoek maar één
      van de twee gedaanten. */
   const morph = useSharedValue(0);
-  const spin = useSharedValue(0);
+  const turn = useSharedValue(0);
   useEffect(() => {
+    /* Heen, even BLIJVEN STAAN, en dan terug (operator, 8 augustus 2026:
+       "iets langer in beeld"). Met een gewone heen-en-weer beweging is het
+       gezicht er maar één ogenblik — precies op het keerpunt — en dat is te
+       kort om te herkennen wat je ziet. Nu staat het er twee en een halve
+       seconde stil. */
     morph.value = withRepeat(
-      withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.cubic) }),
+      withSequence(
+        withTiming(1, { duration: 5200, easing: Easing.inOut(Easing.cubic) }),
+        withDelay(
+          2500,
+          withTiming(0, { duration: 5200, easing: Easing.inOut(Easing.cubic) }),
+        ),
+        withDelay(1200, withTiming(0, { duration: 0 })),
+      ),
       -1,
-      true,
+      false,
     );
-    spin.value = withRepeat(
+    turn.value = withRepeat(
       withTiming(1, { duration: 26000, easing: Easing.linear }),
       -1,
       false,
     );
     return () => {
       cancelAnimation(morph);
-      cancelAnimation(spin);
+      cancelAnimation(turn);
     };
-  }, [morph, spin]);
+  }, [morph, turn]);
+
+  /* ── Twee omwentelingen, en recht landen ──────────────────────────────
+     Nu op de MAAT van SplatField in plaats van op mijn aanname. Daar geldt
+     voor de hoek van elk punt:
+
+         a = beginhoek + eindhoek·t + SWIRL·t + spin·2π
+
+     Die `SWIRL·t` is een vaste extra draaiing die met de morph meegroeit —
+     0,85 radiaal, ongeveer negenenveertig graden. Precies dat is waarom het
+     gezicht scheef tot stilstand kwam: op het hoogtepunt stond de hele wolk
+     een halve slag schuin, hoe de doorlopende draaiing ook liep.
+
+     Dus geven we `spin` de tegenhanger mee. Op het hoogtepunt is de totale
+     extra draaiing dan `SWIRL + (2 − SWIRL/2π)·2π = 2·2π`: twee volle
+     omwentelingen, en dus rechtop. Onderweg draait hij die twee rondjes ook
+     echt — het gezicht komt draaiend aan en gaat draaiend weer uiteen, en
+     komt daarna in dezelfde stand terug (operator, 8 augustus 2026). */
+  const SWIRL_TURNS = 0.85 / (Math.PI * 2);
+  const spin = useDerivedValue(() => morph.value * (2 - SWIRL_TURNS));
+  void turn;
 
   /* Reeds ingelogd? → welkomstscherm overslaan, direct de tabs in.
      Tijdens de check tonen we alleen de merk-achtergrondkleur (geen flits).
@@ -178,7 +213,12 @@ export default function WelcomeScreen() {
             breath={morph}
             size={FIELD_SIZE}
             color="#5EA6FF"
-            count={2600}
+            /* Meer punten voor een scherper gezicht (operator: "kan je
+               gezicht superduidelijk maken"). Op 2600 was de omtrek er wel
+               maar bleven de ogen en de mond een suggestie; het dubbele
+               tekent ze uit. Het blijft één tekenopdracht via Atlas, dus de
+               prijs zit in geheugen en niet in beeldjes per seconde. */
+            count={5200}
           />
         </View>
       </View>
@@ -349,10 +389,23 @@ const SCREEN_W = Dimensions.get('window').width;
 const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
 /* Vierkant, want de wolk rekent in een vierkante ruimte. Breder dan het scherm
    zodat de buitenrand van het veld doorloopt tot voorbij de zijkanten. */
-const FIELD_SIZE = Math.round(SCREEN_W * 1.25);
+/* Precies binnen de schermbreedte, met een marge (operator, 8 augustus 2026:
+   "de animatie moet zich altijd in het beeld afspelen"). Stond op 1,25 maal
+   de breedte met een negatieve marge erboven: mooi als achtergrond, maar de
+   buitenrand van het veld en de bovenkant van het gezicht liepen het scherm
+   uit. Een gezicht dat half buiten beeld ontstaat is geen gezicht. */
+const FIELD_SIZE = Math.round(SCREEN_W * 0.94);
 /* Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
    beeld terug zolang de download loopt, en dan blijft het veld draaien zonder
    ooit een gezicht te worden. */
+/* De blik die tot vandaag de welkomstfoto was. Ik heb hier eenmalig een
+   andere figuur geprobeerd omdat ik dacht dat een duidelijker kopvorm beter
+   zou lezen — dat was mijn aanname, niet een vraag van de operator, en het
+   beeld hing bovendien scheef in het vak. Teruggezet (8 augustus 2026).
+
+   Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
+   beeld zolang de download loopt, en dan blijft het veld draaien zonder ooit
+   een gezicht te worden. */
 const FACE = assetUri(
   'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg',
 );
@@ -375,10 +428,11 @@ const s = StyleSheet.create({
   /* Het vierkante veld gecentreerd in het vak erboven. */
   fieldCenter: {
     position: 'absolute',
-    top: -Math.round(SCREEN_W * 1.25 * 0.12),
-    left: (SCREEN_W - Math.round(SCREEN_W * 1.25)) / 2,
-    width: Math.round(SCREEN_W * 1.25),
-    height: Math.round(SCREEN_W * 1.25),
+    /* Onder de wordmark, boven de kop. */
+    top: 54,
+    left: Math.round((SCREEN_W - SCREEN_W * 0.94) / 2),
+    width: Math.round(SCREEN_W * 0.94),
+    height: Math.round(SCREEN_W * 0.94),
   },
   bgPhoto: {
     width: '100%',
