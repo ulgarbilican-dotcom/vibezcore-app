@@ -186,14 +186,14 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     techniques: [
       {
         key: 'energize',
-        name: 'Equal Breathing',
+        name: 'Fast Equal Breathing',
         explain:
           'Fast and even, fifteen breaths a minute. Short in through the nose, short out through the mouth.',
         phases: [inhale(2, 'Nose'), exhale(2, 'Mouth')],
       },
       {
         key: 'power',
-        name: 'Equal Breathing',
+        name: 'Moderate Equal Breathing',
         explain:
           'The same pattern at a calmer pace. Use this one if the faster rhythm makes you light-headed.',
         phases: [inhale(3, 'Nose'), exhale(3, 'Mouth')],
