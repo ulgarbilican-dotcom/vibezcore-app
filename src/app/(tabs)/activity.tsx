@@ -52,7 +52,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -70,6 +73,7 @@ const HERO_H = Math.round(SCREEN_W * 0.66);
 const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ActivityScreen() {
+  const insets = useSafeAreaInsets();
   const history = useBreathHistory();
   const [goals] = useSetting('goals');
   const sub = useSubscription();
@@ -224,7 +228,10 @@ export default function ActivityScreen() {
       {/* Kopbeeld met verloop eronder, zodat de tekst erin ligt in plaats van
           erop. Zonder dat verloop liep het beeld door tot achter de eerste kop
           en was die nauwelijks te lezen. */}
-      <View style={s.heroWrap} pointerEvents="none">
+      <View
+        style={[s.heroWrap, { top: insets.top }]}
+        pointerEvents="none"
+      >
         <RNImage
           source={{ uri: assetUri(HERO) }}
           style={StyleSheet.absoluteFill}
@@ -398,9 +405,12 @@ export default function ActivityScreen() {
           )}
         </View>
 
-        {sub.hasBracelet ? (
-          <>
-            <View style={s.statRow}>
+        {/* De vier kaarten staan er ALTIJD (operator, 7 augustus 2026). Ze
+            zaten achter een controle op bezit, dus wie geen bracelet heeft zag
+            ze nooit — terwijl de mockup ze juist toont. Zonder bracelet staan
+            ze op nul; dat laat zien wat er komt in plaats van het te verbergen. */}
+        <>
+          <View style={s.statRow}>
               <Stat
                 Icon={Waves}
                 n={String(bracelet.sessions)}
@@ -484,14 +494,17 @@ export default function ActivityScreen() {
               ))}
             </View>
 
+          {sub.hasBracelet && (
             <Row
               Icon={Watch}
               title="All bracelet sessions"
               sub="View your bracelet session history"
               onPress={() => router.push('/bracelet-history')}
             />
-          </>
-        ) : (
+          )}
+        </>
+
+        {!sub.hasBracelet && (
           <View style={s.card}>
             <Text style={s.emptyT}>Bracelet sessions coming soon</Text>
             <Text style={s.emptyB}>
@@ -569,6 +582,9 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   heroWrap: {
     position: 'absolute',
+    /* Onder de statusbalk beginnen (operator, 7 augustus 2026: de bovenkant
+       verdween achter de camera). Wordt bij het renderen gezet met de echte
+       inzet van het toestel — een vast getal klopt op geen enkel scherm. */
     top: 0,
     left: 0,
     right: 0,
