@@ -84,6 +84,11 @@ const HERO =
    precies deze hoogte vrijhoudt. Een kop waar tekst overheen loopt is geen
    kop maar een achtergrond. */
 const HERO_H = Math.round(SCREEN_W * 0.66);
+/* Hoogte van de titelbalk. Het beeld begint hierONDER, zodat "ACTIVITY" boven
+   de gezichten staat en niet in het haar van de man (operator, 7 augustus
+   2026). Eén getal, op drie plekken gebruikt — anders schuift het beeld weg
+   onder de kop zodra er iets aan verandert. */
+const BAR_H = 34;
 const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ActivityScreen() {
@@ -272,7 +277,7 @@ export default function ActivityScreen() {
           erop. Zonder dat verloop liep het beeld door tot achter de eerste kop
           en was die nauwelijks te lezen. */}
       <View
-        style={[s.heroWrap, { top: insets.top }]}
+        style={[s.heroWrap, { top: insets.top + BAR_H }]}
         pointerEvents="none"
       >
         <RNImage
@@ -280,9 +285,15 @@ export default function ActivityScreen() {
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
+        {/* Alleen nog een uitdoving onderaan, geen sluier over het hele beeld
+            (operator, 7 augustus 2026: "overlay mag weg, is te donker"). Die
+            sluier lag er om tekst leesbaar te houden die er nu niet meer
+            overheen ligt — de kop staat erboven. Wat blijft is de onderrand:
+            zonder die overgang houdt de foto met een harde lijn op tegen het
+            zwart, en dat leest als een fout in plaats van als een ontwerp. */}
         <ExpoGradient
-          colors={['rgba(10,10,10,0.15)', 'rgba(10,10,10,0.7)', Brand.bg]}
-          locations={[0, 0.6, 1]}
+          colors={['transparent', 'transparent', Brand.bg]}
+          locations={[0, 0.62, 1]}
           style={StyleSheet.absoluteFill}
         />
       </View>
@@ -636,11 +647,11 @@ const s = StyleSheet.create({
   },
 
   bar: {
+    height: BAR_H,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
-    paddingVertical: 6,
   },
   title: {
     fontFamily: BrandFonts.regular,
@@ -655,7 +666,7 @@ const s = StyleSheet.create({
     /* De titelbalk ligt IN het beeld; de rest begint eronder. Het verloop
        onderaan de foto loopt daar nog even in door, dus er is geen harde
        rand waar het beeld ophoudt. */
-    paddingTop: HERO_H - 44,
+    paddingTop: HERO_H + BAR_H - 44,
   },
 
   head: {

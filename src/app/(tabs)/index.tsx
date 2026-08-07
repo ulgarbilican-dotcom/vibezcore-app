@@ -381,7 +381,21 @@ function SessionRow({
    blijft bestaan — bestaande abonnees kunnen er via een deeplink nog in —
    maar wie hier per ongeluk landt, en dat gebeurde met de terugknop, ziet
    niet ineens een pagina die niet meer bij de app hoort. */
-export default function AudioScreen() {
+/* De audiobibliotheek is verborgen, maar de route `/` bestond nog en er
+   wijzen nog een stuk of tien plekken naartoe: uitloggen, "terug naar begin"
+   in de bracelet, de over-pagina, het einde van een proefsessie. Elk van die
+   plekken afzonderlijk omleiden is tien kansen om er één te vergeten — en dat
+   gebeurde ook (operator, 7 augustus 2026). Daarom staat de afsluiting hier,
+   op de route zelf: één plek, en niets kan er meer langs.
+
+   Zet `AUDIO_ENABLED` weer aan en alles werkt zoals het was; er is niets
+   verwijderd. */
+export default function AudioRoute() {
+  if (!AUDIO_ENABLED) return <Redirect href="/breath" />;
+  return <AudioScreen />;
+}
+
+function AudioScreen() {
   /* GEEN doorstuur meer naar Breath (7 augustus 2026). Die was bedoeld voor
      de terugknop, maar hij vocht met het welkomstscherm: de app opent op deze
      route, stuurde meteen door naar Breath, en overschreef daarmee de

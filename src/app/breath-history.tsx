@@ -70,7 +70,14 @@ function buildWeek(history: BreathHistoryEntry[]) {
       today: i === 0,
     });
   }
-  const max = Math.max(...out.map((o) => o.min), 1);
+  /* De schaal begint bij tien minuten en niet bij je hoogste dag.
+     Deelde je door de hoogste dag, dan stond één minuut als een VOLLE balk —
+     precies zo hoog als een week waarin je een uur ademde (operator,
+     7 augustus 2026: "de balken staan weer vol kleur met maar 1 min").
+     Zo'n grafiek liegt: hij toont verhouding binnen de week en leest als
+     hoeveelheid. Met een vaste ondergrens klopt de hoogte met wat er staat,
+     en groeit hij pas mee zodra je er echt overheen gaat. */
+  const max = Math.max(10, ...out.map((o) => o.min));
   for (const o of out) o.frac = o.min / max;
   return out;
 }
@@ -270,23 +277,29 @@ export default function BreathHistoryScreen() {
                 ook in een week van drie minuten. Lege dagen krijgen een
                 streepje in plaats van niets: een gat hoort zichtbaar te zijn,
                 anders lijkt de week korter dan hij was. */}
-            <Text style={styles.sectionLbl}>LAST 7 DAYS</Text>
+            {/* De kop noemt de eenheid. "LAST 7 DAYS" met een 1 erboven laat
+                open of dat één minuut of één sessie is (operator, 7 augustus
+                2026: "het is niet duidelijk wat die cijfers betekenen"). */}
+            <Text style={styles.sectionLbl}>MINUTES PER DAY · LAST 7 DAYS</Text>
             <View style={styles.week}>
               {week7.map((d) => (
                 <View key={d.label} style={styles.weekCol}>
+                  <Text style={styles.weekMin}>{d.min > 0 ? d.min : ''}</Text>
+                  {/* Het getal staat BOVEN de balk en het spoor eronder loopt
+                      altijd door tot de volle hoogte. Zo zie je waartegen je
+                      kijkt: een korte balk in een lang spoor is een korte dag,
+                      en dat is af te lezen zonder de andere dagen erbij. */}
                   <View style={styles.weekBarBox}>
                     <View
                       style={[
                         styles.weekBar,
                         {
-                          height: Math.max(3, d.frac * 76),
+                          height: d.min > 0 ? Math.max(3, d.frac * 76) : 0,
                           backgroundColor: d.color,
-                          opacity: d.min > 0 ? 1 : 0.22,
                         },
                       ]}
                     />
                   </View>
-                  <Text style={styles.weekMin}>{d.min > 0 ? d.min : ''}</Text>
                   <Text style={[styles.weekDay, d.today && styles.weekToday]}>
                     {d.label}
                   </Text>
@@ -524,8 +537,17 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   weekCol: { alignItems: 'center', flex: 1, gap: 4 },
-  weekBarBox: { height: 76, justifyContent: 'flex-end' },
-  weekBar: { width: 18, borderRadius: 4 },
+  /* Hetzelfde spoor als op Activity: één taal voor dezelfde grafiek, anders
+     lijken het twee metingen van twee verschillende dingen. */
+  weekBarBox: {
+    height: 76,
+    width: 18,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  weekBar: { width: '100%', borderRadius: 6 },
   weekMin: {
     fontFamily: BrandFonts.bold,
     fontSize: 10,

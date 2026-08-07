@@ -80,12 +80,18 @@ export default function WelcomeScreen() {
       const treatAsGuest = override === 'guest';
       const treatAsSignedIn =
         override === 'audio' || override === 'bracelet' || override === 'pro';
-      const isSignedIn = treatAsSignedIn || (!!token && !treatAsGuest);
-      if (isSignedIn) {
-        router.replace('/');
-      } else {
-        setStatus('show');
-      }
+      /* Iedereen ziet het welkomstscherm, ook wie ingelogd is (operator,
+         7 augustus 2026 — dat stond al zo in de root, maar HIER sprong een
+         ingelogde gebruiker alsnog weg naar `/`, en `/` is sinds 5 augustus
+         de verborgen audiobibliotheek. Vandaar dat de app steeds op "Where
+         Insight Becomes Identity" uitkwam.)
+
+         De gegevens worden nog steeds opgehaald — daar hangt af wat het
+         scherm aanbiedt — alleen de omleiding is weg. */
+      void treatAsSignedIn;
+      void treatAsGuest;
+      void token;
+      setStatus('show');
     })();
     return () => {
       cancelled = true;
