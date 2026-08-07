@@ -462,17 +462,20 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     subtitle: 'Restore & Replenish',
     description:
       'Restore deeply. Support recovery, relaxation and restful sleep.',
-    /* Smaragd in plaats van limoen (operator, 7 augustus 2026: "te veel
-       neon"). #8FD94A trekt naar geel, en geelgroen leest als signaal — het
-       is de kleur van waarschuwingsvesten en energiedrank. Voor de toestand
-       waarin je tot rust komt is dat het verkeerde signaal. Dit groen heeft
-       een vleugje blauw en zakt daardoor terug in het zwart in plaats van
-       eruit te springen, zonder zijn plaats naast amber, blauw, violet en wit
-       te verliezen. */
-    accent: '#3ECF8E',
-    accentSoft: 'rgba(62,207,142,0.15)',
-    glow: '#12724A',
-    gradient: ['#1B7A55', '#3ECF8E', '#A7EBCD'],
+    /* Limoen, maar dan het bedaarde soort (operator, 8 augustus 2026: "mag
+       meer limoengroen maar niet neon"). Smaragd was te ver de andere kant
+       op — dat werd blauwgroen en liep weg van de boom, die zelf limoen is.
+
+       Wat het neon-gevoel maakte, is niet de tint maar de VERZADIGING: het
+       oude #8FD94A staat op tweeenzestig procent en licht daardoor op tegen
+       zwart. Dit zit op dezelfde plek in de kleurencirkel maar met een derde
+       minder verzadiging en iets minder licht. Nog steeds onmiskenbaar
+       limoen, alleen niet meer schreeuwerig — en het staat weer naast de
+       Tree of Life in plaats van ernaast. */
+    accent: '#96CB56',
+    accentSoft: 'rgba(150,203,86,0.15)',
+    glow: '#4E7A22',
+    gradient: ['#4F7C24', '#96CB56', '#CDE8A3'],
     /* 20% kleiner dan eerst (operator, 2 augustus 2026): 0.88 → 0.70. De
        boom is hoog en breed en vulde het beeldvak tot aan de rand, waar de
        andere vier lucht om zich heen hebben. */
