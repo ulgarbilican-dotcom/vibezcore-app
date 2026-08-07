@@ -51,6 +51,7 @@ import {
   type BreathState,
   type BreathStateKey,
   type PhaseKey,
+  patternOf,
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -997,8 +998,24 @@ export default function BreathSessionScreen() {
                         }}
                         style={[s.techChip, on && s.chipActive]}
                       >
+                        {/* Naam boven, patroon eronder (operator, 7 augustus
+                            2026). De officiele term hoort er te staan — een
+                            app die ook door mensen uit het vak gelezen wordt,
+                            kan niet "Energize" zeggen waar de literatuur
+                            "Equal Breathing" zegt. Maar bij BOOST heten
+                            allebei de ritmes zo; dan is het patroon het enige
+                            dat ze uit elkaar houdt, en dus moet dat er los
+                            onder. Het patroon komt uit de fases zelf. */}
                         <Text style={[s.techTxt, on && s.chipTxtActive]}>
                           {t.name}
+                        </Text>
+                        <Text
+                          style={[
+                            s.techPattern,
+                            on && { color: st.accent, opacity: 0.9 },
+                          ]}
+                        >
+                          {patternOf(t)}
                         </Text>
                       </Pressable>
                     );
@@ -1700,6 +1717,14 @@ function makeStyles(st: BreathState) {
     fontSize: 12,
     letterSpacing: 0.2,
     color: 'rgba(255,255,255,0.72)',
+    textAlign: 'center',
+  },
+  techPattern: {
+    marginTop: 2,
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
+    letterSpacing: 1.1,
+    color: 'rgba(255,255,255,0.5)',
   },
   chipTxt: {
     fontFamily: BrandFonts.bold,

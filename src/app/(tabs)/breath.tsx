@@ -38,6 +38,7 @@ import {
   BREATH_STATES,
   cycleSeconds,
   type BreathStateKey,
+  rhythmLine,
 } from '@/data/breath-states';
 import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
@@ -509,9 +510,13 @@ export default function BreathScreen() {
               en de ene noemde alleen het eerste ritme terwijl je er binnen
               twee kunt kiezen. Nu staan ze er allebei, en kan het niet meer
               uit de pas lopen. */}
+          {/* De ritmes op de eerste regel, de vraag eronder. Stond alles op
+              één regel, dan liep "What is this?" als weeskind door naar de
+              tweede — gezien op het toestel, 7 augustus 2026. */}
           <Text style={[s.spec, { color: st.accent }]}>
-            {st.techniques.map((t) => t.name).join(' · ')} · What is this?
+            {rhythmLine(st.techniques)}
           </Text>
+          <Text style={[s.specAsk, { color: st.accent }]}>What is this?</Text>
         </Pressable>
       </Animated.View>
 
@@ -811,6 +816,17 @@ const s = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     color: 'rgba(255,255,255,0.36)',
+    textAlign: 'center',
+  },
+  /* De vraag eronder, een tikje stiller: hij hoort bij de regel erboven en
+     mag die niet overstemmen. */
+  specAsk: {
+    marginTop: 3,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 10.5,
+    letterSpacing: 0.8,
+    opacity: 0.72,
+    textAlign: 'center',
   },
 
   /* ── De uitleg-popup ── */

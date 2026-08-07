@@ -186,14 +186,14 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     techniques: [
       {
         key: 'energize',
-        name: 'Energize 2-2',
+        name: 'Equal Breathing',
         explain:
           'Fast and even, fifteen breaths a minute. Short in through the nose, short out through the mouth.',
         phases: [inhale(2, 'Nose'), exhale(2, 'Mouth')],
       },
       {
         key: 'power',
-        name: 'Power 3-3',
+        name: 'Equal Breathing',
         explain:
           'The same pattern at a calmer pace. Use this one if the faster rhythm makes you light-headed.',
         phases: [inhale(3, 'Nose'), exhale(3, 'Mouth')],
@@ -246,14 +246,14 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     techniques: [
       {
         key: 'coherent',
-        name: 'Coherent 5-5',
+        name: 'Coherent Breathing',
         explain:
           'Five seconds in, five out — six breaths a minute. Equal halves, nothing held.',
         phases: [inhale(5, 'Nose'), exhale(5, 'Nose')],
       },
       {
         key: 'resonant',
-        name: 'Resonant 6-6',
+        name: 'Slow Coherent',
         explain:
           'Slower than coherent, at five breaths a minute. The longest even rhythm most people can hold comfortably.',
         phases: [inhale(6, 'Nose'), exhale(6, 'Nose')],
@@ -317,7 +317,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     techniques: [
       {
         key: 'box',
-        name: 'Box 4-4-4-4',
+        name: 'Box Breathing',
         explain:
           'Four equal parts: in, hold, out, hold. Used by people who need to stay sharp under pressure.',
         phases: [
@@ -329,7 +329,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       },
       {
         key: 'triangle',
-        name: 'Triangle 4-4-4',
+        name: 'Triangular Breathing',
         explain:
           'Box breathing without the second hold. Three sides instead of four, so it moves along faster.',
         phases: [inhale(4, 'Nose'), hold(4, 'hold-in'), exhale(4, 'Nose')],
@@ -393,14 +393,14 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     techniques: [
       {
         key: 'long-exhale',
-        name: 'Long Exhale 4-2-6',
+        name: 'Long Exhale',
         explain:
           'The exhale runs longer than the inhale, with a short pause at the top.',
         phases: [inhale(4, 'Nose'), hold(2, 'hold-in'), exhale(6, 'Mouth')],
       },
       {
         key: 'extended',
-        name: 'Extended 4-8',
+        name: 'Deep Long Exhale',
         explain:
           'Twice as long out as in, and no pause. The plainest form of a long exhale.',
         phases: [inhale(4, 'Nose'), exhale(8, 'Mouth')],
@@ -466,14 +466,14 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     techniques: [
       {
         key: 'slow',
-        name: 'Slow 4-6',
+        name: 'Slow Breathing',
         explain:
           'Four in, six out, at six breaths a minute. Slow enough to lie down to.',
         phases: [inhale(4, 'Nose'), exhale(6, 'Mouth')],
       },
       {
         key: '478',
-        name: '4-7-8',
+        name: '4-7-8 Breathing',
         explain:
           'Four in, seven held, eight out. The longest hold of all ten rhythms.',
         phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
@@ -513,6 +513,32 @@ type HasPhases = { phases: PhaseDef[] };
 
 export const cycleSeconds = (x: HasPhases) =>
   x.phases.reduce((s, p) => s + p.secs, 0);
+
+/* Het patroon in seconden, AFGELEID uit de fases: "4-2-6".
+   Stond het in de naam, dan waren er weer twee bronnen voor hetzelfde — en
+   dat is precies wat er op 7 augustus 2026 misging bij het losse veld
+   `technique`. Een naam die een getal bevat, kan verouderen; dit niet. */
+export const patternOf = (x: HasPhases) => x.phases.map((f) => f.secs).join('-');
+
+/** Naam plus patroon, zoals je het buiten het keuzevak leest.
+ *  Draagt de naam het patroon al ("4-7-8 Breathing"), dan niet nog een keer. */
+export const techLabel = (t: TechniqueDef) => {
+  const p = patternOf(t);
+  return t.name.includes(p) ? t.name : `${t.name} ${p}`;
+};
+
+/** De ritmes van een toestand op één regel.
+ *
+ *  Heten ze allemaal hetzelfde — bij BOOST zijn het allebei Equal Breathing —
+ *  dan staat de naam één keer en volgen de patronen. Anders volledig. Zonder
+ *  die uitzondering las BOOST als "Equal Breathing 2-2 · Equal Breathing 3-3",
+ *  en dat is twee keer hetzelfde woord om één verschil te tonen. */
+export const rhythmLine = (techniques: TechniqueDef[]) => {
+  const names = techniques.map((t) => t.name);
+  return names.every((n) => n === names[0])
+    ? [names[0], ...techniques.map(patternOf)].join(' · ')
+    : techniques.map(techLabel).join(' · ');
+};
 
 export const phaseAt = (x: HasPhases, k: PhaseKey) =>
   x.phases.find((p) => p.key === k) ?? x.phases[0];
