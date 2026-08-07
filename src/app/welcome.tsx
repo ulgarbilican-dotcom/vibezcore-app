@@ -236,7 +236,7 @@ export default function WelcomeScreen() {
               style={s.linkRow}
             >
               <Text style={s.linkRowText}>Reset in minutes</Text>
-              <Text style={s.linkRowSub}>Free professional breathwork sessions</Text>
+              <Text style={s.linkRowSub}>Guided breathwork sessions</Text>
             </Pressable>
           </View>
         </View>
