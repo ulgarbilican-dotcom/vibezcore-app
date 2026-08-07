@@ -30,6 +30,7 @@ import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
 import {
+  BarChart3,
   CalendarDays,
   ChevronRight,
   Clock,
@@ -61,7 +62,11 @@ const DAY = 864e5;
 /* Kopbeeld, aangeleverd door de operator. */
 const HERO =
   'https://vibezcore-audio.b-cdn.net/images/activity%20header.png';
-const HERO_H = Math.round(SCREEN_W * 0.52);
+/* Hoger dan eerst (operator, 7 augustus 2026: "moet meer ademen en groter").
+   De inhoud begint eronder in plaats van eroverheen — zie `scroll`, dat
+   precies deze hoogte vrijhoudt. Een kop waar tekst overheen loopt is geen
+   kop maar een achtergrond. */
+const HERO_H = Math.round(SCREEN_W * 0.66);
 const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ActivityScreen() {
@@ -104,7 +109,13 @@ export default function ActivityScreen() {
       };
     });
 
-    const peak = Math.max(1, ...days.map((d) => d.min));
+    /* Vol = een VOLWAARDIGE dag, niet "de hoogste dag van deze week".
+       Stond hier Math.max(1, …), dan is op een lege week die ene minuut
+       meteen de hoogste — en dus een volle balk. Dat leest als "dag gehaald"
+       terwijl je één minuut deed.
+       Tien minuten is de ondergrens van de schaal; heb je meer gedaan, dan
+       schaalt hij mee met je beste dag. */
+    const peak = Math.max(10, ...days.map((d) => d.min));
 
     /* Reeks: aaneengesloten dagen terug. Vandaag nog niets gedaan breekt hem
        niet — de dag is nog niet voorbij. */
@@ -411,9 +422,35 @@ export default function ActivityScreen() {
                 sub="Most used"
                 c="rgba(255,255,255,0.85)"
               />
+              {/* Vierde kaart met staafjes in plaats van een cijfer — precies
+                  zoals in de mockup. Vier kaarten op één rij, geen losse kaart
+                  eronder. */}
+              <View style={s.stat}>
+                <BarChart3
+                  size={13}
+                  color="rgba(255,255,255,0.85)"
+                  strokeWidth={2.4}
+                />
+                <View style={s.miniBars}>
+                  {bracelet.perMode.map((m) => (
+                    <View
+                      key={m.name}
+                      style={[
+                        s.miniBar,
+                        {
+                          height: Math.max(4, Math.round(m.pct * 0.26)) + 4,
+                          backgroundColor: m.min > 0 ? m.color : 'rgba(255,255,255,0.16)',
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Text style={s.statLbl} numberOfLines={2}>
+                  MINUTES PER MODE
+                </Text>
+              </View>
             </View>
-            <View style={s.card}>
-              <Text style={s.cardHead}>MINUTES PER MODE</Text>
+            <View style={s.hiddenPerMode}>
               {bracelet.perMode.map((m) => (
                 <View key={m.name} style={s.stateRow}>
                   <View
@@ -552,7 +589,14 @@ const s = StyleSheet.create({
     color: '#ffffff',
   },
   gear: { position: 'absolute', right: 12, padding: 6 },
-  scroll: { paddingHorizontal: 14, paddingBottom: 28 },
+  scroll: {
+    paddingHorizontal: 14,
+    paddingBottom: 28,
+    /* De titelbalk ligt IN het beeld; de rest begint eronder. Het verloop
+       onderaan de foto loopt daar nog even in door, dus er is geen harde
+       rand waar het beeld ophoudt. */
+    paddingTop: HERO_H - 44,
+  },
 
   head: {
     flexDirection: 'row',
@@ -624,12 +668,12 @@ const s = StyleSheet.create({
   },
   track: {
     flex: 1,
-    borderRadius: 999,
+    borderRadius: 6,
     backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  fill: { width: '100%', borderRadius: 999, minHeight: 3 },
+  fill: { width: '100%', borderRadius: 6, minHeight: 3 },
   colDay: {
     marginTop: 5,
     fontFamily: BrandFonts.bold,
@@ -677,6 +721,15 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
   },
 
+  hiddenPerMode: { display: 'none' },
+  miniBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+    height: 26,
+    marginTop: 6,
+  },
+  miniBar: { width: 4, borderRadius: 2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -727,16 +780,20 @@ const s = StyleSheet.create({
   },
   soonPill: {
     alignSelf: 'center',
+    borderColor: 'rgba(224,179,65,0.45)',
+    backgroundColor: 'rgba(224,179,65,0.12)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
   },
   soonTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 8.5,
     letterSpacing: 1.4,
-    color: 'rgba(255,255,255,0.5)',
+    /* Goud, niet grijs. Grijs leest als "uitgeschakeld"; dit is geen defect
+       maar een aankondiging, en die mag opvallen. Zelfde tint als de
+       COMING FALL 2026-badge in de onboarding. */
+    color: '#E0B341',
   },
 });
