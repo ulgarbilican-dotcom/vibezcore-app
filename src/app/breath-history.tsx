@@ -12,7 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { BREATH_STATES } from '@/data/breath-states';
+import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
@@ -32,6 +32,16 @@ import { showVibezAlert } from '@/components/VibezAlert';
    bracelet (CLAUDE.md §5) en de oude namen, terwijl de ademsessies sinds
    1 augustus 2026 hun eigen palet hebben. Eén afhankelijkheid is goedkoper
    dan vijf regels die stilletjes verouderen. */
+/* De vijf toestanden in de volgorde van de keuzepagina, zodat een kleur altijd
+   op dezelfde hoogte in de stapel zit. */
+const STATE_ORDER: BreathStateKey[] = [
+  'boost',
+  'focus',
+  'calm',
+  'clarity',
+  'rest',
+];
+
 const PATTERN_INFO: Record<string, { name: string; color: string }> =
   Object.fromEntries(
     Object.values(BREATH_STATES).map((st) => [
@@ -49,7 +59,8 @@ function buildWeek(history: BreathHistoryEntry[]) {
     label: string;
     min: number;
     frac: number;
-    color: string;
+    /** Elke toestand van die dag, met zijn eigen tijd. */
+    segments: { key: string; color: string; sec: number }[];
     today: boolean;
   }[] = [];
   const now = new Date();
@@ -61,12 +72,19 @@ function buildWeek(history: BreathHistoryEntry[]) {
     const sec = mine.reduce((a, e) => a + e.durSec, 0);
     const byKey: Record<string, number> = {};
     for (const e of mine) byKey[e.key] = (byKey[e.key] ?? 0) + e.durSec;
-    const top = Object.entries(byKey).sort((a, b) => b[1] - a[1])[0]?.[0];
+    /* ALLE toestanden van die dag, in de vaste volgorde van de vijf. De balk
+       kleurde naar de toestand die het langst duurde en liet de rest weg; op
+       een dag met twee sessies is dat onwaar (operator, 8 augustus 2026). */
+    const segments = STATE_ORDER.map((k) => ({
+      key: k,
+      color: BREATH_STATES[k].accent,
+      sec: byKey[k] ?? 0,
+    })).filter((x) => x.sec > 0);
     out.push({
       label: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()],
       min: Math.round(sec / 60),
       frac: 0,
-      color: top ? (PATTERN_INFO[top]?.color ?? Brand.accent) : Brand.border,
+      segments,
       today: i === 0,
     });
   }
@@ -293,12 +311,20 @@ export default function BreathHistoryScreen() {
                     <View
                       style={[
                         styles.weekBar,
-                        {
-                          height: d.min > 0 ? Math.max(3, d.frac * 76) : 0,
-                          backgroundColor: d.color,
-                        },
+                        { height: d.min > 0 ? Math.max(3, d.frac * 76) : 0 },
                       ]}
-                    />
+                    >
+                      {d.segments.map((seg) => (
+                        <View
+                          key={seg.key}
+                          style={{
+                            flexGrow: seg.sec,
+                            flexBasis: 0,
+                            backgroundColor: seg.color,
+                          }}
+                        />
+                      ))}
+                    </View>
                   </View>
                   <Text style={[styles.weekDay, d.today && styles.weekToday]}>
                     {d.label}
@@ -547,7 +573,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  weekBar: { width: '100%', borderRadius: 6 },
+  weekBar: { width: '100%', borderRadius: 6, overflow: 'hidden' },
   weekMin: {
     fontFamily: BrandFonts.bold,
     fontSize: 10,

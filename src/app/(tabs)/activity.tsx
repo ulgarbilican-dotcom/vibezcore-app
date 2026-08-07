@@ -66,6 +66,7 @@ const SCREEN_H = Dimensions.get('window').height;
 
 const DAY = 864e5;
 
+
 /* De vijf bracelet-modi in de volgorde van het BLE-contract (index 0-4). Ze
    dragen sinds 5 augustus dezelfde namen en kleuren als de ademtoestanden. */
 const ORDER_MODES = [
@@ -119,17 +120,31 @@ export default function ActivityScreen() {
       const mine = history.filter((e) => e.ts >= start && e.ts < start + DAY);
       const perState: Record<string, number> = {};
       for (const e of mine) perState[e.key] = (perState[e.key] ?? 0) + e.durSec;
-      const top = Object.entries(perState).sort((a, b) => b[1] - a[1])[0];
-      const topState = top
-        ? BREATH_STATES[top[0] as keyof typeof BREATH_STATES]
-        : undefined;
       const dd = new Date(start);
+      /* ELKE toestand van die dag, niet alleen de langste (operator,
+         8 augustus 2026: "ik heb zondag rest en reset en calm control gedaan
+         maar in de balk staat alleen groen").
+
+         De balk kleurde naar de toestand die het langst duurde, en de rest
+         verdween. Op een dag met twee sessies is dat gewoon onwaar: je ziet
+         tien minuten staan waarvan je er zes ergens anders aan besteedde.
+
+         Nu draagt de balk segmenten, in dezelfde volgorde als de vijf
+         toestanden op de keuzepagina — zo staat groen altijd op dezelfde
+         plek, welke dag je ook bekijkt. Seconden en niet minuten als maat:
+         een sessie van veertig seconden is een streepje, geen nul. */
+      const segments = ORDER_MODES.map((st) => ({
+        key: st.key,
+        color: st.accent,
+        sec: perState[st.key] ?? 0,
+      })).filter((x) => x.sec > 0);
       return {
         letter: DAY_LABEL[dd.getDay()],
         today: i === 6,
         label: DAY_LABEL[dd.getDay()],
         min: Math.round(mine.reduce((s, e) => s + e.durSec, 0) / 60),
-        color: topState?.accent ?? null,
+        sec: mine.reduce((s, e) => s + e.durSec, 0),
+        segments,
       };
     });
 
@@ -370,16 +385,38 @@ export default function ActivityScreen() {
                   <View key={i} style={s.col}>
                     <Text style={s.colMin}>{d.min > 0 ? d.min : ''}</Text>
                     <View style={[s.track, s.barSlot]}>
+                      {/* Gestapeld, onderaan beginnend. De hoogte van de hele
+                          balk blijft de dag; de segmenten verdelen hem naar
+                          rato van de tijd per toestand. */}
                       <View
                         style={[
                           s.fill,
                           {
                             height: `${Math.round((d.min / stats.peak) * 100)}%` as const,
-                            backgroundColor:
-                              d.color ?? 'rgba(255,255,255,0.07)',
+                            backgroundColor: 'transparent',
                           },
                         ]}
-                      />
+                      >
+                        {d.segments.map((seg, k) => (
+                          <View
+                            key={seg.key}
+                            style={{
+                              flexGrow: seg.sec,
+                              flexBasis: 0,
+                              backgroundColor: seg.color,
+                              /* Alleen het bovenste segment krijgt de ronding
+                                 van de balk; de rest sluit vlak op elkaar aan,
+                                 anders ontstaan er witte kieren. */
+                              borderTopLeftRadius: k === 0 ? 5 : 0,
+                              borderTopRightRadius: k === 0 ? 5 : 0,
+                              borderBottomLeftRadius:
+                                k === d.segments.length - 1 ? 5 : 0,
+                              borderBottomRightRadius:
+                                k === d.segments.length - 1 ? 5 : 0,
+                            }}
+                          />
+                        ))}
+                      </View>
                     </View>
                     <Text style={[s.colDay, d.today && { color: tone }]}>
                       {d.letter}
@@ -748,7 +785,9 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  fill: { width: '100%', borderRadius: 6, minHeight: 3 },
+  /* `overflow: hidden` houdt de segmenten binnen de ronding; zonder dat
+     steken de hoeken van het onderste segment onder de balk uit. */
+  fill: { width: '100%', borderRadius: 6, minHeight: 3, overflow: 'hidden' },
   colDay: {
     marginTop: 5,
     fontFamily: BrandFonts.bold,
