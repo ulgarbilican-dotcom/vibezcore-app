@@ -388,6 +388,25 @@ export default function BreathSessionScreen() {
   const [techIdx, setTechIdx] = useState(0);
   const tech = st.techniques[techIdx] ?? st.techniques[0];
 
+  /* ── Het gekozen ritme, ook nog tijdens de sessie ────────────────────────
+     De fase-loop is bewust ÉÉN keer opgebouwd: hij roept zichzelf aan vanuit
+     een timer, dus hij mag niet opnieuw gemaakt worden terwijl hij draait —
+     anders praten er twee lussen door elkaar. De prijs daarvan is dat alles
+     wat hij aanraakt bevroren is op het moment van opbouwen, en dat was het
+     eerste ritme.
+
+     Gevolg (operator, 7 augustus 2026): je koos Power 3-3, het scherm toonde
+     keurig 3-3, en de sessie ademde 2-2. Bij CLARITY draaide Extended 4-8 als
+     4-2-6. De keuze werd wél getoond en nooit gebruikt — in alle vijf de
+     toestanden.
+
+     Een ref lost precies dit op: de lus leest hem op het moment dat hij hem
+     nodig heeft, in plaats van een kopie mee te dragen uit het verleden. */
+  const techRef = useRef(tech);
+  useEffect(() => {
+    techRef.current = tech;
+  }, [tech]);
+
   /* Het achtergrondgeluid. Per TOESTAND onthouden: wie voor slapen Deep wil
      en voor focus Rain, hoort dat niet elke keer opnieuw te kiezen. */
   /* Soundscape wordt NIET onthouden (operator, 4 augustus 2026). Anders dan
@@ -434,8 +453,10 @@ export default function BreathSessionScreen() {
   );
 
   const CYCLE_S = useMemo(() => cycleSeconds(tech), [tech]);
-  const byKey = useCallback((k: Phase) => phaseAt(tech, k), [tech]);
-  const nextOf = useCallback((k: Phase) => nextPhase(tech, k), [tech]);
+  /* Via de ref, en dus zonder afhankelijkheden: deze twee worden vanuit de
+     fase-loop aangeroepen en moeten daarom stabiel zijn én actueel. */
+  const byKey = useCallback((k: Phase) => phaseAt(techRef.current, k), []);
+  const nextOf = useCallback((k: Phase) => nextPhase(techRef.current, k), []);
   const DURATIONS = st.durations;
 
   const [durationIdx, setDurationIdx] = useState<number>(
@@ -661,7 +682,7 @@ export default function BreathSessionScreen() {
     setRunning(false);
     setRound(1);
     setPhase('inhale');
-    setSecsLeft(tech.phases[0].secs);
+    setSecsLeft(techRef.current.phases[0].secs);
     idleBreathing();
     releaseVoiceSource('breath');
   }, [idleBreathing, stopAll]);
@@ -744,8 +765,9 @@ export default function BreathSessionScreen() {
                Nu wordt het einde van de ronde afgeleid uit de fasenlijst
                zelf, dus het klopt ook voor een toestand die er later bijkomt
                met een heel ander ritme. */
-            const idx = tech.phases.findIndex((p) => p.key === k);
-            const lastOfRound = idx === tech.phases.length - 1;
+            const phases = techRef.current.phases;
+            const idx = phases.findIndex((p) => p.key === k);
+            const lastOfRound = idx === phases.length - 1;
             if (lastOfRound) {
               const n = r + 1;
               if (n > roundsRef.current) {
@@ -754,7 +776,7 @@ export default function BreathSessionScreen() {
               }
               setRound(n);
               roundRef.current = n;
-              runPhase(tech.phases[0].key, n);
+              runPhase(techRef.current.phases[0].key, n);
             } else {
               runPhase(nextOf(k).key, r);
             }
@@ -780,8 +802,8 @@ export default function BreathSessionScreen() {
     breath.value = 0;
     /* De allereerste cue kan per definitie niet vooruitlopen — er is geen
        fase vóór deze. Die klinkt dus gelijk met de start. */
-    speak(tech.phases[0]);
-    runPhase(tech.phases[0].key, 1);
+    speak(techRef.current.phases[0]);
+    runPhase(techRef.current.phases[0].key, 1);
   }, [breath, runPhase]);
 
   const stop = useCallback(() => {
