@@ -45,6 +45,11 @@ const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 
 const DAY = 864e5;
+
+/* Kopbeeld, aangeleverd door de operator. */
+const HERO =
+  'https://vibezcore-audio.b-cdn.net/images/activity%20header.png';
+const HERO_H = Math.round(SCREEN_W * 0.44);
 const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ActivityScreen() {
@@ -135,6 +140,16 @@ export default function ActivityScreen() {
       {/* Een zachte lichtbron achter de kop. Zonder dit is het vlak zwart en
           leest alles eronder als een tabel. */}
       <View style={[s.halo, { backgroundColor: tone }]} pointerEvents="none" />
+
+      {/* Het beeld van de operator als kop (7 augustus 2026). Een dashboard
+          dat met een titelregel begint leest als een rapport; met een beeld
+          leest het als een plek. Hij loopt tot achter de titel door, zodat de
+          tekst erin ligt in plaats van erop. */}
+      <RNImage
+        source={{ uri: assetUri(HERO) }}
+        style={s.hero}
+        resizeMode="cover"
+      />
 
       <View style={s.bar}>
         <Text style={s.title}>ACTIVITY</Text>
@@ -378,6 +393,14 @@ const s = StyleSheet.create({
     height: 320,
     borderRadius: 160,
     opacity: 0.16,
+  },
+  hero: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HERO_H,
+    opacity: 0.9,
   },
   bar: {
     flexDirection: 'row',

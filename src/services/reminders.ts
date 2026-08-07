@@ -174,3 +174,33 @@ export async function syncReminders(
    }
   }
 }
+
+
+/** Wanneer de eerstvolgende herinnering valt, als leesbare tekst.
+ *
+ *  Nodig omdat een dagelijkse herinnering pas op zijn uur afgaat: je zet iets
+ *  en er gebeurt niets, en dan weet je niet of het gelukt is (operator,
+ *  7 augustus 2026). Dit zegt het gewoon.
+ *
+ *  Zet je om 09:00 een tijd van 12:14, dan valt hij VANDAAG. Zet je 08:00,
+ *  dan is dat moment voorbij en valt hij morgen. Datzelfde onderscheid maakt
+ *  het systeem, dus het klopt met wat er werkelijk gepland staat. */
+export function nextFireText(minsOfDay: number, days?: number[]): string {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(Math.floor(minsOfDay / 60), minsOfDay % 60, 0, 0);
+
+  /* Zoek de eerstvolgende dag die meedoet, te beginnen bij vandaag. */
+  for (let i = 0; i < 8; i += 1) {
+    const d = new Date(target);
+    d.setDate(d.getDate() + i);
+    const allowed = !days || days.length === 0 || days.includes(d.getDay());
+    if (!allowed) continue;
+    if (d.getTime() <= now.getTime()) continue;
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (i === 0) return `First reminder today at ${t}`;
+    if (i === 1) return `First reminder tomorrow at ${t}`;
+    return `First reminder ${d.toLocaleDateString([], { weekday: 'long' })} at ${t}`;
+  }
+  return 'No day selected yet';
+}

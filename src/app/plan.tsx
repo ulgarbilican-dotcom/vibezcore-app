@@ -29,6 +29,7 @@ import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import {
   ensurePermission,
+  nextFireText,
   reminderKey,
   syncReminders,
 } from '@/services/reminders';
@@ -64,6 +65,10 @@ export default function PlanScreen() {
   const [at, setAt] = useSetting('reminderAt');
 
   const [picking, setPicking] = useState<'morning' | 'evening' | null>(null);
+  /* Wat er net is ingesteld, in mensentaal. Blijft staan tot je het scherm
+     verlaat — lang genoeg om gelezen te worden, kort genoeg om niet in de
+     weg te zitten. */
+  const [justSet, setJustSet] = useState<string | null>(null);
 
   const minsFor = (slot: 'morning' | 'evening') => {
     const key = reminderKey('breath', slot);
@@ -152,6 +157,13 @@ export default function PlanScreen() {
                 .join(' and ')}.`
             : 'Two moments a day. Pick a goal to shape them around what you want.'}
         </Text>
+
+        {justSet && (
+          <View style={s.confirm}>
+            <Bell size={14} color="#4ade80" strokeWidth={2.4} />
+            <Text style={s.confirmTxt}>{justSet}</Text>
+          </View>
+        )}
 
         {items.map((it) => (
           <View
@@ -292,7 +304,22 @@ export default function PlanScreen() {
                 date.getHours() * 60 + date.getMinutes(),
             };
             await setAt(next);
-            if (planned) void syncReminders(reminders, next);
+
+            /* De tijd zetten schakelt de herinnering METEEN in (operator,
+               7 augustus 2026). Het was een losse tweede stap, en die miste
+               iedereen: je zette een tijd en er gebeurde niets. Wie geen
+               herinnering wil, zet hem daarna uit — dat is één tik, en veel
+               makkelijker te vinden dan een schakelaar die je nog moet
+               ontdekken. */
+            const key = reminderKey('breath', slot);
+            const on = { ...reminders, [key]: true };
+            if (!reminders[key]) {
+              if (await ensurePermission()) await setReminders(on);
+            }
+            void syncReminders(reminders[key] ? reminders : on, next);
+            setJustSet(
+              nextFireText(date.getHours() * 60 + date.getMinutes()),
+            );
           }}
         />
       )}
@@ -396,6 +423,23 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 13,
     color: 'rgba(255,255,255,0.6)',
+  },
+  confirm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(74,222,128,0.35)',
+    backgroundColor: 'rgba(74,222,128,0.10)',
+    marginBottom: 14,
+  },
+  confirmTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12.5,
+    color: '#4ade80',
   },
   timeVal: { fontFamily: BrandFonts.bold, fontSize: 15, letterSpacing: -0.2 },
   laterTxt: {

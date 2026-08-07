@@ -382,7 +382,13 @@ function SessionRow({
    maar wie hier per ongeluk landt, en dat gebeurde met de terugknop, ziet
    niet ineens een pagina die niet meer bij de app hoort. */
 export default function AudioScreen() {
-  if (!AUDIO_ENABLED) return <Redirect href="/breath" />;
+  /* GEEN doorstuur meer naar Breath (7 augustus 2026). Die was bedoeld voor
+     de terugknop, maar hij vocht met het welkomstscherm: de app opent op deze
+     route, stuurde meteen door naar Breath, en overschreef daarmee de
+     doorstuur naar "Stop Drifting" die de root-layout net had gedaan. Vandaar
+     dat welcome nooit verscheen.
+     De terugknop is al opgelost met `backBehavior="initialRoute"` op de
+     tab-groep; twee oplossingen voor hetzelfde probleem is er één te veel. */
 
   /* Iter v168 (2026-06-28): tijdens isLoading (status === null) behandelen
      we hasSub als TRUE — voorkomt FREE flicker bij cold-start en net-na-
