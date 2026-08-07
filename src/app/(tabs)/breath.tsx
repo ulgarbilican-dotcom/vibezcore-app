@@ -43,7 +43,7 @@ import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   ArrowRight,
   ChartNoAxesColumn,
@@ -170,8 +170,22 @@ export default function BreathScreen() {
      de gezichten nooit meer terug. Nu begint de reeks elke keer opnieuw bij de
      foto (operator, 5 augustus 2026). */
   const [introRun, setIntroRun] = useState(0);
+
+  /* Eén uitzondering op "altijd eerst het beeld": je komt hier via een
+     herinnering (operator, 7 augustus 2026). Dan heb je de vraag al gelezen op
+     je vergrendelscherm en is een tweede drempel er één te veel — je komt
+     meteen bij de vijf toestanden uit, staand op wat er voorgesteld wordt.
+     Eenmalig: veeg je hem weg en kom je later terug, dan is het beeld er
+     gewoon weer. */
+  const entry = useLocalSearchParams<{ from?: string }>();
+  const skipIntroRef = useRef(entry.from === 'reminder');
   useFocusEffect(
     useCallback(() => {
+      if (skipIntroRef.current) {
+        skipIntroRef.current = false;
+        setIntro(false);
+        return;
+      }
       setIntro(true);
       setIntroRun((n) => n + 1);
     }, []),

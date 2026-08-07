@@ -58,7 +58,15 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Image, Text as RNText, View } from 'react-native';
+import {
+  onReminderTap,
+  reminderRoute,
+  syncReminders,
+  tappedReminderOnLaunch,
+  type TappedReminder,
+} from '@/services/reminders';
+import * as Notifications from 'expo-notifications';
+import { AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -145,6 +153,37 @@ export default function RootLayout() {
     undefined
   );
 
+  /* Is de app geopend door op een herinnering te tikken? Dan hoort hij daar
+     uit te komen en niet op het welkomstscherm (operator, 7 augustus 2026:
+     "als ik dan de telefoon ontgrendel en naar de app ga, is er niets meer te
+     zien — dat moet logisch en duidelijk zijn").
+
+     `undefined` = nog aan het kijken; `null` = gewoon geopend. Het hoort bij
+     `ready`, anders is de welkomst-omleiding er eerder dan het antwoord. */
+  const [tapped, setTapped] = useState<TappedReminder | null | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const t = await tappedReminderOnLaunch();
+      if (!cancelled) setTapped(t);
+    })();
+    /* En zolang de app draait: een tik terwijl hij op de achtergrond staat.
+       `navigate` en niet `replace`, want dan blijft de weg terug bestaan. */
+    const off = onReminderTap((t) => {
+      router.navigate({
+        pathname: reminderRoute(t),
+        params: { from: 'reminder' },
+      } as never);
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -174,7 +213,10 @@ export default function RootLayout() {
   }, []);
 
   const ready =
-    fontsLoaded && auth !== undefined && pendingAuthLink !== undefined;
+    fontsLoaded &&
+    auth !== undefined &&
+    pendingAuthLink !== undefined &&
+    tapped !== undefined;
 
   /* Iter v148 (2026-06-25): IAP startup-recovery. Fire-and-forget
      achtergrond-call die (a) pending verifies uit AsyncStorage drain't
@@ -186,6 +228,33 @@ export default function RootLayout() {
   useEffect(() => {
     if (!ready) return;
     void iapRecoverOnStartup();
+  }, [ready]);
+
+  /* Herinneringen opnieuw zetten bij elke start.
+     Ze werden alleen gepland op het moment dat je een schakelaar omzette. Wat
+     daarvóór al gepland stond, bleef staan zoals het toen was — dus een
+     verbetering aan de melding zelf bereikte niemand die zijn herinnering al
+     had aanstaan (operator, 7 augustus 2026). Hetzelfde gold na een herstart
+     van het toestel, waarbij Android geplande wekkers weggooit.
+
+     Opnieuw zetten is veilig: `syncReminders` werkt met de volledige lijst en
+     vervangt per moment, dus er komt nooit een tweede naast. */
+  useEffect(() => {
+    if (!ready) return;
+    void (async () => {
+      await ensureSettingsLoaded();
+      const on = getSetting('reminders');
+      if (Object.values(on).some(Boolean)) {
+        await syncReminders(on, getSetting('reminderAt'));
+      }
+      /* Het oude kanaal opruimen, anders staat er in de instellingen van het
+         toestel een tweede regel die nergens meer bij hoort. */
+      if (Platform.OS === 'android') {
+        try {
+          await Notifications.deleteNotificationChannelAsync('breath');
+        } catch {}
+      }
+    })();
   }, [ready]);
 
   /* Iter v165 (2026-06-27): RevenueCat bootstrap — één effect dat Purchases
@@ -369,10 +438,18 @@ export default function RootLayout() {
        De uitzondering die BLIJFT: een openstaande auth-deeplink. Zou welcome
        daar overheen komen, dan slokt hij het verify-scherm op en strandt
        iemand midden in het aanmelden. */
-    const showWelcome = !pendingAuthLink;
+    /* Een tik op een herinnering gaat vóór het welkomstscherm. Wie om negen
+       uur 's avonds op "Time to wind down" tikt, wil ademen — niet eerst het
+       merkbeeld en dan zelf de weg zoeken. */
+    const showWelcome = !pendingAuthLink && !tapped;
     void treatAsGuest;
     void treatAsSignedIn;
-    if (showWelcome) {
+    if (tapped) {
+      router.replace({
+        pathname: reminderRoute(tapped),
+        params: { from: 'reminder' },
+      } as never);
+    } else if (showWelcome) {
       router.replace('/welcome');
     } else if (
       !pendingAuthLink &&
@@ -392,7 +469,7 @@ export default function RootLayout() {
       router.replace('/bracelet');
     }
     SplashScreen.hideAsync().catch(() => {});
-  }, [ready, auth, pendingAuthLink]);
+  }, [ready, auth, pendingAuthLink, tapped]);
 
   /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
      Webapp wordt uitgefaseerd — alle email-flows (magic link na

@@ -131,13 +131,25 @@ export async function syncReminders(
 
   if (Platform.OS === 'android') {
     try {
-      await Notifications.setNotificationChannelAsync('breath', {
-        name: 'Breathwork',
-        importance: Notifications.AndroidImportance.DEFAULT,
-        /* Geen trilling en geen geluid: een herinnering om rustig te worden
-           hoort niet met een schok binnen te komen. */
-        vibrationPattern: [0],
+      /* Een NIEUWE naam, want Android bevriest een kanaal zodra het bestaat:
+         wie de oude 'breath' had, hield voor altijd de oude instellingen
+         (operator, 7 augustus 2026 — "als mijn telefoon uitstaat, krijg ik
+         dan een bericht?"). Met DEFAULT stond er alleen een pictogram in de
+         balk: geen banner, geen scherm dat aangaat. Op een toestel dat in je
+         zak ligt, is dat hetzelfde als niets sturen.
+
+         HIGH toont hem wél over het scherm en op het vergrendelscherm. Geluid
+         blijft uit en de trilling is één korte tik: zichtbaar, niet luid. Een
+         herinnering om rustig te worden hoort niet met een schok binnen te
+         komen, maar hij hoort ook niet ongezien te blijven. */
+      await Notifications.setNotificationChannelAsync('reminders', {
+        name: 'Reminders',
+        description: 'Your breathwork and bracelet moments.',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 40],
         sound: null,
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     } catch {}
   }
@@ -158,8 +170,11 @@ export async function syncReminders(
             k === 'breath'
               ? s.body
               : 'One press. No screen, no sound, no effort.',
-          data: { kind: k },
-          ...(Platform.OS === 'android' ? { channelId: 'breath' } : {}),
+          /* Waar een tik naartoe moet. Zonder dit opent de app op het
+             welkomstscherm en is er van de herinnering niets meer terug te
+             vinden — precies de klacht van de operator (7 augustus 2026). */
+          data: { kind: k, slot: s.slot },
+          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -175,6 +190,60 @@ export async function syncReminders(
   }
 }
 
+
+/* ── Wat er gebeurt als je op de melding tikt ──────────────────────────
+   De melding IS de vraag; tikken hoort meteen op de juiste plek uit te komen.
+   Dat stond hier als bedoeling beschreven maar was nooit aangesloten: er
+   luisterde niemand naar de tik, dus je kwam op het welkomstscherm terecht en
+   zag nergens meer waarom je de app geopend had.
+
+   Twee wegen naar binnen, en ze zijn allebei nodig:
+   · de app stond UIT      → `tappedReminderOnLaunch` bij het opstarten
+   · de app stond op de achtergrond → `onReminderTap`, live                */
+
+export type TappedReminder = { kind: ReminderKind; slot?: ReminderSlot };
+
+/* Waarheen per soort. Breathwork opent de vijf toestanden, al staand op wat
+   er voorgesteld wordt; de bracelet opent zijn eigen tab. */
+export const reminderRoute = (t: TappedReminder) =>
+  t.kind === 'bracelet' ? '/bracelet' : '/breath';
+
+function fromResponse(
+  r: Notifications.NotificationResponse | null,
+): TappedReminder | null {
+  const data = r?.notification.request.content.data as
+    | { kind?: string; slot?: ReminderSlot }
+    | undefined;
+  if (data?.kind !== 'breath' && data?.kind !== 'bracelet') return null;
+  return { kind: data.kind, slot: data.slot };
+}
+
+/** De melding waarmee de app zojuist geopend is, of `null`.
+ *
+ *  Het systeem bewaart het laatste antwoord langer dan één start, dus een
+ *  oude tik zou de app dagen later nog kunnen omleiden. Vandaar de grens van
+ *  tien minuten: verder terug is het geen "ik open dit nu" meer. */
+export async function tappedReminderOnLaunch(): Promise<TappedReminder | null> {
+  try {
+    const r = await Notifications.getLastNotificationResponseAsync();
+    const t = fromResponse(r);
+    if (!t) return null;
+    const when = r?.notification.date;
+    const age = typeof when === 'number' ? Date.now() - when : 0;
+    return age > 10 * 60_000 ? null : t;
+  } catch {
+    return null;
+  }
+}
+
+/** Luistert zolang de app draait. Geeft de opzegging terug. */
+export function onReminderTap(cb: (t: TappedReminder) => void): () => void {
+  const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+    const t = fromResponse(r);
+    if (t) cb(t);
+  });
+  return () => sub.remove();
+}
 
 /** Wanneer de eerstvolgende herinnering valt, als leesbare tekst.
  *
