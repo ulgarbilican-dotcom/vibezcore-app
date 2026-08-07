@@ -1,3 +1,4 @@
+import { AUDIO_ENABLED } from '@/constants/features';
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Audio Library (route /)
 
@@ -55,7 +56,7 @@ import {
 import { useSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Share2 } from 'lucide-react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 /* expo-web-browser was nodig voor de oude Gumroad-WebBrowser-flow.
    Iter 9dq v64: Gumroad-checkout vervangen door /subscribe (IAP). Indien
    ooit terug nodig (bv. een externe info-pagina openen): re-import. */
@@ -376,7 +377,13 @@ function SessionRow({
   );
 }
 
+/* Zolang audio verborgen is stuurt dit scherm door naar Breath. De route
+   blijft bestaan — bestaande abonnees kunnen er via een deeplink nog in —
+   maar wie hier per ongeluk landt, en dat gebeurde met de terugknop, ziet
+   niet ineens een pagina die niet meer bij de app hoort. */
 export default function AudioScreen() {
+  if (!AUDIO_ENABLED) return <Redirect href="/breath" />;
+
   /* Iter v168 (2026-06-28): tijdens isLoading (status === null) behandelen
      we hasSub als TRUE — voorkomt FREE flicker bij cold-start en net-na-
      sign-in. Audio Library renderde anders 'FREE · 27' tile + upsell-cards

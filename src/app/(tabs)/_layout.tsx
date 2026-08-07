@@ -121,6 +121,11 @@ export default function TabLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: Brand.bg }}>
       <Tabs
+        /* Terug gaat naar de BEGINROUTE, niet naar het vorige tabblad dat je
+           bezocht (operator, 7 augustus 2026). Zonder dit landde de
+           terugknop op het verborgen audioscherm — dat is nog steeds het
+           eerste scherm van de groep, ook al staat het niet in de balk. */
+        backBehavior="initialRoute"
         screenOptions={{
           headerShown: false,
           tabBarStyle: {

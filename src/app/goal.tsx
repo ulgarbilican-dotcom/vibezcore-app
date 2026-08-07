@@ -19,9 +19,18 @@ import { useSetting } from '@/utils/settings';
 import { router, Stack } from 'expo-router';
 import { Check, ChevronLeft } from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 export default function GoalScreen() {
+  /* De navigatiebalk van het toestel hoort NIET over de laatste knop te
+     vallen (operator, 7 augustus 2026: "see your plan staat half zichtbaar").
+     Een vaste marge onderaan werkt niet — die is op het ene toestel te klein
+     en op het andere een gat. */
+  const insets = useSafeAreaInsets();
+
   const [goals, setGoals] = useSetting('goals');
 
   /* Aan- of uitzetten, met een grens. Zit je al op twee en kies je een derde,
@@ -48,7 +57,10 @@ export default function GoalScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[
+          s.scroll,
+          { paddingBottom: Math.max(insets.bottom, 12) + 28 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lead}>
@@ -134,7 +146,7 @@ const s = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: -0.2,
   },
-  scroll: { paddingHorizontal: 16, paddingBottom: 30 },
+  scroll: { paddingHorizontal: 16 },
   lead: {
     marginTop: 6,
     marginBottom: 18,

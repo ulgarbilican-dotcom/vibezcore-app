@@ -36,7 +36,10 @@ import { router, Stack } from 'expo-router';
 import { Bell, Check, ChevronLeft, Clock } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 /* De twee momenten van een dag. Ochtend zet de toon, avond bouwt af — dat
    zijn de twee waar bijna iedereen ruimte voor heeft, en ze staan het verst
@@ -48,6 +51,12 @@ const MOMENTS = [
 ] as const;
 
 export default function PlanScreen() {
+  /* De navigatiebalk van het toestel hoort NIET over de laatste knop te
+     vallen (operator, 7 augustus 2026: "see your plan staat half zichtbaar").
+     Een vaste marge onderaan werkt niet — die is op het ene toestel te klein
+     en op het andere een gat. */
+  const insets = useSafeAreaInsets();
+
   const history = useBreathHistory();
   const [goalKeys] = useSetting('goals');
   const [reminders, setReminders] = useSetting('reminders');
@@ -130,7 +139,10 @@ export default function PlanScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[
+          s.scroll,
+          { paddingBottom: Math.max(insets.bottom, 12) + 28 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lead}>
@@ -304,7 +316,7 @@ const s = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: -0.2,
   },
-  scroll: { paddingHorizontal: 16, paddingBottom: 30 },
+  scroll: { paddingHorizontal: 16 },
   lead: {
     marginTop: 6,
     marginBottom: 18,
