@@ -34,7 +34,11 @@ const SHORTCUTS = [
     id: 'quick_reset',
     short: 'Quick reset',
     long: 'Calm Control · shortest',
-    uri: 'vibezcoreapp://quick-breath',
+    /* Een BESTAANDE route, geen verzonnen pad. `vibezcoreapp://quick-breath`
+       stond nergens in de app/-map, dus Expo Router kon er niets mee en de
+       app bleef op de splash hangen — gemeten op het toestel, 7 augustus
+       2026. Nu wijst de snelkoppeling naar het sessiescherm zelf. */
+    uri: 'vibezcoreapp://breath-session?state=calm&quick=1',
   },
   {
     id: 'all_modes',
@@ -50,6 +54,11 @@ const SHORTCUTS = [
   },
 ];
 
+/* Een `&` in een URI is in XML geen `&` maar `&amp;`. Zonder dit weigert
+   aapt het bestand en breekt de hele release-build. */
+const esc = (v) =>
+  v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
 function xml(pkg) {
   const items = SHORTCUTS.map(
     (s) => `  <shortcut
@@ -61,7 +70,7 @@ function xml(pkg) {
       android:action="android.intent.action.VIEW"
       android:targetPackage="${pkg}"
       android:targetClass="${pkg}.MainActivity"
-      android:data="${s.uri}" />
+      android:data="${esc(s.uri)}" />
   </shortcut>`,
   ).join('\n');
   return `<?xml version="1.0" encoding="utf-8"?>\n<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">\n${items}\n</shortcuts>\n`;

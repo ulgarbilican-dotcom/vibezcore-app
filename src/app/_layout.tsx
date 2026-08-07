@@ -132,7 +132,7 @@ const SHORTCUT_ROUTES: Record<string, string> = {
   /* Vast op CALM CONTROL en de kortste duur. Eerder koos hier de suggestie,
      en die zette er 's middags CLARITY neer — een snelkoppeling waarvan de
      bestemming verschuift is er geen (operator, 7 augustus 2026). */
-  'quick-breath': '/breath-session?state=calm&quick=1',
+  'breath-session': '/breath-session?state=calm&quick=1',
   breath: '/breath',
   bracelet: '/bracelet',
 };
