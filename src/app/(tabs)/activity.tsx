@@ -28,7 +28,7 @@ import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
-import { ChevronRight, Settings } from 'lucide-react-native';
+import { ChevronRight, Settings, Watch, Wind } from 'lucide-react-native';
 import { useMemo } from 'react';
 import {
   Dimensions,
@@ -152,6 +152,17 @@ export default function ActivityScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* ══ BREATHWORK ═══════════════════════════════════════════════
+             Elk getal hieronder gaat over ADEMSESSIES. Dat stond er niet, en
+             daardoor was "2 DAY STREAK" een cijfer zonder onderwerp: van wat?
+             Ademen of bracelet? (operator, 7 augustus 2026). Een dashboard dat
+             je moet uitleggen is geen dashboard. */}
+        <View style={s.head}>
+          <Wind size={16} color={tone} strokeWidth={2.4} />
+          <Text style={[s.headTxt, { color: tone }]}>BREATHWORK</Text>
+        </View>
+        <Text style={s.headSub}>What you practise yourself</Text>
+
         {stats.count === 0 ? (
           /* Geen lege grafiek met nullen: die zegt "je doet niets" tegen
              precies degene die nog moet beginnen. */
@@ -200,7 +211,7 @@ export default function ActivityScreen() {
                 />
                 <View style={s.todayTxt}>
                   <Text style={[s.todayEyebrow, { color: sugState.accent }]}>
-                    {suggestion.reason.toUpperCase()}
+                    SUGGESTED NOW · {suggestion.reason.toUpperCase()}
                   </Text>
                   <Text style={s.todayName}>{sugState.eyebrow}</Text>
                   <Text style={s.todaySub}>
@@ -213,12 +224,15 @@ export default function ActivityScreen() {
             )}
 
             <View style={s.row3}>
-              <Stat n={String(stats.streak)} l="DAY STREAK" c={tone} />
+              <Stat n={String(stats.streak)} l="DAYS IN A ROW" c={tone} />
               <Stat n={String(stats.count)} l="SESSIONS" c={tone} />
               <Stat n={String(stats.totalMin)} l="MINUTES" c={tone} />
             </View>
 
-            <Text style={s.section}>THIS WEEK</Text>
+            <Text style={s.section}>Minutes per day</Text>
+            <Text style={s.sectionSub}>
+              Last 7 days · today on the right
+            </Text>
             <View style={s.chart}>
               {stats.days.map((d, i) => (
                 <View key={i} style={s.col}>
@@ -239,7 +253,8 @@ export default function ActivityScreen() {
               ))}
             </View>
 
-            <Text style={s.section}>BY STATE</Text>
+            <Text style={s.section}>Minutes per state</Text>
+            <Text style={s.sectionSub}>Where your time goes</Text>
             {stats.byState.map((b) => (
               <View key={b.key} style={s.stateRow}>
                 <View style={[s.dot, { backgroundColor: b.accent }]} />
@@ -272,14 +287,13 @@ export default function ActivityScreen() {
              2026). Een tabblad is een PLEK; alles wat een eigen pagina
              verdient wordt van hieruit gepusht. Zo krijgt elk onderdeel
              ruimte om zichzelf uit te leggen zonder dat de balk volloopt. */}
-        <Text style={s.section}>YOUR PRACTICE</Text>
         <Pressable style={s.link} onPress={() => router.push('/goal' as never)}>
           {/* De rij heet naar wat hij IS, niet naar wat erin staat (operator,
               6 augustus 2026). Stond de gekozen waarde als titel, dan las
               "Less stress" als een mededeling en niet als een knop waarmee je
               hem instelt of wijzigt. De waarde hoort eronder. */}
           <View>
-            <Text style={s.linkTxt}>Your goal</Text>
+            <Text style={s.linkTxt}>Breathwork goal</Text>
             <Text style={s.linkSub}>
               {goalsByKeys(goals)
                 .map((g) => g.name)
@@ -291,18 +305,24 @@ export default function ActivityScreen() {
 
         <Pressable style={s.link} onPress={() => router.push('/plan' as never)}>
           <View>
-            <Text style={s.linkTxt}>Your plan</Text>
+            <Text style={s.linkTxt}>Breathwork plan</Text>
             <Text style={s.linkSub}>Two moments a day, and what you did</Text>
           </View>
           <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
         </Pressable>
 
-        <Text style={s.section}>HISTORY</Text>
+        <View style={[s.head, { marginTop: 30 }]}>
+          <Watch size={16} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+          <Text style={[s.headTxt, { color: 'rgba(255,255,255,0.75)' }]}>
+            SMART BEAD BRACELET
+          </Text>
+        </View>
+        <Text style={s.headSub}>What the bracelet does for you</Text>
         <Pressable
           style={s.link}
           onPress={() => router.push('/breath-history')}
         >
-          <Text style={s.linkTxt}>Breathwork sessions</Text>
+          <Text style={s.linkTxt}>All breathwork sessions</Text>
           <ChevronRight size={17} color="rgba(255,255,255,0.35)" />
         </Pressable>
 
@@ -487,6 +507,23 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,
     color: 'rgba(255,255,255,0.55)',
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  headTxt: { fontFamily: BrandFonts.bold, fontSize: 12, letterSpacing: 2.4 },
+  headSub: {
+    marginTop: 3,
+    marginBottom: 12,
+    marginLeft: 24,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  sectionSub: {
+    marginTop: 2,
+    marginBottom: 10,
+    fontFamily: BrandFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.38)',
   },
   link: {
     flexDirection: 'row',
