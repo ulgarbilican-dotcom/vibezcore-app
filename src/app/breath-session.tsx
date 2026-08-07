@@ -458,7 +458,8 @@ export default function BreathSessionScreen() {
      fase-loop aangeroepen en moeten daarom stabiel zijn én actueel. */
   const byKey = useCallback((k: Phase) => phaseAt(techRef.current, k), []);
   const nextOf = useCallback((k: Phase) => nextPhase(techRef.current, k), []);
-  const DURATIONS = st.durations;
+  /* Het ritme mag zijn eigen duren dragen; anders die van de toestand. */
+  const DURATIONS = tech.durations ?? st.durations;
 
   const [durationIdx, setDurationIdx] = useState<number>(
     params.quick === '1' ? 0 : st.defaultDuration,
@@ -546,11 +547,18 @@ export default function BreathSessionScreen() {
   const [secsLeft, setSecsLeft] = useState(st.techniques[0].phases[0].secs);
   const [round, setRound] = useState(1);
 
-  const chosen = DURATIONS[durationIdx];
+  /* Binnen de grenzen blijven. 4-7-8 heeft twee duren, de andere ritmes drie
+     of vier. Stond je op de derde en wisselde je van ritme, dan wees de index
+     naar niets en viel de app om op de eerstvolgende regel. Terugvallen op de
+     laatste die er WEL is, is hier het juiste antwoord: je koos de langste, en
+     dat blijft de langste. */
+  const chosen =
+    DURATIONS[Math.min(durationIdx, DURATIONS.length - 1)] ?? DURATIONS[0];
   /* Berekend uit het gekozen ritme, niet meer uit een vast getal per
      toestand: twintig minuten van een cyclus van tien seconden is nu eenmaal
      een ander aantal rondes dan van een cyclus van zestien. */
-  const rounds = roundsFor(tech, chosen.minutes);
+  /* Een vast aantal ademhalingen gaat vóór een aantal minuten. */
+  const rounds = chosen.cycles ?? roundsFor(tech, chosen.minutes);
   const totalSec = rounds * CYCLE_S;
 
   /* De fase-loop draait buiten React om, dus de actuele instellingen komen
@@ -1039,16 +1047,18 @@ export default function BreathSessionScreen() {
             <Text style={s.sectionEyebrow}>SESSION DURATION</Text>
             <View style={s.chips}>
               {DURATIONS.map((d, i) => {
-                const active = i === durationIdx;
+                const active = i === Math.min(durationIdx, DURATIONS.length - 1);
                 return (
                   <Pressable
-                    key={d.minutes}
+                    key={d.name}
                     onPress={() => pickDuration(i)}
                     style={[s.chip, active && s.chipActive]}
                   >
                     <Text style={[s.chipTxt, active && s.chipTxtActive]}>
-                      {d.minutes}
-                      <Text style={s.chipUnit}> MIN</Text>
+                      {d.cycles ?? d.minutes}
+                      <Text style={s.chipUnit}>
+                        {d.cycles ? ' CYCLES' : ' MIN'}
+                      </Text>
                     </Text>
                     <Text style={[s.chipName, active && s.chipNameActive]}>
                       {d.name.split(' ')[0]}
@@ -1241,32 +1251,13 @@ export default function BreathSessionScreen() {
           </View>
         )}
 
-        {/* Alleen vooraf. Tijdens het ademen hoort er geen product op het
-            scherm te staan. */}
-        {!running && (
-          <Pressable
-            onPress={() => router.push('/bracelet')}
-            style={s.braceletCard}
-          >
-            <Image
-              source={{ uri: BRACELET_IMG }}
-              style={s.braceletImg}
-              resizeMode="contain"
-            />
-            <View style={s.braceletTxt}>
-              <Text style={s.braceletEyebrow}>SMART BEAD BRACELET</Text>
-              <Text style={s.braceletBody}>
-                Connect your bracelet for real-time haptic guidance.
-              </Text>
-              <Text style={s.braceletWhen}>Available Fall 2026</Text>
-            </View>
-            <ChevronRight
-              size={18}
-              color="rgba(255,255,255,0.34)"
-              strokeWidth={2.2}
-            />
-          </Pressable>
-        )}
+        {/* Hier stond een kaart die de Smart Bead Bracelet aanprees. Weg
+            (operator, 7 augustus 2026): de pagina hoort te ademen en niet
+            gescrold te worden, en dat blok was het enige dat er niet in paste.
+            De bracelet staat trouwens al op dit scherm — als vierde kanaal
+            naast stem, geluid en telefoon, met zijn datum erbij. Twee keer
+            hetzelfde aankondigen op één scherm is geen aandacht vragen maar
+            aandacht verliezen. Hij blijft bereikbaar via zijn eigen tab. */}
       </ScrollView>
 
       {/* Verloop onder de knop. Zonder dit lijkt de laatste kaart door de
@@ -1927,38 +1918,6 @@ function makeStyles(st: BreathState) {
   },
 
   /* ── Bracelet ── */
-  braceletCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    width: SCREEN_W - 28,
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(255,255,255,0.035)',
-  },
-  braceletImg: { width: 62, height: 50 },
-  braceletTxt: { flex: 1, gap: 1 },
-  braceletEyebrow: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 10.5,
-    letterSpacing: 1.6,
-    color: st.accent,
-  },
-  braceletBody: {
-    fontFamily: BrandFonts.regular,
-    fontSize: 12.5,
-    lineHeight: 17,
-    color: 'rgba(255,255,255,0.72)',
-  },
-  braceletWhen: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 11.5,
-    color: 'rgba(255,255,255,0.42)',
-  },
 
   /* ── Voet ── */
   footerScrim: { position: 'absolute', left: 0, right: 0, bottom: 0 },

@@ -68,6 +68,8 @@ export type PhaseDef = {
  *  niveau wil iemand feiten. Het getal is dus de naam, en dat schaalt: een
  *  zesde ritme heeft geen nieuwe metafoor nodig. */
 export type TechniqueDef = {
+  /** Eigen duren, als de algemene van de toestand niet passen. Zie `cycles`. */
+  durations?: DurationDef[];
   key: string;
   name: string;
   /** Eén zin: wát het is en waar het vandaan komt.
@@ -84,6 +86,14 @@ export type TechniqueDef = {
 
 export type DurationDef = {
   minutes: number;
+  /* Vaste hoeveelheid ADEMHALINGEN in plaats van minuten.
+     Nodig voor 4-7-8: Weil schrijft vier cycli om mee te beginnen en hoogstens
+     acht na een maand oefenen. Onze algemene duren van 5, 10 en 20 minuten
+     zijn bij een cyclus van negentien seconden zestien, tweeendertig en
+     drieenzestig cycli — tot acht keer die bovengrens. Voor een app die met
+     docenten samenwerkt is dat niet te verdedigen (operator, 7 augustus 2026).
+     Staat dit veld er, dan telt het en niet de minuten. */
+  cycles?: number;
   rounds: number;
   name: string;
   why: string;
@@ -474,6 +484,26 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
       {
         key: '478',
         name: '4-7-8 Breathing',
+        /* Vier om mee te beginnen, acht als het vertrouwd is — de opbouw die
+           Weil zelf beschrijft. Geen 20 minuten: dat zou drieenzestig cycli
+           zijn, en meer dan vier in het begin wordt uitdrukkelijk afgeraden. */
+        durations: [
+          {
+            minutes: 1,
+            cycles: 4,
+            rounds: 4,
+            name: 'Starter',
+            why: 'Four cycles. The amount to begin with, twice a day.',
+            recommended: true,
+          },
+          {
+            minutes: 3,
+            cycles: 8,
+            rounds: 8,
+            name: 'Practised',
+            why: 'Eight cycles. Build up to this over about a month.',
+          },
+        ],
         explain:
           'Four in, seven held, eight out. The longest hold of all ten rhythms.',
         phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
