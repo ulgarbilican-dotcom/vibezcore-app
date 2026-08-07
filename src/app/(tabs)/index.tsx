@@ -1,4 +1,5 @@
 import { AUDIO_ENABLED } from '@/constants/features';
+import { bootDecided } from '@/utils/boot';
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Audio Library (route /)
 
@@ -391,8 +392,14 @@ function SessionRow({
    Zet `AUDIO_ENABLED` weer aan en alles werkt zoals het was; er is niets
    verwijderd. */
 export default function AudioRoute() {
-  if (!AUDIO_ENABLED) return <Redirect href="/breath" />;
-  return <AudioScreen />;
+  if (AUDIO_ENABLED) return <AudioScreen />;
+  /* Niets doen zolang de root nog beslist waar de app opent. Deed dit hier
+     meteen een omleiding, dan won die van `router.replace('/welcome')` en zag
+     niemand het welkomstscherm nog (operator, 7 augustus 2026). De splash
+     staat er tijdens dat wachten overheen, dus er is niets van te zien.
+     Zie utils/boot.ts. */
+  if (!bootDecided()) return null;
+  return <Redirect href="/breath" />;
 }
 
 function AudioScreen() {

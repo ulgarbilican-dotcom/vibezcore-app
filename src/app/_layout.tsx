@@ -66,6 +66,7 @@ import {
   type TappedReminder,
 } from '@/services/reminders';
 import * as Notifications from 'expo-notifications';
+import { markBootDecided } from '@/utils/boot';
 import { AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -484,6 +485,8 @@ export default function RootLayout() {
          o.b.v. backend "has_bracelet"-flag. */
       router.replace('/bracelet');
     }
+    /* Vanaf hier mag `/` zijn eigen gang gaan. Zie utils/boot.ts. */
+    markBootDecided();
     SplashScreen.hideAsync().catch(() => {});
   }, [ready, auth, pendingAuthLink, tapped]);
 
