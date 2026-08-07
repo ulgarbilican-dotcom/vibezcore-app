@@ -29,7 +29,7 @@ import {
   useBraceletStats,
 } from '@/utils/bracelet-history';
 import { goalsByKeys } from '@/data/goals';
-import { useBreathHistory } from '@/utils/breath-history';
+import { useBreathHistory, useBreathTotals } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
@@ -94,6 +94,7 @@ const DAY_LABEL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const history = useBreathHistory();
+  const lifetime = useBreathTotals();
   const [goals] = useSetting('goals');
   const sub = useSubscription();
 
@@ -340,7 +341,10 @@ export default function ActivityScreen() {
                 Icon={Flame}
                 n={String(stats.streak)}
                 l="DAYS IN A ROW"
-                sub={'Best: ' + stats.best}
+                /* De hoogste van twee: wat er in de lijst staat, en wat er
+                   ooit bewaard is. Kort de lijst ooit in, dan blijft je beste
+                   reeks staan — een record dat zakt is geen record. */
+                sub={'Best: ' + Math.max(stats.best, lifetime.bestStreak)}
                 c={tone}
               />
               <Stat

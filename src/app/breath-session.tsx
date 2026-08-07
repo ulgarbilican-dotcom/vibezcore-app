@@ -256,7 +256,14 @@ export default function BreathSessionScreen() {
      we de inzet expliciet mee, op de enige plek waar hij telt. */
   const insets = useSafeAreaInsets();
 
-  const params = useLocalSearchParams<{ state?: string; from?: string }>();
+  const params = useLocalSearchParams<{
+    state?: string;
+    from?: string;
+    /** '1' = binnengekomen via de snelkoppeling op het beginscherm. Dan de
+        KORTSTE duur, niet de gebruikelijke: wie van buiten de app binnenvalt
+        heeft geen twintig minuten, die heeft nu iets nodig. */
+    quick?: string;
+  }>();
   const st: BreathState =
     BREATH_STATES[(params.state as BreathStateKey) ?? 'calm'] ??
     BREATH_STATES.calm;
@@ -318,7 +325,9 @@ export default function BreathSessionScreen() {
   const nextOf = useCallback((k: Phase) => nextPhase(tech, k), [tech]);
   const DURATIONS = st.durations;
 
-  const [durationIdx, setDurationIdx] = useState<number>(st.defaultDuration);
+  const [durationIdx, setDurationIdx] = useState<number>(
+    params.quick === '1' ? 0 : st.defaultDuration,
+  );
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
