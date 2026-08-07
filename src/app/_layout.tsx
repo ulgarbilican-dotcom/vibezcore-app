@@ -66,10 +66,6 @@ import {
   type TappedReminder,
 } from '@/services/reminders';
 import * as Notifications from 'expo-notifications';
-import * as QuickActions from 'expo-quick-actions';
-import { BREATH_STATES } from '@/data/breath-states';
-import { useBreathHistory } from '@/utils/breath-history';
-import { suggestBreath } from '@/utils/breath-suggestion';
 import { AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -126,12 +122,28 @@ const AUTH_DEEP_LINK_PATHS = new Set([
   'account',
 ]);
 
+/* De snelkoppelingen onder het app-icoon (plugins/withQuickShortcuts.js).
+   Het zijn gewone deeplinks, want die worden ook afgeleverd als de app AL
+   draait — dat was het gebrek van de vorige aanpak. Ze staan hier als vaste
+   lijst en niet als "alles wat binnenkomt", zodat een vreemde link de app nog
+   steeds nergens heen kan sturen. */
+const SHORTCUT_ROUTES: Record<string, string> = {
+  /* Vast op CALM CONTROL en de kortste duur. Eerder koos hier de suggestie,
+     en die zette er 's middags CLARITY neer — een snelkoppeling waarvan de
+     bestemming verschuift is er geen (operator, 7 augustus 2026). */
+  'quick-breath': '/breath-session?state=calm&quick=1',
+  breath: '/breath',
+  bracelet: '/bracelet',
+};
+
 async function hasPendingAuthDeepLink(): Promise<boolean> {
   try {
     const initialUrl = await Linking.getInitialURL();
     if (!initialUrl) return false;
     const path = Linking.parse(initialUrl).path ?? '';
-    return AUTH_DEEP_LINK_PATHS.has(path);
+    /* Ook een snelkoppeling moet het welkomstscherm overslaan, anders komt
+       die eroverheen en strandt je waar je niet heen wilde. */
+    return AUTH_DEEP_LINK_PATHS.has(path) || path in SHORTCUT_ROUTES;
   } catch {
     return false;
   }
@@ -167,28 +179,6 @@ export default function RootLayout() {
   const [tapped, setTapped] = useState<TappedReminder | null | undefined>(
     undefined,
   );
-
-  /* ── Snelkoppelingen op het beginscherm ────────────────────────────────
-     Ademhalen is een noodgreep. Wie gespannen is moest tot nu toe: app
-     openen → welkomstscherm → CHOOSE YOUR MODE → doorvegen → ritme → start.
-     Zes handelingen op het moment dat je er geen één wil doen.
-
-     Nu staat er onder het app-icoon (lang indrukken) een snelkoppeling die
-     rechtstreeks een sessie start, in de toestand die op dit uur voorgesteld
-     wordt en op de KORTSTE duur. Eén handeling. */
-  const [quickHref, setQuickHref] = useState<string | null | undefined>(
-    undefined,
-  );
-
-  useEffect(() => {
-    const href = QuickActions.initial?.params?.href;
-    setQuickHref(typeof href === 'string' ? href : null);
-    const sub = QuickActions.addListener((a) => {
-      const h = a?.params?.href;
-      if (typeof h === 'string') router.navigate(h as never);
-    });
-    return () => sub.remove();
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,8 +232,7 @@ export default function RootLayout() {
     fontsLoaded &&
     auth !== undefined &&
     pendingAuthLink !== undefined &&
-    tapped !== undefined &&
-    quickHref !== undefined;
+    tapped !== undefined;
 
   /* Iter v148 (2026-06-25): IAP startup-recovery. Fire-and-forget
      achtergrond-call die (a) pending verifies uit AsyncStorage drain't
@@ -256,50 +245,6 @@ export default function RootLayout() {
     if (!ready) return;
     void iapRecoverOnStartup();
   }, [ready]);
-
-  /* Wat er ÍN de snelkoppelingen staat. Volgt de suggestie, dus de eerste
-     regel verandert mee met het uur en met wat je zelf doet: 's ochtends
-     BOOST, 's avonds REST & RESET. Een vaste snelkoppeling zou de helft van
-     de dag het verkeerde aanbieden. */
-  const breathHistory = useBreathHistory();
-  useEffect(() => {
-    if (!ready) return;
-    void (async () => {
-      await ensureSettingsLoaded();
-      const goalKeys = getSetting('goals');
-      const sug =
-        breathHistory.length > 0
-          ? suggestBreath(breathHistory, new Date(), goalKeys)
-          : null;
-      const key = sug?.state ?? 'calm';
-      const st = BREATH_STATES[key];
-      try {
-        await QuickActions.setItems([
-          {
-            id: 'quick-breath',
-            title: st.eyebrow,
-            subtitle: sug?.reason ?? 'A short reset',
-            params: { href: `/breath-session?state=${key}&quick=1` },
-          },
-          {
-            id: 'all-modes',
-            title: 'All modes',
-            subtitle: 'Pick your own',
-            params: { href: '/breath' },
-          },
-          {
-            id: 'bracelet',
-            title: 'Bracelet',
-            subtitle: 'One press, no screen',
-            params: { href: '/bracelet' },
-          },
-        ]);
-      } catch {
-        /* niet elk toestel ondersteunt het — dan gebeurt er niets */
-      }
-    })();
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [ready, breathHistory.length]);
 
   /* Herinneringen opnieuw zetten bij elke start.
      Ze werden alleen gepland op het moment dat je een schakelaar omzette. Wat
@@ -512,14 +457,10 @@ export default function RootLayout() {
     /* Een tik op een herinnering gaat vóór het welkomstscherm. Wie om negen
        uur 's avonds op "Time to wind down" tikt, wil ademen — niet eerst het
        merkbeeld en dan zelf de weg zoeken. */
-    const showWelcome = !pendingAuthLink && !tapped && !quickHref;
+    const showWelcome = !pendingAuthLink && !tapped;
     void treatAsGuest;
     void treatAsSignedIn;
-    if (quickHref) {
-      /* Een snelkoppeling gaat vóór alles. Wie hem gebruikt heeft de app niet
-         geopend om rond te kijken. */
-      router.replace(quickHref as never);
-    } else if (tapped) {
+    if (tapped) {
       router.replace({
         pathname: reminderRoute(tapped),
         params: { from: 'reminder' },
@@ -544,7 +485,7 @@ export default function RootLayout() {
       router.replace('/bracelet');
     }
     SplashScreen.hideAsync().catch(() => {});
-  }, [ready, auth, pendingAuthLink, tapped, quickHref]);
+  }, [ready, auth, pendingAuthLink, tapped]);
 
   /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
      Webapp wordt uitgefaseerd — alle email-flows (magic link na
@@ -581,6 +522,10 @@ export default function RootLayout() {
           });
         } else if (path === 'forgot-password') {
           router.push('/forgot-password' as never);
+        } else if (path in SHORTCUT_ROUTES) {
+          /* `replace` en niet `push`: wie via een snelkoppeling binnenkomt
+             heeft geen scherm achter zich waar hij naar terug wil. */
+          router.replace(SHORTCUT_ROUTES[path] as never);
         } else if (__DEV__) {
           console.log('[deep-link] unhandled path:', path);
         }
