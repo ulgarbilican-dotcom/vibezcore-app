@@ -152,7 +152,7 @@ Volgorde en taglines zijn bindend en consistent over de hele webapp.
 | 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min |
 | 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min |
 | 3 | Theta | Clarity | Wit #FFFFFF | 15 – 30 min |
-| 4 | Delta | Rest & Reset | Groen #8FD94A | 25 – 45 min |
+| 4 | Delta | Rest & Reset | Groen #3ECF8E | 25 – 45 min |
 
 **GEWIJZIGD 5 augustus 2026 (operator): de bracelet draagt nu DEZELFDE
 kleuren als de vijf ademtoestanden.** Reden: het wordt één product. Wie van

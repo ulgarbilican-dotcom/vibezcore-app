@@ -148,9 +148,9 @@ function rgbOf(hex: string): [number, number, number] {
    toestand en hier komen de kleuren uit de animatie. */
 const staticStyles = StyleSheet.create({
   explainWrap: {
-    marginTop: 10,
-    marginBottom: 6,
-    paddingVertical: 11,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 16,
     borderWidth: 1,
@@ -259,7 +259,11 @@ const ART_RUN = SCREEN_W * 0.98;
    illustratie groter of kleiner stond — en dan staat geen enkele pagina op
    dezelfde plek. Nu ligt de indeling vast en regelt `artScale` per toestand
    alleen hoe groot de illustratie BINNEN dat vak is. */
-const BOX_IDLE = 208;
+/* 208 → 176 (operator, 7 augustus 2026: "er moet nog een beetje gescrold
+   worden"). Het beeldvak was de grootste post op een scherm waar de inhoud
+   eronder juist compleet moet zijn; de illustratie heeft die twee-endertig
+   punten niet nodig om te dragen. */
+const BOX_IDLE = 176;
 const BOX_RUN = 268;
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
@@ -1783,8 +1787,8 @@ function makeStyles(st: BreathState) {
   /* ── Ademritme vooraf ── */
   patternCard: {
     width: SCREEN_W - 28,
-    marginTop: 14,
-    paddingVertical: 12,
+    marginTop: 10,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 18,
     borderWidth: 1,

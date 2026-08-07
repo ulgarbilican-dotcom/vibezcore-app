@@ -462,10 +462,17 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     subtitle: 'Restore & Replenish',
     description:
       'Restore deeply. Support recovery, relaxation and restful sleep.',
-    accent: '#8FD94A',
-    accentSoft: 'rgba(143,217,74,0.15)',
-    glow: '#3B7A1C',
-    gradient: ['#3F7D1F', '#8FD94A', '#D8F5A5'],
+    /* Smaragd in plaats van limoen (operator, 7 augustus 2026: "te veel
+       neon"). #8FD94A trekt naar geel, en geelgroen leest als signaal — het
+       is de kleur van waarschuwingsvesten en energiedrank. Voor de toestand
+       waarin je tot rust komt is dat het verkeerde signaal. Dit groen heeft
+       een vleugje blauw en zakt daardoor terug in het zwart in plaats van
+       eruit te springen, zonder zijn plaats naast amber, blauw, violet en wit
+       te verliezen. */
+    accent: '#3ECF8E',
+    accentSoft: 'rgba(62,207,142,0.15)',
+    glow: '#12724A',
+    gradient: ['#1B7A55', '#3ECF8E', '#A7EBCD'],
     /* 20% kleiner dan eerst (operator, 2 augustus 2026): 0.88 → 0.70. De
        boom is hoog en breed en vulde het beeldvak tot aan de rand, waar de
        andere vier lucht om zich heen hebben. */
