@@ -24,6 +24,10 @@ import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
+import {
+  getAllSessions,
+  useBraceletStats,
+} from '@/utils/bracelet-history';
 import { goalsByKeys } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
@@ -61,6 +65,16 @@ const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 
 const DAY = 864e5;
+
+/* De vijf bracelet-modi in de volgorde van het BLE-contract (index 0-4). Ze
+   dragen sinds 5 augustus dezelfde namen en kleuren als de ademtoestanden. */
+const ORDER_MODES = [
+  BREATH_STATES.boost,
+  BREATH_STATES.focus,
+  BREATH_STATES.calm,
+  BREATH_STATES.clarity,
+  BREATH_STATES.rest,
+];
 
 /* Kopbeeld, aangeleverd door de operator. */
 const HERO =
@@ -208,20 +222,49 @@ export default function ActivityScreen() {
   /* Bracelet-cijfers. Er wordt nog niets weggeschreven over bracelet-gebruik,
      dus dit blijft leeg tot dat gebouwd is — maar het blok staat er wel, zodat
      het scherm niet verspringt zodra de eerste sessie binnenkomt. */
-  const bracelet = {
+  /* ECHTE cijfers. De opslag bestond al — bracelet-control roept
+     `recordSession` aan bij elk sessie-einde en `useBraceletStats` rekent de
+     totalen uit. Er viel dus niets te bouwen, alleen aan te sluiten; het blok
+     stond alleen op nullen omdat ik ze nooit had opgehaald. */
+  const bStats = useBraceletStats();
+  const bracelet = useMemo(() => {
+    const all = getAllSessions();
+    const perModeMin: Record<number, number> = {};
+    for (const r of all) {
+      perModeMin[r.mode] = (perModeMin[r.mode] ?? 0) + r.durationMin;
+    }
+    const total = Math.max(
+      1,
+      Object.values(perModeMin).reduce((a, x) => a + x, 0),
+    );
+    /* De modi staan in dezelfde volgorde als de ademtoestanden, en dragen
+       sinds 5 augustus dezelfde namen en kleuren. Index 0-4 = BOOST t/m
+       REST & RESET, zoals in het BLE-contract. */
+    const per = ORDER_MODES.map((st, i) => ({
+      name: st.eyebrow,
+      color: st.accent,
+      min: perModeMin[i] ?? 0,
+      pct: Math.round(((perModeMin[i] ?? 0) / total) * 100),
+    }));
+    const top = [...per].sort((a, b) => b.min - a.min)[0];
+    return {
+      sessions: bStats.weekSessions,
+      minutes: bStats.weekMinutes,
+      topMode: top && top.min > 0 ? top.name.split(' ')[0] : null,
+      perMode: per,
+    };
+  }, [bStats]);
+
+  const braceletUnused = {
     sessions: 0,
     minutes: 0,
     topMode: null as string | null,
     /* De vijf modi dragen dezelfde namen en kleuren als de ademtoestanden —
        dat is sinds 5 augustus één tabel. Minuten blijven nul tot
        bracelet-gebruik wordt weggeschreven. */
-    perMode: Object.values(BREATH_STATES).map((st) => ({
-      name: st.eyebrow,
-      color: st.accent,
-      min: 0,
-      pct: 0,
-    })),
+    perMode: [] as { name: string; color: string; min: number; pct: number }[],
   };
+  void braceletUnused;
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -494,14 +537,15 @@ export default function ActivityScreen() {
               ))}
             </View>
 
-          {sub.hasBracelet && (
-            <Row
-              Icon={Watch}
-              title="All bracelet sessions"
-              sub="View your bracelet session history"
-              onPress={() => router.push('/bracelet-history')}
-            />
-          )}
+          {/* Altijd zichtbaar (operator, 7 augustus 2026). Ook zonder bracelet
+              hoort deze rij er te staan: de lijst bestaat, hij is alleen leeg,
+              en verbergen maakt onvindbaar wat er straks is. */}
+          <Row
+            Icon={Watch}
+            title="All bracelet sessions"
+            sub="View your bracelet session history"
+            onPress={() => router.push('/bracelet-history')}
+          />
         </>
 
         {!sub.hasBracelet && (
