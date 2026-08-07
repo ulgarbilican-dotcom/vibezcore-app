@@ -57,6 +57,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { addBreathSession } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
+import { skipBreathIntroOnce } from '@/utils/breath-entry';
 import {
   GROUP_ORDER,
   GROUP_TINT,
@@ -760,6 +761,10 @@ export default function BreathSessionScreen() {
               stop();
               return;
             }
+            /* Terug naar de vijf toestanden, NIET naar het welkomstbeeld
+               (operator, 7 augustus 2026). Je hebt die drempel al genomen; er
+               weer op uitkomen leest als eruit gezet worden. */
+            skipBreathIntroOnce();
             if (router.canGoBack()) router.back();
             else router.replace('/breath');
           }}
@@ -1121,11 +1126,23 @@ export default function BreathSessionScreen() {
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 24 }]}>
         {running ? (
+          /* END SESSION blijft BEWUST stil en omlijnd (operator vroeg om wit
+             en vol, 7 augustus 2026 — dit is de ene plek waar ik het afraad).
+             Tijdens een sessie is er geen handeling die je hoort te doen; het
+             hele punt is dat je niets doet. Een volle witte balk is dan het
+             felste op het scherm en nodigt uit tot stoppen, precies wat de
+             sessie niet moet. Hij blijft vindbaar, niet luid. */
           <Pressable onPress={stop} style={s.endBtn}>
             <Text style={s.endTxt}>END SESSION</Text>
           </Pressable>
         ) : (
-          /* Omlijnd, niet gevuld — dezelfde vorm als SELECT MODE op de
+          /* VOL in de kleur van de toestand (operator, 7 augustus 2026).
+             Vervangt de keuze van 4 augustus om hem te omlijnen. Dit is de
+             enige handeling op het scherm en hoort ook de enige te zijn die
+             opvalt. De vorm blijft gelijk aan SELECT MODE op de keuzepagina,
+             dus de twee schermen lezen nog steeds als een product — nu
+             allebei gevuld in plaats van allebei omlijnd.
+             OUD: omlijnd, niet gevuld — dezelfde vorm als SELECT MODE op de
              keuzepagina (operator, 4 augustus 2026: "start session is ook
              niet mooi"). Een volle balk van vijftig punten is het zwaarste
              element op een scherm dat verder uit één lichtgevende figuur op
@@ -1133,11 +1150,14 @@ export default function BreathSessionScreen() {
              elkaar met dezelfde knopvorm lezen bovendien als één product. */
           <Pressable
             onPress={start}
-            style={[s.startBtn, { borderColor: st.accent }]}
-            android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+            style={[
+              s.startBtn,
+              { backgroundColor: st.accent, borderColor: st.accent },
+            ]}
+            android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
           >
-            <Text style={[s.startTxt, { color: st.accent }]}>START SESSION</Text>
-            <ArrowRight size={17} color={st.accent} strokeWidth={2} />
+            <Text style={[s.startTxt, { color: '#0a0a0a' }]}>START SESSION</Text>
+            <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
           </Pressable>
         )}
       </View>

@@ -42,6 +42,7 @@ import {
 import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
+import { consumeBreathIntroSkip } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
@@ -183,7 +184,8 @@ export default function BreathScreen() {
   );
   useFocusEffect(
     useCallback(() => {
-      if (skipIntroRef.current) {
+      /* Terug uit een sessie: geen beeld. Zie utils/breath-entry.ts. */
+      if (skipIntroRef.current || consumeBreathIntroSkip()) {
         skipIntroRef.current = false;
         setIntro(false);
         return;
@@ -372,7 +374,7 @@ export default function BreathScreen() {
             android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
           >
             <Text style={[s.ctaTxt, { color: '#0a0a0a' }]}>
-              CHOOSE YOUR MODE
+              EXPLORE MODES
             </Text>
             <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
           </Pressable>
@@ -513,11 +515,18 @@ export default function BreathScreen() {
       <Animated.View style={fadeStyle}>
         <Pressable
           onPress={open}
-          style={[s.cta, { borderColor: st.accent }]}
-          android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+          /* VOL in de kleur van de toestand (operator, 7 augustus 2026). Eén
+             volle knop per scherm — de handeling die je écht wil — en al het
+             andere omlijnd. Was alles omlijnd, dan zegt geen enkele knop nog
+             "hier moet je heen": op dit scherm concurreerde SELECT MODE met
+             vijf toestandsknoppen en won hij niet. De kleur draagt nu de
+             handeling in plaats van alleen de sfeer, en een gevuld vlak leest
+             ook in fel licht — een lijn van één punt doet dat niet. */
+          style={[s.cta, { backgroundColor: st.accent, borderColor: st.accent }]}
+          android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
         >
-          <Text style={[s.ctaTxt, { color: st.accent }]}>SELECT MODE</Text>
-          <ArrowRight size={17} color={st.accent} strokeWidth={2} />
+          <Text style={[s.ctaTxt, { color: '#0a0a0a' }]}>SELECT MODE</Text>
+          <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
         </Pressable>
       </Animated.View>
 
