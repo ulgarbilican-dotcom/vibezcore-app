@@ -193,7 +193,20 @@ export default function ActivityScreen() {
   /* Bracelet-cijfers. Er wordt nog niets weggeschreven over bracelet-gebruik,
      dus dit blijft leeg tot dat gebouwd is — maar het blok staat er wel, zodat
      het scherm niet verspringt zodra de eerste sessie binnenkomt. */
-  const bracelet = { sessions: 0, minutes: 0, topMode: null as string | null };
+  const bracelet = {
+    sessions: 0,
+    minutes: 0,
+    topMode: null as string | null,
+    /* De vijf modi dragen dezelfde namen en kleuren als de ademtoestanden —
+       dat is sinds 5 augustus één tabel. Minuten blijven nul tot
+       bracelet-gebruik wordt weggeschreven. */
+    perMode: Object.values(BREATH_STATES).map((st) => ({
+      name: st.eyebrow,
+      color: st.accent,
+      min: 0,
+      pct: 0,
+    })),
+  };
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -280,7 +293,7 @@ export default function ActivityScreen() {
                 {stats.days.map((d, i) => (
                   <View key={i} style={s.col}>
                     <Text style={s.colMin}>{d.min > 0 ? d.min : ''}</Text>
-                    <View style={s.track}>
+                    <View style={[s.track, s.barSlot]}>
                       <View
                         style={[
                           s.fill,
@@ -367,6 +380,11 @@ export default function ActivityScreen() {
           <Text style={[s.headTxt, { color: 'rgba(255,255,255,0.8)' }]}>
             SMART BEAD BRACELET
           </Text>
+          {!sub.hasBracelet && (
+            <View style={s.soonPill}>
+              <Text style={s.soonTxt}>FALL 2026</Text>
+            </View>
+          )}
         </View>
 
         {sub.hasBracelet ? (
@@ -394,6 +412,41 @@ export default function ActivityScreen() {
                 c="rgba(255,255,255,0.85)"
               />
             </View>
+            <View style={s.card}>
+              <Text style={s.cardHead}>MINUTES PER MODE</Text>
+              {bracelet.perMode.map((m) => (
+                <View key={m.name} style={s.stateRow}>
+                  <View
+                    style={[
+                      s.stateIcon,
+                      {
+                        borderColor: m.color + '66',
+                        backgroundColor: m.color + '18',
+                      },
+                    ]}
+                  >
+                    <View style={[s.stateDot, { backgroundColor: m.color }]} />
+                  </View>
+                  <Text style={s.stateName} numberOfLines={1}>
+                    {m.name}
+                  </Text>
+                  <View style={s.stateTrack}>
+                    <View
+                      style={[
+                        s.stateFill,
+                        {
+                          width: `${Math.max(2, m.pct)}%` as const,
+                          backgroundColor: m.color,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={s.stateMin}>{fmtMin(m.min)}</Text>
+                  <Text style={s.statePct}>{m.pct}%</Text>
+                </View>
+              ))}
+            </View>
+
             <Row
               Icon={Watch}
               title="All bracelet sessions"
@@ -409,9 +462,6 @@ export default function ActivityScreen() {
               separately from breathwork: one you practise, the other the
               bracelet does for you.
             </Text>
-            <View style={s.soonPill}>
-              <Text style={s.soonTxt}>AVAILABLE FALL 2026</Text>
-            </View>
           </View>
         )}
       </ScrollView>
@@ -562,6 +612,10 @@ const s = StyleSheet.create({
 
   chart: { flexDirection: 'row', gap: 6, height: 96 },
   col: { flex: 1, alignItems: 'center' },
+  /* De staaf is smaller dan zijn kolom (operator: "te bruut"). Een balk die
+     de volle breedte pakt leest als een blok; met lucht ernaast leest hij als
+     een meting. */
+  barSlot: { flex: 1, width: '58%', alignSelf: 'center' },
   colMin: {
     fontFamily: BrandFonts.semibold,
     fontSize: 9,
@@ -570,13 +624,12 @@ const s = StyleSheet.create({
   },
   track: {
     flex: 1,
-    width: '100%',
-    borderRadius: 5,
+    borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  fill: { width: '100%', borderRadius: 5, minHeight: 3 },
+  fill: { width: '100%', borderRadius: 999, minHeight: 3 },
   colDay: {
     marginTop: 5,
     fontFamily: BrandFonts.bold,
@@ -673,8 +726,7 @@ const s = StyleSheet.create({
     color: '#0a0a0a',
   },
   soonPill: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
