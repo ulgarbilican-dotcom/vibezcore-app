@@ -194,7 +194,7 @@ export default function BreathSplatScreen() {
       <Text style={[s.phase, { color: st.accent }]}>
         {running ? `${label}${via ? ` · ${via.toUpperCase()}` : ''}` : 'READY'}
       </Text>
-      <Text style={s.secs}>{running ? `${Math.max(0, secsLeft)}` : st.technique}</Text>
+      <Text style={s.secs}>{running ? `${Math.max(0, secsLeft)}` : st.techniques[0].name}</Text>
 
       <View style={s.modes}>
         {ORDER.map((k) => {

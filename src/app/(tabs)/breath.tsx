@@ -502,8 +502,15 @@ export default function BreathScreen() {
         <View style={[s.rule, { backgroundColor: st.accent }]} />
         <Text style={s.desc}>{st.description}</Text>
         <Pressable onPress={() => setInfoOpen(true)} hitSlop={10}>
+          {/* AFGELEID uit de ritmes zelf, niet meer een los ingevuld zinnetje
+              (operator, 7 augustus 2026: "bij boost zie ik 3-3, maar als je
+              activeert zie ik daar 2-2"). Er stond een handgeschreven veld
+              `technique` naast de echte lijst — twee bronnen voor hetzelfde,
+              en de ene noemde alleen het eerste ritme terwijl je er binnen
+              twee kunt kiezen. Nu staan ze er allebei, en kan het niet meer
+              uit de pas lopen. */}
           <Text style={[s.spec, { color: st.accent }]}>
-            {st.technique} · What is this?
+            {st.techniques.map((t) => t.name).join(' · ')} · What is this?
           </Text>
         </Pressable>
       </Animated.View>

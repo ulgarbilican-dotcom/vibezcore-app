@@ -122,7 +122,10 @@ export type BreathState = {
   artScale?: number;
   phases: PhaseDef[];
   /** Naam van de techniek, onder het ritmeblok. */
-  technique: string;
+  /* Het losse veld `technique` is op 7 augustus 2026 verwijderd. Het was een
+     met de hand ingevulde herhaling van het eerste ritme, en zodra een
+     toestand er twee kreeg, noemde het er nog maar een. Wat een toestand aan
+     ritmes heeft, staat in `techniques` — daar en nergens anders. */
   /** De ritmes die binnen deze toestand te kiezen zijn (operator, 4 augustus
    *  2026). De eerste is de standaard en draagt dezelfde fasen als `phases`
    *  hierboven — dat veld blijft bestaan zodat schermen die maar één ritme
@@ -196,7 +199,6 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         phases: [inhale(3, 'Nose'), exhale(3, 'Mouth')],
       },
     ],
-    technique: 'Energizing breath · 2-2',
     durations: [
       {
         minutes: 3,
@@ -257,7 +259,6 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         phases: [inhale(6, 'Nose'), exhale(6, 'Nose')],
       },
     ],
-    technique: 'Coherent breathing · 5-5',
     durations: [
       {
         minutes: 3,
@@ -334,7 +335,6 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         phases: [inhale(4, 'Nose'), hold(4, 'hold-in'), exhale(4, 'Nose')],
       },
     ],
-    technique: 'Box Breathing · 4-4-4-4',
     durations: [
       {
         minutes: 3,
@@ -406,7 +406,6 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         phases: [inhale(4, 'Nose'), exhale(8, 'Mouth')],
       },
     ],
-    technique: 'Long exhale · 4-2-6',
     durations: [
       {
         minutes: 3,
@@ -480,7 +479,6 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
       },
     ],
-    technique: 'Slow breathing · 4-6',
     durations: [
       {
         minutes: 5,
