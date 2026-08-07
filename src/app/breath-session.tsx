@@ -117,17 +117,129 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import {
+import Animated, {
   cancelAnimation,
   Easing,
+  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
 const SCREEN_W = Dimensions.get('window').width;
+
+/* De kleur van een toestand als losse getallen, zodat een worklet ermee kan
+   rekenen. Reanimated draait op de UI-draad en kan daar geen hex omzetten. */
+function rgbOf(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const n =
+    h.length === 3
+      ? h.split('').map((c) => parseInt(c + c, 16))
+      : [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return [n[0], n[1], n[2]];
+}
+
+/* Vaste maten van het uitlegvlak. Los van makeStyles, want die hangt aan de
+   toestand en hier komen de kleuren uit de animatie. */
+const staticStyles = StyleSheet.create({
+  explainWrap: {
+    marginTop: 10,
+    marginBottom: 6,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+});
+
+/* ── De uitleg onder het ritme ───────────────────────────────────────────
+   Wie op "Power 5-3" tikt ziet de tekst eronder veranderen, maar niet DAT hij
+   verandert — het is grijze tekst op zwart, twintig punten onder je vinger
+   (operator, 7 augustus 2026).
+
+   Eerst probeerde ik een kort oplichten. Te vlak: "het beweegt een beetje en
+   dat is het". Wat ontbrak is DIEPTE — het gevoel dat de tekst van het scherm
+   loskomt en naar je toe schuift.
+
+   Drie dingen tegelijk, en juist de combinatie maakt het:
+   · hij begint kleiner en verder weg (0.9) en veert naar zijn plek, met een
+     lichte doorschieter voorbij 1 — dat doorschieten IS het naar-voren-komen;
+     een beweging die netjes op 1 stopt leest als schuiven, niet als komen;
+   · het vlak eronder kleurt op in de toestandskleur en zakt terug naar een
+     rustige verhoging, zodat de tekst ook daarna niet meer plat op de pagina
+     ligt maar op iets staat;
+   · de tekst zelf wordt witter op het hoogtepunt, want dat is wat je leest.
+
+   Bij het openen van het scherm gebeurt er niets: dan heb je niets aangetikt
+   en hoort er dus ook niets te bewegen. */
+function TechniqueExplain({
+  text,
+  accent,
+  step,
+  style,
+}: {
+  text: string;
+  accent: string;
+  /** Verandert bij elke keuze; dat is het startsein. */
+  step: number;
+  style: object;
+}) {
+  const flash = useSharedValue(0);
+  const enter = useSharedValue(1);
+  const first = useRef(true);
+  const [r, g, b] = useMemo(() => rgbOf(accent), [accent]);
+
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    enter.value = 0;
+    /* Een veer en geen tijdlijn. Een veer heeft massa, en dat is precies het
+       verschil tussen "iets verschuift" en "iets komt naar voren". */
+    enter.value = withSpring(1, {
+      damping: 11,
+      stiffness: 170,
+      mass: 0.75,
+      overshootClamping: false,
+    });
+    flash.value = withSequence(
+      withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: 340 }),
+      withTiming(0, { duration: 820, easing: Easing.inOut(Easing.quad) }),
+    );
+  }, [step, enter, flash]);
+
+  const wrap = useAnimatedStyle(() => {
+    const f = flash.value;
+    /* Van een rustige verhoging (wit, nauwelijks zichtbaar) naar de kleur van
+       de toestand. Handmatig mengen: een worklet kent geen kleurnamen. */
+    const mix = (base: number) => Math.round(255 + (base - 255) * f);
+    return {
+      backgroundColor: `rgba(${mix(r)}, ${mix(g)}, ${mix(b)}, ${0.05 + 0.17 * f})`,
+      borderColor: `rgba(${mix(r)}, ${mix(g)}, ${mix(b)}, ${0.1 + 0.7 * f})`,
+      transform: [
+        { translateY: (1 - enter.value) * 18 },
+        { scale: 0.9 + enter.value * 0.1 },
+      ],
+      opacity: 0.45 + Math.min(1, enter.value) * 0.55,
+    };
+  });
+
+  const txt = useAnimatedStyle(() => ({
+    color: `rgba(255, 255, 255, ${0.58 + 0.4 * flash.value})`,
+  }));
+
+  return (
+    <Animated.View style={[staticStyles.explainWrap, wrap]}>
+      <Animated.Text style={[style, txt]}>{text}</Animated.Text>
+    </Animated.View>
+  );
+}
 const SCREEN_H = Dimensions.get('window').height;
 
 /* Het BEELD is breder dan het scherm. De aangeleverde PNG's hebben een
@@ -877,7 +989,12 @@ export default function BreathSessionScreen() {
                     een ander scherm; hier moet hij staan, want hier kies je.
                     Geen tik nodig: een keuze die je eerst moet openen om te
                     snappen, is geen keuze. */}
-                <Text style={s.techExplain}>{tech.explain}</Text>
+                <TechniqueExplain
+                  text={tech.explain}
+                  accent={st.accent}
+                  step={techIdx}
+                  style={s.techExplain}
+                />
               </>
             )}
             <Text style={s.sectionEyebrow}>SESSION DURATION</Text>
@@ -1552,9 +1669,9 @@ function makeStyles(st: BreathState) {
     lineHeight: 17,
     color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
-    paddingHorizontal: 8,
-    marginTop: 8,
-    marginBottom: 4,
+    /* Randen en marges zitten nu op het omhullende vlak (staticStyles.
+       explainWrap), anders licht er straks een strook op die niet om de tekst
+       heen valt maar ernaast. */
   },
   techTxt: {
     fontFamily: BrandFonts.semibold,
