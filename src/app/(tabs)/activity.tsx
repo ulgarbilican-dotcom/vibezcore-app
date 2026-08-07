@@ -121,7 +121,47 @@ export default function ActivityScreen() {
       .filter((x) => x.min > 0)
       .sort((a, b) => b.min - a.min);
 
-    return { days, peak, streak, totalMin, byState, count: history.length };
+    /* Beste reeks OOIT — maakt een teruggevallen reeks minder pijnlijk: je
+       ziet dat je het al eens verder hebt geschopt in plaats van alleen dat
+       je nu op 1 staat. */
+    const uniqueDays = [
+      ...new Set(history.map((e) => new Date(e.ts).toDateString())),
+    ]
+      .map((d) => new Date(d).setHours(0, 0, 0, 0))
+      .sort((x, y) => x - y);
+    let best = 0;
+    let run = 0;
+    let prev = 0;
+    for (const d of uniqueDays) {
+      run = prev && d - prev === DAY ? run + 1 : 1;
+      best = Math.max(best, run);
+      prev = d;
+    }
+
+    /* Deze week apart van het totaal: "24 sessies ooit" zegt weinig over of
+       je het NU volhoudt. */
+    const weekAgo = now.getTime() - 7 * DAY;
+    const wk = history.filter((e) => e.ts >= weekAgo);
+
+    const totalStateMin = Math.max(
+      1,
+      byState.reduce((acc, x) => acc + x.min, 0),
+    );
+
+    return {
+      days,
+      peak,
+      streak,
+      totalMin,
+      best,
+      weekSessions: wk.length,
+      weekMinutes: Math.round(wk.reduce((acc, e) => acc + e.durSec, 0) / 60),
+      byState: byState.map((x) => ({
+        ...x,
+        pct: Math.round((x.min / totalStateMin) * 100),
+      })),
+      count: history.length,
+    };
   }, [history]);
 
   /* De kleur van de toestand waar je het vaakst naartoe gaat. Die draagt het
@@ -239,9 +279,24 @@ export default function ActivityScreen() {
             )}
 
             <View style={s.row3}>
-              <Stat n={String(stats.streak)} l="DAYS IN A ROW" c={tone} />
-              <Stat n={String(stats.count)} l="SESSIONS" c={tone} />
-              <Stat n={String(stats.totalMin)} l="MINUTES" c={tone} />
+              <Stat
+                n={String(stats.streak)}
+                l="DAYS IN A ROW"
+                sub={stats.best > 1 ? `Best: ${stats.best}` : undefined}
+                c={tone}
+              />
+              <Stat
+                n={String(stats.weekSessions)}
+                l="SESSIONS"
+                sub="This week"
+                c={tone}
+              />
+              <Stat
+                n={fmtMin(stats.weekMinutes)}
+                l="MINUTES"
+                sub="This week"
+                c={tone}
+              />
             </View>
 
             <Text style={s.section}>Minutes per day</Text>
@@ -374,13 +429,30 @@ export default function ActivityScreen() {
   );
 }
 
-function Stat({ n, l, c }: { n: string; l: string; c: string }) {
+function Stat({
+  n,
+  l,
+  sub,
+  c,
+}: {
+  n: string;
+  l: string;
+  sub?: string;
+  c: string;
+}) {
   return (
     <View style={[s.stat, { borderColor: `${c}33` }]}>
       <Text style={[s.statNum, { color: c }]}>{n}</Text>
       <Text style={s.statLbl}>{l}</Text>
+      {sub ? <Text style={s.statSub}>{sub}</Text> : null}
     </View>
   );
+}
+
+/* Uren zodra het er genoeg zijn: "8h 45m" leest sneller dan "525". */
+function fmtMin(m: number): string {
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
 const s = StyleSheet.create({
@@ -433,6 +505,19 @@ const s = StyleSheet.create({
     fontSize: 26,
     letterSpacing: -0.5,
     color: '#ffffff',
+  },
+  statSub: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.3)',
+  },
+  statePct: {
+    width: 34,
+    textAlign: 'right',
+    fontFamily: BrandFonts.regular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.38)',
   },
   statLbl: {
     marginTop: 3,
