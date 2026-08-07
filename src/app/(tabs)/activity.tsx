@@ -18,17 +18,21 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import Starfield from '@/components/Starfield';
+import { SESSION_ART } from '@/components/SessionArt';
+import { assetUri } from '@/services/asset-cache';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import { goalsByKeys } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
+import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
 import { ChevronRight, Settings } from 'lucide-react-native';
 import { useMemo } from 'react';
 import {
   Dimensions,
+  Image as RNImage,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,6 +51,15 @@ export default function ActivityScreen() {
   const history = useBreathHistory();
   const [goals] = useSetting('goals');
   const sub = useSubscription();
+
+  /* De suggestie van dit moment — dezelfde bron als de Breath-tab, zodat de
+     twee schermen nooit iets anders voorstellen. */
+  const suggestion = useMemo(
+    () => (history.length > 0 ? suggestBreath(history, new Date(), goals) : null),
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    [history.length > 0, goals],
+  );
+  const sugState = BREATH_STATES[suggestion?.state ?? 'calm'];
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -157,6 +170,48 @@ export default function ActivityScreen() {
           </View>
         ) : (
           <>
+            {/* ── Wat er NU aan de beurt is ──────────────────────────────
+                 Het scherm begon met drie getallen in drie grijze vakjes —
+                 correct en levenloos (operator, 6 augustus 2026: "te saai en
+                 zakelijk"). Cijfers vertellen wat gewéést is; hier hoort
+                 bovenaan te staan wat je nu kunt doen.
+
+                 De illustratie en de kleur van die toestand dragen het blok,
+                 dus dit scherm ziet er anders uit naargelang het uur. Dat is
+                 de goedkoopste vorm van leven die een dashboard kan hebben:
+                 het verandert mee met jou, zonder één extra animatie. */}
+            {suggestion && (
+              <Pressable
+                style={[
+                  s.today,
+                  { borderColor: `${sugState.accent}55`, backgroundColor: `${sugState.accent}10` },
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/breath-session',
+                    params: { state: sugState.key },
+                  })
+                }
+              >
+                <RNImage
+                  source={{ uri: assetUri(SESSION_ART[sugState.art]) }}
+                  style={s.todayArt}
+                  resizeMode="contain"
+                />
+                <View style={s.todayTxt}>
+                  <Text style={[s.todayEyebrow, { color: sugState.accent }]}>
+                    {suggestion.reason.toUpperCase()}
+                  </Text>
+                  <Text style={s.todayName}>{sugState.eyebrow}</Text>
+                  <Text style={s.todaySub}>
+                    {sugState.durations[suggestion.durationIdx].minutes} min ·{' '}
+                    {sugState.techniques[0].name}
+                  </Text>
+                </View>
+                <ChevronRight size={18} color={sugState.accent} />
+              </Pressable>
+            )}
+
             <View style={s.row3}>
               <Stat n={String(stats.streak)} l="DAY STREAK" c={tone} />
               <Stat n={String(stats.count)} l="SESSIONS" c={tone} />
@@ -404,6 +459,35 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
 
+  today: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 12,
+    marginTop: 14,
+  },
+  todayArt: { width: 58, height: 58 },
+  todayTxt: { flex: 1 },
+  todayEyebrow: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.8,
+  },
+  todayName: {
+    marginTop: 3,
+    fontFamily: BrandFonts.bold,
+    fontSize: 18,
+    color: '#ffffff',
+    letterSpacing: -0.2,
+  },
+  todaySub: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.55)',
+  },
   link: {
     flexDirection: 'row',
     alignItems: 'center',
