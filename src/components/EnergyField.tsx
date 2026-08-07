@@ -51,6 +51,35 @@ const COUNT = RINGS * PER_RING;
    weggekanteld. 0.34 geeft de schotel uit de mockup. */
 const TILT = 0.34;
 
+/** Het energieveld als PUNTENWOLK, in dezelfde genormaliseerde ruimte als de
+ *  andere vormen (gecentreerd op 0, straal tot ongeveer 0,46).
+ *
+ *  Zo kan SplatField ertussen morphen: het veld is dan niet langer een eigen
+ *  tekening maar één van de twee gedaanten die dezelfde punten aannemen.
+ *  Precies wat de operator vroeg op 8 augustus 2026 — een draaiend veld in de
+ *  ruimte dat in een gezicht overgaat en weer terug. */
+export function energyFieldCloud(count: number): number[] {
+  const out: number[] = [];
+  const rings = Math.max(8, Math.round(Math.sqrt(count / 1.7)));
+  const perRing = Math.max(8, Math.round(count / rings));
+  for (let r = 0; r < rings && out.length < count * 2; r += 1) {
+    /* Kwadratisch oplopend, net als in de tekening hieronder: dicht bij de
+       kern staan de ringen op elkaar, naar buiten toe ruimer. */
+    const rr = ((r + 1) / rings) ** 1.35 * 0.46;
+    for (let k = 0; k < perRing && out.length < count * 2; k += 1) {
+      const a = ((k + (r % 2) * 0.5) / perRing) * Math.PI * 2;
+      out.push(Math.cos(a) * rr, Math.sin(a) * rr * TILT);
+    }
+  }
+  /* Aanvullen als de deling niet uitkomt: liever een paar punten dubbel op de
+     buitenring dan een wolk die korter is dan het veld verwacht. */
+  while (out.length < count * 2) {
+    const a = (out.length / (count * 2)) * Math.PI * 2;
+    out.push(Math.cos(a) * 0.46, Math.sin(a) * 0.46 * TILT);
+  }
+  return out;
+}
+
 type Props = {
   width: number;
   height: number;

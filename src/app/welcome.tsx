@@ -12,7 +12,9 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { AUDIO_ENABLED } from '@/constants/features';
-import EnergyField from '@/components/EnergyField';
+import SplatField from '@/components/SplatField';
+import { energyFieldCloud } from '@/components/EnergyField';
+import { assetUri } from '@/services/asset-cache';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import {
@@ -28,6 +30,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import {
+  Easing,
+  cancelAnimation,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   Dimensions,
   Image,
@@ -65,6 +74,34 @@ type Status = 'checking' | 'show';
 
 export default function WelcomeScreen() {
   const [status, setStatus] = useState<Status>('checking');
+
+  /* ── De beweging ──────────────────────────────────────────────────────
+     Twee waarden, allebei doorlopend: `morph` gaat heen en weer tussen veld
+     en gezichten, `spin` draait onophoudelijk. Ze staan LOS van elkaar, want
+     een draaiing die stilvalt op het keerpunt maakt van een veld in de ruimte
+     een plaatje dat even bevriest.
+
+     Zeven seconden per kant. Korter en het wordt onrustig op een scherm waar
+     je juist even moet landen; langer en zie je bij een kort bezoek maar één
+     van de twee gedaanten. */
+  const morph = useSharedValue(0);
+  const spin = useSharedValue(0);
+  useEffect(() => {
+    morph.value = withRepeat(
+      withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.cubic) }),
+      -1,
+      true,
+    );
+    spin.value = withRepeat(
+      withTiming(1, { duration: 26000, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(morph);
+      cancelAnimation(spin);
+    };
+  }, [morph, spin]);
 
   /* Reeds ingelogd? → welkomstscherm overslaan, direct de tabs in.
      Tijdens de check tonen we alleen de merk-achtergrondkleur (geen flits).
@@ -121,9 +158,29 @@ export default function WelcomeScreen() {
       {/* Een bewegend energieveld in plaats van een foto (operator,
           8 augustus 2026). Een foto van een gezicht zegt iets over een
           persoon; dit zegt iets over wat de app doet. Zie
-          components/EnergyField.tsx. */}
+          Niet twee losse tekeningen die in elkaar overvloeien maar EEN wolk
+          punten die twee gedaanten aanneemt: het veld WORDT het gezicht, in
+          plaats van ervoor te verdwijnen. Daarom is het gezicht ook echt door
+          de lichtjes gemaakt en niet een foto die opkomt (operator,
+          8 augustus 2026).
+
+          Het gezicht is de blik die tot vandaag de welkomstfoto was — dat
+          beeld hoort bij dit scherm, en als puntenwolk zegt het hetzelfde
+          zonder een foto te zijn. Bewust NIET de twee gezichten van de
+          Breath-tab: dezelfde vorm op twee plekken maakt van een merkbeeld
+          een behangetje. */}
       <View style={s.bgPhotoWrap}>
-        <EnergyField width={SCREEN_W} height={FIELD_H} />
+        <View style={s.fieldCenter}>
+          <SplatField
+            restBuilder={energyFieldCloud}
+            endUri={FACE}
+            spin={spin}
+            breath={morph}
+            size={FIELD_SIZE}
+            color="#5EA6FF"
+            count={2600}
+          />
+        </View>
       </View>
 
       {/* Top scrim — subtiele donkere fade voor status bar + wordmark.
@@ -290,6 +347,15 @@ const BRACELET_IMG =
    gradient in het zwart over. */
 const SCREEN_W = Dimensions.get('window').width;
 const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
+/* Vierkant, want de wolk rekent in een vierkante ruimte. Breder dan het scherm
+   zodat de buitenrand van het veld doorloopt tot voorbij de zijkanten. */
+const FIELD_SIZE = Math.round(SCREEN_W * 1.25);
+/* Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
+   beeld terug zolang de download loopt, en dan blijft het veld draaien zonder
+   ooit een gezicht te worden. */
+const FACE = assetUri(
+  'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg',
+);
 
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
@@ -305,6 +371,14 @@ const s = StyleSheet.create({
     height: `${FOTO_HEIGHT}%`,
     overflow: 'hidden',
     backgroundColor: Brand.bg,
+  },
+  /* Het vierkante veld gecentreerd in het vak erboven. */
+  fieldCenter: {
+    position: 'absolute',
+    top: -Math.round(SCREEN_W * 1.25 * 0.12),
+    left: (SCREEN_W - Math.round(SCREEN_W * 1.25)) / 2,
+    width: Math.round(SCREEN_W * 1.25),
+    height: Math.round(SCREEN_W * 1.25),
   },
   bgPhoto: {
     width: '100%',
@@ -361,7 +435,9 @@ const s = StyleSheet.create({
        geven; nu de twee kaarten eronder staan is die ruimte juist nodig
        onderaan. De kop klimt het beeld in, waar hij op de mockup ook staat. */
     justifyContent: 'flex-end',
-    paddingBottom: 6,
+    /* Hoger (operator, 8 augustus 2026). Meer ruimte onder de kop duwt hem
+       omhoog het veld in, waar hij op de mockup ook staat. */
+    paddingBottom: 54,
   },
   accentBar: {
     width: 34,
@@ -378,14 +454,19 @@ const s = StyleSheet.create({
        numberOfLines={1} + adjustsFontSizeToFit op de <Text> beschermt
        extra-smalle toestellen tegen wrap. */
     color: Brand.text,
-    fontFamily: BrandFonts.black,
+    /* Inter in een LICHT gewicht, zoals op de mockup (operator, 8 augustus
+       2026). Dit wijkt af van MERK_ANKER, dat grote vette koppen voorschrijft
+       — bewust, en op verzoek. Op een veld dat zelf al beweegt en licht geeft
+       leest een zware kop als een balk eroverheen; een dunne laat het beeld
+       doorlopen. */
+    fontFamily: BrandFonts.regular,
     /* 42 → 34. "Control Your Vibe" is langer dan "Stop Drifting." en werd op
        42 afgekapt tot "Control Your …" (gezien op het toestel, 8 augustus
        2026). Op 34 past de langste regel met marge, ook op smallere
        toestellen. */
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.5,
+    fontSize: 36,
+    lineHeight: 44,
+    letterSpacing: 0.2,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowRadius: 6,
