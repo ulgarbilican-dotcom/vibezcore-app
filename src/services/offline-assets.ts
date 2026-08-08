@@ -16,10 +16,21 @@ import { VOICE_ASSET_URLS } from '@/services/breath-voice';
  *  hoeven importeren. */
 export const FACES_URL = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
 
+/** De twee portretten waartussen het welkomstscherm morpht. Ze moeten LOKAAL
+ *  staan voor het scherm ze nodig heeft: `useImage` levert een leeg beeld
+ *  zolang een download loopt, en dan blijft de wolk hangen in de vorm die hij
+ *  al had. */
+export const WELCOME_MAN =
+  'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg';
+export const WELCOME_WOMAN =
+  'https://vibezcore-audio.b-cdn.net/images/welcome%20woman.png';
+
 /** Alles wat een ademsessie nodig heeft om zonder netwerk te werken:
  *  de illustraties, de gezichten en elke stemopname. */
 export const OFFLINE_ASSETS: string[] = [
   ...Object.values(SESSION_ART),
   FACES_URL,
+  WELCOME_MAN,
+  WELCOME_WOMAN,
   ...VOICE_ASSET_URLS,
 ];

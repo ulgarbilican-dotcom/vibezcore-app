@@ -13,7 +13,7 @@
 
 import { AUDIO_ENABLED } from '@/constants/features';
 import SplatField from '@/components/SplatField';
-import { energyFieldCloud } from '@/components/EnergyField';
+import { WELCOME_MAN, WELCOME_WOMAN } from '@/services/offline-assets';
 import { assetUri } from '@/services/asset-cache';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
@@ -207,8 +207,8 @@ export default function WelcomeScreen() {
       <View style={s.bgPhotoWrap}>
         <View style={s.fieldCenter}>
           <SplatField
-            restBuilder={energyFieldCloud}
-            endUri={FACE}
+            restUri={MAN}
+            endUri={WOMAN}
             spin={spin}
             breath={morph}
             size={FIELD_SIZE}
@@ -398,17 +398,15 @@ const FIELD_SIZE = Math.round(SCREEN_W * 0.94);
 /* Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
    beeld terug zolang de download loopt, en dan blijft het veld draaien zonder
    ooit een gezicht te worden. */
-/* De blik die tot vandaag de welkomstfoto was. Ik heb hier eenmalig een
-   andere figuur geprobeerd omdat ik dacht dat een duidelijker kopvorm beter
-   zou lezen — dat was mijn aanname, niet een vraag van de operator, en het
-   beeld hing bovendien scheef in het vak. Teruggezet (8 augustus 2026).
+/* Van de man naar de vrouw en terug (operator, 8 augustus 2026). Twee
+   portretten in plaats van een veld dat een gezicht wordt: het veld is nu wat
+   je ONDERWEG ziet — duizenden punten die van de ene kop naar de andere
+   reizen. Dat is hetzelfde beeld, maar met een reden erachter.
 
    Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
-   beeld zolang de download loopt, en dan blijft het veld draaien zonder ooit
-   een gezicht te worden. */
-const FACE = assetUri(
-  'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg',
-);
+   beeld zolang de download loopt. */
+const MAN = assetUri(WELCOME_MAN);
+const WOMAN = assetUri(WELCOME_WOMAN);
 
 const s = StyleSheet.create({
   checking: { flex: 1, backgroundColor: Brand.bg },
