@@ -1358,6 +1358,16 @@ export default function BreathSessionScreen() {
       >
         <Pressable style={s.modalBackdrop} onPress={() => setPaywall(false)}>
           <Pressable style={s.payCard} onPress={() => {}}>
+            {/* Blauw verloop bovenlangs — het merk, niet de toestand. De
+                popup stond eerst in de accentkleur van de toestand en dat
+                klopte niet: dit is geen onderdeel van de sessie maar een
+                aanbod van VIBEZCORE, en dat spreekt in merkblauw (operator,
+                8 augustus 2026: "niet paars, en interessanter"). */}
+            <ExpoGradient
+              colors={['rgba(58,143,255,0.22)', 'rgba(58,143,255,0)']}
+              style={s.payGlow}
+              pointerEvents="none"
+            />
             <Pressable
               onPress={() => setPaywall(false)}
               hitSlop={12}
@@ -1365,6 +1375,7 @@ export default function BreathSessionScreen() {
             >
               <X size={20} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
             </Pressable>
+            <Text style={s.payEyebrow}>VIBEZCORE PREMIUM</Text>
             <Text style={s.payTitle}>Unlock every session</Text>
             <View style={s.payList}>
               {[
@@ -1382,6 +1393,15 @@ export default function BreathSessionScreen() {
             </View>
             {(['yearly', 'monthly'] as const).map((tier) => {
               const prod = getProduct(tier);
+              /* De besparing wordt UITGEREKEND uit de echte store-prijzen,
+                 nooit hard gezet: dan klopt hij in elke valuta en bij elke
+                 prijswijziging (WYSIWYG — er staat wat je betaalt). */
+              const yr = getProduct('yearly')?.priceAmountMicros;
+              const mo = getProduct('monthly')?.priceAmountMicros;
+              const savePct =
+                tier === 'yearly' && yr && mo
+                  ? Math.round((1 - yr / (mo * 12)) * 100)
+                  : 0;
               return (
                 <Pressable
                   key={tier}
@@ -1392,9 +1412,16 @@ export default function BreathSessionScreen() {
                   style={[s.payTier, tier === 'yearly' && s.payTierMain]}
                   android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
                 >
-                  <Text style={s.payTierName}>
-                    {tier === 'yearly' ? 'Yearly' : 'Monthly'}
-                  </Text>
+                  <View style={s.payTierLeft}>
+                    <Text style={s.payTierName}>
+                      {tier === 'yearly' ? 'Yearly' : 'Monthly'}
+                    </Text>
+                    {savePct > 0 && (
+                      <View style={s.paySave}>
+                        <Text style={s.paySaveTxt}>SAVE {savePct}%</Text>
+                      </View>
+                    )}
+                  </View>
                   {prod ? (
                     <Text style={s.payTierPrice}>
                       {prod.localizedPrice}
@@ -2285,9 +2312,24 @@ function makeStyles(st: BreathState) {
     borderRadius: 22,
     backgroundColor: '#141414',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
+    borderColor: 'rgba(58,143,255,0.28)',
     padding: 22,
-    paddingTop: 26,
+    paddingTop: 24,
+    overflow: 'hidden',
+  },
+  payGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 130,
+  },
+  payEyebrow: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: Brand.accent,
+    marginBottom: 6,
   },
   payClose: { position: 'absolute', top: 12, right: 12, zIndex: 2 },
   payTitle: {
@@ -2304,7 +2346,7 @@ function makeStyles(st: BreathState) {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: st.accent,
+    backgroundColor: Brand.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2326,7 +2368,23 @@ function makeStyles(st: BreathState) {
     paddingHorizontal: 16,
     marginBottom: 9,
   },
-  payTierMain: { borderColor: st.accent, backgroundColor: `${st.accent}14` },
+  payTierMain: {
+    borderColor: Brand.accent,
+    backgroundColor: 'rgba(58,143,255,0.1)',
+  },
+  payTierLeft: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  paySave: {
+    borderRadius: 999,
+    backgroundColor: Brand.accent,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  paySaveTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 9.5,
+    letterSpacing: 0.6,
+    color: '#0a0a0a',
+  },
   payTierName: {
     fontFamily: BrandFonts.bold,
     fontSize: 15,
@@ -2342,7 +2400,7 @@ function makeStyles(st: BreathState) {
     textAlign: 'center',
     fontFamily: BrandFonts.medium,
     fontSize: 12.5,
-    color: st.accent,
+    color: Brand.accent,
   },
   });
 }
