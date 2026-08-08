@@ -1,49 +1,62 @@
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE — De vragenlijst na de onboarding
 
-   Vier stappen, één vraag per scherm (operator, 8 augustus 2026: "ik zag
-   dat er een bepaalde vragenlijst is bij sommige apps, kan dat?").
+   Drie vragen en dan het ANTWOORD terug (operator, 8 augustus 2026: "gewoon
+   laten invullen heeft voor niemand zin — wat bieden wij na die vragenlijst
+   aan?"). Elke vraag verdient zijn plek doordat er iets mee gebeurt, en de
+   laatste stap laat dat zien:
 
-   Wat elke stap OPLEVERT staat erbij — een vraag zonder gevolg hoort hier
-   niet te staan:
-     1. Over jou (geslacht, leeftijd)  → aanspreektoon en analytics, later.
-        Alles optioneel; "Prefer not to say" is een volwaardig antwoord.
-     2. Je doel (hoogstens twee)       → weegt mee in welke toestand de app
-        voorstelt — dezelfde `goals` als op de Goal-pagina.
-     3. Ervaring                       → bepaalt straks hoeveel uitleg je
-        krijgt; een beginner verdient meer woorden dan een leraar.
-     4. Beste moment                   → voorkeursmoment voor het dagplan.
+     1. Doelen     → wegen mee in welke toestand de app voorstelt (goalRank).
+     2. Ervaring   → bepaalt de toon van de begeleiding.
+     3. Momenten   → worden je dagplan.
+     R. JOUW PLAN  → de beloning: je startmodus, je momenten, je begeleiding.
+        Dit is wat Headspace en Calm na hun vragen doen — de vragenlijst
+        eindigt niet in een dank-je-wel maar in een plan.
 
-   Geen medische vragen en geen claims (CLAUDE.md §1): we vragen wat iemand
-   WIL, niet wat iemand heeft.
+   Geslacht en leeftijd zijn GESCHRAPT (zelfde operator-beslissing): de app
+   deed er niets mee, en een vraag zonder gevolg is tijd van de gebruiker
+   nemen zonder iets terug te geven. Komt er ooit een reden, dan komt de
+   vraag terug mét die reden.
+
+   Alles blijft op het toestel — geen account, geen upload; dat staat op de
+   eerste stap. Geen medische vragen, geen claims (CLAUDE.md §1).
 
    Na afloop: premium terug de app in, ieder ander naar de volledige gratis
    kennismakingssessie.
    ───────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
-import { GOALS, MAX_GOALS } from '@/data/goals';
+import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
+import { GOALS, goalRank } from '@/data/goals';
 import { useSubscription } from '@/hooks/useSubscription';
+import { SLOTS } from '@/services/reminders';
 import { useSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
-import { Check, ChevronLeft } from 'lucide-react-native';
-import { useState } from 'react';
+import { Check, ChevronLeft, Sparkles } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+/* Drie vragen plus het plan. */
 const STEPS = 4;
 
-const GENDERS = ['Woman', 'Man', 'Other', 'Prefer not to say'];
-const AGES = ['Under 25', '25–34', '35–44', '45–54', '55+'];
 const EXPERIENCE = [
   { key: 'new', name: 'New to breathwork', hint: 'Never done this before' },
   { key: 'some', name: 'Tried it a few times', hint: 'Know the basics' },
   { key: 'regular', name: 'Regular practice', hint: 'Part of my routine' },
 ];
+
+/* Wat de ervaring OPLEVERT, zichtbaar in het plan. Dezelfde drie sleutels. */
+const GUIDANCE_LINE: Record<string, string> = {
+  new: 'Voice and visuals guide every breath — nothing to memorise.',
+  some: 'The rhythm stays on screen; the voice steps back as you settle in.',
+  regular: 'Guidance stays out of your way — tune voice and haptics per state.',
+};
+
 const MOMENTS = [
   { key: 'morning', name: 'Morning', hint: 'Before the day takes over' },
   { key: 'midday', name: 'Midday', hint: 'A reset halfway through' },
@@ -64,15 +77,37 @@ export default function BreathQuizScreen() {
 
   const toggleGoal = (key: string) => {
     Haptics.selectionAsync();
-    const has = goals.includes(key);
     void setGoals(
-      has ? goals.filter((g) => g !== key) : [...goals, key].slice(-MAX_GOALS),
+      goals.includes(key)
+        ? goals.filter((g) => g !== key)
+        : [...goals, key],
     );
   };
 
+  /* ── Het plan: de antwoorden omgezet in iets bruikbaars ─────────────
+     De startmodus komt uit dezelfde weging als de dagelijkse suggestie
+     (goalRank) — het plan belooft dus precies wat de app daarna doet. */
+  const plan = useMemo(() => {
+    const ranked = (Object.keys(BREATH_STATES) as BreathStateKey[])
+      .map((k) => ({ k, r: goalRank(goals, k) }))
+      .sort((a, b) => a.r - b.r);
+    const primary =
+      BREATH_STATES[ranked[0] && ranked[0].r < 99 ? ranked[0].k : 'calm'];
+    const slots = SLOTS.filter((sl) =>
+      (profile.preferredSlots ?? []).includes(sl.slot),
+    );
+    return {
+      state: primary,
+      slots,
+      guidance: GUIDANCE_LINE[profile.experience ?? 'new'],
+    };
+  }, [goals, profile.preferredSlots, profile.experience]);
+
+  const isResult = step === STEPS - 1;
+
   const next = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (step < STEPS - 1) {
+    if (!isResult) {
       setStep((n) => n + 1);
       return;
     }
@@ -151,50 +186,16 @@ export default function BreathQuizScreen() {
       >
         {step === 0 && (
           <>
-            <Text style={s.title}>About you</Text>
-            <Text style={s.lead}>
-              Optional — it only shapes how the app speaks to you.
-            </Text>
-            {/* WAAR de antwoorden blijven hoort hier te staan, niet in een
-                voorwaardenpagina: dit is het moment waarop iemand het zich
-                afvraagt (operator, 8 augustus 2026: "wat gebeurt er met die
-                informatie?"). Het antwoord is: nergens heen. */}
-            <Text style={s.privacy}>
-              Your answers stay on this device. No account, no upload.
-            </Text>
-            <Text style={s.groupLbl}>You are</Text>
-            {GENDERS.map((g) => (
-              <Choice
-                key={g}
-                label={g}
-                on={profile.gender === g}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  save({ gender: profile.gender === g ? undefined : g });
-                }}
-              />
-            ))}
-            <Text style={s.groupLbl}>Your age</Text>
-            {AGES.map((a) => (
-              <Choice
-                key={a}
-                label={a}
-                on={profile.age === a}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  save({ age: profile.age === a ? undefined : a });
-                }}
-              />
-            ))}
-          </>
-        )}
-
-        {step === 1 && (
-          <>
             <Text style={s.title}>What brings you here?</Text>
             <Text style={s.lead}>
               Choose all that apply. What you pick first matters most for
               what gets suggested — all five states stay open.
+            </Text>
+            {/* WAAR de antwoorden blijven hoort hier te staan, niet in een
+                voorwaardenpagina: dit is het moment waarop iemand het zich
+                afvraagt. Het antwoord is: nergens heen. */}
+            <Text style={s.privacy}>
+              Your answers stay on this device. No account, no upload.
             </Text>
             {GOALS.map((g) => (
               <Choice
@@ -208,11 +209,12 @@ export default function BreathQuizScreen() {
           </>
         )}
 
-        {step === 2 && (
+        {step === 1 && (
           <>
             <Text style={s.title}>Your experience</Text>
             <Text style={s.lead}>
-              So the guidance matches where you are.
+              This sets how much the app guides you — you see it back in
+              your plan.
             </Text>
             {EXPERIENCE.map((e) => (
               <Choice
@@ -229,12 +231,11 @@ export default function BreathQuizScreen() {
           </>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <>
             <Text style={s.title}>When would you practice?</Text>
             <Text style={s.lead}>
-              Pick as many as you like — your daily plan starts here, and you
-              can change it any time.
+              Pick as many as you like — these become your daily plan.
             </Text>
             {MOMENTS.map((m) => {
               const cur = profile.preferredSlots ?? [];
@@ -258,6 +259,60 @@ export default function BreathQuizScreen() {
             })}
           </>
         )}
+
+        {/* ── HET PLAN — wat de antwoorden opleveren ──────────────────
+            Geen dank-je-wel maar een resultaat: startmodus, momenten en
+            begeleiding, elk herleidbaar tot een antwoord van net. */}
+        {isResult && (
+          <>
+            <View style={s.planBadge}>
+              <Sparkles size={13} color={Brand.accent} strokeWidth={2.2} />
+              <Text style={s.planBadgeTxt}>Built from your answers</Text>
+            </View>
+            <Text style={s.title}>Your plan</Text>
+            <Text style={s.lead}>
+              This shapes what gets suggested from here on — change any of
+              it any time.
+            </Text>
+
+            <View style={s.planCard}>
+              <Text style={s.planLbl}>Your starting state</Text>
+              <View style={s.planStateRow}>
+                <View
+                  style={[s.planDot, { backgroundColor: plan.state.accent }]}
+                />
+                <Text style={[s.planState, { color: plan.state.accent }]}>
+                  {plan.state.eyebrow}
+                </Text>
+              </View>
+              <Text style={s.planBody}>{plan.state.description}</Text>
+            </View>
+
+            <View style={s.planCard}>
+              <Text style={s.planLbl}>Your moments</Text>
+              {plan.slots.length > 0 ? (
+                plan.slots.map((sl) => (
+                  <View key={sl.slot} style={s.planSlotRow}>
+                    <Text style={s.planSlotWhen}>{sl.when}</Text>
+                    <Text style={s.planSlotName}>{sl.label}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={s.planBody}>
+                  No fixed moments — suggestions follow your clock instead.
+                </Text>
+              )}
+              <Text style={s.planHint}>
+                Reminders stay off until you turn them on in Daily plan.
+              </Text>
+            </View>
+
+            <View style={s.planCard}>
+              <Text style={s.planLbl}>Your guidance</Text>
+              <Text style={s.planBody}>{plan.guidance}</Text>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Altijd door te komen — ook zonder antwoord. Een verplichte vraag
@@ -271,7 +326,7 @@ export default function BreathQuizScreen() {
           android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
         >
           <Text style={s.ctaTxt}>
-            {step < STEPS - 1 ? 'CONTINUE' : 'START YOUR FIRST SESSION'}
+            {isResult ? 'START YOUR FIRST SESSION' : 'CONTINUE'}
           </Text>
         </Pressable>
       </View>
@@ -311,13 +366,6 @@ const s = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: -0.4,
   },
-  privacy: {
-    marginTop: -8,
-    marginBottom: 16,
-    fontFamily: BrandFonts.medium,
-    fontSize: 12.5,
-    color: 'rgba(74,222,128,0.85)',
-  },
   lead: {
     marginTop: 8,
     marginBottom: 18,
@@ -326,12 +374,12 @@ const s = StyleSheet.create({
     lineHeight: 20,
     color: 'rgba(255,255,255,0.6)',
   },
-  groupLbl: {
-    marginTop: 10,
-    marginBottom: 8,
+  privacy: {
+    marginTop: -8,
+    marginBottom: 16,
     fontFamily: BrandFonts.medium,
     fontSize: 12.5,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(74,222,128,0.85)',
   },
 
   choice: {
@@ -368,6 +416,74 @@ const s = StyleSheet.create({
     backgroundColor: Brand.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  /* ── Het plan ── */
+  planBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.4)',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  planBadgeTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11.5,
+    color: Brand.accent,
+  },
+  planCard: {
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 16,
+    marginBottom: 10,
+  },
+  planLbl: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 8,
+  },
+  planStateRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  planDot: { width: 10, height: 10, borderRadius: 5 },
+  planState: {
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 19,
+    letterSpacing: 0.5,
+  },
+  planBody: {
+    marginTop: 6,
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: 'rgba(255,255,255,0.72)',
+  },
+  planSlotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  planSlotWhen: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 14,
+    color: '#ffffff',
+    width: 52,
+  },
+  planSlotName: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.72)',
+  },
+  planHint: {
+    marginTop: 8,
+    fontFamily: BrandFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.38)',
   },
 
   footer: {

@@ -43,15 +43,6 @@ import {
   GUIDANCE_MODES,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
-import {
-  Canvas,
-  Group,
-  Image as SkiaImage,
-  LinearGradient as SkGradient,
-  Rect,
-  useImage,
-  vec,
-} from '@shopify/react-native-skia';
 import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
 import SplatField from '@/components/SplatField';
 import { mandalaCloud } from '@/components/mandala-geometry';
@@ -598,48 +589,12 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
        foto staat al vol vanaf 0.12. Er is dus een moment waarop het beeld
        compleet is en de punten er nog liggen — dat is precies het moment
        waarop het lijkt of het beeld uit die punten is opgebouwd. */
-    const inn = Math.min(1, Math.max(0, (breath.value - 0.02) / 0.1));
-    const out = Math.min(1, Math.max(0, (breath.value - 0.83) / 0.17));
-    return { opacity: inn * (1 - out) };
+    /* Zonder fotolaag zijn de punten het beeld zelf: vol vanaf het begin,
+       alleen op het uiterste hoogtepunt maken ze plaats voor de getekende
+       rozet. */
+    const out = Math.min(1, Math.max(0, (breath.value - 0.9) / 0.1));
+    return { opacity: 1 - out * 0.4 };
   });
-  /* En op het hoogtepunt de FOTO zelf. Punten alleen blijven een schets;
-     de operator wil aan het eind het echte beeld zien. Hij komt op precies
-     wanneer de wolk al in de vorm van de gezichten staat, dus je ziet geen
-     tweede beeld verschijnen maar dezelfde vorm scherp worden. */
-  /* De foto is het BEGINBEELD: vol in rust, en hij lost op zodra de beweging
-     inzet. Hij verdwijnt langzamer dan de punten opkomen, zodat het beeld
-     even ín de punten ligt en er niet onderuit wordt geschoven. */
-  /* De foto heeft de langste aanloop van de drie lagen en is VOLLEDIG in
-     beeld voordat de punten weggaan (operator, 3 augustus 2026). Die volgorde
-     is het hele punt: eerst staat het beeld er, dán pas verdwijnt waar het uit
-     ontstond. Andersom — punten weg terwijl de foto nog opkomt — laat een gat
-     vallen waarin je naar een half beeld kijkt.
-     Vol vanaf 0.12 en niet vanaf 0, zodat er ná de voltooiing nog een stukje
-     beweging over is waarin de punten kunnen oplossen. */
-  const photoFade = useAnimatedStyle(() => {
-    /* Niet symmetrisch, en dat is de bedoeling.
-
-       OMHOOG moet de foto meteen wijken. Hij bleef tot ver in de beweging
-       staan en dekte daarmee de punten af — daarom leek de morph van foto
-       naar rozet te ontbreken: hij gebeurde achter een beeld dat er nog
-       grotendeels stond.
-
-       OMLAAG moet hij juist zo lang mogelijk opbouwen en pas op het laatst
-       compleet zijn, zodat de reis niet wordt afgedekt maar afgemaakt.
-
-       Eén formule voor beide richtingen kan dat niet; vandaar dat de
-       stijgen-of-dalen-vlag hier ook gelezen wordt. */
-    const rising = flow.value < 0.5;
-    const from = rising ? 0.0 : 0.12;
-    const to = rising ? 0.16 : 0.58;
-    const p = (breath.value - from) / (to - from);
-    return { opacity: 1 - Math.min(1, Math.max(0, p)) };
-  });
-
-  /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
-     laadt hem één keer en deelt hem; er staat dus geen tweede kopie in het
-     geheugen. */
-  const facesImg = useImage(FACES);
 
   /* De regel ademt als GEHEEL. Dat is één beweging op de laag eromheen —
      het besturingssysteem verzet die view, er wordt geen letter opnieuw
@@ -709,70 +664,12 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
             color="#7FB2FF"
           />
         </Animated.View>
-        {/* De foto zelf, op het hoogtepunt.
-
-            Niet als gewone afbeelding maar OPTELLEND gemengd. De originele
-            foto draagt een eigen zwart vlak dat net niet het zwart van de app
-            is; als gewone afbeelding zie je dus een rechthoek opkomen in
-            plaats van een gezicht. Optellend gemengd voegt zwart niets toe —
-            het vlak verdwijnt volledig en alleen de gezichten lichten op.
-
-            Daarmee kan de ORIGINELE gebruikt worden en niet de uitgeknipte:
-            die laatste is 612×408 en wordt zacht zodra hij op bijna duizend
-            beeldpunten breed staat, precies op het moment dat het beeld
-            scherp hóórt te zijn. De originele heeft 1535×1024 en houdt zijn
-            detail, zonder uitknipranden.
-
-            `fit="contain"` is exact dezelfde inpassing als waarmee het
-            puntenveld is afgetast, dus de gezichten van de foto vallen
-            samen met die van de wolk. */}
-        <Animated.View style={[StyleSheet.absoluteFill, photoFade]}>
-          <Canvas style={{ width: ORB, height: ORB }}>
-            {facesImg && (
-              <Group>
-                <SkiaImage
-                  image={facesImg}
-                  x={0}
-                  y={0}
-                  width={ORB}
-                  height={ORB}
-                  fit="contain"
-                  blendMode="plus"
-                />
-                {/* De hals loopt uit in zwart.
-
-                    De foto houdt onderaan gewoon op: schouders, dan een
-                    rechte rand. Op een zwart scherm leest dat als een
-                    afgesneden beeld en niet als een gezicht dat uit het
-                    donker komt — en het maakt het geheel hard, precies zoals
-                    de operator zei.
-
-                    Dit is geen zwart vlak eroverheen: `dstIn` gumt weg wat
-                    hier doorzichtig is, dus de foto zelf lóst op. Een vlak
-                    zou de sterren erachter meedoven; nu blijft alles
-                    eromheen intact.
-
-                    De grenzen volgen de foto: bij verhouding 1535×1024 in een
-                    vierkant vak staat het beeld tussen 0.17 en 0.83, en de
-                    hals begint rond driekwart. Vandaar 0.66 tot 0.86. */}
-                <Rect
-                  x={0}
-                  y={0}
-                  width={ORB}
-                  height={ORB}
-                  blendMode="dstIn"
-                >
-                  <SkGradient
-                    start={vec(0, 0)}
-                    end={vec(0, ORB)}
-                    colors={['white', 'white', 'transparent']}
-                    positions={[0, 0.66, 0.86]}
-                  />
-                </Rect>
-              </Group>
-            )}
-          </Canvas>
-        </Animated.View>
+        {/* De echte foto stond hier als derde laag, optellend gemengd.
+            Verwijderd (operator, 8 augustus 2026): hij laadde niet altijd —
+            een lege plek waar het beginbeeld hoort is erger dan geen foto —
+            en de wolk draagt de gezichten inmiddels zelf. De reeks is nu:
+            gezichten uit punten → mandala → terug, zonder wachten op een
+            download. */}
       </Pressable>
 
       {/* Wit, met één schuine blauwe lichtband erdoorheen die naar rechts

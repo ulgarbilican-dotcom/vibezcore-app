@@ -258,7 +258,10 @@ export default function WelcomeScreen() {
             spin={spin}
             breath={morph}
             size={FIELD_SIZE}
-            color="#5EA6FF"
+            /* Wit (operator, 8 augustus 2026). Hier horen de lichtpunten
+               wit: een lichtbron in de ruimte, geen kleur. Het blauw staat op
+               de Breath-intro, waar de sterren al blauw zijn. */
+            color="#FFFFFF"
             /* Meer punten voor een scherper gezicht (operator: "kan je
                gezicht superduidelijk maken"). Op 2600 was de omtrek er wel
                maar bleven de ogen en de mond een suggestie; het dubbele
