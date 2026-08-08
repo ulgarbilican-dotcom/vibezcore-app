@@ -93,8 +93,13 @@ export const GOALS: Goal[] = [
 export const goalByKey = (k: string | null): Goal | null =>
   k ? (GOALS.find((g) => g.key === k) ?? null) : null;
 
-/** Hoogstens twee — zie de toelichting bij `goals` in utils/settings.ts. */
-export const MAX_GOALS = 2;
+/** Alle vier mogen (operator, 8 augustus 2026). Headspace heeft dit
+ *  A/B-getest: meerdere doelen laten aanvinken gaf ~10% hogere conversie dan
+ *  er één afdwingen — een grens voelt als een weigering op het moment dat
+ *  iemand net enthousiast is. De RICHTING blijft bewaakt in `goalRank`, dat
+ *  alleen de eerste twee laat meewegen: kiezen mag ruim, sturen blijft
+ *  scherp. */
+export const MAX_GOALS = 4;
 
 export const goalsByKeys = (keys: string[]): Goal[] =>
   keys.map((k) => goalByKey(k)).filter((g): g is Goal => g !== null);
@@ -104,7 +109,11 @@ export const goalsByKeys = (keys: string[]): Goal[] =>
  *  BESTE positie, zodat een toestand die bij allebei hoort vooropgaat zonder
  *  dat de rest gelijk komt te staan. */
 export const goalRank = (keys: string[], state: string): number => {
-  const gs = goalsByKeys(keys);
+  /* Alleen de EERSTE TWEE sturen de suggestie, wat er ook aangevinkt staat.
+     Wie alle vier kiest, dekt alle vijf de toestanden en dan betekent de
+     keuze niets meer voor de weging — de volgorde van aantikken is dan het
+     eerlijkste signaal van wat iemand het belangrijkst vindt. */
+  const gs = goalsByKeys(keys.slice(0, 2));
   if (gs.length === 0) return 99;
   return Math.min(
     ...gs.map((g) => {

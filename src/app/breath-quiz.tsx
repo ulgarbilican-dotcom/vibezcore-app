@@ -155,6 +155,13 @@ export default function BreathQuizScreen() {
             <Text style={s.lead}>
               Optional — it only shapes how the app speaks to you.
             </Text>
+            {/* WAAR de antwoorden blijven hoort hier te staan, niet in een
+                voorwaardenpagina: dit is het moment waarop iemand het zich
+                afvraagt (operator, 8 augustus 2026: "wat gebeurt er met die
+                informatie?"). Het antwoord is: nergens heen. */}
+            <Text style={s.privacy}>
+              Your answers stay on this device. No account, no upload.
+            </Text>
             <Text style={s.groupLbl}>You are</Text>
             {GENDERS.map((g) => (
               <Choice
@@ -186,8 +193,8 @@ export default function BreathQuizScreen() {
           <>
             <Text style={s.title}>What brings you here?</Text>
             <Text style={s.lead}>
-              Pick one or two. This shapes which state gets suggested — all
-              five stay open.
+              Choose all that apply. What you pick first matters most for
+              what gets suggested — all five states stay open.
             </Text>
             {GOALS.map((g) => (
               <Choice
@@ -226,20 +233,29 @@ export default function BreathQuizScreen() {
           <>
             <Text style={s.title}>When would you practice?</Text>
             <Text style={s.lead}>
-              Your daily plan starts here — you can change it any time.
+              Pick as many as you like — your daily plan starts here, and you
+              can change it any time.
             </Text>
-            {MOMENTS.map((m) => (
-              <Choice
-                key={m.key}
-                label={m.name}
-                hint={m.hint}
-                on={profile.preferredSlot === m.key}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  save({ preferredSlot: m.key });
-                }}
-              />
-            ))}
+            {MOMENTS.map((m) => {
+              const cur = profile.preferredSlots ?? [];
+              const on = cur.includes(m.key);
+              return (
+                <Choice
+                  key={m.key}
+                  label={m.name}
+                  hint={m.hint}
+                  on={on}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    save({
+                      preferredSlots: on
+                        ? cur.filter((k) => k !== m.key)
+                        : [...cur, m.key],
+                    });
+                  }}
+                />
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -294,6 +310,13 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: '#ffffff',
     letterSpacing: -0.4,
+  },
+  privacy: {
+    marginTop: -8,
+    marginBottom: 16,
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    color: 'rgba(74,222,128,0.85)',
   },
   lead: {
     marginTop: 8,

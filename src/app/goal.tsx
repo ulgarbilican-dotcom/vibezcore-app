@@ -33,9 +33,10 @@ export default function GoalScreen() {
 
   const [goals, setGoals] = useSetting('goals');
 
-  /* Aan- of uitzetten, met een grens. Zit je al op twee en kies je een derde,
-     dan vervangt die de OUDSTE — dat is prettiger dan een melding "je mag er
-     maar twee", want de gebruiker krijgt gewoon wat hij aantikte. */
+  /* Aan- of uitzetten, vrij. Alle vier mogen (operator, 8 augustus 2026 —
+     Headspace-onderzoek: meerdere doelen toestaan geeft hogere conversie).
+     De volgorde van aantikken blijft bewaard: de eerste twee sturen de
+     suggestie, zie goalRank. */
   const toggle = (key: string) => {
     const has = goals.includes(key);
     const next = has
@@ -64,9 +65,8 @@ export default function GoalScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lead}>
-          Pick one or two. What you choose shapes which state gets suggested,
-          and when — all five modes stay open. Pick more than two and nothing
-          stands out, so a third replaces the oldest.
+          Choose all that apply. What you pick first matters most for what
+          gets suggested, and when — all five modes stay open.
         </Text>
 
         {GOALS.map((g) => {

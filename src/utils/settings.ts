@@ -116,7 +116,11 @@ export type Settings = {
     gender?: string;
     age?: string;
     experience?: string;
-    preferredSlot?: string;
+    /** MEERDERE momenten mogelijk (operator, 8 augustus 2026): wie
+     *  's ochtends én 's avonds wil oefenen, hoort dat allebei te kunnen
+     *  zeggen. Doelen blijven wél op twee — daar betekent alles aanvinken
+     *  hetzelfde als niets aanvinken. */
+    preferredSlots?: string[];
   };
 };
 
