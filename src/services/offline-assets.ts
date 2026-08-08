@@ -26,7 +26,8 @@ export const STATE_PHOTOS: Record<string, string> = {
   boost: 'https://vibezcore-audio.b-cdn.net/images/boost%20pic.png',
   focus: 'https://vibezcore-audio.b-cdn.net/images/focus%20pic.png',
   calm: 'https://vibezcore-audio.b-cdn.net/images/calm%20control%20pic.png',
-  clarity: 'https://vibezcore-audio.b-cdn.net/images/clarity%20pic.png',
+  /* Nieuwe versie (operator, 8 augustus 2026). */
+  clarity: 'https://vibezcore-audio.b-cdn.net/images/clarity%20pic%202.png',
   rest: 'https://vibezcore-audio.b-cdn.net/images/rest%20reset%20pic.png',
 };
 

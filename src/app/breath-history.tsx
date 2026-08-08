@@ -101,6 +101,16 @@ function buildWeek(history: BreathHistoryEntry[]) {
 }
 
 /* ── Formatters ──────────────────────────────────────────────────── */
+
+/** Duur in mensentaal. "5:29" leest als een kloktijd en dwingt tot
+ *  rekenen (operator, 8 augustus 2026); "5 min" is een feit. Onder de
+ *  minuut zeggen we seconden, daarboven ronde minuten — de seconden erbij
+ *  zijn schijnprecisie die niemand iets vertelt. */
+function humanDur(sec: number): string {
+  if (sec < 60) return `${Math.max(1, Math.round(sec))} sec`;
+  return `${Math.round(sec / 60)} min`;
+}
+
 function formatMMSS(sec: number): string {
   const total = Math.max(0, Math.round(sec));
   const m = Math.floor(total / 60);
@@ -304,7 +314,7 @@ export default function BreathHistoryScreen() {
             {/* De kop noemt de eenheid. "LAST 7 DAYS" met een 1 erboven laat
                 open of dat één minuut of één sessie is (operator, 7 augustus
                 2026: "het is niet duidelijk wat die cijfers betekenen"). */}
-            <Text style={styles.sectionLbl}>MINUTES PER DAY · LAST 7 DAYS</Text>
+            <Text style={styles.sectionLbl}>Minutes per day · last 7 days</Text>
             <View style={styles.week}>
               {week7.map((d) => (
                 <View key={d.label} style={styles.weekCol}>
@@ -339,13 +349,23 @@ export default function BreathHistoryScreen() {
               ))}
             </View>
 
-            {/* ── Per-pattern breakdown ── */}
-            <Text style={styles.sectionLbl}>BY PATTERN</Text>
+            {/* ── Waar je tijd heenging ──────────────────────────────
+                Herzien (operator, 8 augustus 2026: "ik heb geen idee wat ik
+                hier zie"). Het oude blok had drie losse gegevens per rij —
+                aantal rechts, balk in het midden, "5:29 total" eronder — en
+                geen daarvan verklaarde de andere. Nu draagt één rij één
+                verhaal: naam, percentage groot rechts (de balk is exact dat
+                percentage), en eronder in gewone taal wat het was. Niets om
+                te ontcijferen. */}
+            <Text style={styles.sectionLbl}>Where your time went</Text>
             <View style={styles.patternList}>
               {stats.patternCounts.map((pc) => {
                 const meta = PATTERN_INFO[pc.key];
                 if (!meta) return null;
-                const pctOfTotal = stats.totalSec > 0 ? (pc.totalSec / stats.totalSec) * 100 : 0;
+                const pct =
+                  stats.totalSec > 0
+                    ? Math.round((pc.totalSec / stats.totalSec) * 100)
+                    : 0;
                 return (
                   <View key={pc.key} style={styles.patternRow}>
                     <View
@@ -357,20 +377,21 @@ export default function BreathHistoryScreen() {
                     <View style={{ flex: 1 }}>
                       <View style={styles.patternHead}>
                         <Text style={styles.patternName}>{meta.name}</Text>
-                        <Text style={styles.patternCount}>
-                          {pc.count} session{pc.count === 1 ? '' : 's'}
+                        <Text style={[styles.patternPct, { color: meta.color }]}>
+                          {pct}%
                         </Text>
                       </View>
                       <View style={styles.patternBarTrack}>
                         <View
                           style={[
                             styles.patternBarFill,
-                            { width: `${pctOfTotal}%`, backgroundColor: meta.color },
+                            { width: `${pct}%`, backgroundColor: meta.color },
                           ]}
                         />
                       </View>
                       <Text style={styles.patternMeta}>
-                        {formatMMSS(pc.totalSec)} total
+                        {humanDur(pc.totalSec)} across {pc.count} session
+                        {pc.count === 1 ? '' : 's'}
                       </Text>
                     </View>
                   </View>
@@ -379,7 +400,7 @@ export default function BreathHistoryScreen() {
             </View>
 
             {/* ── All sessions chronological ── */}
-            <Text style={styles.sectionLbl}>ALL SESSIONS</Text>
+            <Text style={styles.sectionLbl}>All sessions</Text>
             <View style={styles.sessionsList}>
               {sortedHistory.map((entry, i) => {
                 const meta = PATTERN_INFO[entry.key] ?? { name: entry.name, color: Brand.text };
@@ -406,7 +427,7 @@ export default function BreathHistoryScreen() {
                         )}
                       </View>
                       <Text style={styles.sessionMeta}>
-                        {formatRelativeTime(entry.ts)} · {entry.rounds} round{entry.rounds === 1 ? '' : 's'} · {formatMMSS(entry.durSec)}
+                        {formatRelativeTime(entry.ts)} · {humanDur(entry.durSec)} · {entry.rounds} round{entry.rounds === 1 ? '' : 's'}
                       </Text>
                     </View>
                   </View>
@@ -554,9 +575,12 @@ const styles = StyleSheet.create({
   },
 
   /* Section labels */
+  /* Gewone tekst in een rustig grijs — zelfde stem als de kaartkoppen op
+     Activity. Blauwe gespatieerde kapitalen schreeuwden hier het hardst van
+     de hele pagina, terwijl een sectielabel juist het stilste hoort te zijn. */
   sectionLbl: {
-    fontFamily: BrandFonts.bold, fontSize: 10,
-    letterSpacing: 2, color: Brand.accent,
+    fontFamily: BrandFonts.medium, fontSize: 12.5,
+    letterSpacing: 0, color: 'rgba(255,255,255,0.4)',
     marginBottom: 10, marginLeft: 2,
   },
 
@@ -623,6 +647,10 @@ const styles = StyleSheet.create({
   patternCount: {
     fontFamily: BrandFonts.bold, fontSize: 11,
     letterSpacing: 0.5, color: Brand.textDim,
+  },
+  patternPct: {
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 15,
   },
   patternBarTrack: {
     height: 4, borderRadius: 2,
