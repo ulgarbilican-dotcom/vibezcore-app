@@ -23,7 +23,7 @@ export const FACES_URL = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
 export const WELCOME_MAN =
   'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg';
 export const WELCOME_WOMAN =
-  'https://vibezcore-audio.b-cdn.net/images/welcome%20woman.png';
+  'https://vibezcore-audio.b-cdn.net/images/welcome%20woman%203.png';
 
 /** Alles wat een ademsessie nodig heeft om zonder netwerk te werken:
  *  de illustraties, de gezichten en elke stemopname. */

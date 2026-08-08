@@ -202,6 +202,21 @@ type Props = {
   size: number;
   /** Kleur van de punten — de accentkleur van de toestand. */
   color: string;
+  /** Hoe sterk de wolk HALVERWEGE uiteenvalt. 0 = uit, en dat is de stand
+   *  waarop de Breath-tab draait — daar mag niets aan veranderen.
+   *
+   *  Waarom dit bestaat (operator, 8 augustus 2026: "nu draait alles gewoon
+   *  rond as, is niet supermooi"): een morph in poolcoördinaten loopt van de
+   *  ene hoek naar de andere en leest daardoor altijd als een schijf die
+   *  kantelt. Er zit geen moment in waarop de wolk écht veld ís.
+   *
+   *  Met deze waarde duwen de punten op de helft van de reis naar buiten en
+   *  raken ze hun ordening kwijt — dat is het energieveld — en trekken daarna
+   *  samen tot de volgende vorm. De draaiing blijft, maar wordt bijzaak.
+   *
+   *  Het is één belcurve: nul aan beide uiteinden, maximaal in het midden.
+   *  Daardoor kan hij de eindvormen per definitie niet vervuilen. */
+  disperse?: number;
   /** Meer punten is rijker en zwaarder. Bewust laag begonnen: eerst voelen
    *  of het werkt en of het toestel het trekt, dan pas ophogen richting de
    *  vijf- à tienduizend uit het oorspronkelijke idee. */
@@ -218,6 +233,7 @@ export default function SplatField({
   breath,
   size,
   color,
+  disperse = 0,
   count = 2600,
 }: Props) {
   /* `useImage` is een hook, dus beide aanroepen moeten er altijd staan, ook
@@ -324,6 +340,7 @@ export default function SplatField({
       breath={breath}
       size={size}
       sprite={sprite}
+      disperse={disperse}
       count={count}
     />
   );
@@ -350,6 +367,7 @@ function PointCloud({
   breath,
   size,
   sprite,
+  disperse,
   count,
 }: {
   clouds: { rest: Cloud; end: Cloud };
@@ -358,6 +376,7 @@ function PointCloud({
   breath: SharedValue<number>;
   size: number;
   sprite: SkImage;
+  disperse: number;
   count: number;
 }) {
   const sprites: SkRect[] = useMemo(
@@ -407,7 +426,22 @@ function PointCloud({
       while (d > Math.PI) d -= TAU;
       ea[i] = d;
     }
-    return { rr, ra, er, ea };
+    /* Per punt een eigen afwijking voor het uiteenvallen. Vast bij het
+       opbouwen en niet per beeldje: een wolk die elk frame opnieuw dobbelt
+       flikkert, een wolk met vaste afwijkingen ademt. */
+    const jr = new Float64Array(count);
+    const ja = new Float64Array(count);
+    for (let i = 0; i < count; i += 1) {
+      /* Deterministisch, geen Math.random: dezelfde wolk moet er bij elke
+         start hetzelfde uitzien. */
+      const h = Math.sin(i * 12.9898) * 43758.5453;
+      const u = h - Math.floor(h);
+      const h2 = Math.sin(i * 78.233) * 21791.1234;
+      const v = h2 - Math.floor(h2);
+      jr[i] = 0.25 + u * 1.15;
+      ja[i] = (v - 0.5) * 1.5;
+    }
+    return { rr, ra, er, ea, jr, ja };
   }, [clouds, count]);
 
   const transforms = useRSXformBuffer(count, (val, i) => {
@@ -453,13 +487,26 @@ function PointCloud({
 
        Daar bovenop loopt de doorlopende draaiing van de figuur zelf, die
        altijd vooruit gaat. */
-    const r = polar.rr[i] + (polar.er[i] - polar.rr[i]) * t;
-    const a = polar.ra[i] + polar.ea[i] * t + SWIRL * t + turn.value * TAU;
+    /* De belcurve van het uiteenvallen: nul bij t = 0 en t = 1, vol in het
+       midden. Kwadratisch zodat het uiteenvallen traag inzet en het
+       samenkomen beslist eindigt in plaats van uit te doven. */
+    const bell = disperse === 0 ? 0 : Math.sin(t * Math.PI) ** 1.6 * disperse;
+
+    const r =
+      (polar.rr[i] + (polar.er[i] - polar.rr[i]) * t) * (1 + bell * polar.jr[i]);
+    const a =
+      polar.ra[i] +
+      polar.ea[i] * t +
+      SWIRL * t +
+      turn.value * TAU +
+      bell * polar.ja[i];
     const x = 0.5 + Math.cos(a) * r;
     const y = 0.5 + Math.sin(a) * r;
 
     /* Dichter opeen wanneer ze de rozet vormen, iets ijler in het gezicht. */
-    const scale = (0.25 - t * 0.08) * (size / 320);
+    /* IJler wanneer de wolk uit elkaar staat: punten die verder uit elkaar
+       liggen mogen kleiner zijn, anders wordt het veld een vlek. */
+    const scale = (0.25 - t * 0.08) * (1 - bell * 0.35) * (size / 320);
     val.set(scale, 0, x * size, y * size);
   });
 

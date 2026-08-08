@@ -219,6 +219,11 @@ export default function WelcomeScreen() {
                tekent ze uit. Het blijft één tekenopdracht via Atlas, dus de
                prijs zit in geheugen en niet in beeldjes per seconde. */
             count={5200}
+            /* Halverwege valt de wolk uiteen tot een veld en komt daarna
+               samen tot het volgende gezicht. Zie de toelichting bij
+               `disperse` in SplatField — de Breath-tab laat hem op nul staan
+               en verandert dus niet. */
+            disperse={0.85}
           />
         </View>
       </View>
