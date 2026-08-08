@@ -378,7 +378,12 @@ export default function WelcomeScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.navigate('/breath')}
+            /* Naar de ONBOARDING, niet rechtstreeks de vijf toestanden in
+               (operator, 8 augustus 2026). Wie hier tikt is nieuw; de intro
+               legt uit wat dit is en eindigt in de vragenlijst en een
+               volledige gratis sessie. Wie de intro al uitliep komt via de
+               Breath-tab gewoon binnen. */
+            onPress={() => router.navigate('/breath-welcome' as never)}
             style={({ pressed }) => [s.card, pressed && s.cardPressed]}
           >
             <View style={s.cardGlyph}>

@@ -470,8 +470,12 @@ export default function ActivityScreen() {
 
         <Row
           Icon={Target}
-          title="Goal"
-          sub={goalNames || 'Not set'}
+          /* "Set goal" zolang er geen staat (operator, 8 augustus 2026):
+             een rij die "Goal · Not set" zegt beschrijft een toestand, een
+             rij die "Set goal" zegt nodigt uit. Zodra er een doel is, is
+             "Goal" met de naam eronder weer de juiste vorm. */
+          title={goalNames ? 'Goal' : 'Set goal'}
+          sub={goalNames || 'Choose what you are working toward'}
           onPress={() => router.push('/goal' as never)}
         />
         <Row

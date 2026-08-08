@@ -54,6 +54,7 @@ import {
   patternOf,
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useIAP } from '@/hooks/useIAP';
 import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { addBreathSession } from '@/utils/breath-history';
@@ -94,6 +95,7 @@ import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
   ArrowRight,
+  Check,
   ChevronRight,
   Settings,
   Smartphone,
@@ -490,6 +492,8 @@ export default function BreathSessionScreen() {
 
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
+  /* Alleen voor de prijzen in de premium-popup. */
+  const { getProduct } = useIAP();
   /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te
      kopen valt. */
   const askPremium = params.from === 'onboarding' && !isPro;
@@ -802,6 +806,22 @@ export default function BreathSessionScreen() {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
     [arc, breath, finish],
   );
+
+  /* ── De poort ──────────────────────────────────────────────────────
+     Sessies zijn premium (operator, 8 augustus 2026: "de breathe in de app
+     pas unlocked na premium"). Premium = abonnement óf bracelet — de
+     bracelet-koper heeft de sessies gratis, dat is de afspraak.
+
+     De poort staat op STARTEN, niet op kijken: iedereen mag alle vijf de
+     toestanden en ritmes zien, dat is de etalage. En de popup is WEGKLIKBAAR
+     (operator wees naar Breathwrk): een muur die je niet kunt sluiten voelt
+     als gijzeling, eentje mét kruisje als een aanbod.
+
+     Eén uitzondering: de kennismakingssessie uit de onboarding
+     (`from=onboarding`) — wie de intro uitloopt, verdient één echte sessie
+     voor er ooit om geld gevraagd wordt. */
+  const [paywall, setPaywall] = useState(false);
+  const locked = !isPro && params.from !== 'onboarding';
 
   const start = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -1304,7 +1324,14 @@ export default function BreathSessionScreen() {
              zwart bestaat, en dat hoort de figuur te zijn. Twee schermen na
              elkaar met dezelfde knopvorm lezen bovendien als één product. */
           <Pressable
-            onPress={start}
+            onPress={() => {
+              if (locked) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setPaywall(true);
+                return;
+              }
+              start();
+            }}
             style={[
               s.startBtn,
               { backgroundColor: st.accent, borderColor: st.accent },
@@ -1316,6 +1343,83 @@ export default function BreathSessionScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* ── Premium-popup ─────────────────────────────────────────────────
+           In VIBEZCORE-stijl, nooit een systeem-alert. Wegklikbaar via het
+           kruisje of de achtergrond; wie sluit, staat gewoon weer op het
+           instelscherm. De prijzen komen uit de store zelf (getProduct), dus
+           er staat exact wat iemand gaat betalen — of niets, zolang de store
+           ze nog niet gegeven heeft. */}
+      <Modal
+        visible={paywall}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPaywall(false)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setPaywall(false)}>
+          <Pressable style={s.payCard} onPress={() => {}}>
+            <Pressable
+              onPress={() => setPaywall(false)}
+              hitSlop={12}
+              style={s.payClose}
+            >
+              <X size={20} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+            </Pressable>
+            <Text style={s.payTitle}>Unlock every session</Text>
+            <View style={s.payList}>
+              {[
+                'All five states, every rhythm and duration',
+                'Voice, haptic and visual guidance',
+                'Soundscapes, goals and your daily plan',
+              ].map((line) => (
+                <View key={line} style={s.payRow}>
+                  <View style={s.payCheck}>
+                    <Check size={11} color="#0a0a0a" strokeWidth={3.2} />
+                  </View>
+                  <Text style={s.payRowTxt}>{line}</Text>
+                </View>
+              ))}
+            </View>
+            {(['yearly', 'monthly'] as const).map((tier) => {
+              const prod = getProduct(tier);
+              return (
+                <Pressable
+                  key={tier}
+                  onPress={() => {
+                    setPaywall(false);
+                    router.push(`/subscribe?tier=${tier}` as never);
+                  }}
+                  style={[s.payTier, tier === 'yearly' && s.payTierMain]}
+                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+                >
+                  <Text style={s.payTierName}>
+                    {tier === 'yearly' ? 'Yearly' : 'Monthly'}
+                  </Text>
+                  {prod ? (
+                    <Text style={s.payTierPrice}>
+                      {prod.localizedPrice}
+                      {tier === 'yearly' ? '/yr' : '/mo'}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+            {/* Geen kleine lettertjes maar het eerlijke alternatief: wie de
+                bracelet koopt, heeft dit al. */}
+            <Pressable
+              onPress={() => {
+                setPaywall(false);
+                router.push('/bracelet' as never);
+              }}
+              hitSlop={8}
+            >
+              <Text style={s.payBracelet}>
+                Included free with the Smart Bead Bracelet
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Zal ik dit onthouden? ─────────────────────────────────────────
            Verschijnt alleen als je iets verzet dat AFWIJKT van je opgeslagen
@@ -2173,6 +2277,72 @@ function makeStyles(st: BreathState) {
     fontFamily: BrandFonts.medium,
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
+  },
+
+  /* ── Premium-popup ── */
+  payCard: {
+    width: '100%',
+    borderRadius: 22,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    padding: 22,
+    paddingTop: 26,
+  },
+  payClose: { position: 'absolute', top: 12, right: 12, zIndex: 2 },
+  payTitle: {
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 22,
+    color: '#ffffff',
+    letterSpacing: -0.3,
+    marginBottom: 14,
+    paddingRight: 26,
+  },
+  payList: { gap: 9, marginBottom: 18 },
+  payRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  payCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: st.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payRowTxt: {
+    flex: 1,
+    fontFamily: BrandFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.78)',
+  },
+  payTier: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 9,
+  },
+  payTierMain: { borderColor: st.accent, backgroundColor: `${st.accent}14` },
+  payTierName: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 15,
+    color: '#ffffff',
+  },
+  payTierPrice: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  payBracelet: {
+    marginTop: 6,
+    textAlign: 'center',
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    color: st.accent,
   },
   });
 }

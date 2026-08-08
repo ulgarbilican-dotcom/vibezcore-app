@@ -109,6 +109,15 @@ export type Settings = {
    *  hoort geen keuze te maken tussen 7 en 8. De oude sleutel wordt nog
    *  gelezen zodat een bestaande instelling niet verdwijnt. */
   reminderAt: Record<string, number>;
+  /** Antwoorden uit de vragenlijst in de onboarding. Alles optioneel en
+   *  nooit vereist — "prefer not to say" is een volwaardig antwoord. Wordt
+   *  gebruikt om suggesties en het dagplan te kleuren, niet als poort. */
+  profile: {
+    gender?: string;
+    age?: string;
+    experience?: string;
+    preferredSlot?: string;
+  };
 };
 
 const defaults: Settings = {
@@ -131,6 +140,7 @@ const defaults: Settings = {
   reminders: {},
   reminderHours: {},
   reminderAt: {},
+  profile: {},
 };
 
 let state: Settings = { ...defaults };
@@ -179,6 +189,11 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
+              : {}),
+            ...(obj.profile &&
+            typeof obj.profile === 'object' &&
+            !Array.isArray(obj.profile)
+              ? { profile: obj.profile }
               : {}),
             ...(obj.reminderAt &&
             typeof obj.reminderAt === 'object' &&

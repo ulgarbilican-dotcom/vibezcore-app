@@ -317,21 +317,12 @@ export default function BreathWelcomeScreen() {
       return;
     }
     finish();
-    if (isPro) {
-      if (router.canGoBack()) router.back();
-      else router.replace('/');
-    } else {
-      /* Volledige gratis sessie — geen 2-min proefje.
-         Sinds 1 augustus 2026 is dat het nieuwe sessiescherm (CALM · Lotus)
-         i.p.v. breath-sample: zelfde sessie, maar met duurkeuze, het
-         ademritme in beeld en de echte illustratie. */
-      /* `from=onboarding` bepaalt of het afsluitscherm om Premium vraagt. Die
-         vraag hoort ALLEEN hier: dit is de gratis kennismakingssessie, dus
-         dan is het aanbod op zijn plaats. Binnen de app is het verkeerd
-         getimed — wie net vijf minuten heeft geademd verdient een afsluiting,
-         geen verkooppraatje. */
-      router.replace('/breath-session?from=onboarding');
-    }
+    /* Eerst de vragenlijst (operator, 8 augustus 2026) — die bepaalt doel,
+       ervaring en moment. Daarna stuurt de vragenlijst zelf door: premium
+       terug de app in, ieder ander naar de volledige gratis
+       kennismakingssessie (`from=onboarding`, het enige moment waarop het
+       afsluitscherm om Premium mag vragen). */
+    router.replace('/breath-quiz' as never);
   };
 
   /* Skip zet de vlag BEWUST NIET (operator 2026-07-31: "iedereen die skipt
