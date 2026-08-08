@@ -703,12 +703,12 @@ export default function BreathScreen() {
             <Text style={[s.statNum, { color: st.accent }]}>
               {practice.weekMin}
             </Text>
-            <Text style={s.statLbl}>MIN THIS WEEK</Text>
+            <Text style={s.statLbl}>min this week</Text>
             <Text style={s.footSep}>·</Text>
           </>
         )}
         <Text style={s.historyTxt}>
-          {history.length > 0 ? 'YOUR PRACTICE' : 'START YOUR PRACTICE'}
+          {history.length > 0 ? 'Your practice' : 'Start your practice'}
         </Text>
       </Pressable>
       </View>
@@ -862,9 +862,9 @@ const s = StyleSheet.create({
   },
   infoSection: {
     marginTop: 20,
-    fontFamily: BrandFonts.bold,
-    fontSize: 10,
-    letterSpacing: 2.4,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0,
   },
   infoTech: { marginTop: 10 },
   infoTechName: {
@@ -988,16 +988,16 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
   statLbl: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 9,
-    letterSpacing: 1.6,
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
+    letterSpacing: 0,
     color: 'rgba(255,255,255,0.42)',
   },
   footSep: { fontSize: 9, color: 'rgba(255,255,255,0.22)' },
   historyTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 9,
-    letterSpacing: 2,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11.5,
+    letterSpacing: 0,
     color: 'rgba(255,255,255,0.42)',
   },
 });

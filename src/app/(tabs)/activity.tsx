@@ -332,7 +332,7 @@ export default function ActivityScreen() {
         {/* ══ BREATHWORK ══════════════════════════════════════════════ */}
         <View style={s.head}>
           <Wind size={15} color={tone} strokeWidth={2.4} />
-          <Text style={[s.headTxt, { color: tone }]}>BREATHWORK</Text>
+          <Text style={[s.headTxt, { color: tone }]}>Breathwork</Text>
         </View>
 
         {stats.count === 0 ? (
@@ -355,7 +355,7 @@ export default function ActivityScreen() {
               <Stat
                 Icon={Flame}
                 n={String(stats.streak)}
-                l="DAYS IN A ROW"
+                l="Days in a row"
                 /* De hoogste van twee: wat er in de lijst staat, en wat er
                    ooit bewaard is. Kort de lijst ooit in, dan blijft je beste
                    reeks staan — een record dat zakt is geen record. */
@@ -365,21 +365,21 @@ export default function ActivityScreen() {
               <Stat
                 Icon={Waves}
                 n={String(stats.weekSessions)}
-                l="SESSIONS"
+                l="Sessions"
                 sub="This week"
                 c={tone}
               />
               <Stat
                 Icon={Clock}
                 n={fmtMin(stats.weekMinutes)}
-                l="MINUTES"
+                l="Minutes"
                 sub="This week"
                 c={tone}
               />
             </View>
 
             <View style={s.card}>
-              <Text style={s.cardHead}>MINUTES PER DAY · LAST 7 DAYS</Text>
+              <Text style={s.cardHead}>Minutes per day · last 7 days</Text>
               <View style={s.chart}>
                 {stats.days.map((d, i) => (
                   <View key={i} style={s.col}>
@@ -427,7 +427,7 @@ export default function ActivityScreen() {
             </View>
 
             <View style={s.card}>
-              <Text style={s.cardHead}>MINUTES PER STATE</Text>
+              <Text style={s.cardHead}>Minutes per state</Text>
               {stats.byState.map((x) => (
                 <View key={x.key} style={s.stateRow}>
                   <View
@@ -491,7 +491,7 @@ export default function ActivityScreen() {
         <View style={[s.head, { marginTop: 22 }]}>
           <Watch size={15} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />
           <Text style={[s.headTxt, { color: 'rgba(255,255,255,0.8)' }]}>
-            SMART BEAD BRACELET
+            Smart Bead Bracelet
           </Text>
           {!sub.hasBracelet && (
             <View style={s.soonPill}>
@@ -509,21 +509,21 @@ export default function ActivityScreen() {
               <Stat
                 Icon={Waves}
                 n={String(bracelet.sessions)}
-                l="SESSIONS"
+                l="Sessions"
                 sub="This week"
                 c="rgba(255,255,255,0.85)"
               />
               <Stat
                 Icon={Clock}
                 n={fmtMin(bracelet.minutes)}
-                l="MINUTES"
+                l="Minutes"
                 sub="This week"
                 c="rgba(255,255,255,0.85)"
               />
               <Stat
                 Icon={Watch}
                 n={bracelet.topMode ?? '—'}
-                l="TOP MODE"
+                l="Top mode"
                 sub="Most used"
                 c="rgba(255,255,255,0.85)"
               />
@@ -551,7 +551,7 @@ export default function ActivityScreen() {
                   ))}
                 </View>
                 <Text style={s.statLbl} numberOfLines={2}>
-                  MINUTES PER MODE
+                  Minutes per mode
                 </Text>
               </View>
             </View>
@@ -717,21 +717,24 @@ const s = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
   },
-  headTxt: { fontFamily: BrandFonts.bold, fontSize: 11.5, letterSpacing: 2.6 },
+  headTxt: { fontFamily: BrandFonts.bold, fontSize: 15, letterSpacing: 0 },
 
+  /* Zonder rand (operator, 8 augustus 2026). Zes omlijnde vakken onder
+     elkaar maakten van dit scherm een dashboard; de achtergrond alleen is
+     genoeg om te tonen wat bij elkaar hoort. */
   card: {
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
     backgroundColor: CARD_BG,
     padding: 13,
     marginBottom: 8,
   },
+  /* Zie de toelichting bij `sectionEyebrow` in breath-session.tsx: gewone
+     tekst in plaats van gespatieerde kapitalen (operator, 8 augustus 2026). */
   cardHead: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 9,
-    letterSpacing: 1.6,
-    color: 'rgba(255,255,255,0.45)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    letterSpacing: 0,
+    color: 'rgba(255,255,255,0.4)',
     marginBottom: 12,
   },
 
@@ -753,11 +756,11 @@ const s = StyleSheet.create({
     letterSpacing: -0.4,
   },
   statLbl: {
-    marginTop: 1,
-    fontFamily: BrandFonts.bold,
-    fontSize: 7.5,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.5)',
+    marginTop: 2,
+    fontFamily: BrandFonts.medium,
+    fontSize: 11,
+    letterSpacing: 0,
+    color: 'rgba(255,255,255,0.45)',
   },
   statSub: {
     marginTop: 1,

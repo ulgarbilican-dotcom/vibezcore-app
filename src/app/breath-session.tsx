@@ -147,13 +147,15 @@ function rgbOf(hex: string): [number, number, number] {
 /* Vaste maten van het uitlegvlak. Los van makeStyles, want die hangt aan de
    toestand en hier komen de kleuren uit de animatie. */
 const staticStyles = StyleSheet.create({
+  /* Ook zonder rand — zie de toelichting bij `patternCard`. De kleur van de
+     toestand zit al in de achtergrond, en dat is genoeg om te tonen dat deze
+     tekst bij de keuze erboven hoort. */
   explainWrap: {
     marginTop: 8,
     marginBottom: 4,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 16,
-    borderWidth: 1,
   },
 });
 
@@ -997,7 +999,7 @@ export default function BreathSessionScreen() {
           <View style={s.durationWrap}>
             {st.techniques.length > 1 && (
               <>
-                <Text style={s.sectionEyebrow}>BREATHING RHYTHM</Text>
+                <Text style={s.sectionEyebrow}>Breathing rhythm</Text>
                 <View style={s.chips}>
                   {st.techniques.map((t, i) => {
                     const on = i === techIdx;
@@ -1048,7 +1050,7 @@ export default function BreathSessionScreen() {
                 />
               </>
             )}
-            <Text style={s.sectionEyebrow}>SESSION DURATION</Text>
+            <Text style={s.sectionEyebrow}>Session duration</Text>
             <View style={s.chips}>
               {DURATIONS.map((d, i) => {
                 const active = i === Math.min(durationIdx, DURATIONS.length - 1);
@@ -1083,12 +1085,14 @@ export default function BreathSessionScreen() {
              de fase op waar je in zit. ── */}
         {!running ? (
           <View style={s.patternCard}>
-            <Text style={s.cardEyebrow}>BREATHING PATTERN</Text>
+            <Text style={s.cardEyebrow}>Breathing pattern</Text>
             <View style={s.phaseRow}>
               {tech.phases.map((p, i) => (
                 <View key={i} style={s.phaseCol}>
                   <Text style={s.phaseSecsSmall}>{p.secs}s</Text>
-                  <Text style={s.phaseName}>{p.label}</Text>
+                  <Text style={s.phaseName}>
+                    {p.label[0] + p.label.slice(1).toLowerCase()}
+                  </Text>
                   {/* Dit ontbrak: nergens was af te lezen of je door de
                       neus of door de mond ademt. */}
                   <Text style={p.via ? s.phaseVia : s.phaseViaNone}>
@@ -1665,11 +1669,19 @@ function makeStyles(st: BreathState) {
     marginBottom: 16,
   },
 
+  /* ── Sectielabels ──────────────────────────────────────────────────
+     Geen gespatieerde kapitalen meer (operator, 8 augustus 2026). Vette caps
+     met 2,6 punt spatiëring waren rond 2019 de standaard voor "premium" en
+     lezen nu als sjabloon. Ze schreeuwen bovendien: een label dat vertelt
+     WAT er onder staat hoort het stilste element op het scherm te zijn, niet
+     het luidste.
+     Nu gewone tekst in een licht gewicht en een lager contrast. Hetzelfde
+     woord, half zo veel aandacht. */
   sectionEyebrow: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 10.5,
-    letterSpacing: 2.6,
-    color: 'rgba(255,255,255,0.44)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    letterSpacing: 0,
+    color: 'rgba(255,255,255,0.38)',
   },
 
   /* ── Voorkeuzes ── */
@@ -1785,22 +1797,25 @@ function makeStyles(st: BreathState) {
   barFill: { height: 3, borderRadius: 2, backgroundColor: st.accent },
 
   /* ── Ademritme vooraf ── */
+  /* Geen rand meer (operator, 8 augustus 2026). Op dit scherm stonden vier
+     omkaderde blokken onder elkaar — ritmeknoppen, uitlegvak, duurknoppen,
+     patroonkaart. Randen om alles maakt van een rustig scherm een formulier.
+     De knoppen HOUDEN hun rand, want die kun je indrukken; wat je alleen
+     leest, hoeft geen doos. Afstand doet daar het werk. */
   patternCard: {
     width: SCREEN_W - 28,
     marginTop: 10,
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(255,255,255,0.035)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
     alignItems: 'center',
     gap: 10,
   },
   cardEyebrow: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 9.5,
-    letterSpacing: 2.2,
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    letterSpacing: 0,
     color: st.accent,
   },
   phaseRow: { flexDirection: 'row', width: '100%' },
@@ -1812,10 +1827,10 @@ function makeStyles(st: BreathState) {
     lineHeight: 23,
   },
   phaseName: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 10.5,
-    letterSpacing: 1.3,
-    color: '#ffffff',
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    letterSpacing: 0,
+    color: 'rgba(255,255,255,0.72)',
   },
   /* Door welke opening je ademt. Stond eerst klein en violet en was
      daardoor niet af te lezen — juist dít is de instructie. */
