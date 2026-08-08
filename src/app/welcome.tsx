@@ -95,14 +95,23 @@ export default function WelcomeScreen() {
        gezicht er maar één ogenblik — precies op het keerpunt — en dat is te
        kort om te herkennen wat je ziet. Nu staat het er twee en een halve
        seconde stil. */
+    /* Sneller, en zonder stilte ertussen (operator, 8 augustus 2026: "kan het
+       sneller gaan, gezicht max 1 of 2 sec in beeld en doordraaien").
+
+       Anderhalve seconde stil op het gezicht, tweeënhalf heen en tweeënhalf
+       terug: een ronde van zes en een halve seconde in plaats van veertien.
+       De pauze aan het eind is weg — die was het enige moment waarop er
+       werkelijk niets gebeurde, en dat is precies wat "doordraaien" uitsluit.
+
+       Het gezicht landt nog steeds rechtop: de draaiing hangt aan de morph en
+       maakt onderweg twee volle omwentelingen, hoe snel die ook lopen. */
     morph.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 5200, easing: Easing.inOut(Easing.cubic) }),
+        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
         withDelay(
-          2500,
-          withTiming(0, { duration: 5200, easing: Easing.inOut(Easing.cubic) }),
+          1500,
+          withTiming(0, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
         ),
-        withDelay(1200, withTiming(0, { duration: 0 })),
       ),
       -1,
       false,
