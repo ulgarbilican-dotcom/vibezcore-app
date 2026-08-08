@@ -1452,8 +1452,11 @@ const s = StyleSheet.create({
 
   /* Scherm 4 */
   howSub1: { marginTop: 6 },
+  /* 66 → 20 (operator, 8 augustus 2026: de FEEL-stap viel achter de knop).
+     Dit scherm scrolt niet, dus elke punt marge bovenin duwt onderin tekst
+     het beeld uit. De foto mag lager beginnen; de tekst mag niet wegvallen. */
   wearWrap: {
-    marginTop: 66,
+    marginTop: 20,
     width: CONTENT_W,
     height: WEAR_H,
     borderRadius: 18,
@@ -1485,7 +1488,7 @@ const s = StyleSheet.create({
     letterSpacing: 1.4,
     textAlign: 'center',
   },
-  howSteps: { marginTop: 32, gap: 17, width: CONTENT_W },
+  howSteps: { marginTop: 20, gap: 13, width: CONTENT_W },
   howStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   howNumWrap: {
     width: 24,

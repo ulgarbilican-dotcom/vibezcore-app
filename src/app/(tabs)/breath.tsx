@@ -426,9 +426,12 @@ export default function BreathScreen() {
               etalage en mag het gewoon MOOI zijn. */}
           <Image
             source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
+            /* Iets lager dan het vak, en dat is bewust: de ruimte die de
+               foto afstaat gaat naar de marges eronder — het scherm moet
+               ademen (operator, 8 augustus 2026). */
             style={{
               width: SCREEN_W - 72,
-              height: BOX_H - 8,
+              height: BOX_H - 26,
               borderRadius: 26,
             }}
             resizeMode="cover"
@@ -791,7 +794,7 @@ const s = StyleSheet.create({
   arrowLeft: { left: 4 },
   arrowRight: { right: 4 },
 
-  copy: { alignItems: 'center', marginTop: 14, paddingHorizontal: 26 },
+  copy: { alignItems: 'center', marginTop: 22, paddingHorizontal: 26 },
   mode: {
     fontFamily: BrandFonts.regular,
     fontSize: 23,
@@ -807,9 +810,9 @@ const s = StyleSheet.create({
   },
   /* Het streepje scheidt de naam van de omschrijving. Kort, in de kleur van
      de toestand — zonder dat lopen naam en tekst als één blok in elkaar. */
-  rule: { width: 34, height: 1.5, borderRadius: 1, marginTop: 12, opacity: 0.8 },
+  rule: { width: 34, height: 1.5, borderRadius: 1, marginTop: 14, opacity: 0.8 },
   desc: {
-    marginTop: 12,
+    marginTop: 14,
     maxWidth: 320,
     fontFamily: BrandFonts.regular,
     fontSize: 14,
@@ -818,7 +821,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   spec: {
-    marginTop: 9,
+    marginTop: 12,
     fontFamily: BrandFonts.semibold,
     fontSize: 11,
     letterSpacing: 1,
@@ -902,7 +905,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: 26,
     paddingHorizontal: 30,
     height: 50,
     borderRadius: 25,
@@ -986,7 +989,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     gap: 6,
-    marginTop: 14,
+    marginTop: 18,
     paddingHorizontal: 12,
   },
   statNum: {
