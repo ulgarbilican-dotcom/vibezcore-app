@@ -33,6 +33,7 @@ import SessionArt, {
 import Starfield from '@/components/Starfield';
 import { SlideIntro } from '@/app/breath-welcome';
 import { assetUri } from '@/services/asset-cache';
+import { STATE_PHOTOS } from '@/services/offline-assets';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   BREATH_STATES,
@@ -419,13 +420,18 @@ export default function BreathScreen() {
       {/* ── Het beeld, met de veeglaag eroverheen ── */}
       <View style={s.stage}>
         <Animated.View style={[s.artWrap, fadeStyle]} pointerEvents="none">
-          <SessionArt
-            size={artSize}
-            art={st.art}
-            breath={breath}
-            glow={st.glow}
-            boxHeight={BOX_H}
-            focusY={st.focusY - drop}
+          {/* De echte foto in plaats van de ademende illustratie (operator,
+              8 augustus 2026), met afgeronde hoeken. De ademhaling blijft in
+              de sessie zelf — daar begeleidt ze; hier is het beeld de
+              etalage en mag het gewoon MOOI zijn. */}
+          <Image
+            source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
+            style={{
+              width: SCREEN_W - 72,
+              height: BOX_H - 8,
+              borderRadius: 26,
+            }}
+            resizeMode="cover"
           />
         </Animated.View>
 
@@ -627,12 +633,13 @@ export default function BreathScreen() {
                 />
                 {on && <View style={[s.thumbRing, { borderColor: t.accent }]} />}
                 <Image
-                  source={{ uri: assetUri(SESSION_ART[t.art]) }}
+                  source={{ uri: assetUri(STATE_PHOTOS[t.key]) }}
                   style={{
-                    width: thumbSize(t.artScale),
-                    height: thumbSize(t.artScale),
+                    width: THUMB,
+                    height: THUMB,
+                    borderRadius: THUMB / 2,
                   }}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
               </View>
               {/* Twee regels toegestaan, en dát is wat de letter groot maakt.

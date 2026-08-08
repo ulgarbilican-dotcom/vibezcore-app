@@ -20,6 +20,16 @@ export const FACES_URL = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
  *  staan voor het scherm ze nodig heeft: `useImage` levert een leeg beeld
  *  zolang een download loopt, en dan blijft de wolk hangen in de vorm die hij
  *  al had. */
+/** De vijf statefoto's van de keuzepagina (operator, 8 augustus 2026):
+ *  echte beelden in plaats van de ademende illustraties. */
+export const STATE_PHOTOS: Record<string, string> = {
+  boost: 'https://vibezcore-audio.b-cdn.net/images/boost%20pic.png',
+  focus: 'https://vibezcore-audio.b-cdn.net/images/focus%20pic.png',
+  calm: 'https://vibezcore-audio.b-cdn.net/images/calm%20control%20pic.png',
+  clarity: 'https://vibezcore-audio.b-cdn.net/images/clarity%20pic.png',
+  rest: 'https://vibezcore-audio.b-cdn.net/images/rest%20reset%20pic.png',
+};
+
 export const WELCOME_MAN =
   'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg';
 export const WELCOME_WOMAN =
@@ -30,6 +40,7 @@ export const WELCOME_WOMAN =
 export const OFFLINE_ASSETS: string[] = [
   ...Object.values(SESSION_ART),
   FACES_URL,
+  ...Object.values(STATE_PHOTOS),
   WELCOME_MAN,
   WELCOME_WOMAN,
   ...VOICE_ASSET_URLS,

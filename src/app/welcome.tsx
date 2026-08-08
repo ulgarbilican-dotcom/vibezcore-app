@@ -30,6 +30,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { getSetting } from '@/utils/settings';
 import {
   Easing,
   cancelAnimation,
@@ -386,7 +387,16 @@ export default function WelcomeScreen() {
                legt uit wat dit is en eindigt in de vragenlijst en een
                volledige gratis sessie. Wie de intro al uitliep komt via de
                Breath-tab gewoon binnen. */
-            onPress={() => router.navigate('/breath-welcome' as never)}
+            onPress={() => {
+              /* Wie de intro al uitliep (of al sessies draaide) komt direct
+                 op de keuzepagina — de onboarding nog eens afdwingen is
+                 iemand de weg versperren die hem al kent (operator,
+                 8 augustus 2026). Alleen wie hier echt nieuw is krijgt de
+                 uitleg eerst. */
+              const seen =
+                getSetting('breathOnboardingCompletedAt') !== null;
+              router.navigate((seen ? '/breath' : '/breath-welcome') as never);
+            }}
             style={({ pressed }) => [s.card, pressed && s.cardPressed]}
           >
             <View style={s.cardGlyph}>
