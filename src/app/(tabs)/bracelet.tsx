@@ -548,7 +548,10 @@ type PriceSet = {
   bundle: PriceRow;
   extra: PriceRow;
 };
-const PRICING: PriceSet = {
+/* GEËXPORTEERD (8 augustus 2026): de premium-popup belooft leden de
+   early-bird-prijs, en een belofte hoort uit dezelfde bron te komen als de
+   prijs op deze pagina — anders lopen ze uiteen zodra er één verandert. */
+export const PRICING: PriceSet = {
   /* Iter v244 (2026-07-20, operator-correctie): audio-jaarwaarde was
      nog $130 (foutieve conversie-inschatting) — operator bevestigde
      rechtstreeks uit Play Console dat de echte regular yearly-prijs
@@ -1196,7 +1199,8 @@ export default function BraceletScreen() {
         ) : isPro ? (
           <View style={s.proBanner}>
             <Text style={s.proBannerText}>
-              ✨  Reserved for VIBEZCORE members — priority access at launch
+              ✨  Member price locked: {PRICING.bracelet.main} at launch
+              (not {PRICING.bracelet.old}) — with priority access
             </Text>
           </View>
         ) : null}

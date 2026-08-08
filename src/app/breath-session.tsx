@@ -55,6 +55,7 @@ import {
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useIAP } from '@/hooks/useIAP';
+import { PRICING } from '@/app/(tabs)/bracelet';
 import { useKeepAwake } from 'expo-keep-awake';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { addBreathSession } from '@/utils/breath-history';
@@ -1382,6 +1383,11 @@ export default function BreathSessionScreen() {
                 'All five states, every rhythm and duration',
                 'Voice, haptic and visual guidance',
                 'Soundscapes, goals and your daily plan',
+                /* De prijsbelofte (operator, 8 augustus 2026): wie nu lid
+                   wordt, houdt de early-bird-prijs van de bracelet vast tot
+                   de lancering. Het bedrag komt uit dezelfde PRICING als de
+                   bracelet-pagina — één bron, dus altijd hetzelfde getal. */
+                `Bracelet price locked: ${PRICING.bracelet.main} at launch (not ${PRICING.bracelet.old})`,
               ].map((line) => (
                 <View key={line} style={s.payRow}>
                   <View style={s.payCheck}>
