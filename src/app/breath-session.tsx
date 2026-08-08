@@ -265,7 +265,7 @@ const ART_RUN = SCREEN_W * 0.98;
    worden"). Het beeldvak was de grootste post op een scherm waar de inhoud
    eronder juist compleet moet zijn; de illustratie heeft die twee-endertig
    punten niet nodig om te dragen. */
-const BOX_IDLE = 176;
+const BOX_IDLE = 164;
 const BOX_RUN = 268;
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
@@ -1679,7 +1679,7 @@ function makeStyles(st: BreathState) {
      woord, half zo veel aandacht. */
   sectionEyebrow: {
     fontFamily: BrandFonts.medium,
-    fontSize: 13,
+    fontSize: 12,
     letterSpacing: 0,
     color: 'rgba(255,255,255,0.38)',
   },
@@ -1802,19 +1802,23 @@ function makeStyles(st: BreathState) {
      patroonkaart. Randen om alles maakt van een rustig scherm een formulier.
      De knoppen HOUDEN hun rand, want die kun je indrukken; wat je alleen
      leest, hoeft geen doos. Afstand doet daar het werk. */
+  /* Strakker gezet (8 augustus 2026). De grotere labels van de
+     typografieronde maakten de pagina langer en toen viel de onderkant van
+     deze kaart weer achter de knop. De ruimte komt hiervandaan en niet uit de
+     lettergrootte: leesbaarheid was juist het punt. */
   patternCard: {
     width: SCREEN_W - 28,
-    marginTop: 10,
-    paddingVertical: 10,
+    marginTop: 8,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.03)',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
   },
   cardEyebrow: {
     fontFamily: BrandFonts.medium,
-    fontSize: 12.5,
+    fontSize: 12,
     letterSpacing: 0,
     color: st.accent,
   },
@@ -1828,7 +1832,7 @@ function makeStyles(st: BreathState) {
   },
   phaseName: {
     fontFamily: BrandFonts.medium,
-    fontSize: 12.5,
+    fontSize: 11.5,
     letterSpacing: 0,
     color: 'rgba(255,255,255,0.72)',
   },
