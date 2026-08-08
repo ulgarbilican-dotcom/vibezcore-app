@@ -266,8 +266,11 @@ const FACES_CUTOUT =
 
    De overgang zelf blijft vijf tellen: die duur gaat over de beweging, en
    die is niet minder mooi geworden omdat je hem vaker ziet. */
-const LOOK_MS = 2000;
-const RISE_MS = 5000;
+/* 2000/5000 → 1000/3500 (operator, 8 augustus 2026: "alles lijkt in
+   slowmotion"). Eén tel kijken is genoeg om te zien waar je bent; daarna mag
+   de beweging komen. */
+const LOOK_MS = 1000;
+const RISE_MS = 3500;
 
 /* Operator-geleverd productbeeld (transparante achtergrond). */
 const BRACELET_IMG =
@@ -545,7 +548,9 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
   const spin = useSharedValue(0);
   useEffect(() => {
     spin.value = withRepeat(
-      withTiming(1, { duration: 20000, easing: Easing.linear }),
+      /* 20 → 13 seconden per omwenteling (operator: de mandala draaide in
+         slowmotion). MOET gelijk blijven aan HapticOrb — zelfde getal daar. */
+      withTiming(1, { duration: 13000, easing: Easing.linear }),
       -1,
       false,
     );

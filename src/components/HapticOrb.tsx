@@ -328,7 +328,10 @@ export default function HapticOrb({
     }
     if (!externalSpin) {
       ownSpin.value = withRepeat(
-        withTiming(1, { duration: 20000, easing: Easing.linear }),
+        /* 13 s per omwenteling — zelfde tempo als de puntenwolk in de
+           onboarding (breath-welcome), anders verspringt de draaiing bij de
+           overname. */
+        withTiming(1, { duration: 13000, easing: Easing.linear }),
         -1,
         false,
       );

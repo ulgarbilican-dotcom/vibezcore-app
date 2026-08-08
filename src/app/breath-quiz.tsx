@@ -70,38 +70,92 @@ export default function BreathQuizScreen() {
 
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useSetting('profile');
-  const [goals, setGoals] = useSetting('goals');
+  const [, setGoals] = useSetting('goals');
 
-  const save = (patch: Partial<typeof profile>) =>
-    void setProfile({ ...profile, ...patch });
+  /* ── LOKALE antwoorden ────────────────────────────────────────────────
+     Niets staat vooraf aangevinkt (operator, 8 augustus 2026): de lijst las
+     eerst rechtstreeks uit de opslag, dus wie de vragenlijst opnieuw opende
+     zag oude keuzes al aangetikt staan — en een keuze die er al staat is
+     geen keuze. De antwoorden leven hier tijdens het invullen en gaan pas
+     bij het afronden naar de opslag. */
+  const [selGoals, setSelGoals] = useState<string[]>([]);
+  const [selExp, setSelExp] = useState<string | null>(null);
+  const [selMoments, setSelMoments] = useState<string[]>([]);
 
   const toggleGoal = (key: string) => {
     Haptics.selectionAsync();
-    void setGoals(
-      goals.includes(key)
-        ? goals.filter((g) => g !== key)
-        : [...goals, key],
+    setSelGoals((cur) =>
+      cur.includes(key) ? cur.filter((g) => g !== key) : [...cur, key],
     );
   };
 
-  /* ── Het plan: de antwoorden omgezet in iets bruikbaars ─────────────
-     De startmodus komt uit dezelfde weging als de dagelijkse suggestie
-     (goalRank) — het plan belooft dus precies wat de app daarna doet. */
+  /* ── Het plan: jouw dag ───────────────────────────────────────────────
+     Eén toestand als "plan" tonen was fout (operator, 8 augustus 2026: wie
+     beter slapen én minder stress kiest, kreeg CLARITY — "dit lijkt mij niet
+     echt een plan"). Een plan is een DAG: per gekozen moment de toestand die
+     bij dat uur én die doelen past, met de reden erbij.
+
+     Dezelfde grondwet als utils/breath-suggestion.ts: de klok is leidend
+     (nooit BOOST voor het slapen), het doel weegt binnen wat bij het moment
+     past, en alles is na te vertellen. Beter slapen + minder stress wordt zo:
+     ochtend CALM (minder stress), middag CLARITY (variatie op hetzelfde
+     doel), avond REST (beter slapen) — en dat klopt, want dat is precies wat
+     de dagelijkse suggestie later ook gaat doen. */
   const plan = useMemo(() => {
-    const ranked = (Object.keys(BREATH_STATES) as BreathStateKey[])
-      .map((k) => ({ k, r: goalRank(goals, k) }))
-      .sort((a, b) => a.r - b.r);
-    const primary =
-      BREATH_STATES[ranked[0] && ranked[0].r < 99 ? ranked[0].k : 'calm'];
-    const slots = SLOTS.filter((sl) =>
-      (profile.preferredSlots ?? []).includes(sl.slot),
+    /* Wat bij welk dagdeel KAN, in volgorde van vanzelfsprekendheid. Breder
+       dan de suggestie-uurlijst, want een plan mag kiezen uit alles wat niet
+       misstaat op dat uur — REST hoort alleen 's avonds, BOOST nooit daar. */
+    const CANDIDATES: Record<string, BreathStateKey[]> = {
+      morning: ['boost', 'focus', 'clarity', 'calm'],
+      midday: ['focus', 'clarity', 'calm', 'boost'],
+      evening: ['rest', 'calm', 'clarity'],
+    };
+    /* De reden noemt het doel dat deze toestand het HOOGST zette — niet het
+       eerste doel uit de lijst dat hem toevallig ook bevat. "CLARITY omdat
+       je minder stress wilt" moet er staan als stress hem bovenaan zette,
+       ook als slapen hem ergens halverwege noemt. */
+    const reasonFor = (k: BreathStateKey, slotLabel: string): string => {
+      let best: { name: string; idx: number } | null = null;
+      for (const g of GOALS) {
+        if (!selGoals.includes(g.key)) continue;
+        const idx = (g.states as string[]).indexOf(k);
+        if (idx === -1) continue;
+        if (!best || idx < best.idx) best = { name: g.name, idx };
+      }
+      return best ? best.name : `Fits the ${slotLabel.toLowerCase()}`;
+    };
+    let prev: BreathStateKey | null = null;
+    const schedule = SLOTS.filter((sl) => selMoments.includes(sl.slot)).map(
+      (sl) => {
+        const cand = CANDIDATES[sl.slot];
+        const ranked = [...cand].sort(
+          (a, b) => goalRank(selGoals, a) - goalRank(selGoals, b),
+        );
+        /* Variatie: twee momenten na elkaar dezelfde toestand is een armere
+           dag dan twee verwante — pak de volgende zolang die het doel bijna
+           even goed dient. */
+        let pick = ranked[0];
+        if (
+          pick === prev &&
+          ranked[1] &&
+          goalRank(selGoals, ranked[1]) - goalRank(selGoals, pick) <= 1
+        ) {
+          pick = ranked[1];
+        }
+        prev = pick;
+        return {
+          slot: sl.slot,
+          label: sl.label,
+          state: BREATH_STATES[pick],
+          reason: reasonFor(pick, sl.label),
+        };
+      },
     );
     return {
-      state: primary,
-      slots,
-      guidance: GUIDANCE_LINE[profile.experience ?? 'new'],
+      schedule,
+      guidance: GUIDANCE_LINE[selExp ?? 'new'],
     };
-  }, [goals, profile.preferredSlots, profile.experience]);
+  }, [selGoals, selMoments, selExp]);
 
   const isResult = step === STEPS - 1;
 
@@ -111,7 +165,15 @@ export default function BreathQuizScreen() {
       setStep((n) => n + 1);
       return;
     }
-    /* Klaar. Premium heeft de sessies al; ieder ander proeft er meteen één —
+    /* Klaar — NU pas naar de opslag, en alleen wat er werkelijk gekozen is.
+       Wie niets aantikte, overschrijft ook niets. */
+    if (selGoals.length > 0) void setGoals(selGoals);
+    void setProfile({
+      ...profile,
+      ...(selExp ? { experience: selExp } : {}),
+      ...(selMoments.length > 0 ? { preferredSlots: selMoments } : {}),
+    });
+    /* Premium heeft de sessies al; ieder ander proeft er meteen één —
        de vragenlijst mag nooit het einde van de reis zijn. */
     if (isPro) {
       router.replace('/breath' as never);
@@ -202,7 +264,7 @@ export default function BreathQuizScreen() {
                 key={g.key}
                 label={g.name}
                 hint={g.hint}
-                on={goals.includes(g.key)}
+                on={selGoals.includes(g.key)}
                 onPress={() => toggleGoal(g.key)}
               />
             ))}
@@ -221,10 +283,10 @@ export default function BreathQuizScreen() {
                 key={e.key}
                 label={e.name}
                 hint={e.hint}
-                on={profile.experience === e.key}
+                on={selExp === e.key}
                 onPress={() => {
                   Haptics.selectionAsync();
-                  save({ experience: e.key });
+                  setSelExp(e.key);
                 }}
               />
             ))}
@@ -238,8 +300,7 @@ export default function BreathQuizScreen() {
               Pick as many as you like — these become your daily plan.
             </Text>
             {MOMENTS.map((m) => {
-              const cur = profile.preferredSlots ?? [];
-              const on = cur.includes(m.key);
+              const on = selMoments.includes(m.key);
               return (
                 <Choice
                   key={m.key}
@@ -248,11 +309,9 @@ export default function BreathQuizScreen() {
                   on={on}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    save({
-                      preferredSlots: on
-                        ? cur.filter((k) => k !== m.key)
-                        : [...cur, m.key],
-                    });
+                    setSelMoments((cur) =>
+                      on ? cur.filter((k) => k !== m.key) : [...cur, m.key],
+                    );
                   }}
                 />
               );
@@ -275,37 +334,48 @@ export default function BreathQuizScreen() {
               it any time.
             </Text>
 
-            <View style={s.planCard}>
-              <Text style={s.planLbl}>Your starting state</Text>
-              <View style={s.planStateRow}>
-                <View
-                  style={[s.planDot, { backgroundColor: plan.state.accent }]}
-                />
-                <Text style={[s.planState, { color: plan.state.accent }]}>
-                  {plan.state.eyebrow}
+            {/* JOUW DAG. Elk moment zijn eigen toestand, met de reden
+                ernaast. Geen verzonnen kloktijden — het moment is de
+                afspraak, de exacte tijd zet je in Daily plan. */}
+            {plan.schedule.length > 0 ? (
+              <View style={s.planCard}>
+                <Text style={s.planLbl}>Your day</Text>
+                {plan.schedule.map((row) => (
+                  <View key={row.slot} style={s.planDayRow}>
+                    <Text style={s.planSlotWhen}>{row.label}</Text>
+                    <View style={{ flex: 1 }}>
+                      <View style={s.planStateRow}>
+                        <View
+                          style={[
+                            s.planDot,
+                            { backgroundColor: row.state.accent },
+                          ]}
+                        />
+                        <Text
+                          style={[s.planState, { color: row.state.accent }]}
+                        >
+                          {row.state.eyebrow}
+                        </Text>
+                      </View>
+                      <Text style={s.planReason}>{row.reason}</Text>
+                    </View>
+                  </View>
+                ))}
+                <Text style={s.planHint}>
+                  Set exact times and reminders in Daily plan — nothing is
+                  scheduled until you do.
                 </Text>
               </View>
-              <Text style={s.planBody}>{plan.state.description}</Text>
-            </View>
-
-            <View style={s.planCard}>
-              <Text style={s.planLbl}>Your moments</Text>
-              {plan.slots.length > 0 ? (
-                plan.slots.map((sl) => (
-                  <View key={sl.slot} style={s.planSlotRow}>
-                    <Text style={s.planSlotWhen}>{sl.when}</Text>
-                    <Text style={s.planSlotName}>{sl.label}</Text>
-                  </View>
-                ))
-              ) : (
+            ) : (
+              <View style={s.planCard}>
+                <Text style={s.planLbl}>Your day</Text>
                 <Text style={s.planBody}>
-                  No fixed moments — suggestions follow your clock instead.
+                  No fixed moments chosen — suggestions simply follow your
+                  clock: energise in the morning, settle in the afternoon,
+                  wind down at night.
                 </Text>
-              )}
-              <Text style={s.planHint}>
-                Reminders stay off until you turn them on in Daily plan.
-              </Text>
-            </View>
+              </View>
+            )}
 
             <View style={s.planCard}>
               <Text style={s.planLbl}>Your guidance</Text>
@@ -448,11 +518,23 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     marginBottom: 8,
   },
+  planDayRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 7,
+  },
+  planReason: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.45)',
+  },
   planStateRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   planDot: { width: 10, height: 10, borderRadius: 5 },
   planState: {
     fontFamily: BrandFonts.extrabold,
-    fontSize: 19,
+    fontSize: 16,
     letterSpacing: 0.5,
   },
   planBody: {
@@ -470,9 +552,10 @@ const s = StyleSheet.create({
   },
   planSlotWhen: {
     fontFamily: BrandFonts.bold,
-    fontSize: 14,
+    fontSize: 13.5,
     color: '#ffffff',
-    width: 52,
+    /* Breed genoeg voor "Morning" op één regel — op 52 brak hij af. */
+    width: 78,
   },
   planSlotName: {
     fontFamily: BrandFonts.regular,

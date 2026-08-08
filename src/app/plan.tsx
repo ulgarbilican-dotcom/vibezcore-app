@@ -48,8 +48,16 @@ import {
    niet je hele dag te vullen. */
 const MOMENTS = [
   { key: 'morning', label: 'MORNING', hour: 8, from: 4, to: 12 },
+  /* MIDDAY verschijnt alleen voor wie hem in de vragenlijst koos (operator,
+     8 augustus 2026). Twee momenten blijft de standaard — ochtend zet de
+     toon, avond bouwt af — maar wie zei dat hij 's middags wil oefenen,
+     hoort dat moment hier terug te zien. Dit is waar de voorkeuren uit de
+     vragenlijst zichtbaar worden. */
+  { key: 'midday', label: 'MIDDAY', hour: 13, from: 12, to: 17 },
   { key: 'evening', label: 'EVENING', hour: 21, from: 17, to: 24 },
 ] as const;
+
+type SlotKey = (typeof MOMENTS)[number]['key'];
 
 export default function PlanScreen() {
   /* De navigatiebalk van het toestel hoort NIET over de laatste knop te
@@ -64,13 +72,13 @@ export default function PlanScreen() {
   const [hours] = useSetting('reminderHours');
   const [at, setAt] = useSetting('reminderAt');
 
-  const [picking, setPicking] = useState<'morning' | 'evening' | null>(null);
+  const [picking, setPicking] = useState<SlotKey | null>(null);
   /* Wat er net is ingesteld, in mensentaal. Blijft staan tot je het scherm
      verlaat — lang genoeg om gelezen te worden, kort genoeg om niet in de
      weg te zitten. */
   const [justSet, setJustSet] = useState<string | null>(null);
 
-  const minsFor = (slot: 'morning' | 'evening') => {
+  const minsFor = (slot: SlotKey) => {
     const key = reminderKey('breath', slot);
     /* Nieuwe sleutel eerst, dan de oude met hele uren, dan de standaard van
        dit moment. Zo raakt niemand zijn instelling kwijt. */
@@ -88,7 +96,13 @@ export default function PlanScreen() {
   };
   /* Gepland als BEIDE momenten aanstaan. Half aan is geen plan, dus dan blijft
      de knop uitnodigen in plaats van te doen alsof het geregeld is. */
-  const planned = MOMENTS.every(
+  const [profile] = useSetting('profile');
+  const visible = MOMENTS.filter(
+    (m) =>
+      m.key !== 'midday' ||
+      (profile.preferredSlots ?? []).includes('midday'),
+  );
+  const planned = visible.every(
     (m) => reminders[reminderKey('breath', m.key)] === true,
   );
   const chosen = goalsByKeys(goalKeys);
@@ -98,7 +112,7 @@ export default function PlanScreen() {
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
 
-    return MOMENTS.map((m) => {
+    return visible.map((m) => {
       /* De suggestie voor DAT uur, niet voor nu. Zo staat er 's ochtends al
          wat je vanavond gaat doen, in plaats van twee keer hetzelfde. */
       const at = new Date(now);
@@ -129,7 +143,7 @@ export default function PlanScreen() {
         done,
       };
     });
-  }, [history, goalKeys]);
+  }, [history, goalKeys, visible.length]);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -250,7 +264,7 @@ export default function PlanScreen() {
           style={[s.remind, planned && s.remindOn]}
           onPress={async () => {
             const next = { ...reminders };
-            for (const m of MOMENTS) {
+            for (const m of visible) {
               next[reminderKey('breath', m.key)] = !planned;
             }
             if (!planned && !(await ensurePermission())) return;
