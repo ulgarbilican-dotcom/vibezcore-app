@@ -57,6 +57,10 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useIAP } from '@/hooks/useIAP';
 import { PRICING } from '@/app/(tabs)/bracelet';
 import { useKeepAwake } from 'expo-keep-awake';
+import {
+  startSessionKeepAlive,
+  stopSessionKeepAlive,
+} from '@/services/session-keepalive';
 import { playPhaseHaptic } from '@/services/breath-haptics';
 import { addBreathSession } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
@@ -613,6 +617,8 @@ export default function BreathSessionScreen() {
      niet afgeleid uit de render-waarden: die zijn in een callback verouderd,
      en dan schrijf je de duur van een paar tellen geleden weg. */
   const elapsedRef = useRef(0);
+  /* Wanneer de sessie ECHT begon, voor de wandklok-correctie hierboven. */
+  const startWallRef = useRef(0);
   const roundRef = useRef(1);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -695,7 +701,18 @@ export default function BreathSessionScreen() {
        niet meetellen maakt de cijfers een beloning voor doorzetten in plaats
        van een verslag van wat er gebeurd is. Onder de tien seconden slaan we
        niets op: dat is een vergissing, geen sessie. */
-    const doneSec = Math.round(elapsedRef.current);
+    stopSessionKeepAlive();
+    /* De EERLIJKE duur: de wandklok, niet de getikte seconden. Wordt de app
+       ooit toch even bevroren (agressieve batterijstand), dan lopen de tikken
+       achter op de werkelijkheid — de historiek hoort de echte tijd te
+       krijgen, begrensd op wat er gepland stond. */
+    const wallSec =
+      startWallRef.current > 0
+        ? (Date.now() - startWallRef.current) / 1000
+        : elapsedRef.current;
+    const doneSec = Math.round(
+      Math.min(Math.max(elapsedRef.current, wallSec), chosen.minutes * 60),
+    );
     if (doneSec >= 10) {
       void addBreathSession({
         key: st.key,
@@ -835,6 +852,12 @@ export default function BreathSessionScreen() {
 
   const start = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    /* Het audio-anker: een lus van stilte die het proces levend houdt als
+       het scherm op slot gaat (operator, 8 augustus 2026: "als ik scherm
+       lock moet het ook verder gaan"). Zonder dit bevriest Android de
+       JS-klok zodra er geen audio speelt. */
+    startSessionKeepAlive();
+    startWallRef.current = Date.now();
     claimVoiceSource('breath');
     /* Het achtergrondgeluid hoort bij de sessie, niet bij het scherm: het komt
        op met START en gaat weg met END. */
@@ -860,6 +883,7 @@ export default function BreathSessionScreen() {
     () => () => {
       stopAll();
       stopScape();
+      stopSessionKeepAlive();
       setVoiceEnabled(voiceGlobal);
       releaseVoiceSource('breath');
     },
