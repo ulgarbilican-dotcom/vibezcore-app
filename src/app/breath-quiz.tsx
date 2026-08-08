@@ -27,7 +27,12 @@
 
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
-import { GOALS, goalRank } from '@/data/goals';
+import { GOALS } from '@/data/goals';
+import {
+  pickForSlot,
+  reasonForPick,
+  slotForHour,
+} from '@/utils/day-plan';
 import { useSubscription } from '@/hooks/useSubscription';
 import { SLOTS } from '@/services/reminders';
 import { useSetting } from '@/utils/settings';
@@ -62,6 +67,7 @@ const MOMENTS = [
   { key: 'midday', name: 'Midday', hint: 'A reset halfway through' },
   { key: 'evening', name: 'Evening', hint: 'Winding down' },
 ];
+
 
 export default function BreathQuizScreen() {
   const insets = useSafeAreaInsets();
@@ -102,52 +108,16 @@ export default function BreathQuizScreen() {
      doel), avond REST (beter slapen) — en dat klopt, want dat is precies wat
      de dagelijkse suggestie later ook gaat doen. */
   const plan = useMemo(() => {
-    /* Wat bij welk dagdeel KAN, in volgorde van vanzelfsprekendheid. Breder
-       dan de suggestie-uurlijst, want een plan mag kiezen uit alles wat niet
-       misstaat op dat uur — REST hoort alleen 's avonds, BOOST nooit daar. */
-    const CANDIDATES: Record<string, BreathStateKey[]> = {
-      morning: ['boost', 'focus', 'clarity', 'calm'],
-      midday: ['focus', 'clarity', 'calm', 'boost'],
-      evening: ['rest', 'calm', 'clarity'],
-    };
-    /* De reden noemt het doel dat deze toestand het HOOGST zette — niet het
-       eerste doel uit de lijst dat hem toevallig ook bevat. "CLARITY omdat
-       je minder stress wilt" moet er staan als stress hem bovenaan zette,
-       ook als slapen hem ergens halverwege noemt. */
-    const reasonFor = (k: BreathStateKey, slotLabel: string): string => {
-      let best: { name: string; idx: number } | null = null;
-      for (const g of GOALS) {
-        if (!selGoals.includes(g.key)) continue;
-        const idx = (g.states as string[]).indexOf(k);
-        if (idx === -1) continue;
-        if (!best || idx < best.idx) best = { name: g.name, idx };
-      }
-      return best ? best.name : `Fits the ${slotLabel.toLowerCase()}`;
-    };
     let prev: BreathStateKey | null = null;
     const schedule = SLOTS.filter((sl) => selMoments.includes(sl.slot)).map(
       (sl) => {
-        const cand = CANDIDATES[sl.slot];
-        const ranked = [...cand].sort(
-          (a, b) => goalRank(selGoals, a) - goalRank(selGoals, b),
-        );
-        /* Variatie: twee momenten na elkaar dezelfde toestand is een armere
-           dag dan twee verwante — pak de volgende zolang die het doel bijna
-           even goed dient. */
-        let pick = ranked[0];
-        if (
-          pick === prev &&
-          ranked[1] &&
-          goalRank(selGoals, ranked[1]) - goalRank(selGoals, pick) <= 1
-        ) {
-          pick = ranked[1];
-        }
+        const pick = pickForSlot(sl.slot, selGoals, prev);
         prev = pick;
         return {
           slot: sl.slot,
           label: sl.label,
           state: BREATH_STATES[pick],
-          reason: reasonFor(pick, sl.label),
+          reason: reasonForPick(pick, selGoals, sl.label),
         };
       },
     );
@@ -165,21 +135,35 @@ export default function BreathQuizScreen() {
       setStep((n) => n + 1);
       return;
     }
-    /* Klaar — NU pas naar de opslag, en alleen wat er werkelijk gekozen is.
-       Wie niets aantikte, overschrijft ook niets. */
+    persist();
+    /* Premium heeft de sessies al; ieder ander proeft er meteen één — de
+       vragenlijst mag nooit het einde van de reis zijn. En die eerste sessie
+       is de toestand die het plan voor DIT dagdeel zegt (operator, 8
+       augustus 2026: de knop opende een vaste standaard die niet eens in het
+       plan stond). Plan en knop komen nu uit dezelfde formule. */
+    if (isPro) {
+      router.replace('/breath' as never);
+    } else {
+      const first = pickForSlot(
+        slotForHour(new Date().getHours()),
+        selGoals,
+        null,
+      );
+      router.replace(
+        ('/breath-session?from=onboarding&state=' + first) as never,
+      );
+    }
+  };
+
+  /* NU pas naar de opslag, en alleen wat er werkelijk gekozen is. Wie niets
+     aantikte, overschrijft niets. */
+  const persist = () => {
     if (selGoals.length > 0) void setGoals(selGoals);
     void setProfile({
       ...profile,
       ...(selExp ? { experience: selExp } : {}),
       ...(selMoments.length > 0 ? { preferredSlots: selMoments } : {}),
     });
-    /* Premium heeft de sessies al; ieder ander proeft er meteen één —
-       de vragenlijst mag nooit het einde van de reis zijn. */
-    if (isPro) {
-      router.replace('/breath' as never);
-    } else {
-      router.replace('/breath-session?from=onboarding' as never);
-    }
   };
 
   const back = () => {
@@ -361,9 +345,22 @@ export default function BreathQuizScreen() {
                     </View>
                   </View>
                 ))}
+                {/* De tijden zet je HIER, niet via een verwijzing naar een
+                    ander scherm (operator, 8 augustus 2026). De knop bewaart
+                    de antwoorden en opent Daily plan, dat dezelfde momenten
+                    toont. */}
+                <Pressable
+                  onPress={() => {
+                    persist();
+                    router.replace('/plan' as never);
+                  }}
+                  style={s.planTimesBtn}
+                  android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+                >
+                  <Text style={s.planTimesTxt}>Set times and reminders</Text>
+                </Pressable>
                 <Text style={s.planHint}>
-                  Set exact times and reminders in Daily plan — nothing is
-                  scheduled until you do.
+                  Nothing is scheduled until you set it.
                 </Text>
               </View>
             ) : (
@@ -449,7 +446,9 @@ const s = StyleSheet.create({
     marginBottom: 16,
     fontFamily: BrandFonts.medium,
     fontSize: 12.5,
-    color: 'rgba(74,222,128,0.85)',
+    /* Gedempt wit, geen fluogroen (operator, 8 augustus 2026): dit is een
+       geruststelling, geen succesmelding. */
+    color: 'rgba(255,255,255,0.55)',
   },
 
   choice: {
@@ -561,6 +560,20 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 13.5,
     color: 'rgba(255,255,255,0.72)',
+  },
+  planTimesBtn: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,255,0.5)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  planTimesTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    color: Brand.accent,
   },
   planHint: {
     marginTop: 8,

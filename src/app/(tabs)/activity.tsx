@@ -97,6 +97,7 @@ export default function ActivityScreen() {
   const history = useBreathHistory();
   const lifetime = useBreathTotals();
   const [goals] = useSetting('goals');
+  const [profile] = useSetting('profile');
   const sub = useSubscription();
 
   /* De suggestie van dit moment — dezelfde bron als de Breath-tab, zodat de
@@ -481,7 +482,11 @@ export default function ActivityScreen() {
         <Row
           Icon={CalendarDays}
           title="Daily plan"
-          sub="Two moments a day"
+          sub={
+            (profile.preferredSlots ?? []).includes('midday')
+              ? 'Three moments a day'
+              : 'Two moments a day'
+          }
           onPress={() => router.push('/plan' as never)}
         />
         <Row

@@ -20,12 +20,11 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, cycleSeconds, roundsFor } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
 import { useBreathHistory } from '@/utils/breath-history';
-import { suggestBreath } from '@/utils/breath-suggestion';
+import { pickForSlot } from '@/utils/day-plan';
 import { useSetting } from '@/utils/settings';
 import {
   ensurePermission,
@@ -34,9 +33,23 @@ import {
   syncReminders,
 } from '@/services/reminders';
 import { router, Stack } from 'expo-router';
-import { Bell, Check, ChevronLeft, Clock } from 'lucide-react-native';
+import {
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Pencil,
+} from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -112,15 +125,18 @@ export default function PlanScreen() {
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
 
+    /* DEZELFDE motor als het plan uit de vragenlijst (utils/day-plan.ts).
+       Hier draaide suggestBreath per uur, en die kent geen variatie tussen
+       momenten — dus stond er twee keer FOCUS en week de dag af van wat de
+       vragenlijst net beloofd had (operator, 8 augustus 2026). Eén formule,
+       één dag. */
+    let prevPick: ReturnType<typeof pickForSlot> | null = null;
     return visible.map((m) => {
-      /* De suggestie voor DAT uur, niet voor nu. Zo staat er 's ochtends al
-         wat je vanavond gaat doen, in plaats van twee keer hetzelfde. */
-      const at = new Date(now);
-      at.setHours(m.hour, 0, 0, 0);
-      const sug = suggestBreath(history, at, goalKeys);
-      const st = BREATH_STATES[sug.state];
+      const picked = pickForSlot(m.key, goalKeys, prevPick);
+      prevPick = picked;
+      const st = BREATH_STATES[picked];
       const tech = st.techniques[0];
-      const dur = st.durations[sug.durationIdx];
+      const dur = st.durations[st.defaultDuration];
 
       /* Gedaan? Alles wat vandaag binnen dit dagdeel valt telt, ongeacht
          welke toestand — wie 's ochtends iets anders koos heeft zijn moment
@@ -164,37 +180,58 @@ export default function PlanScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Het AANTAL telt mee (operator, 8 augustus 2026): wie in de
+            vragenlijst ook de middag koos, ziet drie momenten — dan hoort
+            hier geen "two" te staan. */}
         <Text style={s.lead}>
           {chosen.length > 0
-            ? `Two moments a day, shaped around ${chosen
+            ? `${visible.length === 3 ? 'Three' : 'Two'} moments a day, shaped around ${chosen
+                .slice(0, 2)
                 .map((g) => g.name.toLowerCase())
                 .join(' and ')}.`
-            : 'Two moments a day. Pick a goal to shape them around what you want.'}
+            : `${visible.length === 3 ? 'Three' : 'Two'} moments a day. Pick a goal to shape them around what you want.`}
         </Text>
 
         {justSet && (
           <View style={s.confirm}>
-            <Bell size={14} color="#4ade80" strokeWidth={2.4} />
+            <Bell size={14} color={Brand.accent} strokeWidth={2.4} />
             <Text style={s.confirmTxt}>{justSet}</Text>
           </View>
         )}
 
+        {/* De hele kaart opent de sessie (operator, 8 augustus 2026). De
+            START-knop stond alleen op het moment dat "aan de beurt" was —
+            een regel die niemand kon raden. Wie 's ochtends zijn avondsessie
+            wil doen, mag dat; het plan is een uitnodiging, geen slagboom. */}
         {items.map((it) => (
-          <View
+          <Pressable
             key={it.moment.key}
+            onPress={() =>
+              router.push({
+                pathname: '/breath-session',
+                params: { state: it.state.key },
+              })
+            }
             style={[
               s.card,
               { borderColor: it.done ? `${it.state.accent}55` : 'rgba(255,255,255,0.09)' },
             ]}
+            android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
           >
             <View style={s.cardTop}>
               <Text style={[s.moment, { color: it.state.accent }]}>
                 {it.moment.label}
               </Text>
-              {it.done && (
+              {it.done ? (
                 <View style={[s.tick, { backgroundColor: it.state.accent }]}>
                   <Check size={12} color="#0a0a0a" strokeWidth={3} />
                 </View>
+              ) : (
+                <ChevronRight
+                  size={17}
+                  color="rgba(255,255,255,0.35)"
+                  strokeWidth={2.2}
+                />
               )}
             </View>
 
@@ -222,35 +259,34 @@ export default function PlanScreen() {
               <Text style={[s.timeVal, { color: it.state.accent }]}>
                 {fmtTime(minsFor(it.moment.key))}
               </Text>
+              {/* Zichtbaar bewerkbaar (operator, 8 augustus 2026): zonder
+                  het potlood was de tijd een mededeling waar je toevallig
+                  op moest tikken om te ontdekken dat hij een knop was. */}
+              <Pencil
+                size={13}
+                color="rgba(255,255,255,0.4)"
+                strokeWidth={2.2}
+              />
             </Pressable>
 
-            {it.done ? (
-              <Text style={s.doneTxt}>Done today</Text>
-            ) : !it.now ? (
-              /* Geen startknop voor een moment dat nog niet aan de beurt is.
-                 's Ochtends een avondsessie starten vanaf een PLANNINGSscherm
-                 is verwarrend: je bent hier tijden aan het zetten, niet aan
-                 het ademen. */
-              <Text style={s.laterTxt}>
-                Starts here when it&apos;s time
-              </Text>
-            ) : (
-              <Pressable
-                style={[s.cta, { borderColor: it.state.accent }]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/breath-session',
-                    params: { state: it.state.key },
-                  })
-                }
-              >
-                <Text style={[s.ctaTxt, { color: it.state.accent }]}>
-                  START
-                </Text>
-              </Pressable>
-            )}
-          </View>
+            {it.done && <Text style={s.doneTxt}>Done today</Text>}
+          </Pressable>
         ))}
+
+        {/* Naast het plan blijven alle vijf de deuren open — en dat mag
+            hier gewoon staan (operator, 8 augustus 2026). */}
+        <Pressable
+          style={s.allModes}
+          onPress={() => router.push('/breath' as never)}
+          android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+        >
+          <Text style={s.allModesTxt}>Explore all modes</Text>
+          <ChevronRight
+            size={16}
+            color="rgba(255,255,255,0.6)"
+            strokeWidth={2.2}
+          />
+        </Pressable>
 
         {/* ── Van voorstel naar afspraak ─────────────────────────────────
              Een plan dat niets plant is een lijstje (operator, 6 augustus
@@ -279,9 +315,9 @@ export default function PlanScreen() {
           />
           <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
             {planned
-              ? `REMINDERS ON · ${fmtTime(minsFor('morning'))} · ${fmtTime(
-                  minsFor('evening'),
-                )}`
+              ? `REMINDERS ON · ${visible
+                  .map((m) => fmtTime(minsFor(m.key)))
+                  .join(' · ')}`
               : 'REMIND ME AT THESE TIMES'}
           </Text>
         </Pressable>
@@ -298,51 +334,160 @@ export default function PlanScreen() {
         </Text>
       </ScrollView>
 
-      {picking !== null && (
-        <DateTimePicker
-          value={(() => {
-            const d = new Date();
-            const m = minsFor(picking);
-            d.setHours(Math.floor(m / 60), m % 60, 0, 0);
-            return d;
-          })()}
-          mode="time"
-          display="spinner"
-          onChange={async (_e, date) => {
-            const slot = picking;
-            setPicking(null);
-            if (!date || !slot) return;
-            const next = {
-              ...at,
-              [reminderKey('breath', slot)]:
-                date.getHours() * 60 + date.getMinutes(),
-            };
-            await setAt(next);
-
-            /* De tijd zetten schakelt de herinnering METEEN in (operator,
-               7 augustus 2026). Het was een losse tweede stap, en die miste
-               iedereen: je zette een tijd en er gebeurde niets. Wie geen
-               herinnering wil, zet hem daarna uit — dat is één tik, en veel
-               makkelijker te vinden dan een schakelaar die je nog moet
-               ontdekken. */
-            const key = reminderKey('breath', slot);
-            const on = { ...reminders, [key]: true };
-            if (!reminders[key]) {
-              if (await ensurePermission()) await setReminders(on);
-            }
-            void syncReminders(reminders[key] ? reminders : on, next);
-            setJustSet(
-              nextFireText(date.getHours() * 60 + date.getMinutes()),
-            );
-          }}
-        />
-      )}
+      {/* ── Eigen tijdkiezer ──────────────────────────────────────────
+          De systeem-spinner was een grijze popup uit een andere wereld
+          (operator, 8 augustus 2026: "redelijk simpel en ouderwets"). Dit is
+          onze eigen: donker paneel onderaan, uren binnen het venster van het
+          moment, minuten per kwartier. Kwartieren zijn een keuze, geen
+          beperking — een herinnering op 7:38 bestaat alleen in apps die de
+          keuze niet durfden te maken. */}
+      <Modal
+        visible={picking !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPicking(null)}
+      >
+        <Pressable style={s.pickBackdrop} onPress={() => setPicking(null)}>
+          <Pressable
+            style={[
+              s.pickSheet,
+              { paddingBottom: Math.max(insets.bottom, 14) + 14 },
+            ]}
+            onPress={() => {}}
+          >
+            <Text style={s.pickTitle}>
+              {picking
+                ? MOMENTS.find((m) => m.key === picking)!.label.charAt(0) +
+                  MOMENTS.find((m) => m.key === picking)!
+                    .label.slice(1)
+                    .toLowerCase() +
+                  ' time'
+                : ''}
+            </Text>
+            <ScrollView
+              style={s.pickScroll}
+              showsVerticalScrollIndicator={false}
+            >
+            <View style={s.pickGrid}>
+              {picking !== null &&
+                (() => {
+                  const m = MOMENTS.find((x) => x.key === picking)!;
+                  const out: number[] = [];
+                  for (let h = m.from; h < m.to; h += 1) {
+                    out.push(h * 60, h * 60 + 15, h * 60 + 30, h * 60 + 45);
+                  }
+                  const cur = minsFor(picking);
+                  return out.map((mins) => {
+                    const on = mins === cur;
+                    return (
+                      <Pressable
+                        key={mins}
+                        onPress={async () => {
+                          const slot = picking!;
+                          setPicking(null);
+                          const next = {
+                            ...at,
+                            [reminderKey('breath', slot)]: mins,
+                          };
+                          await setAt(next);
+                          /* De tijd zetten schakelt de herinnering METEEN in
+                             (operator, 7 augustus 2026): een losse tweede
+                             stap miste iedereen. Wie geen herinnering wil,
+                             zet hem daarna uit — dat is één tik. */
+                          const key = reminderKey('breath', slot);
+                          const on2 = { ...reminders, [key]: true };
+                          if (!reminders[key]) {
+                            if (await ensurePermission())
+                              await setReminders(on2);
+                          }
+                          void syncReminders(
+                            reminders[key] ? reminders : on2,
+                            next,
+                          );
+                          /* Met het moment erbij: "First reminder today
+                             at 13:00" zónder context las alsof het hele plan
+                             om 13:00 begon (operator, 8 augustus 2026). */
+                          const lbl =
+                            slot.charAt(0).toUpperCase() + slot.slice(1);
+                          setJustSet(lbl + ' — ' + nextFireText(mins));
+                        }}
+                        style={[s.pickChip, on && s.pickChipOn]}
+                        android_ripple={{
+                          color: 'rgba(255,255,255,0.08)',
+                        }}
+                      >
+                        <Text style={[s.pickChipTxt, on && s.pickChipTxtOn]}>
+                          {fmtTime(mins)}
+                        </Text>
+                      </Pressable>
+                    );
+                  });
+                })()}
+            </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+
+  /* ── Tijdkiezer ── */
+  pickBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    justifyContent: 'flex-end',
+  },
+  pickSheet: {
+    backgroundColor: '#141414',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  pickTitle: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 17,
+    color: '#ffffff',
+    marginBottom: 14,
+  },
+  /* Nooit hoger dan iets meer dan een half scherm: het venster van de
+     ochtend telt 32 tijden en dat paste niet overal (operator, 8 augustus
+     2026: "moet voor eender welke sessie volledig in beeld staan"). */
+  /* Zes volledige rijen, en de zevende piept er half onderuit — dat halve
+     rijtje is geen slordigheid maar het teken dat er meer is. De onderrand
+     van het paneel volgt de veilige zone, dus de navigatiebalk snijdt nooit
+     meer door een tijd heen (operator, 8 augustus 2026). */
+  pickScroll: { maxHeight: 322 },
+  pickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 6,
+  },
+  pickChip: {
+    width: '22.7%',
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+  },
+  pickChipOn: {
+    borderColor: Brand.accent,
+    backgroundColor: 'rgba(58,143,255,0.12)',
+  },
+  pickChipTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.82)',
+  },
+  pickChipTxtOn: { color: '#ffffff' },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,7 +575,26 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
     backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  allModes: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 10,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  allModesTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.85)',
   },
   timeLbl: {
     flex: 1,
@@ -446,14 +610,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.35)',
-    backgroundColor: 'rgba(74,222,128,0.10)',
+    borderColor: 'rgba(58,143,255,0.35)',
+    backgroundColor: 'rgba(58,143,255,0.10)',
     marginBottom: 14,
   },
   confirmTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12.5,
-    color: '#4ade80',
+    /* Merkblauw, geen fluogroen (operator, 8 augustus 2026). Groen als
+       signaalkleur is voor succes na een handeling met risico; dit is een
+       rustige bevestiging en hoort in de kleur van het merk te spreken. */
+    color: Brand.accent,
   },
   timeVal: { fontFamily: BrandFonts.bold, fontSize: 15, letterSpacing: -0.2 },
   laterTxt: {

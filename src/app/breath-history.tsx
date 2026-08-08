@@ -117,19 +117,25 @@ function formatTotalTime(sec: number): { num: string; unit: string } {
 }
 
 function formatRelativeTime(ts: number): string {
-  const now = Date.now();
-  const diff = Math.max(0, now - ts);
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return 'Just now';
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const days = Math.floor(hr / 24);
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
+  /* Dag én KLOKTIJD (operator, 8 augustus 2026: "welke sessie gedaan om hoe
+     laat? welke datum?"). "3h ago" verschuift onder je ogen en dwingt tot
+     rekenen; "Today · 09:12" is een feit. Vandaag en gisteren houden hun
+     woord — dat leest sneller dan een datum — daarna weekdag en datum. */
   const d = new Date(ts);
+  const time = d.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const that = new Date(ts);
+  that.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - that.getTime()) / 864e5);
+  if (days === 0) return `Today · ${time}`;
+  if (days === 1) return `Yesterday · ${time}`;
+  const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
+  return `${wk} ${d.getDate()} ${months[d.getMonth()]} · ${time}`;
 }
 
 /* ── Stats berekeningen ──────────────────────────────────────────── */
