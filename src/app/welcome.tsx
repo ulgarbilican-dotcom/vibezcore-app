@@ -30,9 +30,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
+import Animated, {
   Easing,
   cancelAnimation,
+  useAnimatedReaction,
+  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -107,7 +109,14 @@ export default function WelcomeScreen() {
        maakt onderweg twee volle omwentelingen, hoe snel die ook lopen. */
     morph.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
+        /* De man blijft een seconde langer staan dan de vrouw (operator,
+           8 augustus 2026). Hij is het beeld waarmee het scherm opent, dus hij
+           mag de rustigste van de twee zijn: tweeënhalve seconde tegen
+           anderhalve. */
+        withDelay(
+          2500,
+          withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
+        ),
         withDelay(
           1500,
           withTiming(0, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
@@ -144,7 +153,44 @@ export default function WelcomeScreen() {
      echt — het gezicht komt draaiend aan en gaat draaiend weer uiteen, en
      komt daarna in dezelfde stand terug (operator, 8 augustus 2026). */
   const SWIRL_TURNS = 0.85 / (Math.PI * 2);
-  const spin = useDerivedValue(() => morph.value * (2 - SWIRL_TURNS));
+
+  /* ── Altijd met de klok mee ───────────────────────────────────────────
+     De draaiing hing rechtstreeks aan `morph`. Die loopt heen en weer, dus de
+     draaiing liep op de terugweg mee terug — tegen de klok in (operator,
+     8 augustus 2026). Nu tellen we de AFGELEGDE WEG op in plaats van de
+     stand: die kan alleen maar groeien, dus de draaiing kan nooit omkeren.
+
+     De maat verschilt per richting, en dat moet. In de hoekformule van
+     SplatField zit `SWIRL·t`, en die telt alleen mee als er een gezicht in
+     wording is. Op de heenweg (t: 0→1) staat er aan het eind SWIRL bij; op de
+     terugweg valt die er weer af. Twee omwentelingen min die scheefstand
+     heen, twee plus terug: bij elke aankomst staat de teller op een heel
+     aantal omwentelingen, en dus staat het gezicht rechtop. */
+  const travel = useSharedValue(0);
+  const prev = useSharedValue(0);
+  useAnimatedReaction(
+    () => morph.value,
+    (cur) => {
+      travel.value += Math.abs(cur - prev.value);
+      prev.value = cur;
+    },
+  );
+  const REVEAL = 0.94;
+  const manFade = useAnimatedStyle(() => ({
+    opacity: Math.max(0, (REVEAL - morph.value) / (1 - REVEAL)) * 0.85,
+  }));
+  const womanFade = useAnimatedStyle(() => ({
+    opacity: Math.max(0, (morph.value - REVEAL) / (1 - REVEAL)) * 0.85,
+  }));
+
+  const spin = useDerivedValue(() => {
+    const laps = Math.floor(travel.value / 2);
+    const within = travel.value - laps * 2;
+    const base = laps * 4;
+    return within <= 1
+      ? base + within * (2 - SWIRL_TURNS)
+      : base + (2 - SWIRL_TURNS) + (within - 1) * (2 + SWIRL_TURNS);
+  });
   void turn;
 
   /* Reeds ingelogd? → welkomstscherm overslaan, direct de tabs in.
@@ -233,6 +279,25 @@ export default function WelcomeScreen() {
                `disperse` in SplatField — de Breath-tab laat hem op nul staan
                en verandert dus niet. */
             disperse={0.85}
+          />
+          {/* Heel even de ECHTE foto (operator, 8 augustus 2026). Alleen op
+              het rustmoment, en alleen dan: de punten hebben de vorm al
+              gemaakt, en dit legt er een ogenblik lang het gezicht zelf
+              overheen. Daarna neemt de wolk het weer over.
+
+              De doorzichtigheid springt pas aan in de laatste zes procent van
+              de reis, zodat je het niet ziet aankomen maar ziet landen. Beide
+              foto's staan op zwart, dus wat er bijkomt is licht en geen
+              rechthoek. */}
+          <Animated.Image
+            source={{ uri: MAN }}
+            style={[s.realFace, manFade]}
+            resizeMode="contain"
+          />
+          <Animated.Image
+            source={{ uri: WOMAN }}
+            style={[s.realFace, womanFade]}
+            resizeMode="contain"
           />
         </View>
       </View>
@@ -438,6 +503,14 @@ const s = StyleSheet.create({
     backgroundColor: Brand.bg,
   },
   /* Het vierkante veld gecentreerd in het vak erboven. */
+  /* De echte foto ligt precies over het vak van de puntenwolk. */
+  realFace: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: Math.round(SCREEN_W * 0.94),
+    height: Math.round(SCREEN_W * 0.94),
+  },
   fieldCenter: {
     position: 'absolute',
     /* Onder de wordmark, boven de kop. */

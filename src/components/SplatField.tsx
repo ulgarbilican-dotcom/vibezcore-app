@@ -504,9 +504,20 @@ function PointCloud({
     const y = 0.5 + Math.sin(a) * r;
 
     /* Dichter opeen wanneer ze de rozet vormen, iets ijler in het gezicht. */
-    /* IJler wanneer de wolk uit elkaar staat: punten die verder uit elkaar
-       liggen mogen kleiner zijn, anders wordt het veld een vlek. */
-    const scale = (0.25 - t * 0.08) * (1 - bell * 0.35) * (size / 320);
+    /* Puntgrootte.
+
+       Zonder `disperse` krimpen de punten met de reis mee (0,25 → 0,17): dat
+       hoort bij de Breath-tab, waar de wolk van een dichte rozet naar een
+       ijler gezicht gaat. Maar op het welkomstscherm zijn BEIDE uiteinden een
+       gezicht, en dan maakt diezelfde krimp de ene kop grover dan de andere —
+       precies wat de operator zag op 8 augustus 2026 ("die van de vrouw zijn
+       fijner en man groffer"). Eén vaste maat lost dat op: dezelfde korrel
+       aan allebei de kanten.
+
+       IJler zolang de wolk uit elkaar staat blijft wel: punten die verder uit
+       elkaar liggen mogen kleiner zijn, anders wordt het veld een vlek. */
+    const base = disperse === 0 ? 0.25 - t * 0.08 : 0.2;
+    const scale = base * (1 - bell * 0.35) * (size / 320);
     val.set(scale, 0, x * size, y * size);
   });
 
