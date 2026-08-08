@@ -30,11 +30,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import Animated, {
+import {
   Easing,
   cancelAnimation,
   useAnimatedReaction,
-  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -175,14 +174,6 @@ export default function WelcomeScreen() {
       prev.value = cur;
     },
   );
-  const REVEAL = 0.94;
-  const manFade = useAnimatedStyle(() => ({
-    opacity: Math.max(0, (REVEAL - morph.value) / (1 - REVEAL)) * 0.85,
-  }));
-  const womanFade = useAnimatedStyle(() => ({
-    opacity: Math.max(0, (morph.value - REVEAL) / (1 - REVEAL)) * 0.85,
-  }));
-
   const spin = useDerivedValue(() => {
     const laps = Math.floor(travel.value / 2);
     const within = travel.value - laps * 2;
@@ -280,25 +271,7 @@ export default function WelcomeScreen() {
                en verandert dus niet. */
             disperse={0.85}
           />
-          {/* Heel even de ECHTE foto (operator, 8 augustus 2026). Alleen op
-              het rustmoment, en alleen dan: de punten hebben de vorm al
-              gemaakt, en dit legt er een ogenblik lang het gezicht zelf
-              overheen. Daarna neemt de wolk het weer over.
 
-              De doorzichtigheid springt pas aan in de laatste zes procent van
-              de reis, zodat je het niet ziet aankomen maar ziet landen. Beide
-              foto's staan op zwart, dus wat er bijkomt is licht en geen
-              rechthoek. */}
-          <Animated.Image
-            source={{ uri: MAN }}
-            style={[s.realFace, manFade]}
-            resizeMode="contain"
-          />
-          <Animated.Image
-            source={{ uri: WOMAN }}
-            style={[s.realFace, womanFade]}
-            resizeMode="contain"
-          />
         </View>
       </View>
 
@@ -503,14 +476,6 @@ const s = StyleSheet.create({
     backgroundColor: Brand.bg,
   },
   /* Het vierkante veld gecentreerd in het vak erboven. */
-  /* De echte foto ligt precies over het vak van de puntenwolk. */
-  realFace: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: Math.round(SCREEN_W * 0.94),
-    height: Math.round(SCREEN_W * 0.94),
-  },
   fieldCenter: {
     position: 'absolute',
     /* Onder de wordmark, boven de kop. */
