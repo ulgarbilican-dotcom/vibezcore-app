@@ -110,11 +110,17 @@ export default function PlanScreen() {
   /* Gepland als BEIDE momenten aanstaan. Half aan is geen plan, dus dan blijft
      de knop uitnodigen in plaats van te doen alsof het geregeld is. */
   const [profile] = useSetting('profile');
-  const visible = MOMENTS.filter(
-    (m) =>
-      m.key !== 'midday' ||
-      (profile.preferredSlots ?? []).includes('midday'),
-  );
+  /* PRECIES de momenten die de gebruiker koos — niet meer, niet minder
+     (operator, 8 augustus 2026: wie alleen de middag koos, kreeg hier
+     ongevraagd ochtend en avond bij, en daardoor verschoof zelfs zijn
+     middag-toestand: de variatieregel zag de ochtend als 'al gebruikt').
+     Wie in de vragenlijst niets koos, krijgt de standaard van twee —
+     ochtend zet de toon, avond bouwt af. */
+  const chosenSlots = profile.preferredSlots ?? [];
+  const visible =
+    chosenSlots.length > 0
+      ? MOMENTS.filter((m) => chosenSlots.includes(m.key))
+      : MOMENTS.filter((m) => m.key !== 'midday');
   const planned = visible.every(
     (m) => reminders[reminderKey('breath', m.key)] === true,
   );
@@ -185,11 +191,11 @@ export default function PlanScreen() {
             hier geen "two" te staan. */}
         <Text style={s.lead}>
           {chosen.length > 0
-            ? `${visible.length === 3 ? 'Three' : 'Two'} moments a day, shaped around ${chosen
+            ? `${['One moment', 'Two moments', 'Three moments'][visible.length - 1]} a day, shaped around ${chosen
                 .slice(0, 2)
                 .map((g) => g.name.toLowerCase())
                 .join(' and ')}.`
-            : `${visible.length === 3 ? 'Three' : 'Two'} moments a day. Pick a goal to shape them around what you want.`}
+            : `${['One moment', 'Two moments', 'Three moments'][visible.length - 1]} a day. Pick a goal to shape them around what you want.`}
         </Text>
 
         {justSet && (

@@ -128,14 +128,14 @@ const AUTH_DEEP_LINK_PATHS = new Set([
    draait — dat was het gebrek van de vorige aanpak. Ze staan hier als vaste
    lijst en niet als "alles wat binnenkomt", zodat een vreemde link de app nog
    steeds nergens heen kan sturen. */
-const SHORTCUT_ROUTES: Record<string, string> = {
-  /* Vast op CALM CONTROL en de kortste duur. Eerder koos hier de suggestie,
-     en die zette er 's middags CLARITY neer — een snelkoppeling waarvan de
-     bestemming verschuift is er geen (operator, 7 augustus 2026). */
-  'breath-session': '/breath-session?state=calm&quick=1',
-  breath: '/breath?from=shortcut',
-  bracelet: '/bracelet',
-};
+/* GEEN vaste bestemmingen meer maar toegestane paden (audit, 8 augustus
+   2026). Hier stond '/breath-session?state=calm&quick=1' hard, en die
+   herspeling walste over de parameters van de ECHTE link heen: een deeplink
+   naar mode=boost rendeerde eerst goed en werd 300 ms later door deze regel
+   naar CALM omgezet. De lijst blijft de poort — een vreemd pad stuurt de app
+   nog steeds nergens heen — maar de parameters komen voortaan uit de link
+   zelf. */
+const SHORTCUT_PATHS = new Set(['breath-session', 'breath', 'bracelet']);
 
 /* Waar het pad in een deeplink terechtkomt.
    Bij `vibezcoreapp://breath-session?state=calm` is er geen host én pad —
@@ -159,7 +159,7 @@ async function hasPendingAuthDeepLink(): Promise<boolean> {
     const path = linkPath(initialUrl);
     /* Ook een snelkoppeling moet het welkomstscherm overslaan, anders komt
        die eroverheen en strandt je waar je niet heen wilde. */
-    return AUTH_DEEP_LINK_PATHS.has(path) || path in SHORTCUT_ROUTES;
+    return AUTH_DEEP_LINK_PATHS.has(path) || SHORTCUT_PATHS.has(path);
   } catch {
     return false;
   }
@@ -540,10 +540,12 @@ export default function RootLayout() {
           });
         } else if (path === 'forgot-password') {
           router.push('/forgot-password' as never);
-        } else if (path in SHORTCUT_ROUTES) {
+        } else if (SHORTCUT_PATHS.has(path)) {
           /* `replace` en niet `push`: wie via een snelkoppeling binnenkomt
-             heeft geen scherm achter zich waar hij naar terug wil. */
-          router.replace(SHORTCUT_ROUTES[path] as never);
+             heeft geen scherm achter zich waar hij naar terug wil. De
+             queryparameters reizen mee — dat is het hele punt van de link. */
+          const q = (parsed.queryParams ?? {}) as Record<string, string>;
+          router.replace({ pathname: `/${path}`, params: q } as never);
         } else if (__DEV__) {
           console.log('[deep-link] unhandled path:', path);
         }

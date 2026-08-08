@@ -25,8 +25,12 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
+          {/* /explore is in mei verwijderd; deze web-variant verwees er
+              nog naar en was daarmee de laatste typecheck-fout van het
+              project (audit, 8 augustus 2026). Breath is de echte tweede
+              deur. */}
+          <TabTrigger name="breath" href="/breath" asChild>
+            <TabButton>Breath</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

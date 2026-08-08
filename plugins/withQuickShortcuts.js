@@ -38,7 +38,9 @@ const SHORTCUTS = [
        stond nergens in de app/-map, dus Expo Router kon er niets mee en de
        app bleef op de splash hangen — gemeten op het toestel, 7 augustus
        2026. Nu wijst de snelkoppeling naar het sessiescherm zelf. */
-    uri: 'vibezcoreapp://breath-session?state=calm&quick=1',
+    /* `mode` en niet `state` — state wordt door de URL-parser van de router
+       opgegeten; zie de toelichting in breath-session.tsx. */
+    uri: 'vibezcoreapp://breath-session?mode=calm&quick=1',
   },
   {
     id: 'all_modes',

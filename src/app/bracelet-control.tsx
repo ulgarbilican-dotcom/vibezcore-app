@@ -3383,6 +3383,17 @@ export default function BraceletControl() {
      wordt sessionStartedAtRef expliciet door de handler gewist; bij
      natural completion blijft 'ie staan en deze useEffect record 'm. */
   const prevSessionActiveRef = useRef<boolean>(false);
+  /* Iter v197 (2026-07-04): endedLocally — lokale flag die derived
+     sessionActive overrulet als user End tikte. Zonder deze flag bleef de
+     5s-poll status.sessionActive=true zetten als de sim niet meteen Stop
+     verwerkte. Reset bij nieuwe Start/Restart.
+
+     VERPLAATST naar boven het effect dat hem leest (audit, 8 augustus
+     2026): hij stond er 400 regels ONDER, dus de deps-lijst las hem op het
+     eerste render vóór zijn declaratie — TypeScript meldde het terecht, en
+     dat het toch werkte was transpiler-geluk, geen correctheid. */
+  const [endedLocally, setEndedLocally] = useState(false);
+
   useEffect(() => {
     if (!status) return;
     const wasActive = prevSessionActiveRef.current;
@@ -3825,12 +3836,6 @@ export default function BraceletControl() {
     }
   };
 
-  /* Iter v197 (2026-07-04): endedLocally — lokale flag die derived
-     sessionActive overrulen als user End tikte. Zonder deze flag
-     bleef de 5s-poll (line 3448+) status.sessionActive=true zetten
-     als de sim niet meteen Stop verwerkte → user zat 3 builds lang
-     vast op active-screen. Reset bij nieuwe Start/Restart. */
-  const [endedLocally, setEndedLocally] = useState(false);
 
   /* ── Derived state ─────────────────────────────────────────────── */
   const sessionActive = !endedLocally && (status?.sessionActive ?? false);

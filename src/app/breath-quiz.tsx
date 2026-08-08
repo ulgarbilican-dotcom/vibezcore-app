@@ -149,8 +149,10 @@ export default function BreathQuizScreen() {
         selGoals,
         null,
       );
+      /* `mode`, niet `state`: state wordt door de URL-parser van de router
+         opgegeten (zie de toelichting in breath-session.tsx). */
       router.replace(
-        ('/breath-session?from=onboarding&state=' + first) as never,
+        ('/breath-session?from=onboarding&mode=' + first) as never,
       );
     }
   };

@@ -123,7 +123,7 @@ export async function activateBracelet(
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { apiCall } = require('@/utils/api');
+    const { apiCall } = require('@/utils/api') as typeof import('@/utils/api');
     const data = await apiCall<Record<string, unknown>>(
       '/api/bracelet/activate',
       { method: 'POST', auth: true, body: { code: stripped } },

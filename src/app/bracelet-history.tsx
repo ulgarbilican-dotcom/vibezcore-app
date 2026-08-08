@@ -689,7 +689,11 @@ function MilestoneChip({
   stats,
   index,
 }: {
-  milestone: Milestone & { unlocked: boolean };
+  /* `unlocked` is op het Milestone-type een FUNCTIE; hierboven is hij al
+     uitgerekend tot een boolean. `Omit` maakt dat expliciet — zonder dit
+     meldde de typecheck acht keer "condition always true" en verdronken
+     echte fouten in die ruis (audit, 8 augustus 2026). */
+  milestone: Omit<Milestone, 'unlocked'> & { unlocked: boolean };
   stats: BraceletStats;
   index: number;
 }) {

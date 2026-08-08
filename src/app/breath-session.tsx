@@ -381,6 +381,14 @@ export default function BreathSessionScreen() {
 
   const params = useLocalSearchParams<{
     state?: string;
+    /** Zelfde rol als `state`, maar URL-VEILIG. `state` is intern een
+        gereserveerd woord in de router: bij navigatie via een URL —
+        deeplink, snelkoppeling, de startknop na de vragenlijst — werd
+        ?state=boost stilletjes weggegooid terwijl ?quick=1 gewoon doorkwam,
+        en viel elke sessie terug op CALM (audit, 8 augustus 2026). Dit was
+        de bug die de operator zag als "start opent een willekeurige modus".
+        Object-pushes binnen de app geven `state` wél door; die blijven. */
+    mode?: string;
     from?: string;
     /** '1' = binnengekomen via de snelkoppeling op het beginscherm. Dan de
         KORTSTE duur, niet de gebruikelijke: wie van buiten de app binnenvalt
@@ -388,8 +396,9 @@ export default function BreathSessionScreen() {
     quick?: string;
   }>();
   const st: BreathState =
-    BREATH_STATES[(params.state as BreathStateKey) ?? 'calm'] ??
-    BREATH_STATES.calm;
+    BREATH_STATES[
+      ((params.state ?? params.mode) as BreathStateKey) ?? 'calm'
+    ] ?? BREATH_STATES.calm;
   const s = useMemo(() => makeStyles(st), [st]);
   /* Welk ritme binnen deze toestand. De eerste is de standaard; wie niets
      kiest merkt van deze laag niets. Alles hieronder rekent vanaf `tech` en
