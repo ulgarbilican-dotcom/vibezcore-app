@@ -18,25 +18,48 @@
    die zet de bestaande audiolaag bij het opstarten.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+} from 'expo-audio';
 
 let anchor: AudioPlayer | null = null;
+let modeSet = false;
 
 /** Start het anker. Veilig om vaker aan te roepen; er draait er hoogstens
  *  één. */
 export function startSessionKeepAlive(): void {
   if (anchor) return;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const p = createAudioPlayer(require('../../assets/silence.wav'));
-    p.loop = true;
-    p.volume = 1; /* het bestand ÍS stilte — volume verlagen is dubbelop */
-    p.play();
-    anchor = p;
-  } catch {
-    /* Geen anker is geen ramp: met scherm aan werkt alles gewoon. */
-    anchor = null;
-  }
+  void (async () => {
+    try {
+      /* De aanname hierboven ("de audiomodus staat al goed") bleek fout —
+         gemeten op het toestel, 9 augustus 2026: 84 seconden slot, 15
+         seconden klok. `shouldPlayInBackground` werd alleen gezet door de
+         audiobibliotheek-speler, en die is verborgen; het anker speelde dus
+         in de standaardmodus en Android zette het stil zodra het scherm op
+         slot ging — precies wat het moest voorkomen. Nu zet het anker de
+         modus zelf, VÓÓR het afspelen begint. */
+      if (!modeSet) {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: 'doNotMix',
+        });
+        modeSet = true;
+      }
+      if (anchor) return;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const p = createAudioPlayer(require('../../assets/silence.wav'));
+      p.loop = true;
+      p.volume = 1; /* het bestand ÍS stilte — volume verlagen is dubbelop */
+      p.play();
+      anchor = p;
+    } catch {
+      /* Geen anker is geen ramp: met scherm aan werkt alles gewoon. */
+      anchor = null;
+    }
+  })();
 }
 
 /** Stop en ruim op. Veilig om vaker aan te roepen dan nodig. */

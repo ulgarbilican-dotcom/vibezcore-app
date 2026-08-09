@@ -111,6 +111,7 @@ import {
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppState,
   Dimensions,
   Image,
   Modal,
@@ -834,6 +835,62 @@ export default function BreathSessionScreen() {
     [arc, breath, finish],
   );
 
+  /* ── De inhaalslag ─────────────────────────────────────────────────
+     Het vangnet ONDER het audio-anker. Houdt Android het proces toch tegen
+     (agressieve batterijstand, anker geweigerd), dan loopt de getikte klok
+     achter op de werkelijkheid. Bij terugkeer naar de voorgrond wordt de
+     sessie hier naar de wandklok gezet: klaar als de tijd om is, anders
+     springen ronde en fase naar waar ze hóren te staan. De historiek
+     schreef al wandklok (zie finish); nu klopt ook wat je ZIET na het
+     ontgrendelen. */
+  const runningRef = useRef(false);
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
+  const cycleRef = useRef(CYCLE_S);
+  useEffect(() => {
+    cycleRef.current = CYCLE_S;
+  }, [CYCLE_S]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st2) => {
+      if (st2 !== 'active') return;
+      if (!runningRef.current || startWallRef.current <= 0) return;
+      const trueElapsed = (Date.now() - startWallRef.current) / 1000;
+      /* Kleine afwijking is gewoon jitter; pas vanaf drie seconden is het
+         een bevroren klok geweest. */
+      if (trueElapsed - elapsedRef.current < 3) return;
+      const cycle = Math.max(1, cycleRef.current);
+      const total = roundsRef.current * cycle;
+      if (trueElapsed >= total) {
+        finish(true);
+        return;
+      }
+      if (tickRef.current) clearInterval(tickRef.current);
+      if (nextRef.current) clearTimeout(nextRef.current);
+      if (preRef.current) clearTimeout(preRef.current);
+      elapsedRef.current = Math.floor(trueElapsed);
+      const newRound = Math.min(
+        roundsRef.current,
+        Math.floor(trueElapsed / cycle) + 1,
+      );
+      roundRef.current = newRound;
+      setRound(newRound);
+      /* De fase waarin dit moment valt. De rest van de fase loopt gewoon af
+         — hoogstens een paar tellen verschil, en dan tikt alles weer. */
+      let off = trueElapsed % cycle;
+      const phases = techRef.current.phases;
+      let i = 0;
+      while (i < phases.length - 1 && off >= phases[i].secs) {
+        off -= phases[i].secs;
+        i += 1;
+      }
+      runPhase(phases[i].key, newRound);
+    });
+    return () => sub.remove();
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [finish, runPhase]);
+
   /* ── De poort ──────────────────────────────────────────────────────
      Sessies zijn premium (operator, 8 augustus 2026: "de breathe in de app
      pas unlocked na premium"). Premium = abonnement óf bracelet — de
@@ -1462,10 +1519,25 @@ export default function BreathSessionScreen() {
                     )}
                   </View>
                   {prod ? (
-                    <Text style={s.payTierPrice}>
-                      {prod.localizedPrice}
-                      {tier === 'yearly' ? '/yr' : '/mo'}
-                    </Text>
+                    prod.freeTrialDays ? (
+                      /* WYSIWYG: de prijs ná de trial staat er meteen bij —
+                         "7 days free" zonder vervolgprijs is een valstrik,
+                         mét is het een aanbod. */
+                      <View style={s.payTrialCol}>
+                        <Text style={s.payTrialLead}>
+                          {prod.freeTrialDays} days free
+                        </Text>
+                        <Text style={s.payTrialThen}>
+                          then {prod.localizedPrice}
+                          {tier === 'yearly' ? '/yr' : '/mo'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={s.payTierPrice}>
+                        {prod.localizedPrice}
+                        {tier === 'yearly' ? '/yr' : '/mo'}
+                      </Text>
+                    )
                   ) : null}
                 </Pressable>
               );
@@ -2412,6 +2484,18 @@ function makeStyles(st: BreathState) {
     backgroundColor: 'rgba(58,143,255,0.1)',
   },
   payTierLeft: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  payTrialCol: { alignItems: 'flex-end' },
+  payTrialLead: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 14.5,
+    color: '#ffffff',
+  },
+  payTrialThen: {
+    marginTop: 1,
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.55)',
+  },
   paySave: {
     borderRadius: 999,
     backgroundColor: Brand.accent,

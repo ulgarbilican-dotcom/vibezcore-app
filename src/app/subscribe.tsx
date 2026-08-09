@@ -776,6 +776,11 @@ export default function SubscribeScreen() {
   const tierLabel = tierForCompute === 'yearly' ? 'Yearly' : 'Monthly';
   const priceLabel = product?.localizedPrice ?? (tierForCompute === 'yearly' ? '€69,99' : '€9,99');
   const periodLabel = tierForCompute === 'yearly' ? '/year' : '/month';
+  /* De trialregel voor het besteloverzicht. Eén bron (het store-product),
+     dus hij verschijnt alleen wanneer de trial echt geldt voor deze klant. */
+  const trialLine = product?.freeTrialDays
+    ? `${product.freeTrialDays} days free, then ${priceLabel}${periodLabel} — cancel anytime`
+    : null;
 
   /* Iter (2026-07-30, bugfix): OrderSummary/LegalLine/RestoreLink MOETEN
      vóór alle vroege phase-returns gedeclareerd staan — de tier===null
@@ -801,7 +806,13 @@ export default function SubscribeScreen() {
           regel: alleen de werkelijke prijs tonen). "Launch offer" is een
           waar, voorwaarts-kijkend label — prijs verhoogt later, huidige
           klanten behouden hun tarief (Play/Apple price-grandfathering). */}
-      <Text style={s.orderSave}>Launch offer</Text>
+      {/* De trial vervangt het label wanneer hij geldt: twee aanbiedingen
+          op één kaart lezen als kleine lettertjes. */}
+      {trialLine ? (
+        <Text style={s.orderSave}>{trialLine}</Text>
+      ) : (
+        <Text style={s.orderSave}>Launch offer</Text>
+      )}
     </View>
   );
 
@@ -1052,7 +1063,11 @@ export default function SubscribeScreen() {
               {yearlyPrice}
               <Text style={s.planCardPeriod}>/year</Text>
             </Text>
-            <Text style={s.planCardSub}>Launch offer · one payment a year</Text>
+            <Text style={s.planCardSub}>
+              {yearlyProduct?.freeTrialDays
+                ? `${yearlyProduct.freeTrialDays} days free, then ${yearlyPrice}/year · cancel anytime`
+                : 'Launch offer · one payment a year'}
+            </Text>
           </Pressable>
 
           <Pressable

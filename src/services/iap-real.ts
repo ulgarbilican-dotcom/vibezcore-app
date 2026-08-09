@@ -160,6 +160,39 @@ function extractIntroPriceFromPackage(
   return intro;
 }
 
+/** Gratis proefperiode uit de EERSTE pricing phase, in dagen.
+ *
+ *  Spiegelbeeld van extractIntroPriceFromPackage hierboven: die slaat
+ *  gratis fases bewust over (micros <= 0), deze pakt juist alleen die.
+ *  Google stuurt de trial-fase alleen mee wanneer deze klant er recht op
+ *  heeft, dus "de store meldt hem" is hetzelfde als "hij geldt". */
+function extractFreeTrialDaysFromPackage(
+  pkg: PurchasesPackage
+): number | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const product = pkg.product as any;
+  const opt = product?.defaultOption ?? product?.subscriptionOptions?.[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const phases: any[] = opt?.pricingPhases;
+  if (!Array.isArray(phases) || phases.length < 2) return undefined;
+  const first = phases[0];
+  const price = extractPhasePrice(first);
+  /* extractPhasePrice geeft null op een fase zonder geldig prijsobject;
+     een trial-fase HEEFT er een, met bedrag nul. */
+  if (!price || price.micros !== 0) return undefined;
+  /* RevenueCat levert de periode als object ({iso8601: 'P1W'}) of als
+     kale string, afhankelijk van platform en versie. */
+  const iso: string | undefined =
+    first?.billingPeriod?.iso8601 ?? first?.billingPeriod;
+  if (typeof iso !== 'string') return undefined;
+  const m = iso.match(/^P(\d+)([DWMY])$/);
+  if (!m) return undefined;
+  const n = parseInt(m[1], 10);
+  const days =
+    m[2] === 'D' ? n : m[2] === 'W' ? n * 7 : m[2] === 'M' ? n * 30 : n * 365;
+  return days > 0 ? days : undefined;
+}
+
 function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
   const productId = pkg.product.identifier;
   const tier = tierFromProductId(productId);
@@ -172,12 +205,14 @@ function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
   const intro = extractIntroPriceFromPackage(pkg);
   const displayLabel = intro?.label ?? pkg.product.priceString;
   const displayMicros = intro?.micros ?? Math.round(pkg.product.price * 1_000_000);
+  const freeTrialDays = extractFreeTrialDaysFromPackage(pkg);
   return {
     productId,
     tier,
     title: pkg.product.title || `VIBEZCORE Audio ${tier}`,
     description: pkg.product.description || '',
     localizedPrice: displayLabel,
+    freeTrialDays,
     currency: pkg.product.currencyCode,
     priceAmountMicros: displayMicros,
     subscriptionPeriod: tier === 'monthly' ? 'P1M' : 'P1Y',

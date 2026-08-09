@@ -85,6 +85,12 @@ export type IapProduct = {
   /** Per-platform subscription-period: 'P1M' (monthly) of 'P1Y' (yearly).
    *  ISO 8601 duration format, zelfde op iOS en Android. */
   subscriptionPeriod?: string;
+  /** Gratis proefdagen, RECHTSTREEKS uit de store (operator, 8 augustus
+   *  2026: 7 dagen trial op het jaarplan, geconfigureerd in Play Console).
+   *  Alleen gezet als Google/Apple een gratis eerste fase meldt voor DEZE
+   *  klant — wie zijn trial al gebruikt heeft, krijgt hem ook niet te zien.
+   *  Undefined = geen trial, en dan toont geen enkel scherm er één. */
+  freeTrialDays?: number;
   /** Iter v163 (2026-06-27): regular (non-intro) prijs als strikethrough
    *  display. Komt direct uit Google's pricingPhases (laatste fase na
    *  intro-12m). Werkt in alle valuta's want Google geeft localized
