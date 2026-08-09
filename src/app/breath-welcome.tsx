@@ -458,7 +458,12 @@ export default function BreathWelcomeScreen() {
           RESERVED (bij de tegels) en de vaste maten (bij bracelet en
           how-it-works) zijn nu ruimer ingeschat, zodat kop, inhoud en knop
           altijd zonder scrollen samen in het scherm passen. */}
-      <View style={[s.slideArea, slide === 1 && s.slideAreaTop]}>
+      <View
+        style={[
+          s.slideArea,
+          slide >= 1 && slide <= 4 && s.slideAreaTop,
+        ]}
+      >
         {slide === 0 ? (
           <SlideIntro onTapOrb={feelOrb} />
         ) : slide === 1 ? (
@@ -926,19 +931,24 @@ function SlideGuidance({
             style={s.titleLine2}
           />
         </Animated.View>
+        {/* Binnen titleBlock, niet erna (operator, 10 augustus 2026:
+            "subheader heel laag, moet vlak onder header staan"). Als losse
+            sibling ná het blok erfde deze regel de lege ruimte onder de
+            gecentreerde kop mee — op de andere drie schermen staat de
+            subregel al WEL binnen titleBlock, en zit strak tegen de kop.
+            Smaller meegegeven dan de kop, zodat ze er nooit breder uit kan
+            komen — ook niet als de tekst ooit verandert. */}
+        <GradientText
+          text="YOUR BREATH. YOUR RHYTHM. YOUR CHOICE"
+          size={SUB_SIZE}
+          width={CONTENT_W * 0.94}
+          weight="regular"
+          colors={SUB_COLORS}
+          positions={SUB_POSITIONS}
+          tracking={SUB_TRACK}
+          style={s.subWrap}
+        />
       </View>
-      {/* Smaller meegegeven dan de kop, zodat de subtitel er nooit breder
-         uit kan komen — ook niet als de tekst ooit verandert. */}
-      <GradientText
-        text="YOUR BREATH. YOUR RHYTHM. YOUR CHOICE"
-        size={SUB_SIZE}
-        width={CONTENT_W * 0.94}
-        weight="regular"
-        colors={SUB_COLORS}
-        positions={SUB_POSITIONS}
-        tracking={SUB_TRACK}
-        style={s.subWrap}
-      />
 
       {/* Geen uitvergroting meer: de omschrijving staat nu groot genoeg in
          de beelden zelf, dus een tweede scherm voegde niets toe behalve een
@@ -1475,7 +1485,10 @@ const s = StyleSheet.create({
   },
   titleLines: { alignItems: 'center' },
   titleLine2: { marginTop: -2 },
-  subWrap: { marginTop: 16 },
+  /* 16 -> 6, gelijk aan braceletSubLine/howSub1 (operator, 10 augustus
+     2026). Nu de subregel binnen titleBlock staat i.p.v. erna, hoort ze
+     ook dezelfde krappe afstand te dragen als op de andere schermen. */
+  subWrap: { marginTop: 6 },
 
   /* Scherm 1 — kop en tagline zijn Skia-tekst (GradientText); die brengen
      hun eigen hoogte mee, hier alleen de ruimte ertussen. */
