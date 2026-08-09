@@ -84,7 +84,7 @@ export const TERMS: LegalDoc = {
     { kind: 'h2', text: 'Use of the Platform' },
     {
       kind: 'p',
-      text: 'The VIBEZCORE platform provides educational content, structured audio sessions, and physical tools designed to support personal reflection, awareness, and intentional living.',
+      text: 'The VIBEZCORE platform provides guided breathwork sessions, educational content, structured audio sessions, and physical tools designed to support personal reflection, awareness, and intentional living.',
     },
     {
       kind: 'p',
@@ -150,7 +150,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'The platform provides structured audio sessions, educational materials, and supportive physical tools designed to help individuals cultivate awareness, recognize behavioral patterns, and develop intentional responses in daily life.',
+      text: 'The platform provides guided breathwork sessions, structured audio sessions, educational materials, and supportive physical tools designed to help individuals cultivate awareness, recognize behavioral patterns, and develop intentional responses in daily life.',
     },
     {
       kind: 'p',
@@ -176,7 +176,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'The platform — including audio sessions, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition.',
+      text: 'The platform — including breathwork sessions, audio sessions, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition.',
     },
     {
       kind: 'p',
@@ -955,7 +955,7 @@ export const REFUND: LegalDoc = {
       kind: 'ul',
       items: [
         '**Physical Products** — such as the VIBEZCORE Smart Bead Bracelet',
-        '**Digital Content or Services** — such as Audio Sessions, Digital Materials, or memberships',
+        '**Digital Content or Services** — such as the Premium subscription (guided breathwork), Audio Sessions, Digital Materials, or memberships',
       ],
     },
 
@@ -1034,7 +1034,7 @@ export const REFUND: LegalDoc = {
     { kind: 'h2', text: 'Digital Products and Services' },
     {
       kind: 'p',
-      text: 'Digital products and services — including Audio Sessions, Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**.',
+      text: 'Digital products and services — including the Premium subscription (guided breathwork), Audio Sessions, Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions purchased through Google Play or the App Store follow the refund rules of that store.',
     },
     {
       kind: 'p',
@@ -1113,7 +1113,7 @@ export const COOKIES: LegalDoc = {
     /* Intro vóór sectie 01. */
     {
       kind: 'p',
-      text: 'This Cookie Policy explains how **VIBEZCORE** uses cookies and similar storage technologies across both the website and the mobile app. It applies to all VIBEZCORE products — Audio Library and Smart Bead Bracelet — and complements our Privacy Policy.',
+      text: 'This Cookie Policy explains how **VIBEZCORE** uses cookies and similar storage technologies across both the website and the mobile app. It applies to all VIBEZCORE products — the app (guided breathwork and audio) and the Smart Bead Bracelet — and complements our Privacy Policy.',
     },
     {
       kind: 'highlight',
@@ -1256,7 +1256,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: 'Purpose of Our Platform' },
     {
       kind: 'p',
-      text: 'VIBEZCORE is designed exclusively for personal development, self-improvement, and educational purposes. Our audio sessions, content, and tools are created to help individuals gain insights and apply them in daily life — in the areas of mindset, resilience, social mastery, and personal growth.',
+      text: 'VIBEZCORE is designed exclusively for personal development, self-improvement, and educational purposes. Our breathwork sessions, audio content, and tools are created to help individuals gain insights and apply them in daily life — in the areas of mindset, resilience, social mastery, and personal growth.',
     },
     {
       kind: 'tags',
@@ -1277,7 +1277,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: '1. Important Disclaimer' },
     {
       kind: 'p',
-      text: '**VIBEZCORE is a personal development tool, not medical care.** Both the audio sessions and the Smart Bead Bracelet are designed to support self-reflection, focus, and resilience — they are **not** therapy, counselling, diagnosis, or treatment for any mental or physical health condition. The bracelet delivers haptic stimulation through the wrist; it is not a medical device.',
+      text: '**VIBEZCORE is a personal development tool, not medical care.** The breathwork sessions, audio sessions, and the Smart Bead Bracelet are designed to support self-reflection, focus, and resilience — they are **not** therapy, counselling, diagnosis, or treatment for any mental or physical health condition. The bracelet delivers haptic stimulation through the wrist; it is not a medical device.',
     },
     {
       kind: 'p',
@@ -1286,7 +1286,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: '2. Safe Use' },
     {
       kind: 'p',
-      text: 'VIBEZCORE audio sessions are designed for everyday life — at home, at work, during walks, on the commute, while driving or cycling. The point is to fit personal development into your real routine, not to remove you from it.',
+      text: 'VIBEZCORE is designed for everyday life — at home, at work, during walks, on the commute. The point is to fit personal development into your real routine, not to remove you from it. **Listening and active breathing are two different things**: audio you can take almost anywhere; a guided breathwork session asks for your attention and changes your breathing pace — do it seated or lying down, in a place where you can close your eyes.',
     },
     {
       kind: 'p',
@@ -1296,11 +1296,13 @@ export const HEALTH: LegalDoc = {
       kind: 'ul',
       items: [
         '**Stay aware of your surroundings.** Keep volume at a level where you can still hear traffic, alarms, and people around you',
-        '**Choose the right session for the moment.** Energizing, focus, and resilience sessions work well in active settings. **Deep relaxation, sleep, and guided meditation sessions should only be used when stationary and safe** — never while driving, cycling, or operating machinery',
+        '**Never practice breathwork while driving, cycling, swimming, standing in water, or operating machinery.** Paced breathing and breath holds can cause light-headedness — harmless when seated, dangerous behind the wheel or in water',
+        '**Choose the right session for the moment.** Deep relaxation and sleep sessions should only be used when stationary and safe',
         '**Use headphones responsibly** — protect your hearing with moderate volume; consider one earbud when situational awareness matters (cycling, walking near traffic)',
         '**Follow local laws.** Some regions restrict headphone use while driving or cycling — respect them',
         '**Pause when you need full attention.** Heavy traffic, busy intersections, complex tasks — stop the session and resume later',
-        'Stop immediately if you feel dizzy, nauseous, or distressed',
+        '**Stop and breathe normally** if you feel dizzy, tingling, or short of breath during a session — the effect passes within a minute. Resume gently or leave it for today',
+        'Stop immediately if you feel nauseous or distressed',
       ],
     },
     { kind: 'h2', text: '3. Possible Reactions' },
@@ -1318,10 +1320,10 @@ export const HEALTH: LegalDoc = {
         'If feelings persist or intensify, reach out to a mental health professional',
       ],
     },
-    { kind: 'h2', text: '4. Audio Sessions — Not Suitable If…' },
+    { kind: 'h2', text: '4. Use Caution If…' },
     {
       kind: 'p',
-      text: 'Please use caution or consult a professional before using the VIBEZCORE audio library if you:',
+      text: 'Please use caution or consult a professional before using VIBEZCORE breathwork or audio sessions if you:',
     },
     {
       kind: 'ul',
@@ -1330,6 +1332,8 @@ export const HEALTH: LegalDoc = {
         'Have a history of psychosis, severe trauma, or dissociation',
         'Are in active crisis or recently bereaved',
         'Have a medical condition that may be affected by deep relaxation or focused attention',
+        'Are pregnant, or have a cardiovascular or respiratory condition — breath holds and fast-paced breathing may not be suitable; slower rhythms usually are, but check with your doctor first',
+        'Have a history of fainting or epilepsy — avoid fast-paced breathing sessions',
       ],
     },
     {
