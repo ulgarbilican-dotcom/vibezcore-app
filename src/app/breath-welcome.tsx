@@ -70,6 +70,7 @@ import { setSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import {
+  AudioWaveform,
   Clock,
   Gem,
   Leaf,
@@ -1211,6 +1212,17 @@ const START_POINTS = [
     Icon: Leaf,
     label: 'NO COMMITMENT',
     text: "Explore freely. Upgrade when you're ready.",
+  },
+  /* Operator, 9 augustus 2026: "bij onboarding niets te zien van de
+     library? mensen dienen te weten wat er aan de hand is." Dit is het
+     laatste scherm voor de eerste sessie — waar de rest van de belofte al
+     staat — dus hoort de bibliotheek hier ook genoemd, niet pas achteraf
+     ontdekt te worden op een scherm dat niemand toevallig aantikt. */
+  {
+    key: 'library',
+    Icon: AudioWaveform,
+    label: 'AUDIO LIBRARY INCLUDED',
+    text: 'Sessions to train the mind, free to sample from day one.',
   },
 ] as const;
 

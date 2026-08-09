@@ -39,7 +39,6 @@ import {
   BREATH_STATES,
   cycleSeconds,
   type BreathStateKey,
-  rhythmLine,
 } from '@/data/breath-states';
 import { useBreathHistory } from '@/utils/breath-history';
 import { suggestBreath } from '@/utils/breath-suggestion';
@@ -49,6 +48,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   ArrowRight,
+  AudioWaveform,
   ChartNoAxesColumn,
   ChevronLeft,
   ChevronRight,
@@ -519,12 +519,12 @@ export default function BreathScreen() {
               en de ene noemde alleen het eerste ritme terwijl je er binnen
               twee kunt kiezen. Nu staan ze er allebei, en kan het niet meer
               uit de pas lopen. */}
-          {/* De ritmes op de eerste regel, de vraag eronder. Stond alles op
-              één regel, dan liep "What is this?" als weeskind door naar de
-              tweede — gezien op het toestel, 7 augustus 2026. */}
-          <Text style={[s.spec, { color: st.accent }]}>
-            {rhythmLine(st.techniques)}
-          </Text>
+          {/* De ritme-namen ("Box Breathing 4-4-4-4 · Triangular Breathing
+              4-4-4") stonden hier én op het volgende scherm, waar je ze
+              echt kiest (operator, 9 augustus 2026: "dat staat al in de
+              volgende, hoeft hier niet te staan"). Alleen de vraag blijft —
+              die opent de uitleg, en is nergens dubbel. Eén regel minder is
+              hier ook gewoon rustiger: "mooi ademen, Apple-stijl". */}
           <Text style={[s.specAsk, { color: st.accent }]}>What is this?</Text>
         </Pressable>
       </Animated.View>
@@ -550,6 +550,38 @@ export default function BreathScreen() {
           <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
         </Pressable>
       </Animated.View>
+
+      {/* ── De bibliotheek, BOVEN de vouw ──────────────────────────────────
+          Stond eerst onderaan na de praktijkregel — daar zag niemand hem,
+          en een pagina scrollen om te ONTDEKKEN dat er iets bestaat is geen
+          ontdekking (operator, 9 augustus 2026: "uw knop onderaan, is dat
+          de juiste plaats? die knop is ook niet zichtbaar"). Vlak onder de
+          hoofdknop is de eerste plek waar iedereen komt, zonder te vegen.
+          Nog altijd ondergeschikt aan SELECT MODE in gewicht — kleiner,
+          geen volle kleur — maar niet meer te missen.
+          Opent de ECHTE bibliotheek: hero, de vier pijlers, alle series,
+          Soundscapes. Niet een nieuw kaal lijstje ernaast, maar het scherm
+          dat er al staat (operator: "die pagina's dienen op een manier
+          gebruikt te worden"). Enige ingang: vanuit breathwork. */}
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/', params: { from: 'breath' } } as never)
+        }
+        style={s.libraryCard}
+        android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
+      >
+        <View style={s.libraryIcon}>
+          <AudioWaveform size={17} color={st.accent} strokeWidth={2.2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.libraryTitle}>Audio Library</Text>
+          <Text style={s.librarySub}>
+            Sessions to train the mind — free to sample, full access with
+            Premium
+          </Text>
+        </View>
+        <ChevronRight size={18} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
+      </Pressable>
 
       {/* ── Wat deze toestand is ─────────────────────────────────────────
            "Coherent 5-5" of "Resonant 6-6" zegt niets tegen wie de term niet
@@ -721,6 +753,7 @@ export default function BreathScreen() {
           {history.length > 0 ? 'Your practice' : 'Start your practice'}
         </Text>
       </Pressable>
+
       </View>
         </>
       )}
@@ -731,6 +764,37 @@ export default function BreathScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   stars: { ...StyleSheet.absoluteFillObject },
+  libraryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+  },
+  libraryIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  libraryTitle: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    color: '#ffffff',
+  },
+  librarySub: {
+    marginTop: 2,
+    fontFamily: BrandFonts.regular,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: 'rgba(255,255,255,0.45)',
+  },
 
   /* De zijmarge is niet cosmetisch: rechtsboven zweeft het instellingen-
      icoon van de app over élk scherm heen, en zonder deze marge liep de
@@ -989,7 +1053,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     gap: 6,
-    marginTop: 18,
+    marginTop: 10,
     paddingHorizontal: 12,
   },
   statNum: {

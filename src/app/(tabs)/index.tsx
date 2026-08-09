@@ -57,7 +57,12 @@ import {
 import { useSetting } from '@/utils/settings';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Share2 } from 'lucide-react-native';
-import { Redirect, router, useFocusEffect } from 'expo-router';
+import {
+  Redirect,
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
 /* expo-web-browser was nodig voor de oude Gumroad-WebBrowser-flow.
    Iter 9dq v64: Gumroad-checkout vervangen door /subscribe (IAP). Indien
    ooit terug nodig (bv. een externe info-pagina openen): re-import. */
@@ -392,7 +397,16 @@ function SessionRow({
    Zet `AUDIO_ENABLED` weer aan en alles werkt zoals het was; er is niets
    verwijderd. */
 export default function AudioRoute() {
-  if (AUDIO_ENABLED) return <AudioScreen />;
+  const params = useLocalSearchParams<{ from?: string }>();
+  /* De ECHTE bibliotheek — hero, de vier pijlers, alle series, Soundscapes —
+     open vanuit breathwork (operator, 9 augustus 2026: "de library die we
+     gebouwd hebben, die pagina's dienen op een manier gebruikt te worden").
+     Eerder bouwde ik hiervoor een aparte, kale pagina; dat was dubbel werk
+     en precies niet wat er gevraagd was. Dit scherm bestaat al en is af —
+     alleen de tab ernaartoe is verborgen, het scherm zelf niet. Vanuit
+     breathwork komt hier dus gewoon naartoe wie tikt, met `from=breath` als
+     enige voorwaarde om de standaard-omleiding te omzeilen. */
+  if (AUDIO_ENABLED || params.from === 'breath') return <AudioScreen />;
   /* Niets doen zolang de root nog beslist waar de app opent. Deed dit hier
      meteen een omleiding, dan won die van `router.replace('/welcome')` en zag
      niemand het welkomstscherm nog (operator, 7 augustus 2026). De splash

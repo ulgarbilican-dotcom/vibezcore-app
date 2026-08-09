@@ -1839,6 +1839,29 @@ export default function BreathSessionScreen() {
               </Pressable>
             )}
 
+            {/* De tweede deur naar de volledige bibliotheek (operator,
+                9 augustus 2026: eerst een bijna onzichtbaar regeltje, nu
+                een leesbare regel die de belofte meteen meegeeft — gratis
+                proeven, volledig ontgrendeld bij Premium). Nog altijd
+                kleiner dan de kaart erboven: dit is de tweede deur, niet
+                een tweede aanbod ernaast. */}
+            <Pressable
+              onPress={() => {
+                dismissDone();
+                router.push({
+                  pathname: '/',
+                  params: { from: 'breath' },
+                } as never);
+              }}
+              hitSlop={8}
+              style={{ marginBottom: 4 }}
+            >
+              <Text style={s.mindMore}>Browse the full Audio Library ▸</Text>
+              <Text style={s.mindMoreSub}>
+                Free to sample, full access with Premium
+              </Text>
+            </Pressable>
+
             {askPremium ? (
               <>
                 <Pressable
@@ -2394,6 +2417,22 @@ function makeStyles(st: BreathState) {
     fontFamily: BrandFonts.medium,
     fontSize: 11.5,
     color: st.accent,
+  },
+  mindMore: {
+    marginTop: -4,
+    marginBottom: 10,
+    textAlign: 'center',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  mindMoreSub: {
+    marginTop: -6,
+    marginBottom: 10,
+    textAlign: 'center',
+    fontFamily: BrandFonts.regular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.4)',
   },
   doneStrip: {
     position: 'absolute',
