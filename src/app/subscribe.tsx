@@ -791,7 +791,7 @@ export default function SubscribeScreen() {
   const OrderSummary = (
     <View style={s.orderCard}>
       <Text style={s.orderEyebrow}>YOUR SELECTION</Text>
-      <Text style={s.orderTitle}>VIBEZCORE Audio — {tierLabel}</Text>
+      <Text style={s.orderTitle}>VIBEZCORE Premium — {tierLabel}</Text>
       <View style={s.orderPriceRow}>
         <Text style={s.orderPrice}>
           {priceLabel}
@@ -1046,7 +1046,7 @@ export default function SubscribeScreen() {
         >
           <Text style={s.heading}>Choose your plan</Text>
           <Text style={s.sub}>
-            Full access to the VIBEZCORE Audio Library. Cancel anytime.
+            Every state, every rhythm, every session. Cancel anytime.
           </Text>
 
           <Pressable

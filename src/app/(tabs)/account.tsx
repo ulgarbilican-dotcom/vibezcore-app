@@ -82,10 +82,14 @@ import { Share2 } from 'lucide-react-native';
    maar 1 plek aan te passen. KS-launch: Fall 2026 (operator 2026-07-14
    — sep-datum weg, geen concrete datum meer). */
 const APP_LINK_URL = 'https://www.vibezcore.com/app';
+/* Het product is breathwork + bracelet (operator, 9 augustus 2026 — de
+   audiobibliotheek is verborgen en de uitnodiging mag er niet meer over
+   praten). Toestand-taal, geen claims; de gratis kennismakingssessie is wat
+   een genodigde werkelijk krijgt. */
 const BRAND_PITCH =
-  "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
+  'Guided breathwork built on five states — energy, focus, calm, clarity and rest. Voice, visuals and haptics carry every breath.\n\n' +
   'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app and listen to more than 27 free full sessions: ${APP_LINK_URL}`;
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app and try your first guided session free: ${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {
@@ -173,8 +177,10 @@ function FreeEnvironmentCard() {
       <Text style={[s.subBig, { color: Brand.text }]}>
         You&apos;re in the free environment
       </Text>
+      {/* Geen sessietelling meer — dat waren audiocijfers. Wat hier staat
+          is wat een vrije gebruiker werkelijk heeft en mist. */}
       <Text style={s.subSmall}>
-        27 of 144 sessions available. Activate full access below:
+        Your first guided session is free. Unlock every state below:
       </Text>
 
       {/* Iter v237e (2026-07-09, operator-feedback): Activate CTA BOVENAAN.
@@ -195,16 +201,18 @@ function FreeEnvironmentCard() {
         <Text style={s.cardCtaArrow}>→</Text>
       </Pressable>
 
-      {/* Pad 2 — Audio subscribe */}
+      {/* Pad 2 — Premium. Geen prijs hier: die stond hardgecodeerd
+          (€9,99) en dat breekt de WYSIWYG-regel zodra de store iets anders
+          zegt — het subscribe-scherm toont de echte prijzen. */}
       <Pressable
         style={s.cardCta}
         onPress={() => router.navigate('/subscribe' as never)}
-        accessibilityLabel="Subscribe to the audio library"
+        accessibilityLabel="Go Premium — unlock every breathwork state"
       >
         <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Subscribe to Audio Library</Text>
+          <Text style={s.cardCtaText}>Go Premium</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            Full library — €9.99/month
+            All five states · every rhythm · monthly or yearly
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
@@ -217,10 +225,10 @@ function FreeEnvironmentCard() {
       <Pressable
         style={s.cardCta}
         onPress={() => Linking.openURL('https://www.vibezcore.com/')}
-        accessibilityLabel="Get the Bundle — Bracelet plus Audio, opens vibezcore.com"
+        accessibilityLabel="Get the Full Bundle — Bracelet plus Premium, opens vibezcore.com"
       >
         <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Get the Bundle — Bracelet + Audio</Text>
+          <Text style={s.cardCtaText}>Full Bundle — Bracelet + Premium</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
             Learn more at vibezcore.com
           </Text>
@@ -281,7 +289,7 @@ function SubscriptionCard() {
     } else if (tier === 'yearly') {
       bigText = 'Full PRO — Yearly + Bracelet';
     } else {
-      bigText = 'Full PRO — Audio + Bracelet';
+      bigText = 'Full PRO — Premium + Bracelet';
     }
     bigColor = Brand.accent;
     if (validUntil) {
@@ -293,8 +301,8 @@ function SubscriptionCard() {
           year: 'numeric',
         });
         subText = willRenew
-          ? `Audio renews on ${formatted}`
-          : `Audio active until ${formatted}`;
+          ? `Premium renews on ${formatted}`
+          : `Premium active until ${formatted}`;
       } else {
         subText = '';
       }
@@ -316,7 +324,10 @@ function SubscriptionCard() {
        blijven ongewijzigd. */
     bigText = 'Bracelet PRO';
     bigColor = Brand.accent;
-    subText = 'Audio Library not yet activated';
+    /* De bracelet DÉKT premium (sessies gratis bij de bracelet), dus hier
+       stond iets wat niet meer klopt. Wat een bracelet-eigenaar mist is
+       niets — dat mag de regel gewoon zeggen. */
+    subText = 'Breathwork included with your bracelet';
   } else {
     /* tier kan undefined zijn (defensief — backend zou dat niet
        moeten doen voor een active=true sub, maar we crashen er niet
@@ -330,7 +341,7 @@ function SubscriptionCard() {
     /* "Audio PRO" ipv "PRO" — disambigueert van Bracelet-bezit. Een user
        met alleen audio-sub moet zien dat dit hun AUDIO-product is, niet
        een algemene "PRO"-status (operator-keuze 2026-05-29). */
-    bigText = tierLabel ? `Audio PRO — ${tierLabel}` : 'Audio PRO';
+    bigText = tierLabel ? `Premium — ${tierLabel}` : 'Premium';
     bigColor = Brand.accent;
 
     /* Datum-regel — alleen als we een geldige validUntil hebben. */
@@ -364,14 +375,15 @@ function SubscriptionCard() {
      Voorheen was er een dubbel pad (Gumroad customer portal vs store-link),
      maar Gumroad is verwijderd uit de app — geen branching meer nodig.
      Apple eist altijd toegang tot manage-subscription voor PRO users. */
-  const showUpgrade = !isLoading && !isPro;
+  /* Ook niet voor bracelet-eigenaren: de sessies zitten bij hun bracelet
+     in, dus er valt niets bij te kopen. */
+  const showUpgrade = !isLoading && !isPro && !isBraceletOwner;
   const showManageStore = !isLoading && isPro;
-  const upgradeCtaText = isBraceletOwner
-    ? 'Add Audio Library'
-    : 'Upgrade to full library';
-  const upgradeAccessibilityLabel = isBraceletOwner
-    ? 'Add Audio Library to your bracelet'
-    : 'Upgrade to full library access';
+  /* De bracelet dekt de sessies al — een eigenaar heeft niets bij te
+     kopen, dus voor hem verdwijnt de knop hieronder via showUpgrade. */
+  const upgradeCtaText = 'Go Premium';
+  const upgradeAccessibilityLabel =
+    'Go Premium — unlock every breathwork state';
 
   return (
     <View style={s.card}>
@@ -681,8 +693,10 @@ export default function AccountScreen() {
     if (isBraceletPro && !isAudioPro) {
       setTimeout(() => router.replace('/bracelet' as never), 50);
     } else {
-      requestScrollTo('top');
-      setTimeout(() => router.replace('/'), 50);
+      /* Zelfde correctie als bij het inloggen: `/` is de verborgen
+         audiotab, de Breath-tab is waar iemand zonder bracelet hoort te
+         landen. */
+      setTimeout(() => router.replace('/breath' as never), 50);
     }
   };
 
@@ -957,11 +971,11 @@ export default function AccountScreen() {
           /* Bracelet-only owner → direct naar Bracelet tab. */
           setTimeout(() => router.replace('/bracelet' as never), 50);
         } else {
-          /* Audio PRO / Full Bundle / Free → Audio Library bovenkant.
-             Zonder requestScrollTo behoudt de tab z'n vorige scroll-positie
-             (bv. van een eerdere free-browse sessie). */
-          requestScrollTo('top');
-          setTimeout(() => router.replace('/'), 50);
+          /* Iedereen zonder bracelet → de Breath-tab. Route `/` is de
+             VERBORGEN audiobibliotheek; die stuurt zelf wel door, maar dan
+             flitst er eerst een leeg scherm — rechtstreeks is gewoon
+             juist. */
+          setTimeout(() => router.replace('/breath' as never), 50);
         }
       } else {
         setMsg(r.error);
@@ -1767,7 +1781,9 @@ export default function AccountScreen() {
             Bundle leeft INSIDE de bracelet-card als inline BEST VALUE-
             rij ipv eigen CTA. Reassurance gereduceerd tot 1 dim regel. */}
 
-        {/* Card 1: Audio Library — available now (primary product) */}
+        {/* Card 1: Guided Breathwork — het product dat er NÚ is. Verving
+            de Audio Library-kaart (operator, 9 augustus 2026); die wees
+            bovendien naar de verborgen audiotab. */}
         <View style={s.productCard}>
           <View style={s.productStatusRow}>
             <View
@@ -1778,19 +1794,16 @@ export default function AccountScreen() {
             />
             <Text style={s.productStatusLabel}>AVAILABLE NOW</Text>
           </View>
-          <Text style={s.productTitle}>Audio Library</Text>
+          <Text style={s.productTitle}>Guided Breathwork</Text>
           <Text style={s.productOneLiner}>
-            All sessions · monthly or yearly
+            Five states · voice, visuals and haptics
           </Text>
           <Pressable
             style={s.productCtaPrimary}
-            onPress={() => {
-              requestScrollTo('pricing');
-              router.navigate('/');
-            }}
-            accessibilityLabel="Subscribe to Audio Library"
+            onPress={() => router.navigate('/subscribe' as never)}
+            accessibilityLabel="Go Premium — unlock every breathwork state"
           >
-            <Text style={s.productCtaPrimaryText}>Subscribe</Text>
+            <Text style={s.productCtaPrimaryText}>Go Premium</Text>
             <Text style={s.productCtaPrimaryArrow}>→</Text>
           </Pressable>
         </View>
@@ -1816,8 +1829,10 @@ export default function AccountScreen() {
                 { backgroundColor: 'rgba(255,255,255,0.30)' },
               ]}
             />
+            {/* Geen datum meer (operator, 2026-07-14): sep-datum gedropt,
+                communicatie is “Launching Fall 2026”. */}
             <Text style={s.productStatusLabel}>
-              EARLY BIRD · LAUNCHING 1 SEPT
+              EARLY BIRD · LAUNCHING FALL 2026
             </Text>
           </View>
           <Text style={s.productTitle}>Smart Bead Bracelet</Text>
@@ -1853,7 +1868,7 @@ export default function AccountScreen() {
             onPress={() =>
               openExternal('https://www.vibezcore.com/subscribe-bundle')
             }
-            accessibilityLabel="Reserve your spot for VIBEZCORE Full Bundle, bracelet plus 12-month Audio"
+            accessibilityLabel="Reserve your spot for VIBEZCORE Full Bundle, bracelet plus 12 months Premium"
           >
             <View style={s.reserveOptionLeft}>
               <View style={s.bundleInlineBadge}>
@@ -1862,7 +1877,7 @@ export default function AccountScreen() {
               <Text style={s.reserveOptionTitle}>Reserve your spot</Text>
               <Text style={s.reserveOptionSub}>VIBEZCORE Full Bundle</Text>
               <Text style={s.reserveOptionSubFine}>
-                Bracelet + 12-month Audio Library
+                Bracelet + 12 months Premium
               </Text>
             </View>
             <Text style={s.reserveOptionArrow}>→</Text>
