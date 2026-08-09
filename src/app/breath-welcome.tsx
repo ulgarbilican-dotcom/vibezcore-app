@@ -1109,7 +1109,9 @@ function SlideBracelet({
       <View style={s.features}>
         {BRACELET_FEATURES.map(({ key, Icon, text }) => (
           <View key={key} style={s.featureRow}>
-            <Icon size={15} color="#7FB2FF" strokeWidth={2} />
+            <View style={s.featureIconWrap}>
+              <Icon size={15} color="#7FB2FF" strokeWidth={2} />
+            </View>
             <Text style={s.featureTxt}>{text}</Text>
           </View>
         ))}
@@ -1567,8 +1569,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  features: { marginTop: 2, gap: 5 },
+  /* 2 -> 18: de tekst begon vrijwel tegen de foto aan (operator, 10
+     augustus 2026, twee keer herhaald: "moet ademen"). */
+  features: { marginTop: 18, gap: 7 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  /* Vaste kolombreedte — zie de toelichting bij BRACELET_FEATURES.map
+     hierboven. 15 (icoonmaat) + wat lucht, zodat ook het breedste icoon
+     (de schuifjes) er ruim in past. */
+  featureIconWrap: { width: 18, alignItems: 'center' },
   featureTxt: {
     color: 'rgba(255,255,255,0.8)',
     fontFamily: BrandFonts.medium,
@@ -1721,7 +1729,10 @@ const s = StyleSheet.create({
      dit gedeelde blok wordt ook door SlideStart gebruikt met drie punten
      (past al ruim), dus de marge komt liever van de kop erboven — zie
      libHero. */
-  startPoints: { width: CONTENT_W, gap: 14 },
+  /* marginTop 22, gelijk aan de ruimte BOVEN de foto (libHero) — dezelfde
+     lucht aan beide kanten in plaats van de tekst tegen de foto te
+     duwen (operator, 10 augustus 2026). */
+  startPoints: { width: CONTENT_W, gap: 14, marginTop: 22 },
   startPoint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   startIconWrap: {
     width: 34,
