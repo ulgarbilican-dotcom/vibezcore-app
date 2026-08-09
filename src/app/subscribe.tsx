@@ -1046,7 +1046,8 @@ export default function SubscribeScreen() {
         >
           <Text style={s.heading}>Choose your plan</Text>
           <Text style={s.sub}>
-            Every state, every rhythm, every session. Cancel anytime.
+            Every state, every rhythm, every session — plus the full
+            VIBEZCORE Audio Library. Cancel anytime.
           </Text>
 
           <Pressable

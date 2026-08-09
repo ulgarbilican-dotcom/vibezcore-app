@@ -56,6 +56,7 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import { useIAP } from '@/hooks/useIAP';
 import { PRICING } from '@/app/(tabs)/bracelet';
+import { trainTheMindFor } from '@/data/train-the-mind';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   startSessionKeepAlive,
@@ -905,6 +906,8 @@ export default function BreathSessionScreen() {
      (`from=onboarding`) — wie de intro uitloopt, verdient één echte sessie
      voor er ooit om geld gevraagd wordt. */
   const [paywall, setPaywall] = useState(false);
+  /* De audiosessie die deze toestand verdiept — één per toestand, gratis. */
+  const mindPick = useMemo(() => trainTheMindFor(st.key), [st.key]);
   const locked = !isPro && params.from !== 'onboarding';
 
   const start = useCallback(() => {
@@ -1478,6 +1481,18 @@ export default function BreathSessionScreen() {
                    de lancering. Het bedrag komt uit dezelfde PRICING als de
                    bracelet-pagina — één bron, dus altijd hetzelfde getal. */
                 `Bracelet price locked: ${PRICING.bracelet.main} at launch (not ${PRICING.bracelet.old})`,
+                /* De bibliotheek als bonus, met zijn ECHTE losse prijs als
+                   maat (operator: "worth ..."). Die komt uit de store —
+                   regularPriceLabel is wat het audio-abonnement zonder
+                   aanbieding kost — dus het getal klopt in elke valuta en
+                   is geen verzonnen ankerprijs (WYSIWYG). Meldt de store
+                   niets, dan staat er geen bedrag. */
+                (() => {
+                  const worth = getProduct('monthly')?.regularPriceLabel;
+                  return worth
+                    ? `Full Audio Library included — worth ${worth}/mo`
+                    : 'Full VIBEZCORE Audio Library included';
+                })(),
               ].map((line) => (
                 <View key={line} style={s.payRow}>
                   <View style={s.payCheck}>
@@ -1791,6 +1806,38 @@ export default function BreathSessionScreen() {
               You completed {rounds} rounds of {st.title}. Carry the
               breath with you.
             </Text>
+
+            {/* ── Train the mind ──────────────────────────────────────
+                De brug naar de audiobibliotheek, op het enige moment
+                waarop hij zich mag aandienen: NA het ademen, wanneer
+                iemand kalm en ontvankelijk is (operator, 9 augustus
+                2026). Eén vaste sessie per toestand, gratis, dus dit
+                werkt voor iedereen — zie data/train-the-mind.ts. */}
+            {mindPick && (
+              <Pressable
+                style={s.mindCard}
+                onPress={() => {
+                  dismissDone();
+                  router.push({
+                    pathname: '/player',
+                    params: {
+                      title: mindPick.title,
+                      series: mindPick.series,
+                      url: mindPick.url,
+                      free: mindPick.free ? 'true' : 'false',
+                      desc: mindPick.desc,
+                    },
+                  } as never);
+                }}
+                android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+              >
+                <Text style={s.mindEyebrow}>You're calm — train the mind</Text>
+                <Text style={s.mindTitle}>{mindPick.title}</Text>
+                <Text style={s.mindMeta}>
+                  {mindPick.series} · Listen now ▸
+                </Text>
+              </Pressable>
+            )}
 
             {askPremium ? (
               <>
@@ -2319,6 +2366,35 @@ function makeStyles(st: BreathState) {
   },
   /* Een streep in de kleur van de toestand, zoals bij de bracelet. Geeft het
      scherm zijn identiteit terug zonder er een gekleurd vlak van te maken. */
+  /* De Train-the-mind-kaart: het accent van de toestand als rand, want de
+     sessie hoort bij wat je net gedaan hebt. */
+  mindCard: {
+    width: '100%',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${st.accent}55`,
+    backgroundColor: `${st.accent}0E`,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  mindEyebrow: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  mindTitle: {
+    marginTop: 3,
+    fontFamily: BrandFonts.bold,
+    fontSize: 15,
+    color: '#ffffff',
+  },
+  mindMeta: {
+    marginTop: 3,
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
+    color: st.accent,
+  },
   doneStrip: {
     position: 'absolute',
     top: 0,
