@@ -283,7 +283,13 @@ export default function PlanScreen() {
             hier gewoon staan (operator, 8 augustus 2026). */}
         <Pressable
           style={s.allModes}
-          onPress={() => router.push('/breath' as never)}
+          /* `navigate` en niet `push` (operator, 9 augustus 2026: "gaat naar
+             verkeerde pagina"). Deze pagina staat BUITEN de tab-groep, en
+             een `push` van daar zet een hele nieuwe tab-navigator boven op
+             de bestaande — de bestemming klopt dan wel, maar de weg ernaartoe
+             niet. `navigate` schakelt gewoon om naar de bestaande tab, zoals
+             overal elders vanuit een root-scherm (zie BreathMiniControl). */
+          onPress={() => router.navigate('/breath' as never)}
           android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
         >
           <Text style={s.allModesTxt}>Explore all modes</Text>

@@ -507,7 +507,7 @@ export default function BreathSessionScreen() {
   useKeepAwake('breath-session');
 
   const sub = useSubscription();
-  const isPro = sub.isPro || sub.hasBracelet;
+  const isPro = sub.isPro;
   /* Alleen voor de prijzen in de premium-popup. */
   const { getProduct } = useIAP();
   /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te
@@ -894,8 +894,11 @@ export default function BreathSessionScreen() {
 
   /* ── De poort ──────────────────────────────────────────────────────
      Sessies zijn premium (operator, 8 augustus 2026: "de breathe in de app
-     pas unlocked na premium"). Premium = abonnement óf bracelet — de
-     bracelet-koper heeft de sessies gratis, dat is de afspraak.
+     pas unlocked na premium"). Premium = het abonnement, punt — niet de
+     bracelet. Hier stond "bracelet-koper heeft de sessies gratis, dat is
+     de afspraak", en dat was nooit een afspraak: mijn eigen aanname van
+     8 augustus, teruggedraaid op 9 augustus ("breathwork zal niet gratis
+     zijn bij aankoop bracelet").
 
      De poort staat op STARTEN, niet op kijken: iedereen mag alle vijf de
      toestanden en ritmes zien, dat is de etalage. En de popup is WEGKLIKBAAR
@@ -904,7 +907,13 @@ export default function BreathSessionScreen() {
 
      Eén uitzondering: de kennismakingssessie uit de onboarding
      (`from=onboarding`) — wie de intro uitloopt, verdient één echte sessie
-     voor er ooit om geld gevraagd wordt. */
+     voor er ooit om geld gevraagd wordt.
+
+     De bracelet ontgrendelt hier BEWUST niets meer (operator, 9 augustus
+     2026: "breathwork zal niet gratis zijn bij aankoop bracelet"). Eerder
+     stond hier `sub.isPro || sub.hasBracelet` — dat was een eigen aanname
+     van mij, nooit een afspraak, en precies verkeerd: Premium is het enige
+     wat de sessies ontgrendelt, de bracelet doet dat niet vanzelf mee. */
   const [paywall, setPaywall] = useState(false);
   /* De audiosessie die deze toestand verdiept — één per toestand, gratis. */
   const mindPick = useMemo(() => trainTheMindFor(st.key), [st.key]);

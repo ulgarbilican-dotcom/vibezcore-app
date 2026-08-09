@@ -324,10 +324,13 @@ function SubscriptionCard() {
        blijven ongewijzigd. */
     bigText = 'Bracelet PRO';
     bigColor = Brand.accent;
-    /* De bracelet DÉKT premium (sessies gratis bij de bracelet), dus hier
-       stond iets wat niet meer klopt. Wat een bracelet-eigenaar mist is
-       niets — dat mag de regel gewoon zeggen. */
-    subText = 'Breathwork included with your bracelet';
+    /* Terugbedraaid (operator, 9 augustus 2026: "breathwork zal niet
+       gratis zijn bij aankoop bracelet"). De vorige regel beloofde iets
+       wat niet klopt — een bracelet-eigenaar zonder Premium heeft nog
+       precies dezelfde vrije proefsessies als ieder ander, geen volledige
+       bibliotheek. De regel zegt dat nu eerlijk, in dezelfde "compleet
+       maken"-toon als de rest van deze branche. */
+    subText = 'Add Premium to unlock every breathwork state';
   } else {
     /* tier kan undefined zijn (defensief — backend zou dat niet
        moeten doen voor een active=true sub, maar we crashen er niet
@@ -375,9 +378,11 @@ function SubscriptionCard() {
      Voorheen was er een dubbel pad (Gumroad customer portal vs store-link),
      maar Gumroad is verwijderd uit de app — geen branching meer nodig.
      Apple eist altijd toegang tot manage-subscription voor PRO users. */
-  /* Ook niet voor bracelet-eigenaren: de sessies zitten bij hun bracelet
-     in, dus er valt niets bij te kopen. */
-  const showUpgrade = !isLoading && !isPro && !isBraceletOwner;
+  /* OOK voor bracelet-eigenaren (operator, 9 augustus 2026): de bracelet
+     ontgrendelt de sessies niet, dus er valt voor hen wel degelijk iets
+     bij te kopen. Stond hier eerst `&& !isBraceletOwner` — dat verstopte
+     precies de knop die een bracelet-only eigenaar nodig heeft. */
+  const showUpgrade = !isLoading && !isPro;
   const showManageStore = !isLoading && isPro;
   /* De bracelet dekt de sessies al — een eigenaar heeft niets bij te
      kopen, dus voor hem verdwijnt de knop hieronder via showUpgrade. */

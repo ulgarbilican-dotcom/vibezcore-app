@@ -66,10 +66,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -137,7 +134,6 @@ function fmt(sec: number) {
 }
 
 export default function BreathScreen() {
-  const insets = useSafeAreaInsets();
   /* De suggestie bepaalt waar de pagina op OPENT. Bewust geen extra balk of
      kaart erbij: het scherm ziet er precies hetzelfde uit, hij staat alleen
      al op de juiste deur. Dat is de rustigste vorm die een aanbeveling kan
@@ -401,33 +397,19 @@ export default function BreathScreen() {
         <ChartNoAxesColumn size={19} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
       </Pressable>
 
-      <Animated.View style={[s.header, fadeStyle]}>
-        {/* Eén regel, altijd. "CALM CONTROL" brak op twee regels doordat de
-            letterafstand hem breder maakte dan de ruimte tussen de marges —
-            en een kop die afbreekt op een woordgrens die niets betekent leest
-            als een fout. Krimpt liever een fractie dan te breken. */}
-        <Text
-          style={[s.mode, { color: st.accent }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {st.eyebrow}
-        </Text>
-      </Animated.View>
+      {/* De naam boven de foto is weg (operator, 9 augustus 2026: dit
+          scherm mag niet scrollen en moet toch volledig passen — en deze
+          regel was de eerste die ooit een keer overlapte met de foto
+          eronder. De naam staat al, gekleurd en groot, in de rij van vijf
+          onderaan; twee keer dezelfde naam kostte alleen hoogte zonder iets
+          toe te voegen. */}
 
-      {/* Alles onder de kop staat als ÉÉN blok gecentreerd in wat er
+      {/* Alles staat als ÉÉN blok gecentreerd in wat er
           overblijft. Stond de praktijkregel onderaan vastgeprikt, dan viel
           er tussen de rij van vijf en die regel een leeg vlak van een derde
           scherm — en een keuzepagina die halfleeg staat leest als een pagina
           waar nog iets bij moet. */}
-      <ScrollView
-        style={s.body}
-        contentContainerStyle={[
-          s.bodyContent,
-          { paddingBottom: Math.max(insets.bottom, 12) + 12 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={s.body}>
       {/* ── Het beeld, met de veeglaag eroverheen ── */}
       <View style={s.stage}>
         <Animated.View style={[s.artWrap, fadeStyle]} pointerEvents="none">
@@ -694,44 +676,11 @@ export default function BreathScreen() {
         ))}
       </View>
 
-      {/* ── Wat je gedaan hebt ───────────────────────────────────────────
-           Hier stond alleen "YOUR PRACTICE (4)" — een teller die niets zegt.
-           Vier sessies kunnen vier dagen op rij zijn of vier keer in maart.
-           Nu staat er wat iemand daadwerkelijk wil weten: hoe lang de reeks
-           is en hoeveel er deze week in zit. Beide leeg? Dan blijft het bij
-           de uitnodiging, want een streak van nul tonen ontmoedigt.
-
-           Bewust één regel en geen kaart: dit is de laatste regel van een
-           keuzescherm, niet het onderwerp ervan. */}
-      <Pressable
-        onPress={() => router.push('/breath-history')}
-        hitSlop={10}
-        style={s.footRow}
-      >
-        {practice.streak > 0 && (
-          <>
-            <Text style={[s.statNum, { color: st.accent }]}>
-              {practice.streak}
-            </Text>
-            <Text style={s.statLbl}>
-              DAY{practice.streak === 1 ? '' : 'S'}
-            </Text>
-            <Text style={s.footSep}>·</Text>
-          </>
-        )}
-        {practice.weekMin > 0 && (
-          <>
-            <Text style={[s.statNum, { color: st.accent }]}>
-              {practice.weekMin}
-            </Text>
-            <Text style={s.statLbl}>min this week</Text>
-            <Text style={s.footSep}>·</Text>
-          </>
-        )}
-        <Text style={s.historyTxt}>
-          {history.length > 0 ? 'Your practice' : 'Start your practice'}
-        </Text>
-      </Pressable>
+      {/* ── Praktijkregel weg (operator, 9 augustus 2026: "tekst start your
+          practice moet ook weg"). Het linksboven-icoon (histBtn) opent
+          dezelfde historiek al; deze regel was een tweede weg naar
+          hetzelfde scherm, en op een scherm dat zonder scroll alles moet
+          laten passen is een dubbele ingang de eerste die weg mag. */}
 
       {/* ── De bibliotheek, ONDERAAN ─────────────────────────────────────
           Terug naar de voet (operator, 9 augustus 2026): tussen de foto en
@@ -763,7 +712,7 @@ export default function BreathScreen() {
         <ChevronRight size={18} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
       </Pressable>
 
-      </ScrollView>
+      </View>
         </>
       )}
     </SafeAreaView>
@@ -845,8 +794,7 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.52)',
   },
 
-  body: { flex: 1 },
-  bodyContent: { flexGrow: 1, justifyContent: 'center' },
+  body: { flex: 1, justifyContent: 'center' },
 
   stage: {
     width: SCREEN_W,

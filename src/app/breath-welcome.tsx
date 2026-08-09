@@ -89,6 +89,7 @@ import {
   Dimensions,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   Vibration,
@@ -114,7 +115,11 @@ const ORB = Math.min(SCREEN_W * 0.96, 440);
 const HERO = Math.min(SCREEN_W * 0.7, 310);
 /* De mandala achter de kop. Ruimer dan de tekst zelf, zodat de figuur er
    omheen valt i.p.v. erachter te klemmen. */
-const HEADER_MANDALA = Math.min(SCREEN_W * 0.43, 190);
+/* 0.43/190 -> 0.34/150 (operator, 10 augustus 2026: "blokken naar boven",
+   voor de derde keer gevraagd). De mandala is decor achter de kop, geen
+   onderwerp — hij mag kleiner zonder iets te verliezen, en dat scheelt op
+   ELK scherm dat een titleBlock heeft (vier van de zes). */
+const HEADER_MANDALA = Math.min(SCREEN_W * 0.34, 150);
 /* De mandala op het slotscherm. Kleiner dan op scherm 1, want daar is ze
    het onderwerp en hier een voorproefje. */
 const START_ORB = Math.min(SCREEN_W * 0.52, 230);
@@ -229,7 +234,9 @@ const BRACELET_FEATURES = [
    uitsnede laat de bracelet in beeld en snijdt alleen lucht boven en pols
    onder weg. Dat is ook waar de foto over gaat — hem dragen terwijl je iets
    anders doet. */
-const WEAR_H = 176;
+/* 176 -> 132 (operator, 10 augustus 2026: "blokken naar boven"). De pols-
+   foto was na de mandala de grootste losse post op dit scherm. */
+const WEAR_H = 132;
 const WEAR_IMG =
   'https://vibezcore-audio.b-cdn.net/images/bracelet%20new%20correct.png';
 
@@ -296,7 +303,10 @@ export default function BreathWelcomeScreen() {
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
 
-  const TOTAL = 5;
+  /* Zes stappen, niet vijf (operator, 9 augustus 2026): de bibliotheek
+     krijgt een EIGEN scherm — geen bijzin meer op het slotscherm — met de
+     echte hero-foto van de bibliotheek zelf. */
+  const TOTAL = 6;
   const [slide, setSlide] = useState(0);
   const isLast = slide === TOTAL - 1;
 
@@ -404,7 +414,9 @@ export default function BreathWelcomeScreen() {
       : 'Start your first session  →'
     : slide === 2
       ? 'How it works  →'
-      : 'Next';
+      : slide === 3
+        ? 'Audio Library  →'
+        : 'Next';
 
   /* "Maybe later" staat alleen op het slotscherm. Elders zou het naast de
      Skip rechtsboven een tweede uitgang zijn, en twee manieren om hetzelfde
@@ -438,6 +450,14 @@ export default function BreathWelcomeScreen() {
         </Pressable>
       </View>
 
+      {/* GEEN scroll (operator, 10 augustus 2026, voor de derde keer:
+          "paginas moeten volledig in beeld staan zonder te moeten
+          scrollen"). Een ScrollView loste het overlappen wél op, maar dat
+          was het verkeerde probleem oplossen — de eis is dat het PAST, niet
+          dat je het kunt opvegen. De echte oplossing zit in de stappen zelf:
+          RESERVED (bij de tegels) en de vaste maten (bij bracelet en
+          how-it-works) zijn nu ruimer ingeschat, zodat kop, inhoud en knop
+          altijd zonder scrollen samen in het scherm passen. */}
       <View style={[s.slideArea, slide === 1 && s.slideAreaTop]}>
         {slide === 0 ? (
           <SlideIntro onTapOrb={feelOrb} />
@@ -450,6 +470,8 @@ export default function BreathWelcomeScreen() {
           />
         ) : slide === 3 ? (
           <SlideHowItWorks />
+        ) : slide === 4 ? (
+          <SlideLibrary />
         ) : (
           <SlideStart />
         )}
@@ -1214,18 +1236,103 @@ const START_POINTS = [
     label: 'NO COMMITMENT',
     text: "Explore freely. Upgrade when you're ready.",
   },
-  /* Operator, 9 augustus 2026: "bij onboarding niets te zien van de
-     library? mensen dienen te weten wat er aan de hand is." Dit is het
-     laatste scherm voor de eerste sessie — waar de rest van de belofte al
-     staat — dus hoort de bibliotheek hier ook genoemd, niet pas achteraf
-     ontdekt te worden op een scherm dat niemand toevallig aantikt. */
+] as const;
+
+/* De hero-foto van de ECHTE bibliotheek (tabs)/index.tsx — dezelfde foto,
+   niet een nieuwe. Wat hier staat moet kloppen met wat je zo meteen ziet
+   als je erop tikt; een ander beeld beloven dan je toont is het snelste
+   om vertrouwen te verliezen. */
+const LIBRARY_HERO_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/audio-library.png';
+
+/* Drie regels, elk één ding (operator, 9 augustus 2026: "header en tekst
+   wil ik dat jij mooi en duidelijk opsomt"). Wat het IS, wat het NU al
+   kost, en wat er verandert met Premium — in die volgorde, want dat is de
+   volgorde waarin iemand de vraag stelt. */
+/* Twee punten, niet drie (operator, 9 augustus 2026: "de free sessions
+   moeten weg, user krijgt dit samen met de breathwork 7 days free trial").
+   "Free to sample" beloofde iets APARTS naast de proefperiode van
+   breathwork zelf — en dat zijn er dan twee gratis-beloftes op één scherm,
+   die elkaar tegenspreken zodra de trial ingaat. De bibliotheek hoort NU
+   gewoon bij diezelfde proefperiode, dus die belofte staat al bij Premium;
+   hier hoeft ze niet nog eens apart. */
+const LIBRARY_POINTS = [
   {
-    key: 'library',
+    key: 'built',
+    Icon: Gem,
+    label: 'BUILT ON TIMELESS IDEAS',
+    text: 'Jung, the Stoics and more, turned into guided audio.',
+  },
+  {
+    key: 'unlocked',
     Icon: AudioWaveform,
-    label: 'AUDIO LIBRARY INCLUDED',
-    text: 'Sessions to train the mind, free to sample from day one.',
+    label: 'FULL ACCESS WITH PREMIUM',
+    text: 'Every series unlocked, included in your subscription.',
   },
 ] as const;
+
+/* ── Stap 5: de bibliotheek krijgt haar eigen scherm ──────────────────────
+   Stond eerst als bijzin op het slotscherm; dat vertelde DAT ze bestaat
+   maar niet WAT ze is (operator, 9 augustus 2026: "audio library moet als
+   standalone pagina bij onboarding komen"). Dezelfde opbouw als het
+   slotscherm hierna — kop, drie punten — zodat de twee als familie lezen
+   en niet als twee andere vaardigheden. */
+function SlideLibrary() {
+  return (
+    <View style={s.slide}>
+      {/* Dezelfde kop-vorm als HOW IT WORKS en de andere stappen (operator,
+         9 augustus 2026: "header ook zoals andere onboarding tekst"). Stond
+         eerst als klein bijschrift IN de foto gebakken — dat maakte dit
+         scherm de vreemde eend, met een ander lettertype op een andere
+         plek dan overal elders. "AUDIO LIBRARY" is nu de kop, "Where
+         insight becomes identity" de subregel — exact de tekst van
+         daarnet, alleen in de vorm die hier hoort. De foto blijft, maar
+         puur als beeld, zonder tekst erin. */}
+      <View style={s.titleBlock}>
+        <MandalaBackdrop size={HEADER_MANDALA} />
+        <GradientText
+          text="AUDIO LIBRARY"
+          size={HEADER_SIZE}
+          width={CONTENT_W}
+          weight="regular"
+          tracking={HEADER_TRACK}
+        />
+        <GradientText
+          text="WHERE INSIGHT BECOMES IDENTITY"
+          size={SUB_SIZE}
+          width={CONTENT_W * 0.94}
+          weight="regular"
+          colors={SUB_COLORS}
+          positions={SUB_POSITIONS}
+          tracking={SUB_TRACK}
+          style={s.howSub1}
+        />
+      </View>
+
+      <View style={s.libHero}>
+        <Image
+          source={{ uri: LIBRARY_HERO_IMG }}
+          style={s.libHeroImg}
+          resizeMode="cover"
+        />
+      </View>
+
+      <View style={s.startPoints}>
+        {LIBRARY_POINTS.map(({ key, Icon, label, text }) => (
+          <View key={key} style={s.startPoint}>
+            <View style={s.startIconWrap}>
+              <Icon size={16} color="#7FB2FF" strokeWidth={2} />
+            </View>
+            <View style={s.startPointText}>
+              <Text style={s.startLabel}>{label}</Text>
+              <Text style={s.startDesc}>{text}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 function SlideStart() {
   return (
@@ -1265,53 +1372,17 @@ function SlideStart() {
       </View>
 
       <View style={s.startPoints}>
-        {START_POINTS.map(({ key, Icon, label, text }) => {
-          /* Alleen het bibliotheek-punt is aantikbaar (operator, 9 augustus
-             2026: "onboarding ook een tik naar bibliotheek — niet de
-             premium, enkel de preview"). De andere drie zijn beloftes over
-             de sessie die zo begint; dit ene punt is een bestaand scherm
-             en verdient dezelfde tik als overal elders. Geen `from=breath`
-             maar `from=onboarding`: dat laat het echte scherm zien — wie
-             hier nog geen abonnement heeft ziet vanzelf de FREE-preview en
-             de PRO-sloten, precies zoals het hoort te zijn zonder dat wij
-             iets hoeven te ensceneren. */
-          const isLibrary = key === 'library';
-          const row = (
-            <>
-              <View style={s.startIconWrap}>
-                <Icon size={16} color="#7FB2FF" strokeWidth={2} />
-              </View>
-              <View style={s.startPointText}>
-                <Text style={s.startLabel}>{label}</Text>
-                <Text style={s.startDesc}>{text}</Text>
-              </View>
-              {isLibrary && (
-                <ChevronRight size={16} color="rgba(127,178,255,0.6)" strokeWidth={2.2} />
-              )}
-            </>
-          );
-          if (!isLibrary) {
-            return (
-              <View key={key} style={s.startPoint}>
-                {row}
-              </View>
-            );
-          }
-          return (
-            <Pressable
-              key={key}
-              style={s.startPoint}
-              onPress={() =>
-                router.push({
-                  pathname: '/',
-                  params: { from: 'onboarding' },
-                } as never)
-              }
-            >
-              {row}
-            </Pressable>
-          );
-        })}
+        {START_POINTS.map(({ key, Icon, label, text }) => (
+          <View key={key} style={s.startPoint}>
+            <View style={s.startIconWrap}>
+              <Icon size={16} color="#7FB2FF" strokeWidth={2} />
+            </View>
+            <View style={s.startPointText}>
+              <Text style={s.startLabel}>{label}</Text>
+              <Text style={s.startDesc}>{text}</Text>
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -1386,9 +1457,19 @@ const s = StyleSheet.create({
   },
   titleWrap: { marginTop: 16 },
   /* De mandala vult dit blok en ligt eronder; de hoogte volgt de tekst. */
+  /* `minHeight: HEADER_MANDALA` is de eigenlijke fix (operator, 9 augustus
+     2026: "how it works, foto en de mandala bovenaan overlappen"). Dit vak
+     was alleen zo hoog als zijn TEKST, terwijl de mandala-achtergrond daar
+     centraal ABSOLUUT in hangt op zijn eigen, grotere maat — was de tekst
+     korter dan de mandala, dan stak ze onderaan het vak uit tot in wat
+     erna komt. Alleen op het "how it works"-scherm stond de foto dicht
+     genoeg om dat te laten zien; de fout zat wel op alle drie de schermen
+     die dit vak gebruiken. Een minimumhoogte gelijk aan de mandala zorgt
+     dat het vak nooit meer krimpt tot onder haar eigen achtergrond. */
   titleBlock: {
     marginTop: 10,
     width: CONTENT_W,
+    minHeight: HEADER_MANDALA,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1453,25 +1534,33 @@ const s = StyleSheet.create({
 
   /* Scherm 3 */
   /* Strak onder de kop, zoals de subtitels op de andere schermen. */
-  braceletSubLine: { marginTop: 4 },
+  /* 4 -> 6, gelijk aan howSub1 (operator, 10 augustus 2026: "header en
+     subheader niet altijd mooi onder elkaar"). Beide zijn een kop van één
+     regel met een subregel eronder — twee millimeter verschil tussen twee
+     schermen die er hetzelfde uitzien, was precies zichtbaar genoeg om als
+     onzorgvuldig te lezen. */
+  braceletSubLine: { marginTop: 6 },
+  /* 0.7 -> 0.42 (operator, 10 augustus 2026). Dit vak was de grootste
+     post op het scherm — breder dan het scherm zelf en 70% daarvan hoog —
+     terwijl zeven kenmerken eronder om diezelfde ruimte vroegen. */
   braceletImgWrap: {
     marginTop: -6,
     width: BRACELET_W,
-    height: BRACELET_W * 0.7,
+    height: BRACELET_W * 0.42,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  features: { marginTop: 2, gap: 8 },
+  features: { marginTop: 2, gap: 5 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   featureTxt: {
     color: 'rgba(255,255,255,0.8)',
     fontFamily: BrandFonts.medium,
-    fontSize: 13.5,
+    fontSize: 12.5,
     letterSpacing: 0.1,
   },
   braceletImg: { width: '100%', height: '100%' },
   comingPill: {
-    marginTop: 16,
+    marginTop: 10,
     paddingHorizontal: 11,
     paddingVertical: 4,
     borderRadius: 999,
@@ -1506,11 +1595,21 @@ const s = StyleSheet.create({
 
   /* Scherm 4 */
   howSub1: { marginTop: 6 },
-  /* 66 → 20 (operator, 8 augustus 2026: de FEEL-stap viel achter de knop).
-     Dit scherm scrolt niet, dus elke punt marge bovenin duwt onderin tekst
-     het beeld uit. De foto mag lager beginnen; de tekst mag niet wegvallen. */
+  /* De foto zelf, zonder tekst erin gebakken (operator, 9 augustus 2026):
+     de kop staat nu erboven, in dezelfde vorm als op de andere schermen.
+     Het scherm scrolt inmiddels wél als het niet past (zie de ScrollView
+     om slideArea) — deze hoogte is dus een richtwaarde, geen harde grens
+     meer. */
+  libHero: {
+    marginTop: 14,
+    width: CONTENT_W,
+    height: 200,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  libHeroImg: { width: '100%', height: '100%' },
   wearWrap: {
-    marginTop: 20,
+    marginTop: 12,
     width: CONTENT_W,
     height: WEAR_H,
     borderRadius: 18,
@@ -1522,7 +1621,7 @@ const s = StyleSheet.create({
     marginLeft: -CONTENT_W * 0.18,
   },
   howWhen: {
-    marginTop: 12,
+    marginTop: 6,
     maxWidth: CONTENT_W,
     color: 'rgba(255,255,255,0.82)',
     fontFamily: BrandFonts.regular,
@@ -1534,7 +1633,7 @@ const s = StyleSheet.create({
      laat staan zonder te schreeuwen. Licht gewicht met wat letterafstand
      leest als rust; vet zou het een reclamekreet maken. */
   howClaim: {
-    marginTop: 26,
+    marginTop: 14,
     maxWidth: CONTENT_W,
     color: '#ffffff',
     fontFamily: BrandFonts.regular,
@@ -1542,7 +1641,7 @@ const s = StyleSheet.create({
     letterSpacing: 1.4,
     textAlign: 'center',
   },
-  howSteps: { marginTop: 20, gap: 13, width: CONTENT_W },
+  howSteps: { marginTop: 10, gap: 8, width: CONTENT_W },
   howStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   howNumWrap: {
     width: 24,
