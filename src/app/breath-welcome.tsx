@@ -71,6 +71,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import {
   AudioWaveform,
+  ChevronRight,
   Clock,
   Gem,
   Leaf,
@@ -1264,17 +1265,53 @@ function SlideStart() {
       </View>
 
       <View style={s.startPoints}>
-        {START_POINTS.map(({ key, Icon, label, text }) => (
-          <View key={key} style={s.startPoint}>
-            <View style={s.startIconWrap}>
-              <Icon size={16} color="#7FB2FF" strokeWidth={2} />
-            </View>
-            <View style={s.startPointText}>
-              <Text style={s.startLabel}>{label}</Text>
-              <Text style={s.startDesc}>{text}</Text>
-            </View>
-          </View>
-        ))}
+        {START_POINTS.map(({ key, Icon, label, text }) => {
+          /* Alleen het bibliotheek-punt is aantikbaar (operator, 9 augustus
+             2026: "onboarding ook een tik naar bibliotheek — niet de
+             premium, enkel de preview"). De andere drie zijn beloftes over
+             de sessie die zo begint; dit ene punt is een bestaand scherm
+             en verdient dezelfde tik als overal elders. Geen `from=breath`
+             maar `from=onboarding`: dat laat het echte scherm zien — wie
+             hier nog geen abonnement heeft ziet vanzelf de FREE-preview en
+             de PRO-sloten, precies zoals het hoort te zijn zonder dat wij
+             iets hoeven te ensceneren. */
+          const isLibrary = key === 'library';
+          const row = (
+            <>
+              <View style={s.startIconWrap}>
+                <Icon size={16} color="#7FB2FF" strokeWidth={2} />
+              </View>
+              <View style={s.startPointText}>
+                <Text style={s.startLabel}>{label}</Text>
+                <Text style={s.startDesc}>{text}</Text>
+              </View>
+              {isLibrary && (
+                <ChevronRight size={16} color="rgba(127,178,255,0.6)" strokeWidth={2.2} />
+              )}
+            </>
+          );
+          if (!isLibrary) {
+            return (
+              <View key={key} style={s.startPoint}>
+                {row}
+              </View>
+            );
+          }
+          return (
+            <Pressable
+              key={key}
+              style={s.startPoint}
+              onPress={() =>
+                router.push({
+                  pathname: '/',
+                  params: { from: 'onboarding' },
+                } as never)
+              }
+            >
+              {row}
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

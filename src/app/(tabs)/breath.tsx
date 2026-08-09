@@ -66,7 +66,10 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -134,6 +137,7 @@ function fmt(sec: number) {
 }
 
 export default function BreathScreen() {
+  const insets = useSafeAreaInsets();
   /* De suggestie bepaalt waar de pagina op OPENT. Bewust geen extra balk of
      kaart erbij: het scherm ziet er precies hetzelfde uit, hij staat alleen
      al op de juiste deur. Dat is de rustigste vorm die een aanbeveling kan
@@ -416,7 +420,14 @@ export default function BreathScreen() {
           er tussen de rij van vijf en die regel een leeg vlak van een derde
           scherm — en een keuzepagina die halfleeg staat leest als een pagina
           waar nog iets bij moet. */}
-      <View style={s.body}>
+      <ScrollView
+        style={s.body}
+        contentContainerStyle={[
+          s.bodyContent,
+          { paddingBottom: Math.max(insets.bottom, 12) + 12 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
       {/* ── Het beeld, met de veeglaag eroverheen ── */}
       <View style={s.stage}>
         <Animated.View style={[s.artWrap, fadeStyle]} pointerEvents="none">
@@ -550,38 +561,6 @@ export default function BreathScreen() {
           <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
         </Pressable>
       </Animated.View>
-
-      {/* ── De bibliotheek, BOVEN de vouw ──────────────────────────────────
-          Stond eerst onderaan na de praktijkregel — daar zag niemand hem,
-          en een pagina scrollen om te ONTDEKKEN dat er iets bestaat is geen
-          ontdekking (operator, 9 augustus 2026: "uw knop onderaan, is dat
-          de juiste plaats? die knop is ook niet zichtbaar"). Vlak onder de
-          hoofdknop is de eerste plek waar iedereen komt, zonder te vegen.
-          Nog altijd ondergeschikt aan SELECT MODE in gewicht — kleiner,
-          geen volle kleur — maar niet meer te missen.
-          Opent de ECHTE bibliotheek: hero, de vier pijlers, alle series,
-          Soundscapes. Niet een nieuw kaal lijstje ernaast, maar het scherm
-          dat er al staat (operator: "die pagina's dienen op een manier
-          gebruikt te worden"). Enige ingang: vanuit breathwork. */}
-      <Pressable
-        onPress={() =>
-          router.push({ pathname: '/', params: { from: 'breath' } } as never)
-        }
-        style={s.libraryCard}
-        android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
-      >
-        <View style={s.libraryIcon}>
-          <AudioWaveform size={17} color={st.accent} strokeWidth={2.2} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.libraryTitle}>Audio Library</Text>
-          <Text style={s.librarySub}>
-            Sessions to train the mind — free to sample, full access with
-            Premium
-          </Text>
-        </View>
-        <ChevronRight size={18} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
-      </Pressable>
 
       {/* ── Wat deze toestand is ─────────────────────────────────────────
            "Coherent 5-5" of "Resonant 6-6" zegt niets tegen wie de term niet
@@ -754,7 +733,37 @@ export default function BreathScreen() {
         </Text>
       </Pressable>
 
-      </View>
+      {/* ── De bibliotheek, ONDERAAN ─────────────────────────────────────
+          Terug naar de voet (operator, 9 augustus 2026): tussen de foto en
+          de rij van vijf stond hij het beeld-blok te breken, dat van kop tot
+          praktijkregel als één geheel hoort te ademen. Onderaan verstoort
+          hij niets — en blijft nu ook echt ZICHTBAAR, want het scherm scrolt
+          voortaan als de inhoud niet past (zie de ScrollView hieronder), in
+          plaats van stil te overlappen.
+          Opent de ECHTE bibliotheek: hero, de vier pijlers, alle series,
+          Soundscapes — het scherm dat er al staat, niet een nieuw kaal
+          lijstje ernaast. Enige ingang: vanuit breathwork. */}
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/', params: { from: 'breath' } } as never)
+        }
+        style={s.libraryCard}
+        android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
+      >
+        <View style={s.libraryIcon}>
+          <AudioWaveform size={17} color={st.accent} strokeWidth={2.2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.libraryTitle}>Audio Library</Text>
+          <Text style={s.librarySub}>
+            Sessions to train the mind — free to sample, full access with
+            Premium
+          </Text>
+        </View>
+        <ChevronRight size={18} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
+      </Pressable>
+
+      </ScrollView>
         </>
       )}
     </SafeAreaView>
@@ -836,7 +845,8 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.52)',
   },
 
-  body: { flex: 1, justifyContent: 'center', paddingBottom: 8 },
+  body: { flex: 1 },
+  bodyContent: { flexGrow: 1, justifyContent: 'center' },
 
   stage: {
     width: SCREEN_W,

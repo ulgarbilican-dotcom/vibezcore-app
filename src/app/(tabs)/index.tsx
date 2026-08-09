@@ -36,7 +36,13 @@ import {
   showBraceletUpsell,
 } from '@/services/bracelet-upsell';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Gem, Heart, Sparkles, TrendingUp } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Gem,
+  Heart,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react-native';
 import { AppleLogo, GooglePlayLogo } from '@/components/StoreLogos';
 import {
   getEntryByUrl,
@@ -403,10 +409,15 @@ export default function AudioRoute() {
      gebouwd hebben, die pagina's dienen op een manier gebruikt te worden").
      Eerder bouwde ik hiervoor een aparte, kale pagina; dat was dubbel werk
      en precies niet wat er gevraagd was. Dit scherm bestaat al en is af —
-     alleen de tab ernaartoe is verborgen, het scherm zelf niet. Vanuit
-     breathwork komt hier dus gewoon naartoe wie tikt, met `from=breath` als
-     enige voorwaarde om de standaard-omleiding te omzeilen. */
-  if (AUDIO_ENABLED || params.from === 'breath') return <AudioScreen />;
+     alleen de tab ernaartoe is verborgen, het scherm zelf niet.
+     Twee routes komen hier binnen: `breath` (de kaart op het keuzescherm en
+     het afsluitscherm van een sessie) en `onboarding` (het bibliotheek-punt
+     op het laatste onboarding-scherm) — die laatste krijgt bovendien een
+     eigen terugknop, zie AudioScreen. */
+  const fromOnboarding = params.from === 'onboarding';
+  if (AUDIO_ENABLED || params.from === 'breath' || fromOnboarding) {
+    return <AudioScreen fromOnboarding={fromOnboarding} />;
+  }
   /* Niets doen zolang de root nog beslist waar de app opent. Deed dit hier
      meteen een omleiding, dan won die van `router.replace('/welcome')` en zag
      niemand het welkomstscherm nog (operator, 7 augustus 2026). De splash
@@ -416,7 +427,9 @@ export default function AudioRoute() {
   return <Redirect href="/breath" />;
 }
 
-function AudioScreen() {
+function AudioScreen({
+  fromOnboarding = false,
+}: { fromOnboarding?: boolean } = {}) {
   /* GEEN doorstuur meer naar Breath (7 augustus 2026). Die was bedoeld voor
      de terugknop, maar hij vocht met het welkomstscherm: de app opent op deze
      route, stuurde meteen door naar Breath, en overschreef daarmee de
@@ -1142,6 +1155,25 @@ function AudioScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
+      {/* De weg terug naar de onboarding (operator, 9 augustus 2026: "van
+          daaruit misschien ook een zwevende knop die teruggaat naar waar ze
+          gebleven waren"). Alleen zichtbaar via die ene ingang — wie hier
+          via breathwork zelf binnenkomt heeft de Breath-tab al als weg
+          terug, en twee knoppen voor hetzelfde is er één te veel.
+          `router.back()` en niet `router.replace`: de onboarding-stap staat
+          nog precies te wachten zoals hij was, want push laat hem gemount
+          liggen — er hoeft niets onthouden te worden om terug te keren op
+          exact dezelfde stap. */}
+      {fromOnboarding && (
+        <Pressable
+          onPress={() => router.back()}
+          style={s.backToOnboarding}
+          hitSlop={10}
+        >
+          <ArrowLeft size={16} color="#0a0a0a" strokeWidth={2.4} />
+          <Text style={s.backToOnboardingTxt}>Back to onboarding</Text>
+        </Pressable>
+      )}
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={[
@@ -3575,6 +3607,29 @@ function AudioScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+  backToOnboarding: {
+    position: 'absolute',
+    top: 8,
+    alignSelf: 'center',
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  backToOnboardingTxt: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12.5,
+    color: '#0a0a0a',
+  },
   /* Iter 9: nav-tiles voor New / Favorites / Free. Apple-iOS-style
      squircle tiles met glyph + label. 12px radius, hairline border,
      subtle bg-fill. Vervangt de oude full-pill nav-knoppen die te
