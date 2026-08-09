@@ -1099,9 +1099,9 @@ function SlideBracelet({
            midden van het beeld. */}
         <PodPulse
           width={BRACELET_W}
-          height={BRACELET_W * 0.7}
-          originY={0.605}
-          reach={0.085}
+          height={BRACELET_W * 0.34}
+          originY={0.58}
+          reach={0.1}
           intensity={2.4}
         />
       </Pressable>
@@ -1553,15 +1553,19 @@ const s = StyleSheet.create({
      schermen die er hetzelfde uitzien, was precies zichtbaar genoeg om als
      onzorgvuldig te lezen. */
   braceletSubLine: { marginTop: 6 },
-  /* 0.7 -> 0.42 (operator, 10 augustus 2026). Dit vak was de grootste
-     post op het scherm — breder dan het scherm zelf en 70% daarvan hoog —
-     terwijl zeven kenmerken eronder om diezelfde ruimte vroegen. */
+  /* 0.7 -> 0.42 -> 0.34 (operator, 10 augustus 2026, twee pogingen). De
+     eerste verkleining toonde nog altijd een kale strook onder de armband —
+     dat bleek niet de puls-ringen (overflow:hidden loste niets op, er viel
+     niets te clippen) maar de FOTO zelf: het bronbestand heeft eigen lege
+     ruimte onder de armband. Krapper bijsnijden toont minder van die rand
+     en meer van de armband + het kastje zelf. */
   braceletImgWrap: {
     marginTop: -6,
     width: BRACELET_W,
-    height: BRACELET_W * 0.42,
+    height: BRACELET_W * 0.34,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   features: { marginTop: 2, gap: 5 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -1614,7 +1618,7 @@ const s = StyleSheet.create({
      om slideArea) — deze hoogte is dus een richtwaarde, geen harde grens
      meer. */
   libHero: {
-    marginTop: 14,
+    marginTop: 22,
     width: CONTENT_W,
     height: 200,
     borderRadius: 20,
@@ -1713,6 +1717,10 @@ const s = StyleSheet.create({
   },
   titleBlockPlain: { width: CONTENT_W, alignItems: 'center' },
   startOrb: { marginTop: 10, marginBottom: 10 },
+  /* 14 -> 22 op de bibliotheekstap specifiek zou een losse stijl vragen;
+     dit gedeelde blok wordt ook door SlideStart gebruikt met drie punten
+     (past al ruim), dus de marge komt liever van de kop erboven — zie
+     libHero. */
   startPoints: { width: CONTENT_W, gap: 14 },
   startPoint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   startIconWrap: {
