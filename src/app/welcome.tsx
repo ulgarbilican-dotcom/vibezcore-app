@@ -324,17 +324,21 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={s.middle}>
-          {/* Operator-mockup, 8 augustus 2026. */}
+          {/* "CHANGE THE GAME..." weg (operator, 10 augustus 2026) — de kop
+              zegt het al. Een blauw kleurverloop over de woorden in plaats
+              van platte witte tekst: "Control Your" blijft wit, "Your"
+              warmt op naar lichtblauw, "Vibe"/"Life" staan vol in het
+              accentblauw. Geen losse gradient-tekengine nodig — drie tinten
+              over twee korte regels lezen al als een verloop. */}
           <Text style={s.header} numberOfLines={1}>
-            Control Your Vibe
+            Control{' '}
+            <Text style={s.headerMid}>Your</Text>{' '}
+            <Text style={s.headerAccent}>Vibe</Text>
           </Text>
           <Text style={s.header} numberOfLines={1}>
-            Control Your Life
-          </Text>
-          {/* Accent-streepje tussen hoofdregel en caps-ondertekst (#3a8fff). */}
-          <View style={s.accentBar} />
-          <Text style={s.subheader}>
-            CHANGE THE GAME · UNLOCK YOUR FULL POTENTIAL
+            Control{' '}
+            <Text style={s.headerMid}>Your</Text>{' '}
+            <Text style={s.headerAccent}>Life</Text>
           </Text>
         </View>
 
@@ -360,56 +364,64 @@ export default function WelcomeScreen() {
               Wat elke kaart moet doen: in twee regels vertellen wat je
               krijgt. Alleen een naam laat de bezoeker raden, en dit is het
               scherm waar iemand beslist of hij verder kijkt. */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.navigate('/bracelet')}
-            style={({ pressed }) => [s.card, pressed && s.cardPressed]}
-          >
-            <Image
-              source={{ uri: BRACELET_IMG }}
-              style={s.cardImg}
-              resizeMode="contain"
-              accessibilityIgnoresInvertColors
-            />
-            <View style={s.cardTxt}>
+          <View style={s.cardRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.navigate('/bracelet')}
+              style={({ pressed }) => [s.cardCol, pressed && s.cardPressed]}
+            >
+              {/* `cover`: het bronbestand draagt rondom lege ruimte, en
+                  `cover` snijdt die weg in plaats van hem mee te schalen
+                  (operator, 10 augustus 2026). */}
+              <Image
+                source={{ uri: BRACELET_IMG }}
+                style={s.cardColImg}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
               <Text style={s.cardTitle}>Smart Bead Bracelet</Text>
               <Text style={s.cardBody}>
                 Instant state control through precision haptics.
               </Text>
-            </View>
-            <ChevronRight size={20} color={Brand.accent} strokeWidth={2.2} />
-          </Pressable>
+              <View style={s.cardCta}>
+                <Text style={s.cardCtaTxt}>EXPLORE</Text>
+                <ChevronRight size={15} color={Brand.accent} strokeWidth={2.4} />
+              </View>
+            </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            /* Naar de ONBOARDING, niet rechtstreeks de vijf toestanden in
-               (operator, 8 augustus 2026). Wie hier tikt is nieuw; de intro
-               legt uit wat dit is en eindigt in de vragenlijst en een
-               volledige gratis sessie. Wie de intro al uitliep komt via de
-               Breath-tab gewoon binnen. */
-            onPress={() => {
-              /* Wie de intro al uitliep (of al sessies draaide) komt direct
-                 op de keuzepagina — de onboarding nog eens afdwingen is
-                 iemand de weg versperren die hem al kent (operator,
-                 8 augustus 2026). Alleen wie hier echt nieuw is krijgt de
-                 uitleg eerst. */
-              const seen =
-                getSetting('breathOnboardingCompletedAt') !== null;
-              router.navigate((seen ? '/breath' : '/breath-welcome') as never);
-            }}
-            style={({ pressed }) => [s.card, pressed && s.cardPressed]}
-          >
-            <View style={s.cardGlyph}>
-              <AudioWaveform size={26} color={Brand.accent} strokeWidth={2} />
-            </View>
-            <View style={s.cardTxt}>
+            <Pressable
+              accessibilityRole="button"
+              /* Naar de ONBOARDING, niet rechtstreeks de vijf toestanden in
+                 (operator, 8 augustus 2026). Wie hier tikt is nieuw; de
+                 intro legt uit wat dit is en eindigt in de vragenlijst en
+                 een volledige gratis sessie. Wie de intro al uitliep komt
+                 via de Breath-tab gewoon binnen. */
+              onPress={() => {
+                const seen =
+                  getSetting('breathOnboardingCompletedAt') !== null;
+                router.navigate(
+                  (seen ? '/breath' : '/breath-welcome') as never,
+                );
+              }}
+              style={({ pressed }) => [s.cardCol, pressed && s.cardPressed]}
+            >
+              <View style={s.cardColGlyph}>
+                <AudioWaveform
+                  size={40}
+                  color={Brand.accent}
+                  strokeWidth={1.6}
+                />
+              </View>
               <Text style={s.cardTitle}>Guided Breathwork</Text>
               <Text style={s.cardBody}>
                 Recognised techniques for energy, focus and recovery.
               </Text>
-            </View>
-            <ChevronRight size={20} color={Brand.accent} strokeWidth={2.2} />
-          </Pressable>
+              <View style={s.cardCta}>
+                <Text style={s.cardCtaTxt}>START SESSION</Text>
+                <ChevronRight size={15} color={Brand.accent} strokeWidth={2.4} />
+              </View>
+            </Pressable>
+          </View>
 
           {/* Twee regels, niet drie. "Reset in minutes" wees naar breathwork
               en dat staat nu als kaart hierboven — dezelfde bestemming twee
@@ -508,8 +520,9 @@ const s = StyleSheet.create({
   /* Het vierkante veld gecentreerd in het vak erboven. */
   fieldCenter: {
     position: 'absolute',
-    /* Onder de wordmark, boven de kop. */
-    top: 54,
+    /* 54 -> 30 (operator, 10 augustus 2026: "animatie zelf mag iets
+       hoger"). */
+    top: 30,
     left: Math.round((SCREEN_W - SCREEN_W * 0.94) / 2),
     width: Math.round(SCREEN_W * 0.94),
     height: Math.round(SCREEN_W * 0.94),
@@ -573,14 +586,6 @@ const s = StyleSheet.create({
        omhoog het veld in, waar hij op de mockup ook staat. */
     paddingBottom: 54,
   },
-  accentBar: {
-    width: 34,
-    height: 3,
-    backgroundColor: Brand.accent,
-    alignSelf: 'center',
-    marginTop: 22,
-    marginBottom: 16,
-  },
   header: {
     /* Hoofdregel = visuele baas. Inter 900 + lichte negatieve letter-spacing
        voor strakke koppen. fontSize gekozen zodat "Start Directing." (de
@@ -606,30 +611,20 @@ const s = StyleSheet.create({
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 2 },
   },
-  subheader: {
-    /* Iter 9ao (2026-05-31): kleur naar wit (was Brand.textDim #8a8a8a).
-       Door de zachtere gradient is de fotozone op die hoogte te druk
-       voor de gedimde grijs-tekst — wit met text-shadow leest altijd. */
-    color: Brand.text,
-    fontFamily: BrandFonts.medium,
-    fontSize: 11,
-    lineHeight: 16,
-    letterSpacing: 2.4,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.85)',
-    textShadowRadius: 6,
-    textShadowOffset: { width: 0, height: 2 },
-  },
+  /* De twee extra tinten van het verloop — zie de toelichting bij de
+     kop hierboven. */
+  headerMid: { color: '#9FC6FF' },
+  headerAccent: { color: Brand.accent },
   bottom: {
     gap: 10,
   },
-  /* ── De twee kaarten ── */
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+  /* ── De twee kaarten, naast elkaar (operator, 10 augustus 2026,
+     referentiebeeld erbij: "cards moet verticaal en naast elkaar") ── */
+  cardRow: { flexDirection: 'row', gap: 10 },
+  cardCol: {
+    flex: 1,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(58,143,255,0.28)',
@@ -639,31 +634,49 @@ const s = StyleSheet.create({
     borderColor: 'rgba(58,143,255,0.55)',
     backgroundColor: 'rgba(16,32,58,0.85)',
   },
-  cardImg: { width: 62, height: 62 },
-  /* Zelfde vak als de foto, zodat de twee kaarten even hoog beginnen en de
-     titels op één lijn staan. */
-  cardGlyph: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+  /* Het beeld boven, over de volle kolombreedte — `cover` snijdt de lege
+     rand van het bronbestand weg in plaats van hem mee te schalen. */
+  cardColImg: {
+    width: '100%',
+    height: 92,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  cardColGlyph: {
+    width: '100%',
+    height: 92,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(58,143,255,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 12,
   },
-  cardTxt: { flex: 1 },
   cardTitle: {
     fontFamily: BrandFonts.semibold,
-    fontSize: 18,
+    fontSize: 16,
     color: Brand.text,
     letterSpacing: -0.2,
   },
   cardBody: {
     marginTop: 4,
     fontFamily: BrandFonts.regular,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     color: 'rgba(255,255,255,0.62)',
+  },
+  cardCta: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardCtaTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 0.8,
+    color: Brand.accent,
   },
   linkAction: { color: Brand.accent, fontFamily: BrandFonts.semibold },
   btnRow: {
