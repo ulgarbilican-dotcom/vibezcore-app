@@ -28,13 +28,20 @@ import {
   User,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, {
+  Defs,
+  LinearGradient as SvgGradient,
+  Stop,
+  Text as SvgText,
+} from 'react-native-svg';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { getSetting } from '@/utils/settings';
-import {
+import Animated, {
   Easing,
   cancelAnimation,
   useAnimatedReaction,
+  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -42,6 +49,7 @@ import {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import PodPulse from '@/components/PodPulse';
 import {
   Dimensions,
   Image,
@@ -185,6 +193,38 @@ export default function WelcomeScreen() {
   });
   void turn;
 
+  /* De kaarten ademen, traag en licht — een schaal van 1 naar 1,03 en
+     terug, elk op zijn eigen ritme zodat de twee nooit precies gelijk
+     lopen (operator, 10 augustus 2026: "beweging in de cards, nu is alles
+     statisch"). */
+  const cardBreath1 = useSharedValue(0);
+  const cardBreath2 = useSharedValue(0);
+  useEffect(() => {
+    cardBreath1.value = withRepeat(
+      withTiming(1, { duration: 3400, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+    cardBreath2.value = withRepeat(
+      withDelay(
+        400,
+        withTiming(1, { duration: 3800, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    );
+    return () => {
+      cancelAnimation(cardBreath1);
+      cancelAnimation(cardBreath2);
+    };
+  }, [cardBreath1, cardBreath2]);
+  const breathe1 = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + cardBreath1.value * 0.03 }],
+  }));
+  const breathe2 = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + cardBreath2.value * 0.03 }],
+  }));
+
   /* Reeds ingelogd? → welkomstscherm overslaan, direct de tabs in.
      Tijdens de check tonen we alleen de merk-achtergrondkleur (geen flits).
      Iter 9ar (2026-05-31): respecteert nu OOK de dev user-override
@@ -325,21 +365,44 @@ export default function WelcomeScreen() {
 
         <View style={s.middle}>
           {/* "CHANGE THE GAME..." weg (operator, 10 augustus 2026) — de kop
-              zegt het al. Een blauw kleurverloop over de woorden in plaats
-              van platte witte tekst: "Control Your" blijft wit, "Your"
-              warmt op naar lichtblauw, "Vibe"/"Life" staan vol in het
-              accentblauw. Geen losse gradient-tekengine nodig — drie tinten
-              over twee korte regels lezen al als een verloop. */}
-          <Text style={s.header} numberOfLines={1}>
-            Control{' '}
-            <Text style={s.headerMid}>Your</Text>{' '}
-            <Text style={s.headerAccent}>Vibe</Text>
-          </Text>
-          <Text style={s.header} numberOfLines={1}>
-            Control{' '}
-            <Text style={s.headerMid}>Your</Text>{' '}
-            <Text style={s.headerAccent}>Life</Text>
-          </Text>
+              zegt het al. Een ECHTE SVG-gradient over de kop (operator,
+              dezelfde datum, tweede poging: "gradient blauw is niet echt
+              mooi, moet professioneler") — drie losse kleurtinten op
+              gewone Text lazen als stappen, geen verloop. react-native-svg
+              was al een afhankelijkheid van deze app (player.tsx,
+              bracelet-control.tsx); zijn <Text> accepteert een gradient
+              als fill en is daarmee het juiste gereedschap. */}
+          <Svg width={CONTENT_W} height={112}>
+            <Defs>
+              <SvgGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#ffffff" />
+                <Stop offset="0.55" stopColor="#bfe0ff" />
+                <Stop offset="1" stopColor={Brand.accent} />
+              </SvgGradient>
+            </Defs>
+            <SvgText
+              x="50%"
+              y="42"
+              textAnchor="middle"
+              fontFamily={BrandFonts.regular}
+              fontSize={36}
+              letterSpacing={0.2}
+              fill="url(#headerGrad)"
+            >
+              Control Your Vibe
+            </SvgText>
+            <SvgText
+              x="50%"
+              y="86"
+              textAnchor="middle"
+              fontFamily={BrandFonts.regular}
+              fontSize={36}
+              letterSpacing={0.2}
+              fill="url(#headerGrad)"
+            >
+              Control Your Life
+            </SvgText>
+          </Svg>
         </View>
 
         <View style={s.bottom}>
@@ -370,15 +433,41 @@ export default function WelcomeScreen() {
               onPress={() => router.navigate('/bracelet')}
               style={({ pressed }) => [s.cardCol, pressed && s.cardPressed]}
             >
-              {/* `cover`: het bronbestand draagt rondom lege ruimte, en
-                  `cover` snijdt die weg in plaats van hem mee te schalen
-                  (operator, 10 augustus 2026). */}
-              <Image
-                source={{ uri: BRACELET_IMG }}
-                style={s.cardColImg}
-                resizeMode="cover"
-                accessibilityIgnoresInvertColors
+              {/* Lichtbron in de kaart zelf (operator, 10 augustus 2026:
+                  "binnenkant te effen, misschien gradient of een soort
+                  lichtbron") — een zachte gloed die van linksboven komt,
+                  zoals licht dat ergens buiten beeld vandaan schijnt. */}
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(58,143,255,0.16)', 'rgba(58,143,255,0)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.8, y: 0.9 }}
+                style={StyleSheet.absoluteFill}
               />
+              {/* `contain`, niet `cover` (operator, 10 augustus 2026,
+                  tweede correctie: "bracelet wordt links en rechts
+                  afgesneden, dat mag niet") — de hele armband moet zichtbaar
+                  blijven, ook als dat lege rand van het bronbestand
+                  meebrengt. */}
+              <Animated.View style={[s.cardVisual, breathe1]}>
+                <Image
+                  source={{ uri: BRACELET_IMG }}
+                  style={s.cardColImg}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+                {/* De haptische klop (operator: "bracelet moet ook haptics
+                    krijgen") — hetzelfde kastje-effect als op de onboarding-
+                    schermen, hier op de plek van de foto. */}
+                <PodPulse
+                  width={CARD_IMG_W}
+                  height={CARD_IMG_H}
+                  originX={0.5}
+                  originY={0.56}
+                  reach={0.09}
+                  intensity={2}
+                />
+              </Animated.View>
               <Text style={s.cardTitle}>Smart Bead Bracelet</Text>
               <Text style={s.cardBody}>
                 Instant state control through precision haptics.
@@ -405,13 +494,23 @@ export default function WelcomeScreen() {
               }}
               style={({ pressed }) => [s.cardCol, pressed && s.cardPressed]}
             >
-              <View style={s.cardColGlyph}>
-                <AudioWaveform
-                  size={40}
-                  color={Brand.accent}
-                  strokeWidth={1.6}
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(58,143,255,0.16)', 'rgba(58,143,255,0)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.8, y: 0.9 }}
+                style={StyleSheet.absoluteFill}
+              />
+              {/* Operator-foto voor deze kaart, 10 augustus 2026 — vervangt
+                  het losse golficoon. */}
+              <Animated.View style={[s.cardVisual, breathe2]}>
+                <Image
+                  source={{ uri: BREATHWORK_CARD_IMG }}
+                  style={s.cardColImg}
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
                 />
-              </View>
+              </Animated.View>
               <Text style={s.cardTitle}>Guided Breathwork</Text>
               <Text style={s.cardBody}>
                 Recognised techniques for energy, focus and recovery.
@@ -476,10 +575,24 @@ export default function WelcomeScreen() {
    Bracelet-tab, zodat het product er op beide plekken gelijk uitziet. */
 const BRACELET_IMG =
   'https://vibezcore-audio.b-cdn.net/images/vzc-bracelet%20no%20bg.png';
+/* Operator-foto voor de Guided Breathwork-kaart, 10 augustus 2026. */
+const BREATHWORK_CARD_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/welcome%20app%20screen%20duo.png';
+/* Maten van het beeldvak in de kaart — PodPulse rekent zijn kloppunt op
+   deze afmetingen, dus ze moeten gelijk zijn aan `cardColImg` hieronder.
+   Rechtstreeks uit Dimensions en niet uit SCREEN_W: die constante staat
+   verderop in dit bestand en zou hier nog niet bestaan (module-volgorde). */
+const CARD_IMG_W = Math.round(
+  (Dimensions.get('window').width - 48 - 10) / 2 - 28,
+);
+const CARD_IMG_H = 92;
 
 /* Het veld vult de bovenste helft; daaronder loopt het via de bestaande
    gradient in het zwart over. */
 const SCREEN_W = Dimensions.get('window').width;
+/* Breedte van het SVG-vlak voor de kop: schermbreedte min de zijmarge van
+   `safe` (paddingHorizontal:24 aan beide kanten). */
+const CONTENT_W = SCREEN_W - 48;
 const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
 /* Vierkant, want de wolk rekent in een vierkante ruimte. Breder dan het scherm
    zodat de buitenrand van het veld doorloopt tot voorbij de zijkanten. */
@@ -629,6 +742,9 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(58,143,255,0.28)',
     backgroundColor: 'rgba(12,24,44,0.72)',
+    /* De lichtbron-gradient (StyleSheet.absoluteFill) mag nooit voorbij
+       de ronde hoeken van de kaart uitsteken. */
+    overflow: 'hidden',
   },
   cardPressed: {
     borderColor: 'rgba(58,143,255,0.55)',
@@ -636,12 +752,19 @@ const s = StyleSheet.create({
   },
   /* Het beeld boven, over de volle kolombreedte — `cover` snijdt de lege
      rand van het bronbestand weg in plaats van hem mee te schalen. */
-  cardColImg: {
+  /* De wrapper draagt de marge en de vaste plaats voor PodPulse (die zich
+     absoluut positioneert op zijn eigen ouder); `cardColImg` zelf is nu
+     puur de afbeelding. */
+  cardVisual: {
     width: '100%',
     height: 92,
+    marginBottom: 12,
+  },
+  cardColImg: {
+    width: '100%',
+    height: '100%',
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 12,
   },
   cardColGlyph: {
     width: '100%',
