@@ -1315,8 +1315,16 @@ const FOUR_PILLARS = [
    slotscherm hierna — kop, drie punten — zodat de twee als familie lezen
    en niet als twee andere vaardigheden. */
 function SlideLibrary() {
+  /* Enige uitzondering op "geen scroll" (operator, 10 augustus 2026): dit
+     scherm draagt sinds de vier pijlers gewoon meer dan één beeldvlak kan
+     dragen zonder de tekst tot onleesbaar te verkleinen. Alleen HIER een
+     ScrollView — de andere vijf stappen blijven op hun eigen plek passen. */
   return (
-    <View style={s.slide}>
+    <ScrollView
+      style={s.libScroll}
+      contentContainerStyle={s.slide}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Dezelfde kop-vorm als HOW IT WORKS en de andere stappen (operator,
          9 augustus 2026: "header ook zoals andere onboarding tekst"). Stond
          eerst als klein bijschrift IN de foto gebakken — dat maakte dit
@@ -1381,7 +1389,7 @@ function SlideLibrary() {
           </View>
         ))}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -1473,6 +1481,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   slide: { alignItems: 'center', width: '100%' },
+  libScroll: { width: '100%', alignSelf: 'stretch' },
+  /* Bewust GEEN paddingBottom hier — contentContainerStyle is `s.slide`,
+     gedeeld met alle andere stappen; extra lucht onderaan komt van
+     pillarCard's eigen marginBottom. */
   /* Scherm 2 begint bovenaan i.p.v. gecentreerd: met vier grote kaarten is
      er onderaan toch geen ruimte over, en de kop hoort bovenaan te staan. */
   slideAreaTop: { justifyContent: 'flex-start', paddingTop: 4 },
@@ -1668,12 +1680,13 @@ const s = StyleSheet.create({
      om slideArea) — deze hoogte is dus een richtwaarde, geen harde grens
      meer. */
   libHero: {
+    /* Terug naar ruimer nu dit scherm mag scrollen (operator, 10 augustus
+       2026: "voor audio library onboarding mag scroll uitzonderlijk"). De
+       eerdere krimp naar 96 was een noodgreep tegen een knop die alles
+       overlapte; die noodzaak is weg. */
     marginTop: 22,
     width: CONTENT_W,
-    /* 200 -> 130: de pijlers eronder vragen hun eigen ruimte, en de foto
-       is hier decor — de tekst draagt het scherm (operator, 10 augustus
-       2026, over dit vak: "alles in verhouding"). */
-    height: 130,
+    height: 170,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -1777,9 +1790,9 @@ const s = StyleSheet.create({
   /* marginTop 22, gelijk aan de ruimte BOVEN de foto (libHero) — dezelfde
      lucht aan beide kanten in plaats van de tekst tegen de foto te
      duwen (operator, 10 augustus 2026). */
-  startPoints: { width: CONTENT_W, gap: 10, marginTop: 18 },
+  startPoints: { width: CONTENT_W, gap: 12, marginTop: 20 },
   pillarsLbl: {
-    marginTop: 18,
+    marginTop: 20,
     width: CONTENT_W,
     color: '#7FB2FF',
     fontFamily: BrandFonts.bold,
@@ -1787,7 +1800,7 @@ const s = StyleSheet.create({
     letterSpacing: 2,
   },
   pillarsGrid: {
-    marginTop: 8,
+    marginTop: 10,
     width: CONTENT_W,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1796,7 +1809,7 @@ const s = StyleSheet.create({
   pillarCard: {
     width: (CONTENT_W - 10) / 2,
     marginBottom: 10,
-    padding: 10,
+    padding: 11,
     borderRadius: 12,
     backgroundColor: 'rgba(127,178,255,0.06)',
   },
@@ -1807,15 +1820,15 @@ const s = StyleSheet.create({
   pillarName: {
     color: '#ffffff',
     fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontSize: 12.5,
+    lineHeight: 16,
   },
   pillarTag: {
-    marginTop: 2,
+    marginTop: 3,
     color: 'rgba(255,255,255,0.55)',
     fontFamily: BrandFonts.regular,
-    fontSize: 10.5,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 15,
   },
   startPoint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   startIconWrap: {
