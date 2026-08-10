@@ -464,10 +464,11 @@ export default function WelcomeScreen() {
                 <PodPulse
                   width={CARD_IMG_W}
                   height={CARD_IMG_H}
-                  originX={0.5}
-                  originY={0.62}
-                  reach={0.1}
-                  intensity={2.6}
+                  originX={0.4}
+                  originY={0.76}
+                  reach={0.08}
+                  intensity={3.4}
+                  color={SOFT_BLUE}
                 />
               </Animated.View>
               <Text style={s.cardTitle}>Smart Bead Bracelet</Text>
@@ -602,8 +603,13 @@ const CONTENT_W = SCREEN_W - 48;
    (operator, 10 augustus 2026: "accentblauw nu overal is redelijk hard").
    Minder verzadigd, meer wit erin, blijft leesbaar blauw op zwart zonder
    te schreeuwen. */
-const SOFT_BLUE = '#7EB8FF';
-const SOFT_BLUE_RGB = '126,184,255';
+/* #7EB8FF (eerste poging) las nog te bleek en pastel aan (operator, 10
+   augustus 2026, tweede correctie: "moderner kiezen"). #4F8FFF is
+   verzadigder — de blauwtoon die de meeste hedendaagse SaaS-merken
+   gebruiken — zonder terug te vallen op het hardere #3a8fff van
+   daarvoor. */
+const SOFT_BLUE = '#4F8FFF';
+const SOFT_BLUE_RGB = '79,143,255';
 const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
 /* Vierkant, want de wolk rekent in een vierkante ruimte. Breder dan het scherm
    zodat de buitenrand van het veld doorloopt tot voorbij de zijkanten. */
