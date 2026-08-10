@@ -377,7 +377,7 @@ export default function WelcomeScreen() {
               <SvgGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0" stopColor="#ffffff" />
                 <Stop offset="0.55" stopColor="#bfe0ff" />
-                <Stop offset="1" stopColor={Brand.accent} />
+                <Stop offset="1" stopColor={SOFT_BLUE} />
               </SvgGradient>
             </Defs>
             <SvgText
@@ -439,7 +439,7 @@ export default function WelcomeScreen() {
                   zoals licht dat ergens buiten beeld vandaan schijnt. */}
               <LinearGradient
                 pointerEvents="none"
-                colors={['rgba(58,143,255,0.16)', 'rgba(58,143,255,0)']}
+                colors={[`rgba(${SOFT_BLUE_RGB},0.16)`, `rgba(${SOFT_BLUE_RGB},0)`]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0.8, y: 0.9 }}
                 style={StyleSheet.absoluteFill}
@@ -450,22 +450,24 @@ export default function WelcomeScreen() {
                   blijven, ook als dat lege rand van het bronbestand
                   meebrengt. */}
               <Animated.View style={[s.cardVisual, breathe1]}>
+                {/* `cover`, zelfde behandeling als de breathwork-foto — dit
+                   bronbestand heeft al een achtergrond en is op formaat
+                   aangeleverd (operator, 10 augustus 2026). */}
                 <Image
                   source={{ uri: BRACELET_IMG }}
                   style={s.cardColImg}
-                  resizeMode="contain"
+                  resizeMode="cover"
                   accessibilityIgnoresInvertColors
                 />
-                {/* De haptische klop (operator: "bracelet moet ook haptics
-                    krijgen") — hetzelfde kastje-effect als op de onboarding-
-                    schermen, hier op de plek van de foto. */}
+                {/* De haptische klop, hetzelfde kastje-effect als op de
+                    onboarding-schermen. */}
                 <PodPulse
                   width={CARD_IMG_W}
                   height={CARD_IMG_H}
                   originX={0.5}
-                  originY={0.56}
-                  reach={0.09}
-                  intensity={2}
+                  originY={0.62}
+                  reach={0.1}
+                  intensity={2.6}
                 />
               </Animated.View>
               <Text style={s.cardTitle}>Smart Bead Bracelet</Text>
@@ -474,7 +476,7 @@ export default function WelcomeScreen() {
               </Text>
               <View style={s.cardCta}>
                 <Text style={s.cardCtaTxt}>EXPLORE</Text>
-                <ChevronRight size={15} color={Brand.accent} strokeWidth={2.4} />
+                <ChevronRight size={15} color={SOFT_BLUE} strokeWidth={2.4} />
               </View>
             </Pressable>
 
@@ -496,7 +498,7 @@ export default function WelcomeScreen() {
             >
               <LinearGradient
                 pointerEvents="none"
-                colors={['rgba(58,143,255,0.16)', 'rgba(58,143,255,0)']}
+                colors={[`rgba(${SOFT_BLUE_RGB},0.16)`, `rgba(${SOFT_BLUE_RGB},0)`]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0.8, y: 0.9 }}
                 style={StyleSheet.absoluteFill}
@@ -517,7 +519,7 @@ export default function WelcomeScreen() {
               </Text>
               <View style={s.cardCta}>
                 <Text style={s.cardCtaTxt}>START SESSION</Text>
-                <ChevronRight size={15} color={Brand.accent} strokeWidth={2.4} />
+                <ChevronRight size={15} color={SOFT_BLUE} strokeWidth={2.4} />
               </View>
             </Pressable>
           </View>
@@ -537,7 +539,7 @@ export default function WelcomeScreen() {
               <Text style={s.linkRowText}>
                 Have a bracelet? <Text style={s.linkAction}>Activate now</Text>
               </Text>
-              <ChevronRight size={16} color={Brand.accent} strokeWidth={2.2} />
+              <ChevronRight size={16} color={SOFT_BLUE} strokeWidth={2.2} />
             </Pressable>
             <View style={s.linkRowSep} />
             <Pressable
@@ -550,7 +552,7 @@ export default function WelcomeScreen() {
               <Text style={s.linkRowText}>
                 Already a member? <Text style={s.linkAction}>Sign in</Text>
               </Text>
-              <ChevronRight size={16} color={Brand.accent} strokeWidth={2.2} />
+              <ChevronRight size={16} color={SOFT_BLUE} strokeWidth={2.2} />
             </Pressable>
           </View>
 
@@ -561,9 +563,9 @@ export default function WelcomeScreen() {
               beeld zoals in de referentie: dat beeld draagt het scherm al,
               hier hoeft alleen de laatste regel te staan. */}
           <Text style={s.footTagline}>
-            YOUR <Text style={{ color: Brand.accent }}>MIND</Text>. YOUR{' '}
-            <Text style={{ color: Brand.accent }}>BODY</Text>. YOUR{' '}
-            <Text style={{ color: Brand.accent }}>EVOLUTION</Text>.
+            YOUR <Text style={{ color: SOFT_BLUE }}>MIND</Text>. YOUR{' '}
+            <Text style={{ color: SOFT_BLUE }}>BODY</Text>. YOUR{' '}
+            <Text style={{ color: SOFT_BLUE }}>EVOLUTION</Text>.
           </Text>
         </View>
       </SafeAreaView>
@@ -573,8 +575,11 @@ export default function WelcomeScreen() {
 
 /* De bracelet zelf, vrijstaand op zwart — dezelfde render als op de
    Bracelet-tab, zodat het product er op beide plekken gelijk uitziet. */
+/* Nieuwe operator-foto (10 augustus 2026): armband MET achtergrond, zelfde
+   formaat als de Guided Breathwork-foto — dus dezelfde `cover`-behandeling
+   in plaats van het `contain` van de vorige, vrijstaande versie. */
 const BRACELET_IMG =
-  'https://vibezcore-audio.b-cdn.net/images/vzc-bracelet%20no%20bg.png';
+  'https://vibezcore-audio.b-cdn.net/images/welcoma%20screen%20app%20bracelet%20with%20background%202.png';
 /* Operator-foto voor de Guided Breathwork-kaart, 10 augustus 2026. */
 const BREATHWORK_CARD_IMG =
   'https://vibezcore-audio.b-cdn.net/images/welcome%20app%20screen%20duo.png';
@@ -593,6 +598,12 @@ const SCREEN_W = Dimensions.get('window').width;
 /* Breedte van het SVG-vlak voor de kop: schermbreedte min de zijmarge van
    `safe` (paddingHorizontal:24 aan beide kanten). */
 const CONTENT_W = SCREEN_W - 48;
+/* Zachter en lichter dan SOFT_BLUE (#3a8fff) — alleen voor dit scherm
+   (operator, 10 augustus 2026: "accentblauw nu overal is redelijk hard").
+   Minder verzadigd, meer wit erin, blijft leesbaar blauw op zwart zonder
+   te schreeuwen. */
+const SOFT_BLUE = '#7EB8FF';
+const SOFT_BLUE_RGB = '126,184,255';
 const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
 /* Vierkant, want de wolk rekent in een vierkante ruimte. Breder dan het scherm
    zodat de buitenrand van het veld doorloopt tot voorbij de zijkanten. */
@@ -727,7 +738,7 @@ const s = StyleSheet.create({
   /* De twee extra tinten van het verloop — zie de toelichting bij de
      kop hierboven. */
   headerMid: { color: '#9FC6FF' },
-  headerAccent: { color: Brand.accent },
+  headerAccent: { color: SOFT_BLUE },
   bottom: {
     gap: 10,
   },
@@ -740,14 +751,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.28)',
+    borderColor: `rgba(${SOFT_BLUE_RGB},0.28)`,
     backgroundColor: 'rgba(12,24,44,0.72)',
     /* De lichtbron-gradient (StyleSheet.absoluteFill) mag nooit voorbij
        de ronde hoeken van de kaart uitsteken. */
     overflow: 'hidden',
   },
   cardPressed: {
-    borderColor: 'rgba(58,143,255,0.55)',
+    borderColor: `rgba(${SOFT_BLUE_RGB},0.55)`,
     backgroundColor: 'rgba(16,32,58,0.85)',
   },
   /* Het beeld boven, over de volle kolombreedte — `cover` snijdt de lege
@@ -771,7 +782,7 @@ const s = StyleSheet.create({
     height: 92,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.35)',
+    borderColor: `rgba(${SOFT_BLUE_RGB},0.35)`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -799,56 +810,12 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 11.5,
     letterSpacing: 0.8,
-    color: Brand.accent,
+    color: SOFT_BLUE,
   },
-  linkAction: { color: Brand.accent, fontFamily: BrandFonts.semibold },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  btnHalf: {
-    flex: 1,
-    paddingHorizontal: 8,
-  },
-  btn: {
-    /* Halftransparante accentkleur: bracelet schijnt er onderdoor heen.
-       Brand.accent = #3a8fff = rgb(58,143,255), 0.55 alpha. Lichte rand
-       houdt de knop-vorm helder tegen de foto. */
-    backgroundColor: 'rgba(58,143,255,0.55)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnPressed: {
-    /* Brand.accentHover = #2a7fee = rgb(42,127,238), iets minder transparant
-       voor duidelijke pressed-feedback. */
-    backgroundColor: 'rgba(42,127,238,0.78)',
-  },
-  btnLabel: {
-    color: Brand.text,
-    fontFamily: BrandFonts.bold,
-    fontSize: 16,
-    letterSpacing: 0.2,
-    textAlign: 'center',
-    /* Tekstschaduw voor leesbaarheid over zowel donkere als lichte fotozones. */
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowRadius: 4,
-    textShadowOffset: { width: 0, height: 1 },
-  },
+  linkAction: { color: SOFT_BLUE, fontFamily: BrandFonts.semibold },
   /* Iter v237f (2026-07-09): 3 links in nette grouped card met dividers.
      Voorheen was 't 3 losse text-links wat te druk oogde. Nu: 1 pill met
      3 rijen gescheiden door hairline dividers — leest als een menu-lijstje. */
-  secondaryBtn: { alignSelf: 'center', paddingVertical: 14 },
-  secondaryLabel: {
-    color: Brand.text,
-    fontFamily: BrandFonts.semibold,
-    fontSize: 15,
-    letterSpacing: 0.2,
-  },
   linksDivider: {
     height: 1,
     marginTop: 16,

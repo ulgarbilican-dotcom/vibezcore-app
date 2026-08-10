@@ -37,12 +37,24 @@ export const WELCOME_WOMAN =
   'https://vibezcore-audio.b-cdn.net/images/welcome%20woman%203.png';
 
 /** Alles wat een ademsessie nodig heeft om zonder netwerk te werken:
- *  de illustraties, de gezichten en elke stemopname. */
+ *  de illustraties, de gezichten en elke stemopname.
+ *
+ *  FACES_URL en WELCOME_MAN/WELCOME_WOMAN staan VOORAAN (operator, 10
+ *  augustus 2026: "welcome breathwork pagina 1 van 6 laadt heel traag en de
+ *  foto wordt soms overgeslagen"). `cacheAssets` haalt deze lijst
+ *  SEQUENTIEEL binnen. Drie beelden — FACES_URL voor de onboarding-intro,
+ *  WELCOME_MAN/WELCOME_WOMAN voor het app-welkomstscherm — zijn allebei het
+ *  EERSTE wat een nieuwe gebruiker ooit ziet, nog voor de vijf sessie-
+ *  illustraties of een enkele stemopname ooit nodig zijn. Stonden ze
+ *  achteraan (wat FACES_URL tot nu toe deed), dan was de download-wachtrij
+ *  op een verse installatie nog niet bij hen aanbeland tegen de tijd dat
+ *  het scherm ze al probeerde te tonen: `useImage` levert dan een leeg
+ *  beeld terug en de wolk vormt geen gezicht. */
 export const OFFLINE_ASSETS: string[] = [
-  ...Object.values(SESSION_ART),
   FACES_URL,
-  ...Object.values(STATE_PHOTOS),
   WELCOME_MAN,
   WELCOME_WOMAN,
+  ...Object.values(SESSION_ART),
+  ...Object.values(STATE_PHOTOS),
   ...VOICE_ASSET_URLS,
 ];
