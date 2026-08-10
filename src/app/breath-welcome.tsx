@@ -74,6 +74,7 @@ import {
   ChevronRight,
   Clock,
   Gem,
+  Headphones,
   Leaf,
   Moon,
   Repeat,
@@ -1097,10 +1098,13 @@ function SlideBracelet({
         />
         {/* De haptische klop komt uit het zwarte kastje, iets onder het
            midden van het beeld. */}
+        {/* originY 0.58 -> 0.70 (operator, 10 augustus 2026: "haptic staat
+            nog altijd 0.5cm te hoog"). De vorige poging schatte het
+            kastje te hoog in de bijgesneden foto. */}
         <PodPulse
           width={BRACELET_W}
           height={BRACELET_W * 0.34}
-          originY={0.58}
+          originY={0.7}
           reach={0.1}
           intensity={2.4}
         />
@@ -1272,8 +1276,20 @@ const LIBRARY_POINTS = [
   {
     key: 'built',
     Icon: Gem,
-    label: 'BUILT ON TIMELESS IDEAS',
+    /* "Built on timeless ideas" -> "Timeless wisdom" (operator, 10 augustus
+       2026) — korter, en de bron (Jung, de Stoïcijnen) staat toch al in de
+       tekst eronder. */
+    label: 'TIMELESS WISDOM',
     text: 'Jung, the Stoics and more, turned into guided audio.',
+  },
+  {
+    /* 144 sessies in de bibliotheek (data/audio-library-data.ts) — "140+"
+       rondt naar beneden af, zodat het getal nooit voor de werkelijkheid
+       uitloopt als er sessies bijkomen. */
+    key: 'count',
+    Icon: Headphones,
+    label: '140+ SESSIONS',
+    text: 'Across four pillars of personal development.',
   },
   {
     key: 'unlocked',
@@ -1281,6 +1297,15 @@ const LIBRARY_POINTS = [
     label: 'FULL ACCESS WITH PREMIUM',
     text: 'Every series unlocked, included in your subscription.',
   },
+] as const;
+
+/* De vier pijlers — CLAUDE.md §4, woordelijk. Bindend en overal op de
+   webapp consistent; hier voor het eerst ook in de app zelf. */
+const FOUR_PILLARS = [
+  { key: 'resilience', name: 'Psychological Resilience', tag: 'Build what cannot break.' },
+  { key: 'sovereignty', name: 'Inner Sovereignty', tag: 'Master what is yours.' },
+  { key: 'mastery', name: 'Social Mastery', tag: 'Command without force.' },
+  { key: 'wealth', name: 'Strategic Execution & Wealth', tag: 'Engineer your autonomy.' },
 ] as const;
 
 /* ── Stap 5: de bibliotheek krijgt haar eigen scherm ──────────────────────
@@ -1339,6 +1364,20 @@ function SlideLibrary() {
               <Text style={s.startLabel}>{label}</Text>
               <Text style={s.startDesc}>{text}</Text>
             </View>
+          </View>
+        ))}
+      </View>
+
+      {/* De vier pijlers (operator, 10 augustus 2026). Geen vierde punt in
+          de lijst erboven — vier extra regels met icoon zouden het scherm
+          weer laten breken. Een krap 2x2-raster met alleen naam + korte
+          belofte draagt hetzelfde gewicht in de helft van de hoogte. */}
+      <Text style={s.pillarsLbl}>FOUR PILLARS</Text>
+      <View style={s.pillarsGrid}>
+        {FOUR_PILLARS.map(({ key, name, tag }) => (
+          <View key={key} style={s.pillarCard}>
+            <Text style={s.pillarName}>{name}</Text>
+            <Text style={s.pillarTag}>{tag}</Text>
           </View>
         ))}
       </View>
@@ -1562,7 +1601,10 @@ const s = StyleSheet.create({
      ruimte onder de armband. Krapper bijsnijden toont minder van die rand
      en meer van de armband + het kastje zelf. */
   braceletImgWrap: {
-    marginTop: -6,
+    /* -6 -> 32 (operator, 10 augustus 2026: "bracelet en tekst eronder
+       moeten 1cm zakken"). Schuift de armband en alles eronder als geheel
+       lager, weg van de kop erboven. */
+    marginTop: 32,
     width: BRACELET_W,
     height: BRACELET_W * 0.34,
     alignItems: 'center',
@@ -1628,7 +1670,10 @@ const s = StyleSheet.create({
   libHero: {
     marginTop: 22,
     width: CONTENT_W,
-    height: 200,
+    /* 200 -> 130: de pijlers eronder vragen hun eigen ruimte, en de foto
+       is hier decor — de tekst draagt het scherm (operator, 10 augustus
+       2026, over dit vak: "alles in verhouding"). */
+    height: 130,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -1732,7 +1777,46 @@ const s = StyleSheet.create({
   /* marginTop 22, gelijk aan de ruimte BOVEN de foto (libHero) — dezelfde
      lucht aan beide kanten in plaats van de tekst tegen de foto te
      duwen (operator, 10 augustus 2026). */
-  startPoints: { width: CONTENT_W, gap: 14, marginTop: 22 },
+  startPoints: { width: CONTENT_W, gap: 10, marginTop: 18 },
+  pillarsLbl: {
+    marginTop: 18,
+    width: CONTENT_W,
+    color: '#7FB2FF',
+    fontFamily: BrandFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 2,
+  },
+  pillarsGrid: {
+    marginTop: 8,
+    width: CONTENT_W,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  pillarCard: {
+    width: (CONTENT_W - 10) / 2,
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(127,178,255,0.06)',
+  },
+  /* Zelfde lettergewicht-paar als startLabel/startDesc hierboven — bold
+     hoofdregel, regular onderschrift — zodat dit raster als familie leest
+     met de drie punten erboven, niet als een ander onderdeel (operator, 10
+     augustus 2026: "font consistent"). */
+  pillarName: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    lineHeight: 15,
+  },
+  pillarTag: {
+    marginTop: 2,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 10.5,
+    lineHeight: 14,
+  },
   startPoint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   startIconWrap: {
     width: 34,
