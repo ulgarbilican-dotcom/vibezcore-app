@@ -442,6 +442,18 @@ export default function WelcomeScreen() {
               <ChevronRight size={16} color={Brand.accent} strokeWidth={2.2} />
             </Pressable>
           </View>
+
+          {/* Sluitregel (operator, 10 augustus 2026, met een referentiebeeld
+              erbij): drie woorden, elk voor wat de app werkelijk is — de
+              ademsessies trainen de geest, de bracelet werkt op het lichaam,
+              samen is dat waar VIBEZCORE om draait. Geen aparte animatie of
+              beeld zoals in de referentie: dat beeld draagt het scherm al,
+              hier hoeft alleen de laatste regel te staan. */}
+          <Text style={s.footTagline}>
+            YOUR <Text style={{ color: Brand.accent }}>MIND</Text>. YOUR{' '}
+            <Text style={{ color: Brand.accent }}>BODY</Text>. YOUR{' '}
+            <Text style={{ color: Brand.accent }}>EVOLUTION</Text>.
+          </Text>
         </View>
       </SafeAreaView>
     </View>
@@ -712,6 +724,14 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
     backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  footTagline: {
+    marginTop: 16,
+    textAlign: 'center',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 2.2,
+    color: 'rgba(255,255,255,0.5)',
   },
   /* Icoon, tekst en pijl op ÉÉN regel. Zonder richting stapelde React Native
      ze onder elkaar en werd van twee regels een blok van zes. */

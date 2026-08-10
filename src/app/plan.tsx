@@ -33,6 +33,7 @@ import {
   syncReminders,
 } from '@/services/reminders';
 import { router, Stack } from 'expo-router';
+import { skipBreathIntroOnce } from '@/utils/breath-entry';
 import {
   Bell,
   Check,
@@ -67,7 +68,14 @@ const MOMENTS = [
      hoort dat moment hier terug te zien. Dit is waar de voorkeuren uit de
      vragenlijst zichtbaar worden. */
   { key: 'midday', label: 'MIDDAY', hour: 13, from: 12, to: 17 },
-  { key: 'evening', label: 'EVENING', hour: 21, from: 17, to: 24 },
+  /* to: 24 -> 28 (operator, 10 augustus 2026: "voor sommige users is
+     evening misschien 2u, 3u — wij beperken dit toch?"). 24 t/m 27 zijn
+     0:00 t/m 3:45 de volgende ochtend — JS' eigen Date-rekenkunde rolt dat
+     correct om (zie fmtTime en nextFireText), dus dit is geen aparte
+     nacht-categorie maar gewoon een langere avond. Samen met morning vanaf
+     4 dekken de twee nu de volle 24 uur, zonder gat tussen middernacht en
+     4 uur waar niemand een tijd kon zetten. */
+  { key: 'evening', label: 'EVENING', hour: 21, from: 17, to: 28 },
 ] as const;
 
 type SlotKey = (typeof MOMENTS)[number]['key'];
@@ -288,8 +296,21 @@ export default function PlanScreen() {
              een `push` van daar zet een hele nieuwe tab-navigator boven op
              de bestaande — de bestemming klopt dan wel, maar de weg ernaartoe
              niet. `navigate` schakelt gewoon om naar de bestaande tab, zoals
-             overal elders vanuit een root-scherm (zie BreathMiniControl). */
-          onPress={() => router.navigate('/breath' as never)}
+             overal elders vanuit een root-scherm (zie BreathMiniControl).
+
+             De Breath-tab BLEEF GEMONTEERD staan (operator, 10 augustus
+             2026: "gaat naar de welcome page"). Dat was niet het echte
+             welkomstscherm van de app, maar de Breath-tab z'n EIGEN
+             intro-drempel (de gezichten die in de mandala overgaan) — die
+             draait bij elke terugkeer naar de tab opnieuw, en wie hier
+             specifiek op "alle modi" tikt heeft die drempel al gezien en
+             wil de rij van vijf, niet nog een keer landen. skipBreathIntroOnce
+             slaat hem over, exact het mechanisme dat ook een teruggekeerde
+             sessie overslaat. */
+          onPress={() => {
+            skipBreathIntroOnce();
+            router.navigate('/breath' as never);
+          }}
           android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
         >
           <Text style={s.allModesTxt}>Explore all modes</Text>
@@ -367,15 +388,36 @@ export default function PlanScreen() {
             ]}
             onPress={() => {}}
           >
-            <Text style={s.pickTitle}>
-              {picking
-                ? MOMENTS.find((m) => m.key === picking)!.label.charAt(0) +
-                  MOMENTS.find((m) => m.key === picking)!
-                    .label.slice(1)
-                    .toLowerCase() +
-                  ' time'
-                : ''}
-            </Text>
+            {/* Handvat, zoals elk ander onderpaneel op het toestel — dat is
+                het verschil tussen "hier is een lijst geplakt" en "dit
+                schuift open" (operator, 10 augustus 2026: "zo onderaan
+                gepropt en saai"). */}
+            <View style={s.pickHandle} />
+            {(() => {
+              const item = items.find((i) => i.moment.key === picking);
+              if (!item) return null;
+              return (
+                <>
+                  <View
+                    style={[s.pickAccent, { backgroundColor: item.state.accent }]}
+                  />
+                  <Text style={s.pickTitle}>
+                    {MOMENTS.find((m) => m.key === picking)!.label.charAt(0) +
+                      MOMENTS.find((m) => m.key === picking)!
+                        .label.slice(1)
+                        .toLowerCase() +
+                      ' time'}
+                  </Text>
+                  {/* De reden erbij — dit IS de toestand die er nu staat,
+                      niet zomaar een uur (operator, dezelfde regel: "saai" —
+                      een sheet die alleen cijfers toont vertelt niets over
+                      WAT er om die tijd gebeurt). */}
+                  <Text style={s.pickSub}>
+                    {item.state.eyebrow} · {item.techName}
+                  </Text>
+                </>
+              );
+            })()}
             <ScrollView
               style={s.pickScroll}
               showsVerticalScrollIndicator={false}
@@ -389,6 +431,8 @@ export default function PlanScreen() {
                     out.push(h * 60, h * 60 + 15, h * 60 + 30, h * 60 + 45);
                   }
                   const cur = minsFor(picking);
+                  const accent = items.find((i) => i.moment.key === picking)!
+                    .state.accent;
                   return out.map((mins) => {
                     const on = mins === cur;
                     return (
@@ -423,12 +467,23 @@ export default function PlanScreen() {
                             slot.charAt(0).toUpperCase() + slot.slice(1);
                           setJustSet(lbl + ' — ' + nextFireText(mins));
                         }}
-                        style={[s.pickChip, on && s.pickChipOn]}
+                        style={[
+                          s.pickChip,
+                          on && {
+                            borderColor: accent,
+                            backgroundColor: `${accent}1F`,
+                          },
+                        ]}
                         android_ripple={{
                           color: 'rgba(255,255,255,0.08)',
                         }}
                       >
-                        <Text style={[s.pickChipTxt, on && s.pickChipTxtOn]}>
+                        <Text
+                          style={[
+                            s.pickChipTxt,
+                            on && { color: '#ffffff', fontFamily: BrandFonts.bold },
+                          ]}
+                        >
                           {fmtTime(mins)}
                         </Text>
                       </Pressable>
@@ -460,13 +515,35 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
     paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  pickHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: 14,
+  },
+  pickAccent: {
+    width: 30,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 8,
   },
   pickTitle: {
+    alignSelf: 'flex-start',
     fontFamily: BrandFonts.bold,
     fontSize: 17,
     color: '#ffffff',
+  },
+  pickSub: {
+    alignSelf: 'flex-start',
+    marginTop: 2,
     marginBottom: 14,
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.5)',
   },
   /* Nooit hoger dan iets meer dan een half scherm: het venster van de
      ochtend telt 32 tijden en dat paste niet overal (operator, 8 augustus
@@ -475,7 +552,7 @@ const s = StyleSheet.create({
      rijtje is geen slordigheid maar het teken dat er meer is. De onderrand
      van het paneel volgt de veilige zone, dus de navigatiebalk snijdt nooit
      meer door een tijd heen (operator, 8 augustus 2026). */
-  pickScroll: { maxHeight: 322 },
+  pickScroll: { maxHeight: 322, width: '100%' },
   pickGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

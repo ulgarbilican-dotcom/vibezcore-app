@@ -178,8 +178,14 @@ export async function syncReminders(
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          /* De gekozen tijd, anders het standaarduur van dit moment. */
-          hour: Math.floor((at[reminderKey(k, s.slot)] ?? s.hour * 60) / 60),
+          /* De gekozen tijd, anders het standaarduur van dit moment. `% 24`
+             op het uur (operator, 10 augustus 2026: de avondkeuze loopt nu
+             door tot 3:45 's nachts). Zonder die modulo werd 25:00
+             doorgegeven aan een dagelijkse trigger die alleen 0-23 kent —
+             dat plant geen wekker op 1 uur 's nachts, dat plant hem
+             helemaal niet. */
+          hour:
+            Math.floor((at[reminderKey(k, s.slot)] ?? s.hour * 60) / 60) % 24,
           minute: (at[reminderKey(k, s.slot)] ?? s.hour * 60) % 60,
         },
       });
