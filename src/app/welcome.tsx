@@ -461,16 +461,22 @@ export default function WelcomeScreen() {
                 />
                 {/* De haptische klop, hetzelfde kastje-effect als op de
                     onboarding-schermen. */}
-                {/* originX 0.4 -> 0.47, originY 0.76 -> 0.69 (operator,
-                    10 augustus 2026: "te veel naar links, 1mm naar
-                    boven"). Fijnkorrectie op de meting van zonet. */}
+                {/* Nog een fijnkorrectie (operator, 10 augustus 2026: "nog
+                    een beetje naar rechts en naar beneden"), en de ringen
+                    zelf kregen ruimte: bij reach 0,08 was de maximale
+                    straal maar 14 beeldpunten — te klein om vier
+                    gefaseerde ringen (elk een kwart cyclus na elkaar) ooit
+                    zichtbaar UIT ELKAAR te laten liggen. Ze verdrongen
+                    elkaar dus tot één wazige stip in plaats van een
+                    duidelijke puls. Bij 0,22 is er eindelijk ruimte om de
+                    beweging te ZIEN. */}
                 <PodPulse
                   width={CARD_IMG_W}
                   height={CARD_IMG_H}
-                  originX={0.47}
-                  originY={0.69}
-                  reach={0.08}
-                  intensity={3.4}
+                  originX={0.53}
+                  originY={0.74}
+                  reach={0.22}
+                  intensity={2.2}
                   color={SOFT_BLUE}
                 />
               </Animated.View>
