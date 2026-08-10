@@ -461,11 +461,14 @@ export default function WelcomeScreen() {
                 />
                 {/* De haptische klop, hetzelfde kastje-effect als op de
                     onboarding-schermen. */}
+                {/* originX 0.4 -> 0.47, originY 0.76 -> 0.69 (operator,
+                    10 augustus 2026: "te veel naar links, 1mm naar
+                    boven"). Fijnkorrectie op de meting van zonet. */}
                 <PodPulse
                   width={CARD_IMG_W}
                   height={CARD_IMG_H}
-                  originX={0.4}
-                  originY={0.76}
+                  originX={0.47}
+                  originY={0.69}
                   reach={0.08}
                   intensity={3.4}
                   color={SOFT_BLUE}
