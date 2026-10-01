@@ -12,7 +12,10 @@
       "bundleIdentifier": "com.ubili.vibezcoreapp",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "audio"
+        ]
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -135,7 +138,16 @@
       ],
       "./plugins/withoutReleaseLint",
       "@react-native-community/datetimepicker",
-      "./plugins/withQuickShortcuts"
+      "./plugins/withQuickShortcuts",
+      "./modules/breath-background/plugin.js",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification_icon.png",
+          "color": "#00A3A3"
+        }
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

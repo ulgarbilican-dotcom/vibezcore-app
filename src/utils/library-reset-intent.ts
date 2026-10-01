@@ -27,13 +27,15 @@
 const listeners = new Set<() => void>();
 
 export function requestLibraryReset(): void {
-  listeners.forEach((l) => {
-    try {
-      l();
-    } catch {
-      /* één crashende listener mag de rest niet blokkeren */
-    }
-  });
+  setTimeout(() => {
+    listeners.forEach((l) => {
+      try {
+        l();
+      } catch {
+        /* één crashende listener mag de rest niet blokkeren */
+      }
+    });
+  }, 0);
 }
 
 export function subscribeLibraryReset(cb: () => void): () => void {

@@ -5,225 +5,198 @@
    - Géén poort, géén keuzescherm — alleen een entree die de bezoeker een
      vertrekpunt geeft. Beide knoppen leiden naar volledig vrije tabs.
    - "Reeds ingelogd" → welkomstscherm overslaan, direct de app in.
-   - Audio en Bracelet zijn GELIJKWAARDIGE productkernen (SPEC §1.1):
-     beide knoppen bewust even prominent.
-   - Alle zichtbare teksten op dit scherm zijn EXACT zoals door operator
-     voorgeschreven. Verzin hier niets bij — overige copy = [OPERATOR].
+
+   Operator-beslissing 15 september 2026 — volledige herbouw #2 ("dit is
+   exact hoe Apple de lay-out en teksten van boven naar beneden zou
+   aanpassen"):
+   - Eén paginahoge achtergrondfoto (pic homepage app.png) i.p.v. een
+     boxed hero (355px) met eigen decoratie. De ademhalings-deeltjes/
+     equalizer-staafjes/kloppende-armband-puls uit de vorige versie waren
+     op de OUDE foto's exacte neus/oor/pols-posities afgesteld en zijn
+     mee weg — ze zouden nergens meer bij aansluiten op deze nieuwe foto.
+   - Logo + tagline in wit, helemaal bovenaan (het lichte deel van de
+     foto), zodat ze meteen afsteken.
+   - De 3 productknoppen verhuisd naar de onderste helft van het scherm
+     (over de kleding heen, niet over de gezichten) — Frosted Glass
+     (`expo-blur` BlurView, tint dark) i.p.v. een harde witte vlakke
+     knop, zodat de foto er zichtbaar doorheen blijft. Geen product-
+     categorie-label meer boven de titel (icoon + titel vertellen het
+     verhaal al) — dunne witte lucide-iconen i.p.v. de eigen PNG-artwork-
+     thumbnails (die paste bij de oude, minder fotografische opzet).
+   - "Activate now" / "Sign in" niet langer in een omkaderd wit blok —
+     kale witte/lichtgrijze tekstlinks, onderaan boven de home-indicator.
    ─────────────────────────────────────────────────────────────────────────── */
 
-import { AUDIO_ENABLED } from '@/constants/features';
-import SplatField from '@/components/SplatField';
-import { WELCOME_MAN, WELCOME_WOMAN } from '@/services/offline-assets';
-import { assetUri } from '@/services/asset-cache';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
 } from '@/utils/dev-user-override';
-import {
-  AudioWaveform,
-  ChevronRight,
-  CircleDot,
-  User,
-} from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, {
-  Defs,
-  LinearGradient as SvgGradient,
-  Stop,
-  Text as SvgText,
-} from 'react-native-svg';
+import { Headphones, Wind, Zap } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { getSetting } from '@/utils/settings';
+import * as Haptics from 'expo-haptics';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+/* Operator, 19 september 2026 ("gestaffelde intro... logo, dan tekst,
+   dan de knoppen één voor één van onderen omhoog met een zachte
+   vering"): gewone mount-animatie, geen native dialoog/overgang
+   gelijktijdig (dat patroon gaf ooit de zwart-scherm-crash op
+   plan-success.tsx) — hier gewoon een scherm dat opent, veilig. */
 import Animated, {
-  Easing,
-  cancelAnimation,
-  useAnimatedReaction,
+  Extrapolation,
+  interpolate,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withDelay,
-  withRepeat,
-  withSequence,
+  withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
-import PodPulse from '@/components/PodPulse';
-import {
-  Dimensions,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-/* ────────────────────────────────────────────────────────────────
-   FINETUNE-KNOPPEN voor de operator
-   ──────────────────────────────────────────────────────────────── */
-/* Iter 9ai (2026-05-31): Calm/Headspace-style full-bleed welcome.
-   Cover + slimme crop. Foto vloeit via een lange zachte gradient over
-   in Brand.bg — geen harde randen, wereldklasse-gevoel.
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-   Iter 9an (2026-05-31): nieuwe "zoom out zonder zwarte randen" knop —
-   FOTO_HEIGHT bepaalt hoeveel SCHERMHOOGTE de foto inneemt (top-anchored,
-   cover binnen die ruimte). Bij FOTO_HEIGHT < 100% is het onderdeel boven
-   de buttons een rustig dark vlak dat door de bottom-gradient wordt
-   opgevangen — geen randen om de foto, want links/rechts blijft 'cover'
-   de wrapper netjes vullen.
+/* ── DE 3 PIJLERS — dun wit icoon + klein categorie-label + grote titel
+   + chevron.
+   Operator, 15 september 2026 (tweede ronde): het categorie-label kwam
+   terug op eigen verzoek — "als sub-label BOVEN de actietekst, klein en
+   dun, in Vibezcore-blauw/lichtgrijs, terwijl de titel groot wit
+   blijft". Zo blijft de emotie (Reset Yourself) het eerste wat opvalt,
+   maar snapt de bezoeker meteen welke tool erachter zit. `product` is
+   dus terug in de data, enkel de presentatie is nu een klein eyebrow-
+   label i.p.v. de eerdere zware ALL-CAPS-rij die er vóór de eerste
+   redesign stond. */
+type Pillar = {
+  key: string;
+  Icon: typeof Wind;
+  product: string;
+  title: string;
+  onPress: () => void;
+};
 
-   FOTO_Y: translateY-shift binnen de wrapper. Negatief = focal point
-   omhoog, positief = omlaag.
+const PILLARS: Pillar[] = [
+  {
+    key: 'breathwork',
+    Icon: Wind,
+    /* Operator, 24 september 2026 ("Breathe - Reset Yourself / Feel -
+       Instant State Control / Listen - Train Your Mind"): productlabel
+       nu een kort werkwoord per pijler i.p.v. de productnaam — dit
+       overschrijft bewust de 18 september-beslissing die hier "Breath"
+       zette (gelijk aan het tabblad-label); operator koos nu expliciet
+       voor "Breathe" op dit scherm. Titel blijft ongewijzigd. */
+    product: 'Breathe',
+    title: 'Reset Yourself',
+    onPress: () => {
+      const seen = getSetting('breathOnboardingCompletedAt') !== null;
+      router.navigate((seen ? '/breath' : '/breath-welcome') as never);
+    },
+  },
+  {
+    key: 'bracelet',
+    Icon: Zap,
+    product: 'Feel',
+    title: 'Instant State Control',
+    onPress: () => router.navigate('/bracelet'),
+  },
+  {
+    key: 'audio',
+    Icon: Headphones,
+    product: 'Listen',
+    title: 'Train Your Mind',
+    onPress: () => router.navigate('/'),
+  },
+];
 
-   FOTO_SCALE: extra zoom binnen de wrapper. ≥1.0 garandeert geen zwarte
-   randen aan zijkanten. <1.0 NIET aanraden (geeft randen). */
-const FOTO_HEIGHT = 75;   // % van schermhoogte, top-anchored
-const FOTO_Y = -20;        // pixels: negatief = omhoog
-const FOTO_SCALE = 1.0;    // ≥1.0 om randen te vermijden
+/* Paginahoge achtergrondfoto — vervangt de eerdere samengestelde,
+   opgeknipte hero (HERO_IMG + losse armband-cutout + decoratie).
+   Operator, 17 september 2026: nieuwe foto. */
+const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pic%20welcome%20app%20new.png';
+
+/* Operator, 15 september 2026: iconen + categorie-labels terug naar
+   zachtgrijs (was kort indigo, operator draaide terug). */
+const PILLAR_ACCENT = 'rgba(255,255,255,0.65)';
 
 type Status = 'checking' | 'show';
 
+/* Operator, 19 september 2026 ("de drie knoppen schuiven één voor één
+   heel subtiel van onderen omhoog met een vloeiende, zachte vering"):
+   `progress` is ÉÉN gedeelde spring (0→1, zie hierboven) — elke knop
+   leest daar zijn EIGEN stukje uit via `interpolate` met een per-index
+   verschoven ingangs-bereik, dus knop 0 is al bijna klaar wanneer knop 2
+   nog moet beginnen. Eigen component (niet inline in de `.map()`) voor
+   de losse touch-down/spring-animatie per knop (Rules of Hooks). */
+function PillarButton({
+  p,
+  index,
+  progress,
+}: {
+  p: Pillar;
+  index: number;
+  progress: SharedValue<number>;
+}) {
+  const pressScale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  const enterStyle = useAnimatedStyle(() => {
+    const start = index * 0.18;
+    const local = interpolate(progress.value, [start, start + 0.6], [0, 1], Extrapolation.CLAMP);
+    return {
+      opacity: local,
+      transform: [{ translateY: (1 - local) * 22 }],
+    };
+  });
+  return (
+    <Animated.View style={enterStyle}>
+      <AnimatedPressable
+        accessibilityRole="button"
+        onPress={p.onPress}
+        onPressIn={() => {
+          pressScale.value = withTiming(0.96, { duration: 90 });
+        }}
+        onPressOut={() => {
+          pressScale.value = withSpring(1, { damping: 12, stiffness: 220 });
+        }}
+        style={[s.pillarWrap, pressStyle]}
+      >
+        {/* Operator, 20 september 2026 ("het glaseffect klopt niet, wil
+           blur native"): `expo-blur`'s Android-gedrag valt zonder
+           `blurMethod` terug op `'none'` — een vlak, semi-transparant vlak,
+           GEEN echte blur. `dimezisBlurViewSdk31Plus` geeft de echte native
+           blur op Android 12+ (elk toestel dat VIBEZCORE realistisch
+           target). Zelfde fix nodig in build-choice.tsx/breath-setup.tsx/
+           breath-session.tsx — zie die bestanden. */}
+        <BlurView
+          intensity={40}
+          tint="dark"
+          blurMethod="dimezisBlurViewSdk31Plus"
+          style={s.pillarBlur}
+        >
+          <View style={s.pillarIconWrap}>
+            <p.Icon size={20} color={PILLAR_ACCENT} strokeWidth={1.5} />
+          </View>
+          {/* Operator, 24 september 2026 ("Breathe - Reset Yourself / Feel
+             - Instant State Control / Listen - Train Your Mind"): `product`
+             stond al in de data maar werd nooit getekend — enkel `title`.
+             Nu een klein label BOVEN de titel, zelfde eyebrow-patroon als
+             elders in de app (bv. "VIBEZCORE AUDIO LIBRARY" op de Library-
+             tab-intro). */}
+          <View style={{ flex: 1 }}>
+            <Text style={s.pillarProduct}>{p.product.toUpperCase()}</Text>
+            <Text style={s.pillarTitle}>{p.title}</Text>
+          </View>
+        </BlurView>
+      </AnimatedPressable>
+    </Animated.View>
+  );
+}
+
 export default function WelcomeScreen() {
   const [status, setStatus] = useState<Status>('checking');
-
-  /* ── De beweging ──────────────────────────────────────────────────────
-     Twee waarden, allebei doorlopend: `morph` gaat heen en weer tussen veld
-     en gezichten, `spin` draait onophoudelijk. Ze staan LOS van elkaar, want
-     een draaiing die stilvalt op het keerpunt maakt van een veld in de ruimte
-     een plaatje dat even bevriest.
-
-     Zeven seconden per kant. Korter en het wordt onrustig op een scherm waar
-     je juist even moet landen; langer en zie je bij een kort bezoek maar één
-     van de twee gedaanten. */
-  const morph = useSharedValue(0);
-  const turn = useSharedValue(0);
-  useEffect(() => {
-    /* Heen, even BLIJVEN STAAN, en dan terug (operator, 8 augustus 2026:
-       "iets langer in beeld"). Met een gewone heen-en-weer beweging is het
-       gezicht er maar één ogenblik — precies op het keerpunt — en dat is te
-       kort om te herkennen wat je ziet. Nu staat het er twee en een halve
-       seconde stil. */
-    /* Sneller, en zonder stilte ertussen (operator, 8 augustus 2026: "kan het
-       sneller gaan, gezicht max 1 of 2 sec in beeld en doordraaien").
-
-       Anderhalve seconde stil op het gezicht, tweeënhalf heen en tweeënhalf
-       terug: een ronde van zes en een halve seconde in plaats van veertien.
-       De pauze aan het eind is weg — die was het enige moment waarop er
-       werkelijk niets gebeurde, en dat is precies wat "doordraaien" uitsluit.
-
-       Het gezicht landt nog steeds rechtop: de draaiing hangt aan de morph en
-       maakt onderweg twee volle omwentelingen, hoe snel die ook lopen. */
-    morph.value = withRepeat(
-      withSequence(
-        /* De man blijft een seconde langer staan dan de vrouw (operator,
-           8 augustus 2026). Hij is het beeld waarmee het scherm opent, dus hij
-           mag de rustigste van de twee zijn: tweeënhalve seconde tegen
-           anderhalve. */
-        withDelay(
-          2500,
-          withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
-        ),
-        withDelay(
-          1500,
-          withTiming(0, { duration: 2600, easing: Easing.inOut(Easing.cubic) }),
-        ),
-      ),
-      -1,
-      false,
-    );
-    turn.value = withRepeat(
-      withTiming(1, { duration: 26000, easing: Easing.linear }),
-      -1,
-      false,
-    );
-    return () => {
-      cancelAnimation(morph);
-      cancelAnimation(turn);
-    };
-  }, [morph, turn]);
-
-  /* ── Twee omwentelingen, en recht landen ──────────────────────────────
-     Nu op de MAAT van SplatField in plaats van op mijn aanname. Daar geldt
-     voor de hoek van elk punt:
-
-         a = beginhoek + eindhoek·t + SWIRL·t + spin·2π
-
-     Die `SWIRL·t` is een vaste extra draaiing die met de morph meegroeit —
-     0,85 radiaal, ongeveer negenenveertig graden. Precies dat is waarom het
-     gezicht scheef tot stilstand kwam: op het hoogtepunt stond de hele wolk
-     een halve slag schuin, hoe de doorlopende draaiing ook liep.
-
-     Dus geven we `spin` de tegenhanger mee. Op het hoogtepunt is de totale
-     extra draaiing dan `SWIRL + (2 − SWIRL/2π)·2π = 2·2π`: twee volle
-     omwentelingen, en dus rechtop. Onderweg draait hij die twee rondjes ook
-     echt — het gezicht komt draaiend aan en gaat draaiend weer uiteen, en
-     komt daarna in dezelfde stand terug (operator, 8 augustus 2026). */
-  const SWIRL_TURNS = 0.85 / (Math.PI * 2);
-
-  /* ── Altijd met de klok mee ───────────────────────────────────────────
-     De draaiing hing rechtstreeks aan `morph`. Die loopt heen en weer, dus de
-     draaiing liep op de terugweg mee terug — tegen de klok in (operator,
-     8 augustus 2026). Nu tellen we de AFGELEGDE WEG op in plaats van de
-     stand: die kan alleen maar groeien, dus de draaiing kan nooit omkeren.
-
-     De maat verschilt per richting, en dat moet. In de hoekformule van
-     SplatField zit `SWIRL·t`, en die telt alleen mee als er een gezicht in
-     wording is. Op de heenweg (t: 0→1) staat er aan het eind SWIRL bij; op de
-     terugweg valt die er weer af. Twee omwentelingen min die scheefstand
-     heen, twee plus terug: bij elke aankomst staat de teller op een heel
-     aantal omwentelingen, en dus staat het gezicht rechtop. */
-  const travel = useSharedValue(0);
-  const prev = useSharedValue(0);
-  useAnimatedReaction(
-    () => morph.value,
-    (cur) => {
-      travel.value += Math.abs(cur - prev.value);
-      prev.value = cur;
-    },
-  );
-  const spin = useDerivedValue(() => {
-    const laps = Math.floor(travel.value / 2);
-    const within = travel.value - laps * 2;
-    const base = laps * 4;
-    return within <= 1
-      ? base + within * (2 - SWIRL_TURNS)
-      : base + (2 - SWIRL_TURNS) + (within - 1) * (2 + SWIRL_TURNS);
-  });
-  void turn;
-
-  /* De kaarten ademen, traag en licht — een schaal van 1 naar 1,03 en
-     terug, elk op zijn eigen ritme zodat de twee nooit precies gelijk
-     lopen (operator, 10 augustus 2026: "beweging in de cards, nu is alles
-     statisch"). */
-  const cardBreath1 = useSharedValue(0);
-  const cardBreath2 = useSharedValue(0);
-  useEffect(() => {
-    cardBreath1.value = withRepeat(
-      withTiming(1, { duration: 3400, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    cardBreath2.value = withRepeat(
-      withDelay(
-        400,
-        withTiming(1, { duration: 3800, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      true,
-    );
-    return () => {
-      cancelAnimation(cardBreath1);
-      cancelAnimation(cardBreath2);
-    };
-  }, [cardBreath1, cardBreath2]);
-  const breathe1 = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + cardBreath1.value * 0.03 }],
-  }));
-  const breathe2 = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + cardBreath2.value * 0.03 }],
-  }));
 
   /* Reeds ingelogd? → welkomstscherm overslaan, direct de tabs in.
      Tijdens de check tonen we alleen de merk-achtergrondkleur (geen flits).
@@ -241,20 +214,12 @@ export default function WelcomeScreen() {
       const override = getDevUserOverride();
       const token = await getToken();
       if (cancelled) return;
-      /* Iter 9dj (2026-05-31): override 'audio' / 'bracelet' / 'pro'
-         simuleren ingelogde state → ook zonder echte token welcome
-         overslaan, anders blijft welcome hangen op cold-start tests. */
       const treatAsGuest = override === 'guest';
       const treatAsSignedIn =
         override === 'audio' || override === 'bracelet' || override === 'pro';
       /* Iedereen ziet het welkomstscherm, ook wie ingelogd is (operator,
-         7 augustus 2026 — dat stond al zo in de root, maar HIER sprong een
-         ingelogde gebruiker alsnog weg naar `/`, en `/` is sinds 5 augustus
-         de verborgen audiobibliotheek. Vandaar dat de app steeds op "Where
-         Insight Becomes Identity" uitkwam.)
-
-         De gegevens worden nog steeds opgehaald — daar hangt af wat het
-         scherm aanbiedt — alleen de omleiding is weg. */
+         7 augustus 2026). De gegevens worden nog steeds opgehaald — daar
+         hangt af wat het scherm aanbiedt — alleen de omleiding is weg. */
       void treatAsSignedIn;
       void treatAsGuest;
       void token;
@@ -265,631 +230,247 @@ export default function WelcomeScreen() {
     };
   }, []);
 
+  /* Operator, 19 september 2026: eenmalige, gestaffelde intro — logo
+     eerst, 150ms later de tagline, dan de knoppen één voor één van
+     onderen omhoog met een zachte spring. `bgOpacity` is de "foto fadet
+     in vanaf zwart"-stap; `status==='show'` triggert alles pas ná de
+     login-check hierboven, dus er is geen risico dat dit start terwijl
+     het scherm nog aan het bepalen is of het zichzelf moet overslaan. */
+  const bgOpacity = useSharedValue(0);
+  const logoOpacity = useSharedValue(0);
+  const taglineOpacity = useSharedValue(0);
+  const pillarProgress = useSharedValue(0);
+  useEffect(() => {
+    if (status !== 'show') return;
+    bgOpacity.value = withTiming(1, { duration: 800 });
+    logoOpacity.value = withTiming(1, { duration: 380 });
+    taglineOpacity.value = withDelay(150, withTiming(1, { duration: 380 }));
+    pillarProgress.value = withDelay(
+      300,
+      withSpring(1, { damping: 16, stiffness: 120 }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+  const bgStyle = useAnimatedStyle(() => ({ opacity: bgOpacity.value }));
+  const logoStyle = useAnimatedStyle(() => ({ opacity: logoOpacity.value }));
+  const taglineStyle = useAnimatedStyle(() => ({ opacity: taglineOpacity.value }));
+
+  /* Press-scale — zelfde recept als StartCard in breath-welcome.tsx.
+     Kleine tekstlinks, dus 0.94 (icoon-/knop-schaal), geen aparte kaart.
+     Operator ("kijk alle CTA's na"): ontbrak opacity(.85) + haptic-tik
+     (huisstijl §5) — nu op allebei toegevoegd. */
+  const activateScale = useSharedValue(1);
+  const onActivatePressIn = () => {
+    activateScale.value = withTiming(0.94, { duration: 80 });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+  const onActivatePressOut = () => {
+    activateScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const activateStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: activateScale.value }],
+    opacity: 1 - (1 - activateScale.value) * 2.5,
+  }));
+
+  const signInScale = useSharedValue(1);
+  const onSignInPressIn = () => {
+    signInScale.value = withTiming(0.94, { duration: 80 });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+  const onSignInPressOut = () => {
+    signInScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const signInStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: signInScale.value }],
+    opacity: 1 - (1 - signInScale.value) * 2.5,
+  }));
+
   if (status === 'checking') {
     return <View style={s.checking} />;
   }
 
   return (
     <View style={s.root}>
-      {/* Iter 9ai (2026-05-31): Calm/Headspace-style full-bleed photo.
-         Wrapper-View met overflow:hidden zorgt dat de cover-image netjes
-         binnen het scherm valt; FOTO_Y translateY tilt de focal point.
-         Iter 9al (2026-05-31): operator probeert "master-mental-clarity"
-         als welcome — testen of de "arrival energy" sterker leest dan
-         de vorige Sharp Focus / Beta crop. */}
-      {/* Een bewegend energieveld in plaats van een foto (operator,
-          8 augustus 2026). Een foto van een gezicht zegt iets over een
-          persoon; dit zegt iets over wat de app doet. Zie
-          Niet twee losse tekeningen die in elkaar overvloeien maar EEN wolk
-          punten die twee gedaanten aanneemt: het veld WORDT het gezicht, in
-          plaats van ervoor te verdwijnen. Daarom is het gezicht ook echt door
-          de lichtjes gemaakt en niet een foto die opkomt (operator,
-          8 augustus 2026).
-
-          Het gezicht is de blik die tot vandaag de welkomstfoto was — dat
-          beeld hoort bij dit scherm, en als puntenwolk zegt het hetzelfde
-          zonder een foto te zijn. Bewust NIET de twee gezichten van de
-          Breath-tab: dezelfde vorm op twee plekken maakt van een merkbeeld
-          een behangetje. */}
-      <View style={s.bgPhotoWrap}>
-        <View style={s.fieldCenter}>
-          <SplatField
-            restUri={MAN}
-            endUri={WOMAN}
-            spin={spin}
-            breath={morph}
-            size={FIELD_SIZE}
-            /* Wit (operator, 8 augustus 2026). Hier horen de lichtpunten
-               wit: een lichtbron in de ruimte, geen kleur. Het blauw staat op
-               de Breath-intro, waar de sterren al blauw zijn. */
-            color="#FFFFFF"
-            /* Meer punten voor een scherper gezicht (operator: "kan je
-               gezicht superduidelijk maken"). Op 2600 was de omtrek er wel
-               maar bleven de ogen en de mond een suggestie; het dubbele
-               tekent ze uit. Het blijft één tekenopdracht via Atlas, dus de
-               prijs zit in geheugen en niet in beeldjes per seconde. */
-            count={5200}
-            /* Halverwege valt de wolk uiteen tot een veld en komt daarna
-               samen tot het volgende gezicht. Zie de toelichting bij
-               `disperse` in SplatField — de Breath-tab laat hem op nul staan
-               en verandert dus niet. */
-            disperse={0.85}
-          />
-
-        </View>
-      </View>
-
-      {/* Top scrim — subtiele donkere fade voor status bar + wordmark.
-         15% van scherm, transparant → 35% zwart. Houdt de tekst leesbaar
-         tegen lichte fotozones bovenaan zonder de foto te dempen. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(10,10,10,0.55)', 'rgba(10,10,10,0)']}
-        locations={[0, 1]}
-        style={s.topScrim}
+      <Animated.Image
+        source={{ uri: BG_IMG }}
+        style={[StyleSheet.absoluteFill, bgStyle]}
+        resizeMode="cover"
       />
-
-      {/* Iter 9ao (2026-05-31): bottom-gradient afgestemd op FOTO_HEIGHT.
-         Gradient bereikt 100% opacity exact bij de wrapper-onderkant
-         (FOTO_HEIGHT% van scherm) zodat foto onmerkbaar in zwart over­
-         vloeit. Geen "harde lijn" meer. Cubic-like curve over 8 stops
-         voor maximaal zachte transitie. Gradient strekt naar boven uit
-         tot 10% van scherm zodat 65% van gradient-zone benut wordt voor
-         de fade — vergeleken met 50% eerder. */}
+      {/* Operator, 19 september 2026 ("gradient bovenaan — VIBEZCORE en
+         tagline vallen weg tegen de lichte lucht"): symmetrisch met de
+         bestaande onderste verloop hieronder — donker vanaf de bovenrand,
+         volledig doorzichtig tegen het midden, zodat het logo altijd
+         hoog contrast heeft ongeacht hoe licht de lucht op de foto is. */}
       <LinearGradient
+        colors={['rgba(0,0,0,0.75)', 'rgba(0,0,0,0.35)', 'transparent']}
+        locations={[0, 0.18, 0.38]}
+        style={StyleSheet.absoluteFill}
         pointerEvents="none"
+      />
+      {/* Operator, 17 september 2026 ("Apple lost dit op met een vloeiend
+         zwart verloop — de jassen smelten samen met de zwarte
+         ondergrond"): was een lichte "veiligheidsnet"-uitdoving (max
+         ~45% zwart, begint pas op 42%) — te subtiel om de letters/knop-
+         rand echt los te weken van de drukke kleding. Nu een écht
+         verloop vanaf borsthoogte (~38%) dat onderaan volledig
+         overgaat in dieprzwart (98%) — de foto blijft 100%
+         schermvullend, maar de onderste band wordt een rustig, bijna
+         egaal donker vlak waar de matglas-knoppen op kunnen "zweven". */}
+      <LinearGradient
         colors={[
-          'rgba(10,10,10,0)',
-          'rgba(10,10,10,0.04)',
-          'rgba(10,10,10,0.12)',
-          'rgba(10,10,10,0.25)',
-          'rgba(10,10,10,0.45)',
-          'rgba(10,10,10,0.70)',
-          'rgba(10,10,10,0.92)',
-          Brand.bg,
-          Brand.bg,
+          'transparent',
+          'rgba(0,0,0,0.55)',
+          'rgba(0,0,0,0.88)',
+          'rgba(0,0,0,0.98)',
         ]}
-        locations={[0, 0.15, 0.30, 0.45, 0.55, 0.63, 0.70, 0.72, 1]}
-        style={s.bottomFade}
+        locations={[0.38, 0.62, 0.82, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
       />
-
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <View style={s.top}>
-          <Image
+          <Animated.Image
             source={require('../../assets/vibezcore_wordmark.png')}
-            style={s.wordmark}
+            style={[s.wordmark, logoStyle]}
             resizeMode="contain"
+            tintColor="#ffffff"
             accessibilityLabel="VIBEZCORE"
           />
+          <Animated.Text style={[s.topTagline, taglineStyle]}>
+            Change your vibe. Change your life
+          </Animated.Text>
         </View>
 
-        <View style={s.middle}>
-          {/* "CHANGE THE GAME..." weg (operator, 10 augustus 2026) — de kop
-              zegt het al. Een ECHTE SVG-gradient over de kop (operator,
-              dezelfde datum, tweede poging: "gradient blauw is niet echt
-              mooi, moet professioneler") — drie losse kleurtinten op
-              gewone Text lazen als stappen, geen verloop. react-native-svg
-              was al een afhankelijkheid van deze app (player.tsx,
-              bracelet-control.tsx); zijn <Text> accepteert een gradient
-              als fill en is daarmee het juiste gereedschap. */}
-          <Svg width={CONTENT_W} height={112}>
-            <Defs>
-              <SvgGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor="#ffffff" />
-                <Stop offset="0.55" stopColor="#bfe0ff" />
-                <Stop offset="1" stopColor={SOFT_BLUE} />
-              </SvgGradient>
-            </Defs>
-            <SvgText
-              x="50%"
-              y="42"
-              textAnchor="middle"
-              fontFamily={BrandFonts.regular}
-              fontSize={36}
-              letterSpacing={0.2}
-              fill="url(#headerGrad)"
-            >
-              Control Your Vibe
-            </SvgText>
-            <SvgText
-              x="50%"
-              y="86"
-              textAnchor="middle"
-              fontFamily={BrandFonts.regular}
-              fontSize={36}
-              letterSpacing={0.2}
-              fill="url(#headerGrad)"
-            >
-              Control Your Life
-            </SvgText>
-          </Svg>
+        {/* Spacer duwt de knoppen + links naar de onderste helft, over de
+           foto's kleding heen i.p.v. over de gezichten. */}
+        <View style={{ flex: 1 }} />
+
+        <View style={s.pillars}>
+          {PILLARS.map((p, i) => (
+            <PillarButton key={p.key} p={p} index={i} progress={pillarProgress} />
+          ))}
         </View>
 
-        <View style={s.bottom}>
-          {/* Twee gelijkwaardige knoppen naast elkaar — halve breedte,
-             identiek qua gewicht. Volgorde per BLAUWDRUK §2:
-             Audio eerst, Bracelet tweede. */}
-          {/* Twee gelijkwaardige knoppen zolang audio meedoet; staat die uit,
-              dan zijn Breath en Bracelet de twee kernen en krijgen zij de
-              volle breedte. Geen halflege rij met één knop erin — dat leest
-              als een scherm waar iets van weggehaald is. */}
-          {/* De bracelet is de HOOFDROL (operator, 5 augustus 2026). Twee
-              even grote knoppen zeiden dat beide even belangrijk waren; dat
-              was waar toen audio meedeed, en het is niet meer waar nu het
-              product de bracelet is. Eén volle knop en één ondergeschikte
-              regel zeggen in één oogopslag wat je hier komt doen. */}
-          {/* Twee kaarten in plaats van een knop en een regel (operator-
-              mockup, 8 augustus 2026). Ze zijn gelijkwaardig van vorm maar
-              niet van gewicht: de bracelet draagt een foto van het product
-              zelf, breathwork een teken. Dat verschil zegt genoeg zonder dat
-              de tweede een bijzin wordt.
-
-              Wat elke kaart moet doen: in twee regels vertellen wat je
-              krijgt. Alleen een naam laat de bezoeker raden, en dit is het
-              scherm waar iemand beslist of hij verder kijkt. */}
-          <View style={s.cardRow}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.navigate('/bracelet')}
-              style={({ pressed }) => [s.cardCol, pressed && s.cardPressed]}
-            >
-              {/* Lichtbron in de kaart zelf (operator, 10 augustus 2026:
-                  "binnenkant te effen, misschien gradient of een soort
-                  lichtbron") — een zachte gloed die van linksboven komt,
-                  zoals licht dat ergens buiten beeld vandaan schijnt. */}
-              <LinearGradient
-                pointerEvents="none"
-                colors={[`rgba(${SOFT_BLUE_RGB},0.16)`, `rgba(${SOFT_BLUE_RGB},0)`]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0.8, y: 0.9 }}
-                style={StyleSheet.absoluteFill}
-              />
-              {/* `contain`, niet `cover` (operator, 10 augustus 2026,
-                  tweede correctie: "bracelet wordt links en rechts
-                  afgesneden, dat mag niet") — de hele armband moet zichtbaar
-                  blijven, ook als dat lege rand van het bronbestand
-                  meebrengt. */}
-              <Animated.View style={[s.cardVisual, breathe1]}>
-                {/* `cover`, zelfde behandeling als de breathwork-foto — dit
-                   bronbestand heeft al een achtergrond en is op formaat
-                   aangeleverd (operator, 10 augustus 2026). */}
-                <Image
-                  source={{ uri: BRACELET_IMG }}
-                  style={s.cardColImg}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
-                {/* De haptische klop, hetzelfde kastje-effect als op de
-                    onboarding-schermen. */}
-                {/* Nog een fijnkorrectie (operator, 10 augustus 2026: "nog
-                    een beetje naar rechts en naar beneden"), en de ringen
-                    zelf kregen ruimte: bij reach 0,08 was de maximale
-                    straal maar 14 beeldpunten — te klein om vier
-                    gefaseerde ringen (elk een kwart cyclus na elkaar) ooit
-                    zichtbaar UIT ELKAAR te laten liggen. Ze verdrongen
-                    elkaar dus tot één wazige stip in plaats van een
-                    duidelijke puls. Bij 0,22 is er eindelijk ruimte om de
-                    beweging te ZIEN. */}
-                <PodPulse
-                  width={CARD_IMG_W}
-                  height={CARD_IMG_H}
-                  originX={0.53}
-                  originY={0.74}
-                  reach={0.22}
-                  intensity={2.2}
-                  color={SOFT_BLUE}
-                />
-              </Animated.View>
-              <Text style={s.cardTitle}>Smart Bead Bracelet</Text>
-              <Text style={s.cardBody}>
-                Instant state control through precision haptics.
-              </Text>
-              <View style={s.cardCta}>
-                <Text style={s.cardCtaTxt}>EXPLORE</Text>
-                <ChevronRight size={15} color={SOFT_BLUE} strokeWidth={2.4} />
-              </View>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              /* Naar de ONBOARDING, niet rechtstreeks de vijf toestanden in
-                 (operator, 8 augustus 2026). Wie hier tikt is nieuw; de
-                 intro legt uit wat dit is en eindigt in de vragenlijst en
-                 een volledige gratis sessie. Wie de intro al uitliep komt
-                 via de Breath-tab gewoon binnen. */
-              onPress={() => {
-                const seen =
-                  getSetting('breathOnboardingCompletedAt') !== null;
-                router.navigate(
-                  (seen ? '/breath' : '/breath-welcome') as never,
-                );
-              }}
-              style={({ pressed }) => [s.cardCol, pressed && s.cardPressed]}
-            >
-              <LinearGradient
-                pointerEvents="none"
-                colors={[`rgba(${SOFT_BLUE_RGB},0.16)`, `rgba(${SOFT_BLUE_RGB},0)`]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0.8, y: 0.9 }}
-                style={StyleSheet.absoluteFill}
-              />
-              {/* Operator-foto voor deze kaart, 10 augustus 2026 — vervangt
-                  het losse golficoon. */}
-              <Animated.View style={[s.cardVisual, breathe2]}>
-                <Image
-                  source={{ uri: BREATHWORK_CARD_IMG }}
-                  style={s.cardColImg}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
-              </Animated.View>
-              <Text style={s.cardTitle}>Guided Breathwork</Text>
-              <Text style={s.cardBody}>
-                Recognised techniques for energy, focus and recovery.
-              </Text>
-              <View style={s.cardCta}>
-                <Text style={s.cardCtaTxt}>START SESSION</Text>
-                <ChevronRight size={15} color={SOFT_BLUE} strokeWidth={2.4} />
-              </View>
-            </Pressable>
-          </View>
-
-          {/* Twee regels, niet drie. "Reset in minutes" wees naar breathwork
-              en dat staat nu als kaart hierboven — dezelfde bestemming twee
-              keer aanbieden maakt een scherm langer, niet duidelijker. */}
-          <View style={s.linksDivider} />
-          <View style={s.linksGroup}>
-            <Pressable
-              accessibilityRole="link"
-              onPress={() => router.navigate('/activate-bracelet' as never)}
-              hitSlop={10}
-              style={s.linkRow}
-            >
-              <CircleDot size={16} color="rgba(255,255,255,0.45)" strokeWidth={2} />
-              <Text style={s.linkRowText}>
-                Have a bracelet? <Text style={s.linkAction}>Activate now</Text>
-              </Text>
-              <ChevronRight size={16} color={SOFT_BLUE} strokeWidth={2.2} />
-            </Pressable>
-            <View style={s.linkRowSep} />
-            <Pressable
-              accessibilityRole="link"
-              onPress={() => router.navigate('/account')}
-              hitSlop={10}
-              style={s.linkRow}
-            >
-              <User size={16} color="rgba(255,255,255,0.45)" strokeWidth={2} />
-              <Text style={s.linkRowText}>
-                Already a member? <Text style={s.linkAction}>Sign in</Text>
-              </Text>
-              <ChevronRight size={16} color={SOFT_BLUE} strokeWidth={2.2} />
-            </Pressable>
-          </View>
-
-          {/* Sluitregel (operator, 10 augustus 2026, met een referentiebeeld
-              erbij): drie woorden, elk voor wat de app werkelijk is — de
-              ademsessies trainen de geest, de bracelet werkt op het lichaam,
-              samen is dat waar VIBEZCORE om draait. Geen aparte animatie of
-              beeld zoals in de referentie: dat beeld draagt het scherm al,
-              hier hoeft alleen de laatste regel te staan. */}
-          <Text style={s.footTagline}>
-            YOUR <Text style={{ color: SOFT_BLUE }}>MIND</Text>. YOUR{' '}
-            <Text style={{ color: SOFT_BLUE }}>BODY</Text>. YOUR{' '}
-            <Text style={{ color: SOFT_BLUE }}>EVOLUTION</Text>.
-          </Text>
+        <View style={s.bottomLinks}>
+          <AnimatedPressable
+            accessibilityRole="link"
+            onPress={() => router.navigate('/activate-bracelet' as never)}
+            onPressIn={onActivatePressIn}
+            onPressOut={onActivatePressOut}
+            hitSlop={10}
+            style={activateStyle}
+          >
+            <Text style={s.bottomLinkText}>
+              Have a bracelet? <Text style={s.bottomLinkAction}>Activate now</Text>
+            </Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            accessibilityRole="link"
+            onPress={() => router.navigate('/account')}
+            onPressIn={onSignInPressIn}
+            onPressOut={onSignInPressOut}
+            hitSlop={10}
+            style={signInStyle}
+          >
+            <Text style={s.bottomLinkText}>
+              Already a member? <Text style={s.bottomLinkAction}>Sign in</Text>
+            </Text>
+          </AnimatedPressable>
         </View>
       </SafeAreaView>
     </View>
   );
 }
 
-/* De bracelet zelf, vrijstaand op zwart — dezelfde render als op de
-   Bracelet-tab, zodat het product er op beide plekken gelijk uitziet. */
-/* Nieuwe operator-foto (10 augustus 2026): armband MET achtergrond, zelfde
-   formaat als de Guided Breathwork-foto — dus dezelfde `cover`-behandeling
-   in plaats van het `contain` van de vorige, vrijstaande versie. */
-const BRACELET_IMG =
-  'https://vibezcore-audio.b-cdn.net/images/welcoma%20screen%20app%20bracelet%20with%20background%202.png';
-/* Operator-foto voor de Guided Breathwork-kaart, 10 augustus 2026. */
-const BREATHWORK_CARD_IMG =
-  'https://vibezcore-audio.b-cdn.net/images/welcome%20app%20screen%20duo.png';
-/* Maten van het beeldvak in de kaart — PodPulse rekent zijn kloppunt op
-   deze afmetingen, dus ze moeten gelijk zijn aan `cardColImg` hieronder.
-   Rechtstreeks uit Dimensions en niet uit SCREEN_W: die constante staat
-   verderop in dit bestand en zou hier nog niet bestaan (module-volgorde). */
-const CARD_IMG_W = Math.round(
-  (Dimensions.get('window').width - 48 - 10) / 2 - 28,
-);
-const CARD_IMG_H = 92;
-
-/* Het veld vult de bovenste helft; daaronder loopt het via de bestaande
-   gradient in het zwart over. */
-const SCREEN_W = Dimensions.get('window').width;
-/* Breedte van het SVG-vlak voor de kop: schermbreedte min de zijmarge van
-   `safe` (paddingHorizontal:24 aan beide kanten). */
-const CONTENT_W = SCREEN_W - 48;
-/* Zachter en lichter dan SOFT_BLUE (#3a8fff) — alleen voor dit scherm
-   (operator, 10 augustus 2026: "accentblauw nu overal is redelijk hard").
-   Minder verzadigd, meer wit erin, blijft leesbaar blauw op zwart zonder
-   te schreeuwen. */
-/* #7EB8FF (eerste poging) las nog te bleek en pastel aan (operator, 10
-   augustus 2026, tweede correctie: "moderner kiezen"). #4F8FFF is
-   verzadigder — de blauwtoon die de meeste hedendaagse SaaS-merken
-   gebruiken — zonder terug te vallen op het hardere #3a8fff van
-   daarvoor. */
-const SOFT_BLUE = '#4F8FFF';
-const SOFT_BLUE_RGB = '79,143,255';
-const FIELD_H = Math.round(Dimensions.get('window').height * (FOTO_HEIGHT / 100));
-/* Vierkant, want de wolk rekent in een vierkante ruimte. Breder dan het scherm
-   zodat de buitenrand van het veld doorloopt tot voorbij de zijkanten. */
-/* Precies binnen de schermbreedte, met een marge (operator, 8 augustus 2026:
-   "de animatie moet zich altijd in het beeld afspelen"). Stond op 1,25 maal
-   de breedte met een negatieve marge erboven: mooi als achtergrond, maar de
-   buitenrand van het veld en de bovenkant van het gezicht liepen het scherm
-   uit. Een gezicht dat half buiten beeld ontstaat is geen gezicht. */
-const FIELD_SIZE = Math.round(SCREEN_W * 0.94);
-/* Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
-   beeld terug zolang de download loopt, en dan blijft het veld draaien zonder
-   ooit een gezicht te worden. */
-/* Van de man naar de vrouw en terug (operator, 8 augustus 2026). Twee
-   portretten in plaats van een veld dat een gezicht wordt: het veld is nu wat
-   je ONDERWEG ziet — duizenden punten die van de ene kop naar de andere
-   reizen. Dat is hetzelfde beeld, maar met een reden erachter.
-
-   Via de cache en niet rechtstreeks van het net: `useImage` levert een leeg
-   beeld zolang de download loopt. */
-const MAN = assetUri(WELCOME_MAN);
-const WOMAN = assetUri(WELCOME_WOMAN);
-
 const s = StyleSheet.create({
-  checking: { flex: 1, backgroundColor: Brand.bg },
-  root: { flex: 1, backgroundColor: Brand.bg },
-  /* Iter 9an (2026-05-31): wrapper is TOP-anchored met FOTO_HEIGHT%.
-     Foto vult de wrapper (cover, geen randen aan zijkanten). Onder de
-     wrapper is Brand.bg, naadloos opgepakt door de bottom-gradient. */
-  bgPhotoWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: `${FOTO_HEIGHT}%`,
-    overflow: 'hidden',
-    backgroundColor: Brand.bg,
-  },
-  /* Het vierkante veld gecentreerd in het vak erboven. */
-  fieldCenter: {
-    position: 'absolute',
-    /* 54 -> 30 (operator, 10 augustus 2026: "animatie zelf mag iets
-       hoger"). */
-    top: 30,
-    left: Math.round((SCREEN_W - SCREEN_W * 0.94) / 2),
-    width: Math.round(SCREEN_W * 0.94),
-    height: Math.round(SCREEN_W * 0.94),
-  },
-  bgPhoto: {
-    width: '100%',
-    height: '100%',
-    transform: [{ scale: FOTO_SCALE }, { translateY: FOTO_Y }],
-  },
-  /* Top scrim — 15% van scherm. Subtiel zwart-fade voor status bar +
-     wordmark leesbaarheid, dempt de foto niet onnodig. */
-  topScrim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '15%',
-  },
-  /* Iter 9ao (2026-05-31): bottom-fade strekt nu 90% van schermhoogte
-     (was 68%). Maakt de fade veel gradueler én laat de gradient 100%
-     opacity bereiken precies op de foto-wrapper onderkant (FOTO_HEIGHT).
-     Resultaat: foto en zwart vlak vloeien onmerkbaar in elkaar over. */
-  bottomFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '90%',
-  },
+  checking: { flex: 1, backgroundColor: '#000000' },
+  root: { flex: 1, backgroundColor: '#000000' },
   safe: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: 18,
+    paddingBottom: 16,
   },
   top: {
     alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 4,
   },
   wordmark: {
-    width: 220,
-    height: 36,
-    /* Wordmark is een PNG — textShadow werkt niet op een Image, dus iOS-shadow
-       props + Android-elevation voor leesbaarheid op de foto. */
-    shadowColor: '#000',
-    shadowOpacity: 0.85,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    width: 270,
+    height: 44,
   },
-  middle: {
-    flex: 1,
-    paddingHorizontal: 8,
-    /* Naar BOVEN in plaats van naar beneden (operator, 8 augustus 2026:
-       "hoger zetten"). De kop stond 38 punten omlaag om de foto lucht te
-       geven; nu de twee kaarten eronder staan is die ruimte juist nodig
-       onderaan. De kop klimt het beeld in, waar hij op de mockup ook staat. */
-    justifyContent: 'flex-end',
-    /* Hoger (operator, 8 augustus 2026). Meer ruimte onder de kop duwt hem
-       omhoog het veld in, waar hij op de mockup ook staat. */
-    paddingBottom: 54,
-  },
-  header: {
-    /* Hoofdregel = visuele baas. Inter 900 + lichte negatieve letter-spacing
-       voor strakke koppen. fontSize gekozen zodat "Start Directing." (de
-       langste regel) op telefoon-breedtes op één regel past;
-       numberOfLines={1} + adjustsFontSizeToFit op de <Text> beschermt
-       extra-smalle toestellen tegen wrap. */
-    color: Brand.text,
-    /* Inter in een LICHT gewicht, zoals op de mockup (operator, 8 augustus
-       2026). Dit wijkt af van MERK_ANKER, dat grote vette koppen voorschrijft
-       — bewust, en op verzoek. Op een veld dat zelf al beweegt en licht geeft
-       leest een zware kop als een balk eroverheen; een dunne laat het beeld
-       doorlopen. */
-    fontFamily: BrandFonts.regular,
-    /* 42 → 34. "Control Your Vibe" is langer dan "Stop Drifting." en werd op
-       42 afgekapt tot "Control Your …" (gezien op het toestel, 8 augustus
-       2026). Op 34 past de langste regel met marge, ook op smallere
-       toestellen. */
-    fontSize: 36,
-    lineHeight: 44,
-    letterSpacing: 0.2,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.85)',
-    textShadowRadius: 6,
-    textShadowOffset: { width: 0, height: 2 },
-  },
-  /* De twee extra tinten van het verloop — zie de toelichting bij de
-     kop hierboven. */
-  headerMid: { color: '#9FC6FF' },
-  headerAccent: { color: SOFT_BLUE },
-  bottom: {
-    gap: 10,
-  },
-  /* ── De twee kaarten, naast elkaar (operator, 10 augustus 2026,
-     referentiebeeld erbij: "cards moet verticaal en naast elkaar") ── */
-  cardRow: { flexDirection: 'row', gap: 10 },
-  cardCol: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: `rgba(${SOFT_BLUE_RGB},0.28)`,
-    backgroundColor: 'rgba(12,24,44,0.72)',
-    /* De lichtbron-gradient (StyleSheet.absoluteFill) mag nooit voorbij
-       de ronde hoeken van de kaart uitsteken. */
-    overflow: 'hidden',
-  },
-  cardPressed: {
-    borderColor: `rgba(${SOFT_BLUE_RGB},0.55)`,
-    backgroundColor: 'rgba(16,32,58,0.85)',
-  },
-  /* Het beeld boven, over de volle kolombreedte — `cover` snijdt de lege
-     rand van het bronbestand weg in plaats van hem mee te schalen. */
-  /* De wrapper draagt de marge en de vaste plaats voor PodPulse (die zich
-     absoluut positioneert op zijn eigen ouder); `cardColImg` zelf is nu
-     puur de afbeelding. */
-  cardVisual: {
-    width: '100%',
-    height: 92,
-    marginBottom: 12,
-  },
-  cardColImg: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  cardColGlyph: {
-    width: '100%',
-    height: 92,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `rgba(${SOFT_BLUE_RGB},0.35)`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 16,
-    color: Brand.text,
-    letterSpacing: -0.2,
-  },
-  cardBody: {
+  topTagline: {
     marginTop: 4,
+    textAlign: 'center',
     fontFamily: BrandFonts.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: 'rgba(255,255,255,0.62)',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.85)',
   },
-  cardCta: {
-    marginTop: 12,
+
+  /* Operator, 17 september 2026 ("haal de dunne scheidingslijntjes weg,
+     losse capsulevorm met witruimte ertussen"): gap 10→16 voor meer
+     lucht tussen de drie knoppen — losse pillen i.p.v. een bijna-
+     aaneengeplakt blok. */
+  pillars: { gap: 16, marginBottom: 18 },
+  /* Volledige pil-vorm (borderRadius 999) i.p.v. afgeronde rechthoek —
+     "eigen losse capsulevorm". */
+  pillarWrap: {
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  pillarPressed: { opacity: 0.7 },
+  pillarBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  cardCtaTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    letterSpacing: 0.8,
-    color: SOFT_BLUE,
-  },
-  linkAction: { color: SOFT_BLUE, fontFamily: BrandFonts.semibold },
-  /* Iter v237f (2026-07-09): 3 links in nette grouped card met dividers.
-     Voorheen was 't 3 losse text-links wat te druk oogde. Nu: 1 pill met
-     3 rijen gescheiden door hairline dividers — leest als een menu-lijstje. */
-  linksDivider: {
-    height: 1,
-    marginTop: 16,
-    marginBottom: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  linksGroup: {
-    borderRadius: 14,
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    /* Operator, 17 september 2026 ("matglas-effect, 40% doorzichtig"):
+       0.22 → 0.55 dekking. Bij 0.22 verdween de knop-rand tegen drukke
+       kleding — precies de onrust die opgelost moest worden. Op de nu
+       veel donkerdere onderkant (zie de LinearGradient hierboven) geeft
+       0.55 een duidelijke eigen vorm terwijl de foto er nog vaag
+       doorheen schemert. */
+    backgroundColor: 'rgba(18,18,20,0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  footTagline: {
-    marginTop: 16,
-    textAlign: 'center',
+  /* Vaste breedte + gecentreerd: elk icoon (Wind/Zap/Headphones heeft
+     een andere natuurlijke glyph-breedte) landt zo altijd op exact
+     dezelfde verticale lijn. */
+  pillarIconWrap: {
+    width: 24,
+    alignItems: 'center',
+  },
+  /* Operator, 17 september 2026 ("letters te dik en groot"): cardHeadline
+     (22px Bold) was voor een kaart-context gemaakt, niet voor deze
+     compacte pil — semibold + 17px oogt rustiger zonder de leesbaarheid
+     op te offeren. */
+  pillarTitle: {
     fontFamily: BrandFonts.semibold,
-    fontSize: 11,
-    letterSpacing: 2.2,
-    color: 'rgba(255,255,255,0.5)',
+    fontSize: 17,
+    letterSpacing: -0.2,
+    color: '#ffffff',
   },
-  /* Icoon, tekst en pijl op ÉÉN regel. Zonder richting stapelde React Native
-     ze onder elkaar en werd van twee regels een blok van zes. */
-  linkRow: {
-    flexDirection: 'row',
+  pillarProduct: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 0.8,
+    color: PILLAR_ACCENT,
+    marginBottom: 2,
+  },
+
+  bottomLinks: {
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
   },
-  linkRowText: {
-    flex: 1,
-    color: 'rgba(255,255,255,0.72)',
+  bottomLinkText: {
     fontFamily: BrandFonts.medium,
     fontSize: 14,
-    letterSpacing: 0.1,
+    color: 'rgba(255,255,255,0.75)',
   },
-  linkRowSub: {
-    color: Brand.textDim,
-    fontFamily: BrandFonts.medium,
-    fontSize: 11,
-    marginTop: 1,
-    letterSpacing: 0.15,
-    opacity: 0.75,
-  },
-  linkRowSep: {
-    height: 1,
-    marginHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  /* Legacy — nog gerefereerd door oude code paths, houd voor safety. */
-  signinHit: {
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 2,
-  },
-  signinText: {
-    color: Brand.textDim,
-    fontFamily: BrandFonts.medium,
-    fontSize: 13,
-    textDecorationLine: 'underline',
+  bottomLinkAction: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.semibold,
   },
 });

@@ -29,6 +29,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type VibezAlertButton = {
   text: string;
@@ -42,6 +50,12 @@ export type VibezAlertConfig = {
   title: string;
   message?: string;
   buttons?: VibezAlertButton[];
+  /** Operator, 12 september 2026: breath-setup/breath-session.tsx zijn
+     omgezet naar light — hun eigen alerts (bv. de bracelet-popup) mogen
+     niet meer op de vaste, donkere `Brand`-kaart vallen. Optioneel en
+     standaard `false`: de rest van de (nog grotendeels donkere) app
+     blijft ongewijzigd, dit raakt enkel wie 'm expliciet meegeeft. */
+  light?: boolean;
 };
 
 type QueueEntry = VibezAlertConfig & { resolve: (idx: number) => void };
@@ -109,6 +123,7 @@ export function VibezAlertHost() {
   const buttons = current.buttons?.length
     ? current.buttons
     : [{ text: 'OK', style: 'primary' as const }];
+  const light = !!current.light;
 
   return (
     <Modal
@@ -123,10 +138,10 @@ export function VibezAlertHost() {
       statusBarTranslucent
     >
       <Pressable style={s.scrim} onPress={() => { /* tap outside = no dismiss */ }}>
-        <View style={s.card}>
-          <Text style={s.title}>{current.title}</Text>
+        <View style={[s.card, light && s.cardLight]}>
+          <Text style={[s.title, light && s.titleLight]}>{current.title}</Text>
           {current.message ? (
-            <Text style={s.message}>{current.message}</Text>
+            <Text style={[s.message, light && s.messageLight]}>{current.message}</Text>
           ) : null}
           <View
             style={[
@@ -134,45 +149,83 @@ export function VibezAlertHost() {
               buttons.length > 2 && s.buttonColumn,
             ]}
           >
-            {buttons.map((b, idx) => {
-              const isCancel = b.style === 'cancel';
-              const isDestructive = b.style === 'destructive';
-              return (
-                <Pressable
-                  key={idx}
-                  style={[
-                    s.button,
-                    isCancel && s.buttonCancel,
-                    isDestructive && s.buttonDestructive,
-                    !isCancel && !isDestructive && s.buttonPrimary,
-                    buttons.length > 2 && s.buttonFull,
-                  ]}
-                  onPress={() => {
-                    try {
-                      b.onPress?.();
-                    } catch {
-                      /* swallow caller errors */
-                    }
-                    dismiss(idx);
-                  }}
-                >
-                  <Text
-                    style={[
-                      s.buttonText,
-                      isCancel && s.buttonCancelText,
-                      isDestructive && s.buttonDestructiveText,
-                      !isCancel && !isDestructive && s.buttonPrimaryText,
-                    ]}
-                  >
-                    {b.text}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {buttons.map((b, idx) => (
+              <AlertButton
+                key={idx}
+                button={b}
+                light={light}
+                multiline={buttons.length > 2}
+                onPress={() => {
+                  try {
+                    b.onPress?.();
+                  } catch {
+                    /* swallow caller errors */
+                  }
+                  dismiss(idx);
+                }}
+              />
+            ))}
           </View>
         </View>
       </Pressable>
     </Modal>
+  );
+}
+
+/** One alert button. Own component (not inline in the .map()) so the
+ *  press-scale hooks don't run inside a loop. */
+function AlertButton({
+  button,
+  light,
+  multiline,
+  onPress,
+}: {
+  button: VibezAlertButton;
+  light: boolean;
+  multiline: boolean;
+  onPress: () => void;
+}) {
+  const isCancel = button.style === 'cancel';
+  const isDestructive = button.style === 'destructive';
+
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      style={[
+        s.button,
+        isCancel && s.buttonCancel,
+        isCancel && light && s.buttonCancelLight,
+        isDestructive && s.buttonDestructive,
+        !isCancel && !isDestructive && s.buttonPrimary,
+        multiline && s.buttonFull,
+        pressStyle,
+      ]}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+    >
+      <Text
+        style={[
+          s.buttonText,
+          isCancel && s.buttonCancelText,
+          isCancel && light && s.buttonCancelTextLight,
+          isDestructive && s.buttonDestructiveText,
+          !isCancel && !isDestructive && s.buttonPrimaryText,
+        ]}
+      >
+        {button.text}
+      </Text>
+    </AnimatedPressable>
   );
 }
 
@@ -193,6 +246,13 @@ const s = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
   },
+  /* Operator, 12 september 2026: light-only override — de rest van de
+     kaart (knop-kleuren: accent/error) blijft ongewijzigd, die werken al
+     op beide achtergronden. */
+  cardLight: {
+    backgroundColor: '#ffffff',
+    borderColor: 'rgba(10,10,12,0.12)',
+  },
   title: {
     color: Brand.text,
     fontFamily: BrandFonts.extrabold,
@@ -200,6 +260,7 @@ const s = StyleSheet.create({
     letterSpacing: -0.3,
     marginBottom: 8,
   },
+  titleLight: { color: '#0a0a0c' },
   message: {
     color: Brand.textDim,
     fontFamily: BrandFonts.regular,
@@ -207,6 +268,7 @@ const s = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 20,
   },
+  messageLight: { color: '#4a4a4e' },
   buttonRow: {
     flexDirection: 'row',
     gap: 10,
@@ -226,14 +288,17 @@ const s = StyleSheet.create({
     flex: 0,
     width: '100%',
   },
+  /* Huisstijl v4.4: CTA op donkere ondergrond = witte knop, donkere tekst.
+     Brand.accent (Signal Blue) is nooit een knop-achtergrond. */
   buttonPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
   },
   buttonCancel: {
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: Brand.border,
   },
+  buttonCancelLight: { borderColor: 'rgba(10,10,12,0.16)' },
   buttonDestructive: {
     backgroundColor: Brand.error,
   },
@@ -242,7 +307,8 @@ const s = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 0.2,
   },
-  buttonPrimaryText: { color: '#ffffff' },
+  buttonPrimaryText: { color: '#0a0a0a' },
   buttonCancelText: { color: Brand.textDim },
+  buttonCancelTextLight: { color: '#4a4a4e' },
   buttonDestructiveText: { color: '#ffffff' },
 });

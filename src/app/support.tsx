@@ -15,6 +15,11 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor CTA's. CTA-regel v4.4 op donker: witte knop-bg +
+   donkere tekst (die donkere tekst stond hier al goed). */
 import { Stack, router } from 'expo-router';
 import { useEffect } from 'react';
 import {
@@ -24,11 +29,32 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* Press-scale recipe (zie breath-welcome.tsx `StartCard`) — de "Open
+   Support page"-knop had nog geen enkele press-feedback. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const SUPPORT_URL = 'https://www.vibezcore.com/support';
 
 export default function SupportScreen() {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   useEffect(() => {
     /* Open de centrale support-webpage in de browser. Direct na openen
        gaan we terug zodat de user op z'n oorspronkelijke scherm terugkomt
@@ -48,21 +74,30 @@ export default function SupportScreen() {
 
   return (
     <SafeAreaView style={s.root}>
-      <Stack.Screen options={{ title: 'Support', headerBackTitle: 'Back' }} />
+      <Stack.Screen
+        options={{
+          title: 'Support',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
+      />
       <View style={s.center}>
         <Text style={s.title}>Opening Support…</Text>
         <Text style={s.body}>
           We&apos;re taking you to the VIBEZCORE Support page where you can
           submit your request.
         </Text>
-        <Pressable
-          style={s.btn}
+        <AnimatedPressable
+          style={[s.btn, pressStyle]}
           onPress={() => {
             void Linking.openURL(SUPPORT_URL);
           }}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         >
           <Text style={s.btnText}>Open Support page</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </SafeAreaView>
   );
@@ -94,7 +129,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 12,
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
   },
   btnText: {
     color: '#0a0a0a',

@@ -15,9 +15,58 @@
    Catch) om het te initiëren.
    ─────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/* Class components can't use hooks, so the press-scale lives in this small
+   functional wrapper — mirrors StartCard's pattern in breath-welcome.tsx. */
+function PressScaleButton({
+  style,
+  textStyle,
+  text,
+  onPress,
+  accessibilityLabel,
+  scaleTo = 0.95,
+}: {
+  style: object;
+  textStyle: object;
+  text: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+  scaleTo?: number;
+}) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(scaleTo, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      style={[style, pressStyle]}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Text style={textStyle}>{text}</Text>
+    </AnimatedPressable>
+  );
+}
 
 const SUPPORT_URL = 'https://www.vibezcore.com/support';
 
@@ -70,24 +119,25 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 {this.state.error.message}
               </Text>
             )}
-            <Pressable
+            <PressScaleButton
               style={s.btn}
+              textStyle={s.btnText}
+              text="Try again"
               onPress={this.reset}
               accessibilityLabel="Try again"
-            >
-              <Text style={s.btnText}>Try again</Text>
-            </Pressable>
+              scaleTo={0.96}
+            />
             {/* Iter v159 (2026-06-26): Contact support knop → opent
                 webformulier op vibezcore.com/support. Niet meer email-app. */}
-            <Pressable
+            <PressScaleButton
               style={s.linkBtn}
+              textStyle={s.linkText}
+              text="Contact support"
               onPress={() => {
                 void Linking.openURL(SUPPORT_URL);
               }}
               accessibilityLabel="Contact support"
-            >
-              <Text style={s.linkText}>Contact support</Text>
-            </Pressable>
+            />
           </View>
         </View>
       );
@@ -154,8 +204,10 @@ const s = StyleSheet.create({
     width: '100%',
     marginBottom: 18,
   },
+  /* Huisstijl v4.4: CTA op donkere ondergrond = witte knop, donkere tekst.
+     Brand.accent (Signal Blue) is nooit een knop-achtergrond of link-kleur. */
   btn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 28,
@@ -163,7 +215,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.3,
@@ -173,7 +225,7 @@ const s = StyleSheet.create({
     paddingVertical: 8,
   },
   linkText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 14,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.2,

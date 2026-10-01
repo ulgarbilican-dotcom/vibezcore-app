@@ -25,7 +25,7 @@
    _layout.tsx als sibling.
    ─────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
 import {
@@ -208,8 +208,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 24,
   },
+  /* Operator, 26 september 2026 (accentkleur-wissel, audio): eyebrow
+     gebruikt nu AudioAccent (Bio-Teal) i.p.v. AccentTextOnDark — zelfde
+     patroon als player.tsx. dismissBtn blijft de v4.4 CTA, ongewijzigd. */
   eyebrow: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2.4,
@@ -250,13 +253,13 @@ const styles = StyleSheet.create({
   },
   dismissBtn: {
     flex: 1.4,
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
   dismissBtnText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 13,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.3,

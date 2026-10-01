@@ -30,29 +30,31 @@ import SessionArt, {
   SESSION_ART,
   prefetchSessionArt,
 } from '@/components/SessionArt';
-import Starfield from '@/components/Starfield';
-import { SlideIntro } from '@/app/breath-welcome';
+import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
+import StateGlyph from '@/components/StateGlyph';
+import { usePlayerState } from '@/services/audio-player';
+import { LinearGradient } from 'expo-linear-gradient';
 import { assetUri } from '@/services/asset-cache';
 import { STATE_PHOTOS } from '@/services/offline-assets';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   BREATH_STATES,
   cycleSeconds,
+  type BreathState,
   type BreathStateKey,
 } from '@/data/breath-states';
 import { useBreathHistory } from '@/utils/breath-history';
-import { suggestBreath } from '@/utils/breath-suggestion';
 import { useSetting } from '@/utils/settings';
-import { consumeBreathIntroSkip } from '@/utils/breath-entry';
+import {
+  consumeBreathIntroSkip,
+  consumeBreathOnboardingRedirectSkip,
+} from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import {
-  ArrowRight,
-  AudioWaveform,
-  ChartNoAxesColumn,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react-native';
+import { ChartNoAxesColumn, Info, Lock, Target } from 'lucide-react-native';
+import { useActivePlan } from '@/utils/plan-store';
+import { useProtocolLocked } from '@/utils/protocol-gate';
+import { techniqueIcon } from '@/utils/technique-copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -72,21 +74,134 @@ import Animated, {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
+  type AnimatedStyle,
 } from 'react-native-reanimated';
+import { type ViewStyle } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+/* Halve breedte van de CTA-knop is genoeg zwaai voor de shimmer-strook om
+   volledig van links naar rechts te vegen (de strook zelf is smal en
+   gedraaid, dus hoeft niet de volle breedte te reizen). */
+const CTA_SHIMMER_RANGE = 170;
+
+const INTRO_BG_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20breathwork%20welcome%203.png';
+/* Operator, 8 september 2026: "Choose your session" naar de eerste
+   mockup-foto — volle achtergrondfoto i.p.v. zwart. Het oude
+   `STATES_BG_IMG`-bestand ("pic background app breathwork.png") bleek bij
+   controle een lichte, wazige abstracte textuur uit de LICHTE periode van
+   de app, geen scènefoto — vandaar de eerdere "grijs"/"mistig"-klachten,
+   niet de overlay.
+   Operator, zelfde dag (vervolg): "kijk kleine cirkels na, daar staan
+   andere foto's in nu" — de achtergrond had EVEN een eigen, losse fotolijst
+   die uit de pas liep met de miniaturen (`STATE_PHOTOS`). Die losse lijst is
+   weer weg; de achtergrond leest nu rechtstreeks uit `STATE_PHOTOS`, exact
+   dezelfde bron als de rij van vijf onderaan — kán niet meer uiteenlopen. */
+const stateBgFor = (key: BreathStateKey) => STATE_PHOTOS[key] ?? INTRO_BG_IMG;
+
+/* Operator, 9 september 2026: "info in popup is beetje te belerend en ziet
+   er saai en veel uit... users lezen niet graag veel" — de RHYTHMS-lijst was
+   drie volle alinea's tekst. Vervangen door een scanbare rij per techniek:
+   vorm-icoon (zelfde set als `breath-setup.tsx`), het cijferpatroon
+   rechtstreeks uit `phases` (geen tekst, meteen duidelijk), en één korte
+   "hook"-zin i.p.v. de volle `explain`. Geen nieuwe copy nodig: elke
+   `explain` in breath-states.ts volgt al het patroon "[timing] — [hook].
+   [evt. extra zin]" — het stuk na de streep IS al de pakkende zin. */
+
+/* Per-foto kadrering bovenop `cover` (zie toelichting bij de <Image> zelf).
+   Omrekening 1cm ≈ 63dp op dit toestel (450dpi, 1dp ≈ 1/160 inch).
+
+   Operator, 8 september 2026: "niet waar, je hebt beide foto's naar
+   beneden geplaatst" — terecht. EERDERE (foute) redenering: een positieve
+   `translateY` toont meer van de BOVENKANT van de brontfoto, dus leek
+   "hoger gekaderd" logisch. Maar "meer bovenkant tonen" duwt het bestaande
+   onderwerp juist LAGER het zichtbare venster in (er komt extra beeld
+   BOVEN het onderwerp bij, dus het onderwerp zelf zakt naar beneden in
+   het venster) — het tegenovergestelde van wat "naar boven" bedoelt.
+   Teken nu omgedraaid: NEGATIEF = onderwerp hoger in beeld.
+
+   Operator, 15 september 2026: "calm control foto nog meer uitzomen" —
+   `cover` op scale 1 is al het MAXIMUM uitgezoomd dat kan zonder een
+   lege rand (het crop-venster ligt vast op de layout-maat, VÓÓR
+   transform; scale < 1 verkleint enkel diezelfde vaste crop, toont nooit
+   meer bronbeeld — zie de toelichting bij `calm` hieronder). Verder
+   uitzoomen dan dat kan alleen door de HELE foto te tonen i.p.v. 'm te
+   vullen: optionele `mode: 'contain'` per state, met een subtiele
+   achtergrondkleur (`C.bg`) op de plekken die dan open blijven. */
+type BgCrop = {
+  scale: number;
+  translateY: number;
+  translateX?: number;
+  mode?: 'cover' | 'contain';
+};
+const NO_CROP: BgCrop = { scale: 1, translateY: 0 };
+
+/* Operator, 8 september 2026 (2e ronde): "wat doe jij? foto boost sharp
+   focus stond al goed" — de algemene basiswaarde die hier stond
+   (toegepast op ALLE vijf, ook de twee die al prima stonden) is terug
+   weg. Terug naar: kaal `cover` (= geen aanpassing) tenzij een toestand
+   hier expliciet een eigen override heeft, precies zoals vóór de
+   "consistentie"-poging — die poging loste niets op en brak juist twee
+   foto's die al goed stonden. */
+const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
+  /* "clarity nu veel te hoog" — de -189 was getuned op een oudere foto
+     (deze staat nu op de 3e vervanging, "pic clarity app 3.png"), nooit
+     hierop gecontroleerd. Terug naar kaal `cover` tot hier iets specifieks
+     over gevraagd wordt. */
+  /* "rest moet ook 2cm zakken" (-150 → -24), toen "1cm hoger" (-24 → -87).
+     Operator, 15 september 2026: "rest foto moet ook volledig op scherm
+     staan, wordt nu afgesneden" — eerst `mode: 'contain'` (toont 'm
+     volledig, met eventuele lege rand). Operator daarna, samen met de
+     `calm`-correctie hierboven: "moet zoals bij boost en sharp focus
+     mooi in heel scherm" — terug naar kale `cover` (geen lege rand,
+     wél een beetje crop — zelfde afweging als bij `calm`). Bescheiden
+     inzoom + positieve `translateY` beschermt de bovenkant, net als bij
+     `calm` hierboven. Operator daarna: "beetje naar links" — nieuw
+     `translateX`-veld op `BgCrop` (bestond nog niet, enkel scale/
+     translateY); negatief = naar links. */
+  rest: { scale: 1.3, translateX: -20, translateY: 30 },
+  /* Operator, 15 september 2026: "pic calm control app 5.png" — twee
+     mensen naast elkaar, beide met een opgeheven arm. Bronfoto (923×1343)
+     is breder dan een telefoonscherm, dus `cover` snijdt van nature de
+     zijkanten af.
+
+     Twee mislukte pogingen om de vrouw rechts (vuist dicht bij de
+     rechterrand) meer ruimte te geven door steeds harder in te zoomen +
+     te verschuiven (tot scale 1.55) sneden uiteindelijk BEIDE figuren
+     "langs alle kanten af" (operator) — véél te agressief. Een bescheiden
+     zoom (1.05) hielp ook niet: haar hand staat zo dicht bij de rand dat
+     ZELFS de minimale `cover`-crop 'm al raakt — met `cover` is er geen
+     scale/translateY-combinatie die haar hand toont zonder ergens anders
+     iets af te snijden, want `cover` snijdt per definitie altijd iets af.
+     `mode: 'contain'` toont de HELE foto, gegarandeerd, ongeacht
+     schermformaat — enige manier om zeker te weten dat haar hand nooit
+     meer wegvalt. Operator daarna: "foto naar boven, heb liever zwarte
+     rand aan onderkant" — bij `contain` op scale 1 staat de lege ruimte
+     standaard verdeeld boven én onder; negatieve `translateY` schuift de
+     volledige foto omhoog, dus de rand verzamelt zich nu onderaan i.p.v.
+     verspreid. */
+  calm: { scale: 1, translateX: 0, translateY: -60, mode: 'contain' },
+};
+
+const bgCropFor = (key: BreathStateKey): BgCrop =>
+  STATE_BG_CROP[key] ?? NO_CROP;
 
 /* Dezelfde volgorde als overal elders: van meest activerend naar meest
    kalmerend. Dat is ook de nummering van de bracelet-modi (CLAUDE.md §5),
    dus hij hoort niet per scherm te verschillen. */
 const ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
 
-/* Waar de pagina op opent als er nog niets te suggereren valt: CALM CONTROL,
-   de toestand van de onboarding en van de gratis sessie. Zodra er historiek
-   is neemt de suggestie het over — zie `suggestion` hieronder. */
+/* Waar de pagina ALTIJD op opent bij een verse binnenkomst vanaf een andere
+   pagina: CALM CONTROL — mooiste kleur, middelste positie in de rij van
+   vijf (operator, 13 augustus 2026). Geen gepersonaliseerde suggestie meer
+   op dit scherm; die zit nu in het protocol/agenda (utils/protocol.ts). */
 const FALLBACK_INDEX = ORDER.indexOf('calm');
 
 /* Het beeldvak. VASTE hoogte, want de tekst eronder mag niet verspringen
@@ -94,7 +209,12 @@ const FALLBACK_INDEX = ORDER.indexOf('calm');
    `artScale` per toestand. */
 /* Het beeldvak levert hoogte in aan de rij eronder: die draagt nu twee
    leesbare regels per toestand in plaats van één onleesbare. */
-const BOX_H = Math.min(Math.round(SCREEN_H * 0.28), 252);
+/* Operator, 7 september 2026 (productkritiek): "de foto is té dominant,
+   voelt als een banner — maak 'm iets kleiner, ruimte voor een sterkere
+   typografische hiërarchie" — 0.28/252 → 0.22/200. */
+/* Operator, 7 september 2026: "foto moet iets groter in de hoogte" —
+   0.22 → 0.25, cap 200 → 226. */
+const BOX_H = Math.min(Math.round(SCREEN_H * 0.25), 226);
 /* 20% kleiner (operator, 3 augustus 2026): op een smaller toestel dan de
    emulator liepen de illustraties tot tegen de kop en de naam eronder aan.
    Tekst hoort vrij te staan, dus de figuur wijkt — niet andersom. */
@@ -133,7 +253,181 @@ function fmt(sec: number) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/* Operator, 7 september 2026 (terug naar donker): wit-op-zwart is precies
+   het contrast dat je wil, dus deze vervangkleur-logica is een no-op.
+   Functie blijft bestaan (i.p.v. alle aanroepen weg te halen) zodat een
+   eventuele latere lichte variant van dit scherm 'm zo kan terugzetten.
+   Verplaatst naar module-scope (21 september 2026) zodat `StateThumb`
+   'm ook kan gebruiken zonder een closure-prop nodig te hebben. */
+const accentTextFor = (hex: string) => hex;
+
+/* Operator, 7 september 2026 (productkritiek): "Apple gebruikt sentence
+   case, niet overal caps" — de NAAM zelf verandert niet, enkel de
+   schrijfwijze op dit scherm. Verplaatst naar module-scope, zelfde reden
+   als `accentTextFor` hierboven. */
+const sentenceCase = (v: string) =>
+  v
+    .toLowerCase()
+    .split(' ')
+    .map((w) => (w === '&' ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+
+/* Eigen component (niet inline in de `.map()`) — elke cirkel heeft zijn
+   EIGEN animated shared value nodig, dat kan niet in een lus met
+   `useSharedValue` (Rules of Hooks: vast aantal hooks per render).
+   Operator, 21 september 2026 ("choose your state buttons ook zelfde
+   animatie geven"): was RN's ingebouwde `pressed`-state (instant scale
+   0.95, geen terugveer) — nu dezelfde reanimated spring-press als de CTA
+   op dit scherm (`ctaPressStyle`, zie hieronder in `BreathScreen`). */
+function StateThumb({
+  k,
+  t,
+  on,
+  onPress,
+  thumbPulseStyle,
+}: {
+  k: BreathStateKey;
+  t: BreathState;
+  on: boolean;
+  onPress: () => void;
+  thumbPulseStyle: AnimatedStyle<ViewStyle>;
+}) {
+  const pressScale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => {
+        pressScale.value = withTiming(0.95, { duration: 80 });
+      }}
+      onPressOut={() => {
+        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      }}
+      style={[s.thumbCol, pressStyle]}
+      accessibilityLabel={t.eyebrow}
+    >
+      <View style={[s.thumb, on && s.thumbSelected]}>
+        {/* Operator, 24 september 2026, definitief: "ook bij aanklikken
+           geen halo buiten de grote ring, enkel een beetje gloed-kleur
+           BINNEN de ring, in de state-kleur." `haloOuter` (1.28×) en
+           `haloMid` (1.04×) waren allebei GROTER dan de ring zelf
+           (`thumbOutline`, exact THUMB) — dat mag dus nooit meer, ook niet
+           bij selectie. Volledig weg. Wat overblijft: `haloInner` (0.7×,
+           wit, ruim binnen de ring) plus, enkel bij selectie, een kleine
+           gloed in de eigen accentkleur van de staat — ook die blijft
+           BINNEN de ringrand (0.82×, nog altijd kleiner dan de ring). */}
+        {on && (
+          <View
+            style={[
+              s.halo,
+              { width: THUMB * 0.82, height: THUMB * 0.82, backgroundColor: t.accent, opacity: 0.18 },
+            ]}
+          />
+        )}
+        <View
+          style={[
+            s.halo,
+            s.haloInner,
+            { backgroundColor: '#ffffff', opacity: on ? 0.13 : 0.06 },
+          ]}
+        />
+        {/* Operator, 24 september 2026 ("cirkel kleur moet weg"): de rand
+           droeg bij selectie de accentkleur van de staat (paars voor Calm
+           Control op het screenshot) — dat is exact de kleur die weg moet,
+           niet enkel een gloed erachter. Wit i.p.v. `t.accent`, enkel dikker
+           bij selectie (1.5 i.p.v. 1) — kleur draagt de selectie nergens
+           meer op dit rijtje, enkel opaciteit/dikte/schaal. */}
+        <View
+          style={[
+            s.thumbOutline,
+            {
+              borderColor: on ? '#ffffff' : 'rgba(255,255,255,0.22)',
+              borderWidth: on ? 1.5 : 1,
+            },
+          ]}
+        />
+        <Animated.View style={on ? thumbPulseStyle : undefined}>
+          <StateGlyph
+            stateKey={t.key}
+            size={THUMB * 0.5}
+            /* Operator, 24 september 2026, vervolg ("dimmen nog steeds niet
+               echt merkbaar bij aantikken"): 0.32 → 0.22, nog duidelijker
+               contrast met het actieve icoon. */
+            color={on ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.22)'}
+            strokeWidth={1.8}
+          />
+        </Animated.View>
+      </View>
+      {/* Operator, 21 september 2026 ("tekst Sharp Focus... onder de
+         knoppen en de lijn daaronder wit highlighten"): naam + lijntje
+         droegen de statekleur (`accentTextFor(t.accent)`) bij selectie —
+         nu gewoon wit, zelfde "kleur zit al op de cirkel/ring, niet
+         nogmaals herhalen"-principe als elders in de app. */}
+      <Text
+        style={[
+          s.thumbName,
+          on
+            ? { fontFamily: BrandFonts.semibold, color: '#ffffff' }
+            : { fontFamily: BrandFonts.medium, color: 'rgba(255,255,255,0.45)' },
+        ]}
+        numberOfLines={2}
+      >
+        {sentenceCase(t.eyebrow)}
+      </Text>
+      {/* Operator, 24 september 2026 ("streep bij aanklikken moet ander"):
+         het onderstreepje onder de naam van de geselecteerde staat weg —
+         ring + schaalvergroting + wit-vs-gedimde tekst dragen de selectie
+         al, dit was een vierde, overbodig signaal bovenop. */}
+    </AnimatedPressable>
+  );
+}
+
+function GoalButton({
+  plan,
+  protocolLocked,
+  onPress,
+}: {
+  plan: unknown;
+  protocolLocked: boolean;
+  onPress: () => void;
+}) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      hitSlop={10}
+      style={[s.goalBtn, pressStyle]}
+      accessibilityLabel="Your goal and daily plan"
+    >
+      {!plan && protocolLocked ? (
+        <Lock size={19} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+      ) : (
+        <Target size={19} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+      )}
+      <Text style={s.goalBtnLbl}>{plan ? 'Plan' : 'Goal'}</Text>
+    </AnimatedPressable>
+  );
+}
+
 export default function BreathScreen() {
+  /* Operator, 26 september 2026 ("cta niet bereikbaar, mini-player staat
+     erover op de welcome-pagina van breath"): nodig voor `introWrap`
+     hieronder om ruimte te reserveren voor de mini-player. */
+  const playerState = usePlayerState();
   /* De suggestie bepaalt waar de pagina op OPENT. Bewust geen extra balk of
      kaart erbij: het scherm ziet er precies hetzelfde uit, hij staat alleen
      al op de juiste deur. Dat is de rustigste vorm die een aanbeveling kan
@@ -142,18 +436,13 @@ export default function BreathScreen() {
      Eén keer bepaald bij het openen; hem laten meebewegen met de klok zou
      de pagina onder je handen laten verspringen. */
   const history = useBreathHistory();
-  /* MOET boven de suggestie staan: die leest hem. Stond hij eronder, dan is
-     de waarde er nog niet op het moment dat de berekening loopt. */
-  const [goals] = useSetting('goals');
-  const suggestion = useMemo(
-    () =>
-      history.length > 0 ? suggestBreath(history, new Date(), goals) : null,
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-    [history.length > 0],
-  );
-  const startIndex = suggestion
-    ? ORDER.indexOf(suggestion.state)
-    : FALLBACK_INDEX;
+  /* Voor de doel/dagplan-knop hieronder — zelfde "slimme bestemming"-logica
+     als de "Your daily plan"-rij op Activity. */
+  const { plan } = useActivePlan();
+  /* Operator, 17 september 2026: zelfde vooraf-signaal als op Activity —
+     zie utils/protocol-gate.ts. Deze knop is te klein voor tekst, dus
+     enkel het icoon wisselt naar een slot. */
+  const protocolLocked = useProtocolLocked();
 
   const [index, setIndex] = useState(FALLBACK_INDEX);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -174,6 +463,144 @@ export default function BreathScreen() {
      foto (operator, 5 augustus 2026). */
   const [introRun, setIntroRun] = useState(0);
 
+  /* Operator, 8 september 2026 ("wereldniveau"-kritiek): "de foto zou heel
+     langzaam moeten in-zoomen (Ken Burns-effect) om diepte te creëren" —
+     traag heen-en-weer tussen 1.0 en 1.06 (yoyo via `withRepeat(...,
+     true)`), zodat de lus naadloos doorloopt zonder ooit terug te
+     springen. 18 sec per richting is bewust traag — moet nauwelijks
+     betrapt worden ALS beweging, enkel als "waarom voelt dit levend aan". */
+  /* Operator, 8 september 2026: de pan-drift die hier stond ("dynamischer
+     maken") duwde de gezichten soms deels uit beeld — op een scherm dat
+     iemand maar een paar seconden ziet, moet meteen duidelijk zijn wat er
+     staat; dat weegt zwaarder dan extra beweging. Terug naar enkel de
+     zoom, in het bereik dat al goed stond vóór de pan erbij kwam. */
+  const kenBurns = useSharedValue(1);
+  useEffect(() => {
+    kenBurns.value = withRepeat(
+      withTiming(1.06, { duration: 18000, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [kenBurns]);
+  const kenBurnsStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: kenBurns.value }],
+  }));
+
+  /* Operator, 8 september 2026: "de foto's zijn nu heel statisch, kunnen
+     we daar iets aan doen?" — EERSTE poging (eigen `useAnimatedStyle` die
+     `STATE_BG_CROP[st.key]` in de worklet opzocht) veroorzaakte een
+     Reanimated-crash ("animated style op non-animated component" /
+     "Should not already be working") zodra dit scherm geopend werd — de
+     precieze oorzaak (vermoedelijk het dynamisch opzoeken van een object
+     per key ÍN de worklet, i.p.v. een simpele shared-value-lezing) is niet
+     verder uitgezocht; teruggedraaid naar stabiel. Dit blijft dus nog
+     open — zie eerstvolgende, voorzichtigere poging. */
+
+  /* Operator, 8 september 2026: "breathe/build/become om de beurt laten
+     zien, telkens een reveal van een woord" — daarna: "moet smoother, een
+     vlotte overgang, nu is het gewoon om de beurt." De eerste versie liet
+     elk woord VOLLEDIG wegdoezelen vóór het volgende begon (harde
+     estafette); nu start het volgende woord al terwijl het vorige nog
+     bezig is met wegdoezelen — een echte overlappende crossfade (700ms
+     overlap), plus een tikje schaal erbij naast opacity/optillen voor een
+     rijker gevoel. TURN (tijd tussen de STARTS van opeenvolgende woorden)
+     is korter dan de actieve duur van één woord — dát overlap is het hele
+     verschil tussen "estafette" en "vloeiend". */
+  /* Operator, 8 september 2026: een oneindig herhalende carrousel — steeds
+     maar één woord zichtbaar, dan weer weg — is precies het patroon van een
+     goedkope website-hero-slider en dát is waarom het "amateuristisch" oogt,
+     los van hoe soepel de easing is. De techniek die high-end merken hier
+     wél gebruiken (Apple/Stripe/Linear-stijl) is een STAGGERED ENTRANCE:
+     de woorden komen één keer na elkaar op, met een korte vertraging
+     ertussen, en BLIJVEN staan. Geen lus — zelfverzekerd i.p.v. onrustig,
+     en goedkoper op batterij/GPU (geen animatie die voor altijd doorloopt). */
+  const WORD_STAGGER_MS = 220;
+  const WORD_RISE_MS = 620;
+  const wordReveal = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
+  useEffect(() => {
+    wordReveal.forEach((v, i) => {
+      v.value = withDelay(
+        300 + i * WORD_STAGGER_MS,
+        withTiming(1, { duration: WORD_RISE_MS, easing: Easing.out(Easing.cubic) }),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* Drie losse `useAnimatedStyle`-aanroepen i.p.v. een helper-functie die
+     de hook aanroept — hooks horen rechtstreeks in het component te staan,
+     niet achter een gewone functie verstopt.
+     Operator, 8 september 2026: "haperend" — `scale` erbij (naast opacity/
+     translateY) was één GPU-bewerking te veel op dit toestel (budget-
+     Android); weg, enkel opacity+translateY blijft over. Vloeiender op
+     zwakkere hardware weegt hier zwaarder dan het extra tikkeltje "rijk".
+     Nu geen lus meer (zie boven) dus dit is bovendien een eenmalige, niet
+     een continue GPU-belasting. */
+  const wordStyle1 = useAnimatedStyle(() => ({
+    opacity: wordReveal[0].value,
+    transform: [{ translateY: 10 * (1 - wordReveal[0].value) }],
+  }));
+  const wordStyle2 = useAnimatedStyle(() => ({
+    opacity: wordReveal[1].value,
+    transform: [{ translateY: 10 * (1 - wordReveal[1].value) }],
+  }));
+  const wordStyle3 = useAnimatedStyle(() => ({
+    opacity: wordReveal[2].value,
+    transform: [{ translateY: 10 * (1 - wordReveal[2].value) }],
+  }));
+
+  /* Operator, 8 september 2026 ("wereldniveau"-kritiek): "de knop mist
+     vibe... een subtiele interne lichtgloed die over de letters beweegt,
+     of reageert met een vering als je vinger hem nadert" — beide: een
+     dunne lichtstrook die om de ~3 sec over de knop veegt (shimmer), plus
+     een echte spring-schaal bij aanraken (niet enkel de Android-ripple). */
+  const ctaScale = useSharedValue(1);
+  const ctaPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+  const infoBtnScale = useSharedValue(1);
+  const onInfoBtnPressIn = () => {
+    infoBtnScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onInfoBtnPressOut = () => {
+    infoBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const infoBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: infoBtnScale.value }],
+  }));
+  const histBtnScale = useSharedValue(1);
+  const onHistBtnPressIn = () => {
+    histBtnScale.value = withTiming(0.92, { duration: 80 });
+  };
+  const onHistBtnPressOut = () => {
+    histBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const histBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: histBtnScale.value }],
+  }));
+  const specAskScale = useSharedValue(1);
+  const onSpecAskPressIn = () => {
+    specAskScale.value = withTiming(0.94, { duration: 80 });
+  };
+  const onSpecAskPressOut = () => {
+    specAskScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const specAskPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: specAskScale.value }],
+  }));
+  const shimmer = useSharedValue(-1);
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(-1, { duration: 0 }),
+        withDelay(2600, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })),
+        withDelay(1200, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+  }, [shimmer]);
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shimmer.value * CTA_SHIMMER_RANGE }, { rotate: '18deg' }],
+  }));
+
   /* Eén uitzondering op "altijd eerst het beeld": je komt hier via een
      herinnering (operator, 7 augustus 2026). Dan heb je de vraag al gelezen op
      je vergrendelscherm en is een tweede drempel er één te veel — je komt
@@ -186,6 +613,17 @@ export default function BreathScreen() {
   );
   useFocusEffect(
     useCallback(() => {
+      /* Altijd terug naar CALM CONTROL bij een verse binnenkomst vanaf een
+         andere pagina (operator, 13 augustus 2026: "mooie kleur en
+         centraal") — geen gepersonaliseerde suggestie meer hier; die leeft
+         nu in het protocol/agenda. `didPlace` resetten laat de pager, zodra
+         hij (opnieuw) mount, via `onLayout` naar CALM scrollen; bestaat de
+         pager al (het intro-scherm wordt overgeslagen), dan scrollt deze
+         regel er meteen zelf heen. */
+      didPlace.current = false;
+      setIndex(FALLBACK_INDEX);
+      pagerRef.current?.scrollTo({ x: FALLBACK_INDEX * SCREEN_W, animated: false });
+
       /* Terug uit een sessie: geen beeld. Zie utils/breath-entry.ts. */
       if (skipIntroRef.current || consumeBreathIntroSkip()) {
         skipIntroRef.current = false;
@@ -224,6 +662,7 @@ export default function BreathScreen() {
     return { weekMin, streak };
   }, [history]);
   const st = BREATH_STATES[ORDER[index]];
+  const accentText = accentTextFor(st.accent);
 
   const pagerRef = useRef<ScrollView | null>(null);
   const didPlace = useRef(false);
@@ -243,6 +682,12 @@ export default function BreathScreen() {
   historyLenRef.current = history.length;
 
   useEffect(() => {
+    /* "Maybe later" zet deze vlag vlak vóór de navigatie hierheen
+       (operator, 11 augustus 2026: "maybe later gaat nu terug naar
+       welcome breathwork"). Synchroon, geen AsyncStorage, dus geen race
+       met de vlag hieronder mogelijk — wie hier met deze vlag aankomt mag
+       nooit terug de intro in, punt uit. */
+    if (consumeBreathOnboardingRedirectSkip()) return;
     const id = setTimeout(() => {
       if (flagRef.current !== null) return;
       if (historyLenRef.current > 0) return;
@@ -276,6 +721,17 @@ export default function BreathScreen() {
   const fadeStyle = useAnimatedStyle(() => ({
     opacity: 0.25 + fade.value * 0.75,
     transform: [{ scale: 0.965 + fade.value * 0.035 }],
+  }));
+
+  /* Operator, 18 september 2026 ("het geselecteerde icoon moet niet
+     statisch zijn, maar heel langzaam en subtiel groter/kleiner worden op
+     het ritme van een rustige ademhaling" — Apple's SF Symbols
+     `.breathe`-animatie): hergebruikt gewoon de al bestaande `breath`
+     shared value hierboven (dezelfde 4.2s in-/uitademing die de grote
+     illustratie ook al gebruikt) i.p.v. een tweede, eigen loop te
+     starten — vanzelf al perfect gesynchroniseerd. */
+  const thumbPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + breath.value * 0.08 }],
   }));
 
   const goTo = useCallback(
@@ -315,8 +771,17 @@ export default function BreathScreen() {
   );
 
   const open = useCallback(() => {
+    if (__DEV__) console.log('[breath] CTA tapped at', Date.now());
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push({ pathname: '/breath-session', params: { state: st.key } });
+    /* Operator, 7 september 2026: "mockup klopt" — CONTINUE gaat nu naar
+       het nieuwe lichte setup-scherm (ritme + duur kiezen), niet meer
+       rechtstreeks naar de donkere sessie. `claimFreeSessionParam()`
+       verhuisde mee naar dat scherm se ECHTE "Start session"-tik — enkel
+       browsen naar setup mag de ene gratis sessie nog niet verbruiken. */
+    router.push({
+      pathname: '/breath-setup',
+      params: { state: st.key },
+    });
   }, [st.key]);
 
   /* ── Een halve centimeter lager ─────────────────────────────────────────
@@ -343,15 +808,81 @@ export default function BreathScreen() {
     st.durations.find((d) => d.recommended) ?? st.durations[st.defaultDuration];
 
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
-      <View style={s.stars} pointerEvents="none">
-        <Starfield
-          width={SCREEN_W}
-          height={SCREEN_H}
-          count={70}
-          color="#C9A7FF"
-        />
-      </View>
+    <SafeAreaView style={[s.root, s.rootLight]} edges={['top']}>
+      {/* Operator, 6 september 2026: het intro-scherm (WELCOME + mandala)
+         krijgt de lichte achtergrondfoto i.p.v. het sterrenveld.
+         Operator, 7 september 2026: "dat wordt licht modus" — de rest van
+         de tab (vijf-toestanden-carrousel) is nu OOK licht, dus het
+         sterrenveld (bedoeld voor een zwarte achtergrond) verdwijnt
+         volledig i.p.v. enkel tijdens intro uit te staan. */}
+      {intro ? (
+        <>
+          {/* Operator, 8 september 2026: "laat de foto tot helemaal beneden
+             en boven lopen" — volle-scherm i.p.v. een vast blok met een
+             `top`-offset. Ken Burns-zoom blijft op de foto zelf zitten. */}
+          <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
+            <Image
+              source={{ uri: INTRO_BG_IMG }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          </Animated.View>
+          {/* Operator, 8 september 2026: "ook de zwarte banden weg" — de
+             twee opaque vlakken (boven-dekkend, onder-dekkend) zijn weg.
+             Wat overblijft is ÉÉN zachte, geleidelijke sluiervervaging
+             onderaan (fotografische vignet, geen harde band) — enkel genoeg
+             om de tekst/CTA erboven leesbaar te houden, de foto zelf loopt
+             ongebroken door tot de randen. */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.55)', Brand.bg]}
+            locations={[0.4, 0.78, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      ) : (
+        <>
+          {/* Operator, 8 september 2026: per-foto bijstelling bovenop
+             `cover` — niet elke foto staat van nature goed gekaderd.
+             `scale` > 1 zoomt in, < 1 zoomt uit (kan dunne randen tonen,
+             vangt de vignet-gradiënt hieronder grotendeels op); NEGATIEVE
+             `translateY` toont het onderwerp hoger in het vaste kader
+             (positief zou extra beeld boven het onderwerp tonen en het
+             onderwerp zelf dus juist lager duwen — zie `STATE_BG_CROP`
+             hierboven voor de om-de-tuin-geleide eerste poging). Eén
+             object i.p.v. losse per-state checks, want dit groeit met
+             elke foto-vraag.
+
+             De continue "ademende" zoom bovenop deze kadrering (verzoek:
+             "de foto's zijn heel statisch") is teruggedraaid — gaf een
+             Reanimated-crash op dit scherm. Zie de toelichting bij
+             `bgZoom` hierboven. */}
+          <Image
+            key={st.key}
+            source={{ uri: assetUri(stateBgFor(st.key)) }}
+            style={[
+              StyleSheet.absoluteFill,
+              /* `contain` (zie `calm`) laat boven/onder open — die krijgen
+                 de pagina-achtergrondkleur i.p.v. zwart/transparant. */
+              bgCropFor(st.key).mode === 'contain' && { backgroundColor: Brand.bg },
+              {
+                transform: [
+                  { scale: bgCropFor(st.key).scale },
+                  { translateX: bgCropFor(st.key).translateX ?? 0 },
+                  { translateY: bgCropFor(st.key).translateY },
+                ],
+              },
+            ]}
+            resizeMode={bgCropFor(st.key).mode ?? 'cover'}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(10,10,10,0.15)', 'rgba(10,10,10,0.6)', Brand.bg]}
+            locations={[0.3, 0.72, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      )}
 
       {/* Alleen de naam van de toestand (operator, 4 augustus 2026).
           "CHOOSE YOUR MODE" en "Select your state" stonden hier als kop en
@@ -361,25 +892,66 @@ export default function BreathScreen() {
           naar. De naam staat nu bovenaan in plaats van eronder — dan weet je
           wat je ziet vóór je het ziet. */}
       {intro ? (
-        <View style={s.introWrap}>
-          <SlideIntro key={introRun} onTapOrb={() => {}} />
-          <Pressable
-            onPress={() => setIntro(false)}
-            /* Wit en VOL, niet omlijnd in de kleur van de toestand (operator,
-               5 augustus 2026). Dit is het enige wat je hier kunt doen, en op
-               een scherm dat verder uit één lichtgevend beeld op zwart bestaat
-               is wit het enige dat harder spreekt dan die figuur. Verderop, bij
-               de vijf toestanden, blijven de knoppen omlijnd — daar concurreert
-               de kleur van de toestand niet met een enkel beeld maar draagt ze
-               betekenis. */
-            style={[s.cta, s.ctaSolid, { marginTop: 28 }]}
-            android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-          >
-            <Text style={[s.ctaTxt, { color: '#0a0a0a' }]}>
-              EXPLORE MODES
-            </Text>
-            <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
-          </Pressable>
+        <View
+          style={[
+            s.introWrap,
+            playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT + 12 },
+          ]}
+        >
+          {/* Operator, 8 september 2026: "verwijder mandala... tekst breathe
+             moet verschillende groottes en onder elkaar. al de rest welcome
+             en voice weg" — `SlideIntro` (WELCOME-label, de morphende
+             cirkel-figuur, de Voice/Haptics/Silent-rij) is hier volledig
+             weg; dit scherm heeft nu enkel nog de foto, deze drie regels en
+             de knop. De ECHTE onboarding-aanroep van `SlideIntro` elders in
+             breath-welcome.tsx blijft volledig ongemoeid — dit component
+             wordt daar nog steeds op precies dezelfde manier gebruikt. */}
+          <View style={s.stackTitle}>
+            <Animated.Text style={[s.stackWord1, wordStyle1]}>Breathe</Animated.Text>
+            <Animated.Text style={[s.stackWord2, wordStyle2]}>Build</Animated.Text>
+            <Animated.Text style={[s.stackWord3, wordStyle3]}>Become</Animated.Text>
+          </View>
+          {/* Operator, 22 september 2026 ("control the input... op
+             breathwork welcome scherm onderaan in de app?"): dezelfde
+             tagline als onboarding's `SlideIntro` (breath-welcome.tsx) —
+             dat scherm had 'm al, deze (losse, gedupliceerde) versie hier
+             nog niet, wat onnodig kaler aanvoelde voor exact hetzelfde
+             merkbeeld. */}
+          <Text style={s.introSub}>Control the input. Change the output</Text>
+          {/* Operator, 24 september 2026 ("cta op welcome scherm van alle
+             3 [Breath/Bracelet/Library] moet zelfde kleur, animatie en
+             breedte hebben — vindt de witte mooier"): deze knop was op 19
+             september omgezet naar donker matglas (zie de oude toelichting
+             hieronder, nu verwijderd) en week daarmee af van de witte
+             `introCta`-knop op (tabs)/index.tsx ("Explore Audio Library")
+             en (tabs)/bracelet.tsx ("Explore Bracelet"). Terug naar wit/
+             donkere tekst, EN content-brede pil i.p.v. volle breedte —
+             exact dezelfde afmetingen/kleuren/animatie als die twee. */}
+          <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
+            <Pressable
+              onPress={() => setIntro(false)}
+              onPressIn={() => {
+                ctaScale.value = withTiming(0.96, { duration: 80 });
+              }}
+              onPressOut={() => {
+                ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+              }}
+              style={s.introCtaMatch}
+              android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+            >
+              <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>
+                Explore modes
+              </Text>
+              <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
+                <LinearGradient
+                  colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </Pressable>
+          </Animated.View>
         </View>
       ) : (
         <>
@@ -388,21 +960,50 @@ export default function BreathScreen() {
           gedimde tekstregel onderaan, en dat leest niet als een knop — zeker
           niet op een scherm waar de rest van de aandacht naar de figuur gaat.
           Linksboven, tegenover niets, zodat hij nooit met de kop botst. */}
-      <Pressable
+      <AnimatedPressable
         onPress={() => router.push('/breath-history')}
+        onPressIn={onHistBtnPressIn}
+        onPressOut={onHistBtnPressOut}
         hitSlop={14}
-        style={s.histBtn}
+        style={[s.histBtn, histBtnPressStyle]}
         accessibilityLabel="Your practice"
       >
-        <ChartNoAxesColumn size={19} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-      </Pressable>
+        <ChartNoAxesColumn size={19} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+      </AnimatedPressable>
 
-      {/* De naam boven de foto is weg (operator, 9 augustus 2026: dit
-          scherm mag niet scrollen en moet toch volledig passen — en deze
-          regel was de eerste die ooit een keer overlapte met de foto
-          eronder. De naam staat al, gekleurd en groot, in de rij van vijf
-          onderaan; twee keer dezelfde naam kostte alleen hoogte zonder iets
-          toe te voegen. */}
+      {/* Operator, 11 september 2026: "set your goal en daily plan een
+         eigen plaats geven, ook in de breath-tab" — stonden tot nu toe
+         enkel als rijen op Activity. Zelfde symmetrische plek als de
+         historiek-knop hierboven (links), nu rechts: één icoon, dezelfde
+         "slimme bestemming" als de "Your daily plan"-rij op Activity
+         (bestaat er al een protocol, dan rechtstreeks naar de agenda;
+         anders eerst naar de doel-keuze) — geen twee aparte knoppen nodig
+         voor wat in de kern één doorlopende flow is. */}
+      {/* Operator, 11 september 2026 (2e ronde): "zichtbaar maar
+         nietszeggend" — terecht, een los kruisje-icoon zegt niemand iets
+         (anders dan het grafiek-icoon links, dat tenminste conventioneel
+         "statistieken" uitstraalt). Tekstlabel eronder erbij, zelfde
+         patroon als een tabblad-icoon met caption. */}
+      <GoalButton
+        plan={plan}
+        protocolLocked={protocolLocked}
+        onPress={() => router.push((plan ? '/agenda' : '/build-choice') as never)}
+      />
+
+      {/* Operator, 8 september 2026 (3e ronde): "waar moet die header dan
+         staan? nu is dat gewoon platte tekst ergens" — terecht: de kop zat
+         BINNEN het gecentreerde `body`-blok (foto/thumbs/cta), dus zijn
+         positie was toeval — bij Boost viel hij letterlijk op het gezicht
+         van het model. Nu een vaste plek los van die groep: direct onder
+         de instellingen-/historiek-iconen, met een eigen sluier ERACHTER
+         (niet de vage vignet van de foto zelf, die dekt bovenaan bewust
+         bijna niets af) plus een tekstschaduw — zo blijft de kop leesbaar
+         ongeacht welke van de vijf foto's eronder staat. */}
+      {/* Operator, 8 september 2026 (5e ronde): "step 1 of 2 verwijderen en
+         choose your state in grijs kleine hoofdletters boven de cirkels
+         zetten centreel" — de vaste kop bovenaan (met sluier/schaduw/
+         stapindicator) is helemaal weg; "Choose your state" verhuist naar
+         vlak boven de rij van vijf, zie daar. */}
 
       {/* Alles staat als ÉÉN blok gecentreerd in wat er
           overblijft. Stond de praktijkregel onderaan vastgeprikt, dan viel
@@ -410,27 +1011,14 @@ export default function BreathScreen() {
           scherm — en een keuzepagina die halfleeg staat leest als een pagina
           waar nog iets bij moet. */}
       <View style={s.body}>
-      {/* ── Het beeld, met de veeglaag eroverheen ── */}
+      {/* ── Onzichtbare veeglaag ── Operator, 8 september 2026 (mockup 1):
+          de grote afgeronde foto-kaart die hier stond is weg — de
+          achtergrondfoto draagt het beeld nu, en de mockup toont hier geen
+          los kaartje meer. De swipe-pager zelf blijft: vegen om van
+          toestand te wisselen werkt nog exact zoals voorheen, enkel zonder
+          zichtbare inhoud — hij is nu een onzichtbare gebaar-laag boven de
+          achtergrond. */}
       <View style={s.stage}>
-        <Animated.View style={[s.artWrap, fadeStyle]} pointerEvents="none">
-          {/* De echte foto in plaats van de ademende illustratie (operator,
-              8 augustus 2026), met afgeronde hoeken. De ademhaling blijft in
-              de sessie zelf — daar begeleidt ze; hier is het beeld de
-              etalage en mag het gewoon MOOI zijn. */}
-          <Image
-            source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
-            /* Iets lager dan het vak, en dat is bewust: de ruimte die de
-               foto afstaat gaat naar de marges eronder — het scherm moet
-               ademen (operator, 8 augustus 2026). */
-            style={{
-              width: SCREEN_W - 72,
-              height: BOX_H - 26,
-              borderRadius: 26,
-            }}
-            resizeMode="cover"
-          />
-        </Animated.View>
-
         <ScrollView
           ref={pagerRef}
           horizontal
@@ -446,10 +1034,10 @@ export default function BreathScreen() {
             if (didPlace.current) return;
             didPlace.current = true;
             pagerRef.current?.scrollTo({
-              x: startIndex * SCREEN_W,
+              x: FALLBACK_INDEX * SCREEN_W,
               animated: false,
             });
-            setIndex(startIndex);
+            setIndex(FALLBACK_INDEX);
             setTimeout(() => {
               pagerReady.current = true;
             }, 120);
@@ -461,88 +1049,10 @@ export default function BreathScreen() {
           ))}
         </ScrollView>
 
-        {/* De pijlen staan ná de pager, dus ze vangen hun eigen tik. Kale
-            haken tegen de schermrand, geen knopjes: het beeld is het
-            onderwerp, en een omcirkelde pijl ernaast wordt vanzelf een
-            tweede. Aan de uiteinden verdwijnen ze — een pijl die er staat
-            maar niets doet is erger dan geen pijl. */}
-        {index > 0 && (
-          <Pressable
-            onPress={() => goTo(index - 1)}
-            hitSlop={20}
-            style={[s.arrow, s.arrowLeft]}
-            accessibilityLabel="Previous mode"
-          >
-            <ChevronLeft
-              size={30}
-              color="rgba(255,255,255,0.55)"
-              strokeWidth={1.5}
-            />
-          </Pressable>
-        )}
-        {index < ORDER.length - 1 && (
-          <Pressable
-            onPress={() => goTo(index + 1)}
-            hitSlop={20}
-            style={[s.arrow, s.arrowRight]}
-            accessibilityLabel="Next mode"
-          >
-            <ChevronRight
-              size={30}
-              color="rgba(255,255,255,0.55)"
-              strokeWidth={1.5}
-            />
-          </Pressable>
-        )}
+        {/* Operator, 7 september 2026: "pijltjes rechts en links van de
+           grote fotos wegdoen" — swipen op de pager (hierboven) blijft de
+           manier om te wisselen, net als de rij van vijf onderaan. */}
       </View>
-
-      {/* ── Wie dit is ──
-          Modus en figuur dragen béíde de kleur van de toestand, met een kort
-          streepje ertussen en de omschrijving eronder in wit. Niet de naam
-          wit en de rest gekleurd: de kleur IS hier de modus, dus die hoort
-          bij zijn naam te staan. */}
-      <Animated.View style={[s.copy, fadeStyle]}>
-        <View style={[s.rule, { backgroundColor: st.accent }]} />
-        <Text style={s.desc}>{st.description}</Text>
-        <Pressable onPress={() => setInfoOpen(true)} hitSlop={10}>
-          {/* AFGELEID uit de ritmes zelf, niet meer een los ingevuld zinnetje
-              (operator, 7 augustus 2026: "bij boost zie ik 3-3, maar als je
-              activeert zie ik daar 2-2"). Er stond een handgeschreven veld
-              `technique` naast de echte lijst — twee bronnen voor hetzelfde,
-              en de ene noemde alleen het eerste ritme terwijl je er binnen
-              twee kunt kiezen. Nu staan ze er allebei, en kan het niet meer
-              uit de pas lopen. */}
-          {/* De ritme-namen ("Box Breathing 4-4-4-4 · Triangular Breathing
-              4-4-4") stonden hier én op het volgende scherm, waar je ze
-              echt kiest (operator, 9 augustus 2026: "dat staat al in de
-              volgende, hoeft hier niet te staan"). Alleen de vraag blijft —
-              die opent de uitleg, en is nergens dubbel. Eén regel minder is
-              hier ook gewoon rustiger: "mooi ademen, Apple-stijl". */}
-          <Text style={[s.specAsk, { color: st.accent }]}>What is this?</Text>
-        </Pressable>
-      </Animated.View>
-
-      {/* ── De knop draagt de kleur van de modus ──
-          Omlijnd en niet gevuld: op een scherm dat verder uit één lichtgevend
-          beeld op zwart bestaat, is een vol vlak het zwaarste element in
-          beeld — en dat hoort de illustratie te zijn. */}
-      <Animated.View style={fadeStyle}>
-        <Pressable
-          onPress={open}
-          /* VOL in de kleur van de toestand (operator, 7 augustus 2026). Eén
-             volle knop per scherm — de handeling die je écht wil — en al het
-             andere omlijnd. Was alles omlijnd, dan zegt geen enkele knop nog
-             "hier moet je heen": op dit scherm concurreerde SELECT MODE met
-             vijf toestandsknoppen en won hij niet. De kleur draagt nu de
-             handeling in plaats van alleen de sfeer, en een gevuld vlak leest
-             ook in fel licht — een lijn van één punt doet dat niet. */
-          style={[s.cta, { backgroundColor: st.accent, borderColor: st.accent }]}
-          android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
-        >
-          <Text style={[s.ctaTxt, { color: '#0a0a0a' }]}>SELECT MODE</Text>
-          <ArrowRight size={17} color="#0a0a0a" strokeWidth={2.4} />
-        </Pressable>
-      </Animated.View>
 
       {/* ── Wat deze toestand is ─────────────────────────────────────────
            "Coherent 5-5" of "Resonant 6-6" zegt niets tegen wie de term niet
@@ -558,159 +1068,168 @@ export default function BreathScreen() {
       >
         <Pressable style={s.infoBackdrop} onPress={() => setInfoOpen(false)}>
           <Pressable style={s.infoCard} onPress={() => {}}>
-            <Text style={[s.infoEyebrow, { color: st.accent }]}>
-              {st.eyebrow}
+            {/* Operator, 10 september 2026: "moet tonen wat de ademtechniek
+               doet en varieert van de andere 2... niet als je niet verder
+               kan lezen" — daarna expliciet: "popup scrollbaar niet, gewoon
+               zo kort mogelijk en duidelijk beschreven". Geen ScrollView
+               dus — de inhoud moet vanzelf passen. Het cijferpatroon
+               ("4-4") hoort hier niet — dat is iets om MEE TE STELLEN, niet
+               om een STAAT op te kiezen; staat nu op het duur+techniek-
+               scherm (breath-setup.tsx). In de plaats het NIVEAU (Beginner/
+               Intermediate/Advanced): zegt net wél hoe de 3 van elkaar
+               verschillen — oplopende complexiteit, niet enkel andere
+               cijfers. Naam en hook zonder `numberOfLines`-afkap: de hook
+               is al kort (eerste zin na de streep uit `explain`), dus dat
+               past zonder scroll. */}
+            <Text style={[s.infoEyebrow, { color: accentText }]}>
+              {sentenceCase(st.eyebrow)}
             </Text>
             <Text style={s.infoTitle}>{st.title}</Text>
             <Text style={s.infoBody}>{st.description}</Text>
 
-            <Text style={[s.infoSection, { color: st.accent }]}>
+            <Text style={[s.infoSection, { color: accentText }]}>
               RHYTHMS
             </Text>
-            {st.techniques.map((t) => (
-              <View key={t.key} style={s.infoTech}>
-                <Text style={s.infoTechName}>{t.name}</Text>
-                <Text style={s.infoTechBody}>{t.explain}</Text>
-              </View>
-            ))}
+            {st.techniques.map((t) => {
+              const Icon = techniqueIcon(t.key);
+              return (
+                <View key={t.key} style={s.infoTechRow}>
+                  <View style={[s.infoTechIcon, { backgroundColor: `${st.accent}22` }]}>
+                    <Icon size={16} color={accentText} strokeWidth={2.2} />
+                  </View>
+                  <View style={s.infoTechCopy}>
+                    <View style={s.infoTechTop}>
+                      <Text style={s.infoTechName}>{t.name}</Text>
+                      <Text style={[s.infoTechLevel, { color: accentText }]}>
+                        {t.level}
+                      </Text>
+                    </View>
+                    <Text style={s.infoTechHook}>{t.effect}</Text>
+                  </View>
+                </View>
+              );
+            })}
 
-            <Pressable
-              style={[s.infoBtn, { borderColor: st.accent }]}
+            <AnimatedPressable
+              style={[s.infoBtn, { borderColor: accentText }, infoBtnPressStyle]}
               onPress={() => setInfoOpen(false)}
+              onPressIn={onInfoBtnPressIn}
+              onPressOut={onInfoBtnPressOut}
             >
-              <Text style={[s.infoBtnTxt, { color: st.accent }]}>Got it</Text>
-            </Pressable>
+              <Text style={[s.infoBtnTxt, { color: accentText }]}>Got it</Text>
+            </AnimatedPressable>
           </Pressable>
         </Pressable>
       </Modal>
 
+      {/* Operator, 8 september 2026 (5e ronde): "choose your state in grijs
+         kleine hoofdletters boven de cirkels zetten centreel" — vervangt de
+         losse kop bovenaan het scherm; dit label hoort nu direct bij de rij
+         die het beschrijft. */}
+      <Text style={s.chooseStateLabel}>CHOOSE YOUR STATE</Text>
+
       {/* ── De vijf, altijd zichtbaar ──
           Op volle kleur, niet weggedimd. Ze zijn hier geen knopjes maar de
           vijf beelden zelf; wat de keuze aanwijst is de ring en de naam
-          eronder, niet dat de andere vier uitgaan. */}
-      <View style={s.thumbs}>
-        {ORDER.map((k, i) => {
-          const t = BREATH_STATES[k];
-          const on = i === index;
-          return (
-            <Pressable
-              key={k}
-              onPress={() => goTo(i)}
-              style={s.thumbCol}
-              accessibilityLabel={t.eyebrow}
-            >
-              <View style={s.thumb}>
-                {/* De lichtkrans. Drie cirkels in de kleur van de toestand,
-                    van groot en bijna doorzichtig naar klein en sterker —
-                    samen lezen ze als één zachte gloed. Zonder dit liggen de
-                    beelden dof op het zwart terwijl ze in de referentie
-                    lichtgeven. Bewust géén Skia: vijf verlooptekeningen naast
-                    elkaar voor iets van zeventig punten is verspilling. */}
-                <View
-                  style={[
-                    s.halo,
-                    s.haloOuter,
-                    { backgroundColor: t.accent, opacity: on ? 0.07 : 0.03 },
-                  ]}
-                />
-                <View
-                  style={[
-                    s.halo,
-                    s.haloMid,
-                    { backgroundColor: t.accent, opacity: on ? 0.09 : 0.04 },
-                  ]}
-                />
-                <View
-                  style={[
-                    s.halo,
-                    s.haloInner,
-                    { backgroundColor: t.accent, opacity: on ? 0.13 : 0.06 },
-                  ]}
-                />
-                {on && <View style={[s.thumbRing, { borderColor: t.accent }]} />}
-                <Image
-                  source={{ uri: assetUri(STATE_PHOTOS[t.key]) }}
-                  style={{
-                    width: THUMB,
-                    height: THUMB,
-                    borderRadius: THUMB / 2,
-                  }}
-                  resizeMode="cover"
-                />
-              </View>
-              {/* Twee regels toegestaan, en dát is wat de letter groot maakt.
-                  Op één regel moest "CALM CONTROL" binnen 79 punt passen en
-                  kwam de tekst niet boven de tien punt uit — onleesbaar. Over
-                  twee regels is "CONTROL" de langste eenheid, en die past
-                  ruim op dertien. */}
-              <Text
-                style={[
-                  s.thumbName,
-                  { color: on ? t.accent : 'rgba(255,255,255,0.8)' },
-                ]}
-                numberOfLines={2}
-              >
-                {t.eyebrow}
-              </Text>
-              {/* Twee regels toegestaan: "Balance & Composure" past niet op
-                  één kolombreedte, en afkappen met een puntje maakt van een
-                  naam een raadsel. */}
-              <Text style={s.thumbSub} numberOfLines={2}>
-                {t.subtitle}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+          eronder, niet dat de andere vier uitgaan.
 
-      {/* Waar je bent in de rij van vijf, in de kleur van waar je staat. */}
-      <View style={s.dots}>
+          Operator, 11 september 2026: geprobeerd om hier een EIGEN,
+          tweede gradient achter de cirkels te zetten — bovenop het al
+          bestaande volledig-scherm vignet (regel ~626-631). Twee
+          overlappende verlopen met een andere curve gaven precies waar
+          ze uit elkaar liepen een zichtbare naad/rand ("het wordt weer
+          gepruts, de rand is zichtbaarder geworden"). Volledig
+          teruggedraaid — het ene bestaande vignet regelt dit al, geen
+          tweede laag meer nodig. */}
+      <View style={s.thumbs}>
         {ORDER.map((k, i) => (
-          <View
+          <StateThumb
             key={k}
-            style={[
-              s.dot,
-              i === index && { width: 18, backgroundColor: st.accent },
-            ]}
+            k={k}
+            t={BREATH_STATES[k]}
+            on={i === index}
+            onPress={() => goTo(i)}
+            thumbPulseStyle={thumbPulseStyle}
           />
         ))}
       </View>
 
-      {/* ── Praktijkregel weg (operator, 9 augustus 2026: "tekst start your
-          practice moet ook weg"). Het linksboven-icoon (histBtn) opent
-          dezelfde historiek al; deze regel was een tweede weg naar
-          hetzelfde scherm, en op een scherm dat zonder scroll alles moet
-          laten passen is een dubbele ingang de eerste die weg mag. */}
-
-      {/* ── De bibliotheek, ONDERAAN ─────────────────────────────────────
-          Terug naar de voet (operator, 9 augustus 2026): tussen de foto en
-          de rij van vijf stond hij het beeld-blok te breken, dat van kop tot
-          praktijkregel als één geheel hoort te ademen. Onderaan verstoort
-          hij niets — en blijft nu ook echt ZICHTBAAR, want het scherm scrolt
-          voortaan als de inhoud niet past (zie de ScrollView hieronder), in
-          plaats van stil te overlappen.
-          Opent de ECHTE bibliotheek: hero, de vier pijlers, alle series,
-          Soundscapes — het scherm dat er al staat, niet een nieuw kaal
-          lijstje ernaast. Enige ingang: vanuit breathwork. */}
-      <Pressable
-        onPress={() =>
-          router.push({ pathname: '/', params: { from: 'breath' } } as never)
-        }
-        style={s.libraryCard}
-        android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
-      >
-        <View style={s.libraryIcon}>
-          <AudioWaveform size={17} color={st.accent} strokeWidth={2.2} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.libraryTitle}>Audio Library</Text>
-          <Text style={s.librarySub}>
-            Sessions to train the mind — free to sample, full access with
-            Premium
+      {/* ── De knop, nu ÉÉN vaste kleur — 3e ronde, operator 8 september
+          2026: "wat is beter om 1 kleur voor alle knoppen?" Terecht — de
+          achtergrondfoto én de ring om de geselecteerde miniatuur dragen de
+          statekleur al; de knop diezelfde kleur nogmaals geven was drie
+          keer hetzelfde signaal. Wit, zelfde knop-chrome als het
+          welkomstscherm — één herkenbare primaire-actie-stijl door de app
+          heen i.p.v. per scherm anders. */}
+      {/* Operator, 8 september 2026: "we hadden ook een animatie voor de cta
+         voorzien?" — klopt, dit was de voorgestelde app-brede standaard
+         (spring-press bij indrukken, zoals op het welkomstscherm) die nog
+         niet overal stond. Hier nu toegepast — `fadeStyle` (bestaand,
+         faseert in/uit bij statewissel) en `ctaPressStyle` (nieuw, spring
+         bij indrukken) samen in ÉÉN array op ÉÉN Animated.View, niet
+         genest — twee losse geneste Animated.View's bleken op dit
+         Reanimated-versie een "animated style op non-animated component"
+         crash te geven zodra beide tegelijk actief waren. */}
+      {/* Operator, 21 september 2026 ("cta continue knop transparant blur
+         maar zachtjes de kleur van de state"): was vlak wit (operator, 8
+         september 2026, "1 kleur voor alle knoppen" — dat bleef zo lang
+         de knop zelf geen kleur droeg). Nu matglas i.p.v. massief wit,
+         met `st.accent` als zachte tint — zelfde `dimezisBlurViewSdk31Plus`-
+         recept als de rest van de app, tekst wit voor contrast op de
+         donkere blur i.p.v. het vorige zwart-op-wit. */}
+      <Animated.View style={[fadeStyle, ctaPressStyle]}>
+        <Pressable
+          onPress={open}
+          onPressIn={() => {
+            ctaScale.value = withTiming(0.96, { duration: 80 });
+          }}
+          onPressOut={() => {
+            ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          }}
+          style={[s.cta, { overflow: 'hidden', backgroundColor: '#ffffff' }]}
+          android_ripple={{ color: 'rgba(10,10,12,0.08)' }}
+        >
+          {/* Operator, 25 september 2026 ("groen van de choose cta niet
+             mooi/modern, kleur per state of 1 vaste kleur?"): was
+             blur + `st.accent`-tint — een knop die van kleur wisselt per
+             staat (paars/blauw/groen/...) is precies wat Apple vermijdt
+             voor een primaire actie; die blijft app-breed één herkenbare
+             kleur. Nu de vaste witte CTA-chrome, zelfde protocol als
+             overal elders vandaag al doorgevoerd (paywall, onboarding,
+             Audio & Haptics). */}
+          {/* Operator, 24 september 2026 (pasted Apple-referentie,
+             "Information Foraging Theory": een statische "Continue" laat
+             de gebruiker gissen wat er verandert; tekst die meebeweegt met
+             de gekozen staat kost geen actie-onzekerheid meer): dynamisch
+             i.p.v. vast "Continue". */}
+          <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>
+            Set {sentenceCase(st.eyebrow)} Session
           </Text>
-        </View>
-        <ChevronRight size={18} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
-      </Pressable>
+        </Pressable>
+      </Animated.View>
+      {/* Operator, 24 september 2026 (pasted Apple-referentie, "de tekst
+         met pijltje verbreekt de rust van de interface, i-icoontje rechts-
+         boven houdt de focus onderin op de cta"): "How it works" als
+         tekstlink onder de CTA vervangen door een klein info-icoontje
+         rechtsboven — zelfde `setInfoOpen`-popup, enkel de ingang
+         verandert. */}
+      <AnimatedPressable
+        onPress={() => setInfoOpen(true)}
+        onPressIn={onSpecAskPressIn}
+        onPressOut={onSpecAskPressOut}
+        hitSlop={10}
+        style={[s.howItWorksBtn, specAskPressStyle, fadeStyle]}
+      >
+        <Info size={18} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
+      </AnimatedPressable>
+
+      {/* Operator, 8 september 2026 (2e ronde): "verwijder more than
+         breathwork" — sluitregel weer weg. */}
+
+      {/* Operator, 7 september 2026: "staat te laag nu, plakt tegen balk
+         onderaan" — dit scherm gebruikt bewust `edges={['top']}` (geen
+         automatische safe-area onderaan). */}
+      <View style={{ height: 24 }} />
 
       </View>
         </>
@@ -721,62 +1240,171 @@ export default function BreathScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
-  stars: { ...StyleSheet.absoluteFillObject },
-  libraryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
-    marginBottom: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.035)',
-  },
-  libraryIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  libraryTitle: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 14,
-    color: '#ffffff',
-  },
-  librarySub: {
-    marginTop: 2,
-    fontFamily: BrandFonts.regular,
-    fontSize: 11.5,
-    lineHeight: 15,
-    color: 'rgba(255,255,255,0.45)',
-  },
+  /* Operator, 6 september 2026: intro-scherm licht i.p.v. donker — de
+     achtergrondfoto zelf dekt bijna alles af, maar de rand/statusbalk-zone
+     erboven moet ook al licht zijn, niet even opflitsen zwart. */
+  /* Operator, 8 september 2026: "we gaan terug naar dark mode" — Fase 1 van
+     de strategie ("Depth over breadth"). Naam `rootLight` blijft staan
+     (minder-invasieve diff dan overal hernoemen); de waarde is nu donker. */
+  rootLight: { backgroundColor: Brand.bg },
 
   /* De zijmarge is niet cosmetisch: rechtsboven zweeft het instellingen-
      icoon van de app over élk scherm heen, en zonder deze marge liep de
      laatste letter van de kop eronder door. */
   header: { alignItems: 'center', marginTop: 6, paddingHorizontal: 30 },
-  ctaSolid: {
+  /* Operator, 19 september 2026 ("matglas i.p.v. massief wit, zodat de
+     foto de ruimte krijgt"): keert de "moet wit zijn"-beslissing van 7
+     september bewust om — zelfde bewezen rgba-glasreceptuur als elders
+     in de app (geen `expo-blur`/BlurView, die werkt pas na een native
+     rebuild). */
+  /* Operator, 24 september 2026: zelfde kleuren/animatie als
+     (tabs)/index.tsx se `introCta` en (tabs)/bracelet.tsx se `introCta`
+     ("Explore Audio Library"/"Explore Bracelet"). Vervolg, zelfde dag
+     ("ctas moeten langer, Apple gebruikt een vaste zijmarge voor een
+     primaire hero-cta i.p.v. een content-brede pil"): `paddingHorizontal`
+     → `marginHorizontal`, de knop rekt nu uit tot een vaste zijmarge i.p.v.
+     rond de tekst te plooien — zelfde wijziging in de andere twee
+     bestanden. Eigen naam (niet hernoemd naar `introCta`) om niet per
+     ongeluk de bestaande `s.cta`-gebruikers in dit bestand (elders, andere
+     schermtoestand) te raken. */
+  introCtaMatch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 50,
+    marginHorizontal: 26,
+    borderRadius: 14,
     backgroundColor: '#ffffff',
-    borderColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#D2D2D7',
+    overflow: 'hidden',
   },
+  /* Operator, 8 september 2026: "foto tot boven en beneden laten lopen" —
+     nu de foto het hele scherm vult i.p.v. enkel het bovenste stuk, hoort
+     de tekst+knop onderaan te zitten (over het zachte vignet), niet meer
+     verticaal gecentreerd over het midden van de foto heen. */
+  /* Operator, 8 september 2026: "zet breathe build become in midden" —
+     terug van links (7-september-keuze, "sluit aan bij het natuurlijke
+     gewicht van de foto") naar gecentreerd. De CTA eronder had al zijn
+     eigen `alignSelf:'center'`, dus die verandert hier niet mee. */
+  /* Operator, 24 september 2026 ("moet de plaatsing exact zelfde zijn?"):
+     `paddingBottom` stond hier op 40, terwijl `(tabs)/index.tsx` se
+     `introTextWrap` en `(tabs)/bracelet.tsx` se `introTextWrap` (zelfde
+     rol, andere naam) allebei op 34 stonden — geen vastgelegde reden voor
+     het verschil gevonden. Gelijkgetrokken naar 34 zodat de CTA op alle 3
+     exact even ver van de onderrand staat. */
   introWrap: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 26,
+    paddingBottom: 34,
+  },
+  /* Operator, 8 september 2026 — 3e ronde: "Breathe/Build gelijk, Become
+     super groot" oogde als een fout i.p.v. een keuze — de sprong tussen
+     laag 2 en 3 was te groot/plotseling. Nu een gegradueerde 3-traps
+     hiërarchie (geen 2 gelijk + 1 uitschieter): elke regel iets groter
+     én iets zwaarder én iets witter dan de vorige — een opbouw die
+     bedoeld aanvoelt, met strakke tracking op alle drie. */
+  /* Operator, 11 september 2026: "zetten we breathe build become in het
+     midden of beter links?" — links geprobeerd, operator koos alsnog voor
+     gecentreerd. Terug naar `center`. */
+  stackTitle: { alignItems: 'center' },
+  /* Tagline onder "Breathe Build Become" — zelfde stijl als onboarding's
+     `introSubLight` (breath-welcome.tsx). */
+  introSub: {
+    marginTop: 4,
+    width: SCREEN_W - 64,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.65)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 16,
+  },
+  stackWord1: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 28,
+    letterSpacing: -0.2,
+    lineHeight: 32,
+    color: 'rgba(255,255,255,0.62)',
+    textAlign: 'center',
+  },
+  /* Operator, 11 september 2026: "Build moet visueel breder zijn dan
+     Breathe en smaller dan Become" — bij 38px lag "Build" (5 letters) qua
+     GERENDERDE BREEDTE zo goed als gelijk met "Breathe" (7 letters, maar
+     kleiner lettertype): het kortere woord haalde de brede het bijna
+     helemaal in.
+     Operator (3e correctie, definitief): na `semibold` op meerdere
+     formaten geprobeerd te hebben bleef het "te bold" ogen — ook al is
+     600 letterlijk het gewicht tussen Breathe (500) en Become (700).
+     Terug naar `medium`, ZELFDE gewicht als Breathe: de breedte-volgorde
+     (Breathe < Build < Become) komt nu volledig uit fontSize (48px) en
+     letterSpacing, niet uit een zwaarder lettergewicht. */
+  stackWord2: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 48,
+    letterSpacing: 0,
+    lineHeight: 52,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  stackWord3: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 50,
+    letterSpacing: -1.2,
+    lineHeight: 52,
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 2,
   },
   histBtn: {
     position: 'absolute',
     left: 10,
-    top: 4,
+    top: 8,
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
+  },
+  /* Symmetrisch met `histBtn`, rechts i.p.v. links. Operator, 11 september
+     2026: "1 cm lager" — ~40dp extra t.o.v. `histBtn`, niet meer op
+     dezelfde hoogte. Breder + hoger dan `histBtn` sinds het tekstlabel
+     erbij kwam ("zichtbaar maar nietszeggend"). */
+  /* Operator, 24 september 2026 (pasted Apple-referentie): "How it
+     works"-tekstlink onder de CTA verhuisd naar een klein info-icoontje in
+     een hoek. Letterlijk rechtsboven zat al vol (systeem-instellingen-
+     icoon + `goalBtn` hieronder) — linksboven, onder `histBtn`, is de
+     eerstvolgende vrije hoek en behoudt dezelfde bedoeling: een rustig
+     hoekicoontje, niet meer een tekstlink die de aandacht van de CTA
+     wegtrekt. */
+  howItWorksBtn: {
+    position: 'absolute',
+    left: 10,
+    top: 56,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  goalBtn: {
+    position: 'absolute',
+    right: 10,
+    top: 48,
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    zIndex: 5,
+  },
+  goalBtnLbl: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 9.5,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.55)',
   },
   /* Licht gewicht met veel letterafstand, zoals de koppen in de onboarding.
      Het gewicht doet niets, de ruimte doet alles. */
@@ -796,51 +1424,46 @@ const s = StyleSheet.create({
 
   body: { flex: 1, justifyContent: 'center' },
 
+  /* Operator, 8 september 2026: "cirkels en cta moeten zakken" — extra
+     hoogte op deze (onzichtbare) tussenlaag duwt alles eronder (rij van
+     vijf + knop) verder omlaag, zonder de kop erboven te raken. */
   stage: {
     width: SCREEN_W,
-    height: BOX_H,
+    /* "nog 1cm" (2e ronde) bovenop de eerdere +70 — 63dp erbij ≈ 1cm op dit
+       toestel.
+       Operator, 11 september 2026 (3e ronde): "nu de cta en de cirkels
+       laten zakken" — nog eens ~1cm erbij (63dp, zelfde maat als de 2e
+       ronde hierboven). */
+    height: BOX_H + 196,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  artWrap: { alignItems: 'center', justifyContent: 'center' },
-  /* Buiten de illustratie, tegen de schermrand. Binnen het beeld zouden ze
-     over de figuur liggen, en die figuur is waar het scherm om draait. */
-  arrow: {
-    position: 'absolute',
-    top: BOX_H / 2 - 20,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowLeft: { left: 4 },
-  arrowRight: { right: 4 },
 
-  copy: { alignItems: 'center', marginTop: 22, paddingHorizontal: 26 },
-  mode: {
-    fontFamily: BrandFonts.regular,
-    fontSize: 23,
-    letterSpacing: 4.5,
+  /* Operator, 7 september 2026 (productkritiek): "sterke headline...
+     Train your state. Structured breathwork for calm, focus, energy and
+     recovery." Eén productstatement per scherm, niet per toestand — staat
+     daarom BOVEN de foto, los van `copy` (dat blijft per-toestand). */
+  /* Operator, 7 september 2026: "mandala toevoegen op achtergrond
+     header/subheader" — `minHeight`+`overflow:hidden` begrenst de mandala
+     tot dit blok, exact hetzelfde patroon als breath-welcome.tsx (zonder
+     die begrenzing centreert de mandala zich op de HELE pagina i.p.v.
+     achter de kop — bekende bug uit die flow). */
+  /* Operator, 8 september 2026 (5e ronde): "choose your state in grijs
+     kleine hoofdletters boven de cirkels zetten centreel" — vervangt de
+     vaste kop bovenaan (die zelf al twee eerdere pogingen doorging, zie
+     git-historie) volledig. Klein, grijs, geen sluier/schaduw nodig — dit
+     label zit dicht genoeg boven de rij van vijf om altijd over de
+     donkerdere onderkant van de foto te vallen. */
+  /* Operator, 11 september 2026: exacte specificatie — 13px Bold,
+     letterSpacing +1.5. Was semibold/12px/1.6. */
+  chooseStateLabel: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
-  },
-  figure: {
-    marginTop: 9,
-    fontFamily: BrandFonts.medium,
-    fontSize: 18,
-    letterSpacing: 0.2,
-    textAlign: 'center',
-  },
-  /* Het streepje scheidt de naam van de omschrijving. Kort, in de kleur van
-     de toestand — zonder dat lopen naam en tekst als één blok in elkaar. */
-  rule: { width: 34, height: 1.5, borderRadius: 1, marginTop: 14, opacity: 0.8 },
-  desc: {
-    marginTop: 14,
-    maxWidth: 320,
-    fontFamily: BrandFonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
+    marginBottom: 10,
   },
   spec: {
     marginTop: 12,
@@ -852,12 +1475,13 @@ const s = StyleSheet.create({
   },
   /* De vraag eronder, een tikje stiller: hij hoort bij de regel erboven en
      mag die niet overstemmen. */
+  /* Operator, 11 september 2026: exacte specificatie — 14px (was 12px). */
   specAsk: {
-    marginTop: 3,
-    fontFamily: BrandFonts.semibold,
-    fontSize: 10.5,
-    letterSpacing: 0.8,
-    opacity: 0.72,
+    marginTop: 6,
+    fontFamily: BrandFonts.medium,
+    fontSize: 14,
+    letterSpacing: 0.1,
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
   },
 
@@ -872,17 +1496,21 @@ const s = StyleSheet.create({
   infoCard: {
     width: '100%',
     borderRadius: 22,
-    backgroundColor: '#141018',
+    backgroundColor: '#161616',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     padding: 22,
   },
-  infoEyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 3 },
+  /* Operator, 7 september 2026 (typografie-feedback): "vrij veel bold —
+     high-end interfaces gebruiken contrast tussen regular/medium/semibold
+     i.p.v. alles zwaar te maken." Extrabold → bold, minder letter-spacing
+     op de eyebrow. */
+  infoEyebrow: { fontFamily: BrandFonts.semibold, fontSize: 11, letterSpacing: 1.5 },
   infoTitle: {
     marginTop: 6,
-    fontFamily: BrandFonts.extrabold,
-    fontSize: 24,
-    letterSpacing: -0.4,
+    fontFamily: BrandFonts.bold,
+    fontSize: 22,
+    letterSpacing: -0.3,
     color: '#ffffff',
   },
   infoBody: {
@@ -890,7 +1518,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 14,
     lineHeight: 21,
-    color: 'rgba(255,255,255,0.78)',
+    color: 'rgba(255,255,255,0.6)',
   },
   infoSection: {
     marginTop: 20,
@@ -898,18 +1526,43 @@ const s = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 0,
   },
-  infoTech: { marginTop: 10 },
+  infoTechRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoTechIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTechCopy: { flex: 1 },
+  infoTechTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   infoTechName: {
+    flexShrink: 1,
     fontFamily: BrandFonts.semibold,
     fontSize: 13.5,
     color: '#ffffff',
   },
-  infoTechBody: {
+  infoTechLevel: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 10.5,
+    letterSpacing: 0.3,
+  },
+  infoTechHook: {
     marginTop: 2,
     fontFamily: BrandFonts.regular,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.5)',
   },
   infoBtn: {
     marginTop: 22,
@@ -919,31 +1572,67 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.8 },
+  infoBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, letterSpacing: 0.8 },
 
+  /* Operator, 11 september 2026: "cta hier is beetje klein, is dat
+     professioneel en zou apple dat zo doen?" — nee: dit was een
+     content-brede pil (`alignSelf:'center'` + `paddingHorizontal:30`),
+     terwijl `breath-setup.tsx`'s eigen CTA al edge-to-edge breed staat
+     (geen `alignSelf`, dus stretcht vol). Apple's HIG-patroon voor de ENE
+     primaire actie op een scherm is precies dat: breed en prominent, geen
+     kleine pil. `marginHorizontal` i.p.v. `alignSelf:'center'` zodat hij
+     nu ook stretcht — zelfde breedte-taal als het setup-scherm. */
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    alignSelf: 'center',
-    marginTop: 26,
-    paddingHorizontal: 30,
+    marginHorizontal: 26,
+    /* Operator, 7 september 2026: "de cta op eerste pagina beetje naar
+       boven" — 26 → 14.
+       Operator, 11 september 2026: "cta nog beetje laten zakken, dicht bij
+       how it works" — verder omlaag, samen met de bredere vorm hierboven. */
+    marginTop: 34,
     height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
+    /* Operator, zelfde dag: "vorm van de cta is anders dan onboarding, is
+       dat professioneel?" — was een volle pil (25 = height/2), onboarding
+       gebruikt overal `borderRadius:14`. Zelfde vorm nu, app-breed één
+       herkenbare primaire-knop-chrome i.p.v. twee verschillende. */
+    borderRadius: 14,
   },
+  /* Operator, 7 september 2026 (typografie-feedback): "letter-spacing in
+     de CTA is wat overdreven" — 2.2 → 0.8. Semibold bleef al staan (matcht
+     de aanbevolen CTA-hiërarchie: Medium/Semibold + beperkte spacing). */
+  /* Operator, 7 september 2026 (productkritiek): "letter-spacing voelt als
+     een marketingwebsite-knop, sterk verminderen." */
+  /* Operator, 11 september 2026: exacte specificatie — 16px (was 14px). */
   ctaTxt: {
     fontFamily: BrandFonts.semibold,
-    fontSize: 13.5,
-    letterSpacing: 2.2,
+    fontSize: 16,
+    letterSpacing: 0.1,
+  },
+  /* Operator, 8 september 2026 (mockup 1): "How it works" verhuisde van
+     naast de statenaam naar hier, direct onder de CTA — `alignSelf` nodig
+     want de omringende `Animated.View` stretcht niet vanzelf. */
+  specAskWrap: { alignSelf: 'center', marginTop: 10, padding: 4 },
+  /* Sluitregel onderaan, uit dezelfde mockup — bewust stil, geen actie. */
+  /* Operator, 8 september 2026: smalle, gedraaide lichtstrook die om de
+     ~3 sec over de knop veegt — vast op de knop-hoogte, breder dan hoog
+     zodat de rotatie 'm niet buiten de randen laat pieken. */
+  ctaShimmer: {
+    position: 'absolute',
+    top: -20,
+    bottom: -20,
+    width: 46,
   },
 
+  /* Operator, 7 september 2026: "kaarten moeten iets hoger, zodat het
+     aansluit bij subheader" — 22 → 12. */
   thumbs: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: THUMB_GAP,
-    marginTop: 22,
+    marginTop: 12,
     alignItems: 'flex-start',
   },
   thumbCol: { width: THUMB_COL, alignItems: 'center' },
@@ -959,53 +1648,36 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  halo: { position: 'absolute', borderRadius: THUMB },
-  haloOuter: { width: THUMB * 1.28, height: THUMB * 1.28 },
-  haloMid: { width: THUMB * 1.04, height: THUMB * 1.04 },
-  haloInner: { width: THUMB * 0.7, height: THUMB * 0.7 },
-  thumbRing: {
+  thumbSelected: { transform: [{ scale: 1.1 }] },
+  /* Operator, 18 september 2026 ("geen kleur, cirkels hebben omlijning"):
+     dunne cirkelrand i.p.v. een gevulde schijf ÉN i.p.v. de vorige, apart
+     uitvergrote `thumbRing` — doorzichtig middenvlak, enkel de rand
+     verandert (dikte + kleur) bij selectie. */
+  thumbOutline: {
     position: 'absolute',
-    width: THUMB * 1.26,
-    height: THUMB * 1.26,
-    borderRadius: THUMB,
-    borderWidth: 1,
-    opacity: 0.9,
+    width: THUMB,
+    height: THUMB,
+    borderRadius: THUMB / 2,
   },
+  halo: { position: 'absolute', borderRadius: THUMB },
+  haloInner: { width: THUMB * 0.7, height: THUMB * 0.7 },
   /* Vaste hoogte van twee regels, ook voor de namen die er één nodig hebben.
      Anders begint de ondertitel per kolom op een andere hoogte en golft de
-     hele rij. */
+     hele rij.
+     Operator, 7 september 2026 (typografie-feedback): "BOOST/FOCUS/CALM
+     CONTROL zijn vrij zwaar" — bold → semibold, zodat de naam en de
+     ondertitel eronder (al regular) niet even zwaar ogen. */
+  /* Operator, 11 september 2026: exacte specificatie — 14px (was 13px);
+     `fontFamily` komt nu per selectie-status van de call-site (semibold
+     geselecteerd, medium niet). */
   thumbName: {
     marginTop: 8,
     height: 30,
-    fontFamily: BrandFonts.bold,
-    fontSize: 13,
-    lineHeight: 15,
+    fontSize: 14,
+    lineHeight: 16,
     letterSpacing: 0,
     textAlign: 'center',
   },
-  thumbSub: {
-    marginTop: 3,
-    fontFamily: BrandFonts.regular,
-    fontSize: 10.5,
-    lineHeight: 13,
-    color: 'rgba(255,255,255,0.58)',
-    textAlign: 'center',
-  },
-
-  dots: {
-    flexDirection: 'row',
-    alignSelf: 'center',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: 14,
-  },
-  dot: {
-    width: 5,
-    height: 2.5,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-
   footRow: {
     flexDirection: 'row',
     alignItems: 'center',

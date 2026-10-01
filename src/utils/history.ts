@@ -60,7 +60,7 @@ let curSeries = '';
 let tStart = 0;
 
 function notify() {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 /* Iter 9dq v44: legacy-migratie. Bestaande user-data onder vzh_v1 wordt

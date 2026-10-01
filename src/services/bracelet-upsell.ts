@@ -22,7 +22,7 @@ let visible = false;
 const listeners = new Set<() => void>();
 
 function notify(): void {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 /** Toon de modal. No-op als 'ie al open is. */

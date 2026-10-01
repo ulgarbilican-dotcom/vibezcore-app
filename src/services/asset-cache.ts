@@ -24,8 +24,33 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { Directory, File, Paths } from 'expo-file-system';
+import { useEffect, useState } from 'react';
 
 const DIR_NAME = 'vz-assets';
+
+/* BUG (operator, 13 augustus 2026, "al 10 keer eerder doorgegeven" — de
+   zwarte onboarding/welkomstschermen): meerdere schermen lazen `assetUri()`
+   in een module-level `const`, ÉÉN keer, bij het inladen van het bestand —
+   dus ruim voordat `cacheAssets()` (pas gestart via een effect in de root-
+   layout NA de eerste render) ooit de kans kreeg iets weg te schrijven. Die
+   `const` bleef daardoor voor de hele levensduur van het proces de
+   REMOTE url, ook nadat het bestand allang lokaal stond. Skia's `useImage`
+   deed daardoor bij ELK bezoek een verse netwerk-fetch, en zolang die niet
+   klaar was stond het scherm zwart — structureel, niet toevallig traag.
+
+   Deze listener-laag laat schermen daarentegen REAGEREN zodra een bestand
+   binnen is: `useAssetUri()` hertoetst na elke voltooide download en het
+   scherm dat 'm gebruikt her-rendert dan met het echte lokale pad. */
+const listeners = new Set<() => void>();
+function notifyAssetCacheChanged(): void {
+  setTimeout(() => {
+    listeners.forEach((l) => {
+      try {
+        l();
+      } catch {}
+    });
+  }, 0);
+}
 
 function dir(): Directory {
   return new Directory(Paths.document, DIR_NAME);
@@ -77,10 +102,32 @@ export async function cacheAssets(urls: string[]): Promise<void> {
       const f = new File(d, fileName(url));
       if (f.exists) continue;
       await File.downloadFileAsync(url, f);
+      /* Meteen na DIT bestand melden, niet pas als de hele lijst klaar is
+         — wie op de eerste foto uit de lijst wacht, hoort niet te wachten
+         tot ook het laatste stemcue-bestand binnen is. */
+      notifyAssetCacheChanged();
     } catch {
       /* dit ene bestand blijft streamen; de volgende krijgt zijn kans */
     }
   }
+}
+
+/** Reactieve versie van `assetUri()` — leest hetzelfde lokale-pad-of-URL,
+ *  maar her-rendert zodra `cacheAssets()` een nieuw bestand heeft
+ *  binnengehaald. Gebruik dit in schermen (bewust NIET in een module-level
+ *  `const`, dat is precies de fout hierboven), zodat een beeld dat halverwege
+ *  het scherm klaar wordt alsnog het lokale, snelle pad krijgt in plaats van
+ *  voor de rest van de app-sessie aan de remote URL vast te zitten. */
+export function useAssetUri(remote: string): string {
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const l = () => bump((n) => n + 1);
+    listeners.add(l);
+    return () => {
+      listeners.delete(l);
+    };
+  }, []);
+  return assetUri(remote);
 }
 
 /** Hoeveel van de meegegeven bestanden al op het toestel staan. Voor een

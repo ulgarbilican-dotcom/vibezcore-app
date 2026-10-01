@@ -32,13 +32,15 @@ const productsListeners = new Set<() => void>();
 const purchaseListeners = new Set<(p: IapPurchase) => void>();
 
 function notifyProducts(): void {
-  productsListeners.forEach((cb) => {
-    try {
-      cb();
-    } catch (e) {
-      if (__DEV__) console.warn('[useIAP] product-listener threw:', e);
-    }
-  });
+  setTimeout(() => {
+    productsListeners.forEach((cb) => {
+      try {
+        cb();
+      } catch (e) {
+        if (__DEV__) console.warn('[useIAP] product-listener threw:', e);
+      }
+    });
+  }, 0);
 }
 
 async function ensureInit(): Promise<void> {
@@ -51,13 +53,15 @@ async function ensureInit(): Promise<void> {
       /* Subscribe op alle purchase-events ÉÉN keer hier op module-niveau.
          Individual hooks subscriben hierop via purchaseListeners. */
       iap.onPurchase((purchase) => {
-        purchaseListeners.forEach((cb) => {
-          try {
-            cb(purchase);
-          } catch (e) {
-            if (__DEV__) console.warn('[useIAP] purchase-listener threw:', e);
-          }
-        });
+        setTimeout(() => {
+          purchaseListeners.forEach((cb) => {
+            try {
+              cb(purchase);
+            } catch (e) {
+              if (__DEV__) console.warn('[useIAP] purchase-listener threw:', e);
+            }
+          });
+        }, 0);
       });
       initialized = true;
     } catch (e) {

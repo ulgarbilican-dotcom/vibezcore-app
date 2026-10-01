@@ -10,7 +10,22 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+
+/* Operator, 15 september 2026: zelfde light/C-token-toggle als
+   index.tsx/bracelet.tsx/activity.tsx — hele pagina naar light mode, één
+   boolean om terug te draaien. */
+/* Operator, 26 september 2026: dark is de nieuwe app-brede default (was
+   light, 14 september) — zelfde hardcoded-schakelaar-patroon, enkel de
+   waarde omgezet. */
+const light = false;
+const C = light ? BrandLight : BrandDark;
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Signal Blue (#3a8fff / rgba(58,143,255,…)) is strikt gereserveerd voor
+   haptic-pulsen en "nu actief"-status — nooit voor kaart-tints/borders/
+   links/eyebrows. Deze schermen zijn light-mode, dus de vervanging is
+   Royal Indigo (#1E2A4A, rgb 30,42,74), gelijk aan BrandLight.accent. */
+const ROYAL_INDIGO_RGB = '30,42,74';
 import {
   refreshSubscription,
   setSignedOutStatus,
@@ -60,7 +75,7 @@ import {
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -72,7 +87,27 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import { Share2 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import {
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Headphones,
+  HelpCircle,
+  Info,
+  Lock,
+  Mail,
+  Package,
+  Settings as SettingsIcon,
+  Share2,
+  UserPlus,
+} from 'lucide-react-native';
 
 /* Iter v244 (2026-07-20, operator-feedback): pitch herschreven — noemt
    nu expliciet de denkers/insights ipv generieke "grounded in Science,
@@ -82,14 +117,19 @@ import { Share2 } from 'lucide-react-native';
    maar 1 plek aan te passen. KS-launch: Fall 2026 (operator 2026-07-14
    — sep-datum weg, geen concrete datum meer). */
 const APP_LINK_URL = 'https://www.vibezcore.com/app';
-/* Het product is breathwork + bracelet (operator, 9 augustus 2026 — de
-   audiobibliotheek is verborgen en de uitnodiging mag er niet meer over
-   praten). Toestand-taal, geen claims; de gratis kennismakingssessie is wat
-   een genodigde werkelijk krijgt. */
+/* Breathwork voorop, bracelet als "komt eraan", audio library als
+   inbegrepen extra (operator, 11 augustus 2026: bracelet is het
+   toekomstige hoofdproduct — uniek, maar nog niet beschikbaar; breathwork
+   is NU verkoopbaar; audio library verkoopt moeilijk als eigen product en
+   hoort er daarom bij als bonus, niet als kop). Vervangt de eerdere versie
+   (9 augustus 2026) die de bibliotheek helemaal wegliet — die redenering
+   klopte nog steeds (geen aparte titel), maar één regel "inclusief"
+   ontbrak. Toestand-taal, geen claims; de gratis kennismakingssessie is
+   wat een genodigde werkelijk krijgt. */
 const BRAND_PITCH =
-  'Guided breathwork built on five states — energy, focus, calm, clarity and rest. Voice, visuals and haptics carry every breath.\n\n' +
-  'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\nInstall the app and try your first guided session free: ${APP_LINK_URL}`;
+  'Control Your Body. Direct Your Mind. Become The Architect Of Your Life.\n\n' +
+  'VIBEZCORE combines guided breathwork, premium audio sessions, and the upcoming Smart Bead Bracelet (Fall 2026) to help you feel calmer, think clearer, perform better, and grow with intention.';
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\nStart your 7-day free trial:\n${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {
@@ -103,6 +143,7 @@ async function shareInvite(): Promise<void> {
 import { showVibezAlert } from '@/components/VibezAlert';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path as SvgPath } from 'react-native-svg';
 import {
     clearSession,
     deleteAccount,
@@ -121,6 +162,53 @@ import {
 } from '@/services/social-auth';
 
 type Mode = 'login' | 'signup';
+
+/* Press-scale feedback — same recipe as StartCard in breath-welcome.tsx
+   (critically-damped spring on release, no bounce on press-in). Used
+   throughout this file's tappable cards/rows/CTAs so every one of them
+   gets the same tactile feedback without repeating the hook boilerplate
+   at every call-site (this file has ~30 such elements). Purely additive:
+   forwards every prop unchanged, only swaps Pressable->AnimatedPressable
+   and appends the scale transform to the style array. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+/* Operator ("kijk alle CTA's na, daar ook niet overal toegepast"): audit
+   vond dat deze gedeelde wrapper (~30 call-sites in dit bestand) enkel
+   scale animeerde — huisstijl §5 vraagt scale(.97 à .95)+opacity(.85)
+   sámen, plus een lichte haptic-tik op het moment van indrukken
+   (onPressIn, niet onPress/dieper in de handler — dat was de andere
+   terugkerende fout in de rest van de app). Beide nu hier toegevoegd,
+   op de gedeelde plek zodat elke call-site het automatisch meekrijgt. */
+function PressScale({
+  style,
+  children,
+  scaleTo = 0.95,
+  ...rest
+}: ComponentProps<typeof Pressable> & { scaleTo?: number }) {
+  const pressScale = useSharedValue(1);
+  const onPressIn: NonNullable<ComponentProps<typeof Pressable>['onPressIn']> = (e) => {
+    pressScale.value = withTiming(scaleTo, { duration: 80 });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    rest.onPressIn?.(e);
+  };
+  const onPressOut: NonNullable<ComponentProps<typeof Pressable>['onPressOut']> = (e) => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    rest.onPressOut?.(e);
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: 1 - (1 - pressScale.value) * 3,
+  }));
+  return (
+    <AnimatedPressable
+      {...rest}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[style, pressStyle]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
 
 /* Externe URL voor bracelet-purchase (operator-keuze 2026-05-26).
    Webapp shop covered ook Kickstarter-reservering pre-launch en
@@ -174,7 +262,7 @@ function FreeEnvironmentCard() {
   return (
     <View style={s.card}>
       <Text style={s.label}>Status</Text>
-      <Text style={[s.subBig, { color: Brand.text }]}>
+      <Text style={[s.subBig, { color: C.text }]}>
         You&apos;re in the free environment
       </Text>
       {/* Geen sessietelling meer — dat waren audiocijfers. Wat hier staat
@@ -187,7 +275,7 @@ function FreeEnvironmentCard() {
           Bundle-koper landt hier na aankoop met code in email — Activate
           moet als eerste zichtbaar zijn, niet onder Audio subscribe.
           Subscribe zakt naar Pad 2. */}
-      <Pressable
+      <PressScale
         style={s.cardCta}
         onPress={() => router.push('/activate-bracelet' as never)}
         accessibilityLabel="Activate your Bracelet or Full Bundle"
@@ -199,30 +287,30 @@ function FreeEnvironmentCard() {
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
-      </Pressable>
+      </PressScale>
 
       {/* Pad 2 — Premium. Geen prijs hier: die stond hardgecodeerd
           (€9,99) en dat breekt de WYSIWYG-regel zodra de store iets anders
           zegt — het subscribe-scherm toont de echte prijzen. */}
-      <Pressable
+      <PressScale
         style={s.cardCta}
         onPress={() => router.navigate('/subscribe' as never)}
-        accessibilityLabel="Go Premium — unlock every breathwork state"
+        accessibilityLabel="Go Premium — unlock Breathwork and the Audio Library"
       >
         <View style={{ flex: 1 }}>
           <Text style={s.cardCtaText}>Go Premium</Text>
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            All five states · every rhythm · monthly or yearly
+            All 49 Breathwork sessions + full Audio Library
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
-      </Pressable>
+      </PressScale>
 
       {/* Pad 3 — Bundle info (ACTIVE, external)
           Iter v193 (2026-07-03): links naar vibezcore.com voor Bundle
           pre-order/KS-info (fysiek product = mag externe link per
           store policy §3.1.1). */}
-      <Pressable
+      <PressScale
         style={s.cardCta}
         onPress={() => Linking.openURL('https://www.vibezcore.com/')}
         accessibilityLabel="Get the Full Bundle — Bracelet plus Premium, opens vibezcore.com"
@@ -234,7 +322,7 @@ function FreeEnvironmentCard() {
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
-      </Pressable>
+      </PressScale>
     </View>
   );
 }
@@ -272,7 +360,7 @@ function SubscriptionCard() {
 
   if (isLoading) {
     bigText = 'Checking…';
-    bigColor = Brand.textDim;
+    bigColor = C.textDim;
     subText = '';
   } else if (isPro && isBraceletOwner) {
     /* Full PRO — beide producten actief.
@@ -291,7 +379,7 @@ function SubscriptionCard() {
     } else {
       bigText = 'Full PRO — Premium + Bracelet';
     }
-    bigColor = Brand.accent;
+    bigColor = C.accent;
     if (validUntil) {
       const d = new Date(validUntil);
       if (!isNaN(d.getTime())) {
@@ -323,14 +411,14 @@ function SubscriptionCard() {
        in deze branche — andere staten (Free / Audio PRO / Full PRO)
        blijven ongewijzigd. */
     bigText = 'Bracelet PRO';
-    bigColor = Brand.accent;
+    bigColor = C.accent;
     /* Terugbedraaid (operator, 9 augustus 2026: "breathwork zal niet
        gratis zijn bij aankoop bracelet"). De vorige regel beloofde iets
        wat niet klopt — een bracelet-eigenaar zonder Premium heeft nog
        precies dezelfde vrije proefsessies als ieder ander, geen volledige
        bibliotheek. De regel zegt dat nu eerlijk, in dezelfde "compleet
        maken"-toon als de rest van deze branche. */
-    subText = 'Add Premium to unlock every breathwork state';
+    subText = 'Add Premium to unlock every breathwork state and the Audio Library';
   } else {
     /* tier kan undefined zijn (defensief — backend zou dat niet
        moeten doen voor een active=true sub, maar we crashen er niet
@@ -345,7 +433,7 @@ function SubscriptionCard() {
        met alleen audio-sub moet zien dat dit hun AUDIO-product is, niet
        een algemene "PRO"-status (operator-keuze 2026-05-29). */
     bigText = tierLabel ? `Premium — ${tierLabel}` : 'Premium';
-    bigColor = Brand.accent;
+    bigColor = C.accent;
 
     /* Datum-regel — alleen als we een geldige validUntil hebben. */
     if (validUntil) {
@@ -388,7 +476,7 @@ function SubscriptionCard() {
      kopen, dus voor hem verdwijnt de knop hieronder via showUpgrade. */
   const upgradeCtaText = 'Go Premium';
   const upgradeAccessibilityLabel =
-    'Go Premium — unlock every breathwork state';
+    'Go Premium — unlock Breathwork and the Audio Library';
 
   return (
     <View style={s.card}>
@@ -396,7 +484,7 @@ function SubscriptionCard() {
       <Text style={[s.subBig, { color: bigColor }]}>{bigText}</Text>
       {subText ? <Text style={s.subSmall}>{subText}</Text> : null}
       {showUpgrade && (
-        <Pressable
+        <PressScale
           style={s.cardCta}
           /* Iter v197 (2026-07-04): direct naar /subscribe (tier picker
              Monthly/Yearly) ipv Audio-tab landing. Operator-feedback:
@@ -407,10 +495,10 @@ function SubscriptionCard() {
         >
           <Text style={s.cardCtaText}>{upgradeCtaText}</Text>
           <Text style={s.cardCtaArrow}>→</Text>
-        </Pressable>
+        </PressScale>
       )}
       {showManageStore && (
-        <Pressable
+        <PressScale
           style={s.cardCta}
           /* Iter v168 (2026-06-28): SKU-specifieke deeplink (gebaseerd op
              huidige tier) → Play Store landt direct op VIBEZCORE als de
@@ -420,7 +508,7 @@ function SubscriptionCard() {
         >
           <Text style={s.cardCtaText}>Manage subscription</Text>
           <Text style={s.cardCtaArrow}>→</Text>
-        </Pressable>
+        </PressScale>
       )}
       {/* Iter v233 (2026-07-09): upgrade-CTA voor Monthly-subscribers →
           Yearly. Deep-linkt naar Play Store subscription page waar
@@ -429,7 +517,7 @@ function SubscriptionCard() {
           was defensief maar onbereikbaar via UI). Bundle-users hebben
           full access, Yearly-users hebben geen upgrade-pad. */}
       {!isLoading && isPro && tier === 'monthly' && braceletModel !== 'bundle' && (
-        <Pressable
+        <PressScale
           style={s.cardCta}
           onPress={() => openExternal(storeSubscriptionsUrl('yearly'))}
           accessibilityLabel="Switch to the Yearly plan via the Play Store"
@@ -441,13 +529,13 @@ function SubscriptionCard() {
             </Text>
           </View>
           <Text style={s.cardCtaArrow}>→</Text>
-        </Pressable>
+        </PressScale>
       )}
       {/* Iter v193 (2026-07-03): cross-sell naar bracelet voor audio-only
           users — actief gemaakt. Audio-PRO die z'n bracelet ontvangt kan
           nu meteen activeren zonder te wachten op Fall 2026. */}
       {!isLoading && isPro && !isBraceletOwner && (
-        <Pressable
+        <PressScale
           style={s.cardCta}
           onPress={() => router.push('/activate-bracelet' as never)}
           accessibilityLabel="Activate your Smart Bead Bracelet"
@@ -459,7 +547,7 @@ function SubscriptionCard() {
             </Text>
           </View>
           <Text style={s.cardCtaArrow}>→</Text>
-        </Pressable>
+        </PressScale>
       )}
     </View>
   );
@@ -503,14 +591,14 @@ function BraceletCard() {
           Your bracelet is not yet linked to this account. Enter your
           12-character activation code to pair it.
         </Text>
-        <Pressable
+        <PressScale
           style={s.cardCta}
           onPress={() => router.navigate('/activate-bracelet' as never)}
           accessibilityLabel="Activate your bracelet with a code"
         >
           <Text style={s.cardCtaText}>Activate your bracelet</Text>
           <Text style={s.cardCtaArrow}>→</Text>
-        </Pressable>
+        </PressScale>
       </View>
     );
   }
@@ -520,7 +608,7 @@ function BraceletCard() {
   return (
     <View style={s.card}>
       <Text style={s.label}>Bracelet</Text>
-      <Text style={[s.subBig, { color: Brand.accent }]}>
+      <Text style={[s.subBig, { color: C.accent }]}>
         Bracelet activated
       </Text>
       {/* Iter 9dq v79 (2026-06-03): copy was "paired and ready to use"
@@ -531,7 +619,7 @@ function BraceletCard() {
       <Text style={s.subSmall}>
         Open Bracelet to preview your modes and review your activation.
       </Text>
-      <Pressable
+      <PressScale
         style={s.cardCta}
         /* Operator 2026-05-30: navigate naar /bracelet tab ipv push naar
            /bracelet-control stack-screen. Reden: navigatie was inconsistent
@@ -544,7 +632,7 @@ function BraceletCard() {
       >
         <Text style={s.cardCtaText}>Open Bracelet Control</Text>
         <Text style={s.cardCtaArrow}>→</Text>
-      </Pressable>
+      </PressScale>
       {/* Iter 9gg (operator-correctie): bracelet heeft VERVANGBARE bead-
           bands, geen "rechargeable edition". Klanten kunnen nieuwe
           beadbands bestellen (andere stones, vervanging). URL volgt
@@ -554,7 +642,7 @@ function BraceletCard() {
           is. Nu eigen subtieler outlined style (transparent bg, dim
           border) ipv de gevulde primary cardCta met fade. Tekst en
           arrow op accent-kleur zodat de tap-affordance duidelijk is. */}
-      <Pressable
+      <PressScale
         style={s.cardCtaSecondary}
         onPress={() =>
           /* /shop/beadbands bestond niet en gaf een 404 in de browser — dat
@@ -568,7 +656,7 @@ function BraceletCard() {
       >
         <Text style={s.cardCtaSecondaryText}>Order new beadband</Text>
         <Text style={s.cardCtaSecondaryArrow}>→</Text>
-      </Pressable>
+      </PressScale>
     </View>
   );
 }
@@ -588,7 +676,7 @@ function BraceletCard() {
    ingelogde users. */
 function LibrarySettingsLink() {
   return (
-    <Pressable
+    <PressScale
       style={s.linkCard}
       onPress={() => {
         /* requestScrollTo() fired het signal eerst (de listener in
@@ -599,14 +687,41 @@ function LibrarySettingsLink() {
         requestScrollTo('library-settings');
         router.navigate('/');
       }}
-      android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+      android_ripple={{ color: 'rgba(10,10,12,0.06)' }}
     >
       <View style={s.linkTextWrap}>
         <Text style={s.linkTitle}>Library settings</Text>
         <Text style={s.linkSub}>Auto-play and playback preferences</Text>
       </View>
       <Text style={s.linkArrow}>›</Text>
-    </Pressable>
+    </PressScale>
+  );
+}
+
+/* Het officiële Google "G"-logo (Google Identity brand-asset, 18×18
+   viewBox, de vier merkkleuren) — geen platte letter (operator, 11
+   augustus 2026: "moet een officiële google logo zijn de cta continue
+   with google"). */
+function GoogleGlyph({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 18 18">
+      <SvgPath
+        fill="#4285F4"
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+      />
+      <SvgPath
+        fill="#34A853"
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
+      />
+      <SvgPath
+        fill="#FBBC05"
+        d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"
+      />
+      <SvgPath
+        fill="#EA4335"
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+      />
+    </Svg>
   );
 }
 
@@ -1181,7 +1296,7 @@ export default function AccountScreen() {
   if (loading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={[s.root, s.center]}>
-        <ActivityIndicator color={Brand.text} />
+        <ActivityIndicator color={C.text} />
       </SafeAreaView>
     );
   }
@@ -1201,6 +1316,14 @@ export default function AccountScreen() {
           extraScrollHeight={20}
           enableAutomaticScroll={true}
         >
+          {/* Operator, 15 september 2026: GradientText (wit→blauw verloop,
+              gebouwd voor een donkere achtergrond — zie GradientText.tsx)
+              vervangen door platte tekst, anders onzichtbaar op de nieuwe
+              lichte pagina. Sentence case i.p.v. ALL CAPS, per het Apple-
+              font-framework (14 september 2026) dat elders in de app al
+              is doorgevoerd. `screenTitle` blijft ongewijzigd: die haalt
+              al `TypeScale.tabHeader` op, de ene bron voor de pagina-
+              titel-rol op alle 4 tabs (operator, 11 september 2026). */}
           <Text style={s.screenTitle}>Account</Text>
 
           {/* ── My account ──
@@ -1227,7 +1350,7 @@ export default function AccountScreen() {
             {/* Password row — interactief: label/value gestackt links,
                 "Change" + chevron rechts. Dot-string als "value" voor
                 visuele bevestiging dat er een password is ingesteld. */}
-            <Pressable
+            <PressScale
               style={s.accountFieldInteractive}
               onPress={onChangePassword}
               accessibilityLabel="Change your password"
@@ -1238,7 +1361,7 @@ export default function AccountScreen() {
               </View>
               <Text style={s.accountFieldCta}>Change</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
           </View>
 
           <SubscriptionCard />
@@ -1261,7 +1384,7 @@ export default function AccountScreen() {
             {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-
                 glyph (Android-native share-symbool) ipv ↗ Unicode-arrow.
                 Operator: "sharing moet duidelijk en altijd zichtbaar". */}
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={shareInvite}
               accessibilityLabel="Invite a friend to VIBEZCORE"
@@ -1271,13 +1394,13 @@ export default function AccountScreen() {
                 <Text style={[s.cardRowText, { color: '#4ade80', marginLeft: 10 }]}>Invite a friend</Text>
               </View>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
             {/* Iter 9dq v86 (2026-06-03): Restore Purchases. Apple App
                 Review Guideline 3.1.1 vereist deze knop voor IAP-apps.
                 Bovenaan de lijst zodat 'ie vindbaar is na een reinstall
                 of new-device sign-in. */}
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={onRestorePurchases}
               disabled={restoring}
@@ -1287,54 +1410,57 @@ export default function AccountScreen() {
                 {restoring ? 'Restoring…' : 'Restore purchases'}
               </Text>
               {restoring ? (
-                <ActivityIndicator color={Brand.textDim} size="small" />
+                <ActivityIndicator color={C.textDim} size="small" />
               ) : (
                 <Text style={s.cardRowArrow}>›</Text>
               )}
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            {/* Operator, 13 september 2026: "settings knop is weg, wil hem
+               terug met inhoud zoals het was" — herroept de verwijdering
+               van 11 september. */}
+            <PressScale
               style={s.cardRow}
               onPress={() => router.navigate('/settings')}
               accessibilityLabel="Open settings"
             >
               <Text style={s.cardRowText}>Settings</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
             {/* About VIBEZCORE — brand-story screen voor users die
                 meer willen weten over wat VIBEZCORE is. Custom screen
                 src/app/about.tsx, gesynced met vibezcore.com/about-
                 vibezcore. */}
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() => router.navigate('/about' as never)}
               accessibilityLabel="Learn about VIBEZCORE"
             >
               <Text style={s.cardRowText}>About VIBEZCORE</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
             {/* FAQ — voor "Contact support" zodat user eerst self-serve
                 kan proberen. Mirror van vibezcore.com/faq, content in
                 src/data/faq-content.ts. */}
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() => router.navigate('/faq' as never)}
               accessibilityLabel="Browse frequently asked questions"
             >
               <Text style={s.cardRowText}>Frequently asked questions</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() => router.navigate('/support')}
               accessibilityLabel="Contact VIBEZCORE support"
             >
               <Text style={s.cardRowText}>Contact support</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
           </View>
 
           {/* Cancel Subscription verwijderd — iter 9dq v150 (operator
@@ -1343,9 +1469,9 @@ export default function AccountScreen() {
               bovenaan deze tab (opent Settings → Apple ID → Subscriptions
               of Play Store → Subscriptions). */}
 
-          <Pressable style={s.signOut} onPress={onSignOut}>
+          <PressScale style={s.signOut} onPress={onSignOut}>
             <Text style={s.signOutText}>Sign out</Text>
-          </Pressable>
+          </PressScale>
 
           {/* ── Danger Zone — Delete Account ──
               Visueel duidelijk gescheiden van Sign Out (welke reversible is)
@@ -1357,13 +1483,13 @@ export default function AccountScreen() {
               Deleting your account is permanent. Your listening history,
               favorites, and subscription data will be removed.
             </Text>
-            <Pressable
+            <PressScale
               style={s.dangerBtn}
               onPress={onDeleteAccount}
               accessibilityLabel="Request account deletion"
             >
               <Text style={s.dangerBtnText}>Delete my account</Text>
-            </Pressable>
+            </PressScale>
           </View>
 
           {/* ── Legal section ──
@@ -1374,7 +1500,7 @@ export default function AccountScreen() {
               uitgefaseerd wordt blijven deze docs gewoon staan. */}
           <View style={s.card}>
             <Text style={s.label}>Legal & Safety</Text>
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1386,9 +1512,9 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Terms and Conditions</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1400,9 +1526,9 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Privacy Policy</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1414,9 +1540,9 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Accessibility Statement</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1428,9 +1554,9 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Shipping Policy</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1442,9 +1568,9 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Refund & Returns Policy</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1456,9 +1582,9 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Cookie Policy</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1470,13 +1596,13 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Consumer Health Notice</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
             <View style={s.cardRowDivider} />
             {/* Audio Sessions — legal-disclaimer specifiek voor de
                 audio content (no affiliation, IP, etc). Op de website
                 staat 'ie onder PLATFORM-footer, in de app bij Legal
                 & Safety omdat de inhoud legal van aard is. */}
-            <Pressable
+            <PressScale
               style={s.cardRow}
               onPress={() =>
                 router.navigate({
@@ -1488,7 +1614,7 @@ export default function AccountScreen() {
             >
               <Text style={s.cardRowText}>Audio Sessions</Text>
               <Text style={s.cardRowArrow}>›</Text>
-            </Pressable>
+            </PressScale>
           </View>
 
           <Text style={s.legal}>
@@ -1523,109 +1649,82 @@ export default function AccountScreen() {
             - Legal footer met 5 doc-links (compliance + altijd accessibel)
             - Apple SSO weggehaald uit guest-flow (komt terug als 't werkt) */}
 
-        {/* Hero greeting — iter 9mmm: brand-style met wordmark + accent
-            bar conform welcome.tsx voor consistentie tussen Welcome en
-            Account guest-view. */}
+        {/* Hero greeting — operator-mockup, 11 augustus 2026 ("header/hero
+            sectie correct opbouwen", exclusief de productfoto uit de
+            mockup — die hoort al bij de welkomstpagina, niet hier
+            nogmaals). Klein wordmark boven een echte kop i.p.v. de oude
+            opbouw (kleine "WELCOME TO"-label + wordmark + accentstreepje +
+            een ondergeschikte instructiezin) — dat las als drie losse
+            regeltjes, geen kop. */}
+        {/* Wordmark BLIJFT, gecentreerd, met de kop + subtekst eronder ook
+            gecentreerd (operator, 11 augustus 2026, verduidelijking:
+            "centreren logo boven en eronder enkel welcome en dan
+            access...") — het wordmark zelf hoeft dus niet weg, alleen de
+            eerdere links-uitlijning van de tekst eronder wordt centered. */}
         <View style={s.heroBlock}>
-          <Text style={s.heroEyebrow}>WELCOME TO</Text>
           <Image
             source={require('../../../assets/vibezcore_wordmark.png')}
             style={s.heroWordmark}
             resizeMode="contain"
             accessibilityLabel="VIBEZCORE"
           />
-          <View style={s.heroAccentBar} />
-          {/* Iter v168 (2026-06-28): copy corrigeren — "or get started below"
-              verwees naar niets (geen signup-mode toggle op dit scherm; nieuwe
-              accounts komen via Subscribe of Continue with Google). Operator
-              wees dit aan als verwarrend. */}
+          {/* "Welcome" alleen (operator, 11 augustus 2026: "enkel welcome
+              niet welcome to vibezcore") — het wordmark erboven zegt de
+              merknaam al. */}
+          <Text style={s.heroGreeting}>Welcome</Text>
           <Text style={s.heroSub}>
-            Sign in to your VIBEZCORE account.
+            Access your account or explore everything VIBEZCORE has to
+            offer.
           </Text>
         </View>
 
-        {/* ── SIGN-IN CARD ── */}
+        {/* ── SIGN-IN CARD ── operator-mockup, 11 augustus 2026: intro-blok
+            (icoon + "WELCOME BACK" + titel + subtekst) toegevoegd, en
+            email/wachtwoord/knop staan nu VOOR de social-knoppen — de
+            vorige volgorde (social eerst, velden erna) was het omgekeerde
+            van de mockup. */}
         <View style={s.authCard}>
-          <Text style={s.authCardLabel}>SIGN IN</Text>
-
-          {/* Iter v149: social sign-in. Boven email/password zoals
-              subscribe.tsx — één tap, geen wachtwoord. Apple HIG +
-              Google branding. Werkt voor zowel sign-in als signup
-              (Supabase grant_type=id_token maakt-of-vindt user). */}
-          {(googleAvailable || appleAvailable) && (
-            <View style={{ marginBottom: 14 }}>
-              {appleAvailable && (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                  cornerRadius={12}
-                  style={{ width: '100%', height: 48, marginBottom: 10 }}
-                  onPress={() => void onAppleSignIn()}
-                />
-              )}
-              {googleAvailable && (
-                <Pressable
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: 48,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    backgroundColor: '#ffffff',
-                  }}
-                  onPress={() => void onGoogleSignIn()}
-                >
-                  <Text style={{ color: '#4285F4', fontSize: 18, fontFamily: BrandFonts.extrabold, marginRight: 10 }}>
-                    G
-                  </Text>
-                  <Text style={{ color: '#1f1f1f', fontSize: 14, fontFamily: BrandFonts.semibold }}>
-                    Continue with Google
-                  </Text>
-                </Pressable>
-              )}
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: 14,
-                  marginBottom: 4,
-                }}
-              >
-                <View style={{ flex: 1, height: 1, backgroundColor: Brand.border }} />
-                <Text
-                  style={{
-                    marginHorizontal: 12,
-                    color: Brand.textDim,
-                    fontSize: 11,
-                    fontFamily: BrandFonts.semibold,
-                    letterSpacing: 1.2,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  or
-                </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: Brand.border }} />
-              </View>
+          <View style={s.authCardHeader}>
+            <View style={s.authCardIconBadge}>
+              <Lock size={18} color={C.accent} strokeWidth={2} />
             </View>
-          )}
+            <View style={{ flex: 1 }}>
+              <Text style={s.authCardLabel}>
+                {mode === 'login' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}
+              </Text>
+              <Text style={s.authCardTitle}>
+                {mode === 'login'
+                  ? 'Sign in to your account'
+                  : 'Create your account'}
+              </Text>
+            </View>
+          </View>
+          <Text style={s.authCardIntro}>
+            Access your premium content and manage your products.
+          </Text>
 
-          <Text style={s.inputLabel}>Email</Text>
-          <TextInput
-            style={s.input}
-            value={emailInput}
-            onChangeText={(v) => {
-              setEmailInput(v);
-              if (msg) setMsg(null);
-            }}
-            placeholder="you@example.com"
-            placeholderTextColor={Brand.textDim}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
+          {/* Icoon in het veld, geen los "Email"-label erboven (operator-
+              mockup, 11 augustus 2026: "exact wat je ziet" — de mockup
+              heeft geen labels boven de velden, de envelop/hangslot-
+              iconen IN het veld dragen die rol). */}
+          <View style={s.inputIconWrap}>
+            <Mail size={17} color={C.textDim} strokeWidth={2} />
+            <TextInput
+              style={s.inputWithIcon}
+              value={emailInput}
+              onChangeText={(v) => {
+                setEmailInput(v);
+                if (msg) setMsg(null);
+              }}
+              placeholder="Email address"
+              placeholderTextColor={C.textDim}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+            />
+          </View>
 
           {/* Iter v144: live email-feedback. Toont niets bij leeg veld;
               warn bij typo (met tap-to-fix); success bij valid format. */}
@@ -1636,15 +1735,15 @@ export default function AccountScreen() {
             if (!hint.text) return null;
             const toneStyle =
               hint.tone === 'success'
-                ? { color: Brand.success }
+                ? { color: C.success }
                 : hint.tone === 'warn'
                   ? { color: '#ffb450' }
                   : hint.tone === 'error'
-                    ? { color: Brand.error }
-                    : { color: Brand.textDim };
+                    ? { color: C.error }
+                    : { color: C.textDim };
             if (v.ok === 'maybe' && v.reason === 'typo') {
               return (
-                <Pressable
+                <PressScale
                   onPress={() => {
                     setEmailInput(v.suggestion);
                     if (msg) setMsg(null);
@@ -1674,7 +1773,7 @@ export default function AccountScreen() {
                   }}>
                     Tap to use it
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             }
             return (
@@ -1684,14 +1783,14 @@ export default function AccountScreen() {
             );
           })()}
 
-          <Text style={s.inputLabel}>Password</Text>
-          <View style={s.pwWrap}>
+          <View style={[s.inputIconWrap, { marginTop: 12 }]}>
+            <Lock size={17} color={C.textDim} strokeWidth={2} />
             <TextInput
-              style={[s.input, s.pwInput]}
+              style={s.inputWithIcon}
               value={pwInput}
               onChangeText={setPwInput}
-              placeholder="••••••••"
-              placeholderTextColor={Brand.textDim}
+              placeholder="Password"
+              placeholderTextColor={C.textDim}
               secureTextEntry={!showPw}
               autoCapitalize="none"
               autoComplete="current-password"
@@ -1699,39 +1798,124 @@ export default function AccountScreen() {
               returnKeyType="go"
               onSubmitEditing={onSubmit}
             />
-            <Pressable
-              style={s.pwToggle}
+            {/* Oog-icoon i.p.v. "Show"/"Hide"-tekst (operator-mockup). */}
+            <PressScale
               onPress={() => setShowPw((v: boolean) => !v)}
+              hitSlop={10}
+              scaleTo={0.92}
             >
-              <Text style={s.pwToggleText}>{showPw ? 'Hide' : 'Show'}</Text>
-            </Pressable>
+              {showPw ? (
+                <EyeOff size={17} color={C.textDim} strokeWidth={2} />
+              ) : (
+                <Eye size={17} color={C.textDim} strokeWidth={2} />
+              )}
+            </PressScale>
           </View>
 
           {msg && <Text style={s.msg}>{msg}</Text>}
 
-          <Pressable
-            style={[s.primaryBtn, busy && s.btnDisabled]}
-            onPress={onSubmit}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color={Brand.text} />
-            ) : (
-              <Text style={s.primaryBtnText}>Sign in</Text>
-            )}
-          </Pressable>
-
-          <Pressable
+          {/* Forgot password VOOR de Sign In-knop, niet erna (operator-
+              mockup, 11 augustus 2026: "forgot password staat klein
+              rechtsboven de sign in"). */}
+          <PressScale
             style={s.forgotLink}
             onPress={() => router.navigate('/forgot-password' as never)}
             accessibilityLabel="Reset your password"
           >
             <Text style={s.forgotLinkText}>Forgot password?</Text>
-          </Pressable>
+          </PressScale>
+
+          <PressScale
+            style={[s.primaryBtn, busy && s.btnDisabled]}
+            onPress={onSubmit}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator color={C.text} />
+            ) : (
+              <>
+                {/* Operator, 9 september 2026: "endowment effect (...) niet
+                   sign up maar continue zoals duolingo" — 'Sign Up' framet
+                   dit als een nieuwe, extra stap; 'Continue' framet het als
+                   verdergaan met wat de user al aan het doen was (minder
+                   drempel, geen nieuw "commitment" gevoel). */}
+                <Text style={s.primaryBtnText}>
+                  {mode === 'login' ? 'Sign In' : 'Continue'}
+                </Text>
+              </>
+            )}
+          </PressScale>
+
+          {/* Social sign-in NA de velden (operator-mockup, 11 augustus
+              2026) — was ervoor. Apple + Google naast elkaar i.p.v.
+              gestapeld, zoals de mockup toont. */}
+          {(googleAvailable || appleAvailable) && (
+            <View style={{ marginTop: 6 }}>
+              <View style={s.orDividerRow}>
+                <View style={s.orDividerLine} />
+                <Text style={s.orDividerText}>or</Text>
+                <View style={s.orDividerLine} />
+              </View>
+              <View style={s.socialRow}>
+                {appleAvailable && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={12}
+                    style={{ flex: 1, height: 48 }}
+                    onPress={() => void onAppleSignIn()}
+                  />
+                )}
+                {googleAvailable && (
+                  <PressScale
+                    style={s.googleBtn}
+                    onPress={() => void onGoogleSignIn()}
+                  >
+                    {/* Officieel Google "G"-logo, niet een platte letter
+                        (operator, 11 augustus 2026: "moet een officiële
+                        google logo zijn"). */}
+                    <GoogleGlyph size={16} />
+                    <Text style={s.googleBtnText}>Continue with Google</Text>
+                  </PressScale>
+                )}
+              </View>
+            </View>
+          )}
 
           <Text style={s.staySignedIn}>
             You'll stay signed in on this device
           </Text>
+
+          {/* "Don't have an account? Sign Up" ontbrak (operator, 11
+              augustus 2026: "google sign in apple sign in sign up...").
+              `mode` bestond al (login/signup, stuurt onSubmit naar login()
+              of signup()) maar had nog geen zichtbare toggle — dit is 'm. */}
+          <PressScale
+            onPress={() => {
+              setMode((m) => (m === 'login' ? 'signup' : 'login'));
+              setMsg(null);
+            }}
+            hitSlop={8}
+            style={{ alignSelf: 'center', marginTop: 14 }}
+          >
+            <Text style={s.staySignedIn}>
+              {mode === 'login' ? (
+                <>
+                  Don't have an account?{' '}
+                  <Text style={{ color: C.accent, fontFamily: BrandFonts.semibold }}>
+                    Sign Up
+                  </Text>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <Text style={{ color: C.accent, fontFamily: BrandFonts.semibold }}>
+                    Sign In
+                  </Text>
+                </>
+              )}
+            </Text>
+          </PressScale>
 
         </View>
 
@@ -1742,29 +1926,25 @@ export default function AccountScreen() {
             CTA — visueel gelijkwaardig aan Audio Library en Bracelet
             cards hieronder. Boven de "NEW TO VIBEZCORE" divider want
             deze card is voor OWNERS (al gekocht), niet voor discovery. */}
-        <View style={s.productCard}>
-          <View style={s.productStatusRow}>
-            <View
-              style={[
-                s.productStatusDot,
-                { backgroundColor: Brand.accent },
-              ]}
-            />
-            <Text style={s.productStatusLabel}>ALREADY OWN A PRODUCT?</Text>
+        {/* Hele kaart tikbaar, geen losse knop meer (operator-mockup, 11
+            augustus 2026: enkel een chevron rechts, icoon+tekst links). */}
+        <PressScale
+          style={s.productCardRow}
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+          accessibilityLabel="Activate your Bracelet or Full Bundle code"
+        >
+          <View style={s.productCardIconBadge}>
+            <Package size={18} color={C.accent} strokeWidth={2} />
           </View>
-          <Text style={s.productTitle}>Activate</Text>
-          <Text style={s.productOneLiner}>
-            Bracelet or Full Bundle code
-          </Text>
-          <Pressable
-            style={s.productCtaPrimary}
-            onPress={() => router.navigate('/activate-bracelet' as never)}
-            accessibilityLabel="Activate your Bracelet or Full Bundle code"
-          >
-            <Text style={s.productCtaPrimaryText}>Activate</Text>
-            <Text style={s.productCtaPrimaryArrow}>→</Text>
-          </Pressable>
-        </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.productStatusLabel}>ALREADY OWN A PRODUCT?</Text>
+            <Text style={s.productTitle}>Activate your product</Text>
+            <Text style={s.productOneLiner}>
+              Activate your bracelet or full bundle code.
+            </Text>
+          </View>
+          <ChevronRight size={18} color={C.accent} strokeWidth={2.2} />
+        </PressScale>
 
         {/* Iter v238g (2026-07-10, operator-feedback): "in account is blok
             got a bracelet en new to vibezcore redelijk rommelig".
@@ -1772,9 +1952,12 @@ export default function AccountScreen() {
             divider-header. Activate CTA (hierboven) en product-cards
             (hieronder) hebben nu een duidelijke visuele scheiding zonder
             concurrerende eyebrows. */}
+        {/* "EXPLORE VIBEZCORE", niet "NEW TO VIBEZCORE" (operator-mockup,
+            11 augustus 2026) — deze sectie toont ook aan bestaande leden
+            wat er nog te ontdekken valt, niet alleen aan nieuwkomers. */}
         <View style={s.newHereDivider}>
           <View style={s.newHereDividerLine} />
-          <Text style={s.newHereDividerText}>NEW TO VIBEZCORE</Text>
+          <Text style={s.newHereDividerText}>EXPLORE VIBEZCORE</Text>
           <View style={s.newHereDividerLine} />
         </View>
 
@@ -1794,23 +1977,27 @@ export default function AccountScreen() {
             <View
               style={[
                 s.productStatusDot,
-                { backgroundColor: Brand.success },
+                { backgroundColor: C.success },
               ]}
             />
             <Text style={s.productStatusLabel}>AVAILABLE NOW</Text>
           </View>
           <Text style={s.productTitle}>Guided Breathwork</Text>
+          {/* Tekst woordelijk uit de mockup (operator, 11 augustus 2026). */}
           <Text style={s.productOneLiner}>
-            Five states · voice, visuals and haptics
+            Premium sessions to improve focus, sleep and performance.
           </Text>
-          <Pressable
-            style={s.productCtaPrimary}
+          {/* Tekstlink met pijltje, geen volle knop (operator-mockup). */}
+          <PressScale
+            style={s.productCtaLink}
             onPress={() => router.navigate('/subscribe' as never)}
-            accessibilityLabel="Go Premium — unlock every breathwork state"
+            accessibilityLabel="Go Premium — unlock Breathwork and the Audio Library"
           >
-            <Text style={s.productCtaPrimaryText}>Go Premium</Text>
-            <Text style={s.productCtaPrimaryArrow}>→</Text>
-          </Pressable>
+            <Text style={[s.productCtaLinkText, { color: C.accent }]}>
+              Go Premium
+            </Text>
+            <ChevronRight size={15} color={C.accent} strokeWidth={2.2} />
+          </PressScale>
         </View>
 
         {/* Card 2: Smart Bead Bracelet — preorder, met 2 duidelijke
@@ -1831,12 +2018,17 @@ export default function AccountScreen() {
             <View
               style={[
                 s.productStatusDot,
-                { backgroundColor: 'rgba(255,255,255,0.30)' },
+                { backgroundColor: '#E0B341' },
               ]}
             />
             {/* Geen datum meer (operator, 2026-07-14): sep-datum gedropt,
-                communicatie is “Launching Fall 2026”. */}
-            <Text style={s.productStatusLabel}>
+                communicatie is “Launching Fall 2026”. Goud, niet gedimd
+                (operator, 11 augustus 2026: "knop bracelet fall 2026 moet
+                heel duidelijk opvallen") — zelfde tint als de
+                "COMING FALL 2026"-badge in de onboarding en de
+                Activity-tab (#E0B341, "geen defect maar een
+                aankondiging"). */}
+            <Text style={[s.productStatusLabel, { color: '#E0B341' }]}>
               EARLY BIRD · LAUNCHING FALL 2026
             </Text>
           </View>
@@ -1849,7 +2041,7 @@ export default function AccountScreen() {
           </Text>
 
           {/* Option A: Bracelet alone — outlined, lower-key */}
-          <Pressable
+          <PressScale
             style={s.reserveOption}
             onPress={() =>
               openExternal('https://www.vibezcore.com/subscribe-bracelet')
@@ -1863,12 +2055,12 @@ export default function AccountScreen() {
               </Text>
             </View>
             <Text style={s.reserveOptionArrow}>→</Text>
-          </Pressable>
+          </PressScale>
 
           {/* Option B: Bundle — BEST VALUE highlighted, order-bump styling.
               Pakketnaam (VIBEZCORE Full Bundle) prominent + extra dim
               regel onder met wat de bundle inhoudt. */}
-          <Pressable
+          <PressScale
             style={s.reserveOptionBundle}
             onPress={() =>
               openExternal('https://www.vibezcore.com/subscribe-bundle')
@@ -1886,7 +2078,7 @@ export default function AccountScreen() {
               </Text>
             </View>
             <Text style={s.reserveOptionArrow}>→</Text>
-          </Pressable>
+          </PressScale>
 
           {/* Disclaimer — 2-regel volledig zoals voorheen, omdat dit
               juridisch + emotioneel relevant is voor preorders. */}
@@ -1906,122 +2098,162 @@ export default function AccountScreen() {
             voor guests. Operator: "sharing moet duidelijk en altijd zichtbaar".
             Gasten zien dit direct na Get Started — primaire growth-loop voor
             pre-KS-launch awareness. */}
-        <Pressable
-          style={s.guestInviteCta}
-          onPress={shareInvite}
-          accessibilityLabel="Invite a friend to VIBEZCORE"
-        >
-          <Share2 size={18} color="#4ade80" strokeWidth={2.2} />
-          <Text style={s.guestInviteCtaText}>Invite a friend</Text>
-        </Pressable>
+        {/* SUPPORT — herbouwd naar de mockup (operator, 11 augustus 2026):
+            rijen met icoon + titel + onderschrift + chevron, i.p.v. de
+            oude losse "Invite a friend"-knop + een enkele dot-separated
+            tekstregel (Settings/About/FAQ/Contact support) die totaal niet
+            op de mockup leek. "About" is teruggezet (operator, zelfde dag,
+            later bericht: "ik zie die about tab nergens staan" — de
+            guest-view had 'm nergens, alleen ingelogde users zagen 'm via
+            Settings & Help).
 
-        {/* Iter v172 (2026-06-29): About / FAQ / Contact support links voor
-            guests. Settings & Help blok zat verstopt achter sign-in;
-            operator-feedback dat About/FAQ/Support pre-purchase ook
-            vindbaar moeten zijn. Inline link-row, subtle. */}
-        {/* Settings hoort hier óók (operator, 4 augustus 2026). Het stond
-            alleen in de ingelogde versie van dit scherm, en dat is precies de
-            verkeerde helft: een gast is degene die de intro nog wil zien, het
-            geluid wil uitzetten of de app wil leren kennen. Wie al betaalt
-            heeft die knoppen het minst nodig.
-            Zelfde ongeluk als bij About en FAQ hierboven, en om dezelfde reden
-            opgelost. */}
-        <View style={s.guestInfoLinks}>
-          <Pressable
+            "Settings" bleef toen bewust weg (niet in de mockup, enkel
+            bereikbaar via de __DEV__-link onderaan) — teruggedraaid
+            operator, 7 september 2026: "voor user de functies voor echte
+            users" — settings.tsx bevat inmiddels functies die precies
+            GASTEN nodig hebben (breath-onboarding opnieuw bekijken, welcome
+            opnieuw bekijken, gratis-sessie-status), en die zaten zo enkel
+            achter een verborgen dev-knop. Bovenaan de lijst: dit is
+            inmiddels een eersteklas ingang, geen bijzaak meer. */}
+        <Text style={s.supportSectionLabel}>SUPPORT</Text>
+        <View style={s.supportList}>
+          {/* Operator, 13 september 2026: "settings knop is weg, wil hem
+             terug met inhoud zoals het was" — herroept de 24e ronde. */}
+          <PressScale
+            style={s.supportRow}
             onPress={() => router.navigate('/settings' as never)}
-            hitSlop={8}
+            accessibilityLabel="Open settings"
           >
-            <Text style={s.guestInfoLink}>Settings</Text>
-          </Pressable>
-          <Text style={s.guestInfoLinkSep}>·</Text>
-          <Pressable
-            onPress={() => router.navigate('/about' as never)}
-            hitSlop={8}
+            <SettingsIcon size={18} color={C.accent} strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.supportRowTitle}>Settings</Text>
+              <Text style={s.supportRowSub}>Playback, privacy, and more</Text>
+            </View>
+            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
+          </PressScale>
+          <View style={s.supportRowSep} />
+          <PressScale
+            style={s.supportRow}
+            onPress={shareInvite}
+            accessibilityLabel="Invite a friend to VIBEZCORE"
           >
-            <Text style={s.guestInfoLink}>About</Text>
-          </Pressable>
-          <Text style={s.guestInfoLinkSep}>·</Text>
-          <Pressable
+            <UserPlus size={18} color={C.accent} strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.supportRowTitle}>Invite a Friend</Text>
+              <Text style={s.supportRowSub}>
+                Share VIBEZCORE and get rewards
+              </Text>
+            </View>
+            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
+          </PressScale>
+          <View style={s.supportRowSep} />
+          <PressScale
+            style={s.supportRow}
             onPress={() => router.navigate('/faq' as never)}
             hitSlop={8}
           >
-            <Text style={s.guestInfoLink}>FAQ</Text>
-          </Pressable>
-          <Text style={s.guestInfoLinkSep}>·</Text>
-          <Pressable
+            <HelpCircle size={18} color={C.accent} strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.supportRowTitle}>FAQ</Text>
+              <Text style={s.supportRowSub}>Common questions</Text>
+            </View>
+            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
+          </PressScale>
+          <View style={s.supportRowSep} />
+          <PressScale
+            style={s.supportRow}
             onPress={() => router.navigate('/support' as never)}
             hitSlop={8}
           >
-            <Text style={s.guestInfoLink}>Contact support</Text>
-          </Pressable>
+            <Headphones size={18} color={C.accent} strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.supportRowTitle}>Contact Support</Text>
+              <Text style={s.supportRowSub}>We're here to help</Text>
+            </View>
+            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
+          </PressScale>
+          <View style={s.supportRowSep} />
+          <PressScale
+            style={s.supportRow}
+            onPress={() => router.navigate('/legal/shipping' as never)}
+            hitSlop={8}
+          >
+            <Package size={18} color={C.accent} strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.supportRowTitle}>Shipping & Returns</Text>
+              <Text style={s.supportRowSub}>
+                Info about delivery and returns
+              </Text>
+            </View>
+            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
+          </PressScale>
+          <View style={s.supportRowSep} />
+          <PressScale
+            style={s.supportRow}
+            onPress={() => router.navigate('/about' as never)}
+            accessibilityLabel="Learn about VIBEZCORE"
+            hitSlop={8}
+          >
+            <Info size={18} color={C.accent} strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.supportRowTitle}>About VIBEZCORE</Text>
+              <Text style={s.supportRowSub}>
+                What we're building, and why
+              </Text>
+            </View>
+            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
+          </PressScale>
         </View>
 
-        {/* ── LEGAL FOOTER ──
-            5 docs altijd toegankelijk, ook voor guests (AVG/compliance +
-            UX-conventie). Inline link-row, subtle, Apple-style. */}
+        {/* ── LEGAL FOOTER ── teruggebracht naar exact de 5 links uit de
+            mockup (operator, 11 augustus 2026) — Access/Shipping/Refund
+            zijn weg uit deze regel (Shipping leeft nu in de Support-rij
+            hierboven; Access en Refund waren geen onderdeel van de mockup
+            en blijven bereikbaar via hun eigen /legal/-route voor wie de
+            link kent, gewoon niet meer hier opgesomd). */}
         <View style={s.legalFooter}>
           <View style={s.legalLinkRow}>
-            <Pressable
+            <PressScale
               onPress={() => router.navigate('/legal/terms' as never)}
               hitSlop={8}
+              scaleTo={0.92}
             >
               <Text style={s.legalLink}>Terms</Text>
-            </Pressable>
+            </PressScale>
             <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
+            <PressScale
               onPress={() => router.navigate('/legal/privacy' as never)}
               hitSlop={8}
+              scaleTo={0.92}
             >
               <Text style={s.legalLink}>Privacy</Text>
-            </Pressable>
+            </PressScale>
             <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
-              onPress={() =>
-                router.navigate('/legal/accessibility' as never)
-              }
-              hitSlop={8}
-            >
-              <Text style={s.legalLink}>Access</Text>
-            </Pressable>
-            <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
-              onPress={() =>
-                router.navigate('/legal/shipping' as never)
-              }
-              hitSlop={8}
-            >
-              <Text style={s.legalLink}>Shipping</Text>
-            </Pressable>
-            <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
-              onPress={() => router.navigate('/legal/refund' as never)}
-              hitSlop={8}
-            >
-              <Text style={s.legalLink}>Refund</Text>
-            </Pressable>
-            <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
+            <PressScale
               onPress={() => router.navigate('/legal/cookies' as never)}
               hitSlop={8}
+              scaleTo={0.92}
             >
               <Text style={s.legalLink}>Cookies</Text>
-            </Pressable>
+            </PressScale>
             <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
+            <PressScale
               onPress={() => router.navigate('/legal/health' as never)}
               hitSlop={8}
+              scaleTo={0.92}
             >
-              <Text style={s.legalLink}>Health</Text>
-            </Pressable>
+              <Text style={s.legalLink}>Health Disclaimer</Text>
+            </PressScale>
             <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
+            <PressScale
               onPress={() =>
                 router.navigate('/legal/audio-sessions' as never)
               }
               hitSlop={8}
+              scaleTo={0.92}
             >
-              <Text style={s.legalLink}>Audio</Text>
-            </Pressable>
+              <Text style={s.legalLink}>Audio Disclaimer</Text>
+            </PressScale>
           </View>
           <Text style={s.legalCopy}>© VIBEZCORE 2026</Text>
         </View>
@@ -2032,9 +2264,11 @@ export default function AccountScreen() {
             in test (bv. 'Free / Guest' vs 'Audio PRO') moest je eerst
             inloggen. Met deze link kan een tester de override aanpassen
             zonder eerst een account-roundtrip te doen. Verschijnt enkel
-            in __DEV__ builds — productie ziet 'm niet. */}
+            in __DEV__ builds — productie ziet 'm niet.
+            Operator, 13 september 2026: teruggezet, zie de toelichting
+            bij de andere twee Settings-links hierboven. */}
         {__DEV__ && (
-          <Pressable
+          <PressScale
             onPress={() => router.navigate('/settings' as never)}
             hitSlop={12}
             style={s.devSettingsLink}
@@ -2043,7 +2277,7 @@ export default function AccountScreen() {
             <Text style={s.devSettingsLinkText}>
               🔧 Developer settings (dev only)
             </Text>
-          </Pressable>
+          </PressScale>
         )}
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -2051,7 +2285,7 @@ export default function AccountScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Brand.bg },
+  root: { flex: 1, backgroundColor: C.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: 48 },
   /* ── Iter 9iii → 9mmm: signed-out hero ──
@@ -2064,54 +2298,49 @@ const s = StyleSheet.create({
     paddingBottom: 6,
     marginBottom: 20,
   },
-  heroEyebrow: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2.4,
-    marginBottom: 12,
-  },
   heroWordmark: {
-    width: 220,
-    height: 36,
+    width: 190,
+    height: 30,
+    marginBottom: 22,
     /* Subtle shadow voor brand-presence — matched welcome.tsx style. */
     shadowColor: '#000',
-    shadowOpacity: 0.40,
+    shadowOpacity: 0.4,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  heroAccentBar: {
-    width: 34,
-    height: 3,
-    backgroundColor: Brand.accent,
-    marginTop: 18,
-    marginBottom: 16,
-  },
-  /* Old heroGreeting (Welcome to VIBEZCORE plain text) replaced by
-     heroBlock met wordmark. Style kept for any legacy usage. */
+  /* "Welcome to VIBEZCORE" als echte kop i.p.v. de oude losse
+     label+wordmark+streepje-opbouw (operator-mockup, 11 augustus 2026). */
   heroGreeting: {
-    color: Brand.text,
+    /* extrabold → regular (operator, 11 augustus 2026: "wat heb ik gezegd
+       over de font?" — koppen zijn de hele avond al regular-gewicht op
+       Breath/Bracelet/Audio Library, deze bleef nog op het oude zware
+       gewicht staan). */
+    color: C.text,
     fontSize: 26,
-    fontFamily: BrandFonts.extrabold,
+    fontFamily: BrandFonts.regular,
     letterSpacing: -0.5,
-    marginTop: 8,
-    marginBottom: 6,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   heroSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     lineHeight: 20,
     textAlign: 'center',
+    maxWidth: 300,
   },
   /* Card-frame voor zowel sign-in als product-sectie. Subtle bg-tint
      + hairline border = visueel één geheel per sectie. */
+  /* Blauw getint i.p.v. neutraal grijs (operator-mockup, 11 augustus
+     2026, close-up: "kijk hier" — de kaart draagt duidelijk een blauwe
+     achtergrond + rand, niet C.panel-grijs). */
   authCard: {
-    backgroundColor: 'rgba(255,255,255,0.025)',
+    backgroundColor: `rgba(${ROYAL_INDIGO_RGB},0.08)`,
     borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: `rgba(${ROYAL_INDIGO_RGB},0.35)`,
     paddingHorizontal: 16,
     paddingVertical: 18,
     marginBottom: 18,
@@ -2121,12 +2350,12 @@ const s = StyleSheet.create({
      bracelet-owners het meteen vinden. Operator-feedback: bracelet wordt
      main product, niet verstoppen onder dim link. */
   activateBraceletCard: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
+    backgroundColor: `rgba(${ROYAL_INDIGO_RGB},0.10)`,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: 'rgba(58,143,255,0.55)',
+    borderColor: `rgba(${ROYAL_INDIGO_RGB},0.55)`,
     marginBottom: 18,
-    shadowColor: '#3a8fff',
+    shadowColor: '#1E2A4A',
     shadowOpacity: 0.20,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 0 },
@@ -2143,30 +2372,31 @@ const s = StyleSheet.create({
     paddingRight: 12,
   },
   activateBraceletCardEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.8,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): zelfde rol
+     als `activateBraceletEntryLabel` op bracelet.tsx (was daar 18px, hier
+     17px) — nu allebei uit `TypeScale.compactCardTitle`. */
   activateBraceletCardLabel: {
-    color: Brand.text,
-    fontSize: 17,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.2,
+    color: C.text,
+    ...TypeScale.compactCardTitle,
     marginBottom: 4,
     lineHeight: 21,
   },
   activateBraceletCardSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
     lineHeight: 17,
   },
   activateBraceletCardArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 26,
     fontFamily: BrandFonts.regular,
     lineHeight: 26,
@@ -2182,29 +2412,84 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   learnMoreLinkText: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
     textAlign: 'center',
   },
   learnMoreLinkAccent: {
-    color: Brand.accent,
+    color: C.accent,
     fontFamily: BrandFonts.semibold,
   },
   authCardLabel: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.8,
     marginBottom: 14,
   },
   authCardIntro: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     lineHeight: 19,
     marginBottom: 14,
+  },
+  /* Intro-blok boven de velden (operator-mockup, 11 augustus 2026). */
+  authCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  authCardIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: `rgba(${ROYAL_INDIGO_RGB},0.14)`,
+  },
+  authCardTitle: {
+    color: C.text,
+    fontSize: 17,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.2,
+    marginTop: 2,
+  },
+  orDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  orDividerLine: { flex: 1, height: 1, backgroundColor: C.border },
+  orDividerText: {
+    marginHorizontal: 12,
+    color: C.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  /* Apple + Google naast elkaar, niet gestapeld (operator-mockup). */
+  socialRow: { flexDirection: 'row', gap: 10 },
+  googleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    backgroundColor: '#ffffff',
+  },
+  googleBtnText: {
+    color: '#1f1f1f',
+    fontSize: 12,
+    fontFamily: BrandFonts.semibold,
   },
 
   /* ── Iter 9dq v10 (2026-06-02): restructured product-cards ──
@@ -2215,10 +2500,31 @@ const s = StyleSheet.create({
     marginTop: 14,
     padding: 18,
     borderRadius: 14,
-    backgroundColor: Brand.panel,
+    backgroundColor: C.panel,
     /* Subtiele blauwe omlijning matched de history-page card-style. */
-    borderColor: 'rgba(58, 143, 255, 0.28)',
+    borderColor: `rgba(${ROYAL_INDIGO_RGB}, 0.28)`,
     borderWidth: 1,
+  },
+  /* Hele-kaart-tikbaar variant (operator-mockup, 11 augustus 2026) — icoon
+     + tekst links, chevron rechts, geen losse knop. */
+  productCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 14,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: 'rgba(74,222,128,0.08)',
+    borderColor: 'rgba(74,222,128,0.35)',
+    borderWidth: 1,
+  },
+  productCardIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(74,222,128,0.14)',
   },
   productStatusRow: {
     flexDirection: 'row',
@@ -2231,21 +2537,27 @@ const s = StyleSheet.create({
     borderRadius: 3,
     marginRight: 8,
   },
+  /* Gedeeld door 3 labels ("ALREADY OWN A PRODUCT?", "AVAILABLE NOW",
+     "EARLY BIRD · LAUNCHING FALL 2026") — bewust neutraal/gedimd hier;
+     alleen de FALL 2026-regel krijgt zijn eigen goud-override verderop
+     (operator, 11 augustus 2026), niet deze gedeelde basisstijl. */
   productStatusLabel: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.8,
   },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): 22px was
+     al toevallig gelijk aan `TypeScale.cardHeadline`, enkel het gewicht
+     (extrabold i.p.v. bold) en letterSpacing (-0.4 i.p.v. -0.3) weken af
+     zonder reden — nu uit dezelfde bron. */
   productTitle: {
-    color: Brand.text,
-    fontSize: 22,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.4,
+    color: C.text,
+    ...TypeScale.cardHeadline,
     marginBottom: 4,
   },
   productOneLiner: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     marginBottom: 18,
@@ -2254,7 +2566,7 @@ const s = StyleSheet.create({
      first reserved, first served". Subtieler dan one-liner zodat het
      als scarcity-microcopy leest, niet als hoofdpunt. */
   productSubOneLiner: {
-    color: 'rgba(255,255,255,0.40)',
+    color: 'rgba(10,10,12,0.40)',
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     fontStyle: 'italic',
@@ -2266,11 +2578,23 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Brand.accent,
+    backgroundColor: C.accent,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 12,
     gap: 8,
+  },
+  /* Tekstlink met pijltje i.p.v. volle knop (operator-mockup). */
+  productCtaLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    gap: 2,
+  },
+  productCtaLinkText: {
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
   },
   productCtaPrimaryText: {
     color: '#ffffff',
@@ -2289,7 +2613,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderColor: Brand.accent,
+    borderColor: C.accent,
     borderWidth: 1,
     paddingVertical: 13,
     paddingHorizontal: 18,
@@ -2298,13 +2622,13 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   productCtaSecondaryText: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
   },
   productCtaSecondaryArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
   },
@@ -2319,7 +2643,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'transparent',
-    borderColor: 'rgba(58, 143, 255, 0.45)',
+    borderColor: `rgba(${ROYAL_INDIGO_RGB}, 0.45)`,
     borderWidth: 1,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -2330,8 +2654,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(58, 143, 255, 0.10)',
-    borderColor: 'rgba(58, 143, 255, 0.50)',
+    backgroundColor: `rgba(${ROYAL_INDIGO_RGB}, 0.10)`,
+    borderColor: `rgba(${ROYAL_INDIGO_RGB}, 0.50)`,
     borderWidth: 1,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -2342,13 +2666,13 @@ const s = StyleSheet.create({
     flex: 1,
   },
   reserveOptionTitle: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.1,
   },
   reserveOptionSub: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 12,
     fontFamily: BrandFonts.medium,
     marginTop: 3,
@@ -2356,13 +2680,13 @@ const s = StyleSheet.create({
   /* Iter 9dq v12: extra fine-print onder pakketnaam (alleen bundle).
      Toont wat in de bundle zit zonder de pakketnaam te overschaduwen. */
   reserveOptionSubFine: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(10,10,12,0.35)',
     fontSize: 11,
     fontFamily: BrandFonts.regular,
     marginTop: 2,
   },
   reserveOptionArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 18,
     fontFamily: BrandFonts.bold,
     marginLeft: 10,
@@ -2370,7 +2694,7 @@ const s = StyleSheet.create({
   /* BEST VALUE pill — gedeeld door bundle inline. */
   bundleInlineBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: Brand.success,
+    backgroundColor: C.success,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 4,
@@ -2401,10 +2725,10 @@ const s = StyleSheet.create({
   newHereDividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(10,10,12,0.10)',
   },
   newHereDividerText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 1.4,
@@ -2421,7 +2745,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Brand.success,
+    backgroundColor: C.success,
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 999,
@@ -2447,8 +2771,8 @@ const s = StyleSheet.create({
      Accent-border, transparante bg, accent-tekst — lichter visueel
      gewicht dan de solid-filled audio-knop. */
   getProductBtnOutlined: {
-    backgroundColor: 'rgba(58,143,255,0.06)',
-    borderColor: Brand.accent,
+    backgroundColor: `rgba(${ROYAL_INDIGO_RGB},0.06)`,
+    borderColor: C.accent,
     borderWidth: 1,
   },
   /* Iter 9kkk — Bundle btn wrapper voor BEST VALUE-badge die boven
@@ -2472,7 +2796,7 @@ const s = StyleSheet.create({
     elevation: 4,
   },
   bundleBadgeText: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 9,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1,
@@ -2485,27 +2809,27 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   earlyBirdLabel: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.8,
   },
   earlyBirdDate: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 10,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   earlyBirdHeadline: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.3,
     marginBottom: 4,
   },
   earlyBirdSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     lineHeight: 17,
@@ -2513,7 +2837,7 @@ const s = StyleSheet.create({
   },
   /* Disclaimer onder de 3 product-knoppen (samengevoegd uit 2 dubbele) */
   productCardDisclaimer: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     textAlign: 'center',
@@ -2521,7 +2845,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
   },
   productCardDisclaimerSub: {
-    color: 'rgba(255,255,255,0.40)',
+    color: 'rgba(10,10,12,0.40)',
     fontSize: 10,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
@@ -2543,13 +2867,13 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(58,143,255,0.06)',
+    backgroundColor: `rgba(${ROYAL_INDIGO_RGB},0.06)`,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.22)',
+    borderColor: `rgba(${ROYAL_INDIGO_RGB},0.22)`,
     alignItems: 'center',
   },
   activateBraceletShortcutText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.1,
@@ -2557,7 +2881,7 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
   activateBraceletShortcutAccent: {
-    color: Brand.accent,
+    color: C.accent,
     fontFamily: BrandFonts.bold,
   },
   activateBraceletInline: {
@@ -2566,13 +2890,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   activateBraceletInlineText: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
   },
   activateBraceletInlineLink: {
-    color: Brand.accent,
+    color: C.accent,
     fontFamily: BrandFonts.semibold,
   },
   /* Iter v186 (2026-07-02): duplicate activateBraceletCard styles verwijderd.
@@ -2583,54 +2907,50 @@ const s = StyleSheet.create({
      boven info-links. Groen accent matched Free Picks branding (free
      sessions = entry-point voor invited users). Share2-icon links van
      label voor visuele balans. */
-  guestInviteCta: {
-    marginTop: 12,
-    marginHorizontal: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.3)',
-    backgroundColor: 'rgba(74,222,128,0.08)',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-  },
-  guestInviteCtaText: {
-    color: '#4ade80',
-    fontSize: 15,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.2,
-  },
   /* Voor cardRow met icoon links van label — Share2-glyph naast tekst. */
   cardRowIconText: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  /* Iter v172 (2026-06-29): About / FAQ / Contact support link-row voor
-     uitgelogde users — zodat ze deze info pre-purchase kunnen vinden
-     zonder dat het Settings & Help blok prominent staat. */
-  guestInfoLinks: {
+  /* SUPPORT-sectie, herbouwd naar de mockup (operator, 11 augustus 2026):
+     4 rijen met icoon + titel + onderschrift + chevron. */
+  supportSectionLabel: {
+    color: 'rgba(10,10,12,0.4)',
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.6,
+    marginTop: 26,
+    marginBottom: 10,
+  },
+  supportList: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10,10,12,0.08)',
+    backgroundColor: 'rgba(10,10,12,0.025)',
+  },
+  supportRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginTop: 6,
-    marginBottom: 6,
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  guestInfoLink: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  supportRowSep: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(10,10,12,0.08)',
+    marginLeft: 46,
   },
-  guestInfoLinkSep: {
-    color: 'rgba(255,255,255,0.25)',
+  supportRowTitle: {
+    color: C.text,
+    fontSize: 14,
+    fontFamily: BrandFonts.semibold,
+  },
+  supportRowSub: {
+    marginTop: 1,
+    color: 'rgba(10,10,12,0.5)',
     fontSize: 12,
+    fontFamily: BrandFonts.regular,
   },
   legalFooter: {
     marginTop: 14,
@@ -2638,7 +2958,7 @@ const s = StyleSheet.create({
     paddingBottom: 8,
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: 'rgba(10,10,12,0.06)',
   },
   legalLinkRow: {
     flexDirection: 'row',
@@ -2648,7 +2968,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   legalLink: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 12,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.1,
@@ -2656,11 +2976,11 @@ const s = StyleSheet.create({
     paddingVertical: 2,
   },
   legalLinkSep: {
-    color: 'rgba(255,255,255,0.25)',
+    color: 'rgba(10,10,12,0.25)',
     fontSize: 12,
   },
   legalCopy: {
-    color: 'rgba(255,255,255,0.30)',
+    color: 'rgba(10,10,12,0.30)',
     fontSize: 10,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.6,
@@ -2673,7 +2993,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   devSettingsLinkText: {
-    color: 'rgba(58,143,255,0.65)',
+    color: `rgba(${ROYAL_INDIGO_RGB},0.65)`,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.4,
@@ -2684,14 +3004,14 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   getProductHeader: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.3,
     marginBottom: 4,
   },
   getProductSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     lineHeight: 18,
@@ -2701,8 +3021,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Brand.panel,
-    borderColor: Brand.border,
+    backgroundColor: C.panel,
+    borderColor: C.border,
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 14,
@@ -2710,32 +3030,32 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   getProductBtnFeatured: {
-    backgroundColor: Brand.accent,
-    borderColor: Brand.accent,
+    backgroundColor: C.accent,
+    borderColor: C.accent,
   },
   getProductBtnLeft: {
     flex: 1,
   },
   getProductBtnTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 14,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.1,
   },
   getProductBtnSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.medium,
     marginTop: 2,
   },
   getProductBtnSubFeatured: {
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(10,10,12,0.85)',
     fontSize: 11,
     fontFamily: BrandFonts.medium,
     marginTop: 2,
   },
   getProductBtnArrow: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 18,
     fontFamily: BrandFonts.bold,
     marginLeft: 12,
@@ -2744,7 +3064,7 @@ const s = StyleSheet.create({
      "No credit card · No financial data · No purchase obligation" +
      "We only use your email to notify you before launch". */
   getProductDisclaimer: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(10,10,12,0.45)',
     fontSize: 10,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.2,
@@ -2754,7 +3074,7 @@ const s = StyleSheet.create({
     lineHeight: 14,
   },
   getProductDisclaimerSub: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(10,10,12,0.35)',
     fontSize: 10,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
@@ -2773,21 +3093,22 @@ const s = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 8,
   },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): was
+     `extrabold`/letterSpacing 1, los van dezelfde rol elders in de app —
+     nu uit `TypeScale.tabHeader` (bold, letterSpacing -0.3). */
   screenTitle: {
-    color: Brand.text,
-    fontSize: 26,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: 1,
+    color: C.text,
+    ...TypeScale.tabHeader,
     marginTop: 12,
   },
   subtitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 20,
     fontFamily: BrandFonts.bold,
     marginTop: 8,
   },
   optional: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     marginTop: 8,
@@ -2795,8 +3116,8 @@ const s = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: Brand.panel,
-    borderColor: Brand.border,
+    backgroundColor: C.panel,
+    borderColor: C.border,
     borderWidth: 1,
     borderRadius: 10,
     padding: 4,
@@ -2809,54 +3130,58 @@ const s = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 7,
   },
-  toggleActive: { backgroundColor: 'rgba(244,244,244,0.07)' },
+  /* Was een bijna-wit tintje (`rgba(244,244,244,0.07)`) — onzichtbaar op
+     het nieuwe lichte `toggleRow`-paneel. Zelfde subtiele donkere
+     highlight als de andere "actieve chip"-fixes op deze pagina. */
+  toggleActive: { backgroundColor: 'rgba(10,10,12,0.06)' },
   toggleText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
   },
-  toggleTextActive: { color: Brand.text },
-  inputLabel: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.semibold,
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: Brand.panel,
-    borderColor: Brand.border,
+  toggleTextActive: { color: C.text },
+  /* Icoon + placeholder IN het veld, geen los label erboven (operator-
+     mockup, 11 augustus 2026). */
+  inputIconWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.bg,
+    borderColor: 'rgba(10,10,12,0.12)',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: Brand.text,
+    paddingVertical: 4,
+  },
+  inputWithIcon: {
+    flex: 1,
+    color: C.text,
     fontFamily: BrandFonts.regular,
     fontSize: 15,
-  },
-  pwWrap: { position: 'relative', justifyContent: 'center' },
-  pwInput: { paddingRight: 64 },
-  pwToggle: { position: 'absolute', right: 12, padding: 6 },
-  pwToggleText: {
-    color: Brand.accent,
-    fontSize: 13,
-    fontFamily: BrandFonts.semibold,
+    paddingVertical: 11,
   },
   msg: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     marginTop: 14,
   },
+  /* flexDirection ontbrak — tekst en pijl stonden daardoor onder elkaar
+     i.p.v. naast elkaar, en de knop oogde daardoor te dik (operator, 11
+     augustus 2026: "cta knop is te dik pijl moet achter sign in niet
+     eronder"). */
   primaryBtn: {
-    backgroundColor: Brand.accent,
+    flexDirection: 'row',
+    backgroundColor: C.accent,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 15,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 22,
   },
   primaryBtnText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
   },
@@ -2866,7 +3191,7 @@ const s = StyleSheet.create({
      Sign-in knop. Komt uit operator-feedback dat user wist of de session
      bewaard blijft. Bovendien mobiele-app-conventie. */
   staySignedIn: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
@@ -2883,10 +3208,10 @@ const s = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Brand.border,
+    backgroundColor: C.border,
   },
   dividerText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
@@ -2903,7 +3228,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Brand.border,
+    borderColor: C.border,
   },
   /* Disabled state — gedimd zodat duidelijk is dat de knop nog niet
      actief is. Combineert met de SOON-badge rechts. */
@@ -2928,6 +3253,8 @@ const s = StyleSheet.create({
      met onverklaarde non-respons bij tap. */
   soonBadge: {
     marginLeft: 10,
+    /* Zit altijd op de zwarte Apple-SSO-knop (`ssoBtn`, `#000`), niet op
+       de pagina-achtergrond — blijft dus wit-tint ongeacht thema. */
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 6,
     paddingVertical: 2,
@@ -2940,15 +3267,15 @@ const s = StyleSheet.create({
     letterSpacing: 1,
   },
   card: {
-    backgroundColor: Brand.panel,
-    borderColor: Brand.border,
+    backgroundColor: C.panel,
+    borderColor: C.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: 18,
     marginTop: 14,
   },
   label: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.5,
@@ -2956,7 +3283,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   email: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
   },
@@ -2969,14 +3296,14 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
   subSmall: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     marginTop: 4,
     lineHeight: 18,
   },
   dimText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     lineHeight: 21,
@@ -2990,12 +3317,12 @@ const s = StyleSheet.create({
     marginTop: 22,
   },
   signOutText: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 14,
     fontFamily: BrandFonts.bold,
   },
   legal: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 10,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
@@ -3011,8 +3338,8 @@ const s = StyleSheet.create({
   linkCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Brand.panel,
-    borderColor: Brand.border,
+    backgroundColor: C.panel,
+    borderColor: C.border,
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 18,
@@ -3021,18 +3348,18 @@ const s = StyleSheet.create({
   },
   linkTextWrap: { flex: 1 },
   linkTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
   },
   linkSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     marginTop: 4,
   },
   linkArrow: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(10,10,12,0.4)',
     fontSize: 28,
     marginLeft: 8,
     lineHeight: 28,
@@ -3047,16 +3374,16 @@ const s = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.10)',
+    borderTopColor: 'rgba(10,10,12,0.10)',
   },
   cardCtaText: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
   },
   cardCtaArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
   },
@@ -3073,24 +3400,24 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   cardCtaSecondaryText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
   },
   cardCtaSecondaryArrow: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
   },
   /* Forgot Password — kleine subtiele link onder de Sign In knop. */
   forgotLink: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginTop: 4,
+    alignItems: 'flex-end',
+    paddingVertical: 8,
+    marginTop: 2,
   },
   forgotLinkText: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
@@ -3105,19 +3432,19 @@ const s = StyleSheet.create({
     paddingVertical: 14,
   },
   cardRowText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
   },
   cardRowArrow: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(10,10,12,0.4)',
     fontSize: 22,
     fontFamily: BrandFonts.medium,
   },
   cardRowDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(10,10,12,0.08)',
   },
   /* My Account-card field rows — andere visuele structuur dan de
      normale cardRow (die heeft alleen tekst + chevron). Hier tonen we
@@ -3134,7 +3461,7 @@ const s = StyleSheet.create({
     gap: 10,
   },
   accountFieldLabel: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.4,
@@ -3142,7 +3469,7 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   accountFieldValue: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
@@ -3150,7 +3477,7 @@ const s = StyleSheet.create({
   /* "Change" CTA tekst in password-row — accent-blauw, naast de
      chevron. Geeft direct duidelijk dat dit interactief is. */
   accountFieldCta: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
@@ -3164,12 +3491,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(10,10,12,0.18)',
     borderRadius: 12,
     alignItems: 'center',
   },
   cancelBtnText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
@@ -3186,7 +3513,7 @@ const s = StyleSheet.create({
     borderRadius: 14,
   },
   dangerLabel: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
@@ -3194,7 +3521,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   dangerText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     lineHeight: 19,
@@ -3209,7 +3536,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   dangerBtnText: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,

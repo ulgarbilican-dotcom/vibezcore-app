@@ -20,7 +20,9 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import {
+  PILLAR_META,
   SERIES_PHOTO,
+  SERIES_PILLAR,
   SERIES_SUBTITLE,
   type Session,
 } from '@/data/audio-library-data';
@@ -28,7 +30,6 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import {
-  continueFromSaved,
   dismissEndedPanel,
   loadSession,
   playNextFromPanel,
@@ -41,11 +42,8 @@ import {
   usePlayerState,
 } from '@/services/audio-player';
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
-import {
-  formatListenedLabel,
-  getEntryByUrl,
-  useHistory,
-} from '@/utils/history';
+import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
+import { useHistory } from '@/utils/history';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -63,26 +61,55 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { Share2 } from 'lucide-react-native';
+import { Heart, Share2 } from 'lucide-react-native';
+import Animated, {
+  Easing,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withDelay,
+  withRepeat,
+  withSequence,
+  cancelAnimation,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
-const BACKDROP_HEIGHT = Math.round(Dimensions.get('window').height * 0.5);
+/* Operator, 26 september 2026 (Apple-redesign): de oude foto-banner-hoogte
+   (BACKDROP_HEIGHT) verviel — de backdrop is nu fullscreen (zie JSX
+   hieronder). ARTWORK_SIZE is de nieuwe zwevende squircle-albumhoes, ruim
+   binnen de meeste schermbreedtes met een vaste zij-marge. */
+const ARTWORK_SIZE = Math.min(164, Dimensions.get('window').width - 180);
 
+/* MERK_ANKER §2 (bindend palet): near-black #0a0a0a i.p.v. zuiver #000,
+   tekst #f4f4f4 i.p.v. zuiver #fff, dim/faint als opacity daarop (zelfde
+   aanpak als de webapp), rand #2a2a2a i.p.v. losse witte opacity.
+
+   Operator, 26 september 2026 (accentkleur-wissel, EERST toegepast in
+   audio): de Audio Library/player-ervaring krijgt een NIEUWE, enkele
+   accentkleur — "Bio-Teal" (#00A3A3 / lichte variant #4AF0D4) — i.p.v.
+   het eerdere tweeledige Signal-Blue/Royal-Indigo-Light-systeem. Eén
+   tint overal in audio: eyebrow-labels, progress-fill, play-icoon,
+   "Continue"-kaart-rand. Nog NIET app-breed (bracelet/breath/website
+   blijven ongewijzigd tot een aparte, bewuste beslissing) — scope is
+   voorlopig uitsluitend dit scherm + de rest van de Audio Library. */
 const C = {
-  bg: '#000',
-  text: '#fff',
-  dim: 'rgba(255,255,255,0.55)',
-  faint: 'rgba(255,255,255,0.4)',
-  border: 'rgba(255,255,255,0.15)',
-  accent: '#3a8fff',
-  /* Iter 2026-06-05: kleur-cleanup (operator-feedback).
-     - FREE label: wit i.p.v. groen (info, geen completion-signaal)
-     - PARTIAL: blauw (active/in-progress) — ongewijzigd
-     - FULL: groen (completion) — ongewijzigd
-     De drie staten hebben nu één duidelijk semantiek elk. */
-  free: 'rgba(255,255,255,0.72)',
-  partial: '#3a8fff',
-  full: '#4ade80',
+  bg: '#0a0a0a',
+  text: '#f4f4f4',
+  dim: 'rgba(244,244,244,0.55)',
+  faint: 'rgba(244,244,244,0.4)',
+  border: '#2a2a2a',
+  /* De ENE audio-accentkleur — eyebrow-tekst, progress-fill, play-icoon,
+     "Continue"-kaart-rand. */
+  accent: AudioAccent,
+  accentLight: AudioAccentLight,
+  /* v4.4 CTA-regel voor een donkere ondergrond: witte knop, donkere tekst.
+     Blijft gelden voor de persistente "Full library access"-CTA en de
+     modal-CTA's — dat is een aparte rol (algemene actie), geen accent. */
+  ctaBg: '#ffffff',
+  ctaText: '#0a0a0a',
   heart: '#ec4899',
   modalOverlay: 'rgba(0,0,0,0.85)',
 };
@@ -165,7 +192,7 @@ export default function PlayerScreen() {
      voor auth (preview-flag), isPro voor display (CTA tonen/verbergen).
      Voorheen toonde de "Full library access" CTA in PRO override omdat
      realIsPro=false; nu verbergt-ie correct want isPro=true. */
-  const { isPro: displayIsPro, realIsPro, braceletModel } = useSubscription();
+  const { isPro: displayIsPro, realIsPro, isTrialing, braceletModel } = useSubscription();
   /* Iter v227 (2026-07-07, audit AU3): bracelet-only owner ziet
      "Add Audio Library" ipv "Get Full Access". Consistent met Account-
      tab (regel 393: upgradeCtaText = isBraceletOwner ? 'Add Audio Library'
@@ -182,8 +209,16 @@ export default function PlayerScreen() {
      backend returnt `active: false` voor bundle-users → realIsPro=false →
      usePreview=true → loadSession met preview=true → paywall na 60s.
      Fix: `realIsPro || isBundleUser`. Symmetrisch met useSubscription.isPro
-     defensive fallback en audio-player.shouldPreview bundle-check. */
-  const hasSubscription = realIsPro || isBundleUser;
+     defensive fallback en audio-player.shouldPreview bundle-check.
+
+     Operator, 26 september 2026 (toegangsmodel-gat gedicht): `realIsPro`
+     is ook `true` tijdens de 7-dagen-trial (RevenueCat telt een trial als
+     actieve entitlement) — zonder de `!isTrialing`-check hieronder kreeg
+     een trial-user dus volledige, ongecapte PRO-playback, terwijl het
+     bedoelde model (project-free-tier-facts, operator-bevestigd) een
+     trial beperkt tot 27 sessies + Breathwork. `isBundleUser` blijft WEL
+     onvoorwaardelijk — dat is geen trial-product. */
+  const hasSubscription = (realIsPro && !isTrialing) || isBundleUser;
   const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
 
   /* Laden bij mount — driven door urlSession (= de sessie waar dit scherm
@@ -226,25 +261,23 @@ export default function PlayerScreen() {
     seekTo(playerState.durationSec * pct);
   };
 
-  /* Series-foto: hoofdkaart van de serie. Soundscapes-subcategorieën
-     krijgen GEEN eigen photo (operator-besluit Q6 TAAK 3). */
-  const photoUri = session ? SERIES_PHOTO[session.series] : undefined;
+  /* Operator ("je moet dezelfde fotos ook gebruiken bij afspelen van een
+     sessie"): de player toonde tot nu toe een aparte reeks-foto
+     (SERIES_PHOTO). Nu dezelfde pijler-foto als de Audio Library-grid en
+     het pillar-scherm — via SERIES_PILLAR opzoeken bij welke pijler deze
+     sessie hoort, dan PILLAR_META's foto. SERIES_PHOTO blijft de
+     fallback voor het (zeldzame) geval dat een reeks niet in
+     SERIES_PILLAR voorkomt. */
+  const photoUri = session
+    ? PILLAR_META[SERIES_PILLAR[session.series]]?.img ?? SERIES_PHOTO[session.series]
+    : undefined;
+  /* "fotos moeten mooi in de kaders passen" — zelfde `imgAspect`-aanpak
+     als de grid-kaarten/pillar-scherm: de albumhoes krijgt de echte
+     beeldverhouding zodat `cover` niet hoeft te croppen. */
+  const photoAspect = session
+    ? PILLAR_META[SERIES_PILLAR[session.series]]?.imgAspect
+    : undefined;
   const subtitle = session ? SERIES_SUBTITLE[session.series] ?? '' : '';
-
-  /* State-pill leest history. ▶ Partly listened (blauw) of ✓ Fully listened
-     (groen) of ✓ Fully listened x2/3/... voor herhaalde afspelingen.
-     Iter 9dq v111 (2026-06-04): label gecentraliseerd in
-     formatListenedLabel — inclusief fc-count. */
-  const stateLabel = useMemo(() => {
-    if (!session) return null;
-    const label = formatListenedLabel(getEntryByUrl(session.url));
-    if (!label) return null;
-    return {
-      text: label.text,
-      color: label.isFull ? C.full : C.partial,
-      glyph: label.isFull ? '✓' : '▶',
-    };
-  }, [session, playerState.session]); // re-eval als history schrijft (via useHistory hierboven)
 
   /* ── Actions ──────────────────────────────────────────────────────────── */
 
@@ -263,10 +296,17 @@ export default function PlayerScreen() {
       return;
     }
     requestScrollTo('pricing');
-    if (router.canGoBack()) router.back();
-    else router.navigate('/');
+    /* Deze knop wil altijd de Audio Library-pricing tonen, ongeacht
+       vanaf welk scherm je in de player kwam — dismissTo blijft hier dus
+       terecht, anders dan onMinimize/onClose hieronder. */
+    router.dismissTo('/');
   };
 
+  /* Operator ("moet gewoon in dezelfde kaart met sessies blijven — dan
+     bij back naar de audio library, niet naar welcome, simpel"): sluiten
+     van de sessie hoort één scherm terug te gaan (de pillar-/Free-Picks-
+     kaart waar je vandaan kwam), niet meteen door te schieten naar de
+     Audio Library-tab. */
   const onMinimize = () => {
     /* Sluit alleen de full-player UI — audio + service-state blijft.
        Mini-player pikt het op. */
@@ -317,6 +357,147 @@ export default function PlayerScreen() {
     else router.navigate('/');
   };
 
+  /* Operator, 26 september 2026 (Apple-redesign, "liquid glass" player):
+     de albumhoes krimpt licht wanneer gepauzeerd, komt terug op volle
+     grootte bij afspelen — Apple Music-patroon. Dit reageert op
+     `playerState.playing` via een `useEffect`, NIET op een Pressable's
+     onPressIn/onPressOut — de knop die deze state omzet (togglePlay/
+     onPlay) verdwijnt of unmountet niet, dus geen enkel risico op de
+     "press-out-animatie-loopt-nog-tijdens-unmount"-crashklasse die de
+     rest van dit scherm eerder trof. */
+  const artworkScale = useSharedValue(1);
+  useEffect(() => {
+    artworkScale.value = withSpring(playerState.playing ? 1 : 0.88, {
+      duration: 400,
+      dampingRatio: 0.75,
+    });
+  }, [playerState.playing, artworkScale]);
+  const artworkAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: artworkScale.value }],
+  }));
+
+  /* Operator, 26 september 2026 (Apple-redesign, staggered entrance):
+     eyebrow/titel/hoes/knoppen vliegen na elkaar in bij het openen van dit
+     scherm — Apple-patroon i.p.v. alles in één keer tonen. Dit draait
+     UITSLUITEND op mount (lege dependency-array), volledig losstaand van
+     elke Pressable's press-in/out — geen enkele component unmountet
+     tijdens deze animatie, dus geen risico op de crashklasse die de
+     resume-knoppen eerder troffen. */
+  const entranceArt = useSharedValue(0);
+  const entranceTitle = useSharedValue(0);
+  const entranceControls = useSharedValue(0);
+  useEffect(() => {
+    entranceArt.value = withTiming(1, { duration: 500 });
+    entranceTitle.value = withDelay(120, withTiming(1, { duration: 450 }));
+    entranceControls.value = withDelay(240, withTiming(1, { duration: 450 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const entranceArtStyle = useAnimatedStyle(() => ({
+    opacity: entranceArt.value,
+    transform: [{ translateY: (1 - entranceArt.value) * 14 }],
+  }));
+  const entranceTitleStyle = useAnimatedStyle(() => ({
+    opacity: entranceTitle.value,
+    transform: [{ translateY: (1 - entranceTitle.value) * 14 }],
+  }));
+  const entranceControlsStyle = useAnimatedStyle(() => ({
+    opacity: entranceControls.value,
+    transform: [{ translateY: (1 - entranceControls.value) * 10 }],
+  }));
+
+  /* ── Press-scale animaties (per knop, additief — geen logica-wijziging) ── */
+  const pressScaleMinimize = useSharedValue(1);
+  const onPressInMinimize = () => { pressScaleMinimize.value = withTiming(0.92, { duration: 80 }); };
+  const onPressOutMinimize = () => { pressScaleMinimize.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleMinimize = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleMinimize.value }] }));
+
+  const pressScaleClose = useSharedValue(1);
+  const onPressInClose = () => { pressScaleClose.value = withTiming(0.92, { duration: 80 }); };
+  const onPressOutClose = () => { pressScaleClose.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleClose = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleClose.value }] }));
+
+  const pressScaleProgress = useSharedValue(1);
+  /* Operator (Apple-HIG-brief, "flinterdunne balk, pas tijdens het slepen
+     iets dikker/duimpje zichtbaar — reactive design"): losse waarde van
+     de press-scale hierboven, want dit stuurt track-hoogte + duim-
+     zichtbaarheid aan, niet een schaal-transform. */
+  const scrubActive = useSharedValue(0);
+  const onPressInProgress = () => {
+    pressScaleProgress.value = withTiming(0.97, { duration: 80 });
+    scrubActive.value = withTiming(1, { duration: 120 });
+  };
+  const onPressOutProgress = () => {
+    pressScaleProgress.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    scrubActive.value = withTiming(0, { duration: 180 });
+  };
+  const pressStyleProgress = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleProgress.value }] }));
+  const progressTrackAnimStyle = useAnimatedStyle(() => ({
+    height: 2 + scrubActive.value * 2,
+  }));
+  const progressThumbAnimStyle = useAnimatedStyle(() => ({
+    opacity: scrubActive.value,
+  }));
+
+  const pressScaleSkipBack = useSharedValue(1);
+  const onPressInSkipBack = () => { pressScaleSkipBack.value = withTiming(0.92, { duration: 80 }); };
+  const onPressOutSkipBack = () => { pressScaleSkipBack.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleSkipBack = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleSkipBack.value }] }));
+
+  const pressScalePlay = useSharedValue(1);
+  const onPressInPlay = () => { pressScalePlay.value = withTiming(0.94, { duration: 80 }); };
+  const onPressOutPlay = () => { pressScalePlay.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStylePlay = useAnimatedStyle(() => ({ transform: [{ scale: pressScalePlay.value }] }));
+
+  const pressScaleSkipFwd = useSharedValue(1);
+  const onPressInSkipFwd = () => { pressScaleSkipFwd.value = withTiming(0.92, { duration: 80 }); };
+  const onPressOutSkipFwd = () => { pressScaleSkipFwd.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleSkipFwd = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleSkipFwd.value }] }));
+
+  const pressScaleCta = useSharedValue(1);
+  const onPressInCta = () => { pressScaleCta.value = withTiming(0.96, { duration: 80 }); };
+  const onPressOutCta = () => { pressScaleCta.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleCta = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleCta.value }] }));
+
+  const pressScaleLoginPrimary = useSharedValue(1);
+  const onPressInLoginPrimary = () => { pressScaleLoginPrimary.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutLoginPrimary = () => { pressScaleLoginPrimary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleLoginPrimary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleLoginPrimary.value }] }));
+
+  const pressScaleLoginSecondary = useSharedValue(1);
+  const onPressInLoginSecondary = () => { pressScaleLoginSecondary.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutLoginSecondary = () => { pressScaleLoginSecondary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleLoginSecondary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleLoginSecondary.value }] }));
+
+  const pressScaleErrorClose = useSharedValue(1);
+  const onPressInErrorClose = () => { pressScaleErrorClose.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutErrorClose = () => { pressScaleErrorClose.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleErrorClose = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleErrorClose.value }] }));
+
+  const pressScaleUpsellPrimary = useSharedValue(1);
+  const onPressInUpsellPrimary = () => { pressScaleUpsellPrimary.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutUpsellPrimary = () => { pressScaleUpsellPrimary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleUpsellPrimary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleUpsellPrimary.value }] }));
+
+  const pressScaleUpsellSecondary = useSharedValue(1);
+  const onPressInUpsellSecondary = () => { pressScaleUpsellSecondary.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutUpsellSecondary = () => { pressScaleUpsellSecondary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleUpsellSecondary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleUpsellSecondary.value }] }));
+
+  const pressScaleEndedDone1 = useSharedValue(1);
+  const onPressInEndedDone1 = () => { pressScaleEndedDone1.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutEndedDone1 = () => { pressScaleEndedDone1.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleEndedDone1 = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleEndedDone1.value }] }));
+
+  const pressScaleEndedPlayNext = useSharedValue(1);
+  const onPressInEndedPlayNext = () => { pressScaleEndedPlayNext.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutEndedPlayNext = () => { pressScaleEndedPlayNext.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleEndedPlayNext = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleEndedPlayNext.value }] }));
+
+  const pressScaleEndedDone2 = useSharedValue(1);
+  const onPressInEndedDone2 = () => { pressScaleEndedDone2.value = withTiming(0.95, { duration: 80 }); };
+  const onPressOutEndedDone2 = () => { pressScaleEndedDone2.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const pressStyleEndedDone2 = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleEndedDone2.value }] }));
+
   /* ── Render ───────────────────────────────────────────────────────────── */
 
   if (!session) {
@@ -332,100 +513,152 @@ export default function PlayerScreen() {
 
   return (
     <View style={s.root}>
-      {/* ── Cinematic backdrop ────────────────────────────────────────── */}
-      <View style={s.backdrop}>
+      {/* ── "Liquid glass" achtergrond ───────────────────────────────────
+         Operator, 26 september 2026 (Apple-redesign): geen harde foto-
+         banner + zwart vlak meer. De serie-foto vult nu het HELE scherm,
+         zwaar geblurd (`blurRadius`, native blur — geen rgba-fake-glass)
+         en licht uitvergroot (scale 1.15) zodat de geblurde randen nooit
+         zichtbaar worden. Een donkere gradient bovenop houdt de tekst/
+         knoppen overal leesbaar, ongeacht de foto-kleuren eronder. */}
+      <View style={s.backdrop} pointerEvents="none">
         {photoUri ? (
-          <Image source={{ uri: photoUri }} style={s.backdropImage} />
+          <Image
+            source={{ uri: photoUri }}
+            style={s.backdropImageFull}
+            blurRadius={38}
+          />
         ) : (
-          <View style={[s.backdropImage, s.backdropFallback]} />
+          <View style={[s.backdropImageFull, s.backdropFallback]} />
         )}
         <LinearGradient
           colors={[
-            'rgba(0,0,0,0)',
-            'rgba(0,0,0,0.4)',
-            'rgba(0,0,0,0.85)',
-            '#000',
+            'rgba(10,10,10,0.55)',
+            'rgba(10,10,10,0.72)',
+            'rgba(10,10,10,0.93)',
+            '#0a0a0a',
           ]}
-          locations={[0, 0.4, 0.7, 1]}
+          locations={[0, 0.35, 0.7, 1]}
           style={StyleSheet.absoluteFill}
-          pointerEvents="none"
         />
       </View>
 
       {/* ── Top bar (absolute over backdrop) ──────────────────────────── */}
-      {/* iOS-stijl: elk button is een ronde 32px container met een dun
-         glyph en een label eronder. NOW PLAYING-label staat centraal,
-         visueel uitgelijnd met de icon-centers (alignItems:'flex-start'
-         op de column zorgt dat de NOW PLAYING-text ook bovenaan staat). */}
+      {/* Operator (Apple-HIG-brief, "Apple gebruikt hier nooit tekst"):
+         MINIMIZE/NOW PLAYING/CLOSE-tekstlabels weg — enkel de twee
+         iconen (chevron-down / x), niks in het midden. De controls
+         eronder maken al duidelijk dat er audio speelt. */}
       <SafeAreaView edges={['top']} style={s.topbar}>
-        <Pressable onPress={onMinimize} hitSlop={14} style={s.topColumn}>
-          <View style={s.topIconBtn}>
-            <Text style={s.topGlyph}>⌄</Text>
-          </View>
-          <Text style={s.topBtnLabel}>MINIMIZE</Text>
-        </Pressable>
-        <View style={s.topColumn}>
-          <View style={s.topLabelSpacer} />
-          <Text style={s.topLabel}>NOW PLAYING</Text>
-        </View>
-        <Pressable onPress={onClose} hitSlop={14} style={s.topColumn}>
-          <View style={s.topIconBtn}>
-            <Text style={s.topGlyphX}>✕</Text>
-          </View>
-          <Text style={s.topBtnLabel}>CLOSE</Text>
-        </Pressable>
+        <AnimatedPressable
+          onPress={onMinimize}
+          onPressIn={onPressInMinimize}
+          onPressOut={onPressOutMinimize}
+          hitSlop={14}
+          style={[s.topIconBtn, pressStyleMinimize]}
+        >
+          <Text style={s.topGlyph}>⌄</Text>
+        </AnimatedPressable>
+        <AnimatedPressable
+          onPress={onClose}
+          onPressIn={onPressInClose}
+          onPressOut={onPressOutClose}
+          hitSlop={14}
+          style={[s.topIconBtn, pressStyleClose]}
+        >
+          <Text style={s.topGlyphX}>✕</Text>
+        </AnimatedPressable>
       </SafeAreaView>
 
-      {/* ── Content (overlapt backdrop met -60px) ─────────────────────── */}
+      {/* ── Content — start ONDER de topbar, geen overlap meer met een
+         fotobanner (die bestaat niet meer als apart element — de foto zit
+         nu in de fullscreen backdrop hierboven). ──────────────────────── */}
       <View style={s.content}>
-        <View style={s.titleBlock}>
+        {/* Zwevende vierkante albumhoes (squircle) — Apple Music-patroon.
+           Krimpt licht bij pauze via artworkAnimStyle (zie useEffect
+           hierboven), niet gekoppeld aan een Pressable dus geen
+           unmount-race mogelijk. */}
+        <Animated.View
+          style={[
+            s.artworkWrap,
+            photoAspect ? { height: ARTWORK_SIZE / photoAspect } : null,
+            artworkAnimStyle,
+            entranceArtStyle,
+          ]}
+        >
+          {photoUri ? (
+            /* Operator ("ik vraag letterlijk om de fotos mooi te laten
+               passen in de cards"): de hoes krijgt nu de echte
+               beeldverhouding (photoAspect, zie hierboven) i.p.v. een vast
+               vierkant, dus `cover` toont de hele foto zonder crop of
+               lege letterbox-rand. */
+            <Image source={{ uri: photoUri }} style={s.artworkImage} resizeMode="cover" />
+          ) : (
+            <View style={[s.artworkImage, s.backdropFallback]} />
+          )}
+        </Animated.View>
+
+        <Animated.View style={[s.titleBlock, entranceTitleStyle]}>
+          {/* Operator (Apple-HIG-brief, "de titel van de sessie hoort
+             altijd bovenaan, groot en vet — categorie/auteur eronder in
+             een veel kleiner, rustiger grijs font"): hiërarchie omgedraaid
+             t.o.v. de vorige versie (toen stond de categorie bovenaan).
+             De live-soundwave staat nu naast de titel i.p.v. naast de
+             tijd hieronder ("Apple houdt de cijfers puur clean"). */}
+          <View style={s.titleRow}>
+            <Text style={s.title} numberOfLines={3}>
+              {session.title}
+            </Text>
+            <View style={s.titleWaveSlot}>
+              <SoundwaveIndicator playing={playerState.playing} />
+            </View>
+          </View>
           <Text style={s.series}>{session.series.toUpperCase()}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-          <Text style={s.title} numberOfLines={3}>
-            {session.title}
-          </Text>
-          {stateLabel ? (
-            <Text style={[s.statePill, { color: stateLabel.color }]}>
-              {stateLabel.glyph} {stateLabel.text}
-            </Text>
-          ) : null}
-        </View>
+        </Animated.View>
 
-        {/* ── Progress OR Resume panel ────────────────────────────────── */}
-        {playerState.awaitingResume ? (
-          <View style={s.resumePanel}>
-            <Pressable
-              style={s.resumeBtn}
-              onPress={continueFromSaved}
-              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-            >
-              <Text style={s.resumeGlyph}>↩</Text>
-              <Text style={s.resumeText}>Continue</Text>
-              <Text style={s.resumeSub}>
-                {fmt(playerState.savedPositionSec)}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.resumeBtn, s.resumeBtnAlt]}
-              onPress={startOver}
-              android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-            >
-              <Text style={s.resumeGlyph}>▶</Text>
-              <Text style={s.resumeText}>Start over</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={s.progressWrap}>
-            <Pressable
+        <Animated.View style={entranceControlsStyle}>
+        {/* Operator ("continue-popup verschijnt telkens overal, heel
+           storend — hoe kunnen we dat anders doen?"): het blokkerende
+           Continue/Start over-paneel is weg. `loadSession()` hervat nu
+           zelf automatisch vanaf de opgeslagen positie (zie
+           audio-player.ts, warmSeekTo) — geen keuze meer vooraf, precies
+           zoals Spotify/Apple Podcasts/YouTube. "Start over" blijft
+           mogelijk, maar als klein, niet-blokkerend tekstlinkje i.p.v.
+           een apart paneel; enkel zichtbaar als deze sessie daadwerkelijk
+           ergens hervat is (savedPositionSec > 4 bij het laden). */}
+        {playerState.savedPositionSec > 4 && (
+          <Pressable
+            onPress={startOver}
+            hitSlop={8}
+            style={s.resumedLineWrap}
+            accessibilityLabel={`Resumed from ${fmt(playerState.savedPositionSec)}. Tap to start over.`}
+          >
+            <Text style={s.resumedLineText}>
+              Resumed from {fmt(playerState.savedPositionSec)} · <Text style={s.resumedLineAction}>Start over</Text>
+            </Text>
+          </Pressable>
+        )}
+        {/* ── Progress ─────────────────────────────────────────────────── */}
+        <View style={s.progressWrap}>
+            <AnimatedPressable
               onLayout={onProgressLayout}
               onPress={onProgressTap}
+              onPressIn={onPressInProgress}
+              onPressOut={onPressOutProgress}
               hitSlop={{ top: 12, bottom: 12, left: 0, right: 0 }}
-              style={s.progressHitArea}
+              style={[s.progressHitArea, pressStyleProgress]}
             >
-              <View style={s.progressTrack}>
+              {/* Operator (Apple-HIG-brief, "de balk flinterdun, pas
+                 tijdens het slepen iets dikker — reactive design"): track
+                 + duimpje zijn nu Animated.Views die reageren op
+                 `scrubActive` (zie onPressIn/onPressOutProgress) i.p.v.
+                 altijd dezelfde vaste dikte/zichtbare stip te tonen. */}
+              <Animated.View style={[s.progressTrack, progressTrackAnimStyle]}>
                 <View style={[s.progressFill, { width: `${pct}%` }]} />
-              </View>
-            </Pressable>
+                <Animated.View
+                  style={[s.progressThumb, { left: `${pct}%` }, progressThumbAnimStyle]}
+                />
+              </Animated.View>
+            </AnimatedPressable>
             <View style={s.timeRow}>
               <Text style={s.time}>{fmt(playerState.positionSec)}</Text>
               {/* Iter v189 (2026-07-02): "PREVIEW · X sec left" tijdens
@@ -436,17 +669,23 @@ export default function PlayerScreen() {
                   PREVIEW · {Math.max(0, 60 - Math.floor(playerState.positionSec))}s left
                 </Text>
               )}
-              <Text style={s.time}>{fmt(playerState.durationSec)}</Text>
+              {/* Operator ("Apple houdt de cijfers puur clean... toont de
+                 REST-tijd, niet de totale duur"): -M:SS i.p.v. de totale
+                 duur, zelfde patroon als Apple Music/Podcasts. */}
+              <Text style={s.time}>
+                -{fmt(Math.max(0, playerState.durationSec - playerState.positionSec))}
+              </Text>
             </View>
-          </View>
-        )}
+        </View>
 
         {/* ── Skip + Play controls ────────────────────────────────────── */}
         <View style={s.skipRow}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => skipBy(-15)}
+            onPressIn={onPressInSkipBack}
+            onPressOut={onPressOutSkipBack}
             hitSlop={8}
-            style={s.skipBtn}
+            style={[s.skipBtn, pressStyleSkipBack]}
           >
             {/* FIX 14 (5e poging — react-native-svg ipv text-glyph).
                Achtergrond-arc via Svg/Path, "15"-cijfer absoluut gevuld
@@ -477,22 +716,27 @@ export default function PlayerScreen() {
             <Text style={s.skipNum} allowFontScaling={false}>
               15
             </Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
+          <AnimatedPressable
             onPress={togglePlay}
+            onPressIn={onPressInPlay}
+            onPressOut={onPressOutPlay}
             hitSlop={10}
             style={[
               s.playBtn,
-              (playerState.loading || playerState.awaitingResume) &&
-                s.playBtnDisabled,
+              playerState.loading && s.playBtnDisabled,
+              pressStylePlay,
             ]}
-            disabled={playerState.loading || playerState.awaitingResume}
+            disabled={playerState.loading}
           >
             {playerState.loading ? (
               /* Spinner ipv play/pause-icoon tijdens loading. Voorkomt
                  het "het doet niks"-gevoel bij eerste play na cold-start
-                 (signed-URL fetch + native player init kan 1-3s duren). */
+                 (signed-URL fetch + native player init kan 1-3s duren).
+                 Operator, 26 september 2026: knop-bg is weer solide teal
+                 (operator vond het matte wit niet mooi) — spinner/icoon
+                 dus weer wit. */
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
               <PlayPauseGlyph
@@ -501,12 +745,14 @@ export default function PlayerScreen() {
                 playing={playerState.playing}
               />
             )}
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
+          <AnimatedPressable
             onPress={() => skipBy(15)}
+            onPressIn={onPressInSkipFwd}
+            onPressOut={onPressOutSkipFwd}
             hitSlop={8}
-            style={s.skipBtn}
+            style={[s.skipBtn, pressStyleSkipFwd]}
           >
             {/* Forward-variant: arc start rechtsboven, eindigt links.
                Paths zijn de mirror van de backward-knop. */}
@@ -535,16 +781,32 @@ export default function PlayerScreen() {
             <Text style={s.skipNum} allowFontScaling={false}>
               15
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
-        {/* ── Extras row — iter v175 (2026-06-30): Sleep-knop weg. Zie
-            audio-player.ts iter v175 voor rationale (expo-audio limitation). */}
-        <View style={s.extrasRow}>
+        </Animated.View>
+
+        {/* ── Extras row — operator (Apple-HIG-brief, "favorite/share
+            verhuizen naar de absolute onderkant, zodat ze de rust rond
+            de grote afspeelknoppen niet verstoren"): niet langer direct
+            onder skip+play, maar los daarvan naar de bodem geduwd
+            (marginTop:'auto' binnen de flex:1 content-kolom) — vlak boven
+            de CTA. Iter v175 (2026-06-30): Sleep-knop weg, zie
+            audio-player.ts voor rationale (expo-audio limitation). */}
+        <View style={[s.extrasRow, { marginTop: 'auto' }]}>
+          {/* Operator, 26 september 2026 (finishing touch): Unicode-glyph
+             ♡/♥ verving door het echte lucide Heart-icoon — sluit qua
+             lijndikte aan bij Share hiernaast en de skip-knoppen. */}
           <ExtraBtn
-            icon={isFav ? '♥' : '♡'}
+            icon={
+              <Heart
+                size={24}
+                color={isFav ? C.heart : C.text}
+                fill={isFav ? C.heart : 'transparent'}
+                strokeWidth={2.3}
+              />
+            }
             label="Favorite"
-            color={isFav ? C.heart : C.text}
             onPress={() =>
               toggleFav({
                 url: session.url,
@@ -555,7 +817,7 @@ export default function PlayerScreen() {
           />
           <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
           {session.free && (
-            <ExtraBtn icon={<Share2 size={24} color={C.text} strokeWidth={2.2} />} label="Share" onPress={onShare} />
+            <ExtraBtn icon={<Share2 size={24} color={C.text} strokeWidth={2.3} />} label="Share" onPress={onShare} />
           )}
         </View>
 
@@ -578,17 +840,20 @@ export default function PlayerScreen() {
             erboven krijgt paddingBottom (zie s.content) zodat de
             favorite-row niet onder de CTA verdwijnt. */}
         {!displayIsPro && (
-          <Pressable
+          <AnimatedPressable
             style={[
               s.cta,
               s.ctaAbsolute,
               { bottom: Math.max(safeInsets.bottom + 24, 72) },
+              pressStyleCta,
             ]}
             onPress={openUpgrade}
-            android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+            onPressIn={onPressInCta}
+            onPressOut={onPressOutCta}
+            hitSlop={10}
           >
-            <Text style={s.ctaText}>→ Full library access</Text>
-          </Pressable>
+            <Text style={s.ctaText}>Full library access</Text>
+          </AnimatedPressable>
         )}
         {/* PRO-spacer onnodig in absolute-mode (CTA staat niet in
             flex-flow), maar we behouden 'm voor bottom-padding bij
@@ -628,18 +893,25 @@ export default function PlayerScreen() {
                   Get full access to the complete VIBEZCORE library.
                 </Text>
                 <View style={s.modalBtns}>
-                  <Pressable style={s.modalPrimary} onPress={openUpgrade}>
+                  <AnimatedPressable
+                    style={[s.modalPrimary, pressStyleLoginPrimary]}
+                    onPress={openUpgrade}
+                    onPressIn={onPressInLoginPrimary}
+                    onPressOut={onPressOutLoginPrimary}
+                  >
                     <Text style={s.modalPrimaryText}>Get Full Access</Text>
-                  </Pressable>
-                  <Pressable
-                    style={s.modalSecondary}
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={[s.modalSecondary, pressStyleLoginSecondary]}
                     onPress={() => {
                       router.back();
                       router.navigate('/account');
                     }}
+                    onPressIn={onPressInLoginSecondary}
+                    onPressOut={onPressOutLoginSecondary}
                   >
                     <Text style={s.modalSecondaryText}>Sign in</Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 </View>
               </>
             ) : (
@@ -649,12 +921,14 @@ export default function PlayerScreen() {
                   Please check your connection and try again.
                 </Text>
                 <View style={s.modalBtns}>
-                  <Pressable
-                    style={s.modalPrimary}
+                  <AnimatedPressable
+                    style={[s.modalPrimary, pressStyleErrorClose]}
                     onPress={() => router.back()}
+                    onPressIn={onPressInErrorClose}
+                    onPressOut={onPressOutErrorClose}
                   >
                     <Text style={s.modalPrimaryText}>Close</Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 </View>
               </>
             )}
@@ -674,11 +948,22 @@ export default function PlayerScreen() {
                 primair (Get Full Access) maar krijgt de gast een eerlijk
                 alternatief.
                 Iter v227 (2026-07-07, audit AU3): bracelet-owner ziet
-                andere copy — "Add Audio Library" ipv "Get Full Access". */}
+                andere copy — "Add Audio Library" ipv "Get Full Access".
+                Operator, 26 september 2026 — CORRECTIE: eerdere versie zei
+                "unlock all 144 sessions" tijdens de trial. Fout: het
+                toegangsmodel is 3 niveaus (project-free-tier-facts) — de
+                trial ontgrendelt 27 sessies + Breathwork, NIET de hele
+                bibliotheek; volledige toegang komt pas na het BETAALDE
+                jaar (na de trial-periode). De code (useSubscription.ts)
+                behandelt een actieve RevenueCat-trial nu nog hetzelfde als
+                een volledig betaald abonnement (`isPro=true` voor beide) —
+                dat is een apart, groter gat dat nog opgelost moet worden;
+                deze copy-fix voorkomt in elk geval dat de PAYWALL zelf een
+                belofte doet die niet klopt met het bedoelde model. */}
             <Text style={s.modalBody}>
               {isBraceletOwner && !realIsPro && !isBundleUser
                 ? 'Add the Audio Library to complete your VIBEZCORE system.'
-                : 'Get full access to the complete VIBEZCORE library.'}
+                : 'Start your 7-day free trial to unlock more sessions.'}
               {'\n\n'}
               Not ready? Browse Free Picks to keep listening for free.
             </Text>
@@ -712,7 +997,8 @@ export default function PlayerScreen() {
                 <Text style={s.endedTitle} numberOfLines={2}>
                   {playerState.endedPanel.nextSession.title}
                 </Text>
-                <Text style={s.endedSeries} numberOfLines={1}>
+                {/* Operator, 1 okt 2026 ("namen niet afbreken met …"). */}
+                <Text style={s.endedSeries}>
                   {playerState.endedPanel.nextSession.series}
                 </Text>
                 <View style={s.endedBtns}>
@@ -807,22 +1093,107 @@ function SpeedBtn({
   );
 }
 
+/* Operator (marktonderzoek Apple-brief, "flinterdunne actieve soundwave-
+   animatie... direct naast de afspeeltijd... enige plek voor een
+   functioneel symbool dat de sessie live is"): vier dunne staafjes die
+   los van elkaar op-en-neer bewegen zolang er wordt afgespeeld, en stil
+   staan bij pauze. Geen echte audio-analyse (expo-audio geeft geen
+   frequentiedata) — een subtiele, licht willekeurige loop-animatie geeft
+   exact hetzelfde "dit leeft"-gevoel zonder die data nodig te hebben. */
+/* Operator ("dat moet echte wave zijn, professioneel"): 4 identieke
+   staafjes die in lockstep dezelfde 4 waarden doorliepen oogde als een
+   simpel knippersignaal, niet als een equalizer. Vijf staafjes, elk met
+   een EIGEN min/max-bereik en tempo (zodat ze nooit synchroon bewegen)
+   + een `ease-in-out`-curve i.p.v. lineaire `withTiming`-stappen — dat
+   organische, ongelijke ritme is precies wat een écht audio-EQ-icoon
+   (Apple Music "now playing") herkenbaar maakt. Bars groeien vanaf de
+   bodem (zie `soundwave`'s `alignItems:'flex-end'`), niet vanuit het
+   midden. */
+const BAR_PROFILES = [
+  { min: 3, peaks: [8, 5, 11], durations: [280, 260, 300] },
+  { min: 3, peaks: [13, 7, 15], durations: [320, 240, 340] },
+  { min: 3, peaks: [6, 10, 4], durations: [260, 300, 220] },
+  { min: 3, peaks: [11, 4, 9], durations: [300, 220, 280] },
+  { min: 3, peaks: [7, 14, 6], durations: [240, 320, 260] },
+] as const;
+
+function SoundwaveBar({
+  playing,
+  profile,
+}: {
+  playing: boolean;
+  profile: (typeof BAR_PROFILES)[number];
+}) {
+  const h = useSharedValue<number>(profile.min);
+  useEffect(() => {
+    if (playing) {
+      h.value = withRepeat(
+        withSequence(
+          ...profile.peaks.map((peak, i) =>
+            withTiming(peak, {
+              duration: profile.durations[i],
+              easing: Easing.inOut(Easing.ease),
+            }),
+          ),
+        ),
+        -1,
+        true,
+      );
+    } else {
+      cancelAnimation(h);
+      h.value = withTiming(profile.min, { duration: 200 });
+    }
+  }, [playing, profile, h]);
+  const style = useAnimatedStyle(() => ({ height: h.value }));
+  return <Animated.View style={[s.soundwaveBar, style]} />;
+}
+
+function SoundwaveIndicator({ playing }: { playing: boolean }) {
+  return (
+    <View style={s.soundwave} accessibilityLabel="Session is live">
+      {BAR_PROFILES.map((profile, i) => (
+        <SoundwaveBar key={i} playing={playing} profile={profile} />
+      ))}
+    </View>
+  );
+}
+
 /* ── Styles ─────────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
-  /* Backdrop */
+  /* Backdrop — fullscreen, geblurd (zie toelichting bij de JSX hierboven). */
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: BACKDROP_HEIGHT,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#0a0a0a',
+    overflow: 'hidden',
   },
-  backdropImage: { width: '100%', height: '100%' },
+  /* scale 1.15 verbergt de rand-artefacten die blurRadius soms aan de
+     buitenkant van een Image achterlaat. */
+  backdropImageFull: {
+    width: '100%',
+    height: '100%',
+    transform: [{ scale: 1.15 }],
+  },
   backdropFallback: { backgroundColor: '#1a1a1a' },
+
+  /* Zwevende vierkante albumhoes (squircle) — Apple Music-patroon. */
+  artworkWrap: {
+    alignSelf: 'center',
+    width: ARTWORK_SIZE,
+    height: ARTWORK_SIZE,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#141414',
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.45,
+    shadowRadius: 30,
+    elevation: 12,
+  },
+  artworkImage: { width: '100%', height: '100%' },
 
   /* Top bar — absolute zodat backdrop volledig erachter zit en content
      niet wordt opgeschoven. SafeAreaView (top edge) zorgt voor status-bar
@@ -836,22 +1207,18 @@ const s = StyleSheet.create({
     right: 0,
     zIndex: 10,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
     paddingTop: 6,
     paddingBottom: 10,
-  },
-  topColumn: {
-    alignItems: 'center',
-    minWidth: 64,
   },
   topIconBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(244,244,244,0.15)',
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
@@ -861,42 +1228,23 @@ const s = StyleSheet.create({
   topGlyph: {
     color: C.text,
     fontSize: 18,
-    fontWeight: '400',
+    fontFamily: BrandFonts.regular,
     lineHeight: 18,
     marginTop: -2, // optische correctie voor chevron-down baseline
   },
   topGlyphX: {
     color: C.text,
     fontSize: 14,
-    fontWeight: '400',
+    fontFamily: BrandFonts.regular,
     lineHeight: 14,
   },
-  /* Label onder icon-button (MINIMIZE / CLOSE). */
-  topBtnLabel: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1.08, // .12em op 9px
-    textTransform: 'uppercase',
-    marginTop: 4,
-  },
-  /* Spacer in midden-column zodat NOW PLAYING op gelijke hoogte komt als
-     de icon-button-mid (niet alleen onder een lege ruimte). 32 (icon) +
-     4 (gap) = 36 totaal hoogte tot label. Spacer vult tot label-positie. */
-  topLabelSpacer: { height: 36 },
-  /* "NOW PLAYING" — dimmer dan de actie-labels per spec. */
-  topLabel: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.35, // .15em op 9px
-    textTransform: 'uppercase',
-  },
 
-  /* Content */
+  /* Content — start onder de topbar (geen fotobanner meer om over te
+     overlappen, zie backdrop hierboven). safeInsets.top + topbar-hoogte
+     (±70) + ademruimte. */
   content: {
     flex: 1,
-    marginTop: BACKDROP_HEIGHT - 60, // -60 overlap zoals spec voorschrijft
+    marginTop: 116,
     paddingHorizontal: 24,
     /* Iter 9dq v78 (2026-06-03): paddingBottom reserveert ruimte voor
        de absolute-positioned CTA (knop-hoogte ~48px + 72px floor-margin
@@ -906,100 +1254,118 @@ const s = StyleSheet.create({
     paddingBottom: 136,
   },
 
-  /* Title block */
-  titleBlock: { paddingTop: 0 },
-  series: {
-    color: C.accent,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.54,
-  },
-  subtitle: {
-    color: C.dim,
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
-  },
+  /* Title block — operator, 26 september 2026 ("alles staat heel dicht bij
+     elkaar"): marginTop geeft ademruimte tussen de albumhoes en de tekst. */
+  titleBlock: { marginTop: 14 },
+  /* Operator (Apple-HIG-brief, "titel altijd bovenaan, groot en vet —
+     categorie/auteur eronder in een veel kleiner, rustiger grijs font"):
+     rollen omgewisseld t.o.v. de vorige versie. `series`/`subtitle` zijn
+     nu de gedempte metadata-regels, `title` is de hero. */
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  titleWaveSlot: { marginTop: 6 },
   title: {
+    flex: 1,
     color: C.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     lineHeight: 28,
-    marginTop: 4,
   },
-  /* FIX 15a: status-pill subtieler. fontSize 12→11, weight 600→500,
-     opacity 0.65 (dimmer), marginTop 8→6. Voelt als terloopse info
-     ipv hoofdmoot onder de titel. Kleur (blauw partial / groen full)
-     wordt nog steeds inline op de Text geset. */
-  statePill: {
+  series: {
+    color: C.dim,
     fontSize: 11,
-    fontWeight: '500',
-    opacity: 0.65,
-    letterSpacing: 0,
-    marginTop: 6,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 1.1,
+    marginTop: 8,
+  },
+  subtitle: {
+    color: 'rgba(244,244,244,0.4)',
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    marginTop: 3,
   },
 
-  /* Progress */
+  /* Progress — Apple-redesign: zachtere track + duimpje op de huidige
+     positie i.p.v. een kale 3px lijn zonder handvat. */
   progressWrap: { marginTop: 24, marginHorizontal: 0 },
   progressHitArea: { paddingVertical: 12 },
   progressTrack: {
-    height: 3,
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(244,244,244,0.18)',
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
-  progressFill: { height: '100%', backgroundColor: C.accent },
+  progressFill: {
+    height: '100%',
+    backgroundColor: C.accent,
+    borderRadius: 2,
+  },
+  /* Duimpje — absoluut gepositioneerd op de rand van progressFill, dus
+     de `left`/`right`-offset volgt automatisch mee met de fill-breedte
+     zolang beide binnen dezelfde relative-positioned progressTrack zitten. */
+  progressThumb: {
+    position: 'absolute',
+    top: '50%',
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+    backgroundColor: '#ffffff',
+    marginTop: -5.5,
+    marginLeft: -5.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: -2,
   },
-  time: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
+  time: { color: 'rgba(244,244,244,0.5)', fontSize: 11 },
+  soundwave: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2.5,
+    height: 15,
+  },
+  soundwaveBar: {
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: 'rgba(244,244,244,0.65)',
+  },
   /* Iter v189 (2026-07-02): preview countdown pill tussen huidige tijd en
-     totale duur. Blauw accent voor zichtbaarheid zonder visueel schreeuwend. */
+     totale duur. Accentkleur voor zichtbaarheid zonder visueel schreeuwend. */
   previewCountdown: {
-    color: '#3a8fff',
+    color: C.accent,
     fontSize: 10.5,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     letterSpacing: 0.8,
   },
 
-  /* Resume panel */
-  resumePanel: {
-    marginTop: 24,
-    flexDirection: 'row',
-    gap: 12,
+  /* Operator ("continue-popup verschijnt telkens overal, heel storend"):
+     vervangt het vorige blokkerende resume-paneel (2 grote knoppen) —
+     nu een klein, rustig tekstlinkje, enkel zichtbaar wanneer deze
+     sessie automatisch ergens hervat is. */
+  resumedLineWrap: { alignSelf: 'center', marginTop: 14, marginBottom: -4 },
+  resumedLineText: {
+    color: 'rgba(244,244,244,0.45)',
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
   },
-  resumeBtn: {
-    flex: 1,
-    backgroundColor: C.accent,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    alignItems: 'center',
+  resumedLineAction: {
+    color: 'rgba(244,244,244,0.7)',
+    fontFamily: BrandFonts.semibold,
+    textDecorationLine: 'underline',
   },
-  resumeBtnAlt: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  resumeGlyph: { color: C.text, fontSize: 18, fontWeight: '700' },
-  resumeText: {
-    color: C.text,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  resumeSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 },
 
   /* Skip + play */
   skipRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
-    marginBottom: 24,
+    marginTop: 10,
+    marginBottom: 10,
     gap: 48,
   },
   /* FIX 14 (5e poging — react-native-svg). Container 48×48,
@@ -1033,11 +1399,17 @@ const s = StyleSheet.create({
     textAlign: 'center',
     textAlignVertical: 'center',
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     color: '#ffffff',
     lineHeight: 48,
     includeFontPadding: false,
   },
+  /* Operator, 26 september 2026: terug naar solide accentkleur-vlak met
+     wit icoon — het "Apple Podcasts wit vlak + gekleurd icoon"-patroon
+     oogde te mat/dof (operator-feedback).
+     Operator (Apple-HIG-brief, "zachtere glow of een perfecte, egale
+     cirkel"): shadowOpacity/-Radius iets getemperd — een egale cirkel
+     met een zachte gloed i.p.v. een felle spot. */
   playBtn: {
     width: 72,
     height: 72,
@@ -1046,10 +1418,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: C.accent,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
+    elevation: 6,
   },
   /* Subtle dim wanneer disabled (tijdens loading / awaiting-resume) zodat
      het visueel duidelijk is dat de tap niet werkt. Combineert met de
@@ -1057,7 +1429,7 @@ const s = StyleSheet.create({
   playBtnDisabled: {
     opacity: 0.65,
   },
-  playGlyph: { color: C.text, fontSize: 28, fontWeight: '700' },
+  playGlyph: { color: C.text, fontSize: 28, fontFamily: BrandFonts.bold },
 
   /* Extras row */
   extrasRow: {
@@ -1081,9 +1453,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   extraLabel: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(244,244,244,0.55)',
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: BrandFonts.semibold,
     letterSpacing: 0.4,
     marginTop: 6,
   },
@@ -1096,16 +1468,21 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  speedText: { color: C.text, fontSize: 14, fontWeight: '700' },
+  speedText: { color: C.text, fontSize: 14, fontFamily: BrandFonts.bold },
 
-  /* CTA */
+  /* CTA — Operator, 26 september 2026 (Apple-redesign): de volle witte
+     pil eiste te veel aandacht tijdens actief luisteren ("een verkoopknop
+     mag nooit de hoofdrol spelen in een actieve player"). Outlined i.p.v.
+     solid — subtiel aanwezig, niet dominant.
+     Operator (Apple-HIG-brief, "in een actieve player hoort geen
+     storende upgrade-banner te staan... een elegant, klein
+     tekstlinkje helemaal onderin"): geen rand/vlak meer, gewoon een
+     rustig, klein tekstlinkje. Enkel DEZE persistente CTA verandert;
+     de modal-CTA's (upsell/ended-panel) blijven bewust wel solid, dat
+     zijn gerichte conversiemomenten, geen permanent zichtbare balk. */
   cta: {
     marginTop: 'auto',
     marginBottom: 24,
-    backgroundColor: C.accent,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 24,
     alignItems: 'center',
   },
   /* Absolute-positioned variant van cta (iter 9dq v78). marginTop:auto
@@ -1119,7 +1496,13 @@ const s = StyleSheet.create({
     marginTop: 0,
     marginBottom: 0,
   },
-  ctaText: { color: C.text, fontSize: 15, fontWeight: '700' },
+  ctaText: {
+    color: 'rgba(244,244,244,0.55)',
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(244,244,244,0.3)',
+  },
 
   /* Preview modal */
   modalOverlay: {
@@ -1132,7 +1515,7 @@ const s = StyleSheet.create({
   modalCard: {
     backgroundColor: '#0a0a0a',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(244,244,244,0.1)',
     borderRadius: 16,
     paddingVertical: 24,
     paddingHorizontal: 24,
@@ -1143,10 +1526,10 @@ const s = StyleSheet.create({
   modalTitle: {
     color: C.text,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
   },
   modalBody: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(244,244,244,0.7)',
     fontSize: 14,
     textAlign: 'center',
     marginTop: 8,
@@ -1160,30 +1543,30 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   modalPrimary: {
-    backgroundColor: C.accent,
+    backgroundColor: C.ctaBg,
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 24,
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  modalPrimaryText: { color: C.text, fontSize: 15, fontWeight: '700' },
+  modalPrimaryText: { color: C.ctaText, fontSize: 15, fontFamily: BrandFonts.bold },
   modalSecondary: {
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(244,244,244,0.2)',
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  modalSecondaryText: { color: C.text, fontSize: 15, fontWeight: '600' },
+  modalSecondaryText: { color: C.text, fontSize: 15, fontFamily: BrandFonts.semibold },
 
   /* Ended-paneel ("Play next?") — modal-achtig over de player */
   endedCard: {
     backgroundColor: 'rgba(20,20,25,0.97)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(244,244,244,0.1)',
     borderRadius: 20,
     padding: 24,
     maxWidth: 360,
@@ -1192,26 +1575,26 @@ const s = StyleSheet.create({
   endedEyebrow: {
     color: C.accent,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   endedSub: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(244,244,244,0.5)',
     fontSize: 12,
     marginTop: 6,
   },
   endedTitle: {
     color: C.text,
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: BrandFonts.extrabold,
     marginTop: 8,
     lineHeight: 24,
   },
   endedSeries: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(244,244,244,0.55)',
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: BrandFonts.medium,
     marginTop: 2,
   },
   endedBtns: {
@@ -1224,25 +1607,25 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(244,244,244,0.2)',
     alignItems: 'center',
   },
   endedDoneText: {
     color: C.text,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: BrandFonts.semibold,
   },
   endedPlayNext: {
     flex: 1,
-    backgroundColor: C.accent,
+    backgroundColor: C.ctaBg,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 22,
     alignItems: 'center',
   },
   endedPlayNextText: {
-    color: C.text,
+    color: C.ctaText,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
   },
 });

@@ -36,23 +36,37 @@ Bron: geëxtraheerd uit de echte VIBEZCORE-webapp (`sign-in.html`,
   `assets/fonts`. Zonder dit valt de app terug op systeemfont — dat is de
   reden dat de huidige native build er "kaal/lelijk" uitziet.
 
-## 2. KLEURENPALET (exact uit de webapp — bindend)
+## 2. KLEURENPALET
 
-| Rol | Hex |
-|---|---|
-| Achtergrond (app-breed, dark theme) | `#0a0a0a` |
-| Primair accent (knoppen, links, actieve tab) | `#3a8fff` |
-| Accent hover / pressed | `#2a7fee` |
-| Succes (groen) | `#4ade80` |
-| Fout (rood) | `#ef4444` |
-| Paneel / kaart | `#1e1e1e` |
-| Rand / divider | `#2a2a2a` |
-| Tekst primair | `#f4f4f4` |
-| Tekst gedimd (bijschriften) | ~`#8a8a8a` (webapp gebruikt opacity op #f4f4f4) |
+> **GEWIJZIGD 26 september 2026 (operator):** de oorspronkelijke tabel hieronder
+> beschreef `#3a8fff` (Signal Blue) als "primair accent (knoppen, links, actieve
+> tab)" — dat was fout en is de bron geweest van herhaalde correcties in de app
+> zelf. Signal Blue is STRIKT gereserveerd voor haptic-pulsen en "nu actief" in
+> de player — nooit voor knoppen, tekst of vlakken. Bron van waarheid is voortaan
+> `src/constants/theme.ts`, niet deze tabel of de webapp-extractie. Onderstaande
+> tabel is bijgewerkt om dat te weerspiegelen.
 
-De 5 bracelet-modus-kleuren (Boost=rood, Sharp Focus=oranje, Calm Control=blauw,
-Clarity=paars, Rest & Reset=groen) komen uit het structuurdocument §3 en mogen
-binnen dit palet getint worden. Exacte modus-hex = latere fijnafstemming.
+| Rol | Hex | Gebruik |
+|---|---|---|
+| Achtergrond (app-breed, dark — nu DEFAULT theme, zie §7) | `#0a0a0a` | — |
+| Achtergrond (light-variant, niet-default) | `#F5F5F7` | — |
+| Signal Blue | `#3a8fff` | UITSLUITEND haptic-pulsen / "nu actief" in de player. Nooit CTA/tekst/vlakken. |
+| Royal Indigo (Light) | `#6E85C4` (op dark) / `#1E2A4A` (op light) | Accent-tekst/labels/links — nooit knop-achtergronden. |
+| Bio-Teal (Audio Library-scoped) | `#00A3A3` / `#4AF0D4` | Accent binnen de Audio Library-ervaring (player, mini-player, library-schermen) — nog NIET app-breed. |
+| Succes (groen) | `#4ade80` (dark) / `#16a34a` (light) | — |
+| Fout (rood) | `#ef4444` (dark) / `#dc2626` (light) | — |
+| Paneel / kaart | `#1e1e1e` (dark) / `#ffffff` (light) | — |
+| Rand / divider | `#2a2a2a` (dark) / `#e5e5ea` (light) | — |
+| Tekst primair | `#f4f4f4` (dark) / `#1D1D1F` (light) | — |
+| Tekst gedimd | `#8a8a8a` (dark) / `#8E8E93` (light) | — |
+
+**CTA-knop-chrome (v4.4, losstaand van accentkleur):** donkere achtergrond →
+witte knop + donkere tekst; lichte achtergrond → zwarte/Royal-Indigo knop +
+witte tekst. De CTA-achtergrond is NOOIT de accentkleur zelf.
+
+De 5 bracelet-modus-kleuren (Boost=amber, Sharp Focus=blauw, Calm Control=violet,
+Clarity & Relax=wit, Sleep=WhatsApp-groen) komen uit CLAUDE.md §5 — zie die tabel
+voor de actuele, herhaaldelijk bijgestelde exacte hex-waardes.
 
 ## 3. LOGO
 
@@ -73,13 +87,19 @@ Regel: **VIBEZCORE altijd in HOOFDLETTERS**, ook in lopende tekst.
 > native app. Zo hoeft het logo nooit opnieuw uit de webapp geëxtraheerd te
 > worden.
 
-## 4. LOOK & FEEL (uit app.vibezcore.com)
+## 4. LOOK & FEEL
 
-- Donkere achtergrond `#0a0a0a`, hoog contrast, witte tekst.
+- Donkere achtergrond `#0a0a0a`, hoog contrast, witte tekst — dit is sinds
+  26 september 2026 de DEFAULT theme van de app (niet meer light-default).
 - Strak, modern, royale spacing — geen drukke UI.
-- Blauw (`#3a8fff`) spaarzaam als accent (labels, actieve staat, knoppen).
+- Accentgebruik is nu rol-gesplitst i.p.v. één blauw overal — zie §2:
+  Signal Blue alleen haptic-pulsen, Royal Indigo alleen tekst/labels,
+  Bio-Teal alleen binnen Audio Library.
 - Grote vette koppen (Inter 800/900), rustige bodytekst (Inter 400/500).
-- Beeldmateriaal mag groot en sfeervol (hero-stijl), tekst eroverheen wit.
+- Beeldmateriaal mag groot en sfeervol (hero-stijl); tekst wordt NIET meer
+  standaard over foto's geplaatst (zie de "Content-Card"-regel — tekst
+  onder een foto, los op de pagina-achtergrond) — een klein, zacht label
+  (bv. "Pillar 0X") mag nog wel als subtiele scrim op de foto zelf staan.
 
 ## 5. DIRECT TOEPASBAAR — concrete eerste stappen (geen beslissing nodig)
 

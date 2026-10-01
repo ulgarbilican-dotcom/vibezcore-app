@@ -21,7 +21,12 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor links/CTA. AudioAccent is de link-kleur op
+   donker; CTA-regel v4.4: witte knop-bg + donkere tekst. */
 import { refreshSubscription } from '@/hooks/useSubscription';
 import { getUserEmail, persistSession } from '@/services/auth';
 import { Stack, router } from 'expo-router';
@@ -34,8 +39,19 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+/* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
+   voor de referentie-implementatie) — additief, geen layout/logica-
+   wijziging. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type Phase = 'form' | 'updating' | 'done';
 
@@ -74,6 +90,52 @@ export default function ChangePassword() {
       if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
     };
   }, []);
+
+  /* Press-scale-animatie — één losse shared value per tappable element
+     (zie breath-welcome.tsx `StartCard`). */
+  const currentTogglePressScale = useSharedValue(1);
+  const onCurrentTogglePressIn = () => {
+    currentTogglePressScale.value = withTiming(0.93, { duration: 80 });
+  };
+  const onCurrentTogglePressOut = () => {
+    currentTogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const currentTogglePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: currentTogglePressScale.value }],
+  }));
+
+  const pw1TogglePressScale = useSharedValue(1);
+  const onPw1TogglePressIn = () => {
+    pw1TogglePressScale.value = withTiming(0.93, { duration: 80 });
+  };
+  const onPw1TogglePressOut = () => {
+    pw1TogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pw1TogglePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pw1TogglePressScale.value }],
+  }));
+
+  const pw2TogglePressScale = useSharedValue(1);
+  const onPw2TogglePressIn = () => {
+    pw2TogglePressScale.value = withTiming(0.93, { duration: 80 });
+  };
+  const onPw2TogglePressOut = () => {
+    pw2TogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pw2TogglePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pw2TogglePressScale.value }],
+  }));
+
+  const submitPressScale = useSharedValue(1);
+  const onSubmitPressIn = () => {
+    submitPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onSubmitPressOut = () => {
+    submitPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const submitPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: submitPressScale.value }],
+  }));
 
   /* Live "match" feedback — pas tonen zodra user iets in pw2 typt,
      anders rode flash terwijl 'ie nog aan 't typen is. */
@@ -284,7 +346,12 @@ export default function ChangePassword() {
   return (
     <SafeAreaView style={s.root}>
       <Stack.Screen
-        options={{ title: 'Change password', headerBackTitle: 'Account' }}
+        options={{
+          title: 'Change password',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
       />
       <KeyboardAwareScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
@@ -322,16 +389,18 @@ export default function ChangePassword() {
             textContentType="password"
             editable={phase === 'form'}
           />
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowCurrent((v) => !v)}
+            onPressIn={onCurrentTogglePressIn}
+            onPressOut={onCurrentTogglePressOut}
             accessibilityLabel={
               showCurrent ? 'Hide password' : 'Show password'
             }
             hitSlop={8}
-            style={s.toggleBtn}
+            style={[s.toggleBtn, currentTogglePressStyle]}
           >
             <Text style={s.toggleText}>{showCurrent ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* New password */}
@@ -349,14 +418,16 @@ export default function ChangePassword() {
             textContentType="newPassword"
             editable={phase === 'form'}
           />
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShow1((v) => !v)}
+            onPressIn={onPw1TogglePressIn}
+            onPressOut={onPw1TogglePressOut}
             accessibilityLabel={show1 ? 'Hide password' : 'Show password'}
             hitSlop={8}
-            style={s.toggleBtn}
+            style={[s.toggleBtn, pw1TogglePressStyle]}
           >
             <Text style={s.toggleText}>{show1 ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* Confirm new password */}
@@ -374,14 +445,16 @@ export default function ChangePassword() {
             textContentType="newPassword"
             editable={phase === 'form'}
           />
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShow2((v) => !v)}
+            onPressIn={onPw2TogglePressIn}
+            onPressOut={onPw2TogglePressOut}
             accessibilityLabel={show2 ? 'Hide password' : 'Show password'}
             hitSlop={8}
-            style={s.toggleBtn}
+            style={[s.toggleBtn, pw2TogglePressStyle]}
           >
             <Text style={s.toggleText}>{show2 ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* Match indicator */}
@@ -393,18 +466,21 @@ export default function ChangePassword() {
 
         {err && <Text style={s.err}>{err}</Text>}
 
-        <Pressable
-          style={[s.btnPrimary, !canSubmit && s.btnDisabled]}
+        <AnimatedPressable
+          style={[s.btnPrimary, !canSubmit && s.btnDisabled, submitPressStyle]}
           onPress={onSubmit}
+          onPressIn={onSubmitPressIn}
+          onPressOut={onSubmitPressOut}
           disabled={!canSubmit}
           accessibilityLabel="Update password"
         >
           {phase === 'updating' ? (
-            <ActivityIndicator color="#ffffff" />
+            /* Knop-bg is nu wit (Huisstijl v4.4) — spinner moet donker zijn. */
+            <ActivityIndicator color="#0a0a0a" />
           ) : (
             <Text style={s.btnPrimaryText}>Update password</Text>
           )}
-        </Pressable>
+        </AnimatedPressable>
 
         <Text style={s.help}>
           Forgot your current password? Sign out and use{' '}
@@ -497,7 +573,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
   toggleText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 12,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -524,14 +600,14 @@ const s = StyleSheet.create({
   },
   /* Primary submit button */
   btnPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 22,
   },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
@@ -547,7 +623,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   helpLink: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontFamily: BrandFonts.semibold,
   },
   /* Done state */

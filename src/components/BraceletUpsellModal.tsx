@@ -46,14 +46,16 @@ import {
 
 /* Color-token-set — bewust witte card-stijl (operator-besluit 2026-05-24
    iteratie 9). Card heeft brand-witte achtergrond zoals de webapp-
-   pricing-cards; tekst donker zodat 't leesbaar blijft. Accent-blauw
-   blijft voor brand-line + pulse + tap-ripple. */
+   pricing-cards; tekst donker zodat 't leesbaar blijft.
+   Huisstijl v4.4: Signal Blue is voorbehouden voor de haptic-pulse-ring
+   ('#00aaff' hieronder, blijft ongewijzigd) — de eyebrow-tekst op deze
+   witte card gebruikt Royal Indigo, niet Signal Blue. */
 const C = {
   bg: '#ffffff',
   border: 'rgba(0,0,0,0.08)',
   text: '#0a0a0a',
   faint: 'rgba(0,0,0,0.55)',
-  accent: '#3a8fff',
+  accent: '#1E2A4A',
   chevron: 'rgba(0,0,0,0.35)',
 };
 

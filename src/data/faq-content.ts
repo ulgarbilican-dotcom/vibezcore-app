@@ -15,6 +15,7 @@
 
 export type FaqCategory =
   | 'overview'
+  | 'breathwork'
   | 'bracelet'
   | 'audio'
   | 'design'
@@ -29,19 +30,30 @@ export type FaqItem = {
   answer: string;
 };
 
+/* Herzien (operator, 11 augustus 2026: "breathwork en audio in faq moet
+   ook apart, nu heb je dat samengezet maar gaat niet ver genoeg over
+   breathwork"). De vorige "Breathwork & Audio"-tab hernoemde het label
+   maar de inhoud eronder ging nog altijd uitsluitend over de Audio
+   Library — geen enkele vraag over breathwork zelf. Zelfde principe als
+   about.tsx: drie aparte instrumenten, elk zijn eigen plek. 'audio' is nu
+   weer zuiver de Audio Library; 'breathwork' is een nieuwe, eigen tab. */
 export const FAQ_CATEGORY_LABELS: Record<FaqCategory, string> = {
   overview:   'Product Overview',
-  bracelet:   'Smart Bracelet',
-  audio:      'Audio Sessions',
+  breathwork: 'Breathwork',
+  bracelet:   'Smart Bead Bracelet',
+  audio:      'Audio Library',
   design:     'Design & Materials',
   orders:     'Orders & Shipping',
   membership: 'Membership',
   privacy:    'Privacy & Data',
 };
 
-/* Volgorde van categorieën in de UI (tabs). */
+/* Volgorde van categorieën in de UI (tabs). Breathwork direct na overview
+   — het is het beschikbare instapproduct, hoort vooraan (zelfde principe
+   als de productkaart-volgorde in about.tsx). */
 export const FAQ_CATEGORY_ORDER: FaqCategory[] = [
   'overview',
+  'breathwork',
   'bracelet',
   'audio',
   'design',
@@ -56,53 +68,163 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'overview-what-is-vibezcore',
     category: 'overview',
     question: 'What is VIBEZCORE?',
+    /* Herschreven (operator, 11 augustus 2026, finale Engelse essentie-
+       tekst, letterlijk aangehouden): "VibeZCore is a platform for state
+       control and personal growth." Bracelet = Instant State Control,
+       Breathwork = Active State Training, Audio Library = Long-Term
+       Growth. */
     answer:
-      "VIBEZCORE is a personal development platform built on a simple principle: real change requires both a way to shift your state in the moment and a way to rewire how you think over time.\n\n" +
-      "Most platforms give you motivation that fades by evening. They leave your physiology and your mental frameworks untouched — so the old patterns keep running. VIBEZCORE works on two levels — bottom-up through your body, top-down through ideas — so change is immediate AND lasting.\n\n" +
-      "It is built for people who take their performance, mindset, and inner state seriously.",
+      "VIBEZCORE is a platform for state control and personal growth. It combines three instruments:\n\n" +
+      "**Smart Bead Bracelet — Instant State Control.** Precision haptics at the wrist change your physiological state within minutes — calm, focus, energy or sleep, on demand. Coming Fall 2026 on Kickstarter.\n\n" +
+      "**Guided Breathwork — Active State Training.** Learn to consciously steer your state through your breath — regulating stress, raising focus, activating energy, or creating relaxation. Available now.\n\n" +
+      "**Audio Library — Long-Term Growth.** Develop new mental models, habits and behavioural patterns that compound over time. Included with Breathwork.\n\n" +
+      "VIBEZCORE helps people not only feel better, but also perform better and continue developing over time.",
   },
   {
+    /* Nieuw (operator, 11 augustus 2026, finale essentie-tekst, letterlijk
+       aangehouden): "wat is het resultaat voor de gebruiker" — sluit af
+       met de exacte tagline "Control Your State. Build Your Future." */
+    id: 'overview-what-results',
+    category: 'overview',
+    question: 'What results can I expect from VIBEZCORE?',
+    answer:
+      "Greater control over how you feel, think, and perform.\n\n" +
+      "**Short term:** more calm, better focus, higher energy, improved sleep.\n\n" +
+      "**Long term:** better habits, greater self-awareness, stronger mental resilience, more intentional living.\n\n" +
+      "In one sentence: VIBEZCORE helps you consciously direct your state and systematically develop yourself over time. Or even shorter — Control Your State. Build Your Future.",
+  },
+  {
+    /* Herschreven (operator, 11 augustus 2026: drie aparte pijlers, niet
+       twee — Breathwork en Audio Library zijn apart, niet samengevoegd.
+       Labels definitief (operator, essentie-tekst): Bracelet = Instant
+       State Control (passief), Breathwork = Active State Training,
+       Audio Library = Long-Term Growth. */
     id: 'overview-components',
     category: 'overview',
     question: 'What components are part of the VIBEZCORE system?',
     answer:
-      "VIBEZCORE consists of two distinct instruments — each addressing a different dimension of how you operate.\n\n" +
-      "**1. Control the Moment — Smart Bead Bracelet**\nPrecision haptics at the wrist. Instant state regulation — calm, focus or recovery. No screens. No effort. Just results.\n\n" +
+      "VIBEZCORE consists of three distinct instruments — each addressing a different dimension of how you operate.\n\n" +
+      "**1. Instant State Control — Smart Bead Bracelet** (Kickstarter, launching Fall 2026)\nOne HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. A standalone instrument for passive, bottom-up state regulation: precision pulses at the wrist shift you into calm, focus, energy or sleep on demand, no screen or effort needed. For breathwork, that's a selling point on its own: a pre-set, structured session is carried entirely through the HapticCore's haptic pulses on your wrist, private and undetectable, anywhere you are.\n\n" +
+      "**2. Active State Training — Guided Breathwork**\nFive guided breathing states meet you in the moment — energy, focus, calm, clarity, rest — with voice, visuals and haptics carrying every breath. Available now, with the full Audio Library included.\n\n" +
+      "**3. Long-Term Growth — Audio Library**\nA structured library built on neuroscience, psychology and philosophy: not motivation, understanding. Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
       "The body influences the mind: signals from your nervous system shape attention, emotion and decisions before cognition engages. The bracelet works with that biology — a direct route to inner state, bottom-up by design.\n\n" +
       "The bracelet features an interchangeable bead system — one HapticCore module, 15 editions of natural gemstones sourced from across the globe. Origin, Signature and Reserve series. Each stone is unique in character, origin, and energy.\n\n" +
       "Body first. Mind follows.\n\n" +
-      "**2. Train the Mind — Audio Library**\nBuilt on neuroscience, psychology and philosophy. Not motivation — understanding. Sessions that create real mental shifts over time.\n\n" +
-      "Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
-      "Each instrument is fully independent. Use one, the other, or both — entirely as fits your life.",
+      "Each instrument is fully independent. Use any of them, or all three — entirely as fits your life.",
   },
   {
     id: 'overview-separate-purchase',
     category: 'overview',
-    question: 'Can I purchase the bracelet and audio library separately?',
+    question: 'Can I purchase the bracelet and breathwork/audio separately?',
     answer:
-      "Yes. The bracelet and the Audio Library are independent instruments — each with its own purpose. Neither requires the other to work.\n\n" +
-      "**Bracelet only** — a standalone state regulation instrument for daily use. Calm, focus, or recovery on demand, without needing audio.\n\n" +
-      "**Audio Library only** — access the session library independently through a membership. Build cognitive frameworks and self-awareness over time, without needing the bracelet.\n\n" +
-      "**Both** — they were designed as separate tools, but they complement each other naturally. Some users wear the bracelet before an audio session to enter a calm or focused state, deepening their integration. Others use them in entirely different parts of their day. Use them however fits you.",
+      "Yes. The bracelet and the Breathwork + Audio Library subscription are independent instruments — each with its own purpose. Neither requires the other to work.\n\n" +
+      "**Bracelet only** — a standalone instant state control instrument for daily use. Calm, focus, energy or sleep on demand, without needing breathwork or audio. Reserve it now on Kickstarter, launching Fall 2026.\n\n" +
+      "**Breathwork + Audio Library only** — active state training through guided breathing sessions, plus the full session library for long-term growth, through a single membership available today. No bracelet needed.\n\n" +
+      "**Both** — they were designed as separate tools, but they complement each other naturally, and Fall 2026 they'll pair directly: on top of its own standalone regulation, the bracelet will also carry your breathwork guidance onto your wrist. Use them however fits you.",
   },
   {
+    /* Herschreven (operator, finale Engelse essentie-tekst, letterlijk
+       aangehouden). */
     id: 'overview-who-for',
     category: 'overview',
     question: 'Who is VIBEZCORE designed for?',
     answer:
-      "VIBEZCORE is built for anyone who takes their performance, mindset, and daily state seriously.\n\n" +
-      "That includes people who are building self-confidence and self-respect from the ground up — those who feel held back, overlooked, or stuck in patterns they can't break. But it equally includes high-performers, leaders, and entrepreneurs who already have confidence and results — and want to sharpen their edge, deepen their self-control, and compound their growth.\n\n" +
-      "The common thread is simple: a commitment to operating at a higher level — mentally, emotionally, and in daily life.",
+      "For people who want greater control over themselves:\n\n" +
+      "Entrepreneurs, professionals, leaders, creatives, high-performers under pressure, and anyone committed to personal growth.\n\n" +
+      "In short: for people who refuse to live on autopilot.",
   },
   {
     id: 'overview-what-makes-different',
     category: 'overview',
     question: 'What makes VIBEZCORE different from other self-improvement platforms?',
     answer:
-      "Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on two levels simultaneously — bottom-up and top-down at the same time.\n\n" +
-      "**Control the Moment** — the Smart Bead Bracelet regulates your state in real time through bottom-up neural pathways. In the moments that count — under pressure, in high-stakes situations, when clarity drops — your body is guided back to control automatically. No meditation required. No conscious effort. Just immediate, repeatable results.\n\n" +
-      "**Train the Mind** — the Audio Library reshapes how you think, feel, and respond over time through ideas drawn from psychology, philosophy and behavioural science. Building cognitive frameworks, self-awareness, and reflective thinking that compounds — session after session.\n\n" +
-      "Two instruments. One direction: growth, success, and freedom.",
+      "Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on three levels at once — instant, active, and long-term.\n\n" +
+      "**Instant State Control** — the Smart Bead Bracelet (Kickstarter, launching Fall 2026), the first of its kind: one HapticCore built into a bracelet of premium natural gemstone beads, jewelry first, technology second. A standalone instrument that regulates your state in real time through bottom-up neural pathways — under pressure, in high-stakes situations, when clarity drops, your body is guided back to control automatically, no meditation or conscious effort required. For breathwork, it's a selling point on its own: a pre-set session carried through the HapticCore's haptic pulses on your wrist, private and unnoticed, wherever you are.\n\n" +
+      "**Active State Training** — guided breathwork meets you in the moment, all 35 sessions across five states for whatever you're facing, right now, with voice, visuals and haptics carrying every breath.\n\n" +
+      "**Long-Term Growth** — the Audio Library reshapes how you think, feel, and respond over time through ideas drawn from psychology, philosophy and behavioural science. Building cognitive frameworks, self-awareness, and reflective thinking that compounds — session after session.\n\n" +
+      "Three instruments. One direction: growth, success, and freedom.",
+  },
+
+  /* ── BREATHWORK ────────────────────────────────────────────────
+     Nieuw (operator, 11 augustus 2026: "breathwork en audio in faq moet
+     ook apart, gaat niet ver genoeg over breathwork"). Voorheen stond
+     hier geen enkele breathwork-specifieke vraag — de tab heette wel
+     "Breathwork & Audio" maar de inhoud ging alleen over de Audio
+     Library. Deze sectie behandelt breathwork als eigen instrument
+     (Active State Training), los van de Audio Library (Long-Term
+     Growth) en de bracelet (Instant State Control). */
+  {
+    id: 'breathwork-what-is',
+    category: 'breathwork',
+    question: 'What is guided breathwork on VIBEZCORE?',
+    answer:
+      "Five guided breathing states — Boost, Focus, Calm Control, Clarity & Relax, and Sleep — each built around a specific breathing rhythm. Voice, visuals and haptics carry you through every breath in real time, so you always know exactly when to inhale, hold, and exhale.\n\n" +
+      "This is active practice: something you consciously do, not something you passively receive.",
+  },
+  {
+    id: 'breathwork-session-length',
+    category: 'breathwork',
+    question: 'How long are breathwork sessions?',
+    answer:
+      "Each state offers several session lengths, from short resets to longer, deeper sessions. Every length has a name and a reason — tap your choice to select it, tap it again to see why that length exists. There's no single \"correct\" duration; pick what fits the moment.",
+  },
+  {
+    id: 'breathwork-voice-haptics-silent',
+    category: 'breathwork',
+    question: 'Can I practice breathwork without sound?',
+    answer:
+      "Yes. During a session you can switch between Voice (spoken guidance), Haptics (phone vibration cues), and Silent (visuals only) — whatever fits where you are. Coming Fall 2026: the Smart Bead Bracelet will let you keep the haptic guidance going with your phone away entirely, no screen or sound needed.",
+  },
+  {
+    /* Nieuw (operator, 15 augustus 2026: "extra info als aparte support
+       toevoegen voor het gebruik van de batterij tijdens lock... als users
+       de popup wegklikken moeten ze toch ergens de info vinden"). Zelfde
+       uitleg als de blijvende banner + Settings-rij in breath-session.tsx/
+       settings.tsx, maar dan vindbaar via FAQ voor wie de banner al eens
+       wegklikte en later opnieuw tegen het probleem aanloopt. */
+    id: 'breathwork-lock-screen-battery',
+    category: 'breathwork',
+    question: 'Why does VIBEZCORE ask to run in the background / ignore battery optimization?',
+    answer:
+      "On Android, your phone can pause apps running in the background to save battery. If that happens partway through a breathwork session, the voice guidance and vibration can stop as soon as you lock your screen — even though the timer is still running.\n\n" +
+      "Allowing VIBEZCORE to run unrestricted in the background (a standard Android permission, the same one apps like Spotify or WhatsApp use for calls and playback) prevents that: your session keeps going with the same voice, visuals and haptic timing whether your screen is on or locked.\n\n" +
+      "It only affects battery while a session is actually running, and it's entirely optional — without it, sessions still work, but may pause if you lock your screen partway through. You can grant it any time from Settings → Keep sessions running when locked, or the first time a session prompts you for it.",
+  },
+  {
+    id: 'breathwork-need-bracelet',
+    category: 'breathwork',
+    question: 'Do I need the Smart Bead Bracelet to practice breathwork?',
+    answer:
+      "No. Every guided breathwork session runs fully on your phone today, with voice, visuals and phone haptics — the bracelet isn't required. Coming Fall 2026, the bracelet adds an exclusive way to stay with your breath: a pre-set, structured session — the same guided states from the app — carried entirely through haptic pulses on your wrist, worn like jewelry, no screen needed.",
+  },
+  {
+    /* Herschreven (operator, 11 augustus 2026, derde correctie: "de bead
+       bracelet heeft de pod met de haptic core, en de bedoeling is om de
+       bracelet als unique selling point te gebruiken ook voor
+       breathwork." Twee fixes: (1) technisch — haptiek zit in de
+       HapticCore-pod, niet "in de beads"; gemstones zijn het sieraad
+       eromheen. (2) breathwork-guidance is een volwaardig, eigen selling
+       point, niet een bijzaak "on top of" de standalone regulatie. */
+    id: 'breathwork-bracelet-difference',
+    category: 'breathwork',
+    question: 'What makes the Smart Bead Bracelet different from other wearables?',
+    answer:
+      "It's the first of its kind: one HapticCore — the precision engine at its center — built into a bracelet of premium natural gemstone beads. Jewelry first, technology second: no screen, no interface, nothing that looks like a gadget.\n\n" +
+      "For breathwork, that's a selling point on its own: a pre-set, structured session — the same guided states from the app — carried entirely through the HapticCore's haptic pulses on your wrist. Private and subtle enough to use anywhere: in a meeting, a hard conversation, on a train — and nobody around you would know.",
+  },
+  {
+    id: 'breathwork-membership',
+    category: 'breathwork',
+    question: 'Do I need a membership to practice breathwork?',
+    answer:
+      "You can try any of the five states with a short free preview before you subscribe. All 35 full sessions are part of VIBEZCORE Breathwork Premium, which also includes the complete Audio Library — one membership unlocks both.",
+  },
+  {
+    id: 'breathwork-professional-help',
+    category: 'breathwork',
+    question: 'Is guided breathwork a substitute for professional help?',
+    answer:
+      "No. VIBEZCORE breathwork sessions are for educational and personal development purposes only. They are not a replacement for professional medical, psychological, or therapeutic advice, diagnosis, or treatment. If you have a cardiovascular or respiratory condition, are pregnant, or have any health concern, consult a qualified professional before practicing breathwork exercises.",
   },
 
   /* ── SMART BRACELET & TECHNOLOGY ──────────────────────────────── */
@@ -122,11 +244,16 @@ export const FAQ_ITEMS: FaqItem[] = [
       "The wrist provides direct access to nerve pathways that influence the autonomic nervous system. Haptic stimulation at this location produces faster, more reliable physiological responses. The signals bypass visual distraction and cognitive filtering — reaching you directly, in the moment, without requiring you to look at a screen.",
   },
   {
+    /* Herschreven (operator, 11 augustus 2026: "echt alles nakijken, want
+       niets klopt momenteel nergens"). De oude tekst beloofde een
+       intensity-instelling die niet bestaat — de app toont bewust GEEN
+       technische parameters (CLAUDE.md §5: "App toont NOOIT PPS, burst_ms,
+       amplitude, RTP"), er is geen intensity-slider in bracelet-control.tsx. */
     id: 'bracelet-noticeable-vibrations',
     category: 'bracelet',
     question: 'How noticeable are the vibrations?',
     answer:
-      "The vibrations are designed to be subtle and non-intrusive — noticeable to you, invisible to others. In most social and professional settings, the haptic signal goes completely undetected by those around you. You can adjust the intensity to suit your preference and context.",
+      "The vibrations are designed to be subtle and non-intrusive — noticeable to you, invisible to others. In most social and professional settings, the haptic signal goes completely undetected by those around you.",
   },
   {
     id: 'bracelet-multiple-times-day',
@@ -232,11 +359,16 @@ export const FAQ_ITEMS: FaqItem[] = [
       "Specific water resistance ratings are listed on the product page. When in doubt, remove the bracelet before water exposure.",
   },
   {
+    /* Herschreven (operator, 11 augustus 2026: "echt alles nakijken"). De
+       oude tekst noemde een "magnetic charging cable" — dat klopt niet met
+       het echte ontwerp: 2 POGO-pin landings in de ONDERKANT van de
+       behuizing, bracelet wordt op een dock gelegd (dock ligt eronder,
+       pins wijzen omhoog). Geen kabel die je aansluit. */
     id: 'design-charging',
     category: 'design',
     question: 'How is the bracelet charged?',
     answer:
-      "The Smart Bead Bracelet charges via the included magnetic charging cable. A full charge provides several days of regular use. Exact charging time and battery life are listed on the product page.",
+      "The Smart Bead Bracelet charges by resting on its included charging dock — precision POGO-pin contacts on the dock connect to the bracelet automatically, no cable to plug in. A full charge provides several days of regular use. Exact charging time and battery life are listed on the product page.",
   },
   {
     id: 'design-sizes',
@@ -287,32 +419,50 @@ export const FAQ_ITEMS: FaqItem[] = [
 
   /* ── MEMBERSHIP & ACCOUNT ─────────────────────────────────────── */
   {
+    /* Herschreven (operator, 11 augustus 2026: "membership nakijken, echt
+       alles nakijken, want jij zegt in orde maar niets klopt momenteel
+       nergens"). De oude tekst verzon "membership tiers" en een
+       "Membership page" die niet bestaan — er is één plan (Breathwork
+       Premium: volledige Audio Library + alle vijf ademtoestanden),
+       geen tiers. Prijs staat gewoon in de paywall, niet op een aparte
+       pagina. */
     id: 'membership-includes',
     category: 'membership',
     question: 'What does a VIBEZCORE membership include?',
     answer:
-      "A VIBEZCORE membership grants access to the full Audio Library, new session releases, and member-exclusive content. Specific inclusions vary by membership tier — full details are available on the Membership page.",
+      "VIBEZCORE Breathwork Premium grants full access to all five guided breathwork states and the complete Audio Library, including every new session release. There is a single membership plan — pricing and terms are shown in full before you subscribe.",
   },
   {
+    /* Cancel gaat via het OS-eigen abonnementsscherm (Apple/Google-policy
+       verbiedt dat een app IAP zelf cancelt) — direct bereikbaar vanuit de
+       Account-tab, niet via "account settings" in algemene zin. Zie
+       src/services/subscription-actions.ts. */
     id: 'membership-cancel',
     category: 'membership',
     question: 'How do I cancel my membership?',
     answer:
-      "You can cancel your membership at any time through your account settings. Cancellation takes effect at the end of your current billing period — you retain full access until then. If you need assistance, contact us via the Support Center.",
+      "Open the Account tab and tap Manage Subscription — this takes you straight to your device's subscription settings (Apple ID → Subscriptions on iOS, or the Play Store's Subscriptions page on Android), since Apple and Google require cancellations to go through their own systems for in-app purchases.\n\n" +
+      "Cancellation takes effect at the end of your current billing period — you keep full access until then. Need help finding it? Contact us via the Support Center.",
   },
   {
+    /* Pause bestaat echt en is bewust belangrijk: Google Play's native
+       pause behoudt de intro-prijs, cancel niet (operator-memory
+       project-intro-pause-strategy-2026-06-19.md). Apple biedt geen
+       native pause, alleen cancel/resubscribe. De oude tekst ("contact
+       support to discuss options") verzweeg dit reële verschil. */
     id: 'membership-pause',
     category: 'membership',
     question: 'Can I pause my membership instead of canceling?',
     answer:
-      "Membership pause options depend on your current plan. Please contact our support team via the Support Center to discuss what options are available for your account.",
+      "**On Android** — yes. Open your Play Store subscription settings (reachable from the Account tab) and choose Pause instead of Cancel. This is the better option if you're on an intro-priced plan: pausing keeps that rate when you resume, while canceling loses it.\n\n" +
+      "**On iOS** — Apple doesn't offer a native pause option. You can cancel and resubscribe later, though this may mean losing any intro pricing.",
   },
   {
     id: 'membership-cant-login',
     category: 'membership',
     question: "I can't log into my account — what should I do?",
     answer:
-      "Try resetting your password via the login screen. If the issue persists, contact our support team through the Support Center with your account email address and a description of the issue.",
+      "Tap **Forgot password?** on the sign-in screen to reset it. If the issue persists, contact our support team through the Support Center with your account email address and a description of the issue.",
   },
 
   /* ── PRIVACY & DATA ───────────────────────────────────────────── */

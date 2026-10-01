@@ -19,7 +19,8 @@
      backer; geen alternatief koop-pad in app (bracelet via webshop, niet IAP)
    ─────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { clearSession, getToken, login, signup } from '@/services/auth';
 import { clearLastPlayed } from '@/utils/last-played';
 import {
@@ -45,6 +46,29 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import ReanimatedAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
+
+/* Standaardiseerde press-scale (2026-09-23) — zelfde curve als StartCard
+   in breath-welcome.tsx. */
+const AnimatedPressable = ReanimatedAnimated.createAnimatedComponent(Pressable);
+function usePressScale(scaleTo: number) {
+  const scale = useSharedValue(1);
+  const onPressIn = () => {
+    scale.value = withTiming(scaleTo, { duration: 80 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return { onPressIn, onPressOut, pressStyle };
+}
 
 type Phase = 'form' | 'submitting' | 'success' | 'error';
 
@@ -62,6 +86,10 @@ export default function ActivateBraceletScreen() {
   const [phase, setPhase] = useState<Phase>('form');
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [isBundle, setIsBundle] = useState(false);
+  const doneBtnScale = usePressScale(0.96);
+  const pwShowScale = usePressScale(0.92);
+  const submitBtnScale = usePressScale(0.96);
+  const signInLinkScale = usePressScale(0.95);
 
   /* Iter v183 (2026-07-02): "Sign in first"-gate verwijderd. Nu gecombineerde
      form: als user niet ingelogd is toont het scherm email + password + code
@@ -263,7 +291,14 @@ export default function ActivateBraceletScreen() {
   if (!authChecked) {
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Activate your bracelet' }} />
+        <Stack.Screen
+          options={{
+            title: 'Activate your bracelet',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
+        />
         <View style={s.center}>
           <ActivityIndicator color={Brand.text} />
         </View>
@@ -305,18 +340,20 @@ export default function ActivateBraceletScreen() {
             )}
           </View>
 
-          <Pressable
-            style={s.doneBtn}
+          <AnimatedPressable
+            style={[s.doneBtn, doneBtnScale.pressStyle]}
             /* Iter v227 (2026-07-07, audit BLE1): route naar (tabs)/bracelet
                ipv naar stack-route /bracelet-control. Bracelet-tab rendert
                BraceletControl inline voor owners MET tab-bar; standalone
                stack-route had geen tab-bar en back-button popte naar
                welcome. */
             onPress={() => router.replace('/(tabs)/bracelet' as never)}
+            onPressIn={doneBtnScale.onPressIn}
+            onPressOut={doneBtnScale.onPressOut}
             accessibilityLabel="Open Bracelet Control screen"
           >
             <Text style={s.doneBtnText}>Open Bracelet Control</Text>
-          </Pressable>
+          </AnimatedPressable>
 
           <Text style={s.doneFooter}>
             You can manage your bracelet anytime from the Bracelet tab.
@@ -332,7 +369,9 @@ export default function ActivateBraceletScreen() {
       <Stack.Screen
         options={{
           title: 'Activate your bracelet',
-          headerBackTitle: 'Back',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
         }}
       />
       <KeyboardAwareScrollView
@@ -391,13 +430,15 @@ export default function ActivateBraceletScreen() {
                 textContentType="newPassword"
                 editable={phase !== 'submitting'}
               />
-              <Pressable
+              <AnimatedPressable
                 onPress={() => setShowPw((v) => !v)}
+                onPressIn={pwShowScale.onPressIn}
+                onPressOut={pwShowScale.onPressOut}
                 hitSlop={8}
-                style={s.pwShow}
+                style={[s.pwShow, pwShowScale.pressStyle]}
               >
                 <Text style={s.pwShowText}>{showPw ? 'Hide' : 'Show'}</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </>
         )}
@@ -420,35 +461,41 @@ export default function ActivateBraceletScreen() {
 
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
-        <Pressable
+        <AnimatedPressable
           style={[
             s.btnPrimary,
             phase === 'submitting' && s.btnDisabled,
+            submitBtnScale.pressStyle,
           ]}
           onPress={onSubmit}
+          onPressIn={submitBtnScale.onPressIn}
+          onPressOut={submitBtnScale.onPressOut}
           disabled={phase === 'submitting' || code.replace(/-/g, '').length < 12}
           accessibilityLabel="Activate bracelet"
         >
           {phase === 'submitting' ? (
-            <ActivityIndicator color="#ffffff" />
+            /* Knop-bg is nu wit (Huisstijl v4.4) — spinner moet donker zijn. */
+            <ActivityIndicator color="#0a0a0a" />
           ) : (
             <Text style={s.btnPrimaryText}>
               {isSignedIn ? 'Activate' : 'Create account & activate'}
             </Text>
           )}
-        </Pressable>
+        </AnimatedPressable>
 
         {!isSignedIn && (
-          <Pressable
+          <AnimatedPressable
             onPress={() => router.replace('/account' as never)}
-            style={s.signInLink}
+            onPressIn={signInLinkScale.onPressIn}
+            onPressOut={signInLinkScale.onPressOut}
+            style={[s.signInLink, signInLinkScale.pressStyle]}
             hitSlop={8}
           >
             <Text style={s.signInLinkText}>
               Already have an account?{' '}
               <Text style={s.signInLinkAccent}>Sign in first</Text>
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         )}
 
         <Text style={s.legal}>
@@ -546,8 +593,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
+  /* Huisstijl v4.4: link-tekst op donkere achtergrond = AudioAccent, geen Signal Blue. */
   pwShowText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 13,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.3,
@@ -563,8 +611,9 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.1,
   },
+  /* Huisstijl v4.4: link-tekst op donkere achtergrond = AudioAccent, geen Signal Blue. */
   signInLinkAccent: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontFamily: BrandFonts.bold,
   },
   err: {
@@ -576,8 +625,9 @@ const s = StyleSheet.create({
   },
   /* Iter v180 (2026-07-02): CTA breder + tekst-ademruimte (systemisch met
      subscribe.tsx). */
+  /* Huisstijl v4.4: primaire CTA op donkere achtergrond = wit bg + donkere tekst. */
   btnPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -585,7 +635,7 @@ const s = StyleSheet.create({
     marginTop: 22,
   },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -682,8 +732,9 @@ const s = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 20,
   },
+  /* Huisstijl v4.4: primaire CTA op donkere achtergrond = wit bg + donkere tekst. */
   doneBtn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 999,
@@ -691,7 +742,7 @@ const s = StyleSheet.create({
     minWidth: 240,
   },
   doneBtnText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
@@ -707,12 +758,13 @@ const s = StyleSheet.create({
     maxWidth: 320,
   },
   /* Auth-guard state — iter 9dq v97 (2026-06-04) */
+  /* Huisstijl v4.4: decoratieve icoon-cirkel, niet haptic/status — AudioAccent. */
   lockCircle: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(58,143,255,0.12)',
-    borderColor: 'rgba(58,143,255,0.40)',
+    backgroundColor: 'rgba(110,133,196,0.12)',
+    borderColor: 'rgba(110,133,196,0.40)',
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

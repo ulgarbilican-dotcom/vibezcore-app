@@ -174,7 +174,14 @@ function shouldPreview(session: SessionInfo): boolean {
   const sub = getCachedSubscription();
   if (sub === null) return state.preview === true;
   if (sub.braceletModel === 'bundle') return false;
-  return sub.active !== true;
+  /* Operator, 26 september 2026 (toegangsmodel-gat gedicht): `sub.active`
+     is ook `true` tijdens de 7-dagen-trial (RevenueCat telt een trial als
+     actieve entitlement) — zonder de trial-check hieronder kreeg een
+     trial-user hier `shouldPreview()===false` en dus ongecapte PRO-
+     playback. Bedoeld model (project-free-tier-facts, operator-bevestigd):
+     trial ontgrendelt enkel 27 sessies + Breathwork, niet de PRO-
+     catalogus. */
+  return sub.active !== true || sub.isTrialing === true;
 }
 
 let state: PlayerState = { ...initialState };
@@ -241,8 +248,29 @@ const PERIODIC_WRITE_INTERVAL_SEC = 10;
  *  (Android — voor de media-controls in de notification shade). */
 let notifPermissionAsked = false;
 
+/* Operator, 26 september 2026 (dé echte root cause, na WebSearch-bevestiging
+   van het exacte React-scheduler-gedrag): "Should not already be working"
+   is een React-reconciler re-entrancy-crash — "performWorkOnRoot() or
+   commitRootImpl() are called re-entrantly" (React-core, niet Reanimated-
+   specifiek). Hier is de trigger `onStatus`, de native playbackStatusUpdate-
+   listener die 4×/seconde vuurt: die riep tot nu toe SYNCHROON `notify()`
+   → elke gemounte `usePlayerState()`'s `setSnapshot()` aan, rechtstreeks
+   vanuit de native-bridge-callback. Valt zo'n tick precies samen met een
+   lopende React-commit (bv. een scherm-overgang naar `/player`), dan
+   re-entert React z'n eigen work-loop en crasht.
+   Eerdere pogingen (animaties weg, navigatie zelf uitstellen) misten dit
+   — ELKE setState()-aanroep in deze service loopt via notify(), dus de
+   listener-notificatie zelf moet uit de native-callback-call-stack, niet
+   de aanroepende code. `setTimeout(...,0)` garandeert dat de listeners
+   pas vuren nadat de huidige call-stack (incl. een eventuele lopende
+   React-commit) volledig is afgerond — de standaard-fix voor exact dit
+   patroon (native event handler → synchrone setState). `state` zelf blijft
+   synchroon bijgewerkt (zie setState hieronder); enkel de REACT-notificatie
+   schuift één tick op. */
 function notify() {
-  listeners.forEach((l) => l());
+  setTimeout(() => {
+    listeners.forEach((l) => l());
+  }, 0);
 }
 
 function setState(patch: Partial<PlayerState>) {
@@ -486,13 +514,15 @@ function onStatus(st: AudioStatus): void {
        evaluate auto-play / endedPanel. Beide paden moeten de event-
        emission triggeren — een PRO-user met autoPlayNext aan moet ook
        de upsell krijgen (cooldown van 24u handelt frequentie af). */
-    finishListeners.forEach((l) => {
-      try {
-        l(finishedSession);
-      } catch {
-        /* swallow — een listener mag de audio-flow nooit breken */
-      }
-    });
+    setTimeout(() => {
+      finishListeners.forEach((l) => {
+        try {
+          l(finishedSession);
+        } catch {
+          /* swallow — een listener mag de audio-flow nooit breken */
+        }
+      });
+    }, 0);
 
     /* Iter 9nn: voor non-PRO users alleen volgende FREE sessie zoeken,
        niet PRO sessies. Voorkomt valse "Play next"-belofte die in een
@@ -651,7 +681,12 @@ export async function loadSession(
     rate: 1.0,
     preview,
     previewBlocked: false,
-    awaitingResume: shouldShowResume,
+    /* Operator ("continue-popup verschijnt telkens overal, heel
+       storend"): geen blokkerende gate meer — altijd false. Player
+       hervat hieronder zelf automatisch; `savedPositionSec` blijft
+       bewaard zodat de UI een klein "Resumed from X:XX"-linkje kan
+       tonen (zie player.tsx), niet om playback op te houden. */
+    awaitingResume: false,
     savedPositionSec: savedSec,
     errorMessage: null,
   });
@@ -714,7 +749,12 @@ export async function loadSession(
        eerste tick van Now Playing op zonder titel/artwork. */
     activateLockScreen(session);
 
-    if (!shouldShowResume) {
+    if (shouldShowResume) {
+      /* Automatisch hervatten vanaf de opgeslagen positie — geen tap op
+         "Continue" meer nodig. Fire-and-forget: state is al gezet,
+         warmSeekTo() speelt zodra de warm-up/seek-sequence klaar is. */
+      void warmSeekTo(savedSec);
+    } else {
       newPlayer.play();
     }
 
@@ -803,7 +843,18 @@ export async function setRate(rate: number): Promise<void> {
   } catch {}
 }
 
-/** UI klikt Continue — speel verder vanaf saved position.
+/** Operator ("continue-popup verschijnt telkens overal, heel storend —
+ *  hoe kunnen we dat anders doen?"): het blokkerende Continue/Start
+ *  over-gate is weg — sessies hervatten nu ALTIJD automatisch vanaf de
+ *  opgeslagen positie, zonder eerst een keuze af te dwingen (zelfde
+ *  gedrag als Spotify/Apple Podcasts/YouTube). "Start over" blijft
+ *  beschikbaar als een klein, niet-blokkerend tekstlinkje in de player
+ *  (zie player.tsx) i.p.v. een modaal paneel.
+ *
+ *  Deze functie bevat de eigenlijke seek-werkwijze (zie BUGFIX-toelichting
+ *  hieronder) en wordt nu vanuit `loadSession()` zelf aangeroepen zodra
+ *  er een geldige saved position is, in plaats van te wachten op een tap
+ *  op een "Continue"-knop die niet meer bestaat.
  *
  *  BUGFIX 2026-05-25: in expo-audio is `player.seekTo()` op een
  *  freshly-created, nog-niet-spelende player onbetrouwbaar. De seek wordt
@@ -817,13 +868,12 @@ export async function setRate(rate: number): Promise<void> {
  *  de player tijdelijk en zetten 'm na de seek weer terug op originele
  *  volume.
  */
-export async function continueFromSaved(): Promise<void> {
-  if (!state.session || !state.awaitingResume) return;
-  setState({ awaitingResume: false });
-
-  if (!player || state.previewBlocked) return;
-
-  const target = state.savedPositionSec;
+/** Gedeelde seek-werkwijze (zie toelichting hierboven) — start playback en
+ *  landt "geruisloos" op `target` seconden, ongeacht of de player nog
+ *  nooit heeft gespeeld. Aangeroepen door `loadSession()` zelf zodra er
+ *  een geldige saved position is (automatisch hervatten, geen gate meer). */
+async function warmSeekTo(target: number): Promise<void> {
+  if (!player) return;
   let originalVolume = 1;
   try {
     originalVolume = player.volume ?? 1;

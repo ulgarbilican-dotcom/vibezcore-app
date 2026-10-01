@@ -100,7 +100,7 @@ let activeBucket: string | null = null;
 const listeners = new Set<() => void>();
 
 function notify(): void {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 /* ── User bucket resolution ────────────────────────────────────────
@@ -629,8 +629,13 @@ function buildLast7Days(
 }
 
 /** Genereer YYYY-MM-DD voor een Date in LOKALE tijd (niet UTC) — zodat
- *  een sessie om 23:55 niet "in de dag van morgen" valt. */
-function dayKey(d: Date): string {
+ *  een sessie om 23:55 niet "in de dag van morgen" valt.
+ *
+ *  Geëxporteerd (was module-privé) zodat `plan-store.ts`/`agenda.tsx` dezelfde,
+ *  correct-gepadde en dus sorteerbare sleutel gebruiken i.p.v. een van de
+ *  andere, inconsistente varianten elders in de app (operator, 13 augustus
+ *  2026, protocol-systeem). */
+export function dayKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');

@@ -43,9 +43,15 @@ import {
   AlphaType,
   Atlas,
   Canvas,
+  Circle,
   ColorType,
+  Group,
+  LinearGradient,
+  RadialGradient,
+  Rect,
   Skia,
   useImage,
+  vec,
   type SkImage,
   type SkRect,
 } from '@shopify/react-native-skia';
@@ -202,6 +208,15 @@ type Props = {
   size: number;
   /** Kleur van de punten — de accentkleur van de toestand. */
   color: string;
+  /** Optioneel: twee kleuren voor een verloop OVER het veld (links → rechts,
+   *  op de gemiddelde x-positie van elk punt) in plaats van één egale kleur.
+   *  Laat `color` dan als fallback staan; deze wint zodra hij gezet is.
+   *  Losstaand van `color` omdat elk punt dan zijn EIGEN tint nodig heeft —
+   *  dat kost een kleur per punt in plaats van één kleur voor het hele veld,
+   *  en dat is precies wat elders bewust vermeden werd toen alle punten
+   *  toch dezelfde kleur hadden (operator, 12 augustus 2026: "stippen blauw
+   *  en fuchsia gradient"). */
+  gradientColors?: readonly [string, string];
   /** Hoe sterk de wolk HALVERWEGE uiteenvalt. 0 = uit, en dat is de stand
    *  waarop de Breath-tab draait — daar mag niets aan veranderen.
    *
@@ -221,6 +236,16 @@ type Props = {
    *  of het werkt en of het toestel het trekt, dan pas ophogen richting de
    *  vijf- à tienduizend uit het oorspronkelijke idee. */
   count?: number;
+  /** Optioneel: een blauwe gloed die een ECHT PUNT uit de wolk volgt in
+   *  plaats van op een vaste coördinaat te blijven staan (operator, 12
+   *  augustus 2026, tweede poging — de eerste, met een vaste plek, bleek
+   *  "willekeurig, niet op de iris" zodra het veld draaide of van gezicht
+   *  wisselde). `target` is een gok in genormaliseerde (0…1) coördinaten
+   *  van het RUSTbeeld; hier wordt eenmalig het dichtstbijzijnde echte
+   *  punt in die wolk opgezocht, en de gloed rekent zijn positie daarna
+   *  ELK BEELDJE uit met dezelfde formule als de punten zelf — hij draait
+   *  en morft dus letterlijk MEE, ongeacht welk gezicht er staat. */
+  eyeGlow?: { target: { x: number; y: number }; r: number; color: string };
 };
 
 export default function SplatField({
@@ -233,8 +258,10 @@ export default function SplatField({
   breath,
   size,
   color,
+  gradientColors,
   disperse = 0,
   count = 2600,
+  eyeGlow,
 }: Props) {
   /* `useImage` is een hook, dus beide aanroepen moeten er altijd staan, ook
      als die kant een berekende vorm gebruikt. Een lege bron levert `null` en
@@ -255,13 +282,25 @@ export default function SplatField({
      De KLEUR zit in de sprite zelf en niet in een `colors`-lijst naast het
      veld: zo'n lijst zou per punt een kleurobject vragen — duizenden keren
      dezelfde waarde doorgeven aan de tekenlaag, met alle risico van dien —
-     terwijl elk punt hier toch dezelfde kleur heeft. */
+     terwijl elk punt hier toch dezelfde kleur heeft.
+
+     Een gradient over het veld gaat daarom NIET via kleur per punt (dat
+     bleek Atlas' `colors`-prop iedere frame te laten crashen — leeg scherm,
+     "updateAndRelease() failed" in logcat), maar via één extra laag: het
+     veld één keer wit tekenen, en daarna een verloop-gevulde rechthoek
+     erover met blendMode "srcIn" — dezelfde truc als de gloed in
+     GradientText.tsx. Dat kost één extra tekenopdracht in totaal, niet één
+     per punt. */
   const sprite = useMemo(() => {
     /* Zelf pixel voor pixel opgebouwd en dan tot beeld gemaakt — ook hier
        geen offscreen tekenvlak, om dezelfde reden als bij het aftasten. Een
-       rond verloop van vol naar doorzichtig, 24 bij 24. */
+       rond verloop van vol naar doorzichtig, 24 bij 24.
+
+       Bij een gradient is de sprite zelf wit: de overlay hierboven bepaalt
+       de uiteindelijke kleur, de sprite levert alleen nog de zachte
+       alfa-vervaging. */
     const S = 24;
-    const c = Skia.Color(color);
+    const c = Skia.Color(gradientColors ? '#FFFFFF' : color);
     const r0 = Math.round((c[0] ?? 1) * 255);
     const g0 = Math.round((c[1] ?? 1) * 255);
     const b0 = Math.round((c[2] ?? 1) * 255);
@@ -289,7 +328,7 @@ export default function SplatField({
       Skia.Data.fromBytes(bytes),
       S * 4,
     );
-  }, [color]);
+  }, [color, gradientColors]);
 
   const clouds = useMemo(() => {
     const rest = restBuilder
@@ -342,6 +381,8 @@ export default function SplatField({
       sprite={sprite}
       disperse={disperse}
       count={count}
+      gradientColors={gradientColors}
+      eyeGlow={eyeGlow}
     />
   );
 }
@@ -369,6 +410,8 @@ function PointCloud({
   sprite,
   disperse,
   count,
+  gradientColors,
+  eyeGlow,
 }: {
   clouds: { rest: Cloud; end: Cloud };
   turn: SharedValue<number>;
@@ -378,6 +421,8 @@ function PointCloud({
   sprite: SkImage;
   disperse: number;
   count: number;
+  gradientColors?: readonly [string, string];
+  eyeGlow?: { target: { x: number; y: number }; r: number; color: string };
 }) {
   const sprites: SkRect[] = useMemo(
     () => new Array(count).fill(0).map(() => Skia.XYWHRect(0, 0, 24, 24)),
@@ -444,6 +489,53 @@ function PointCloud({
     return { rr, ra, er, ea, jr, ja };
   }, [clouds, count]);
 
+  /* Eénmalig het echte punt opzoeken dat het dichtst bij de gegeven
+     doelcoördinaat ligt in het RUSTbeeld — niet elk beeldje opnieuw, de
+     wolk staat vast, alleen de vorm errond beweegt. */
+  const eyeIndex = useMemo(() => {
+    if (!eyeGlow) return -1;
+    let best = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < count; i += 1) {
+      const dx = clouds.rest[i * 2] - eyeGlow.target.x;
+      const dy = clouds.rest[i * 2 + 1] - eyeGlow.target.y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    }
+    return best;
+  }, [clouds, count, eyeGlow]);
+
+  /* Dezelfde formule als de punten zelf hieronder (`r`, `a`, `x`, `y`),
+     maar dan voor ÉÉN vast punt-index, en als Reanimated-vector in plaats
+     van in de Skia-buffer — zo kunnen zowel de Circle (cx/cy) als de
+     RadialGradient (c, moet PRECIES hetzelfde middelpunt hebben, anders
+     valt de gloed niet samen met de cirkel die hem toont) 'm rechtstreeks
+     lezen. Draait en morft daardoor letterlijk mee met de wolk, ongeacht
+     welk gezicht er staat of hoever de draaiing al is. */
+  const eyePos = useDerivedValue(() => {
+    if (eyeIndex < 0) return { x: 0, y: 0 };
+    const t = breath.value;
+    const bell = disperse === 0 ? 0 : Math.sin(t * Math.PI) ** 1.6 * disperse;
+    const r =
+      (polar.rr[eyeIndex] + (polar.er[eyeIndex] - polar.rr[eyeIndex]) * t) *
+      (1 + bell * polar.jr[eyeIndex]);
+    const a =
+      polar.ra[eyeIndex] +
+      polar.ea[eyeIndex] * t +
+      SWIRL * t +
+      turn.value * TAU +
+      bell * polar.ja[eyeIndex];
+    return {
+      x: (0.5 + Math.cos(a) * r) * size,
+      y: (0.5 + Math.sin(a) * r) * size,
+    };
+  });
+  const eyeCx = useDerivedValue(() => eyePos.value.x);
+  const eyeCy = useDerivedValue(() => eyePos.value.y);
+
   const transforms = useRSXformBuffer(count, (val, i) => {
     'worklet';
     /* Recht evenredig van begin- naar eindvorm. De ademwaarde draagt de
@@ -492,6 +584,15 @@ function PointCloud({
        samenkomen beslist eindigt in plaats van uit te doven. */
     const bell = disperse === 0 ? 0 : Math.sin(t * Math.PI) ** 1.6 * disperse;
 
+    /* Terug naar de oorspronkelijke, stabiele formule (operator, 12
+       augustus 2026: "je bent het aan het verpesten, animatie ineens veel
+       te groot") — de toegevoegde "arrivalPush" hierboven bleek FOUT: hij
+       piekte op t=0/1, precies het moment waarop de morph een tijdlang
+       STIL STAAT (de "hold" tussen twee gezichten). Wat bedoeld was als
+       een kort, voorbijgaand duwtje bleek daardoor een permanente
+       vergroting van elk staand gezicht. Geen vervanging hier — het
+       "uitdeinen bij verschijnen"-verzoek staat nog open en verdient een
+       zorgvuldiger oplossing dan nog een blinde gok. */
     const r =
       (polar.rr[i] + (polar.er[i] - polar.rr[i]) * t) * (1 + bell * polar.jr[i]);
     const a =
@@ -517,13 +618,55 @@ function PointCloud({
        IJler zolang de wolk uit elkaar staat blijft wel: punten die verder uit
        elkaar liggen mogen kleiner zijn, anders wordt het veld een vlek. */
     const base = disperse === 0 ? 0.25 - t * 0.08 : 0.2;
+    /* Puntgrootte weer ONGEWIJZIGD (operator, 12 augustus 2026: "vorige
+       leek beter" — hier stond een tweede bloom-term die de sprites zelf
+       vergrootte, en die duwde ze voorbij hun eigen 24×24-resolutie:
+       zachter/waziger. Het "uitdeinen" zit nu uitsluitend in `arrivalPush`
+       hierboven, op de STRAAL — dat verplaatst de punten verder uit
+       elkaar zonder ze te vervagen. */
     const scale = base * (1 - bell * 0.35) * (size / 320);
     val.set(scale, 0, x * size, y * size);
   });
 
   return (
     <Canvas style={{ width: size, height: size }} pointerEvents="none">
-      <Atlas image={sprite} sprites={sprites} transforms={transforms} />
+      {gradientColors ? (
+        /* `layer` forceert een eigen tekenvlak: zonder die vlag mengt
+           blendMode "srcIn" tegen wat er ONDER de Canvas zit (zwart) in
+           plaats van tegen het net getekende puntenveld erboven, en
+           verdwijnt alles. Met de laag geldt srcIn alleen BINNEN de groep:
+           de rechthoek neemt zijn kleur van het verloop, zijn vorm van de
+           zachte stipjes eronder. Kost precies één tekenopdracht extra —
+           niet één per punt zoals de eerdere, kapotte poging. */
+        <Group layer>
+          <Atlas image={sprite} sprites={sprites} transforms={transforms} />
+          <Rect x={0} y={0} width={size} height={size} blendMode="srcIn">
+            <LinearGradient
+              start={vec(0, size * 0.5)}
+              end={vec(size, size * 0.5)}
+              colors={[gradientColors[0], gradientColors[1]]}
+            />
+          </Rect>
+        </Group>
+      ) : (
+        <Atlas image={sprite} sprites={sprites} transforms={transforms} />
+      )}
+      {/* Blauwe gloed die het echte oog-punt volgt (operator, 12 augustus
+         2026, tweede poging). Additief (blendMode "plus"): dit LICHT het
+         puntje daar op in plaats van het te herkleuren, en raakt de rest
+         van het veld niet — geen "srcIn" hier, dat zou alles BUITEN de
+         gloed onzichtbaar maken. */}
+      {eyeGlow && eyeIndex >= 0 && (
+        <Group blendMode="plus">
+          <Circle cx={eyeCx} cy={eyeCy} r={eyeGlow.r * size}>
+            <RadialGradient
+              c={eyePos}
+              r={eyeGlow.r * size}
+              colors={[eyeGlow.color, `${eyeGlow.color}00`]}
+            />
+          </Circle>
+        </Group>
+      )}
     </Canvas>
   );
 }

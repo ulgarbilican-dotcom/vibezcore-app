@@ -49,10 +49,30 @@ type Props = {
    *  dan boven zwart — daar concurreert hij met alles wat eronder ligt. */
   intensity?: number;
   color?: string;
+  /** Aantal ringen tegelijk onderweg. Standaard 4 (RINGS) staat garant voor
+   *  "er is altijd één onderweg" — precies wat op een klein, druk kaartje
+   *  juist als "continu zichtbaar" leest in plaats van als losse klop
+   *  (operator, 10 augustus 2026). Lager = duidelijker losse pulsen met
+   *  stilte ertussen. */
+  ringCount?: number;
+  /** Vervaagt de rand van de ring. Standaard 1.2; lager oogt scherper op
+   *  een klein vlak (operator, 10 augustus 2026: "blauw moet scherper, nu
+   *  heel dof"). */
+  blur?: number;
+  /** Duur van één klop in ms. Standaard PULSE_MS (5200, "een trage deining
+   *  aan de pols"). Overschrijfbaar per instantie (operator, 10 augustus
+   *  2026: "haptics moet beetje sneller"). */
+  pulseMs?: number;
+  /** Vermenigvuldigt de streepdikte van de ringen. Standaard 1 (ongewijzigd
+   *  gedrag op alle bestaande schermen). Lager voor een fijnere, ijlere
+   *  lijn op een klein vlak (operator, 11 augustus 2026: "haptics moeten
+   *  fijner"). */
+  strokeScale?: number;
 };
 
 function Ring({
   index,
+  count,
   pulse,
   cx,
   cy,
@@ -61,8 +81,10 @@ function Ring({
   color,
   strokeWidth,
   intensity,
+  blur,
 }: {
   index: number;
+  count: number;
   pulse: SharedValue<number>;
   cx: number;
   cy: number;
@@ -71,10 +93,11 @@ function Ring({
   color: string;
   strokeWidth: number;
   intensity: number;
+  blur: number;
 }) {
   const phase = useDerivedValue(() => {
     'worklet';
-    const f = pulse.value - index / RINGS;
+    const f = pulse.value - index / count;
     return f - Math.floor(f);
   });
 
@@ -102,7 +125,7 @@ function Ring({
       color={color}
       opacity={opacity}
     >
-      <BlurMask blur={1.2} style="normal" />
+      <BlurMask blur={blur} style="normal" />
     </Circle>
   );
 }
@@ -118,6 +141,10 @@ export default function PodPulse({
      als precisie, lichtblauw en dik leest als waarschuwing (operator
      2026-07-31). */
   color = '#2E6BD8',
+  ringCount = RINGS,
+  blur = 1.2,
+  pulseMs = PULSE_MS,
+  strokeScale = 1,
 }: Props) {
   const cx = width * originX;
   const cy = height * originY;
@@ -125,7 +152,7 @@ export default function PodPulse({
   const pulse = useSharedValue(0);
   useEffect(() => {
     pulse.value = withRepeat(
-      withTiming(1, { duration: PULSE_MS, easing: Easing.linear }),
+      withTiming(1, { duration: pulseMs, easing: Easing.linear }),
       -1,
       false,
     );
@@ -142,18 +169,22 @@ export default function PodPulse({
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Canvas style={{ flex: 1 }}>
         <Group blendMode="plus">
-          {Array.from({ length: RINGS }).map((_, i) => (
+          {Array.from({ length: ringCount }).map((_, i) => (
             <Ring
               key={i}
               index={i}
+              count={ringCount}
               pulse={pulse}
               cx={cx}
               cy={cy}
               r0={width * reach * 0.1}
               r1={width * reach}
               color={color}
-              strokeWidth={Math.max(0.9, width * 0.0028 * intensity)}
+              strokeWidth={
+                Math.max(0.9, width * 0.0028 * intensity) * strokeScale
+              }
               intensity={intensity}
+              blur={blur}
             />
           ))}
 

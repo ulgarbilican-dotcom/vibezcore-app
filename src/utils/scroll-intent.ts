@@ -25,13 +25,15 @@ const listeners = new Set<(target: string) => void>();
 
 export function requestScrollTo(target: string): void {
   pending = target;
-  listeners.forEach((l) => {
-    try {
-      l(target);
-    } catch {
-      /* één crashende listener mag de rest niet blokkeren */
-    }
-  });
+  setTimeout(() => {
+    listeners.forEach((l) => {
+      try {
+        l(target);
+      } catch {
+        /* één crashende listener mag de rest niet blokkeren */
+      }
+    });
+  }, 0);
 }
 
 export function subscribeScrollIntent(

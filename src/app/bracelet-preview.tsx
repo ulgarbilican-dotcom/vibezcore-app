@@ -9,7 +9,7 @@
 
    Wat dit screen toont:
    - Header met VIBEZCORE branding
-   - 5 mode cards (Boost, Sharp Focus, Calm Control, Clarity, Rest & Reset)
+   - 5 mode cards (Boost, Sharp Focus, Calm Control, Clarity & Relax, Sleep)
    - Per mode: kleurige header met sonar-puls, mode-naam, blurb, duur-range
    - Footer CTA's: 'Reserve your bracelet' (→ /bracelet) en 'Activate code'
      (→ /activate-bracelet)
@@ -23,9 +23,10 @@
    Route: gepushed vanaf Bracelet-tab 'See how it works' CTA.
    ─────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
 import { MODES } from '@/services/ble-contract';
 import { Stack, router } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -37,12 +38,67 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ReanimatedAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
+
+/* Standaardiseerde press-scale (2026-09-23) — zelfde curve als StartCard
+   in breath-welcome.tsx. */
+const AnimatedPressable = ReanimatedAnimated.createAnimatedComponent(Pressable);
+function usePressScale(scaleTo: number) {
+  const scale = useSharedValue(1);
+  const onPressIn = () => {
+    scale.value = withTiming(scaleTo, { duration: 80 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return { onPressIn, onPressOut, pressStyle };
+}
+
+/* Operator, 1 okt 2026 ("headers overal consistent, zoals Apple"): dit
+   scherm gebruikte nog de onaangepaste systeem-terugpijl (native header,
+   geen eigen styling) — nu dezelfde ChevronLeft-stijl (size 20,
+   strokeWidth 2.8 — de "officiële iOS-chevron.backward"-stijl uit
+   build-choice.tsx, 18 sept) als overal elders, zelfde recept als
+   bracelet-history.tsx's `HistoryBackButton`. */
+function PreviewBackButton() {
+  const { onPressIn, onPressOut, pressStyle } = usePressScale(0.92);
+  return (
+    <AnimatedPressable
+      onPress={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/bracelet');
+      }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      hitSlop={12}
+      accessibilityLabel="Back"
+      style={[{ paddingHorizontal: 8, paddingVertical: 6 }, pressStyle]}
+    >
+      <ChevronLeft size={20} color={Brand.text} strokeWidth={2.8} />
+    </AnimatedPressable>
+  );
+}
 
 export default function BraceletPreviewScreen(): React.ReactElement {
+  const primaryScale = usePressScale(0.96);
+  const secondaryScale = usePressScale(0.96);
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <Stack.Screen
-        options={{ title: 'Preview', headerBackTitle: 'Back' }}
+        options={{
+          title: 'Preview',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <PreviewBackButton />,
+        }}
       />
       <ScrollView
         contentContainerStyle={s.scroll}
@@ -76,21 +132,25 @@ export default function BraceletPreviewScreen(): React.ReactElement {
           activation code if you already have one.
         </Text>
 
-        <Pressable
-          style={[s.btn, s.btnPrimary]}
+        <AnimatedPressable
+          style={[s.btn, s.btnPrimary, primaryScale.pressStyle]}
           onPress={() => router.replace('/bracelet')}
+          onPressIn={primaryScale.onPressIn}
+          onPressOut={primaryScale.onPressOut}
           accessibilityLabel="Reserve your bracelet"
         >
           <Text style={s.btnPrimaryText}>Reserve your bracelet</Text>
-        </Pressable>
+        </AnimatedPressable>
 
-        <Pressable
-          style={[s.btn, s.btnSecondary]}
+        <AnimatedPressable
+          style={[s.btn, s.btnSecondary, secondaryScale.pressStyle]}
           onPress={() => router.push('/activate-bracelet')}
+          onPressIn={secondaryScale.onPressIn}
+          onPressOut={secondaryScale.onPressOut}
           accessibilityLabel="Activate your bracelet"
         >
           <Text style={s.btnSecondaryText}>I have an activation code</Text>
-        </Pressable>
+        </AnimatedPressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -157,8 +217,9 @@ function ModeCard({
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
   scroll: { padding: 20, paddingBottom: 60 },
+  /* Huisstijl v4.4: eyebrow op donkere achtergrond = AudioAccent, geen Signal Blue. */
   eyebrow: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,
@@ -205,20 +266,22 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  btnPrimary: { backgroundColor: Brand.accent },
+  /* Huisstijl v4.4: primaire CTA op donkere achtergrond = wit bg + donkere tekst. */
+  btnPrimary: { backgroundColor: '#ffffff' },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
   },
+  /* Huisstijl v4.4: secundaire CTA, niet haptic/status — AudioAccent. */
   btnSecondary: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
+    backgroundColor: 'rgba(110,133,196,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.45)',
+    borderColor: 'rgba(110,133,196,0.45)',
   },
   btnSecondaryText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 15,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.2,

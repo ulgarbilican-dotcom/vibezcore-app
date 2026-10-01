@@ -164,13 +164,30 @@ export async function playScape(key: string | null): Promise<void> {
   }
 }
 
-/** Wegvagen en opruimen. Veilig om vaker aan te roepen dan nodig. */
-export function stopScape(): void {
+/** Wegvagen en opruimen. Veilig om vaker aan te roepen dan nodig.
+ *
+ *  `immediate` (operator, 20 september 2026: "soundscape speelt door
+ *  nadat ik terug ben op choose your state") — de standaard 1,5s-uitvaging
+ *  is bedoeld voor WISSELEN terwijl je nog in de sessie zit (zie
+ *  `playScape` hierboven). Bij het volledig AFSLUITEN van een sessie
+ *  (`finish()`, en de opruim-cleanup bij unmount) navigeert het scherm nu
+ *  direct weg (`dismissTo`, geen animatie-vertraging meer) — dan hoor je
+ *  die 1,5s juist duidelijker doorlopen op de pagina waar je net op
+ *  aankwam, wat als "blijft spelen" overkomt. Daar hoort geen vervaging,
+ *  gewoon meteen stil. */
+export function stopScape(immediate = false): void {
   playingKey = null;
+  stopFade();
   const p = player;
   player = null;
-  if (!p) {
-    stopFade();
+  if (!p) return;
+  if (immediate) {
+    try {
+      p.pause();
+    } catch {}
+    try {
+      p.remove();
+    } catch {}
     return;
   }
   rampTo(p, 0, FADE_OUT_MS, () => {

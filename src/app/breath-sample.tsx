@@ -26,7 +26,8 @@ import GuidanceSelector, {
   GUIDANCE_MODES,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { BREATH_STATES } from '@/data/breath-states';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
@@ -50,16 +51,35 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ReanimatedView, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = ReanimatedView.createAnimatedComponent(Pressable);
 
 const SCREEN_W = Dimensions.get('window').width;
 
 /* Calm Control — box breath 4-4-4-4, 19 rondes = 304 sec (5:04).
-   Operator 2026-07-30: geen uitgekleed proefje maar de VOLLEDIGE sessie. */
-const INHALE_S = 4;
-const HOLD_IN_S = 4;
-const EXHALE_S = 4;
-const HOLD_OUT_S = 4;
-const ROUNDS = 19;
+   Operator 2026-07-30: geen uitgekleed proefje maar de VOLLEDIGE sessie.
+   Operator, 28 september 2026 ("alle breathwork moet kloppen" — audit na
+   fouten op de website): deze 5 getallen stonden hier als losse,
+   hertypte constanten, zonder link naar breath-states.ts — vandaag nog
+   toevallig correct, maar bij een volgende retuning van Calm's Box
+   Breathing in de bron zou dit scherm stilzwijgend stale worden, exact
+   dezelfde fout als op de website. Nu rechtstreeks afgeleid uit de echte
+   `box`-techniek, geen eigen kopie meer. */
+const CALM_BOX = BREATH_STATES.calm.techniques.find((t) => t.key === 'box')!;
+const CALM_BOX_DURATIONS = CALM_BOX.durations ?? BREATH_STATES.calm.durations;
+const CALM_BOX_DURATION =
+  CALM_BOX_DURATIONS.find((d) => d.recommended) ?? CALM_BOX_DURATIONS[0];
+const INHALE_S = CALM_BOX.phases[0].secs;
+const HOLD_IN_S = CALM_BOX.phases[1].secs;
+const EXHALE_S = CALM_BOX.phases[2].secs;
+const HOLD_OUT_S = CALM_BOX.phases[3].secs;
+const ROUNDS = CALM_BOX_DURATION.rounds;
 
 type Phase = 'inhale' | 'hold-in' | 'exhale' | 'hold-out';
 
@@ -259,11 +279,50 @@ export default function BreathSampleScreen() {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
-  const goSubscribe = () => router.replace('/subscribe');
+  /* Operator, 10 september 2026: "hoe weten wij of user audio of
+     breathwork wil" — dit scherm is breathwork-context, dus meegeven
+     zodat subscribe.tsx na aankoop naar breathwork kan terugsturen i.p.v.
+     altijd naar de Audio Library-root. */
+  const goSubscribe = () => router.replace('/subscribe?returnTo=breathwork' as never);
   const goBreathTab = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/');
   };
+
+  const stopPressScale = useSharedValue(1);
+  const onStopPressIn = () => {
+    stopPressScale.value = withTiming(0.92, { duration: 80 });
+  };
+  const onStopPressOut = () => {
+    stopPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const stopPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: stopPressScale.value }],
+  }));
+
+  /* Enter Breath / Continue with Premium delen één waarde — nooit
+     tegelijk zichtbaar (isPro-branch is of/of). */
+  const modalPrimaryPressScale = useSharedValue(1);
+  const onModalPrimaryPressIn = () => {
+    modalPrimaryPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onModalPrimaryPressOut = () => {
+    modalPrimaryPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const modalPrimaryPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: modalPrimaryPressScale.value }],
+  }));
+
+  const modalSecondaryPressScale = useSharedValue(1);
+  const onModalSecondaryPressIn = () => {
+    modalSecondaryPressScale.value = withTiming(0.94, { duration: 80 });
+  };
+  const onModalSecondaryPressOut = () => {
+    modalSecondaryPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const modalSecondaryPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: modalSecondaryPressScale.value }],
+  }));
 
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
@@ -272,9 +331,15 @@ export default function BreathSampleScreen() {
       <View style={s.topbar}>
         <Text style={s.topbarTitle}>Calm Control · 5:04</Text>
         {!finished && (
-          <Pressable onPress={stopEarly} hitSlop={14} style={s.stopWrap}>
+          <AnimatedPressable
+            onPress={stopEarly}
+            onPressIn={onStopPressIn}
+            onPressOut={onStopPressOut}
+            hitSlop={14}
+            style={[s.stopWrap, stopPressStyle]}
+          >
             <Text style={s.stopTxt}>Stop</Text>
-          </Pressable>
+          </AnimatedPressable>
         )}
       </View>
 
@@ -368,34 +433,40 @@ export default function BreathSampleScreen() {
             <Text style={s.modalTitle}>{isPro ? 'Nice.' : 'Loved it?'}</Text>
             <Text style={s.modalBody}>
               {isPro
-                ? 'That was a taste. All five states, full-length sessions and bracelet guidance are already unlocked in your account.'
-                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all five states, full-length sessions and the complete audio library.'}
+                ? 'That was a taste. All 49 breathwork sessions and bracelet guidance are already unlocked in your account.'
+                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all 49 breathwork sessions and the complete audio library.'}
             </Text>
 
             {isPro ? (
-              <Pressable
-                style={s.modalPrimary}
+              <AnimatedPressable
+                style={[s.modalPrimary, modalPrimaryPressStyle]}
                 onPress={goBreathTab}
+                onPressIn={onModalPrimaryPressIn}
+                onPressOut={onModalPrimaryPressOut}
                 android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
               >
                 <Text style={s.modalPrimaryTxt}>Enter Breath  →</Text>
-              </Pressable>
+              </AnimatedPressable>
             ) : (
               <>
-                <Pressable
-                  style={s.modalPrimary}
+                <AnimatedPressable
+                  style={[s.modalPrimary, modalPrimaryPressStyle]}
                   onPress={goSubscribe}
+                  onPressIn={onModalPrimaryPressIn}
+                  onPressOut={onModalPrimaryPressOut}
                   android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
                 >
                   <Text style={s.modalPrimaryTxt}>Continue with Premium</Text>
-                </Pressable>
-                <Pressable
-                  style={s.modalSecondary}
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={[s.modalSecondary, modalSecondaryPressStyle]}
                   onPress={goBreathTab}
+                  onPressIn={onModalSecondaryPressIn}
+                  onPressOut={onModalSecondaryPressOut}
                   hitSlop={8}
                 >
                   <Text style={s.modalSecondaryTxt}>Not yet</Text>
-                </Pressable>
+                </AnimatedPressable>
               </>
             )}
           </View>
@@ -532,8 +603,11 @@ const s = StyleSheet.create({
     borderColor: Brand.border,
     gap: 12,
   },
+  /* Huisstijl v4.4: Brand.accent (#3a8fff, Signal Blue) is enkel voor
+     haptic-pulse/"nu actief" — nooit tekst/knoppen. AudioAccent is
+     de eyebrow-kleur op donker. */
   modalEyebrow: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontFamily: BrandFonts.bold,
     fontSize: 11,
     letterSpacing: 2,
@@ -553,14 +627,16 @@ const s = StyleSheet.create({
     lineHeight: 21,
     marginBottom: 8,
   },
+  /* v4.4 CTA-regel: donkere ondergrond -> witte knop, donkere tekst
+     (geen Signal Blue, geen Royal Indigo op knoppen). */
   modalPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   modalPrimaryTxt: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontFamily: BrandFonts.bold,
     fontSize: 15,
     letterSpacing: 0.3,

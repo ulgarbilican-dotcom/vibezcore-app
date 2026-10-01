@@ -21,7 +21,12 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor spinners/links/CTA. AudioAccent is de
+   link-kleur op donker; CTA-regel v4.4: witte knop-bg + donkere tekst. */
 import { refreshSubscription } from '@/hooks/useSubscription';
 import { clearSession, getToken, persistSession } from '@/services/auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
@@ -36,8 +41,19 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+/* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
+   voor de referentie-implementatie) — additief, geen layout/logica-
+   wijziging. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type Mode = 'recovery' | 'setup';
 type Phase = 'verifying' | 'ready' | 'updating' | 'done' | 'error';
@@ -77,6 +93,52 @@ export default function ResetPassword() {
   /* Iter 9dq v77 (2026-06-03): safe-area-aware scroll padding.
      Floor 72 = consistent met andere bottom-CTAs. */
   const safeInsets = useSafeAreaInsets();
+
+  /* Press-scale-animatie — één losse shared value per tappable element
+     (zie breath-welcome.tsx `StartCard`). */
+  const errorBtnPressScale = useSharedValue(1);
+  const onErrorBtnPressIn = () => {
+    errorBtnPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onErrorBtnPressOut = () => {
+    errorBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const errorBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: errorBtnPressScale.value }],
+  }));
+
+  const pwTogglePressScale = useSharedValue(1);
+  const onPwTogglePressIn = () => {
+    pwTogglePressScale.value = withTiming(0.93, { duration: 80 });
+  };
+  const onPwTogglePressOut = () => {
+    pwTogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pwTogglePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pwTogglePressScale.value }],
+  }));
+
+  const pw2TogglePressScale = useSharedValue(1);
+  const onPw2TogglePressIn = () => {
+    pw2TogglePressScale.value = withTiming(0.93, { duration: 80 });
+  };
+  const onPw2TogglePressOut = () => {
+    pw2TogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pw2TogglePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pw2TogglePressScale.value }],
+  }));
+
+  const submitPressScale = useSharedValue(1);
+  const onSubmitPressIn = () => {
+    submitPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onSubmitPressOut = () => {
+    submitPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const submitPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: submitPressScale.value }],
+  }));
 
   /* setTimeout ref — opruimen bij unmount voorkomt navigate-after-unmount
      warnings én double-routes als user snel weg-tikt na success. */
@@ -298,7 +360,7 @@ export default function ResetPassword() {
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={s.center}>
-          <ActivityIndicator size="large" color={Brand.accent} />
+          <ActivityIndicator size="large" color={Brand.textDim} />
           <Text style={s.title}>Verifying link…</Text>
         </View>
       </SafeAreaView>
@@ -309,7 +371,12 @@ export default function ResetPassword() {
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
-          options={{ title: copy.screenTitle, headerBackTitle: 'Back' }}
+          options={{
+            title: copy.screenTitle,
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
         />
         <View style={s.center}>
           <View style={s.errorCircle}>
@@ -323,8 +390,8 @@ export default function ResetPassword() {
               ? 'This recovery link has expired or was already used. Request a new one.'
               : 'Your sign-in session expired before you could set a password. Please sign in again.'}
           </Text>
-          <Pressable
-            style={s.btnPrimary}
+          <AnimatedPressable
+            style={[s.btnPrimary, errorBtnPressStyle]}
             onPress={() =>
               router.replace(
                 (mode === 'recovery'
@@ -332,11 +399,13 @@ export default function ResetPassword() {
                   : '/account') as never
               )
             }
+            onPressIn={onErrorBtnPressIn}
+            onPressOut={onErrorBtnPressOut}
           >
             <Text style={s.btnPrimaryText}>
               {mode === 'recovery' ? 'Request new link' : 'Back to sign in'}
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </SafeAreaView>
     );
@@ -360,7 +429,12 @@ export default function ResetPassword() {
   return (
     <SafeAreaView style={s.root}>
       <Stack.Screen
-        options={{ title: copy.screenTitle, headerBackTitle: 'Back' }}
+        options={{
+          title: copy.screenTitle,
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
       />
       <KeyboardAwareScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
@@ -386,14 +460,16 @@ export default function ResetPassword() {
             autoComplete="new-password"
             textContentType="newPassword"
           />
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowPw((v) => !v)}
+            onPressIn={onPwTogglePressIn}
+            onPressOut={onPwTogglePressOut}
             accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
             hitSlop={8}
-            style={s.toggleBtn}
+            style={[s.toggleBtn, pwTogglePressStyle]}
           >
             <Text style={s.toggleText}>{showPw ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         <Text style={s.label}>Confirm password</Text>
@@ -409,14 +485,16 @@ export default function ResetPassword() {
             autoComplete="new-password"
             textContentType="newPassword"
           />
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowPw2((v) => !v)}
+            onPressIn={onPw2TogglePressIn}
+            onPressOut={onPw2TogglePressOut}
             accessibilityLabel={showPw2 ? 'Hide password' : 'Show password'}
             hitSlop={8}
-            style={s.toggleBtn}
+            style={[s.toggleBtn, pw2TogglePressStyle]}
           >
             <Text style={s.toggleText}>{showPw2 ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {showMatchHint && (
@@ -427,17 +505,20 @@ export default function ResetPassword() {
 
         {err && <Text style={s.err}>{err}</Text>}
 
-        <Pressable
-          style={[s.btnPrimary, phase === 'updating' && s.btnDisabled]}
+        <AnimatedPressable
+          style={[s.btnPrimary, phase === 'updating' && s.btnDisabled, submitPressStyle]}
           onPress={onSubmit}
+          onPressIn={onSubmitPressIn}
+          onPressOut={onSubmitPressOut}
           disabled={phase === 'updating'}
         >
           {phase === 'updating' ? (
-            <ActivityIndicator color="#ffffff" />
+            /* Knop-bg is nu wit (Huisstijl v4.4) — spinner moet donker zijn. */
+            <ActivityIndicator color="#0a0a0a" />
           ) : (
             <Text style={s.btnPrimaryText}>{copy.submit}</Text>
           )}
-        </Pressable>
+        </AnimatedPressable>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -504,7 +585,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
   toggleText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 12,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -530,7 +611,7 @@ const s = StyleSheet.create({
   },
   /* Iter v180 (2026-07-02): CTA breder + tekst-ademruimte (systemisch). */
   btnPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -538,7 +619,7 @@ const s = StyleSheet.create({
     marginTop: 22,
   },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

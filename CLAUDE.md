@@ -37,6 +37,16 @@ verzonnen contract was fout en is volledig vervangen.
 - **Geen wetenschaps-/medische claims.** App gebruikt uitsluitend toestand-taal
   (focus / kalmte / rust). NOOIT "hersengolven", "synchroniseert",
   "klinisch bewezen", "brainwave entrainment". Alleen "geïnspireerd op" waar nuance kan.
+  **Uitzondering (operator, 10 september 2026): "binaural beats" als audio-
+  techniek/feature is toegestaan** — de vier verboden termen hierboven
+  blijven verboden voor de MARKETING-/uitleg-taal errond (dus wel "binaural
+  beats", nooit "synchroniseert je hersengolven" om uit te leggen waarom).
+  Geldt enkel voor deze ene, expliciet goedgekeurde term — geen algemene
+  versoepeling van deze regel. Nieuwe features rond biometrie/AI (rPPG,
+  stress-inschatting e.d.) blijven onder de volledige regel vallen: enkel
+  welzijnstaal ("welzijnsscore", "energie-tracking"), nooit een diagnose-
+  of meet-claim ("we meten je hartslag/HRV om stress te diagnosticeren") —
+  zie ook Apple's "Inaccurate Health Measurements"-richtlijn.
 - **Provider-agnostisch.** De app praat NOOIT rechtstreeks met Gumroad of Stripe —
   alleen met de eigen backend (`https://app.vibezcore.com/api/...`). Provider-logica
   hoort niet in de app.
@@ -146,13 +156,41 @@ Volgorde en taglines zijn bindend en consistent over de hele webapp.
 
 ## 5. DE 5 BRACELET-MODI (namen voorlopig — [OPERATOR] finaliseert)
 
-| Idx | Intern | App-naam (voorlopig) | Kleur | Duur (min=default – max) |
-|-----|--------|----------------------|-------|--------------------------|
-| 0 | Gamma | Boost | Amber #F5A524 | 8 – 15 min |
-| 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min |
-| 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min |
-| 3 | Theta | Clarity | Wit #FFFFFF | 15 – 30 min |
-| 4 | Delta | Rest & Reset | Groen #96CB56 | 25 – 45 min |
+**GEWIJZIGD 22 september 2026 (operator): Rest & Reset heet voortaan
+Sleep** ("SLEEP" in hoofdletter-contexten) — duidelijker voor de
+gebruiker. Enkel de naam wijzigt; index (Delta = 4), kleur en
+duur/default blijven zoals hieronder.
+
+**GEWIJZIGD 22 september 2026 (operator, vervolg): Clarity heet voortaan
+Clarity & Relax** ("CLARITY & RELAX" in hoofdletter-contexten) — zelfde
+methodiek als de Sleep-hernoeming hierboven. Enkel de naam wijzigt; index
+(Theta = 3), kleur en duur/default blijven zoals hieronder.
+
+| Idx | Intern | App-naam (voorlopig) | Kleur | Duur (min – max) | Default |
+|-----|--------|----------------------|-------|-------------------|---------|
+| 0 | Gamma | Boost | Amber #F5A524 | 8 – 20 min | 10 min |
+| 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min | 15 min |
+| 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min | 20 min |
+| 3 | Theta | Clarity & Relax | Wit #FFFFFF | 20 – 45 min | 25 min |
+| 4 | Delta | Sleep | WhatsApp-groen #25D366 | 30 – 50 min | 30 min |
+
+**GEWIJZIGD 16 september 2026 (operator, officiële hardware-spec-tabel
+Haptic_Bracelet_Spec_v2_3): duur-ranges + defaults bijgewerkt** — was
+"default = min" voor alle modi (8–15/15–30/15–30/15–30/25–45); nu heeft
+elke modus een eigen default die niet per se het minimum is.
+
+**GEWIJZIGD 16 september 2026 (vervolg, na online onderzoek naar
+effectieve/optimale sessieduur per state): maximum-waardes verder
+bijgesteld** — Boost 15→20 (powernap-onderzoek: optimaal venster
+20-30 min), Sharp Focus 20→30 (attentie-onderzoek: 20-30 min voor
+sustained-attention-effecten), Clarity 30→45 (meditatieve diepte bouwt
+geleidelijk op), Rest & Reset 45→50 (NSDR-onderzoek ondersteunt zelfs
+tot 60 min, 50 is een batterij-bewustere tussenstap voor overnight-
+gebruik — check bij hardware/firmware of de batterij een volle sessie
+op het maximum aankan voor dit verder omhoog gaat). Calm Control
+ongewijzigd bevestigd (30 min max, weinig extra meerwaarde erboven).
+Bron van waarheid: `services/ble-contract.ts`'s
+`ModeMeta.defaultMinutes`/`minMinutes`/`maxMinutes`.
 
 **GEWIJZIGD 5 augustus 2026 (operator): de bracelet draagt nu DEZELFDE
 kleuren als de vijf ademtoestanden.** Reden: het wordt één product. Wie van
@@ -162,6 +200,22 @@ hoort niet halverwege van kleur te wisselen.
 Vervangt de vorige tabel (wit / oranje / blauw / paars / sage). De bron van
 waarheid is `src/data/breath-states.ts`; `services/ble-contract.ts` volgt
 die. Wijzigt een kleur daar, dan hoort deze tabel mee te veranderen.
+
+**GEWIJZIGD 11 september 2026 (operator: "groen te neonachtig, wat is een
+moderne groen"): Rest & Reset van limoen #96CB56 naar salie/smaragd
+#5FA777.** Tweede bijstelling van deze kleur (eerder al van #8FD94A naar
+#96CB56 getemperd, 8 augustus) — deze keer een echte overstap naar een
+andere, meer gedempte groenfamilie i.p.v. dezelfde lime verder afzwakken.
+
+**GEWIJZIGD 14 september 2026 (operator: "te oudbollig"): Rest & Reset van
+salie/smaragd #5FA777 naar jade/smaragd #20B486.** Derde bijstelling — het
+salie bleek te gebroken/gedempt (las als khaki), nu een helderder, koeler
+jade binnen dezelfde groenfamilie.
+
+**GEWIJZIGD 16 september 2026 (operator: "het groen is echt lelijk, gebruik
+het groen van WhatsApp"): Rest & Reset van jade/smaragd #20B486 naar
+WhatsApp-groen #25D366.** Vierde bijstelling — herkenbare, gangbare groentint
+i.p.v. de zelfgekozen jade-tint.
 
 App toont NOOIT technische parameters (PPS, burst_ms, amplitude, RTP) — spec §11.5.
 Alleen modusnaam, duur, resterende tijd, batterij, status.
@@ -191,14 +245,32 @@ veranderen NIET bij omschakeling.
 
 ## 7. MERK / UITERLIJK (uit MERK_ANKER.md — bindend)
 
+> GEWIJZIGD 26 september 2026 (operator): de kleurregel hieronder beschreef
+> `#3a8fff` als algemeen accent — dat was fout en is herhaaldelijk gecorrigeerd
+> in de app zelf. Bron van waarheid is voortaan `src/constants/theme.ts`, niet
+> deze samenvatting of de webapp-extractie waar hij ooit uit kwam.
+
 - **Font:** Inter (gewichten 400/500/600/700/800/900). Native: `@expo-google-fonts/inter`.
-- **Kleuren (exact):** achtergrond `#0a0a0a` · accent `#3a8fff` · accent
-  hover `#2a7fee` · succes `#4ade80` · fout `#ef4444` · paneel `#1e1e1e` ·
-  rand `#2a2a2a` · tekst primair `#f4f4f4` · tekst gedimd ~`#8a8a8a`.
+- **Theme:** DARK is de default (sinds 26 september 2026, was licht). App heeft
+  ook een lichte variant (`BrandLight`), maar opent standaard in dark.
+- **Kleuren (rol-gesplitst, exact — zie theme.ts):** achtergrond `#0a0a0a`
+  (dark) / `#F5F5F7` (light) · Signal Blue `#3a8fff` UITSLUITEND voor
+  haptic-pulsen/"nu actief" in de player, nooit CTA/tekst/vlakken · Royal
+  Indigo `#6E85C4` (op dark) / `#1E2A4A` (op light) voor accent-tekst/labels,
+  nooit knoppen · Bio-Teal `#00A3A3`/`#4AF0D4` als accent BINNEN Audio Library
+  (player, mini-player, library-schermen) — nog niet app-breed · succes
+  `#4ade80`/`#16a34a` · fout `#ef4444`/`#dc2626` · paneel `#1e1e1e`/`#ffffff` ·
+  rand `#2a2a2a`/`#e5e5ea` · tekst primair `#f4f4f4`/`#1D1D1F` · tekst gedimd
+  `#8a8a8a`/`#8E8E93`. CTA-knop-chrome (v4.4) is een aparte rol: donkere
+  achtergrond → witte knop + donkere tekst; lichte achtergrond → zwarte/
+  Royal-Indigo knop + witte tekst — CTA-achtergrond is nooit de accentkleur.
 - **Logo:** `vibezcore_wordmark.png` (schermkoppen, vervangt platte tekst) en
   `vibezcore_icon.png` (app-icoon). Zitten in de projectkennis.
-- **Look & feel:** dark, hoog contrast, witte tekst, strak, royale spacing,
-  blauw spaarzaam als accent, grote vette koppen (Inter 800/900).
+- **Look & feel:** dark (default), hoog contrast, witte tekst, strak, royale
+  spacing, grote vette koppen (Inter 800/900). Tekst wordt niet standaard
+  over foto's geplaatst (Content-Card-regel: tekst onder de foto, los op de
+  pagina-achtergrond) — een klein zacht label mag nog als subtiele scrim op
+  de foto.
 - Het MERK_ANKER gaat UITSLUITEND over uiterlijk. App-structuur, tab-indeling
   en schermteksten vallen daar buiten (operator-beslissing).
 

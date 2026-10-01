@@ -3,14 +3,33 @@
    kleuren als de vijf ademtoestanden:
 
      BOOST   amber  #F5A524      CLARITY  wit    #FFFFFF
-     FOCUS   blauw  #3E9BFF      REST     groen  #8FD94A
+     FOCUS   blauw  #3E9BFF      REST     groen  #25D366
      CALM    violet #B478FF
 
    Dit VERVANGT de tabel in CLAUDE.md §5, die daar is bijgewerkt. De reden:
    het wordt één product. Wie in de app van een ademsessie naar een
    bracelet-sessie gaat ziet dezelfde toestand, en die hoort dan niet
    halverwege van kleur te wisselen.
-   ───────────────────────────────────────────────────────────────────── */
+
+   REST hier bijgewerkt (11 augustus 2026, operator: "check ook de kleuren
+   en namen van de state cards, ik dacht dat we die veranderd hadden") —
+   dit bestand liep achter op src/data/breath-states.ts, dat de REST-kleur
+   op 8 augustus al van #8FD94A naar het minder verzadigde #96CB56 had
+   verplaatst (te neon tegen zwart). CLAUDE.md §5 zegt expliciet:
+   breath-states.ts is de bron van waarheid, dit bestand volgt die — dat
+   was hier niet gebeurd.
+
+   REST nogmaals bijgewerkt (11 september 2026, operator: "nog steeds te
+   neonachtig, wat is een moderne groen") — #96CB56 bleef binnen dezelfde
+   limoenachtige geel-groene familie, enkel minder verzadigd. Toen een
+   overstap naar salie-/smaragdgroen (#5FA777).
+
+   REST nogmaals bijgewerkt (14 september 2026, operator: "te oudbollig")
+   — het salie was te gedempt/gebroken, las als khaki. Toen #20B486, een
+   helderder jade-smaragd.
+   REST wéér bijgewerkt (16 september 2026, operator: "het groen is echt
+   lelijk, gebruik het groen van WhatsApp") — nu #25D366, gelijk aan
+   breath-states.ts. */
 
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — BLE Contract (spec v2.3 §8)
@@ -29,8 +48,8 @@ export enum BraceletMode {
   Gamma = 0, // app name: Boost
   Beta = 1,  // app name: Sharp Focus
   Alpha = 2, // app name: Calm Control
-  Theta = 3, // app name: Clarity
-  Delta = 4, // app name: Rest & Reset
+  Theta = 3, // app name: Clarity & Relax
+  Delta = 4, // app name: Sleep
 }
 
 /* Command byte — spec §8.1 */
@@ -69,9 +88,15 @@ export interface ModeMeta {
   blurb: string;
   /** UI accent colour (tuned for #0a0a0a dark theme; fine-tune later) */
   color: string;
-  /** Session duration bounds — spec §11.2 (exact). default = min */
+  /** Session duration bounds — spec §11.2.
+     Operator, 16 september 2026: officiële hardware-spec-tabel
+     (Haptic_Bracelet_Spec_v2_3, PPS-waardes blijven firmware-only, spec
+     §11.5 — NOOIT in de UI tonen) verving de vorige "default = min"-
+     aanname. Default zit nu per modus expliciet in `defaultMinutes`,
+     niet meer altijd gelijk aan `minMinutes`. */
   minMinutes: number;
   maxMinutes: number;
+  defaultMinutes: number;
 }
 
 export const MODES: ModeMeta[] = [
@@ -85,7 +110,12 @@ export const MODES: ModeMeta[] = [
        outline, op cards als wit-fill-met-donker-text. */
     color: '#F5A524',
     minMinutes: 8,
-    maxMinutes: 15,
+    /* Operator, 16 september 2026 (research-onderbouwd voorstel,
+       bevestigd): 15→20. Powernap-onderzoek plaatst het optimale
+       venster op 20-30 min; 20 is het bewezen plafond voor Boost, hoger
+       heeft geen aantoonbare meerwaarde (en risico op sufheid). */
+    maxMinutes: 20,
+    defaultMinutes: 10,
   },
   {
     mode: BraceletMode.Beta,
@@ -93,7 +123,10 @@ export const MODES: ModeMeta[] = [
     blurb: 'Clear, active attention — work mode.',
     color: '#3E9BFF', // FOCUS-blauw, gelijk aan breathwork
     minMinutes: 15,
+    /* Operator, 16 september 2026: 20→30. Attentie-onderzoek gebruikt
+       vaak 20-30 min voor sustained-attention-effecten. */
     maxMinutes: 30,
+    defaultMinutes: 15,
   },
   {
     mode: BraceletMode.Alpha,
@@ -101,26 +134,33 @@ export const MODES: ModeMeta[] = [
     blurb: 'Relaxed but focused — flow.',
     color: '#B478FF', // CALM-violet, gelijk aan breathwork
     minMinutes: 15,
+    /* Operator, 16 september 2026: ongewijzigd bevestigd — relaxation-
+       onderzoek toont weinig extra meerwaarde voorbij 30 min. */
     maxMinutes: 30,
+    defaultMinutes: 20,
   },
   {
     mode: BraceletMode.Theta,
-    name: 'Clarity',
+    name: 'Clarity & Relax',
     blurb: 'Deep relaxation and letting go.',
     color: '#FFFFFF', // CLARITY-wit, gelijk aan breathwork
-    minMinutes: 15,
-    maxMinutes: 30,
+    minMinutes: 20,
+    /* Operator, 16 september 2026: 30→45. Meditatieve diepte bouwt
+       geleidelijker op, langere sessies zijn hier wél verdedigbaar. */
+    maxMinutes: 45,
+    defaultMinutes: 25,
   },
   {
     mode: BraceletMode.Delta,
-    name: 'Rest & Reset',
+    name: 'Sleep',
     blurb: 'Deep rest and the transition to sleep.',
-    /* Iter 8c: groen #30D158 → zachter #4FA46B (operator-feedback
-       "flashy, te fel"). Mossier/sage-tint, leest rustiger en past
-       beter bij de "rest & reset"-intentie. */
-    color: '#8FD94A', // REST-groen, gelijk aan breathwork
-    minMinutes: 25,
-    maxMinutes: 45,
+    color: '#25D366', // REST-groen (WhatsApp-groen), gelijk aan breathwork (breath-states.ts, 16 september 2026)
+    minMinutes: 30,
+    /* Operator, 16 september 2026: 45→50 (operator-keuze — NSDR-
+       onderzoek ondersteunt zelfs tot 60 min, maar 50 is een
+       batterij-bewustere tussenstap voor een overnight-sessie). */
+    maxMinutes: 50,
+    defaultMinutes: 30,
   },
 ];
 

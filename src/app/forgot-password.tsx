@@ -16,6 +16,11 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor CTA's. CTA-regel v4.4 op donker: witte knop-bg +
+   donkere tekst. */
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -26,9 +31,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
+
+/* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
+   voor de referentie-implementatie) — additief, geen layout/logica-
+   wijziging. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 /* Redirect-URL die in de email-link verschijnt. Supabase voegt zelf
    `&token_hash=...&type=recovery` toe.
 
@@ -57,6 +73,30 @@ export default function ForgotPassword() {
      niet onder iOS home-indicator of Android nav-bar valt. SafeAreaView
      dekte voorheen alleen top af; scroll-content had geen bottom-padding. */
   const insets = useSafeAreaInsets();
+
+  /* Press-scale-animatie — één losse shared value per tappable element
+     (zie breath-welcome.tsx `StartCard`). */
+  const backToSignInPressScale = useSharedValue(1);
+  const onBackToSignInPressIn = () => {
+    backToSignInPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onBackToSignInPressOut = () => {
+    backToSignInPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const backToSignInPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backToSignInPressScale.value }],
+  }));
+
+  const submitPressScale = useSharedValue(1);
+  const onSubmitPressIn = () => {
+    submitPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onSubmitPressOut = () => {
+    submitPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const submitPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: submitPressScale.value }],
+  }));
 
   const onSubmit = async () => {
     setErr(null);
@@ -150,7 +190,12 @@ export default function ForgotPassword() {
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
-          options={{ title: 'Forgot password', headerBackTitle: 'Back' }}
+          options={{
+            title: 'Forgot password',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
         />
         <View style={s.center}>
           <View style={s.checkCircle}>
@@ -162,13 +207,15 @@ export default function ForgotPassword() {
             way. The link opens directly in this app and is valid for
             1 hour.
           </Text>
-          <Pressable
-            style={s.btnSecondary}
+          <AnimatedPressable
+            style={[s.btnSecondary, backToSignInPressStyle]}
             onPress={() => router.replace('/account')}
+            onPressIn={onBackToSignInPressIn}
+            onPressOut={onBackToSignInPressOut}
             accessibilityLabel="Back to sign in"
           >
             <Text style={s.btnSecondaryText}>Back to sign in</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </SafeAreaView>
     );
@@ -177,7 +224,12 @@ export default function ForgotPassword() {
   return (
     <SafeAreaView style={s.root}>
       <Stack.Screen
-        options={{ title: 'Forgot password', headerBackTitle: 'Back' }}
+        options={{
+          title: 'Forgot password',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
       />
       <KeyboardAwareScrollView
         contentContainerStyle={[
@@ -211,9 +263,11 @@ export default function ForgotPassword() {
         />
         {err && <Text style={s.err}>{err}</Text>}
 
-        <Pressable
-          style={[s.btnPrimary, busy && s.btnDisabled]}
+        <AnimatedPressable
+          style={[s.btnPrimary, busy && s.btnDisabled, submitPressStyle]}
           onPress={onSubmit}
+          onPressIn={onSubmitPressIn}
+          onPressOut={onSubmitPressOut}
           disabled={busy}
           accessibilityLabel="Send reset link"
         >
@@ -222,7 +276,7 @@ export default function ForgotPassword() {
           ) : (
             <Text style={s.btnPrimaryText}>Send reset link</Text>
           )}
-        </Pressable>
+        </AnimatedPressable>
 
         <Text style={s.helpLine}>
           The reset link opens directly in this app.
@@ -284,7 +338,7 @@ const s = StyleSheet.create({
   },
   /* Iter v180 (2026-07-02): CTA breder + tekst-ademruimte (systemisch). */
   btnPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -292,7 +346,7 @@ const s = StyleSheet.create({
     marginTop: 18,
   },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

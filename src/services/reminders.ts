@@ -24,8 +24,18 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { pickStatesForDay, reasonForPick } from '@/utils/day-plan';
+import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
+import { dayKey } from '@/utils/bracelet-history';
+import type { ActivePlan } from '@/utils/plan-store';
+import { getModeMeta, type BraceletMode } from '@/services/ble-contract';
 
-export type ReminderSlot = 'morning' | 'midday' | 'evening';
+/* Operator, 11 september 2026: nieuw vierde moment "after work / on the
+   way home" — zie utils/day-plan.ts se `DAY_CANDIDATES` voor de volledige
+   toelichting. Bestaande `evening` (21:00, "Time to wind down") verandert
+   niet van betekenis of tijdstip — dat blijft het vlak-voor-slapen-moment;
+   `afterWork` is nieuw en zit er qua tijd vóór. */
+export type ReminderSlot = 'morning' | 'midday' | 'afterWork' | 'evening';
 
 /* Voor welke ACTIVITEIT een herinnering geldt (operator, 6 augustus 2026).
    Breathwork en bracelet zijn twee verschillende dingen om aan herinnerd te
@@ -33,8 +43,15 @@ export type ReminderSlot = 'morning' | 'midday' | 'evening';
    op één knop drukt. Ze delen dus geen schakelaar.
 
    De sleutel in Settings wordt `breath:evening` of `bracelet:morning`, zodat
-   beide onafhankelijk aan en uit kunnen. */
-export type ReminderKind = 'breath' | 'bracelet';
+   beide onafhankelijk aan en uit kunnen.
+
+   Operator, 29 september 2026 ("set daily plan... start dagelijks
+   automatisch"): `'bracelet-plan'` erbij — apart van het generieke
+   `'bracelet'` (dat opent enkel de Bracelet-tab). Een dagplan-melding kent
+   al de exacte modus + duur, dus die MOET rechtstreeks naar
+   `/bracelet-control` met die waarden vooraf ingevuld — geen eigen
+   ReminderSlot nodig, het is 1 vast tijdstip per dag, geen 4 momenten. */
+export type ReminderKind = 'breath' | 'bracelet' | 'bracelet-plan';
 
 export const reminderKey = (kind: ReminderKind, slot: ReminderSlot) =>
   `${kind}:${slot}`;
@@ -54,7 +71,8 @@ type SlotDef = {
 export const SLOT_RANGE: Record<ReminderSlot, [number, number]> = {
   morning: [5, 11],
   midday: [11, 17],
-  evening: [17, 23],
+  afterWork: [17, 20],
+  evening: [20, 23],
 };
 
 export const SLOTS: SlotDef[] = [
@@ -73,6 +91,14 @@ export const SLOTS: SlotDef[] = [
     when: '13:00',
     title: 'Your midday reset is ready',
     body: 'Come back to steady before the afternoon.',
+  },
+  {
+    slot: 'afterWork',
+    hour: 18,
+    label: 'After work',
+    when: '18:00',
+    title: 'On your way home',
+    body: 'A few minutes to leave the day behind you.',
   },
   {
     slot: 'evening',
@@ -113,6 +139,32 @@ async function cancel(kind: ReminderKind, slot: ReminderSlot): Promise<void> {
   }
 }
 
+/* Gedeeld tussen syncReminders() en syncPlanReminders() — beide plannen op
+   hetzelfde Android-kanaal, dus één plek die het aanmaakt. */
+async function ensureAndroidChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync('reminders', {
+      name: 'Reminders',
+      description: 'Your breathwork and bracelet moments.',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 40],
+      sound: null,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
+  } catch {}
+}
+
+/* "SLEEP" -> "Sleep" — de `eyebrow`-namen in breath-states.ts
+   zijn in hoofdletters voor op het sessiescherm, niet voor in een
+   meldingstitel. Korte woorden ("&") blijven ongemoeid. */
+function titleCase(s: string): string {
+  return s
+    .split(' ')
+    .map((w) => (w.length <= 2 ? w : w[0] + w.slice(1).toLowerCase()))
+    .join(' ');
+}
+
 /** Zet de geplande berichten gelijk aan wat er in Settings staat.
  *
  *  Werkt met de VOLLEDIGE lijst en niet met losse aan/uit-opdrachten: zo kan
@@ -122,6 +174,12 @@ export async function syncReminders(
   enabled: Record<string, boolean>,
   /** Minuten na middernacht per sleutel. */
   at: Record<string, number> = {},
+  /** Doelen van de gebruiker (operator, 13 augustus 2026: de melding-tekst
+   *  was vast, los van welke toestand het plan voor dat moment koos —
+   *  onderdeel van dezelfde klacht als de dode Breath-tab-suggestie). Leeg
+   *  = dezelfde generieke tekst als voorheen, dus bestaande aanroepers die
+   *  dit niet meegeven breken niet. */
+  goals: string[] = [],
 ): Promise<void> {
   const kinds: ReminderKind[] = ['breath', 'bracelet'];
   const wantsAny = kinds.some((k) =>
@@ -129,35 +187,38 @@ export async function syncReminders(
   );
   if (wantsAny && !(await ensurePermission())) return;
 
-  if (Platform.OS === 'android') {
-    try {
-      /* Een NIEUWE naam, want Android bevriest een kanaal zodra het bestaat:
-         wie de oude 'breath' had, hield voor altijd de oude instellingen
-         (operator, 7 augustus 2026 — "als mijn telefoon uitstaat, krijg ik
-         dan een bericht?"). Met DEFAULT stond er alleen een pictogram in de
-         balk: geen banner, geen scherm dat aangaat. Op een toestel dat in je
-         zak ligt, is dat hetzelfde als niets sturen.
+  /* Een NIEUWE kanaalnaam, want Android bevriest een kanaal zodra het
+     bestaat: wie de oude 'breath' had, hield voor altijd de oude
+     instellingen (operator, 7 augustus 2026). HIGH toont de melding over
+     het scherm en op het vergrendelscherm; geluid blijft uit. */
+  await ensureAndroidChannel();
 
-         HIGH toont hem wél over het scherm en op het vergrendelscherm. Geluid
-         blijft uit en de trilling is één korte tik: zichtbaar, niet luid. Een
-         herinnering om rustig te worden hoort niet met een schok binnen te
-         komen, maar hij hoort ook niet ongezien te blijven. */
-      await Notifications.setNotificationChannelAsync('reminders', {
-        name: 'Reminders',
-        description: 'Your breathwork and bracelet moments.',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 40],
-        sound: null,
-        lockscreenVisibility:
-          Notifications.AndroidNotificationVisibility.PUBLIC,
-      });
-    } catch {}
-  }
+  /* Dezelfde motor als /plan.tsx (utils/day-plan.ts) — ÉÉN keer voor alle
+     drie de sloten doorgerekend. Zo kan de meldingstekst nooit iets anders
+     beloven dan wat de gebruiker in de app zelf ziet staan.
+
+     Operator, 11 september 2026: "het gaat over heel systeem" — dit was
+     nog de oude slot-voor-slot `pickForSlot` + "niet gelijk aan vorige"-
+     regel (zelfde constructiefout als de protocol-generator, zie
+     utils/protocol.ts): bij twee doelen die op rang 1 gelijk staan
+     pingpongt dat tussen precies die twee toestanden i.p.v. de dag echt
+     te variëren. `pickStatesForDay` kiest de hele dag in één keer. */
+  const pickedFor = pickStatesForDay(
+    SLOTS.map((s) => s.slot),
+    goals,
+  ) as Record<ReminderSlot, BreathStateKey>;
 
   for (const k of kinds) {
    for (const s of SLOTS) {
     await cancel(k, s.slot);
     if (!enabled[reminderKey(k, s.slot)]) continue;
+    /* Doel-bewuste tekst voor breath, alleen als er ook echt een doel
+       gekozen is — zonder doel blijft de oorspronkelijke, generieke
+       toon staan (die was al goed voor "hier staat iets klaar", zonder
+       een reden te verzinnen die er niet is). */
+    const picked = pickedFor[s.slot];
+    const st = BREATH_STATES[picked];
+    const why = goals.length > 0 ? reasonForPick(picked, goals, s.label) : null;
     try {
       await Notifications.scheduleNotificationAsync({
         identifier: idFor(k, s.slot),
@@ -165,15 +226,27 @@ export async function syncReminders(
           /* De melding ÍS de vraag: tikken opent meteen de juiste sessie.
              Geen bevestiging in de app erna — wie niet wil, veegt hem weg, en
              dat is het antwoord "nee". */
-          title: k === 'breath' ? s.title : 'Your bracelet is ready',
+          title:
+            k === 'breath'
+              ? why
+                ? `Your ${titleCase(st.eyebrow)} session is ready`
+                : s.title
+              : 'Your bracelet is ready',
           body:
             k === 'breath'
-              ? s.body
+              ? why
+                ? `${why} — ${st.durations[st.defaultDuration].minutes} min.`
+                : s.body
               : 'One press. No screen, no sound, no effort.',
           /* Waar een tik naartoe moet. Zonder dit opent de app op het
              welkomstscherm en is er van de herinnering niets meer terug te
              vinden — precies de klacht van de operator (7 augustus 2026). */
-          data: { kind: k, slot: s.slot },
+          /* `state` erbij (operator, 13 augustus 2026: "de link naar de app
+             gaat maar naar verkeerde scherm en modus") — zonder dit wist een
+             tik alleen dat het om 'breath' ging, en opende de generieke tab
+             die op zijn eigen standaard landt (Calm Control), niet op de
+             toestand die de melding zelf net beloofde. */
+          data: { kind: k, slot: s.slot, state: k === 'breath' ? picked : undefined },
           ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
         trigger: {
@@ -196,6 +269,164 @@ export async function syncReminders(
   }
 }
 
+/* Operator, 17 september 2026 ("Bouw je dag" — meerdere sessies toegestaan
+   in hetzelfde dagdeel): dit was per SLOT geïdentificeerd
+   (`vzc-plan-${slot}-${n}`), wat werkte zolang elk dagdeel hoogstens één
+   item droeg. Zodra een dagdeel er twee kan hebben, overschrijft de tweede
+   `scheduleNotificationAsync` gewoon de eerste (Expo's `identifier` is een
+   unieke sleutel) — de eerste sessie in dat dagdeel verliest stilzwijgend
+   zijn melding. Nu per POSITIE in `today.items` i.p.v. per slot; een vaste
+   bovengrens (`MAX_PLAN_ITEMS`) i.p.v. de 4 vaste dagdelen om bij het
+   opruimen ook oudere, langere dagen volledig te annuleren. */
+export const MAX_PLAN_ITEMS = 8;
+const planIdFor = (index: number, n: 1 | 2) => `vzc-plan-${index}-${n}`;
+
+/** Herinneringen voor een ACTIEF protocol (operator, 13 augustus 2026,
+ *  protocol-systeem) — schedult per moment van VANDAAG's dag uit het plan
+ *  (de template herhaalt zich toch identiek elke dag, zie protocol.ts, dus
+ *  vandaag volstaat als bron voor de dagelijkse trigger-tijd). Gebruikt
+ *  dezelfde doel-bewuste titel/body-logica als syncReminders(), plus PRECIES
+ *  één extra, zachte melding 15 minuten later — geen derde, geen
+ *  streak-dreiging (zie de toon-regel bovenaan dit bestand). `null` = geen
+ *  actief protocol → alles opruimen. */
+export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> {
+  for (let i = 0; i < MAX_PLAN_ITEMS; i += 1) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(planIdFor(i, 1));
+      await Notifications.cancelScheduledNotificationAsync(planIdFor(i, 2));
+    } catch {}
+  }
+  if (!plan) return;
+
+  const today = plan.days[dayKey(new Date())];
+  if (!today || today.items.length === 0) return;
+  if (!(await ensurePermission())) return;
+  await ensureAndroidChannel();
+
+  for (const [index, it] of today.items.entries()) {
+    /* Bovengrens deelt de cancel-loop hierboven — een item erbuiten zou bij
+       de volgende sync nooit meer geannuleerd kunnen worden. */
+    if (index >= MAX_PLAN_ITEMS) break;
+    const st = BREATH_STATES[it.state];
+    const slotDef = SLOTS.find((s) => s.slot === it.slot);
+    const why = reasonForPick(it.state, plan.goals, slotDef?.label ?? it.slot);
+    const hour = Math.floor(it.reminderAt / 60) % 24;
+    const minute = it.reminderAt % 60;
+    const second = it.reminderAt + 15;
+    const hour2 = Math.floor(second / 60) % 24;
+    const minute2 = second % 60;
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        identifier: planIdFor(index, 1),
+        content: {
+          title: `Your ${titleCase(st.eyebrow)} session is ready`,
+          body: `${why} — ${it.minutes} min.`,
+          data: { kind: 'breath', slot: it.slot, state: it.state },
+          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+      });
+      await Notifications.scheduleNotificationAsync({
+        identifier: planIdFor(index, 2),
+        content: {
+          /* Zacht, geen schuldgevoel — meldt alleen dat het er nog staat. */
+          title: 'Still time for your session today',
+          body: `${titleCase(st.eyebrow)} — ${it.minutes} min, whenever you're ready.`,
+          data: { kind: 'breath', slot: it.slot, state: it.state },
+          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: hour2, minute: minute2 },
+      });
+    } catch {
+      /* Eén moment dat niet lukt mag de andere niet meeslepen. */
+    }
+  }
+}
+
+/* Operator, 29 september 2026 ("een echte pagina... horizon kunnen
+   kiezen... per dag individueel... zolang je wil laten doorlopen"): de
+   vorige, platte "1 dag vaste sessies"-opslag is vervangen door
+   `bracelet-plan-store.ts`'s `BraceletActivePlan` (horizon + per-dag
+   `items[]`, zelfde architectuur als breathwork's `plan-store.ts`). Deze
+   functie leest — net als `syncPlanReminders` hierboven — VANDAAG's
+   `BraceletPlanDay` uit dat plan (de template herhaalt zich toch
+   identiek elke dag tenzij de gebruiker een specifieke dag via
+   agenda.tsx afwijkend maakt, dus vandaag volstaat als bron voor de
+   dagelijkse trigger-tijd). */
+export const MAX_BRACELET_SESSIONS = 8;
+const braceletPlanIdFor = (index: number, n: 1 | 2) => `vzc-bracelet-plan-${index}-${n}`;
+
+/** Herinneringen voor het actieve bracelet-plan — zelfde patroon als
+ *  `syncPlanReminders` hierboven: per sessie van VANDAAG precies één
+ *  hoofdmelding + één zachte herinnering 15 minuten later, geen derde,
+ *  geen streak-dreiging (zie de toon-regel bovenaan dit bestand). `null`
+ *  = alles opruimen. */
+export async function syncBraceletPlanReminder(
+  plan: { days: Record<string, { dayKey: string; items: { mode: number; durationMinutes: number; reminderAt: number }[] }> } | null,
+): Promise<void> {
+  for (let i = 0; i < MAX_BRACELET_SESSIONS; i += 1) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 1));
+      await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 2));
+    } catch {}
+  }
+  const today = plan?.days[dayKey(new Date())];
+  if (!today || today.items.length === 0) return;
+  if (!(await ensurePermission())) return;
+  await ensureAndroidChannel();
+
+  for (const [index, item] of today.items.entries()) {
+    if (index >= MAX_BRACELET_SESSIONS) break;
+    const meta = getModeMeta(item.mode as BraceletMode);
+    const hour = Math.floor(item.reminderAt / 60) % 24;
+    const minute = item.reminderAt % 60;
+    const second = item.reminderAt + 15;
+    const hour2 = Math.floor(second / 60) % 24;
+    const minute2 = second % 60;
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        identifier: braceletPlanIdFor(index, 1),
+        content: {
+          /* De melding ÍS de vraag: tikken opent meteen /bracelet-control
+             met modus+duur al ingevuld, verbonden en klaar — 1 tik op
+             Resume i.p.v. een hele flow. Zie
+             `reminderRoute`/`reminderParams`. */
+          title: `Your ${meta.name} session is ready`,
+          body: 'One press. No screen, no sound, no effort.',
+          data: {
+            kind: 'bracelet-plan',
+            braceletMode: item.mode,
+            braceletDuration: item.durationMinutes,
+          },
+          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+      });
+      await Notifications.scheduleNotificationAsync({
+        identifier: braceletPlanIdFor(index, 2),
+        content: {
+          title: 'Still time for your bracelet session',
+          body: `${meta.name} — ${item.durationMinutes} min, whenever you're ready.`,
+          data: {
+            kind: 'bracelet-plan',
+            braceletMode: item.mode,
+            braceletDuration: item.durationMinutes,
+          },
+          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: hour2,
+          minute: minute2,
+        },
+      });
+    } catch {
+      /* Eén sessie die niet lukt mag de andere niet meeslepen. */
+    }
+  }
+}
 
 /* ── Wat er gebeurt als je op de melding tikt ──────────────────────────
    De melding IS de vraag; tikken hoort meteen op de juiste plek uit te komen.
@@ -207,21 +438,87 @@ export async function syncReminders(
    · de app stond UIT      → `tappedReminderOnLaunch` bij het opstarten
    · de app stond op de achtergrond → `onReminderTap`, live                */
 
-export type TappedReminder = { kind: ReminderKind; slot?: ReminderSlot };
+export type TappedReminder = {
+  kind: ReminderKind;
+  slot?: ReminderSlot;
+  /** De exacte toestand die de melding beloofde (operator, 13 augustus
+   *  2026: "de link gaat naar verkeerde scherm en modus"). Zonder dit
+   *  opende een tik alleen de generieke Breath-tab, die op zijn eigen
+   *  standaard landt — nooit per se de toestand uit de melding. */
+  state?: BreathStateKey;
+  /** Enkel bij `kind === 'bracelet-plan'` — de exacte modus/duur die de
+   *  melding beloofde, zie `syncBraceletPlanReminder`. */
+  braceletMode?: number;
+  braceletDuration?: number;
+};
 
-/* Waarheen per soort. Breathwork opent de vijf toestanden, al staand op wat
-   er voorgesteld wordt; de bracelet opent zijn eigen tab. */
+/* Waarheen per soort. Een breath-melding met een bekende toestand opent die
+   sessie RECHTSTREEKS (`/breath-session`); zonder toestand (oudere geplande
+   meldingen, of de generieke bracelet-melding) blijft het de tab zelf.
+   Een bracelet-DAGPLAN-melding (`'bracelet-plan'`) kent al modus + duur —
+   die gaat rechtstreeks naar `/bracelet-control`, net als breathwork naar
+   `/breath-session` gaat. */
 export const reminderRoute = (t: TappedReminder) =>
-  t.kind === 'bracelet' ? '/bracelet' : '/breath';
+  t.kind === 'bracelet-plan'
+    ? '/bracelet-control'
+    : t.kind === 'bracelet'
+      ? '/bracelet'
+      : t.state
+        ? '/breath-session'
+        : '/breath';
+
+/** Extra route-params voor `reminderRoute` — leeg tenzij er een specifieke
+ *  toestand bij hoort. `autostart:'1'` erbij (operator, 11 september 2026:
+ *  "check alles overal, de oude selectiepagina mag nooit meer
+ *  verschijnen") — deze tak geldt enkel wanneer `reminderRoute` naar
+ *  `/breath-session` wijst (zelfde `t.state`-voorwaarde), en die kent zijn
+ *  toestand al uit de melding, dus er valt niets te kiezen.
+ *  `plan:'1'` bij bracelet-plan triggert dezelfde auto-connect/auto-start/
+ *  auto-pauze-sequentie op bracelet-control.tsx als breathwork's
+ *  `breathwork=1` — zie de toelichting bij `autoStartBracelet` daar. */
+export const reminderParams = (t: TappedReminder): Record<string, string> =>
+  t.kind === 'breath' && t.state
+    ? { state: t.state, autostart: '1' }
+    : t.kind === 'bracelet-plan' && t.braceletMode !== undefined
+      ? {
+          mode: String(t.braceletMode),
+          plan: '1',
+          ...(t.braceletDuration !== undefined
+            ? { duration: String(t.braceletDuration) }
+            : {}),
+        }
+      : {};
 
 function fromResponse(
   r: Notifications.NotificationResponse | null,
 ): TappedReminder | null {
   const data = r?.notification.request.content.data as
-    | { kind?: string; slot?: ReminderSlot }
+    | {
+        kind?: string;
+        slot?: ReminderSlot;
+        state?: BreathStateKey;
+        braceletMode?: number;
+        braceletDuration?: number;
+      }
     | undefined;
+  /* 'bracelet-session' (bracelet-session-monitor.ts's lopende-status-
+     melding, apart kind zodat de notification-handler in _layout.tsx de
+     herhaalde tijd-updates kan onderscheiden van een echte reminder) tikt
+     hetzelfde weg als 'bracelet' — genormaliseerd hier zodat de rest van
+     dit bestand (reminderRoute/reminderParams/TappedReminder) er niets
+     extra's van hoeft te weten. */
+  if (data?.kind === 'bracelet-session') {
+    return { kind: 'bracelet', slot: data.slot, state: data.state };
+  }
+  if (data?.kind === 'bracelet-plan') {
+    return {
+      kind: 'bracelet-plan',
+      braceletMode: data.braceletMode,
+      braceletDuration: data.braceletDuration,
+    };
+  }
   if (data?.kind !== 'breath' && data?.kind !== 'bracelet') return null;
-  return { kind: data.kind, slot: data.slot };
+  return { kind: data.kind, slot: data.slot, state: data.state };
 }
 
 /** De melding waarmee de app zojuist geopend is, of `null`.

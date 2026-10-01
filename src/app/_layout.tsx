@@ -60,6 +60,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import {
   onReminderTap,
+  reminderParams,
   reminderRoute,
   syncReminders,
   tappedReminderOnLaunch,
@@ -165,6 +166,42 @@ async function hasPendingAuthDeepLink(): Promise<boolean> {
   }
 }
 
+/* Operator, 17 september 2026 ("op lockscreen zie ik nog altijd niets, dus
+   weet zelfs niet of het werkt"): root cause gevonden — expo-notifications
+   toont GEEN enkele melding terwijl de app in de voorgrond is tenzij er
+   ergens een `setNotificationHandler` geregistreerd staat (de eigen docs
+   van scheduleNotificationAsync waarschuwen hier expliciet voor: "this
+   does not mean the notification will be presented... you have to set a
+   notification handler"). Die stond NERGENS in deze codebase — ook de
+   bestaande bracelet/breath-reminders (reminders.ts) draaiden hier al op
+   goed geluk (werkten toevallig omdat hun DAILY-triggers meestal afgaan
+   terwijl de app dicht is, niet omdat dit correct geconfigureerd was).
+   Module-level, buiten de component — moet één keer bij app-start
+   geregistreerd zijn, niet pas na een render. shouldPlaySound false +
+   shouldSetBadge false: een lopende-status-melding (bracelet-sessie,
+   reminders) hoort niet te piepen of het app-icoon te badgen. */
+/* Operator, 17 september 2026 (vervolg — "ik krijg nu melding via dropdown
+   maar tijd klopt niet, moet op lockscreen kunnen volgen"): elke keer dat
+   bracelet-session-monitor.ts de melding herschrijft (om de tijd bij te
+   werken) triggerde dit dezelfde `shouldShowBanner: true` — dus elke
+   update liet de transiënte dropdown-banner opnieuw opduiken i.p.v. rustig
+   in de lockscreen/shade te blijven staan zoals gevraagd. `kind ===
+   'bracelet-session'` (alleen de lopende-status-updates, NIET de dagelijkse
+   bracelet/breath-reminders die wél een banner verdienen) onderdrukt de
+   banner maar laat 'm wel in de lijst/lockscreen staan (shouldShowList). */
+Notifications.setNotificationHandler({
+  handleNotification: async (notification) => {
+    const isBraceletSessionTicker =
+      notification.request.content.data?.kind === 'bracelet-session';
+    return {
+      shouldShowBanner: !isBraceletSessionTicker,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    };
+  },
+});
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -207,7 +244,7 @@ export default function RootLayout() {
     const off = onReminderTap((t) => {
       router.navigate({
         pathname: reminderRoute(t),
-        params: { from: 'reminder' },
+        params: { from: 'reminder', ...reminderParams(t) },
       } as never);
     });
     return () => {
@@ -277,7 +314,7 @@ export default function RootLayout() {
       await ensureSettingsLoaded();
       const on = getSetting('reminders');
       if (Object.values(on).some(Boolean)) {
-        await syncReminders(on, getSetting('reminderAt'));
+        await syncReminders(on, getSetting('reminderAt'), getSetting('goals'));
       }
       /* Het oude kanaal opruimen, anders staat er in de instellingen van het
          toestel een tweede regel die nergens meer bij hoort. */
@@ -352,7 +389,19 @@ export default function RootLayout() {
           } catch {
             return;
           }
-          refreshSubscription();
+          /* Operator, 26 september 2026 ("nog steeds zwart scherm, ook na
+             de notify()/notifyAll()-fixes"): RevenueCat's SDK kan deze
+             listener bij `addCustomerInfoUpdateListener` DIRECT met de
+             gecachete customer-info aanroepen — de `await getToken()`
+             hierboven schuift dat maar één microtask op, niet één macrotask.
+             Een microtask kan nog steeds midden in React's huidige commit-
+             cyclus vallen (Scheduler gebruikt macrotasks, maar await/Promise
+             callbacks lopen als microtask ná de huidige sync stack maar vóór
+             de volgende macrotask — dus nog steeds potentieel midden-commit).
+             `refreshSubscription()` triggert notifyAll() → subscriber-
+             setStates. setTimeout(...,0) hier garandeert een echte macrotask-
+             grens, exact zoals notify()/notifyAll() elders al doen. */
+          setTimeout(() => { refreshSubscription(); }, 0);
         };
         Purchases.addCustomerInfoUpdateListener(handler);
         removeListener = () => {
@@ -379,7 +428,10 @@ export default function RootLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        refreshSubscription();
+        /* Zelfde macrotask-defer als de RevenueCat-listener hierboven —
+           AppState's 'change'-event is ook een echte native-bridge-callback
+           die op elk moment, midden in een React-commit, kan vallen. */
+        setTimeout(() => { refreshSubscription(); }, 0);
         /* Iter v230 (2026-07-08, audit BUG 6/8): retry pending RC-link
            bij foreground. Als linkRevenueCatUser eerder faalde (offline,
            SDK not ready) zit RC nog op $RCAnonymousID → volgende purchase
@@ -479,7 +531,7 @@ export default function RootLayout() {
     if (tapped) {
       router.replace({
         pathname: reminderRoute(tapped),
-        params: { from: 'reminder' },
+        params: { from: 'reminder', ...reminderParams(tapped) },
       } as never);
     } else if (showWelcome) {
       router.replace('/welcome');
@@ -587,34 +639,34 @@ export default function RootLayout() {
       >
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="bracelet-control"
-          options={{ title: 'Bracelet', headerBackTitle: 'Back' }}
-        />
+        {/* bracelet-control.tsx zet zelf overal headerShown:false (eigen
+           BraceletHeader) — title/headerBackTitle hier zijn dus nooit
+           zichtbaar geweest, opgeruimd. */}
+        <Stack.Screen name="bracelet-control" options={{ title: 'Bracelet' }} />
         {/* Iter v149 v3 (2026-06-25): preview-screen voor uitgelogde
             users die de 5 bracelet-states willen verkennen zonder eerst
             een account te hoeven aanmaken. */}
         <Stack.Screen
           name="bracelet-preview"
-          options={{ title: 'Preview', headerBackTitle: 'Back' }}
+          options={{ title: 'Preview' }}
         />
         {/* `bracelet-history` — sub-screen voor sessie-overzicht. Push
             vanaf bracelet-control idle (history-knop). */}
         <Stack.Screen
           name="bracelet-history"
-          options={{ title: 'Session history', headerBackTitle: 'Back' }}
+          options={{ title: 'Session history' }}
         />
         {/* `breath-history` — full-page Your Practice met stats + lijst.
             Push vanaf Breath-tab "Your Practice" link. */}
         <Stack.Screen
           name="breath-history"
-          options={{ title: 'Your Practice', headerBackTitle: 'Back' }}
+          options={{ title: 'Your Practice' }}
         />
         {/* `support` — in-app contact-form (vervangt externe support-URL).
             Push vanaf Account → Support of legal-docs Contact-CTA. */}
         <Stack.Screen
           name="support"
-          options={{ title: 'Support', headerBackTitle: 'Back' }}
+          options={{ title: 'Support' }}
         />
         <Stack.Screen
           name="player"
@@ -625,7 +677,7 @@ export default function RootLayout() {
             account-create-form (of skip als ingelogd) → IAP-popup. */}
         <Stack.Screen
           name="subscribe"
-          options={{ title: 'Subscribe', headerBackTitle: 'Back' }}
+          options={{ title: 'Subscribe' }}
         />
         {/* `activate-bracelet` — activation-code redemption (iter 9dq v87).
             Gepusht vanaf Account-tab CTA voor ingelogde users zonder
@@ -633,13 +685,13 @@ export default function RootLayout() {
             nog te bouwen — dev draait op mock-success. */}
         <Stack.Screen
           name="activate-bracelet"
-          options={{ title: 'Activate your bracelet', headerBackTitle: 'Back' }}
+          options={{ title: 'Activate your bracelet' }}
         />
         {/* `settings` — sub-screen pushed from Account-tab. Toont Playback /
            Privacy / About-secties die de webapp ook heeft. */}
         <Stack.Screen
           name="settings"
-          options={{ title: 'Settings', headerBackTitle: 'Account' }}
+          options={{ title: 'Settings' }}
         />
         {/* ── Auth flow schermen (operator-keuze 2026-05-27: webapp wordt
             uitgefaseerd, alles in native). ──
@@ -652,11 +704,11 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="forgot-password"
-          options={{ title: 'Forgot password', headerBackTitle: 'Back' }}
+          options={{ title: 'Forgot password' }}
         />
         <Stack.Screen
           name="reset-password"
-          options={{ title: 'Reset password', headerBackTitle: 'Back' }}
+          options={{ title: 'Reset password' }}
         />
         {/* `change-password` — voor ingelogde users die hun bekende
             password willen wijzigen. Anders dan /reset-password
@@ -664,14 +716,14 @@ export default function RootLayout() {
             → "Change password" row. */}
         <Stack.Screen
           name="change-password"
-          options={{ title: 'Change password', headerBackTitle: 'Account' }}
+          options={{ title: 'Change password' }}
         />
         {/* `legal/[doc]` — dynamic route voor 5 legal/safety-docs
             (terms/privacy/refund/cookies/health). Inhoud in
             `src/data/legal-content.ts`. */}
         <Stack.Screen
           name="legal/[doc]"
-          options={{ headerBackTitle: 'Account' }}
+          options={{}}
         />
         {/* `faq` — Frequently Asked Questions, gesynced van
             vibezcore.com/faq. Content in `src/data/faq-content.ts`.
@@ -679,7 +731,7 @@ export default function RootLayout() {
             form ("Browse FAQ first" link bovenaan). */}
         <Stack.Screen
           name="faq"
-          options={{ title: 'FAQ', headerBackTitle: 'Back' }}
+          options={{ title: 'FAQ' }}
         />
         {/* `about` — Brand story screen, gesynced van vibezcore.com/
             about-vibezcore. 8 secties (origin, challenge, system,
@@ -688,7 +740,7 @@ export default function RootLayout() {
             niet via Legal renderer omdat visueel anders. */}
         <Stack.Screen
           name="about"
-          options={{ title: 'About', headerBackTitle: 'Back' }}
+          options={{ title: 'About' }}
         />
         {/* `coming` heeft géén handmatige Stack.Screen-registratie meer —
            expo-router 55 pikte 'm dubbel op (file-based routing + deze

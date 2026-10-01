@@ -23,17 +23,33 @@ import type { Session } from '@/data/audio-library-data';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
+/* Operator, 26 september 2026 ("weer zwart scherm, nu bij een andere
+   gratis sessie — kijk alle open-sessie-paden na"): de crash zat NIET in
+   de tier-gating (die werkt correct) maar in een generieke, scherm-
+   onafhankelijke race — `services/audio-player.ts`'s status-listener
+   stuurt 4×/seconde een synchrone state-update. Valt zo'n tick precies
+   samen met de commit van de navigatie naar `/player`, dan geeft
+   Reanimated/Fabric een scheduler-reëntrantiecrash ("Should not already
+   be working") — dit heeft NIETS te maken met welke sessie of welk
+   scherm, dus elke eerdere per-scherm workaround (enkel in het
+   pijlerscherm) miste alle andere aanroepers. Fix hier, op de ENE
+   centrale plek die alle open-paden delen (gated én ongated), met de
+   zelfde bekende, al elders in deze codebase gedocumenteerde oplossing:
+   de navigatie één tick uitstellen (`setTimeout(...,0)`) zodat React
+   eerst het huidige scherm afrondt vóór `/player` begint te mounten. */
 export function openSession(sess: Session) {
-  router.push({
-    pathname: '/player',
-    params: {
-      title: sess.title,
-      series: sess.series,
-      url: sess.url,
-      free: sess.free ? 'true' : 'false',
-      desc: sess.desc,
-    },
-  });
+  setTimeout(() => {
+    router.push({
+      pathname: '/player',
+      params: {
+        title: sess.title,
+        series: sess.series,
+        url: sess.url,
+        free: sess.free ? 'true' : 'false',
+        desc: sess.desc,
+      },
+    });
+  }, 0);
 }
 
 /** React-hook variant met tier-gating. Roep aan in een component, gebruik
@@ -50,7 +66,7 @@ export function openSession(sess: Session) {
  *  scroll) komen automatisch door wanneer de subscribed component
  *  re-rendert. */
 export function useGatedOpenSession() {
-  const { isPro } = useSubscription();
+  const { isPro, isTrialing } = useSubscription();
   const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
 
   useEffect(() => {
@@ -66,7 +82,7 @@ export function useGatedOpenSession() {
 
   return useCallback(
     (session: Session) => {
-      const access = resolveAccess(session, isSignedIn, isPro);
+      const access = resolveAccess(session, isSignedIn, isPro, isTrialing);
       if (access === 'allowed') {
         openSession(session);
       } else if (access === 'needs-account') {
@@ -85,7 +101,7 @@ export function useGatedOpenSession() {
         openSession(session);
       }
     },
-    [isSignedIn, isPro],
+    [isSignedIn, isPro, isTrialing],
   );
 }
 

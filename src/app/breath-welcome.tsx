@@ -31,16 +31,18 @@
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
-import BreathMandala from '@/components/BreathMandala';
 import GradientText, {
   SUB_COLORS,
   SUB_POSITIONS,
 } from '@/components/GradientText';
-import MandalaBackdrop from '@/components/MandalaBackdrop';
-import PodPulse from '@/components/PodPulse';
-import SelectionGlow from '@/components/SelectionGlow';
+import {
+  claimFreeSessionParam,
+  skipBreathIntroOnce,
+  skipBreathOnboardingRedirectOnce,
+} from '@/utils/breath-entry';
 import {
   GUIDANCE_MODES,
+  ModeGlyph,
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
 import {
@@ -53,42 +55,55 @@ import {
   vec,
 } from '@shopify/react-native-skia';
 import HapticOrb, { BREATH_CYCLE_MS } from '@/components/HapticOrb';
-import SplatField from '@/components/SplatField';
-import { mandalaCloud } from '@/components/mandala-geometry';
-import { assetUri } from '@/services/asset-cache';
-import { FACES_URL } from '@/services/offline-assets';
-import Starfield from '@/components/Starfield';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { useAssetUri } from '@/services/asset-cache';
+import {
+  BREATH_ONBOARDING_BRACELET_TEASER_IMG,
+  FACES_URL,
+} from '@/services/offline-assets';
+import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
   playBreathCue,
   preloadBreathCues,
   setVoiceEnabled,
+  setVoiceGenderOverride,
 } from '@/services/breath-voice';
-import { setSetting } from '@/utils/settings';
+import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
+import { GOALS, MAX_GOALS, type Goal } from '@/data/goals';
+import { bestSlotsForCount, pickStatesForDay, reasonForPick, slotForHour } from '@/utils/day-plan';
+import { getSetting, setSetting, type ExperienceLevel } from '@/utils/settings';
+import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
+import { SLOTS } from '@/services/reminders';
+import { INTENSITY_SESSION_COUNT, RECOMMENDED_INTENSITY } from '@/utils/protocol';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import {
-  AudioWaveform,
-  ChevronRight,
-  Clock,
-  Gem,
-  Headphones,
-  Leaf,
+  router,
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
+import {
+  Check,
+  ChevronLeft,
+  Info,
   Moon,
-  Repeat,
+  MoonStar,
   Rss,
-  SlidersHorizontal,
-  Smartphone,
   Sparkles,
+  Target,
   Volume2,
-  Watch,
+  Waves,
+  Zap,
 } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   Dimensions,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -97,16 +112,25 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedReaction,
+  interpolate,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -121,12 +145,6 @@ const HERO = Math.min(SCREEN_W * 0.7, 310);
    onderwerp — hij mag kleiner zonder iets te verliezen, en dat scheelt op
    ELK scherm dat een titleBlock heeft (vier van de zes). */
 const HEADER_MANDALA = Math.min(SCREEN_W * 0.34, 150);
-/* De mandala op het slotscherm. Kleiner dan op scherm 1, want daar is ze
-   het onderwerp en hier een voorproefje. */
-const START_ORB = Math.min(SCREEN_W * 0.52, 230);
-/* De bracelet mag buiten de tekstmarge treden — het product is hier het
-   onderwerp en formaat telt zwaarder dan uitlijning. */
-const BRACELET_W = SCREEN_W + 40;
 /* Tekstbreedte binnen `slideArea` (paddingHorizontal 26). Skia-tekst
    centreert zichzelf niet, dus die breedte moet expliciet mee. */
 const CONTENT_W = SCREEN_W - 52;
@@ -145,28 +163,59 @@ const CONTENT_W = SCREEN_W - 52;
    en veilige zones bovenaan, de kop met subtitel, en onderaan de puntjes en
    de knop. Liever iets te ruim: een kaart die tien punten kleiner is valt
    niemand op, een kaart die half achter de knop zit wel. */
-const GRID_GAP = 6;
+/* Operator, 22 september 2026 ("kaarten mogen beetje kleiner zodat ze
+   meer ademruimte hebben"): de foto-tegels van 2026-07-31 wilden zo groot
+   mogelijk (geen eigen lucht nodig, de foto droeg alles) — nu het matglas-
+   kaarten met een icoon zijn (zie `ModeTile`), passen ruimere kieren en
+   een iets kleiner formaat beter bij de rest van de app. `TILE_SHRINK`
+   krimpt het berekende formaat, `GRID_GAP`/`ROW_GAP` gingen omhoog. */
+const TILE_SHRINK = 0.88;
+const GRID_GAP = 14;
 const RESERVED = 330;
 const TILE = Math.floor(
   Math.min(
     (SCREEN_W - 8 - GRID_GAP) / 2,
     (SCREEN_H - RESERVED - GRID_GAP) / 2,
-  ),
+  ) * TILE_SHRINK,
 );
 const GRID_W = TILE * 2 + GRID_GAP;
-/* Waar de gloed moet staan, in de coördinaten van het raster. */
-const GLOW_CELLS = [0, 1, 2, 3].map((i) => ({
-  x: i % 2 === 0 ? 0 : TILE + GRID_GAP,
-  y: i < 2 ? 0 : TILE + ROW_GAP,
-  w: TILE,
-  h: TILE,
-}));
-/* Bijna de volle tegelbreedte: de animatie IS de kaart, dus lucht eromheen
-   gaat ten koste van waar het om draait. */
-const TILE_HERO = TILE - 8;
-/* Verticale kier tussen de twee rijen. Wordt ook gebruikt om uit te rekenen
-   waar de gloed moet staan, dus één plek. */
-const ROW_GAP = 6;
+/* Verticale kier tussen de twee rijen. */
+const ROW_GAP = 14;
+
+/* Stap 3 (operator, 22 september 2026: "carrousel op stap 3 moet weg, we
+   bouwen dat op zoals in de build-breathwork-protocol"): verving de
+   horizontale kaarten-carrousel (één grote foto-kaart, doorbladerbaar) —
+   die verwarde ("waarom is dat zo moeilijk om te begrijpen") omdat het een
+   heel ander patroon was dan de rest van de app. Nu exact hetzelfde
+   bento-grid als `goal.tsx`'s "Set your state" (de echte protocol-
+   opbouwpagina): 2 kolommen, matglas-tegels, icoon + naam, geselecteerd =
+   genummerde badge (1/2) + `Goal.gradient`. Enige verschil met goal.tsx:
+   ALLE 8 tegels dezelfde (compacte) maat i.p.v. 2 grote + 6 compacte — dit
+   scherm mag niet scrollen (harde regel, zie de `slideArea`-toelichting
+   verderop), en 8 gelijke tegels passen daar waar 2 grote tegels dat
+   budget al te veel zouden opeisen. */
+
+/* Nieuwe stap 4: drie liggende fotokaarten onder elkaar (operator, 6
+   september 2026, mockup: "New to breathwork") — RESERVED-logica zoals
+   hierboven, alleen door drie gedeeld i.p.v. één grote kaart. */
+const EXP_RESERVED = 420;
+const EXP_GAP = 14;
+const EXP_CARD_H = Math.floor((SCREEN_H - EXP_RESERVED - EXP_GAP * 2) / 3);
+
+/* Operator, 11 september 2026: nieuwe fotoset (3 losse beelden i.p.v. de
+   vorige 3 liggende kaarten) — "eerst 2 vierkanten, laatste (Experienced)
+   panoramisch eronder, zodat het een mooi blok vormt", vierkanten exact
+   even groot als stap 2's kaarten. Derde correctie: de vorige poging gaf
+   de rij een eigen `EXP_GAP` (14px) i.p.v. stap 2's `GRID_GAP` (6px) —
+   dat extra verschil, niet `TILE` zelf, duwde de rij buiten de veilige
+   zone. Door hier letterlijk `GRID_W`/`GRID_GAP` te hergebruiken (dezelfde
+   twee constanten als stap 2) past de rij vanzelf, zonder `TILE` te
+   moeten verkleinen. Panoramische kaart: zelfde breedte als de rij samen
+   (`GRID_W`) op `TILE`-hoogte — samen even groot als de 2 vierkanten
+   samen. */
+const EXP_SQUARE = TILE;
+const EXP_PANO_H = TILE;
+const EXP_BLOCK_W = GRID_W;
 
 /* De signatuur-puls: kort tikje, korte stilte, vollere tik. Twee tikken
    lezen als iets bedoelds; één tik leest als een notificatie. */
@@ -179,6 +228,13 @@ const SIGNATURE_PULSE = [0, 18, 62, 46];
    alle drie binnen de tijd dat iemand hier is. */
 const WORD_CYCLE_MS = 2800;
 
+/* Nieuwe stap 6 (operator, 7 september 2026, vijfde mockup): foto naar
+   rechts (58% van de schermbreedte), tekst links in wat overblijft, min
+   de standaard scherm-marge (26) en wat lucht voor de foto. */
+/* Operator, 7 september 2026: "foto nog steeds veel te klein, moet
+   dubbel zo groot" — tekstkolom nog een keer versmald. */
+const LIB_TEXT_W = SCREEN_W * 0.24 - 14;
+
 /* Eén maat voor alle koppen en één voor alle subkoppen. Stonden ze los per
    scherm, dan lopen ze bij elke wijziging weer uit elkaar — en dat gebeurde
    ook (operator 2026-07-31: "kop van pagina 2 lijkt groter dan de rest").
@@ -186,60 +242,106 @@ const WORD_CYCLE_MS = 2800;
    26 punten is de grootste maat waarop óók de langste kop, "SMART BEAD
    BRACELET", nog binnen de tekstbreedte past. Groter zou die regel
    automatisch laten krimpen, en dan is hij alsnog kleiner dan de rest. */
-const HEADER_SIZE = 26;
-const HEADER_TRACK = 3.2;
 const SUB_SIZE = 12;
 const SUB_TRACK = 2.2;
 
-/* Operator-geleverde modus-kaarten (2026-07-31). Dit zijn VOLLEDIGE kaarten:
-   foto, kader, label en omschrijving zitten er al in. Ze vervangen dus niet
-   de animatie binnen een tegel maar de tegel zelf — daarom staat er in het
-   raster geen apart label meer onder.
-
-   Alle vier vierkant sinds 2026-07-31, dus ze vullen hun tegel gelijk. Toch
-   `contain` en geen `cover`: mocht er ooit een beeld met een andere
-   verhouding tussen komen, dan wordt het geschaald i.p.v. bijgesneden — en
-   bijsnijden zou de omschrijving eraf halen. */
-const MODE_CARDS: Record<GuidanceMode, string> = {
-  voice: 'https://vibezcore-audio.b-cdn.net/images/voice%202.png',
-  haptic:
-    'https://vibezcore-audio.b-cdn.net/images/smartphone%20haptics.%202png.png',
-  both: 'https://vibezcore-audio.b-cdn.net/images/voice%20%2B%20haptics%201.png',
-  silent: 'https://vibezcore-audio.b-cdn.net/images/silent%20mode%204png.png',
+/* Operator, 22 september 2026 ("iconen moeten eigen transparante blur
+   kaarten hebben" → Apple HIG-onderbouwing, verticale lijst i.p.v. raster):
+   `MODE_CARDS`/`MODE_IMG_ZOOM` (de foto-tegels van 2026-07-31/11 september)
+   zijn weg — `ModeRow` toont nu `ModeGlyph` (`@/components/
+   GuidanceSelector`) + een korte omschrijving per modus in een
+   selecteerbare lijstrij. */
+const MODE_DESCRIPTIONS: Record<GuidanceMode, string> = {
+  voice: 'Guided cues, spoken aloud.',
+  haptic: 'Silent vibration guides your rhythm.',
+  both: 'Voice and vibration together.',
+  silent: 'Visual guidance only — no sound or vibration.',
+};
+/* Operator, 22 september 2026 (Apple HIG, "geen vinkjes maar een
+   'luister'-status"): vervangt de omschrijving TIJDELIJK terwijl een rij
+   speelt, zie `ModeRow`'s `playing`-tak. */
+const MODE_PLAYING_LABEL: Record<GuidanceMode, string> = {
+  voice: 'Listening…',
+  haptic: 'Feeling…',
+  both: 'Listening & feeling…',
+  silent: 'This is what silence feels like.',
 };
 
-/* Wat de bracelet is, in vijf regels (operator 2026-07-31). Elk met een
-   eigen teken, in dezelfde taal als de rest van de onboarding: klein,
-   gedempt, op één regel.
+/* Nieuwe stap 3, operator 6 september 2026: "What do you want to change?"
+   Operator, 22 september 2026 ("de iconen/kaarten die we voor breathwork
+   [protocol-opbouw] gebruikt hebben, de 8"): stond hier een aparte,
+   handmatige lijst van 5 kaarten (1:1 op de vijf ademtoestanden, niet op
+   de acht echte doelen) — dat was exact de bug die de toelichting bij
+   `toggleChangeGoal`/`dayPlanPicks` hieronder al beschrijft: deze stap
+   beloofde een doel-keuze maar bood er feitelijk maar 5 van de 8 aan, met
+   eigen titels die niet overal 1-op-1 matchten met `goalRank`'s echte
+   doelen. Nu rechtstreeks `GOALS` (`data/goals.ts`) — dezelfde 8 doelen,
+   dezelfde iconen/foto's, als de echte "Let VIBEZCORE build it"-pagina
+   (goal.tsx). `CHANGE_CARDS`/`goalKey`-omweg is weg; `Goal.key` IS al de
+   echte `GoalKey`. */
 
-   VIBEZCORE in hoofdletters — merkregel, overal en altijd. */
-const BRACELET_FEATURES = [
-  { key: 'wrist', Icon: Watch, text: 'Haptic guidance through your wrist' },
-  { key: 'stone', Icon: Gem, text: 'Premium natural stone design' },
-  { key: 'app', Icon: Smartphone, text: 'Powered by the VIBEZCORE app' },
+/* Nieuwe stap 4, operator 6 september 2026: "How experienced are you?"
+   Operator, 22 september 2026 ("ervaring is wel belangrijk, wij gaan op
+   basis daarvan een protocol samenstellen — moeten wij dit aanpakken
+   zoals in breathwork Let VIBEZCORE build...?"): stond hier op eigen,
+   losstaande sleutels ('new'/'some'/'regular') in een eigen `profile.
+   experience`-instelling — precies dezelfde soort bug als stap 3 had:
+   deze vraag BELOOFDE mee te wegen in het protocol, maar `profile.
+   experience` werd nergens door `protocol.ts` gelezen. Het echte
+   protocol-systeem (intensity.tsx, "Set your routine" → Level) gebruikt
+   `ExperienceLevel` ('beginner'/'intermediate'/'advanced', settings.ts)
+   — nu dezelfde sleutels/instelling, dus deze keuze weegt eindelijk ook
+   echt mee in `RECOMMENDED_INTENSITY`/`protocol.ts`, niet enkel in de
+   eigen duur-logica hieronder. Labels blijven de eigen, vriendelijkere
+   kaart-teksten (intensity.tsx's "Beginner"/"Intermediate"/"Advanced"
+   passen goed op een formele lijst-rij, minder natuurlijk op een grote
+   fotokaart) — enkel de SLEUTELS en de opslagplek zijn nu gelijk. */
+/* Operator, 22 september 2026 ("New · Familiar · Experienced, moet
+   transparante blur zwarte kaarten zijn zoals overal"): labels
+   ingekort (was "New to breathwork"/"Some experience") en de kaarten
+   zelf zijn geen fotokaarten meer — dus `trimTop`/`panDown` (foto-crop-
+   sturing) zijn weg, die golden enkel voor de oude fotoset.
+   Operator, 22 september 2026 (vervolg, "cirkel die 1/3 volloopt met
+   wave-animatie, Familiar half vol, Experienced helemaal vol maar
+   golfbeweging nog duidelijk"): `fill` = het waterpeil per niveau voor
+   `ExperienceWaveFill` — 1/3, 1/2, en NIET letterlijk 1 (dat verstopt de
+   golfkam tegen de rand, "golfbeweging nog duidelijk" vraagt om een
+   randje lucht erboven). */
+const EXPERIENCE_OPTIONS: {
+  key: ExperienceLevel;
+  label: string;
+  hint: string;
+  fill: number;
+}[] = [
   {
-    key: 'personal',
-    Icon: SlidersHorizontal,
-    text: 'Personalized haptic experiences',
+    key: 'beginner',
+    label: 'New',
+    /* Operator, 22 september 2026 ("subtekst moet korter, mag niet
+       afgekapt"): was volledige zinnen ("I'm just getting started.") —
+       nu korte labels, zelfde stijl als Apple's eigen voorbeeld
+       ("1-3 minutes"), geen ellipsis-risico meer op de smalle kaarten. */
+    hint: 'Just getting started',
+    /* Operator, 23 september 2026 ("water van New mag iets lager" →
+       "nog minder"): 1/3 → 0.22 → 0.14. */
+    fill: 0.14,
   },
-  { key: 'wear', Icon: Clock, text: 'Comfortable all-day wear' },
-  { key: 'core', Icon: Sparkles, text: 'Neuroscience based haptic core' },
-  { key: 'beads', Icon: Repeat, text: 'Interchangeable bead bracelet' },
-] as const;
-
-/* Draagfoto voor scherm 4 (operator 2026-07-31). Staand beeld van 2:3, en
-   dat past niet als geheel — op volle breedte zou het anderhalf keer de
-   schermhoogte innemen. Het wordt daarom bijgesneden tot een brede band.
-
-   Dat kan hier omdat de pols precies op halve hoogte zit: een gecentreerde
-   uitsnede laat de bracelet in beeld en snijdt alleen lucht boven en pols
-   onder weg. Dat is ook waar de foto over gaat — hem dragen terwijl je iets
-   anders doet. */
-/* 176 -> 132 (operator, 10 augustus 2026: "blokken naar boven"). De pols-
-   foto was na de mandala de grootste losse post op dit scherm. */
-const WEAR_H = 132;
-const WEAR_IMG =
-  'https://vibezcore-audio.b-cdn.net/images/bracelet%20new%20correct.png';
+  {
+    key: 'intermediate',
+    label: 'Familiar',
+    hint: 'Tried it before',
+    fill: 1 / 2,
+  },
+  {
+    key: 'advanced',
+    label: 'Experienced',
+    hint: 'Practice regularly',
+    /* Operator, 22 september 2026 ("beetje ruimte boven zodat
+       golfbeweging duidelijk is"): 0.92→0.8 — bij bijna vol was er te
+       weinig lucht boven de waterlijn voor de golfkam (amp 4-5) om nog
+       zichtbaar op en neer te lopen. */
+    fill: 0.8,
+  },
+];
 
 /* De twee gezichten, in TWEE versies — en dat is geen slordigheid.
    AFTASTEN gebeurt op de originele foto: die heeft ruim twee keer zoveel
@@ -248,8 +350,13 @@ const WEAR_IMG =
    TONEN gebeurt op de uitgeknipte versie. De originele draagt een eigen
    zwart vlak dat net niet het zwart van de app is, en dat zie je als een
    rechthoek zodra hij opkomt — een blok op het scherm in plaats van een
-   gezicht dat verschijnt. Zonder achtergrond is er geen rand om te verraden. */
-const FACES = assetUri(FACES_URL);
+   gezicht dat verschijnt. Zonder achtergrond is er geen rand om te verraden.
+
+   `FACES` zelf is GEEN module-constante meer (operator, 13 augustus 2026,
+   "foto lijkt niet correct te laden" — de structurele oorzaak van de
+   zwarte-scherm-klacht): `useAssetUri(FACES_URL)` wordt binnen `SlideIntro`
+   zelf aangeroepen, zodat het scherm her-rendert zodra het bestand lokaal
+   staat i.p.v. voor altijd aan de trage remote-URL vast te zitten. */
 const FACES_CUTOUT =
   'https://vibezcore-audio.b-cdn.net/images/faces-removebg-preview.png';
 
@@ -282,39 +389,347 @@ const FACES_CUTOUT =
 const LOOK_MS = 1000;
 const RISE_MS = 3500;
 
-/* Operator-geleverd productbeeld (transparante achtergrond). */
-const BRACELET_IMG =
-  'https://vibezcore-audio.b-cdn.net/images/Shattudkite_vzc_fiv%20no%20bg.png';
+/* Operator, 6 september 2026: lichte achtergrondfoto voor stap 1 van de
+   onboarding (WELCOME + mandala) — zelfde beeld als op de Breath-tab zelf
+   (zie (tabs)/breath.tsx INTRO_BG_IMG), hier los gedefinieerd om geen
+   circulaire import te maken (breath.tsx importeert SlideIntro van hier).
+   Operator, 22 september 2026 ("gebruik deze foto ook voor step 1 bij
+   onboarding, vervang de andere"): was uit de pas gelopen met
+   (tabs)/breath.tsx se eigen `INTRO_BG_IMG` (`pic step 1 app.png` hier vs.
+   `pic hero breathwork welcome 3.png` daar) ondanks de "zelfde beeld"-
+   belofte hierboven — nu weer letterlijk dezelfde URL. */
+const INTRO_BG_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20breathwork%20welcome%203.png';
+
+/* Kaart onder de 4 gidsmodi op stap 2 ("bracelet mag deze achtergrond
+   behouden"): eigen Apple-stijl productfoto.
+   Operator, 22 september 2026 ("waar is de bracelet in step 2? die mocht
+   niet weg, zet dat exact terug zoals het was"): per ongeluk mee verwijderd
+   tijdens het opruimen van de bracelet-PAGINA (stap 5) — dat was een
+   andere, losse vraag. Deze teaserkaart + infopopup op stap 2 zijn terug. */
+const BRACELET_TEASER_IMG = BREATH_ONBOARDING_BRACELET_TEASER_IMG;
 
 /* Icoonrij onder de kop. Drie kanalen, geen overlap, past op één regel.
    Eerder stond hier TOUCH · SILENT · PRECISE · HANDS-FREE — dat brak over
    twee regels en mengde categorieën: TOUCH en HANDS-FREE zeiden hetzelfde,
    PRECISE was een kwaliteitsclaim i.p.v. een manier van begeleiden. Deze
    drie zijn wél de kanalen die je op scherm 2 kunt kiezen. */
+/* Subtekst per icoon (operator, 6 september 2026, light-mockup) — alleen
+   gebruikt in lichte stand; de donkere, compacte rij blijft tekstloos. */
 const TRAITS = [
-  { key: 'voice', label: 'VOICE', Icon: Volume2 },
+  { key: 'voice', label: 'VOICE', sub: 'Guidance that grounds', Icon: Volume2 },
   /* Zelfde teken als op de kaarten van scherm 2: een punt met golven die
      eruit lopen (operator 2026-07-31). Het trillende-telefoontje dat hier
      stond zei iets anders — dat toont het apparaat, dit toont wat je voelt. */
-  { key: 'haptics', label: 'HAPTICS', Icon: Rss },
-  { key: 'silent', label: 'SILENT', Icon: Moon },
+  { key: 'haptics', label: 'HAPTICS', sub: 'Feel the shift', Icon: Rss },
+  { key: 'silent', label: 'SILENT', sub: 'Your moment anywhere', Icon: Moon },
 ] as const;
 
 export default function BreathWelcomeScreen() {
   const sub = useSubscription();
   const isPro = sub.isPro || sub.hasBracelet;
 
-  /* Zes stappen, niet vijf (operator, 9 augustus 2026): de bibliotheek
-     krijgt een EIGEN scherm — geen bijzin meer op het slotscherm — met de
-     echte hero-foto van de bibliotheek zelf. */
-  const TOTAL = 6;
-  const [slide, setSlide] = useState(0);
+  /* Zeven stappen, niet acht (operator, 7 september 2026): Bracelet-intro
+     en "How it works" zijn samengevoegd tot ÉÉN lichte pagina (mockup) —
+     dat scheelt weer een stap t.o.v. de vorige telling. De bibliotheek
+     behoudt daarnaast haar EIGEN scherm (operator, 9 augustus 2026), geen
+     bijzin op het slotscherm. */
+  /* Operator, 22 september 2026 ("de hele pagina moet gewoon weg"): stap
+     5 ("Smart bead bracelet") is uit de flow — 7→6 stappen. Alle
+     `resumeStep`-links (agenda.tsx, plan.tsx, plan-summary.tsx,
+     intensity.tsx, plan-review.tsx) wezen naar index 6 (het toenmalige
+     slotscherm), toen 5 (na het schrappen van de bracelet-stap); die zijn
+     nu meeverhuisd naar 4, de nieuwe index van hetzelfde slotscherm na
+     ALSO het schrappen van de Audio Library-stap ("audio library ook
+     helemaal weg, wel onthouden misschien voor andere pagina" — de
+     inhoud staat niet meer in dit bestand, enkel nog in de git-historie
+     van deze sessie). */
+  const TOTAL = 5;
+  /* Operator, 7 september 2026: "nu gaat alles naar step 1... alles moet
+     naar stap 7" — `router.navigate('/breath-welcome')` vanuit de
+     plan-keten bleek GEEN bestaande instantie te hergebruiken (die begon
+     gewoon opnieuw op slide 0), dus vertrouwen op stack-hergebruik was de
+     verkeerde aanname. Robuuste, expliciete oplossing: elke terugknop in
+     die keten geeft nu `?resumeStep=4` mee, en een verse (of hergebruikte)
+     instantie start dan altijd meteen op die stap — geen giswerk meer over
+     wat React Navigation intern wel/niet hergebruikt. */
+  const { resumeStep } = useLocalSearchParams<{ resumeStep?: string }>();
+  const [slide, setSlide] = useState(() => {
+    const n = Number(resumeStep);
+    return Number.isInteger(n) && n >= 0 && n < TOTAL ? n : 0;
+  });
   const isLast = slide === TOTAL - 1;
 
   /* Scherm 2 — gekozen modus. Standaard geen enkele actief, zodat de
      knoppen puur informatief ogen tot de gebruiker kiest. */
   const [demoMode, setDemoMode] = useState<GuidanceMode | null>(null);
-  const [braceletNote, setBraceletNote] = useState(false);
+  /* Operator, 11 september 2026: "wanneer gebruiker uit die pagina gaat
+     moet alles terug ongeselecteerd staan" — dit scherm is ÉÉN component
+     voor alle 7 stappen (enkel `slide` wisselt), dus `demoMode` overleefde
+     tot nu toe een bezoek aan andere stappen. Zodra de gebruiker van stap
+     2 (index 1) weg navigeert, reset de selectie meteen — dus staat ze al
+     leeg klaar tegen de tijd dat iemand terugkeert. */
+  useEffect(() => {
+    if (slide !== 1) setDemoMode(null);
+  }, [slide]);
+  /* Operator, 23 september 2026 ("recap-chip op stap 5 toont enkel
+     ervaring, niet de begeleiding"): `demoMode` is met opzet hierboven al
+     leeg tegen de tijd dat je stap 5 bereikt (voor de reset-op-stap-2-
+     verlaten-logica) — de recap-chip op het slotscherm heeft dus een
+     EIGEN, niet-resettende kopie nodig van dezelfde keuze, puur voor
+     weergave. */
+  const [chosenMode, setChosenMode] = useState<GuidanceMode | null>(null);
+
+  /* Scherm 3 — "wat wil je veranderen": tot twee doelen, zelfde opslag
+     (`goals`-setting) als de latere breath-quiz, dus deze keuze weegt
+     meteen mee in welke toestand de app overal voorstelt. Start vanuit
+     wat al opgeslagen staat, zodat terugbladeren de keuze niet wist. */
+  const [changeGoals, setChangeGoals] = useState<string[]>(() =>
+    getSetting('goals'),
+  );
+  const toggleChangeGoal = (goalKey: string) => {
+    Haptics.selectionAsync();
+    setChangeGoals((cur) => {
+      const next = cur.includes(goalKey)
+        ? cur.filter((g) => g !== goalKey)
+        : cur.length >= MAX_GOALS
+          ? [cur[1], goalKey]
+          : [...cur, goalKey];
+      setSetting('goals', next);
+      return next;
+    });
+  };
+
+  /* Scherm 4 — "hoe ervaren ben je": nu de ECHTE `experienceLevel`-
+     instelling (settings.ts) i.p.v. het losstaande `profile.experience`
+     — zie de toelichting bij `EXPERIENCE_OPTIONS`. Zelfde instelling die
+     intensity.tsx ("Set your routine" → Level) leest/schrijft, dus deze
+     keuze bepaalt nu ook echt de techniek/duur die `protocol.ts` kiest. */
+  const [experience, setExperience] = useState<ExperienceLevel | null>(
+    () => getSetting('experienceLevel'),
+  );
+  const pickExperience = (key: ExperienceLevel) => {
+    Haptics.selectionAsync();
+    setExperience(key);
+    setSetting('experienceLevel', key);
+  };
+  /* Operator, 22 september 2026 ("bij aankomst op stap 4 moet next niet
+     actief zijn, user moet altijd eerst opnieuw selectie maken"): zonder
+     dit bleef een eerder gekozen niveau (deze sessie, of zelfs een oude
+     opgeslagen `experienceLevel`) aangevinkt staan zodra je hier
+     terugkwam — de CTA was dan al meteen wit/actief, zonder dat er echt
+     iets bevestigd werd bij DIT bezoek. Reset enkel het lokale scherm-
+     antwoord bij het BETREDEN van stap 4 (niet bij elke render terwijl
+     je er al op staat, anders wist een tik op een kaart zichzelf weer
+     uit) — een nieuwe tik schrijft de instelling meteen opnieuw weg. */
+  useEffect(() => {
+    if (slide === 3) setExperience(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slide]);
+
+  /* Operator, 22 september 2026 ("veiligheid van gebruiker en ons"):
+     korte, niet-medische veiligheidsdisclaimer vlak vóór de eerste sessie
+     (stap 7) — GEEN opgeslagen antwoord (geen gezondheidsdata, geen
+     vertakking), enkel een bevestiging die de "Start"-knop vrijgeeft.
+     Puur lokale state, bewust niet in `settings` — dit hoeft nergens
+     buiten deze ene sessie te overleven. */
+  const [safetyAck, setSafetyAck] = useState(false);
+  /* Operator, 23 september 2026 ("bij teruggaan mag het niet aangevinkt
+     blijven staan, bezoeker moet telkens zelf aanvinken"): zelfde
+     reset-op-verlaten-patroon als `demoMode` hierboven — zodra de
+     gebruiker van stap 4 (index 3, de veiligheidsdisclaimer) weg
+     navigeert, reset meteen, dus staat het al leeg klaar bij een volgend
+     bezoek, ongeacht of dat via terug- of vooruitbladeren gaat. */
+  useEffect(() => {
+    if (slide !== 3) setSafetyAck(false);
+  }, [slide]);
+
+  /* Operator, 23 september 2026 ("als gebruiker op next klikt zonder
+     blokje aan te vinken moet het duidelijk zijn waarom het niet gaat"):
+     `disabled={ctaBlocked}` op een Pressable vuurt in React Native GEEN
+     enkele touch-event — een tik op de gedimde knop deed dus letterlijk
+     niets, geen feedback, niets. De knop blijft nu altijd tikbaar; bij een
+     tik terwijl `ctaBlocked` schudt de knop zelf (algemene "dit kan nog
+     niet"-feedback), en specifiek op stap 4 — wanneer enkel de
+     veiligheidsbevestiging nog ontbreekt — schudt ALSO het checkbox-rijtje
+     zelf, zodat je meteen ziet WAAR het aan ligt. */
+  const ctaShakeX = useSharedValue(0);
+  /* Operator, 23 september 2026 ("heb je de CTA's ook op zelfde manier
+     aangepast?"): zelfde druk-vering als de kaarten hierboven — press-in
+     zonder bounce, press-out MET de critically-damped spring. Gecombineerd
+     in DEZELFDE animated style als de bestaande shake (translateX), dat
+     scheelt een extra wrapper. */
+  const ctaPressScale = useSharedValue(1);
+  /* Operator ("kijk alle CTA's na"): de Start-CTA zelf had geen haptic-tik
+     — het `Haptics.selectionAsync()` verderop in dit bestand hoort bij
+     plan-KEUZE (een ander element), niet bij deze knop. Huisstijl §5
+     wil hier de standaard lichte tik op onPressIn + opacity(.85). */
+  const onCtaPressIn = () => {
+    ctaPressScale.value = withTiming(0.96, { duration: 80 });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+  const onCtaPressOut = () => {
+    ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const ctaShakeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: ctaShakeX.value },
+      { scale: ctaPressScale.value },
+    ],
+    opacity: 1 - (1 - ctaPressScale.value) * 3.75,
+  }));
+  const safetyShakeX = useSharedValue(0);
+  const shake = (sv: typeof ctaShakeX) => {
+    sv.value = withSequence(
+      withTiming(-8, { duration: 55 }),
+      withTiming(8, { duration: 55 }),
+      withTiming(-6, { duration: 55 }),
+      withTiming(6, { duration: 55 }),
+      withTiming(0, { duration: 55 }),
+    );
+  };
+  const onBlockedTap = () => {
+    Vibration.vibrate(20);
+    shake(ctaShakeX);
+    if (slide === 3 && experience !== null && !safetyAck) {
+      shake(safetyShakeX);
+    }
+  };
+
+  /* Scherm 7 — "your first session": vier rondes operator-feedback, 7
+     september 2026, die hier allemaal samenkomen:
+     1) "1 adem protocol lijkt mij niet correct... user moet zelf kiezen"
+        → meerdere kaarten, user selecteert er één.
+     2) "MORNING/EVENING... dat is nergens uitgelegd" → opgelost via de
+        subtekst hierboven ("Built around your goals"), niet door de
+        tijdstip-labels zelf weg te halen.
+     3) "boost op beide kaarten klopt niet — als er 1 statekaart gevraagd
+        is, moeten we dan geen 1 gepast protocol aanbieden?" → 1 gekozen
+        doel = 1 kaart, 2 doelen = 2 kaarten (ochtend + avond).
+     4) "de daily plan klopt nu niet met het ingestelde" — DIT was de bug:
+        tussenstap 3 gebruikte een losse, RECHTSTREEKSE koppeling
+        (CHANGE_CARDS) i.p.v. dezelfde `pickForSlot`/`goalRank`-motor die
+        plan.tsx gebruikt. Voor 2 van de 5 doelen (Stress→Calm, Mental
+        Clarity→Clarity) koos die directe koppeling een ANDERE toestand
+        dan `goalRank` voor datzelfde doel zou kiezen — twee schermen die
+        hetzelfde beloven maar iets anders tonen (exact het probleem dat
+        day-plan.ts's eigen openingscommentaar al noemde: "een plan dat
+        zichzelf tegenspreekt is geen plan").
+     Oplossing: terug naar `pickForSlot` — de ENIGE motor, ook hier. Bij 2
+     gekozen doelen tonen we de 2 ECHTE dagmomenten (ochtend/avond, exact
+     zoals plan.tsx). Bij 1 doel (of 0, bij overslaan stap 3) tonen we
+     enkel het moment van NU — 1 kaart, geen tweede verzonnen optie, maar
+     wel dezelfde `pickForSlot`-uitkomst die plan.tsx voor dat moment ook
+     zou tonen. */
+  const currentSlot = slotForHour(new Date().getHours());
+  /* Operator, 7 september 2026: "we hadden ook gezegd dat op de kaarten
+     geen morning of evening of welk moment ook zouden komen" — de
+     MOMENTEN blijven wel de motor achter de keuze (zie hierboven, voor
+     consistentie met plan.tsx), maar het label op de kaart zelf toont dat
+     tijdstip nooit. De toestand-naam (`cfg.eyebrow`, bv. "BOOST") maakt de
+     kaarten al van elkaar te onderscheiden. */
+  /* Operator, 22 september 2026 ("wij hebben een logica voor niveau
+     gekoppeld aan aantal sessies al uitgewerkt, toch?"): klopt — dat
+     bestond al via `RECOMMENDED_INTENSITY` (intensity.tsx) +
+     `INTENSITY_SESSION_COUNT` (protocol.ts), dezelfde beginner→2/
+     intermediate→3/advanced→4-keten die de echte Routine-aanbeveling
+     draagt. Hergebruikt i.p.v. een eigen dubbele tabel — enkel het
+     AANTAL kaarten/ring-items op dit slotscherm volgt hieruit, niet de
+     dagplan-generator zelf (die blijft ongemoeid, scope = onboarding-
+     preview). `SLOTS` (services/reminders.ts) heeft precies 4 vaste
+     dagmomenten, dus "advanced" (Complete) gebruikt ze alle 4.
+     `experience` staat op dit punt altijd vast (stap 4 blokkeert "Next"
+     tot een niveau gekozen is) — de `currentSlot`-fallback is enkel een
+     typesafe vangnet.
+
+     Operator, 22 september 2026, vervolg ("waarom stel jij 3x zelfde voor?
+     savonds kunnen we toch wel sleep voorstellen? er moet pure logica
+     zijn"): bug — een simpele `slice(0, N)` op de vaste dagorde
+     (morning/midday/afterWork/evening) pakt bij N=2/3 altijd de EERSTE
+     N momenten, en sluit "evening" (het enige moment waar Rest/Sleep
+     thuishoort, zie `DAY_CANDIDATES` in day-plan.ts) daardoor bijna
+     altijd uit — ongeacht het gekozen doel. `bestSlotsForCount` (ook
+     day-plan.ts, al de motor achter de echte protocol-generator,
+     protocol.ts) bestond al precies hiervoor: het kiest de N dagdelen die
+     het BESTE bij het gekozen doel passen (dus evening TELT mee zodra
+     een doel daar iets te zoeken heeft), i.p.v. altijd de eerste N in
+     vaste volgorde. */
+  const momentSlots: string[] = experience
+    ? bestSlotsForCount(
+        changeGoals,
+        INTENSITY_SESSION_COUNT[RECOMMENDED_INTENSITY[experience]],
+      )
+    : [currentSlot];
+
+  /* Operator, 11 september 2026: "het gaat over heel systeem" — was
+     slot-voor-slot met `prevPick` als enige variatieregel, zelfde
+     constructiefout als de protocol-generator (utils/protocol.ts). Nu via
+     `pickStatesForDay`, dezelfde motor als plan.tsx/breath-quiz.tsx. */
+  const dayPlanPicks = pickStatesForDay(momentSlots, changeGoals);
+  const dayPlan = momentSlots.map((slot) => {
+    const state = dayPlanPicks[slot];
+    const durations = BREATH_STATES[state].durations;
+    /* Zelfde ervaring-naar-duur-logica als voorheen (operator: "wat heeft
+       het voor zin om ervaring in te vullen als de duur toch altijd
+       hetzelfde is") — nu per kaart, niet enkel voor één toestand. */
+    const minutes =
+      experience === 'beginner'
+        ? durations[0].minutes
+        : experience === 'advanced'
+          ? durations[durations.length - 1].minutes
+          : (durations.find((d) => d.recommended) ??
+            durations[BREATH_STATES[state].defaultDuration] ??
+            durations[0]).minutes;
+    /* Operator, 22 september 2026 ("bouw super logisch": Recover & relax
+       naast een avond-Sleep-sessie zonder context leek verwarrend — enkel
+       met een gekozen doel is er iets om naar te verwijzen; zonder doel
+       (stap 3 overgeslagen) blijft de oude generieke tekst staan, geen
+       dagdeel-woord tonen (operator, 7 september 2026: nooit "morning"/
+       "evening" los op een kaart). */
+    const label =
+      changeGoals.length > 0
+        ? reasonForPick(state, changeGoals, slot).toUpperCase()
+        : 'RECOMMENDED FOR YOU';
+    return { slot, label, state, minutes };
+  });
+  /* Standaard alvast het moment van NU geselecteerd — de rest kies je zelf.
+     Blijft nodig zodat "Start your first session" altijd een concreet
+     plan-item heeft, ook als de gebruiker nooit zelf tikt. */
+  const [selectedPlanIdx, setSelectedPlanIdx] = useState(() =>
+    Math.max(
+      0,
+      dayPlan.findIndex((p) => p.slot === currentSlot),
+    ),
+  );
+  /* Operator, 24 september 2026 ("bij teruggaan van stap 5 moet binnenkant
+     ring terug leeg tot er weer getikt wordt"): puur visuele vlag, los van
+     `selectedPlanIdx` hierboven — die moet een zinnig default HOUDEN (voor
+     de CTA), maar de ring-MIDDEN-weergave hoort pas te verschijnen na een
+     ECHTE tik op DIT bezoek aan stap 5, niet automatisch vanaf het
+     standaard-item. Reset-op-betreden-patroon, zelfde als `experience`
+     hierboven (stap 4). */
+  const [planTapped, setPlanTapped] = useState(false);
+  useEffect(() => {
+    if (isLast) setPlanTapped(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLast]);
+  /* Operator, 23 september 2026 (Apple citeert: "selectionChanged-puls vóór
+     de animatie, dan pas krimpt de knop"): dezelfde `Haptics.selectionAsync`
+     die overal elders al bij keuzes hoort (agenda.tsx, breath.tsx's eigen
+     `StateThumb`, breath-quiz.tsx, ...) — hier ontbrak 'm nog. Guard tegen
+     opnieuw tikken op de AL geselecteerde kaart, anders trilt 'm zonder dat
+     er iets verandert. */
+  const onSelectPlan = useCallback((idx: number) => {
+    setPlanTapped(true);
+    setSelectedPlanIdx((prev) => {
+      if (prev === idx) return prev;
+      Haptics.selectionAsync();
+      return idx;
+    });
+  }, []);
+  const selectedPlan = dayPlan[selectedPlanIdx] ?? dayPlan[0];
+  const recommendedState = selectedPlan.state;
+  const recommendedMinutes = selectedPlan.minutes;
 
   /* De stemcues alvast inladen. Op dit scherm speelt één losse cue per tik,
      en een speler die het bestand nog niet heeft blijft stil — in een sessie
@@ -323,9 +738,51 @@ export default function BreathWelcomeScreen() {
     preloadBreathCues();
   }, []);
 
-  const finish = () => {
-    setSetting('breathOnboardingCompletedAt', Date.now());
-  };
+  const finish = () => setSetting('breathOnboardingCompletedAt', Date.now());
+
+  /* Licht i.p.v. donker — stap 1-5 zijn nu gemigreerd (operator, 7
+     september 2026: Bracelet erbij), de rest volgt later. */
+  /* Operator, 22 september 2026 ("de eerste foto blijft dark vanaf step
+     2" — d.w.z. stap 1 blijft zoals nu, stap 2+ wordt donker, zelfde
+     stijl als de protocolflow): gedeeltelijke terugkeer naar het
+     slide-afhankelijke `light` van vóór 7 september. Enkel stap 1
+     (SlideIntro, de fotopagina) blijft licht. */
+  const light = slide === 0;
+
+  /* Operator, 22 september 2026 ("kijk op van welcome in breathwork, dat
+     heeft een animatie lichtflits, dat moet ook bij onboarding eerste
+     stap" → "werkt heel slecht, links zichtbaar in wacht en gaat te
+     traag, moet al verdwenen zijn alvorens aan te komen"): de vaste
+     `CTA_SHIMMER_RANGE`-aanpak van (tabs)/breath.tsx (translateX ±170,
+     geen expliciete `left`) bleek hier niet hetzelfde resultaat te geven
+     — vermoedelijk een subtiel layout-verschil in hoe de absoluut-
+     gepositioneerde strook zonder `left` rust t.o.v. de knop. In plaats
+     van te blijven gokken naar DAT verschil: de echte knopbreedte meten
+     (`onLayout`) en de strook-beweging daar expliciet op berekenen —
+     `left:0` vastgezet (zie `ctaShimmer`-stijl), start ruim links VAN de
+     knop (-70) en eindigt ruim rechts ERVAN (breedte+40), dus gegarandeerd
+     volledig verdwenen aan beide kanten, ongeacht knopbreedte. */
+  const [ctaWidth, setCtaWidth] = useState(SCREEN_W - 52);
+  const ctaShimmer = useSharedValue(-1);
+  useEffect(() => {
+    ctaShimmer.value = withRepeat(
+      withSequence(
+        withTiming(-1, { duration: 0 }),
+        withDelay(2600, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })),
+        withDelay(1200, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+  }, [ctaShimmer]);
+  const ctaShimmerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(ctaShimmer.value, [-1, 1], [-70, ctaWidth + 40]) },
+      { rotate: '18deg' },
+    ],
+  }));
+
+  const goBack = () => setSlide((n) => Math.max(0, n - 1));
 
   const goNext = () => {
     if (!isLast) {
@@ -333,12 +790,48 @@ export default function BreathWelcomeScreen() {
       return;
     }
     finish();
-    /* Eerst de vragenlijst (operator, 8 augustus 2026) — die bepaalt doel,
-       ervaring en moment. Daarna stuurt de vragenlijst zelf door: premium
-       terug de app in, ieder ander naar de volledige gratis
-       kennismakingssessie (`from=onboarding`, het enige moment waarop het
-       afsluitscherm om Premium mag vragen). */
-    router.replace('/breath-quiz' as never);
+    /* Operator, 7 september 2026: "start your session moet direct naar
+       geselecteerde sessie gaan" — de vragenlijst (breath-quiz.tsx)
+       vroeg hier niet meer opnieuw doel/ervaring (die komen al uit stap
+       3/4), enkel nog "voorkeursmomenten" voor herinneringen, en rekende
+       daarna met DEZELFDE `pickForSlot`-formule dezelfde toestand uit die
+       de kaart hierboven al toont. Die tussenstop voelde als "nog een
+       stap bouwen" i.p.v. direct beginnen — nu rechtstreeks naar precies
+       de sessie die beloofd werd. Zelfde isPro-vertakking als
+       breath-quiz.tsx had. */
+    if (isPro) {
+      router.replace('/breath' as never);
+    } else {
+      /* Operator, 7 september 2026: "mag maar 1 keer werken" — check EN
+         markering gebeuren op het moment van de knop-tik zelf (gewone
+         functie-aanroep), niet in breath-session.tsx's eigen mount-timing
+         (`useState`/`useEffect`), die bleek onbetrouwbaar zodra Expo
+         Router een scherm hermonteert. `claimFreeSessionParam()` is de
+         GEDEELDE versie van die check (zelfde dag: "wat als user naar
+         'Customize your full plan' doorklikt, is hij de trial dan kwijt?"
+         — plan.tsx claimt 'm nu ook via dezelfde functie), dus deze knop
+         is niet meer de enige plek die de vlag kan claimen. */
+      const freeParam = claimFreeSessionParam();
+      router.replace(
+        `/breath-session?${new URLSearchParams({
+          ...freeParam,
+          mode: recommendedState,
+          minutes: String(recommendedMinutes),
+          /* Operator, 11 september 2026: "check alles overal, de oude
+             selectiepagina mag nooit meer verschijnen" — mode+duur staan
+             hier al vast (aanbevolen door de onboarding zelf). */
+          autostart: '1',
+          /* Operator, 11 september 2026: "in onboarding krijg ik geen
+             vraag popup, heb jij dat weggedaan?" — niet weggehaald, nooit
+             gezet: `isFreeOnboardingSession` in breath-session.tsx checkt
+             `params.from === 'onboarding'`, en deze aanroep zette `from`
+             nooit. Zonder dit dacht breath-session.tsx dat het een gewone
+             sessie was, dus geen "weet je zeker dat je je gratis sessie
+             wil stoppen"-bevestiging bij vroegtijdig stoppen. */
+          from: 'onboarding',
+        }).toString()}` as never,
+      );
+    }
   };
 
   /* Skip zet de vlag BEWUST NIET (operator 2026-07-31: "iedereen die skipt
@@ -346,16 +839,132 @@ export default function BreathWelcomeScreen() {
      de drie schermen uitloopt is klaar; wegklikken is uitstel, geen keuze.
      Anders raakt iemand die per ongeluk op Skip tikt de intro voorgoed
      kwijt — en die intro is het enige moment waarop we uitleggen wat dit
-     product is. */
+     product is.
+
+     BUG (operator, 13 augustus 2026, "al 10 keer eerder doorgegeven"): de
+     `else`-tak stuurde naar `/` — de ROOT, die via _layout.tsx altijd naar
+     het trage welcome.tsx-scherm leidt (hetzelfde puntenwolk-canvas dat een
+     paar seconden zwart opstart, zie SplatField.tsx). Wie Skip tikte kwam
+     dus op een scherm terecht dat leek "vast te hangen". De bedoeling was
+     altijd select mode (de Breath-tab), niet terug naar het merkbeeld.
+     `skipBreathOnboardingRedirectOnce()` voorkomt dat de Breath-tab meteen
+     weer terugstuurt naar de intro — dezelfde vlag die `onMaybeLater`
+     hieronder gebruikt. */
   const onSkip = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/');
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    skipBreathOnboardingRedirectOnce();
+    /* BUG (operator, 13 augustus 2026, tweede helft van dezelfde klacht):
+       zonder deze regel landt de Breath-tab wél, maar toont zijn EIGEN
+       welkomstbeeld (SlideIntro — dezelfde mandala/gezichten-animatie,
+       met dezelfde trage eerste-tekening) opnieuw. Wie net de hele intro
+       heeft gezien hoeft 'm geen tweede keer, meteen achter elkaar, te
+       zien — dat las als "gaat niet naar select mode" terwijl de
+       navigatie zelf al goed stond. */
+    skipBreathIntroOnce();
+    router.replace('/breath' as never);
   };
+
+  /* Operator, 7 september 2026: "alles moet perfect werken" — de Android
+     hardware-terugknop/-gebaar werd nergens opgevangen. Standaard popt die
+     dan gewoon het HELE scherm van de stack (React Navigation's eigen
+     gedrag), wat de zorgvuldige stap-voor-stap `goBack` EN de skip-vlaggen
+     van `onSkip` volledig omzeilt — en kon zo, afhankelijk van de exacte
+     stack-positie, zomaar op welcome.tsx uitkomen i.p.v. netjes terug te
+     bladeren. Nu: op stap 2+ gewoon één stap terug (zelfde als de
+     Back-knop), op stap 1 hetzelfde pad als Skip — nooit het onvoorspelbare
+     standaardgedrag. `useFocusEffect` i.p.v. een kale `useEffect`: de
+     listener moet weg zodra dit scherm niet meer focust, anders vangt hij
+     ook de terugknop op een scherm ERBOVEN nog op. */
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (slide > 0) {
+          goBack();
+        } else {
+          onSkip();
+        }
+        return true;
+      });
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slide]),
+  );
+
+  /* "Maybe later" is geen vroegtijdig wegklikken zoals Skip — dit staat
+     pas op het LAATSTE scherm, wie hier komt heeft de hele intro al
+     gezien. De vlag mag dus wél gezet worden (operator, 11 augustus
+     2026: "moet naar de breathe free environment gaan, zodat hij kan
+     testen") — anders stuurt de Breath-tab hem meteen weer terug naar
+     deze intro, en "later" wordt dan nooit "nu even rondkijken".
+
+     `await finish()` alléén bleek niet genoeg (operator, 11 augustus
+     2026, tweede melding: "maybe fucking later opnieuw naar die welcome
+     pagina"): de Breath-tab blijft doorgaans al gemonteerd (zie
+     breath-entry.ts) en zijn redirect-timer hangt aan `useSetting`-state
+     die via een luisteraar bijwerkt — een extra laag die nog steeds
+     ruimte voor een race gaf. `skipBreathOnboardingRedirectOnce()` is
+     dezelfde synchrone, race-vrije vlag-truc die dit bestand al gebruikt
+     voor het intro-beeld: geen enkele afhankelijkheid van async state,
+     dus geen enkele race meer mogelijk. */
+  /* Operator, 7 september 2026: "info over zelf protocol aanmaken komt
+     nergens terug in onboarding, lijkt mij belangrijk" — terecht: plan.tsx
+     laat je al PER MOMENT een ander protocol/duur kiezen, maar daar werd
+     nooit naar verwezen.
+
+     EERSTE versie linkte rechtstreeks naar `/plan?onboarding=1` — bleek
+     fout: die pagina is het EINDPUNT van de echte protocol-keten
+     (`/goal → /intensity → /plan-review → /plan-duration`, die pas écht
+     een protocol OPSLAAT via `saveActivePlan`). Rechtstreeks binnenkomen
+     betekende dat er nog geen protocol bestond, dus toonde `/plan` de
+     losse live-herberekende twee-momenten-preview — die klopte, maar
+     "REVIEW & CONFIRM" verderop bevestigde dan NIETS (leeg `useActivePlan()`)
+     of, erger, een oud protocol van eerder testen. Operator: "ingesteld via
+     onboarding komt niet overeen... heeft dan geen zin om dat preview te
+     noemen. Moeten we niet de hele flow laten zien?" — terecht: als we
+     "REVIEW & CONFIRM" beloven, moet er ook echt iets zijn om te bevestigen.
+
+     Nu: binnenkomen bij `/intensity`, niet bij `/plan`. `/goal` slaan we
+     over — de doelen staan al vast via stap 3 (`changeGoals`, dezelfde
+     `goals`-setting die `/goal` ook gebruikt), die vraag hoeft niet
+     dubbel. Vanaf `/intensity` loopt de ECHTE keten verder
+     (intensity → review → duration, die daarna zelf naar
+     `/plan?onboarding=1` pusht, nu MET een opgeslagen protocol) tot en met
+     Agenda — dezelfde flow als de bestaande protocol-opbouw, nu ook
+     bereikbaar vanuit breathwork-onboarding i.p.v. enkel via Activity.
+
+     BEWUST `push`, niet `replace` (operator, na 5 keer mis geraden: "de
+     back moet uitkomen op die laatste onboarding pagina") — `replace`
+     verwijderde stap 7 uit de stack, dus terug had nergens heen te gaan;
+     `push` laat stap 7 staan, dus terug-knoppen door de hele keten komen
+     er vanzelf weer op uit.
+
+     Operator, zelfde dag, ná dat het technisch klopte: "user moet nu
+     telkens op back en nog eens back klikken... op het einde bij Agenda
+     moet die 5x op de terugpijl klikken om terug te gaan naar stap 7. Kan
+     dat telkens met 1 klik?" — terecht, stap-voor-stap terugbladeren door
+     6 tussenschermen is geen "in 1 klik". `fromBreathWelcome` is een apart
+     signaal (los van `onboarding`, dat al een andere rol heeft: de
+     CTA-tekst "REVIEW & CONFIRM" i.p.v. "OPEN YOUR AGENDA") dat door de
+     hele keten meegaat, zodat ELKE terugknop daar `router.navigate`
+     gebruikt i.p.v. `back()` — dat springt in ÉÉN stap naar de BESTAANDE
+     stap-7-instantie (nog steeds op slide 6, want die was nooit
+     ge-`replace`t), ongeacht hoe diep je in de keten zit. */
+  /* Operator, 22 september 2026 ("gesproken volledige cyclus inhale hold
+     exhale"): geplande vervolg-cues (hold/exhale) van de demo — opgeruimd
+     bij een volgende tik of bij het verlaten van dit scherm, zie
+     `onPickMode`/de cleanup hieronder. */
+  const demoTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => demoTimers.current.forEach(clearTimeout), []);
 
   /* Elke modus demonstreert zichzelf bij het aantikken: je hoort en voelt
      wat je kiest, in plaats van het alleen te lezen. */
   const onPickMode = (m: GuidanceMode) => {
+    Haptics.selectionAsync();
     setDemoMode(m);
+    setChosenMode(m);
     const wantsHaptic = m === 'haptic' || m === 'both';
     const wantsVoice = m === 'voice' || m === 'both';
 
@@ -376,7 +985,15 @@ export default function BreathWelcomeScreen() {
        ONMIDDELLIJK moet klinken; de bewaarde waarde bereikt de dienst pas
        een render later via de root-layout. Beide zetten dezelfde waarde,
        dus er valt niets te winnen of te verliezen. */
+    /* Operator, 23 september 2026 ("gekozen guidance moet ook echt naar
+       de sessie doorgezet worden"): `hapticsPhone` ontbrak hier — de
+       instelling die `breath-session.tsx` (`useSetting('hapticsPhone')`)
+       ECHT leest om phone-haptics aan/uit te zetten. Zonder deze regel
+       bleef `hapticsPhone` op zijn default (`true`) staan ongeacht de
+       keuze hier — "Voice" en vooral "Silent Mode" waren daardoor in de
+       echte sessie niet stil, de telefoon trilde gewoon door. */
     setSetting('voiceCues', wantsVoice);
+    setSetting('hapticsPhone', wantsHaptic);
     setVoiceEnabled(wantsVoice);
     if (wantsVoice) {
       /* De stemdienst geeft het woord aan één scherm tegelijk; wie niet
@@ -385,11 +1002,36 @@ export default function BreathWelcomeScreen() {
          precies wat de operator zag (2026-07-31: "bij aanklikken cards
          gebeurt niets"). */
       claimVoiceSource('breath');
+      /* Operator, 11 september 2026 (definitieve opzet): "Voice"-kaart
+         demonstreert de vrouwenstem, "Voice + Haptics" de mannenstem — vast
+         per kaart, geen aparte toggle. De override is enkel voor deze ene
+         demo-cue, meteen daarna weer op `null`: de eigenlijke, persistente
+         `voiceGender`-instelling (elders gekozen, bv. Settings) blijft
+         ongemoeid. */
+      const gender = m === 'voice' ? 'female' : m === 'both' ? 'male' : null;
+      setVoiceGenderOverride(gender);
       /* Zonder `force`. Die was nodig zolang de tik alleen een vlag in het
          geheugen zette die de root-layout even later terugdraaide. Nu wordt
          de keuze bewaard en zet de regel hierboven de dienst meteen aan, dus
          er is niets meer om langs te gaan. */
+      /* Operator, 22 september 2026 ("gesproken volledige cyclus inhale
+         hold exhale"): was enkel de inhale-cue — nu een volledige
+         demo-cyclus (inhale → hold → exhale), met pauzes ertussen die de
+         echte fase-duur van een sessie nabootsen i.p.v. de 3 cues
+         achter elkaar af te vuren. `demoTimers` ruimt eerdere, nog
+         lopende demo's op als iemand snel een andere kaart aantikt —
+         anders speelt een oude "exhale" nog na terwijl je al een andere
+         modus koos. */
+      demoTimers.current.forEach(clearTimeout);
+      demoTimers.current = [];
       playBreathCue('inhale', 'nose', 'calm', 'breath');
+      demoTimers.current.push(
+        setTimeout(() => playBreathCue('hold-in', 'nose', 'calm', 'breath'), 3000),
+        setTimeout(() => {
+          playBreathCue('exhale', 'nose', 'calm', 'breath');
+          setVoiceGenderOverride(null);
+        }, 5000),
+      );
     }
   };
 
@@ -406,110 +1048,328 @@ export default function BreathWelcomeScreen() {
     Vibration.vibrate(SIGNATURE_PULSE, false);
   };
 
-  /* De knop kondigt aan wat er komt. Na de bracelet volgt het uitleg-scherm,
-     dus daar staat niet "Next" maar waar je heen gaat (operator
-     2026-07-31). */
+  /* Operator, 11 september 2026: "Audio Library →" op de bracelet-stap was
+     verwarrend — teruggezet naar het gewone "Next"-patroon, net als elke
+     andere tussenstap.
+     Operator, 22 september 2026 ("ook geen pijlen in cta's, dat is een
+     harde regel geworden"): "→" overal weg.
+     Operator, 24 september 2026 ("next is ook niet goed hier, begin your
+     journey ofzo"): scherm 1 heeft nog geen keuze/opbouw om op voort te
+     bouwen (endowment/IKEA-effect gaan hier niet op, zie toelichting in
+     memory), maar "Next" is ook te administratief voor een sfeer-opener —
+     past niet bij de poëtische toon ("Breathe. Build. Become."). "Start"
+     i.p.v. "Begin" (operator, vervolg, "begin of start?"): zelfde
+     werkwoord als het slotscherm ("Start your first session") — begin en
+     einde van de onboarding spiegelen elkaar nu. Alleen scherm 1 krijgt
+     dit eigen label; stap 2/3 blijven "Next". */
   const ctaLabel = isLast
     ? isPro
-      ? 'Enter Breath  →'
-      : 'Start your first session  →'
-    : slide === 2
-      ? 'How it works  →'
-      : slide === 3
-        ? 'Audio Library  →'
-        : 'Next';
+      ? 'Enter Breath'
+      : 'Start your first session'
+    : slide === 0
+      ? 'Start Your Journey'
+      : 'Next';
 
-  /* "Maybe later" staat alleen op het slotscherm. Elders zou het naast de
-     Skip rechtsboven een tweede uitgang zijn, en twee manieren om hetzelfde
-     te doen maken een scherm rommelig. */
-  const showMaybeLater = isLast && !isPro;
+  /* Operator, 22 september 2026 ("next cta moet hier pas actief en wit
+     worden bij keuze gemaakt"): stap 3 ("What's the end game") is de
+     enige stap met een VERPLICHTE keuze om verder te gaan — tot dan is
+     de knop inert (geen tap-reactie) en gedimd i.p.v. de gewone
+     blur/tint- of witte stijl.
+     Operator, 22 september 2026 (vervolg, "veiligheid van gebruiker en
+     ons"): zelfde inerte/gedimde behandeling op het slotscherm (`isLast`)
+     zolang de veiligheidsdisclaimer niet bevestigd is — "Start your first
+     session" mag pas ECHT starten na die bevestiging.
+     Operator, 22 september 2026 (vervolg, "cta moet identiek zelfde als
+     in stap 3"): stap 4 ("Your breathwork experience") krijgt exact
+     dezelfde behandeling — pas wit/actief zodra `experience` gekozen is.
+     Operator, 22 september 2026 (vervolg, "ook bij stap 2 echte keuze
+     laten maken, dan kunnen we dat zo laten starten bij free trial"): was
+     "elke kaart is maar een demo, geen verplichte keuze" — maar `onPick`
+     schrijft de echte `voiceCues`-instelling al meteen weg (zie
+     `onPickMode`), dus dit was al een echte keuze, enkel de knop deed nog
+     niet mee. `demoMode` reset al naar `null` zodra je van stap 2 weg
+     navigeert (zie de `useEffect` erboven), dus je moet ook hier telkens
+     opnieuw tikken. */
+  /* Operator, 23 september 2026 ("breathwork can affect... tekst in de
+     stap hiervoor onderaan zetten"): de veiligheidsbevestiging verhuisde
+     van het slotscherm naar stap 4 (SlideExperience) — blokkeert nu
+     "Next" op stap 4 i.p.v. "Start" op stap 5, samen met de al bestaande
+     ervaring-keuze-eis daar. */
+  const ctaBlocked =
+    (slide === 1 && demoMode === null) ||
+    (slide === 2 && changeGoals.length === 0) ||
+    (slide === 3 && (experience === null || !safetyAck));
 
   return (
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+    /* Operator, 22 september 2026 ("foto onderkant moet doorlopen — zie
+       je niet dat het niet leesbaar is"): de achtergrondfoto zat VOORHEEN
+       als kind BINNEN de `SafeAreaView` (`edges={['top','bottom']}`), dus
+       werd ook de foto zelf ingesprongen door de top/bottom-veilige-zone
+       — onderaan (en bovenaan) bleef een reep van de effen `root`/
+       `rootLight`-kleur zichtbaar i.p.v. dat de foto echt tot de
+       schermrand doorloopt. Nu een niet-inspringende buitenste `View` die
+       de ECHTE achtergrond draagt (foto of `Starfield`/effen kleur), met
+       de `SafeAreaView` er transparant OVERHEEN — enkel nog voor de
+       inspringing van de INHOUD (tekst/knoppen), niet meer voor de
+       achtergrond zelf. */
+    <View style={[s.root, light && s.rootLight, { flex: 1 }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Ruimte-gevoel: stil sterrenveld achter alles. Eén kleur, lage
-         dichtheid, traag individueel fonkelen — diepte, geen decor. */}
-      <Starfield width={SCREEN_W} height={SCREEN_H} />
+      {/* Operator, 6 september 2026: stap 1-3 krijgen de lichte
+         achtergrond i.p.v. het sterrenveld — de rest blijft voorlopig
+         donker (gefaseerde light/dark-migratie). Stap 3 heeft geen eigen
+         achtergrondfoto nodig: de 5 kaarten zijn zelf al foto's, op het
+         effen lichte `rootLight`-vlak. */}
+      {slide === 0 ? (
+        /* Operator, 22 september 2026 ("de foto moet doorlopen"): volle
+           schermbreedte+hoogte i.p.v. de eigen beeldverhouding met
+           ademruimte erboven — zelfde `StyleSheet.absoluteFill`+`cover`
+           als de andere fotostappen (1/4/6) hieronder. */
+        <Image
+          source={{ uri: INTRO_BG_IMG }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      ) : slide === 1 || slide === 2 || slide === 3 ? (
+        /* Operator, 22 september 2026 ("waarom is dat zo moeilijk, dat
+           staat nog altijd wit?" → "de zwarte achtergronden moeten zonder
+           de stippen, effen zwart"): stap 2 had een aparte, volledig-
+           scherm `STEP2_BG_IMG` ("een neutrale LICHTE wassing", 6
+           september) die nog onvoorwaardelijk stond — dat was de echte
+           reden dat de pagina wit bleef ogen. Eerst vervangen door
+           `Starfield` (sterrenveld-stippen), maar dat mocht weg — enkel
+           de effen `root`-achtergrond (`Brand.bg`, zie de buitenste
+           `View`) blijft, geen decor.
+           Operator, 22 september 2026 (vervolg, "de hele pagina moet
+           gewoon weg" / "audio library ook helemaal weg"): zowel de
+           bracelet-stap (met `BraceletBgPhoto`) als de Audio Library-stap
+           zijn uit de flow — index 4 is nu het slotscherm, zie de tak
+           hieronder. */
+        null
+      ) : (
+        /* Operator, 22 september 2026 ("achtergrond moet zwart om te
+           beginnen"): de foto-achtergrond (was hier) weg — slot-scherm
+           volgt nu dezelfde effen-zwarte `s.root`-achtergrond als stap
+           2/3/4 hierboven, geen aparte foto meer nodig nu de RhythmRing
+           en kaarten zelf al genoeg beeld geven. */
+        null
+      )}
 
+      <SafeAreaView style={s.safeContent} edges={['top', 'bottom']}>
       {/* De stapregel staat ABSOLUUT in het midden van de balk, niet tussen
           twee rekbare vlakken in. Zo lag hij namelijk nooit echt in het
           midden: "Skip" neemt rechts ruimte in, en de tekst schoof dus een
           halve knopbreedte naar links. Op elk scherm even scheef, en precies
           zichtbaar omdat de kop eronder wél gecentreerd staat. */}
       <View style={s.topbar}>
-        <View style={s.stepCenter} pointerEvents="none">
-          <Text style={s.stepEyebrow}>{`STEP ${slide + 1} OF ${TOTAL}`}</Text>
+        {/* Operator, 6 september 2026 (mockup): pijl terug i.p.v. enkel
+           Skip — wie per ongeluk doorklikt kan nu ook terug, niet enkel
+           opnieuw beginnen. Onzichtbaar (niet enkel disabled) op stap 1:
+           er is nergens naartoe terug. */}
+        <View style={s.backWrap}>
+          {slide > 0 && (
+            <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+              <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
+              <Text style={s.skipTxt}>Back</Text>
+            </Pressable>
+          )}
         </View>
-        {/* Waar je bent, op élk scherm. Alleen op het laatste tonen leest als
-           een nagedachte; hier weet je vanaf het begin hoe lang het duurt
-           (operator 2026-07-31). De puntjes onderaan konden daarmee weg —
-           twee voortgangsmeters op één scherm is er één te veel. */}
-        <View style={{ flex: 1 }} />
-        <Pressable onPress={onSkip} hitSlop={14} style={s.skipWrap}>
-          <Text style={s.skipTxt}>Skip</Text>
-        </Pressable>
+        <View style={s.stepCenter} pointerEvents="none">
+          <Text style={s.stepEyebrow}>
+            {`STEP ${slide + 1} OF ${TOTAL}`}
+          </Text>
+          {/* Operator, 22 september 2026 ("stippen vervangen door lijn
+             zoals bij breathwork setting protocol"): vervangt de losse
+             puntjes-rij door dezelfde dunne, doorlopende voortgangsbalk
+             als `StepIndicator` (goal.tsx/intensity.tsx/plan-review.tsx)
+             — zelfde `track`/`fill`-opbouw, hier los nagebouwd i.p.v. het
+             gedeelde component zelf omdat dit scherm zijn stap-blok
+             absoluut gecentreerd houdt (niet in een flex-rij tussen twee
+             knoppen), wat `StepIndicator`'s eigen `flex:1` niet toelaat.
+             Vervolg ("waarom is de kleur blauw?" toen "foto onderkant moet
+             doorlopen, tekstkleur wit, zie je niet dat het onleesbaar
+             is?"): eerst nog een `light`-donker-variant voor stap 1, maar
+             de foto daar is dezelfde donkere/sfeervolle hero-foto als
+             elders in de app (niet een lichte achtergrond) — dus altijd
+             wit, geen `light`-uitzondering meer nodig, ongeacht stap. */}
+          <View style={s.stepTrack} pointerEvents="none">
+            <View
+              style={[s.stepFill, { width: `${((slide + 1) / TOTAL) * 100}%` }]}
+            />
+          </View>
+        </View>
+        <View style={s.backWrap}>
+          <Pressable onPress={onSkip} hitSlop={14} style={s.skipWrap}>
+            <Text style={s.skipTxtSecondary}>Skip</Text>
+          </Pressable>
+        </View>
       </View>
 
-      {/* GEEN scroll (operator, 10 augustus 2026, voor de derde keer:
-          "paginas moeten volledig in beeld staan zonder te moeten
-          scrollen"). Een ScrollView loste het overlappen wél op, maar dat
-          was het verkeerde probleem oplossen — de eis is dat het PAST, niet
-          dat je het kunt opvegen. De echte oplossing zit in de stappen zelf:
-          RESERVED (bij de tegels) en de vaste maten (bij bracelet en
-          how-it-works) zijn nu ruimer ingeschat, zodat kop, inhoud en knop
-          altijd zonder scrollen samen in het scherm passen. */}
-      <View
-        style={[
-          s.slideArea,
-          slide >= 1 && slide <= 4 && s.slideAreaTop,
-        ]}
-      >
-        {slide === 0 ? (
-          <SlideIntro onTapOrb={feelOrb} />
-        ) : slide === 1 ? (
-          <SlideGuidance mode={demoMode} onPick={onPickMode} />
-        ) : slide === 2 ? (
-          <SlideBracelet
-            noteVisible={braceletNote}
-            onTap={() => setBraceletNote(true)}
+      {/* GEEN scroll op stap 1-4 (operator, 10 augustus 2026, voor de derde
+          keer: "paginas moeten volledig in beeld staan zonder te moeten
+          scrollen") — RESERVED/vaste maten daar zijn ruim genoeg ingeschat
+          zodat kop, inhoud en knop altijd zonder scrollen samen passen.
+          Operator, 22 september 2026 ("maak de pagina ook eens
+          scrollbaar"): het SLOTSCHERM (stap 5) is de uitzondering — de
+          ring + tot 4 kaarten (afhankelijk van ervaringsniveau) hebben
+          geen vaste, voorspelbare hoogte meer zoals de andere stappen, dus
+          daar geldt de oude regel niet langer. Enkel dít scherm krijgt een
+          ScrollView; de andere 4 blijven ongewijzigd zonder scroll. */}
+      {isLast ? (
+        <ScrollView
+          style={s.startScroll}
+          contentContainerStyle={s.startScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <SlideStart
+            plan={dayPlan}
+            selectedIdx={selectedPlanIdx}
+            onSelect={onSelectPlan}
+            goals={changeGoals}
+            experience={experience}
+            showRingCenter={planTapped}
           />
-        ) : slide === 3 ? (
-          <SlideHowItWorks />
-        ) : slide === 4 ? (
-          <SlideLibrary />
-        ) : (
-          <SlideStart />
-        )}
-      </View>
+        </ScrollView>
+      ) : (
+        <View
+          style={[
+            s.slideArea,
+            slide >= 1 && slide <= 4 && s.slideAreaTop,
+          ]}
+        >
+          {slide === 0 ? (
+            <SlideIntro onTapOrb={feelOrb} light />
+          ) : slide === 1 ? (
+            <SlideGuidance onPick={onPickMode} chosenMode={chosenMode} light={light} />
+          ) : slide === 2 ? (
+            <SlideChangeGoals selected={changeGoals} onToggle={toggleChangeGoal} />
+          ) : (
+            <SlideExperience
+              selected={experience}
+              onPick={pickExperience}
+              safetyAck={safetyAck}
+              onToggleSafetyAck={() => setSafetyAck((v) => !v)}
+              safetyShakeX={safetyShakeX}
+            />
+          )}
+        </View>
+      )}
 
-      <View style={s.footer}>
+      {/* Operator, 7 september 2026: "foto moet doorlopen tot onderkant
+         scherm" — op de Library-stap mag de foto onder de knop blijven
+         doorlopen (de knop is zelf al een effen blauwe pil, heeft geen
+         witte balk erachter nodig). Elders (bracelet/laatste stap) blijft
+         de witte achtergrond, die loste daar juist een ander probleem op
+         (blauwe waas rond de knop). */}
+      <View
+        style={s.footer}
+      >
+        {/* Operator, 22 september 2026 ("cta daily plan weg"): de
+           secundaire "Daily plan with Premium"-knop op het slotscherm is
+           weg — droeg bij aan de overlap/te-lange-scherm-problemen
+           hiervoor en is geen essentiële stap in de onboarding-flow. */}
+
+        {/* Operator, 23 september 2026 ("verwijder die bal met voice en
+           haptics"): de tikbare instellingenstrook is weer weg — de
+           begeleiding staat nu terug (enkel als icoon, niet tikbaar) in de
+           ring zelf, zie `SlideStart`. Aanpassen kan straks via de echte
+           breathwork-sessie/actieve kaart, niet hier in de preview. */}
+
+        <Animated.View style={ctaShakeStyle}>
         <Pressable
-          onPress={goNext}
-          android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+          onPress={ctaBlocked ? onBlockedTap : goNext}
+          onPressIn={ctaBlocked ? undefined : onCtaPressIn}
+          onPressOut={ctaBlocked ? undefined : onCtaPressOut}
+          android_ripple={ctaBlocked ? undefined : { color: 'rgba(255,255,255,0.12)' }}
           style={s.ctaWrap}
         >
-          {/* Een verloop i.p.v. één vlakke kleur (operator 2026-07-31).
-             Diagonaal, van een helder hemelsblauw naar een dieper koningsblauw
-             — dat geeft de knop volume; één egale vlakke kleur oogt plat. */}
-          <LinearGradient
-            colors={['#5AA9FF', '#2F6BFF', '#1E4FE0']}
-            locations={[0, 0.55, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.cta}
-          >
-            <Text style={s.ctaTxt}>{ctaLabel}</Text>
-          </LinearGradient>
+          {(isLast || slide === 1 || slide === 2 || slide === 3) && !ctaBlocked ? (
+            /* Operator, 7 september 2026 (mockup): witte knop op de foto
+               i.p.v. blauw of het donkere verloop — dit slotscherm is
+               donker met een foto, geen van beide andere stijlen past.
+               Operator, 22 september 2026 ("next cta moet hier pas actief
+               en wit worden bij keuze gemaakt"): stap 3 (`slide === 2`)
+               krijgt dezelfde witte knop, maar pas ZODRA `changeGoals`
+               niet meer leeg is (`!ctaBlocked`) — zie de gedimde tak
+               hieronder voor de toestand ervoor.
+               Operator, 22 september 2026 (vervolg, "cta moet identiek
+               zelfde als in stap 3"): stap 4 (`slide === 3`) volgt exact
+               dezelfde regel, gezelfde `ctaBlocked`.
+               Operator, 22 september 2026 (vervolg, veiligheidsdisclaimer):
+               `isLast` volgt nu dezelfde regel — pas wit zodra
+               `safetyAck` waar is (ook via `ctaBlocked`).
+               Operator, 22 september 2026 (vervolg, "ook bij stap 2 echte
+               keuze laten maken"): was ONVOORWAARDELIJK wit op `slide ===
+               1` ("geen keuze wordt gemaakt") — nu ook via `ctaBlocked`,
+               dus pas wit zodra `demoMode` gezet is. */
+            <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
+              <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
+            </View>
+          ) : ctaBlocked ? (
+            /* Gedimde, inerte staat — geen keuze gemaakt op stap 2/3/4, of
+               veiligheidsdisclaimer nog niet bevestigd op het slotscherm.
+               Zelfde blur-basis als de standaardknop, maar zonder de
+               witte tint en met gedempte tekst, zodat het verschil met de
+               "klaar om te tikken"-witte knop hierboven meteen duidelijk
+               is. */
+            <View style={[s.cta, s.ctaBlurWrap]}>
+              <BlurView
+                intensity={40}
+                tint="dark"
+                blurMethod="dimezisBlurViewSdk31Plus"
+                style={StyleSheet.absoluteFill}
+              />
+              <Text style={s.ctaTxtBlocked}>{ctaLabel}</Text>
+            </View>
+          ) : (
+            /* Operator, 22 september 2026 ("next knop ook transparant...
+               exact de stijl van breathwork protocolflow doortrekken"):
+               vervangt het effen blauw (lichte stappen) en het blauwe
+               verloop (donkere stappen) door dezelfde matglas-knop als de
+               rest van de app — echte `BlurView`
+               (`dimezisBlurViewSdk31Plus`) + een doorschijnende blauwe
+               tint, i.p.v. een vol vlak. Zelfde recept ongeacht `light`,
+               want de knop staat altijd op een foto/donkere achtergrond,
+               nooit op een effen vlak dat om een eigen kleur vraagt. */
+            <View
+              style={[s.cta, s.ctaBlurWrap]}
+              onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}
+            >
+              <BlurView
+                intensity={40}
+                tint="dark"
+                blurMethod="dimezisBlurViewSdk31Plus"
+                style={StyleSheet.absoluteFill}
+              />
+              {/* Operator, 22 september 2026: eerst een blauwe tint, toen
+                 "blur zwart transparant" (geen tint) — maar op de donkere
+                 foto viel de knop zo bijna weg, geen randcontrast. "Geef
+                 dat een witte transparante kleur": een lichte, doorschijnende
+                 witte tint bovenop de blur, zodat de knop weer een eigen
+                 vorm heeft i.p.v. te versmelten met de achtergrond. */}
+              <View style={[StyleSheet.absoluteFill, s.ctaTintWhite]} />
+              <Text style={s.ctaTxt}>{ctaLabel}</Text>
+              {/* Operator, 22 september 2026 ("lichtflits zoals bij welcome
+                 in breathwork, ook bij onboarding eerste stap"): enkel op
+                 stap 1 — "eerste stap" letterlijk, niet elke stap die deze
+                 knopstijl deelt. */}
+              {slide === 0 && (
+                <Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none">
+                  <LinearGradient
+                    colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              )}
+            </View>
+          )}
         </Pressable>
-
-        {showMaybeLater && (
-          <Pressable onPress={onSkip} hitSlop={12} style={s.laterWrap}>
-            <Text style={s.laterTxt}>MAYBE LATER</Text>
-          </Pressable>
-        )}
+        </Animated.View>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -519,7 +1379,39 @@ export default function BreathWelcomeScreen() {
    je bij de vijf toestanden komt (operator, 5 augustus 2026). Daarom
    geëxporteerd in plaats van gekopieerd: één beeld, één plek waar het
    verandert. */
-export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
+/* Hetzelfde lichtere/warmere blauw als op welcome.tsx (HAPTIC_BLUE
+   daar, letterlijk dezelfde hex) — operator, 6 september 2026: "hou
+   rekening met ons nieuwe blauw dat we ook op de welcome page gebruikt
+   hebben". Alle blauwtinten in de LICHTE stand van dit scherm gaan via
+   deze ene constante, niet los verzonnen per plek. */
+const LIGHT_BLUE = '#7FB2E5';
+
+/* Lichte variant van de GradientText-kleurstops (operator, 6 september
+   2026, light-thema Breath-tab) — donker links → blauw rechts, het
+   spiegelbeeld van de witte-naar-blauw stops die op donkere achtergrond
+   staan. Zelfde aantal stops als de originelen zodat de posities-array
+   (DEFAULT_POSITIONS/SUB_POSITIONS) herbruikt kan worden. */
+const LIGHT_HEAD_COLORS = ['#0a0a0c', '#0a0a0c', '#3d5f8a', '#5f92c4', LIGHT_BLUE];
+const LIGHT_SUB_COLORS = [
+  '#0a0a0c',
+  '#0a0a0c',
+  '#3d5f8a',
+  '#5f92c4',
+  LIGHT_BLUE,
+  LIGHT_BLUE,
+];
+
+export function SlideIntro({
+  onTapOrb,
+  light = false,
+}: {
+  onTapOrb: () => void;
+  light?: boolean;
+}) {
+  /* Reactief, niet bevroren — zie de toelichting bij `FACES_CUTOUT`
+     hierboven. */
+  const FACES = useAssetUri(FACES_URL);
+
   /* Eén klok voor het beeld én de kop eronder — daarom staat hij hier en
      niet in het beeldonderdeel. De regel ademt mét de wolk in plaats van
      ernaast, inclusief de stilstanden.
@@ -530,25 +1422,24 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
      blijft hij anderhalve seconde boven staan — dát is het moment waarop je
      het gezicht compleet ziet — en een seconde onder, waarin de wolk
      helemaal uiteen is. */
-  /* ── Eén keer, en dan blijft het staan ──────────────────────────────────
-     Geen herhalende cyclus meer (operator, 3 augustus 2026). De bezoeker
-     landt op de twee gezichten, ziet ze overgaan in de rozet, en daar blijft
-     het. Dat is sterker dan heen en weer: een overgang die zich herhaalt
-     wordt een animatie, een overgang die één keer gebeurt is een aankomst.
-
-     Het scheelt ook alle problemen van de terugweg — die was nooit met de
-     klok mee te krijgen zonder ergens een omweg te maken. Die weg is er nu
-     domweg niet meer.
-
-     De rozet leeft daarna gewoon door: hij draait, zijn meteoor loopt rond en
-     zijn sterren bewegen. Alleen de morph is af. */
+  /* ── Continu ademen, niet één keer aankomen ──────────────────────────────
+     De vorige versie ("Eén keer, en dan blijft het staan") hoorde bij de
+     foto→rozet-overgang die hier stond: een aankomst die maar één keer
+     gebeurt. Nu de foto weg is (operator, 13 augustus 2026 — herhaalde
+     black-screen-klachten) ÍS de mandala het hele scherm, en die hoort dan
+     ook net zo te blijven ademen als overal elders in de app: in en uit,
+     doorlopend. Zonder deze cyclus bevroor `breath` na de eerste (voorheen
+     eenmalige) stijging permanent op 1, en daarmee ook de "in en uit"-schaal
+     van de mandala (operator: "moet ook in en uit ademen"). */
   const breath = useSharedValue(0);
   useEffect(() => {
     breath.value = withDelay(
-      /* Even wachten voor de gezichten oplossen. Zonder die stilte begint de
-         beweging voordat de bezoeker heeft gezien waar hij naar kijkt. */
       LOOK_MS,
-      withTiming(1, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
+      withRepeat(
+        withTiming(1, { duration: RISE_MS, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true,
+      ),
     );
   }, [breath]);
 
@@ -618,64 +1509,13 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
      Nu bereikt elke laag zijn volle sterkte pas op het uiterste punt, waar de
      adem toch al stilstaat. Wat je ziet is dan het einde van de beweging, en
      niet het begin van de stilstand. */
-  const orbFade = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.max(0, (breath.value - 0.58) / 0.42)),
-  }));
-  /* De punten dragen het middenstuk. Ze komen op zodra de rozet wegvalt en
-     gaan zelf weg zodra de foto het overneemt — nooit alle drie tegelijk in
-     beeld, want dan zie je lagen in plaats van één beweging. */
-  /* De punten dragen het hele middenstuk. Ze komen op zodra de foto begint op
-     te lossen en verdwijnen pas als de getekende rozet er al staat — nooit
-     een moment waarop geen van de drie lagen iets toont, en nooit een moment
-     waarop je ze alle drie los ziet liggen. */
-  const dustFade = useAnimatedStyle(() => {
-    /* Onderaan doven de punten pas NA de foto: tussen 0.12 en 0.02, en de
-       foto staat al vol vanaf 0.12. Er is dus een moment waarop het beeld
-       compleet is en de punten er nog liggen — dat is precies het moment
-       waarop het lijkt of het beeld uit die punten is opgebouwd. */
-    const inn = Math.min(1, Math.max(0, (breath.value - 0.02) / 0.1));
-    const out = Math.min(1, Math.max(0, (breath.value - 0.83) / 0.17));
-    return { opacity: inn * (1 - out) };
-  });
-  /* En op het hoogtepunt de FOTO zelf. Punten alleen blijven een schets;
-     de operator wil aan het eind het echte beeld zien. Hij komt op precies
-     wanneer de wolk al in de vorm van de gezichten staat, dus je ziet geen
-     tweede beeld verschijnen maar dezelfde vorm scherp worden. */
-  /* De foto is het BEGINBEELD: vol in rust, en hij lost op zodra de beweging
-     inzet. Hij verdwijnt langzamer dan de punten opkomen, zodat het beeld
-     even ín de punten ligt en er niet onderuit wordt geschoven. */
-  /* De foto heeft de langste aanloop van de drie lagen en is VOLLEDIG in
-     beeld voordat de punten weggaan (operator, 3 augustus 2026). Die volgorde
-     is het hele punt: eerst staat het beeld er, dán pas verdwijnt waar het uit
-     ontstond. Andersom — punten weg terwijl de foto nog opkomt — laat een gat
-     vallen waarin je naar een half beeld kijkt.
-     Vol vanaf 0.12 en niet vanaf 0, zodat er ná de voltooiing nog een stukje
-     beweging over is waarin de punten kunnen oplossen. */
-  const photoFade = useAnimatedStyle(() => {
-    /* Niet symmetrisch, en dat is de bedoeling.
-
-       OMHOOG moet de foto meteen wijken. Hij bleef tot ver in de beweging
-       staan en dekte daarmee de punten af — daarom leek de morph van foto
-       naar rozet te ontbreken: hij gebeurde achter een beeld dat er nog
-       grotendeels stond.
-
-       OMLAAG moet hij juist zo lang mogelijk opbouwen en pas op het laatst
-       compleet zijn, zodat de reis niet wordt afgedekt maar afgemaakt.
-
-       Eén formule voor beide richtingen kan dat niet; vandaar dat de
-       stijgen-of-dalen-vlag hier ook gelezen wordt. */
-    const rising = flow.value < 0.5;
-    const from = rising ? 0.0 : 0.12;
-    const to = rising ? 0.16 : 0.58;
-    const p = (breath.value - from) / (to - from);
-    return { opacity: 1 - Math.min(1, Math.max(0, p)) };
-  });
-
-  /* Dezelfde foto die het puntenveld heeft afgetast, nu om te tónen. Skia
-     laadt hem één keer en deelt hem; er staat dus geen tweede kopie in het
-     geheugen. */
-  const facesImg = useImage(FACES);
-
+  /* ALTIJD zichtbaar (operator, 13 augustus 2026: "als je het niet kan met
+     de foto moet de foto gewoon weg" — na herhaalde black-screen-klachten,
+     tot een minuut lang, op de foto hieronder). De mandala is zuiver Skia-
+     vectorwerk zonder netwerkbeeld erin en tekent daarom altijd meteen —
+     dat bewees zich in elke test dit hele traject. Ze draagt nu het scherm
+     in plaats van pas op te komen ná een beeld dat soms niet komt. */
+  const orbFade = useAnimatedStyle(() => ({ opacity: 1 }));
   /* De regel ademt als GEHEEL. Dat is één beweging op de laag eromheen —
      het besturingssysteem verzet die view, er wordt geen letter opnieuw
      getekend. De vorige beurt-animatie deed het omgekeerde en moest elk
@@ -688,127 +1528,105 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
     transform: [{ scale: 0.985 + breath.value * 0.022 }],
   }));
 
+  /* Operator, 22 september 2026 ("onboarding step 1 de breathe build...
+     zelfde als in de breathwork tab welcome scherm"): zelfde gestapelde
+     "Breathe / Build / Become"-behandeling en dezelfde eenmalige
+     staggered-entrance-animatie als (tabs)/breath.tsx se eigen intro-
+     scherm (`wordReveal`/`WORD_STAGGER_MS`/`WORD_RISE_MS` daar) — exact
+     dezelfde fonts/maten, enkel donkere tekst i.p.v. wit (dit scherm
+     staat op een lichte foto-achtergrond, niet op zwart). */
+  const WORD_STAGGER_MS = 220;
+  const WORD_RISE_MS = 620;
+  const wordReveal = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
+  useEffect(() => {
+    wordReveal.forEach((v, i) => {
+      v.value = withDelay(
+        300 + i * WORD_STAGGER_MS,
+        withTiming(1, { duration: WORD_RISE_MS, easing: Easing.out(Easing.cubic) }),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* Operator, 22 september 2026 ("breathe build become moet om de beurt
+     even vergroten net zoals bij welcome breath pagina"): elk woord popt
+     nu ook kort iets groter op tijdens zijn eigen reveal (overshoot naar
+     1.08, dan terug naar 1) i.p.v. enkel op te schuiven — hergebruikt
+     dezelfde `wordReveal`-waarde, geen nieuwe shared values nodig. */
+  const wordStyle1 = useAnimatedStyle(() => ({
+    opacity: wordReveal[0].value,
+    transform: [
+      { translateY: 10 * (1 - wordReveal[0].value) },
+      { scale: interpolate(wordReveal[0].value, [0, 0.7, 1], [0.85, 1.08, 1]) },
+    ],
+  }));
+  const wordStyle2 = useAnimatedStyle(() => ({
+    opacity: wordReveal[1].value,
+    transform: [
+      { translateY: 10 * (1 - wordReveal[1].value) },
+      { scale: interpolate(wordReveal[1].value, [0, 0.7, 1], [0.85, 1.08, 1]) },
+    ],
+  }));
+  const wordStyle3 = useAnimatedStyle(() => ({
+    opacity: wordReveal[2].value,
+    transform: [
+      { translateY: 10 * (1 - wordReveal[2].value) },
+      { scale: interpolate(wordReveal[2].value, [0, 0.7, 1], [0.85, 1.08, 1]) },
+    ],
+  }));
+
   return (
     /* Extra ruimte ONDER het blok. Omdat `slideArea` zijn kind centreert,
        schuift het zichtbare deel daardoor omhoog — en dat was nodig, want
        met deze hoge bol bleef er bovenaan merkbaar meer lucht over dan
        onderaan (operator 2026-07-31). */
-    <View style={[s.slide, s.slideIntro]}>
-      {/* Klein en gedempt: een begroeting hoort niet te concurreren met de
-         kop eronder. Die kop draagt de belofte, dit alleen de toon. */}
-      <Text style={s.welcome}>WELCOME</Text>
+    <View style={[s.slide, light ? s.slideIntroLight : s.slideIntro]}>
+      {light ? (
+        /* Operator, 6 september 2026 (mockup): geen WELCOME/wordmark/mandala
+           meer op deze stap — enkel de foto, daaronder rechtstreeks de kop.
+           `slideIntroLight` zet kop+subtekst nu zelf onderaan
+           (justifyContent: flex-end), geen aparte spacer meer nodig. */
+        <View />
+      ) : (
+        <>
+          {/* Klein en gedempt: een begroeting hoort niet te concurreren met
+             de kop eronder. Die kop draagt de belofte, dit alleen de toon. */}
+          <Text style={s.welcome}>WELCOME</Text>
 
-      {/* De twee gezichten in plaats van de bol (operator, 3 augustus 2026).
-          Ze ademen op dezelfde klok als de kop eronder — één gedeelde waarde,
-          dus de regel en de wolk lopen exact gelijk. De klop die je voelt
-          blijft: die hing aan de bol en wordt nu apart aangeslagen, één keer
-          per ademcyclus. */}
-      {/* Twee lagen op elkaar, even groot en op dezelfde plek: de mandala
-          zoals hij was, en de puntenwolk die hem overneemt. */}
-      <Pressable onPress={onTapOrb} style={{ width: ORB, height: ORB }}>
-        <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
-          {/* Op ONZE ademwaarde, niet op zijn eigen. Anders zet de rozet uit
-              terwijl de punten al krimpen en klopt de beweging niet meer. */}
-          {/* Op onze ADEM, maar op zijn EIGEN draaiing.
+          {/* De twee gezichten in plaats van de bol (operator, 3 augustus
+              2026). Ze ademen op dezelfde klok als de kop eronder — één
+              gedeelde waarde, dus de regel en de wolk lopen exact gelijk. De
+              klop die je voelt blijft: die hing aan de bol en wordt nu apart
+              aangeslagen, één keer per ademcyclus. */}
+          {/* Twee lagen op elkaar, even groot en op dezelfde plek: de
+              mandala zoals hij was, en de puntenwolk die hem overneemt. */}
+          <Pressable onPress={onTapOrb} style={{ width: ORB, height: ORB }}>
+            <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
+              {/* Op ONZE ademwaarde, niet op zijn eigen. Anders zet de rozet
+                  uit terwijl de punten al krimpen en klopt de beweging niet
+                  meer. */}
+              {/* Op onze ADEM, maar op zijn EIGEN draaiing.
 
-              Ik had hem ook van zijn draaiing afgehaald, en dat was fout: die
-              werkte al en heeft niets te maken met het probleem dat ik wilde
-              oplossen. Hier hoort alleen de adem gedeeld te worden, want die
-              bepaalt of de figuur uitzet of krimpt — en dáár liep hij tegen
-              de puntenwolk in.
+                  Ik had hem ook van zijn draaiing afgehaald, en dat was fout:
+                  die werkte al en heeft niets te maken met het probleem dat
+                  ik wilde oplossen. Hier hoort alleen de adem gedeeld te
+                  worden, want die bepaalt of de figuur uitzet of krimpt — en
+                  dáár liep hij tegen de puntenwolk in.
 
-              De draaiing van de wolk staat los en heeft dezelfde omlooptijd,
-              zodat er al beweging in zit voordat deze laag verschijnt. */}
-          {/* GEEN `onPulse` meer (operator, 3 augustus 2026): de overgang is
-              alleen visueel. Een telefoon die uit zichzelf begint te trillen
-              terwijl je nog aan het kijken bent, onderbreekt precies het
-              moment dat het beeld moet dragen.
-              Tikken op de figuur trilt nog wél — dat vraagt de bezoeker zelf,
-              en dan is het antwoord op een handeling in plaats van een
-              onderbreking. */}
-          <HapticOrb size={ORB} breath={breath} />
-        </Animated.View>
-        <Animated.View style={[StyleSheet.absoluteFill, dustFade]}>
-          {/* De GEZICHTEN zijn de ruststand en de rozet het keerpunt — niet
-              andersom. Wie het scherm opent moet de twee mensen zien; van
-              daaruit waaieren de punten naar buiten, vormen de rozet, en
-              komen weer terug. Dat stond omgekeerd, en daarom begon de
-              onboarding op een figuur in plaats van op een gezicht. */}
-          <SplatField
-            restUri={FACES}
-            endBuilder={mandalaCloud}
-            spin={spin}
-            flow={flow}
-            breath={breath}
-            size={ORB}
-            color="#7FB2FF"
-          />
-        </Animated.View>
-        {/* De foto zelf, op het hoogtepunt.
-
-            Niet als gewone afbeelding maar OPTELLEND gemengd. De originele
-            foto draagt een eigen zwart vlak dat net niet het zwart van de app
-            is; als gewone afbeelding zie je dus een rechthoek opkomen in
-            plaats van een gezicht. Optellend gemengd voegt zwart niets toe —
-            het vlak verdwijnt volledig en alleen de gezichten lichten op.
-
-            Daarmee kan de ORIGINELE gebruikt worden en niet de uitgeknipte:
-            die laatste is 612×408 en wordt zacht zodra hij op bijna duizend
-            beeldpunten breed staat, precies op het moment dat het beeld
-            scherp hóórt te zijn. De originele heeft 1535×1024 en houdt zijn
-            detail, zonder uitknipranden.
-
-            `fit="contain"` is exact dezelfde inpassing als waarmee het
-            puntenveld is afgetast, dus de gezichten van de foto vallen
-            samen met die van de wolk. */}
-        <Animated.View style={[StyleSheet.absoluteFill, photoFade]}>
-          <Canvas style={{ width: ORB, height: ORB }}>
-            {facesImg && (
-              <Group>
-                <SkiaImage
-                  image={facesImg}
-                  x={0}
-                  y={0}
-                  width={ORB}
-                  height={ORB}
-                  fit="contain"
-                  blendMode="plus"
-                />
-                {/* De hals loopt uit in zwart.
-
-                    De foto houdt onderaan gewoon op: schouders, dan een
-                    rechte rand. Op een zwart scherm leest dat als een
-                    afgesneden beeld en niet als een gezicht dat uit het
-                    donker komt — en het maakt het geheel hard, precies zoals
-                    de operator zei.
-
-                    Dit is geen zwart vlak eroverheen: `dstIn` gumt weg wat
-                    hier doorzichtig is, dus de foto zelf lóst op. Een vlak
-                    zou de sterren erachter meedoven; nu blijft alles
-                    eromheen intact.
-
-                    De grenzen volgen de foto: bij verhouding 1535×1024 in een
-                    vierkant vak staat het beeld tussen 0.17 en 0.83, en de
-                    hals begint rond driekwart. Vandaar 0.66 tot 0.86. */}
-                <Rect
-                  x={0}
-                  y={0}
-                  width={ORB}
-                  height={ORB}
-                  blendMode="dstIn"
-                >
-                  <SkGradient
-                    start={vec(0, 0)}
-                    end={vec(0, ORB)}
-                    colors={['white', 'white', 'transparent']}
-                    positions={[0, 0.66, 0.86]}
-                  />
-                </Rect>
-              </Group>
-            )}
-          </Canvas>
-        </Animated.View>
-      </Pressable>
+                  De draaiing van de wolk staat los en heeft dezelfde
+                  omlooptijd, zodat er al beweging in zit voordat deze laag
+                  verschijnt. */}
+              {/* GEEN `onPulse` meer (operator, 3 augustus 2026): de overgang
+                  is alleen visueel. Een telefoon die uit zichzelf begint te
+                  trillen terwijl je nog aan het kijken bent, onderbreekt
+                  precies het moment dat het beeld moet dragen.
+                  Tikken op de figuur trilt nog wél — dat vraagt de bezoeker
+                  zelf, en dan is het antwoord op een handeling in plaats van
+                  een onderbreking. */}
+              <HapticOrb size={ORB} breath={breath} />
+            </Animated.View>
+          </Pressable>
+        </>
+      )}
 
       {/* Wit, met één schuine blauwe lichtband erdoorheen die naar rechts
          volledig blauw wordt. Niet losse woorden blauw kleuren — het blauw
@@ -816,15 +1634,27 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
          de beurt naar voren, één ronde per ademcyclus, dus de golf door de
          regel loopt gelijk met de golf door de ring. */}
       <Animated.View style={[s.headlineWrap, headBreath]}>
-        <GradientText
-          text="BREATHE. BUILD. BECOME"
-          size={23}
-          width={CONTENT_W}
-          weight="regular"
-          tracking={3.6}
-          stagger
-          cycleMs={WORD_CYCLE_MS}
-        />
+        {/* Operator, 6 september 2026: "geen gradient, gewoon 1 kleur
+           zwart" — in lichte stand gewone effen tekst i.p.v. GradientText
+           (dat draagt hier geen enkele animatie meer, dus geen reden meer
+           voor de Skia-omweg). */}
+        {light ? (
+          <View style={s.stackTitle}>
+            <Animated.Text style={[s.stackWord1Light, wordStyle1]}>Breathe</Animated.Text>
+            <Animated.Text style={[s.stackWord2Light, wordStyle2]}>Build</Animated.Text>
+            <Animated.Text style={[s.stackWord3Light, wordStyle3]}>Become</Animated.Text>
+          </View>
+        ) : (
+          <GradientText
+            text="BREATHE. BUILD. BECOME"
+            size={23}
+            width={CONTENT_W}
+            weight="regular"
+            tracking={3.6}
+            stagger
+            cycleMs={WORD_CYCLE_MS}
+          />
+        )}
       </Animated.View>
 
       {/* Tagline draagt de merkbelofte: één regel, wit, dezelfde schuine
@@ -833,51 +1663,115 @@ export function SlideIntro({ onTapOrb }: { onTapOrb: () => void }) {
          letterafstand valt de punt in het midden weg en lees je het als één
          lange zin; zo staan de twee beloftes duidelijk náást elkaar. Geen
          punt aan het eind — koppen zijn labels, geen zinnen. */}
-      <GradientText
-        text="CONTROL YOUR VIBE"
-        size={SUB_SIZE}
-        width={CONTENT_W * 0.94}
-        weight="regular"
-        colors={SUB_COLORS}
-        positions={SUB_POSITIONS}
-        tracking={SUB_TRACK}
-        style={s.taglineWrap}
-      />
-      <GradientText
-        text="CONTROL YOUR LIFE"
-        size={SUB_SIZE}
-        width={CONTENT_W * 0.94}
-        weight="regular"
-        colors={SUB_COLORS}
-        positions={SUB_POSITIONS}
-        tracking={SUB_TRACK}
-        style={s.taglineLine2}
-      />
+      {/* "CONTROL YOUR VIBE / LIFE" weg (operator, 10 augustus 2026): dat
+          staat al als de kop van het app-welkomstscherm (welcome.tsx), een
+          paar tikken hiervoor — hier nogmaals is dubbel. De oude
+          welcome.tsx-subregel ("CHANGE THE GAME · UNLOCK YOUR FULL
+          POTENTIAL", daar zelf weggehaald toen de kop het al zei) hoort
+          hier thuis: deze onboarding-slide heeft geen eigen kop-tekst die
+          het al zegt. */}
+      {/* Operator, 6 september 2026: in lichte stand weg (mockup gaat direct
+         van de kop naar de iconenrij, geen aparte taglineregel — dat stond
+         hier enkel als vulling op donker). */}
+      {!light && (
+        <>
+          <GradientText
+            text="CHANGE THE GAME"
+            size={SUB_SIZE}
+            width={CONTENT_W * 0.94}
+            weight="regular"
+            colors={SUB_COLORS}
+            positions={SUB_POSITIONS}
+            tracking={SUB_TRACK}
+            style={s.taglineWrap}
+          />
+          <GradientText
+            text="UNLOCK YOUR FULL POTENTIAL"
+            size={SUB_SIZE}
+            width={CONTENT_W * 0.94}
+            weight="regular"
+            colors={SUB_COLORS}
+            positions={SUB_POSITIONS}
+            tracking={SUB_TRACK}
+            style={s.taglineLine2}
+          />
+        </>
+      )}
 
-      <View style={s.traits}>
-        {TRAITS.map(({ key, label, Icon }, i) => (
-          <View key={key} style={s.traitItem}>
-            {i > 0 && <View style={s.traitDivider} />}
-            <Icon size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-            <Text style={s.traitTxt}>{label}</Text>
-          </View>
-        ))}
-      </View>
+      {light ? (
+        /* Operator, 6 september 2026 (mockup): geen iconenrij meer — één
+           rustige subtekstregel onder de kop, "moet rustiger".
+           Operator, 22 september 2026 ("weet gebruiker nu wat er aan het
+           gebeuren is?" → "verwijder hier control the input, laat alles
+           op dezelfde plaats staan"): de merk-tagline is hier weg — enkel
+           de functionele oriëntatie-regel blijft, met een groter eigen
+           `marginTop` (was 10 t.o.v. de tagline erboven) zodat hij op
+           ongeveer dezelfde plek landt als voorheen i.p.v. omhoog te
+           springen naar waar de tagline stond. */
+        <Text style={[s.introOrientLight, { marginTop: 34 }]}>
+          A few quick steps, then your first session
+        </Text>
+      ) : (
+        <View style={s.traits}>
+          {TRAITS.map(({ key, label, Icon }, i) => (
+            <View key={key} style={s.traitItem}>
+              {i > 0 && <View style={s.traitDivider} />}
+              <Icon size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+              <Text style={s.traitTxt}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
 
 /* ── Scherm 2 — hoe je begeleid wordt ─────────────────────────────────── */
 
+/* Dekt de volledige demo-cyclus in `onPickMode` (inhale meteen, hold-in op
+   3000ms, exhale op 5000ms) + de exhale-cue zelf, zodat de puls niet dooft
+   terwijl de stem nog spreekt. */
+const VOICE_DEMO_MS = 7500;
+
 function SlideGuidance({
-  mode,
   onPick,
+  chosenMode,
+  light = false,
 }: {
-  mode: GuidanceMode | null;
   onPick: (m: GuidanceMode) => void;
+  chosenMode: GuidanceMode | null;
+  light?: boolean;
 }) {
-  const activeIndex = GUIDANCE_MODES.findIndex((m) => m.key === mode);
-  const activeCfg = GUIDANCE_MODES[activeIndex];
+  /* Operator, 22 september 2026 (Apple HIG, "geen vinkjes maar een
+     'luister'-status, tijdelijke dynamische animaties"): `playing` is
+     lokaal en TRANSIENT — enkel voor de "nu speelt dit"-puls in `ModeRow`,
+     los van de echte, bewaarde instelling (die loopt nog steeds via
+     `onPick` → `onPickMode` in de aanroeper, ongewijzigd — zie de
+     toelichting daar).
+     Operator, 22 september 2026 (vervolg, "de cirkel moet wel blijven
+     zolang spraak niet is geëindigd"): geen vaste 1,8s meer voor élke
+     modus. Voice/Voice+Haptics spelen sinds de vorige wijziging een
+     volledige inhale→hold→exhale-cyclus (`onPickMode` hierboven: exhale
+     start pas op 5000ms) — bij een vaste 1,8s doofde de puls dus allang
+     terwijl de stem nog aan het inhalen/vasthouden was. `VOICE_DEMO_MS`
+     dekt die hele cyclus + de exhale-cue zelf; Haptics/Silent (geen
+     spraak) houden de kortere, oorspronkelijke duur. */
+  const [playing, setPlaying] = useState<GuidanceMode | null>(null);
+  const playingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (playingTimer.current) clearTimeout(playingTimer.current);
+  }, []);
+  /* Operator, 22 september 2026 ("bij aantikken popup met info... ze mogen
+     niet uit de flow geraken"): een in-scherm `Modal` i.p.v. `router.push`
+     naar de Bracelet-tab — de onboarding-flow blijft actief eronder. */
+  const [braceletInfo, setBraceletInfo] = useState(false);
+  const handlePress = (key: GuidanceMode) => {
+    onPick(key);
+    setPlaying(key);
+    const wantsVoice = key === 'voice' || key === 'both';
+    if (playingTimer.current) clearTimeout(playingTimer.current);
+    playingTimer.current = setTimeout(() => setPlaying(null), wantsVoice ? VOICE_DEMO_MS : 1800);
+  };
 
   /* Zelfde ademhaling als op scherm 1, op dezelfde klok. Eén beweging op de
      laag eromheen; de letters blijven onaangeroerd. */
@@ -900,366 +1794,835 @@ function SlideGuidance({
 
   return (
     <View style={s.slide}>
-      {/* Kapitalen op LICHT gewicht met ruime letterafstand, naar de
-         referentie van de operator (2026-07-31). Dat is een andere school
-         dan zwaar-en-strak: het gewicht doet niets, de ruimte doet alles.
-         Twee regels, want zo blijven de letters groot genoeg om dat te
-         dragen — op één regel zou hij tot ruim de helft moeten krimpen.
+      {/* Operator, 23 september 2026 ("de lichtbron op de achtergrond mag
+         weg in onboarding"): de `AuroraGlow`-achtergrondgloed (kleurde mee
+         met de gekozen modus zolang die speelde) is weg — de rand-gloed +
+         icoonpuls op de kaart zelf geven al genoeg selectiesignaal. */}
+      {/* Operator, 22 september 2026 ("ook de fontstijl en layout moet
+         zelfde als in de app protocol settings"): vervangt de gecentreerde,
+         grote-kapitalen "titleBlock" (uitgelegd in de vorige versie van
+         deze comment) door exact dezelfde kop/subkop-taal als goal.tsx/
+         intensity.tsx — links uitgelijnd, `TypeScale.pageHeader` (bold/30)
+         + `TypeScale.pageSubhead` (regular/16), geen aparte Skia-tekst of
+         gestapelde twee-regel-kop meer. De adem-animatie op de kop blijft
+         (`titleBreath`), enkel de vorm/uitlijning verandert. */}
+      <Animated.View style={[{ alignSelf: 'stretch' }, titleBreath]}>
+        {/* Operator, 22 september 2026 ("choose your rhythm misschien
+           beter zo krijgen we meer ruimte"): was een geforceerde 2-regel
+           kop ("Your rhythm\nYour choice") — deze ene regel geeft dezelfde
+           boodschap terug en maakt de verticale ruimte vrij die de
+           bracelet-teaserkaart eronder nodig heeft. */}
+        <Text style={s.header}>Choose your rhythm</Text>
+        <Text style={s.lead}>Tap. See. Hear. Feel</Text>
+      </Animated.View>
 
-         De mandala staat erachter als decor: haarlijnen op lage dekking,
-         traag draaiend, zonder de gevulde maanvorm — die zou precies achter
-         de tekst komen en die onleesbaar maken. */}
-      <View style={s.titleBlock}>
-        <MandalaBackdrop size={HEADER_MANDALA} />
-        <Animated.View style={[s.titleLines, titleBreath]}>
-          <GradientText
-            text="CHOOSE YOUR"
-            size={HEADER_SIZE}
-            width={CONTENT_W}
-            weight="regular"
-            tracking={HEADER_TRACK}
-            sweep
-            cycleMs={WORD_CYCLE_MS}
-          />
-          <GradientText
-            text="GUIDANCE"
-            size={HEADER_SIZE}
-            width={CONTENT_W}
-            weight="regular"
-            tracking={HEADER_TRACK}
-            sweep
-            cycleMs={WORD_CYCLE_MS}
-            style={s.titleLine2}
-          />
-        </Animated.View>
-        {/* Binnen titleBlock, niet erna (operator, 10 augustus 2026:
-            "subheader heel laag, moet vlak onder header staan"). Als losse
-            sibling ná het blok erfde deze regel de lege ruimte onder de
-            gecentreerde kop mee — op de andere drie schermen staat de
-            subregel al WEL binnen titleBlock, en zit strak tegen de kop.
-            Smaller meegegeven dan de kop, zodat ze er nooit breder uit kan
-            komen — ook niet als de tekst ooit verandert. */}
-        <GradientText
-          text="YOUR BREATH. YOUR RHYTHM. YOUR CHOICE"
-          size={SUB_SIZE}
-          width={CONTENT_W * 0.94}
-          weight="regular"
-          colors={SUB_COLORS}
-          positions={SUB_POSITIONS}
-          tracking={SUB_TRACK}
-          style={s.subWrap}
-        />
-      </View>
-
-      {/* Geen uitvergroting meer: de omschrijving staat nu groot genoeg in
-         de beelden zelf, dus een tweede scherm voegde niets toe behalve een
-         extra tik (operator 2026-07-31). Aantikken kiest en licht op. */}
-      <View style={s.grid}>
-        {/* Eén gloed die naar de gekozen kaart toe schuift, in de kleur van
-           die kaart zelf. Dat maakt de keuze zichtbaar i.p.v. hem alleen aan
-           te wijzen — en het scheelt drie vervaagde vlakken die toch
-           onzichtbaar zouden zijn. */}
-        <SelectionGlow
-          cells={GLOW_CELLS}
-          activeIndex={activeIndex}
-          color={activeCfg?.color ?? '#ffffff'}
-        />
-        {GUIDANCE_MODES.map((m) => (
-          <ModeTile
+      {/* Operator, 22 september 2026 ("ik vind het niet goed, ik wil
+         verschillende transparante kaarten in verschillende groottes en
+         de iconen wit"): de verticale lijst (Apple HIG-poging, ronde 2)
+         is terug een kaarten-grid — nu een bento-opzet zoals goal.tsx's
+         eigen grid (2 grote tegels boven, kleinere eronder), echte
+         matglas-kaarten (`BlurView`), en witte iconen i.p.v. de moduskleur
+         (die kleur zat al op de rand/gloed, geen dubbel signaal meer). De
+         "speelt nu"-puls (geen blijvend vinkje, wel tijdelijke feedback —
+         dat deel bleef ongemoeid, enkel het uiterlijk veranderde) blijft
+         hetzelfde `playing`-mechanisme. */}
+      <View style={s.modeGrid}>
+        {GUIDANCE_MODES.map((m, i) => (
+          <ModeCard
             key={m.key}
             cfg={m}
-            active={m.key === mode}
-            onPress={() => onPick(m.key)}
+            desc={MODE_DESCRIPTIONS[m.key]}
+            big={i < 2}
+            playing={m.key === playing}
+            selected={m.key === chosenMode}
+            dimmed={chosenMode !== null && m.key !== chosenMode}
+            onPress={() => handlePress(m.key)}
           />
         ))}
       </View>
+
+      {/* Operator, 22 september 2026 ("zet je onder de kaarten een
+         vertical kaart met de bracelet in"): 5e, volle-breedte kaart onder
+         het 2×2-raster — geen 5e "modus" (dat blijft de 4 hierboven), maar
+         een teaser die naar een infopopup leidt i.p.v. een keuze te zijn. */}
+      <BraceletTeaserCard onPress={() => setBraceletInfo(true)} />
+      <BraceletInfoModal
+        visible={braceletInfo}
+        onClose={() => setBraceletInfo(false)}
+      />
     </View>
   );
 }
 
-/* Eén kaart. Eigen component omdat de selectie hooks vraagt.
+/* Volle-breedte teaser-kaart onder de 4 gidsmodi-kaarten — zelfde
+   matglas-rand-taal als `ModeCard`, maar met de operator-aangeleverde
+   productfoto als achtergrond i.p.v. een icoon. Geen selectiestatus (geen
+   `active`/`playing`): dit is geen keuze, enkel een aankondiging die je
+   meer info geeft. Bronbeeld 1024×1536, effen zwarte achtergrond,
+   dramatisch belicht. */
+const BRACELET_TEASER_SRC_W = 1024;
+const BRACELET_TEASER_SRC_H = 1536;
+/* Operator, 23 september 2026 ("onderkant van de kaart is beetje te kort
+   afgesneden"): 150 → 164, iets meer verticale ruimte zodat de armband
+   onderaan niet zo krap wordt afgesneden. */
+const BRACELET_TEASER_CARD_H = 164;
 
-   De selectie is bewust méér dan een randje: een WITTE halo achter de kaart,
-   de kaart zelf op volle helderheid terwijl de andere drie wegzakken, en een
-   zachte opschaling. Wit en niet de moduskleur — de kaarten zijn al blauw,
-   en nóg meer blauw laat de selectie juist verdwijnen (operator 2026-07-31).
-
-   React Native kent geen echte gloed op Android; twee gestapelde afgeronde
-   vlakken die iets buiten de kaart uitsteken geven dezelfde zachte rand voor
-   vrijwel niets. */
-function ModeTile({
-  cfg,
-  active,
-  onPress,
-}: {
-  cfg: (typeof GUIDANCE_MODES)[number];
-  active: boolean;
-  onPress: () => void;
-}) {
-  const sel = useSharedValue(active ? 1 : 0);
-  useEffect(() => {
-    sel.value = withTiming(active ? 1 : 0, {
-      duration: 340,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [active, sel]);
-
-  /* Welke kaart actief is moet in één oogopslag duidelijk zijn (operator
-     2026-07-31). Drie signalen die samenwerken, want de beelden hebben zélf
-     al een gekleurd kader en één enkel signaal verdrinkt daarin:
-       - de kaart schaalt op en komt naar voren
-       - een dunne rand in de kleur van de modus, ÓVER het beeld heen
-       - de corona erachter, die naar deze kaart toe schuift
-     Het vinkje is eruit: met drie signalen was dat er één te veel, en een
-     badge is nu eenmaal een sticker op een foto (operator 2026-07-31).
-
-     De rand is bewust dun en niet vol: subtiel en elegant, geen keuzevakje.
-     De niet-gekozen kaarten zakken licht terug — niet ver, want op 55% werd
-     het hele scherm te donker. */
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.982 + sel.value * 0.038 }],
-    opacity: 0.8 + sel.value * 0.2,
-  }));
-
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: sel.value * 0.8,
-    borderColor: cfg.color,
-  }));
-
-
+function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
+  const IMG = useAssetUri(BRACELET_TEASER_IMG);
+  const [w, setW] = useState(0);
+  /* Handmatige crop: kader-brede "cover"-schaal met een extra
+     `ZOOM`-factor eronder (kleiner beeld, dus de armband zelf ook
+     kleiner) en een `V_OFFSET` naar beneden (schuift de zichtbare
+     cropvenster omlaag, dus meer van de lege zwarte ruimte bovenaan
+     blijft zichtbaar, de armband zakt lager in de kaart). De rand rond
+     het beeld blijft naadloos zwart — de kaart zelf heeft geen eigen
+     achtergrondkleur, dus de donkere schermachtergrond schijnt er gewoon
+     doorheen. */
+  const ZOOM = 0.8;
+  const V_OFFSET = 22;
+  const coverScale = w > 0
+    ? Math.max(w / BRACELET_TEASER_SRC_W, BRACELET_TEASER_CARD_H / BRACELET_TEASER_SRC_H)
+    : 0;
+  const scale = coverScale * ZOOM;
+  const dispW = BRACELET_TEASER_SRC_W * scale;
+  const dispH = BRACELET_TEASER_SRC_H * scale;
   return (
-    <Pressable onPress={onPress} style={s.tileWrap}>
-      <Animated.View style={cardStyle}>
+    <Pressable
+      onPress={onPress}
+      style={s.braceletTeaser}
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+    >
+      {w > 0 && (
         <Image
-          source={{ uri: MODE_CARDS[cfg.key] }}
-          style={s.tileImg}
-          resizeMode="contain"
+          source={{ uri: IMG }}
+          resizeMode="stretch"
+          style={{
+            position: 'absolute',
+            left: (w - dispW) / 2,
+            top: (BRACELET_TEASER_CARD_H - dispH) / 2 + V_OFFSET,
+            width: dispW,
+            height: dispH,
+          }}
         />
-        <Animated.View style={[s.tileRing, ringStyle]} pointerEvents="none" />
-      </Animated.View>
+      )}
+      <View style={s.braceletTeaserBadge}>
+        <Text style={s.braceletTeaserBadgeTxt}>Launching Fall 2026</Text>
+      </View>
     </Pressable>
   );
 }
 
-/* ── Scherm 3 — de bracelet ───────────────────────────────────────────── */
-
-function SlideBracelet({
-  noteVisible,
-  onTap,
+/* In-flow infopopup — houdt de bezoeker op dit onboarding-scherm i.p.v.
+   'm naar de Bracelet-tab te sturen (operator: "ze mogen niet uit de flow
+   geraken"). Functie hier is haptic guidance through the wrist voor
+   breathwork — dezelfde begeleide ademsessie doorgezet als haptiek op de
+   pols, NIET de losse "Instant State Control"-pitch. Tekst is de
+   goedgekeurde FAQ-zin geherformuleerd, geen nieuwe claim. */
+function BraceletInfoModal({
+  visible,
+  onClose,
 }: {
-  noteVisible: boolean;
-  onTap: () => void;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const IMG = useAssetUri(BRACELET_TEASER_IMG);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s.braceletModalScrim}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={s.braceletModalCard}>
+          <Image source={{ uri: IMG }} style={s.braceletModalImg} resizeMode="cover" />
+          <View style={s.braceletModalBody}>
+            <Text style={s.braceletModalEyebrow}>SMART BEAD BRACELET</Text>
+            <Text style={s.braceletModalTitle}>Wear the rhythm</Text>
+            <Text style={s.braceletModalSubhead}>
+              {'Haptic guidance, designed\nas a statement piece'}
+            </Text>
+            <View style={s.braceletModalFeatures}>
+              <View style={s.braceletModalFeatureRow}>
+                <View style={s.braceletModalBullet} />
+                <Text style={s.braceletModalFeature}>Feel the pulse</Text>
+              </View>
+              <View style={s.braceletModalFeatureRow}>
+                <View style={s.braceletModalBullet} />
+                <Text style={s.braceletModalFeature}>Follow the rhythm</Text>
+              </View>
+              <View style={s.braceletModalFeatureRow}>
+                <View style={s.braceletModalBullet} />
+                <Text style={s.braceletModalFeature}>Stay present</Text>
+              </View>
+            </View>
+            <Text style={s.braceletModalText}>Use discreetly. Anytime. Anywhere.</Text>
+            <View style={s.braceletModalHintRow}>
+              <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+              <Text style={s.braceletModalHint}>Full details in the Bracelet tab in the app</Text>
+            </View>
+            <Pressable onPress={onClose} style={s.braceletModalClose}>
+              <Text style={s.braceletModalCloseTxt}>Got it</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/* Matglas-kaart, twee groottes (`big` = de eerste 2 modi, groter; de
+   overige 2 compacter) — zelfde bento-principe als goal.tsx se GoalTile.
+   `playing` is TRANSIENT (zie `handlePress` in `SlideGuidance`, zet 'm even
+   en veegt na ~1.8s weer weg) — enkel voor de tijdelijke "dit speelt nu"-
+   iconpuls. De rand-gloed zelf volgt sinds "aangeduide kaart moet
+   aangeduid BLIJVEN zolang er geen andere keuze gemaakt wordt" (operator,
+   23 september 2026) niet meer `playing` maar het nieuwe, WEL persistente
+   `selected` (= `chosenMode`, resetzich niet na de demo). */
+function ModeCard({
+  cfg,
+  desc,
+  big,
+  playing,
+  selected,
+  dimmed,
+  onPress,
+}: {
+  cfg: (typeof GUIDANCE_MODES)[number];
+  desc: string;
+  big: boolean;
+  playing: boolean;
+  selected: boolean;
+  dimmed: boolean;
+  onPress: () => void;
+}) {
+  const sel = useSharedValue(selected ? 1 : 0);
+  useEffect(() => {
+    sel.value = withTiming(selected ? 1 : 0, {
+      duration: selected ? 200 : 500,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [selected, sel]);
+
+  /* Operator, 24 september 2026 ("rand moet niet te wit"): eindwaarde was
+     0.64 (0.14 + 0.5) — merkbaar feller dan goal.tsx's vaste 0.4 bij
+     selectie. Animatie zelf blijft (vloeiender dan goal.tsx's instant-
+     snap, dat is een verbetering), enkel de eindwaarde nu gelijkgetrokken:
+     0.14 + 1×0.26 = 0.4. */
+  const borderStyle = useAnimatedStyle(() => ({
+    borderColor: `rgba(255,255,255,${0.14 + sel.value * 0.26})`,
+  }));
+
+  /* Puls op het icoon-rondje zolang de demo loopt. Operator, 22 september
+     2026 ("mogen rustiger pulseren, mensen moeten tot rust komen"): was
+     450ms per richting (~1,3 puls/sec) — voelde gejaagd voor een app die
+     net kalmte belooft. 950ms is dichter bij een rustige ademhalings-
+     cadans, zelfde soort tempo als `titleBreath` elders op dit scherm. */
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    if (playing) {
+      pulse.value = withRepeat(
+        withTiming(1, { duration: 950, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true,
+      );
+    } else {
+      cancelAnimation(pulse);
+      pulse.value = withTiming(0, { duration: 200 });
+    }
+  }, [playing, pulse]);
+  const iconPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.05 }],
+  }));
+  /* Operator, 22 september 2026 ("als de cirkels animeren moeten die mooi
+     binnen het kader blijven"): schaalde tot 1,3× de iconcirkel op — bij de
+     grotere iconen (nu 2,2×) groeide de ring dan voorbij het icoonvak en
+     leek hij tegen/over de kaartrand te schuiven. Kleinere groei (1,14×
+     max) houdt 'm ruim binnen `modeCardIconWrap`.
+     Operator, 22 september 2026 (vervolg, "puls mag subtieler"): amplitude
+     verder getemperd (0.3+0.4/1.14 → 0.18+0.2/1.08) — de kaartrand-gloed
+     hierboven draagt nu het grootste deel van het "dit speelt nu"-signaal,
+     de ring hoeft niet meer zo te schreeuwen. */
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: sel.value * (0.18 + pulse.value * 0.2),
+    transform: [{ scale: 1 + pulse.value * 0.08 }],
+  }));
+
+  /* Operator, 23 september 2026 ("pas de volledige kaart-animatie toe op
+     heel de onboarding, moet consistent zijn"): zelfde recept als
+     `StartCard` (stap 5) — press-in zonder bounce, press-out MET de
+     critically-damped spring, en de niet-actieve kaarten dimmen naar 0.45
+     zodra er een andere kaart "speelt". */
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
+  useEffect(() => {
+    cardOpacity.value = withTiming(dimmed ? 0.45 : 1, {
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [dimmed, cardOpacity]);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: cardOpacity.value,
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.modeCardWrap, big ? s.modeCardBig : s.modeCardCompact, pressStyle]}
+    >
+      {/* Operator, 22 september 2026 ("alle tekst even groot en icoon
+         boven de tekst"): geen rij-lay-out (icoon links) meer op de
+         compacte kaarten — alle 4 kaarten zijn nu kolommen, icoon boven
+         gecentreerd, tekst eronder, enkel `big` bepaalt nog de hoogte. */}
+      {/* Operator, 22 september 2026 ("binnenkant van de kaarten hebben nu
+         een rare vierkante gloed"): de `shadowColor`/`elevation`-gloed
+         (goal.tsx se recept) teruggedraaid — rendert hier lelijk (een
+         vierkante gloed BINNEN de afgeronde kaart, door `overflow:
+         'hidden'` op `modeCard`). Terug naar enkel de rand-animatie. */}
+      <Animated.View style={[s.modeCard, s.modeCardColumn, borderStyle]}
+      >
+        <BlurView
+          intensity={40}
+          tint="dark"
+          blurMethod="dimezisBlurViewSdk31Plus"
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.modeCardIconWrap}>
+          {/* Operator, 22 september 2026 ("bij aantikken mag de cirkel
+             wit zijn, niet gekleurd"): was `cfg.color` (de moduskleur) —
+             nu wit, zelfde kleur als het icoon zelf. */}
+          <Animated.View
+            style={[s.modeCardRing, { borderColor: '#ffffff' }, ringStyle]}
+            pointerEvents="none"
+          />
+          <Animated.View style={[s.modeCardIcon, iconPulseStyle]}>
+            <ModeGlyph mode={cfg.key} color="#ffffff" scale={1.9} />
+          </Animated.View>
+        </View>
+        {/* Operator, 22 september 2026 ("alle tekst headers en body tekst
+           zelfde grootte, verwijder subtekst, enkel voice ... behouden"):
+           geen aparte omschrijving/"Listening…"-regel meer — enkel het
+           label, dezelfde tekstgrootte op elke kaart. */}
+        <Text style={s.modeCardLabel} numberOfLines={2}>
+          {cfg.label}
+        </Text>
+      </Animated.View>
+    </AnimatedPressable>
+  );
+}
+
+/* ── Scherm 3 — "wat wil je veranderen" ────────────────────────────────
+   Nieuwe stap (operator, 6 september 2026), 1:1 op onze vijf echte
+   ademtoestanden — geen zesde kaart die de app niet waarmaakt. Tot twee
+   kaarten aan te vinken, zelfde opslag als de latere breath-quiz. */
+function SlideChangeGoals({
+  selected,
+  onToggle,
+}: {
+  selected: string[];
+  onToggle: (goalKey: string) => void;
 }) {
   return (
     <View style={s.slide}>
-      {/* Zelfde opzet als scherm 2: kapitalen op licht gewicht met ruime
-         letterafstand, met de mandala als decor erachter. */}
-      {/* Omgedraaid (operator, 3 augustus 2026): de PRODUCTNAAM staat boven,
-          de belofte eronder. Zo stond het als enige scherm andersom — de
-          overige vier zetten hun kop eerst. En belangrijker: dit scherm gaat
-          over een product dat nog niemand kent. Dan moet eerst vaststaan
-          waar je naar kijkt, en pas daarna wat het voor je doet. */}
-      <View style={s.titleBlock}>
-        <MandalaBackdrop size={HEADER_MANDALA} />
-        <GradientText
-          text="SMART BEAD BRACELET"
-          size={HEADER_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-          tracking={HEADER_TRACK}
-        />
-        <GradientText
-          text="QUIET GUIDANCE THROUGH THE WRIST"
-          size={SUB_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-          colors={SUB_COLORS}
-          positions={SUB_POSITIONS}
-          tracking={SUB_TRACK}
-          style={s.braceletSubLine}
-        />
+      {/* Operator, 23 september 2026 ("de lichtbron op de achtergrond mag
+         weg in onboarding"): de `AuroraGlow`-achtergrondgloed (kleurde mee
+         met het eerste gekozen doel) is weg — de badge/rank-nummer op de
+         tegel zelf geeft al genoeg selectiesignaal. */}
+      <View style={s.changeHeader}>
+        {/* Operator, 22 september 2026: "What's the end game?" / "Choose
+           up to two, adjust anytime" — vervangt "What do you want to
+           change?" / "Choose up to two. You can always adjust this
+           later." Subheader zonder punt (huisstijl voor headers/
+           subheaders, geen doorlopende zin meer maar één korte regel). */}
+        <Text style={s.changeTitle}>What&apos;s the end game</Text>
+        <Text style={s.changeSub}>Choose up to two, adjust anytime</Text>
       </View>
 
-      {/* Geen gouden gloed meer erachter: die maakte er een vlak van waarop
-         het product LAG. Zonder dat vlak zweeft het in dezelfde ruimte als
-         de rest van de onboarding (operator 2026-07-31). */}
-      <Pressable onPress={onTap} style={s.braceletImgWrap}>
-        {/* `cover` en niet `contain`. Het bestand is VIERKANT met veel lege
-           ruimte boven en onder de bracelet, en bij `contain` bepaalt in een
-           breed vak de hoogte hoe groot het beeld wordt — die lege ruimte
-           telt dan mee en drukt het product klein. `cover` schaalt op de
-           breedte en snijdt boven en onder weg; dat is precies de lege
-           ruimte. Het product wordt daardoor ruim 40% groter zonder dat het
-           vak groeit (operator 2026-07-31). */}
-        <Image
-          source={{ uri: BRACELET_IMG }}
-          style={s.braceletImg}
-          resizeMode="cover"
-        />
-        {/* De haptische klop komt uit het zwarte kastje, iets onder het
-           midden van het beeld. */}
-        {/* originY 0.58 -> 0.70 (operator, 10 augustus 2026: "haptic staat
-            nog altijd 0.5cm te hoog"). De vorige poging schatte het
-            kastje te hoog in de bijgesneden foto. */}
-        <PodPulse
-          width={BRACELET_W}
-          height={BRACELET_W * 0.34}
-          originY={0.7}
-          reach={0.1}
-          intensity={2.4}
-        />
-      </Pressable>
-
-      <View style={s.features}>
-        {BRACELET_FEATURES.map(({ key, Icon, text }) => (
-          <View key={key} style={s.featureRow}>
-            <View style={s.featureIconWrap}>
-              <Icon size={15} color="#7FB2FF" strokeWidth={2} />
-            </View>
-            <Text style={s.featureTxt}>{text}</Text>
-          </View>
-        ))}
+      {/* Operator, 22 september 2026 ("carrousel moet weg, bouwen zoals in
+         build breathwork protocol"): zelfde bento-grid als `goal.tsx`'s
+         "Set your state" — `selected[0]`/`selected[1]` bepalen de
+         genummerde badge (1/2), exact zoals `primary`/`secondary` daar. */}
+      <View style={s.changeGrid}>
+        {GOALS.map((g) => {
+          const rank = selected[0] === g.key ? 1 : selected[1] === g.key ? 2 : 0;
+          return (
+            <ChangeTile
+              key={g.key}
+              g={g}
+              rank={rank}
+              dimmed={selected.length > 0 && rank === 0}
+              onPress={() => onToggle(g.key)}
+            />
+          );
+        })}
       </View>
-
-      <View style={s.comingPill}>
-        <Text style={s.comingTxt}>COMING FALL 2026</Text>
-      </View>
-
-      {noteVisible && (
-        <Text style={s.braceletNote}>
-          The rhythm moves from your screen to your wrist. Silent,
-          invisible, hands-free.
-        </Text>
-      )}
     </View>
   );
 }
 
-/* ── Scherm 4 — hoe het werkt ─────────────────────────────────────────── */
+/* Bento-tegel voor stap 3 — 1-op-1 het `GoalTile`-recept van goal.tsx
+   (matglas-kaart, icoon-badge, genummerde selectie, `Goal.gradient` bij
+   selectie), maar met ÉÉN vaste (compacte) maat voor alle 8 tegels i.p.v.
+   2 grote + 6 compacte — dit scherm mag niet scrollen, dat budget is er
+   hier niet. */
+function ChangeTile({
+  g,
+  rank,
+  dimmed,
+  onPress,
+}: {
+  g: Goal;
+  rank: number;
+  dimmed: boolean;
+  onPress: () => void;
+}) {
+  const on = rank > 0;
+  const Icon = g.Icon;
+  /* Operator, 23 september 2026 ("pas de volledige kaart-animatie toe op
+     heel de onboarding, moet consistent zijn"): zelfde recept als
+     `StartCard`/`ModeCard` — press-in zonder bounce, press-out MET de
+     critically-damped spring, niet-gekozen tegels dimmen naar 0.45 zodra
+     er minstens 1 doel getikt is. */
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
+  useEffect(() => {
+    cardOpacity.value = withTiming(dimmed ? 0.45 : 1, {
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [dimmed, cardOpacity]);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: cardOpacity.value,
+  }));
+  /* Operator, 22 september 2026 ("enkel icoon 1 sleep better lijkt kleiner
+     dan de rest"): niet de doos is anders, de brontekening zelf heeft
+     minder "inkt" binnen hetzelfde canvas — exact hetzelfde kalibratie-
+     probleem dat goal.tsx's eigen `GoalTile` al oploste (`iconSize = g.key
+     === 'sleep' ? 62 : g.key === 'recovery' ? 53 : 46`, tegenover een
+     basis van 46). Zelfde verhoudingen hier, op onze basis van 56. */
+  const iconSize = g.key === 'sleep' ? 76 : g.key === 'recovery' ? 65 : 56;
+  const iconNode = g.image ? (
+    <Image
+      source={{ uri: g.image }}
+      style={{ width: iconSize, height: iconSize, tintColor: '#ffffff' }}
+      resizeMode="contain"
+    />
+  ) : (
+    <Icon size={iconSize} color="#ffffff" strokeWidth={2} />
+  );
 
-/* Drie stappen, in de volgorde waarin een gebruiker ze doorloopt. Labels in
-   kapitalen zonder punt (het zijn labels), de uitleg eronder als gewone zin
-   mét punt. VIBEZCORE in hoofdletters — merkregel. */
-const HOW_STEPS = [
-  { key: 'connect', label: 'CONNECT', text: 'Pair your bracelet once.' },
-  {
-    key: 'choose',
-    label: 'CHOOSE',
-    text: 'Select any breathing session in the VIBEZCORE app.',
-  },
-  {
-    key: 'feel',
-    label: 'FEEL',
-    text: 'Every inhale, hold and exhale is delivered through precise haptic guidance.',
-  },
-] as const;
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      style={[s.changeTile, on && s.changeTileOn, pressStyle]}
+    >
+      <BlurView
+        intensity={40}
+        tint="dark"
+        blurMethod="dimezisBlurViewSdk31Plus"
+        style={StyleSheet.absoluteFill}
+      />
+      {on && (
+        <LinearGradient
+          colors={g.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      )}
+      {on && (
+        <View style={s.changeTileRank}>
+          <Text style={[s.changeTileRankTxt, { color: g.gradient[0] }]}>
+            {rank}
+          </Text>
+        </View>
+      )}
+      <View
+        style={[s.changeTileContent, g.key === 'sleep' && { marginTop: -4 }]}
+      >
+        {iconNode}
+        {/* Operator, 22 september 2026 ("tekst sleep better moet hoger
+           zonder icoon te verplaatsen"): het grotere icoon (76px, zie
+           `iconSize` hierboven) duwt het label via de vaste `gap:10` van
+           `changeTileContent` verder omlaag dan bij de andere kaarten —
+           het icoon zelf blijft precies waar het stond, enkel het label
+           schuift dichterbij via een negatieve marginTop op DIT ene
+           label.
+           Operator, 22 september 2026 (vervolg, "icoon en tekst 1mm
+           hoger"): het HELE blok (icoon + label samen) schuift nu ook nog
+           1mm (~4px) omhoog, via een negatieve marginTop op de
+           buitenste content-wrap hierboven — enkel voor deze kaart. */}
+        <Text
+          style={[s.changeTileName, g.key === 'sleep' && { marginTop: -14 }]}
+          numberOfLines={2}
+        >
+          {g.name}
+        </Text>
+      </View>
+    </AnimatedPressable>
+  );
+}
 
-function SlideHowItWorks() {
+/* ── Scherm 4 — "hoe ervaren ben je" ──────────────────────────────────
+   Nieuwe stap (operator, 6 september 2026), zelfde 3 keuzes/sleutels als
+   `profile.experience` in de latere breath-quiz — die vraag verdwijnt
+   daar, dit is m'n enige plek. */
+function SlideExperience({
+  selected,
+  onPick,
+  safetyAck,
+  onToggleSafetyAck,
+  safetyShakeX,
+}: {
+  selected: ExperienceLevel | null;
+  onPick: (key: ExperienceLevel) => void;
+  safetyAck: boolean;
+  onToggleSafetyAck: () => void;
+  safetyShakeX: SharedValue<number>;
+}) {
+  const safetyShakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: safetyShakeX.value }],
+  }));
   return (
     <View style={s.slide}>
-      <View style={s.titleBlock}>
-        <MandalaBackdrop size={HEADER_MANDALA} />
-        <GradientText
-          text="HOW IT WORKS"
-          size={HEADER_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-          tracking={HEADER_TRACK}
-        />
-        {/* De twee regels horen bij elkaar en bij de kop: strak eronder,
-           met nauwelijks lucht ertussen. Stonden ze verder uit elkaar, dan
-           lazen ze als twee losse mededelingen (operator 2026-07-31). */}
-        <GradientText
-          text="ALWAYS WITH YOU. NEVER IN THE WAY"
-          size={SUB_SIZE}
-          width={CONTENT_W * 0.94}
-          weight="regular"
-          colors={SUB_COLORS}
-          positions={SUB_POSITIONS}
-          tracking={SUB_TRACK}
-          style={s.howSub1}
+      <View style={s.changeHeader}>
+        {/* Operator, 23 september 2026 ("verander header naar your
+           experience, zo creëren we meer ademruimte"): "Your breathwork
+           experience" → "Your experience" — korter, meer ruimte. */}
+        <Text style={s.changeTitle}>Your experience</Text>
+        <Text style={s.changeSub}>
+          Select your current level{'\n'}You can always adjust this later
+        </Text>
+      </View>
+
+      {/* Operator, 11 september 2026: "eerst 2 vierkanten, laatste
+         (Experienced) panoramisch eronder, mooi blok" — i.p.v. 3 gelijke
+         liggende kaarten onder elkaar. Blijft ongewijzigd; enkel de
+         kaarten zelf zijn nu matglas i.p.v. foto's (zie ExperienceCard). */}
+      <View style={s.expBlock}>
+        <View style={s.expSquareRow}>
+          {EXPERIENCE_OPTIONS.slice(0, 2).map((o) => (
+            <ExperienceCard
+              key={o.key}
+              option={o}
+              active={o.key === selected}
+              dimmed={selected !== null && o.key !== selected}
+              onPress={() => onPick(o.key)}
+              width={EXP_SQUARE}
+              height={EXP_SQUARE}
+            />
+          ))}
+        </View>
+        <ExperienceCard
+          option={EXPERIENCE_OPTIONS[2]}
+          active={EXPERIENCE_OPTIONS[2].key === selected}
+          dimmed={selected !== null && EXPERIENCE_OPTIONS[2].key !== selected}
+          onPress={() => onPick(EXPERIENCE_OPTIONS[2].key)}
+          width={EXP_BLOCK_W}
+          height={EXP_PANO_H}
         />
       </View>
 
-      <View style={s.wearWrap}>
-        {/* Groter dan de kaart en naar links geschoven: zo komt de pols meer
-           naar het midden i.p.v. rechts weg te vallen. Zonder die overmaat
-           valt er niets te schuiven — een precies passende uitsnede heeft
-           geen speling. */}
-        <Image
-          source={{ uri: WEAR_IMG }}
-          style={s.wearImg}
-          resizeMode="cover"
-        />
-        <PodPulse
-          width={CONTENT_W}
-          height={WEAR_H}
-          originX={0.4}
-          originY={0.49}
-          reach={0.11}
-          intensity={2.4}
-        />
-      </View>
+      {/* Operator, 23 september 2026 ("breathwork can affect... tekst in
+         de stap hiervoor onderaan zetten"): verhuisd van het slotscherm
+         (stap 5) naar hier (stap 4) — zelfde niet-medische disclaimer,
+         zelfde `ctaBlocked`-koppeling (nu op `slide === 3` i.p.v.
+         `isLast`), enkel de plek in de flow veranderde.
+         Vervolg ("tekst staat te dicht tegen de kaart" + "moet duidelijk
+         zijn waarom next niet gaat"): `s.safetyRow` kreeg een eigen
+         `marginTop` (zie de stijl) voor ademruimte t.o.v. de panoramische
+         kaart erboven, en dit hele rijtje schudt nu (`safetyShakeStyle`,
+         aangestuurd vanuit het hoofdcomponent) wanneer je op de gedimde
+         CTA tikt terwijl dit de enige ontbrekende stap is. */}
+      <Animated.View style={safetyShakeStyle}>
+      <Pressable
+        onPress={onToggleSafetyAck}
+        style={s.safetyRow}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: safetyAck }}
+      >
+        <View style={[s.safetyCheck, safetyAck && s.safetyCheckOn]}>
+          {safetyAck && <Check size={12} color="#0a0a0c" strokeWidth={3} />}
+        </View>
+        <Text style={s.safetyTxt}>
+          Breathwork can affect your body quickly. If you&apos;re pregnant,
+          or have epilepsy, a heart or respiratory condition, check with
+          your doctor first.
+        </Text>
+      </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
 
-      {/* Onder de foto eerst de belofte, dan pas waar je hem draagt. Die
-         volgorde werkt beter: wat het je oplevert weegt zwaarder dan waar
-         het kan, en de kapitalen maken er een uitspraak van in plaats van
-         een zin (operator 2026-07-31). */}
-      <Text style={s.howClaim}>ALWAYS AVAILABLE. PRIVATE. PERSONAL.</Text>
-      <Text style={s.howWhen}>
-        Work. Travel. Walk. Commute. Study. Pause.
-      </Text>
+/* Eén ervaring-kaart: enkel de foto, geen overlay/tekst (operator, 7
+   september 2026) — gewoon aanklikbaar.
+   Operator, 22 september 2026 ("moet transparante blur zwarte kaarten
+   zijn zoals overal"): de fotokaart (+ scrim, dim-overlay, ring/vinkje)
+   is weg — nu hetzelfde matglas-recept als `ModeCard`/`ChangeTile`: een
+   echte `BlurView`, transparante rand die oplicht bij selectie, gecentreerd
+   label. Geen foto's meer nodig (`BREATH_ONBOARDING_EXPERIENCE_IMAGES` is
+   sindsdien ongebruikt). */
+function ExperienceCard({
+  option,
+  active,
+  dimmed,
+  onPress,
+  width,
+  height,
+}: {
+  option: (typeof EXPERIENCE_OPTIONS)[number];
+  active: boolean;
+  dimmed: boolean;
+  onPress: () => void;
+  width: number;
+  height: number;
+}) {
+  /* Operator, 23 september 2026 ("pas de volledige kaart-animatie toe op
+     heel de onboarding, moet consistent zijn"): zelfde recept als
+     `StartCard`/`ModeCard`/`ChangeTile` — press-in zonder bounce,
+     press-out MET de critically-damped spring, niet-gekozen kaarten
+     dimmen naar 0.45 zodra er een niveau gekozen is. */
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
+  useEffect(() => {
+    cardOpacity.value = withTiming(dimmed ? 0.45 : 1, {
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [dimmed, cardOpacity]);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: cardOpacity.value,
+  }));
 
-      <View style={s.howSteps}>
-        {HOW_STEPS.map(({ key, label, text }, i) => (
-          <View key={key} style={s.howStep}>
-            <View style={s.howNumWrap}>
-              <Text style={s.howNum}>{i + 1}</Text>
-            </View>
-            <View style={s.howStepText}>
-              <Text style={s.howLabel}>{label}</Text>
-              <Text style={s.howDesc}>{text}</Text>
-            </View>
-          </View>
-        ))}
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
+        s.expCardWrap,
+        { width, height },
+        active && s.expCardWrapActive,
+        pressStyle,
+      ]}
+    >
+      <BlurView
+        intensity={40}
+        tint="dark"
+        blurMethod="dimezisBlurViewSdk31Plus"
+        style={StyleSheet.absoluteFill}
+      />
+      <ExperienceWaveFill level={option.fill} active={active} />
+      {/* Operator, 22 september 2026 (Apple HIG-citaat, "links-uitgelijnde
+         variant voor functionele selecties"): titel + subtekst horen
+         samen linksonder — `option.hint` bestond al in de data maar werd
+         nooit getoond, precies de ontbrekende subtekst-regel. */}
+      <View style={s.expCardTextWrap}>
+        <Text style={s.expCardLabel} numberOfLines={1}>
+          {option.label}
+        </Text>
+        <Text style={s.expCardHint} numberOfLines={1}>
+          {option.hint}
+        </Text>
       </View>
+    </AnimatedPressable>
+  );
+}
+
+/* Operator, 22 september 2026 ("niet mooi, cirkels groter en dikkere
+   randen moeten echt ringen zijn"): 44→64, ring 1.5→3. */
+const EXP_WAVE_SIZE = 64;
+/* Operator, 22 september 2026 ("water mag de ring niet raken, heel
+   minimaal van de cirkel blijven"): het water clipt nu binnen een
+   kleinere cirkel dan de ring zelf — `EXP_WAVE_INSET` is de resterende
+   lucht tussen ring en waterrand. */
+const EXP_WAVE_INSET = 7;
+const EXP_WAVE_INNER = EXP_WAVE_SIZE - EXP_WAVE_INSET * 2;
+
+/* "Vloeistof"-rondje per ervaringsniveau — zelfde golf-techniek als
+   `AddToDayHero` (twee golf-lagen die continu naar links schuiven, geclipt
+   tot een cirkel).
+   Operator, 22 september 2026 ("moet vollopen bij aantikken"): was een
+   vast waterpeil, altijd zichtbaar — nu leeg (`level` 0) tot de kaart
+   `active` is, dan veert 'm op naar zijn niveau (New 1/3, Familiar 1/2,
+   Experienced bijna vol) en zakt weer leeg zodra een ANDERE kaart gekozen
+   wordt (enkelvoudige keuze, dus nooit twee tegelijk vol). */
+function ExperienceWaveFill({ level, active }: { level: number; active: boolean }) {
+  const target = active ? level : 0;
+  const waterlineY = EXP_WAVE_INNER * (1 - target);
+  const waterlineYSV = useSharedValue(waterlineY);
+  useEffect(() => {
+    waterlineYSV.value = withSpring(waterlineY, { damping: 9, stiffness: 100, mass: 1 });
+  }, [waterlineY, waterlineYSV]);
+
+  /* Operator, 22 september 2026 ("in principe moet enkel de bovenkant de
+     golfbeweging maken, nu bounced dat heel de tijd"): de verticale `bob`
+     liet het HELE gevulde vlak op-en-neer deinen — weg. Enkel de
+     horizontale schuifbeweging blijft, die raakt alleen de BOVENRAND van
+     het water (de curve zelf), de vulling eronder staat stil.
+     Operator, 22 september 2026 ("plots is er een fout, lijkt te
+     verschuiven" → "animatie is nu weg" → "moet 1 richting uitgaan, niet
+     heen en weer"): de échte periode van dit pad is EXP_WAVE_INNER/2 (elk
+     van de 4 identieke C-segmenten is er één, niet EXP_WAVE_INNER) — de
+     eerdere schuifafstand van een volledige EXP_WAVE_INNER klopte dus
+     niet exact, vandaar de zichtbare sprong bij hoog tempo. Terug naar
+     één richting (`reverse:false`) met de juiste periode ÉN een rustig
+     tempo (6200/4400ms, zoals `AddToDayHero`) — de eerdere "animatie is
+     weg"-melding kwam van de VERKEERDE periode gecombineerd met een trage
+     duur, niet van de duur op zich. */
+  const wave1X = useSharedValue(0);
+  const wave2X = useSharedValue(0);
+  useEffect(() => {
+    wave1X.value = withRepeat(
+      withTiming(-EXP_WAVE_INNER / 2, { duration: 6200, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    wave2X.value = withRepeat(
+      withTiming(-EXP_WAVE_INNER / 2, { duration: 4400, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(wave1X);
+      cancelAnimation(wave2X);
+    };
+  }, [wave1X, wave2X]);
+  const wave1Style = useAnimatedStyle(() => ({ transform: [{ translateX: wave1X.value }] }));
+  const wave2Style = useAnimatedStyle(() => ({ transform: [{ translateX: wave2X.value }] }));
+
+  const wavePathBackProps = useAnimatedProps(() => {
+    const baseY = waterlineYSV.value + 4;
+    const amp = 5;
+    return {
+      d: `M0 ${baseY}
+       C ${EXP_WAVE_INNER * 0.25} ${baseY - amp}, ${EXP_WAVE_INNER * 0.25} ${baseY + amp}, ${EXP_WAVE_INNER * 0.5} ${baseY}
+       C ${EXP_WAVE_INNER * 0.75} ${baseY - amp}, ${EXP_WAVE_INNER * 0.75} ${baseY + amp}, ${EXP_WAVE_INNER} ${baseY}
+       C ${EXP_WAVE_INNER * 1.25} ${baseY - amp}, ${EXP_WAVE_INNER * 1.25} ${baseY + amp}, ${EXP_WAVE_INNER * 1.5} ${baseY}
+       C ${EXP_WAVE_INNER * 1.75} ${baseY - amp}, ${EXP_WAVE_INNER * 1.75} ${baseY + amp}, ${EXP_WAVE_INNER * 2} ${baseY}
+       L ${EXP_WAVE_INNER * 2} ${EXP_WAVE_INNER} L 0 ${EXP_WAVE_INNER} Z`,
+    };
+  });
+  const wavePathFrontProps = useAnimatedProps(() => {
+    const baseY = waterlineYSV.value - 4;
+    const amp = 4;
+    return {
+      d: `M0 ${baseY}
+       C ${EXP_WAVE_INNER * 0.25} ${baseY - amp}, ${EXP_WAVE_INNER * 0.25} ${baseY + amp}, ${EXP_WAVE_INNER * 0.5} ${baseY}
+       C ${EXP_WAVE_INNER * 0.75} ${baseY - amp}, ${EXP_WAVE_INNER * 0.75} ${baseY + amp}, ${EXP_WAVE_INNER} ${baseY}
+       C ${EXP_WAVE_INNER * 1.25} ${baseY - amp}, ${EXP_WAVE_INNER * 1.25} ${baseY + amp}, ${EXP_WAVE_INNER * 1.5} ${baseY}
+       C ${EXP_WAVE_INNER * 1.75} ${baseY - amp}, ${EXP_WAVE_INNER * 1.75} ${baseY + amp}, ${EXP_WAVE_INNER * 2} ${baseY}
+       L ${EXP_WAVE_INNER * 2} ${EXP_WAVE_INNER} L 0 ${EXP_WAVE_INNER} Z`,
+    };
+  });
+
+  return (
+    <View style={s.expWaveWrap} pointerEvents="none">
+      {/* Eigen, kleinere geclipte cirkel dan de ring (`EXP_WAVE_INSET`
+         lucht rondom) — het water raakt de ring nooit meer. */}
+      <View style={s.expWaveInner}>
+        {/* Operator, 22 september 2026 ("onderaan binnen de cirkels een
+           streep, dat mag niet"): bij `target === 0` (niet aangetikt) is
+           er geen enkele reden om ook maar een sliver water te tekenen —
+           eerst renderden de golf-lagen altijd, en bij een waterpeil
+           tegen de bodem bleef er een dun lijntje water zichtbaar/
+           geklipt tegen de onderrand. Nu helemaal geen golf-laag als er
+           niks te vullen valt. */}
+        {target > 0 && (
+          <>
+            {/* Operator, 22 september 2026 ("bovenrand van het water mag
+               een lichter kleur voor contrast en beweging"): de achterste
+               laag (het waterlichaam) getemperd naar 45% — de voorste/
+               bovenste laag (de golfkam, duidelijk hoger via een grotere
+               `baseY`-offset) blijft effen wit, dus leest als een lichter
+               "schuim"-strookje boven op het water. */}
+            <Animated.View style={[StyleSheet.absoluteFill, wave1Style]}>
+              <Svg width={EXP_WAVE_INNER * 2} height={EXP_WAVE_INNER}>
+                <AnimatedPath animatedProps={wavePathBackProps} fill="rgba(255,255,255,0.45)" />
+              </Svg>
+            </Animated.View>
+            <Animated.View style={[StyleSheet.absoluteFill, wave2Style]}>
+              <Svg width={EXP_WAVE_INNER * 2} height={EXP_WAVE_INNER}>
+                <AnimatedPath animatedProps={wavePathFrontProps} fill="#ffffff" />
+              </Svg>
+            </Animated.View>
+          </>
+        )}
+      </View>
+      <View style={s.expWaveRing} />
     </View>
   );
 }
 
 /* ── Scherm 5 — de eerste sessie ──────────────────────────────────────── */
 
-/* Wat de gratis sessie inhoudt, in drie regels. Volgorde uit de referentie
-   van de operator: eerst wat je krijgt, dan hoe het voelt, dan wat het
-   kost — dat laatste is niets, en dat hoort als laatste indruk te blijven
-   hangen. */
-const START_POINTS = [
-  {
-    key: 'full',
-    Icon: Clock,
-    label: 'FULL SESSION',
-    text: 'Experience a complete breathing journey.',
-  },
-  {
-    key: 'haptic',
-    Icon: Rss,
-    label: 'HAPTIC GUIDANCE',
-    text: 'Feel every breath with subtle vibrations.',
-  },
-  {
-    key: 'free',
-    Icon: Leaf,
-    label: 'NO COMMITMENT',
-    text: "Explore freely. Upgrade when you're ready.",
-  },
-] as const;
+/* Operator, 23 september 2026 ("hebben wij iconen voor boost sharp
+   focus..." → "kan je die vooraan de states zetten"): zelfde iconen als
+   bracelet-control.tsx se `MODE_ICONS` (Gamma/Beta/Alpha/Theta/Delta =
+   boost/focus/calm/clarity/rest, exact dezelfde 5 toestanden) — geen
+   nieuwe iconenset verzinnen.
+   Vervolg, zelfde dag ("SF Symbols zoals target/moon.stars.fill"): Crosshair
+   → Target, Moon → MoonStar — dichter bij de officiële SF Symbols-vormen,
+   ook doorgevoerd in bracelet-control.tsx's MODE_ICONS zodat beide sets
+   identiek blijven. */
+const STATE_ICONS: Record<BreathStateKey, typeof Zap> = {
+  boost: Zap,
+  focus: Target,
+  calm: Waves,
+  clarity: Sparkles,
+  rest: MoonStar,
+};
+
+/* Sleutels van `experienceLevel` (stap 4) naar een leesbaar niveau —
+   zelfde labels als `protocol.ts`'s eigen (module-lokale) `LEVEL_LABEL`. */
+const EXPERIENCE_LEVEL_LABEL: Record<ExperienceLevel, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
+
+/* Sleutels van de gekozen begeleiding (stap 2) naar een leesbaar label. */
+const GUIDANCE_MODE_LABEL: Record<GuidanceMode, string> = {
+  voice: 'Voice',
+  haptic: 'Haptics',
+  both: 'Voice + Haptics',
+  silent: 'Silent',
+};
+
+/* Zelfde lokale helper als agenda.tsx (niet geëxporteerd door
+   services/reminders.ts) — enkel voor het RhythmRing-label. */
+const titleCase = (str: string) =>
+  str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 /* De hero-foto van de ECHTE bibliotheek (tabs)/index.tsx — dezelfde foto,
    niet een nieuwe. Wat hier staat moet kloppen met wat je zo meteen ziet
    als je erop tikt; een ander beeld beloven dan je toont is het snelste
    om vertrouwen te verliezen. */
-const LIBRARY_HERO_IMG =
-  'https://vibezcore-audio.b-cdn.net/images/audio-library.png';
 
 /* Drie regels, elk één ding (operator, 9 augustus 2026: "header en tekst
    wil ik dat jij mooi en duidelijk opsomt"). Wat het IS, wat het NU al
@@ -1272,178 +2635,408 @@ const LIBRARY_HERO_IMG =
    die elkaar tegenspreken zodra de trial ingaat. De bibliotheek hoort NU
    gewoon bij diezelfde proefperiode, dus die belofte staat al bij Premium;
    hier hoeft ze niet nog eens apart. */
-const LIBRARY_POINTS = [
-  {
-    key: 'built',
-    Icon: Gem,
-    /* "Built on timeless ideas" -> "Timeless wisdom" (operator, 10 augustus
-       2026) — korter, en de bron (Jung, de Stoïcijnen) staat toch al in de
-       tekst eronder. */
-    label: 'TIMELESS WISDOM',
-    text: 'Jung, the Stoics and more, turned into guided audio.',
-  },
-  {
-    /* 144 sessies in de bibliotheek (data/audio-library-data.ts) — "140+"
-       rondt naar beneden af, zodat het getal nooit voor de werkelijkheid
-       uitloopt als er sessies bijkomen. */
-    key: 'count',
-    Icon: Headphones,
-    label: '140+ SESSIONS',
-    text: 'Across four pillars of personal development.',
-  },
-  {
-    key: 'unlocked',
-    Icon: AudioWaveform,
-    label: 'FULL ACCESS WITH PREMIUM',
-    text: 'Every series unlocked, included in your subscription.',
-  },
-] as const;
 
-/* De vier pijlers — CLAUDE.md §4, woordelijk. Bindend en overal op de
-   webapp consistent; hier voor het eerst ook in de app zelf. */
-const FOUR_PILLARS = [
-  { key: 'resilience', name: 'Psychological Resilience', tag: 'Build what cannot break.' },
-  { key: 'sovereignty', name: 'Inner Sovereignty', tag: 'Master what is yours.' },
-  { key: 'mastery', name: 'Social Mastery', tag: 'Command without force.' },
-  { key: 'wealth', name: 'Strategic Execution & Wealth', tag: 'Engineer your autonomy.' },
-] as const;
 
-/* ── Stap 5: de bibliotheek krijgt haar eigen scherm ──────────────────────
-   Stond eerst als bijzin op het slotscherm; dat vertelde DAT ze bestaat
-   maar niet WAT ze is (operator, 9 augustus 2026: "audio library moet als
-   standalone pagina bij onboarding komen"). Dezelfde opbouw als het
-   slotscherm hierna — kop, drie punten — zodat de twee als familie lezen
-   en niet als twee andere vaardigheden. */
-function SlideLibrary() {
-  /* Enige uitzondering op "geen scroll" (operator, 10 augustus 2026): dit
-     scherm draagt sinds de vier pijlers gewoon meer dan één beeldvlak kan
-     dragen zonder de tekst tot onleesbaar te verkleinen. Alleen HIER een
-     ScrollView — de andere vijf stappen blijven op hun eigen plek passen. */
+type DayPlanItem = {
+  slot: string;
+  label: string;
+  state: BreathStateKey;
+  minutes: number;
+};
+
+/* Operator, 23 september 2026 ("op de kaarten zelf moet een i komen en
+   daar de info over de state, officiële info volgens VIBEZCORE"): toont
+   de ECHTE, bestaande omschrijving uit `BREATH_STATES[key]` — `eyebrow`,
+   `title`, `description` (en `tagline`) — geen nieuwe copy verzinnen,
+   zelfde scrim/kaart-opzet als `BraceletInfoModal` hierboven, enkel
+   zonder foto (deze states hebben er hier geen bij de hand). */
+function StateInfoModal({
+  stateKey,
+  onClose,
+}: {
+  stateKey: BreathStateKey | null;
+  onClose: () => void;
+}) {
+  const cfg = stateKey ? BREATH_STATES[stateKey] : null;
   return (
-    <ScrollView
-      style={s.libScroll}
-      contentContainerStyle={s.slide}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Dezelfde kop-vorm als HOW IT WORKS en de andere stappen (operator,
-         9 augustus 2026: "header ook zoals andere onboarding tekst"). Stond
-         eerst als klein bijschrift IN de foto gebakken — dat maakte dit
-         scherm de vreemde eend, met een ander lettertype op een andere
-         plek dan overal elders. "AUDIO LIBRARY" is nu de kop, "Where
-         insight becomes identity" de subregel — exact de tekst van
-         daarnet, alleen in de vorm die hier hoort. De foto blijft, maar
-         puur als beeld, zonder tekst erin. */}
-      <View style={s.titleBlock}>
-        <MandalaBackdrop size={HEADER_MANDALA} />
-        <GradientText
-          text="AUDIO LIBRARY"
-          size={HEADER_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-          tracking={HEADER_TRACK}
-        />
-        <GradientText
-          text="WHERE INSIGHT BECOMES IDENTITY"
-          size={SUB_SIZE}
-          width={CONTENT_W * 0.94}
-          weight="regular"
-          colors={SUB_COLORS}
-          positions={SUB_POSITIONS}
-          tracking={SUB_TRACK}
-          style={s.howSub1}
-        />
-      </View>
-
-      <View style={s.libHero}>
-        <Image
-          source={{ uri: LIBRARY_HERO_IMG }}
-          style={s.libHeroImg}
-          resizeMode="cover"
-        />
-      </View>
-
-      <View style={s.startPoints}>
-        {LIBRARY_POINTS.map(({ key, Icon, label, text }) => (
-          <View key={key} style={s.startPoint}>
-            <View style={s.startIconWrap}>
-              <Icon size={16} color="#7FB2FF" strokeWidth={2} />
-            </View>
-            <View style={s.startPointText}>
-              <Text style={s.startLabel}>{label}</Text>
-              <Text style={s.startDesc}>{text}</Text>
-            </View>
+    <Modal visible={!!cfg} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s.braceletModalScrim}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        {cfg && (
+          <View style={s.stateInfoCard}>
+            <Text style={[s.stateInfoEyebrow, { color: cfg.accent }]}>{cfg.eyebrow}</Text>
+            <Text style={s.stateInfoTitle}>{cfg.title}</Text>
+            <Text style={s.stateInfoTagline}>{cfg.tagline}</Text>
+            <Text style={s.stateInfoDesc}>{cfg.description}</Text>
+            <Pressable onPress={onClose} style={s.braceletModalClose}>
+              <Text style={s.braceletModalCloseTxt}>Got it</Text>
+            </Pressable>
           </View>
-        ))}
+        )}
       </View>
-
-      {/* De vier pijlers (operator, 10 augustus 2026). Geen vierde punt in
-          de lijst erboven — vier extra regels met icoon zouden het scherm
-          weer laten breken. Een krap 2x2-raster met alleen naam + korte
-          belofte draagt hetzelfde gewicht in de helft van de hoogte. */}
-      <Text style={s.pillarsLbl}>FOUR PILLARS</Text>
-      <View style={s.pillarsGrid}>
-        {FOUR_PILLARS.map(({ key, name, tag }) => (
-          <View key={key} style={s.pillarCard}>
-            <Text style={s.pillarName}>{name}</Text>
-            <Text style={s.pillarTag}>{tag}</Text>
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+    </Modal>
   );
 }
 
-function SlideStart() {
+/* Operator, 7 september 2026 (mockup, later uitgebreid naar een echt
+   dagplan): "Your first session — built around your goals". Toont het
+   ECHTE dagplan (zelfde `pickForSlot`-motor als plan.tsx, zie `dayPlan` in
+   BreathWelcomeScreen) als 2 selecteerbare kaarten i.p.v. 1 vaste
+   aanbeveling — user kiest zelf welk moment hij nu wil proeven, en die
+   keuze IS de sessie die zo meteen start (`goNext` gebruikt
+   `selectedPlan`). */
+function SlideStart({
+  plan,
+  selectedIdx,
+  onSelect,
+  goals,
+  experience,
+  showRingCenter,
+}: {
+  plan: DayPlanItem[];
+  selectedIdx: number;
+  onSelect: (idx: number) => void;
+  goals: string[];
+  experience: ExperienceLevel | null;
+  /** Operator, 24 september 2026 ("bij teruggaan moet binnenkant ring
+   *  leeg tot opnieuw getikt"): puur weergave-gate, los van `selectedIdx`
+   *  (die blijft een zinnig default dragen voor de CTA). */
+  showRingCenter: boolean;
+}) {
+  const levelLabel = experience ? EXPERIENCE_LEVEL_LABEL[experience] : null;
+
+  /* Operator, 22 september 2026 ("ik wil de agenda stijl aan linken... cirkel
+     met de states langs, geen dropdown met datum, enkel vandaag"): de echte
+     RhythmRing (components/RhythmRing.tsx, ook gebruikt in agenda.tsx) i.p.v.
+     enkel de kaartenlijst — zo "proeft" de gebruiker meteen de echte app-UI.
+     `DayPlanItem` heeft (anders dan agenda.tsx se dagplan) geen eigen
+     kloktijd, enkel een `slot`-sleutel — die mappen we hier op SLOTS' vaste
+     representatieve uur. `onDragEnd` krijgt een lokale override (niet naar
+     de parent) zodat het ringetje na loslaten niet terugspringt — dit is
+     enkel een voorproefje, geen echte herinnering die ergens opgeslagen
+     wordt. */
+  const [dragOverrides, setDragOverrides] = useState<Record<string, number>>({});
+  /* Operator, 23 september 2026 ("op de kaarten zelf moet een i komen met
+     de officiële VIBEZCORE-info, tekst in de cirkel moet weg"): het
+     midden van de ring toonde tot nu toe "Voice + Haptics"/"Advanced" —
+     die info verhuist naar de actieve kaart zelf (zie de kaart-render
+     hieronder), en de "i" opent de ECHTE, bestaande omschrijving uit
+     `BREATH_STATES[key].description` — geen nieuwe marketingtekst
+     verzinnen. */
+  const [infoState, setInfoState] = useState<BreathStateKey | null>(null);
+  const selectedItem = plan[selectedIdx] ?? null;
+  const ringItems: RhythmRingItem[] = plan.map((item, idx) => {
+    const key = String(idx);
+    const baseHour =
+      SLOTS.find((sl) => sl.slot === item.slot)?.hour ?? new Date().getHours();
+    return {
+      key,
+      reminderAt: dragOverrides[key] ?? baseHour * 60,
+      minutes: item.minutes,
+      color: BREATH_STATES[item.state].accent,
+      label: titleCase(BREATH_STATES[item.state].eyebrow),
+    };
+  });
+  /* Operator (n.a.v. "hou jij rekening met weergave van uur US en EU?"):
+     JA — `toLocaleTimeString([], ...)` volgt het toestel-land, dus 12u
+     AM/PM in de VS en 24u elders, automatisch. Zelfde patroon als
+     `RhythmRing`'s eigen `fmtHM` (agenda.tsx se echte kloktijden) en
+     `reminders.ts`'s `nextFireText` — nooit het harde 24u-string uit
+     `SLOTS.when` rechtstreeks tonen. Neemt ook de `dragOverrides` mee,
+     dus het uur blijft kloppen als de user het puntje versleept.
+     Operator, 23 september 2026 ("20:00 correct?" — Evening hoort
+     `SLOTS.evening.hour = 21` te tonen, dus 21:00/9 PM, niet 20:00): bug
+     zat in `new Date(0, 0, 0, h, m)` — jaar 0 (→ 1900) heeft op sommige
+     toestellen (Hermes/Android, historische tijdzone-tabellen) een
+     afwijkende UTC-offset dan vandaag, wat `toLocaleTimeString` een fout
+     uur laat tonen. `RhythmRing`'s eigen `fmtHM` omzeilt dit al correct
+     door van VANDAAG te vertrekken (`new Date()` + `setHours`) i.p.v. een
+     jaar-0-datum te bouwen — exact dat patroon hier overgenomen. */
+  const selectedWhen = ringItems[selectedIdx]
+    ? (() => {
+        const d = new Date();
+        d.setHours(
+          Math.floor(ringItems[selectedIdx].reminderAt / 60),
+          ringItems[selectedIdx].reminderAt % 60,
+          0,
+          0,
+        );
+        return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      })()
+    : undefined;
+
   return (
-    <View style={s.slide}>
-      {/* Geen mandala achter deze kop: er staat er al een groot exemplaar
-         onder, en twee keer dezelfde figuur op één scherm vecht met zichzelf
-         (operator 2026-07-31). */}
-      <View style={s.titleBlockPlain}>
-        <GradientText
-          text="START YOUR"
-          size={HEADER_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-          tracking={HEADER_TRACK}
-        />
-        <GradientText
-          text="FIRST SESSION"
-          size={HEADER_SIZE}
-          width={CONTENT_W}
-          weight="regular"
-          tracking={HEADER_TRACK}
-          style={s.titleLine2}
-        />
+    <View style={[s.slide, s.startSlideFill]}>
+      {/* Operator, 11 september 2026: mandala weg — zelfde beslissing als
+         stap 2/3/4/5/6. */}
+      <View style={s.startHeaderWrap}>
+        {/* Operator, 24 september 2026 ("Experience your session wordt
+           enige header, gecentreerd"): kop+sub (23 september) vervangen
+           door één gecentreerde titel — geen aparte subkop meer.
+           Operator, vervolg ("Header Choose one session"): tekst
+           aangepast. */}
+        <Text style={[s.startTitleDark, s.startTitleCentered]}>
+          Choose one session
+        </Text>
+        {/* Operator, 22 september 2026 ("we laten ook zijn selectie zien:
+           rhythm/voice, gekozen state, experience"): korte recap-chips van
+           wat op stap 2/4 gekozen werd — de gekozen STATE zelf staat al op
+           elke kaart (`cfg.eyebrow`) en nu ook als kleur/label op de ring
+           zelf, dus hier enkel begeleiding + ervaring. */}
       </View>
 
-      <Text style={s.startLead}>
-        Begin your journey with a free trial session.
-      </Text>
-      <Text style={s.startLead2}>
-        Feel the rhythm. Experience the shift.
-      </Text>
-
-      {/* De mandala uit scherm 1, klein. Hier is ze geen decor maar een
-         belofte: dit is wat er straks op je scherm staat. */}
-      <View style={s.startOrb}>
-        <BreathMandala size={START_ORB} />
-      </View>
-
-      <View style={s.startPoints}>
-        {START_POINTS.map(({ key, Icon, label, text }) => (
-          <View key={key} style={s.startPoint}>
-            <View style={s.startIconWrap}>
-              <Icon size={16} color="#7FB2FF" strokeWidth={2} />
-            </View>
-            <View style={s.startPointText}>
-              <Text style={s.startLabel}>{label}</Text>
-              <Text style={s.startDesc}>{text}</Text>
-            </View>
+      <View style={s.startRingWrap}>
+        {/* Operator, 24 september 2026 ("foto in ring step 5, gewoon
+           decoratief" → "man en vrouw dichter bij elkaar"): operator-
+           aangeleverde cirkelvormige foto — het lege midden is er lokaal
+           uitgesneden (linker- en rechterhelft tegen elkaar geplakt), dus
+           de bron is nu staand (903×1254) i.p.v. vierkant. `cover` op de
+           vierkante weergave-maat snijdt boven/onder gelijk af, gezichten
+           blijven gecentreerd. Puur sfeer, geen interactie. */}
+        <Image
+          source={require('../../assets/ring_couple.png')}
+          style={s.startRingPhoto}
+          resizeMode="cover"
+        />
+        {/* Operator, vervolg ("mag een donkere overlay"): temperen zodat de
+           foto puur sfeer blijft en de ring/tekst erboven leesbaar blijft. */}
+        <View style={s.startRingPhotoOverlay} pointerEvents="none" />
+        <RhythmRing
+          /* Operator, 24 september 2026 ("cirkel groter"): 224 → 260. */
+          size={260}
+          items={ringItems}
+          isToday
+          now={new Date()}
+          itemLabelMode="none"
+          showCenterInfo={false}
+          animateBreath={false}
+          selectedKey={String(selectedIdx)}
+          onTapItem={(key) => onSelect(Number(key))}
+          onDragEnd={(key, newReminderAt) =>
+            setDragOverrides((prev) => ({ ...prev, [key]: newReminderAt }))
+          }
+        />
+        {/* Operator, 23 september 2026 ("verwijder de tikbare strook, zet
+           enkel icoon/iconen mee in de cirkel — minuten grootste, daaronder
+           uur, daaronder de begeleidingsiconen" → "in de cirkel misschien
+           gekozen state(s) weergeven i.p.v. de sound" → "de gekozen states
+           in step 3 weergeven"): duur is de dominante regel, uur eronder
+           kleiner, en onderaan nu de iconen van de op stap 3 gekozen
+           doelen (`GOALS`, tot 2) i.p.v. het begeleidingsicoon — puur
+           illustratief, NIET tikbaar (`pointerEvents="none"` op de hele
+           overlay). Niveau blijft op de actieve kaart zelf
+           (`startCardBadge`). */}
+        {/* Operator, 23 september 2026 ("het uur in de cirkel onderaan in
+           de cirkel zetten"): niet meer in de gecentreerde stapel — een
+           eigen, los tekstje onderin de ring zelf (6-uur-positie), zodat
+           het midden enkel nog duur + doelen toont. */}
+        {selectedWhen && showRingCenter && (
+          <Text style={s.startRingTimeBottom} pointerEvents="none">
+            {selectedWhen}
+          </Text>
+        )}
+        {selectedItem && showRingCenter && (
+          <View style={s.startRingCenter} pointerEvents="none">
+            <Text style={s.startRingDuration}>{selectedItem.minutes} min</Text>
+            {/* Operator, 25 september 2026 ("level mag ook in de cirkel
+               komen"): terug van de kaart (23 september) naar de ring —
+               tweede omkering van dezelfde beslissing, ditmaal om
+               ademruimte op de kaarten te winnen. */}
+            {levelLabel && (
+              <Text style={s.startRingLevel} numberOfLines={1}>
+                {levelLabel.toUpperCase()} LEVEL
+              </Text>
+            )}
+            {goals.length > 0 && (
+              <View style={s.startRingGoalList}>
+                {goals.map((gKey) => {
+                  const g = GOALS.find((gg) => gg.key === gKey);
+                  if (!g) return null;
+                  const GoalIcon = g.Icon;
+                  return (
+                    <View key={gKey} style={s.startRingGoalRow}>
+                      <GoalIcon size={17} color="rgba(255,255,255,0.75)" strokeWidth={2} />
+                      <Text style={s.startRingGoalNames} numberOfLines={1}>
+                        {g.name}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
-        ))}
+        )}
       </View>
+
+      {/* Operator, 23 september 2026 ("elke state een eigen kaart, 2
+         naast elkaar" → "op de kaarten icoon en naam state, de rest komt
+         in de cirkel"): kaart-grid, 2 per rij (`startCardGrid`). Elke
+         kaart heeft nu een "i"-knop (opent `StateInfoModal`, de ECHTE
+         `description` uit `BREATH_STATES`) — enkel icoon + naam, geen
+         duur/begeleiding meer op de kaart zelf (zie ring-overlay
+         hierboven). */}
+      <View style={s.startCardGrid}>
+        {plan.map((item, idx) => {
+          /* Operator, 24 september 2026 ("bij toekomen ook geen sessie
+             aangeduid"): `showRingCenter` (dezelfde vlag als de ring-
+             midden-gate hierboven) bepaalt ook hier — geen kaart oogt
+             actief tot een ECHTE tik op dit bezoek. */
+          const active = showRingCenter && idx === selectedIdx;
+          return (
+            <StartCard
+              key={item.slot}
+              item={item}
+              active={active}
+              onSelect={() => onSelect(idx)}
+              onInfo={() => setInfoState(item.state)}
+            />
+          );
+        })}
+      </View>
+      <StateInfoModal stateKey={infoState} onClose={() => setInfoState(null)} />
+
+      {/* Operator, 7 september 2026: "includes-tekst weg" — die boodschap
+         staat al op stap 6 (Audio Library), hier niet nog eens nodig. */}
+
     </View>
+  );
+}
+
+/* Operator, 23 september 2026 ("de kaarten moet ook onze animatie" →
+   "wij hebben de andere kaarten toch een soort VERENDE animatie bij
+   aanklikken" → "bounce te stroef, Apple's critically damped spring:
+   response 0.22, dampingFraction 0.73"): druk-vering + rand-glow gebruiken
+   `withSpring`'s `{ duration, dampingRatio }`-vorm (SwiftUI's
+   `.spring(response:dampingFraction:)`-equivalent), niet de `StateThumb`-
+   protocolkaart-waardes (`(tabs)/breath.tsx`) of `PressableScale`
+   (bracelet-control.tsx) — zie de uitleg bij `sel`/`pressScale` hieronder.
+   Eigen component (i.p.v. inline in de `.map()`) omdat hooks niet in een
+   loop mogen. */
+function StartCard({
+  item,
+  active,
+  onSelect,
+  onInfo,
+}: {
+  item: DayPlanItem;
+  active: boolean;
+  onSelect: () => void;
+  onInfo: () => void;
+}) {
+  const cfg = BREATH_STATES[item.state];
+  const StateIcon = STATE_ICONS[item.state];
+
+  /* Operator, 23 september 2026 ("Apple bouwt deze animaties op basis van
+     fysica i.p.v. vaste tijden" → "bounce te stroef" → "Apple's knoppen
+     stuiteren nooit meerdere keren, critically damped spring: response
+     0.22, dampingFraction 0.73"): eerst `mass`/`damping`-tuning geprobeerd,
+     maar dat is niet hoe Apple het zelf specificeert. Reanimated heeft een
+     letterlijk equivalent van SwiftUI's `.spring(response:dampingFraction:)`
+     — de `{ duration, dampingRatio }`-vorm van `withSpring` (i.p.v.
+     mass/stiffness/damping), waarbij `duration` ≈ Apple's `response` in ms
+     en `dampingRatio` ≈ `dampingFraction` (1 = geen bounce, <1 = precies
+     één mini-overshoot). Apple's exacte cijfers overgenomen: 220ms/0.73,
+     op zowel de druk-vering als de rand-glow. */
+  const sel = useSharedValue(active ? 1 : 0);
+  useEffect(() => {
+    sel.value = withSpring(active ? 1 : 0, { duration: 220, dampingRatio: 0.73 });
+  }, [active, sel]);
+  /* Operator, 24 september 2026 ("rand gelijktrekken"): was een licht
+     blauw-grijze tint (225,225,232) met eindwaarde 0.45 — nu zuiver wit,
+     eindwaarde 0.4, zelfde als goal.tsx en stap 4's ExperienceCard. */
+  const borderStyle = useAnimatedStyle(() => ({
+    borderColor: `rgba(255,255,255,${0.1 + sel.value * 0.3})`,
+  }));
+
+  const pressScale = useSharedValue(1);
+  /* Operator ("press-in mag niet bouncen — een fysieke knop stuitert niet
+     tegen de bodem"): `withTiming` (geen spring) op de indruk-fase, de
+     `withSpring`-bounce is enkel voor de release hieronder. */
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  /* Operator ("focus verlagen op de niet-actieve kaarten, faden naar
+     0.4-0.5 opacity, lineair/ease — mag niet mee-stuiteren met de
+     rand-glow"): op dit scherm is er altijd precies één actieve kaart
+     (`selectedPlanIdx` start al op een waarde), dus "geen kaart gekozen"
+     bestaat hier niet — enkel `!active` bepaalt of deze kaart dimt.
+     `withTiming` (geen spring), Apple's 0.45-cijfer. */
+  const cardOpacity = useSharedValue(active ? 1 : 0.45);
+  useEffect(() => {
+    cardOpacity.value = withTiming(active ? 1 : 0.45, {
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [active, cardOpacity]);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: cardOpacity.value,
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onSelect}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.startCard, pressStyle]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${item.label}: ${cfg.eyebrow}`}
+    >
+      <Animated.View style={[s.startCardInner, borderStyle]}>
+        {/* Operator, 23 september 2026 ("kaarten moeten transparant
+           blur"): echte `BlurView` — zelfde matglas-recept als
+           `ExperienceCard`/`ModeCard`/`ChangeTile`, geen rgba-
+           nepglas (memory: "altijd echte expo-blur BlurView"). */}
+        <BlurView
+          intensity={40}
+          tint="dark"
+          blurMethod="dimezisBlurViewSdk31Plus"
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Operator, 23 september 2026 ("ik wil vergelijken"): TIJDELIJK
+           terug — de vlakke SystemGray6-tint bovenop de blur (had 'm
+           net verwijderd op "moet transparant blur"). Enkel om op het
+           toestel A/B te bekijken naast de pure-blur-versie; zeg welke
+           moet blijven, dan verwijder ik de andere weer. */}
+        <View style={s.startCardTint} pointerEvents="none" />
+        {/* Operator, 23 september 2026 ("ik zie geen tekst in de
+           kaarten"): gewone flex-flow tekst NAAST de BlurView bleek
+           onzichtbaar — `dimezisBlurViewSdk31Plus` rendert op Android
+           via een eigen native compositing-laag die soms bóven
+           gewone flow-content komt te liggen ondanks de JSX-volgorde.
+           `ExperienceCard` (bevestigd zichtbaar) omzeilt dat door de
+           tekst ABSOLUUT te positioneren i.p.v. gewone flow — zelfde
+           aanpak hier. */}
+        <View style={s.startCardContent}>
+          {/* Operator, 23 september 2026 ("tekst ademruimte, verticaal
+             centreren i.p.v. tegen de onderrand"): icoon + naam nu
+             samen gecentreerd in de kaart, de "i"-knop staat los in de
+             hoek zodat centreren het niet verstoort. */}
+          <StateIcon
+            size={22}
+            color={active ? cfg.accent : '#ffffff'}
+            strokeWidth={2.2}
+          />
+          <Text style={s.startCardName} numberOfLines={1}>
+            {titleCase(cfg.eyebrow)}
+          </Text>
+        </View>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            onInfo();
+          }}
+          hitSlop={10}
+          style={s.startCardInfoBtn}
+        >
+          <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+        </Pressable>
+      </Animated.View>
+    </AnimatedPressable>
   );
 }
 
@@ -1451,10 +3044,25 @@ function SlideStart() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  /* Operator, 6 september 2026: stap 1 licht i.p.v. donker — de
+     achtergrondfoto dekt bijna alles af, maar de rand erboven (status-
+     balk-zone) moet ook al licht zijn, niet even opflitsen zwart. */
+  /* Operator, 7 september 2026: "nog blauw over" — de lichtblauwe tint
+     schemerde overal door waar geen foto/knop overheen lag (bv. tussen de
+     "coming fall"-badge en de footer). Puur wit lost dat overal op. */
+  rootLight: { backgroundColor: '#ffffff' },
+  /* Operator, 22 september 2026 ("foto moet doorlopen"): de echte
+     achtergrond (foto/Starfield/`rootLight`) zit nu op de buitenste
+     `View` (`root`/`rootLight` hierboven) — deze `SafeAreaView` ligt daar
+     transparant overheen en zorgt enkel nog voor de inspringing van de
+     INHOUD, geen eigen kleur meer die de achtergrond in de inspring-zones
+     zou verbergen. */
+  safeContent: { flex: 1 },
 
   topbar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
@@ -1471,9 +3079,63 @@ const s = StyleSheet.create({
   skipTxt: {
     color: Brand.textDim,
     fontFamily: BrandFonts.medium,
-    fontSize: 15,
+    fontSize: 14,
   },
+  /* Operator, 22 september 2026 ("foto onderkant moet doorlopen, tekst-
+     kleur wit"): geen aparte `light`-tekstkleur meer op deze topbar — de
+     foto op stap 1 is dezelfde donkere hero-foto als elders in de app,
+     dus wit/lichtgrijs overal, geen dark-op-licht-uitzondering meer.
+     "Skip" blijft de secundaire actie (Apple-onboarding-tip, 11 sep):
+     lichter/gedimder dan "Back", nu in de witte familie i.p.v. het
+     `#8a8a8e` dat voor een lichte achtergrond gekalibreerd was. */
+  skipTxtSecondary: { color: 'rgba(255,255,255,0.45)' },
+  /* Even breed als skipWrap (bij benadering), zodat de gecentreerde
+     STEP-tekst ook echt in het midden van het SCHERM blijft staan, niet
+     scheeftrekt doordat links nu ook iets staat. */
+  backWrap: { minWidth: 64 },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    alignSelf: 'flex-start',
+  },
+  /* Operator, 22 september 2026: vervangt `dotsRow`/`dot*` — zelfde
+     `track`/`fill`-maten als de gedeelde `StepIndicator` (height 3,
+     borderRadius 1.5), enkel breedte vast (niet `flex:1`) omdat dit
+     scherm geen flex-rij is. Kleur nu ook altijd wit, geen `light`-
+     variant meer (zie toelichting bij `skipTxtSecondary`). */
+  /* Operator, 22 september 2026, vervolg ("mag dikker, moet elegant zijn"):
+     3 → 5px. `shadow*` (iOS) i.p.v. Android-only `elevation` zou hier toch
+     door `overflow:'hidden'` afgeknipt worden — elegant blijft dus gewoon
+     dunner/subtieler dan "dik", niet een geforceerde glow-hack. */
+  /* Operator, 23 september 2026 ("moet ook veel dunner"): 5 → 1.5, na de
+     eerdere "mag dikker"-ronde nu net andersom — terug naar een subtiele
+     lijn. */
+  stepTrack: {
+    width: 120,
+    height: 1.5,
+    borderRadius: 0.75,
+    marginTop: 10,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  stepFill: { height: '100%', borderRadius: 0.75, backgroundColor: '#ffffff' },
 
+  /* Operator, 22 september 2026 ("maak de pagina ook eens scrollbaar"):
+     `contentContainerStyle` voor het slotscherm se ScrollView — zelfde
+     zijmarge als `slideArea` (die hier enkel nog de VASTE `style`,
+     buitenkant, van de ScrollView is), plus `flexGrow:1` zodat korte
+     content (weinig kaarten) nog steeds het scherm vult i.p.v. bovenaan
+     te blijven hangen; lange content (veel kaarten) scrollt gewoon. */
+  startScroll: { flex: 1 },
+  startScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 26,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
   slideArea: {
     flex: 1,
     paddingHorizontal: 26,
@@ -1481,17 +3143,43 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   slide: { alignItems: 'center', width: '100%' },
-  libScroll: { width: '100%', alignSelf: 'stretch' },
-  /* Bewust GEEN paddingBottom hier — contentContainerStyle is `s.slide`,
-     gedeeld met alle andere stappen; extra lucht onderaan komt van
-     pillarCard's eigen marginBottom. */
   /* Scherm 2 begint bovenaan i.p.v. gecentreerd: met vier grote kaarten is
      er onderaan toch geen ruimte over, en de kop hoort bovenaan te staan. */
   slideAreaTop: { justifyContent: 'flex-start', paddingTop: 4 },
+  /* Operator, 22 september 2026 ("fontstijl en layout moet zelfde als in
+     de app protocol settings"): exact `goal.tsx`/`intensity.tsx`'s eigen
+     `header`/`lead`-paar — links uitgelijnd, `TypeScale.pageHeader`/
+     `pageSubhead`, dezelfde marges/kleuren. */
+  header: {
+    marginTop: 4,
+    ...TypeScale.pageHeader,
+    textAlign: 'left',
+    color: Brand.text,
+  },
+  lead: {
+    marginTop: 6,
+    ...TypeScale.pageSubhead,
+    textAlign: 'left',
+    color: 'rgba(255,255,255,0.55)',
+  },
   /* Geen extra hoogte meer: het blok wordt gecentreerd, dus boven en onder
      valt evenveel ruimte. Dat is wat de figuur laat zweven — hem omhoog
      duwen liet een lege band onderaan achter. */
   slideIntro: {},
+  /* Operator, 6 september 2026: zonder de grote ORB (die vulde voorheen het
+     midden) klontert de inhoud anders samen in het midden van het scherm,
+     met een groot leeg gat eronder — `slideArea` centreert zijn kind, en
+     dat kind is nu veel korter. `flex:1` + `space-between` verspreidt
+     header/kop/iconenrij zelf over de volledige beschikbare hoogte i.p.v.
+     te vertrouwen op de centrering van de ouder. */
+  slideIntroLight: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingTop: 0,
+    paddingBottom: 60,
+  },
   welcome: {
     marginTop: -26,
     marginBottom: 16,
@@ -1500,52 +3188,403 @@ const s = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 5,
   },
-  grid: {
-    marginTop: 42,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: GRID_W,
+  welcomeLight: { color: 'rgba(10,10,12,0.75)', marginTop: 0, marginBottom: 2 },
+  welcomeSub: {
+    marginBottom: 0,
+    color: 'rgba(10,10,12,0.45)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 4,
   },
-  tileWrap: { width: TILE, marginBottom: ROW_GAP },
-  tileImg: { width: TILE, height: TILE, borderRadius: 22 },
-  tileRing: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 22,
-    borderWidth: 1.5,
-  },
-  titleWrap: { marginTop: 16 },
-  /* De mandala vult dit blok en ligt eronder; de hoogte volgt de tekst. */
-  /* `minHeight: HEADER_MANDALA` is de eigenlijke fix (operator, 9 augustus
-     2026: "how it works, foto en de mandala bovenaan overlappen"). Dit vak
-     was alleen zo hoog als zijn TEKST, terwijl de mandala-achtergrond daar
-     centraal ABSOLUUT in hangt op zijn eigen, grotere maat — was de tekst
-     korter dan de mandala, dan stak ze onderaan het vak uit tot in wat
-     erna komt. Alleen op het "how it works"-scherm stond de foto dicht
-     genoeg om dat te laten zien; de fout zat wel op alle drie de schermen
-     die dit vak gebruiken. Een minimumhoogte gelijk aan de mandala zorgt
-     dat het vak nooit meer krimpt tot onder haar eigen achtergrond. */
-  titleBlock: {
-    marginTop: 10,
+  welcomeWordmark: { width: 108, height: 18 },
+  /* Operator, 6 september 2026: kleine mandala ACHTER de header i.p.v. de
+     grote HapticOrb — zelfde opzet als titleBlock elders in dit bestand. */
+  headerBlockLight: {
     width: CONTENT_W,
     minHeight: HEADER_MANDALA,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: -24,
+    marginBottom: 10,
   },
-  titleLines: { alignItems: 'center' },
-  titleLine2: { marginTop: -2 },
-  /* 16 -> 6, gelijk aan braceletSubLine/howSub1 (operator, 10 augustus
-     2026). Nu de subregel binnen titleBlock staat i.p.v. erna, hoort ze
-     ook dezelfde krappe afstand te dragen als op de andere schermen. */
-  subWrap: { marginTop: 6 },
+  /* Operator, 22 september 2026: het 2×2-raster met foto's werd eerst een
+     verticale lijst (Apple HIG-poging), toen weer teruggedraaid ("ik wil
+     verschillende transparante kaarten in verschillende groottes en de
+     iconen wit") — nu een bento-grid zoals goal.tsx se eigen GoalTile: de
+     eerste 2 modi groot, de overige 2 compacter, echte matglas-kaarten. */
+  modeGrid: {
+    alignSelf: 'stretch',
+    marginTop: 22,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  modeCardWrap: { width: '48%' },
+  /* Operator, 22 september 2026 ("onderste kaarten moeten groter en
+     iconen ook groter, alle tekst zelfde grootte, verwijder subtekst"):
+     compact ging van 84 → 150 (dichter bij `modeCardBig`'s 168, niet
+     langer een half zo hoge tegel), iconen en labeltekst zijn nu overal
+     dezelfde maat (geen aparte "Big"-tekstvariant meer), en de omschrijving
+     onder het label is helemaal weg — enkel `cfg.label` blijft.
+     Operator, 22 september 2026 (vervolg, "zet je onder de kaarten een
+     verticale kaart met de bracelet in... huidige kaarten mogen iets
+     kleiner"): 168/150 → 144/126 om ruimte te maken voor
+     `braceletTeaser` eronder, zonder te hoeven scrollen.
+     Operator, 22 september 2026 (vervolg, "4 kaarten even groot maken,
+     kan dat"): beide op 136 — de `big`-prop (`ModeCard`, `i < 2`) blijft
+     bestaan voor eventueel later gebruik, maar heeft nu geen visueel
+     effect meer. */
+  modeCardBig: { minHeight: 136 },
+  modeCardCompact: { minHeight: 136 },
+  modeCard: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+    padding: 14,
+  },
+  /* Operator, 22 september 2026 ("je mag links uitlijnen", Apple-HIG-
+     mockup): label lijnt links uit, icoon linksboven.
+     Operator, 22 september 2026 (vervolg, "iconen centreren en tekst
+     links, alles in balans"): het icoon zelf is teruggezet naar
+     gecentreerd over de volle kaartbreedte (`modeCardIconWrap`'s eigen
+     `alignSelf:'center'` hieronder) — enkel het LABEL blijft links, dat
+     bleek een betere balans dan beide links. */
+  modeCardColumn: { justifyContent: 'flex-end', alignItems: 'flex-start' },
+  /* Operator, 22 september 2026 ("icoon boven de tekst"): alle 4 kaarten
+     zijn nu kolommen — geen aparte rij-vorm (icoon links) voor de
+     compacte kaarten meer, dus ook maar één icoon-maat.
+     Operator, 22 september 2026 ("iconen groter", toen "beetje kleiner",
+     toen weer kleiner om plaats te maken voor de bracelet-teaserkaart):
+     72→96→84→72, `scale` op de aanroep volgde dezelfde weg (1,8→2,6→2,2→
+     1,9). `alignSelf:'center'` haalt 'm los van `modeCardColumn`'s links
+     uitlijning, zodat enkel de tekst eronder links blijft. */
+  modeCardIconWrap: {
+    width: 72,
+    height: 72,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  modeCardRing: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+    borderWidth: 1.5,
+  },
+  modeCardIcon: { alignItems: 'center', justifyContent: 'center' },
+  /* Operator, 22 september 2026 ("Smartphone Haptics mag op 2 rijen"):
+     `numberOfLines={2}` i.p.v. 1+`adjustsFontSizeToFit` — het langste
+     label ("Smartphone Haptics") mag nu gewoon breken i.p.v. te krimpen.
+     Eigen `lineHeight` nodig zodra een label écht 2 regels wordt. */
+  modeCardLabel: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
+    lineHeight: 19,
+    color: '#ffffff',
+    textAlign: 'left',
+  },
+
+  /* 5e kaart onder het 2×2-raster — teaser, geen keuze. Vaste hoogte
+     zodat het totaal voorspelbaar binnen `slideArea` past zonder scroll. */
+  braceletTeaser: {
+    alignSelf: 'stretch',
+    /* Operator, 23 september 2026 ("op step 2 mag de bracelet kaart
+       lager"): 18 → 30. */
+    marginTop: 30,
+    /* Moet gelijk blijven aan `BRACELET_TEASER_CARD_H` hierboven (operator,
+       23 september 2026, "onderkant beetje te kort afgesneden": 150 →
+       164). */
+    height: 164,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    overflow: 'hidden',
+  },
+  braceletTeaserBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  braceletTeaserBadgeTxt: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 10.5,
+  },
+
+  /* Infopopup — houdt de bezoeker op dit scherm i.p.v. naar de Bracelet-tab
+     te navigeren (zie `BraceletInfoModal`). Effen zwarte achtergrond. */
+  braceletModalScrim: {
+    flex: 1,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 26,
+  },
+  braceletModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: Brand.panel,
+    borderWidth: 1,
+    borderColor: Brand.border,
+  },
+  braceletModalImg: { width: '100%', height: 170 },
+  braceletModalBody: { padding: 20 },
+  braceletModalEyebrow: {
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1.6,
+  },
+  braceletModalTitle: {
+    marginTop: 5,
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 20,
+    lineHeight: 25,
+  },
+  braceletModalSubhead: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 13.5,
+    lineHeight: 18,
+  },
+  braceletModalFeatures: { marginTop: 14, gap: 6 },
+  braceletModalFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  braceletModalBullet: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#ffffff',
+  },
+  braceletModalFeature: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14.5,
+    lineHeight: 19,
+  },
+  braceletModalText: {
+    marginTop: 12,
+    color: 'rgba(255,255,255,0.72)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  braceletModalHintRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  braceletModalHint: {
+    color: 'rgba(255,255,255,0.45)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 12,
+  },
+  braceletModalClose: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+  },
+  braceletModalCloseTxt: {
+    color: '#0a0a0a',
+    fontFamily: BrandFonts.bold,
+    fontSize: 15,
+  },
+  /* Operator, 23 september 2026 — "i"-info-kaart per state, zelfde
+     scrim/kaart-schaal als `braceletModal*` hierboven, enkel zonder foto
+     (geen padding-loze image-bovenkant, dus eigen `padding` op het vak
+     zelf i.p.v. een losse `*Body`-wrapper). */
+  stateInfoCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 22,
+    backgroundColor: Brand.panel,
+    borderWidth: 1,
+    borderColor: Brand.border,
+    padding: 22,
+  },
+  stateInfoEyebrow: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.6,
+  },
+  stateInfoTitle: {
+    marginTop: 6,
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 21,
+    lineHeight: 26,
+  },
+  stateInfoTagline: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 14,
+  },
+  stateInfoDesc: {
+    marginTop: 14,
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+
+  /* Scherm 3 — "wat wil je veranderen" (en gedeeld door stap 4: "How
+     experienced are you?").
+     Operator, 22 september 2026 ("plaatsing en font zoals het hoort"):
+     was een gecentreerde kop op donkere tekst (`#0a0a0c`) — een overblijfsel
+     van toen deze stappen nog licht waren (`light = slide === 0` maakt ze
+     intussen allemaal donker). Nu exact hetzelfde `header`/`lead`-recept
+     als stap 1/2 hierboven: links uitgelijnd, wit, `TypeScale.pageHeader`/
+     `pageSubhead`. */
+  changeHeader: { alignSelf: 'stretch', marginTop: 4, marginBottom: 22 },
+  changeMandalaWrap: {
+    position: 'absolute',
+    top: -26,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  changeTitle: {
+    ...TypeScale.pageHeader,
+    textAlign: 'left',
+    color: Brand.text,
+  },
+  changeSub: {
+    marginTop: 6,
+    ...TypeScale.pageSubhead,
+    textAlign: 'left',
+    color: 'rgba(255,255,255,0.55)',
+  },
+  /* Operator, 22 september 2026 ("carrousel moet weg, bouwen zoals in
+     build breathwork protocol"): vervangt de hele carrousel/ChangeCard-
+     stijlengroep (`carousel`, `changeCardWrap/Img/Scrim/TextWrap/Title/
+     Body/Check`, `carouselDots/Dot/DotActive`) door hetzelfde bento-grid-
+     recept als `goal.tsx`'s `grid`/`tile`/`tileIconBadge`/`tileRank`/
+     `tileName` — 2 kolommen, matglas-tegel, icoon-badge, genummerde
+     selectie. Enige verschil: alle 8 tegels dezelfde (compacte) maat,
+     geen aparte grote variant — dit scherm mag niet scrollen. */
+  changeGrid: {
+    alignSelf: 'stretch',
+    marginTop: 18,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  /* Operator, 22 september 2026 ("kaarten mogen groter en inhoud ook"):
+     92→108, icoon 26→34, tekst 13→15.
+     Operator, 22 september 2026 (vervolg, na het schrappen van Peak
+     performance/Calm the mind, "kunnen de kaarten en iconen groter"):
+     6 doelen i.p.v. 8 = 3 rijen i.p.v. 4, dus extra budget — 108→140,
+     icoon 34→46, tekst 15→17, rangbadge 20→22. */
+  changeTile: {
+    width: '48%',
+    minHeight: 140,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    overflow: 'hidden',
+    padding: 16,
+    justifyContent: 'center',
+  },
+  changeTileOn: { borderColor: 'rgba(255,255,255,0.4)' },
+  changeTileRank: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  changeTileRankTxt: { fontFamily: BrandFonts.bold, fontSize: 11 },
+  changeTileContent: { alignItems: 'center', gap: 10 },
+  changeTileName: {
+    ...TypeScale.cardHeadline,
+    fontSize: 17,
+    lineHeight: 20,
+    color: '#ffffff',
+    textAlign: 'center',
+    alignSelf: 'stretch',
+  },
+  titleWrap: { marginTop: 16 },
+  /* De mandala vult dit blok en ligt eronder; de hoogte volgt de tekst. */
+  /* Operator, 22 september 2026 ("fontstijl en layout moet zelfde als in
+     de app protocol settings"): `titleBlock`/`titleBlockLight`/
+     `titleLines`/`titleLine2`/`subWrap`/`titleLineLight`/`titleLineDark`/
+     `subLineLight`/`subLineDark` (de gecentreerde, grote-kapitalen kop-
+     opzet van stap 2) zijn weg — vervangen door `header`/`lead` hieronder,
+     exact zoals goal.tsx/intensity.tsx. */
+  /* Operator, 22 september 2026 ("moet groter en wit duidelijk staan"):
+     was klein en gedimd (12.5px, 45% wit) — nu zelfde grootte/kleur als
+     de merk-tagline die hier eerst stond ("Control the input. Change the
+     output.", intussen verwijderd op deze stap). */
+  introOrientLight: {
+    marginTop: 10,
+    width: SCREEN_W - 64,
+    textAlign: 'center',
+    color: '#ffffff',
+    fontFamily: BrandFonts.medium,
+    fontSize: 16,
+  },
 
   /* Scherm 1 — kop en tagline zijn Skia-tekst (GradientText); die brengen
      hun eigen hoogte mee, hier alleen de ruimte ertussen. */
   headlineWrap: { marginTop: 14 },
+  /* Operator, 22 september 2026 ("onboarding step 1 de breathe build...
+     zelfde als in de breathwork tab welcome scherm, check ook de
+     fonts"): vervangt de vorige effen ÉÉN-regel kop (BrandFonts.bold/28,
+     6 september) door exact dezelfde gestapelde 3-regel-opbouw en fonts
+     als (tabs)/breath.tsx se `stackWord1`/`stackWord2`/`stackWord3` —
+     zelfde `fontFamily`/`fontSize`/`letterSpacing`/`lineHeight` per
+     woord. Vervolg ("foto onderkant moet doorlopen, tekstkleur wit, zie
+     je niet dat het onleesbaar is"): kleur was nog donker (uitging van
+     een lichte achtergrondfoto) — de echte foto hier is dezelfde donkere
+     hero-foto als op de Breath-tab, dus nu ook wit, exact als daar. */
+  stackTitle: { alignItems: 'center' },
+  stackWord1Light: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 28,
+    letterSpacing: -0.2,
+    lineHeight: 32,
+    color: 'rgba(255,255,255,0.62)',
+    textAlign: 'center',
+  },
+  stackWord2Light: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 48,
+    letterSpacing: 0,
+    lineHeight: 52,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  stackWord3Light: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 50,
+    letterSpacing: -1.2,
+    lineHeight: 52,
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 2,
+  },
   taglineWrap: { marginTop: 12 },
   taglineLine2: { marginTop: 3 },
   traits: {
@@ -1567,11 +3606,46 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
     marginRight: 9,
   },
+  traitDividerLight: { backgroundColor: 'rgba(10,10,12,0.18)' },
   traitTxt: {
     color: 'rgba(255,255,255,0.55)',
     fontFamily: BrandFonts.bold,
     fontSize: 9,
     letterSpacing: 1.4,
+  },
+  traitTxtLight: { color: 'rgba(10,10,12,0.6)' },
+
+  /* Lichte iconenrij (mockup, 6 september 2026) — drie kolommen, elk een
+     cirkel-icoon + label + subtekst, i.p.v. de compacte donkere rij met
+     verdeelstreepjes. */
+  traitsLight: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: CONTENT_W,
+    marginTop: 30,
+  },
+  traitColLight: { alignItems: 'center', width: CONTENT_W / 3.3 },
+  traitIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(127,178,229,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  traitLabelLight: {
+    color: '#0a0a0c',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 1,
+  },
+  traitSubLight: {
+    marginTop: 3,
+    color: 'rgba(10,10,12,0.5)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 10,
+    textAlign: 'center',
   },
 
   /* Scherm 2 */
@@ -1598,268 +3672,486 @@ const s = StyleSheet.create({
     marginHorizontal: -26,
   },
 
-  /* Scherm 3 */
-  /* Strak onder de kop, zoals de subtitels op de andere schermen. */
-  /* 4 -> 6, gelijk aan howSub1 (operator, 10 augustus 2026: "header en
-     subheader niet altijd mooi onder elkaar"). Beide zijn een kop van één
-     regel met een subregel eronder — twee millimeter verschil tussen twee
-     schermen die er hetzelfde uitzien, was precies zichtbaar genoeg om als
-     onzorgvuldig te lezen. */
-  braceletSubLine: { marginTop: 6 },
-  /* 0.7 -> 0.42 -> 0.34 (operator, 10 augustus 2026, twee pogingen). De
-     eerste verkleining toonde nog altijd een kale strook onder de armband —
-     dat bleek niet de puls-ringen (overflow:hidden loste niets op, er viel
-     niets te clippen) maar de FOTO zelf: het bronbestand heeft eigen lege
-     ruimte onder de armband. Krapper bijsnijden toont minder van die rand
-     en meer van de armband + het kastje zelf. */
-  braceletImgWrap: {
-    /* -6 -> 32 (operator, 10 augustus 2026: "bracelet en tekst eronder
-       moeten 1cm zakken"). Schuift de armband en alles eronder als geheel
-       lager, weg van de kop erboven. */
-    marginTop: 32,
-    width: BRACELET_W,
-    height: BRACELET_W * 0.34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  /* 2 -> 18: de tekst begon vrijwel tegen de foto aan (operator, 10
-     augustus 2026, twee keer herhaald: "moet ademen"). */
-  features: { marginTop: 18, gap: 7 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  /* Vaste kolombreedte — zie de toelichting bij BRACELET_FEATURES.map
-     hierboven. 15 (icoonmaat) + wat lucht, zodat ook het breedste icoon
-     (de schuifjes) er ruim in past. */
-  featureIconWrap: { width: 18, alignItems: 'center' },
-  featureTxt: {
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: BrandFonts.medium,
-    fontSize: 12.5,
-    letterSpacing: 0.1,
-  },
-  braceletImg: { width: '100%', height: '100%' },
-  comingPill: {
-    marginTop: 10,
-    paddingHorizontal: 11,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(224,179,65,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(224,179,65,0.36)',
-  },
-  comingTxt: {
-    color: '#E0B341',
-    fontFamily: BrandFonts.bold,
-    fontSize: 9,
-    letterSpacing: 1.6,
-  },
-  braceletTitle: {
-    marginTop: 16,
-    color: Brand.text,
-    fontFamily: BrandFonts.bold,
-    fontSize: 22,
-    lineHeight: 29,
-    letterSpacing: -0.4,
-    textAlign: 'center',
-  },
-  braceletNote: {
-    marginTop: 12,
-    color: Brand.textDim,
-    fontFamily: BrandFonts.medium,
-    fontSize: 13.5,
-    lineHeight: 19,
-    textAlign: 'center',
-    maxWidth: 300,
-  },
-
   /* Scherm 4 */
-  howSub1: { marginTop: 6 },
-  /* De foto zelf, zonder tekst erin gebakken (operator, 9 augustus 2026):
-     de kop staat nu erboven, in dezelfde vorm als op de andere schermen.
-     Het scherm scrolt inmiddels wél als het niet past (zie de ScrollView
-     om slideArea) — deze hoogte is dus een richtwaarde, geen harde grens
+
+  /* Scherm 4 — "hoe ervaren ben je". Lichte fotokaarten, zelfde stijl als
+     welcome.tsx en scherm 3 (operator, 6 september 2026: "premium en
+     pro"). */
+  /* Operator, 11 september 2026: 2 vierkanten naast elkaar + 1 panoramische
+     kaart eronder, i.p.v. 3 gelijke liggende kaarten onder elkaar. */
+  /* Operator, 23 september 2026 ("de 3 kaarten mogen ook beetje
+     zakken"): marginTop toegevoegd t.o.v. de kop/sub erboven. */
+  expBlock: { gap: ROW_GAP, width: EXP_BLOCK_W, alignSelf: 'center', marginTop: 16 },
+  expSquareRow: { flexDirection: 'row', gap: GRID_GAP },
+  /* Operator, 11 september 2026: "zwart blijft buiten de kaarten" —
+     bleek een schaduw te zijn, geen overlay-lek: `Pressable` krijgt op
+     Android standaard een elevation-schaduw zodra hij een eigen
+     `backgroundColor` heeft. Expliciet uitgezet. */
+  /* Operator, 22 september 2026 ("moet transparante blur zwarte kaarten
+     zijn zoals overal"): zelfde matglas-recept als `ModeCard`/`ChangeTile`
+     — transparante rand die oplicht bij selectie, geen witte vulling/foto
      meer. */
-  libHero: {
-    /* Terug naar ruimer nu dit scherm mag scrollen (operator, 10 augustus
-       2026: "voor audio library onboarding mag scroll uitzonderlijk"). De
-       eerdere krimp naar 96 was een noodgreep tegen een knop die alles
-       overlapte; die noodzaak is weg. */
-    marginTop: 22,
-    width: CONTENT_W,
-    height: 170,
+  /* Operator, 22 september 2026 ("niet mooi, tekst moet links" → "tekst
+     links onderaan" → Apple HIG-citaat "links-uitgelijnde variant voor
+     functionele selecties"): rondje linksboven, titel+subtekst samen
+     linksonder — beide op de Apple-minimum marge van 16pt (was 14). */
+  expCardWrap: {
     borderRadius: 20,
-    overflow: 'hidden',
-  },
-  libHeroImg: { width: '100%', height: '100%' },
-  wearWrap: {
-    marginTop: 12,
-    width: CONTENT_W,
-    height: WEAR_H,
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  wearImg: {
-    width: CONTENT_W * 1.3,
-    height: '100%',
-    marginLeft: -CONTENT_W * 0.18,
-  },
-  howWhen: {
-    marginTop: 6,
-    maxWidth: CONTENT_W,
-    color: 'rgba(255,255,255,0.82)',
-    fontFamily: BrandFonts.regular,
-    fontSize: 14,
-    letterSpacing: 0.2,
-    textAlign: 'center',
-  },
-  /* Groter, strakker en dunner dan de regel erboven: dat is wat een claim
-     laat staan zonder te schreeuwen. Licht gewicht met wat letterafstand
-     leest als rust; vet zou het een reclamekreet maken. */
-  howClaim: {
-    marginTop: 14,
-    maxWidth: CONTENT_W,
-    color: '#ffffff',
-    fontFamily: BrandFonts.regular,
-    fontSize: 16,
-    letterSpacing: 1.4,
-    textAlign: 'center',
-  },
-  howSteps: { marginTop: 10, gap: 8, width: CONTENT_W },
-  howStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  howNumWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(127,178,255,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: 'rgba(255,255,255,0.14)',
+    overflow: 'hidden',
   },
-  howNum: {
-    color: '#7FB2FF',
-    fontFamily: BrandFonts.bold,
-    fontSize: 11,
+  expCardWrapActive: { borderColor: 'rgba(255,255,255,0.4)' },
+  expCardTextWrap: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
   },
-  howStepText: { flex: 1 },
-  howLabel: {
-    color: '#7FB2FF',
-    fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    letterSpacing: 2,
+  expCardLabel: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 16,
+    textAlign: 'left',
   },
-  howDesc: {
-    marginTop: 3,
-    color: 'rgba(255,255,255,0.78)',
+  /* Subtekst — kleiner, gedimd (Apple's `secondaryLabel`-equivalent),
+     `option.hint` uit de data. */
+  expCardHint: {
+    marginTop: 2,
+    color: 'rgba(255,255,255,0.5)',
     fontFamily: BrandFonts.regular,
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 12.5,
+    textAlign: 'left',
+  },
+  /* "Vloeistof"-rondje linksboven — zie `ExperienceWaveFill`. Zelf geen
+     clip/achtergrond meer (dat zit nu op `expWaveInner`, kleiner dan de
+     ring) — enkel de positionering t.o.v. de kaart. */
+  expWaveWrap: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    width: EXP_WAVE_SIZE,
+    height: EXP_WAVE_SIZE,
+  },
+  /* Operator, 22 september 2026 ("water mag de ring niet raken, heel
+     minimaal van de cirkel blijven"): eigen, kleinere cirkel dan de ring
+     hieronder — `EXP_WAVE_INSET` lucht rondom. */
+  expWaveInner: {
+    position: 'absolute',
+    top: EXP_WAVE_INSET,
+    left: EXP_WAVE_INSET,
+    width: EXP_WAVE_INNER,
+    height: EXP_WAVE_INNER,
+    borderRadius: EXP_WAVE_INNER / 2,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  expWaveRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: EXP_WAVE_SIZE,
+    height: EXP_WAVE_SIZE,
+    borderRadius: EXP_WAVE_SIZE / 2,
+    /* Operator, 22 september 2026 ("dubbel zo dik en echt wit, nu is dat
+       grijs"): 3→6, en effen wit (was 40% dekkend, dat las als grijs). */
+    borderWidth: 6,
+    borderColor: '#ffffff',
   },
 
-  /* Scherm 5 */
+  /* Scherm 5.
+     Operator, 22 september 2026 ("font vervangen zoals bij breathwork
+     setting protocol" → "waarom is de kleur blauw?"): fontSize/
+     letterSpacing nu exact gelijk aan de gedeelde `StepIndicator` (9/2,
+     was 10/2.6) — en kleur wit i.p.v. blauw, want elke echte aanroeper
+     van dat component geeft `color="#ffffff"` mee; het blauw was enkel
+     de nooit-gebruikte default. */
   stepEyebrow: {
     marginTop: 2,
-    color: '#7FB2FF',
-    fontFamily: BrandFonts.bold,
-    fontSize: 10,
-    letterSpacing: 2.6,
-  },
-  startLead: {
-    marginTop: 12,
-    maxWidth: CONTENT_W,
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: BrandFonts.regular,
-    fontSize: 13.5,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  startLead2: {
-    marginTop: 2,
-    maxWidth: CONTENT_W,
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: BrandFonts.regular,
-    fontSize: 13.5,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  titleBlockPlain: { width: CONTENT_W, alignItems: 'center' },
-  startOrb: { marginTop: 10, marginBottom: 10 },
-  /* 14 -> 22 op de bibliotheekstap specifiek zou een losse stijl vragen;
-     dit gedeelde blok wordt ook door SlideStart gebruikt met drie punten
-     (past al ruim), dus de marge komt liever van de kop erboven — zie
-     libHero. */
-  /* marginTop 22, gelijk aan de ruimte BOVEN de foto (libHero) — dezelfde
-     lucht aan beide kanten in plaats van de tekst tegen de foto te
-     duwen (operator, 10 augustus 2026). */
-  startPoints: { width: CONTENT_W, gap: 12, marginTop: 20 },
-  pillarsLbl: {
-    marginTop: 20,
-    width: CONTENT_W,
-    color: '#7FB2FF',
-    fontFamily: BrandFonts.bold,
-    fontSize: 10.5,
-    letterSpacing: 2,
-  },
-  pillarsGrid: {
-    marginTop: 10,
-    width: CONTENT_W,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  pillarCard: {
-    width: (CONTENT_W - 10) / 2,
-    marginBottom: 10,
-    padding: 11,
-    borderRadius: 12,
-    backgroundColor: 'rgba(127,178,255,0.06)',
-  },
-  /* Zelfde lettergewicht-paar als startLabel/startDesc hierboven — bold
-     hoofdregel, regular onderschrift — zodat dit raster als familie leest
-     met de drie punten erboven, niet als een ander onderdeel (operator, 10
-     augustus 2026: "font consistent"). */
-  pillarName: {
     color: '#ffffff',
     fontFamily: BrandFonts.bold,
-    fontSize: 12.5,
-    lineHeight: 16,
+    fontSize: 9,
+    letterSpacing: 2,
   },
-  pillarTag: {
-    marginTop: 3,
-    color: 'rgba(255,255,255,0.55)',
-    fontFamily: BrandFonts.regular,
-    fontSize: 11,
-    lineHeight: 15,
+  /* Scherm 6 — "your first session" (operator, 7 september 2026, mockup):
+     donkere foto-achtergrond, dus WITTE tekst — dit is de uitzondering op
+     de lichte stappen hiervoor, geen `light`-variant nodig. */
+  /* Operator, 22 september 2026 ("achtergrond moet zwart om te beginnen"):
+     geen fotoachtergrond meer op dit scherm — namen (`startTitleDark`/
+     `startSubDark`) ongewijzigd gelaten, kleuren nu wit-op-zwart, exact
+     `changeTitle`/`changeSub`'s conventie (stap 2/3/4). */
+  /* Begrensd vak voor de mandala erachter — zonder dit centreerde
+     `changeMandalaWrap` (die zich naar zijn OUDER richt) zich over de
+     hele pagina i.p.v. enkel achter deze kop (operator, 7 september
+     2026: "mandala moet onder header komen"). */
+  /* Operator, 22 september 2026 ("staat dat op zelfde hoogte als de andere
+     headers?"): de oude `minHeight: HEADER_MANDALA`+gecentreerde box was
+     restant van de intussen verwijderde mandala-achtergrond (11 september
+     2026) — nu exact `changeHeader`'s eigen, simpele top-uitlijning
+     (stap 2/3/4), zodat de kop op precies dezelfde hoogte begint. */
+  startHeaderWrap: { alignSelf: 'stretch', marginTop: 4, marginBottom: 12 },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): "Your
+     first session"-stap, zelfde fix als `changeTitle`/`headlineLight`. */
+  startTitleDark: {
+    textAlign: 'left',
+    color: Brand.text,
+    ...TypeScale.pageHeader,
   },
-  startPoint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  startIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: 'rgba(127,178,255,0.4)',
+  /* Operator, 24 september 2026 ("Experience your session wordt enige
+     header, gecentreerd"): vervangt `startSubDark` (subkop is weg). */
+  startTitleCentered: { textAlign: 'center' },
+  /* De RhythmRing — zelfde component als agenda.tsx, hier compacter
+     (`size`) zodat ze samen met kop, recap-chips, kaarten en de vaste
+     veiligheidsregel nog zonder scrollen past (harde regel voor dit
+     scherm, zie `startPlanList`-toelichting hieronder). */
+  startRingWrap: {
+    alignItems: 'center',
+    marginTop: -8,
+    position: 'relative',
+  },
+  /* Operator, 24 september 2026 ("foto zit niet mooi in de cirkel"):
+     `RhythmRing`'s `size`-prop is NIET de werkelijke containermaat — die
+     is `size + OUTER_PAD*2` (OUTER_PAD=40, zie RhythmRing.tsx), en de
+     ZICHTBARE dunne ring zelf zit daarbinnen op straal `size/2 - 6`. Het
+     top-offset `(outerSize - diameter)/2` komt daardoor altijd uit op een
+     vaste 46, ongeacht `size` (OUTER_PAD*2 - 12, gehalveerd) — enkel de
+     diameter zelf schaalt mee met `size` (= size - 12).
+     Operator, vervolg ("cirkel groter"): size 224→260, dus diameter
+     212→248; offset blijft 46. */
+  startRingPhoto: {
+    position: 'absolute',
+    top: 46,
+    alignSelf: 'center',
+    width: 248,
+    height: 248,
+    borderRadius: 124,
+  },
+  startRingPhotoOverlay: {
+    position: 'absolute',
+    top: 46,
+    alignSelf: 'center',
+    width: 248,
+    height: 248,
+    borderRadius: 124,
+    /* Operator, 24 september 2026 ("mag echt donkerder"): 0.45 → 0.68. */
+    backgroundColor: 'rgba(0,0,0,0.68)',
+  },
+  /* Operator, 23 september 2026: illustratieve info voor de geselecteerde
+     sessie, gecentreerd in de lege ruimte middenin de ring.
+     Vervolg ("info mag beetje hoger beginnen"): een kleine negatieve
+     `translateY` i.p.v. de exacte middenlijn, zodat er meer lucht overblijft
+     t.o.v. het uur onderin de ring (`startRingTimeBottom`). */
+  startRingCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    transform: [{ translateY: -14 }],
   },
-  startPointText: { flex: 1 },
-  startLabel: {
+  /* Operator, 23 september 2026 ("aantal min moet grootste, daaronder hoe
+     laat, daaronder iconen"): duur is nu de dominante regel — was eerst het
+     uur dat het grootst stond, omgedraaid. */
+  startRingDuration: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 28,
     color: '#ffffff',
-    fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    letterSpacing: 1.8,
   },
-  startDesc: {
-    marginTop: 2,
-    color: 'rgba(255,255,255,0.66)',
-    fontFamily: BrandFonts.regular,
+  /* Operator, 25 september 2026 ("level mag ook in de cirkel komen"):
+     hernoemd van `startCardBadge` — zelfde "ADVANCED LEVEL"-stijl label,
+     nu in de ring i.p.v. op de kaart. */
+  startRingLevel: {
+    marginTop: -2,
+    fontFamily: BrandFonts.bold,
+    fontSize: 9,
+    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  /* Operator, 23 september 2026 ("het uur onderaan in de cirkel zetten"):
+     los van de gecentreerde stapel — een eigen tekstje onderin de ring
+     zelf (6-uur-positie), i.p.v. mee in het midden. */
+  startRingTimeBottom: {
+    position: 'absolute',
+    bottom: 76,
+    alignSelf: 'center',
+    fontFamily: BrandFonts.medium,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  /* Op stap 3 gekozen doelen (tot 2) — puur illustratief, niet tikbaar.
+     Operator ("onder elkaar de states met de iconen ervoor"): kolom i.p.v.
+     een rij iconen + losse naam-regel — elk doel zijn eigen icoon+naam op
+     één lijn, doelen onder elkaar. */
+  startRingGoalList: {
+    marginTop: 9,
+    gap: 4,
+  },
+  startRingGoalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  startRingGoalNames: {
+    maxWidth: 130,
+    fontFamily: BrandFonts.semibold,
     fontSize: 13,
-    lineHeight: 18,
+    color: 'rgba(255,255,255,0.75)',
   },
-  laterWrap: { alignSelf: 'center', paddingVertical: 4 },
-  laterTxt: {
-    color: '#7FB2FF',
+  /* Operator, 7 september 2026: eerst een vaste `marginTop`, getuned voor
+     2 kaarten — maar bij 1 kaart (1 gekozen doel) liet dat een leeg gat
+     onder de kaart en kwam hij te ver van de CTA af te staan ("bij 1 kaart
+     komt die boven de cta"). `marginTop: 'auto'` binnen de nu flex:1
+     gemaakte `slide` (zie `startSlideFill`) duwt de lijst altijd tot vlak
+     boven de CTA, ongeacht of het 1 of 2 kaarten zijn — geen aparte
+     berekening per aantal kaarten meer nodig. Scrollt bewust nooit
+     (operator, 10 augustus 2026: "moet zonder scrollen passen"). */
+  startSlideFill: { flex: 1 },
+  /* Operator, 23 september 2026 ("elke state een eigen kaart, 2 naast
+     elkaar"): grid i.p.v. een verticale lijst — `flexWrap` + `48%`-breedte
+     per kaart, zelfde truc als `changeTile` op stap 3. Dit scherm zit in
+     een `ScrollView` (zie hierboven), dus `marginTop:'auto'` (duwen tot
+     tegen een bekende onderkant) is niet meer nodig — vaste marge. */
+  startCardGrid: {
+    marginTop: 10,
+    /* Operator, 25 september 2026 ("kaarten en cta staan te dicht bij
+       elkaar"): 14 → 24 — `footer` zelf heeft geen eigen paddingTop, dus
+       deze marge was de enige ruimte tussen de kaarten en de CTA. */
+    marginBottom: 24,
+    width: CONTENT_W,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  /* Operator, 23 september 2026 ("Apple Inset Grouped-kaarten: iets hoger" →
+     "de kaarten moet wel transparant blur" → "omlijning subtieler en
+     witgrijs, enkel iconen mogen van kleur veranderen" → "onze animatie bij
+     aanklikken, zoals de andere kaarten"): sizing (`startCard`, de
+     Pressable) losgetrokken van de animatie/rand (`startCardInner`, een
+     Animated.View) — exact `modeCardWrap`/`modeCard`'s opzet (stap 2),
+     nodig omdat een animated borderColor op een plain Pressable niet
+     kan. */
+  /* Operator, 25 september 2026 ("te weinig ademruimte op de pagina"):
+     88 → 72 — het niveau-label verhuisde naar de ring, dus de kaart
+     hoeft die extra regel niet meer te dragen. */
+  startCard: {
+    width: '48%',
+    height: 72,
+  },
+  /* `borderColor` hier is ANIMATED (`borderStyle` in `StartCard`) — de
+     statische basiswaarde staat enkel in de `useSharedValue`-init. */
+  startCardInner: {
+    flex: 1,
+    /* Operator, 23 september 2026: content hierbinnen is nu ABSOLUUT
+       gepositioneerd (`startCardContent`, zie de "ik zie geen tekst"-fix)
+       en telt dus niet meer mee voor de eigen hoogte — vaste hoogte
+       nodig, anders klapt de kaart samen tot enkel de rand. */
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  /* TIJDELIJK terug (operator, "ik wil vergelijken") — iOS' SystemGray6,
+     vlak boven de blur. Voor A/B-vergelijking op het toestel met de
+     pure-blur-versie; verwijderen zodra de keuze gemaakt is. */
+  startCardTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(120,120,128,0.16)',
+  },
+  /* Operator, 25 september 2026 ("iconen en tekst mogen links"): was
+     `alignItems:'center'` — icoon en naam nu beide links, met wat
+     binnenmarge zodat ze niet tegen de kaartrand plakken. */
+  startCardContent: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingLeft: 14,
+    gap: 8,
+  },
+  startCardName: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14.5,
+    letterSpacing: 0.1,
+    color: '#ffffff',
+  },
+  /* "i"-knop los in de hoek (niet meer in de content-rij) zodat icoon +
+     naam er ongestoord door kunnen centreren. */
+  startCardInfoBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  /* Veiligheidsdisclaimer, vlak boven de CTA (buiten dit component, in de
+     vaste footer) — zelfde `CONTENT_W`/centrering als `startPlanList`
+     erboven, zodat beide blokken visueel op één lijn staan. */
+  safetyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    width: CONTENT_W,
+    alignSelf: 'center',
+    /* Operator, 23 september 2026 ("tekst staat te dicht tegen de
+       kaart" → "kan het blok nog beetje zakken?"): nu op stap 4 vlak na
+       `expBlock` (de kaarten) i.p.v. in de vaste footer waar de knop er
+       al genoeg afstand van gaf — eigen `marginTop` voor dezelfde
+       ademruimte, 20 → 36 → 52. */
+    marginTop: 52,
+    marginBottom: 4,
+  },
+  safetyCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  safetyCheckOn: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
+  safetyTxt: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  /* Scherm 6 — Audio Library (operator, 7 september 2026): kopblok is nu
+     gewoon `changeHeader`, hetzelfde bewezen patroon als elke andere
+     stap. Alleen dit ene rustige blok blijft eigen aan deze pagina — het
+     staat in het witte vlak links van de foto, dus smaller dan CONTENT_W. */
+  /* Rij i.p.v. losse spacer + blok onderaan (operator, 7 september 2026:
+     "foto te groot, overlapt tekst" + "groot wit gat in het midden") —
+     vult zelf de overgebleven hoogte, tekst en foto naast elkaar, kunnen
+     dus niet meer overlappen. */
+  /* Operator, 7 september 2026: groot wit gat tussen subkop en dit blok
+     — `alignItems:'center'` centreerde het verticaal over de HELE
+     overgebleven ruimte, wat te ver naar beneden viel. Nu vast bovenaan
+     met wat lucht, i.p.v. zwevend in het midden. */
+  /* Gewone rij i.p.v. absolute achtergrond (operator, 7 september 2026:
+     "bouw de hele pagina opnieuw op") — `flex:1` vult de resterende
+     hoogte tot vlak boven de knop, dus de foto raakt vanzelf bijna de
+     onderkant zonder dat er iets kan overlappen. */
+  /* Operator, 7 september 2026: "back knop werkt niet" — de foto (H =
+     80% van het scherm, `bottom`-verankerd) stak met haar ONZICHTBARE
+     (transparante) randen ver boven dit vak uit, tot in de topbalk, en
+     onderschepte daar de tik op Back (zelfde soort Android-stapelbug als
+     eerder met de tekst). `overflow:'hidden'` knipt alles — zichtbaar
+     én tikbaar — af op de grenzen van dit vak. */
+  /* Geen `overflow:hidden` meer — de echte fix voor het Back-knop-
+     probleem is `pointerEvents="none"` op de foto zelf (zie
+     LibraryPhoto), niet het vak kunstmatig laten afsnijden. */
+  libBodyRow: {
+    flex: 1,
+    flexDirection: 'row',
+    marginTop: 24,
+    marginBottom: 8,
+    width: SCREEN_W,
+    paddingLeft: 26,
+  },
+  /* Vaste breedte, GEEN flex — dit is de kolom die altijd zichtbaar moet
+     blijven; de foto (flex:1) krijgt daarnaast al het overige. Links
+     uitgelijnd i.p.v. gecentreerd — leest beter als lijst, en zo lijnen
+     de pijler-iconen netjes onder elkaar uit (operator, 7 september
+     2026). */
+  libCountBlock: { width: LIB_TEXT_W, alignItems: 'flex-start' },
+  /* Operator, 11 september 2026: "140+" 32px ExtraBold/-0.5, "SESSIONS"
+     10px Bold/+1.0, lijst-items 14px Medium — enkel de fonts aangepast,
+     verder niets aan deze layout gewijzigd. */
+  libCount: {
+    color: '#0a0a0c',
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 32,
+    letterSpacing: -0.5,
+  },
+  libPillarList: { marginTop: 18, gap: 10 },
+  libPillarRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  libPillarLabel: {
+    color: '#0a0a0c',
+    fontFamily: BrandFonts.medium,
+    fontSize: 14,
+  },
+  libCountLbl: {
+    marginTop: -2,
+    color: 'rgba(10,10,12,0.5)',
     fontFamily: BrandFonts.bold,
-    fontSize: 11,
-    letterSpacing: 2,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  /* Operator, 7 september 2026: "moet Apple-stijl" — geen felle kleur,
+     gewoon effen zwart zoals de rest van de pagina. Blijft prominenter
+     dan de dunne bijschriften eromheen via gewicht/grootte, niet via
+     kleur. */
+  /* Operator, 7 september 2026 (mockup): breder dan de tekstkolom, loopt
+     over de foto heen — maar NIET de volle schermbreedte. Positie valt
+     samen met de witte gradient-band onderaan de foto, dus blijft
+     leesbaar zonder eigen kaart. */
+  /* Operator, 7 september 2026: "kaart moet centreren" — volle breedte
+     als positioneervak, `alignItems:'center'` centreert de kaart erin
+     i.p.v. links uitgelijnd te staan. */
+  libIncludedFull: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 50,
+    alignItems: 'center',
+  },
+  /* Operator, 7 september 2026: "hoe zou Apple dat doen" — een echte
+     kaart i.p.v. een gradient-wassing: effen wit, subtiele schaduw,
+     leesbaar ongeacht wat op de foto eronder staat. */
+  /* Operator, 7 september 2026: "back knop werkt niet" — `elevation`
+     (Android) bleek de tap voor de Back-knop in de topbalk te
+     onderscheppen, hetzelfde soort stapel-eigenaardigheid als eerder met
+     de foto. Geen `elevation`/`shadow*` meer — effen kaart met een dunne
+     rand i.p.v. een schaduw. */
+  libIncludedCard: {
+    width: SCREEN_W * 0.66,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(10,10,12,0.08)',
+    /* Anders steekt libIncludedAccent (hieronder) met haar rechte hoeken
+       buiten de afgeronde kaartrand uit. */
+    overflow: 'hidden',
+  },
+  /* Blauwe accentbalk links i.p.v. een schaduw of zwarte rand (operator,
+     7 september 2026) — bakent de kaart af tegen elke achtergrond, wit
+     of foto, zonder Android-`elevation` (die gaf eerder de tik-bug). */
+  libIncludedAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  libIncludedDivider: {
+    marginBottom: 12,
+    width: 40,
+    height: 1,
+    backgroundColor: 'rgba(10,10,12,0.18)',
+  },
+  libIncludedRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  libIncludedEyebrow: {
+    color: 'rgba(10,10,12,0.55)',
+    fontFamily: BrandFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1,
+  },
+  libIncludedTitle: {
+    marginTop: 2,
+    color: '#0a0a0c',
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  libIncludedDesc: {
+    marginTop: 6,
+    color: 'rgba(10,10,12,0.6)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
 
   /* Footer */
@@ -1868,17 +4160,61 @@ const s = StyleSheet.create({
      komt de knop dan vlak tegen die balk aan te liggen en tikt je duim er
      net naast (operator 2026-07-31). */
   footer: { paddingHorizontal: 26, paddingBottom: 32, gap: 18 },
+  /* Operator, 22 september 2026 ("verwijder die witte band onderaan"):
+     `footerLight` (effen wit achter de CTA op stap 1) hoorde bij het
+     oude lichte-achtergrond-thema — nu de foto donker en full-bleed is,
+     gaf die band juist een storende witte streep. Weg. */
   ctaWrap: { borderRadius: 14, overflow: 'hidden' },
+  /* Operator, 22 september 2026 ("shimmer werkt slecht, kijk naar welcome
+     in breathwork, exact hetzelfde doen"): miste `flexDirection: 'row'`
+     (RN's default is 'column') — dat verschil met (tabs)/breath.tsx se
+     eigen `cta` bepaalt waar een absoluut-gepositioneerde kind-laag
+     (de shimmer-strook) standaard rust, en verklaart precies waarom die
+     hier zichtbaar "vastzat" i.p.v. volledig off-screen te starten. Nu
+     1-op-1 dezelfde eigenschappen als daar. */
   cta: {
-    borderRadius: 14,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
+    borderRadius: 14,
+    paddingVertical: 16,
+  },
+  /* Operator, 22 september 2026 ("next knop ook transparant"): eigen
+     `overflow:'hidden'` op de `cta`-laag zelf — de BlurView is nu een
+     kind hiervan (i.p.v. de knop zelf een vlakke `backgroundColor` te
+     geven), dus moet hier al clippen, niet enkel op `ctaWrap`. */
+  ctaBlurWrap: { overflow: 'hidden' },
+  /* Operator, 22 september 2026 ("cta niet meer zichtbaar, geef witte
+     transparante kleur"): doorschijnende witte tint boven de blur. */
+  ctaTintWhite: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  /* Operator, 22 september 2026: zelfde vorm als (tabs)/breath.tsx se
+     `ctaShimmer` — een schuine strook, ruim hoger dan de knop zelf zodat
+     de rotatie geen hoeken leeg laat. */
+  ctaShimmer: {
+    position: 'absolute',
+    top: -20,
+    bottom: -20,
+    /* Expliciet vastgepind (was impliciet/ongezet) — de animatie berekent
+       de horizontale beweging nu zelf via `translateX` t.o.v. deze vaste
+       linkerrand, zie `ctaShimmerStyle`. */
+    left: 0,
+    width: 72,
   },
   ctaTxt: {
     color: '#ffffff',
-    fontFamily: BrandFonts.bold,
-    fontSize: 16,
-    letterSpacing: 0.3,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 17,
+  },
+  ctaTxtDark: {
+    color: '#0a0a0c',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 17,
+  },
+  /* Gedempte tekst voor de "nog geen keuze gemaakt"-staat op stap 3. */
+  ctaTxtBlocked: {
+    color: 'rgba(255,255,255,0.35)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 17,
   },
 });

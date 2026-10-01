@@ -370,13 +370,15 @@ export class RealIAPProvider implements IAPProvider {
       }
 
       /* Fire listeners (subscribe.tsx subscribes during checkout). */
-      this.purchaseListeners.forEach((cb) => {
-        try {
-          cb(mapped);
-        } catch (e) {
-          if (__DEV__) console.warn('[RealIAP] listener threw:', e);
-        }
-      });
+      setTimeout(() => {
+        this.purchaseListeners.forEach((cb) => {
+          try {
+            cb(mapped);
+          } catch (e) {
+            if (__DEV__) console.warn('[RealIAP] listener threw:', e);
+          }
+        });
+      }, 0);
 
       return { ok: true, purchase: mapped };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -417,15 +419,17 @@ export class RealIAPProvider implements IAPProvider {
       }
 
       /* Fire listeners for each restored purchase so caller can re-verify. */
-      restored.forEach((p) => {
-        this.purchaseListeners.forEach((cb) => {
-          try {
-            cb(p);
-          } catch (e) {
-            if (__DEV__) console.warn('[RealIAP] restore-listener threw:', e);
-          }
+      setTimeout(() => {
+        restored.forEach((p) => {
+          this.purchaseListeners.forEach((cb) => {
+            try {
+              cb(p);
+            } catch (e) {
+              if (__DEV__) console.warn('[RealIAP] restore-listener threw:', e);
+            }
+          });
         });
-      });
+      }, 0);
 
       return restored;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

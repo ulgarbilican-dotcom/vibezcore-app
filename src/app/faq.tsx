@@ -20,7 +20,13 @@ import {
   type FaqCategory,
   type FaqItem,
 } from '@/data/faq-content';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor eyebrows/tabs/CTA's. AudioAccent is de
+   label-/accent-tekstkleur op donker; CTA-regel v4.4: witte knop-bg +
+   donkere tekst. */
 import { Stack, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -35,10 +41,21 @@ import {
   UIManager,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* Wordmark als eyebrow (huisstijl, geen platte tekst). */
 const WORDMARK = require('../../assets/vibezcore_wordmark.png');
+
+/* Press-scale recipe (zie breath-welcome.tsx `StartCard`) — geadopteerd
+   voor de card/CTA-achtige Pressables die verder in dit bestand geen
+   enkele press-feedback hadden. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* Enable LayoutAnimation on Android (default off). Geeft een soepele
    uitklap-animatie zonder native dependency. */
@@ -98,10 +115,42 @@ export default function FaqScreen() {
     });
   };
 
+  /* Press-scale voor de twee bottom-CTAs ("Contact support" in de
+     no-results empty-state, "Contact support" in de help-card). Beide
+     renderen ongeconditioneerd hier boven aan de component — enkel de
+     JSX-output errond is conditioneel — dus de hooks zelf blijven altijd
+     top-level en in dezelfde volgorde. */
+  const emptyBtnScale = useSharedValue(1);
+  const onEmptyBtnPressIn = () => {
+    emptyBtnScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onEmptyBtnPressOut = () => {
+    emptyBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const emptyBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emptyBtnScale.value }],
+  }));
+
+  const helpBtnScale = useSharedValue(1);
+  const onHelpBtnPressIn = () => {
+    helpBtnScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onHelpBtnPressOut = () => {
+    helpBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const helpBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: helpBtnScale.value }],
+  }));
+
   return (
     <SafeAreaView style={s.root} edges={['bottom']}>
       <Stack.Screen
-        options={{ title: 'FAQ', headerBackTitle: 'Back' }}
+        options={{
+          title: 'FAQ',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
       />
       <ScrollView
         contentContainerStyle={s.scroll}
@@ -118,8 +167,10 @@ export default function FaqScreen() {
         <Text style={s.title}>
           Frequently Asked{'\n'}Questions
         </Text>
+        {/* Breathwork erbij (operator, 11 augustus 2026) — stond eerder
+            enkel "the platform, the bracelet", breathwork ontbrak. */}
         <Text style={s.sub}>
-          Everything you need to know about VIBEZCORE — the platform, the
+          Everything you need to know about VIBEZCORE — breathwork, the
           bracelet, the science, and your order.
         </Text>
 
@@ -184,12 +235,14 @@ export default function FaqScreen() {
               Try a different search term, or contact us via the Support
               Center.
             </Text>
-            <Pressable
-              style={s.emptyBtn}
+            <AnimatedPressable
+              style={[s.emptyBtn, emptyBtnPressStyle]}
               onPress={() => router.push('/support' as never)}
+              onPressIn={onEmptyBtnPressIn}
+              onPressOut={onEmptyBtnPressOut}
             >
               <Text style={s.emptyBtnText}>Contact support</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         )}
 
@@ -215,13 +268,15 @@ export default function FaqScreen() {
             <Text style={s.helpSub}>
               Our support team responds within 24 hours on weekdays.
             </Text>
-            <Pressable
-              style={s.helpBtn}
+            <AnimatedPressable
+              style={[s.helpBtn, helpBtnPressStyle]}
               onPress={() => router.push('/support' as never)}
+              onPressIn={onHelpBtnPressIn}
+              onPressOut={onHelpBtnPressOut}
               accessibilityLabel="Contact support"
             >
               <Text style={s.helpBtnText}>Contact support  →</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         )}
       </ScrollView>
@@ -240,15 +295,28 @@ function CatTab({
   active: boolean;
   onPress: () => void;
 }) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
-      style={[s.catTab, active && s.catTabActive]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.catTab, active && s.catTabActive, pressStyle]}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
       <Text style={[s.catTabText, active && s.catTabTextActive]}>{label}</Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -261,11 +329,24 @@ function FaqRow({
   open: boolean;
   onToggle: () => void;
 }) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   return (
     <View style={s.faqRow}>
-      <Pressable
+      <AnimatedPressable
         onPress={onToggle}
-        style={s.faqQuestionRow}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[s.faqQuestionRow, pressStyle]}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={item.question}
@@ -276,7 +357,7 @@ function FaqRow({
         <Text style={[s.faqChevron, open && s.faqChevronOpen]}>
           {open ? '–' : '+'}
         </Text>
-      </Pressable>
+      </AnimatedPressable>
       {open && (
         <View style={s.faqAnswerWrap}>{renderRichText(item.answer)}</View>
       )}
@@ -338,7 +419,7 @@ const s = StyleSheet.create({
   },
   /* `eyebrow`-style behouden voor backward-compat. */
   eyebrow: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 1.5,
@@ -411,8 +492,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
   },
   catTabActive: {
-    backgroundColor: Brand.accent,
-    borderColor: Brand.accent,
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
   },
   catTabText: {
     color: Brand.textDim,
@@ -421,7 +502,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
   },
   catTabTextActive: {
-    color: '#ffffff',
+    color: Brand.bg,
   },
 
   /* Sections */
@@ -458,7 +539,7 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
   faqQuestionOpen: {
-    color: Brand.accent,
+    color: AudioAccent,
   },
   faqChevron: {
     color: Brand.textDim,
@@ -469,7 +550,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   faqChevronOpen: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontFamily: BrandFonts.bold,
   },
   faqAnswerWrap: {
@@ -516,13 +597,13 @@ const s = StyleSheet.create({
     maxWidth: 320,
   },
   emptyBtn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 12,
   },
   emptyBtnText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 13,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -553,13 +634,13 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   helpBtn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
   },
   helpBtnText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 13,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

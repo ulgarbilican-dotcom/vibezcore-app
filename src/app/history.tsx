@@ -31,9 +31,9 @@ import {
   useHistory,
   type HistoryEntry,
 } from '@/utils/history';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Flame, Play, Search, Sparkles } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -41,12 +41,42 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextStyle,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInUp,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showVibezAlert } from '@/components/VibezAlert';
+import { AudioAccent, BrandFonts } from '@/constants/theme';
 
-const C = {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/* Operator, 15 september 2026 (Apple-upgrade — "Your Journey" als rustig
+   Bento Grid i.p.v. donkere, rommelige statistiekblokken): zelfde
+   light/C-token-toggle als de andere tabs. Veldnamen blijven dezelfde
+   als de oorspronkelijke inline `C` (bg/text/dim/faint/...) — alleen de
+   WAARDEN veranderen per stand, zodat de rest van dit bestand niet
+   herschreven hoeft te worden. */
+/* Operator, 26 september 2026: dark is de nieuwe app-brede default (was
+   light, 14 september) — zelfde hardcoded-schakelaar-patroon, enkel de
+   waarde omgezet. */
+const light = false;
+/* Operator, 26 september 2026: was '#1E2A4A' (Royal Indigo, afgeschaft) —
+   naam blijft staan (scheelt 10 plekken rename in dit bestand), waarde
+   wijst nu naar Bio-Teal ("kleine player moet ook nieuwe accentkleur",
+   dit scherm miste de eerdere sweep omdat het een lokale const was). */
+const ROYAL_INDIGO = AudioAccent;
+const DARK = {
   bg: '#000',
   text: '#fff',
   dim: 'rgba(255,255,255,0.55)',
@@ -57,20 +87,54 @@ const C = {
   border: 'rgba(255,255,255,0.08)',
   searchBg: 'rgba(255,255,255,0.05)',
   accent: '#3a8fff',
-  /* Iter 9dq v113 (2026-06-04): amber → blauw (#3a8fff). Operator-feedback:
-     "Partly listened" was hier geel terwijl audio library + player 'm blauw
-     tonen. Nu één kleur door de hele app voor consistent state-signaling. */
   partial: '#3a8fff',
   full: '#4ade80',
   inputDim: 'rgba(255,255,255,0.4)',
 };
+/* Operator, 15 september 2026: "Partly listened" verliest hier het felle
+   Signal Blue — dit is HISTORISCHE data (geen live-afspeelstatus), dus
+   het functionele-signaal-argument voor blauw gaat niet op; gedimd grijs
+   zoals de rest van de meta-tekst. */
+const LIGHT = {
+  bg: '#F5F5F7',
+  text: '#1D1D1F',
+  dim: '#8E8E93',
+  faint: '#8E8E93',
+  ghost: 'rgba(10,10,12,0.15)',
+  card: '#FFFFFF',
+  cardStrong: '#FFFFFF',
+  border: '#E5E5EA',
+  searchBg: 'rgba(0,0,0,0.05)',
+  accent: ROYAL_INDIGO,
+  partial: '#8E8E93',
+  full: '#16a34a',
+  inputDim: '#8E8E93',
+};
+const C = light ? LIGHT : DARK;
+
+/* Zachte iOS-kaartschaduw voor de witte Bento-vlakken. */
+const SOFT_SHADOW = light
+  ? {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      elevation: 2,
+    }
+  : {};
 
 const PAGE_DAYS = 30;
 const MS_PER_DAY = 86400000;
 
 type Row =
   | { kind: 'header'; key: string; label: string }
-  | { kind: 'entry'; key: string; entry: HistoryEntry };
+  | {
+      kind: 'entry';
+      key: string;
+      entry: HistoryEntry;
+      isFirst: boolean;
+      isLast: boolean;
+    };
 
 export default function HistoryScreen() {
   const { history, ready, clear } = useHistory();
@@ -112,17 +176,31 @@ export default function HistoryScreen() {
   const streak = useMemo(() => computeStreak(history), [history]);
   const stats = useMemo(() => computeStats(history), [history]);
 
-  /* Bouw flat list met header-rows tussen dag-groepen. */
+  /* Bouw flat list met header-rows tussen dag-groepen. Elke entry
+     onthoudt of hij de EERSTE/LAATSTE van zijn dag-groep is — dat bepaalt
+     welke hoeken afgerond zijn en of er een scheidingslijntje boven komt,
+     zodat alle rijen van één dag optisch één doorlopend wit Bento-vlak
+     vormen (operator, 15 september 2026: "stop de hele lijst met tracks
+     van die dag in één doorlopend wit vlak"). */
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     let lastLabel = '';
     visible.forEach((e, i) => {
       const label = dayLabel(e.ts);
-      if (label !== lastLabel) {
+      const isFirst = label !== lastLabel;
+      if (isFirst) {
         out.push({ kind: 'header', key: `h-${label}-${i}`, label });
         lastLabel = label;
       }
-      out.push({ kind: 'entry', key: `e-${e.url}-${e.ts}-${i}`, entry: e });
+      const next = visible[i + 1];
+      const isLast = !next || dayLabel(next.ts) !== label;
+      out.push({
+        kind: 'entry',
+        key: `e-${e.url}-${e.ts}-${i}`,
+        entry: e,
+        isFirst,
+        isLast,
+      });
     });
     return out;
   }, [visible]);
@@ -146,6 +224,20 @@ export default function HistoryScreen() {
     });
   };
 
+  /* Press-schaal voor de "Clear history"-menu-item, zelfde recept als
+     StartCard (breath-welcome.tsx): geen bounce bij indrukken, wel bij
+     loslaten. */
+  const clearPressScale = useSharedValue(1);
+  const onClearPressIn = () => {
+    clearPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onClearPressOut = () => {
+    clearPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const clearPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: clearPressScale.value }],
+  }));
+
   const playEntry = (e: HistoryEntry) => {
     router.push({
       pathname: '/player',
@@ -166,20 +258,26 @@ export default function HistoryScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Operator, 15 september 2026 (Apple-upgrade): "titel groot en dik
+         gedrukt aan de linkerkant i.p.v. gecentreerd in kleine letters" —
+         back-knop nu enkel het pijltje (compact), titel neemt de vrije
+         ruimte in als echte H2-sectiekop. Witte balk + flinterdunne
+         scheidingslijn i.p.v. de vorige donkere balk. */}
       <View style={s.topbar}>
         <Pressable
           onPress={goBack}
           style={s.backBtn}
           hitSlop={14}
           android_ripple={{
-            color: 'rgba(255,255,255,0.08)',
+            color: 'rgba(10,10,12,0.06)',
             borderless: true,
           }}
         >
           <Text style={s.backChev}>‹</Text>
-          <Text style={s.backText}>Back</Text>
         </Pressable>
-        <Text style={s.topbarTitle}>Your Journey</Text>
+        <Text style={s.topbarTitle} numberOfLines={1}>
+          Your Journey
+        </Text>
         <Pressable
           onPress={() => setMenuOpen((v) => !v)}
           style={s.menuBtn}
@@ -191,13 +289,15 @@ export default function HistoryScreen() {
 
       {menuOpen ? (
         <View style={s.menuPopover}>
-          <Pressable
+          <AnimatedPressable
             onPress={onClearHistory}
-            style={s.menuItem}
-            android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+            onPressIn={onClearPressIn}
+            onPressOut={onClearPressOut}
+            style={[s.menuItem, clearPressStyle]}
+            android_ripple={{ color: 'rgba(10,10,12,0.06)' }}
           >
             <Text style={s.menuItemText}>Clear history</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       ) : null}
 
@@ -234,11 +334,28 @@ export default function HistoryScreen() {
               />
             ) : null
           }
+          /* Operator, 15 september 2026 (Apple-upgrade): "tracklijst
+             verschijnt 150ms later via een zachte fade" — de kaarten
+             bovenin (streak/stats) hebben hun eigen spring-entrance, de
+             lijst daaronder krijgt een aparte, vertraagde opacity-fade
+             zodat het oog eerst naar de prestaties bovenin gaat. */
           renderItem={({ item }) =>
             item.kind === 'header' ? (
-              <Text style={s.dayLabel}>{item.label.toUpperCase()}</Text>
+              <Animated.Text
+                entering={FadeIn.delay(150).duration(280)}
+                style={s.dayLabel}
+              >
+                {item.label.toUpperCase()}
+              </Animated.Text>
             ) : (
-              <EntryRow entry={item.entry} onPlay={() => playEntry(item.entry)} />
+              <Animated.View entering={FadeIn.delay(150).duration(280)}>
+                <EntryRow
+                  entry={item.entry}
+                  isFirst={item.isFirst}
+                  isLast={item.isLast}
+                  onPlay={() => playEntry(item.entry)}
+                />
+              </Animated.View>
             )
           }
         />
@@ -249,49 +366,84 @@ export default function HistoryScreen() {
 
 /* ── Sub-components ─────────────────────────────────────────────────────── */
 
+/* Operator, 15 september 2026 (Apple-upgrade): "cijfers tellen in 400ms
+   op van 0 naar hun actuele waarde" — een `TextInput` (niet-editable)
+   waarvan Reanimated de `text`-prop rechtstreeks op de UI-thread update,
+   het standaard patroon voor een "count-up" zonder een her-render per
+   frame. Hergebruikt voor de streak én de 3 statcijfers. */
+const AnimatedCountInput = Animated.createAnimatedComponent(TextInput);
+function CountUp({
+  value,
+  style,
+  delay = 0,
+}: {
+  value: number;
+  style: TextStyle;
+  delay?: number;
+}) {
+  const sv = useSharedValue(0);
+  useEffect(() => {
+    sv.value = 0;
+    sv.value = withDelay(
+      delay,
+      withTiming(value, { duration: 400, easing: Easing.out(Easing.cubic) }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, delay]);
+  const animatedProps = useAnimatedProps(() => ({
+    text: `${Math.round(sv.value)}`,
+  })) as any;
+  return (
+    <AnimatedCountInput
+      editable={false}
+      underlineColorAndroid="transparent"
+      defaultValue={`${value}`}
+      animatedProps={animatedProps}
+      style={[{ padding: 0 }, style]}
+    />
+  );
+}
+
+/* Operator, 15 september 2026 (Apple-upgrade): "puur wit Bento-eiland,
+   vuurtje wordt een strak vectorgebaseerd icoon, cijfer in H1 Royal
+   Indigo" — de vorige blauw-groene gradient-kaart + 🔥-emoji zijn weg;
+   één wit vlak, `Flame`-icoon uit lucide, kaart veert met een zachte
+   spring een stukje omhoog bij het laden. */
 function StreakCard({ streak }: { streak: number }) {
   const active = streak > 0;
   const sub = active
     ? 'Keep your momentum going.'
     : 'Play your first session to start a streak.';
-  const inner = (
-    <View style={s.streakRow}>
-      <View style={s.streakIcon}>
-        <Text style={s.streakIconGlyph}>{active ? '🔥' : '✨'}</Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={s.streakNumRow}>
-          <Text style={s.streakNum}>{streak}</Text>
-          <Text style={s.streakSuffix}>
-            {' '}
-            {streak === 1 ? 'day streak' : 'day streak'}
-          </Text>
-        </View>
-        <Text style={s.streakSub}>{sub}</Text>
-      </View>
-    </View>
-  );
-
-  if (!active) {
-    return <View style={[s.streakCard, s.streakCardFlat]}>{inner}</View>;
-  }
   return (
-    <LinearGradient
-      colors={[
-        'rgba(58,143,255,0.10)',
-        'rgba(58,143,255,0.04)',
-        'rgba(74,222,128,0.06)',
-      ]}
-      locations={[0, 0.6, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+    <Animated.View
+      entering={FadeInUp.springify().damping(16)}
       style={s.streakCard}
     >
-      {inner}
-    </LinearGradient>
+      <View style={s.streakRow}>
+        <View style={s.streakIcon}>
+          {active ? (
+            <Flame size={22} color={ROYAL_INDIGO} strokeWidth={2.2} />
+          ) : (
+            <Sparkles size={22} color={ROYAL_INDIGO} strokeWidth={2.2} />
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={s.streakNumRow}>
+            <CountUp value={streak} style={s.streakNum} />
+            <Text style={s.streakSuffix}> day streak</Text>
+          </View>
+          <Text style={s.streakSub}>{sub}</Text>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
+/* Operator, 15 september 2026 (Apple-upgrade): "smelt de drie losse
+   zwarte vakken samen in één horizontaal wit oppervlak" — was drie
+   aparte `statCard`s met eigen rand/achtergrond; nu één `statsRow`-vlak
+   met interne verticale scheidingslijntjes. Labels in sentence case
+   (niet ALL CAPS) op het Context Label-lettertype (11px Bold +1.5). */
 function StatsRow({
   stats,
 }: {
@@ -300,21 +452,21 @@ function StatsRow({
   return (
     <View style={s.statsRow}>
       <View style={s.statCard}>
-        <Text style={[s.statValue, { color: C.accent }]}>
-          {stats.uniqueUrls}
-        </Text>
-        <Text style={s.statLabel}>SESSIONS</Text>
+        <CountUp value={stats.uniqueUrls} style={s.statValue} delay={60} />
+        <Text style={s.statLabel}>Sessions</Text>
       </View>
+      <View style={s.statDivider} />
       <View style={s.statCard}>
-        <Text style={s.statValue}>{stats.totalMin}</Text>
-        <Text style={s.statLabel}>MINUTES</Text>
+        <CountUp value={stats.totalMin} style={s.statValue} delay={120} />
+        <Text style={s.statLabel}>Minutes</Text>
       </View>
+      <View style={s.statDivider} />
       <View style={s.statCard}>
         <View style={s.statValueRow}>
-          <Text style={s.statValue}>{stats.longestMin}</Text>
+          <CountUp value={stats.longestMin} style={s.statValue} delay={180} />
           <Text style={s.statValueSuffix}>m</Text>
         </View>
-        <Text style={s.statLabel}>LONGEST</Text>
+        <Text style={s.statLabel}>Longest</Text>
       </View>
     </View>
   );
@@ -329,7 +481,10 @@ function SearchBar({
 }) {
   return (
     <View style={s.searchBar}>
-      <Text style={s.searchIcon}>🔍</Text>
+      {/* Operator, 15 september 2026 (Apple-upgrade): "emoji's zijn
+          verboden, maak hier een native SF Symbol-icoontje van" —
+          `Search` uit lucide i.p.v. 🔍. */}
+      <Search size={16} color={C.inputDim} strokeWidth={2} style={{ marginRight: 10 }} />
       <TextInput
         value={value}
         onChangeText={onChange}
@@ -343,27 +498,59 @@ function SearchBar({
   );
 }
 
+/* Operator, 15 september 2026 (Apple-upgrade): "stop de hele lijst met
+   tracks van die dag in één doorlopend wit Bento-vlak, met flinterdunne
+   native scheidingslijntjes (0.5px, #E5E5EA) ertussen" — elke rij is nu
+   deel van dat vlak i.p.v. een eigen losse rij: alleen de EERSTE rij van
+   een dag krijgt afgeronde bovenhoeken, alleen de LAATSTE afgeronde
+   onderhoeken, en elke rij BEHALVE de eerste krijgt een haarlijn erboven. */
 function EntryRow({
   entry,
+  isFirst,
+  isLast,
   onPlay,
 }: {
   entry: HistoryEntry;
+  isFirst: boolean;
+  isLast: boolean;
   onPlay: () => void;
 }) {
   const photo = SERIES_PHOTO[entry.series];
   /* Iter 9dq v115 (2026-06-04): EXACT dezelfde label-logica als de
      audio library free-view en player. Eén bron (formatListenedLabel),
-     één icoon-set (▶ partly, ✓ fully), één kleur (blauw partly, groen
-     fully). Was ◐ voor partly — operator-mandate "exact dezelfde
-     logica van free toepassen". */
+     één icoon-set (▶ partly, ✓ fully).
+     Operator, 15 september 2026: "Partly listened" verliest het felle
+     Signal Blue hier — historische data, geen live-afspeelstatus (zie
+     de toelichting bij `LIGHT.partial` bovenaan dit bestand). */
   const labelInfo = formatListenedLabel(entry);
   const stateIcon = labelInfo?.isFull ? '✓' : '▶';
   const stateColor = labelInfo?.isFull ? C.full : C.partial;
   const stateLabel =
     labelInfo?.text ?? (entry.full ? 'Fully listened' : 'Partly listened');
 
+  /* Press-schaal voor de play-knop, zelfde recept als StartCard
+     (breath-welcome.tsx): geen bounce bij indrukken, wel bij loslaten. */
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.9, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   return (
-    <View style={s.entryRow}>
+    <View
+      style={[
+        s.entryRow,
+        { backgroundColor: C.card },
+        isFirst && s.entryRowFirst,
+        isLast && s.entryRowLast,
+        !isFirst && s.entryRowSep,
+      ]}
+    >
       <View style={s.thumbWrap}>
         {photo ? (
           <Image source={{ uri: photo }} style={s.thumb} />
@@ -400,14 +587,19 @@ function EntryRow({
           ) : null}
         </View>
       </View>
-      <Pressable
+      {/* Minimalistische, cirkelvormige Royal Indigo-knop met een klein
+          wit driehoekje — was een grijze cirkel met wit driehoekje op de
+          donkere achtergrond. */}
+      <AnimatedPressable
         onPress={onPlay}
-        style={s.playBtn}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[s.playBtn, pressStyle]}
         hitSlop={10}
-        android_ripple={{ color: 'rgba(255,255,255,0.12)', borderless: true }}
+        android_ripple={{ color: 'rgba(255,255,255,0.25)', borderless: true }}
       >
-        <Text style={s.playGlyph}>▶</Text>
-      </Pressable>
+        <Play size={13} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+      </AnimatedPressable>
     </View>
   );
 }
@@ -423,20 +615,56 @@ function PaginationFooter({
   onExpand: () => void;
   onCollapse: () => void;
 }) {
+  /* Press-schaal voor beide knoppen, zelfde recept als StartCard
+     (breath-welcome.tsx): geen bounce bij indrukken, wel bij loslaten.
+     Losse waarden, want "Show older" en "Collapse" kunnen tegelijk
+     gerenderd staan. */
+  const expandPressScale = useSharedValue(1);
+  const onExpandPressIn = () => {
+    expandPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onExpandPressOut = () => {
+    expandPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const expandPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: expandPressScale.value }],
+  }));
+
+  const collapsePressScale = useSharedValue(1);
+  const onCollapsePressIn = () => {
+    collapsePressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onCollapsePressOut = () => {
+    collapsePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const collapsePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: collapsePressScale.value }],
+  }));
+
   if (olderCount === 0 && !expanded) return null;
   return (
     <View style={s.paginationWrap}>
       {olderCount > 0 ? (
-        <Pressable onPress={onExpand} style={s.paginationBtn}>
+        <AnimatedPressable
+          onPress={onExpand}
+          onPressIn={onExpandPressIn}
+          onPressOut={onExpandPressOut}
+          style={[s.paginationBtn, expandPressStyle]}
+        >
           <Text style={s.paginationText}>
             ↓ Show older sessions · {olderCount} more
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       ) : null}
       {expanded ? (
-        <Pressable onPress={onCollapse} style={s.paginationBtn}>
+        <AnimatedPressable
+          onPress={onCollapse}
+          onPressIn={onCollapsePressIn}
+          onPressOut={onCollapsePressOut}
+          style={[s.paginationBtn, collapsePressStyle]}
+        >
           <Text style={s.paginationText}>↑ Collapse to recent</Text>
-        </Pressable>
+        </AnimatedPressable>
       ) : null}
     </View>
   );
@@ -467,38 +695,37 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
-    backgroundColor: C.bg,
+    backgroundColor: C.card,
   },
   backBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    minWidth: 80,
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
   },
   backChev: {
-    color: C.text,
-    fontSize: 24,
-    lineHeight: 24,
+    color: ROYAL_INDIGO,
+    fontSize: 26,
+    lineHeight: 26,
     fontWeight: '600',
-    marginRight: 4,
-    marginTop: -2,
   },
-  backText: { color: C.text, fontSize: 16, fontWeight: '500' },
+  /* H2-sectiekop-rol: 22px Bold, -0.3 — was 16px/700, gecentreerd. */
   topbarTitle: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
+    marginLeft: 4,
     color: C.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: BrandFonts.bold,
+    fontSize: 22,
+    letterSpacing: -0.3,
   },
   menuBtn: {
-    minWidth: 80,
-    alignItems: 'flex-end',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuDots: {
     color: C.text,
@@ -510,30 +737,27 @@ const s = StyleSheet.create({
     position: 'absolute',
     top: 56,
     right: 12,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
     borderRadius: 10,
     paddingVertical: 4,
     minWidth: 160,
     zIndex: 10,
+    ...SOFT_SHADOW,
   },
   menuItem: { paddingHorizontal: 14, paddingVertical: 10 },
   menuItemText: { color: C.text, fontSize: 14, fontWeight: '600' },
 
-  /* Streak card */
+  /* Streak card — puur wit Bento-eiland (was blauw-groene gradient). */
   streakCard: {
     marginHorizontal: 14,
     marginTop: 12,
     marginBottom: 12,
     padding: 16,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.22)',
-  },
-  streakCardFlat: {
     backgroundColor: C.card,
-    borderColor: C.border,
+    ...SOFT_SHADOW,
   },
   streakRow: { flexDirection: 'row', alignItems: 'center' },
   streakIcon: {
@@ -543,110 +767,127 @@ const s = StyleSheet.create({
     marginRight: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3a8fff',
-    shadowColor: '#3a8fff',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    backgroundColor: `${ROYAL_INDIGO}12`,
   },
-  streakIconGlyph: { fontSize: 22 },
   streakNumRow: { flexDirection: 'row', alignItems: 'baseline' },
+  /* H1-rol: 32px Bold, -0.4, Royal Indigo. */
   streakNum: {
-    color: C.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    color: ROYAL_INDIGO,
+    fontFamily: BrandFonts.bold,
+    fontSize: 32,
+    letterSpacing: -0.4,
+    minWidth: 20,
   },
   streakSuffix: {
-    color: C.dim,
-    fontSize: 13,
-    fontWeight: '600',
+    color: ROYAL_INDIGO,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
   },
+  /* Subheader/muted-rol: 15px Regular, #8E8E93. */
   streakSub: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
+    color: C.dim,
+    fontFamily: BrandFonts.regular,
+    fontSize: 15,
     marginTop: 2,
   },
 
   /* Stats */
   statsRow: {
     flexDirection: 'row',
-    gap: 8,
     marginHorizontal: 14,
     marginBottom: 14,
+    backgroundColor: C.card,
+    borderRadius: 14,
+    paddingVertical: 14,
+    ...SOFT_SHADOW,
   },
   statCard: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 14,
     alignItems: 'center',
   },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: C.border,
+    marginVertical: 4,
+  },
   statValueRow: { flexDirection: 'row', alignItems: 'baseline' },
+  /* H1-variant: 32px Bold, -0.4, #1D1D1F. */
   statValue: {
     color: C.text,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: BrandFonts.bold,
+    fontSize: 32,
+    letterSpacing: -0.4,
+    minWidth: 18,
+    textAlign: 'center',
   },
   statValueSuffix: {
-    color: C.faint,
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 1,
+    color: C.dim,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    marginLeft: 2,
   },
+  /* Context Label (Eyebrow)-rol: 11px Bold, +1.5 — sentence case, geen
+     ALL CAPS ("Sessions", niet "SESSIONS"). */
   statLabel: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginTop: 4,
+    color: C.dim,
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    marginTop: 6,
   },
 
-  /* Search */
+  /* Search — native-stijl, zachte grijze vlak i.p.v. donker/hard blok. */
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 14,
     marginBottom: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: C.searchBg,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  searchIcon: { fontSize: 16, marginRight: 10 },
   searchInput: {
     flex: 1,
     color: C.text,
-    fontSize: 14,
+    fontFamily: BrandFonts.regular,
+    fontSize: 15,
     padding: 0,
   },
   searchEmpty: { paddingHorizontal: 16, paddingVertical: 24 },
   searchEmptyText: { color: C.dim, fontSize: 13, textAlign: 'center' },
 
   /* Day label */
+  /* Context Label (Eyebrow)-rol: 11px Bold, +1.5, #8E8E93. */
   dayLabel: {
-    color: C.faint,
+    color: C.dim,
+    fontFamily: BrandFonts.bold,
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.32,
-    marginTop: 16,
+    letterSpacing: 1.5,
+    marginTop: 20,
     marginBottom: 8,
     marginHorizontal: 14,
   },
 
-  /* Entry */
+  /* Entry — deel van één doorlopend wit Bento-vlak per dag (zie
+     `isFirst`/`isLast`/`entryRowSep` hieronder), niet langer een losse
+     rij zonder achtergrond. */
   entryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    marginHorizontal: 14,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     gap: 12,
+    ...SOFT_SHADOW,
+  },
+  entryRowFirst: { borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  entryRowLast: { borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
+  /* Flinterdunne native scheidingslijn (0.5px) tussen tracks van dezelfde
+     dag — vervangt de losse kaartranden. */
+  entryRowSep: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
   },
   thumbWrap: { width: 48, height: 48 },
   thumb: { width: 48, height: 48, borderRadius: 10 },
@@ -654,21 +895,23 @@ const s = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 10,
-    backgroundColor: C.cardStrong,
+    backgroundColor: C.searchBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   thumbGlyph: { color: C.dim, fontSize: 20 },
   entryBody: { flex: 1, marginLeft: 0 },
+  /* Prominent Body-rol: 16px Medium, #1D1D1F. */
   entryTitle: {
     color: C.text,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: BrandFonts.medium,
+    fontSize: 16,
   },
+  /* Subheader/muted-rol: 15px Regular, #8E8E93. */
   entrySeries: {
     color: C.dim,
-    fontSize: 12,
-    fontWeight: '500',
+    fontFamily: BrandFonts.regular,
+    fontSize: 15,
     marginTop: 2,
   },
   metaRow: {
@@ -678,24 +921,23 @@ const s = StyleSheet.create({
     gap: 6,
     flexWrap: 'wrap',
   },
-  metaState: { fontSize: 11, fontWeight: '600' },
+  metaState: { fontSize: 11, fontFamily: BrandFonts.semibold },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
     backgroundColor: C.ghost,
   },
-  metaMuted: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
-  metaReplay: { color: C.accent, fontSize: 11, fontWeight: '600' },
+  metaMuted: { color: C.dim, fontSize: 11, fontFamily: BrandFonts.regular },
+  metaReplay: { color: ROYAL_INDIGO, fontSize: 11, fontFamily: BrandFonts.semibold },
   playBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: ROYAL_INDIGO,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playGlyph: { color: C.text, fontSize: 14, marginLeft: 2 },
 
   /* Pagination */
   paginationWrap: { marginTop: 18, alignItems: 'center' },

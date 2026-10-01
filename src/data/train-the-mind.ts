@@ -30,7 +30,7 @@ import type { BreathStateKey } from '@/data/breath-states';
                 de denk-kant van wat box breathing met het lijf doet.
    · CLARITY  → Rich by Clarity: een helder hoofd, en wat je ermee bouwt.
    · REST     → Delta Descent: de soundscape uit de subserie die letterlijk
-                Rest & Reset heet — luisteren terwijl je wegzakt. */
+                Sleep heet — luisteren terwijl je wegzakt. */
 const PICK: Record<BreathStateKey, { title: string; series: string }> = {
   boost: { title: 'Become a Monster', series: 'Beast Mode' },
   focus: { title: 'Neural State Control', series: 'Master Mental Clarity' },

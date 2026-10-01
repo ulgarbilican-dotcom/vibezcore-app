@@ -72,11 +72,22 @@ export function getEffectiveTier(session: Session): AccessTier {
  *  Parameters:
  *    - isSignedIn: is er een geldige Supabase-session?
  *    - isPro:      heeft de user een actieve audio-subscription?
- */
+ *    - isTrialing: zit de user in de 7-dagen-proefperiode (RevenueCat
+ *      `periodType === 'TRIAL'`)? Operator, 26 september 2026
+ *      (toegangsmodel-gat gedicht): `isPro` is ook `true` tijdens een
+ *      trial (RevenueCat telt een trial als een actieve entitlement), dus
+ *      zonder dit param zou een trial-user meteen de hele PRO-catalogus
+ *      zien. Bedoeld model (project-free-tier-facts, operator-bevestigd):
+ *      trial ontgrendelt enkel de 'account'-tier content (27 sessies) +
+ *      Breathwork, NIET de 'pro'-tier catalogus — dat blijft pas
+ *      toegankelijk na een ECHT betaald jaar. Default `false` zodat
+ *      bestaande callers die dit param niet meegeven het oude (nu
+ *      bewust strengere) gedrag niet stilzwijgend omzeilen. */
 export function resolveAccess(
   session: Session,
   isSignedIn: boolean,
   isPro: boolean,
+  isTrialing: boolean = false,
 ): 'allowed' | 'needs-account' | 'needs-pro' {
   const tier = getEffectiveTier(session);
   switch (tier) {
@@ -85,7 +96,7 @@ export function resolveAccess(
     case 'account':
       return isSignedIn ? 'allowed' : 'needs-account';
     case 'pro':
-      return isPro ? 'allowed' : 'needs-pro';
+      return isPro && !isTrialing ? 'allowed' : 'needs-pro';
   }
 }
 
@@ -102,12 +113,23 @@ export function tierBadgeLabel(tier: AccessTier): string | null {
 }
 
 /** UI-helper: kleur-token voor de tier-badge. */
+/* Operator, 14 september 2026: "account"-tier gebruikte het signaalblauw
+   (#3a8fff) — dat kanaal is voorbehouden aan haptic-pulsen/"nu actief",
+   nooit aan een statuslabel. Vervangen door Royal Indigo Light
+   (#6E85C4), de huisstijl-kleur voor accent-tekst/labels. */
 export function tierBadgeColor(tier: AccessTier): string {
   switch (tier) {
+    /* Operator ("check free sessions in de pill ook, daar moet ook alles
+       correct zijn"): '#4ade80' is GROEN — in (tabs)/index.tsx al
+       vastgelegd als exclusief voor de completion-state ("fully
+       listened"), nooit als decoratieve "dit is gratis"-tint (zie C.free
+       daar). Deze gedeelde helper (LibraryListRow → /library/new,
+       /favorites, /free) had die fix nog niet gekregen — zelfde witte
+       tint als C.free, geen groen meer. */
     case 'public':
-      return '#4ade80'; /* groen — direct beschikbaar */
+      return 'rgba(255,255,255,0.72)'; /* wit — direct beschikbaar */
     case 'account':
-      return '#3a8fff'; /* blauw — actie nodig om te unlocken (account) */
+      return '#6E85C4'; /* Royal Indigo Light — actie nodig om te unlocken */
     case 'pro':
       return 'rgba(255,255,255,0.55)'; /* dim wit — premium gating */
   }

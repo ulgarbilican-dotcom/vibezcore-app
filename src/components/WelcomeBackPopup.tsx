@@ -1,21 +1,22 @@
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Welcome-back popup
 
-   Verschijnt ALLEEN op een cold app-start wanneer er een geldige
-   last-played-entry is (< 7d oud, < 95% voltooid, ≥ 4s positie). Welkomt
-   de terugkerende luisteraar en biedt twee opties:
+   Operator ("haal die popup gewoon weg, en als gebruiker op 'Last
+   Listened' klikt gaat de popup open"): GEEN automatische cold-start-
+   trigger meer (zie git-historie voor die aanpak + de throttle-poging
+   die het te-vaak-verschijnen-probleem probeerde te temperen — bleek
+   uiteindelijk de verkeerde oplossing voor de verkeerde klacht). De
+   popup toont nu UITSLUITEND wanneer de gebruiker zelf op de "Last
+   Listened"-snelkoppeling tikt in de Audio Library ((tabs)/index.tsx,
+   vervangt daar de oude "Free Sessions"-positie zodra er een geldige
+   last-played-entry is).
 
      - "Continue listening"  → openSession + seek naar opgeslagen positie
                                 + auto-play
      - "Not now" / ✕         → dismiss, library blijft staan
 
-   Eenmaal weggetapt: niet opnieuw zichtbaar tot volgende cold-start. Zie
-   `src/services/welcome-popup.ts` voor de cold-start-flag.
-
    Mount-locatie: ROOT layout (sibling van Stack, naast BraceletUpsellModal).
-   Daardoor valt 'ie als overlay boven welke route dan ook — maar de
-   trigger-logica beperkt zich tot de (tabs)-area zodat 'ie nooit over
-   het welkomstscherm verschijnt (gast-flow: geen popup).
+   Daardoor valt 'ie als overlay boven welke route dan ook.
 
    GEEN React-Native <Modal>-wrapper: die heeft op Android een eigen
    native window die ALLE touches opvangt, waardoor swipe-down /
@@ -24,22 +25,27 @@
    Identiek pattern aan BraceletUpsellModal.
    ─────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
-import { SERIES_PHOTO, SERIES_SUBTITLE, SESSIONS } from '@/data/audio-library-data';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import {
+  PILLAR_META,
+  SERIES_PHOTO,
+  SERIES_PILLAR,
+  SERIES_SUBTITLE,
+  SESSIONS,
+} from '@/data/audio-library-data';
 import {
   dismissWelcomePopup,
   useWelcomePopupVisible,
 } from '@/services/welcome-popup';
 import {
   clearLastPlayed,
-  useLastPlayedReady,
   useShowableLastPlayed,
   type LastPlayed,
 } from '@/utils/last-played';
 import { openSession } from '@/utils/openSession';
 import { urlEq } from '@/utils/url-eq';
 import { setSavedPosition } from '@/utils/vzp';
-import { router, useSegments } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import {
   BackHandler,
@@ -66,46 +72,6 @@ function fmtTime(sec: number): string {
 export function WelcomeBackPopup() {
   const visible = useWelcomePopupVisible();
   const lastPlayed = useShowableLastPlayed();
-  const lastPlayedReady = useLastPlayedReady();
-  const segments = useSegments() as string[];
-
-  /* Trigger-logica: cold-start + lastPlayed + in (tabs) → showWelcomePopup.
-
-     KRITIEKE BUG FIX (iter 9kk, 2026-05-29 operator-feedback "popup
-     verschijnt bij sluiten van sessie binnen dezelfde app-launch"):
-
-     Voorheen: app-launch zonder lastPlayed → markWelcomePopupSkipped()
-     werd nooit aangeroepen → coldStartShown bleef false. Later wanneer
-     user een sessie startte en sloot, werd lastPlayed gezet → useEffect
-     re-fired → lastPlayed bestond nu → popup verscheen. Dat is wat de
-     operator als bug zag.
-
-     Fix: zodra useEffect voor het eerst fired EN er is geen lastPlayed,
-     markeren we direct als skipped. Future updates aan lastPlayed
-     triggeren dan geen popup meer (showWelcomePopup is no-op zodra
-     coldStartShown true is).
-
-     ITER 2026-06-05 race-condition fix: 9kk's markSkipped firde óók
-     wanneer AsyncStorage nog niet geladen was — lastPlayed was dan
-     tijdelijk null tijdens initial render, popup werd "skipped" voor
-     het echt geladen werd. Operator-feedback: popup verschijnt nooit
-     na een cold-start zelfs met geldige entry.
-     Fix: wacht op useLastPlayedReady() voordat we beslissen. Pas na
-     load-complete weten we of er ECHT geen entry is. */
-  useEffect(() => {
-    if (!lastPlayedReady) return;
-    const { showWelcomePopup, markWelcomePopupSkipped } =
-      require('@/services/welcome-popup');
-    if (!lastPlayed) {
-      /* Geen entry bij app-start → markeer skipped. Voorkomt dat
-         later-gemaakte sessies triggeren binnen dezelfde process. */
-      markWelcomePopupSkipped();
-      return;
-    }
-    const inTabs = segments[0] === '(tabs)';
-    if (!inTabs) return;
-    showWelcomePopup();
-  }, [lastPlayed, lastPlayedReady, segments]);
 
   /* Android hardware-back = dismiss (UX-conventie: back nooit door een
      overlay heen laten propaganderen — anders zou hij ook de tab-bar of
@@ -119,6 +85,18 @@ export function WelcomeBackPopup() {
     return () => sub.remove();
   }, [visible]);
 
+  /* Operator, 26 september 2026 (crash-jacht, definitieve oorzaak): beide
+     knoppen hieronder verbergen dit hele popup ONMIDDELLIJK na een tap
+     (dismissWelcomePopup / onContinue). Een gedeelde pressStyle over twee
+     knoppen was al een bug (eerder hier gefixt), maar de eigenlijke
+     crash-trigger is dieper: een Reanimated press-out `withSpring` die
+     nog op de UI-thread doorloopt terwijl Fabric de AnimatedPressable-node
+     al aan het afbreken is, geeft "Perhaps you are trying to pass an
+     animated style to a non-animated component" → cascadeert naar de
+     "Should not already be working"-reconciler-crash (het zwarte scherm
+     dat steeds terugkwam na "Continue listening"). Zelfde fix als de
+     resume-knoppen in player.tsx: plain Pressable zonder Reanimated hier
+     — de knop verdwijnt toch meteen. */
   if (!visible || !lastPlayed) return null;
 
   return (
@@ -144,15 +122,20 @@ export function WelcomeBackPopup() {
         <Text style={s.welcome}>Welcome back.</Text>
 
         <View style={s.sessionRow}>
-          {SERIES_PHOTO[lastPlayed.series] ? (
-            <Image
-              source={{ uri: SERIES_PHOTO[lastPlayed.series] }}
-              style={s.cover}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[s.cover, s.coverFallback]} />
-          )}
+          {/* Operator ("in de popup staan de fotos ook niet juist"):
+             zelfde pijler-foto-bron als overal elders (grid, pillar-
+             scherm, player, mini-player, library-rijen) i.p.v. de oude
+             losse reeks-foto. */}
+          {(() => {
+            const photo =
+              PILLAR_META[SERIES_PILLAR[lastPlayed.series]]?.img ??
+              SERIES_PHOTO[lastPlayed.series];
+            return photo ? (
+              <Image source={{ uri: photo }} style={s.cover} resizeMode="cover" />
+            ) : (
+              <View style={[s.cover, s.coverFallback]} />
+            );
+          })()}
           <View style={s.sessionMeta}>
             <Text style={s.eyebrow} numberOfLines={1}>
               {SERIES_SUBTITLE[lastPlayed.series] ?? lastPlayed.series}
@@ -169,7 +152,7 @@ export function WelcomeBackPopup() {
         <Pressable
           style={s.primary}
           onPress={() => onContinue(lastPlayed)}
-          android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
+          android_ripple={{ color: 'rgba(10,10,10,0.12)' }}
           accessibilityLabel="Continue listening where you stopped"
         >
           <Text style={s.primaryText}>Continue listening</Text>
@@ -211,8 +194,18 @@ async function onContinue(lp: LastPlayed): Promise<void> {
        weer op Audio Library — natuurlijker voor wie "Continue listening"
        koos. */
     await setSavedPosition(lp.url, lp.positionSec);
-    router.navigate('/' as never);
-    openSession(sess);
+    /* Operator, 26 september 2026 (crash-jacht vervolg): `router.navigate`
+       hier was ZELF nog een synchrone navigatie-call, vóór openSession()'s
+       eigen setTimeout-defer ooit aan de beurt kwam — precies dezelfde
+       "React tekent dit scherm synchroon af terwijl de AnimatedPressable's
+       press-out-animatie nog op de UI-thread draait"-crash die elders al
+       gefixt is, maar dan één stap eerder in de keten. Beide navigatie-
+       calls nu in dezelfde macrotask-defer zodat de huidige commit
+       (incl. de nog actieve spring-animatie op de knop) eerst afrondt. */
+    setTimeout(() => {
+      router.navigate('/' as never);
+      openSession(sess);
+    }, 0);
   } else {
     /* Stale entry: deze URL bestaat niet meer in SESSIONS — kan na een
        library-refactor (URLs gewijzigd) of als een seizoen-content uit
@@ -301,8 +294,12 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  /* Operator, 26 september 2026 (accentkleur-wissel, audio): eyebrow
+     gebruikt nu AudioAccent (Bio-Teal) i.p.v. AccentTextOnDark — zelfde
+     patroon als player.tsx. Primaire knop blijft de v4.4 CTA (donkere
+     ondergrond → wit vlak, donkere tekst), ongewijzigd. */
   eyebrow: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 1,
@@ -322,14 +319,14 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
   },
   primary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 4,
   },
   primaryText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,

@@ -38,7 +38,7 @@ let loadPromise: Promise<void> | null = null;
 const listeners = new Set<(v: DevUserOverride) => void>();
 
 function notify(): void {
-  listeners.forEach((cb) => cb(cached));
+  setTimeout(() => { listeners.forEach((cb) => cb(cached)); }, 0);
 }
 
 async function loadOnce(): Promise<void> {
@@ -197,7 +197,7 @@ let activatedLoaded = false;
 const activationListeners = new Set<(v: boolean) => void>();
 
 function notifyActivation(): void {
-  activationListeners.forEach((cb) => cb(activatedCached));
+  setTimeout(() => { activationListeners.forEach((cb) => cb(activatedCached)); }, 0);
 }
 
 async function loadActivationOnce(): Promise<void> {

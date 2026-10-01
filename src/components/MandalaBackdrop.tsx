@@ -16,28 +16,31 @@
 
    Wel de ademhaling, want daar draait de app om — en die is op deze schaal
    nauwelijks te zien maar wel te voelen.
+
+   ── Fix 6 september 2026 ──────────────────────────────────────────────
+   De rotatie/adem stonden origineel als Reanimated `useDerivedValue` op
+   Skia's eigen `transform`/`opacity`-props. Getest op toestel (2x, ook op
+   3s per omwenteling i.p.v. de bedoelde 30s): geen enkele beweging, zelfs
+   niet na 10 seconden — de Canvas herschilderde niet op de klok. In plaats
+   van verder te zoeken naar waarom Skia's eigen reactiviteit hier niet
+   aansloeg, tekent de Canvas nu STATISCH (één keer, geen per-frame Skia-
+   updates) en gebeurt de rotatie/adem op de OMRINGENDE View via gewoon
+   Reanimated — hetzelfde bewezen-werkende patroon als de rest van de app
+   (headBreath, orbFade, enz.). Lost het betrouwbaarheidsprobleem op zonder
+   te hoeven uitzoeken WAT er precies mis was met de Skia-kant.
    ───────────────────────────────────────────────────────────────────────── */
 
-import {
-  Canvas,
-  Circle,
-  Group,
-  Path,
-  RadialGradient,
-  vec,
-} from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Path, RadialGradient, vec } from '@shopify/react-native-skia';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
+import Animated, {
   Easing,
-  useDerivedValue,
+  useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { buildMandala } from './mandala-geometry';
-
-const TAU = Math.PI * 2;
 
 type Props = {
   size: number;
@@ -45,12 +48,18 @@ type Props = {
    *  beconcurreren. */
   intensity?: number;
   color?: string;
+  /** Lichte achtergrond i.p.v. donker (operator, 6 september 2026). Additief
+   *  mengen ('plus') telt op tot wit tegen wit — dus onzichtbaar; in lichte
+   *  stand valt dat weg en gaat de dekking iets omhoog zodat de haarlijnen
+   *  zelfstandig zichtbaar blijven. */
+  light?: boolean;
 };
 
 export default function MandalaBackdrop({
   size,
   intensity = 1,
   color = '#ffffff',
+  light = false,
 }: Props) {
   const cx = size / 2;
   const cy = size / 2;
@@ -75,19 +84,24 @@ export default function MandalaBackdrop({
     );
   }, [spin, breath]);
 
-  const transform = useDerivedValue(() => [
-    { translateX: cx },
-    { translateY: cy },
-    { rotate: spin.value * TAU },
-    { scale: 0.94 + breath.value * 0.06 },
-  ]);
+  /* Rotatie + adem-schaal nu op de View, niet meer op Skia's eigen
+     transform-prop (zie toelichting bovenaan). */
+  const spinStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: `${spin.value * 360}deg` },
+      { scale: 0.94 + breath.value * 0.06 },
+    ],
+  }));
+  /* Adem-opacity ook op de View — geldt dan voor lijnen én gloed samen
+     i.p.v. apart, een kleine vereenvoudiging t.o.v. de vorige twee losse
+     Skia-opacities, niet zichtbaar op deze schaal/dekking. */
+  const breathOpacityStyle = useAnimatedStyle(() => ({
+    opacity: 0.85 + breath.value * 0.15,
+  }));
 
-  const lineOpacity = useDerivedValue(
-    () => intensity * (0.3 + breath.value * 0.14),
-  );
-  const glowOpacity = useDerivedValue(
-    () => intensity * (0.11 + breath.value * 0.06),
-  );
+  const lineOpacity = light ? intensity * 0.67 : intensity * 0.37;
+  const glowOpacity = intensity * 0.14;
+  const plusBlend = light ? undefined : 'plus';
 
   return (
     /* Ook VERTICAAL centreren. Zonder dat zakt de figuur naar beneden weg:
@@ -100,11 +114,11 @@ export default function MandalaBackdrop({
       ]}
       pointerEvents="none"
     >
-      <View style={{ width: size, height: size }}>
-        <Canvas style={{ flex: 1 }}>
-          <Group blendMode="plus">
-            {/* Zachte lichtbron in het hart — heldere kleur op lage dekking,
-                anders wordt het tegen zwart een grijze waas. */}
+      <Animated.View style={[{ width: size, height: size }, breathOpacityStyle]}>
+        {/* Statische gloed in het hart, buiten de rotatie (een gloed heeft
+           geen richting). */}
+        <Canvas style={StyleSheet.absoluteFill}>
+          <Group blendMode={plusBlend}>
             <Circle cx={cx} cy={cy} r={R} opacity={glowOpacity}>
               <RadialGradient
                 c={vec(cx, cy)}
@@ -113,26 +127,34 @@ export default function MandalaBackdrop({
                 positions={[0, 0.08, 1]}
               />
             </Circle>
-
-            <Group transform={transform}>
-              <Path
-                path={geo.seedsAll}
-                style="stroke"
-                strokeWidth={thin}
-                color={color}
-                opacity={lineOpacity}
-              />
-              <Path
-                path={geo.outer}
-                style="stroke"
-                strokeWidth={thin}
-                color={color}
-                opacity={lineOpacity}
-              />
-            </Group>
           </Group>
         </Canvas>
-      </View>
+
+        {/* De rozet zelf: statisch getekend, ROTEERT via de omringende
+           Animated.View hieronder. */}
+        <Animated.View style={[StyleSheet.absoluteFill, spinStyle]}>
+          <Canvas style={StyleSheet.absoluteFill}>
+            <Group blendMode={plusBlend}>
+              <Group transform={[{ translateX: cx }, { translateY: cy }]}>
+                <Path
+                  path={geo.seedsAll}
+                  style="stroke"
+                  strokeWidth={thin}
+                  color={color}
+                  opacity={lineOpacity}
+                />
+                <Path
+                  path={geo.outer}
+                  style="stroke"
+                  strokeWidth={thin}
+                  color={color}
+                  opacity={lineOpacity}
+                />
+              </Group>
+            </Group>
+          </Canvas>
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }

@@ -22,15 +22,31 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import BraceletIcon from '@/components/BraceletIcon';
+import { BraceletMiniIndicator } from '@/components/BraceletMiniIndicator';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { AUDIO_ENABLED } from '@/constants/features';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { BrandFonts } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
 import { router, Tabs } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import {
+  ChartNoAxesColumn,
+  CircleUserRound,
+  Music,
+  Wind,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabPath = '/' | '/breath' | '/bracelet' | '/activity' | '/account';
+
+/* Operator, 18 september 2026 ("verander bracelet icoon in tablat naar
+   minimalistische bracelet icoon"): lucide's `Watch` was hier een
+   horloge-icoon, geen bracelet — `BraceletIcon` is een eigen SVG-icoon
+   (zie dat bestand) met dezelfde `size`/`color`/`strokeWidth`-props als
+   een lucide-icoon, dus TabGlyph accepteert voortaan allebei. */
+type IconComponent = LucideIcon | typeof BraceletIcon;
 
 /* Eigen tab-button. Wraps de bestaande icon+label-children van de navigator
    in een gewone Pressable; onPress doet één ding: navigeer naar path. */
@@ -75,28 +91,77 @@ function TabButton({
         alignItems: 'center',
         justifyContent: 'center',
       }}
-      android_ripple={{ color: 'rgba(255,255,255,0.06)', borderless: true }}
+      /* Operator ("bij aanklikken moet het donkerder highlighten nu niet
+         duidelijk"): stond nog op wit-op-wit (rgba(255,255,255,0.06)) —
+         dat paste bij de oude donkere balk, is op de huidige witte balk
+         vrijwel onzichtbaar. Donkere ripple, zelfde donkere tint als de
+         rest van de app op lichte vlakken. */
+      android_ripple={{ color: 'rgba(10,10,12,0.12)', borderless: true }}
     >
       {children}
     </Pressable>
   );
 }
 
-/* Minimal text-glyph icons — keeps the skeleton dependency-free.
-   Swappable for vector icons later without touching navigation. */
-function TabGlyph({ label, focused }: { label: string; focused: boolean }) {
+/* Operator, 18 september 2026 ("kan jij onderste tabblad ook hetzelfde
+   maken? de iconen en doorzichtig?" → later: "tabblad bij aanklikken
+   gewoon wit behouden", "icoon groter en duidelijker aangeven"): echte
+   lijn-iconen i.p.v. de platte tekst-tekens (○/♪/◎/◔/○) die hier voorheen
+   stonden, in een doorzichtige cirkel met enkel een rand. Icoon EN rand
+   blijven altijd wit/licht, ook actief — geen kleur als selectie-signaal.
+   De cirkel zelf toont selectie via grootte/rand/vulling (zie hieronder);
+   het label eronder (`TabLabel`) draagt het enige streepje. */
+/* Operator, 19 september 2026 ("weg met de dikke witte strepen... Apple-
+   standaard: actief icoon 100% opacity, inactief dimt naar 50%"): de
+   omlijnde-cirkel + onderstreep-balk (18 september, hierboven verwijderd)
+   was een bewust gekozen, net-getunede stijl — maar de operator wil hier
+   nu toch de kalere Apple-conventie: geen rand, geen balk, enkel opacity
+   draagt de selectie. */
+/* Operator, 24 september 2026, definitief (na twee keer heen en weer over
+   een chroma-glow achter het actieve tab-icoon): "dat moet gewoon weg,
+   enkel witte highlight blijft bij aanklikken" — geen kleur-cirkel meer
+   hier, enkel opacity (1 actief, 0.45 inactief) draagt de selectie. */
+/* Operator, 25 september 2026, vierde ronde ("niet-actieve iconen/tekst
+   niet goed zichtbaar"): de vorige `opacity: focused ? 1 : 0.35`-selectie
+   (18/24 september) was getuned voor WITTE iconen op een DONKERE balk —
+   35% van wit blijft nog altijd redelijk leesbaar tegen zwart. Nu de balk
+   wit is en de iconen donker (`#1D1D1F`), doet diezelfde 0.35 opacity het
+   omgekeerde: 35% van bijna-zwart op wit is bijna onzichtbaar. Geen
+   opacity-truc meer — active/inactive zijn nu gewoon twee losse, altijd
+   voluit zichtbare kleuren, zelfde paar als de rest van de light-mode
+   chrome (`text` / `text-muted` uit het design-system: `#1D1D1F` /
+   `#8E8E93`), exact zoals Apple's eigen tab bar (donkergrijs = geselecteerd,
+   middengrijs = niet-geselecteerd, nooit halftransparant). */
+const TAB_ACTIVE_COLOR = '#1D1D1F';
+const TAB_INACTIVE_COLOR = '#8E8E93';
+
+function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Text
-        style={{
-          fontSize: 18,
-          color: focused ? Brand.text : Brand.textDim,
-          fontFamily: BrandFonts.regular,
-        }}
-      >
-        {label}
-      </Text>
+      {/* Operator ("iconen mogen kleiner"): 22 → 19. */}
+      <Icon
+        size={19}
+        color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR}
+        strokeWidth={2}
+      />
     </View>
+  );
+}
+
+function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+  return (
+    <Text
+      numberOfLines={1}
+      style={{
+        marginTop: 8,
+        fontSize: 11,
+        fontFamily: focused ? BrandFonts.semibold : BrandFonts.medium,
+        letterSpacing: 0.3,
+        color: focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR,
+      }}
+    >
+      {label}
+    </Text>
   );
 }
 
@@ -109,17 +174,29 @@ function TabGlyph({ label, focused }: { label: string; focused: boolean }) {
 export const unstable_settings = { initialRouteName: 'breath' };
 
 export default function TabLayout() {
-  /* Bottom safe-area inset → tab-bar krijgt extra paddingBottom zodat
-     labels niet onder de Android nav-bar / iPhone home-indicator vallen.
-     Op Pixel 8 (Android 15) bedroeg de oude vaste 64px tab-bar exact
-     de nav-bar zone → labels werden afgesneden. */
+  /* @react-navigation/bottom-tabs plakt zelf `paddingBottom: insets.bottom`
+     bovenop `tabBarStyle` (BottomTabBar.js) — een VASTE `height` die daar
+     geen rekening mee houdt, laat de safe-area-padding gewoon een stuk van
+     de vaste hoogte OPETEN. Icoon (22) + marge (8) + label (~14) hebben
+     zelf al ~44px nodig; op een toestel met een grote gesture-bar (Android)
+     bleef er bij een vaste `height: 56` bijna niets over — de tabs waren
+     dan zo goed als onzichtbaar/afgesneden ("ik zie geen tabbladen meer
+     onderaan", operator 25 september 2026). `height` telt de inset MEE op,
+     zodat er altijd een vaste eigen content-ruimte overblijft, ongeacht
+     toestel — zie `tabBarStyle.height` verderop voor de exacte waarde. */
   const insets = useSafeAreaInsets();
 
   /* Wrap Tabs in een View zodat we de MiniPlayer ernaast (absolute,
      boven de tab-bar) kunnen mounten. MiniPlayer rendert zelf null
      wanneer geen sessie actief is en op /player + /welcome. */
   return (
-    <View style={{ flex: 1, backgroundColor: Brand.bg }}>
+    /* Operator, 25 september 2026, derde ronde: de balk is terug een GEWONE
+       (niet-absolute) balk — reserveert zijn eigen ruimte automatisch in de
+       flex-flow, zoals Apple's eigen tab bar ook gewoon deel is van de
+       layout i.p.v. een zwevend overlay. Deze `backgroundColor` is enkel
+       nog een fallback voor het ene frame vóór een scherm zijn eigen
+       achtergrond tekent. */
+    <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
       <Tabs
         /* Terug gaat naar de BEGINROUTE, niet naar het vorige tabblad dat je
            bezocht (operator, 7 augustus 2026). Zonder dit landde de
@@ -128,26 +205,68 @@ export default function TabLayout() {
         backBehavior="initialRoute"
         screenOptions={{
           headerShown: false,
+          /* Operator, 25 september 2026: eerst een echte `BlurView`-Material
+             geprobeerd, operator vond matglas niet mooi — "kunnen we het
+             transparant maken". Geen `tabBarBackground`-laag meer, geen
+             getinte overlay: de balk zelf heeft nu GEEN achtergrond, enkel
+             de iconen/labels zweven op wat eronder staat. */
           tabBarStyle: {
-            backgroundColor: Brand.bg,
-            borderTopColor: Brand.border,
-            borderTopWidth: 1,
-            /* Basis-hoogte 64 + system-inset onderaan. paddingBottom
-               combineert eigen 8px ruimte met de safe-area-inset zodat
-               labels boven Android nav-bar / iPhone home-bar blijven. */
-            height: 64 + insets.bottom,
-            paddingBottom: 8 + insets.bottom,
-            paddingTop: 8,
-          },
-          tabBarActiveTintColor: Brand.text,
-          tabBarInactiveTintColor: Brand.textDim,
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontFamily: BrandFonts.semibold,
-            letterSpacing: 0.3,
+            /* Operator, 25 september 2026, derde ronde ("onderste band wit
+               maken, moet totaal doorlopen van links naar rechts, hoe zou
+               Apple dit doen"): terug naar Apple's eigen `UITabBar`-patroon
+               — GEEN zwevende kaart met marges meer (dat was een eigen
+               ontwerpkeuze van eerdere iteraties, geen Apple-standaard).
+               Apple's tab bar is vlak, ondoorzichtig wit, loopt volledig
+               van links tot rechts door, plakt tegen de onderrand, en heeft
+               enkel een haarlijn-scheiding bovenaan — geen ronding, geen
+               marge, geen schaduw. Terug een GEWONE (niet-absolute) balk:
+               daarmee reserveert de flex-layout automatisch zijn ruimte, dus
+               geen `tabBarFootprint`-compensatie meer nodig in de
+               tabschermen (die is hier elders weer verwijderd) — exact
+               hoe deze balk vóór de "zwevende kaart"-periode ook al werkte. */
+            /* Operator, 25 september 2026, vijfde ronde ("Profile" met de
+               dalende "p" wordt afgesneden): 56 → 62, 6px extra
+               content-ruimte — een dalende letter (p/g/y) steekt onder de
+               kale lettergrootte uit, en de vorige 50px was daar net te
+               krap voor. */
+            height: 62 + insets.bottom,
+            borderRadius: 0,
+            backgroundColor: '#ffffff',
+            /* Apple se eigen separator-kleur (`separator` in de HIG),
+               niet zwart — een zachte grijze haarlijn, geen "fucking lijn"
+               in de zin van de eerdere klacht (die ging over een ONGEWENSTE
+               schaduw/rand op de vorige DONKERE balk; hier is de haarlijn
+               bewust, exact zoals Apple 'm zelf tekent). */
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: 'rgba(60,60,67,0.29)',
+            borderWidth: 0,
+            paddingTop: 6,
+            /* GEEN `paddingBottom: 0` meer — @react-navigation/bottom-tabs
+               plakt intern zelf `paddingBottom: insets.bottom` bovenop deze
+               stijl (zie BottomTabBar.js), en dat is nu precies gewenst:
+               een balk die vast tegen de onderrand plakt hoort de safe-area
+               zelf als binnenpadding te dragen — exact hoe Apple's eigen
+               tab bar (49pt + safe-area-inset) is opgebouwd. */
           },
         }}
       >
+        {/* Operator, 7 september 2026: Breath als 1ste tabblad, Audio Library
+           als 2de — volgorde in de balk volgt gewoon de JSX-volgorde
+           hieronder, `name="index"` blijft ondertussen de technische
+           beginroute van de groep (zie `backBehavior` hierboven). */}
+        <Tabs.Screen
+          name="breath"
+          options={{
+            title: 'Breath',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph Icon={Wind} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }: { focused: boolean }) => (
+              <TabLabel label="Breath" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/breath" {...props} />,
+          }}
+        />
         {/* De audiobibliotheek is VERBORGEN, niet verwijderd (operator,
             5 augustus 2026). `href: null` haalt het tabblad uit de balk maar
             laat het scherm bestaan: bestaande abonnementen, voortgang en de
@@ -167,7 +286,10 @@ export default function TabLayout() {
               ? {
                   title: 'Audio Library',
                   tabBarIcon: ({ focused }: { focused: boolean }) => (
-                    <TabGlyph label="♪" focused={focused} />
+                    <TabGlyph Icon={Music} focused={focused} />
+                  ),
+                  tabBarLabel: ({ focused }: { focused: boolean }) => (
+                    <TabLabel label="Library" focused={focused} />
                   ),
                   tabBarButton: (props) => <TabButton path="/" {...props} />,
                 }
@@ -175,35 +297,33 @@ export default function TabLayout() {
           }
         />
         <Tabs.Screen
-          name="breath"
-          options={{
-            title: 'Breath',
-            tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph label="○" focused={focused} />
-            ),
-            tabBarButton: (props) => <TabButton path="/breath" {...props} />,
-          }}
-        />
-        <Tabs.Screen
           name="bracelet"
           options={{
             title: 'Bracelet',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph label="◎" focused={focused} />
+              <TabGlyph Icon={BraceletIcon} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }: { focused: boolean }) => (
+              <TabLabel label="Bracelet" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
           }}
         />
         {/* Wat je gedaan hebt verdient een eigen plek in de balk (operator,
-            6 augustus 2026), niet een icoontje op een ander scherm. Hier komt
-            ook de ingang naar Settings, want dat is waar iemand hem zoekt
-            zodra hij naar zijn eigen cijfers kijkt. */}
+            6 augustus 2026), niet een icoontje op een ander scherm.
+            Droeg tot 7 september 2026 ook de ingang naar Settings ("dat is
+            waar iemand hem zoekt zodra hij naar zijn eigen cijfers kijkt")
+            — operator toen: "de settings knop moet in account zitten, nu
+            is het zoeken". Terug naar ÉÉN plek: Account. */}
         <Tabs.Screen
           name="activity"
           options={{
             title: 'Activity',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph label="◔" focused={focused} />
+              <TabGlyph Icon={ChartNoAxesColumn} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }: { focused: boolean }) => (
+              <TabLabel label="Activity" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/activity" {...props} />,
           }}
@@ -213,13 +333,24 @@ export default function TabLayout() {
           options={{
             title: 'Account',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph label="○" focused={focused} />
+              <TabGlyph Icon={CircleUserRound} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }: { focused: boolean }) => (
+              <TabLabel label="Profile" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/account" {...props} />,
           }}
         />
       </Tabs>
       <MiniPlayer />
+      {/* Operator, 16 september 2026 ("iemand kan andere sites bekijken
+         en dan onmiddellijk terugvinden waar de sessie loopt"):
+         teruggehaald uit `master` (iter v238b) — ontbrak op deze
+         rollback-branch. Bewust ALLEEN de pill, niet de v238i tab-bar-
+         hide-subscribe die destijds samen met deze pill een crash-on-
+         launch veroorzaakte (nooit met zekerheid geïsoleerd welke van
+         de twee) — kleiner risico-oppervlak. */}
+      <BraceletMiniIndicator />
     </View>
   );
 }

@@ -103,13 +103,15 @@ export async function refreshUserBucket(): Promise<void> {
   const newBucket = await resolveActiveBucket();
   if (newBucket === cachedBucket) return;
   cachedBucket = newBucket;
-  listeners.forEach((cb) => {
-    try {
-      cb(newBucket);
-    } catch {
-      /* swallow — een listener mag de bucket-flow nooit breken */
-    }
-  });
+  setTimeout(() => {
+    listeners.forEach((cb) => {
+      try {
+        cb(newBucket);
+      } catch {
+        /* swallow — een listener mag de bucket-flow nooit breken */
+      }
+    });
+  }, 0);
 }
 
 /* Init: triggers initial bucket-resolve on module-load. */

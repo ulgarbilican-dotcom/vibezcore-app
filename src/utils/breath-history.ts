@@ -73,6 +73,14 @@ export type BreathHistoryEntry = {
   /** True = alle planned rounds afgerond. False = manual stop / partial.
       Optional voor backward compat met oudere entries (default = true). */
   completed?: boolean;
+  /** Operator, 10 september 2026 (Phase 2, Layer 1 — techniek-niveau):
+   *  welk RITME binnen de toestand (bv. 'box', 'coherent', 'ujjayi'), niet
+   *  enkel de toestand zelf. Optional — oudere entries hebben dit nooit
+   *  gehad, en dat is geen fout, enkel "geen technique-signaal voor die
+   *  sessie". Maakt het mogelijk om later te zien welke technieken iemand
+   *  écht afmaakt vs. vroegtijdig verlaat (`completed` gecombineerd met dit
+   *  veld), niet enkel welke TOESTAND. */
+  techniqueKey?: string;
 };
 
 let state: BreathHistoryEntry[] = [];
@@ -83,9 +91,11 @@ let loadPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
-  listeners.forEach((l) => {
-    try { l(); } catch {}
-  });
+  setTimeout(() => {
+    listeners.forEach((l) => {
+      try { l(); } catch {}
+    });
+  }, 0);
 }
 
 /** Zet de oude gedeelde sleutel eenmalig over naar de emmer van deze
@@ -135,7 +145,8 @@ async function load(): Promise<void> {
               typeof e.ts === 'number' &&
               typeof e.durSec === 'number' &&
               typeof e.rounds === 'number' &&
-              (e.completed === undefined || typeof e.completed === 'boolean'),
+              (e.completed === undefined || typeof e.completed === 'boolean') &&
+              (e.techniqueKey === undefined || typeof e.techniqueKey === 'string'),
           );
         }
       }
@@ -238,6 +249,15 @@ export function calculateStreak(
     cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
+}
+
+/** Synchrone, niet-reactieve lezing — voor pure util-functies buiten React
+ *  (bv. `utils/behavior-patterns.ts`, aangeroepen vanuit `utils/protocol.ts`).
+ *  Geeft `[]` terug zolang de geschiedenis nog niet geladen is; dat is geen
+ *  fout — de aanroeper valt dan gewoon terug op zijn niet-gepersonaliseerde
+ *  standaardgedrag (zie `personalOrderForSlot`'s `MIN_SAMPLES`-drempel). */
+export function getBreathHistory(): BreathHistoryEntry[] {
+  return state;
 }
 
 /* React-hook — gebruik in components voor reactive history-rendering. */

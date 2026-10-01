@@ -1,17 +1,28 @@
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE — De vragenlijst na de onboarding
 
-   Drie vragen en dan het ANTWOORD terug (operator, 8 augustus 2026: "gewoon
+   Eén vraag en dan het ANTWOORD terug (operator, 8 augustus 2026: "gewoon
    laten invullen heeft voor niemand zin — wat bieden wij na die vragenlijst
    aan?"). Elke vraag verdient zijn plek doordat er iets mee gebeurt, en de
    laatste stap laat dat zien:
 
-     1. Doelen     → wegen mee in welke toestand de app voorstelt (goalRank).
-     2. Ervaring   → bepaalt de toon van de begeleiding.
-     3. Momenten   → worden je dagplan.
+     1. Momenten   → worden je dagplan.
      R. JOUW PLAN  → de beloning: je startmodus, je momenten, je begeleiding.
         Dit is wat Headspace en Calm na hun vragen doen — de vragenlijst
         eindigt niet in een dank-je-wel maar in een plan.
+
+   De DOELEN-vraag ("What brings you here?") en de ERVARING-vraag ("Your
+   experience") zijn ERUIT (operator, 6 september 2026): die vragen stelt de
+   onboarding zelf al — "Step 3: What do you want to change?" (`goals`) en
+   "Step 4: How experienced are you?" (`experienceLevel`), beide in
+   `breath-welcome.tsx` (`SlideChangeGoals`/`SlideExperience`). Twee keer
+   dezelfde vraag stellen was precies het "vraag zonder gevolg"-probleem dat
+   deze vragenlijst juist wil vermijden. Wat daar gekozen is, wordt hier
+   gelezen (`useSetting`), niet opnieuw gevraagd.
+   Operator, 22 september 2026: "Step 4" schreef die keuze eerst naar een
+   eigen, losstaand `profile.experience`-veld — nooit gelezen door het
+   echte protocol-systeem. Nu dezelfde `experienceLevel`-instelling als
+   `intensity.tsx`/`utils/protocol.ts`, dus die keuze weegt ook hier mee.
 
    Geslacht en leeftijd zijn GESCHRAPT (zelfde operator-beslissing): de app
    deed er niets mee, en een vraag zonder gevolg is tijd van de gebruiker
@@ -25,17 +36,17 @@
    kennismakingssessie.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
-import { GOALS } from '@/data/goals';
 import {
   pickForSlot,
+  pickStatesForDay,
   reasonForPick,
   slotForHour,
 } from '@/utils/day-plan';
 import { useSubscription } from '@/hooks/useSubscription';
 import { SLOTS } from '@/services/reminders';
-import { useSetting } from '@/utils/settings';
+import { useSetting, type ExperienceLevel } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { Check, ChevronLeft, Sparkles } from 'lucide-react-native';
@@ -45,21 +56,24 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-/* Drie vragen plus het plan. */
-const STEPS = 4;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const EXPERIENCE = [
-  { key: 'new', name: 'New to breathwork', hint: 'Never done this before' },
-  { key: 'some', name: 'Tried it a few times', hint: 'Know the basics' },
-  { key: 'regular', name: 'Regular practice', hint: 'Part of my routine' },
-];
+/* Eén vraag plus het plan (doelen + ervaring zitten nu in de onboarding). */
+const STEPS = 2;
 
-/* Wat de ervaring OPLEVERT, zichtbaar in het plan. Dezelfde drie sleutels. */
-const GUIDANCE_LINE: Record<string, string> = {
-  new: 'Voice and visuals guide every breath — nothing to memorise.',
-  some: 'The rhythm stays on screen; the voice steps back as you settle in.',
-  regular: 'Guidance stays out of your way — tune voice and haptics per state.',
+/* Wat de ervaring OPLEVERT, zichtbaar in het plan. Dezelfde drie sleutels
+   als `experienceLevel` (gezet op stap 4 van de onboarding). */
+const GUIDANCE_LINE: Record<ExperienceLevel, string> = {
+  beginner: 'Voice and visuals guide every breath — nothing to memorise.',
+  intermediate: 'The rhythm stays on screen; the voice steps back as you settle in.',
+  advanced: 'Guidance stays out of your way — tune voice and haptics per state.',
 };
 
 const MOMENTS = [
@@ -76,7 +90,11 @@ export default function BreathQuizScreen() {
 
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useSetting('profile');
-  const [, setGoals] = useSetting('goals');
+  /* Doelen en ervaring zijn al gekozen op stap 3/4 van de onboarding
+     (SlideChangeGoals/SlideExperience) — hier alleen LEZEN, niet opnieuw
+     vragen. */
+  const [goals] = useSetting('goals');
+  const [experienceLevel] = useSetting('experienceLevel');
 
   /* ── LOKALE antwoorden ────────────────────────────────────────────────
      Niets staat vooraf aangevinkt (operator, 8 augustus 2026): de lijst las
@@ -84,16 +102,7 @@ export default function BreathQuizScreen() {
      zag oude keuzes al aangetikt staan — en een keuze die er al staat is
      geen keuze. De antwoorden leven hier tijdens het invullen en gaan pas
      bij het afronden naar de opslag. */
-  const [selGoals, setSelGoals] = useState<string[]>([]);
-  const [selExp, setSelExp] = useState<string | null>(null);
   const [selMoments, setSelMoments] = useState<string[]>([]);
-
-  const toggleGoal = (key: string) => {
-    Haptics.selectionAsync();
-    setSelGoals((cur) =>
-      cur.includes(key) ? cur.filter((g) => g !== key) : [...cur, key],
-    );
-  };
 
   /* ── Het plan: jouw dag ───────────────────────────────────────────────
      Eén toestand als "plan" tonen was fout (operator, 8 augustus 2026: wie
@@ -108,24 +117,32 @@ export default function BreathQuizScreen() {
      doel), avond REST (beter slapen) — en dat klopt, want dat is precies wat
      de dagelijkse suggestie later ook gaat doen. */
   const plan = useMemo(() => {
-    let prev: BreathStateKey | null = null;
-    const schedule = SLOTS.filter((sl) => selMoments.includes(sl.slot)).map(
-      (sl) => {
-        const pick = pickForSlot(sl.slot, selGoals, prev);
-        prev = pick;
-        return {
-          slot: sl.slot,
-          label: sl.label,
-          state: BREATH_STATES[pick],
-          reason: reasonForPick(pick, selGoals, sl.label),
-        };
-      },
+    /* Operator, 11 september 2026: "het gaat over heel systeem" — was
+       slot-voor-slot met `prev` als enige variatieregel, zelfde
+       constructiefout als de protocol-generator (utils/protocol.ts): bij
+       twee doelen die op rang 1 gelijk staan pingpongt dat tussen precies
+       die twee toestanden. `pickStatesForDay` kiest de hele dag in één
+       keer, dus ook déze preview blijft consistent met wat het protocol
+       en het dagplan verderop echt gaan voorstellen. */
+    const chosenSlots = SLOTS.filter((sl) => selMoments.includes(sl.slot));
+    const picks = pickStatesForDay(
+      chosenSlots.map((sl) => sl.slot),
+      goals,
     );
+    const schedule = chosenSlots.map((sl) => {
+      const pick = picks[sl.slot];
+      return {
+        slot: sl.slot,
+        label: sl.label,
+        state: BREATH_STATES[pick],
+        reason: reasonForPick(pick, goals, sl.label),
+      };
+    });
     return {
       schedule,
-      guidance: GUIDANCE_LINE[selExp ?? 'new'],
+      guidance: GUIDANCE_LINE[experienceLevel ?? 'beginner'],
     };
-  }, [selGoals, selMoments, selExp]);
+  }, [goals, selMoments, experienceLevel]);
 
   const isResult = step === STEPS - 1;
 
@@ -146,32 +163,67 @@ export default function BreathQuizScreen() {
     } else {
       const first = pickForSlot(
         slotForHour(new Date().getHours()),
-        selGoals,
+        goals,
         null,
       );
       /* `mode`, niet `state`: state wordt door de URL-parser van de router
-         opgegeten (zie de toelichting in breath-session.tsx). */
+         opgegeten (zie de toelichting in breath-session.tsx).
+         `autostart=1` erbij (operator, 11 september 2026: "check alles
+         overal, de oude selectiepagina mag nooit meer verschijnen") —
+         mode staat hier al vast, er valt niets te kiezen. */
       router.replace(
-        ('/breath-session?from=onboarding&mode=' + first) as never,
+        ('/breath-session?from=onboarding&mode=' + first + '&autostart=1') as never,
       );
     }
   };
 
   /* NU pas naar de opslag, en alleen wat er werkelijk gekozen is. Wie niets
-     aantikte, overschrijft niets. */
+     aantikte, overschrijft niets. Doelen/ervaring staan al in de opslag
+     (stap 3/4 van de onboarding zetten die rechtstreeks), dus hier alleen
+     de momenten. */
   const persist = () => {
-    if (selGoals.length > 0) void setGoals(selGoals);
-    void setProfile({
-      ...profile,
-      ...(selExp ? { experience: selExp } : {}),
-      ...(selMoments.length > 0 ? { preferredSlots: selMoments } : {}),
-    });
+    if (selMoments.length > 0) {
+      void setProfile({ ...profile, preferredSlots: selMoments });
+    }
   };
 
   const back = () => {
     if (step > 0) setStep((n) => n - 1);
     else if (router.canGoBack()) router.back();
   };
+
+  const backPressScale = useSharedValue(1);
+  const onBackPressIn = () => {
+    backPressScale.value = withTiming(0.92, { duration: 80 });
+  };
+  const onBackPressOut = () => {
+    backPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const backPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backPressScale.value }],
+  }));
+
+  const planTimesPressScale = useSharedValue(1);
+  const onPlanTimesPressIn = () => {
+    planTimesPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPlanTimesPressOut = () => {
+    planTimesPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const planTimesPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: planTimesPressScale.value }],
+  }));
+
+  const ctaPressScale = useSharedValue(1);
+  const onCtaPressIn = () => {
+    ctaPressScale.value = withTiming(0.96, { duration: 80 });
+  };
+  const onCtaPressOut = () => {
+    ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const ctaPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ctaPressScale.value }],
+  }));
 
   /* Eén bouwsteen voor alle keuzerijen: aangetikt = accentrand + vinkje.
      Zelfde vormtaal als de Goal-pagina, zodat dit als één app leest. */
@@ -185,36 +237,56 @@ export default function BreathQuizScreen() {
     hint?: string;
     on: boolean;
     onPress: () => void;
-  }) => (
-    <Pressable
-      onPress={onPress}
-      style={[s.choice, on && s.choiceOn]}
-      android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={[s.choiceTxt, on && s.choiceTxtOn]}>{label}</Text>
-        {hint ? <Text style={s.choiceHint}>{hint}</Text> : null}
-      </View>
-      {on && (
-        <View style={s.tick}>
-          <Check size={12} color="#0a0a0a" strokeWidth={3} />
+  }) => {
+    const pressScale = useSharedValue(1);
+    const onPressIn = () => {
+      pressScale.value = withTiming(0.95, { duration: 80 });
+    };
+    const onPressOut = () => {
+      pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    };
+    const pressStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: pressScale.value }],
+    }));
+    return (
+      <AnimatedPressable
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[s.choice, on && s.choiceOn, pressStyle]}
+        android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[s.choiceTxt, on && s.choiceTxtOn]}>{label}</Text>
+          {hint ? <Text style={s.choiceHint}>{hint}</Text> : null}
         </View>
-      )}
-    </Pressable>
-  );
+        {on && (
+          <View style={s.tick}>
+            <Check size={12} color="#0a0a0a" strokeWidth={3} />
+          </View>
+        )}
+      </AnimatedPressable>
+    );
+  };
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={s.bar}>
-        <Pressable onPress={back} hitSlop={12} style={s.back}>
+        <AnimatedPressable
+          onPress={back}
+          onPressIn={onBackPressIn}
+          onPressOut={onBackPressOut}
+          hitSlop={12}
+          style={[s.back, backPressStyle]}
+        >
           <ChevronLeft
             size={22}
             color="rgba(255,255,255,0.75)"
             strokeWidth={2.2}
           />
-        </Pressable>
+        </AnimatedPressable>
         {/* Voortgang als stipjes: je ziet dat het kort is. Een vragenlijst
             zonder einde in zicht wordt afgebroken, niet ingevuld. */}
         <View style={s.dots}>
@@ -234,56 +306,15 @@ export default function BreathQuizScreen() {
       >
         {step === 0 && (
           <>
-            <Text style={s.title}>What brings you here?</Text>
+            <Text style={s.title}>When would you practice?</Text>
             <Text style={s.lead}>
-              Choose all that apply. What you pick first matters most for
-              what gets suggested — all five states stay open.
+              Pick as many as you like — these become your daily plan.
             </Text>
             {/* WAAR de antwoorden blijven hoort hier te staan, niet in een
                 voorwaardenpagina: dit is het moment waarop iemand het zich
                 afvraagt. Het antwoord is: nergens heen. */}
             <Text style={s.privacy}>
               Your answers stay on this device. No account, no upload.
-            </Text>
-            {GOALS.map((g) => (
-              <Choice
-                key={g.key}
-                label={g.name}
-                hint={g.hint}
-                on={selGoals.includes(g.key)}
-                onPress={() => toggleGoal(g.key)}
-              />
-            ))}
-          </>
-        )}
-
-        {step === 1 && (
-          <>
-            <Text style={s.title}>Your experience</Text>
-            <Text style={s.lead}>
-              This sets how much the app guides you — you see it back in
-              your plan.
-            </Text>
-            {EXPERIENCE.map((e) => (
-              <Choice
-                key={e.key}
-                label={e.name}
-                hint={e.hint}
-                on={selExp === e.key}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setSelExp(e.key);
-                }}
-              />
-            ))}
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <Text style={s.title}>When would you practice?</Text>
-            <Text style={s.lead}>
-              Pick as many as you like — these become your daily plan.
             </Text>
             {MOMENTS.map((m) => {
               const on = selMoments.includes(m.key);
@@ -311,7 +342,7 @@ export default function BreathQuizScreen() {
         {isResult && (
           <>
             <View style={s.planBadge}>
-              <Sparkles size={13} color={Brand.accent} strokeWidth={2.2} />
+              <Sparkles size={13} color={AudioAccent} strokeWidth={2.2} />
               <Text style={s.planBadgeTxt}>Built from your answers</Text>
             </View>
             <Text style={s.title}>Your plan</Text>
@@ -351,16 +382,18 @@ export default function BreathQuizScreen() {
                     ander scherm (operator, 8 augustus 2026). De knop bewaart
                     de antwoorden en opent Daily plan, dat dezelfde momenten
                     toont. */}
-                <Pressable
+                <AnimatedPressable
                   onPress={() => {
                     persist();
                     router.replace('/plan' as never);
                   }}
-                  style={s.planTimesBtn}
+                  onPressIn={onPlanTimesPressIn}
+                  onPressOut={onPlanTimesPressOut}
+                  style={[s.planTimesBtn, planTimesPressStyle]}
                   android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
                 >
                   <Text style={s.planTimesTxt}>Set times and reminders</Text>
-                </Pressable>
+                </AnimatedPressable>
                 <Text style={s.planHint}>
                   Nothing is scheduled until you set it.
                 </Text>
@@ -389,15 +422,17 @@ export default function BreathQuizScreen() {
       <View
         style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 14 }]}
       >
-        <Pressable
+        <AnimatedPressable
           onPress={next}
-          style={s.cta}
+          onPressIn={onCtaPressIn}
+          onPressOut={onCtaPressOut}
+          style={[s.cta, ctaPressStyle]}
           android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
         >
           <Text style={s.ctaTxt}>
             {isResult ? 'START YOUR FIRST SESSION' : 'CONTINUE'}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </SafeAreaView>
   );
@@ -425,7 +460,9 @@ const s = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(255,255,255,0.18)',
   },
-  dotOn: { backgroundColor: Brand.accent },
+  /* Huisstijl v4.4: Brand.accent (#3a8fff, Signal Blue) is enkel voor
+     haptic-pulse/"nu actief" — nooit voor stap-indicators/selectie-UI. */
+  dotOn: { backgroundColor: AudioAccent },
 
   scroll: { paddingHorizontal: 18 },
   title: {
@@ -465,8 +502,8 @@ const s = StyleSheet.create({
     marginBottom: 9,
   },
   choiceOn: {
-    borderColor: Brand.accent,
-    backgroundColor: 'rgba(58,143,255,0.1)',
+    borderColor: AudioAccent,
+    backgroundColor: 'rgba(110,133,196,0.1)',
   },
   choiceTxt: {
     fontFamily: BrandFonts.semibold,
@@ -484,7 +521,7 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Brand.accent,
+    backgroundColor: AudioAccent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -498,14 +535,14 @@ const s = StyleSheet.create({
     marginTop: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.4)',
+    borderColor: 'rgba(110,133,196,0.4)',
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
   planBadgeTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11.5,
-    color: Brand.accent,
+    color: AudioAccent,
   },
   planCard: {
     borderRadius: 18,
@@ -568,14 +605,14 @@ const s = StyleSheet.create({
     alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.5)',
+    borderColor: 'rgba(110,133,196,0.5)',
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   planTimesTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 13,
-    color: Brand.accent,
+    color: AudioAccent,
   },
   planHint: {
     marginTop: 8,

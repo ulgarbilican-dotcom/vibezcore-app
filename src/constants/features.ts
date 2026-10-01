@@ -14,11 +14,12 @@
 
 /** De audiobibliotheek.
  *
- *  UIT sinds 5 augustus 2026 (operator): de app richt zich nu op de Smart
+ *  UIT sinds 5 augustus 2026 (operator): de app richt zich toen op de Smart
  *  Bead Bracelet en breathwork als één geheel. Audio wordt een apart
- *  gegeven en hoort daarom niet meer als tabblad in deze app te staan.
+ *  gegeven en hoorde daarom niet meer als tabblad in deze app te staan.
  *
- *  Wat er ONDANKS dit alles blijft draaien: bestaande abonnementen, de
- *  spelerslogica, de voortgang en de gegevens van iedereen die de
- *  bibliotheek al gebruikte. Er wordt niets weggegooid en niets opgezegd. */
-export const AUDIO_ENABLED = false;
+ *  WEER AAN sinds 7 september 2026 (operator, expliciet bevestigd na
+ *  toelichting van de 5-augustus-reden): de "end trial"-exit uit de
+ *  gratis breathwork-sessie stuurt nu naar de Breath-tab, en de user moet
+ *  daar ook naar de Audio Library kunnen — dat kan alleen via de tabbalk. */
+export const AUDIO_ENABLED = true;

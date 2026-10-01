@@ -45,7 +45,7 @@ let loadPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 /* Iter 9dq v44: eenmalig vzp_v1 → vzp_{bucket}_v1 migreren. */

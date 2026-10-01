@@ -51,6 +51,19 @@ export type SubscriptionStatus = {
   /** Iter v222 (2026-07-07): 'bracelet' (bracelet only) of 'bundle'
    *  (bracelet + 1 jaar audio). Uit backend `bracelet_model`. */
   braceletModel?: 'bracelet' | 'bundle';
+  /** Operator, 26 september 2026 (toegangsmodel-gat gevonden en gedicht):
+   *  RevenueCat's `entitlement.periodType === 'TRIAL'` — de gebruiker zit
+   *  in de 7-dagen-proefperiode van het jaarabonnement, nog niet echt
+   *  betaald. `active` is dan óók `true` (RC behandelt een trial als een
+   *  actieve entitlement), dus zonder dit veld is een trial-user niet te
+   *  onderscheiden van een volledig betaalde abonnee. Bedoeld
+   *  toegangsmodel (project-free-tier-facts, operator-bevestigd
+   *  26 september 2026): trial ontgrendelt enkel de `account`-tier
+   *  sessies (17, zie audio-library-data.ts) + Breathwork, NIET de
+   *  volledige PRO-catalogus — dat vereist dit onderscheid. Operator,
+   *  1 okt 2026: "27" hier was het al op 1 sept gecorrigeerde foute
+   *  getal (10 public + 17 account), dit commentaar had de fix gemist. */
+  isTrialing?: boolean;
   /** Iter 9dq v150 (operator 2026-06-17): Gumroad-veld verwijderd. App is
    *  IAP-only (App Store / Play Store). Geen Gumroad-subscriptions meer
    *  in productie — operator-besluit "GUMROAD NIET MEER VOOR DE APP".
@@ -82,9 +95,27 @@ let currentFetchGen: number | null = null;
 let fetchGeneration = 0;
 const subscribers = new Set<(s: SubscriptionStatus | null) => void>();
 
+/* Operator, 26 september 2026 ("denk volledig anders, alle scenario's
+   nakijken"): dezelfde root cause als audio-player.ts's notify() — deze
+   functie wordt aangeroepen vanuit `refreshSubscription()`, die op zijn
+   beurt vuurt vanuit ECHTE native-bridge-callbacks: RevenueCat's
+   `addCustomerInfoUpdateListener` (root _layout.tsx) én React Native's
+   eigen `AppState.addEventListener('change', ...)` bij elke voorgrond-
+   wissel. Deze hook draait op vrijwel elk scherm (account/index/player/
+   bracelet/...), dus een synchrone `subscribers.forEach` hier kan op
+   ELK moment, op ELK scherm, samenvallen met een lopende React-commit —
+   exact dezelfde "Should not already be working"-reëntrantie, maar dan
+   niet aan één specifiek scherm te koppelen (wat verklaart waarom de
+   crash willekeurig leek qua sessie/scherm). Zelfde fix: de daadwerkelijke
+   React-notificatie één tick uitstellen. `cachedStatus` blijft synchroon
+   bijgewerkt — synchrone lezers (bv. `getCachedSubscription()`) zien de
+   nieuwe waarde meteen, enkel de subscriber-callbacks (die naar React
+   `setState` leiden) schuiven op. */
 function notifyAll(status: SubscriptionStatus | null): void {
   cachedStatus = status;
-  subscribers.forEach((cb) => cb(status));
+  setTimeout(() => {
+    subscribers.forEach((cb) => cb(status));
+  }, 0);
 }
 
 async function persistCache(status: SubscriptionStatus): Promise<void> {
@@ -143,6 +174,7 @@ async function loadCacheOnce(): Promise<void> {
             willRenew: obj.willRenew,
             hasBracelet: obj.hasBracelet,
             braceletModel: obj.braceletModel,
+            isTrialing: obj.isTrialing,
           };
           notifyAll(status);
         }
@@ -194,6 +226,12 @@ async function tryRevenueCatStatus(): Promise<SubscriptionStatus | null> {
           ? audioPro.expirationDate
           : undefined,
       willRenew: audioPro.willRenew === true,
+      /* Operator, 26 september 2026: `periodType` is RevenueCat's eigen
+         onderscheid tussen "TRIAL"/"INTRO"/"NORMAL"/"PREPAID" — de enige
+         betrouwbare bron om trial vs. echt-betaald te weten (de backend
+         kent dit onderscheid niet, dus GEEN fallback op backendStatus
+         hier). */
+      isTrialing: audioPro.periodType === 'TRIAL',
     };
   } catch {
     return null; /* SDK niet geladen / native module mist — fall back */
@@ -383,7 +421,7 @@ export function setSignedOutStatus(): void {
 export function setSigningInStatus(): void {
   fetchGeneration++;
   cachedStatus = null;
-  subscribers.forEach((cb) => cb(null));
+  setTimeout(() => { subscribers.forEach((cb) => cb(null)); }, 0);
   clearPersistedCache().catch(() => {});
 }
 
@@ -465,6 +503,12 @@ export function useSubscription() {
        PRO override + geen real token → backend gaf 401 op PRO sessies
        omdat we geen preview=true stuurden. */
     realIsPro,
+    /* Operator, 26 september 2026: echte trial-status, ongeacht override —
+       consumers die content moeten gaten op "echt betaald vs. trial"
+       (access-tier.ts, audio-player.ts) lezen dit, niet `isPro`. Devs die
+       PRO-override gebruiken simuleren bewust een volledig betaalde
+       gebruiker, geen trial, dus override forceert dit NIET naar true. */
+    isTrialing: status?.isTrialing === true,
     tier: status?.tier,
     validUntil: status?.validUntil,
     willRenew: status?.willRenew,

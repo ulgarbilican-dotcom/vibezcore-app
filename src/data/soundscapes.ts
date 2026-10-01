@@ -139,7 +139,15 @@ export const SOUNDSCAPES: Soundscape[] = [
     group: 'WATER',
     Icon: Anchor,
     url: `${CDN}/dragon-studio-deep-sea-underwater-ambience-472383.mp3`,
-    gain: 0.11,
+    /* Was 0.11 — wiskundig correct tegen het gemeten -10,67 LUFS bronbestand
+       (opnieuw gemeten 11 augustus 2026, klopt exact met de eerdere meting),
+       maar operator hoorde 'm expliciet aangetikt alsnog als "niets/bijna
+       niets". LUFS-matching houdt geen rekening met de zwakke bas-respons
+       van een telefoonspeaker — een bas-zwaar "onderwater"-geluid blijft bij
+       gelijke GEMETEN luidheid alsnog stiller AANVOELEN dan bijvoorbeeld
+       Rain. Voorlopige handmatige correctie, geen LUFS-meting: 3x omhoog.
+       Nog te bevestigen op het toestel — ik kan zelf niet luisteren. */
+    gain: 0.33,
   },
 
   /* ── EARTH ────────────────────────────────────────────────────────── */

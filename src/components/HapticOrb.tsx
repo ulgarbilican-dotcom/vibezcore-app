@@ -98,6 +98,15 @@ type Props = {
   /** Aangeroepen telkens wanneer de meteoor het startpunt passeert — zodat
    *  de parent de telefoon kan laten meetrillen. */
   onPulse?: () => void;
+  /** Lichte achtergrond i.p.v. donker (operator, 6 september 2026, light-
+   *  thema Breath-tab). De "kleurregel" hierboven (helder-op-laag-dekking,
+   *  additief gemengd) werkt UITSLUITEND op zwart — additief mengen met wit
+   *  telt op tot wit, dus onzichtbaar. Deze knop schakelt daarom niet enkel
+   *  van kleur om, maar zet ALLE additieve groepen (mist/sterren/gloed/
+   *  rozet-waas/meteoor) om naar normaal mengen met een eigen, verzadigder
+   *  lichtpalet — het mist-waas valt weg (te zwak op wit om de moeite waard
+   *  te zijn), de rest blijft, alleen ondoorzichtiger. */
+  light?: boolean;
 };
 
 const TAU = Math.PI * 2;
@@ -131,6 +140,19 @@ const C_STAR = '#9ec5ff';
 /* De O wordt normaal gemengd i.p.v. additief, dus deze kleur is precies wat
    je ziet — niet iets dat bij de achtergrond wordt opgeteld. */
 const C_SOLID = '#3d7fd8';
+
+/* Lichte variant (operator, 6 september 2026) — zie `light`-prop hierboven.
+   Verzadigder/donkerder dan de donkere set, want zonder additief mengen
+   moet elke kleur het alleen redden tegen wit. */
+const L_GLASS = '#a9c6f2';
+const L_GLASS_LIT = '#2f6fd6';
+const L_SPEC = '#ffffff';
+const L_GLOW = '#dce8fb';
+const L_HOT = '#2f6fd6';
+const L_CORE = '#bcd4f5';
+const L_WHITE = '#ffffff';
+const L_STAR = '#8fb4ec';
+const L_SOLID = '#3a8fff';
 
 /* Sterren rondom de figuur (operator 2026-07-31: "de mandala zweeft ook
    door het heelal dus rondom sterachtige dots"). Ze liggen in een ring
@@ -238,12 +260,14 @@ function Seed({
   orbit,
   breath,
   strokeWidth,
+  color,
 }: {
   path: SkPath;
   index: number;
   orbit: SharedValue<number>;
   breath: SharedValue<number>;
   strokeWidth: number;
+  color: string;
 }) {
   const opacity = useDerivedValue(() => {
     'worklet';
@@ -261,7 +285,7 @@ function Seed({
       path={path}
       style="stroke"
       strokeWidth={strokeWidth}
-      color={C_GLASS_LIT}
+      color={color}
       opacity={opacity}
     />
   );
@@ -273,9 +297,37 @@ export default function HapticOrb({
   spin: externalSpin,
   breathCycleMs = BREATH_CYCLE_MS,
   onPulse,
+  light = false,
 }: Props) {
   const cx = size / 2;
   const cy = size / 2;
+  /* Additief mengen ('plus') telt kleuren bij elkaar op tot ze oplichten
+     tegen zwart; tegen wit telt datzelfde op tot wit, dus onzichtbaar. In
+     lichte stand blijft het dus bij normaal mengen (geen blendMode). */
+  const plusBlend = light ? undefined : 'plus';
+  const pal = light
+    ? {
+        glass: L_GLASS,
+        glassLit: L_GLASS_LIT,
+        spec: L_SPEC,
+        glow: L_GLOW,
+        hot: L_HOT,
+        core: L_CORE,
+        white: L_WHITE,
+        star: L_STAR,
+        solid: L_SOLID,
+      }
+    : {
+        glass: C_GLASS,
+        glassLit: C_GLASS_LIT,
+        spec: C_SPEC,
+        glow: C_GLOW,
+        hot: C_HOT,
+        core: C_CORE,
+        white: C_WHITE,
+        star: C_STAR,
+        solid: C_SOLID,
+      };
   const baseR = size * 0.36;
   /* Eén haarlijn voor de hele figuur. Was bijna twee keer zo dik plus een
      aparte zware lijn voor de O; het gewicht van de O zit nu in zijn
@@ -328,10 +380,12 @@ export default function HapticOrb({
     }
     if (!externalSpin) {
       ownSpin.value = withRepeat(
-        /* 13 s per omwenteling — zelfde tempo als de puntenwolk in de
-           onboarding (breath-welcome), anders verspringt de draaiing bij de
-           overname. */
-        withTiming(1, { duration: 13000, easing: Easing.linear }),
+        /* 13s → 7s per omwenteling (operator, 13 augustus 2026: "sneller
+           draaien"). De 13s stond gelijk aan de puntenwolk die het
+           welkomstscherm ooit meedraaide — die laag bestaat niet meer
+           (verwijderd samen met de foto), dus deze snelheid staat nu
+           volledig op zichzelf. */
+        withTiming(1, { duration: 7000, easing: Easing.linear }),
         -1,
         false,
       );
@@ -479,9 +533,13 @@ export default function HapticOrb({
   const glassOpacity = useDerivedValue(() => 0.5 + flash.value * 0.22);
 
   /* Lichtbron in het hart. Ademt mee — dit is naast de schaal de tweede,
-     duidelijkere aanwijzing dat de figuur ademt. */
-  const glowOpacity = useDerivedValue(
-    () => 0.07 + breath.value * 0.07 + flash.value * 0.05,
+     duidelijkere aanwijzing dat de figuur ademt. In lichte stand hoger
+     basisniveau: zonder additief mengen (zie `plusBlend` hierboven) heeft
+     deze wassing meer dekking nodig om nog zichtbaar te zijn tegen wit. */
+  const glowOpacity = useDerivedValue(() =>
+    light
+      ? 0.16 + breath.value * 0.1 + flash.value * 0.08
+      : 0.07 + breath.value * 0.07 + flash.value * 0.05,
   );
   const coreOpacity = useDerivedValue(
     () => 0.12 + breath.value * 0.14 + flash.value * 0.2,
@@ -491,16 +549,20 @@ export default function HapticOrb({
   return (
     <View style={{ width: size, height: size }}>
       <Canvas style={{ flex: 1 }}>
-        <Group blendMode="plus">
-          {/* ── Mist — hangt om de figuur, drijft er traag omheen ── */}
-          {WISPS.map((w, i) => (
-            <Wisp key={i} w={w} mt={mist} cx={cx} cy={cy} baseR={baseR} />
-          ))}
+        <Group blendMode={plusBlend}>
+          {/* ── Mist — hangt om de figuur, drijft er traag omheen. Alleen in
+             donkere stand: op wit is deze wassing te zwak om de moeite waard
+             te zijn, ook op verhoogde dekking (het is per ontwerp bijna
+             onzichtbaar, zie WISPS-commentaar). ── */}
+          {!light &&
+            WISPS.map((w, i) => (
+              <Wisp key={i} w={w} mt={mist} cx={cx} cy={cy} baseR={baseR} />
+            ))}
 
           {/* ── Sterren rondom ── draaien niet mee: dit is de ruimte om de
              figuur heen, geen onderdeel ervan. */}
           {starPaths.map((sp, i) => (
-            <Path key={i} path={sp} color={C_STAR} opacity={starOps[i]} />
+            <Path key={i} path={sp} color={pal.star} opacity={starOps[i]} />
           ))}
 
           {/* ── Licht in het hart: brede gloed ── */}
@@ -508,7 +570,7 @@ export default function HapticOrb({
             <RadialGradient
               c={vec(cx, cy)}
               r={baseR * 0.8}
-              colors={[C_GLOW, C_GLOW, '#00000000']}
+              colors={[pal.glow, pal.glow, '#00000000']}
               positions={[0, 0.1, 1]}
             />
           </Circle>
@@ -517,13 +579,15 @@ export default function HapticOrb({
              wordt door één transformatie gekanteld. */}
           <Group transform={figureTransform}>
             {/* Rozet: gloed. Eén geblurde pas over alle zes samen — zes
-                aparte geblurde passen zou zes keer zo duur zijn. */}
+                aparte geblurde passen zou zes keer zo duur zijn. Hogere
+                dekking in lichte stand (0.5 i.p.v. 0.26): zonder additieve
+                stapeling moet deze laag zelfstandig zichtbaar zijn. */}
             <Path
               path={geo.seedsAll}
               style="stroke"
               strokeWidth={thin * 2.2}
-              color={C_GLASS}
-              opacity={0.26}
+              color={pal.glass}
+              opacity={light ? 0.5 : 0.26}
             >
               <BlurMask blur={6} style="normal" />
             </Path>
@@ -538,6 +602,7 @@ export default function HapticOrb({
                 orbit={orbit}
                 breath={breath}
                 strokeWidth={thin}
+                color={pal.glassLit}
               />
             ))}
 
@@ -546,8 +611,8 @@ export default function HapticOrb({
               path={geo.outer}
               style="stroke"
               strokeWidth={thin * 2.4}
-              color={C_GLASS}
-              opacity={0.34}
+              color={pal.glass}
+              opacity={light ? 0.6 : 0.34}
             >
               <BlurMask blur={7} style="normal" />
             </Path>
@@ -557,8 +622,8 @@ export default function HapticOrb({
               path={geo.outer}
               style="stroke"
               strokeWidth={thin}
-              color={C_GLASS_LIT}
-              opacity={0.55}
+              color={pal.glassLit}
+              opacity={light ? 0.9 : 0.55}
             />
 
           </Group>
@@ -571,17 +636,17 @@ export default function HapticOrb({
             afdekt. De haarlijn eroverheen sluit de cirkel boven en onder,
             waar de vulling tot nul afloopt. */}
         <Group transform={figureTransform}>
-          <Path path={geo.oFill} color={C_SOLID} />
+          <Path path={geo.oFill} color={pal.solid} />
           <Path
             path={geo.oRing}
             style="stroke"
             strokeWidth={thin * 1.1}
-            color={C_SPEC}
+            color={pal.spec}
             opacity={glassOpacity}
           />
         </Group>
 
-        <Group blendMode="plus">
+        <Group blendMode={plusBlend}>
           <Group transform={figureTransform}>
             {/* ── De meteoor ── vier bogen op de buitencirkel, van lang en
               zwak naar een compacte felle kop. De gloed is ongeveer zo
@@ -592,7 +657,7 @@ export default function HapticOrb({
               style="stroke"
               strokeWidth={thin * 0.8}
               strokeCap="round"
-              color={C_HOT}
+              color={pal.hot}
               opacity={0.3}
             />
             <Path
@@ -600,7 +665,7 @@ export default function HapticOrb({
               style="stroke"
               strokeWidth={thin}
               strokeCap="round"
-              color={C_CORE}
+              color={pal.core}
               opacity={0.5}
             />
             <Path
@@ -608,7 +673,7 @@ export default function HapticOrb({
               style="stroke"
               strokeWidth={thin * 2.6}
               strokeCap="round"
-              color={C_WHITE}
+              color={pal.white}
               opacity={0.2}
             >
               <BlurMask blur={5} style="normal" />
@@ -618,7 +683,7 @@ export default function HapticOrb({
               style="stroke"
               strokeWidth={thin * 1.1}
               strokeCap="round"
-              color={C_WHITE}
+              color={pal.white}
               opacity={0.85}
             />
             <Path
@@ -626,7 +691,7 @@ export default function HapticOrb({
               style="stroke"
               strokeWidth={thin * 4.4}
               strokeCap="round"
-              color={C_WHITE}
+              color={pal.white}
               opacity={0.3}
             >
               <BlurMask blur={6} style="normal" />
@@ -636,7 +701,7 @@ export default function HapticOrb({
               style="stroke"
               strokeWidth={thin * 1.7}
               strokeCap="round"
-              color={C_WHITE}
+              color={pal.white}
               opacity={1}
             />
           </Group>
@@ -647,7 +712,7 @@ export default function HapticOrb({
             <RadialGradient
               c={vec(cx, cy)}
               r={baseR * 0.18}
-              colors={[C_SPEC, C_SPEC, '#00000000']}
+              colors={[pal.spec, pal.spec, '#00000000']}
               positions={[0, 0.08, 1]}
             />
           </Circle>

@@ -23,7 +23,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import ReanimatedView, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* Press-scale recept (bron: breath-welcome.tsx `StartCard`) — aliased als
+   `ReanimatedView` omdat dit bestand al een RN-`Animated` importeert voor
+   PulseDot; twee dingen "Animated" noemen in één file zou botsen. */
+const AnimatedPressable = ReanimatedView.createAnimatedComponent(Pressable);
 
 const C = {
   bg: '#0a0a0a',
@@ -31,7 +42,11 @@ const C = {
   dim: 'rgba(255,255,255,0.55)',
   faint: 'rgba(255,255,255,0.4)',
   border: 'rgba(255,255,255,0.08)',
-  accent: '#3a8fff',  // sectie 1 — bestaande series
+  /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+     was #3a8fff (Signal Blue) — die is strikt gereserveerd voor
+     haptic-pulsen/"nu actief", niet voor deze decoratieve sectie-kleur
+     (eyebrow, pulse-dot, chevron). AudioAccent-waarde op donker. */
+  accent: '#6E85C4',  // sectie 1 — bestaande series
   amber: '#f59e0b',   // sectie 2 — nieuwe series ("Coming")
 };
 
@@ -445,11 +460,26 @@ function RoadmapRow({
   const total = item.tags.length;
   const hasMore = total > 6;
   const visibleTags = showAll || !hasMore ? item.tags : item.tags.slice(0, 6);
+
+  /* Press-scale — zelfde recept als StartCard in breath-welcome.tsx. */
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   return (
     <View style={s.rowCard}>
-      <Pressable
+      <AnimatedPressable
         onPress={onPress}
-        style={s.rowHeader}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[s.rowHeader, pressStyle]}
         android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
       >
         <PulseDot color={color} />
@@ -458,7 +488,7 @@ function RoadmapRow({
           <Text style={s.rowSub}>{item.sub}</Text>
         </View>
         <Text style={[s.rowChev, expanded && s.rowChevOpen]}>›</Text>
-      </Pressable>
+      </AnimatedPressable>
       {expanded && (
         <View style={s.tagsWrap}>
           {visibleTags.map((tag) => (

@@ -25,7 +25,13 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+import { SESSIONS } from '@/data/audio-library-data';
+import { getEffectiveTier } from '@/utils/access-tier';
+import { getSetting } from '@/utils/settings';
+import { getActivePlan, reloadActivePlan, saveActivePlan } from '@/utils/plan-store';
+import { generateProtocol } from '@/utils/protocol';
 import { useIAP } from '@/hooks/useIAP';
 import { refreshSubscription, setProSubscribedStatus, useSubscription } from '@/hooks/useSubscription';
 import { getIAP } from '@/services/iap';
@@ -68,9 +74,52 @@ import {
 import { showVibezAlert } from '@/components/VibezAlert';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/* Standaard press-scale animatie voor tappables op dit scherm. Elke
+   Pressable krijgt zijn EIGEN instantie (aparte state) door deze hook
+   apart aan te roepen — nooit hergebruiken tussen twee losse knoppen. */
+/* Operator ("kijk alle CTA's na, daar ook niet overal toegepast"): audit
+   vond enkel scale, geen opacity, en geen haptic-tik — huisstijl §5.
+   Beide hier toegevoegd, raakt automatisch elke call-site (main paywall
+   "Continue to checkout", form-submit, success-screen "Continue"). */
+function usePressScale(scaleTo: number) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(scaleTo, { duration: 80 });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: 1 - (1 - pressScale.value) * (0.15 / (1 - scaleTo)),
+  }));
+  return { onPressIn, onPressOut, pressStyle };
+}
 
 type Mode = 'signup' | 'signin';
 type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 'error';
+
+/* Operator, 26 september 2026 (zelfde correctie als AccountWallModal): het
+   'done'-successcherm noemde altijd "144 Audio Library sessions" als
+   directe beloning — fout tijdens een trial-start, die enkel de
+   'account'-tier content (27) + Breathwork ontgrendelt (resolveAccess() in
+   access-tier.ts). Afgeleid uit de echte databron i.p.v. hardcoded. */
+const TOTAL_SESSION_COUNT = SESSIONS.length;
+const TRIAL_SESSION_COUNT = SESSIONS.filter((s) => {
+  const tier = getEffectiveTier(s);
+  return tier === 'public' || tier === 'account';
+}).length;
 
 /* Iter 9dq v134 (2026-06-14): mapt rauwe technische errors (auth-proxy
    "upstream fetch failed", IAP "network error", Supabase 401's, etc.)
@@ -141,7 +190,18 @@ function friendlyError(raw: string | null | undefined): string {
 }
 
 export default function SubscribeScreen() {
-  const params = useLocalSearchParams<{ tier?: string; devForceSignedIn?: string }>();
+  const params = useLocalSearchParams<{
+    tier?: string;
+    devForceSignedIn?: string;
+    /* Operator, 10 september 2026: "hoe weten wij of user audio of
+       breathwork wil" — het scherm waar iemand VANDAAN kwam (breath-
+       sample/breath-session/PremiumPaywallModal → 'breathwork', de
+       Audio-tab → 'audio') is een betrouwbaarder signaal dan gissen uit
+       onboarding-status. Ontbreekt dit param (bv. vanuit account.tsx,
+       geen duidelijke context), dan valt de 'done'-routing terug op de
+       plan-check en daarna de bestaande Audio Library-standaard. */
+    returnTo?: 'breathwork' | 'audio';
+  }>();
   /* Iter v167 (2026-06-28): plan-picker step. Voorheen defaultten we naar
      'yearly' wanneer er geen ?tier= query param was — operator-feedback:
      "ik moet eerst kunnen kiezen monthly of yearly". Account-tab CTA en
@@ -184,6 +244,14 @@ export default function SubscribeScreen() {
   const [pw, setPw] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
+  /* Operator, 10 september 2026: "bij succesvolle aankoop, als er al
+     goals+intensity opgeslagen staan en er nog geen ActivePlan bestaat,
+     roep dan gewoon buildPlanFromTemplate()/saveActivePlan() aan" — zie
+     `verifyAndComplete` hieronder. Stuurt de "Start listening"-CTA om naar
+     het net-gebouwde plan i.p.v. altijd naar de Audio Library-root
+     (Apple's continuïteitsprincipe: maak af waar iemand mee bezig was,
+     stuur niet naar een los startpunt). */
+  const [planJustBuilt, setPlanJustBuilt] = useState(false);
   /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase state.
      IAP-entitlement leeft op RevenueCat's eigen (anonymous) customer-ID,
      niet op een VIBEZCORE-account — een account is dus NIET vereist om
@@ -194,6 +262,16 @@ export default function SubscribeScreen() {
      onSubmit/onAppleSignIn/onGoogleSignIn slaan dan de IAP-call over. */
   const [guestPurchase, setGuestPurchase] = useState(false);
   const [linkingAccount, setLinkingAccount] = useState(false);
+  /* Operator, 26 september 2026 ("gebruiker denkt ik krijg full library
+     tijdens trial, dat is niet zo"): het 'done'-successcherm hieronder
+     toonde altijd "144 Audio Library sessions" als beloning, ook wanneer
+     deze aankoop een TRIAL-start was (RevenueCat's periodType==='TRIAL')
+     — tijdens de trial is enkel de 'account'-tier content (27) +
+     Breathwork ontgrendeld, zie resolveAccess()/access-tier.ts. Capture
+     hier, op het moment van de echte RevenueCat-bevestiging (niet via de
+     async-ververste useSubscription-cache, die deze waarde nog niet
+     synchroon kent), of DEZE aankoop een trial was. */
+  const [purchaseWasTrial, setPurchaseWasTrial] = useState(false);
   /* Iter v194 (2026-07-04): pre-emptive check — als user al een actieve
      audio-subscription heeft, skip de aankoop-flow direct naar success.
      Voorkomt Google Play native "Fout — Je bent al geabonneerd" popup
@@ -201,12 +279,17 @@ export default function SubscribeScreen() {
      linkingAccount-guard: anders flipt deze effect het scherm terug naar
      'done' zodra alreadyIsPro true is — precies de state tijdens de
      optionele post-purchase account-link. */
-  const { isPro: alreadyIsPro, tier: currentTier } = useSubscription();
+  const { isPro: alreadyIsPro, tier: currentTier, isTrialing: alreadyTrialing } = useSubscription();
   useEffect(() => {
     if (alreadyIsPro && phase === 'form' && !linkingAccount) {
+      /* Zelfde purchaseWasTrial-signaal als de echte aankoopflow, maar dan
+         voor de pre-emptive-skip (user is al geabonneerd) — hier is de
+         useSubscription-cache al ververst, dus isTrialing is hier wél
+         betrouwbaar. */
+      setPurchaseWasTrial(alreadyTrialing);
       setPhase('done');
     }
-  }, [alreadyIsPro, phase, linkingAccount]);
+  }, [alreadyIsPro, alreadyTrialing, phase, linkingAccount]);
   /* Iter v230 (2026-07-08, audit BUG 4): tier-switch detectie. Als user
      al een sub heeft op andere tier (Monthly → Yearly of andersom) en
      tapt op een pricing-card van de andere tier → RC/Google throwt
@@ -228,6 +311,26 @@ export default function SubscribeScreen() {
      dim ondercroten — niet primair UI maar wel zichtbaar voor copy-
      pasten naar support of debugging. */
   const [errDebug, setErrDebug] = useState<string | null>(null);
+
+  /* Press-scale animaties — één losse instantie per Pressable op dit
+     scherm, boven alle vroege phase-returns zodat de hooks-volgorde
+     onafhankelijk van welke branch rendert altijd hetzelfde is. */
+  const restorePress = usePressScale(0.95);
+  const doneCtaPress = usePressScale(0.96);
+  const saveSubPress = usePressScale(0.95);
+  const tryAgainPress = usePressScale(0.96);
+  const contactSupportPress = usePressScale(0.95);
+  const yearlyCardPress = usePressScale(0.95);
+  const monthlyCardPress = usePressScale(0.95);
+  const checkoutPress = usePressScale(0.96);
+  const cancelPress = usePressScale(0.95);
+  const googlePress = usePressScale(0.95);
+  const emailHintPress = usePressScale(0.94);
+  const pwTogglePress = usePressScale(0.92);
+  const forgotPress = usePressScale(0.94);
+  const submitPress = usePressScale(0.96);
+  const skipPress = usePressScale(0.95);
+  const guestPress = usePressScale(0.95);
 
   /* Auth-state detectie. Voor ingelogde users tonen we een review-step
      (order-summary + "Continue to checkout"-knop) ipv direct de IAP-popup
@@ -454,6 +557,13 @@ export default function SubscribeScreen() {
       }
 
       if (isPro) {
+        /* Zie toelichting bij purchaseWasTrial hierboven: dit is de ENE
+           plek waar we de echte, verse RevenueCat-entitlement in handen
+           hebben — periodType==='TRIAL' is de enige betrouwbare bron. */
+        const activeEntitlement =
+          customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
+        setPurchaseWasTrial(activeEntitlement?.periodType === 'TRIAL');
+
         /* Acknowledge bij store zodat de purchase niet na 3 dagen wordt
            gerefund. RevenueCat doet dit eigenlijk al automatisch, maar
            we behouden onze eigen acknowledge() voor symmetrie. */
@@ -469,6 +579,33 @@ export default function SubscribeScreen() {
            na "Start listening" tap kort de FREE Audio Library ziet. */
         setProSubscribedStatus();
         refreshSubscription();
+
+        /* Operator, 10 september 2026: goals+intensity liggen al vast
+           (vanuit goal.tsx, ooit ingevuld) maar leverden op zichzelf nooit
+           een opgeslagen plan op tenzij de user zelf de hele
+           goal→intensity→plan-review→plan-duration-keten opnieuw
+           doorliep — een bestaand gat. Geen nieuwe engineering: enkel de
+           al-bestaande `generateProtocol()`/`saveActivePlan()` aanroepen
+           met wat er al ligt. Reageert de gebruiker nooit op `goal.tsx`
+           (geen goals/intensity opgeslagen), dan gebeurt hier bewust
+           niets — geen plan verzinnen voor wie het concept nooit aanraakte.
+           Volledig best-effort: een fout hier mag de betaalflow nooit
+           breken, dus swallow en gewoon doorgaan naar 'done'. */
+        try {
+          const goals = getSetting('goals');
+          const intensity = getSetting('intensity');
+          if (goals.length > 0 && intensity) {
+            await reloadActivePlan();
+            if (!getActivePlan()) {
+              const plan = generateProtocol(goals, intensity, '1w', new Date());
+              await saveActivePlan(plan);
+              setPlanJustBuilt(true);
+            }
+          }
+        } catch {
+          /* swallow — dit mag de betaalflow nooit breken */
+        }
+
         setPhase('done');
         /* Iter v175 (2026-06-30): auto-redirect na 1.2s verwijderd. Post-
            purchase is een emotioneel moment — laat user zelf op "Start
@@ -884,13 +1021,15 @@ export default function SubscribeScreen() {
     }
   };
   const RestoreLink = (
-    <Pressable
-      style={s.restoreLink}
+    <AnimatedPressable
+      style={[s.restoreLink, restorePress.pressStyle]}
       onPress={() => void handleRestore()}
+      onPressIn={restorePress.onPressIn}
+      onPressOut={restorePress.onPressOut}
       accessibilityLabel="Restore previous purchases"
     >
       <Text style={s.restoreLinkText}>Already subscribed? Restore purchases</Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 
   /* Loading/transitional phases — single full-screen state.
@@ -906,9 +1045,16 @@ export default function SubscribeScreen() {
           : 'Confirming your purchase…';
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <Stack.Screen
+          options={{
+            title: 'Subscribe',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
+        />
         <View style={s.center}>
-          <ActivityIndicator size="large" color={Brand.accent} />
+          <ActivityIndicator size="large" color={Brand.textDim} />
           <Text style={s.busyTitle}>Just a moment</Text>
           <Text style={s.busySub}>{sub}</Text>
         </View>
@@ -920,7 +1066,28 @@ export default function SubscribeScreen() {
     /* Iter v175 (2026-06-30): betekenisvol welkomstscherm ipv 1.2s flash.
        Operator-feedback: post-purchase moment moet dankbaarheid + wat je
        hebt gekocht communiceren. Manual "Start listening" CTA geeft user
-       controle en tijd om moment te absorberen. */
+       controle en tijd om moment te absorberen.
+       Operator, 10 september 2026: waarheen die knop stuurt is nu een
+       kleine beslisboom, hoogste zekerheid eerst — nooit gissen: (1)
+       `returnTo` — het scherm waar de gebruiker VANDAAN kwam, het
+       betrouwbaarste signaal; (2) een plan dat we zonet automatisch
+       bouwden uit al-opgeslagen goals/intensity; (3) de bestaande
+       Audio Library-standaard, voor wie zonder duidelijke context
+       (bv. via account.tsx) hier terechtkwam. */
+    const doneDestination =
+      params.returnTo === 'breathwork'
+        ? '/breath'
+        : params.returnTo === 'audio'
+          ? '/'
+          : planJustBuilt
+            ? '/plan'
+            : '/';
+    const doneCtaLabel =
+      params.returnTo === 'breathwork'
+        ? 'Start breathing'
+        : planJustBuilt
+          ? 'View your plan'
+          : 'Start listening';
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -928,23 +1095,49 @@ export default function SubscribeScreen() {
           <View style={s.checkCircle}>
             <Text style={s.checkText}>✓</Text>
           </View>
-          <Text style={s.doneTitle}>Welcome to VIBEZCORE Audio Library</Text>
-          <Text style={s.doneThanks}>Thank you for subscribing.</Text>
+          <Text style={s.doneTitle}>Welcome to VIBEZCORE Premium</Text>
+          <Text style={s.doneThanks}>
+            {purchaseWasTrial
+              ? 'Your 7-day free trial has started.'
+              : 'Thank you for subscribing.'}
+          </Text>
 
           <View style={s.donePerks}>
-            <Text style={s.donePerkTitle}>You now have access to:</Text>
-            <Text style={s.donePerkLine}>· 144 sessions across 4 pillars of growth</Text>
-            <Text style={s.donePerkLine}>· All content unlocked</Text>
-            <Text style={s.donePerkLine}>· New sessions added regularly</Text>
+            {purchaseWasTrial ? (
+              <>
+                <Text style={s.donePerkTitle}>
+                  During your trial, you have access to:
+                </Text>
+                <Text style={s.donePerkLine}>· All 49 Breathwork sessions — every state, every rhythm</Text>
+                <Text style={s.donePerkLine}>
+                  · {TRIAL_SESSION_COUNT} Audio Library sessions
+                </Text>
+                <Text style={s.donePerkLine}>
+                  · Stay subscribed after your trial to unlock all{' '}
+                  {TOTAL_SESSION_COUNT} sessions
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={s.donePerkTitle}>One membership, you now have access to:</Text>
+                <Text style={s.donePerkLine}>· All 49 Breathwork sessions — every state, every rhythm</Text>
+                <Text style={s.donePerkLine}>
+                  · {TOTAL_SESSION_COUNT} Audio Library sessions across 4 pillars of growth
+                </Text>
+                <Text style={s.donePerkLine}>· New sessions added regularly</Text>
+              </>
+            )}
           </View>
 
-          <Pressable
-            style={s.doneCta}
-            onPress={() => router.replace('/')}
-            accessibilityLabel="Start listening to your library"
+          <AnimatedPressable
+            style={[s.doneCta, doneCtaPress.pressStyle]}
+            onPress={() => router.replace(doneDestination as never)}
+            onPressIn={doneCtaPress.onPressIn}
+            onPressOut={doneCtaPress.onPressOut}
+            accessibilityLabel={doneCtaLabel}
           >
-            <Text style={s.doneCtaText}>Start listening</Text>
-          </Pressable>
+            <Text style={s.doneCtaText}>{doneCtaLabel}</Text>
+          </AnimatedPressable>
 
           <Text style={s.doneFooter}>
             You&apos;ll receive a confirmation email from{' '}
@@ -958,18 +1151,20 @@ export default function SubscribeScreen() {
               als guest gebeurde. Account is niet vereist (entitlement zit
               al op de RC anonymous-ID); dit is puur voor cross-device sync. */}
           {guestPurchase && !signedIn && (
-            <Pressable
-              style={s.linkBtn}
+            <AnimatedPressable
+              style={[s.linkBtn, saveSubPress.pressStyle]}
               onPress={() => {
                 setLinkingAccount(true);
                 setPhase('form');
               }}
+              onPressIn={saveSubPress.onPressIn}
+              onPressOut={saveSubPress.onPressOut}
               accessibilityLabel="Create an account to sync this subscription across your devices"
             >
               <Text style={s.linkText}>
                 Save your subscription — create an account
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           )}
         </View>
       </SafeAreaView>
@@ -987,7 +1182,14 @@ export default function SubscribeScreen() {
        primary CTA. Geen 'free environment' troostprijs meer. */
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <Stack.Screen
+          options={{
+            title: 'Subscribe',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
+        />
         <View style={s.center}>
           <View style={s.errorCircle}>
             <Text style={s.errorText}>!</Text>
@@ -1001,27 +1203,31 @@ export default function SubscribeScreen() {
             </Text>
           )}
 
-          <Pressable
-            style={s.btnPrimary}
+          <AnimatedPressable
+            style={[s.btnPrimary, tryAgainPress.pressStyle]}
             onPress={() => {
               setErrMsg(null);
               setErrDebug(null);
               setPhase('form');
             }}
+            onPressIn={tryAgainPress.onPressIn}
+            onPressOut={tryAgainPress.onPressOut}
           >
             <Text style={s.btnPrimaryText}>Try again</Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
-            style={s.linkBtn}
+          <AnimatedPressable
+            style={[s.linkBtn, contactSupportPress.pressStyle]}
             onPress={() => {
               void Linking.openURL(
                 SUPPORT_URL,
               );
             }}
+            onPressIn={contactSupportPress.onPressIn}
+            onPressOut={contactSupportPress.onPressOut}
           >
             <Text style={s.linkText}>Contact support</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </SafeAreaView>
     );
@@ -1038,7 +1244,14 @@ export default function SubscribeScreen() {
     const yearlyPrice = yearlyProduct?.localizedPrice ?? '€69,99';
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <Stack.Screen
+          options={{
+            title: 'Subscribe',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
+        />
         <KeyboardAwareScrollView
           contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPadding }]}
           keyboardShouldPersistTaps="handled"
@@ -1046,13 +1259,15 @@ export default function SubscribeScreen() {
         >
           <Text style={s.heading}>Choose your plan</Text>
           <Text style={s.sub}>
-            Every state, every rhythm, every session — plus the full
-            VIBEZCORE Audio Library. Cancel anytime.
+            All 49 breathwork sessions — every state, every rhythm — plus
+            the full VIBEZCORE Audio Library. Cancel anytime.
           </Text>
 
-          <Pressable
-            style={s.planCard}
+          <AnimatedPressable
+            style={[s.planCard, yearlyCardPress.pressStyle]}
             onPress={() => setTier('yearly')}
+            onPressIn={yearlyCardPress.onPressIn}
+            onPressOut={yearlyCardPress.onPressOut}
             accessibilityLabel={`Select yearly plan — ${yearlyPrice} per year, best value`}
             accessibilityRole="button"
           >
@@ -1069,11 +1284,13 @@ export default function SubscribeScreen() {
                 ? `${yearlyProduct.freeTrialDays} days free, then ${yearlyPrice}/year · cancel anytime`
                 : 'Launch offer · one payment a year'}
             </Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
-            style={s.planCardAlt}
+          <AnimatedPressable
+            style={[s.planCardAlt, monthlyCardPress.pressStyle]}
             onPress={() => setTier('monthly')}
+            onPressIn={monthlyCardPress.onPressIn}
+            onPressOut={monthlyCardPress.onPressOut}
             accessibilityLabel="Select monthly plan"
             accessibilityRole="button"
           >
@@ -1085,7 +1302,7 @@ export default function SubscribeScreen() {
               <Text style={s.planCardPeriod}>/month</Text>
             </Text>
             <Text style={s.planCardSub}>Launch offer · cancel anytime</Text>
-          </Pressable>
+          </AnimatedPressable>
 
           {LegalLine}
           {RestoreLink}
@@ -1099,9 +1316,16 @@ export default function SubscribeScreen() {
   if (signedIn === null) {
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <Stack.Screen
+          options={{
+            title: 'Subscribe',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
+        />
         <View style={s.center}>
-          <ActivityIndicator size="large" color={Brand.accent} />
+          <ActivityIndicator size="large" color={Brand.textDim} />
         </View>
       </SafeAreaView>
     );
@@ -1114,7 +1338,14 @@ export default function SubscribeScreen() {
   if (signedIn === true) {
     return (
       <SafeAreaView style={s.root}>
-        <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+        <Stack.Screen
+          options={{
+            title: 'Subscribe',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
+        />
         <KeyboardAwareScrollView
           contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPadding }]}
           keyboardShouldPersistTaps="handled"
@@ -1143,16 +1374,23 @@ export default function SubscribeScreen() {
           {infoMsg && <Text style={s.info}>{infoMsg}</Text>}
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
-          <Pressable style={s.btnPrimary} onPress={() => void runIapFlow()}>
+          <AnimatedPressable
+            style={[s.btnPrimary, checkoutPress.pressStyle]}
+            onPress={() => void runIapFlow()}
+            onPressIn={checkoutPress.onPressIn}
+            onPressOut={checkoutPress.onPressOut}
+          >
             <Text style={s.btnPrimaryText}>Continue to checkout</Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
-            style={s.linkBtn}
+          <AnimatedPressable
+            style={[s.linkBtn, cancelPress.pressStyle]}
             onPress={() => router.back()}
+            onPressIn={cancelPress.onPressIn}
+            onPressOut={cancelPress.onPressOut}
           >
             <Text style={s.linkText}>Cancel</Text>
-          </Pressable>
+          </AnimatedPressable>
 
           {LegalLine}
           {RestoreLink}
@@ -1166,7 +1404,14 @@ export default function SubscribeScreen() {
      dan account-create OF sign-in (mode-toggle), dan IAP-popup. */
   return (
     <SafeAreaView style={s.root}>
-      <Stack.Screen options={{ title: 'Subscribe', headerBackTitle: 'Back' }} />
+      <Stack.Screen
+        options={{
+          title: 'Subscribe',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
+      />
       <KeyboardAwareScrollView
         contentContainerStyle={s.scroll}
         keyboardShouldPersistTaps="handled"
@@ -1221,13 +1466,15 @@ export default function SubscribeScreen() {
               />
             )}
             {googleAvailable && (
-              <Pressable
-                style={[s.socialBtn, s.socialBtnGoogle]}
+              <AnimatedPressable
+                style={[s.socialBtn, s.socialBtnGoogle, googlePress.pressStyle]}
                 onPress={() => void onGoogleSignIn()}
+                onPressIn={googlePress.onPressIn}
+                onPressOut={googlePress.onPressOut}
               >
                 <Text style={s.socialBtnIconGoogle}>G</Text>
                 <Text style={s.socialBtnTextGoogle}>Continue with Google</Text>
-              </Pressable>
+              </AnimatedPressable>
             )}
             <View style={s.divider}>
               <View style={s.dividerLine} />
@@ -1272,19 +1519,21 @@ export default function SubscribeScreen() {
                   : s.emailHintDim;
           if (v.ok === 'maybe' && v.reason === 'typo') {
             return (
-              <Pressable
+              <AnimatedPressable
                 onPress={() => {
                   setEmail(v.suggestion);
                   if (errMsg) setErrMsg(null);
                 }}
-                style={s.emailHintTap}
+                onPressIn={emailHintPress.onPressIn}
+                onPressOut={emailHintPress.onPressOut}
+                style={[s.emailHintTap, emailHintPress.pressStyle]}
                 accessibilityLabel={`Use suggested email ${v.suggestion}`}
               >
                 <Text style={[s.emailHintBase, tone]}>
                   {hint.text}
                 </Text>
                 <Text style={s.emailHintAction}>Tap to use it</Text>
-              </Pressable>
+              </AnimatedPressable>
             );
           }
           return <Text style={[s.emailHintBase, tone]}>{hint.text}</Text>;
@@ -1308,13 +1557,15 @@ export default function SubscribeScreen() {
             returnKeyType="go"
             onSubmitEditing={onSubmit}
           />
-          <Pressable
-            style={s.pwToggle}
+          <AnimatedPressable
+            style={[s.pwToggle, pwTogglePress.pressStyle]}
             onPress={() => setShowPw((v) => !v)}
+            onPressIn={pwTogglePress.onPressIn}
+            onPressOut={pwTogglePress.onPressOut}
             hitSlop={8}
           >
             <Text style={s.pwToggleText}>{showPw ? 'Hide' : 'Show'}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* Iter 9dq v134 (2026-06-14): live password-hint voor signup. Begint
@@ -1332,13 +1583,15 @@ export default function SubscribeScreen() {
         {/* Iter 9dq v142: Forgot-password link onder password-veld, alleen
             in signin mode (signup heeft geen wachtwoord om te resetten). */}
         {mode === 'signin' && (
-          <Pressable
-            style={s.forgotLink}
+          <AnimatedPressable
+            style={[s.forgotLink, forgotPress.pressStyle]}
             onPress={onForgotPassword}
+            onPressIn={forgotPress.onPressIn}
+            onPressOut={forgotPress.onPressOut}
             hitSlop={6}
           >
             <Text style={s.forgotLinkText}>Forgot password?</Text>
-          </Pressable>
+          </AnimatedPressable>
         )}
 
         {infoMsg && <Text style={s.info}>{infoMsg}</Text>}
@@ -1353,33 +1606,42 @@ export default function SubscribeScreen() {
           </Text>
         )}
 
-        <Pressable style={s.btnPrimary} onPress={onSubmit}>
+        <AnimatedPressable
+          style={[s.btnPrimary, submitPress.pressStyle]}
+          onPress={onSubmit}
+          onPressIn={submitPress.onPressIn}
+          onPressOut={submitPress.onPressOut}
+        >
           <Text style={s.btnPrimaryText}>
             {linkingAccount
               ? 'Create account'
               : mode === 'signup' ? 'Create account & continue' : 'Sign in & continue'}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
 
         {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase
             entry point / skip-link. Registratie is optioneel — koop direct
             zonder account, koppel later desgewenst voor cross-device sync. */}
         {linkingAccount ? (
-          <Pressable
-            style={s.linkBtn}
+          <AnimatedPressable
+            style={[s.linkBtn, skipPress.pressStyle]}
             onPress={() => router.replace('/')}
+            onPressIn={skipPress.onPressIn}
+            onPressOut={skipPress.onPressOut}
             accessibilityLabel="Skip creating an account for now"
           >
             <Text style={s.linkText}>Skip for now</Text>
-          </Pressable>
+          </AnimatedPressable>
         ) : (
-          <Pressable
-            style={s.linkBtn}
+          <AnimatedPressable
+            style={[s.linkBtn, guestPress.pressStyle]}
             onPress={() => void onContinueAsGuest()}
+            onPressIn={guestPress.onPressIn}
+            onPressOut={guestPress.onPressOut}
             accessibilityLabel="Continue without creating an account"
           >
             <Text style={s.linkText}>Continue without an account</Text>
-          </Pressable>
+          </AnimatedPressable>
         )}
 
         {/* Iter v175 (2026-06-30): Mode-switcher als secondary link onderaan.
@@ -1412,9 +1674,10 @@ const s = StyleSheet.create({
     padding: 32,
   },
   /* Order summary card */
+  /* Huisstijl v4.4: kaartrand is decoratie, geen live "actief"-status. */
   orderCard: {
     backgroundColor: Brand.panel,
-    borderColor: 'rgba(58, 143, 255, 0.28)',
+    borderColor: Brand.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
@@ -1440,8 +1703,9 @@ const s = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'space-between',
   },
+  /* Huisstijl v4.4: prijstekst is geen "actief"-status — Signal Blue eruit. */
   orderPrice: {
-    color: Brand.accent,
+    color: Brand.text,
     fontSize: 28,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.6,
@@ -1460,9 +1724,10 @@ const s = StyleSheet.create({
   /* Iter v167 (2026-06-28): plan-picker cards. Yearly = primary (blauwe
      glow border, "BEST VALUE" badge). Monthly = alt (subtieler, gewone
      border). Tap → setTier → flow gaat door. */
+  /* Huisstijl v4.4: selected-border is decoratie, geen live status. */
   planCard: {
     backgroundColor: Brand.panel,
-    borderColor: Brand.accent,
+    borderColor: AudioAccent,
     borderWidth: 1.5,
     borderRadius: 14,
     padding: 18,
@@ -1489,9 +1754,10 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.3,
   },
+  /* Huisstijl v4.4: badge, geen live status — accent eruit. */
   planCardBadge: {
-    color: Brand.accent,
-    backgroundColor: 'rgba(58, 143, 255, 0.14)',
+    color: AudioAccent,
+    backgroundColor: 'rgba(110, 133, 196, 0.14)',
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.4,
@@ -1500,8 +1766,9 @@ const s = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden',
   },
+  /* Huisstijl v4.4: prijstekst is geen "actief"-status — Signal Blue eruit. */
   planCardPrice: {
-    color: Brand.accent,
+    color: Brand.text,
     fontSize: 26,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.6,
@@ -1550,8 +1817,9 @@ const s = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
+  /* Huisstijl v4.4: link, geen live status — accent eruit. */
   modeSwitchLink: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 14,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
@@ -1597,8 +1865,9 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     marginLeft: -56,
   },
+  /* Huisstijl v4.4: label, geen live status — accent eruit. */
   pwToggleText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 12,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -1666,8 +1935,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     marginTop: 8,
   },
+  /* Huisstijl v4.4: link, geen live status — accent eruit. */
   forgotLinkText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.1,
@@ -1741,8 +2011,10 @@ const s = StyleSheet.create({
   /* Iter v180 (2026-07-02): CTA-knoppen systemisch verruimd. Operator
      -feedback: knoppen te krap, tekst moet ademen. Padding + fontSize
      omhoog + iets meer letterSpacing voor betere leesbaarheid. */
+  /* Operator, 26 september 2026 (Huisstijl v4.4): donkere ondergrond →
+     witte knop, donkere tekst. Brand.accent (#3a8fff) is nooit een CTA. */
   btnPrimary: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -1750,7 +2022,7 @@ const s = StyleSheet.create({
     marginTop: 22,
   },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -1760,8 +2032,9 @@ const s = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 8,
   },
+  /* Huisstijl v4.4: link, geen live status — accent eruit. */
   linkText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
   },
@@ -1801,8 +2074,9 @@ const s = StyleSheet.create({
   /* Iter 2026-07-25 (Apple 3.1.2(c) fix): tapbare Terms/Privacy-spans
      binnen de legal-line. Accent-kleur + underline zodat het duidelijk
      een link is; grootte matcht omringende legal-tekst. */
+  /* Huisstijl v4.4: link, geen live status — accent eruit. */
   legalLink: {
-    color: Brand.accent,
+    color: AudioAccent,
     textDecorationLine: 'underline',
     fontFamily: BrandFonts.semibold,
   },
@@ -1814,8 +2088,9 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 8,
   },
+  /* Huisstijl v4.4: link, geen live status — accent eruit. */
   restoreLinkText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
   },
@@ -1914,9 +2189,11 @@ const s = StyleSheet.create({
     maxWidth: 320,
   },
   /* Iter v179 (2026-07-02): eigen bredere Start-listening CTA voor done-phase.
-     Operator: knop moet breder en tekst moet ademen. */
+     Operator: knop moet breder en tekst moet ademen.
+     Operator, 26 september 2026 (Huisstijl v4.4): witte knop/donkere tekst
+     i.p.v. Signal Blue — zelfde regel als elke andere CTA op dit scherm. */
   doneCta: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 32,
@@ -1928,7 +2205,7 @@ const s = StyleSheet.create({
     marginTop: 6,
   },
   doneCtaText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 17,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

@@ -20,20 +20,31 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
-import { BREATH_STATES, cycleSeconds, roundsFor } from '@/data/breath-states';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import {
+  BREATH_STATES,
+  cycleSeconds,
+  roundsFor,
+  type BreathState,
+  type TechniqueDef,
+} from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
+import { DurationWheel } from '@/components/DurationWheel';
 import { useBreathHistory } from '@/utils/breath-history';
-import { pickForSlot } from '@/utils/day-plan';
+import { personalOrderForSlot } from '@/utils/behavior-patterns';
+import { pickStatesForDay } from '@/utils/day-plan';
 import { useSetting } from '@/utils/settings';
+import { dayKey } from '@/utils/bracelet-history';
+import { saveActivePlan, useActivePlan } from '@/utils/plan-store';
 import {
   ensurePermission,
   nextFireText,
   reminderKey,
+  syncPlanReminders,
   syncReminders,
 } from '@/services/reminders';
-import { router, Stack } from 'expo-router';
-import { skipBreathIntroOnce } from '@/utils/breath-entry';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { claimFreeSessionParam, skipBreathIntroOnce } from '@/utils/breath-entry';
 import {
   Bell,
   Check,
@@ -42,7 +53,7 @@ import {
   Clock,
   Pencil,
 } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -51,10 +62,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* De twee momenten van een dag. Ochtend zet de toon, avond bouwt af — dat
    zijn de twee waar bijna iedereen ruimte voor heeft, en ze staan het verst
@@ -68,14 +87,23 @@ const MOMENTS = [
      hoort dat moment hier terug te zien. Dit is waar de voorkeuren uit de
      vragenlijst zichtbaar worden. */
   { key: 'midday', label: 'MIDDAY', hour: 13, from: 12, to: 17 },
+  /* Operator, 11 september 2026: nieuw vierde moment, "after work / on
+     the way home" — enkel zichtbaar via een ECHT protocol (goal.tsx →
+     intensity.tsx) dat dit moment koos, nooit als standaard hier (zie
+     `visible` hieronder: "twee momenten, niet vijf" blijft de regel voor
+     de live, protocol-loze preview). Zonder dit erbij zou `MOMENTS.find()`
+     voor een protocol-item met slot 'afterWork' niets vinden, en dus geen
+     label/tijdvenster kunnen tonen (zie `items` hieronder). */
+  { key: 'afterWork', label: 'AFTER WORK', hour: 18, from: 17, to: 20 },
   /* to: 24 -> 28 (operator, 10 augustus 2026: "voor sommige users is
      evening misschien 2u, 3u — wij beperken dit toch?"). 24 t/m 27 zijn
      0:00 t/m 3:45 de volgende ochtend — JS' eigen Date-rekenkunde rolt dat
      correct om (zie fmtTime en nextFireText), dus dit is geen aparte
-     nacht-categorie maar gewoon een langere avond. Samen met morning vanaf
-     4 dekken de twee nu de volle 24 uur, zonder gat tussen middernacht en
-     4 uur waar niemand een tijd kon zetten. */
-  { key: 'evening', label: 'EVENING', hour: 21, from: 17, to: 28 },
+     nacht-categorie maar gewoon een langere avond. `from: 17` -> `20`
+     (11 september 2026): dat bereik overlapte met het nieuwe `afterWork`
+     hierboven — evening dekt nu enkel nog vanaf 20u, samen met morning
+     vanaf 4 blijft de volle 24 uur gedekt. */
+  { key: 'evening', label: 'EVENING', hour: 21, from: 20, to: 28 },
 ] as const;
 
 type SlotKey = (typeof MOMENTS)[number]['key'];
@@ -86,6 +114,10 @@ export default function PlanScreen() {
      Een vaste marge onderaan werkt niet — die is op het ene toestel te klein
      en op het andere een gat. */
   const insets = useSafeAreaInsets();
+  const { onboarding, fromBreathWelcome } = useLocalSearchParams<{
+    onboarding?: string;
+    fromBreathWelcome?: string;
+  }>();
 
   const history = useBreathHistory();
   const [goalKeys] = useSetting('goals');
@@ -93,13 +125,149 @@ export default function PlanScreen() {
   const [hours] = useSetting('reminderHours');
   const [at, setAt] = useSetting('reminderAt');
 
-  const [picking, setPicking] = useState<SlotKey | null>(null);
+  /* Een ACTIEF protocol (goal.tsx → intensity.tsx → plan-review.tsx →
+     plan-duration.tsx) maakt dit scherm het tijden-instelscherm voor een
+     ECHT vastgelegd rooster i.p.v. de live-herberekende twee-momenten-
+     preview hieronder (operator, 13 augustus 2026, protocol-systeem). Geen
+     protocol? Dan blijft het oude gedrag ongewijzigd — wie via de oude
+     vragenlijst (breath-quiz.tsx) hier binnenkomt, ziet nog steeds zijn
+     twee momenten op basis van de klok en zijn doelen. */
+  const { plan } = useActivePlan();
+  const todayKey = dayKey(new Date());
+  const planDay = plan?.days[todayKey] ?? null;
+
+  useEffect(() => {
+    if (plan) void syncPlanReminders(plan);
+  }, [plan]);
+
+  /* Operator, 17 september 2026 ("Bouw je dag" — meerdere sessies per
+     dagdeel toegestaan): `picking`/`durationPicking` waren SlotKey — dat
+     ging fout zodra twee items hetzelfde dagdeel delen (welke van de twee
+     bedoel je?). Nu een index in de gerenderde `items`-lijst zelf, altijd
+     ondubbelzinnig, in beide standen (met of zonder actief protocol). */
+  const [picking, setPicking] = useState<number | null>(null);
   /* Wat er net is ingesteld, in mensentaal. Blijft staan tot je het scherm
      verlaat — lang genoeg om gelezen te worden, kort genoeg om niet in de
      weg te zitten. */
   const [justSet, setJustSet] = useState<string | null>(null);
 
+  /* Welk item zijn duur-kiezer openstaat (operator, 13 augustus 2026:
+     "user mag de mogelijkheid hebben om langere sessies te doen" — ook NA
+     het opzetten, niet alleen tijdens plan-review). Alleen relevant met een
+     actief protocol; de oude live-suggestie kent geen bewaarde duur. */
+  const [durationPicking, setDurationPicking] = useState<number | null>(null);
+
+  /* Press-animatie voor de vaste CTA's onderaan het scherm (niet in een
+     loop, dus hooks hier gewoon op componentniveau — zelfde recept als
+     `PlanItemCard` hierboven/`StartCard` in breath-welcome.tsx). */
+  const allModesScale = useSharedValue(1);
+  const onAllModesPressIn = () => {
+    allModesScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onAllModesPressOut = () => {
+    allModesScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const allModesStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: allModesScale.value }],
+  }));
+
+  const primaryCtaScale = useSharedValue(1);
+  const onPrimaryCtaPressIn = () => {
+    primaryCtaScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPrimaryCtaPressOut = () => {
+    primaryCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const primaryCtaStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: primaryCtaScale.value }],
+  }));
+
+  const remindScale = useSharedValue(1);
+  const onRemindPressIn = () => {
+    remindScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onRemindPressOut = () => {
+    remindScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const remindStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: remindScale.value }],
+  }));
+
+  const goalCtaScale = useSharedValue(1);
+  const onGoalCtaPressIn = () => {
+    goalCtaScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onGoalCtaPressOut = () => {
+    goalCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const goalCtaStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: goalCtaScale.value }],
+  }));
+
+  /* Terugknop bovenaan — klein icoon-knopje, dus 0.93 i.p.v. de 0.95 van
+     kaarten/rijen (zelfde schaalregel als de rest van dit bestand). */
+  const backScale = useSharedValue(1);
+  const onBackPressIn = () => {
+    backScale.value = withTiming(0.93, { duration: 80 });
+  };
+  const onBackPressOut = () => {
+    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const backStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backScale.value }],
+  }));
+
+  /* De twee backdrops (tijd- en duur-kiezer) sluiten bij een tik ernaast —
+     zelfde recept als de rest, ook al ziet de animatie zelf weinig licht
+     omdat de modal meteen dichtgaat. */
+  const pickBackdropScale = useSharedValue(1);
+  const onPickBackdropPressIn = () => {
+    pickBackdropScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPickBackdropPressOut = () => {
+    pickBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pickBackdropStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pickBackdropScale.value }],
+  }));
+
+  const durationBackdropScale = useSharedValue(1);
+  const onDurationBackdropPressIn = () => {
+    durationBackdropScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onDurationBackdropPressOut = () => {
+    durationBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const durationBackdropStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: durationBackdropScale.value }],
+  }));
+
+  /* Zet de duur op ELKE dag van het protocol op dezelfde POSITIE in
+     `planDay.items` — dezelfde regel als bij tijd (de template herhaalt
+     zich toch identiek over alle dagen, en elke dag is via
+     `template.map(...)` opgebouwd in protocol.ts, dus de array-positie is
+     stabiel). Matchte voorheen op `slot`, wat twee items in hetzelfde
+     dagdeel allebei zou raken i.p.v. enkel het aangetikte. */
+  const setMinutesForPlanIndex = async (planIndex: number, minutes: number) => {
+    if (!plan) return;
+    setDurationPicking(null);
+    const days = Object.fromEntries(
+      Object.entries(plan.days).map(([dk, day]) => [
+        dk,
+        {
+          ...day,
+          items: day.items.map((it, i) => (i === planIndex ? { ...it, minutes } : it)),
+        },
+      ]),
+    );
+    const updated = { ...plan, days };
+    await saveActivePlan(updated);
+    void syncPlanReminders(updated);
+  };
+
   const minsFor = (slot: SlotKey) => {
+    const planItem = planDay?.items.find((pi) => pi.slot === slot);
+    if (planItem) return planItem.reminderAt;
     const key = reminderKey('breath', slot);
     /* Nieuwe sleutel eerst, dan de oude met hele uren, dan de standaard van
        dit moment. Zo raakt niemand zijn instelling kwijt. */
@@ -125,10 +293,14 @@ export default function PlanScreen() {
      Wie in de vragenlijst niets koos, krijgt de standaard van twee —
      ochtend zet de toon, avond bouwt af. */
   const chosenSlots = profile.preferredSlots ?? [];
+  /* 'afterWork' is nooit een keuze in de vragenlijst (breath-quiz.tsx kent
+     enkel morning/midday/evening) en hoort dus ook niet ongevraagd in de
+     standaard-van-twee te verschijnen — enkel 'midday' uitsluiten was hier
+     niet meer genoeg zodra MOMENTS een vierde entry kreeg. */
   const visible =
     chosenSlots.length > 0
       ? MOMENTS.filter((m) => chosenSlots.includes(m.key))
-      : MOMENTS.filter((m) => m.key !== 'midday');
+      : MOMENTS.filter((m) => m.key === 'morning' || m.key === 'evening');
   const planned = visible.every(
     (m) => reminders[reminderKey('breath', m.key)] === true,
   );
@@ -138,52 +310,123 @@ export default function PlanScreen() {
     const now = new Date();
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
+    const h = now.getHours();
 
-    /* DEZELFDE motor als het plan uit de vragenlijst (utils/day-plan.ts).
+    const doneInWindow = (from: number, to: number) =>
+      history.some((e) => {
+        if (e.ts < startOfDay.getTime()) return false;
+        const eh = new Date(e.ts).getHours();
+        return eh >= from && eh < to;
+      });
+
+    /* MET actief protocol: één rij per ECHT item uit `planDay.items`, niet
+       één per dagdeel — operator, 17 september 2026 ("Bouw je dag"): een
+       dagdeel kan nu meerdere sessies dragen, dus "één rij per MOMENTS-
+       entry" liet elk extra item in datzelfde dagdeel stilzwijgend
+       verdwijnen (de oude `.find()` pakte altijd enkel de eerste). Elk item
+       onthoudt zijn eigen `planIndex` (positie in `planDay.items`) — nodig
+       om latere edits (duur/tijd) ondubbelzinnig op ÉÉN item toe te passen,
+       niet per ongeluk op alle items in hetzelfde dagdeel. */
+    if (planDay) {
+      return planDay.items.map((planItem, planIndex) => {
+        const m = MOMENTS.find((mm) => mm.key === planItem.slot) ?? MOMENTS[0];
+        const st = BREATH_STATES[planItem.state];
+        const tech =
+          st.techniques.find((t) => t.key === planItem.techniqueKey) ?? st.techniques[0];
+        return {
+          now: h >= m.from && h < m.to,
+          moment: m,
+          state: st,
+          techName: tech.name,
+          minutes: planItem.minutes,
+          exact: roundsFor(tech, planItem.minutes) * cycleSeconds(tech),
+          done: doneInWindow(m.from, m.to),
+          planIndex,
+          reminderAt: planItem.reminderAt,
+        };
+      });
+    }
+
+    /* ZONDER protocol: ongewijzigd, de live twee/drie-momenten-preview.
+       DEZELFDE motor als het plan uit de vragenlijst (utils/day-plan.ts).
        Hier draaide suggestBreath per uur, en die kent geen variatie tussen
        momenten — dus stond er twee keer FOCUS en week de dag af van wat de
        vragenlijst net beloofd had (operator, 8 augustus 2026). Eén formule,
        één dag. */
-    let prevPick: ReturnType<typeof pickForSlot> | null = null;
+    const livePicks = pickStatesForDay(
+      visible.map((m) => m.key),
+      goalKeys,
+      (slot) => personalOrderForSlot(history, slot),
+    );
     return visible.map((m) => {
-      const picked = pickForSlot(m.key, goalKeys, prevPick);
-      prevPick = picked;
+      const picked = livePicks[m.key];
       const st = BREATH_STATES[picked];
       const tech = st.techniques[0];
-      const dur = st.durations[st.defaultDuration];
-
-      /* Gedaan? Alles wat vandaag binnen dit dagdeel valt telt, ongeacht
-         welke toestand — wie 's ochtends iets anders koos heeft zijn moment
-         gehad. Het plan is een uitnodiging, geen voorschrift. */
-      const done = history.some((e) => {
-        if (e.ts < startOfDay.getTime()) return false;
-        const h = new Date(e.ts).getHours();
-        return h >= m.from && h < m.to;
-      });
-
-      const h = now.getHours();
+      const minutes = st.durations[st.defaultDuration].minutes;
       return {
-        /* Zit je NU in dit dagdeel? Dan mag je hem hiervandaan starten. */
         now: h >= m.from && h < m.to,
         moment: m,
         state: st,
         techName: tech.name,
-        minutes: dur.minutes,
-        exact: roundsFor(tech, dur.minutes) * cycleSeconds(tech),
-        done,
+        minutes,
+        exact: roundsFor(tech, minutes) * cycleSeconds(tech),
+        done: doneInWindow(m.from, m.to),
+        planIndex: null as number | null,
+        reminderAt: minsFor(m.key),
       };
     });
-  }, [history, goalKeys, visible.length]);
+  }, [history, goalKeys, visible, planDay]);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={s.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
-          <ChevronLeft size={22} color="rgba(255,255,255,0.75)" strokeWidth={2.2} />
-        </Pressable>
-        <Text style={s.title}>Your plan</Text>
+        <AnimatedPressable
+          /* Operator, 7 september 2026: eerst opgelost via `push` i.p.v.
+             `replace` in breath-welcome.tsx (zodat stap 7 op de stack
+             bleef staan), maar dat betekende nog steeds stap-voor-stap
+             terugbladeren door de hele keten — "kan dat telkens met 1
+             klik [naar stap 7]?" Nu: `fromBreathWelcome` (zie
+             intensity.tsx) springt in 1 tik naar de bestaande
+             stap-7-instantie. Buiten die context (bv. vanuit Activity)
+             blijft gewone stack-navigatie. */
+          onPress={() =>
+            /* Operator, 11 september 2026: "eens je een echt actief plan
+               hebt, hoort terug NOOIT meer naar onboarding te gaan" — dit
+               scherm is precies de stap NA plan-duration.tsx's `confirm()`
+               (die het plan al opslaat vóór hierheen te navigeren), dus
+               `plan` bestaat hier altijd al zodra je via de protocol-flow
+               binnenkomt. Zonder de `!plan`-check sprong terug hier altijd
+               naar onboarding-stap 6, ook al was het protocol al klaar —
+               exact de gerapporteerde eindeloze lus. */
+            fromBreathWelcome && !plan
+              ? router.navigate({
+                  pathname: '/breath-welcome',
+                  /* Operator, 22 september 2026: breath-welcome.tsx's
+                     slotscherm schoof van index 6 naar 4. */
+                  params: { resumeStep: '4' },
+                } as never)
+              : router.canGoBack()
+                ? router.back()
+                : router.replace('/breath')
+          }
+          hitSlop={12}
+          onPressIn={onBackPressIn}
+          onPressOut={onBackPressOut}
+          style={[s.back, backStyle]}
+        >
+          {/* Operator, 1 okt 2026 ("headers overal consistent"): size
+             22→20, stroke 2.2→2.8 — de "officiële iOS-chevron.backward"-
+             stijl uit build-choice.tsx (18 sept), nu de app-brede
+             standaard. */}
+          <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
+        </AnimatedPressable>
+        {/* "Set timing" zodra er een actief protocol is — dit scherm is dan
+            geen los overzicht meer maar stap 5 van de protocol-flow
+            (operator, 13 augustus 2026: "kunnen we dit set timing of zoiets
+            noemen"). Zonder protocol blijft de oude, generieke naam. */}
+        <Text style={s.title}>{plan ? 'Set timing' : 'Your plan'}</Text>
         <View style={s.back} />
       </View>
 
@@ -208,7 +451,7 @@ export default function PlanScreen() {
 
         {justSet && (
           <View style={s.confirm}>
-            <Bell size={14} color={Brand.accent} strokeWidth={2.4} />
+            <Bell size={14} color={AudioAccent} strokeWidth={2.4} />
             <Text style={s.confirmTxt}>{justSet}</Text>
           </View>
         )}
@@ -217,148 +460,155 @@ export default function PlanScreen() {
             START-knop stond alleen op het moment dat "aan de beurt" was —
             een regel die niemand kon raden. Wie 's ochtends zijn avondsessie
             wil doen, mag dat; het plan is een uitnodiging, geen slagboom. */}
-        {items.map((it) => (
-          <Pressable
-            key={it.moment.key}
-            onPress={() =>
+        {items.map((it, index) => (
+          <PlanItemCard
+            /* Index i.p.v. slot als key/identiteit — een dagdeel kan nu
+               meerdere items dragen, zie de toelichting bij `items`. */
+            key={it.planIndex ?? `live-${it.moment.key}`}
+            it={it}
+            plan={plan}
+            onOpenSession={() =>
               router.push({
                 pathname: '/breath-session',
-                params: { state: it.state.key },
+                /* `minutes` erbij (operator, 13 augustus 2026: "alles moet
+                   mee logisch aangepast en weergegeven worden") — anders
+                   opent de sessie op de ALGEMENE standaardduur van de
+                   toestand, los van wat het protocol er zelf voor koos.
+                   `claimFreeSessionParam()` erbij (operator, 7 september
+                   2026: "als user via 'Customize your full plan' naar hier
+                   doorklikt, is hij de gratis trial dan kwijt?") — wie zijn
+                   ENE gratis kennismakingssessie nog niet verbruikt had,
+                   kan die nu ook via déze kaart claimen, niet enkel via de
+                   ene knop in breath-welcome.tsx. */
+                params: {
+                  ...claimFreeSessionParam(),
+                  state: it.state.key,
+                  minutes: String(it.minutes),
+                  /* Operator, 11 september 2026: "check alles overal, de
+                     oude selectiepagina op breath-session.tsx mag nooit
+                     meer verschijnen" — deze kaart geeft mode+duur al
+                     mee, dus er valt niets te kiezen; zonder `autostart`
+                     toonde het scherm zijn eigen, overbodige kies-UI. */
+                  autostart: '1',
+                },
               })
             }
-            style={[
-              s.card,
-              { borderColor: it.done ? `${it.state.accent}55` : 'rgba(255,255,255,0.09)' },
-            ]}
-            android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
-          >
-            <View style={s.cardTop}>
-              <Text style={[s.moment, { color: it.state.accent }]}>
-                {it.moment.label}
-              </Text>
-              {it.done ? (
-                <View style={[s.tick, { backgroundColor: it.state.accent }]}>
-                  <Check size={12} color="#0a0a0a" strokeWidth={3} />
-                </View>
-              ) : (
-                <ChevronRight
-                  size={17}
-                  color="rgba(255,255,255,0.35)"
-                  strokeWidth={2.2}
-                />
-              )}
-            </View>
-
-            <Text style={s.state}>{it.state.eyebrow}</Text>
-            <Text style={s.detail}>
-              {it.techName} · {it.minutes} min
-            </Text>
-
-            {/* ── De tijd ────────────────────────────────────────────
-                Een echte tijdkiezer van het toestel (operator, 6 augustus
-                2026), met uren én minuten. De rij vaste uren die hier stond
-                was mijn oplossing, niet die van de gebruiker: wie om 7:15
-                opstaat hoort niet te moeten kiezen tussen 7 en 8.
-
-                De notatie volgt het TOESTEL — 8:00 AM of 08:00, afhankelijk
-                van wat daar is ingesteld. Een eigen 12/24-schakelaar in de
-                app zou een tweede plek zijn die hetzelfde regelt, en dat is
-                vandaag al twee keer misgegaan. */}
-            <Pressable
-              style={s.timeRow}
-              onPress={() => setPicking(it.moment.key)}
-            >
-              <Clock size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-              <Text style={s.timeLbl}>Reminder</Text>
-              <Text style={[s.timeVal, { color: it.state.accent }]}>
-                {fmtTime(minsFor(it.moment.key))}
-              </Text>
-              {/* Zichtbaar bewerkbaar (operator, 8 augustus 2026): zonder
-                  het potlood was de tijd een mededeling waar je toevallig
-                  op moest tikken om te ontdekken dat hij een knop was. */}
-              <Pencil
-                size={13}
-                color="rgba(255,255,255,0.4)"
-                strokeWidth={2.2}
-              />
-            </Pressable>
-
-            {it.done && <Text style={s.doneTxt}>Done today</Text>}
-          </Pressable>
+            onOpenDuration={() => setDurationPicking(index)}
+            onOpenTime={() => setPicking(index)}
+            fmtTime={fmtTime}
+          />
         ))}
 
-        {/* Naast het plan blijven alle vijf de deuren open — en dat mag
-            hier gewoon staan (operator, 8 augustus 2026). */}
-        <Pressable
-          style={s.allModes}
-          /* `navigate` en niet `push` (operator, 9 augustus 2026: "gaat naar
-             verkeerde pagina"). Deze pagina staat BUITEN de tab-groep, en
-             een `push` van daar zet een hele nieuwe tab-navigator boven op
-             de bestaande — de bestemming klopt dan wel, maar de weg ernaartoe
-             niet. `navigate` schakelt gewoon om naar de bestaande tab, zoals
-             overal elders vanuit een root-scherm (zie BreathMiniControl).
-
-             De Breath-tab BLEEF GEMONTEERD staan (operator, 10 augustus
-             2026: "gaat naar de welcome page"). Dat was niet het echte
-             welkomstscherm van de app, maar de Breath-tab z'n EIGEN
-             intro-drempel (de gezichten die in de mandala overgaan) — die
-             draait bij elke terugkeer naar de tab opnieuw, en wie hier
-             specifiek op "alle modi" tikt heeft die drempel al gezien en
-             wil de rij van vijf, niet nog een keer landen. skipBreathIntroOnce
-             slaat hem over, exact het mechanisme dat ook een teruggekeerde
-             sessie overslaat. */
-          onPress={() => {
-            skipBreathIntroOnce();
-            router.navigate('/breath' as never);
-          }}
-          android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-        >
-          <Text style={s.allModesTxt}>Explore all modes</Text>
-          <ChevronRight
-            size={16}
-            color="rgba(255,255,255,0.6)"
-            strokeWidth={2.2}
-          />
-        </Pressable>
+        {/* "Explore all modes" alleen buiten de protocol-flow (operator, 13
+            augustus 2026: "op deze pagina hoeft er geen knop met alle modes
+            te staan... hij is nu zijn planning aan het instellen" — een
+            weg-knop tijdens het configureren leidt af/verwart). Zonder
+            actief protocol blijft dit gewoon de bladerknop van vroeger. */}
+        {!plan && (
+          <AnimatedPressable
+            style={[s.allModes, allModesStyle]}
+            /* `navigate` en niet `push` (operator, 9 augustus 2026: "gaat naar
+               verkeerde pagina"). Deze pagina staat BUITEN de tab-groep, en
+               een `push` van daar zet een hele nieuwe tab-navigator boven op
+               de bestaande — de bestemming klopt dan wel, maar de weg ernaartoe
+               niet. `navigate` schakelt gewoon om naar de bestaande tab, zoals
+               overal elders vanuit een root-scherm (zie BreathMiniControl). */
+            onPress={() => {
+              skipBreathIntroOnce();
+              router.navigate('/breath' as never);
+            }}
+            onPressIn={onAllModesPressIn}
+            onPressOut={onAllModesPressOut}
+            android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+          >
+            <Text style={s.allModesTxt}>Explore all modes</Text>
+            <ChevronRight
+              size={16}
+              color="rgba(255,255,255,0.6)"
+              strokeWidth={2.2}
+            />
+          </AnimatedPressable>
+        )}
 
         {/* ── Van voorstel naar afspraak ─────────────────────────────────
-             Een plan dat niets plant is een lijstje (operator, 6 augustus
-             2026). Deze knop zet de herinneringen voor precies deze twee
-             momenten aan — dezelfde die in Settings staan, want twee plekken
-             die hetzelfde regelen lopen altijd uit elkaar.
+             Met een actief protocol staan reminders altijd aan voor de
+             tijden hierboven (de useEffect bovenaan roept syncPlanReminders
+             bij elke wijziging) — deze knop is dan overbodig. Zonder
+             protocol blijft het oude gedrag: een plan dat niets plant is
+             een lijstje (operator, 6 augustus 2026).
 
-             De melding IS de vraag: tikken opent de sessie, wegvegen is nee.
-             Geen tweede bevestiging in de app. */}
-        <Pressable
-          style={[s.remind, planned && s.remindOn]}
-          onPress={async () => {
-            const next = { ...reminders };
-            for (const m of visible) {
-              next[reminderKey('breath', m.key)] = !planned;
+             PROMINENTER dan voorheen (operator, 13 augustus 2026): stond op
+             dezelfde, omlijnde stijl als "Explore all modes" — voor de
+             hoofdactie van dit scherm ("Review & confirm" tijdens
+             onboarding) hoort er geen twijfel te zijn welke knop de
+             belangrijkste is. */}
+        {plan ? (
+          <AnimatedPressable
+            style={[s.primaryCta, primaryCtaStyle]}
+            onPressIn={onPrimaryCtaPressIn}
+            onPressOut={onPrimaryCtaPressOut}
+            onPress={() =>
+              /* Operator, 7 september 2026: "als user de hele agenda flow
+                 doorloopt moet hij toch altijd terug naar die step 7
+                 kunnen gaan" — `onboarding` moet dus WÉL meegegeven worden
+                 aan elke volgende stap, anders raakt de context onderweg
+                 kwijt en weet Agenda niet meer dat terug naar stap 7 moet
+                 i.p.v. naar Activity. */
+              onboarding
+                ? router.push({
+                    pathname: '/plan-summary',
+                    params: {
+                      onboarding: '1',
+                      ...(fromBreathWelcome ? { fromBreathWelcome } : {}),
+                    },
+                  } as never)
+                : router.push('/agenda' as never)
             }
-            if (!planned && !(await ensurePermission())) return;
-            await setReminders(next);
-            void syncReminders(next, at);
-          }}
-        >
-          <Bell
-            size={17}
-            color={planned ? '#0a0a0a' : 'rgba(255,255,255,0.8)'}
-            strokeWidth={2.2}
-          />
-          <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
-            {planned
-              ? `REMINDERS ON · ${visible
-                  .map((m) => fmtTime(minsFor(m.key)))
-                  .join(' · ')}`
-              : 'REMIND ME AT THESE TIMES'}
-          </Text>
-        </Pressable>
+          >
+            <Text style={s.primaryCtaTxt}>
+              {onboarding ? 'REVIEW & CONFIRM' : 'OPEN YOUR AGENDA'}
+            </Text>
+            <ChevronRight size={18} color="#0a0a0a" strokeWidth={2.4} />
+          </AnimatedPressable>
+        ) : (
+          <AnimatedPressable
+            style={[s.remind, planned && s.remindOn, remindStyle]}
+            onPressIn={onRemindPressIn}
+            onPressOut={onRemindPressOut}
+            onPress={async () => {
+              const next = { ...reminders };
+              for (const m of visible) {
+                next[reminderKey('breath', m.key)] = !planned;
+              }
+              if (!planned && !(await ensurePermission())) return;
+              await setReminders(next);
+              void syncReminders(next, at, goalKeys);
+            }}
+          >
+            <Bell
+              size={17}
+              color={planned ? '#0a0a0a' : 'rgba(255,255,255,0.8)'}
+              strokeWidth={2.2}
+            />
+            <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
+              {planned
+                ? `REMINDERS ON · ${visible
+                    .map((m) => fmtTime(minsFor(m.key)))
+                    .join(' · ')}`
+                : 'REMIND ME AT THESE TIMES'}
+            </Text>
+          </AnimatedPressable>
+        )}
 
-        {chosen.length === 0 && (
-          <Pressable style={s.goalCta} onPress={() => router.push('/goal' as never)}>
+        {!plan && chosen.length === 0 && (
+          <AnimatedPressable
+            style={[s.goalCta, goalCtaStyle]}
+            onPress={() => router.push('/build-choice' as never)}
+            onPressIn={onGoalCtaPressIn}
+            onPressOut={onGoalCtaPressOut}
+          >
             <Text style={s.goalCtaTxt}>CHOOSE A GOAL</Text>
-          </Pressable>
+          </AnimatedPressable>
         )}
 
         <Text style={s.foot}>
@@ -380,7 +630,12 @@ export default function PlanScreen() {
         animationType="fade"
         onRequestClose={() => setPicking(null)}
       >
-        <Pressable style={s.pickBackdrop} onPress={() => setPicking(null)}>
+        <AnimatedPressable
+          style={[s.pickBackdrop, pickBackdropStyle]}
+          onPress={() => setPicking(null)}
+          onPressIn={onPickBackdropPressIn}
+          onPressOut={onPickBackdropPressOut}
+        >
           <Pressable
             style={[
               s.pickSheet,
@@ -394,7 +649,7 @@ export default function PlanScreen() {
                 gepropt en saai"). */}
             <View style={s.pickHandle} />
             {(() => {
-              const item = items.find((i) => i.moment.key === picking);
+              const item = picking !== null ? items[picking] : null;
               if (!item) return null;
               return (
                 <>
@@ -402,10 +657,8 @@ export default function PlanScreen() {
                     style={[s.pickAccent, { backgroundColor: item.state.accent }]}
                   />
                   <Text style={s.pickTitle}>
-                    {MOMENTS.find((m) => m.key === picking)!.label.charAt(0) +
-                      MOMENTS.find((m) => m.key === picking)!
-                        .label.slice(1)
-                        .toLowerCase() +
+                    {item.moment.label.charAt(0) +
+                      item.moment.label.slice(1).toLowerCase() +
                       ' time'}
                   </Text>
                   {/* De reden erbij — dit IS de toestand die er nu staat,
@@ -423,24 +676,57 @@ export default function PlanScreen() {
               showsVerticalScrollIndicator={false}
             >
             <View style={s.pickGrid}>
-              {picking !== null &&
+              {picking !== null && items[picking] &&
                 (() => {
-                  const m = MOMENTS.find((x) => x.key === picking)!;
+                  const item = items[picking!];
+                  const m = item.moment;
                   const out: number[] = [];
                   for (let h = m.from; h < m.to; h += 1) {
                     out.push(h * 60, h * 60 + 15, h * 60 + 30, h * 60 + 45);
                   }
-                  const cur = minsFor(picking);
-                  const accent = items.find((i) => i.moment.key === picking)!
-                    .state.accent;
+                  const cur = item.reminderAt;
+                  const accent = item.state.accent;
                   return out.map((mins) => {
                     const on = mins === cur;
                     return (
                       <Pressable
                         key={mins}
                         onPress={async () => {
-                          const slot = picking!;
+                          const slot = item.moment.key;
                           setPicking(null);
+
+                          if (plan && item.planIndex !== null) {
+                            /* Zet de tijd voor DIT item (positie
+                               `item.planIndex`) op ELKE dag van het
+                               protocol — de template herhaalt zich toch al
+                               identiek over de hele horizon (protocol.ts),
+                               dus een tijd hoort dat ook te doen. Operator,
+                               17 september 2026: matchte voorheen op
+                               `slot`, wat twee items in hetzelfde dagdeel
+                               allebei zou raken. */
+                            const planIndex = item.planIndex;
+                            const days = Object.fromEntries(
+                              Object.entries(plan.days).map(([dk, day]) => [
+                                dk,
+                                {
+                                  ...day,
+                                  items: day.items.map((it, i) =>
+                                    i === planIndex
+                                      ? { ...it, reminderAt: mins }
+                                      : it,
+                                  ),
+                                },
+                              ]),
+                            );
+                            const updated = { ...plan, days };
+                            await saveActivePlan(updated);
+                            void syncPlanReminders(updated);
+                            const lbl =
+                              slot.charAt(0).toUpperCase() + slot.slice(1);
+                            setJustSet(lbl + ' — ' + nextFireText(mins));
+                            return;
+                          }
+
                           const next = {
                             ...at,
                             [reminderKey('breath', slot)]: mins,
@@ -459,6 +745,7 @@ export default function PlanScreen() {
                           void syncReminders(
                             reminders[key] ? reminders : on2,
                             next,
+                            goalKeys,
                           );
                           /* Met het moment erbij: "First reminder today
                              at 13:00" zónder context las alsof het hele plan
@@ -493,9 +780,175 @@ export default function PlanScreen() {
             </View>
             </ScrollView>
           </Pressable>
-        </Pressable>
+        </AnimatedPressable>
+      </Modal>
+
+      {/* ── Duur-kiezer ── zelfde als op plan-review.tsx, nu ook bereikbaar
+          NA het opzetten: een protocol is geen contract (operator, 13
+          augustus 2026). */}
+      <Modal
+        visible={durationPicking !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDurationPicking(null)}
+      >
+        <AnimatedPressable
+          style={[s.pickBackdrop, durationBackdropStyle]}
+          onPress={() => setDurationPicking(null)}
+          onPressIn={onDurationBackdropPressIn}
+          onPressOut={onDurationBackdropPressOut}
+        >
+          <Pressable
+            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
+            onPress={() => {}}
+          >
+            <View style={s.pickHandle} />
+            {durationPicking !== null && (() => {
+              const item = durationPicking !== null ? items[durationPicking] : null;
+              if (!item || item.planIndex === null) return null;
+              const planIndex = item.planIndex;
+              /* Operator, 1 okt 2026 ("edit duration... lijkt mij nog oud
+                 systeem"): zelfde discrete `pickChip`-grid als agenda.tsx
+                 had vóór breath-setup.tsx's wheel-redesign (24 sept 2026)
+                 — nu de gedeelde `DurationWheel` (components/
+                 DurationWheel.tsx), identiek aan agenda.tsx's eigen
+                 duur-editor. */
+              return (
+                <>
+                  <View style={[s.pickAccent, { backgroundColor: item.state.accent }]} />
+                  <Text style={s.pickTitle}>{item.state.eyebrow} duration</Text>
+                  <DurationWheel
+                    options={item.state.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
+                    value={item.minutes}
+                    accent={item.state.accent}
+                    trackColor="rgba(255,255,255,0.4)"
+                    recommendedValue={item.state.defaultDuration}
+                    onChange={(v) => void setMinutesForPlanIndex(planIndex, v)}
+                  />
+                </>
+              );
+            })()}
+          </Pressable>
+        </AnimatedPressable>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+/* Eigen component i.p.v. inline in `items.map()` — hooks (press-animatie)
+   mogen niet in een loop/callback staan, dus elke kaart krijgt haar eigen
+   componentinstantie. Zelfde recept als `StartCard` in breath-welcome.tsx. */
+function PlanItemCard({
+  it,
+  plan,
+  onOpenSession,
+  onOpenDuration,
+  onOpenTime,
+  fmtTime,
+}: {
+  it: {
+    done: boolean;
+    state: { accent: string; eyebrow: string };
+    moment: { label: string };
+    techName: string;
+    minutes: number;
+    reminderAt: number;
+  };
+  plan: unknown;
+  onOpenSession: () => void;
+  onOpenDuration: () => void;
+  onOpenTime: () => void;
+  fmtTime: (mins: number) => string;
+}) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onOpenSession}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
+        s.card,
+        { borderColor: it.done ? `${it.state.accent}55` : 'rgba(255,255,255,0.09)' },
+        pressStyle,
+      ]}
+      android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
+    >
+      <View style={s.cardTop}>
+        <Text style={[s.moment, { color: it.state.accent }]}>
+          {it.moment.label}
+        </Text>
+        {it.done ? (
+          <View style={[s.tick, { backgroundColor: it.state.accent }]}>
+            <Check size={12} color="#0a0a0a" strokeWidth={3} />
+          </View>
+        ) : (
+          <ChevronRight
+            size={17}
+            color="rgba(255,255,255,0.35)"
+            strokeWidth={2.2}
+          />
+        )}
+      </View>
+
+      <Text style={s.state}>{it.state.eyebrow}</Text>
+      {plan ? (
+        <Pressable
+          style={s.detailBtn}
+          onPress={onOpenDuration}
+          hitSlop={8}
+        >
+          <Text style={s.detail}>
+            {it.techName} · {it.minutes} min
+          </Text>
+          <Pencil size={12} color="rgba(255,255,255,0.4)" strokeWidth={2.2} />
+        </Pressable>
+      ) : (
+        <Text style={s.detail}>
+          {it.techName} · {it.minutes} min
+        </Text>
+      )}
+
+      {/* ── De tijd ────────────────────────────────────────────
+          Een echte tijdkiezer van het toestel (operator, 6 augustus
+          2026), met uren én minuten. De rij vaste uren die hier stond
+          was mijn oplossing, niet die van de gebruiker: wie om 7:15
+          opstaat hoort niet te moeten kiezen tussen 7 en 8.
+
+          De notatie volgt het TOESTEL — 8:00 AM of 08:00, afhankelijk
+          van wat daar is ingesteld. Een eigen 12/24-schakelaar in de
+          app zou een tweede plek zijn die hetzelfde regelt, en dat is
+          vandaag al twee keer misgegaan. */}
+      <Pressable
+        style={s.timeRow}
+        onPress={onOpenTime}
+      >
+        <Clock size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+        <Text style={s.timeLbl}>Reminder</Text>
+        <Text style={[s.timeVal, { color: it.state.accent }]}>
+          {fmtTime(it.reminderAt)}
+        </Text>
+        {/* Zichtbaar bewerkbaar (operator, 8 augustus 2026): zonder
+            het potlood was de tijd een mededeling waar je toevallig
+            op moest tikken om te ontdekken dat hij een knop was. */}
+        <Pencil
+          size={13}
+          color="rgba(255,255,255,0.4)"
+          strokeWidth={2.2}
+        />
+      </Pressable>
+
+      {it.done && <Text style={s.doneTxt}>Done today</Text>}
+    </AnimatedPressable>
   );
 }
 
@@ -567,9 +1020,11 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
   },
+  /* Huisstijl v4.4: Brand.accent (#3a8fff, Signal Blue) is enkel voor
+     haptic-pulse/"nu actief" — nooit voor selectie-chips. */
   pickChipOn: {
-    borderColor: Brand.accent,
-    backgroundColor: 'rgba(58,143,255,0.12)',
+    borderColor: AudioAccent,
+    backgroundColor: 'rgba(110,133,196,0.12)',
   },
   pickChipTxt: {
     fontFamily: BrandFonts.semibold,
@@ -638,6 +1093,7 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.55)',
   },
+  detailBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   cta: {
     marginTop: 14,
     alignSelf: 'flex-start',
@@ -685,6 +1141,23 @@ const s = StyleSheet.create({
     fontSize: 13.5,
     color: 'rgba(255,255,255,0.85)',
   },
+  primaryCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 10,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#ffffff',
+  },
+  primaryCtaTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
+    letterSpacing: 1.2,
+    color: '#0a0a0a',
+  },
   timeLbl: {
     flex: 1,
     fontFamily: BrandFonts.regular,
@@ -699,17 +1172,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.35)',
-    backgroundColor: 'rgba(58,143,255,0.10)',
+    borderColor: 'rgba(110,133,196,0.35)',
+    backgroundColor: 'rgba(110,133,196,0.10)',
     marginBottom: 14,
   },
   confirmTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12.5,
-    /* Merkblauw, geen fluogroen (operator, 8 augustus 2026). Groen als
-       signaalkleur is voor succes na een handeling met risico; dit is een
-       rustige bevestiging en hoort in de kleur van het merk te spreken. */
-    color: Brand.accent,
+    /* Huisstijl v4.4: dit is een tijdelijke bevestigingsbanner, geen
+       haptic-pulse/"nu actief"-status, dus geen Signal Blue (Brand.accent)
+       meer — AudioAccent is de merkkleur voor tekst op donker. */
+    color: AudioAccent,
   },
   timeVal: { fontFamily: BrandFonts.bold, fontSize: 15, letterSpacing: -0.2 },
   laterTxt: {

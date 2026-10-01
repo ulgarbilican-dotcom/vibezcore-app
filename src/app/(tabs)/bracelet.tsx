@@ -35,29 +35,37 @@
      aangepast (operator-besluit 2026-05-25).
    ─────────────────────────────────────────────────────────────────────── */
 
-import { PreviewBanner } from '@/components/PreviewBanner';
-import { Brand, BrandFonts } from '@/constants/theme';
-import { BREATHWORK_CHOOSER } from '@/data/breathwork-modes';
-import { getModeMeta } from '@/services/ble-contract';
+import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
+import { PreviewPill } from '@/components/PreviewPill';
+import { usePlayerState } from '@/services/audio-player';
+import GradientText, {
+  SUB_COLORS,
+  SUB_POSITIONS,
+} from '@/components/GradientText';
+import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+/* Bron van waarheid voor de 5 haptic-modi (naam + kleur) — CLAUDE.md §5.
+   Niet lokaal opnieuw verzinnen (dat gaf eerder precies de drift die de
+   verwijderde MODES-array had). Aliased: bracelet.tsx had zelf ooit een
+   eigen `MODES`-const. */
+import { MODES as BLE_MODES } from '@/services/ble-contract';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import BraceletControl from '../bracelet-control';
 import { router, useFocusEffect } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  BackHandler,
+  Animated as RNAnimated,
   Dimensions,
-  Easing,
+  Easing as RNEasing,
   Image,
   LayoutAnimation,
   Linking,
   Modal,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -66,6 +74,27 @@ import {
   UIManager,
   View,
 } from 'react-native';
+/* BUG (operator: "ik krijg error" — "[Worklets] Tried to synchronously
+   call a non-worklet anonymous function"): de Reanimated Babel-plugin
+   herkent de callbacks die naar `useAnimatedStyle`/`withTiming`/etc.
+   gaan aan hun IMPORT-NAAM, om ze automatisch tot worklet te compileren.
+   Deze functies hier eerder onder een ALIAS importeren (bv.
+   `useAnimatedStyle as useRAnimatedStyle`) brak die herkenning — de
+   callbacks bleven gewone JS-functies, en Reanimated probeerde ze
+   alsnog synchroon op de UI-thread aan te roepen. Nu de PLAIN
+   (bestaande) reanimated-namen, en in plaats daarvan de react-native-
+   imports die botsten (`Animated`/`Easing`) hernoemd — die hebben geen
+   speciale Babel-herkenning nodig. */
+import ReAnimated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /* LayoutAnimation moet op Android expliciet aangezet worden voor soepele
@@ -82,22 +111,42 @@ if (
 /* Bunny CDN — zelfde pull-zone als audio. Submap /images/ voor bracelet-
    foto's. Pad-namen exact zoals operator ze uploadde, inclusief de
    `vzc (1)`-suffix en spaties (URL-encoded). */
+/* Operator, 14 september 2026: "we gaan de Bracelet-pagina nu eerst
+   volledig transformeren naar Light mode" — zelfde `light`-toggle-patroon
+   als breath-setup/session/Audio Library, alleen hier direct op de al
+   vastgelegde `BrandDark`/`BrandLight` (theme.ts) i.p.v. een eigen lokale
+   kopie — dit scherm gebruikte al exact dat kleurenschema (`C.bg/
+   accent/text/textDim/panel/border/success`), dus de bron hergebruiken
+   is minder om uit elkaar te laten lopen dan 'm hier opnieuw te tikken. */
+/* Operator, 26 september 2026: dark is de nieuwe app-brede default (was
+   light, 14 september) — zelfde hardcoded-schakelaar-patroon, enkel de
+   waarde omgezet. */
+const light = false;
+const C = light ? BrandLight : BrandDark;
+
 const CDN = 'https://vibezcore-audio.b-cdn.net/images';
 /* Iter 9cv (2026-05-31): operator-aangeleverde transparante render →
    bracelet kan nu écht "zweven" op de dark UI zonder witte achtergrond.
    Werkt zowel voor de hero-card (witte bg via renderWrap) als voor de
    Audio PRO landing met transparent prop. */
 const RENDER_URL = `${CDN}/vzc-bracelet%20no%20bg.png`;
+/* Operator ("de bracelet die er eerst stond terug, met zwarte
+   achtergrond"): de echte studio-productfoto — dit was topPhotoHero's
+   foto vóór de hero-redesign (26 september 2026), nu de hero-achtergrond
+   voor de "A closer look"-hotspots i.p.v. de transparante illustratie
+   hierboven. 1024×1536, bracelet zit rond het verticale midden. */
+const HERO_PHOTO_URL = `${CDN}/pic%20hero%20home%202.png`;
 
 /* ────────────────────────────────────────────────────────────────
    OPERATOR-KNOB — verticale positie van de haptic-ring + center-dot
-   op de Free Bracelet hero-render.
+   op de Audio PRO landing hero-render (SonarRender, transparante
+   illustratie). De Free/Bracelet-hero gebruikt sinds 26 september 2026
+   HERO_PHOTO_URL i.p.v. SonarRender — HAPTIC_RING_OFFSET_Y_FREE is
+   daardoor niet meer nodig en verwijderd.
    - Negatief = ring omhoog (richting bovenkant van de bracelet)
    - Positief = ring omlaag (richting onderkant van de bracelet)
    - 1mm ≈ 4 pixels op standaard density
-   Audio PRO landing is hier niet door beïnvloed (blijft 0 = origineel).
    ──────────────────────────────────────────────────────────────── */
-const HAPTIC_RING_OFFSET_Y_FREE = 12; // pixels — verander dit getal om te tunen
 const HAPTIC_RING_OFFSET_Y_AUDIO_PRO = 8; // pixels — Audio PRO landing tune (2mm onder origineel)
 
 /* Waitlist-pagina op de webapp. Operator-besluit: in-app form is
@@ -111,47 +160,21 @@ const WAITLIST_BRACELET_URL = 'https://www.vibezcore.com/subscribe-bracelet';
    blijft voor backwards-compat als operator 'm later wil terugroepen. */
 const WAITLIST_URL = 'https://www.vibezcore.com/';
 
-/* ── Carousel dimensions (How-it-works + Modes) ───────────────────────────
-   Apple iPhone-page-style swipe-carousel met peek van de volgende card.
-   - SIDE_INSET = padding van scherm-rand tot start van eerste card
-   - PEEK       = stukje van de volgende card dat zichtbaar blijft, signal
-                  voor de gebruiker "er is meer"
-   - CARD_GAP   = horizontale ruimte tussen cards
-   - CARD_WIDTH = zichtbare breedte per card
-   - CARD_SNAP  = interval waarop ScrollView vastsnapt bij swipe-einde
-
-   Wordt bij module-load berekend op basis van device-width. Single
-   source of truth voor zowel het JSX als de styles. */
-const SCREEN_WIDTH = Dimensions.get('window').width;
+/* ── Layout constants ──────────────────────────────────────────────────────
+   SIDE_INSET blijft gebruikt door legacy dode stijlen (moduleCard/
+   carouselWrap, zie Styles-sectie).
+   Operator, 26 september 2026: de horizontale swipe-carousels (Modes +
+   Collection) zijn vervangen door vaste grids ("wil heel die pagina
+   anders, nu lijkt dat een slechte website op mobiel") — PEEK/CARD_GAP/
+   CARD_WIDTH/CARD_SNAP/SCREEN_WIDTH/de foto-shimmer waren enkel voor die
+   carousels/de oude fotoheader en zijn verwijderd. */
 const SIDE_INSET = 16;
-/* Iter 9dq v81 (2026-06-03): PEEK opgetrokken van 26 → 70 zodat cards
-   smaller worden — operator-feedback "cards veel te groot en breed".
-   Meer peek van de volgende card = duidelijker affordance dat 'r meer is
-   om te swipen. */
-const PEEK = 70;
-const CARD_GAP = 10;
-const CARD_WIDTH = SCREEN_WIDTH - SIDE_INSET * 2 - PEEK;
-const CARD_SNAP = CARD_WIDTH + CARD_GAP;
-
-/* Series-badge-kleuren. Origin = neutraal grijs (sober), Signature =
-   blauw (accent), Reserve = goud (premium-vibe). Internal IDs blijven
-   'pure'/'premium'/'imperial' (geen data-migratie) — alleen het display
-   wijzigt via SERIES_DISPLAY_NAMES. */
-const SERIES_COLORS = {
-  pure: { bg: 'rgba(255,255,255,0.06)', text: '#bdbdbd' },
-  premium: { bg: 'rgba(58,143,255,0.18)', text: '#3a8fff' },
-  imperial: { bg: 'rgba(212,163,90,0.18)', text: '#d4a35a' },
-} as const;
-
-/* Operator-besluit 2026-06-14: terug naar de oorspronkelijke series-namen
-   Pure / Premium / Imperial. De Iter 9av wijziging naar Origin/Signature/
-   Reserve werd teruggedraaid — de oorspronkelijke namen zijn helderder
-   en consistent met de keys onder de motorkap. */
-const SERIES_DISPLAY_NAMES = {
-  pure: 'Pure',
-  premium: 'Premium',
-  imperial: 'Imperial',
-} as const;
+/* Zelfde subkop-maat als de onboarding (breath-welcome.tsx SUB_SIZE/
+   SUB_TRACK) — niet geëxporteerd vanuit GradientText, dus hier herhaald
+   i.p.v. geïmporteerd (operator, 10 augustus 2026: "subheader gradient
+   doortrekken"). */
+const SUB_SIZE = 12;
+const SUB_TRACK = 2.2;
 
 /* ── Data: 7-step story (How it works) ──────────────────────────────────── */
 
@@ -173,7 +196,9 @@ const STORY: Step[] = [
     n: '02',
     title: 'How it works',
     body:
-      'Calibrated pulses reach your wrist and guide your nervous system toward calm or focus. Notice a shift in 15 to 30 minutes — subtle, but felt.',
+      /* Operator ("guide your nervous system towards calm focus and
+         more"): "calm or focus" dekte maar 2 van de 5 states. */
+      'Calibrated pulses reach your wrist and guide your nervous system toward the state you need — boost, focus, calm, clarity, or sleep. Notice a shift in 15 to 30 minutes — subtle, but felt.',
     tags: ['Haptic Technology', '15–30 min', 'Bottom-up regulation'],
   },
   {
@@ -186,9 +211,13 @@ const STORY: Step[] = [
   {
     n: '04',
     title: 'Materials & build',
+    /* Operator ("geen sterling silver, waar haal je dat vandaan?"): stond
+       hier al fout vóórdat CLOSER_LOOK ernaar verwees — de echte,
+       geverifieerde materiaalclaim staat in faq-content.ts: "high-quality
+       stainless steel" (het slotsysteem), geen sterling silver. */
     body:
       'Hand-assembled, one at a time. Premium 8mm natural gemstones, precision-engineered closure. No two stones alike — each carries its own character.',
-    tags: ['Hand-assembled', 'Natural Gemstone', '925 Sterling Silver'],
+    tags: ['Hand-assembled', 'Natural Gemstone', 'Stainless Steel'],
   },
   {
     n: '05',
@@ -213,324 +242,163 @@ const STORY: Step[] = [
   },
 ];
 
-/* ── Data: 5 Haptic Modes ──────────────────────────────────────────────────
-
-   Namen + duren + kleuren UIT CLAUDE.md §5 (operator-besluit 2026-05-25).
-   Body-tekst + tags uit de HTML-mockup (operator-goedgekeurde copy).
-
-   BELANGRIJK (CLAUDE.md §1, operator-bevestiging 2026-05-26):
-   `wave` (Gamma/Beta/Alpha/Theta/Delta) zijn hersenstaten — die zijn
-   medisch en mogen WIJ NIET CLAIMEN. De firmware tunet de PPS
-   intern op die frequenties, maar de USER-FACING UI toont alleen
-   de state-DIRECTION waar de bracelet je via bottom-up haptiek
-   naartoe begeleidt. Daarom: wave blijft in de data (interne
-   referentie + later evt. control-screen voor geactiveerde
-   bracelet-owners), `direction` is wat de etalage toont. */
-
-type Mode = {
-  app: string;
-  /** Intern alleen. NIET tonen in user-facing UI. Brain-state-label
-   *  voor PPS-tuning (firmware-laag). */
-  wave: string;
-  duration: string;
-  color: string;
-  /** User-facing state-direction. Bottom-up taal (focus/kalmte/rust),
-   *  geen medische claims. Vervangt de eerdere wave-display. */
-  direction: string;
-  head: string;
-  body: string;
-  ideal: string[];
-};
-
-/* Iter 9dq v80 (2026-06-03): per-mode foto's voor de carousel-cards op
-   bracelet-tab. Spiegelt de MODE_IMAGES-map in bracelet-control.tsx —
-   zelfde foto's voor consistentie tussen het marketing-overzicht en de
-   sessie-selectie. Wanneer operator een foto vervangt: beide files
-   updaten (of refactoren naar één gedeelde constant). */
-const MODE_PHOTOS_BY_WAVE: Record<string, string> = {
-  Gamma: 'https://vibezcore-audio.b-cdn.net/images/gamma%20pic.jpg',
-  Beta: 'https://vibezcore-audio.b-cdn.net/images/welcome%20new.png',
-  Alpha: 'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg',
-  Theta:
-    'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
-  Delta:
-    'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg',
-};
-
-const MODES: Mode[] = [
-  {
-    app: 'Boost',
-    wave: 'Gamma',
-    duration: '8–15 min',
-    color: '#FFFFFF', // Iter 8c: rood → wit (zie ble-contract.ts comment)
-    direction: 'Activation',
-    head: 'Sharpens cognitive clarity and accelerates mental processing.',
-    body:
-      'Supports high-level information integration, rapid problem-solving, and peak alertness for demanding tasks.',
-    ideal: [
-      'Intense concentration',
-      'Complex problem-solving',
-      'High-stakes tasks',
-      'Speed and precision',
-    ],
-  },
-  {
-    app: 'Sharp Focus',
-    wave: 'Beta',
-    duration: '15–30 min',
-    color: '#FF9F0A',
-    direction: 'Focus',
-    head: 'Instant focus ignition for moments that demand mental intensity.',
-    body:
-      'Designed to elevate alertness and sustain performance under pressure.',
-    ideal: [
-      'High-intensity work',
-      'Critical precision',
-      'Heavy cognitive load',
-      'Morning activation',
-      'When alertness needs to rise',
-    ],
-  },
-  {
-    app: 'Calm Control',
-    wave: 'Alpha',
-    duration: '15–30 min',
-    color: '#0A84FF',
-    direction: 'Calm focus',
-    head: 'Steady calm for moments that require clear thinking without tension.',
-    body:
-      'Designed to reduce noise, stabilize your state, and keep you mentally present.',
-    ideal: [
-      'Focused work',
-      'Creative thinking',
-      'Social interactions',
-      'Midday reset',
-      'When calm precision matters',
-    ],
-  },
-  {
-    app: 'Clarity',
-    wave: 'Theta',
-    duration: '15–30 min',
-    color: '#BF5AF2',
-    direction: 'Reflection',
-    head: 'Opens space for deeper understanding and inward focus.',
-    body:
-      'Supports insight, creativity, and emotional processing beyond surface thought.',
-    ideal: [
-      'Reflective moments',
-      'Creative exploration',
-      'Emotional processing',
-      'When depth matters',
-    ],
-  },
-  {
-    app: 'Rest & Reset',
-    wave: 'Delta',
-    duration: '25–45 min',
-    color: '#4FA46B', // Iter 8c: groen zachter (zie ble-contract.ts comment)
-    direction: 'Deep rest',
-    head: 'Guides the body toward profound rest and restoration.',
-    body:
-      'Designed to release accumulated tension and support recovery at the deepest level.',
-    ideal: [
-      'Physical recovery',
-      'Nervous system reset',
-      'Pre-sleep wind-down',
-      'Releasing tension',
-    ],
-  },
+/* Operator, 15 september 2026: één trimmed zin per stap voor de niet-
+   getabde "How it works"-lijst — alle 7 punten blijven, enkel de volledige
+   alinea + tags per stap vervangen door de kernzin. Niet uit STORY[i].body
+   afgeleid (zou de eerste zin afknippen, niet per se de beste), maar
+   losstaand geschreven zodat elke regel op zichzelf goed leest. */
+const STORY_SHORT: string[] = [
+  'One HapticCore, fifteen swappable gemstone editions.',
+  'Calibrated pulses on your wrist guide you toward the state you need.',
+  'A precision haptic engine, no screen or notification involved.',
+  'Hand-assembled with natural 8mm gemstones — no two alike.',
+  'Beads click in and out in seconds, no tools needed.',
+  'Sized to your wrist and your choice of gemstone.',
+  'Five modes, each calibrated for a different moment.',
 ];
 
-/* ── Data: Technical Specs ─────────────────────────────────────────────── */
+/* Operator, 26 september 2026: MODES/MODE_SHORT (5 haptic-modi, duplicaat
+   van services/ble-contract.ts — de comments hierboven noteerden al dat
+   deze array "los liep" van die bron van waarheid) verwijderd samen met
+   de modi-grid-sectie. ble-contract.ts blijft de enige bron voor
+   modusnaam/kleur/duur. */
 
-const SPECS = [
-  { val: '16–21cm', lbl: 'Wrist Size' },
-  { val: '8mm', lbl: 'Bead Size' },
-  { val: 'BT 5.0', lbl: 'Bluetooth' },
-  { val: 'Pogo Pin', lbl: 'Charging' },
-  { val: '5', lbl: 'Haptic Modes' },
-  { val: 'App', lbl: 'Control via App' },
-];
-
-/* ── Data: 15 Gemstone Editions ────────────────────────────────────────────
-
-   Image-pad volgt exact de bestandsnamen die operator op Bunny zette
-   (inclusief typo's bronzonite/Shattudkite/Lava vzw/lapiz — bewust niet
-   gecorrigeerd, anders breken de URLs). De `desc` heeft een " — " als
-   scheiding tussen kop-zin (italic in detail-panel) en lichaam (lichter
-   grijs). Series-tag wordt gebruikt voor de filter-tabs + badge-kleur. */
-
-type Series = 'pure' | 'premium' | 'imperial';
-type Edition = {
+/* ── Data: "A closer look" — tabs + hotspots op de bracelet ────────────────
+   Operator, 26 september 2026 ("tabs boven en onder plaatsen die naar
+   specifieke zaken verwijzen, bv haptic core... hoe duidelijk maken waar
+   de haptic core is"): 1-op-1 overgenomen uit de echte, operator-
+   goedgekeurde webpagina-sectie "A closer look / One Bracelet" (huisstijl
+   v5, sectie 7) — zelfde 5 onderwerpen, zelfde copy/tags, niet zelf
+   verzonnen. hotspot = punten op de render die aanwijzen WAAR dat
+   onderdeel zit (top/left in % van heroStage); meerdere punten voor
+   onderwerpen die aan beide kanten van de armband zitten. */
+type CloserLookTopic = {
   key: string;
-  name: string;
-  stone: string;
-  origin: string;
-  series: Series;
-  image: string;
-  desc: string;
+  pill: string;
+  title: string;
+  body: string;
+  tags: string[];
+  hotspots: { top: `${number}%`; left: `${number}%` }[];
 };
-
-const EDITIONS: Edition[] = [
-  /* ── PURE ── */
+/* Operator ("de bracelet die er eerst stond terug, met zwarte
+   achtergrond"): posities herrekend tegen HERO_PHOTO_URL (1024×1536,
+   gedownload en bekeken), niet meer tegen de transparante illustratie.
+   heroStage is 250px hoog en volle breedte; resizeMode="cover" schaalt
+   de foto op de breedte (factor breedte/1024) en snijdt verticaal —
+   zichtbaar venster ≈ 26%–74% van de foto-hoogte, gecentreerd. Elk punt
+   is de echte plek in de foto (top-arc, de blauwe LED, de stalen
+   klik-kralen) omgerekend door die crop, niet een blinde gok. */
+const CLOSER_LOOK: CloserLookTopic[] = [
   {
-    key: 'sentinel',
-    name: 'SENTINEL',
-    stone: 'Lava Stone',
-    origin: 'Arizona, USA',
-    series: 'pure',
-    image: `${CDN}/Lava%20vzw%20(1).jpg`,
-    desc:
-      'Born from fire, hardened by earth. — Rough black surface with a raw, volcanic structure.',
+    key: 'what',
+    pill: 'What is it',
+    /* Operator (Apple-stijl-feedback): "Mind follows body." — sluit aan
+       op de al bestaande bottom-up-positionering ("Body first, mind
+       follows" hieronder / STORY n03 "body settles, mind follows"). */
+    title: 'Mind follows body.',
+    /* Operator (27 september 2026, "eigenlijk moet een lezer na openen van
+       deze 3 punten perfect weten: wat is het? waarvoor dient het? hoe
+       werkt het? wat krijg ik?"): volledige herverdeling van de content
+       over what/core/how — zie de comments bij elk van de drie.
+       Operator (vervolg): "hier moet je niet fifteen editions/materialen
+       beschrijven" — dat is productbeschrijving, hoort niet in "what is
+       it". Puur het effect + het gemak: shift binnen 15-30 min, geen
+       moeite, gewoon dragen. Edities/materialen staan al in Materials/
+       Bead set & fit. */
+    /* Operator (vervolg, 27 september): concrete before→after-paren
+       toevoegen + "neuroscience based" + "effortless, the bracelet does
+       the work" terug. Paren gekozen uit de echte 5 states (niet
+       verzonnen): stressed→calm (Calm Control), tired→alert (Boost),
+       restless→asleep (Sleep) — dekt 3 van de 5 concreet i.p.v. alle 5
+       op te sommen (te druk voor 1 zin). */
+    /* Operator ("body first, mind follows principe in what is it"): de
+       bottom-up-positionering (al gebruikt in STORY n03) hoort hier ook —
+       dat IS het antwoord op "hoe kan dit effortless zijn". */
+    body: 'A neuroscience-based haptic bracelet. Shifts your state — stressed to calm, tired to alert, restless to asleep — within 15 to 30 minutes. Body first, mind follows: effortless, the bracelet does the work.',
+    tags: ['Neuroscience-based', '15–30 min', 'Effortless'],
+    hotspots: [{ top: '23%', left: '50%' }], // top van de kralenboog
   },
   {
-    key: 'phantom',
-    name: 'PHANTOM',
-    stone: 'Black Onyx',
-    origin: 'India',
-    series: 'pure',
-    image: `${CDN}/onyx%20vzc%20(1).jpg`,
-    desc:
-      'Absolute black. No noise, no compromise. — Deep jet black with a flawless, mirror-like finish.',
+    key: 'core',
+    pill: 'HapticCore',
+    /* Operator (Apple-stijl-feedback: "korter, ritmischer, nadruk op
+       voordeel i.p.v. techniek"): "The intelligence inside" zegt niks
+       over de ervaring — nu het directe resultaat. "Instantly" uit de
+       operator-suggestie NIET overgenomen: spreekt de al vastgelegde
+       15-30 min-timing tegen ("What is it" hierboven). */
+    title: 'Feel the shift.',
+    /* Operator ("haptic core is gebaseerd op neuroscience based haptic
+       pulses bottom up regulation. idee shift van state"): dit is nu het
+       "hoe werkt het"-mechanisme — verplaatst uit de oude "How it
+       works"-tekst, die zelf nu de gebruiksflow (dragen + app) beschrijft.
+       Bluetooth/Pogo/App-tags zijn mee verhuisd naar "How it works",
+       want die horen bij het ACTIVEREN via de app, niet bij het
+       mechanisme zelf. */
+    /* Operator ("haptic core mag je meer technische kant beschrijven. de
+       pulsen, bottom-up, neuroscience effect"): dieper op het mechanisme
+       — pulsritme + intensiteit per state, en wat "bottom-up" precies
+       betekent (lichaam-naar-brein, niet andersom). Geen firmware-
+       parameters (PPS/burst_ms/amplitude) — die blijven spec §11.5,
+       nooit in de UI. */
+    /* Operator (vervolg): korter, ritmischer, minder "handleiding"-toon.
+       "Calming your mind" uit de operator-suggestie NIET overgenomen:
+       HapticCore bedient alle 5 states, niet enkel kalmte — zelfde fout
+       als de eerder gecorrigeerde "calm or focus" in How it works. */
+    body: 'A high-precision haptic engine delivers subtle, rhythmic pulses to your wrist — tuned to your active state. Your nervous system responds to the signal directly. No conscious effort needed.',
+    tags: ['Calibrated Pulses', 'Bottom-up Regulation', 'Neuroscience-backed'],
+    hotspots: [{ top: '54%', left: '32%' }], // exact op de blauwe LED
   },
   {
-    key: 'aurum',
-    name: 'AURUM',
-    stone: 'Silver Sheen Obsidian',
-    origin: 'Mexico',
-    series: 'pure',
-    image: `${CDN}/Silver%20sheen%20vzc%20(1).jpg`,
-    desc:
-      'Volcanic glass with a metallic soul. — Black glass ignited with a cold silver glow.',
+    key: 'how',
+    pill: 'How it works',
+    /* Operator (Apple-stijl-feedback): "Set it. Wear it. Forget it." */
+    title: 'Set it. Wear it. Forget it.',
+    /* Operator ("how it works moet gerelateerd zijn aan het dragen en
+       instellen van de bracelet via de app — wear it, dan activeren,
+       vooringesteld of op het moment zelf"): dit was het mechanisme
+       (nu verhuisd naar HapticCore) — hier staat nu de gebruiksflow:
+       dragen → app → preset of live starten. Bluetooth/Pogo verhuisd
+       hierheen vanuit de oude HapticCore-tekst, want pairen/laden hoort
+       bij het gebruiksproces, niet bij de wetenschap erachter. */
+    /* Operator ("niet 'run a preset' — als de preset gezet is moet hij
+       vanzelf starten, geen actie nodig. Of user kiest zelf op het
+       moment zelf wanneer nodig"): "run a preset routine" impliceerde
+       een handeling per keer — een geplande routine start zelf, alleen
+       de op-het-moment-keuze is een actieve tik. */
+    /* Operator (Apple-stijl-feedback, vervolg): ritmischer — "magnetic
+       dock" bewust NIET overgenomen uit de suggestie, niet geverifieerd
+       (zie [[feedback-bracelet-material-stainless-steel]]-achtige les:
+       geen ongeverifieerde specs). */
+    body: 'Slip it on, then connect to the VIBEZCORE app. Routines launch on their own, throughout the day — or switch states instantly, whenever you choose. Pairs over Bluetooth, charges on a pogo dock.',
+    tags: ['Wear it', 'Starts on its own', 'Bluetooth'],
+    hotspots: [{ top: '26%', left: '65%' }], // kraal op de boog, naast "what"
   },
   {
-    key: 'vesper',
-    name: 'VESPER',
-    stone: 'Black Tiger Eye',
-    origin: 'Africa',
-    series: 'pure',
-    image: `${CDN}/black%20tiger%20vzc%20(1).jpg`,
-    desc:
-      'Shadow and light in motion. — Dark bands shifting with a sharp, metallic sheen.',
-  },
-  {
-    key: 'equilibrium',
-    name: 'EQUILIBRIUM',
-    stone: 'Jade',
-    origin: 'China',
-    series: 'pure',
-    image: `${CDN}/jade%20vzc%20(1).jpg`,
-    desc:
-      'Timeless stone of empires. — Dense green with a smooth, almost liquid surface.',
-  },
-  /* ── PREMIUM ── */
-  {
-    key: 'solis',
-    name: 'SOLIS',
-    stone: 'Yellow Tiger Eye',
-    origin: 'Africa',
-    series: 'premium',
-    image: `${CDN}/Yellow%20Tiger%20vzc%20(1).jpg`,
-    desc:
-      'Liquid gold in stone form. — Radiant gold flowing with a sharp, luminous sheen.',
-  },
-  {
-    key: 'genesis',
-    name: 'GENESIS',
-    stone: 'Kambaba Jasper',
-    origin: 'Africa',
-    series: 'premium',
-    image: `${CDN}/Kambaba%20Jasper%20vzc%20(1).jpg`,
-    desc:
-      'Ancient patterns, primal origin. — Deep green marked by ancient, orbital patterns.',
-  },
-  {
-    key: 'aeterna',
-    name: 'AETERNA',
-    stone: 'Agate',
-    origin: 'India',
-    series: 'premium',
-    image: `${CDN}/Agate%20vzc%20(1).jpg`,
-    desc:
-      'Layered over time. Precision shaped by nature. — Layer upon layer carved with surgical precision.',
-  },
-  {
-    key: 'vigor',
-    name: 'VIGOR',
-    stone: 'African Bloodstone',
-    origin: 'Africa',
-    series: 'premium',
-    image: `${CDN}/African%20Bloodstone%20vzc%20(1).jpg`,
-    desc:
-      'The stone of the ancient warrior. — Dark green cut through with deep blood-red strikes.',
-  },
-  {
-    key: 'goldenaurum',
-    name: 'GOLDEN AURUM',
-    stone: 'Golden Sheen Obsidian',
-    origin: 'Mexico',
-    series: 'premium',
-    image: `${CDN}/Golden%20sheen%20vzc%20(1).jpg`,
-    desc:
-      'Black volcanic glass ignited with gold. — Black glass burning with a deep golden reflection.',
-  },
-  /* ── IMPERIAL ── */
-  {
-    key: 'eli',
-    /* Operator-besluit 2026-05-25: ELI = Blue Tiger Eye. De Bunny-foto
-       heet `Star Tiger vzc (1).jpg` (afgeleide marketing-naam van
-       operator), maar de UI-stone-tekst blijft "Blue Tiger Eye" zoals
-       in de oorspronkelijke product-spec. */
-    name: 'ELI',
-    stone: 'Blue Tiger Eye',
-    origin: 'Africa',
-    series: 'imperial',
-    image: `${CDN}/Star%20Tiger%20vzc%20(1).jpg`,
-    desc:
-      'Forged in darkness. Controlled, precise, unshaken. — Midnight blue with a cold, shifting metallic glow.',
-  },
-  {
-    key: 'imperium',
-    name: 'IMPERIUM',
-    stone: 'Lapis Lazuli',
-    origin: 'Afghanistan',
-    series: 'imperial',
-    image: `${CDN}/lapiz%20vzc%20(1).jpg`,
-    desc:
-      'The ultimate hallmark of the elite. — Deep royal blue pierced with natural gold.',
-  },
-  {
-    key: 'cuprum',
-    name: 'CUPRUM',
-    stone: 'Shattuckite',
-    origin: 'Arizona, USA',
-    series: 'imperial',
-    image: `${CDN}/Shattudkite%20vzc%20(1)%20(1).jpg`,
-    desc:
-      'Rare mineral, raw character. — Electric blue and green colliding in raw formation.',
-  },
-  {
-    key: 'ferrum',
-    name: 'FERRUM',
-    stone: 'Bronzite',
-    origin: 'India',
-    series: 'imperial',
-    image: `${CDN}/bronzonite%20vzc%20(1).jpg`,
-    desc:
-      'Forged with the strength of steel. — Dark bronze tones with a forged metallic shimmer.',
-  },
-  {
-    key: 'matrix',
-    name: 'MATRIX',
-    stone: 'African Turquoise',
-    origin: 'Africa',
-    series: 'imperial',
-    image: `${CDN}/Natural%20African%20Turquoise%20vzc%20(1).jpg`,
-    desc:
-      'Shaped by time and terrain. — Green-blue surface fractured with raw matrix veins.',
+    key: 'materials',
+    /* Operator ("bead set en fit en materials mag je samenvoegen"): 2
+       topics → 1. Materiaalfeiten (hand-assembled, stainless steel) +
+       de interchangeable/edities/maat-uitleg samen — het zijn allebei
+       "wat zit erin en past het" vragen, geen aparte onderwerpen. */
+    pill: 'Materials & Fit',
+    /* Operator (Apple-stijl-feedback): "Crafted for your wrist." */
+    title: 'Crafted for your wrist.',
+    /* Operator ("stainless steel weg, premium gemstones"): geen
+       materiaal-spec meer voor het slotsysteem — focus op de edelstenen
+       zelf als het premium-verkoopargument. */
+    body: 'Hand-assembled, one at a time — premium 8mm natural gemstones. Choose from 15 gemstone editions, sized 16–21 cm to your wrist.',
+    tags: ['Premium Gemstones', 'Interchangeable', '15 Editions'],
+    hotspots: [
+      { top: '33%', left: '25%' }, // edelsteen-kralen links
+      { top: '33%', left: '75%' }, // edelsteen-kralen rechts
+      { top: '50%', left: '20%' }, // stalen klik-kraal links, naast de core
+      { top: '50%', left: '83%' }, // stalen klik-kraal rechts
+    ],
   },
 ];
+
+/* Operator, 26 september 2026: EDITIONS/Series/Edition-type (15 gemstone
+   edities) verwijderd samen met de gemstone-collectie-sectie — was
+   uitsluitend data voor die grid + de detail-popup, beide weg. */
 
 /* ── Data: Pricing (placeholders — operator past later aan) ──────────────── */
 
@@ -542,7 +410,14 @@ const EDITIONS: Edition[] = [
 /* Iter v218 (2026-07-04): eur toegevoegd als secundaire hint onder USD.
    Kickstarter is USD-native (KS-pagina zelf toont USD), EUR is contextuele
    conversie voor EU-users. Rate ~0.92 (juli 2026 gemiddeld). */
-type PriceRow = { main: string; old: string; save: string; eur?: string };
+type PriceRow = {
+  main: string;
+  old: string;
+  save: string;
+  eur?: string;
+  eurOld?: string;
+  gbp?: string;
+};
 type PriceSet = {
   bracelet: PriceRow;
   bundle: PriceRow;
@@ -558,20 +433,45 @@ export const PRICING: PriceSet = {
      $119.88 is (pariteit met EUR, geen losse USD-conversie).
      Nieuwe totaal: $299 bracelet + $32 extra + $119.88 audio = $450.88.
      Save $235.88 = 52% korting t.o.v. gecombineerde retail waarde. */
-  bracelet: { main: '$169', old: '$299', save: 'Save $130', eur: '≈ €155' },
-  bundle: { main: '$215', old: '$450.88', save: 'Save $235.88 · 52% off', eur: '≈ €198' },
-  extra: { main: '$32', old: '', save: '', eur: '≈ €30' },
+  /* eur/eurOld (operator, 11 augustus 2026, correctie op de €129 van
+     10 augustus: "als dat de prijs in EU moet voorstellen is dat 149
+     euro?" — terecht, €129 was een verspreking, geen echt bedrag. Dit
+     zijn nu de EXACTE cijfers die al live op de Kickstarter-website staan
+     (crowdfunding-pagina, gezien 10 augustus 2026: "€299 → €149" bracelet,
+     "€448,88 → €199" bundle) — geen valuta-conversie, geen "≈" meer op
+     bundle (dat was een losse geschatte 0,92-omrekening van de USD-prijs,
+     inconsistent met hoe bracelet.eur al werkte). Dit is de bron voor de
+     EUR-abonnementscontext (breath-session.tsx paywall, EUR-only naast de
+     EUR-store-prijzen); de Kickstarter-pagina in de app zelf blijft
+     USD-first (operator-keuze 2026-05-26, "Kickstarter is USD-first"). */
+  /* gbp (operator, 11 augustus 2026: "ook de prijs in pound erbij
+     zetten?"): GEEN live bron zoals eur (dat kwam recht van de
+     Kickstarter-website) — dit volgt hetzelfde patroon als de bestaande
+     audio-abonnementsprijzen (zie project-audio-pricing memory: €9.99 →
+     £8.99, €14.99 → £12.99, €69.99 → £59.99: GBP staat steeds een rond
+     bedrag onder EUR). Toegepast op bracelet (€149→£129, -20) en bundle
+     (€199→£179, -20, zelfde vaste stap als bracelet). Operator-bevestiging
+     nodig vóór dit een echte prijs wordt, niet alleen een schatting. */
+  bracelet: {
+    main: '$169',
+    old: '$299',
+    save: 'Save $130',
+    eur: '€149',
+    eurOld: '€299',
+    gbp: '£129',
+  },
+  bundle: {
+    main: '$215',
+    old: '$450.88',
+    save: 'Save $235.88 · 52% off',
+    eur: '€199',
+    eurOld: '€448.88',
+    gbp: '£179',
+  },
+  extra: { main: '$32', old: '', save: '', eur: '≈ €30', gbp: '≈ £26' },
 };
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
-
-/* Splits "kopzin — body"-desc op de em-dash. Behoudt origineel als er
-   geen em-dash is. */
-function splitDesc(desc: string): { head: string; body: string } {
-  const idx = desc.indexOf(' — ');
-  if (idx < 0) return { head: desc, body: '' };
-  return { head: desc.slice(0, idx), body: desc.slice(idx + 3) };
-}
 
 /* External link — primair via WebBrowser (Custom Tab op Android,
    SFSafariViewController op iOS), fallback naar Linking. Zelfde
@@ -615,26 +515,26 @@ function SonarRender({
      tussen ring1 en ring2 — dat matched het ritme dat de operator
      "echte pulse" noemt (lange dead-time per ring → tussen-puls-
      ruimte ipv constante wave). */
-  const ring1 = useRef(new Animated.Value(0)).current;
-  const ring2 = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
+  const ring1 = useRef(new RNAnimated.Value(0)).current;
+  const ring2 = useRef(new RNAnimated.Value(0)).current;
+  const glow = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
     /* Offset alleen aan de START (setTimeout), niet in de loop —
        anders wordt elke ring's cyclus-lengte verschillend en lopen
        ze uit fase. */
-    const startLoop = (val: Animated.Value, delay: number) => {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(val, {
+    const startLoop = (val: RNAnimated.Value, delay: number) => {
+      const loop = RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(val, {
             toValue: 1,
             duration: 3000,
-            easing: Easing.out(Easing.cubic),
+            easing: RNEasing.out(RNEasing.cubic),
             useNativeDriver: true,
           }),
           /* Instant reset — bij val=1 is opacity al 0, dus geen
              zichtbare flicker. */
-          Animated.timing(val, {
+          RNAnimated.timing(val, {
             toValue: 0,
             duration: 0,
             useNativeDriver: true,
@@ -650,11 +550,11 @@ function SonarRender({
     /* Glow gebruikt LINEAR easing zodat de multi-key opacity-curve
        z'n eigen ritme bepaalt (cubic zou de keyframes vervormen). */
     const startGlowLoop = () => {
-      const loop = Animated.loop(
-        Animated.timing(glow, {
+      const loop = RNAnimated.loop(
+        RNAnimated.timing(glow, {
           toValue: 1,
           duration: 3000,
-          easing: Easing.linear,
+          easing: RNEasing.linear,
           useNativeDriver: true,
         }),
       );
@@ -678,7 +578,7 @@ function SonarRender({
        100% (dead-time, scale terug naar 1 onzichtbaar)
      De dead-time tussen 60% en 100% (= 1.2s rust per ring) is wat
      het pulse-gevoel geeft — tussen pulses een stilte. */
-  const ringStyle = (val: Animated.Value) => ({
+  const ringStyle = (val: RNAnimated.Value) => ({
     opacity: val.interpolate({
       inputRange: [0, 0.12, 0.6, 1],
       outputRange: [0, 0.7, 0, 0],
@@ -731,21 +631,21 @@ function SonarRender({
           fadeDuration={0}
         />
         {/* Iter 9dd: ringOffsetY shift voor per-context tuning. */}
-        <Animated.View
+        <RNAnimated.View
           style={[
             s.sonarRing,
             ringOffsetY ? { marginTop: 5 + ringOffsetY } : null,
             ringStyle(ring1),
           ]}
         />
-        <Animated.View
+        <RNAnimated.View
           style={[
             s.sonarRing,
             ringOffsetY ? { marginTop: 5 + ringOffsetY } : null,
             ringStyle(ring2),
           ]}
         />
-        <Animated.View
+        <RNAnimated.View
           style={[
             s.coreDot,
             ringOffsetY ? { marginTop: 18 + ringOffsetY } : null,
@@ -759,40 +659,6 @@ function SonarRender({
     </View>
   );
 }
-
-/* ── Pricing "what's included"-row helper ─────────────────────────────
-   Klein onderdeeltje: gekleurde checkmark + tekst op één regel.
-   Geëxtraheerd om de pricing-JSX leesbaar te houden (4 stuks per card). */
-function PIncluded({ text }: { text: string }) {
-  return (
-    <View style={pIncludedStyle.row}>
-      <Text style={pIncludedStyle.check}>✓</Text>
-      <Text style={pIncludedStyle.text}>{text}</Text>
-    </View>
-  );
-}
-const pIncludedStyle = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginBottom: 8,
-  },
-  check: {
-    color: Brand.accent,
-    fontSize: 13,
-    fontFamily: BrandFonts.bold,
-    lineHeight: 20,
-    width: 14,
-  },
-  text: {
-    flex: 1,
-    color: Brand.text,
-    fontSize: 14,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 20,
-  },
-});
 
 /* ── Edition detail-panel helper ─────────────────────────────────────────
    Verschijnt direct onder de series-grid waarin de tap viel. Gescheiden
@@ -814,87 +680,49 @@ function LandingBullet({ text }: { text: string }) {
   );
 }
 
-function DetailPanel({ ed, onClose }: { ed: Edition; onClose: () => void }) {
-  const sp = splitDesc(ed.desc);
-  const [zoomed, setZoomed] = useState(false);
+/* Operator ("pills in Smart Bead Bracelet hebben geen animatie" + "kijk
+   ons protocol na, pas overal toe"): huisstijl §5 knop-formule
+   (scale .97 + opacity .85) + §5 "CTA-tik → haptiek" — de pillen hier
+   gebruikten tot nu toe RN's statische `pressed &&`-stijlwissel (een
+   instant snap, geen echte animatie/duur) en geen haptiek. Eén
+   herbruikbare Reanimated-wrapper, analoog aan CardBounce in
+   (tabs)/index.tsx maar met de PLATTE knop-easing (geen spring-
+   overshoot — dit zijn segmented-control-tabs/pillen, geen kaarten). */
+function PillPress({
+  children,
+  style,
+  onPress,
+  accessibilityLabel,
+}: {
+  children: React.ReactNode;
+  style?: object;
+  onPress: () => void;
+  accessibilityLabel?: string;
+}) {
+  const scale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: 1 - (1 - scale.value) * 5,
+  }));
   return (
-    <View style={s.detail}>
-      <Pressable
-        onPress={() => setZoomed((z) => !z)}
-        accessibilityLabel={zoomed ? 'Zoom out' : 'Zoom in (50%)'}
-        style={s.detailImgWrap}
-      >
-        {/* Iter 8c: zoom werkt nu via transform: scale(1.5) op de Image
-            zelf — dat vergroot het hele plaatje (bracelet incl. wit-
-            ruimte) gecentreerd, ipv alleen de container te vergroten
-            (wat alleen de witte rand zou stretchen). Container heeft
-            overflow: hidden voor de clip. */}
-        {/* Iter 9cm (2026-05-31): default popup blijft cover (= perfect).
-            Zoom-factor 1.5 → 1.2 want bij 1.5 werd het beeld 50% groter
-            dan de card en kapte de sides duidelijk af. 1.2 = 20% groter
-            (10% overflow links/rechts) → genoeg voor "inspect"-gevoel
-            zonder dat de bracelet uit het kader valt. */}
-        <Image
-          source={{ uri: ed.image }}
-          style={[
-            s.detailImg,
-            zoomed && { transform: [{ scale: 1.2 }] },
-          ]}
-          resizeMode="cover"
-          resizeMethod="resize"
-          fadeDuration={0}
-        />
-        {/* Zoom-hint chip — alleen visible in unzoomed-state. Subtle. */}
-        {!zoomed && (
-          <View style={s.zoomHint} pointerEvents="none">
-            <Text style={s.zoomHintText}>Tap to zoom</Text>
-          </View>
-        )}
-      </Pressable>
-      {/* Iter 9ax (2026-05-31): floating × close-knop rechtsboven —
-          bespaart ~60px verticale ruimte tov de oude bottom-button.
-          Hit-area 44×44 voor easy tap. Tegen donkere image-zone subtle
-          witte ring + zwarte semi-transparent fill voor contrast. */}
-      <Pressable
-        style={s.detailCloseX}
-        onPress={onClose}
-        hitSlop={8}
-        accessibilityLabel="Close edition details"
-      >
-        <Text style={s.detailCloseXText}>✕</Text>
-      </Pressable>
-      <View style={s.detailBody}>
-        {/* Iter 9au (2026-05-31): Series-badge én Series-spec verwijderd. */}
-        <Text style={s.detailName}>{ed.name}</Text>
-        <Text style={s.detailNat}>
-          {ed.stone} · <Text style={s.detailOrigin}>{ed.origin}</Text>
-        </Text>
-        <View style={s.detailDescWrap}>
-          <Text style={s.detailDescHead}>{sp.head}</Text>
-          {!!sp.body && <Text style={s.detailDescBody}>{sp.body}</Text>}
-        </View>
-        <Text style={s.detailNote}>
-          Each stone is unique in nature. Colors and markings may vary
-          slightly.
-        </Text>
-        <View style={s.detailSpecs}>
-          <View style={s.detailSpec}>
-            <Text style={s.detailSpecLbl}>Stone</Text>
-            <Text style={s.detailSpecVal}>{ed.stone}</Text>
-          </View>
-          <View style={s.detailSpec}>
-            <Text style={s.detailSpecLbl}>Origin</Text>
-            <Text style={s.detailSpecVal}>{ed.origin}</Text>
-          </View>
-          <View style={s.detailSpec}>
-            <Text style={s.detailSpecLbl}>Sizes</Text>
-            <Text style={s.detailSpecVal}>16–21 cm</Text>
-          </View>
-        </View>
-      </View>
-    </View>
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withTiming(0.97, { duration: 80 });
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withTiming(1, { duration: 120 });
+      }}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <ReAnimated.View style={[style, pressStyle]}>{children}</ReAnimated.View>
+    </Pressable>
   );
 }
+
+/* Operator, 26 september 2026: DetailPanel (gemstone-edition-detailpaneel
+   met zoom) verwijderd samen met de collectie-sectie. */
 
 /* ── Main screen ───────────────────────────────────────────────────────── */
 
@@ -913,7 +741,149 @@ export default function BraceletScreen() {
                               waitlist-knop (kleine link, niet dominant)
      Alle 3 zijn additief; je ziet er max 1 tegelijk per zone. */
   const { isPro } = useSubscription();
+  /* Operator, 26 september 2026 ("cta niet bereikbaar, mini-player staat
+     erover op de welcome-pagina van bracelet"): nodig om de intro-overlay
+     hieronder ruimte te laten reserveren voor de mini-player. */
+  const playerState = usePlayerState();
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
+
+  /* Operator, 15 september 2026: "dit is welcome voor bracelet, in de
+     app" — zelfde `intro`-overlay als de Audio Library-tab: foto + Ken
+     Burns-ademing + staggered eyebrow/titel + shimmer-CTA, ALTIJD
+     getoond, zelfde "intro mag zich elke keer tonen"-besluit als bij
+     Audio Library. Vervangt de eerdere kale `topPhotoHero` (foto zonder
+     tekst/CTA).
+
+     BUG (operator: "bracelet welcome is weg nu"): `useState(true)`
+     evalueert maar ÉÉN keer per keer dat dit component daadwerkelijk
+     MONTEERT — en React Navigation's Tabs-navigator monteert een tab
+     maar één keer en houdt 'm daarna gewoon in leven bij elke tab-
+     wissel (geen remount). Wie 'm dus één keer wegtikte (CTA →
+     `finishBraceletIntro`) zag 'm bij terugkeer naar de tab nooit meer
+     — exact "weg". `useFocusEffect` zet de vlag terug op `true` bij
+     ELKE keer dat deze tab focus krijgt, ongeacht of 'ie al gemount
+     was. */
+  const [braceletIntro, setBraceletIntro] = useState(true);
+  const finishBraceletIntro = useCallback(() => setBraceletIntro(false), []);
+  useFocusEffect(
+    useCallback(() => {
+      setBraceletIntro(true);
+    }, []),
+  );
+  /* Operator, 15 september 2026: "foto meer naar rechts zodat de baard
+     niet zichtbaar is, dat is te veel ai" — een basiszoom bovenop de
+     Ken Burns-ademing geeft overhang om te kunnen schuiven; de schuif
+     zelf is een veilig-berekend maximum (zelfde aanpak als de Audio
+     Library-intro) zodat er nooit een lege rand ontstaat, ongeacht
+     schermbreedte.
+     Operator, 30 september 2026 ("de bracelet zelf mag focus krijgen,
+     nu lijkt dat beetje blur"): de bron-foto (`pic hero bracelet app.png`,
+     941×1670) is zelf scherp — de armband staat er haarscherp op (VZC-
+     gesp, blauwe steentjes). Het "blur"-gevoel kwam niet van de foto maar
+     van STAPELING van vergroting: `resizeMode="cover"` op een portret-
+     foto in een volledig-scherm-vlak schaalt 'm al met ~1.4×, en daar
+     bovenop kwam nog een 1.3× basiszoom + Ken Burns-ademing tot 1.06× —
+     samen bijna 2× de eigen resolutie, ver voorbij wat de foto aankan.
+     Vervolg, zelfde dag ("haar/baard van de man ogen een beetje AI-
+     achtig, hoe lossen we dat op"): eerste poging ging naar 1.12, maar
+     `BRACELET_INTRO_MAX_SHIFT_X` schaalt MEE met deze zoom (zie de
+     formule hieronder) — bij 1.12 bleef er nog maar ~10px schuifruimte
+     over, veel te weinig om het gezicht/haar nog weg te schuiven zoals
+     de oorspronkelijke 1.3 deed. Er zit een harde afruil in DEZE foto
+     (arm opgetrokken tot naast het gezicht — pols en hoofd staan op
+     bijna dezelfde hoogte, dus geen crop kan het ene tonen zonder het
+     andere dichtbij te houden): meer schuifruimte = meer zoom = meer
+     blur. 1.2 is het gekozen midden — houdt ~56% van de oorspronkelijke
+     schuifruimte (genoeg om het gezicht grotendeels uit beeld te
+     schuiven) terwijl de totale vergroting toch een flink stuk onder de
+     oude ~2× blijft. ECHTE oplossing als dit nog niet ver genoeg gaat:
+     een nieuwe, dichtere close-up-foto van enkel pols+armband (geen
+     gezicht in the frame) — dat maakt deze hele afruil overbodig. */
+  const BRACELET_INTRO_ZOOM = 1.2;
+  const BRACELET_INTRO_MAX_SHIFT_X = Math.max(
+    0,
+    ((BRACELET_INTRO_ZOOM - 1) * Dimensions.get('window').width) / 2 - 15,
+  );
+  const BRACELET_INTRO_SHIFT_X = BRACELET_INTRO_MAX_SHIFT_X;
+  /* "Foto beetje laten zakken" — positieve translateY schuift de foto
+     naar beneden. Zelfde veiligheidsberekening als de horizontale
+     schuif hierboven, nu op schermhoogte. */
+  const BRACELET_INTRO_MAX_SHIFT_Y = Math.max(
+    0,
+    ((BRACELET_INTRO_ZOOM - 1) * Dimensions.get('window').height) / 2 - 15,
+  );
+  const BRACELET_INTRO_SHIFT_Y = Math.min(40, BRACELET_INTRO_MAX_SHIFT_Y);
+  const introKenBurns = useSharedValue(1);
+  useEffect(() => {
+    if (!braceletIntro) return;
+    introKenBurns.value = withRepeat(
+      /* 1.06 → 1.04 (30 september 2026, zelfde blur-fix als
+         BRACELET_INTRO_ZOOM hierboven): de ademing zelf stapelt boven op
+         de basiszoom, dus telt volledig mee in de totale vergroting. */
+      withTiming(1.04, { duration: 18000, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [braceletIntro, introKenBurns]);
+  const introKenBurnsStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: introKenBurns.value * BRACELET_INTRO_ZOOM },
+      { translateX: BRACELET_INTRO_SHIFT_X },
+      { translateY: BRACELET_INTRO_SHIFT_Y },
+    ],
+  }));
+  const introEyebrowReveal = useSharedValue(0);
+  const introTitleReveal = useSharedValue(0);
+  useEffect(() => {
+    if (!braceletIntro) return;
+    introEyebrowReveal.value = withDelay(
+      300,
+      withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }),
+    );
+    introTitleReveal.value = withDelay(
+      520,
+      withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [braceletIntro]);
+  const introEyebrowStyle = useAnimatedStyle(() => ({
+    opacity: introEyebrowReveal.value,
+    transform: [{ translateY: 10 * (1 - introEyebrowReveal.value) }],
+  }));
+  const introTitleStyle = useAnimatedStyle(() => ({
+    opacity: introTitleReveal.value,
+    transform: [{ translateY: 10 * (1 - introTitleReveal.value) }],
+  }));
+  const introCtaScale = useSharedValue(1);
+  const introCtaPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: introCtaScale.value }],
+  }));
+  const introShimmer = useSharedValue(-1);
+  useEffect(() => {
+    if (!braceletIntro) return;
+    introShimmer.value = withRepeat(
+      withSequence(
+        withTiming(-1, { duration: 0 }),
+        withDelay(2600, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })),
+        withDelay(1200, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+  }, [braceletIntro, introShimmer]);
+  const introShimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: introShimmer.value * 170 }, { rotate: '18deg' }],
+  }));
+  /* Operator, 16 september 2026 ("de flow hoe dat stopt is amateuristisch
+     — moet verdwijnen, niet plots stoppen"): de root cause was dat de
+     streak bij value=+1 nog GEWOON zichtbaar in beeld stond (translateX
+     260 is te weinig reisafstand voor een schermbrede foto) — 'm dus
+     1800ms zichtbaar liet "plakken" voor 'ie ineens terugsprong. Fix:
+     reisafstand nu SCREEN_WIDTH, zodat de streak bij BEIDE uitersten
+     (-1 én +1) volledig buiten de geclipte fotobox valt — de instant
+     reset (duration:0) gebeurt daardoor altijd onzichtbaar, en de pauze
+     valt terwijl de streak al verdwenen is i.p.v. nog zichtbaar te
+     hangen. */
   /* Iter 9cr (2026-05-31): Audio PRO landing-state. False = toont
      teaser-landing, true = toont volledige marketing-pagina. Resets
      elke tab-focus zodat user bij terugkomst weer op de landing belandt. */
@@ -987,85 +957,108 @@ export default function BraceletScreen() {
      indicator (iPhone) of gesture-bar (Android) zakken. */
   const safeInsets = useSafeAreaInsets();
 
+  /* Operator, 26 september 2026 ("op volledige scherm zonder scroll
+     premium weergegeven"): de nieuwe zwarte hero moet exact het
+     zichtbare scherm vullen zodat 'ie zonder scrollen helemaal te zien
+     is.
+     Operator ("cta staat deels onder de tabbladen"): TAB_BAR_HEIGHT was
+     een vaste 64 — maar de échte tabBarStyle.height in (tabs)/_layout.tsx
+     is `62 + insets.bottom` (gebaren-navigatie-balk komt daar nog eens
+     bovenop). Zonder die insets.bottom mee te rekenen was heroFullHeight
+     stelselmatig te groot, en schoof de CTA precies dat stuk onder de
+     tab bar. Nu 62 + safeInsets.bottom, exact zoals _layout.tsx. */
+  const TAB_BAR_HEIGHT = 62 + safeInsets.bottom;
+  const PREVIEW_PILL_HEIGHT = 36; // PreviewPill wrap+pill, approx
+  const heroFullHeight = Math.max(
+    440,
+    Dimensions.get('window').height -
+      safeInsets.top -
+      TAB_BAR_HEIGHT -
+      (isBraceletOwner ? 0 : PREVIEW_PILL_HEIGHT),
+  );
+
   /* Iter 9v: owners zien BraceletControl INLINE in deze tab. Voorheen
      deden we router.replace('/bracelet-control'), maar dat is een
      Stack-route buiten de (tabs) groep → tab-bar verdween. Door
      <BraceletControl /> direct te renderen blijft de tab-bar zichtbaar
      en kan user makkelijk naar Audio of Account switchen. */
 
-  /* Carousel-state (How it works + Modes). Eén active-index per
-     carousel; gesynchroniseerd met de scroll-positie via onMomentum-
-     ScrollEnd. Dots onder elke carousel reflecteren `active*` en
-     kunnen via tap teruggrijpen op `jumpTo*`. */
-  const [activePill, setActivePill] = useState(0);
-  const [activeMode, setActiveMode] = useState(0);
-  const stepScrollRef = useRef<ScrollView>(null);
-  const modeScrollRef = useRef<ScrollView>(null);
+  /* Operator, 15 september 2026 ("een app is om te doen, niet om te
+     lezen — gooi de 7 tekststappen van het hoofdscherm af"): "How it
+     works" leeft niet langer als vaste sectie op de pagina. De 7 stappen
+     (STORY, zie boven) blijven wel bereikbaar — via een klein "i"-knopje
+     rechtsboven — voor de twijfelende koper die de details wél wil
+     lezen, zonder dat het hoofdscherm ermee volgeplakt staat. */
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
-  /* Carousel-scroll handlers — bij momentum-end snap-positie afleiden
-     en de active-index updaten. Math.round zodat een snap exact op 'n
-     veelvoud van CARD_SNAP ook bij rounding-errors klopt. */
-  const onStepScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_SNAP);
-    if (idx !== activePill) setActivePill(idx);
-  };
-  const onModeScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_SNAP);
-    if (idx !== activeMode) setActiveMode(idx);
-  };
+  /* Operator, 26 september 2026 ("tabs boven en onder plaatsen die naar
+     specifieke zaken verwijzen ... hoe duidelijk maken waar de haptic
+     core is"): welk "A closer look"-onderwerp actief is. `null` = geen
+     popup open (pills/hotspots zijn dan allemaal neutraal). */
+  const [closerLookIndex, setCloserLookIndex] = useState<number | null>(null);
 
-  /* Dot-tap → programmatische scroll naar de gekozen card. */
-  const jumpToStep = (i: number) => {
-    setActivePill(i);
-    stepScrollRef.current?.scrollTo({ x: i * CARD_SNAP, animated: true });
-  };
-  const jumpToMode = (i: number) => {
-    setActiveMode(i);
-    modeScrollRef.current?.scrollTo({ x: i * CARD_SNAP, animated: true });
-  };
+  /* Operator ("verwijder die 5 losse pillen, maak 1 nieuwe pill met 5
+     states, zet de 5 states in de popup met kleur en info"): geen 5
+     losse tikbare pillen meer — 1 pill die de 5 modi samenvat, tik erop
+     opent 1 sheet met alle 5 (elk met kleur-stip + naam + duur/blurb). */
+  const [statesInfoOpen, setStatesInfoOpen] = useState(false);
 
-  /* Series-filter voor de collection. Default `imperial`. */
-  const [series, setSeries] = useState<Series>('imperial');
+  /* Operator, 26 september 2026 (Apple-app-feedback: "subtiel pulserende,
+     semitransparante stipjes op de hardware"): zelfde "ademende puls,
+     2.4s cyclus" als een status-stip (huisstijl §5) — één shared value,
+     continu lopend, gebruikt door de actieve hotspot(s) als expanding
+     ring. */
+  const hotspotPulse = useSharedValue(0);
+  useEffect(() => {
+    hotspotPulse.value = withRepeat(
+      withTiming(1, { duration: 2400, easing: Easing.out(Easing.ease) }),
+      -1,
+      false,
+    );
+  }, [hotspotPulse]);
+  const hotspotPulseStyle = useAnimatedStyle(() => ({
+    opacity: 0.55 * (1 - hotspotPulse.value),
+    transform: [{ scale: 1 + hotspotPulse.value * 1.2 }],
+  }));
 
-  /* Welke edition is uitgeklapt voor detail-panel. `null` = niets. */
-  const [selectedEdition, setSelectedEdition] = useState<string | null>(null);
+  /* Operator ("heb je ook met de animaties rekening gehouden? kijk
+     document protocol na"): huisstijl §5 — "bij het openen van een
+     pagina/scherm: staggered fade-up, titel 0ms → subkop 200ms →
+     beeld 400ms → CTA 600ms". De nieuwe hero (header/pillen/foto/CTA)
+     verscheen tot nu toe instant, zonder die stagger. Vier shared
+     values, één per blok, elk fade+translateY(20→0). */
+  const heroHeaderIn = useSharedValue(0);
+  const heroPillsIn = useSharedValue(0);
+  const heroPhotoIn = useSharedValue(0);
+  const heroCtaIn = useSharedValue(0);
+  useEffect(() => {
+    const cfg = { duration: 500, easing: Easing.out(Easing.cubic) };
+    heroHeaderIn.value = withDelay(0, withTiming(1, cfg));
+    heroPillsIn.value = withDelay(200, withTiming(1, cfg));
+    heroPhotoIn.value = withDelay(400, withTiming(1, cfg));
+    heroCtaIn.value = withDelay(600, withTiming(1, cfg));
+  }, [heroHeaderIn, heroPillsIn, heroPhotoIn, heroCtaIn]);
+  const fadeUpStyle = (v: typeof heroHeaderIn) =>
+    useAnimatedStyle(() => ({
+      opacity: v.value,
+      transform: [{ translateY: (1 - v.value) * 20 }],
+    }));
+  const heroHeaderInStyle = fadeUpStyle(heroHeaderIn);
+  const heroPillsInStyle = fadeUpStyle(heroPillsIn);
+  const heroPhotoInStyle = fadeUpStyle(heroPhotoIn);
+  const heroCtaInStyle = fadeUpStyle(heroCtaIn);
 
-  /* Free Breathwork chooser modal — opent vanuit de discovery-card
-     onderaan de Bracelet tab. Toont de 5 breathwork-protocols zodat
-     de gebruiker de juiste state kiest vóór navigatie naar
-     bracelet-control (met ?mode=X&breathwork=1). Identiek aan de Audio
-     tab versie — één coherente UX. */
-  const [breathChooserOpen, setBreathChooserOpen] = useState(false);
+  /* Huisstijl §5: "Indrukken: scale(.97) + opacity: .85" — CTA-tik-
+     feedback (zelfde formule als introCta hierboven) + "CTA-tik →
+     haptiek: een tik op de primaire CTA geeft een lichte haptic-
+     selection-tik". */
+  const heroCtaScale = useSharedValue(1);
+  const heroCtaPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heroCtaScale.value }],
+    opacity: 0.85 + 0.15 * (heroCtaScale.value - 0.97) / 0.03,
+  }));
 
   /* Currency-toggle weggehaald 2026-05-26: alleen USD tonen. */
-
-  /* Android hardware-back terwijl de edition-detail overlay open is →
-     sluit de overlay (= UX-conventie, back nooit door een overlay
-     heen laten propagaderen anders verlaat user de Bracelet-tab). */
-  useEffect(() => {
-    if (!selectedEdition) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      setSelectedEdition(null);
-      return true;
-    });
-    return () => sub.remove();
-  }, [selectedEdition]);
-
-  /* Series-filter: lijst editions waar de huidige series bij past. */
-  const visibleEditions = EDITIONS.filter((e) => e.series === series);
-
-  /* Active edition voor detail-panel (null wanneer niets geselecteerd). */
-  const detailEdition = selectedEdition
-    ? EDITIONS.find((e) => e.key === selectedEdition) ?? null
-    : null;
-
-  /* Wisselen series sluit een open detail-panel. */
-  const switchSeries = (next: Series) => {
-    setSeries(next);
-    setSelectedEdition(null);
-  };
-
-  const price = PRICING;
 
   /* Iter 9v: owners krijgen BraceletControl inline binnen de tab.
      Tab-bar blijft zichtbaar, geen marketing-flash. */
@@ -1091,27 +1084,83 @@ export default function BraceletScreen() {
   if (showAudioProLanding && !exploreUnlocked) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
-        {/* Iter 9dq v79: zelfde preview-banner als de main bracelet-tab
-            route — Audio PRO landing is ook bracelet-content. */}
-        <PreviewBanner />
+        {/* Operator, 15 september 2026: "de bracelet welcome page moet
+           ook altijd standaard in staan" — deze Audio-PRO-landing was
+           een APARTE early return, dus miste de intro-overlay hierboven
+           volledig (die leefde alleen in de hoofd-return eronder). Zelfde
+           blok hier, met dezelfde shared values (dit is nog steeds
+           hetzelfde component, geen aparte hook-scope). */}
+        {braceletIntro && (
+          <View style={[StyleSheet.absoluteFill, s.introOverlay]}>
+            <ReAnimated.View style={[StyleSheet.absoluteFill, introKenBurnsStyle]}>
+              <Image
+                source={{ uri: `${CDN}/pic%20hero%20bracelet%20app.png` }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </ReAnimated.View>
+            <View
+              style={[
+                s.introTextWrap,
+                playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT + 12 },
+              ]}
+            >
+              <ReAnimated.Text style={[s.introEyebrow, introEyebrowStyle]}>
+                KICKSTARTER · FALL 2026
+              </ReAnimated.Text>
+              <ReAnimated.Text style={[s.introTitle, introTitleStyle]}>
+                Smart Bead Bracelet
+              </ReAnimated.Text>
+              <ReAnimated.View
+                style={[{ marginTop: 28, alignSelf: 'stretch' }, introCtaPressStyle]}
+              >
+                <Pressable
+                  onPress={finishBraceletIntro}
+                  onPressIn={() => {
+                    introCtaScale.value = withTiming(0.96, { duration: 80 });
+                  }}
+                  onPressOut={() => {
+                    introCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  }}
+                  style={s.introCtaWrap}
+                  android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+                  accessibilityLabel="Explore the Smart Bead Bracelet"
+                >
+                  <View style={s.introCta}>
+                    <Text style={s.introCtaTxt}>Explore Bracelet</Text>
+                    <ReAnimated.View
+                      style={[s.introCtaShimmer, introShimmerStyle]}
+                      pointerEvents="none"
+                    >
+                      <LinearGradient
+                        colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    </ReAnimated.View>
+                  </View>
+                </Pressable>
+              </ReAnimated.View>
+            </View>
+          </View>
+        )}
+        {/* Iter 9dq v79: zelfde preview-indicator als de main bracelet-tab
+            route — Audio PRO landing is ook bracelet-content.
+            Operator, 17 september 2026: volle-breedte oranje
+            PreviewBanner → neutrale PreviewPill, zelfde als
+            bracelet-control.tsx. */}
+        <PreviewPill />
         <ScrollView
           ref={landingScrollRef}
           contentContainerStyle={s.landingScroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Iter 9ct (2026-05-31): Kickstarter-row is nu de eyebrow
-              (member-text weg). 6 bullets in een 2×3 grid met de echte
-              core features (bottom-up regulation als eerste = HET
-              fundament onder de bracelet). */}
-          <View style={s.landingKsEyebrowRow}>
-            <Text style={s.landingKsDate}>
-              KICKSTARTER · SEPT 1, 2026
-            </Text>
-            <View style={s.landingKsBadge}>
-              <Text style={s.landingKsBadgeText}>EARLY BIRD</Text>
-            </View>
-          </View>
-          <Text style={s.landingTitle}>The Smart Bead{'\n'}Bracelet</Text>
+          {/* Operator, 15 september 2026: "daar staat te veel, wat doen
+             we" — "KICKSTARTER · FALL 2026" + "Smart Bead Bracelet"
+             stond hier NOG een keer, direct na de nieuwe volledige-
+             scherm-intro die exact diezelfde boodschap al bracht. Weg —
+             na de intro gaat de pagina nu direct door met de bullets. */}
 
           {/* 2×3 bullet-grid — 6 core features horizontaal. */}
           <View style={s.landingBulletGrid}>
@@ -1140,7 +1189,7 @@ export default function BraceletScreen() {
           <Pressable
             style={s.landingCtaTight}
             onPress={() => setExploreUnlocked(true)}
-            android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
+            android_ripple={{ color: 'rgba(10,10,12,0.15)' }}
             accessibilityLabel="Explore the full bracelet page"
           >
             <Text style={s.landingCtaText}>Check it out</Text>
@@ -1161,17 +1210,404 @@ export default function BraceletScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
-      {/* Iter v194 (2026-07-04): PreviewBanner alleen voor NIET-owners.
+      {/* Operator, 15 september 2026: "dit is welcome voor bracelet, in
+         de app" — overlay-laag, zelfde opzet als de Audio Library-intro
+         (zie de toelichting bij `braceletIntro` hierboven): foto + Ken
+         Burns + staggered tekst + shimmer-CTA, boven al de rest in
+         gerenderd zodat 'ie sowieso bovenop ligt ongeacht waar in de
+         boom, en toont zich bij ELKE montage van deze tab. */}
+      {braceletIntro && (
+        <View style={[StyleSheet.absoluteFill, s.introOverlay]}>
+          <ReAnimated.View style={[StyleSheet.absoluteFill, introKenBurnsStyle]}>
+            <Image
+              source={{ uri: `${CDN}/pic%20hero%20bracelet%20app.png` }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          </ReAnimated.View>
+          {/* Operator, 15 september 2026: "heel goed, geen gradient
+             onderaan" — verwijderd (zelfde soort uitdoving als bij
+             Audio Library, hier bleek de foto zelf al genoeg contrast
+             te geven voor de tekst eronder). */}
+          <View
+            style={[
+              s.introTextWrap,
+              playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT + 12 },
+            ]}
+          >
+            <ReAnimated.Text style={[s.introEyebrow, introEyebrowStyle]}>
+              KICKSTARTER · FALL 2026
+            </ReAnimated.Text>
+            <ReAnimated.Text style={[s.introTitle, introTitleStyle]}>
+              Smart Bead Bracelet
+            </ReAnimated.Text>
+            <ReAnimated.View
+              style={[{ marginTop: 28, alignSelf: 'stretch' }, introCtaPressStyle]}
+            >
+              <Pressable
+                onPress={finishBraceletIntro}
+                onPressIn={() => {
+                  introCtaScale.value = withTiming(0.96, { duration: 80 });
+                }}
+                onPressOut={() => {
+                  introCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                }}
+                style={s.introCtaWrap}
+                android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
+                accessibilityLabel="Explore the Smart Bead Bracelet"
+              >
+                <View style={s.introCta}>
+                  <Text style={s.introCtaTxt}>Explore Bracelet</Text>
+                  <ReAnimated.View
+                    style={[s.introCtaShimmer, introShimmerStyle]}
+                    pointerEvents="none"
+                  >
+                    <LinearGradient
+                      colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </ReAnimated.View>
+                </View>
+              </Pressable>
+            </ReAnimated.View>
+          </View>
+        </View>
+      )}
+
+      {/* Iter v194 (2026-07-04): preview-indicator alleen voor NIET-owners.
           Echte bracelet-owners (die betaald hebben + code hebben ingevoerd)
-          zien deze banner niet — voor hen is de bracelet een echt product,
-          niet een preview. Guard voorkomt "PREVIEW · Launching Fall
-          2026" tekst op owner-scherm die suggereert het nep is. */}
-      {!isBraceletOwner && <PreviewBanner />}
+          zien deze niet — voor hen is de bracelet een echt product, niet
+          een preview.
+          Operator, 17 september 2026 ("bovenaan ook tekst preview zoals in
+          bracelet control, niet in gele strip"): volle-breedte oranje
+          PreviewBanner → neutrale PreviewPill. */}
+      {!isBraceletOwner && <PreviewPill />}
       <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* Operator, 26 september 2026: volledige-scherm hero (geen scroll
+           nodig om 'm heel te zien) — header + sub + 5-states-pil-rij, de
+           echte productfoto (HERO_PHOTO_URL, cover + gradient naar zwart)
+           met "A closer look"-pills + hotspots (1-op-1 de echte
+           webpagina-sectie), en onderaan Preview Control Center + Reserve
+           on Kickstarter. Vervangt de vorige "Launching / Fall 2026"-tekst
+           + foto van een arm, én de modi-grid/collectie/pricing-card/
+           breathwork-kaart die hieronder stonden (operator: "wil heel die
+           pagina anders ... alles onderaan verwijderen"). */}
+        <View style={[s.productHero, { height: heroFullHeight }]}>
+          <ReAnimated.View style={[s.heroTopGroup, heroHeaderInStyle]}>
+            {/* Operator, 26 september 2026 ("header links subheader
+               grijs"): de intro-stijlen (introEyebrow/introTitle) zijn
+               gecentreerd — correct voor de modale volledige-scherm-intro
+               hierboven, maar dit is een gewone pagina-header en die is
+               overal elders in de app links uitgelijnd (zie sectionHead-
+               instanties verderop in dit bestand). Subheader is gewone
+               gedimde tekst (C.textDim), geen accentkleur. */}
+            {/* Operator (Apple-HIG-feedback: "twee grote acties vechten om
+               aandacht — Kickstarter-promotie verplaatsen naar een
+               subtiele banner bovenaan"): de eyebrow is nu zelf de
+               Kickstarter-ingang (tikbaar → waitlist) i.p.v. een losse
+               tekstlink onderaan naast de primaire CTA. Zie
+               heroBottomGroup: nog maar 1 actie daar. */}
+            <Pressable
+              onPress={() => openExternal(WAITLIST_BRACELET_URL)}
+              hitSlop={8}
+              accessibilityLabel="Kickstarter — Fall 2026, reserve nu"
+            >
+              <Text style={s.heroEyebrowTop}>LAUNCHING · FALL 2026 →</Text>
+            </Pressable>
+            <Text style={s.heroTitleTop}>Smart Bead Bracelet</Text>
+            <Text style={s.heroSubTop}>Instant State Control</Text>
+          </ReAnimated.View>
+
+          {/* Operator ("1 nieuwe pill met 5 states, zet de 5 states in de
+             popup"): maakt "Instant State Control" hierboven concreet —
+             1 pill met de 5 echte modus-kleuren (ble-contract.ts, bron
+             van waarheid) als stippen; tik opent 1 sheet met alle 5. */}
+          {/* Operator ("kunnen dat transparante blur pills worden"): echte
+             BlurView (niet rgba-fake-glass, zie [[feedback-real-blurview-
+             not-fake-glass]]) i.p.v. een effen donker paneel. */}
+          <ReAnimated.View style={heroPillsInStyle}>
+          <PillPress
+            style={{ alignSelf: 'flex-start' }}
+            onPress={() => setStatesInfoOpen(true)}
+            accessibilityLabel="5 haptic states — meer info"
+          >
+            <BlurView intensity={40} tint="dark" style={s.statesSummaryPill}>
+              {BLE_MODES.map((m) => (
+                <View
+                  key={m.mode}
+                  style={[
+                    s.statesSummaryDot,
+                    { backgroundColor: m.color },
+                    m.color === '#FFFFFF' && s.modeSwipeDotOutline,
+                  ]}
+                />
+              ))}
+              <Text style={s.statesSummaryText}>5 States</Text>
+            </BlurView>
+          </PillPress>
+
+          {/* Operator, 26 september 2026 ("tabs boven en onder plaatsen die
+             naar specifieke zaken verwijzen"): pill-tabs boven de render —
+             tikken selecteert een onderwerp, licht het bijbehorende punt
+             op de bracelet op, en opent de detail-popup onderaan. */}
+          {/* Operator, 26 september 2026 (Apple-app-feedback: "knoppenwolk
+             vervangen door horizontaal segmented control, met je duim
+             doorheen swipen"): losse rij die wrapte naar 2-3 regels →
+             één horizontale swipe-strip, zoals een echte iOS tab-strip. */}
+          {/* Operator ("nog altijd heel hoog", 4de poging): de vorige
+             fixes gaven de hoogte aan de ScrollView zelf (style prop) —
+             blijkbaar onbetrouwbaar op dit toestel. Nu een gewone `View`
+             met een HARDE `height:44` + `overflow:'hidden'` als
+             buitenste laag (kan niet uitrekken, is geen ScrollView-
+             quirk), met de ScrollView zelf op `flex:1` daarbinnen —
+             bekend robuust patroon (vaste-hoogte-clip-container +
+             flex:1-scrollview), geen giswerk meer over wat de hoogte
+             bepaalt. */}
+          {/* Operator ("kunnen dat transparante blur pills worden"): echte
+             BlurView i.p.v. het effen donkere paneel. */}
+          <BlurView intensity={40} tint="dark" style={s.closerPillsRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1 }}
+              contentContainerStyle={s.closerPillsRowContent}
+            >
+              {CLOSER_LOOK.map((t, i) => {
+                const on = closerLookIndex === i;
+                return (
+                  /* Operator ("pills hebben geen animatie, pas protocol
+                     overal toe"): PillPress i.p.v. de statische
+                     `pressed &&`-snap — echte Reanimated-tijdlijn +
+                     haptic-tik, zelfde knop-formule (§5). */
+                  <PillPress
+                    key={t.key}
+                    style={[s.closerPill, on && s.closerPillOn]}
+                    onPress={() => setCloserLookIndex(i)}
+                    accessibilityLabel={t.pill}
+                  >
+                    <Text
+                      style={[s.closerPillText, on && s.closerPillTextOn]}
+                      numberOfLines={1}
+                    >
+                      {t.pill}
+                    </Text>
+                  </PillPress>
+                );
+              })}
+            </ScrollView>
+          </BlurView>
+          </ReAnimated.View>
+
+          <ReAnimated.View style={[s.heroStage, heroPhotoInStyle]}>
+            {/* Operator ("kan de bracelet die er eerst stond terug
+               gebruiken met zwarte achtergrond"): de echte productfoto
+               (was topPhotoHero vóór de redesign) i.p.v. de transparante
+               SonarRender-illustratie — cover-crop + gradient-fade naar
+               zwart onderaan zodat de foto's eigen wit-verloop (studio-
+               achtergrond) nooit doorschijnt. */}
+            <Image
+              source={{ uri: HERO_PHOTO_URL }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={['transparent', '#000000']}
+              locations={[0.72, 1]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            {/* Operator ("dots weg, enkel pulserende dot bij aantikken
+               pill"): geen permanent zichtbare punten meer op de bracelet
+               — alleen het GESELECTEERDE onderwerp toont zijn punt(en),
+               pulserend, op de juiste plek. Selectie gaat voortaan enkel
+               via de pillen (geen tik-op-punt meer, want er is niets
+               zichtbaars om op te tikken vóór selectie). */}
+            {closerLookIndex !== null &&
+              CLOSER_LOOK[closerLookIndex].hotspots.map((pos, hi) => (
+                <View
+                  key={hi}
+                  style={{ position: 'absolute', top: pos.top, left: pos.left }}
+                  pointerEvents="none"
+                >
+                  <ReAnimated.View
+                    style={[s.closerHotspotPulse, hotspotPulseStyle]}
+                  />
+                  <View style={[s.closerHotspot, s.closerHotspotOn]} />
+                </View>
+              ))}
+          </ReAnimated.View>
+
+          <ReAnimated.View style={[s.heroBottomGroup, heroCtaInStyle]}>
+            {/* Operator (Apple-HIG-feedback): nog maar 1 primaire actie
+               hier — Kickstarter zit nu in de tikbare eyebrow bovenaan.
+               Operator ("kijk document protocol na"): huisstijl §5
+               "Indrukken: scale(.97) + opacity: .85" + "CTA-tik →
+               haptiek" ontbraken — nu wel, zelfde formule als introCta
+               hierboven. */}
+            {/* Operator ("tekst staat niet gecentreerd, te veel naar
+               rechts"): deze wrapper miste `width:'100%'` — zonder dat
+               resolveert de Pressable's eigen `width:'100%'` tegen een
+               ouder zonder vaste breedte (heroBottomGroup rekt niet uit,
+               alignItems:'center'), en krimpt/verschuift de knop. */}
+            <ReAnimated.View style={[{ width: '100%' }, heroCtaPressStyle]}>
+              <Pressable
+                style={s.heroCta}
+                onPress={() => router.push('/bracelet-control')}
+                onPressIn={() => {
+                  heroCtaScale.value = withTiming(0.97, { duration: 80 });
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                onPressOut={() => {
+                  heroCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                }}
+                android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+                accessibilityLabel="Preview the bracelet app"
+              >
+                {/* Operator ("geen pijl in cta, dat is een regel bij
+                   ons"): huisstijl §2 — geen tekst-pijltjes als
+                   navigatie-indicator op een primaire CTA-knop.
+                   Operator ("is dat correct control center?"): "Control
+                   Center" bestond nergens anders in de app — de echte
+                   navigatietitel van dit scherm is gewoon "Bracelet"
+                   (zie (tabs)/_layout.tsx). Terug naar de al vastgelegde
+                   tekst van vóór deze redesign: "Preview the bracelet
+                   app". */}
+                <Text style={s.heroCtaText}>Preview the Bracelet App</Text>
+              </Pressable>
+            </ReAnimated.View>
+          </ReAnimated.View>
+        </View>
+
+        {/* ── "A closer look"-detailpopup ─────────────────────────────────
+           Zelfde bottom-sheet-patroon als de andere sheets in dit bestand
+           (howItWorksOpen/breathChooserOpen). */}
+        {closerLookIndex !== null && (
+          <Modal
+            visible
+            transparent
+            animationType="slide"
+            onRequestClose={() => setCloserLookIndex(null)}
+            statusBarTranslucent
+          >
+            <View style={s.breathChooserModalRoot}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setCloserLookIndex(null)}
+                accessibilityLabel="Close"
+              />
+              <View
+                style={[
+                  s.breathChooserSheet,
+                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+                ]}
+              >
+                <View style={s.breathChooserHandle} />
+                <Pressable
+                  style={s.breathChooserClose}
+                  onPress={() => setCloserLookIndex(null)}
+                  hitSlop={10}
+                  accessibilityLabel="Close"
+                >
+                  <Text style={s.breathChooserCloseText}>✕</Text>
+                </Pressable>
+                <Text style={s.storyRowNum}>
+                  {String(closerLookIndex + 1).padStart(2, '0')}
+                </Text>
+                <Text style={s.breathChooserTitle}>
+                  {CLOSER_LOOK[closerLookIndex].title}
+                </Text>
+                <Text style={s.breathChooserSub}>
+                  {CLOSER_LOOK[closerLookIndex].body}
+                </Text>
+                <View style={s.tagRow}>
+                  {CLOSER_LOOK[closerLookIndex].tags.map((tag) => (
+                    <View key={tag} style={s.tag}>
+                      <Text style={s.tagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+
+        {/* ── State-infopopup (1 sheet, alle 5 haptic-modi) ────────────────
+           Operator ("verwijder die 5 losse pillen, maak 1 nieuwe pill met
+           5 states, zet de 5 states in de popup met kleur en info"): 1
+           pill hierboven, tik toont hier alle 5 in één sheet — elk zijn
+           eigen kleur-stip + naam + blurb + echte duur (BLE_MODES, bron
+           van waarheid ble-contract.ts). */}
+        {statesInfoOpen && (
+          <Modal
+            visible
+            transparent
+            animationType="slide"
+            onRequestClose={() => setStatesInfoOpen(false)}
+            statusBarTranslucent
+          >
+            <View style={s.breathChooserModalRoot}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setStatesInfoOpen(false)}
+                accessibilityLabel="Close"
+              />
+              <View
+                style={[
+                  s.breathChooserSheet,
+                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+                ]}
+              >
+                <View style={s.breathChooserHandle} />
+                <Pressable
+                  style={s.breathChooserClose}
+                  onPress={() => setStatesInfoOpen(false)}
+                  hitSlop={10}
+                  accessibilityLabel="Close"
+                >
+                  <Text style={s.breathChooserCloseText}>✕</Text>
+                </Pressable>
+                <Text style={s.breathChooserEyebrow}>5 HAPTIC STATES</Text>
+                <Text style={s.breathChooserTitle}>Instant State Control</Text>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={s.stateInfoList}>
+                    {BLE_MODES.map((m, i) => (
+                      <View
+                        key={m.mode}
+                        style={[
+                          s.stateInfoRow,
+                          i === BLE_MODES.length - 1 && s.storyRowLast,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            s.stateInfoDot,
+                            { backgroundColor: m.color },
+                            m.color === '#FFFFFF' && s.modeSwipeDotOutline,
+                          ]}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.storyRowTitle}>{m.name}</Text>
+                          <Text style={s.storyRowBody}>{m.blurb}</Text>
+                          <Text style={s.stateInfoDuration}>
+                            {m.minMinutes}–{m.maxMinutes} min · default{' '}
+                            {m.defaultMinutes} min
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        )}
+
         {/* ── PERSONALISATIE-BANNER ─────────────────────────────────────
             Bracelet-owner krijgt de prominente "Your bracelet is active"
             + Open Control CTA. Pro-audio (zonder bracelet) krijgt een
@@ -1184,7 +1620,7 @@ export default function BraceletScreen() {
           <Pressable
             style={s.ownerBanner}
             onPress={() => router.push('/bracelet-control')}
-            android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+            android_ripple={{ color: 'rgba(10,10,12,0.10)' }}
             accessibilityLabel="Open your bracelet control screen"
           >
             <View style={s.ownerBannerLeft}>
@@ -1205,773 +1641,101 @@ export default function BraceletScreen() {
           </View>
         ) : null}
 
-        {/* ── 1. HERO + 2. BRACELET-RENDER ──
-            Iter 9t: verbergen voor owners (operator-feedback "bracelet
-            knop mag niet meer naar Kickstarter page voelen voor PRO").
-            Owner ziet alleen de owner-banner bovenaan + reference
-            content (How it works / Modes / Tech specs). */}
-        {!isBraceletOwner && (
-          <>
-            {/* Iter 9cn (2026-05-31): hero refactor — premium polish.
-                - Titel: VIBEZCORE drop, alleen "Smart Bead Bracelet"
-                  (brand staat al impliciet overal in de app)
-                - KICKSTARTER row krijgt een EARLY BIRD-chip ernaast
-                - Subline-onder krijgt micro-CTA "Reserve from $169 →"
-                  die naar de Kickstarter pricing-section scrollt */}
-            <View style={s.hero}>
-              <View style={s.heroEyebrowRow}>
-                <Text style={s.heroEyebrow}>
-                  KICKSTARTER · SEPT 1, 2026
-                </Text>
-                <View style={s.heroEarlyBird}>
-                  <Text style={s.heroEarlyBirdText}>EARLY BIRD</Text>
-                </View>
-              </View>
-              <Text style={s.heroTitle}>
-                Smart Bead{'\n'}Bracelet
-              </Text>
-              <Text style={s.heroSub}>
-                5 haptic modes. One clear outcome.{'\n'}
-                You in control of your own state.
-              </Text>
-              {/* Iter 9co (2026-05-31): micro-CTA weggehaald op
-                  operator-verzoek. Reserve-CTA's leven verderop in
-                  de Kickstarter-pricing sectie. */}
-            </View>
-            {/* Iter 9cw (2026-05-31): free hero ook transparent →
-                bracelet zweeft op de dark UI, geen witte card meer.
-                Iter 9de (2026-05-31): haptic-offset komt nu uit
-                HAPTIC_RING_OFFSET_Y_FREE bovenaan dit bestand →
-                operator kan zelf tunen zonder JSX te raken. */}
-            <SonarRender
-              transparent
-              ringOffsetY={HAPTIC_RING_OFFSET_Y_FREE}
-            />
-          </>
-        )}
+        {/* Operator, 26 september 2026 ("wil heel die pagina anders ...
+           alles onderaan verwijderen"): de modi-grid, gemstone-collectie,
+           Kickstarter-pricingkaart en de breathwork-discovery-kaart die
+           hier stonden zijn weg. De hero hierboven is nu de hele pagina
+           (feature-tabs + Preview Control Center + Reserve on Kickstarter
+           dekken wat deze secties deden). PRICING/EDITIONS-data blijft
+           bestaan (PRICING wordt elders geïmporteerd, zie
+           PremiumPaywallModal.tsx) maar wordt hier niet meer getoond. */}
 
         {/* Owner-eyebrow ipv hero (iter 9t): geeft owners een korte
             "you are here"-context zonder marketing-vibes. */}
         {isBraceletOwner && (
           <Text style={s.ownerEyebrow}>YOUR BRACELET</Text>
         )}
-
-        {/* Iter 9o: PREVIEW-knop verplaatst naar onder "How it works" —
-            user heeft eerst context nodig (wat doet de bracelet) voor 'ie
-            de preview wil zien. Operator-feedback. */}
-
-        {/* ── 3. HOW IT WORKS — pill-nav + story-card (HTML-mockup style).
-            Operator-keuze 2026-05-26: terug naar pills voor déze
-            sectie. De carousel was te onrustig; pills + statische
-            content-card geeft een rustigere lees-ervaring. Pill-stijl
-            uit de HTML: witte fill voor actief (hoog contrast), zeer
-            subtiel grijs voor inactief. Story-card heeft een verticale
-            blauwe lijn links van de body-tekst (visual anchor) en
-            blauw-gefilde tags onderaan. */}
-        {/* Iter 9cq → 9db (2026-05-31): marginTop 16 → 4 zodat How it
-            works direct tegen de bracelet aanplakt. */}
-        <Text style={[s.sectionTitle, { marginTop: 4 }]}>How it works.</Text>
-        {/* Iter 9: pill-cloud → horizontale scroll-tabs met underline-
-            indicator (Apple iOS-style segmented nav). Wrapping pills
-            (2-3 regels) waren de meest dated pattern op het scherm.
-            Nu: horizontale scroll met active-state underline + dots. */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.storyTabBar}
-        >
-          {STORY.map((step, i) => {
-            const on = i === activePill;
-            return (
-              <Pressable
-                key={step.n}
-                onPress={() => setActivePill(i)}
-                style={s.storyTab}
-                accessibilityLabel={`Show step: ${step.title}`}
-              >
-                <Text
-                  style={[s.storyTabText, on && s.storyTabTextOn]}
-                  numberOfLines={1}
-                >
-                  {step.title}
-                </Text>
-                {on && <View style={s.storyTabUnderline} />}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        {/* Dot-pagination — kleine indicator voor positie in story-flow.
-            Past bij de carousel-dots verderop, geeft consistente UX. */}
-        <View style={s.storyDots}>
-          {STORY.map((_, i) => (
-            <Pressable
-              key={i}
-              onPress={() => setActivePill(i)}
-              style={[s.storyDot, i === activePill && s.storyDotOn]}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-              accessibilityLabel={`Go to step ${i + 1}`}
-            />
-          ))}
-        </View>
-        <View style={s.storyCard}>
-          <Text style={s.storyNum}>{STORY[activePill].n}</Text>
-          <Text style={s.storyTitle}>{STORY[activePill].title}</Text>
-          <Text style={s.storyBody}>{STORY[activePill].body}</Text>
-          {/* Iter 9: tag-pills → dot-separated text (matches modeWave-
-              patroon elders in deze file). Veel iOS-natuurlijker. */}
-          <Text style={s.storySpecLine}>
-            {STORY[activePill].tags.join('  ·  ')}
-          </Text>
-        </View>
-
-        {/* ── PREVIEW-CTA (iter 9ci 2026-05-31) ────────────────────────
-            Was een rustige outlined-knop die visueel verloren ging tussen
-            "How it works" en "5 modes". Operator-feedback: moet
-            prominenter aanwezig zijn én duidelijker uitleggen wat 't is.
-            Nu: card-style CTA met sterke accent-fill, eyebrow + titel +
-            subline + arrow. Voelt onmiddellijk als "tik hier, beleef het". */}
-        <Pressable
-          style={s.previewCta}
-          onPress={() => router.push('/bracelet-control')}
-          android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
-          accessibilityLabel="Preview the bracelet control app"
-        >
-          <View style={s.previewCtaContent}>
-            <Text style={s.previewCtaEyebrow}>TRY IT NOW</Text>
-            <Text style={s.previewCtaTitle}>Preview the bracelet app</Text>
-            <Text style={s.previewCtaSub}>
-              See the control screen, modes, and feel the flow — no bracelet needed.
-            </Text>
-          </View>
-          <View style={s.previewCtaArrow}>
-            <Text style={s.previewCtaArrowText}>→</Text>
-          </View>
-        </Pressable>
-
-        {/* Iter v193 (2026-07-03): compacte Oura-style CTAs direct onder de
-            preview-card. Voor bezoekers die AL een bracelet hebben (activate)
-            of nog geen (learn more) — kort en helder ipv de oude 2 grote cards
-            onderaan de page die te ver van de context stonden en te druk waren. */}
-        <Pressable
-          style={s.compactActivateBtn}
-          onPress={() => router.push('/activate-bracelet')}
-          android_ripple={{ color: 'rgba(255,255,255,0.20)' }}
-          accessibilityLabel="Activate your Bracelet or Full Bundle"
-        >
-          <Text style={s.compactActivateBtnText}>Activate Bracelet or Full Bundle</Text>
-          <Text style={s.compactActivateBtnArrow}>→</Text>
-        </Pressable>
-        <Pressable
-          style={s.compactLearnMoreLink}
-          onPress={() => openExternal('https://www.vibezcore.com/')}
-          accessibilityLabel="Don't have a Smart Bead Bracelet yet, learn more at vibezcore.com"
-        >
-          <Text style={s.compactLearnMoreLinkText}>
-            Don't have one yet? Learn more →
-          </Text>
-        </Pressable>
-
-        {/* ── 4. 5 HAPTIC MODES — pill-tabs (underline) + content card.
-            Zelfde principe als How it works. Brain-state labels
-            (Gamma/Beta/Alpha/Theta/Delta) tonen we BEWUST niet —
-            CLAUDE.md §1 verbiedt medische/wetenschappelijke claims.
-            In plaats daarvan tonen we de "direction" — de state-
-            richting waar de bracelet je via bottom-up haptiek heen
-            begeleidt (Activation / Focus / Calm focus / Reflection /
-            Deep rest). De firmware tunet PPS intern op de waves. */}
-        <Text style={s.sectionTitle}>
-          Different moments require{'\n'}different states.
-        </Text>
-        <Text style={s.sectionSub}>
-          Five haptic modes. Each calibrated to guide you toward a
-          specific state through bottom-up regulation.
-        </Text>
-        <View style={s.carouselWrap}>
-          <ScrollView
-            ref={modeScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={CARD_SNAP}
-            decelerationRate="fast"
-            onMomentumScrollEnd={onModeScrollEnd}
-            contentContainerStyle={{ paddingHorizontal: SIDE_INSET }}
-          >
-            {MODES.map((m, i) => {
-              const photo = MODE_PHOTOS_BY_WAVE[m.wave];
-              return (
-                <View
-                  key={m.app}
-                  style={[
-                    s.carouselCard,
-                    {
-                      width: CARD_WIDTH,
-                      marginRight: i === MODES.length - 1 ? 0 : CARD_GAP,
-                    },
-                  ]}
-                >
-                  {/* Iter 9dq v80 (2026-06-03): foto-header voor visuele
-                      ankerpunt per modus. Operator-feedback: cards waren
-                      te tekst-zwaar. Photo + dark-gradient-overlay zodat
-                      mode-naam + direction leesbaar blijven over de foto. */}
-                  {photo && (
-                    <View style={s.modePhotoWrap}>
-                      <Image
-                        source={{ uri: photo }}
-                        style={s.modePhoto}
-                        resizeMode="cover"
-                      />
-                      <LinearGradient
-                        colors={[
-                          'rgba(0,0,0,0.10)',
-                          'rgba(0,0,0,0.40)',
-                          'rgba(0,0,0,0.88)',
-                        ]}
-                        locations={[0, 0.55, 1]}
-                        style={StyleSheet.absoluteFill}
-                      />
-                      <View style={s.modePhotoOverlayContent}>
-                        <View
-                          style={[
-                            s.modeDot,
-                            { backgroundColor: m.color },
-                          ]}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={[
-                              s.uCardTitle,
-                              { marginBottom: 0, color: '#ffffff' },
-                            ]}
-                          >
-                            {m.app}
-                          </Text>
-                          <Text
-                            style={[
-                              s.modeWave,
-                              { color: 'rgba(255,255,255,0.75)' },
-                            ]}
-                          >
-                            {m.direction} · {m.duration}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-                  <View style={s.modeCardContent}>
-                    {/* Fallback header (geen foto): originele in-content
-                        header. */}
-                    {!photo && (
-                      <View style={s.modeHdr}>
-                        <View
-                          style={[s.modeDot, { backgroundColor: m.color }]}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text style={[s.uCardTitle, { marginBottom: 0 }]}>
-                            {m.app}
-                          </Text>
-                          <Text style={s.modeWave}>
-                            {m.direction} · {m.duration}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    {/* Iter 9dq v82 (2026-06-03): operator-keuze om de
-                        eerste "head"-zin weg te halen — voelde dubbel
-                        naast de body-tekst. Alleen body als één
-                        compacte beschrijving onder de foto. */}
-                    <Text style={s.uCardBody}>{m.body}</Text>
-                    <Text style={s.modeIdealLbl}>Ideal for</Text>
-                    {/* Iter 9: pill-row → verticale ✓ checklist (Apple Health-
-                        achtige "Use this for"-presentatie). Voelt meer als
-                        een functie-bullet dan een marketing-pill. */}
-                    <View style={s.idealList}>
-                      {m.ideal.map((t) => (
-                        <View key={t} style={s.idealItem}>
-                          <Text
-                            style={[s.idealCheck, { color: m.color }]}
-                          >
-                            ✓
-                          </Text>
-                          <Text style={s.idealItemText}>{t}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-        <View style={s.dotRow}>
-          {MODES.map((_, i) => (
-            <Pressable
-              key={i}
-              onPress={() => jumpToMode(i)}
-              style={[s.dot, i === activeMode && s.dotOn]}
-              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-              accessibilityLabel={`Go to ${MODES[i].app}`}
-            />
-          ))}
-        </View>
-
-        {/* ── 5. TECHNICAL SPECS — 2x2 grid van hardware-specs. ──
-            Operator-feedback 2026-05-26 iter 3: hero met 5 colored
-            dots was te kleurig én redundant — de Modes-carousel
-            hierboven covered die info al volledig. Tech specs zijn
-            nu strikt hardware-attributes: wrist size, bead size,
-            bluetooth, charging. Geen "5 Haptic Modes" of "Control
-            via App" hier (beide elders gecoverd). Explicit row-
-            pairing met flex:1 zodat de cards exact 50/50 delen. */}
-        <Text style={s.sectionTitle}>Technical specs.</Text>
-        <View style={s.specsGrid}>
-          {[
-            [0, 1],
-            [2, 3],
-          ].map((pair, rowIdx) => (
-            <View key={rowIdx} style={s.specRow}>
-              {pair.map((idx) => (
-                <View key={SPECS[idx].lbl} style={s.specCard}>
-                  <Text style={s.specVal}>{SPECS[idx].val}</Text>
-                  <Text style={s.specLbl}>{SPECS[idx].lbl}</Text>
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
-
-        {/* ── 6. THE COLLECTION ──
-            Iter 9q: alleen tonen aan niet-owners. Voor owners is dit
-            een shop-grid en irrelevant (ze hebben al een edition). */}
-        {!isBraceletOwner && (
-        <>
-        <Text style={s.sectionTitle}>
-          15 natural premium{'\n'}gemstone editions.
-        </Text>
-        <Text style={s.sectionSub}>
-          Three series. Fifteen natural stones from origins worldwide.
-          All bracelets feature 8mm natural gemstone beads.
-        </Text>
-
-        {/* Underline-style tabs: pure tekst, accent-underline op
-            selectie. Zelfde principe als de How-it-works pills. */}
-        <View style={s.tabRow}>
-          {(['pure', 'premium', 'imperial'] as Series[]).map((sr) => {
-            const on = series === sr;
-            const c = SERIES_COLORS[sr];
-            return (
-              <Pressable
-                key={sr}
-                onPress={() => switchSeries(sr)}
-                style={[
-                  s.tabBtn,
-                  on && { borderBottomColor: c.text },
-                ]}
-                accessibilityLabel={`Show ${SERIES_DISPLAY_NAMES[sr]} series`}
-              >
-                <Text
-                  style={[
-                    s.tabText,
-                    on && { color: c.text, fontFamily: BrandFonts.semibold },
-                  ]}
-                >
-                  {SERIES_DISPLAY_NAMES[sr]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={s.collGrid}>
-          {visibleEditions.map((ed) => {
-            const c = SERIES_COLORS[ed.series];
-            const active = selectedEdition === ed.key;
-            return (
-              <Pressable
-                key={ed.key}
-                onPress={() =>
-                  setSelectedEdition((cur) => (cur === ed.key ? null : ed.key))
-                }
-                style={[s.collCard, active && s.collCardOn]}
-                accessibilityLabel={`${ed.name} — ${ed.stone}, ${ed.origin}`}
-              >
-                <View style={s.collImgWrap}>
-                  {/* Iter 9ck → 9cl: terug naar cover (contain maakte
-                      de bracelet visueel kleiner binnen de card). */}
-                  <Image
-                    source={{ uri: ed.image }}
-                    style={s.collImg}
-                    resizeMode="cover"
-                    resizeMethod="resize"
-                    fadeDuration={0}
-                  />
-                </View>
-                <View style={s.collInfo}>
-                  <Text style={s.collName}>{ed.name}</Text>
-                  <Text style={s.collNat}>
-                    {ed.stone} · {ed.origin}
-                  </Text>
-                  <View
-                    style={[
-                      s.collBadge,
-                      { backgroundColor: c.bg },
-                    ]}
-                  >
-                    <Text style={[s.collBadgeText, { color: c.text }]}>
-                      {SERIES_DISPLAY_NAMES[ed.series]}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Inline detail-paneel weggehaald 2026-05-26: stond onder de
-            grid waardoor user moest scrollen om 't te zien. Vervangen
-            door floating overlay buiten de ScrollView, hieronder. */}
-        </>
-        )}
-
-        {/* ── 7. KICKSTARTER EARLY BIRD — alles binnen één container ──
-            Operator-feedback 2026-05-26: 3 losse cards voelden los
-            van elkaar. Nu één outer Kickstarter-card waarin titel,
-            sub, 3 pricing-opties (Bundle featured genest, andere 2
-            als sections gescheiden door hairlines), en footer netjes
-            gegroepeerd staan.
-            Iter 9q: hele Kickstarter-blok verbergen voor owners
-            (geen sense in pre-order CTA's tonen aan iemand die al
-            eigenaar is). */}
-        {!isBraceletOwner && (
-        <>
-        <Text style={s.sectionTitle}>Kickstarter early bird.</Text>
-        <Text style={s.sectionSub}>
-          Secure the lowest Kickstarter price.{'\n'}
-          Limited units. First reserved — first served.
-        </Text>
-
-        {/* Launch banner — geen countdown meer (operator 2026-07-14:
-            sep 2026 halen we niet, framing verschoven naar Fall 2026
-            zonder concrete datum). */}
-        <View style={s.timerWrap}>
-          <Text style={s.timerLabel}>
-            KICKSTARTER — LAUNCHING FALL 2026
-          </Text>
-        </View>
-
-        <View style={s.ksCard}>
-          {/* Operator-feedback iter 2 (2026-05-26): Bracelet Only en
-              Add-on óók als aparte cards binnen de outer container —
-              niet als plain text-sections. Alle 3 pricing-opties zijn
-              nu visueel duidelijke eigen blokken met eigen styling. */}
-
-          {/* FEATURED — Bundle, blue-tinted nested card. Iter 9: BEST VALUE
-              pill vervangen door eyebrow-text-only (Apple Wallet / Tips-
-              style). Geen solid fill meer, alleen text + accent kleur. */}
-          <View style={s.ksFeatured}>
-            <Text style={s.ksFeatBadgeText}>— BEST VALUE —</Text>
-            <Text style={s.ksEyebrow}>FULL BUNDLE</Text>
-            <Text style={s.ksName}>
-              Bracelet + Extra + Audio Library
-            </Text>
-            {/* Iter 9: priceSave-pill vervangen door inline text met
-                strikethrough op old price. Veel iOS-natuurlijker. */}
-            <View style={s.priceRow}>
-              <Text style={s.priceMain}>{price.bundle.main}</Text>
-              <Text style={s.priceMeta}>
-                <Text style={s.priceOld}>{price.bundle.old}</Text>
-                <Text style={s.priceSaveInline}> · {price.bundle.save}</Text>
-              </Text>
-            </View>
-            {price.bundle.eur && (
-              <Text style={s.priceEur}>{price.bundle.eur}</Text>
-            )}
-            <View style={s.ksHairline} />
-            <Text style={s.ksIncludesLbl}>What's included</Text>
-            <View>
-              <PIncluded text="VIBEZCORE Smart Bead Bracelet" />
-              <PIncluded text="Extra Interchangeable Bracelet (8mm)" />
-              <PIncluded text="12-Month Full Audio Library (worth €119.88)" />
-              <PIncluded text="VIBEZCORE App access" />
-            </View>
-            <Pressable
-              style={s.ksBtnPrimary}
-              onPress={() => openExternal(WAITLIST_BUNDLE_URL)}
-              android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
-              accessibilityLabel="Reserve full bundle on waitlist"
-            >
-              <Text style={s.ksBtnPrimaryText}>Reserve Full Bundle</Text>
-              <Text style={s.ksBtnPrimaryArrow}>→</Text>
-            </Pressable>
-          </View>
-
-          {/* BRACELET ONLY — eigen nested card (neutrale tonale fill,
-              geen accent — onderscheidt 'm visueel van de featured). */}
-          <View style={s.ksOption}>
-            <Text style={s.ksEyebrow}>BRACELET ONLY</Text>
-            <Text style={s.ksName}>VIBEZCORE Smart Bead Bracelet</Text>
-            <View style={s.priceRow}>
-              <Text style={s.priceMain}>{price.bracelet.main}</Text>
-              <Text style={s.priceMeta}>
-                <Text style={s.priceOld}>{price.bracelet.old}</Text>
-                <Text style={s.priceSaveInline}> · {price.bracelet.save}</Text>
-              </Text>
-            </View>
-            {price.bracelet.eur && (
-              <Text style={s.priceEur}>{price.bracelet.eur}</Text>
-            )}
-            <View style={s.ksHairline} />
-            <Text style={s.ksIncludesLbl}>What's included</Text>
-            <View>
-              <PIncluded text="Smart Bead Bracelet (choice of stone)" />
-              <PIncluded text="VIBEZCORE App access" />
-              <PIncluded text="5 haptic modes" />
-              <PIncluded text="Pogo pin charging cable" />
-            </View>
-            <Pressable
-              style={s.ksBtnSecondary}
-              onPress={() => openExternal(WAITLIST_BRACELET_URL)}
-              android_ripple={{ color: 'rgba(58,143,255,0.15)' }}
-              accessibilityLabel="Reserve bracelet on waitlist"
-            >
-              <Text style={s.ksBtnSecondaryText}>Reserve Bracelet</Text>
-              <Text style={s.ksBtnSecondaryArrow}>→</Text>
-            </Pressable>
-          </View>
-
-          {/* EXTRA BRACELET — compact horizontal nested card. Eigen
-              tonale fill matched de Bracelet-Only card maar in compactere
-              vorm — duidelijk "add-on" gewicht. */}
-          <View style={s.ksAddon}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.ksEyebrow}>ADD-ON</Text>
-              <Text style={s.ksAddonName}>Additional Interchangeable Bracelet</Text>
-              <Text style={s.ksAddonSub}>8mm beads · choice of stone</Text>
-            </View>
-            <View style={s.ksAddonPrice}>
-              <Text style={s.priceMainSmall}>{price.extra.main}</Text>
-              {/* Iter 9dq v175: extra bead set match'd website ($32 retail,
-                  geen KS-discount). old + save zijn leeg → niet renderen. */}
-              {price.extra.old || price.extra.save ? (
-                <Text style={s.ksAddonMeta}>
-                  {price.extra.old ? (
-                    <Text style={s.priceOld}>{price.extra.old}</Text>
-                  ) : null}
-                  {price.extra.save ? (
-                    <Text style={s.priceSaveInline}>
-                      {price.extra.old ? ' · ' : ''}
-                      {price.extra.save}
-                    </Text>
-                  ) : null}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Footer disclaimer — operator-update 2026-05-26 iter 3:
-              "No payment until campaign launches" weg, vervangen door
-              de duidelijkere zero-commitment-disclaimer die voorheen
-              alleen in de standalone Waitlist-sectie stond. Sinds die
-              standalone-sectie verwijderd is moet deze info hier
-              terechtkomen — direct naast de Reserve-CTA's. */}
-          <View style={s.ksFooter}>
-            <Text style={s.ksFooterText}>
-              No credit card · No financial data · No purchase obligation
-            </Text>
-            <Text style={s.ksFooterMeta}>
-              We only use your email to notify you before launch
-            </Text>
-          </View>
-        </View>
-
-        {/* Iter v193 (2026-07-03): oude Activate + Learn more cards
-            verwijderd — zijn verhuisd naar compacte CTAs direct onder de
-            TRY IT NOW · Preview-card (Oura-stijl). Operator-feedback:
-            stonden hier te laag na de KS pricing, voelden druk en
-            gescheiden van de context. Nieuwe positie hoger op de pagina
-            geeft KS-backers en nieuwe bezoekers direct 2 duidelijke acties
-            zonder eerst door alle pricing-cards te scrollen. */}
-        </>
-        )}
-
-        {/* Iter 9o: countdown verplaatst naar boven (onder Reserve-
-            sub-text, vóór pricing-cards) — operator-feedback: bouwt
-            urgency vóór de pricing-keuze, ipv eronder als afterthought. */}
-
-        {/* Standalone Waitlist-sectie weggehaald 2026-05-26 iter 3:
-            de per-product Reserve-CTA's in de Kickstarter pricing
-            cards (Bundle + Bracelet) vervangen deze functioneel.
-            De disclaimer "No credit card · No financial data..." zit
-            nu in de Kickstarter-card footer. Sign-in-link blijft —
-            verhuisd naar standalone block hieronder. */}
-
-        {/* Free Breathwork CTA — Apple-stijl discovery card, gericht
-            naar /bracelet-control (de bestaande breathwork-pagina).
-            Identiek aan de Audio tab card — één coherente voice. Bracelet
-            wordt nooit "optional" genoemd: bracelet is hoofdproduct. Card
-            spreekt alleen over breathwork's 5 states + "Always free". */}
-        <Pressable
-          style={s.breathDiscoverCard}
-          onPress={() => router.push('/breath')}
-          accessibilityLabel="Open breathwork tab"
-        >
-          {/* v4 (2026-06-05): full-bleed hero card. Foto vult hele card
-              met cover (geen letterbox), alle content (label, states,
-              meta, button) overlaid onderaan met sterke gradient. */}
-          <Image
-            source={{
-              uri: 'https://vibezcore-audio.b-cdn.net/images/Psychological%20Resilience.png',
-            }}
-            style={s.breathDiscoverImage}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.75)']}
-            locations={[0, 0.50, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={s.breathDiscoverHeroGradient}
-            pointerEvents="none"
-          />
-          <View style={s.breathDiscoverHeroText}>
-            <Text style={s.breathDiscoverLabel}>Free breathwork</Text>
-            <Text style={s.breathDiscoverStates}>
-              Energy. Focus. Calm. Clarity. Rest.
-            </Text>
-            <Text style={s.breathDiscoverMeta}>
-              Five techniques. Always free.
-            </Text>
-            <View style={s.breathDiscoverCta}>
-              <Text style={s.breathDiscoverCtaText}>Open Breathwork</Text>
-              <Text style={s.breathDiscoverCtaArrow}>→</Text>
-            </View>
-          </View>
-        </Pressable>
-
-        {/* Sign-in-link voor wie nog niet ingelogd is. Subtiel, geen
-            dominante CTA. Toont alleen wanneer state geladen is én
-            user niet ingelogd.
-            Iter 9q: ook verbergen voor owners (die zijn al ingelogd
-            EN hebben geen sign-in-link nodig). */}
-        {/* Iter v190 (2026-07-02): sign-in link verwijderd van Bracelet tab.
-            Sign-in intent hoort op Account tab. Bracelet tab = preview/purchase
-            context, geen returning-member intent. Bottom nav → Account tab is
-            1 tap voor wie wil inloggen. */}
       </ScrollView>
 
-      {/* ── Edition-detail overlay ──────────────────────────────────────
-          Floating popup BOVENOP de pagina, centraal gepositioneerd —
-          user hoeft niet meer naar onder te scrollen om 't paneel te
-          zien. Backdrop tap = sluiten. Android hardware-back = sluiten.
+      {/* Operator, 15 september 2026: klein, elegant "i"-knopje vast
+         rechtsboven in de hoek (blijft staan tijdens scrollen — sibling
+         van de ScrollView, niet erbinnen). Opent de "How it works"-sheet
+         hieronder. Vervangt de losse tekst-sectie die eerder op het
+         hoofdscherm stond. */}
+      <Pressable
+        style={[s.infoBtn, { top: safeInsets.top + 10 }]}
+        onPress={() => setHowItWorksOpen(true)}
+        hitSlop={10}
+        accessibilityLabel="How the bracelet works"
+      >
+        <Text style={s.infoBtnText}>i</Text>
+      </Pressable>
 
-          Geen RN <Modal>-wrapper bewust: die heeft een eigen native
-          window die alle touches opvangt, breekt de tab-bar onderaan.
-          Zelfde pattern als WelcomeBackPopup / BraceletUpsellModal. */}
-      {detailEdition && (
-        <View
-          style={[
-            s.detailOverlay,
-            /* Iter 9aw → 9dq v77 (2026-06-03): harmonised CTA-bottom
-               formula. Floor 72px → consistent met andere screens,
-               clears 3-button nav waar safeInsets soms 0 rapporteert. */
-            {
-              paddingTop: safeInsets.top + 12,
-              paddingBottom: Math.max(safeInsets.bottom + 24, 72),
-            },
-          ]}
-          pointerEvents="box-none"
-        >
-          <Pressable
-            style={s.detailBackdrop}
-            onPress={() => setSelectedEdition(null)}
-          />
-          {/* Iter 9au (2026-05-31): ScrollView verwijderd — operator wil
-              geen scroll binnen de popup. Content is getrimd (Series
-              badge + spec weg) zodat alles past binnen maxHeight 95%
-              op standaard phone-schermen. */}
-          <View style={s.detailWrap}>
-            <DetailPanel
-              ed={detailEdition}
-              onClose={() => setSelectedEdition(null)}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Free Breathwork chooser — Apple-stijl bottom sheet, identiek
-          aan de Audio tab versie. 5 protocols, tap → navigeert naar
-          /bracelet-control met de juiste mode + breathwork pre-enabled. */}
-      {breathChooserOpen && (
+      {/* ── "How it works"-infoblad ────────────────────────────────────
+         Zelfde bottom-sheet-patroon als de breathChooser-modal verderop
+         (RN <Modal>, transparent, slide-in). De 7 STORY-stappen (data
+         bovenaan dit bestand) staan hier nog steeds volledig — enkel niet
+         meer standaard zichtbaar op het hoofdscherm. */}
+      {howItWorksOpen && (
         <Modal
           visible
           transparent
           animationType="slide"
-          onRequestClose={() => setBreathChooserOpen(false)}
+          onRequestClose={() => setHowItWorksOpen(false)}
           statusBarTranslucent
         >
           <View style={s.breathChooserModalRoot}>
             <Pressable
               style={StyleSheet.absoluteFill}
-              onPress={() => setBreathChooserOpen(false)}
+              onPress={() => setHowItWorksOpen(false)}
               accessibilityLabel="Close"
             />
             <View
               style={[
                 s.breathChooserSheet,
-                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+                { maxHeight: '80%', paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
               ]}
             >
               <View style={s.breathChooserHandle} />
               <Pressable
                 style={s.breathChooserClose}
-                onPress={() => setBreathChooserOpen(false)}
+                onPress={() => setHowItWorksOpen(false)}
                 hitSlop={10}
                 accessibilityLabel="Close"
               >
                 <Text style={s.breathChooserCloseText}>✕</Text>
               </Pressable>
-              <Text style={s.breathChooserEyebrow}>FREE BREATHWORK</Text>
-              <Text style={s.breathChooserTitle}>Choose a state.</Text>
+              <Text style={s.breathChooserEyebrow}>HOW IT WORKS</Text>
+              <Text style={s.breathChooserTitle}>The full picture.</Text>
               <Text style={s.breathChooserSub}>
-                Five techniques. Always free.
+                Everything the bracelet does, in seven short points.
               </Text>
-              <View style={s.breathChooserList}>
-                {BREATHWORK_CHOOSER.map((opt) => {
-                  const modeMeta = getModeMeta(opt.mode);
-                  return (
-                    <Pressable
-                      key={opt.mode}
-                      style={s.breathChooserRow}
-                      onPress={() => {
-                        setBreathChooserOpen(false);
-                        router.push(
-                          `/bracelet-control?mode=${opt.mode}&breathwork=1&from=bracelet` as never,
-                        );
-                      }}
-                      accessibilityLabel={`Open ${opt.purpose} breathwork — ${opt.technique}`}
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={s.storyList}>
+                  {STORY.map((step, i) => (
+                    <View
+                      key={step.n}
+                      style={[s.storyRow, i === STORY.length - 1 && s.storyRowLast]}
                     >
-                      <View
-                        style={[
-                          s.breathChooserDot,
-                          { backgroundColor: modeMeta.color },
-                        ]}
-                      />
-                      <View style={s.breathChooserRowText}>
-                        <Text style={s.breathChooserRowPurpose}>
-                          {opt.purpose}
-                        </Text>
-                        <Text style={s.breathChooserRowMeta}>
-                          {opt.technique} · {opt.minutes} min
-                        </Text>
+                      <Text style={s.storyRowNum}>{step.n}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.storyRowTitle}>{step.title}</Text>
+                        <Text style={s.storyRowBody}>{STORY_SHORT[i]}</Text>
                       </View>
-                      <Text style={s.breathChooserRowArrow}>→</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
       )}
+
+      {/* Operator, 26 september 2026: edition-detail-overlay verwijderd
+         samen met de gemstone-collectie (er is geen grid meer om op te
+         tikken). DetailPanel/splitDesc/EDITIONS-selectiestate zijn ook
+         weg — zie verderop. */}
+
     </SafeAreaView>
   );
 }
@@ -1979,7 +1743,7 @@ export default function BraceletScreen() {
 /* ── Styles ─────────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Brand.bg },
+  root: { flex: 1, backgroundColor: C.bg },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1989,15 +1753,317 @@ const s = StyleSheet.create({
   },
   scroll: { padding: 16, paddingBottom: 48 },
 
+  /* Operator, 26 september 2026 ("bracelet centraal op zwarte achtergrond
+     op volledige scherm zonder scroll, premium, cta naar preview control
+     center"): vervangt topPhotoHero + darkHeaderBlock (foto van een arm +
+     los tekstvlak). `height` komt inline mee (heroFullHeight, berekend in
+     BraceletScreen uit window-hoogte minus safe-area/tab-bar/PreviewPill)
+     zodat de hele hero — header, bracelet-render, CTA — precies het
+     zichtbare scherm vult en niemand hoeft te scrollen om 'm heel te zien.
+     Negative margin = zelfde full-bleed-truc als de oude stijlen. */
+  /* Operator ("pils iets lager meer ademruimte, bracelet + cta's naar
+     boven, moet zonder scroll zijn"): `justifyContent:'space-between'`
+     rekte alle 4 kinderen gelijkmatig uit over de volle heroFullHeight —
+     dat duwde stage/CTA juist te ver naar onder. `flex-start` pakt alles
+     bovenaan samen (expliciete marginTop per blok hieronder bepaalt de
+     ademruimte); wat overblijft is lege ruimte onderaan, niet uitgerekt. */
+  /* Operator ("opnieuw past niet alles, waarom fix jij dat niet"): elke
+     vorige poging gokte een vaste `heroStage`-hoogte + handmatige marges
+     tegen een berekende `heroFullHeight` — bij elke content-toevoeging
+     (states-pil-rij) klopte die optelsom niet meer en overflowde de box
+     alsnog. Robuuste fix: `heroStage` krijgt `flex:1` (zie hieronder) en
+     absorbeert ALTIJD precies de resterende ruimte na de andere,
+     vast-hoge blokken — geen handmatige optelsom meer nodig, kan dus
+     nooit meer overflowen. `overflow:'hidden'` als extra vangnet. */
+  /* Operator ("waarom zit er een scroll op de pagina? alles staat toch
+     mooi op het scherm"): marginTop/marginHorizontal heffen de top/zij-
+     padding van `scroll` (de ScrollView-contentContainerStyle) al op,
+     maar niemand hief de `paddingBottom:48` daarvan op — die 48px lege,
+     scrollbare ruimte onderaan was onzichtbaar (zwart-op-zwart) maar wél
+     nog scrollbaar. marginBottom -40 heft 'm op (netto 8px gat blijft
+     over, zelfde als de oorspronkelijke bedoeling). */
+  productHero: {
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: -40,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  heroTopGroup: {
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  /* Operator, 26 september 2026: exact op de huisstijl-tabel (§2B mobiel +
+     §1 kleuren) — geen zelfverzonnen waardes, geen Royal Indigo (bestaat
+     niet meer, volledig vervangen door Bio-Teal), geen decoratieve
+     leestekens. Eyebrow 11px Bold +1.5, H1 vaste 32px Bold -0.4px
+     ("de native app gebruikt een vaste 32px"), subheader/muted 15px
+     Regular #8a8a8a — links uitgelijnd, niet de gecentreerde intro-stijl. */
+  heroEyebrowTop: {
+    color: C.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  heroTitleTop: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.4,
+  },
+  heroSubTop: {
+    color: C.textDim,
+    fontSize: 15,
+    fontFamily: BrandFonts.regular,
+    marginTop: 4,
+  },
+  /* Stage rond de SonarRender — relative zodat de hotspot-punten absoluut
+     kunnen positioneren t.o.v. de render, niet t.o.v. de hele hero. */
+  /* Operator ("ik zie geen bracelet"): `alignItems:'center'` liet
+     SonarRender's buitenste View (die zelf geen width zet, enkel
+     renderWrap's vaste `height:280`) shrinken naar 0 breedte — de
+     Image erin is width:'100%' van een ouder zonder breedte = 0px,
+     dus onzichtbaar. Vaste width+height op heroStage (geen alignItems-
+     override, dus default stretch) laat SonarRender de volle breedte
+     innemen; hotspot top/left-percentages resolven nu ook tegen een
+     echte 280px-hoogte i.p.v. tegen 0. */
+  /* Operator ("alles mooi binnen het scherm laten passen" + nieuwe
+     states-pil-rij erbij): 280→250 en de marges hieronder verkleind om
+     ruimte te maken zonder dat de hero moet scrollen. */
+  heroStage: {
+    width: '100%',
+    flex: 1,
+    minHeight: 140,
+    marginTop: 8,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  /* Operator ("1 nieuwe pill met 5 states"): 1 pill met de 5 kleur-
+     stippen + label, i.p.v. 5 losse pillen. */
+  /* Operator ("transparante blur pills"): echte BlurView (zie JSX) i.p.v.
+     effen '#1e1e1e' — overflow:hidden zodat de blur zelf ook de
+     borderRadius respecteert, dunne witte rand voor definitie op glas. */
+  statesSummaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  statesSummaryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statesSummaryText: {
+    color: '#f4f4f4',
+    fontSize: 12,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+    marginLeft: 2,
+  },
+  /* Huisstijl v5.1/5.2 (monochroom, "Apple zou dat nooit in kleur doen"):
+     geselecteerde pill = lichte vulling + donkere tekst, niet-geselecteerd
+     = donker paneel + rand, geen accentkleur. Zelfde regel als de echte
+     webpagina-sectie "A closer look". */
+  /* Operator ("nog altijd heel hoog"): height op de ScrollView's eigen
+     `style` bleek niet te helpen — nu een harde `height:44` +
+     `overflow:'hidden'` op een gewone `View` die de ScrollView omvat
+     (zie JSX). Kan niet meer uitrekken: een plain View met expliciete
+     hoogte + overflow:hidden is geen ScrollView-edge-case. */
+  closerPillsRow: {
+    width: '100%',
+    height: 44,
+    marginTop: 28,
+    overflow: 'hidden',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  /* Operator (Apple-HIG-feedback: "knoppenwolk vervangen door een
+     Segmented Control ... één strakke, doorlopende horizontale
+     menustrip"): losse chips (elk eigen bg+rand) → één doorlopende balk
+     (bg+radius zit nu op de content-container zelf), segmenten hebben
+     geen eigen rand meer — enkel het actieve segment krijgt een lichte
+     vulling. Blijft horizontaal scrollbaar (5 items, sommige labels te
+     lang voor een niet-scrollende flex:1-verdeling zonder afknippen). */
+  closerPillsRowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+  },
+  closerPill: {
+    flexShrink: 0,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  closerPillOn: {
+    backgroundColor: '#f4f4f4',
+  },
+  closerPillText: {
+    color: '#f4f4f4',
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: -0.1,
+  },
+  closerPillTextOn: {
+    color: '#1D1D1F',
+  },
+  /* Punten op de render — wijzen aan WAAR een onderdeel zit. */
+  /* Operator ("dots zijn slordig en te groot"): 22px met dikke rand las
+     als een blob bovenop de kralen — nu 14px, dunne rand, zelfde subtiele
+     gewicht als de `.hs`-punten op de echte webpagina (12px). Hit-area
+     blijft groot via `hitSlop` op de Pressable, niet via de visuele maat. */
+  /* Operator ("kleine dot"): 14px → 10px, nu enkel zichtbaar op het
+     actieve onderwerp (zie JSX), dus geen eigen inactieve variant meer
+     nodig — altijd de "on"-kleur (wit). */
+  closerHotspot: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    marginLeft: -5,
+    marginTop: -5,
+    borderRadius: 5,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  closerHotspotOn: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
+  /* Expanding ring op de actieve hotspot — zelfde "ademende puls, 2.4s
+     cyclus" als een status-stip (huisstijl §5), niet de Signal-Blue
+     haptic-puls (die blijft uitsluitend voor de player/BLE-status). */
+  closerHotspotPulse: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    marginLeft: -11,
+    marginTop: -11,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  /* Operator ("blijf van de bracelet af, cta staat onder de tabbladen"):
+     terug naar de originele waarde — het echte probleem was de
+     TAB_BAR_HEIGHT-berekening (zie heroFullHeight hierboven), niet deze
+     marge. Die nu apart oplossen i.p.v. hier te blijven compenseren. */
+  heroBottomGroup: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  /* Huisstijl §3: CTA altijd wit + donkere tekst (#1D1D1F), radius 14px,
+     knoptekst 17px SemiBold. */
+  heroCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+  },
+  /* Operator ("tekst staat niet goed na verwijderen pijl"): Android voegt
+     op custom fonts extra verticale font-padding toe die de tekst binnen
+     een gecentreerde flex-box laag/hoog laat ogen — includeFontPadding
+     false + expliciete lineHeight (zelfde fix als player.tsx/
+     PlayPauseGlyph.tsx elders in de app) lost dat op. */
+  heroCtaText: {
+    color: '#1D1D1F',
+    fontSize: 17,
+    lineHeight: 20,
+    fontFamily: BrandFonts.semibold,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  /* Huisstijl §3: tekstlink, wit, 15px Medium — voor de secundaire actie
+     (reserveren) onder de primaire witte CTA. */
+  /* Operator, 15 september 2026: bracelet-intro (`braceletIntro`) —
+     zelfde stijlen als de Audio Library-intro in (tabs)/index.tsx. */
+  introOverlay: { zIndex: 50, elevation: 50, backgroundColor: C.bg, overflow: 'hidden' },
+  introTextWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 26,
+    paddingBottom: 34,
+  },
+  introEyebrow: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  introTitle: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.4,
+    lineHeight: 36,
+    textAlign: 'center',
+  },
+  /* Operator, 24 september 2026 ("ctas moeten langer, Apple gebruikt een
+     vaste zijmarge voor een primaire hero-cta"): `marginHorizontal` op de
+     buitenste wrapper i.p.v. `paddingHorizontal` op de binnenste — de
+     knop rekt nu uit tot een vaste zijmarge i.p.v. rond de tekst te
+     plooien (default `alignItems:'stretch'` laat `introCta` vanzelf de
+     volle breedte van `introCtaWrap` vullen). Zelfde wijziging in
+     breath.tsx/(tabs)/index.tsx. */
+  introCtaWrap: { borderRadius: 16, overflow: 'hidden', marginHorizontal: 26 },
+  introCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#D2D2D7',
+  },
+  introCtaTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 16,
+    letterSpacing: 0.1,
+    color: '#1D1D1F',
+  },
+  introCtaShimmer: {
+    position: 'absolute',
+    top: -20,
+    bottom: -20,
+    width: 46,
+  },
+
   /* ── Personalisatie-banners (top van pagina, conditional) ──
      Apple-style: fill-only (geen borders), grotere radius, ruimere
      padding. Pro-banner subtiel, owner-banner prominenter. */
   /* Iter v180 (2026-07-02): pro-banner opgeschoond — gecentreerde tekst,
      ruimere padding, subtiele border voor definitie. Operator-feedback:
      "Reserved for VIBEZCORE members" mag mooier + gecentreerd. */
+  /* Huisstijl v4.4: decoratieve banner-tint, niet haptic/status — Royal Indigo. */
   proBanner: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    borderColor: 'rgba(58,143,255,0.28)',
+    backgroundColor: 'rgba(30,42,74,0.10)',
+    borderColor: 'rgba(30,42,74,0.28)',
     borderWidth: 1,
     borderRadius: 16,
     paddingVertical: 14,
@@ -2006,8 +2072,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /* Operator ("accentkleur is niet meer blauw"): was C.accent. */
   proBannerText: {
-    color: Brand.accent,
+    color: C.textDim,
     fontSize: 13.5,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.1,
@@ -2015,11 +2082,13 @@ const s = StyleSheet.create({
   },
   /* Owner-eyebrow (iter 9t) — vervangt hero voor owners. Klein,
      "you are here"-style, geen marketing-vibe. */
+  /* Operator, 14 september 2026: was wit-gebaseerd (0.45 alpha) —
+     onzichtbaar op licht. */
   ownerEyebrow: {
-    color: 'rgba(255,255,255,0.45)',
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
-    letterSpacing: 2.4,
+    letterSpacing: 1.5,
     marginTop: 18,
     marginBottom: 6,
     textTransform: 'uppercase',
@@ -2044,22 +2113,22 @@ const s = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Brand.success,
+    backgroundColor: C.success,
   },
   ownerTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.2,
   },
   ownerSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     marginTop: 2,
   },
   ownerArrow: {
-    color: Brand.success,
+    color: C.success,
     fontSize: 24,
     fontFamily: BrandFonts.medium,
   },
@@ -2069,12 +2138,12 @@ const s = StyleSheet.create({
     marginTop: 6,
   },
   signInLinkText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
   },
   signInLinkAccent: {
-    color: Brand.accent,
+    color: C.accent,
     fontFamily: BrandFonts.semibold,
   },
   /* Iter v190 (2026-07-02): Learn-more upgraded van inline text-link naar
@@ -2084,10 +2153,10 @@ const s = StyleSheet.create({
   learnMoreCard: {
     marginTop: 6,
     marginBottom: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(10,10,12,0.04)',
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(10,10,12,0.14)',
   },
   learnMoreCardInner: {
     paddingVertical: 20,
@@ -2101,7 +2170,7 @@ const s = StyleSheet.create({
     paddingRight: 12,
   },
   learnMoreCardEyebrow: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.8,
@@ -2109,7 +2178,7 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   learnMoreCardLabel: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.15,
@@ -2117,14 +2186,14 @@ const s = StyleSheet.create({
     lineHeight: 20,
   },
   learnMoreCardSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
     lineHeight: 17,
   },
   learnMoreCardArrow: {
-    color: 'rgba(255,255,255,0.60)',
+    color: 'rgba(10,10,12,0.60)',
     fontSize: 22,
     fontFamily: BrandFonts.regular,
   },
@@ -2141,9 +2210,9 @@ const s = StyleSheet.create({
     marginBottom: 12,
     aspectRatio: 4 / 5,
     backgroundColor: '#000',
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(10,10,12,0.10)',
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -2208,14 +2277,17 @@ const s = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
   },
+  /* Operator, 14 september 2026: radius 100 (volle pil) → 12, conform
+     de vastgelegde knop-chrome (zelfde fix als deze kaart al kreeg op
+     Audio Library). */
   breathDiscoverCta: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     paddingHorizontal: 18,
     paddingVertical: 11,
-    backgroundColor: Brand.accent,
-    borderRadius: 100,
+    backgroundColor: C.accent,
+    borderRadius: 12,
     gap: 8,
   },
   breathDiscoverCtaText: {
@@ -2243,7 +2315,7 @@ const s = StyleSheet.create({
     paddingBottom: 40,
   },
   landingEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2.0,
@@ -2261,17 +2333,8 @@ const s = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  landingTitle: {
-    color: Brand.text,
-    fontSize: 36,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.8,
-    lineHeight: 40,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
   landingSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 15,
     fontFamily: BrandFonts.medium,
     lineHeight: 22,
@@ -2294,14 +2357,16 @@ const s = StyleSheet.create({
     flexBasis: '46%',
     flexGrow: 1,
   },
+  /* Operator ("accentkleur is niet meer blauw"): was C.accent — een
+     decoratief lijst-bulletje is geen haptic-pulse, dus geen Signal Blue. */
   landingBulletDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Brand.accent,
+    backgroundColor: C.textDim,
   },
   landingBulletText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     lineHeight: 18,
@@ -2327,7 +2392,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
   },
   landingKsDate: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.8,
@@ -2336,7 +2401,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,159,10,0.14)',
     borderColor: 'rgba(255,159,10,0.45)',
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 12,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
@@ -2351,33 +2416,39 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: Brand.accent,
-    borderRadius: 14,
+    backgroundColor: C.accent,
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 24,
     marginTop: 8,
   },
+  /* Operator ("accentkleur is niet meer blauw"): landingCtaTight is nu
+     wit — tekst mee van wit naar donker (#1D1D1F), anders wit-op-wit. */
   landingCtaText: {
-    color: '#ffffff',
+    color: '#1D1D1F',
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.1,
   },
   landingCtaArrow: {
-    color: '#ffffff',
+    color: '#1D1D1F',
     fontSize: 18,
     fontFamily: BrandFonts.bold,
     lineHeight: 20,
   },
   /* Iter 9dg (2026-05-31): tightere CTA-variant — kleinere marginTop
-     zodat 'ie hoger op het scherm landt, dichter tegen de bracelet. */
+     zodat 'ie hoger op het scherm landt, dichter tegen de bracelet.
+     Operator ("accentkleur is niet meer blauw"): backgroundColor was
+     C.accent — een CTA-vulling is nooit de accentkleur (huisstijl §3,
+     altijd wit + donkere tekst). landingCtaText/Arrow hieronder mee
+     aangepast van wit naar donker. */
   landingCtaTight: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: Brand.accent,
-    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 24,
     marginTop: 0,
@@ -2390,18 +2461,19 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   landingBackLinkText: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.2,
   },
 
-  /* Iter 9cz → 9db (2026-05-31): paddingBottom 4 → 0 zodat de hero-
-     tekst MAX dicht tegen de bracelet komt. */
-  hero: { paddingTop: 28, paddingBottom: 0, paddingHorizontal: 4 },
   heroEyebrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    /* Gecentreerd, niet meer links (operator, 10 augustus 2026): de titel
+       eronder is nu ook gecentreerd (GradientText), en een linkse rij
+       boven een gecentreerde kop stond scheef. */
+    justifyContent: 'center',
     gap: 10,
     marginBottom: 8,
   },
@@ -2409,7 +2481,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,159,10,0.14)',
     borderColor: 'rgba(255,159,10,0.45)',
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 12,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
@@ -2424,8 +2496,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(58,143,255,0.12)',
-    borderColor: 'rgba(58,143,255,0.35)',
+    /* Huisstijl v4.4: decoratieve pill-CTA, niet haptic/status — Royal Indigo. */
+    backgroundColor: 'rgba(30,42,74,0.12)',
+    borderColor: 'rgba(30,42,74,0.35)',
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 14,
@@ -2433,38 +2506,24 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   heroMicroCtaText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 13,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.1,
   },
   heroMicroCtaArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     lineHeight: 16,
   },
+  /* Operator, 11 september 2026: was 11px/letterSpacing 1.2, los van
+     dezelfde eyebrow-rol op index.tsx (10.5px/1.4) — nu identiek. */
   heroEyebrow: {
-    color: Brand.accent,
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 1.2,
+    color: C.accent,
+    ...TypeScale.cardEyebrow,
     marginBottom: 14,
     textTransform: 'uppercase',
-  },
-  heroTitle: {
-    color: Brand.text,
-    fontSize: 38,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.9,
-    lineHeight: 42,
-    marginBottom: 14,
-  },
-  heroSub: {
-    color: Brand.textDim,
-    fontSize: 15,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 23,
   },
 
   /* ── 2. Render + sonar ──
@@ -2500,7 +2559,7 @@ const s = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(10,10,12,0.08)',
     overflow: 'hidden',
   },
   sonarRing: {
@@ -2517,7 +2576,7 @@ const s = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 1.5,
-    borderColor: Brand.accent,
+    borderColor: C.accent,
     top: '50%',
     left: '50%',
     /* center y = 50% + 5 + 15 = 50% + 20 */
@@ -2538,7 +2597,7 @@ const s = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Brand.accent,
+    backgroundColor: C.accent,
     top: '50%',
     left: '50%',
     /* Iter 9da → 9dc: marginTop 30 → 18 terug, samen met de sonar-ring
@@ -2546,7 +2605,7 @@ const s = StyleSheet.create({
        'ie buiten de HapticCore positie). */
     marginTop: 18,
     marginLeft: -2,
-    shadowColor: Brand.accent,
+    shadowColor: C.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 6,
@@ -2565,18 +2624,34 @@ const s = StyleSheet.create({
      Vervangt het oude secLabel + secTitle + secSub patroon. Nu alleen
      één grote titel + optionele subtitle. Geen ALL CAPS eyebrows meer
      — die voelden ouderwets. */
-  sectionTitle: {
-    color: Brand.text,
+  /* Operator, 14 september 2026: "checke tekst headers/subheaders, want
+     kloppen zaken niet" — `GradientText`'s standaardverloop is wit →
+     lichtblauw, gebouwd voor een donkere achtergrond ("Alleen zinvol op
+     een donkere achtergrond", zie GradientText.tsx). Op deze nu lichte
+     pagina was dat vrijwel onzichtbaar wit-op-wit. Vervangen door gewone
+     tekst in de H2-rol (22px Bold, -0.3, sentence case) — zelfde token
+     als de rest van de app, en gegarandeerd leesbaar ongeacht thema. De
+     edelsteen-sectie (regel ~1751/1759) is bewust NIET meegenomen: die
+     blijft in zijn geheel dark, inclusief zijn eigen kop. */
+  sectionHead: {
+    color: C.text,
+    fontSize: 22,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  /* Operator, 14 september 2026: "Smart Bead Bracelet mag als hero
+     header" — H1-rol (32px Bold, -0.4), voor de paginatitel zelf,
+     zwaarder dan de gewone H2 sectiekoppen (`sectionHead`, 22px). */
+  heroHead: {
+    color: C.text,
     fontSize: 32,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.8,
-    lineHeight: 36,
-    marginTop: 56,
-    marginBottom: 10,
-    paddingHorizontal: 4,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.4,
+    textAlign: 'center',
   },
   sectionSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     lineHeight: 23,
@@ -2587,34 +2662,38 @@ const s = StyleSheet.create({
   /* ── Universal content-card (story-card + future use) ──
      Eén card-style voor body-content na een pill/tab-selectie. */
   uCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 22,
+    backgroundColor: 'rgba(10,10,12,0.05)',
+    borderRadius: 20,
     padding: 22,
   },
   uCardEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 1.2,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
-  uCardTitle: {
-    color: Brand.text,
-    fontSize: 22,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 10,
+  /* Operator, 17 september 2026 ("in 1 kaart, alles duidelijk gegroepeerd
+     incl de headers"): gedeelde module-kaart voor secties die kop +
+     carousel + CTA/tabs samen omvatten (modi, collectie) — zelfde
+     kaart-taal als learnMoreCard (rgba(10,10,12,0.04) bg, subtiele rand),
+     nu op de "grote kaart"-radius (20) uit de radius-opschoning.
+     paddingHorizontal is BEWUST exact SIDE_INSET: carouselWrap's eigen
+     marginHorizontal:-SIDE_INSET-truc cancelt dan precies deze padding
+     (i.p.v. de pagina-padding), waardoor de carousel binnen de kaart
+     volledig breed kan bleeden zonder verdere aanpassingen. */
+  moduleCard: {
+    backgroundColor: 'rgba(10,10,12,0.04)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(10,10,12,0.14)',
+    paddingHorizontal: SIDE_INSET,
+    paddingTop: 20,
+    paddingBottom: 4,
+    marginBottom: 24,
   },
-  uCardBody: {
-    color: Brand.textDim,
-    fontSize: 15,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 23,
-    marginBottom: 16,
-  },
-
-  /* ── Carousel (How-it-works + Modes) ──
+  /* ── Carousel (Collection) ──
      Apple iPhone-page-style swipe-carousel. carouselWrap brikt uit de
      page-padding (marginHorizontal -16) zodat de ScrollView de hele
      scherm-breedte krijgt. Cards binnenin hebben hun eigen width
@@ -2622,50 +2701,12 @@ const s = StyleSheet.create({
      row eronder als positie-indicator + tappable jump-target.
 
      Apple Photos / iPhone-pages doen dit zo: peek van de volgende
-     card (~26px zichtbaar) is signal voor "er is meer". */
+     card (~26px zichtbaar) is signal voor "er is meer". Was voorheen
+     voor de Modes-sectie (nu 5 vaste rijen, zie modeList) — hergebruikt
+     voor de Collection, die andersom van grid naar carousel ging. */
   carouselWrap: {
     marginHorizontal: -SIDE_INSET,
     marginBottom: 18,
-  },
-  carouselCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 22,
-    /* Iter 9dq v80 (2026-06-03): padding verplaatst naar modeCardContent
-       zodat de foto-header edge-to-edge kan zonder margin. overflow:hidden
-       cliped de foto netjes binnen de afgeronde hoeken. */
-    overflow: 'hidden',
-  },
-  /* Foto-header bovenaan elke mode-card (iter 9dq v80 → v81 → v82).
-     Vaste hoogte zodat carousel-cards visueel uitgelijnd blijven
-     ongeacht foto-aspect-ratio.
-     v82: 110 → 180 nadat operator de head-tekst weghaalde — body alleen
-     is veel compacter dan head+body, dus we kunnen de foto laten domineren
-     zonder de card hoger te maken dan vorige versie. */
-  modePhotoWrap: {
-    height: 180,
-    width: '100%',
-    position: 'relative',
-  },
-  modePhoto: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  /* Content-overlay op de foto: mode-naam + direction · duration.
-     Absolute bottom-left, witte tekst over de dark-gradient. */
-  modePhotoOverlayContent: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  /* Inner content (head, body, ideal-list) onder de foto.
-     Padding 22 → 18 voor compactere cards (iter 9dq v81). */
-  modeCardContent: {
-    padding: 18,
   },
   dotRow: {
     flexDirection: 'row',
@@ -2677,117 +2718,180 @@ const s = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: 'rgba(10,10,12,0.20)',
   },
   dotOn: {
-    backgroundColor: Brand.text,
+    backgroundColor: C.text,
     width: 22,  /* active dot iets breder = Apple-style indicator */
+  },
+
+  /* Vast "i"-knopje rechtsboven — sibling van de ScrollView, dus blijft
+     staan tijdens scrollen. Subtiel glas-effect, geen zware fill, past
+     op zowel de fotoheader (owner) als de lichte pagina (non-owner). */
+  infoBtn: {
+    position: 'absolute',
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(10,10,12,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
+    elevation: 20,
+  },
+  infoBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: BrandFonts.bold,
+    fontStyle: 'italic',
   },
 
   /* ── Story pills (How it works, HTML-mockup style) ──
      Capsule-pills met witte fill als actief (hoog contrast, voelt
      "click-y"), subtiele grijs als inactief. Flex-wrap zodat alle 7
      pills passen op 2-3 rijen ipv horizontale scroll. */
-  /* Iter 9: pill-cloud weggehaald → horizontale tab-bar met underline-
-     indicator (Apple iOS-style segmented nav). Geeft een rustigere
-     hierarchy zonder pill-wrapping over 2-3 regels. */
-  storyTabBar: {
+  /* Operator, 15 september 2026 ("te veel tekst, hoe zou Apple dat
+     aanpakken?"): tab-bar + dots + single-story-card vervangen door een
+     korte, in-één-oogopslag scanbare verticale lijst — alle 7 punten
+     tegelijk zichtbaar, geen tik-doorheen-tabs meer nodig. */
+  storyList: {
+    gap: 4,
+  },
+  storyRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20, // matches root padding zodat eerste/laatste tab niet plakt
-    paddingBottom: 4,
-    gap: 22,
-    alignItems: 'flex-end',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: C.border,
   },
-  storyTab: {
-    paddingVertical: 8,
-    alignItems: 'center',
+  storyRowLast: {
+    borderBottomWidth: 0,
   },
-  storyTabText: {
-    color: Brand.textDim,
-    fontSize: 14,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: -0.1,
+  /* Operator ("accentkleur blauw bestaat niet meer in ons protocool"):
+     was C.accent (Signal Blue, #3a8fff) — die kleur is uitsluitend voor
+     de haptic-pulse, nooit tekst/labels. Monochroom grijs label i.p.v. */
+  storyRowNum: {
+    ...TypeScale.cardEyebrow,
+    color: C.textDim,
+    width: 22,
+    paddingTop: 2,
   },
-  storyTabTextOn: {
-    color: Brand.text,
-    fontFamily: BrandFonts.bold,
+  storyRowTitle: {
+    ...TypeScale.compactCardTitle,
+    color: C.text,
   },
-  storyTabUnderline: {
-    marginTop: 6,
-    height: 2,
-    backgroundColor: Brand.text,
-    borderRadius: 1,
-    alignSelf: 'stretch',
-  },
-  /* Dot-pagination onder de tab-bar (matches modeCarousel dotRow). */
-  storyDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 6,
-    marginBottom: 18,
-  },
-  storyDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  storyDotOn: {
-    backgroundColor: Brand.text,
-    width: 18,
-    borderRadius: 3,
+  storyRowBody: {
+    ...TypeScale.cardDetail,
+    color: C.textDim,
+    marginTop: 3,
+    lineHeight: 19,
   },
 
-  /* ── Story-card (content panel onder de pills) ──
-     Number-eyebrow in accent, grote titel, body met VERTICALE BLAUWE
-     LIJN links (visual anchor uit de HTML-mockup), blauwe gefulde
-     tags onderaan (geen glass-chips hier — operator wil blue-fill). */
-  /* Iter 9ci (2026-05-31): Apple-stijl strakkere story-card.
-     Vroeger: subtiele card-fill + blue left-border op body (bloggy).
-     Nu: cleane card zonder left-border, body krijgt rustige line-height
-     en gedimde tekst-kleur voor leesbaarheid zonder over te nemen. */
-  storyCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 22,
-    paddingVertical: 24,
-    paddingHorizontal: 22,
+  /* ── Modi — swipe-carousel (terug van de verticale-rijen-tussenstap) ──
+     Operator, 15 september 2026: "mensen skippen lange paragrafen, zet
+     ze weer op een swipe-balk" — elke kaart draagt alleen de kleur-dot,
+     de naam, en één korte zin (MODE_SHORT). Gebruikt dezelfde
+     carouselWrap/dotRow/dot/dotOn als de Collection-carousel. */
+  modeSwipeCard: {
+    backgroundColor: C.panel,
+    borderRadius: 20,
+    padding: 20,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  /* Operator, 26 september 2026: bento-grid ipv horizontale swipe-
+     carousel — eerste tile (Boost) full-width "big", de overige 4 in
+     2-koloms rijen. Zelfde tile-taal als goal.tsx's Set Your State. */
+  modeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  modeTile: {
+    width: '48%',
+    backgroundColor: C.panel,
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  modeTileBig: {
+    width: '100%',
+  },
+  modeTileDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginBottom: 12,
+  },
+  modeTileTitle: {
+    ...TypeScale.compactCardTitle,
+    fontSize: 18,
+    color: C.text,
+    marginBottom: 4,
+  },
+  modeTileBody: {
+    ...TypeScale.cardDetail,
+    color: C.textDim,
+    lineHeight: 19,
+  },
+  modeSwipeDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginBottom: 12,
+  },
+  /* Dunne zwarte outline, alleen voor Clarity's witte stip — anders
+     onzichtbaar tegen de witte kaart-achtergrond. */
+  modeSwipeDotOutline: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#000000',
   },
-  storyNum: {
-    color: Brand.accent,
-    fontSize: 12,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2.5,
-    marginBottom: 10,
+  /* State-infopopup: grotere kleur-stip bovenaan de sheet (Clarity's wit
+     krijgt via modeSwipeDotOutline dezelfde zwarte outline-uitzondering
+     als elders). */
+  /* State-infopopup: 1 sheet met een rij per modus (kleur-stip + naam +
+     blurb + duur), zelfde storyRow-opbouw als de "How it works"-sheet. */
+  stateInfoList: {
+    gap: 4,
+    marginTop: 16,
   },
-  /* Iter 9ci: title 22→26 voor sterker Apple-style "headline" gevoel. */
-  storyTitle: {
-    color: Brand.text,
-    fontSize: 26,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.6,
-    lineHeight: 30,
-    marginBottom: 14,
+  stateInfoRow: {
+    flexDirection: 'row',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: C.border,
   },
-  /* Iter 9ci: clean body zonder left-border. Iets gedimde tekst (90%)
-     zodat 't de titel niet visueel weg-concurreert. */
-  storyBody: {
-    color: 'rgba(244,244,244,0.85)',
-    fontSize: 15,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 23,
-    marginBottom: 18,
-  },
-  /* Iter 9: pill-tags weggehaald → dot-separated text. Past bij modeWave-
-     pattern verderop in deze file (consistente "spec-line"-stijl). */
-  storySpecLine: {
-    color: Brand.accent,
-    fontSize: 12,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
+  stateInfoDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     marginTop: 4,
+  },
+  stateInfoDuration: {
+    ...TypeScale.cardEyebrow,
+    color: C.textDim,
+    marginTop: 4,
+  },
+  modeSwipeTitle: {
+    ...TypeScale.compactCardTitle,
+    fontSize: 20,
+    color: C.text,
+    marginBottom: 6,
+  },
+  modeSwipeBody: {
+    ...TypeScale.cardDetail,
+    color: C.textDim,
+    lineHeight: 20,
   },
 
   /* ── Tab-row (collection series, Pure/Premium/Imperial) ──
@@ -2806,7 +2910,7 @@ const s = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
@@ -2826,10 +2930,11 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: 'rgba(58,143,255,0.14)',
-    borderColor: 'rgba(58,143,255,0.40)',
+    /* Huisstijl v4.4: decoratieve CTA-tint, niet haptic/status — Royal Indigo. */
+    backgroundColor: 'rgba(30,42,74,0.14)',
+    borderColor: 'rgba(30,42,74,0.40)',
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 20,
     overflow: 'hidden',
@@ -2838,31 +2943,24 @@ const s = StyleSheet.create({
     flex: 1,
   },
   previewCtaEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2.0,
     marginBottom: 6,
   },
   previewCtaTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 18,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.3,
     marginBottom: 4,
   },
-  previewCtaSub: {
-    color: 'rgba(244,244,244,0.65)',
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    lineHeight: 17,
-    letterSpacing: 0.1,
-  },
   previewCtaArrow: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Brand.accent,
+    backgroundColor: C.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2872,48 +2970,6 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     lineHeight: 22,
   },
-  /* Iter v193 (2026-07-03): Oura-style compact CTAs direct onder previewCta.
-     Grote gevulde primary knop voor Activate, kleine text-link eronder voor
-     Learn more. Verrangt de 2 grote cards die vroeger onderaan de bracelet
-     preview stonden (na KS pricing) — die stonden te ver van de context en
-     voelden druk aan. */
-  compactActivateBtn: {
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Brand.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  compactActivateBtnText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: -0.2,
-  },
-  compactActivateBtnArrow: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontFamily: BrandFonts.bold,
-    lineHeight: 20,
-    marginTop: -1,
-  },
-  compactLearnMoreLink: {
-    marginTop: 12,
-    marginBottom: 4,
-    alignSelf: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  compactLearnMoreLinkText: {
-    color: 'rgba(244,244,244,0.65)',
-    fontSize: 13,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.1,
-  },
   /* Legacy previewBtn (iter 9o) — niet meer in JSX gebruikt, behouden
      voor referentie/rollback. */
   previewBtn: {
@@ -2922,21 +2978,21 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(10,10,12,0.04)',
+    borderColor: 'rgba(10,10,12,0.15)',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 20,
   },
   previewBtnText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
   },
   previewBtnArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 16,
     fontFamily: BrandFonts.bold,
   },
@@ -2949,89 +3005,18 @@ const s = StyleSheet.create({
      consistent tag-taal door de hele pagina. */
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10,10,12,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(10,10,12,0.10)',
     borderRadius: 999,
     paddingVertical: 7,
     paddingHorizontal: 14,
   },
   tagText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 12,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
-  },
-
-  /* ── Mode content-card (binnen uCard) ──
-     Header met kleur-dot + naam-stack, body met head + desc + ideal-
-     tags. Cards zelf gebruiken uCard. */
-  modeHdr: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 16,
-  },
-  modeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  modeWave: {
-    /* `modeWave` heet historisch zo — toont nu state-direction +
-       duration, NIET de brain-state-wave (CLAUDE.md §1). Style blijft
-       om refactor-noise te beperken. */
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    marginTop: 3,
-  },
-  modeHead: {
-    color: Brand.text,
-    fontSize: 16,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.2,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  modeIdealLbl: {
-    color: Brand.accent,
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 1.2,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  /* Ideal-tags: identiek aan algemene `tag`-style (glass-chip).
-     Operator-keuze 2026-05-26: blauwe fill voelde verouderd + creëerde
-     blue-on-blue verzadiging in Calm Control / Boost cards. Tags zijn
-     nu neutraal; de accent-kleur blijft alleen op het IDEAL FOR-label
-     en de mode-dot — dat geeft hiërarchie zonder blue-soup. */
-  /* Iter 9: pill-row "Ideal for" → verticale ✓ checklist (Apple Health-
-     achtige presentatie). Voelt meer als feature-bullet dan pill. */
-  idealList: {
-    marginTop: 4,
-    gap: 8,
-  },
-  idealItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  idealCheck: {
-    fontSize: 14,
-    fontFamily: BrandFonts.bold,
-    marginRight: 10,
-    lineHeight: 20,
-  },
-  idealItemText: {
-    flex: 1,
-    color: Brand.text,
-    fontSize: 13,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: -0.1,
-    lineHeight: 20,
   },
 
   /* ── 5. Specs (hero + 2x2 grid) ──
@@ -3041,13 +3026,14 @@ const s = StyleSheet.create({
 
   /* Hero spec — featured met blauwe tint, 5 colored dots als visueel
      anker. Maakt connectie met de Modes-sectie eerder (zelfde kleuren). */
+  /* Huisstijl v4.4: decoratieve kaart-tint, niet haptic/status — Royal Indigo. */
   specHero: {
-    backgroundColor: 'rgba(58,143,255,0.08)',
-    borderRadius: 22,
+    backgroundColor: 'rgba(30,42,74,0.08)',
+    borderRadius: 20,
     padding: 26,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.20)',
+    borderColor: 'rgba(30,42,74,0.20)',
   },
   specHeroDots: {
     flexDirection: 'row',
@@ -3060,14 +3046,14 @@ const s = StyleSheet.create({
     borderRadius: 7,
   },
   specHeroVal: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 28,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.7,
     marginBottom: 8,
   },
   specHeroLbl: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     lineHeight: 21,
@@ -3076,41 +3062,13 @@ const s = StyleSheet.create({
   /* Grid 2x2 voor de overige 4 specs (wrist, bead, bt, usb). Werkt
      via explicit row-pairing: specsGrid is verticaal (rows stacken),
      specRow horizontaal (2 cards per row, flex:1 elk → exact 50/50). */
-  specsGrid: {
-    gap: 10,
-  },
-  specRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  specCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
-    padding: 22,
-  },
-  specVal: {
-    color: Brand.text,
-    fontSize: 26,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.6,
-    marginBottom: 8,
-  },
-  specLbl: {
-    color: Brand.textDim,
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-
   /* ── 6. Collection ──
      Series-tabs als Apple-style segmented control: outer container met
      subtiele fill, selected pill krijgt een eigen fill (geen borders).
      Net iOS' UISegmentedControl. */
   serTabsWrap: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(10,10,12,0.06)',
     borderRadius: 12,
     padding: 4,
     marginBottom: 16,
@@ -3119,45 +3077,56 @@ const s = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 9,
+    borderRadius: 12,
     backgroundColor: 'transparent',
   },
   serTabText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
   },
   /* Edition-cards: tonale bg, geen border, grotere radius, subtle
      accent-glow op selected ipv harde border. */
+  /* Operator, 26 september 2026: vaste 2-koloms grid ipv horizontale
+     swipe-carousel — edities liggen nu naast elkaar zoals elke andere
+     lijst-sectie in de app. */
   collGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginBottom: 8,
   },
   collCard: {
-    /* Card-styling iter 3 (operator-feedback 2026-05-26): image moet
-       edge-to-edge naar tekst lopen — geen padding rondom image, geen
-       bottom-rounded gap. Card's overflow:hidden + borderRadius clipt
-       automatisch de TOP corners van de image om bij de card-shape te
-       passen; BOTTOM van image is square en sluit naadloos aan op
-       het tekst-blok eronder. Subtiele border (10% wit) omkadert het
-       geheel zodat de card als één duidelijke unit voelt. */
-    flexBasis: '48%',
-    backgroundColor: Brand.panel,
+    width: '48%',
+    /* Operator, 15 september 2026 ("laat de armbanden zweven op de witte
+       achtergrond, geen harde zwarte vlakken"): de dark-panel fill die
+       hier stond (bewuste keuze van 26 mei) is vervangen door dezelfde
+       lichte kaart-behandeling als de rest van de pagina — de foto blijft
+       het enige "zware" element, de kaart zelf voelt luchtig, juweliers-
+       stijl. Zachte schaduw i.p.v. witte rand geeft 'm nog net genoeg
+       scheiding van de eveneens lichte pagina-achtergrond. */
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  collCardClip: {
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: C.panel,
   },
   /* Selected-state op grid-card: subtiel, geen ugly blue tint meer.
      Sinds 2026-05-26 verschijnt de detail-popup als overlay; de
      onderliggende card is dus toch niet zichtbaar tijdens selectie.
      We laten alleen een fijne accent-rand achter zodat user — nadat
      popup gesloten is — herkent welke 'ie tapped had. */
+  /* Huisstijl v4.4: geselecteerde-staat border, niet haptic/status — Royal Indigo. */
   collCardOn: {
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.6)',
+    borderColor: 'rgba(30,42,74,0.6)',
   },
 
   /* ── Edition-detail overlay (floating popup) ──
@@ -3176,9 +3145,9 @@ const s = StyleSheet.create({
     /* Iter 9az (2026-05-31): backdrop volledig opaque (was 70% zwart).
        Operator wil dat de pagina achter de popup volledig verdwijnt —
        voelt meer als een echte fullscreen-modal en niet als een
-       overlay. Brand.bg matched de rest van de app. */
+       overlay. C.bg matched de rest van de app. */
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Brand.bg,
+    backgroundColor: BrandDark.bg,
   },
   detailWrap: {
     /* Iter 9at (2026-05-31): width 88→92%, maxHeight 85→95% zodat de
@@ -3204,15 +3173,18 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 14,
   },
+  /* Operator, 15 september 2026: naam in dun zwart lettertype, steensoort
+     zachtgrijs eronder — "juweliers"-uitstraling i.p.v. de eerdere witte
+     tekst op donker paneel. */
   collName: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.2,
     marginBottom: 4,
   },
   collNat: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     marginBottom: 10,
@@ -3236,13 +3208,13 @@ const s = StyleSheet.create({
   detail: {
     /* Sinds 2026-05-26 (overlay-refactor) is dit een floating card —
        moet OPAQUE zijn anders zie je de pagina + backdrop erdoorheen.
-       Brand.panel #1e1e1e is de standaard card-kleur op dark mode.
-       Iter 9ay (2026-05-31): shadow van Brand.accent (blauw) → #000.
+       C.panel #1e1e1e is de standaard card-kleur op dark mode.
+       Iter 9ay (2026-05-31): shadow van C.accent (blauw) → #000.
        De blauwe glow rondom voelde gimmicky. Nu een neutrale subtiele
        drop-shadow met lichte downward offset = standaard modal-depth
        zonder kleur-afleiding. */
-    backgroundColor: Brand.panel,
-    borderRadius: 24,
+    backgroundColor: BrandDark.panel,
+    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -3268,7 +3240,7 @@ const s = StyleSheet.create({
     right: 12,
     bottom: 12,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: 5,
     paddingHorizontal: 10,
   },
@@ -3279,15 +3251,16 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   detailBody: { padding: 22 },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): 26px was
+     al toevallig gelijk aan `TypeScale.tabHeader`, enkel gewicht
+     (extrabold i.p.v. bold) en letterSpacing (-0.6 i.p.v. -0.3) weken af. */
   detailName: {
-    color: Brand.text,
-    fontSize: 26,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.6,
+    color: BrandDark.text,
+    ...TypeScale.tabHeader,
     marginTop: 12,
   },
   detailNat: {
-    color: Brand.textDim,
+    color: BrandDark.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     marginTop: 4,
@@ -3299,7 +3272,7 @@ const s = StyleSheet.create({
   },
   detailDescWrap: { marginBottom: 14 },
   detailDescHead: {
-    color: Brand.text,
+    color: BrandDark.text,
     fontSize: 16,
     fontFamily: BrandFonts.semibold,
     fontStyle: 'italic',
@@ -3314,7 +3287,7 @@ const s = StyleSheet.create({
     marginTop: 6,
   },
   detailNote: {
-    color: Brand.textDim,
+    color: BrandDark.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     fontStyle: 'italic',
@@ -3330,11 +3303,11 @@ const s = StyleSheet.create({
     flexBasis: '48%',
     flexGrow: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
   },
   detailSpecLbl: {
-    color: Brand.textDim,
+    color: BrandDark.textDim,
     fontSize: 10,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.6,
@@ -3342,19 +3315,19 @@ const s = StyleSheet.create({
     marginBottom: 5,
   },
   detailSpecVal: {
-    color: Brand.text,
+    color: BrandDark.text,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.2,
   },
   detailClose: {
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
   },
   detailCloseText: {
-    color: Brand.text,
+    color: BrandDark.text,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
@@ -3392,21 +3365,22 @@ const s = StyleSheet.create({
 
   /* Outer container — subtiel panel-bg + border, generous padding. */
   ksCard: {
-    backgroundColor: Brand.panel,
-    borderRadius: 24,
+    backgroundColor: C.panel,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(10,10,12,0.08)',
     padding: 20,
     paddingTop: 24,
   },
 
   /* Featured Bundle — nested card binnen ksCard, blue tint + accent
      border om visueel meest prominent te zijn. */
+  /* Huisstijl v4.4: decoratieve "featured" kaart-tint, niet haptic/status — Royal Indigo. */
   ksFeatured: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(30,42,74,0.10)',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,255,0.40)',
+    borderColor: 'rgba(30,42,74,0.40)',
     padding: 20,
     paddingTop: 24,
   },
@@ -3417,13 +3391,13 @@ const s = StyleSheet.create({
     position: 'absolute',
     top: 14,
     right: 14,
-    backgroundColor: Brand.accent,
+    backgroundColor: C.accent,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 999,
   },
   ksFeatBadgeText: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,
@@ -3445,11 +3419,11 @@ const s = StyleSheet.create({
      featured card EN van de outer card-bg. Zelfde radius/padding-
      conventie als ksFeatured zodat ze visueel bij elkaar horen. */
   ksOption: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(10,10,12,0.05)',
+    borderRadius: 20,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(10,10,12,0.10)',
     marginTop: 14,
   },
 
@@ -3457,25 +3431,25 @@ const s = StyleSheet.create({
      layout (tekst links, prijs rechts). Net iets compactere padding
      dan de full options zodat 'ie visueel "tussendoor"-gewicht heeft. */
   ksAddon: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(10,10,12,0.05)',
+    borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(10,10,12,0.10)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     marginTop: 14,
   },
   ksAddonName: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.3,
     marginBottom: 2,
   },
   ksAddonSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
   },
@@ -3489,16 +3463,9 @@ const s = StyleSheet.create({
     gap: 6,
   },
 
-  /* Hairline — gebruikt op meerdere plaatsen binnen ksCard. */
-  ksHairline: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginVertical: 16,
-  },
-
   /* Shared eyebrow + name styles voor de option-secties. */
   ksEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 1.2,
@@ -3506,49 +3473,36 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
   ksName: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 18,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.4,
     marginBottom: 14,
   },
-  ksIncludesLbl: {
-    color: Brand.textDim,
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.8,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-  },
 
-  /* Price row + meta (shared across all 3 options). */
+  /* Price row (shared across all 3 options). */
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 12,
     flexWrap: 'wrap',
   },
-  priceMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   priceMain: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 34,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.9,
     lineHeight: 38,
   },
   priceMainSmall: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 22,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.5,
     lineHeight: 26,
   },
   priceOld: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(10,10,12,0.35)',
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     textDecorationLine: 'line-through',
@@ -3556,18 +3510,21 @@ const s = StyleSheet.create({
   /* Iter v218 (2026-07-04): EUR-conversie hint onder USD-hoofdprijs.
      Subtiel, gedimd, klein — communiceert "voor EU-context, niet
      de betaalprijs op KS". */
+  /* Duidelijker dan voorheen (operator, 11 augustus 2026: "kunnen we
+     duidelijk maken wat die prijs in eu is") — 0.45 opacity/12pt las als
+     kleine lettertjes; dit is een echt prijsgetal, geen disclaimer. */
   priceEur: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 12,
-    fontFamily: BrandFonts.regular,
+    color: 'rgba(10,10,12,0.68)',
+    fontSize: 13.5,
+    fontFamily: BrandFonts.medium,
     letterSpacing: 0.2,
-    marginTop: 2,
+    marginTop: 4,
   },
   /* Iter 9: priceSave-pill weggehaald, vervangen door inline
      "was $X · save $Y" tekst met success-kleur op het save-deel.
      iOS-style inline-pricing-pattern, geen pill meer. */
   priceSaveInline: {
-    color: Brand.success,
+    color: C.success,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.1,
@@ -3586,8 +3543,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginTop: 20,
-    backgroundColor: Brand.accent,
-    borderRadius: 14,
+    backgroundColor: C.accent,
+    borderRadius: 16,
     paddingVertical: 15,
   },
   ksBtnPrimaryText: {
@@ -3609,19 +3566,19 @@ const s = StyleSheet.create({
     gap: 8,
     marginTop: 20,
     backgroundColor: 'transparent',
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: Brand.accent,
+    borderColor: C.accent,
   },
   ksBtnSecondaryText: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.1,
   },
   ksBtnSecondaryArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 17,
     fontFamily: BrandFonts.bold,
     lineHeight: 17,
@@ -3633,7 +3590,7 @@ const s = StyleSheet.create({
     paddingTop: 18,
     paddingHorizontal: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.10)',
+    borderTopColor: 'rgba(10,10,12,0.10)',
     alignItems: 'center',
   },
   /* Iter 9ba (2026-05-31): textAlign center voor multi-line breaks.
@@ -3641,14 +3598,14 @@ const s = StyleSheet.create({
      maar lange regels die wrappen vielen alsnog naar links. textAlign
      center zorgt dat elke gewrapte regel zelf óók centered staat. */
   ksFooterText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     textAlign: 'center',
     marginBottom: 6,
   },
   ksFooterMeta: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 11,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.2,
@@ -3661,13 +3618,14 @@ const s = StyleSheet.create({
      - Eyebrow label, grote titel + sub, pijl-icoon rechts
      - Visueel gelijkwaardig aan Reserve-CTA's bovenaan zodat het
        2e gelijkwaardige pad voelt (Reserve vs Activate). */
+  /* Huisstijl v4.4: decoratieve glow-kaart, niet haptic/status — Royal Indigo. */
   activateBraceletEntry: {
     marginTop: 22,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(58,143,255,0.55)',
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    shadowColor: '#3a8fff',
+    borderColor: 'rgba(30,42,74,0.55)',
+    backgroundColor: 'rgba(30,42,74,0.10)',
+    shadowColor: C.accent,
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 0 },
@@ -3684,30 +3642,31 @@ const s = StyleSheet.create({
     paddingRight: 12,
   },
   activateBraceletEntryEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): zelfde rol
+     als `activateBraceletCardLabel` op account.tsx (was daar 17px, hier
+     18px) — nu allebei uit `TypeScale.compactCardTitle`. */
   activateBraceletEntryLabel: {
-    color: Brand.text,
-    fontSize: 18,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.2,
+    color: C.text,
+    ...TypeScale.compactCardTitle,
     marginBottom: 4,
     lineHeight: 22,
   },
   activateBraceletEntryTitle: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
     lineHeight: 18,
   },
   activateBraceletEntryArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 28,
     fontFamily: BrandFonts.regular,
     lineHeight: 28,
@@ -3720,49 +3679,33 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   previewBraceletEntryText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.regular,
   },
   previewBraceletEntryLink: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
-  },
-
-  /* ── 8. Launch banner (was countdown — 2026-07-14 gestript) ── */
-  timerWrap: {
-    marginTop: 16,
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    borderRadius: 24,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  timerLabel: {
-    color: Brand.accent,
-    fontSize: 13,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
   },
 
   /* ── 9. Waitlist (Apple-card + softere CTA met subtle shadow) ── */
   wlCard: {
     marginTop: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
+    backgroundColor: 'rgba(10,10,12,0.04)',
+    borderRadius: 20,
     padding: 24,
   },
+  /* Operator, 11 september 2026 ("alle fonts overal gelijk"): was 24px
+     extrabold, los van `detailName` hierboven (26px) — zelfde grote-
+     titel-rol, nu uit dezelfde bron. */
   wlTitle: {
-    color: Brand.text,
-    fontSize: 24,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.6,
+    color: C.text,
+    ...TypeScale.tabHeader,
     marginBottom: 8,
   },
   wlSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     lineHeight: 22,
@@ -3770,18 +3713,18 @@ const s = StyleSheet.create({
   },
   wlChecklist: { gap: 10, marginBottom: 20 },
   wlCheck: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     lineHeight: 21,
   },
   wlBtn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: C.accent,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 14,
-    shadowColor: Brand.accent,
+    shadowColor: C.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -3794,7 +3737,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
   },
   wlDisc: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
@@ -3805,26 +3748,35 @@ const s = StyleSheet.create({
      stijl-set hier (geen pillarModal-hergebruik beschikbaar in dit
      bestand). Donker oppervlak, handle bovenaan, close ✕ rechtsboven,
      5 rows. Identiek visueel aan de Audio tab versie. */
+  /* Operator ("draai dat gewoon terug, geen blur of transparant"): terug
+     naar <Modal> (regelt zelf de full-screen overlay + Android-terugknop)
+     en een effen paneel — de BlurView/plain-View-overlay-poging bleek op
+     dit toestel niet naar wens. */
   breathChooserModalRoot: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'flex-end',
   },
+  /* Operator, 14 september 2026: was hardcoded '#141414' (gemist door de
+     eerdere rgba-sweep, want geen rgba-literal) — de rand/subtekst
+     eromheen was al wél naar licht geconverteerd, dus dit blad was
+     inmiddels een donkere achtergrond met bijna-onzichtbare donkere
+     randen. C.panel maakt het weer consistent. */
   breathChooserSheet: {
-    backgroundColor: '#141414',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: C.panel,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     paddingTop: 10,
     paddingHorizontal: 22,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(10,10,12,0.08)',
   },
   breathChooserHandle: {
     alignSelf: 'center',
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(10,10,12,0.18)',
     marginBottom: 14,
   },
   breathChooserClose: {
@@ -3834,33 +3786,41 @@ const s = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(10,10,12,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   breathChooserCloseText: {
-    color: '#ffffff',
+    color: C.text,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     lineHeight: 16,
   },
+  /* Operator ("accentkleur is niet meer blauw"): was C.accent (Signal
+     Blue) — die kleur is uitsluitend voor de haptic-pulse, nooit tekst.
+     Monochroom grijs label i.p.v. (gebruikt door zowel de "5 HAPTIC
+     STATES"- als de "HOW IT WORKS"-sheet-eyebrow). */
   breathChooserEyebrow: {
-    color: Brand.accent,
+    color: C.textDim,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,
     marginBottom: 6,
   },
   breathChooserTitle: {
-    color: '#ffffff',
+    color: C.text,
     fontSize: 26,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.6,
     lineHeight: 30,
     marginBottom: 6,
   },
+  /* Operator ("popup niet alles leesbaar"): rgba(10,10,12,.55) is
+     near-zwart — onleesbaar op de donkere breathChooserSheet
+     (backgroundColor: C.panel, #1e1e1e). Was blijkbaar altijd al fout,
+     nu C.textDim (leesbaar grijs op donker). */
   breathChooserSub: {
-    color: 'rgba(255,255,255,0.55)',
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.1,
@@ -3877,7 +3837,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     gap: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(10,10,12,0.10)',
   },
   breathChooserDot: {
     width: 12,
@@ -3892,21 +3852,21 @@ const s = StyleSheet.create({
     gap: 2,
   },
   breathChooserRowPurpose: {
-    color: '#ffffff',
+    color: C.text,
     fontSize: 17,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.3,
     lineHeight: 22,
   },
   breathChooserRowMeta: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(10,10,12,0.55)',
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0,
     lineHeight: 18,
   },
   breathChooserRowArrow: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(10,10,12,0.45)',
     fontSize: 18,
     fontFamily: BrandFonts.semibold,
     lineHeight: 20,

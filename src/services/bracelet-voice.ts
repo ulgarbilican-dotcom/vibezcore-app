@@ -35,8 +35,8 @@ const MODE_TO_BREATH_KEY: Record<BraceletMode, BreathKey> = {
   0: 'boost',    // Gamma → Boost
   1: 'focus',    // Beta → Sharp Focus
   2: 'calm',     // Alpha → Calm Control
-  3: 'clarity',  // Theta → Clarity
-  4: 'rest',     // Delta → Rest & Reset
+  3: 'clarity',  // Theta → Clarity & Relax
+  4: 'rest',     // Delta → Sleep
 };
 
 /* ── Per-mode copy ─────────────────────────────────────────────────────
@@ -61,15 +61,15 @@ const MODE_CUES: Record<BraceletMode, { start: string; end: string }> = {
     start: 'Calm Control beginning. Breathe out.',
     end: 'Calm Control complete. Carry the calm forward.',
   },
-  /* Theta → Clarity */
+  /* Theta → Clarity & Relax */
   3: {
-    start: 'Clarity session beginning. Let things settle.',
-    end: 'Clarity session complete. Notice the space.',
+    start: 'Clarity and Relax session beginning. Let things settle.',
+    end: 'Clarity and Relax session complete. Notice the space.',
   },
-  /* Delta → Rest & Reset */
+  /* Delta → Sleep */
   4: {
-    start: 'Rest and Reset beginning. Soften.',
-    end: 'Rest complete. Take your time returning.',
+    start: 'Sleep beginning. Soften.',
+    end: 'Sleep complete. Take your time returning.',
   },
 };
 

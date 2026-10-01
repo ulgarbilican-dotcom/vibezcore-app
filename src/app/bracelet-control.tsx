@@ -26,16 +26,56 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
-import { PreviewBanner } from '@/components/PreviewBanner';
-import { Brand, BrandFonts } from '@/constants/theme';
+import PodPulse from '@/components/PodPulse';
+import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
+import {
+  startSessionKeepAlive,
+  stopSessionKeepAlive,
+} from '@/services/session-keepalive';
+import {
+  getBraceletMonitorRemainingSec,
+  isBraceletSessionMonitorActive,
+  pauseBraceletSessionMonitor,
+  resumeBraceletSessionMonitor,
+  startBraceletSessionMonitor,
+  stopBraceletSessionMonitor,
+} from '@/services/bracelet-session-monitor';
+import * as Haptics from 'expo-haptics';
+import { Check, ChevronLeft, Info, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
+/* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
+   bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
+   light/dark-toggle gehad, in tegenstelling tot de rest van de app sinds
+   5 september 2026). BrandLight/BrandDark delen exact dezelfde sleutels
+   (bg/accent/accentHover/success/error/panel/border/text/textDim), dus
+   elke oorspronkelijke `Brand.X`-referentie in dit bestand is
+   mechanisch vervangen door `C.X` — zelfde structuur/naamgeving als
+   bracelet.tsx. */
+/* Operator, 26 september 2026: dark is de nieuwe app-brede default (was
+   light, 14 september) — zelfde hardcoded-schakelaar-patroon, enkel de
+   waarde omgezet. */
+const light = false;
+const C = light ? BrandLight : BrandDark;
 import {
   recordSession,
   useBraceletStats,
+  type BraceletStats,
+  type SessionStatus,
 } from '@/utils/bracelet-history';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
-import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Svg, { Circle, ClipPath, Defs, G, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -50,8 +90,15 @@ import {
   StyleSheet,
   Text,
   View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+  type EdgeInsets,
+} from 'react-native-safe-area-context';
 import {
   BleCommand,
   BleConnectionState,
@@ -61,16 +108,40 @@ import {
   ModeMeta,
   clampDuration,
   getModeMeta,
+  type BraceletTransport,
 } from '../services/ble-contract';
+/* Operator, 29 september 2026 ("kan dat volgens onze firmware/pcb"): puur
+   app-zijdige voorselectie, geen BLE-impact — zie `suggestBraceletMode`
+   (gedeeld met activity.tsx, zie de toelichting daar). */
+import { suggestBraceletMode } from '@/utils/bracelet-suggestion';
+/* Reanimated, aliased: dit bestand gebruikt RN's eigen `Animated` overal
+   (AnimatedCircle/AnimatedPath, DrainingCircle, SearchingPulse, etc.) —
+   die code blijft ongewijzigd. PressableScale hieronder is de EERSTE
+   Reanimated-gebruiker in dit bestand, dus geïmporteerd onder een eigen
+   naam om niet te botsen met RN's `Animated` hierboven. */
+import ReanimatedAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  withTiming,
+  withSpring,
+  withDelay,
+  withRepeat,
+  withSequence,
+  cancelAnimation,
+  interpolate,
+  Extrapolation,
+  Easing as ReanimatedEasing,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { getBracelet, getSimHooks } from '../services/bracelet';
+import type { SimulatedBracelet } from '../services/bracelet-sim';
 import {
   playBraceletStartCue,
   playBraceletCompletionCue,
-  stopBraceletVoice,
 } from '@/services/bracelet-voice';
-import { claimVoiceSource, playBreathCue, playCompletionCue as playBreathCompletionCue, releaseVoiceSource } from '@/services/breath-voice';
 import { useSetting } from '@/utils/settings';
-import { Volume2, VolumeX } from 'lucide-react-native';
+import { isLightColor } from '@/utils/color';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   useBraceletOwner,
@@ -80,30 +151,80 @@ import {
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
 const WARN = '#FF9F0A';
+/* Operator, 16 september 2026 ("de search haptic mag in blauw"): Signal
+   Blue is app-breed voorbehouden voor functionele "nu actief"-signalen
+   (zie theme.ts) — de radar-puls tijdens het zoeken/verbinden IS
+   precies dat, dus dit is de correcte kleur ervoor, niet de algemene
+   C.accent (Royal Indigo). */
+const SIGNAL_BLUE = '#3A8FFF';
 
 /* App polls status every 5 seconds when connected (spec §8.3/§11.4). */
 const POLL_MS = 5000;
 
-/* Per-mode background photo (Bunny CDN). Operator-uploads — 3 van 5 geleverd
-   op 2026-05-27, Sharp Focus + Clarity volgen. Modes zonder foto vallen
-   visueel terug op een mode-color gradient zodat de grid cohesive blijft.
-   Wanneer operator nieuwe foto's uploadt: alleen URL hier toevoegen, geen
-   andere wijzigingen nodig. */
-const MODE_IMAGES: Partial<Record<BraceletMode, string>> = {
-  [BraceletMode.Gamma]:
-    'https://vibezcore-audio.b-cdn.net/images/gamma%20pic.jpg',
-  /* Iter 9ak (2026-05-31): Beta/Sharp Focus foto gewisseld naar
-     operator-bewerkte "welcome new.png". Dezelfde foto wordt nu ook
-     op het welkomstscherm gebruikt → visuele consistentie tussen
-     entry-point en bracelet mode-card. */
-  [BraceletMode.Beta]:
-    'https://vibezcore-audio.b-cdn.net/images/welcome%20new.png',
-  [BraceletMode.Alpha]:
-    'https://vibezcore-audio.b-cdn.net/images/Social%20mastery.jpg',
-  [BraceletMode.Theta]:
-    'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
-  [BraceletMode.Delta]:
-    'https://vibezcore-audio.b-cdn.net/images/Rest%20%26%20Reset%20Delta.jpg',
+/* Operator, 16 september 2026 ("de pagina is te saai, ik wil een pro
+   animatie... ik wil armband"): hero-cutout (transparante achtergrond)
+   voor bovenaan het Choose-mode-scherm, met een zachte gekleurde gloed
+   erachter die van kleur verschuift met de geselecteerde modus. */
+const HERO_BRACELET_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/Shattudkite_vzc_fiv%20no%20bg.png';
+
+/* Operator, 16 september 2026 ("geen drukke foto's in de selectiekaarten
+   — Apple zou kiezen voor een egale kaart met een strak, minimalistisch
+   icoontje"): MODE_IMAGES/de foto-cards hieronder zijn vervangen door
+   MODE_ICONS. De stockfoto's (mensen in pakken, papieren) sneden de
+   naam af ("Calm Contr..") en leidden af van de status-info. Iconen
+   gekozen in lijn met de operator's eigen voorbeelden (bliksem voor
+   Boost, golf voor Calm Control).
+   Vervolg, 23 september 2026 ("SF Symbols zoals target/moon.stars.fill"):
+   Crosshair → Target, Moon → MoonStar — ook doorgevoerd in
+   breath-welcome.tsx's `STATE_ICONS` zodat beide sets identiek blijven. */
+const MODE_ICONS: Record<BraceletMode, typeof Zap> = {
+  [BraceletMode.Gamma]: Zap,
+  [BraceletMode.Beta]: Target,
+  [BraceletMode.Alpha]: Waves,
+  [BraceletMode.Theta]: Sparkles,
+  [BraceletMode.Delta]: MoonStar,
+};
+
+/* Operator, 16 september 2026: min/default blijven de officiële hardware-
+   spec-waardes (PPS blijft firmware-only, spec §11.5, NOOIT in de UI).
+   Max-waardes bijgesteld na online onderzoek naar effectieve/optimale
+   sessieduur per type toestand (powernap-/attentie-/relaxation-/NSDR-
+   literatuur) — zie ook `maxMinutes`-comments in services/ble-
+   contract.ts voor de onderbouwing per modus. "4 tijdlijnen per state"
+   (operator): elke modus heeft nu exact 4 preset-chips, min/default/
+   tussenwaarde(s)/max. "Recommended" = de officiële default. */
+const DURATION_PRESETS: Record<BraceletMode, { value: number; recommended?: boolean }[]> = {
+  [BraceletMode.Gamma]: [
+    { value: 8 },
+    { value: 10, recommended: true },
+    { value: 15 },
+    { value: 20 },
+  ],
+  [BraceletMode.Beta]: [
+    { value: 15, recommended: true },
+    { value: 20 },
+    { value: 25 },
+    { value: 30 },
+  ],
+  [BraceletMode.Alpha]: [
+    { value: 15 },
+    { value: 20, recommended: true },
+    { value: 25 },
+    { value: 30 },
+  ],
+  [BraceletMode.Theta]: [
+    { value: 20 },
+    { value: 25, recommended: true },
+    { value: 35 },
+    { value: 45 },
+  ],
+  [BraceletMode.Delta]: [
+    { value: 30, recommended: true },
+    { value: 35 },
+    { value: 40 },
+    { value: 50 },
+  ],
 };
 
 /* Per-mode breathwork-tempo voor PulsingCircle + BreathingHint.
@@ -115,7 +236,7 @@ const MODE_IMAGES: Partial<Record<BraceletMode, string>> = {
      - Sharp Focus (Beta):  4s/4s = ~7.5 BPM, focused
      - Calm Control (Alpha): 5s/5s = ~6 BPM, coherent breathing (HRV)
      - Clarity (Theta):     6s/6s = ~5 BPM, diepe relaxatie
-     - Rest & Reset (Delta): 7s/7s = ~4.3 BPM, slaap-voorbereiding
+     - Sleep (Delta):        7s/7s = ~4.3 BPM, slaap-voorbereiding
    Pulse-animatie cycle = inMs + outMs (totaal 6-14s afh. mode). */
 const MODE_BREATH: Record<BraceletMode, { inMs: number; outMs: number }> = {
   /* Iter v168 (2026-06-28): Gamma visuele pulse synchroniseren met het
@@ -199,7 +320,7 @@ type NadiProtocol = {
   phaseMs: number;
 };
 /* Physiological Sigh — dubbele inademing (deep + top-up) gevolgd door
-   lange uitademing. Iter 9e: vervangt 4-7-8 voor Rest & Reset (operator-
+   lange uitademing. Iter 9e: vervangt 4-7-8 voor Sleep (operator-
    keuze 27 mei 2026). Pure techniek-instructie, geen claims.
    2026-05-27 iter 9h: niet meer in actief gebruik (te complex voor users);
    code blijft staan voor toekomstig gebruik. */
@@ -240,7 +361,7 @@ type Protocol =
      Beta  (Sharp Focus)  → focus: 5-0-5-0 nose/nose, 30 cycli (Coherent)
      Alpha (Calm Control) → calm:  4-4-4-4 nose/nose, 19 cycli (Box)
      Theta (Clarity)      → clarity: 4-2-6-0 nose/mouth, 20 cycli (Long exhale)
-     Delta (Rest & Reset) → rest: 4-7-8-0 nose/mouth, 12 cycli (4-7-8) */
+     Delta (Sleep)        → rest: 4-7-8-0 nose/mouth, 12 cycli (4-7-8) */
 const BREATH_PROTOCOLS: Record<BraceletMode, Protocol> = {
   /* Boost = Bhastrika-inspired quick activation, nose-in/mouth-out.
      2s in / 2s out × 45 = 3 min.
@@ -279,7 +400,7 @@ const BREATH_PROTOCOLS: Record<BraceletMode, Protocol> = {
     holdMs: 2000,
     outMs: 6000,
   },
-  /* Rest & Reset = 4-7-8. 12 cycli × 19s = ~4 min. Wind-down protocol. */
+  /* Sleep = 4-7-8. 12 cycli × 19s = ~4 min. Wind-down protocol. */
   [BraceletMode.Delta]: {
     kind: '478',
     name: '4-7-8',
@@ -311,37 +432,6 @@ function breathProtocolTotalMs(p: Protocol): number {
   }
 }
 
-/* Aantal fasen per cyclus per protocol-kind — gebruikt door
-   BreathworkStrip om correct te tellen en juiste prompts te tonen. */
-function breathPhasesPerCycle(p: Protocol): number {
-  switch (p.kind) {
-    case 'simple':
-      return 2;
-    case 'box':
-      return 4;
-    case '478':
-      return 3;
-    case 'nadi':
-      return 4;
-    case 'sigh':
-      return 3;
-    case 'triangle':
-      return 3;
-  }
-}
-
-/* Per-mode benefit-copy voor de BreathworkStrip. State-language only
-   (CLAUDE.md §1) — geen medische claims, geen "activates X system" of
-   "lowers cortisol". Communiceert wat de gebruiker beoogt zonder
-   pseudo-wetenschap. Wordt getoond in zowel OFF (als uitnodiging) als
-   ON (als context-anker tijdens de oefening). */
-const BREATH_BENEFIT: Record<BraceletMode, string> = {
-  [BraceletMode.Gamma]: 'Channel the energy into precise action.',
-  [BraceletMode.Beta]: 'Anchor your attention through pacing.',
-  [BraceletMode.Alpha]: 'Pace your breath to deepen calm.',
-  [BraceletMode.Theta]: 'Slow your breath to widen perception.',
-  [BraceletMode.Delta]: 'Lengthen your breath to unwind.',
-};
 
 /* Iter 9dq v8 (2026-06-02): per-mode "when to use" copy voor de info-
    popup. State-anchored zodat user precies weet voor welke taak/context
@@ -413,37 +503,6 @@ function getActiveBgTint(mode: BraceletMode): string {
    getoond op de idle-screen onder de duration-sectie, voor de
    geselecteerde mode. Geeft de gebruiker context over WANNEER deze
    modus de juiste keuze is, zonder medische claims (CLAUDE.md §1). */
-/* Per-mode quotes — rusten op de bodem van de active-session screen,
-   roteren elke 22s met soft fade. Stoïsche / brand-aligned korte
-   zinnen die de mode-intentie versterken zonder pushy te zijn. */
-const MODE_QUOTES: Record<BraceletMode, string[]> = {
-  [BraceletMode.Gamma]: [
-    'Channel the surge.',
-    'Speed serves precision.',
-    'Sharpen the edge.',
-  ],
-  [BraceletMode.Beta]: [
-    'One task. Full presence.',
-    'Depth over speed.',
-    'The work, not the noise.',
-  ],
-  [BraceletMode.Alpha]: [
-    'Calm is the new sharp.',
-    'Steady mind, clear path.',
-    'Pressure passes through you.',
-  ],
-  [BraceletMode.Theta]: [
-    'Slow the mind, find the answer.',
-    'Insight arrives in stillness.',
-    'Let the thought come to you.',
-  ],
-  [BraceletMode.Delta]: [
-    'Recovery is part of the work.',
-    'Let it all settle.',
-    'Sleep is where growth happens.',
-  ],
-};
-
 /* ── Mode descriptions (iter 9k) ──
    Voor de tap-to-detail popup op state-cards. Brand-aligned state-
    language per CLAUDE.md §1: geen medische/wetenschappelijke claims,
@@ -586,212 +645,411 @@ const COMPLETION_MESSAGES: Record<BraceletMode, { line1: string; line2: string }
   },
 };
 
-/* ── DurationFillCircle — cirkel met water-fill voor idle screen ──
-   Vervangt het platte getal-onder-titel. Cirkel-shape vult zich van
-   onderen op met mode-color naarmate de slider-waarde dichter bij
-   max komt. Op min: cirkel bijna leeg. Op max: cirkel volledig
-   gevuld in mode-color. Number stays centraal in wit (rust). */
-function DurationFillCircle({
-  value,
-  min,
-  max,
-  color,
-  size,
+/* ── SignalBeam — reisend puntje van de radar-puls naar de zwarte pod ──
+   Operator, 16 september 2026 ("een animatie die voorstelt dat er vanuit
+   de haptic boven een signaal naar de zwarte pod gaat"): een klein
+   lichtpuntje dat herhaaldelijk van de radar-puls-cirkel naar beneden
+   reist, richting de pod op de armband-foto eronder, met een kort
+   "trail"-streepje erachteraan en fade in/uit aan begin en eind.
+   `startY`/`endY` zijn een eerste schatting op basis van de vaste
+   afmetingen van de puls/tekst/foto hierboven (geen exacte meting via
+   onLayout — dat kan later preciezer als de positie nog moet schuiven,
+   zelfde iteratieve aanpak als bij foto-posities elders in de app). */
+/* Operator, 16 september 2026 ("moet dat niet duidelijk zijn, net een
+   constante loop zonder te stoppen?" / "is dat een try-to-connect
+   animatie hoe een professionele bouwer dat zou doen? moet achter de
+   tekst lopen en eindigen net tegen de zwarte pod"):
+   - Continu: geen puntje met een pauze bovenaan, maar 3 gestaggerde
+     puntjes (zelfde overlap-techniek als de radar-puls-ringen hierboven)
+     — er is altijd minstens één onderweg.
+   - "Professioneel": een vaste, subtiele signaal-lijn (het kanaal) i.p.v.
+     losse zwevende puntjes, plus een "target lock"-ring die pulseert
+     ter hoogte van de pod — zo leest het duidelijk als "verbinding
+     zoeken", niet als decoratie.
+   - Achter de tekst: dit component wordt als EERSTE kind gerenderd in
+     de omringende View (zie call site) — RN tekent siblings in JSX-
+     volgorde, dus alles wat erna komt (puls-animatie, titel, subtekst,
+     foto) tekent erbovenop. */
+function SignalBeam({
+  startY,
+  endY,
+  offsetX = 0,
 }: {
-  value: number;
-  min: number;
-  max: number;
-  color: string;
-  /** Optional diameter override. Default 180. Iter 9b: 92 voor de
-   *  compactere idle-screen layout. */
-  size?: number;
+  startY: number;
+  endY: number;
+  /* Horizontale fijnafstelling in px t.o.v. het midden van de omringende
+     container — operator, 16 september 2026: "staat beetje te veel naar
+     rechts, komt niet exact op horizontal center van de pod uit". De pod
+     zit niet noodzakelijk exact op het midden van de 320px-brede foto,
+     dus hier bijstellen i.p.v. in de layout zelf te knoeien. */
+  offsetX?: number;
 }) {
-  const fillPct = max > min ? ((value - min) / (max - min)) * 100 : 0;
-  const dim = size ?? 180;
-  const numFont = size ? size * 0.36 : 50;
-  const unitFont = size ? Math.max(8, size * 0.10) : 11;
-  /* Iter 9m: contrast-fix voor lichte mode-colors (Boost wit). Bij
-     hoge fillPct (>50%) staat tekst grotendeels op de witte fill →
-     gebruik donkere tekst. Bij lage fillPct staat tekst op donkere bg
-     → witte tekst werkt. */
-  const light = isLightColor(color);
-  const textColor = light && fillPct > 40 ? '#0a0a0a' : Brand.text;
+  /* Operator, 17 september 2026 ("beeld bracelet blijft trillen wanneer
+     ik open, alles moet smooth gaan"): dit + SearchingPulse (de 3
+     radar-ringen erboven) liepen allebei tegelijk, onafhankelijk van
+     elkaar, op dezelfde 600ms-cadans — 3 reizende puntjes + een apart
+     pulserend "target lock"-ringetje + 3 radar-ringen = 7 gelijktijdig
+     animerende elementen in één klein blok. Dat leest als drukte/getril
+     i.p.v. één rustige, leesbare beweging. De target-ring was zuivere
+     herhaling (de 3 puntjes communiceren al "onderweg", de radar-ringen
+     erboven al "zoeken") — weg. Van 3 naar 2 puntjes voor minder
+     gelijktijdige beweging. */
+  const t1 = useRef(new Animated.Value(0)).current;
+  const t2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const DURATION = 1800;
+    const mkLoop = (val: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(val, {
+            toValue: 1,
+            duration: DURATION,
+            /* "nog niet zo vlot" — pure linear voelt mechanisch. Ease
+               in/uit geeft elk puntje een vloeiender, natuurlijker
+               tempo terwijl de stagger toch een constante,
+               nooit-stoppende stroom blijft. */
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(val, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      );
+    const l1 = mkLoop(t1, 0);
+    const l2 = mkLoop(t2, DURATION / 2);
+    l1.start();
+    l2.start();
+    return () => {
+      l1.stop();
+      l2.stop();
+    };
+  }, [t1, t2]);
+
+  const travel = endY - startY;
+  const dotStyle = (val: Animated.Value) => ({
+    opacity: val.interpolate({
+      inputRange: [0, 0.1, 0.8, 1],
+      outputRange: [0, 1, 1, 0],
+    }),
+    transform: [
+      {
+        translateY: val.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, travel],
+        }),
+      },
+    ],
+  });
+
   return (
     <View
-      style={[
-        s.durFillOuter,
-        { width: dim, height: dim, borderRadius: dim / 2 },
-      ]}
+      style={[s.signalBeamWrap, { top: startY, height: travel, marginLeft: -12 + offsetX }]}
+      pointerEvents="none"
     >
-      <View style={s.durFillTrack}>
-        <View
-          style={[
-            s.durFillBar,
-            { height: `${fillPct}%`, backgroundColor: color },
-          ]}
-        />
-      </View>
-      <View style={s.durFillContent}>
-        <Text
-          style={[
-            s.durFillNum,
-            {
-              fontSize: numFont,
-              lineHeight: numFont * 1.05,
-              color: textColor,
-            },
-          ]}
-        >
-          {value}
-        </Text>
-        <Text
-          style={[s.durFillUnit, { fontSize: unitFont, color: textColor }]}
-        >
-          min
-        </Text>
-      </View>
+      <Animated.View style={[s.signalBeamDot, dotStyle(t1)]} />
+      <Animated.View style={[s.signalBeamDot, dotStyle(t2)]} />
     </View>
   );
 }
 
-/* ── DrainingCircle — fill die leegloopt tijdens active session ──
-   Tegenovergesteld aan ProgressArc: arc vult clockwise als time
-   verloopt; deze drain leegt als time verloopt. Geeft user gevoel
-   "time leaks out of me". Bij sessie-start: vol mode-color. Bij
-   einde: empty. Klein subtiel, zit achter de PulsingCircle's
-   breathing-border voor mooie depth-layering. */
-/* DrainingCircle — water-fill metaphor voor sessie-progress. Iter 7
-   (2026-05-27): SVG-based ipv View-clipping zodat het wateroppervlak
-   een animerende sine-wave kan hebben ("zakken alsof het waves zijn",
-   operator-feedback). Twee golven over elkaar (verschillende
-   amplitudes/snelheden) → realistischer water-feel zonder zwaar te
-   worden. */
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+/* ── BraceletHeroGlow — armband-cutout, groot, geen gekleurd vlak erachter ──
+   Operator, 16 september 2026: "zonder achtergrond de bracelet en
+   groter" — de gekleurde gloed-cirkel erachter is weg (voelde dubbel
+   op met de al-blauwe radar-puls erboven op het zoek-scherm); alleen
+   de transparante cutout zelf, nu groter.
+   Operator, 17 september 2026 ("op de pod ook een haptic pulse zetten —
+   geeft de SignalBeam-animatie een duidelijk eindpunt i.p.v. in het
+   niets uit te doven"): PodPulse teruggehaald — bestond al (verwijderd
+   uit welcome.tsx bij de 3-pillar-redesign, bewaard voor hergebruik
+   elders, zie CLAUDE.md/memory) en stond nog volledig klaar, ongebruikt.
+   Bewust ÉÉN traag, rustig element (PULSE_MS default 5200) i.p.v. het
+   snellere/dichtere ringetje dat net weggehaald is voor "te druk" —
+   dit is een compleet ander, kalm gebouwd component (Skia, "snel weg,
+   dan uitrollen"-physics), geen herhaling van dat probleem.
+   Kleur: SIGNAL_BLUE (al gebruikt voor de radar-puls/SignalBeam-puntjes
+   hierboven) i.p.v. de losse HAPTIC_BLUE uit de oude welcome-versie —
+   één signaalkleur voor de hele zoek-animatie op dit scherm.
+   originX/Y zijn een eerste schatting (zelfde "geen exacte onLayout-
+   meting, itereren op operator-feedback"-aanpak als SignalBeam's
+   startY/endY hierboven) — later fijner af te stellen op de exacte
+   pod-positie in HERO_BRACELET_IMG. */
+function BraceletHeroGlow() {
+  return (
+    <View style={s.heroGlowWrap}>
+      <Image
+        source={{ uri: HERO_BRACELET_IMG }}
+        style={s.heroGlowImg}
+        resizeMode="contain"
+      />
+      {/* Operator, 17 september 2026 ("veel te groot en zwaar, staat ook
+         iets te laag" / "beetje naar links" / "te veel, terug naar
+         rechts" / "nog 1mm naar rechts"): reach 0.11→0.06, intensity
+         4.2→1.8, originY 0.66→0.58, originX 0.52→0.46 (te ver) →0.49
+         →0.505 (kleinste stap, fijnafstelling). */}
+      <PodPulse
+        width={380}
+        height={238}
+        originX={0.505}
+        originY={0.58}
+        reach={0.06}
+        ringCount={2}
+        blur={0.5}
+        intensity={1.8}
+        pulseMs={3400}
+        color={SIGNAL_BLUE}
+      />
+    </View>
+  );
+}
 
-function DrainingCircle({
-  progress,
-  color,
-  size,
+/* ── PreviewPill — vervangt de oranje volle-breedte PreviewBanner ──
+   Operator, 16 september 2026: "preview ook banner weg en gewoon in
+   pill neutrale kleur" — de opvallende oranje strip-banner (elders in de
+   app nog gewoon in gebruik, dat blijft) is hier vervangen door een
+   kleine, neutrale pill die dezelfde info draagt zonder de aandacht op
+   te eisen die een volle-breedte gekleurde banner wel trekt. */
+/* Operator ("kijk alle CTA's na, daar ook niet overal toegepast"): audit
+   vond dat beide `primaryBtn`-instanties (Activate/Reconnect) HELEMAAL
+   geen tik-feedback hadden — geen scale, geen opacity, geen haptiek.
+   Huisstijl §5. Eén herbruikbare wrapper voor beide call-sites. */
+function PrimaryCtaButton({
+  style,
+  onPress,
+  disabled,
+  accessibilityLabel,
+  children,
 }: {
-  /** 0..1 — fractie van de sessie die voorbij is */
-  progress: number;
-  color: string;
-  size: number;
+  style?: object | Array<object | false | undefined>;
+  onPress: () => void | Promise<void>;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  children: React.ReactNode;
 }) {
-  const remainingFrac = Math.max(0, Math.min(1, 1 - progress));
-  const waterTopY = size * (1 - remainingFrac); // hoger getal = lager water
+  const scale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: 1 - (1 - scale.value) * 5,
+  }));
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      onPressIn={() => {
+        scale.value = withTiming(0.97, { duration: 80 });
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      }}
+    >
+      <ReanimatedAnimated.View style={[style, pressStyle]}>{children}</ReanimatedAnimated.View>
+    </Pressable>
+  );
+}
 
-  /* Twee phase-trackers voor de twee golven — verschillende periodes
-     zodat ze van elkaar wegdrijven (looks natural, niet symmetrisch). */
-  const wave1Phase = useRef(new Animated.Value(0)).current;
-  const wave2Phase = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop1 = Animated.loop(
-      Animated.timing(wave1Phase, {
-        toValue: 1,
-        duration: 4000,
-        easing: Easing.linear,
-        useNativeDriver: false, // path 'd' attribute kan niet via native driver
-      }),
+/* Operator ("preview mag achter bracelet staan"): compacte inline variant
+   i.p.v. een los, volle-breedte gecentreerd blok onder de header — staat
+   nu direct ná de titel-tekst in BraceletHeader's `badge`-slot (zie
+   daar), op alle 4 schermen die 'm tonen (Searching/Fault/Charging/
+   Control). `dark` volgt het scherm se eigen header-thema: de
+   oorspronkelijke kleuren (donkere tekst/rand op bijna-wit) waren enkel
+   voor een lichte header getekend en zouden onleesbaar zijn op
+   Searching-scherm se zwarte header. */
+function PreviewBadge({ dark }: { dark?: boolean }) {
+  return (
+    <View
+      style={[
+        s.previewPill,
+        /* Operator, 27 september 2026 ("badge nog 0.5 cm laten
+           zakken"): extra 19px marginTop bovenop de headerTitleRow-gap. */
+        { marginTop: 19 },
+        dark && {
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          borderColor: 'rgba(255,255,255,0.18)',
+        },
+      ]}
+    >
+      <Text style={[s.previewPillText, dark && { color: 'rgba(255,255,255,0.6)' }]}>
+        PREVIEW
+      </Text>
+    </View>
+  );
+}
+
+/* ── DurationWheel — verticale scroll-picker, zelfde bewezen implementatie
+   als breath-setup.tsx's DurationWheel/DurationWheelRow (operator: "dat
+   moet meer in deze stijl, breathwork") ──────────────────────────────────
+   Vervangt hier de losse preset-chip-rij + aparte slider door één
+   doorlopend, gecentreerd wiel: gekozen waarde groot/wit in het midden,
+   de rest kleiner/gedimd met een subtiele cilinder-kanteling. Bewust
+   1-op-1 overgenomen (cilinder-wiskunde, snap-mechaniek, "Recommended"-
+   label) i.p.v. opnieuw uitgevonden — dat exacte gedrag is in
+   breath-setup.tsx al door meerdere rondes bugs (padding-offset, clipping
+   op Android, platgedrukte cijfers) heen gefinetuned; deze twee bestanden
+   delen geen component-laag, dus een letterlijke kopie hier voorkomt dat
+   Bracelet dezelfde bugs opnieuw moet doorlopen. */
+const WHEEL_ITEM_H = 44;
+const WHEEL_VISIBLE = 3;
+
+function DurationWheelRow({
+  index,
+  label,
+  on,
+  trackColor,
+  scrollY,
+  viewportHeight,
+}: {
+  index: number;
+  label: string;
+  on: boolean;
+  trackColor: string;
+  scrollY: SharedValue<number>;
+  viewportHeight: number;
+}) {
+  const rowStyle = useAnimatedStyle(() => {
+    const itemOffsetTop = WHEEL_ITEM_H + index * WHEEL_ITEM_H;
+    const viewportCenter = scrollY.value + viewportHeight / 2;
+    const distanceToCenter = itemOffsetTop + WHEEL_ITEM_H / 2 - viewportCenter;
+    const maxDistance = viewportHeight / 2;
+    let normalizedDistance = Math.max(-1, Math.min(1, distanceToCenter / maxDistance));
+    if (Math.abs(normalizedDistance) < 0.03) normalizedDistance = 0;
+    const angleX = normalizedDistance * 38;
+    const opacity = Math.max(0.12, 1 - Math.abs(normalizedDistance) * 0.85);
+    const fontSize = interpolate(
+      Math.abs(normalizedDistance),
+      [0, 1],
+      [26, 17],
+      Extrapolation.CLAMP,
     );
-    const loop2 = Animated.loop(
-      Animated.timing(wave2Phase, {
-        toValue: 1,
-        duration: 6200,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      }),
-    );
-    loop1.start();
-    loop2.start();
-    return () => {
-      loop1.stop();
-      loop2.stop();
+    return {
+      opacity,
+      fontSize,
+      transform: [{ perspective: 800 }, { rotateX: `${angleX}deg` }],
     };
-  }, [wave1Phase, wave2Phase]);
+  });
+  return (
+    <View style={[s.wheelRow, { height: WHEEL_ITEM_H }]}>
+      <ReanimatedAnimated.Text
+        style={[
+          s.wheelTxt,
+          { color: on ? '#ffffff' : trackColor },
+          on && s.wheelTxtOn,
+          rowStyle,
+        ]}
+      >
+        {label}
+      </ReanimatedAnimated.Text>
+    </View>
+  );
+}
 
-  /* Genereer een sine-wave path string op basis van phase ∈ [0, 1].
-     amp = amplitude (max ±pixels), periode = aantal golven over de breedte.
-     topOffset = verschuif de baseline X px naar beneden (positief).
-     Iter 9cf (2026-05-31): M startpunt op de EERSTE wave-y i.p.v. op
-     waterTopY → geen vertical M→L1 sliver meer.
-     Iter 9cg (2026-05-31): topOffset toegevoegd zodat back-wave een
-     lagere baseline kan krijgen dan front-wave → back nooit meer boven
-     front uit, geen kleur-bleed door 55%-opacity over de waterlijn. */
-  const buildWavePath = (
-    phase: number,
-    amp: number,
-    periods: number,
-    topOffset: number = 0,
-  ): string => {
-    const steps = 24;
-    const baseline = waterTopY + topOffset;
-    const firstY = baseline + Math.sin(phase * Math.PI * 2) * amp;
-    let d = `M 0 ${firstY.toFixed(2)}`;
-    for (let i = 1; i <= steps; i++) {
-      const x = (i / steps) * size;
-      const y =
-        baseline +
-        Math.sin((i / steps) * Math.PI * 2 * periods + phase * Math.PI * 2) *
-          amp;
-      d += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+function DurationWheel({
+  options,
+  value,
+  onChange,
+  accent,
+  trackColor,
+  visibleRows = WHEEL_VISIBLE,
+  recommendedValue,
+}: {
+  options: { value: number; label: string }[];
+  value: number;
+  onChange: (v: number) => void;
+  accent: string;
+  trackColor: string;
+  visibleRows?: number;
+  recommendedValue?: number;
+}) {
+  const viewportHeight = WHEEL_ITEM_H * visibleRows;
+  const listRef = useRef<ReanimatedAnimated.ScrollView>(null);
+  const settledIndex = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  );
+  const scrollY = useSharedValue(settledIndex * WHEEL_ITEM_H);
+
+  useEffect(() => {
+    listRef.current?.scrollTo({ y: settledIndex * WHEEL_ITEM_H, animated: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const internalChange = useRef(false);
+  const skipFirstValueSync = useRef(true);
+  useEffect(() => {
+    if (skipFirstValueSync.current) {
+      skipFirstValueSync.current = false;
+      return;
     }
-    /* Sluit het pad af naar onderkant zodat de hele water-area kleurt. */
-    d += ` L ${size} ${size} L 0 ${size} Z`;
-    return d;
+    if (internalChange.current) {
+      internalChange.current = false;
+      return;
+    }
+    listRef.current?.scrollTo({ y: settledIndex * WHEEL_ITEM_H, animated: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const commit = (offsetY: number) => {
+    const idx = Math.min(options.length - 1, Math.max(0, Math.round(offsetY / WHEEL_ITEM_H)));
+    listRef.current?.scrollTo({ y: idx * WHEEL_ITEM_H, animated: true });
+    const picked = options[idx];
+    if (picked && picked.value !== value) {
+      Haptics.selectionAsync();
+      internalChange.current = true;
+      onChange(picked.value);
+    }
   };
 
-  /* Interpoleer phase-strings reactief — RN Animated kan geen strings
-     interpoleren, dus we gebruiken een listener-pattern: phase-value
-     trigger setState die path regenereert. Twee state-getalwaardes voor
-     de twee golven. */
-  const [phase1Val, setPhase1Val] = useState(0);
-  const [phase2Val, setPhase2Val] = useState(0);
-  useEffect(() => {
-    const id1 = wave1Phase.addListener(({ value }) => setPhase1Val(value));
-    const id2 = wave2Phase.addListener(({ value }) => setPhase2Val(value));
-    return () => {
-      wave1Phase.removeListener(id1);
-      wave2Phase.removeListener(id2);
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  /* Iter 9cg (2026-05-31): back-wave (path2) krijgt baseline-offset +6
-     en kleinere amplitude (1). Front-wave max-up = waterTopY - 3, back-
-     wave max-up = (waterTopY+6) - 1 = waterTopY + 5 → back ZIT ALTIJD
-     onder front-trough → geen zichtbare bleed boven de waterlijn meer.
-     Visueel houden we wel het diepte-effect want back is nog zichtbaar
-     in het body van de water-mass (donkerder ondertoon). */
-  const path1 = buildWavePath(phase1Val, 3, 2, 0);
-  const path2 = buildWavePath(phase2Val, 1, 3, 6);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
 
   return (
-    <View
-      style={[
-        s.drainOuter,
-        { width: size, height: size, borderRadius: size / 2 },
-      ]}
-    >
-      <Svg width={size} height={size}>
-        <Defs>
-          <ClipPath id="circleClip">
-            <Circle cx={size / 2} cy={size / 2} r={size / 2} />
-          </ClipPath>
-        </Defs>
-        <G clipPath="url(#circleClip)">
-          {/* Achter-golf — iets dimmer, andere snelheid, verschoven. */}
-          <Path d={path2} fill={color} opacity={0.55} />
-          {/* Voor-golf — vol-kleur, primaire wateroppervlak. */}
-          <Path d={path1} fill={color} opacity={0.95} />
-        </G>
-      </Svg>
+    <View style={[s.wheelWrap, { height: viewportHeight }]}>
+      <View
+        style={[
+          s.wheelPill,
+          { top: (viewportHeight - WHEEL_ITEM_H) / 2, backgroundColor: `${accent}1F` },
+        ]}
+        pointerEvents="none"
+      />
+      {recommendedValue !== undefined && value === recommendedValue && (
+        <View
+          style={[s.wheelRecommendedTag, { top: (viewportHeight - WHEEL_ITEM_H) / 2 }]}
+          pointerEvents="none"
+        >
+          <Text style={s.wheelRecommendedTagTxt} numberOfLines={1}>
+            Recommended
+          </Text>
+        </View>
+      )}
+      <ReanimatedAnimated.ScrollView
+        ref={listRef}
+        style={{ height: viewportHeight }}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={WHEEL_ITEM_H}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingVertical: WHEEL_ITEM_H }}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={(e) => commit(e.nativeEvent.contentOffset.y)}
+      >
+        {options.map((o, i) => (
+          <DurationWheelRow
+            key={o.value}
+            index={i}
+            label={o.label}
+            on={o.value === value}
+            trackColor={trackColor}
+            scrollY={scrollY}
+            viewportHeight={viewportHeight}
+          />
+        ))}
+      </ReanimatedAnimated.ScrollView>
     </View>
   );
 }
-
-/* RotatingArc verwijderd 2026-05-27 iter 8: operator-feedback "geen aparte
-   draaiende boog, de cirkel zelf moet draaien". Rotatie zit nu in
-   SlowAmbientPulse. */
 
 /* ── SearchingPulse — radar-style animatie tijdens scanning/connecting ──
    Iter 8b operator-feedback: "anilmatie toevoegen voor geval het aan het
@@ -799,7 +1057,7 @@ function DrainingCircle({
    ringen die om de beurt expanderen + fade-out (1.5s elk, staggered 0.5s),
    plus een centrale bracelet-icoon-dot. Geeft het radar-zoek-gevoel:
    pulse, pulse, pulse, naar buiten. Pure SVG + Animated, geen externe lib. */
-function SearchingPulse({ color = Brand.accent }: { color?: string }) {
+function SearchingPulse({ color = SIGNAL_BLUE }: { color?: string }) {
   const v1 = useRef(new Animated.Value(0)).current;
   const v2 = useRef(new Animated.Value(0)).current;
   const v3 = useRef(new Animated.Value(0)).current;
@@ -835,11 +1093,12 @@ function SearchingPulse({ color = Brand.accent }: { color?: string }) {
     };
   }, [v1, v2, v3]);
 
+  /* Operator, 16 september 2026 ("zet haptic groter"): 140→190px. */
   const ringStyle = (val: Animated.Value) => ({
     position: 'absolute' as const,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
     borderWidth: 1.5,
     borderColor: color,
     opacity: val.interpolate({
@@ -857,25 +1116,35 @@ function SearchingPulse({ color = Brand.accent }: { color?: string }) {
   });
 
   return (
+    /* Operator, 16 september 2026: de marginTop:-24 van hiervoor ("zet
+       animatie iets hoger") is teruggedraaid — het blok kreeg er sindsdien
+       de grotere armband-cutout onder bij, dus de puls hoefde niet meer
+       apart omhoog geduwd te worden. marginBottom blijft (ademruimte tot
+       de tekst eronder). */
     <View
       style={{
-        width: 140,
-        height: 140,
+        width: 190,
+        height: 190,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 36,
+        /* Operator, 16 september 2026: "0.5 cm lager" (20px), daarna nog
+           "1 cm lager" (+38px) — te dicht tegen de PreviewPill boven. */
+        marginTop: 58,
+        marginBottom: 44,
       }}
       pointerEvents="none"
     >
       <Animated.View style={ringStyle(v1)} />
       <Animated.View style={ringStyle(v2)} />
       <Animated.View style={ringStyle(v3)} />
-      {/* Centrale dot in mode-accent kleur */}
+      {/* Centrale dot in mode-accent kleur. Operator, 16 september 2026
+         ("de dot van de haptic is veel te groot"): 24→14px — de ringen
+         zelf blijven 190px, enkel de kern verkleint. */}
       <View
         style={{
-          width: 18,
-          height: 18,
-          borderRadius: 9,
+          width: 14,
+          height: 14,
+          borderRadius: 7,
           backgroundColor: color,
         }}
       />
@@ -902,18 +1171,14 @@ function SearchingPulse({ color = Brand.accent }: { color?: string }) {
      - Tap buiten / ✕ = sluit zonder selecteren */
 function ModeDetailModal({
   mode,
-  onChoose,
   onClose,
 }: {
   mode: BraceletMode;
-  onChoose: () => void;
   onClose: () => void;
 }) {
   const meta = getModeMeta(mode);
   const desc = MODE_DESCRIPTIONS[mode];
   const ideals = MODE_IDEALS[mode];
-  const light = isLightColor(meta.color);
-  const ctaTextColor = light ? '#0a0a0a' : '#ffffff';
   /* Iter 9m: respecteer bottom safe-area (home-indicator iOS, nav-bar
      Android) zodat de CTA niet onder system-UI valt. */
   const insets = useSafeAreaInsets();
@@ -938,15 +1203,25 @@ function ModeDetailModal({
           style={[
             s.modeModalSheet,
             /* Iter 9dq v77 (2026-06-03): geharmoniseerde formule met
-               floor 72 → consistent met alle andere bottom-CTAs. */
-            { paddingBottom: Math.max(insets.bottom + 24, 72) },
+               floor 72 → consistent met alle andere bottom-CTAs.
+               Operator, 16 september 2026 ("x komt in de bovenste hoek
+               waar batterij/status staat"): de sheet is nu schermhoog
+               (was een bottom-sheet die vanzelf onder de status-bar
+               begon) — extra paddingTop op basis van insets.top zodat
+               alles (handle, X, header) onder het systeem-statusbalkje
+               uitkomt. */
+            {
+              paddingTop: insets.top + 16,
+              paddingBottom: Math.max(insets.bottom + 24, 72),
+            },
           ]}
         >
           <View style={s.modeModalHandle} />
 
-          {/* Close ✕ top-right */}
+          {/* Close ✕ top-right — iets groter (16→18) en top mee-
+             geschoven met insets.top. */}
           <Pressable
-            style={s.modeModalClose}
+            style={[s.modeModalClose, { top: insets.top + 14 }]}
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel="Close"
@@ -990,33 +1265,22 @@ function ModeDetailModal({
           </View>
 
           {/* Optional breath layer — verhuisd naar onderaan (iter 9l):
-              bracelet is hoofd-ervaring, breath is een aparte laag. */}
+              bracelet is hoofd-ervaring, breath is een aparte laag.
+              Operator, 16 september 2026 ("optional layer in kaart
+              zetten?"): eigen kaartje i.p.v. losse platte tekst — zet 'm
+              visueel apart als secundaire, optionele toevoeging. */}
           <Text style={s.modeModalSectionLbl}>Optional breath layer</Text>
-          <Text style={[s.modeModalProtocol, { color: meta.color }]}>
-            {desc.protocol}
-          </Text>
-          <Text style={s.modeModalProtocolHint}>{desc.protocolHow}</Text>
+          <View style={s.modeModalProtocolCard}>
+            <Text style={[s.modeModalProtocol, { color: meta.color }]}>
+              {desc.protocol}
+            </Text>
+            <Text style={s.modeModalProtocolHint}>{desc.protocolHow}</Text>
+          </View>
 
-          {/* Choose CTA — selects + closes */}
-          <Pressable
-            style={[
-              s.modeModalCta,
-              { backgroundColor: meta.color },
-              light && {
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.20)',
-              },
-            ]}
-            onPress={onChoose}
-            accessibilityLabel={`Choose ${meta.name}`}
-          >
-            <Text style={[s.modeModalCtaText, { color: ctaTextColor }]}>
-              Choose {meta.name}
-            </Text>
-            <Text style={[s.modeModalCtaArrow, { color: ctaTextColor }]}>
-              →
-            </Text>
-          </Pressable>
+          {/* Operator, 16 september 2026 ("in de popup choose cta moet
+             weg"): geen aparte Choose-knop meer — modus kiezen gebeurt
+             al via de pill-rij buiten deze popup, dubbele actie hier
+             was overbodig. */}
         </View>
       </View>
     </Modal>
@@ -1099,180 +1363,840 @@ function CompletionModal({
   );
 }
 
-/* ── DurationSlider — horizontale snap-to-int slider ──
-   Vervangt de oude +/- stepper. Drag of tap om duration te wijzigen.
-   Snap op hele minuten binnen de mode's [min, max] range. Track
-   neutraal grijs, gevulde portion + thumb-border in mode-color voor
-   visuele mode-identiteit. Pure JS via PanResponder — geen native
-   dependency.
+/* ── ConnectedPopup — korte bevestiging na een geslaagde connectie ──
+   Operator, 16 september 2026: "bij connected wil ik een popupanimatie
+   met cirkel, vinkje en tekst Yes connected". Geen actieve dismiss-knop
+   nodig — het is een bevestiging, geen beslissing — dus: bounce-in, kort
+   zichtbaar, fade-out, zelf-dismissend. Zelfde brand-styling als de
+   andere in-app popups (C.panel-kaart, geen kale Alert.alert). */
+function ConnectedPopup({ onDismiss }: { onDismiss: () => void }) {
+  const scale = useRef(new Animated.Value(0.6)).current;
+  /* Operator, 27 september 2026 ("opnieuw zelfde probleem" — na de
+     Modal→plain-View-fix hierboven, die het probleem niet was): de
+     ECHTE oorzaak zat in deze animatie zelf. `opacity` liep van 0→1 over
+     200ms — op frame 1 stond de achtergrond dus zelf nog op 0 (volledig
+     doorzichtig), wat het onderliggende scherm (Control) een fractie van
+     een seconde ONVERBLOEMD toonde, vóór de fade-in ooit op gang kwam.
+     Dat gold evengoed met of zonder Modal — de vorige fix loste dus het
+     verkeerde probleem op.
+     Fix: de zwarte achtergrond (`backdropOpacity`) NIET meer laten
+     fade'n bij het verschijnen — die staat vanaf frame 1 al op volle
+     opaciteit (1), dus het scherm erachter is nooit zichtbaar. Enkel de
+     content (vinkje + tekst, `contentOpacity`) fade't/bounce't nog in
+     bovenop die al-solide achtergrond. Bij het verdwijnen faden beide
+     WEL samen uit (250ms) — dat onthult correct het al-gewisselde
+     scherm erachter, en dat IS de gewenste, professionele reveal. */
+  const backdropOpacity = useRef(new Animated.Value(1)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
 
-   Iter 9bc → 9bd (2026-05-31) — pageX-based coordinate fix:
-   - locationX uit nativeEvent is op Android berucht: bij capture door
-     een parent geeft 'ie soms positie relatief tot ORIGINEEL aangeraakte
-     child (de thumb) i.p.v. tot de responder. Daar danst de thumb dan
-     op tijdens drag.
-   - Nu: pageX (absolute screen-coord) + measured slider-pageX → echte
-     relatieve positie tov de slider. Robuust over iOS én Android.
-   - PanResponder + setFromX blijven stabiel via refs (1 keer aangemaakt). */
-function DurationSlider({
-  min,
-  max,
-  value,
-  onChange,
-}: {
-  min: number;
-  max: number;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  /* Refs voor PanResponder-closure stabiliteit. */
-  const widthRef = useRef(0);
-  const sliderPageXRef = useRef(0);
-  const minRef = useRef(min);
-  const maxRef = useRef(max);
-  const valueRef = useRef(value);
-  const onChangeRef = useRef(onChange);
-  minRef.current = min;
-  maxRef.current = max;
-  valueRef.current = value;
-  onChangeRef.current = onChange;
-
-  /* Slider-view ref voor measure() in onLayout (geeft pageX = absolute
-     screen-positie van de slider's left edge). */
-  const sliderViewRef = useRef<View | null>(null);
-
-  /* setFromPageX leest alle inputs uit refs → stabiele identity. */
-  const setFromPageX = useCallback((pageX: number) => {
-    const w = widthRef.current;
-    const sliderX = sliderPageXRef.current;
-    const mn = minRef.current;
-    const mx = maxRef.current;
-    const range = mx - mn;
-    if (w < 8 || range <= 0) return;
-    const localX = pageX - sliderX;
-    const pct = Math.max(0, Math.min(1, localX / w));
-    const snapped = Math.round(mn + pct * range);
-    if (
-      snapped !== valueRef.current &&
-      snapped >= mn &&
-      snapped <= mx
-    ) {
-      onChangeRef.current(snapped);
-    }
-  }, []);
-
-  /* PanResponder ÉÉN keer aangemaakt. Aggressief de gesture claimen om
-     Android's edge back-swipe te beheersen wanneer user vanaf links
-     slidet. Gebruikt pageX voor robuuste cross-platform tracking. */
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onStartShouldSetPanResponderCapture: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponderCapture: () => true,
-        onShouldBlockNativeResponder: () => true,
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderGrant: (e) => setFromPageX(e.nativeEvent.pageX),
-        onPanResponderMove: (e) => setFromPageX(e.nativeEvent.pageX),
-      }),
-    [setFromPageX],
-  );
-
-  /* Re-measure helper — onLayout én bij iedere mount van de view.
-     measure() is async maar fire-and-forget hier OK; eerst zonder geldige
-     pageX returnen we 0 in setFromPageX (w < 8 of localX negatief). */
-  const remeasure = useCallback(() => {
-    const v = sliderViewRef.current;
-    if (!v) return;
-    v.measure((_x, _y, w, _h, pageX) => {
-      if (typeof w === 'number' && w > 0) widthRef.current = w;
-      if (typeof pageX === 'number') sliderPageXRef.current = pageX;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(scale, {
+          toValue: 1,
+          friction: 6,
+          tension: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]),
+      Animated.delay(1300),
+      Animated.parallel([
+        Animated.timing(contentOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(backdropOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]),
+    ]).start(({ finished }) => {
+      if (finished) onDismiss();
     });
-  }, []);
-
-  const range = max - min;
-  const filledPct = range > 0 ? ((value - min) / range) * 100 : 0;
+  }, [scale, contentOpacity, backdropOpacity, onDismiss]);
 
   return (
-    <View>
-      <View
-        ref={sliderViewRef}
-        style={s.sliderTouch}
-        onLayout={(e) => {
-          /* onLayout geeft width direct; pageX vereist measure(). */
-          widthRef.current = e.nativeEvent.layout.width;
-          remeasure();
-        }}
-        {...panResponder.panHandlers}
-      >
-        <View style={s.sliderTrack} />
-        <View style={[s.sliderFilled, { width: `${filledPct}%` }]} />
-        <View style={[s.sliderThumb, { left: `${filledPct}%` }]} />
-      </View>
-      <View style={s.sliderLabels}>
-        <Text style={s.sliderLabel}>{min}</Text>
-        <Text style={s.sliderLabel}>{max} min</Text>
-      </View>
-    </View>
+    <Animated.View
+      pointerEvents="auto"
+      style={[StyleSheet.absoluteFillObject, s.connectedPopupOverlay, { opacity: backdropOpacity }]}
+    >
+      {/* Operator, 27 september 2026 ("en niet met kaart erachter"): geen
+         `connectedPopupCard`-paneel meer — enkel de gedimde overlay
+         erachter, cirkel + tekst los erop.
+         Operator, zelfde dag ("yes connected mag niet groter"): de
+         64→128/30→60/17→28-vergroting hierboven werd teruggedraaid —
+         terug naar de oorspronkelijke maten (64/30/17). */}
+      <Animated.View style={{ alignItems: 'center', opacity: contentOpacity, transform: [{ scale }] }}>
+        <View style={s.connectedPopupCircle}>
+          {/* Operator, 27 september 2026 ("icoon moet 400% groter"):
+             enkel het vinkje zelf, 30→150 (cirkel/tekst blijven op hun
+             eigen, net teruggedraaide maat — "yes connected mag niet
+             groter" ging over de cirkel/tekst, niet het icoon). */}
+          {/* Operator, 27 september 2026 ("vinkje mag dunner"): 3→2. */}
+          <Check size={75} color="#ffffff" strokeWidth={2} />
+        </View>
+        <Text style={s.connectedPopupText}>Yes, connected!</Text>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
-/* ── ProgressArc — circulaire progress-ring rond de timer ──
-   Vult klokwaarts naarmate de sessie vordert (0% → 100%). Mode-color,
-   dunne stroke, ronde caps. Geeft user visueel gevoel van "ik kom
-   ergens" zonder de pulserende cirkel te verstoren. */
-function ProgressArc({
+/* ── PressableScale — micro-interactie voor knoppen ──
+   Operator, 16 september 2026 ("knoppen veranderen vloeiend van vorm
+   zodra je vinger het scherm raakt, de app moet 'leven'"): generieke
+   wrapper die een zachte schaal- + opacity-dip toepast op press-in/-out
+   via Animated.spring (geen instant snap). Native-driver, dus goedkoop
+   — veilig te gebruiken op elke knop in dit bestand. Vervangt géén
+   bestaande onPress-logica; wrapt 'm gewoon. */
+function PressableScale({
+  children,
+  onPress,
+  style,
+  disabled,
+  accessibilityLabel,
+  hitSlop,
+  android_ripple,
+  scaleTo = 0.96,
+}: {
+  children: ReactNode;
+  onPress?: () => void;
+  /* Zowel een statische style als Pressable's eigen ({pressed}) => style
+     render-prop-vorm (voor knoppen die daarnaast nog een instant
+     pressed-tint willen, zoals Pause/End). */
+  style?: StyleProp<ViewStyle> | ((state: { pressed: boolean }) => StyleProp<ViewStyle>);
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  hitSlop?: number | { top?: number; bottom?: number; left?: number; right?: number };
+  android_ripple?: { color?: string; borderless?: boolean };
+  /** Hoever de knop krimpt bij press-in. Kleinere knoppen → dichter bij 1. */
+  scaleTo?: number;
+}) {
+  /* Iter (2026-09-23, operator: standaardiseer press-scale app-breed):
+     gemigreerd van RN's `Animated.spring(speed/bounciness)` naar
+     Reanimated's `withTiming`/`withSpring({duration,dampingRatio})` —
+     zelfde curve als StartCard (breath-welcome.tsx). Enkel de interne
+     animatie-engine verandert; props/API/call sites (~55x in dit
+     bestand) blijven exact zoals ze waren. */
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  const onPressIn = () => {
+    scale.value = withTiming(scaleTo, { duration: 80 });
+    opacity.value = withTiming(0.85, { duration: 90 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    opacity.value = withTiming(1, { duration: 150 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={hitSlop}
+      android_ripple={android_ripple}
+      style={style}
+    >
+      {/* flex:1 + zelfde center-alignment als een standaard knop-body:
+         zonder dit zou deze Animated.View shrink-wrappen naar de content
+         (bv. enkel de tekst), en zou een absoluteFill-gradient binnenin
+         (zoals op de Start-knop) alleen dát kleine vlak vullen i.p.v.
+         de volledige knop. */}
+      <ReanimatedAnimated.View
+        style={[
+          {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          animatedStyle,
+        ]}
+      >
+        {children}
+      </ReanimatedAnimated.View>
+    </Pressable>
+  );
+}
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+/* ── DrainingCircle — water-fill die "opdroogt" naarmate de sessie
+   vordert ── Heropgebouwd (16 september 2026, revert naar pre-Dribbble-
+   redesign): zelfde sine-wave-techniek als de latere WaveFillCircle
+   (Idle-scherm) — die is er destijds JUIST van afgeleid. Hier drijft
+   `progress` (0..1, verstreken fractie van de sessie) het waterniveau
+   direct aan (geen extra smoothing-laag, want progress zelf tikt al
+   elke seconde rustig door): 0 = volledig vol, 1 = leeg. */
+function DrainingCircle({
   progress,
   color,
   size,
 }: {
-  /** 0..1 — fractie van de sessie die voorbij is */
   progress: number;
   color: string;
   size: number;
 }) {
-  const stroke = 3;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(1, progress));
-  const dashOffset = circumference * (1 - clamped);
+  const waterTopY = size * clamped;
+
+  const wave1Phase = useRef(new Animated.Value(0)).current;
+  const wave2Phase = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    /* Operator, 16 september 2026 ("wateranimatie professioneler"): iets
+       trager (6000/9000 → 7000/11000) voor een kalmere, minder
+       "kloppende" beweging — past bij het rustige, premium gevoel dat
+       gevraagd werd.
+       Operator, 27 september 2026 ("flashen op andere plaats terwijl de
+       lijn blijft ronddraaien"): zelfde `Animated.loop`-valkuil als
+       SlowAmbientPulse hierboven — een onderbreking (JS-thread-suspend
+       tijdens app-backgrounding, hier zelfs waarschijnlijker want
+       `useNativeDriver:false` draait via de JS-bridge, die tijdens
+       backgrounding volledig pauzeert) laat de timing met
+       `finished:false` eindigen, en `Animated.loop` herstart dan NOOIT
+       meer — deze golf-loop viel dus stil terwijl SlowAmbientPulse's
+       (al herstelde, native-driven) rotatie gewoon doortikte. Zelfde
+       fix: zelf-kettende animaties die onvoorwaardelijk herstarten, met
+       een ref naar de actief lopende animatie zodat cleanup 'm ECHT
+       stopt (niet enkel toekomstige herstarts blokkeert). */
+    let cancelled = false;
+    let currentLoop1: Animated.CompositeAnimation | null = null;
+    let currentLoop2: Animated.CompositeAnimation | null = null;
+    const runLoop1 = () => {
+      wave1Phase.setValue(0);
+      currentLoop1 = Animated.timing(wave1Phase, {
+        toValue: 1,
+        duration: 7000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      });
+      currentLoop1.start(() => {
+        if (!cancelled) runLoop1();
+      });
+    };
+    const runLoop2 = () => {
+      wave2Phase.setValue(0);
+      currentLoop2 = Animated.timing(wave2Phase, {
+        toValue: 1,
+        duration: 11000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      });
+      currentLoop2.start(() => {
+        if (!cancelled) runLoop2();
+      });
+    };
+    runLoop1();
+    runLoop2();
+    return () => {
+      cancelled = true;
+      currentLoop1?.stop();
+      currentLoop2?.stop();
+    };
+  }, [wave1Phase, wave2Phase]);
+
+  /* Operator, 16 september 2026 ("wateranimatie professioneler"): de
+     vorige versie tekende de golf als polyline (rechte segmenten tussen
+     24 sample-punten) over een an-zich-al-vloeiende sinus-curve — dat
+     gaf zichtbare facetten/knikken, vooral bij de toppen. Nu: dubbel
+     zoveel samples + quadratic-bezier-door-middelpunten (klassieke
+     "smooth line through points"-truc, elk punt wordt het controlepunt
+     van een curve naar het midden met het volgende punt) voor een echt
+     ronde golf. Geeft ook een losse surfaceD terug voor een glazen
+     highlight-lijn op het wateroppervlak. */
+  const buildWavePath = (
+    phase: number,
+    amp: number,
+    periods: number,
+    topOffset: number = 0,
+  ): { fillD: string; surfaceD: string } => {
+    const steps = 48;
+    const baseline = waterTopY + topOffset;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = (i / steps) * size;
+      const y =
+        baseline +
+        Math.sin((i / steps) * Math.PI * 2 * periods + phase * Math.PI * 2) *
+          amp;
+      pts.push({ x, y });
+    }
+    let surfaceD = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+    for (let i = 1; i < pts.length; i++) {
+      const mx = (pts[i - 1].x + pts[i].x) / 2;
+      const my = (pts[i - 1].y + pts[i].y) / 2;
+      surfaceD += ` Q ${pts[i - 1].x.toFixed(2)} ${pts[i - 1].y.toFixed(2)} ${mx.toFixed(2)} ${my.toFixed(2)}`;
+    }
+    const last = pts[pts.length - 1];
+    surfaceD += ` Q ${last.x.toFixed(2)} ${last.y.toFixed(2)} ${size} ${last.y.toFixed(2)}`;
+    const fillD = `${surfaceD} L ${size} ${size} L 0 ${size} Z`;
+    return { fillD, surfaceD };
+  };
+
+  /* ~15fps throttle — een trage waterrimpel heeft geen 60fps nodig. */
+  const THROTTLE_MS = 66;
+  const [phase1Val, setPhase1Val] = useState(0);
+  const [phase2Val, setPhase2Val] = useState(0);
+  useEffect(() => {
+    let last1 = 0;
+    let last2 = 0;
+    const id1 = wave1Phase.addListener(({ value }) => {
+      const now = Date.now();
+      if (now - last1 < THROTTLE_MS) return;
+      last1 = now;
+      setPhase1Val(value);
+    });
+    const id2 = wave2Phase.addListener(({ value }) => {
+      const now = Date.now();
+      if (now - last2 < THROTTLE_MS) return;
+      last2 = now;
+      setPhase2Val(value);
+    });
+    return () => {
+      wave1Phase.removeListener(id1);
+      wave2Phase.removeListener(id2);
+    };
+  }, [wave1Phase, wave2Phase]);
+
+  /* Amplitude iets kleiner dan voorheen (3/1 → 2.2/0.8) — subtieler,
+     leest rustiger/premium i.p.v. druk kabbelend. */
+  /* Operator, 16 september 2026 ("golven moeten wel duidelijk"): amp
+     terug omhoog (2.2/0.8 → 4/1.8) — te subtiel getemperd, nu weer
+     duidelijk zichtbaar bewegend water i.p.v. bijna vlak. */
+  const { fillD: path2 } = buildWavePath(phase2Val, 1.8, 3, 6);
+  const { fillD: path1, surfaceD: surface1 } = buildWavePath(phase1Val, 4, 2, 0);
+
+  /* Operator, 16 september 2026: subtiel kleurverloop (lichter boven,
+     dieper onder) i.p.v. platte vlakke kleur — geeft het water een
+     beetje diepte/glans i.p.v. een egaal geverfd vlak. */
+  const gradId = `drainGrad-${color.replace('#', '')}`;
 
   return (
-    <Svg
-      width={size}
-      height={size}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        /* -90° rotation start = bovenaan, klokwaarts vullen */
-        transform: [{ rotate: '-90deg' }],
-      }}
-      pointerEvents="none"
-    >
-      {/* Track — heel subtle, geeft cirkel-shape aan bij 0% progress */}
+    <Svg width={size} height={size} style={s.drainOuter}>
+      <Defs>
+        <ClipPath id="drainClip">
+          <Circle cx={size / 2} cy={size / 2} r={size / 2} />
+        </ClipPath>
+        <SvgLinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={shadeHex(color, 0.16)} />
+          <Stop offset="1" stopColor={shadeHex(color, -0.1)} />
+        </SvgLinearGradient>
+      </Defs>
+      <G clipPath="url(#drainClip)">
+        {/* Operator, 27 september 2026 ("de lichte doorschijnende
+           binnenkleur bij zakken water moet cirkel volledig vullen"):
+           basisvulling over de HELE cirkel, ONDER de golven — zodra het
+           water zakt, was het leeggelopen bovenstuk gewoon de kale
+           achtergrond; nu blijft dat deel een lichte, doorschijnende
+           tint van de modus-kleur i.p.v. leeg/blanco te ogen. */}
+        <Rect x={0} y={0} width={size} height={size} fill={color} opacity={0.14} />
+        <Path d={path2} fill={color} opacity={0.35} />
+        <Path d={path1} fill={`url(#${gradId})`} opacity={0.88} />
+        {/* Glazen highlight-lijn op het wateroppervlak — een dunne,
+           lichte streep die het idee van een glanzend vloeistof-
+           oppervlak geeft i.p.v. een matte vlakke vulling. */}
+        <Path
+          d={surface1}
+          stroke="#ffffff"
+          strokeWidth={1.5}
+          strokeOpacity={0.35}
+          fill="none"
+        />
+      </G>
+      {/* Operator, 27 september 2026 ("bracelet active pagina moet bij
+         leeglopen een outline hebben"): zonder eigen rand had de cirkel
+         geen zichtbare grens meer zodra de vulling bijna leeg was — enkel
+         de golf zelf tekende de vorm. Dunne modus-kleur-stroke op de
+         buitenrand, buiten de clipPath (dus altijd zichtbaar, ook bij een
+         (bijna) lege vulling), geeft de cirkel een constante outline. */}
       <Circle
         cx={size / 2}
         cy={size / 2}
-        r={radius}
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth={stroke}
-        fill="none"
-      />
-      {/* Progress — gevulde portion in mode-color */}
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
+        r={size / 2 - 1}
         stroke={color}
-        strokeWidth={stroke}
-        strokeLinecap="round"
+        strokeWidth={2}
+        strokeOpacity={0.7}
         fill="none"
-        strokeDasharray={`${circumference} ${circumference}`}
-        strokeDashoffset={dashOffset}
       />
     </Svg>
+  );
+}
+
+/* ── RingAmbientGlow — zachte, brede gloed achter de ring ──
+   Operator, 16 september 2026 ("laat de ring een heel zachte, brede
+   neon-gloed afgeven op de gitzwarte achtergrond — voelt anders aan als
+   een platte lege website, oogt premium"): grotere, laag-opacity gevulde
+   cirkel met een brede shadow-blur (RN heeft geen radial-gradient, dus
+   de "gloed" komt van shadowRadius/Opacity i.p.v. een echte blur-laag),
+   positioned achter DrainingCircle.
+   Operator, 27 september 2026 ("doe die draaiende buitenlijn weg"):
+   SlowAmbientPulse (de losse ronddraaiende boog om de ring) is volledig
+   verwijderd — DrainingCircle's eigen outline-stroke (zie die component)
+   markeert de rand nu, geen tweede, roterend element meer nodig. */
+function RingAmbientGlow({ color, size }: { color: string; size: number }) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+        opacity: 0.28,
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 50,
+        elevation: 14,
+      }}
+    />
+  );
+}
+
+/* ── ModeColorRing — ring die wit begint en met de klok mee inkleurt ──
+   Operator, 16 september 2026 ("de cirkel begint altijd wit en vult dan
+   met de klok mee bij aanklikken state, in een vlotte beweging"): een
+   witte basis-ring (altijd volledig zichtbaar) met daarboven een
+   gekleurde ring die bij elke modus-wissel van 0% naar 100% animeert —
+   zelfde -90°-start-boven/klokwaarts-conventie als ActivityRing, maar nu
+   met een Animated.Value i.p.v. een vaste progress, zodat de inkleur-
+   beweging zichtbaar "veegt" i.p.v. instant om te slaan. */
+function ModeColorRing({
+  color,
+  size,
+}: {
+  color: string;
+  size: number;
+}) {
+  /* Operator, 16 september 2026 ("buitencirkel moet de helft dunner"):
+     14→7. Operator, 27 september 2026 ("ring moet nog dunner, meer in
+     breathwork-stijl"): 7→3, in lijn met breath-setup's HERO_STROKE.
+     Operator, zelfde dag ("nog dunner de cirkel"): 3→2, exact gelijk aan
+     breath-setup's HERO_STROKE. */
+  const stroke = 2;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const reveal = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    reveal.setValue(0);
+    Animated.timing(reveal, {
+      toValue: 1,
+      duration: 650,
+      easing: Easing.out(Easing.cubic),
+      /* strokeDashoffset is geen transform/opacity → geen native driver. */
+      useNativeDriver: false,
+    }).start();
+  }, [color, reveal]);
+
+  const dashOffset = reveal.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <Svg
+        width={size}
+        height={size}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          transform: [{ rotate: '-90deg' }],
+        }}
+        pointerEvents="none"
+      >
+        {/* Witte basis — altijd volledig zichtbaar, ook vóór de eerste
+           modus-keuze en tijdens de inkleur-animatie zelf. */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#ffffff"
+          strokeWidth={stroke}
+          fill="none"
+        />
+        {/* Gekleurde overlay — veegt klokwaarts in bij elke modus-wissel. */}
+        <AnimatedCircle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={dashOffset}
+        />
+      </Svg>
+    </View>
+  );
+}
+
+/* ── WaveFillCircle — golf-vulling binnenin de ring ──
+   Operator, 16 september 2026 ("animatie is zelfde als bij breathwork
+   golven en stijgt mee naargelang meer minuten"): herbouwde versie van
+   de eerder verwijderde DrainingCircle — exact dezelfde sine-wave-
+   techniek (twee golven over elkaar, verschillende snelheid/amplitude
+   voor een natuurlijk water-gevoel), nu als "hoeveel duur is ingesteld"
+   i.p.v. "hoeveel sessie-tijd is verstreken". `fraction` 0 = leeg,
+   1 = vol (bij max-duur). */
+function WaveFillCircle({
+  fraction,
+  color,
+  size,
+}: {
+  /** 0..1 — hoe vol, 0 = leeg (min-duur), 1 = vol (max-duur) */
+  fraction: number;
+  color: string;
+  size: number;
+}) {
+  /* Operator, 16 september 2026 ("bij min moet ook een beetje golven
+     zichtbaar zijn"): ondergrens van 8% i.p.v. een volledig platte,
+     onzichtbare vulling bij de minimale duur. */
+  const clamped = Math.max(0.08, Math.min(1, fraction));
+
+  /* Operator, 16 september 2026 ("animatie van vullen moet mooier en
+     rustiger flowen"): het waterNIVEAU zelf sprong voorheen instant naar
+     de nieuwe waarde bij elke slider-drag — enkel de rimpel golfde. Nu
+     eest het niveau zelf naar de nieuwe fractie met een zachte easing
+     (~550ms), terwijl de rimpel-animatie daarbovenop blijft lopen. */
+  const levelAnim = useRef(new Animated.Value(clamped)).current;
+  const [levelVal, setLevelVal] = useState(clamped);
+  useEffect(() => {
+    const id = levelAnim.addListener(({ value }) => setLevelVal(value));
+    return () => levelAnim.removeListener(id);
+  }, [levelAnim]);
+  useEffect(() => {
+    /* Operator, 16 september 2026: 550→900→1500ms, daarna "golf reageert
+       te traag op regelaar, moet dat niet gelijk gaan?" — het echte
+       probleem was niet de duur an sich, maar dat élke tussenwaarde
+       tijdens het slepen een NIEUWE 1500ms-tween start vanaf de nog-
+       animerende positie, wat zich opstapelt tot zichtbare vertraging
+       achter de duim aan. Terug naar kort (160ms) zodat het bij
+       continu slepen als "gelijk" aanvoelt, met net genoeg easing om
+       een harde teleport bij een preset-tik te voorkomen. */
+    Animated.timing(levelAnim, {
+      toValue: clamped,
+      duration: 160,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    }).start();
+  }, [clamped, levelAnim]);
+
+  const waterTopY = size * (1 - levelVal);
+
+  const wave1Phase = useRef(new Animated.Value(0)).current;
+  const wave2Phase = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    /* Operator, zelfde dag: trager + kleinere amplitude dan voorheen
+       (4000/6200ms → 6000/9000ms, amp 3/1 → 2/0.8) voor een kalmere,
+       minder "kloppende" golfbeweging.
+       Operator, 27 september 2026: zelfde `Animated.loop`-fix als
+       DrainingCircle/SlowAmbientPulse — onvoorwaardelijk zelf-herstarten
+       + de actief lopende animatie écht stoppen bij cleanup, i.p.v.
+       `Animated.loop` die na een onderbreking (bv. app-backgrounding)
+       stilzwijgend nooit meer herstart. */
+    let cancelled = false;
+    let currentLoop1: Animated.CompositeAnimation | null = null;
+    let currentLoop2: Animated.CompositeAnimation | null = null;
+    const runLoop1 = () => {
+      wave1Phase.setValue(0);
+      currentLoop1 = Animated.timing(wave1Phase, {
+        toValue: 1,
+        duration: 6000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      });
+      currentLoop1.start(() => {
+        if (!cancelled) runLoop1();
+      });
+    };
+    const runLoop2 = () => {
+      wave2Phase.setValue(0);
+      currentLoop2 = Animated.timing(wave2Phase, {
+        toValue: 1,
+        duration: 9000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      });
+      currentLoop2.start(() => {
+        if (!cancelled) runLoop2();
+      });
+    };
+    runLoop1();
+    runLoop2();
+    return () => {
+      cancelled = true;
+      currentLoop1?.stop();
+      currentLoop2?.stop();
+    };
+  }, [wave1Phase, wave2Phase]);
+
+  const buildWavePath = (
+    phase: number,
+    amp: number,
+    periods: number,
+    topOffset: number = 0,
+  ): string => {
+    const steps = 24;
+    const baseline = waterTopY + topOffset;
+    const firstY = baseline + Math.sin(phase * Math.PI * 2) * amp;
+    let d = `M 0 ${firstY.toFixed(2)}`;
+    for (let i = 1; i <= steps; i++) {
+      const x = (i / steps) * size;
+      const y =
+        baseline +
+        Math.sin((i / steps) * Math.PI * 2 * periods + phase * Math.PI * 2) *
+          amp;
+      d += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+    }
+    d += ` L ${size} ${size} L 0 ${size} Z`;
+    return d;
+  };
+
+  /* Zelfde throttle als voorheen (~15fps i.p.v. elke frame) — een trage
+     waterrimpel heeft geen 60fps nodig, en dit scheelt merkbaar op
+     goedkopere toestellen tijdens de hele idle-render. */
+  const THROTTLE_MS = 66;
+  const [phase1Val, setPhase1Val] = useState(0);
+  const [phase2Val, setPhase2Val] = useState(0);
+  useEffect(() => {
+    let last1 = 0;
+    let last2 = 0;
+    const id1 = wave1Phase.addListener(({ value }) => {
+      const now = Date.now();
+      if (now - last1 < THROTTLE_MS) return;
+      last1 = now;
+      setPhase1Val(value);
+    });
+    const id2 = wave2Phase.addListener(({ value }) => {
+      const now = Date.now();
+      if (now - last2 < THROTTLE_MS) return;
+      last2 = now;
+      setPhase2Val(value);
+    });
+    return () => {
+      wave1Phase.removeListener(id1);
+      wave2Phase.removeListener(id2);
+    };
+  }, [wave1Phase, wave2Phase]);
+
+  const path1 = buildWavePath(phase1Val, 2, 2, 0);
+  const path2 = buildWavePath(phase2Val, 0.8, 3, 6);
+
+  return (
+    <Svg width={size} height={size}>
+      <Defs>
+        <ClipPath id="durationWaveClip">
+          <Circle cx={size / 2} cy={size / 2} r={size / 2} />
+        </ClipPath>
+      </Defs>
+      {/* Operator, 16 september 2026 ("groen is te flauw, dat is niet
+         whatsappgroen toch?"): de hex-waarde was al correct (#25D366),
+         maar bij 40/70% dekking over de zwarte achtergrond kleurde de
+         golf een gedoofde versie ervan. Voller (60/92%) leest dichter
+         bij de pure accentkleur.
+         Operator, 27 september 2026 ("kleur in de ring moet transparant
+         gekleurd, meer in breathwork-stijl"): 60/92% oogde solide i.p.v.
+         een lichte tint — terug naar een transparante golf-vulling
+         (22/35%), dichter bij breath-setup's wave-opacity. */}
+      <G clipPath="url(#durationWaveClip)">
+        <Path d={path2} fill={color} opacity={0.22} />
+        <Path d={path1} fill={color} opacity={0.35} />
+      </G>
+    </Svg>
+  );
+}
+
+/* ── DurationRing — ring + golf-vulling voor "Choose duration" ──
+   Operator, 16 september 2026: "we gaan het anders aanpakken" — de
+   ring zelf is niet langer draaibaar/interactief (dat deed 'ie via
+   angle-drag in eerdere versies); de duur wordt nu bediend door een
+   losse schuifregelaar ONDER de ring (zie call site: DurationSlider),
+   en deze component toont enkel het resultaat: vaste gekleurde ring-
+   rand + golf-vulling die met de duur meestijgt + modus-naam/getal in
+   het midden. */
+function DurationRing({
+  min,
+  max,
+  value,
+  color,
+  label,
+  size = 180,
+  dark,
+}: {
+  min: number;
+  max: number;
+  value: number;
+  color: string;
+  /* Operator, 16 september 2026 ("tijd verschijnt groot in de cirkel
+     samen met de naam van de state"): modus-naam als klein label boven
+     het getal — zelfde opbouw als de active-session ActivityRing. */
+  label: string;
+  size?: number;
+  /* Operator, 16 september 2026 ("hybride Dark voor dit ene scherm —
+     donkergrijze basislijn, wit dikgedrukt getal, zachte neon-gloed
+     achter de paarse lijn"): schakelt de dark-specifieke kleuren + de
+     ambient RingGlow in, onafhankelijk van de module-brede `light`. */
+  dark?: boolean;
+}) {
+  /* Operator, 27 september 2026 ("als 30 min max is en 15 min minimum,
+     moet de cirkel dan niet al halfvol staan?"): was (value-min)/(max-min)
+     — dat toont hoever je binnen de EIGEN regelrange zit, dus staat de
+     cirkel bij elke modus z'n minimum altijd (bijna) leeg, ook al is dat
+     minimum zelf al de helft van het max. De vulling hoort "hoeveel duur
+     is ingesteld" te tonen als absoluut aandeel van het max — dus
+     value/max, niet (value-min)/(max-min). */
+  const fillFraction = max > 0 ? value / max : 0;
+  /* Operator, 16 september 2026 ("binnenkant cirkel zwart ipv wit... tekst
+     in de cirkel wit", daarna "Calm Control etc ook wit"): alle tekst in
+     de ring — label, getal, unit — is standaard wit, geen mode-kleur meer
+     op het label. Contrast-fix ("binnenkant van cirkel als dat gevuld is
+     is tekst daarin niet goed zichtbaar"): de golf-vulling zelf draagt
+     de mode-kleur (niet de zwarte achtergrond erachter) — bij een lichte
+     mode-kleur (Clarity, wit) verdween witte tekst waar de golf 'm
+     overlapt. isLightColor-patroon zoals overal elders in dit bestand. */
+  /* Operator, 27 september 2026 ("tekst in cirkel bij Clarity & Relax met
+     zwarte achtergrond niet goed leesbaar"): de golf-vulling is intussen
+     transparant (zie WaveFillCircle, 22/35% i.p.v. 60/92%) — de binnenkant
+     blijft dus bij ELKE modus-kleur overwegend zwart, ook bij een lichte
+     kleur zoals Clarity's wit. De oude colorIsLight-omschakeling naar
+     donkere `fg`-tekst ging uit van een bijna-opake witte golf-vulling die
+     niet meer bestaat, en gaf zo onzichtbare donkere tekst op zwart.
+     Label/unit/getal zijn daarom nu allemaal gewoon altijd wit, met de
+     standaard donkere halo (leest prima tegen zowel de zwarte achtergrond
+     als de dunne, transparante gekleurde golf erboven). */
+  const fg = '#ffffff';
+  const numColor = '#ffffff';
+  const textShadow = s.durationRingTextShadow;
+  /* Operator, 16 september 2026 ("buitencirkel moet de helft dunner"):
+     matcht ModeColorRing's stroke (14→7) zodat de golf-vulling weer
+     precies binnen de ring-rand past.
+     Operator, 27 september 2026 ("nog dunner de cirkel"): ModeColorRing's
+     stroke ging 7→2 — hier meegetrokken zodat deze berekening (enkel voor
+     innerSize, tekent zelf geen lijn) niet stil uit sync raakt. */
+  const stroke = 2;
+  const innerSize = size - stroke * 2 - 4;
+
+  /* Operator, 29 september 2026 ("de cirkel buitenlijn ook een zelfde
+     animatie geven zoals in breathwork? de 2 witte travelling lines?",
+     bevestigd als breath-setup.tsx's heroShineStrip op de "choose your
+     duration"-pagina): zelfde flits-sweep, 1-op-1 overgenomen — enige
+     verschil is dat HERO_SIZE/HERO_STROKE daar module-constanten zijn,
+     hier de `size`/`stroke`-props van deze herbruikbare component. */
+  const shimmer = useSharedValue(-1);
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(-1, { duration: 0 }),
+        withDelay(7000, withTiming(1, { duration: 950, easing: ReanimatedEasing.inOut(ReanimatedEasing.quad) })),
+        withDelay(600, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(shimmer);
+  }, []);
+  const shineStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shimmer.value, [-1, -0.85, 0.55, 1], [0, 1, 1, 0], Extrapolation.CLAMP),
+    transform: [{ translateX: shimmer.value * size * 0.75 }, { rotate: '45deg' }],
+  }));
+  const shineMaskStyle = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    overflow: 'hidden' as const,
+  };
+  const shineStripStyle = {
+    position: 'absolute' as const,
+    top: -size,
+    bottom: -size,
+    width: 70,
+  };
+  const shinePunchStyle = {
+    position: 'absolute' as const,
+    top: stroke,
+    left: stroke,
+    width: size - stroke * 2,
+    height: size - stroke * 2,
+    borderRadius: (size - stroke * 2) / 2,
+    backgroundColor: dark ? '#000000' : 'rgba(10,10,12,0.85)',
+  };
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Operator, 16 september 2026 ("verwijder gloed rond de cirkel"):
+         RingGlow hier weg — blijft wel nog aanwezig op de active-session-
+         ring (ander scherm, andere, niet-betwiste feature). */}
+      {/* Operator, 16 september 2026 ("de cirkel begint altijd wit en
+         vult dan met de klok mee bij aanklikken state, in een vlotte
+         beweging"): ModeColorRing i.p.v. een statische ActivityRing —
+         witte basis, gekleurde ring veegt klokwaarts in bij elke modus-
+         wissel (key={color} forceert een remount + nieuwe reveal-
+         animatie per kleur-wissel). */}
+      <ModeColorRing key={color} color={color} size={size} />
+      {/* Shine-sweep over de buitenring — zie de operator-comment hierboven
+         bij `shimmer`. MOET vóór de golf-vulling komen: anders tekent de
+         effen punch-cirkel bovenop de golven en verdwijnen die. */}
+      <View style={shineMaskStyle} pointerEvents="none">
+        <ReanimatedAnimated.View style={[shineStripStyle, shineStyle]}>
+          <LinearGradient
+            colors={['#ffffff00', dark ? '#EAF2FF99' : '#E5F0FFCC', '#ffffff00']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </ReanimatedAnimated.View>
+        <View style={shinePunchStyle} />
+      </View>
+      {/* Golf-vulling — los van de ring-rand, binnenin, altijd rond
+         geclipt. Operator, 16 september 2026 ("binnenkant cirkel zwart
+         ipv wit"): teruggedraaid naar een donkere/zwarte achtergrond
+         (i.p.v. de lichte tussenversie) achter de golven. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: innerSize,
+          height: innerSize,
+          borderRadius: innerSize / 2,
+          overflow: 'hidden',
+          backgroundColor: dark ? '#000000' : 'rgba(10,10,12,0.85)',
+        }}
+      >
+        <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} />
+      </View>
+      <View pointerEvents="none" style={s.durationRingCenter}>
+        <Text style={[s.durationRingLabel, { color: fg }, textShadow]}>
+          {label.toUpperCase()}
+        </Text>
+        {/* Operator, 16 september 2026 ("tekst in de cirkel wit en
+           minuten moeten veel groter", daarna "minuten in Clarity liever
+           wit met zwarte rand"): bij een lichte modus-kleur kreeg het
+           getal een dunne zwarte outline-stack, om op te vallen tegen een
+           toen nog bijna-opake witte golf-vulling.
+           Operator, 27 september 2026: die golf-vulling is nu transparant
+           (zie WaveFillCircle) — de binnenkant is bij elke modus-kleur
+           overwegend zwart, dus de outline-stack is niet meer nodig. Altijd
+           gewone witte tekst + de standaard donkere halo (`textShadow`). */}
+        <Text style={[s.durationRingNum, { color: numColor }, textShadow]}>
+          {value}
+        </Text>
+        <Text style={[s.durationRingUnit, { color: fg }, textShadow]}>
+          min
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -1329,48 +2253,6 @@ function BreathingHint({
   );
 }
 
-/* ── RotatingQuote — mode-specifieke quote, roteert elke 22s ──
-   Soft cross-fade tussen quotes. Quotes per mode in MODE_QUOTES.
-   Rusten aan de bodem van de active-session screen, vlak boven de
-   stats-strip. */
-function RotatingQuote({ quotes }: { quotes: string[] }) {
-  const [idx, setIdx] = useState(0);
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    /* Initial fade-in */
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
-
-    /* Roteer elke 22s — kort genoeg om variatie, lang genoeg om te
-       lezen + niet afleidend te zijn. Fade-out, swap, fade-in. */
-    const iv = setInterval(() => {
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }).start(() => {
-        setIdx((i) => (i + 1) % quotes.length);
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }).start();
-      });
-    }, 22_000);
-    return () => clearInterval(iv);
-  }, [opacity, quotes.length]);
-
-  return (
-    <Animated.Text style={[s.rotatingQuote, { opacity }]}>
-      "{quotes[idx]}"
-    </Animated.Text>
-  );
-}
-
 /* ── PulsingCircle — visuele puls voor active session ──
    Zelfde principe als de sonar-rings op de etalage: continue scale +
    opacity loop met useNativeDriver, geen JS-thread belasting tijdens
@@ -1392,7 +2274,7 @@ function PulsingCircle({
   useEffect(() => {
     /* Adem-ritme — varieert per mode via MODE_BREATH (operator-keuze
        2026-05-27 iter 3). Energiek (3s/3s) voor Boost, traag (7s/7s)
-       voor Rest & Reset. Cyclus = inMs + outMs. */
+       voor Sleep. Cyclus = inMs + outMs. */
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
@@ -1461,1544 +2343,6 @@ function PulsingCircle({
   );
 }
 
-/* ── SlowAmbientPulse — pulserende + roterende cirkel (iter 8) ──
-   Operator-feedback "de cirkel zelf moet draaien, geen aparte boog
-   eromheen". Voorheen was er een aparte RotatingArc — die is verwijderd.
-   Nu doet de SlowAmbientPulse zelf beide bewegingen tegelijk:
-     - Pulse: 8s/8s scale 1 → 1.05 (subtle "apparaat is aan")
-     - Rotate: 14s per volle rotatie (langzaam, niet duizelig-makend)
-   De ring is partieel zichtbaar (~35% arc, rest gap via SVG dasharray)
-   zodat de rotatie ook visueel waarneembaar is — een volledige ring
-   zou symmetrisch zijn en de rotatie niet tonen. */
-function SlowAmbientPulse({
-  color,
-  size = 280,
-}: {
-  color: string;
-  size?: number;
-}) {
-  const pulse = useRef(new Animated.Value(0)).current;
-  const rotation = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 8000,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 0,
-          duration: 8000,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    const rotLoop = Animated.loop(
-      Animated.timing(rotation, {
-        toValue: 1,
-        duration: 14000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    pulseLoop.start();
-    rotLoop.start();
-    return () => {
-      pulseLoop.stop();
-      rotLoop.stop();
-    };
-  }, [pulse, rotation]);
-
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] });
-  const opacity = pulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.30, 0.55],
-  });
-  const rotate = rotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  /* Partial-arc via SVG strokeDasharray — ~35% van de cirkel zichtbaar. */
-  const strokeWidth = 2;
-  const radius = size / 2 - strokeWidth / 2;
-  const circumference = 2 * Math.PI * radius;
-  const arcLength = circumference * 0.35;
-  const gapLength = circumference - arcLength;
-
-  /* Iter 8b: full ring (lichter) als achtergrond, roterende boog
-     erbovenop. Operator-feedback "buitenste ring moet een volledige
-     ring zijn, lichtere kleur dan ronddraaiende boog".
-     Iter 9bh (2026-05-31): achtergrond-ring krijgt nu DEZELFDE scale
-     als de roterende boog. Vroeger pulste alleen de boog (1.0 → 1.05),
-     waardoor de boog 5% gróter werd dan de statische ring tijdens piek-
-     pulse → boog liep niet exact meer op de ring. Door beide samen te
-     scalen blijven ze concentrisch over de hele pulse-cyclus. */
-  return (
-    <View
-      style={[s.pulseWrap, { width: size, height: size }]}
-      pointerEvents="none"
-    >
-      {/* Statische full ring (achtergrond) — pulst nu mee met de boog
-         zodat ze altijd op exact dezelfde radius zitten. */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          transform: [{ scale }],
-        }}
-      >
-        <Svg width={size} height={size}>
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            fill="none"
-            opacity={0.18}
-          />
-        </Svg>
-      </Animated.View>
-      {/* Roterende + pulserende boog (voorgrond) */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          opacity,
-          transform: [{ scale }, { rotate }],
-        }}
-      >
-        <Svg width={size} height={size}>
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${arcLength} ${gapLength}`}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </Svg>
-      </Animated.View>
-    </View>
-  );
-}
-
-/* ── BreathworkStrip — opt-in geleide breathwork tijdens active session ──
-   2026-05-27 iter 5: breathwork is een eigen feature, OPTIONEEL gebruik
-   tijdens een bracelet-sessie. Bracelet+haptic blijven primair, dit is
-   een laagje bovenop dat de gebruiker kan in-/uitschakelen.
-
-   Wanneer disabled: toont subtiele CTA-pill om te starten ("+ Add coherent
-   breathwork (5 min)"). Eén tap = enable.
-
-   Wanneer enabled: voert het mode-specifieke protocol (uit BREATH_PROTOCOLS)
-   uit. Toont progress-balk (cyclus / totaal), resterende tijd, en huidige
-   phase ('Breathe in…' / 'Hold' / 'Breathe out…'). Eén tap op ✕ = disable
-   (state reset, bij volgende enable begint protocol weer vanaf cyclus 0).
-
-   Onafhankelijk van bracelet-pause/resume — als user de bracelet-sessie
-   pauzeert, blijft breathwork-protocol intern doorgaan (het is een
-   visuele/cognitieve oefening, niet hardware-aangestuurd). User kan
-   handmatig uitschakelen indien gewenst. */
-/* ── BoxBreathAnimation — vierkant met dot die clockwise rond loopt ──
-   Iter 9f (operator-feedback): klassiek box-breathing visualisatie.
-   Eén loop = 16s (4 phases × 4s). Dot trace t volgens phase:
-     - Top edge L→R     : Inhale (0-4s)
-     - Right edge T→B   : Hold full (4-8s)
-     - Bottom edge R→L  : Exhale (8-12s)
-     - Left edge B→T    : Hold empty (12-16s)
-   useNativeDriver:true voor smooth 60fps animatie. Een Animated.Value
-   van 0→1 met linear easing wordt geïnterpoleerd naar translateX/Y. */
-function BoxBreathAnimation({
-  color,
-  enabled,
-  size = 100,
-}: {
-  color: string;
-  enabled: boolean;
-  size?: number;
-}) {
-  const t = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!enabled) {
-      t.setValue(0);
-      return;
-    }
-    t.setValue(0);
-    const loop = Animated.loop(
-      Animated.timing(t, {
-        toValue: 1,
-        duration: 16000, // 4 × 4s = volledige box-cyclus
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [enabled, t]);
-
-  const dotSize = 14;
-  const inset = 4; // ruimte zodat dot niet buiten box clipt
-  const trackPath = size - dotSize - inset * 2;
-
-  /* Position interpolation. inputRange [0, 0.25, 0.5, 0.75, 1] maps
-     elke 25% naar één edge van de box. */
-  const translateX = t.interpolate({
-    inputRange: [0, 0.25, 0.5, 0.75, 1],
-    outputRange: [0, trackPath, trackPath, 0, 0],
-  });
-  const translateY = t.interpolate({
-    inputRange: [0, 0.25, 0.5, 0.75, 1],
-    outputRange: [0, 0, trackPath, trackPath, 0],
-  });
-
-  return (
-    <View style={[s.boxBreathWrap, { width: size, height: size }]}>
-      {/* Box outline — subtle */}
-      <View
-        style={[
-          s.boxBreathBox,
-          { width: size, height: size, borderColor: 'rgba(255,255,255,0.18)' },
-        ]}
-      />
-      {/* Phase labels — uit de mockup. Subtle, mode-color toon. */}
-      <Text
-        style={[s.boxBreathLabel, s.boxBreathLabelTop, { color: hexToTint(color, 0.55) }]}
-      >
-        IN
-      </Text>
-      <Text
-        style={[s.boxBreathLabel, s.boxBreathLabelRight, { color: 'rgba(255,255,255,0.40)' }]}
-      >
-        HOLD
-      </Text>
-      <Text
-        style={[s.boxBreathLabel, s.boxBreathLabelBottom, { color: hexToTint(color, 0.55) }]}
-      >
-        OUT
-      </Text>
-      <Text
-        style={[s.boxBreathLabel, s.boxBreathLabelLeft, { color: 'rgba(255,255,255,0.40)' }]}
-      >
-        HOLD
-      </Text>
-      {/* Tracing dot met mode-color glow */}
-      <Animated.View
-        style={[
-          s.boxBreathDot,
-          {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotSize / 2,
-            backgroundColor: color,
-            top: inset,
-            left: inset,
-            transform: [{ translateX }, { translateY }],
-            shadowColor: color,
-            shadowOpacity: 0.6,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 0 },
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
-/* ── UniversalPulseAnimation — unified modern pulse voor alle protocols ──
-   Iter 9i (operator-keuze 27 mei): "alles pulse, modern unified".
-   Een phase-aware pulse die werkt voor:
-     - simple (Boost, Calm)     : in expand → out contract
-     - box (Rest & Reset)       : in → hold-in stays → out → hold-out stays
-     - triangle (Sharp Focus)   : in → hold-in stays → out
-     - nadi (Clarity)           : in-left/right → out-right/left (single pulse;
-                                   nostril aangegeven via prompt-tekst)
-     - 478 (fallback)           : in → hold-in stays → out
-
-   Sigh (Phys Sigh) gebruikt eigen SighAnimation vanwege double-bump.
-
-   Hoe holds zichtbaar zijn zonder geometric shape:
-     - hold-in: cirkel blijft op max scale (1.0), opacity blijft hoog
-     - hold-out: cirkel blijft op min scale (0.45), opacity laag
-     Visueel verschil tussen "actief bewegen" vs "stilstaan" maakt de
-     hold-fase zichtbaar. Prompt-text "Hold (lungs full)" reinforced. */
-function UniversalPulseAnimation({
-  color,
-  phase,
-  phaseDurationMs,
-  enabled,
-  size = 100,
-}: {
-  color: string;
-  phase: string;
-  phaseDurationMs: number;
-  enabled: boolean;
-  size?: number;
-}) {
-  const scale = useRef(new Animated.Value(0.45)).current;
-  const opacity = useRef(new Animated.Value(0.5)).current;
-
-  useEffect(() => {
-    if (!enabled) {
-      scale.setValue(0.45);
-      opacity.setValue(0.5);
-      return;
-    }
-
-    /* Target scale + opacity per phase-categorie. */
-    const isExpand =
-      phase === 'in' ||
-      phase === 'in-left' ||
-      phase === 'in-right' ||
-      phase === 'in-topup';
-    const isContract =
-      phase === 'out' || phase === 'out-left' || phase === 'out-right';
-    const isHoldFull = phase === 'hold-in';
-    const isHoldEmpty = phase === 'hold-out';
-
-    let targetScale = 0.45;
-    let targetOpacity = 0.5;
-
-    if (isExpand || isHoldFull) {
-      targetScale = 1.0;
-      targetOpacity = 0.85;
-    } else if (isContract || isHoldEmpty) {
-      targetScale = 0.45;
-      targetOpacity = 0.5;
-    } else {
-      return; // idle / done — geen animatie
-    }
-
-    Animated.parallel([
-      Animated.timing(scale, {
-        toValue: targetScale,
-        duration: phaseDurationMs,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: targetOpacity,
-        duration: phaseDurationMs,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [phase, phaseDurationMs, enabled, scale, opacity]);
-
-  return (
-    <View style={[s.pulsingCircleWrap, { width: size, height: size }]}>
-      {/* Outer ring — statisch, subtle */}
-      <View
-        style={[
-          s.pulsingCircleRing,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderColor: hexToTint(color, 0.20),
-          },
-        ]}
-      />
-      {/* Pulserende kern met shadow-glow */}
-      <Animated.View
-        style={[
-          s.pulsingCircleCore,
-          {
-            width: size * 0.85,
-            height: size * 0.85,
-            borderRadius: (size * 0.85) / 2,
-            backgroundColor: color,
-            transform: [{ scale }],
-            opacity,
-            shadowColor: color,
-            shadowOpacity: 0.55,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 0 },
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
-/* ── TriangleBreathAnimation — voor 'triangle' protocol (Sharp Focus) ──
-   Iter 9h: equilateral driehoek met dot die 3 hoeken aftikt clockwise.
-   Sama Vritti pranayama-stijl: in (top → bottom-right), hold (bottom
-   edge L→R reversed), out (left edge up). 12s loop = 3×4s.
-
-   Geometrie equilateral triangle:
-     - Top vertex: (size/2, padding)
-     - Bottom-right: (size-padding, triH)
-     - Bottom-left: (padding, triH)
-   triH ≈ size * 0.866 voor echte equilateral. */
-function TriangleBreathAnimation({
-  color,
-  enabled,
-  size = 100,
-  cycleMs = 12000,
-}: {
-  color: string;
-  enabled: boolean;
-  size?: number;
-  cycleMs?: number;
-}) {
-  const t = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!enabled) {
-      t.setValue(0);
-      return;
-    }
-    t.setValue(0);
-    const loop = Animated.loop(
-      Animated.timing(t, {
-        toValue: 1,
-        duration: cycleMs,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [enabled, cycleMs, t]);
-
-  const dotSize = 14;
-  const padding = 6;
-  const triH = (size - padding * 2) * 0.866;
-  /* Vertex coordinates (relative to container top-left) */
-  const topX = size / 2;
-  const topY = padding;
-  const brX = size - padding;
-  const brY = padding + triH;
-  const blX = padding;
-  const blY = padding + triH;
-
-  /* Dot start position: top vertex. Animeer translateX/Y vanuit daar.
-     Phase 1 (0..1/3): top → bottom-right
-     Phase 2 (1/3..2/3): bottom-right → bottom-left
-     Phase 3 (2/3..1): bottom-left → top */
-  const translateX = t.interpolate({
-    inputRange: [0, 1 / 3, 2 / 3, 1],
-    outputRange: [0, brX - topX, blX - topX, 0],
-  });
-  const translateY = t.interpolate({
-    inputRange: [0, 1 / 3, 2 / 3, 1],
-    outputRange: [0, brY - topY, blY - topY, 0],
-  });
-
-  /* SVG path voor de driehoek-outline */
-  const pathD = `M ${topX} ${topY} L ${brX} ${brY} L ${blX} ${blY} Z`;
-
-  return (
-    <View style={[s.triangleWrap, { width: size, height: size }]}>
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Path
-          d={pathD}
-          stroke="rgba(255,255,255,0.18)"
-          strokeWidth={1.5}
-          fill="none"
-          strokeLinejoin="round"
-        />
-      </Svg>
-      {/* Phase labels — subtle */}
-      <Text
-        style={[
-          s.triangleLabel,
-          s.triangleLabelTop,
-          { color: hexToTint(color, 0.55) },
-        ]}
-      >
-        IN
-      </Text>
-      <Text
-        style={[
-          s.triangleLabel,
-          s.triangleLabelRight,
-          { color: 'rgba(255,255,255,0.40)' },
-        ]}
-      >
-        HOLD
-      </Text>
-      <Text
-        style={[
-          s.triangleLabel,
-          s.triangleLabelLeft,
-          { color: hexToTint(color, 0.55) },
-        ]}
-      >
-        OUT
-      </Text>
-      {/* Tracing dot */}
-      <Animated.View
-        style={[
-          s.triangleDot,
-          {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotSize / 2,
-            backgroundColor: color,
-            top: topY - dotSize / 2,
-            left: topX - dotSize / 2,
-            transform: [{ translateX }, { translateY }],
-            shadowColor: color,
-            shadowOpacity: 0.6,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 0 },
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
-/* ── PulsingCircleAnimation — voor 'simple' protocols (Boost, Calm) ──
-   Cirkel die expand/contract in sync met in/out fasen. Voor Boost
-   (3s/3s) loopt 'ie sneller dan voor Calm Control (5s/5s). Geen
-   holds → continue beweging zonder pauze.
-   Scale 0.45 (uitgeademd) → 1.0 (ingeademd). */
-function PulsingCircleAnimation({
-  color,
-  enabled,
-  inMs,
-  outMs,
-  size = 90,
-}: {
-  color: string;
-  enabled: boolean;
-  inMs: number;
-  outMs: number;
-  size?: number;
-}) {
-  const scale = useRef(new Animated.Value(0.45)).current;
-  const opacity = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    if (!enabled) {
-      scale.setValue(0.45);
-      opacity.setValue(0.4);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(scale, {
-            toValue: 1.0,
-            duration: inMs,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0.85,
-            duration: inMs,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(scale, {
-            toValue: 0.45,
-            duration: outMs,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0.4,
-            duration: outMs,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [enabled, inMs, outMs, scale, opacity]);
-
-  return (
-    <View
-      style={[s.pulsingCircleWrap, { width: size, height: size }]}
-    >
-      {/* Outer ring (statisch, subtle) */}
-      <View
-        style={[
-          s.pulsingCircleRing,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderColor: hexToTint(color, 0.20),
-          },
-        ]}
-      />
-      {/* Pulserende kern */}
-      <Animated.View
-        style={[
-          s.pulsingCircleCore,
-          {
-            width: size * 0.85,
-            height: size * 0.85,
-            borderRadius: (size * 0.85) / 2,
-            backgroundColor: color,
-            transform: [{ scale }],
-            opacity,
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
-/* ── NadiAnimation — voor 'nadi' protocol (Clarity) ──
-   Twee cirkels naast elkaar (links/rechts neusgat). Actieve neusgat
-   licht op met mode-color tijdens in/out van die kant. Cycle:
-     L-in (4s)  → linker glow + grow
-     R-out (4s) → rechter glow + shrink
-     R-in (4s)  → rechter glow + grow
-     L-out (4s) → linker glow + shrink */
-function NadiAnimation({
-  color,
-  phase,
-  size = 100,
-}: {
-  color: string;
-  phase: string;
-  size?: number;
-}) {
-  const leftActive = phase === 'in-left' || phase === 'out-left';
-  const rightActive = phase === 'in-right' || phase === 'out-right';
-  const leftGrowing = phase === 'in-left';
-  const rightGrowing = phase === 'in-right';
-
-  const leftScale = useRef(new Animated.Value(0.5)).current;
-  const rightScale = useRef(new Animated.Value(0.5)).current;
-
-  /* Per phase: target scale 1.0 als growing, 0.5 als shrinking. Geen
-     verdere animatie voor inactive kant — die blijft op huidige waarde. */
-  useEffect(() => {
-    if (leftActive) {
-      Animated.timing(leftScale, {
-        toValue: leftGrowing ? 1.0 : 0.5,
-        duration: 4000,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    }
-    if (rightActive) {
-      Animated.timing(rightScale, {
-        toValue: rightGrowing ? 1.0 : 0.5,
-        duration: 4000,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [phase, leftActive, rightActive, leftGrowing, rightGrowing, leftScale, rightScale]);
-
-  const circleSize = size * 0.40;
-
-  return (
-    <View
-      style={[s.nadiWrap, { width: size, height: size * 0.6 }]}
-    >
-      {/* Left nostril */}
-      <View
-        style={[
-          s.nadiSlot,
-          { width: circleSize, height: circleSize },
-        ]}
-      >
-        <View
-          style={[
-            s.nadiRing,
-            {
-              width: circleSize,
-              height: circleSize,
-              borderRadius: circleSize / 2,
-              borderColor: leftActive
-                ? hexToTint(color, 0.6)
-                : 'rgba(255,255,255,0.15)',
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            s.nadiCore,
-            {
-              width: circleSize * 0.7,
-              height: circleSize * 0.7,
-              borderRadius: (circleSize * 0.7) / 2,
-              backgroundColor: leftActive ? color : 'rgba(255,255,255,0.10)',
-              transform: [{ scale: leftScale }],
-              opacity: leftActive ? 0.85 : 0.2,
-            },
-          ]}
-        />
-      </View>
-      {/* Right nostril */}
-      <View
-        style={[
-          s.nadiSlot,
-          { width: circleSize, height: circleSize },
-        ]}
-      >
-        <View
-          style={[
-            s.nadiRing,
-            {
-              width: circleSize,
-              height: circleSize,
-              borderRadius: circleSize / 2,
-              borderColor: rightActive
-                ? hexToTint(color, 0.6)
-                : 'rgba(255,255,255,0.15)',
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            s.nadiCore,
-            {
-              width: circleSize * 0.7,
-              height: circleSize * 0.7,
-              borderRadius: (circleSize * 0.7) / 2,
-              backgroundColor: rightActive ? color : 'rgba(255,255,255,0.10)',
-              transform: [{ scale: rightScale }],
-              opacity: rightActive ? 0.85 : 0.2,
-            },
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
-
-/* ── SighAnimation — voor 'sigh' protocol (Rest & Reset) ──
-   Cirkel met "dubbele pulse" tijdens inhale-fase, dan lange drain.
-   Visualiseert de unieke Physiological Sigh-structuur:
-     in (1.5s)      : grow naar 0.85
-     in-topup (0.5s): mini-jump naar 1.0 (de "extra slokje")
-     out (5s)       : trage drain naar 0.35
-   useNativeDriver:true voor smooth 60fps. */
-function SighAnimation({
-  color,
-  enabled,
-  inMs,
-  inTopUpMs,
-  outMs,
-  size = 90,
-}: {
-  color: string;
-  enabled: boolean;
-  inMs: number;
-  inTopUpMs: number;
-  outMs: number;
-  size?: number;
-}) {
-  const scale = useRef(new Animated.Value(0.35)).current;
-
-  useEffect(() => {
-    if (!enabled) {
-      scale.setValue(0.35);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 0.85,
-          duration: inMs,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1.0,
-          duration: inTopUpMs,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 0.35,
-          duration: outMs,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [enabled, inMs, inTopUpMs, outMs, scale]);
-
-  return (
-    <View
-      style={[s.pulsingCircleWrap, { width: size, height: size }]}
-    >
-      <View
-        style={[
-          s.pulsingCircleRing,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderColor: hexToTint(color, 0.20),
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          s.pulsingCircleCore,
-          {
-            width: size * 0.85,
-            height: size * 0.85,
-            borderRadius: (size * 0.85) / 2,
-            backgroundColor: color,
-            transform: [{ scale }],
-            opacity: 0.75,
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
-/* Iter 9dd: subtle sub-regel onder protocol-naam — toont ritme +
-   adem-route + cycles. Voor nieuwe users die niet meteen weten wat
-   "Box breath" of "Triangle" inhoudt. */
-function getProtocolSubline(
-  protocol: Protocol,
-  method: { inVia: 'nose' | 'mouth'; outVia: 'nose' | 'mouth' | 'nose-or-mouth' },
-): string {
-  /* Pattern (ritme in seconden) */
-  let pattern: string;
-  switch (protocol.kind) {
-    case 'simple': {
-      const inS = Math.round(protocol.inMs / 1000);
-      const outS = Math.round(protocol.outMs / 1000);
-      pattern = `${inS}-${outS}`;
-      break;
-    }
-    case 'box': {
-      const p = Math.round(protocol.phaseMs / 1000);
-      pattern = `${p}-${p}-${p}-${p}`;
-      break;
-    }
-    case 'triangle': {
-      const p = Math.round(protocol.phaseMs / 1000);
-      pattern = `${p}-${p}-${p}`;
-      break;
-    }
-    case '478': {
-      pattern = `${Math.round(protocol.inMs / 1000)}-${Math.round(
-        protocol.holdMs / 1000,
-      )}-${Math.round(protocol.outMs / 1000)}`;
-      break;
-    }
-    case 'nadi': {
-      const p = Math.round(protocol.phaseMs / 1000);
-      pattern = `${p}s alternating`;
-      break;
-    }
-    case 'sigh': {
-      pattern = 'double inhale · long exhale';
-      break;
-    }
-  }
-  /* Route */
-  let route: string;
-  if (protocol.kind === 'nadi') {
-    route = 'nostrils';
-  } else if (method.inVia === 'nose' && method.outVia === 'nose') {
-    route = 'nose only';
-  } else if (method.outVia === 'nose-or-mouth') {
-    route = 'nose only';
-  } else {
-    route = `${method.inVia} in, ${method.outVia} out`;
-  }
-  /* Cycles */
-  const cycles = `${protocol.cycles} cycles`;
-  return `${pattern} · ${route} · ${cycles}`;
-}
-
-function BreathworkStrip({
-  mode,
-  enabled,
-  onToggle,
-  onProgress,
-}: {
-  mode: BraceletMode;
-  enabled: boolean;
-  onToggle: () => void;
-  /* Iter 9ca (2026-05-31): callback voor breathwork-tracking in
-     bracelet-history. Wordt aangeroepen telkens als cycle of phase
-     wijzigt, met cumulatieve stats van DEZE enable-run. BraceletControl
-     accumuleert over meerdere enable-runs binnen één bracelet-sessie. */
-  onProgress?: (data: {
-    protocolKind: string;
-    protocolName: string;
-    cyclesCompleted: number;
-    cyclesTarget: number;
-    durationSec: number;
-  }) => void;
-}) {
-  const protocol = BREATH_PROTOCOLS[mode];
-  const totalMs = breathProtocolTotalMs(protocol);
-  const benefit = BREATH_BENEFIT[mode];
-
-  /* Phase-types per protocol-kind:
-     - simple: 'in' / 'out'
-     - box:    'in' / 'hold-in' / 'out' / 'hold-out'
-     - 478:    'in' / 'hold-in' / 'out'
-     - nadi:   'in-left' / 'out-right' / 'in-right' / 'out-left'
-     'idle' = nog niet gestart, 'done' = klaar. */
-  type Phase =
-    | 'idle'
-    | 'done'
-    | 'in'
-    | 'out'
-    | 'hold-in'
-    | 'hold-out'
-    | 'in-left'
-    | 'in-right'
-    | 'out-left'
-    | 'out-right'
-    | 'in-topup'; // Physiological Sigh: tweede mini-inademing
-
-  const [cycle, setCycle] = useState(0);
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [nowMs, setNowMs] = useState<number>(Date.now());
-  /* Iter v150 (2026-06-25): completion-popup parity met breath-tab.
-     Operator-feedback: audio speelt wel maar Buddha-popup ontbrak. */
-  const [completionVisible, setCompletionVisible] = useState(false);
-  /* Iter 9dq v8 (2026-06-02): info-popup. Lokale state — opent vanaf
-     de ⓘ icon in de eyebrow, sluit via backdrop tap of Close knop.
-     Bevat WHAT/WHEN/HOW + pairing-hint. */
-  const [infoOpen, setInfoOpen] = useState(false);
-  const onShowInfo = () => setInfoOpen(true);
-  const onCloseInfo = () => setInfoOpen(false);
-  const meta = getModeMeta(mode);
-
-  /* Phase-sequence per protocol-kind. Eén cyclus = deze sequence één keer
-     doorlopen. Cycle-counter wordt opgehoogd na de laatste phase van de
-     sequence. Phase-duur per element wordt apart bepaald door
-     phaseDurationMs() omdat 4-7-8 asymmetrisch is. */
-  const phaseSequence: Phase[] = (() => {
-    switch (protocol.kind) {
-      case 'simple':
-        return ['in', 'out'];
-      case 'box':
-        return ['in', 'hold-in', 'out', 'hold-out'];
-      case '478':
-        return ['in', 'hold-in', 'out'];
-      case 'nadi':
-        return ['in-left', 'out-right', 'in-right', 'out-left'];
-      case 'sigh':
-        return ['in', 'in-topup', 'out'];
-      case 'triangle':
-        return ['in', 'hold-in', 'out'];
-    }
-  })();
-
-  const phaseDurationMs = (ph: Phase): number => {
-    switch (protocol.kind) {
-      case 'simple':
-        return ph === 'in' ? protocol.inMs : protocol.outMs;
-      case 'box':
-        return protocol.phaseMs; // alle 4 fasen gelijk
-      case '478':
-        return ph === 'in'
-          ? protocol.inMs
-          : ph === 'hold-in'
-            ? protocol.holdMs
-            : protocol.outMs;
-      case 'nadi':
-        return protocol.phaseMs; // alle 4 fasen gelijk
-      case 'sigh':
-        return ph === 'in'
-          ? protocol.inMs
-          : ph === 'in-topup'
-            ? protocol.inTopUpMs
-            : protocol.outMs;
-      case 'triangle':
-        return protocol.phaseMs; // alle 3 fasen gelijk
-    }
-  };
-
-  /* Phase-classificatie voor animatie + prompt. 'expanding' = adem-in
-     (dot vergroten), 'contracting' = adem-uit (dot kleiner), 'holding' =
-     vasthouden (dot blijft staan). */
-  const phaseType = (
-    ph: Phase,
-  ): 'expanding' | 'contracting' | 'holding' | 'none' => {
-    if (
-      ph === 'in' ||
-      ph === 'in-left' ||
-      ph === 'in-right' ||
-      ph === 'in-topup'
-    )
-      return 'expanding';
-    if (ph === 'out' || ph === 'out-left' || ph === 'out-right')
-      return 'contracting';
-    if (ph === 'hold-in' || ph === 'hold-out') return 'holding';
-    return 'none';
-  };
-
-  /* Animated breath-dot — schaalt met phase. Expanding = groeit naar max,
-     contracting = schrinkt naar min, holding = blijft op huidige scale. */
-  const dotScale = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!enabled) {
-      dotScale.setValue(0);
-      return;
-    }
-    const ptype = phaseType(phase);
-    if (ptype === 'expanding') {
-      Animated.timing(dotScale, {
-        toValue: 1,
-        duration: phaseDurationMs(phase),
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    } else if (ptype === 'contracting') {
-      Animated.timing(dotScale, {
-        toValue: 0,
-        duration: phaseDurationMs(phase),
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    }
-    /* holding / done / idle: geen herstart; dotScale blijft op current. */
-  }, [phase, enabled, dotScale]);
-
-  /* Protocol-loop: bij enable=true start ie, bij enable=false reset hij.
-     Gebruikt phaseSequence (per protocol-kind) om door de fasen te
-     stappen. Na laatste phase van de sequence: cycle++ en terug naar
-     fase 0. Wanneer cycle == protocol.cycles → done. */
-  useEffect(() => {
-    if (!enabled) {
-      setCycle(0);
-      setPhase('idle');
-      setStartedAt(null);
-      return;
-    }
-    const firstPhase = phaseSequence[0];
-    setCycle(0);
-    setPhase(firstPhase);
-    setStartedAt(Date.now());
-
-    let active = true;
-    let currentCycle = 0;
-    let phaseIdx = 0;
-
-    /* Iter v170 (2026-06-28): voice-cue per phase, identiek aan breath tab.
-       Boost (Gamma) krijgt korte protocol-specifieke MP3's via key='boost' +
-       mouth exhale (matcht breath tab Boost pattern). Andere modes gebruiken
-       generieke 'your nose/mouth' cues (geen Boost-specifieke takes).
-       Claim voice-source='bracelet' zodat een tegelijk-lopende breath-tab
-       sessie automatisch wordt overstemd (operator-feedback: dubbele cues
-       waren verwarrend). */
-    claimVoiceSource('bracelet');
-    const isBoost = mode === BraceletMode.Gamma;
-    const exhaleVia: 'nose' | 'mouth' = isBoost
-      ? 'mouth'
-      : protocol.kind === '478' || protocol.kind === 'sigh' ? 'mouth' : 'nose';
-    const protocolKey = isBoost ? ('boost' as const) : undefined;
-
-    const playPhaseCue = (ph: Phase) => {
-      if (ph === 'in' || ph === 'in-left' || ph === 'in-right' || ph === 'in-topup') {
-        playBreathCue('inhale', exhaleVia, protocolKey, 'bracelet');
-      } else if (ph === 'hold-in') {
-        playBreathCue('hold-in', exhaleVia, protocolKey, 'bracelet');
-      } else if (ph === 'hold-out') {
-        playBreathCue('hold-out', exhaleVia, protocolKey, 'bracelet');
-      } else if (ph === 'out' || ph === 'out-left' || ph === 'out-right') {
-        playBreathCue('exhale', exhaleVia, protocolKey, 'bracelet');
-      }
-    };
-
-    /* Initial cue voor eerste phase. */
-    playPhaseCue(firstPhase);
-
-    const advance = () => {
-      if (!active) return;
-      phaseIdx += 1;
-      if (phaseIdx >= phaseSequence.length) {
-        /* Einde van een cyclus */
-        currentCycle += 1;
-        if (currentCycle >= protocol.cycles) {
-          setPhase('done');
-          /* Iter v149 v3: completion-cue mapped op bracelet-mode (zelfde
-             5 modes als bracelet-voice maar via breath-voice's eigen
-             completion files). BraceletMode-index = BreathKey-index in
-             practice — Boost=0=boost, Beta=1=focus, Alpha=2=calm,
-             Theta=3=clarity, Delta=4=rest. */
-          const breathKey: 'boost' | 'focus' | 'calm' | 'clarity' | 'rest' =
-            mode === 0 ? 'boost'
-            : mode === 1 ? 'focus'
-            : mode === 2 ? 'calm'
-            : mode === 3 ? 'clarity'
-            : 'rest';
-          playBreathCompletionCue(breathKey);
-          /* Iter v150: trigger Buddha-popup voor visuele parity met
-             breath-tab completion (operator-feedback). */
-          setCompletionVisible(true);
-          return;
-        }
-        phaseIdx = 0;
-        setCycle(currentCycle);
-      }
-      const nextPhase = phaseSequence[phaseIdx];
-      setPhase(nextPhase);
-      playPhaseCue(nextPhase);
-      setTimeout(advance, phaseDurationMs(nextPhase));
-    };
-
-    /* Eerste timeout = einde van de eerste fase. */
-    const handle = setTimeout(advance, phaseDurationMs(firstPhase));
-    return () => {
-      active = false;
-      clearTimeout(handle);
-      /* Iter v170: release voice-source bij cleanup zodat een latere
-         breath-tab solo-sessie weer kan claimen. */
-      try { releaseVoiceSource('bracelet'); } catch {}
-    };
-    /* Deps: enable, mode (protocol verandert) — phaseSequence en
-       phaseDurationMs zijn afgeleid van protocol/mode, dus impliciet
-       included. */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, mode]);
-
-  /* Real-time clock voor "time left"-display. Tikt 1× per seconde
-     wanneer de strip actief is; gestopt wanneer disabled of done. */
-  useEffect(() => {
-    if (!enabled || phase === 'done' || phase === 'idle') return;
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [enabled, phase]);
-
-  /* Iter 9ca (2026-05-31): rapporteer breathwork-stats naar parent voor
-     history-tracking. Per enable-run: cumulatieve cycles + sec sinds
-     enable. BraceletControl accumuleert deze waarden over meerdere
-     enable/disable cycli binnen één bracelet-sessie. */
-  useEffect(() => {
-    if (!onProgress) return;
-    if (!enabled) return;
-    const cyclesDone = phase === 'done' ? protocol.cycles : cycle;
-    const durationSec = startedAt
-      ? Math.floor((nowMs - startedAt) / 1000)
-      : 0;
-    onProgress({
-      protocolKind: protocol.kind,
-      protocolName: protocol.name,
-      cyclesCompleted: cyclesDone,
-      cyclesTarget: protocol.cycles,
-      durationSec,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, cycle, phase, nowMs]);
-
-  if (!enabled) {
-    const minutes = Math.round(totalMs / 60000);
-    /* Iter 8: tap-anywhere weggehaald (operator-feedback "ademwerk mag
-       niet automatisch starten — knop nodig"). Card is nu informatie-
-       only; alleen de expliciete "Start" knop onderaan triggert de
-       protocol. */
-    /* Operator v14 (2026-05-31): alle modes gebruiken nu DARK card +
-       mode-color border accent (was: white card voor light modes).
-       Reden: witte card stond te veel uit, voelde generiek/boring. Nu
-       uniform donker met mode-color als accent → premium, on-brand.
-       Operator v15 (2026-05-31): voor LIGHT modes (Boost wit) bg = PURE
-       Brand.bg ipv 8% mode-tint. Reden: 8% wit op #0a0a0a leest als
-       grijze card, niet "echt zwart". Witte tekst+border heeft daardoor
-       ook minder pop. Voor dark modes blijft de 8% tint = subtiele
-       mode-color warmte per modus. */
-    const light = isLightColor(meta.color);
-    /* Start-chip blijft mode-color als bg met contrasterende tekst. */
-    const textColor = light ? '#0a0a0a' : '#ffffff';
-    return (
-      <View
-        style={[
-          s.breathOffCard,
-          /* Border: light modes (Boost) krijgen sterk wit; dark modes
-             krijgen mode-color tint zodat de eigen kleur subtiel
-             accent geeft zonder te schreeuwen. */
-          {
-            borderColor: light
-              ? 'rgba(255,255,255,0.55)'
-              : hexToTint(meta.color, 0.32),
-          },
-          /* Bg: light modes = pure Brand.bg (echt zwart). Dark modes =
-             subtiele mode-color tint. */
-          {
-            backgroundColor: light ? Brand.bg : hexToTint(meta.color, 0.08),
-          },
-        ]}
-      >
-        <View style={s.breathOffTopRow}>
-          {/* Info-blok links — iter 9ff: tekst-kleuren conditional op
-              card-bg (wit voor light modes, mode-tint voor rest). */}
-          <View style={s.breathOffInfo}>
-            <View style={s.breathOffHeader}>
-              <View
-                style={[s.breathOffDot, { backgroundColor: meta.color }]}
-              />
-              {/* Operator v14: tekst altijd licht (was: conditional op
-                  light/dark card-bg). Card is nu altijd dark. */}
-              <Text
-                style={[
-                  s.breathOffEyebrow,
-                  { color: 'rgba(255,255,255,0.55)' },
-                ]}
-              >
-                BREATHWORK
-              </Text>
-            </View>
-            <Text style={[s.breathOffTitle, { color: Brand.text }]}>
-              {protocol.name} · {minutes} min
-            </Text>
-            <Text
-              style={[
-                s.breathOffSubline,
-                { color: 'rgba(255,255,255,0.50)' },
-              ]}
-            >
-              {getProtocolSubline(protocol, BREATH_METHOD[mode])}
-            </Text>
-            {/* Iter 9dq v8 (2026-06-02): duidelijke "Learn more" link
-                ipv de eerder geprobeerde ⓘ icon. Operator-feedback: icon
-                niet onmiddelijk discoverable als tap-target. Accent-blue
-                text + arrow = universeel link-pattern. */}
-            <Pressable
-              onPress={onShowInfo}
-              hitSlop={8}
-              accessibilityLabel="Learn more about this breathwork protocol"
-              style={s.breathLearnMore}
-            >
-              <Text style={s.breathLearnMoreText}>Learn more →</Text>
-            </Pressable>
-          </View>
-          {/* Start-knop rechts — compact action chip */}
-          <Pressable
-            style={[
-              s.breathStartChip,
-              { backgroundColor: meta.color },
-              light && {
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.25)',
-              },
-            ]}
-            onPress={onToggle}
-            accessibilityLabel="Start breathwork session"
-          >
-            <Text style={[s.breathStartChipText, { color: textColor }]}>
-              Start
-            </Text>
-            <Text style={[s.breathStartChipArrow, { color: textColor }]}>
-              →
-            </Text>
-          </Pressable>
-        </View>
-        {/* Iter 9dq v8 (2026-06-02): benefit-text verhuisd naar popup
-            (operator-feedback: te veel tekst op card overschaduwt de
-            bracelet als primaire feature). Card houdt nu enkel
-            titel + subline + Learn more link. */}
-
-        {/* Info-popup met WHEN/WHY/HOW. Backdrop-tap sluit, of de
-            expliciete "Close" knop onderaan. */}
-        <Modal
-          visible={infoOpen}
-          transparent
-          animationType="fade"
-          onRequestClose={onCloseInfo}
-        >
-          <Pressable style={s.breathInfoBackdrop} onPress={onCloseInfo}>
-            <Pressable
-              style={s.breathInfoCard}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View
-                style={[s.breathInfoDot, { backgroundColor: meta.color }]}
-              />
-              <Text style={s.breathInfoEyebrow}>BREATHWORK</Text>
-              <Text style={s.breathInfoTitle}>
-                {protocol.name}
-              </Text>
-              {/* Iter 9dq v9: rhythm-meta (pacing-info, geen claims).
-                  Concreet maar feitelijk — protocol-data, niet "doet X
-                  met je systeem". */}
-              <Text style={s.breathInfoMeta}>
-                {minutes} min · {protocol.cycles} cycles · {BREATH_PACE[mode]}
-              </Text>
-
-              <Text style={s.breathInfoSectionLabel}>When to use</Text>
-              <Text style={s.breathInfoBody}>{BREATH_WHEN[mode]}</Text>
-
-              <Text style={s.breathInfoSectionLabel}>
-                What it gives you
-              </Text>
-              <Text style={s.breathInfoBody}>{benefit}</Text>
-
-              <Text style={s.breathInfoSectionLabel}>
-                How it pairs with the bracelet
-              </Text>
-              <Text style={s.breathInfoBody}>{BREATH_PAIRING_HINT}</Text>
-
-              <Pressable
-                style={s.breathInfoClose}
-                onPress={onCloseInfo}
-                accessibilityLabel="Close info"
-              >
-                <Text style={s.breathInfoCloseText}>Close</Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      </View>
-    );
-  }
-
-  const elapsedMs = startedAt ? Math.max(0, nowMs - startedAt) : 0;
-  const remainingMs = Math.max(0, totalMs - elapsedMs);
-  const remainingMin = Math.floor(remainingMs / 60000);
-  const remainingSec = Math.floor((remainingMs % 60000) / 1000);
-  const progress = phase === 'done' ? 1 : cycle / protocol.cycles;
-
-  /* Iter v170 (2026-06-28): verkorte vorm ('through X' zonder 'your') ALLEEN
-     voor Boost mode (BraceletMode.Gamma) — diens 2-2 cyclus is te snel voor
-     lange audio cues. Andere modes gebruiken oorspronkelijke 'through your X'
-     audio takes en moeten dezelfde UI tekst tonen. Operator-instructie 2026-
-     06-28: "niet aan de andere states komen enkel boost aanpassen". */
-  const method = BREATH_METHOD[mode];
-  const isBoost = mode === BraceletMode.Gamma;
-  const promptText = (() => {
-    switch (phase) {
-      case 'in':
-        if (protocol.kind === 'sigh') return 'Inhale deeply through your nose';
-        if (isBoost) {
-          return method.inVia === 'mouth' ? 'Inhale through mouth' : 'Inhale through nose';
-        }
-        return method.inVia === 'mouth'
-          ? 'Inhale through your mouth'
-          : 'Inhale through your nose';
-      case 'in-topup':
-        return 'Top up — small breath in';
-      case 'out':
-        if (protocol.kind === 'sigh') return 'Long exhale through your mouth';
-        if (isBoost) {
-          return method.outVia === 'mouth' ? 'Exhale through mouth' : 'Exhale through nose';
-        }
-        return method.outVia === 'mouth'
-          ? 'Exhale through your mouth'
-          : 'Exhale through your nose';
-      case 'hold-in':
-        return 'Hold';
-      case 'hold-out':
-        return 'Hold';
-      case 'in-left':
-        return 'Inhale through your left nostril';
-      case 'out-right':
-        return 'Exhale through your right nostril';
-      case 'in-right':
-        return 'Inhale through your right nostril';
-      case 'out-left':
-        return 'Exhale through your left nostril';
-      case 'done':
-        return 'Complete';
-      case 'idle':
-      default:
-        return '';
-    }
-  })();
-
-  /* Dot-grootte interpoleert van 6 (klein) naar 24 (groot), past binnen
-     de container. Geeft visuele in/out-cue zonder de centrale bracelet-
-     cirkel te concurreren. */
-  const dotAnimatedScale = dotScale.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.4, 1.6],
-  });
-  const dotAnimatedOpacity = dotScale.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.35, 0.85],
-  });
-
-  /* Operator v14 (2026-05-31): ON-card altijd dark (was: wit voor light
-     modes zoals Boost). Uniforme dark stijl met mode-color border en
-     witte tekst — past in de algemene UI en ondersteunt animatie-
-     leesbaarheid.
-     Operator v15 (2026-05-31): voor LIGHT modes (Boost wit) bg = PURE
-     Brand.bg. 8% wit op #0a0a0a leest als grijs — niet "echt zwart". */
-  const onCardLight = isLightColor(meta.color);
-  return (
-    <View
-      style={[
-        s.breathOnCard,
-        /* Border: light modes (Boost) krijgen sterk wit; dark modes
-           houden mode-color tint. */
-        {
-          borderColor: onCardLight
-            ? 'rgba(255,255,255,0.55)'
-            : hexToTint(meta.color, 0.32),
-        },
-        /* Bg: light modes = pure Brand.bg; dark modes = subtiele tint. */
-        {
-          backgroundColor: onCardLight ? Brand.bg : hexToTint(meta.color, 0.08),
-        },
-      ]}
-    >
-      <View style={s.breathOnHeader}>
-        <View style={s.breathOnHeaderLeft}>
-          <View style={[s.breathOffDot, { backgroundColor: meta.color }]} />
-          <Text style={[s.breathOnTitle, { color: meta.color }]}>
-            {protocol.name.toUpperCase()}
-          </Text>
-        </View>
-        <Pressable
-          onPress={onToggle}
-          hitSlop={12}
-          accessibilityLabel="Disable breathwork"
-        >
-          {/* Dismiss ✕ altijd licht (was: conditional). */}
-          <Text
-            style={[
-              s.breathOnDismiss,
-              { color: 'rgba(255,255,255,0.50)' },
-            ]}
-          >
-            ✕
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Iter 9j: compact ON-state — animatie 70pt, prompt+meta in één
-          rij onderaan. Doel: card-hoogte matches OFF-state zodat tijdens
-          activeren geen extra ruimte nodig (geen scroll). */}
-      {/* Iter 9bv (2026-05-31): animatie 70 → 56 om in nieuwe 64-height
-          container te passen, –14px verticaal. */}
-      <View style={s.boxBreathContainerCompact}>
-        {protocol.kind === 'sigh' ? (
-          <SighAnimation
-            color={meta.color}
-            enabled={enabled && phase !== 'done' && phase !== 'idle'}
-            inMs={protocol.inMs}
-            inTopUpMs={protocol.inTopUpMs}
-            outMs={protocol.outMs}
-            size={56}
-          />
-        ) : (
-          <UniversalPulseAnimation
-            color={meta.color}
-            phase={phase}
-            phaseDurationMs={phaseDurationMs(phase)}
-            enabled={enabled && phase !== 'done' && phase !== 'idle'}
-            size={56}
-          />
-        )}
-      </View>
-
-      {/* Compact prompt — altijd licht (operator v14, dark card). */}
-      <Text
-        style={[
-          s.breathOnPromptCompact,
-          (() => {
-            const t = phaseType(phase);
-            if (t === 'expanding') return { color: meta.color };
-            if (t === 'contracting')
-              return { color: 'rgba(255,255,255,0.78)' };
-            if (t === 'holding')
-              return { color: 'rgba(255,255,255,0.55)' };
-            return undefined;
-          })(),
-        ]}
-      >
-        {promptText}
-      </Text>
-
-      {/* Compact meta — count + time inline, altijd licht. */}
-      <Text
-        style={[
-          s.breathOnMetaCompact,
-          { color: 'rgba(255,255,255,0.50)' },
-        ]}
-      >
-        {phase === 'done'
-          ? `${protocol.cycles} / ${protocol.cycles} cycles · Complete`
-          : `${Math.min(cycle + 1, protocol.cycles)} / ${protocol.cycles} · ${remainingMin}:${remainingSec.toString().padStart(2, '0')} left`}
-      </Text>
-
-      {/* Iter v150 (2026-06-25): Buddha-popup voor breathwork completion,
-          parity met breath-tab modal. Operator-feedback: 'audio speelt
-          maar geen popup met budha'. Simpele variant van breath-tab
-          completionSheet — Buddha image, congratulations, dismiss. */}
-      <Modal
-        visible={completionVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCompletionVisible(false)}
-      >
-        <Pressable
-          style={s.bwCompletionBackdrop}
-          onPress={() => setCompletionVisible(false)}
-        >
-          <Pressable
-            style={s.bwCompletionSheet}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View
-              style={[
-                s.bwCompletionAccentStrip,
-                { backgroundColor: meta.color },
-              ]}
-            />
-            <Image
-              source={{
-                uri: 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png',
-              }}
-              resizeMode="contain"
-              style={s.bwCompletionBuddha}
-            />
-            {/* Iter v152 (2026-06-25): consistency met breath-tab popup.
-                Operator-feedback: 'tekst bij pop up met buddha moet ook
-                consistent zijn met breathe, knop moet i'm done zeggen'. */}
-            <Text style={[s.bwCompletionEyebrow, { color: meta.color }]}>
-              ✦ CONGRATULATIONS ✦
-            </Text>
-            <Text style={s.bwCompletionTitle}>Well done.</Text>
-            <Text style={s.bwCompletionBody}>
-              You completed {protocol.cycles} cycles of {protocol.name}.
-              Carry the breath with you.
-            </Text>
-            <Pressable
-              style={[s.bwCompletionBtn, { backgroundColor: meta.color }]}
-              onPress={() => setCompletionVisible(false)}
-            >
-              {/* Iter v159 (2026-06-26): luminance-aware text color. Voor
-                  lichte mode-colors (Boost = wit #FFFFFF) was de hardcoded
-                  witte tekst onzichtbaar. Nu zwarte tekst op lichte
-                  backgrounds, witte tekst op donkere. */}
-              <Text
-                style={[
-                  s.bwCompletionBtnText,
-                  isLightColor(meta.color) && { color: '#0a0a0a' },
-                ]}
-              >
-                ✓ I&apos;M DONE
-              </Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </View>
-  );
-}
-
 /* Iter 9bq → 9bu (2026-05-31): preview-header helper voor non-owners.
    Pattern C (Calm/Headspace-stijl): alleen ← pijl links + gecentreerde
    titel. Vermijdt de "← Bracelet"-verwarring.
@@ -3030,7 +2374,7 @@ function previewHeaderOptions(title: string, onBack?: () => void) {
       >
         <Text
           style={{
-            color: Brand.text,
+            color: C.text,
             fontSize: 24,
             fontFamily: BrandFonts.regular,
             lineHeight: 26,
@@ -3057,6 +2401,9 @@ function BraceletHeader({
   onBack,
   showBack = true,
   backLabel,
+  right,
+  dark,
+  badge,
 }: {
   title: string;
   onBack?: () => void;
@@ -3065,9 +2412,24 @@ function BraceletHeader({
      "← Audio Library" of "← Bracelet". Default: alleen "←". Op die manier
      wordt het bestaande gedrag voor non-CTA screens niet aangeraakt. */
   backLabel?: string;
+  /* Operator, 16 september 2026 ("Disconnect verplaats je naar de
+     instellingen, het tandwiel-icoon rechtsboven"): optionele rechter-
+     slot-content, i.p.v. altijd een lege spacer. */
+  right?: ReactNode;
+  /* Operator, 16 september 2026 ("hybride: app blijft Light, dit
+     bedieningsscherm wordt Dark"): dit ene scherm's header moet zwart
+     met witte tekst zijn terwijl de rest van de app licht blijft — de
+     module-brede `light`-constante omzetten zou alle andere schermen in
+     dit bestand meeslepen. Losse override hier i.p.v. dat. */
+  dark?: boolean;
+  /* Operator ("preview mag achter bracelet staan"): optioneel, klein
+     label direct ná de titel-tekst i.p.v. een los gecentreerd blok
+     eronder (zie PreviewPill/SearchingScreen) — bespaart een hele rij
+     en leest als één samenhangende titel "Bracelet PREVIEW". */
+  badge?: ReactNode;
 }) {
   return (
-    <View style={s.customHeader}>
+    <View style={[s.customHeader, dark && { backgroundColor: '#000000' }]}>
       {showBack && onBack ? (
         <Pressable
           onPress={onBack}
@@ -3075,9 +2437,18 @@ function BraceletHeader({
           hitSlop={12}
           accessibilityLabel={backLabel ? `Back to ${backLabel}` : 'Back'}
         >
-          <Text style={s.headerBackArrow}>←</Text>
+          {/* Operator ("een chevron pijl geen gewone pijl"): plain "←"
+             tekst-glyph vervangen door dezelfde ChevronLeft-icoon-stijl
+             als elders in de app (bv. het pillar-detailscherm). Operator,
+             1 okt 2026 ("headers overal consistent"): maat 24→20, stroke
+             2.4→2.8 — de "officiële iOS-chevron.backward"-stijl uit
+             build-choice.tsx (18 sept), nu de app-brede standaard. */}
+          <ChevronLeft size={20} color={dark ? '#ffffff' : C.text} strokeWidth={2.8} />
           {backLabel ? (
-            <Text style={s.headerBackLabel} numberOfLines={1}>
+            <Text
+              style={[s.headerBackLabel, dark && { color: '#ffffff' }]}
+              numberOfLines={1}
+            >
               {backLabel}
             </Text>
           ) : null}
@@ -3085,10 +2456,16 @@ function BraceletHeader({
       ) : (
         <View style={s.headerSide} />
       )}
-      <Text style={s.headerTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={s.headerSide} />
+      <View style={s.headerTitleRow}>
+        <Text
+          style={[s.headerTitle, { flex: undefined, marginLeft: 0 }, dark && { color: '#ffffff' }]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        {badge}
+      </View>
+      {right ?? <View style={s.headerSide} />}
     </View>
   );
 }
@@ -3099,6 +2476,1236 @@ function BraceletHeader({
    was daar dus AL zichtbaar. Mijn v193-toevoeging veroorzaakte een
    dubbele tab bar op operator-scherm en verdrong de Start-knop uit
    beeld. Verwijderd om aan het echte gedrag terug te komen. */
+
+/* ── Extracted render-branch components (mechanical refactor, no behavior
+   change) ──────────────────────────────────────────────────────────────
+   BraceletControl renders 5 mutually-exclusive "screens" via a sequence
+   of early-return if-blocks. Pulling each branch's JSX into its own named
+   component keeps BraceletControl's ~1900-line body from being one giant
+   function while leaving every prop-value, style, and comment exactly as
+   it was. All state/refs/handlers stay declared in BraceletControl and
+   are threaded down as props; module-scope constants (Brand, s, MODES,
+   getModeMeta, etc.) are referenced directly, same as every other helper
+   component already in this file (DurationFillCircle, BreathworkStrip, …). */
+
+/* Operator, 1 okt 2026 ("vanuit bracelet plan tik ik → eerst bracelet
+   connect pagina, dat moet niet"): lichte, merk-eigen loader voor de
+   ~1.5s auto-connect-wachttijd tijdens een auto-start (breathwork-CTA
+   / "Start session" vanuit Your bracelet plan) — i.p.v. het volledige
+   zoek-scherm met Retry-knop/activatie-prompt kort te laten opflitsen. */
+function AutoStartLoader() {
+  return (
+    <View style={[s.root, s.autoStartLoader]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ActivityIndicator color="#ffffff" />
+      <Text style={s.autoStartLoaderTxt}>Starting your session…</Text>
+    </View>
+  );
+}
+
+type SearchingScreenProps = {
+  conn: BleConnectionState;
+  isBraceletOwner: boolean;
+  showActivationPrompt: boolean;
+  busy: boolean;
+  fromContext: 'audio' | 'bracelet' | 'plan' | null;
+  ctaBackLabel: string | undefined;
+  navigateBackToSource: () => void;
+  onConnect: () => Promise<void>;
+};
+
+/* SCREEN 3: Not connected */
+function SearchingScreen({
+  conn,
+  isBraceletOwner,
+  showActivationPrompt,
+  busy,
+  fromContext,
+  ctaBackLabel,
+  navigateBackToSource,
+  onConnect,
+}: SearchingScreenProps) {
+  /* Operator, 16 september 2026 ("bracelet connect pagina moet ook dark
+     mode"): zelfde hybride-dark-patroon als Idle/Active — dit ene scherm
+     zwart, de rest van de app blijft licht. */
+  const searchingDark = true;
+  /* Operator ("ook back knop toevoegen... niet zomaar, zoals op de
+     andere pagina's, zoals apple het zou doen"): Iter v227 verstopte de
+     back-knop volledig zodra `fromContext` ontbrak, om de inline-owner-
+     render-bug hierboven te vermijden — maar dat verstopte 'm OOK op de
+     "Preview the Bracelet App"/"Open your bracelet control screen"-CTA's
+     vanuit de Bracelet-tab, die WEL een echte stack-push zijn (gewoon
+     zonder query-param). `fromContext` (query-param-afhankelijk) en
+     `canGoBack()` (bijna altijd true, ook inline) kunnen dat onderscheid
+     geen van beide betrouwbaar maken — het huidige PAD wel: dit scherm
+     heeft alleen zichzelf als URL wanneer het écht gepusht is; in de
+     inline-owner-render blijft het pad gewoon "/bracelet". Consistent
+     met hoe de andere 3 schermen (Fault/Charging/Control) hun terug-pijl
+     altijd tonen. */
+  const isPushedRoute = usePathname() === '/bracelet-control';
+  return (
+    <SafeAreaView
+      style={[s.root, searchingDark && { backgroundColor: '#000000' }]}
+      edges={['top', 'bottom']}
+    >
+      <Stack.Screen options={{ headerShown: false }} />
+      <BraceletHeader
+        title="Bracelet connect"
+        showBack={isPushedRoute}
+        onBack={fromContext ? navigateBackToSource : () => router.back()}
+        backLabel={ctaBackLabel}
+        dark={searchingDark}
+        badge={!isBraceletOwner ? <PreviewBadge dark={searchingDark} /> : undefined}
+      />
+      {/* Iter 9dq v93 (2026-06-03): top-banner CTA NIET tonen op
+          disconnected-screen wanneer al activation-required is —
+          de hele screen wordt dan al de activate-flow (titel +
+          sub + primary CTA onderaan). Anders 3× "activate your
+          bracelet" op één scherm. Wel zichtbaar op connected/
+          idle als constant reminder tijdens preview. */}
+      <View style={s.searchingWrap}>
+        {/* Iter 8b: statische 3-dot replaced door radar-pulse animatie.
+            Visualiseert actief zoeken — 3 ringen die expanderen en
+            fade-out, staggered, met centrale dot.
+            Iter 9dq v93 (2026-06-03): bij niet-geactiveerde owners
+            vervangen we "Searching" door een eerlijker "Not linked yet"
+            messaging — er VALT niets te zoeken want er is geen bracelet
+            aan dit account gekoppeld. */}
+        {showActivationPrompt ? (
+          <>
+            <Text style={[s.searchingTitle, searchingDark && { color: '#ffffff' }]}>
+              Bracelet not linked
+            </Text>
+            <Text
+              style={[
+                s.searchingSub,
+                searchingDark && { color: 'rgba(255,255,255,0.5)' },
+              ]}
+            >
+              Activate your bracelet with your 12-character code to
+              connect it to this account.
+            </Text>
+          </>
+        ) : (
+          <View style={{ alignItems: 'center' }}>
+            {/* Operator ("moet premium apple stijl, doe maar hoe jij denkt
+               dat beste is" — n.a.v. Apple-HIG-feedback op dit scherm):
+               de abstracte radar-cirkel (SearchingPulse) en de reizende
+               chevrons ertussen (SignalBeam) waren een apart, los "zoek-
+               signaal" dat naar de armband-foto "reisde" — precies het
+               soort losse pijl-motion dat de feedback als onrustig
+               omschrijft. BraceletHeroGlow hieronder pulseert al ECHT op
+               de pod van de armband zelf (PodPulse) — dat IS de radar-op-
+               de-hardware die de feedback vraagt, dus de aparte cirkel +
+               brug ertussen was pure duplicatie. Beide weg; de armband-
+               foto (nu groter, zie heroGlowImg) is het enige, centrale
+               pulserende element. */}
+            {/* Operator, 16 september 2026 ("popup yes connected moet
+               enige melding van connect zijn, ik zie eronder ook iets
+               staan van connected"): zodra conn 'connected' is, is de
+               ConnectedPopup de ENIGE bevestiging — geen "Connected" /
+               "Your bracelet is ready." tekst er nog los naast/onder,
+               dat las als een dubbele melding. */}
+            {conn !== 'connected' && (
+              <>
+                <Text style={[s.searchingTitle, searchingDark && { color: '#ffffff' }]}>
+                  {conn === 'scanning' ? 'Searching' : conn === 'connecting' ? 'Connecting' : 'Looking for your bracelet'}
+                </Text>
+                <Text
+                  style={[
+                    s.searchingSub,
+                    searchingDark && { color: 'rgba(255,255,255,0.5)' },
+                  ]}
+                >
+                  Make sure your bracelet is nearby and powered on.
+                </Text>
+              </>
+            )}
+            {/* Operator, 16 september 2026 ("die bracelet had ik eigenlijk
+               voor deze pagina doorgegeven — onder Looking for.. en weg
+               uit select"): de armband-hero-gloed hoort hier, niet op het
+               mode-selectiescherm. Geen mode geselecteerd tijdens het
+               zoeken, dus Signal Blue i.p.v. een mode-kleur — zelfde
+               kleur als de radar-puls erboven. */}
+            <BraceletHeroGlow />
+          </View>
+        )}
+      </View>
+      {/* conn 'connected' + popup nog zichtbaar: geen Connect/Retry-knop
+         meer nodig (en geen activate-CTA, want geactiveerd is 'ie al
+         zodra hij connect) — dit scherm wacht alleen nog even tot de
+         popup verdwijnt. */}
+      {conn !== 'connected' && (
+        <View style={[s.bottomBar, searchingDark && { backgroundColor: '#000000' }]}>
+          {/* Iter 9dq v93 (2026-06-03): wanneer de bracelet nog NIET
+              geactiveerd is, vervangen we de Connect/Retry-knop door
+              een primaire "Activate your bracelet"-CTA. Connect heeft
+              geen zin zolang er geen bracelet aan dit account hangt.
+              Operator-rationale: "connect knop zou misschien niet actief
+              moeten zijn in pro zolang bracelet niet geactiveerd is". */}
+          {showActivationPrompt ? (
+            <PrimaryCtaButton
+              style={s.primaryBtn}
+              onPress={() => router.navigate('/activate-bracelet' as never)}
+              accessibilityLabel="Activate your bracelet with a code"
+            >
+              <Text style={s.primaryBtnText}>Activate your bracelet</Text>
+            </PrimaryCtaButton>
+          ) : (
+            /* Operator ("premium apple stijl, doe wat jij denkt dat beste
+               is"): dit is de enige actie op dit scherm, dus de primaire
+               witte CTA-stijl (§3) i.p.v. de outline-secundaire stijl —
+               en had t.o.v. de andere knoppen hier nog geen tik-
+               feedback/haptiek.
+               Operator ("wat kan er beter — Retry-knop tijdens actief
+               zoeken is verwarrend"): `busy` dekte alleen de HANDMATIGE
+               connect-tap (onConnect hierboven) — de losse auto-connect
+               voor de Free-Breathwork-deeplink (regel ~4170,
+               `bracelet.connect()` zonder setBusy) liet dus een actieve,
+               inschakelbare "Retry"-knop zien terwijl er allang een
+               verbinding bezig was. `isWorking` dekt nu BEIDE paden via
+               `conn` zelf — geen actie tonen zolang het systeem al bezig
+               is, exact Apple's patroon. */
+            (() => {
+              const isWorking = busy || conn === 'scanning' || conn === 'connecting';
+              return (
+                <PrimaryCtaButton
+                  style={[s.primaryBtn, isWorking && s.btnDisabled]}
+                  onPress={onConnect}
+                  disabled={isWorking}
+                  accessibilityLabel="Retry searching for bracelet"
+                >
+                  {isWorking ? (
+                    <ActivityIndicator color="#1D1D1F" />
+                  ) : (
+                    <Text style={s.primaryBtnText}>
+                      {conn === 'disconnected' ? 'Connect' : 'Retry'}
+                    </Text>
+                  )}
+                </PrimaryCtaButton>
+              );
+            })()
+          )}
+        </View>
+      )}
+      {/* Iter v194 (2026-07-04): InlineBraceletTabBar toevoeging weer
+          teruggedraaid. Bracelet-control render is intern in de
+          (tabs) navigator (via BraceletControl-inline in bracelet-tab
+          owner-view) → systeem tab bar was al zichtbaar → mijn stub
+          gaf DUBBELE tab bar. Systeem tab bar is genoeg. */}
+      {/* Operator, 27 september 2026 ("na yes connected zie ik eerst nog
+         bracelet, moet direct naar bracelet control"): ConnectedPopup
+         rendert niet meer hier, gegate achter dit scherm blijven staan —
+         zie BraceletControl's return onderaan dit bestand, waar de popup
+         nu als losstaande overlay BOVENOP het al-gewisselde scherm
+         (Control/Fault/Charging/Active) rendert i.p.v. het wisselen zelf
+         tegen te houden. Zo onthult de fade-out van de popup meteen het
+         juiste scherm, niet nog even "Bracelet". */}
+    </SafeAreaView>
+  );
+}
+
+type FaultScreenProps = {
+  isBraceletOwner: boolean;
+  showActivationPrompt: boolean;
+  busy: boolean;
+  bracelet: BraceletTransport;
+  sim: SimulatedBracelet | null;
+  onDisconnect: () => Promise<void>;
+  onConnect: () => Promise<void>;
+  setStatus: Dispatch<SetStateAction<BleStatusPacket | null>>;
+};
+
+/* SCREEN 6: Fault state (firmware reported error) */
+function FaultScreen({
+  isBraceletOwner,
+  showActivationPrompt,
+  busy,
+  bracelet,
+  sim,
+  onDisconnect,
+  onConnect,
+  setStatus,
+}: FaultScreenProps) {
+  return (
+    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <BraceletHeader
+        title="Bracelet error"
+        onBack={onDisconnect}
+        badge={!isBraceletOwner ? <PreviewBadge /> : undefined}
+      />
+      {showActivationPrompt && <BraceletActivationCta />}
+      <View style={s.faultWrap}>
+        <View style={s.faultIcon}>
+          <Text style={s.faultIconText}>!</Text>
+        </View>
+        <Text style={s.faultTitle}>Something went wrong</Text>
+        <Text style={s.faultSub}>
+          Your bracelet reported an error. Disconnect and reconnect, or
+          contact support if it continues.
+        </Text>
+      </View>
+      <View style={s.bottomBar}>
+        <PrimaryCtaButton
+          style={[s.primaryBtn, busy && s.btnDisabled]}
+          onPress={async () => {
+            await onDisconnect();
+            await onConnect();
+            /* Sim-mode: clear fault zodat user uit deze screen kan
+               navigeren. Op echte hardware blijft fault staan tot
+               Start-command (spec §9 rule 4) — daar is sim==null
+               dus deze line is een no-op. */
+            sim?.simClearFault();
+            const st = await bracelet.requestStatus();
+            setStatus(st);
+          }}
+          disabled={busy}
+          accessibilityLabel="Reconnect bracelet"
+        >
+          <Text style={s.primaryBtnText}>Reconnect</Text>
+        </PrimaryCtaButton>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+type ChargingScreenProps = {
+  isBraceletOwner: boolean;
+  showActivationPrompt: boolean;
+  onDisconnect: () => Promise<void>;
+  battery: number | null;
+  batteryColor: string;
+  sim: SimulatedBracelet | null;
+};
+
+/* SCREEN 4: Charging — sessions paused (spec §11.5) */
+function ChargingScreen({
+  isBraceletOwner,
+  showActivationPrompt,
+  onDisconnect,
+  battery,
+  batteryColor,
+  sim,
+}: ChargingScreenProps) {
+  return (
+    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <BraceletHeader
+        title="Bracelet charging"
+        onBack={onDisconnect}
+        badge={!isBraceletOwner ? <PreviewBadge /> : undefined}
+      />
+      {showActivationPrompt && <BraceletActivationCta />}
+      <View style={s.chargingWrap}>
+        <View style={s.chargingIcon}>
+          <Text style={s.chargingIconText}>⚡</Text>
+        </View>
+        <Text style={s.chargingTitle}>Charging</Text>
+        <Text style={s.chargingSub}>
+          Sessions are paused while the bracelet charges.
+        </Text>
+        <View style={s.chargingStats}>
+          <View style={s.chargingStatRow}>
+            <Text style={s.chargingStatLabel}>Battery</Text>
+            <Text style={[s.chargingStatVal, { color: batteryColor }]}>
+              {battery == null ? '—' : `${battery}%`}
+            </Text>
+          </View>
+        </View>
+      </View>
+      {__DEV__ && sim && <SimDemoBar sim={sim} />}
+      {/* Iter v194 (2026-07-04): InlineBraceletTabBar op charging weg —
+          duplicated systeem tab bar. */}
+    </SafeAreaView>
+  );
+}
+
+type ActiveSessionScreenProps = {
+  status: BleStatusPacket;
+  isPaused: boolean;
+  pausedAt: number | null;
+  activeMeta: ModeMeta;
+  duration: number;
+  selectedMode: BraceletMode;
+  sessionPlannedRef: MutableRefObject<number>;
+  sessionStartedAtRef: MutableRefObject<number | null>;
+  pausedAtElapsedMsRef: MutableRefObject<number>;
+  nowMs: number;
+  safeInsets: EdgeInsets;
+  isBraceletOwner: boolean;
+  onResume: () => Promise<void>;
+  onPause: () => Promise<void>;
+  busy: boolean;
+  setEndedLocally: Dispatch<SetStateAction<boolean>>;
+  onStop: () => Promise<void>;
+};
+
+/* SCREEN 2: Active session — kalm, één focuspunt.
+   Operator-feedback 2026-05-27 iter 3:
+     - End button moest rustiger (neutraal, geen rode CTA)
+     - Pause + Resume + Restart toegevoegd
+     - Wanneer paused: timer toont pausedAt, eyebrow "PAUSED",
+       Resume-button (mode-color filled) ipv Pause
+   UI-stay-condition: sessionActive OF isPaused — anders zou de
+   transitie naar idle de pause-state direct breken. */
+function ActiveSessionScreen({
+  status,
+  isPaused,
+  pausedAt,
+  activeMeta,
+  duration,
+  selectedMode,
+  sessionPlannedRef,
+  sessionStartedAtRef,
+  pausedAtElapsedMsRef,
+  nowMs,
+  safeInsets,
+  isBraceletOwner,
+  onResume,
+  onPause,
+  busy,
+  setEndedLocally,
+  onStop,
+}: ActiveSessionScreenProps) {
+  /* Tijdens pause is sessionActive false maar pausedAt heeft de
+     remaining. Tijdens running zit 't in status.remainingMinutes. */
+  const displayRemaining = isPaused ? pausedAt! : status.remainingMinutes;
+  /* Ambient tint-kleur voor de hele active-session bg. Voor Boost
+     (Gamma) wordt rood vervangen door warm amber via getActiveBgTint. */
+  const ambientTint = getActiveBgTint(activeMeta.mode);
+  /* Progress 0..1 voor de circulaire arc rond de timer. Planned
+     komt uit sessionPlannedRef (gezet bij Start/Restart); fallback
+     op huidige UI-duration voor edge-cases. */
+  const planned =
+    sessionPlannedRef.current > 0
+      ? sessionPlannedRef.current
+      : clampDuration(activeMeta.mode, duration);
+  /* Iter 9be → 9bi (2026-05-31): progress baseerd op de LOKALE timer
+     (sessionStartedAtRef), niet op BLE status.
+     - Bij pause: gebruik pausedAtElapsedMsRef (exact-elapsed-bij-press).
+     - Bij active: gebruik (nowMs - sessionStartedAtRef) / planned.
+     Door dezelfde bron als mm:ss-display blijft het water-niveau
+     consistent. Vroeger gebruikte progress BLE remainingMinutes — die
+     resette na resume naar de verse N-min countdown van de bracelet,
+     waardoor de drain-cirkel TERUGVULDE in plaats van door te lopen
+     vanaf de pause-positie. BLE-status blijft fallback voor hot-reload. */
+  const progress = (() => {
+    if (planned <= 0) return 0;
+    /* Zelfde bron als de mm:ss-tekst hieronder — geen eigen som meer,
+       zie de uitleg daar ("niet ongeveer, moet exact zijn"). */
+    const liveMonitorRemainingSec = getBraceletMonitorRemainingSec();
+    if (liveMonitorRemainingSec !== null) {
+      const remainingMin = liveMonitorRemainingSec / 60;
+      return Math.min(1, Math.max(0, (planned - remainingMin) / planned));
+    }
+    if (isPaused) {
+      const elapsedMin = pausedAtElapsedMsRef.current / 60000;
+      return Math.min(1, Math.max(0, elapsedMin / planned));
+    }
+    const startedAt = sessionStartedAtRef.current;
+    if (startedAt !== null) {
+      const elapsedMin = (Date.now() - startedAt) / 60000;
+      return Math.min(1, Math.max(0, elapsedMin / planned));
+    }
+    /* Fallback: BLE-status als startedAt onbekend (hot-reload edge). */
+    return Math.min(
+      1,
+      Math.max(0, (planned - displayRemaining) / planned),
+    );
+  })();
+  /* Operator, 16 september 2026 ("dit is helemaal fout, we gaan opnieuw
+     opbouwen: donkere achtergrond"): zelfde hybride-dark-patroon als het
+     Idle-scherm (idleDark) — dit ene scherm zwart terwijl de rest van de
+     app licht blijft. Losse const i.p.v. de module-brede `light` omzetten,
+     zodat andere schermen in dit bestand ongemoeid blijven. */
+  const activeDark = true;
+  return (
+    <SafeAreaView
+      style={[s.root, activeDark && { backgroundColor: '#000000' }]}
+      edges={['top', 'bottom']}
+    >
+      {/* Active session blijft immersief voor ALLE accounts.
+          Iter 9dq v109 (2026-06-04): voorheen had non-owner een preview-
+          header met back-arrow tijdens active session. Voor unified
+          UX nu ook hidden — eind-knop is de juiste exit (consistent
+          met spec §11 "één focuspunt").
+          Iter 2026-06-05: ALLEEN voor Free Breathwork CTA-flow voegen
+          we tóch een back-header toe zodat user naar bronpagina terug
+          kan. Non-CTA users zien geen header (bestaand immersief gedrag). */}
+      <Stack.Screen options={{ headerShown: false }} />
+      {/* Ambient tint-overlay — 8% opacity full-screen mood layer.
+          pointerEvents="none" zodat touches doorgaan naar onderliggende
+          UI. Zit BOVEN C.bg maar onder alle content (eerste child). */}
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: hexToTint(ambientTint, 0.08) },
+        ]}
+      />
+      {/* Iter 9w: ScrollView vervangen door View — operator-feedback
+          "active pagina mag niet scrollen". Content fit op één scherm
+          door compactere elementen (iter 9j BreathworkStrip + smaller
+          timer-font). Kortere telefoons: BreathworkStrip kan iets
+          samengedrukt worden, maar geen scroll. */}
+      {/* Iter 9bt → 9bv (2026-05-31): paddingBottom genormaliseerd op
+          safeInsets+16 (min 32). De echte fix voor "card afgesneden"
+          zit in compactere breathwork-card hieronder (iter 9bv shrink:
+          -46px verticaal). Te veel paddingBottom maakt 't juist erger
+          want het comprimeert de content nog meer. */}
+      <View
+        style={[
+          s.activeScreen,
+          /* Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
+             48 was nog te krap voor Samsung 3-button nav waar de
+             inset-API onderrapporteert. 72px = consistent met
+             player.tsx en andere bottom-CTAs.
+             Iter v235 (2026-07-09): owner-inline mode zit binnen de
+             (tabs) group → tab-bar (60-72px) overlappt de Voice
+             guidance card. Fix: extra ~80px bottom padding voor
+             owner-inline. Non-owner mode (Stack push) heeft geen tab-
+             bar → normale padding. */
+          {
+            paddingBottom: isBraceletOwner
+              ? Math.max(safeInsets.bottom + 100, 150)
+              : Math.max(safeInsets.bottom + 24, 72),
+          },
+        ]}
+      >
+        {/* Iter 9bg (2026-05-31): "Resuming will extend"-notice weg.
+            Reden: sinds iter 9bf gebruikt het lokale display de exact-
+            elapsed-ref voor pause én voor resume. De gebruiker ziet de
+            countdown gewoon doortikken vanaf de pause-tijd — de BLE-
+            minimum-extensie speelt zich onder water af en is voor de
+            user onzichtbaar. Notice was alleen verwarrend (operator-
+            feedback: "wat bedoel je met resuming will extend"). */}
+
+        {/* Operator, 16 september 2026 ("timer en info moet in de bol"):
+           mode-naam/dot + PAUSED-label verhuisd van boven de ring naar
+           IN de ring (timerCenter), boven de mm:ss — alle info zit nu
+           samen binnen de cirkel i.p.v. verspreid over het scherm.
+           Operator, 27 september 2026 ("tekst calm control moet boven de
+           cirkel komen"): mode-naam/dot terug verhuisd naar BOVEN de
+           ring — enkel dat ene element, PAUSED-label blijft binnenin
+           (niet expliciet gevraagd om ook te verplaatsen). */}
+        <View style={s.activeModeRow}>
+          <View style={[s.activeDot, { backgroundColor: activeMeta.color }]} />
+          <Text style={[s.activeName, activeDark && { color: '#ffffff' }]}>
+            {activeMeta.name}
+          </Text>
+        </View>
+        <View style={s.timerWrap}>
+          {/* Operator, 16 september 2026 ("ambient glow, voelt anders aan
+             als een platte lege website"): zachte gloed ACHTER alles,
+             iets kleiner dan de ring zodat 'ie er vanachter uitpiept
+             i.p.v. los ernaast te zweven. */}
+          {/* Operator, 27 september 2026 ("grootte en dikte lijn van de
+             cirkel en kleur moet hetzelfde zijn als in bracelet
+             control"): DrainingCircle (deze pagina, loopt LEEG) hoort er
+             even groot uit te zien als DurationRing (Bracelet control,
+             loopt VOL) — 220→240, exact DurationRing's `size={240}`.
+             RingAmbientGlow/SlowAmbientPulse proportioneel meegeschaald
+             (dezelfde onderlinge afstand als voorheen). */}
+          <RingAmbientGlow color={activeMeta.color} size={214} />
+          <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
+          {/* Operator, 27 september 2026 ("doe die draaiende buitenlijn
+             weg"): SlowAmbientPulse-render verwijderd — DrainingCircle's
+             eigen outline (zie de component zelf) markeert de rand nu
+             al voldoende. */}
+          <View style={s.timerCenter} pointerEvents="none">
+            {isPaused && (
+              <Text style={[s.pausedLabel, { color: activeMeta.color }]}>PAUSED</Text>
+            )}
+            {/* Timer-display in mm:ss-formaat (iter 7). Lokaal berekend
+                vanuit sessionStartedAtRef + sessionPlannedRef → tikt
+                elke seconde.
+                Iter 9be (2026-05-31): tijdens pause gebruikt 't nu de
+                EXACT-elapsed-ms ref (gevangen op press-moment in
+                onPause) → display blijft op de werkelijke pause-tijd
+                zoals 14:23 ipv terug te springen naar 14:00. */}
+            {(() => {
+              const startedAt = sessionStartedAtRef.current;
+              const plannedSec = planned * 60;
+              /* Operator, 17 september 2026 ("niet ongeveer, moet exact
+                 zijn — kan de echte teller niet gewoon geminimaliseerd
+                 worden?"): dit scherm had zijn EIGEN, aparte berekening
+                 (sessionStartedAtRef + Date.now()) die toevallig meestal
+                 overeenkwam met bracelet-session-monitor.ts's berekening
+                 (de bron die ook de pill voedt) — twee aparte sommen die
+                 op floor-grenzen een seconde konden verschillen, ook al
+                 waren beide op zich correct. Dat "toevallig gelijk" is
+                 nu weg: dit scherm leest voortaan RECHTSTREEKS dezelfde
+                 live waarde die de monitor intern gebruikt — dezelfde
+                 functie, geen eigen som meer. De pill en dit scherm
+                 kunnen nu per constructie nooit meer uit elkaar lopen.
+                 De oude berekening blijft alleen nog als vangnet voor
+                 het (zeldzame) geval dat de monitor zelf niet draait. */
+              const liveMonitorRemainingSec = getBraceletMonitorRemainingSec();
+              let remSec: number;
+              if (liveMonitorRemainingSec !== null) {
+                remSec = Math.max(0, Math.floor(liveMonitorRemainingSec));
+              } else if (isPaused) {
+                /* Vangnet: exact-ms uit ref → mm:ss precisie behouden
+                   tijdens pause. Floor om half-seconde-flicker te
+                   voorkomen. */
+                const elapsedSec = Math.floor(
+                  pausedAtElapsedMsRef.current / 1000,
+                );
+                remSec = Math.max(0, plannedSec - elapsedSec);
+              } else if (startedAt) {
+                /* Vangnet: Date.now() vers, niet de mogelijk-verouderde
+                   getikte `nowMs`-state. */
+                const elapsedSec = Math.max(
+                  0,
+                  Math.floor((Date.now() - startedAt) / 1000),
+                );
+                remSec = Math.max(0, plannedSec - elapsedSec);
+              } else {
+                /* Vangnet: gebruik BLE-minutes als startedAt onbekend
+                   (edge case bij hot-reload mid-session). */
+                remSec = displayRemaining * 60;
+              }
+              const mm = Math.floor(remSec / 60);
+              const ss = remSec % 60;
+              const totalMM = Math.floor(plannedSec / 60);
+              const totalSS = plannedSec % 60;
+              /* De ring-achtergrond wisselt van kleur/vulling (Draining-
+                 Circle) — dus de cijfers hebben nog altijd een minimale
+                 contrast-vangnet nodig, maar operator-feedback ("harde
+                 slagschaduw aan de onderkant") klopte: radius 8/opacity
+                 0.6 rendert op Android niet als een zachte gloed maar als
+                 een zichtbare dubbele rand. Sterk getemperd (radius 3,
+                 opacity 0.3) — net genoeg om tegen een lichte modus-kleur
+                 (Clarity) leesbaar te blijven, zonder zelf op te vallen.
+                 Licht-versus-donker mode-kleur (isLightColor) bepaalt of
+                 de cijfers zelf donker-met-licht-vangnet of wit-met-
+                 donker-vangnet zijn. */
+              const lightActive = isLightColor(activeMeta.color);
+              const timerColorOverride = lightActive
+                ? {
+                    color: '#0a0a0a',
+                    textShadowColor: 'rgba(255,255,255,0.3)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 3,
+                  }
+                : {
+                    color: '#ffffff',
+                    textShadowColor: 'rgba(0,0,0,0.3)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 3,
+                  };
+              return (
+                <>
+                  <Text style={[s.timerNum, timerColorOverride]}>
+                    {mm}:{ss.toString().padStart(2, '0')}
+                  </Text>
+                  <Text
+                    style={[
+                      s.timerUnit,
+                      activeDark && { color: 'rgba(255,255,255,0.75)' },
+                    ]}
+                  >
+                    {/* Iter 9by (2026-05-31): tijdens pause altijd
+                        "left" tonen i.p.v. "paused" — dat communiceert
+                        het PAUSED-label boven de tijd al. */}
+                    left
+                  </Text>
+                  <Text
+                    style={[
+                      s.timerTotal,
+                      activeDark && { color: 'rgba(255,255,255,0.6)' },
+                    ]}
+                  >
+                    of {totalMM}:{totalSS.toString().padStart(2, '0')}
+                  </Text>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+
+        {/* Operator, 16 september 2026 ("ik vind de pils niet mooi, maak
+           1 ronde pauze-knop en eronder end session, niet in pil"): terug
+           naar een enkele ronde Play/Pause-knop, gecentreerd — "End
+           session" nu als tekst-link ERONDER (i.p.v. ernaast) i.p.v. een
+           tweede capsule. */}
+        <View style={s.sessionControlColumn}>
+          {isPaused ? (
+            (() => {
+              /* Iter 9ad (2026-05-31): Resume-button contrast-fix. Voor
+                 LIGHT modes (Boost wit) was tekst hardcoded wit op witte
+                 mode-color bg → onleesbaar. Nu: isLightColor() bepaalt
+                 icon-kleur. Boost → zwart, anderen → wit. */
+              const resumeLight = isLightColor(activeMeta.color);
+              const resumeFg = resumeLight ? '#0a0a0a' : '#ffffff';
+              return (
+                <Pressable
+                  style={({ pressed }) => [
+                    s.roundActionBtn,
+                    { backgroundColor: activeMeta.color },
+                    resumeLight && {
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.25)',
+                    },
+                    pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
+                    busy && s.btnDisabled,
+                  ]}
+                  android_ripple={{
+                    color: resumeLight
+                      ? 'rgba(0,0,0,0.18)'
+                      : 'rgba(255,255,255,0.18)',
+                    borderless: true,
+                  }}
+                  onPress={onResume}
+                  disabled={busy}
+                  accessibilityLabel="Resume session"
+                >
+                  {busy ? (
+                    <ActivityIndicator color={resumeFg} />
+                  ) : (
+                    <Play size={26} color={resumeFg} fill={resumeFg} />
+                  )}
+                </Pressable>
+              );
+            })()
+          ) : (
+            (() => {
+              const pauseFg = activeDark ? '#ffffff' : C.text;
+              return (
+                <Pressable
+                  style={({ pressed }) => [
+                    s.roundActionBtn,
+                    s.roundActionBtnOutline,
+                    { borderColor: pauseFg },
+                    pressed && {
+                      backgroundColor: `${pauseFg}14`,
+                      transform: [{ scale: 0.95 }],
+                    },
+                    busy && s.btnDisabled,
+                  ]}
+                  android_ripple={{ color: `${pauseFg}30`, borderless: true }}
+                  onPress={onPause}
+                  disabled={busy}
+                  accessibilityLabel="Pause session"
+                >
+                  {busy ? (
+                    <ActivityIndicator color={pauseFg} />
+                  ) : (
+                    <Pause size={24} color={pauseFg} fill={pauseFg} />
+                  )}
+                </Pressable>
+              );
+            })()
+          )}
+          {/* Operator, 17 september 2026 ("twee gelijke capsules,
+             Minimize zachtgrijs gevuld, End transparant met rood
+             randje"): terug naar twee even-brede capsule-knoppen naast
+             elkaar, direct onder de pauzeknop — maar nu met bewuste
+             hiërarchie i.p.v. twee identieke vlakken: Minimize is de
+             "veilige" standaardactie (zachte grijze vulling, zoals het
+             vlak achter het tandwiel-icoon elders op dit scherm), End
+             is de definitieve actie (transparant + dun rood randje,
+             Apple's eigen taal voor destructieve acties — geen gevuld
+             vlak, zodat 'ie niet per ongeluk aangetikt wordt). */}
+          <View style={s.secondaryActionsRow}>
+            {/* Operator, 27 september 2026 ("minimize onder end session
+               dan"): volgorde omgedraaid — End session eerst, Minimize
+               eronder. */}
+            {/* Operator, 16 september 2026: End is een definitieve actie. */}
+            <Pressable
+              style={({ pressed }) => [
+                s.capsuleBtnSecondary,
+                s.capsuleBtnEnd,
+                pressed && { backgroundColor: 'rgba(255,255,255,0.08)' },
+                busy && s.btnDisabled,
+              ]}
+              /* Iter v214 (2026-07-04): End = GEEN navigate meer.
+                 router.back() ging naar Kickstarter marketing (bracelet-
+                 tab main voor non-owner). router.replace idem.
+                 Beide fout omdat user wilde op DEZELFDE bracelet-control
+                 instance blijven, gewoon terug naar Choose Mode idle.
+                 Fix: alleen setEndedLocally + onStop. Derived
+                 sessionActive wordt false → render valt automatisch
+                 terug naar Choose Mode van dezelfde instance
+                 (push voor preview, inline voor owner). Geen navigate
+                 = geen 'verkeerd pad'-risico. */
+              onPress={() => {
+                setEndedLocally(true);
+                void onStop();
+              }}
+              disabled={busy}
+              accessibilityLabel="End session"
+            >
+              {busy ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={s.capsuleBtnSecondaryText}>End session</Text>
+              )}
+            </Pressable>
+            {!isBraceletOwner && (
+              <Pressable
+                style={({ pressed }) => [
+                  s.capsuleBtnSecondary,
+                  s.capsuleBtnMinimize,
+                  pressed && { opacity: 0.8 },
+                ]}
+                onPress={() => {
+                  if (router.canGoBack()) router.back();
+                }}
+                accessibilityLabel="Minimize — session keeps running"
+              >
+                <Text style={s.capsuleBtnSecondaryText}>Minimize</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Operator, 13 augustus 2026: "alles op de pagina active weg
+           buiten wat ik heb gezegd" — het actieve scherm toont nu alleen
+           nog modusnaam, cirkel, en Pause/Resume + End. Minimize, battery-
+           /charging-waarschuwingen, de rondlopende quote, de Free-
+           Breathwork-contextchip en Voice guidance zijn allemaal
+           verwijderd. */}
+      </View>
+
+      {/* Sim demo bar verhuisd naar idle-screen (operator-feedback:
+          tijdens een actieve sessie hoort er geen dev-noise te zijn).
+          Indien dev nog wil testen tijdens active: zelf wisselen
+          naar idle, knoppen daar bedienen, dan terug naar active. */}
+
+      {/* Action bar — ronde Play/Pause-knop (primaire actie) + End als
+          tekst-link ernaast, zie sessionControlRow hierboven in JSX. */}
+    </SafeAreaView>
+  );
+}
+
+type IdleScreenProps = {
+  fromContext: 'audio' | 'bracelet' | 'plan' | null;
+  disconnectAndBackToSource: () => Promise<void>;
+  onDisconnect: () => Promise<void>;
+  ctaBackLabel: string | undefined;
+  isBraceletOwner: boolean;
+  showActivationPrompt: boolean;
+  safeInsets: EdgeInsets;
+  criticalBattery: boolean;
+  lowBattery: boolean;
+  battery: number | null;
+  batteryColor: string;
+  selectedMode: BraceletMode;
+  setSelectedMode: Dispatch<SetStateAction<BraceletMode>>;
+  meta: ModeMeta;
+  duration: number;
+  setDuration: Dispatch<SetStateAction<number>>;
+  onStart: () => Promise<void>;
+  busy: boolean;
+  stats: BraceletStats;
+  completedModeForModal: BraceletMode | null;
+  setCompletedModeForModal: Dispatch<SetStateAction<BraceletMode | null>>;
+  detailModeForModal: BraceletMode | null;
+  setDetailModeForModal: Dispatch<SetStateAction<BraceletMode | null>>;
+  sim: SimulatedBracelet | null;
+};
+
+/* SCREEN 1: Idle — mode selection + duration + Start CTA.
+   Iter 9 (operator-feedback): herschreven naar single-screen layout
+   zonder scroll. Mode bovenaan als horizontale chip-picker, duration
+   kort eronder, Start CTA prominent, mini-footer met stats+history.
+   Doel: alles in één blik zichtbaar zonder scrollen, Apple-style
+   hiërarchie met eyebrow-headers. */
+function IdleScreen({
+  fromContext,
+  disconnectAndBackToSource,
+  onDisconnect,
+  ctaBackLabel,
+  isBraceletOwner,
+  showActivationPrompt,
+  safeInsets,
+  criticalBattery,
+  lowBattery,
+  battery,
+  batteryColor,
+  selectedMode,
+  setSelectedMode,
+  meta,
+  duration,
+  setDuration,
+  onStart,
+  busy,
+  stats,
+  completedModeForModal,
+  setCompletedModeForModal,
+  detailModeForModal,
+  setDetailModeForModal,
+  sim,
+}: IdleScreenProps) {
+  /* Operator, 16 september 2026 ("Optie 1 Hybride: de app blijft Light,
+     maar dit specifieke bedieningsscherm maken we Dark — de felle
+     modus-kleur knalt dan maximaal, 2026-luxe-vibe"): alleen déze ene
+     screen-component (Idle: mode + duration + Start) gaat dark, de rest
+     van bracelet-control.tsx (Searching/Active/Charging/Fault) en de
+     rest van de app blijven op de bestaande `light`-module-instelling.
+     Eén boolean hier i.p.v. de module-brede `light` omzetten. */
+  const idleDark = true;
+
+  /* Operator, 16 september 2026 ("kan de i-button mee onder de juiste
+     kaart komen bij aanklikken"): animeert het info-knopje naar de
+     kolom van de actieve modus. 5 gelijke flex:1-kolommen → de kolom-
+     middens liggen altijd exact op 10/30/50/70/90% van de rijbreedte. */
+  const infoBtnAnim = useRef(
+    new Animated.Value(MODES.findIndex((m) => m.mode === selectedMode)),
+  ).current;
+  useEffect(() => {
+    Animated.spring(infoBtnAnim, {
+      toValue: MODES.findIndex((m) => m.mode === selectedMode),
+      useNativeDriver: false,
+      friction: 8,
+      tension: 60,
+    }).start();
+  }, [selectedMode, infoBtnAnim]);
+  const infoBtnLeft = infoBtnAnim.interpolate({
+    inputRange: [0, 1, 2, 3, 4],
+    outputRange: ['10%', '30%', '50%', '70%', '90%'],
+  });
+
+  return (
+    /* Iter 9bb (2026-05-31): SafeAreaView edges conditional op owner-status.
+       Voor OWNERS (inline render in /bracelet tab, geen native header) =
+       ['top','bottom'] zodat status-bar niet over de content valt.
+       Voor NON-OWNERS (preview met native Stack header) = ['bottom'] only,
+       want de native header consumeert al de top safe-area. Dubbele 'top'
+       inset gaf een grote leegte tussen header en content. */
+    <SafeAreaView
+      style={[s.root, idleDark && { backgroundColor: '#000000' }]}
+      edges={['top', 'bottom']}
+    >
+      <Stack.Screen options={{ headerShown: false }} />
+      <BraceletHeader
+        title="Bracelet control"
+        onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
+        backLabel={ctaBackLabel}
+        dark={idleDark}
+        badge={!isBraceletOwner ? <PreviewBadge dark={idleDark} /> : undefined}
+        right={
+          /* Operator, 16 september 2026 ("die connected en batterij mag
+             rechtsboven naast preview"): de status-regel verhuist van een
+             eigen volle-breedte rij onder de titel naar hier, naast het
+             tandwiel. Disconnect blijft op het tandwiel-icoon (Operator,
+             zelfde dag eerder: "Disconnect hoeft niet prominent, naar
+             tandwiel"), niet tonen tijdens de pre-activation banner-flow
+             (banner is daar al de primary action). */
+          !showActivationPrompt ? (
+            <View style={s.headerRightGroup}>
+              {/* Operator, 27 september 2026 ("verwijder ook de
+                 batterij icoon"): de statusDot (kleur naar batterij-
+                 gezondheid) is weg.
+                 Operator, zelfde dag ("die 87% moet weg"): het
+                 percentage-tekstje ernaast is nu ook weg — enkel het
+                 tandwiel-icoon blijft in deze rechter-slot over. */}
+              <Pressable
+                onPress={onDisconnect}
+                hitSlop={12}
+                accessibilityLabel="Bracelet settings — disconnect"
+              >
+                <Settings
+                  size={20}
+                  color={idleDark ? 'rgba(255,255,255,0.55)' : C.textDim}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            </View>
+          ) : undefined
+        }
+      />
+      {showActivationPrompt && <BraceletActivationCta />}
+      {/* Iter 9ae (2026-05-31): expliciete paddingBottom voor safe-zone.
+          Start-button stond op Audio PRO (non-owner standalone) te dicht
+          tegen home-indicator. Math.max zorgt voor minimum 28px buffer
+          ook op Android zonder gesture-bar.
+          Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
+          Consistent met player.tsx en andere bottom-CTAs.
+          Iter 9dq v105 (2026-06-04, REVERT): vorige iteraties (v100/v102/
+          v104 — paddingBottom 100/140 + ScrollView-wrapper) hebben
+          owner-inline-render verpest (Start-knop afgesneden, layout
+          stuk). Operator-mandate: terug naar 2 dagen geleden, niet
+          scrollbaar, alles moet in scherm passen. */}
+      <View
+        style={[
+          s.idleSingleScreen,
+          { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+        ]}
+      >
+        {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
+            Stack header toont al "Bracelet preview" + back-arrow voor
+            non-owners → de in-screen pill was dubbele duplicate. Levert
+            ~60px verticale ruimte op, content schuift omhoog (operator
+            wilde hele pagina hoger). PREVIEW-signal blijft in de native
+            header-titel. */}
+        {/* Status-regel is verhuisd naar de header (right-slot, naast het
+           tandwiel) — zie BraceletHeader's `right` hierboven. */}
+
+        {/* Operator, 16 september 2026: de armband-hero-gloed is verhuisd
+           naar SearchingScreen ("Looking for your bracelet") — dat was
+           de bedoeling voor die foto, niet dit scherm. */}
+
+        {/* Operator, 16 september 2026 ("we gaan het anders aanpakken —
+           cirkel groter, wit/modus-kleur op donkere achtergrond; user
+           tikt een state aan, cirkel-rand krijgt de kleur, info in de
+           cirkel; een schuifregelaar onderaan vult de binnenkant met een
+           golf-animatie (zelfde als breathwork), stijgend met de
+           minuten"): ring toont enkel het resultaat (rand-kleur + golf-
+           vulling + modus-naam/tijd), de DurationSlider eronder bedient
+           de waarde. */}
+        <View style={s.durationRingWrap}>
+          <DurationRing
+            min={meta.minMinutes}
+            max={meta.maxMinutes}
+            value={duration}
+            color={meta.color}
+            label={meta.name}
+            size={240}
+            dark={idleDark}
+          />
+        </View>
+
+        {/* Operator, 16 september 2026 ("ring moet groter... iconen
+           moeten zakken"): meer ruimte boven de pill-rij nu de ring
+           groter is (230px), zodat ze niet tegen elkaar aan zitten. */}
+        {/* Operator, 16 september 2026: 40→14 — "cta moet hoger, nu
+           buiten beeld": met de ring op 240px + alle secties eronder past
+           het scherm niet meer, dus ruimte terugwinnen waar het kan. */}
+        <Text
+          style={[
+            s.idleH2,
+            /* Operator, 27 september 2026 ("geef alles voldoende
+               ademruimte"): 14/8 → 20/14. */
+            { marginTop: 20, marginBottom: 14, textAlign: 'center' },
+            idleDark && { color: 'rgba(255,255,255,0.5)' },
+          ]}
+        >
+          Choose mode
+        </Text>
+        {/* Operator, 16 september 2026 ("kan de i-button mee onder de
+           juiste kaart komen bij aanklikken"): het i-knopje verschuift
+           nu mee naar de kolom van de actief-getikte pill i.p.v. altijd
+           gecentreerd onder de hele rij te blijven staan. Pills zijn
+           gelijke flex:1-kolommen, dus percentage-posities (10/30/50/
+           70/90%) matchen exact het midden van elke kolom, ongeacht
+           schermbreedte — geen onLayout-meting nodig. */}
+        {/* Operator, 27 september 2026 ("geef alles voldoende
+           ademruimte"): 28→34. */}
+        <View style={{ position: 'relative', marginBottom: 34 }}>
+          <View style={s.modeSegmentRow}>
+            {MODES.map((m: ModeMeta) => {
+            const active = m.mode === selectedMode;
+            const ModeIcon = MODE_ICONS[m.mode];
+            /* Operator, 16 september 2026 ("zet [de iconen] al in de
+               eigen kleuren"): icoon toont altijd zijn eigen modus-kleur,
+               niet enkel wanneer actief — actief blijft zichtbaar via de
+               rand. Contrast-fix voor witte modus-kleur (Boost) — anders
+               onzichtbaar op de neutrale pill-achtergrond.
+               Operator, zelfde dag ("dark-redesign, bento-stijl: actieve
+               knop volledig paars met verloop, icoontje wit; niet-
+               actieve knoppen donkergrijze capsules #1C1C1E, icoontjes
+               heel lichtgrijs"): in idleDark vervangt dat de eerdere
+               accent-only (rand-only) behandeling. */
+            const segFg = idleDark
+              ? 'rgba(255,255,255,0.55)'
+              : isLightColor(m.color)
+                ? C.textDim
+                : m.color;
+            /* Contrast-fix ("witte button icoon niet zichtbaar"): bij een
+               lichte modus-kleur (Clarity, wit) is de actieve pill zelf
+               ook wit gevuld — een wit icoon erop verdween volledig. */
+            const activeFg = isLightColor(m.color)
+              ? '#0a0a0a'
+              : idleDark
+                ? '#ffffff'
+                : m.color;
+            return (
+              /* Operator, 16 september 2026 ("bij elke switch zakt de
+                 onderkant beetje, cta komt buiten scherm... enkel de
+                 aangetikte knop mag even groter worden"): PressableScale
+                 bleek dezelfde layout-bug te hebben als de GO-knop (de
+                 interne flex:1-Animated.View respecteerde de vaste
+                 height:40 niet altijd correct, wat bij herhaald tikken
+                 de rest van het scherm cumulatief liet zakken). Kale
+                 Pressable met een inline scale-transform op `pressed` —
+                 geen extra layout-laag, dus kan niet meer "groeien". */
+              <Pressable
+                key={m.mode}
+                style={({ pressed }) => [
+                  s.modeSegment,
+                  idleDark && { backgroundColor: '#1C1C1E', borderColor: 'transparent' },
+                  active && !idleDark && { borderColor: activeFg },
+                  /* Operator, 16 september 2026 (Apple-critique): "geen los
+                     ovaaltje erachter — kleur de HELE capsule volledig
+                     blauw/paars". Een genest gradient-overlay in een
+                     geneste Animated.View bleek onbetrouwbaar te clippen
+                     (vorige poging). Simpelste, waterdichte fix: platte
+                     backgroundColor rechtstreeks op de Pressable zelf —
+                     zelfde element dat de borderRadius al heeft, geen
+                     aparte clip-laag nodig. */
+                  active && idleDark && { backgroundColor: m.color, borderColor: 'transparent' },
+                  { transform: [{ scale: pressed ? 1.08 : 1 }] },
+                ]}
+                onPress={() => {
+                  /* Operator, 15 september 2026 ("de gebruiker kan virtueel
+                     op de modi tikken en de trillingen direct voelen via
+                     de trilmotor van zijn eigen telefoon"): dit scherm IS
+                     al de interactieve demo (bereikt via de "Preview the
+                     bracelet app"-CTA) — tikbare tactiele feedback op elke
+                     mode-selectie geeft precies dat "proef de interface"-
+                     gevoel, zonder de complexe sessie-puls-loop verderop
+                     in dit bestand aan te raken. */
+                  Haptics.selectionAsync();
+                  setSelectedMode(m.mode);
+                }}
+                accessibilityLabel={`Select ${m.name} mode`}
+              >
+                <ModeIcon
+                  size={18}
+                  color={active ? activeFg : segFg}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            );
+          })}
+          </View>
+
+          {/* Operator, 16 september 2026 ("i onder de choose mode
+             buttons" → "kan de i-button mee onder de juiste kaart komen
+             bij aanklikken"): info-icoontje schuift nu mee naar de
+             kolom van de geselecteerde modus. */}
+          <Animated.View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              top: 44,
+              left: infoBtnLeft,
+              marginLeft: -13,
+            }}
+          >
+            <Pressable
+              style={[s.startInfoBtn, idleDark && { backgroundColor: 'rgba(255,255,255,0.08)' }]}
+              onPress={() => setDetailModeForModal(selectedMode)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={`Learn about ${meta.name}`}
+            >
+              <Info
+                size={14}
+                color={idleDark ? 'rgba(255,255,255,0.6)' : C.textDim}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+          </Animated.View>
+        </View>
+
+        {/* Operator ("dat moet meer in deze stijl, breathwork"): de losse
+           preset-chip-rij + aparte slider vervangen door dezelfde
+           verticale DurationWheel als breath-setup.tsx — gekozen waarde
+           groot/wit gecentreerd, "Recommended" ernaast wanneer van
+           toepassing, geen los sterretje/legend-regel meer nodig. */}
+        <View style={s.durationSliderWrap}>
+          <DurationWheel
+            options={DURATION_PRESETS[selectedMode].map((p) => ({
+              value: p.value,
+              label: `${p.value} min`,
+            }))}
+            value={duration}
+            onChange={setDuration}
+            accent={meta.color}
+            trackColor={idleDark ? 'rgba(255,255,255,0.4)' : C.textDim}
+            recommendedValue={
+              DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
+            }
+          />
+        </View>
+
+        {/* Spacer — pushes Start-CTA naar onderkant. */}
+        <View style={{ flex: 1, minHeight: 2 }} />
+
+        {/* Operator ("dat moet meer in deze stijl, breathwork" — screenshot
+           van breath-setup.tsx se footer-CTA): de losse gekleurde "GO"-
+           cirkel vervangen door dezelfde volle-breedte, effen witte CTA-
+           pil met duidelijke tekst als breathwork/de rest van de app
+           (huisstijl §3 — CTA-achtergrond is nooit de accent-/modus-
+           kleur). `PrimaryCtaButton` = dezelfde haptiek+press-scale-
+           wrapper als het Connect/Retry-scherm hierboven in dit bestand,
+           voor consistentie binnen bracelet-control.tsx zelf. */}
+        <PrimaryCtaButton
+          style={[s.primaryBtn, (busy || criticalBattery) && s.btnDisabled]}
+          onPress={onStart}
+          disabled={busy || criticalBattery}
+          accessibilityLabel={`Start ${meta.name} session`}
+        >
+          {busy ? (
+            <ActivityIndicator color="#1D1D1F" />
+          ) : (
+            <Text style={s.primaryBtnText}>Start {meta.name}</Text>
+          )}
+        </PrimaryCtaButton>
+
+        {/* Low battery warning (compact, alleen als nodig) */}
+        {lowBattery && (
+          <View style={s.warnChip}>
+            <Text style={s.warnChipIcon}>⚠</Text>
+            <Text style={s.warnChipText}>
+              Battery may not last the full session
+            </Text>
+          </View>
+        )}
+
+        {/* Operator, 16 september 2026 ("History moet apart bij activity
+           komen" / "3 today, 19 min etc moet hier weg, statistieken komen
+           in activity"): de hele mini-footer (stats-regel + history-link)
+           is weg. History zat al dubbel met de "All bracelet sessions"
+           rij in de Activity-tab (activity.tsx); de stats-samenvatting
+           hoort daar nu ook thuis i.p.v. hier herhaald te worden. */}
+
+        {/* Iter 9dq v105 (2026-06-04): "Complete the system" Audio
+            Library upsell verwijderd op operator-verzoek
+            ("upsell complete the system is hier niet nodig"). Audio
+            upsell-pad blijft beschikbaar via Account-tab subscription-
+            card. Hier op bracelet-control hoorde 't niet thuis —
+            content moet in scherm passen, geen extra cards. */}
+
+        {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
+        {__DEV__ && sim && <SimDemoBar sim={sim} />}
+      </View>
+
+      {/* CompletionModal — toont na natural completion (timer hits 0).
+          Rendert hier omdat na completion de UI vanzelf naar idle gaat. */}
+      {completedModeForModal !== null && (
+        <CompletionModal
+          mode={completedModeForModal}
+          onDismiss={() => setCompletedModeForModal(null)}
+        />
+      )}
+
+      {/* ModeDetailModal — bottom-sheet popup op tap mode-card (iter 9k).
+          Operator, 16 september 2026 ("in de popup choose cta moet
+          weg"): geen Choose-CTA meer — enkel info, sluiten via backdrop
+          of X. Modus kiezen gebeurt al via de pill-rij buiten de popup. */}
+      {detailModeForModal !== null && (
+        <ModeDetailModal
+          mode={detailModeForModal}
+          onClose={() => setDetailModeForModal(null)}
+        />
+      )}
+
+      {/* Iter v209 (2026-07-04): End-session modal VOLLEDIG VERWIJDERD.
+          6 iteraties (v87, v193, v195, v197, v201-202) faalden in
+          productie. Nu directe End-knop actie zonder modal — navigate
+          weg + fire-and-forget Stop. Simpelheid > confirmatie. */}
+      {/* Iter v194 (2026-07-04): InlineBraceletTabBar op idle Choose Mode
+          verwijderd. Bracelet-control zit binnen (tabs) navigator (via
+          bracelet-tab inline-render) → systeem tab bar was er al →
+          mijn stub gaf DUBBELE bar op operator-scherm en verdrong
+          zelfs de Start-knop uit beeld. */}
+    </SafeAreaView>
+  );
+}
 
 export default function BraceletControl() {
   const bracelet = getBracelet();
@@ -3117,6 +3724,48 @@ export default function BraceletControl() {
   const isBraceletOwner = useBraceletOwner();
   const { isPro } = useSubscription();
   const showAudioUpsell = isBraceletOwner && !isPro;
+
+  /* Operator, 16 september 2026 ("er klopt vanalles niet als ik terug ga
+     na minimizen, is sessie gestopt en als ik terug wil starten begint
+     een andere timing"): root cause — sessionPlannedRef/sessionStartedAtRef
+     /pausedAt zijn PUUR lokale component-state (useRef/useState), die bij
+     een fresh mount (na minimize → terug via de pill) altijd op hun
+     lege startwaarde beginnen. De hardware/sim-status geeft alleen
+     current_mode + remaining_minutes terug (spec §8.2) — GEEN "totaal
+     gepland"-veld — dus zonder deze rehydratie viel `planned` altijd
+     terug op `duration` (de LOKALE, verse default-waarde voor de
+     GEGOKTE mode), niet de echte gestarte duur. Vandaar "andere timing".
+     Erger nog: een GEPAUZEERDE sessie is BLE-technisch al gestopt
+     (spec §8.1 kent geen Pause-opcode — pause = een echte Stop +
+     lokale pausedAt-boekhouding); zonder rehydratie van pausedAt zag
+     een fresh mount dus een écht gestopte sessie en viel terug op Idle.
+
+     Fix: bij mount ÉÉN keer de module-level bracelet-session-state
+     snapshot lezen (dezelfde store die de BraceletMiniIndicator-pill
+     voedt) — die overleeft een unmount, in tegenstelling tot refs/state
+     hierin. Is er een actieve/gepauzeerde sessie bekend, dan hydrateren
+     we selectedMode/duration/pausedAt + de refs hieruit i.p.v. vanaf
+     nul/URL-defaults te starten. Puur-lezende call, geen effect nodig —
+     wordt verderop gebruikt in de useState/useRef-initializers (die toch
+     maar exact éénmaal, bij de eerste render, hun argument gebruiken) én
+     in de preview-reset-effect direct hieronder. Bewust HIER gedeclareerd
+     (vóór die effect) i.p.v. verderop bij initialMode — een const die pas
+     later in de functie gedeclareerd wordt, is hier nog niet leesbaar. */
+  const resumeSnapshot = (() => {
+    const snap = getBraceletSessionSnapshot();
+    return snap.active ? snap : null;
+  })();
+  /* Operator, 17 september 2026 ("2 à 3 seconden minder bij minimize"):
+     resumeSnapshot.remainingSec komt uit de laatst-GEPUBLICEERDE
+     snapshot, die pas bij elke monitor-tick (1x/seconde) ververst — dus
+     tot een volle seconde verouderd, bovenop de echte tijd die de
+     navigatie zelf kostte. getBraceletMonitorRemainingSec() rekent LIVE,
+     exact op dit moment — sluit dat extra gat. Fallback op de snapshot
+     zelf voor de (zeldzame) edge-case dat de monitor z'n eigen state om
+     wat voor reden dan ook kwijt is maar de snapshot nog wel bestaat. */
+  const resumeRemainingSec = resumeSnapshot
+    ? (getBraceletMonitorRemainingSec() ?? resumeSnapshot.remainingSec)
+    : 0;
 
   /* Iter 9dq v92 (2026-06-03): activation-state. Bracelet-owners die hun
      12-char code nog niet hebben ingevoerd zien op ELKE screen-variant
@@ -3140,24 +3789,41 @@ export default function BraceletControl() {
        - Fault → cleared
        - Charging → false
      Owners (echte sessies) NIET aanraken; voor hen is sim==null op
-     real hardware sowieso, en in dev willen ze state-continuïteit. */
+     real hardware sowieso, en in dev willen ze state-continuïteit.
+
+     Operator, 16 september 2026 ("de sessie mag niet stoppen, u stopt
+     dat knop"): deze reset vuurde ONVOORWAARDELIJK bij elke mount — ook
+     wanneer een preview-gebruiker via de BraceletMiniIndicator-pill of
+     Minimize terugkeerde naar een sessie die ze zelf net gestart hadden.
+     Elke keer BraceletControl remountte (nieuwe push van /bracelet-
+     control) stuurde dit dus meteen een Stop naar de nog lopende sessie
+     — precies het "terugkeren = sessie sterft"-gedrag dat net gefixt
+     moest worden.
+     Eerste fix probeerde dit met een async requestStatus()-check op
+     `sessionActive` — werkte niet voor een GEPAUZEERDE sessie: pause IS
+     al een echte BLE Stop (spec §8.1 kent geen Pause-opcode), dus
+     `sessionActive` staat dan al op false en de check zag "geen sessie"
+     terwijl er wél een gepauzeerde sessie was. Nu de synchrone
+     `resumeSnapshot` (hierboven, dezelfde bron die selectedMode/
+     duration/pausedAt/refs hydrateert) — die dekt zowel actief als
+     gepauzeerd correct, en heeft geen async-race met de eerste render. */
   useEffect(() => {
-    if (!isBraceletOwner) {
-      bracelet
-        .sendCommand({
-          mode: BraceletMode.Alpha,
-          duration: 0,
-          command: BleCommand.Stop,
-        })
-        .catch(() => {
-          /* swallow — sim Stop is no-op als er geen sessie loopt */
-        });
-      /* Reset sim health zodat sessies hun volle ingestelde tijd
-         uitdoen (geen battery-cut, geen fault-cut). */
-      sim?.simSetBattery(87);
-      sim?.simSetCharging(false);
-      sim?.simClearFault();
-    }
+    if (isBraceletOwner) return;
+    if (resumeSnapshot) return; // sessie (actief of gepauzeerd) — niet aankomen
+    bracelet
+      .sendCommand({
+        mode: BraceletMode.Alpha,
+        duration: 0,
+        command: BleCommand.Stop,
+      })
+      .catch(() => {
+        /* swallow — sim Stop is no-op als er geen sessie loopt */
+      });
+    /* Reset sim health zodat sessies hun volle ingestelde tijd
+       uitdoen (geen battery-cut, geen fault-cut). */
+    sim?.simSetBattery(87);
+    sim?.simSetCharging(false);
+    sim?.simClearFault();
     // Only fire once on mount per preview-entry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -3165,6 +3831,10 @@ export default function BraceletControl() {
   const [conn, setConn] = useState<BleConnectionState>(
     bracelet.getConnectionState(),
   );
+  /* Operator, 16 september 2026: "bij connected wil ik een popup-
+     animatie met cirkel, vinkje en tekst 'Yes connected'" — korte,
+     zelf-dismissende bevestiging bij een geslaagde connectie. */
+  const [showConnectedPopup, setShowConnectedPopup] = useState(false);
 
   /* Query-params support — Free Breathwork CTA's op Audio/Bracelet tabs
      openen een chooser en navigeren hier met ?mode=0-4&breathwork=1.
@@ -3174,31 +3844,91 @@ export default function BraceletControl() {
                    landt (i.p.v. eerst Connect → Start). De breathwork-
                    toggle blijft FALSE — user tapt zelf "Start" op de
                    breathwork-strip wanneer hij klaar is. Operator-feedback
-                   2026-06-05: breathwork mag niet vanzelf beginnen. */
-  const params = useLocalSearchParams<{ mode?: string; breathwork?: string; from?: string }>();
+                   2026-06-05: breathwork mag niet vanzelf beginnen.
+     - plan      : Operator, 29 september 2026 ("set daily plan"): zelfde
+                   auto-connect/auto-start/auto-pauze-sequentie als
+                   `breathwork=1`, maar getriggerd door een bracelet-
+                   dagplan-melding (reminders.ts's `reminderParams`) i.p.v.
+                   de breathwork-strip. `duration` erbij — anders gebruikt
+                   de auto-start altijd de modus-default, wat de duur uit
+                   het dagplan zou negeren. */
+  const params = useLocalSearchParams<{
+    mode?: string;
+    breathwork?: string;
+    plan?: string;
+    duration?: string;
+    from?: string;
+  }>();
+
   const initialMode: BraceletMode = (() => {
+    if (resumeSnapshot) return resumeSnapshot.mode as BraceletMode;
     const raw = params.mode;
     if (typeof raw === 'string') {
       const n = parseInt(raw, 10);
       if (n >= 0 && n <= 4) return n as BraceletMode;
     }
-    return BraceletMode.Alpha;
+    return suggestBraceletMode(new Date());
   })();
-  const autoStartBracelet = params.breathwork === '1';
+  const autoStartBracelet =
+    !resumeSnapshot && (params.breathwork === '1' || params.plan === '1');
+  /* Enkel gezet bij een dagplan-tik — auto-start gebruikt anders gewoon de
+     modus-default (zie de auto-start-effect verderop). */
+  const planDurationMinutes: number | null = (() => {
+    if (params.plan !== '1' || typeof params.duration !== 'string') return null;
+    const n = parseInt(params.duration, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
   /* Operator-feedback 2026-06-05: bij CTA-flow vanuit Audio of Bracelet
      tab is het onduidelijk waarheen de back-knop terug gaat. Met `from`
      param maken we de back-knop context-aware: "Audio Library" of
      "Bracelet" als label + navigatie naar de juiste tab. */
-  const fromContext: 'audio' | 'bracelet' | null = (() => {
+  /* Operator, 1 okt 2026 ("back vanuit bracelet control komt op de
+     connect-pagina, niet ok"): de "Try it"-deeplink vanuit bracelet-
+     agenda.tsx (`?plan=1&mode=X&duration=Y`) zette nooit een `from`,
+     dus de back-knop viel terug op het owner/inline-gedrag (disconnect
+     + terugvallen naar het zoek/connect-scherm van DEZELFDE instance —
+     geen echte navigatie). `plan` is een derde context: user kwam hier
+     via een pushed route vanuit "Your bracelet plan" en hoort daar met
+     router.back() op terug te landen, niet op het connect-scherm. */
+  const fromContext: 'audio' | 'bracelet' | 'plan' | null = (() => {
     if (params.from === 'audio') return 'audio';
     if (params.from === 'bracelet') return 'bracelet';
+    if (params.from === 'plan') return 'plan';
     return null;
   })();
 
   const [selectedMode, setSelectedMode] = useState<BraceletMode>(initialMode);
   const meta = getModeMeta(selectedMode);
-  const [duration, setDuration] = useState<number>(meta.minMinutes);
-  const [status, setStatus] = useState<BleStatusPacket | null>(null);
+  const [duration, setDuration] = useState<number>(
+    resumeSnapshot
+      ? Math.max(1, Math.round(resumeSnapshot.totalSec / 60))
+      : meta.defaultMinutes,
+  );
+  /* Operator, 17 september 2026 ("zie ik eerst heel kort choose mode,
+     mag niet"): `status` bleef `null` bij een fresh mount TOTDAT de
+     eerste BLE-poll terugkwam (tientallen ms) — de render-branch die
+     ActiveSessionScreen kiest vereist EXPLICIET `... && status` (zie de
+     render-branches onderaan), dus die ene null-frame viel altijd terug
+     op IdleScreen ("Choose mode"), zichtbaar als een korte flits vóór
+     Active alsnog verscheen. Zelfde soort gat als eerder bij
+     sessionPlannedRef/sessionStartedAtRef — nu ook `status` synchroon
+     hydrateren uit resumeSnapshot, zodat de allereerste render al
+     rechtstreeks naar ActiveSessionScreen gaat. battery/charging/fault
+     zijn niet in de snapshot bewaard (niet relevant voor deze render-
+     beslissing) — onschuldige defaults, de eerste echte poll (die
+     hierna nog steeds meteen vuurt) corrigeert ze binnen milliseconden. */
+  const [status, setStatus] = useState<BleStatusPacket | null>(() =>
+    resumeSnapshot
+      ? {
+          sessionActive: !resumeSnapshot.paused,
+          currentMode: resumeSnapshot.mode as BraceletMode,
+          remainingMinutes: Math.max(0, Math.ceil(resumeRemainingSec / 60)),
+          batteryPercent: 100,
+          charging: false,
+          fault: false,
+        }
+      : null,
+  );
   const [busy, setBusy] = useState(false);
   /* Iter v149 v4 (2026-06-25): voice-cues toggle direct op de active-
      session view zodat user 'm ter plekke kan dimmen (operator-feedback:
@@ -3206,74 +3936,12 @@ export default function BraceletControl() {
      useSetting → globale single source of truth, ook respected door
      breath-tab en Settings menu. */
   const [voiceCues, setVoiceCues] = useSetting('voiceCues');
+  /* Operator, 29 september 2026 ("een echte pagina... na connect, bij
+     eerste connectie door klant, soort onboarding"): zie de
+     connection-change-listener verderop. */
+  const [braceletOnboardedAt] = useSetting('braceletOnboardingCompletedAt');
 
   /* Iter v209 (2026-07-04): endSessionVisible state weg — geen modal meer. */
-  /* Breathwork toggle — opt-in tijdens active session. False per default
-     ("bracelet+haptic is main, breathwork is optioneel" — operator-keuze
-     2026-05-27 iter 5). Reset bij sessie-eind via natural-completion
-     useEffect zodat volgende sessie weer schoon start.
-     Ook bij CTA-flow blijft dit FALSE — user tapt zelf Start op de strip. */
-  const [breathworkEnabled, setBreathworkEnabled] = useState(false);
-
-  /* Iter 9ca (2026-05-31): bij transition breathworkEnabled true → false
-     committen we de huidige enable-run naar de cumulative ref. Daarna
-     reset BreathworkStrip cycle/duration naar 0, dus dit is de ENIGE
-     plek om die run vast te leggen. */
-  useEffect(() => {
-    if (breathworkEnabled) return; // alleen acteren op disable
-    const run = breathCurrentRunRef.current;
-    if (!run || run.cyclesCompleted === 0) {
-      breathCurrentRunRef.current = null;
-      return;
-    }
-    const cum = breathCumulativeRef.current;
-    breathCumulativeRef.current = {
-      protocolKind: run.protocolKind,
-      protocolName: run.protocolName,
-      cyclesCompleted: (cum?.cyclesCompleted ?? 0) + run.cyclesCompleted,
-      cyclesTarget: run.cyclesTarget,
-      durationSec: (cum?.durationSec ?? 0) + run.durationSec,
-    };
-    breathCurrentRunRef.current = null;
-  }, [breathworkEnabled]);
-
-  /* Helper: bouw de finale breathwork-snapshot voor recordSession.
-     Combineert cumulative + (huidige run als nog enabled). */
-  const buildBreathworkRecord = useCallback(() => {
-    const cum = breathCumulativeRef.current;
-    const cur = breathworkEnabled ? breathCurrentRunRef.current : null;
-    if (!cum && !cur) return undefined;
-    const base = cum ?? {
-      protocolKind: '',
-      protocolName: '',
-      cyclesCompleted: 0,
-      cyclesTarget: 0,
-      durationSec: 0,
-    };
-    const total = cur
-      ? {
-          protocolKind: cur.protocolKind,
-          protocolName: cur.protocolName,
-          cyclesCompleted: base.cyclesCompleted + cur.cyclesCompleted,
-          cyclesTarget: cur.cyclesTarget,
-          durationSec: base.durationSec + cur.durationSec,
-        }
-      : base;
-    if (total.cyclesCompleted === 0 && total.durationSec === 0) return undefined;
-    return {
-      protocol: total.protocolKind,
-      name: total.protocolName,
-      cyclesCompleted: total.cyclesCompleted,
-      cyclesTarget: total.cyclesTarget,
-      durationSec: total.durationSec,
-    };
-  }, [breathworkEnabled]);
-
-  /* Reset cumulative breathwork bij nieuwe sessie. */
-  const resetBreathworkTracking = useCallback(() => {
-    breathCurrentRunRef.current = null;
-    breathCumulativeRef.current = null;
-  }, []);
 
   /* Pause-state — BLE-contract kent geen native Pause (spec §8.1: alleen
      Start/Stop). Pseudo-pause werkt zo:
@@ -3284,9 +3952,50 @@ export default function BraceletControl() {
                       nieuwe duration; pausedAt op null gezet.
        - onEnd()    : BLE Stop + pausedAt op null → idle-screen.
      De gebruiker ervaart 't als pause; fysiek is 't een korte stop +
-     restart op de resterende minuten. Operator-keuze 2026-05-27. */
-  const [pausedAt, setPausedAt] = useState<number | null>(null);
+     restart op de resterende minuten. Operator-keuze 2026-05-27.
+     Gehydrateerd uit resumeSnapshot als de sessie al gepauzeerd was
+     vóór deze mount (zie hierboven) — anders zou terugkeren na minimize
+     tijdens een pauze op Idle belanden (BLE-status toont sessionActive
+     false, want pause IS al een echte Stop). */
+  const [pausedAt, setPausedAt] = useState<number | null>(
+    resumeSnapshot?.paused
+      ? Math.max(1, Math.ceil(resumeRemainingSec / 60))
+      : null,
+  );
   const isPaused = pausedAt !== null;
+
+  /* Eén plek voor "sluit de lopende sessie af en registreer 'm" (operator-
+     audit, 13 augustus 2026) — deze logica stond bijna identiek 3x
+     uitgeschreven: bij natuurlijk aflopen, bij manual End, en bij Restart.
+     Drie kopieën van dezelfde berekening is drie plekken die uit de pas
+     kunnen lopen zodra er ooit een veld of regel bijkomt. `isPaused` dekt
+     ook het natural-completion-geval correct: die pad loopt alleen als
+     `pausedAt === null`, dus `isPaused` is daar toch al `false`. Refs op
+     null zetten is voor Restart onschadelijk — die overschrijft ze meteen
+     erna met de nieuwe sessie. Geeft `null` terug als er niets liep. */
+  const finishSession = useCallback(
+    (finalStatus: SessionStatus) => {
+      const startedAt = sessionStartedAtRef.current;
+      if (startedAt === null) return null;
+      const realStartedAt = sessionRealStartedAtRef.current ?? startedAt;
+      sessionStartedAtRef.current = null;
+      sessionRealStartedAtRef.current = null;
+      const elapsedMs = isPaused
+        ? pausedAtElapsedMsRef.current
+        : Date.now() - startedAt;
+      const elapsedMin = Math.max(1, Math.round(elapsedMs / 60000));
+      recordSession({
+        mode: selectedMode,
+        startedAt: new Date(realStartedAt).toISOString(),
+        endedAt: new Date().toISOString(),
+        durationMin: elapsedMin,
+        plannedMin: clampDuration(selectedMode, duration),
+        status: finalStatus,
+      });
+      return elapsedMin;
+    },
+    [isPaused, selectedMode, duration],
+  );
 
   /* Completion-modal — toont mode-specifieke felicitatie zodra een
      sessie natuurlijk afloopt (timer hits 0). Niet bij manual End,
@@ -3305,48 +4014,57 @@ export default function BraceletControl() {
   /* Track wanneer de huidige sessie begon (lokaal in component, niet
      persistent). Wordt gezet bij eerste onStart, gewist bij onStop.
      Bij pause/resume blijft de waarde staan zodat de totale doorlopen
-     tijd correct geboekt wordt bij eind. Voor stats. */
-  const sessionStartedAtRef = useRef<number | null>(null);
+     tijd correct geboekt wordt bij eind. Voor stats.
+     Gehydrateerd uit resumeSnapshot (zie hierboven) wanneer we een AL
+     lopende (niet-gepauzeerde) sessie herontdekken na een fresh mount —
+     reconstrueert de wall-clock start uit total/remaining zodat de
+     lokale seconden-tik meteen weer klopt i.p.v. null te blijven. */
+  const sessionStartedAtRef = useRef<number | null>(
+    resumeSnapshot && !resumeSnapshot.paused
+      ? Date.now() - (resumeSnapshot.totalSec - resumeRemainingSec) * 1000
+      : null,
+  );
 
   /* Geplande duration van de huidige sessie — gebruikt voor de
      progress-arc rond de timer en de "of X total"-context-regel.
-     Gezet bij onStart/onRestart, niet relevant op idle. */
-  const sessionPlannedRef = useRef<number>(0);
+     Gezet bij onStart/onRestart, niet relevant op idle.
+     Gehydrateerd uit resumeSnapshot.totalSec — dit is EXACT de bug uit
+     "als ik terug wil starten begint een andere timing": zonder deze
+     hydratie bleef deze ref op 0 staan na een fresh mount, en viel
+     ActiveSessionScreen's `planned`-berekening terug op de LOKALE
+     `duration`-default (de default van de GEGOKTE mode) i.p.v. de
+     werkelijk gestarte duur. */
+  const sessionPlannedRef = useRef<number>(
+    resumeSnapshot ? Math.max(1, Math.round(resumeSnapshot.totalSec / 60)) : 0,
+  );
 
   /* Iter 9be (2026-05-31): exact-elapsed-bij-pause ref. BLE-status geeft
      alleen minuten — display van pausedAt liep daardoor mm:00 ipv mm:ss
      en gaf een visuele backwards-jump op press. Hier vangen we de exact
      elapsed-ms vóór de async BLE Stop, zodat het tijdens pauze op
-     EXACT het press-moment blijft hangen (geen jump, geen rounding). */
-  const pausedAtElapsedMsRef = useRef<number>(0);
+     EXACT het press-moment blijft hangen (geen jump, geen rounding).
+     Gehydrateerd uit resumeSnapshot zodat een herontdekte gepauzeerde
+     sessie ook meteen het juiste "elapsed op pauze-moment" heeft. */
+  const pausedAtElapsedMsRef = useRef<number>(
+    resumeSnapshot
+      ? (resumeSnapshot.totalSec - resumeRemainingSec) * 1000
+      : 0,
+  );
 
   /* Iter 9bj (2026-05-31): ECHTE wall-clock start (onaangetast door
      re-anchor op resume). sessionStartedAtRef wordt op resume virtueel
      gemaakt (Date.now() - exactElapsedMs) zodat de lokale display-timer
      vanaf de pause-tijd doortikt. Maar voor history's startedAt-ISO
-     willen we de echte tijd dat de user de sessie startte. */
-  const sessionRealStartedAtRef = useRef<number | null>(null);
-
-  /* Iter 9ca (2026-05-31): breathwork-stats voor history.
-     - currentRunRef: snapshot van de huidige enable-run (BreathworkStrip
-       reset cycle/duration zodra disabled → vóór die reset moeten we
-       deze run "vastpinnen" in cumulative).
-     - cumulativeRef: cumulatief over alle enable/disable cycli binnen
-       deze bracelet-sessie. Bij recordSession: cumulative + current. */
-  const breathCurrentRunRef = useRef<{
-    protocolKind: string;
-    protocolName: string;
-    cyclesCompleted: number;
-    cyclesTarget: number;
-    durationSec: number;
-  } | null>(null);
-  const breathCumulativeRef = useRef<{
-    protocolKind: string;
-    protocolName: string;
-    cyclesCompleted: number;
-    cyclesTarget: number;
-    durationSec: number;
-  } | null>(null);
+     willen we de echte tijd dat de user de sessie startte.
+     Bij een hydratie uit resumeSnapshot kennen we de ECHTE originele
+     starttijd niet meer (die ging verloren met de vorige instance) —
+     de gereconstrueerde tijd is het beste beschikbare alternatief, dus
+     zelfde waarde als sessionStartedAtRef hierboven. */
+  const sessionRealStartedAtRef = useRef<number | null>(
+    resumeSnapshot && !resumeSnapshot.paused
+      ? Date.now() - (resumeSnapshot.totalSec - resumeRemainingSec) * 1000
+      : null,
+  );
 
   /* Live stats voor de strip — refresht zichzelf via listener-set in
      bracelet-history.ts wanneer een nieuwe sessie wordt vastgelegd. */
@@ -3366,16 +4084,59 @@ export default function BraceletControl() {
   const pollFailsRef = useRef(0);
   const [staleStatus, setStaleStatus] = useState(false);
 
-  /* Connection state subscription. */
+  /* Connection state subscription. Detecteert ook de transitie NAAR
+     'connected' (vanuit een andere state) om de bevestigings-popup te
+     triggeren — niet bij een render die toevallig al 'connected' was. */
+  const prevConnRef = useRef<BleConnectionState>(conn);
   useEffect(() => {
-    const off = bracelet.onConnectionChange(setConn);
+    const off = bracelet.onConnectionChange((next) => {
+      if (next === 'connected' && prevConnRef.current !== 'connected') {
+        /* Operator, 29 september 2026 ("een echte pagina die voor de
+           bracelet-control pagina komt, na connect, bij eerste connectie
+           door klant, soort onboarding"): de EERSTE keer ooit dat deze
+           gebruiker verbindt, gaat 'ie naar /bracelet-set-day i.p.v. de
+           gewone "Yes, connected!"-popup + idle-scherm. Nadien (tweede
+           connectie en verder) gewoon het bestaande gedrag. */
+        if (braceletOnboardedAt === null) {
+          /* Operator, 30 september 2026 ("na Set your plan land ik op de
+             Bracelet-tab se welkomstscherm, is dat correct?"): nee — deze
+             route verving bracelet-control al via `replace` (geen
+             geschiedenis-entry meer), dus Set your plan se `router.back()`
+             sprong door naar de Bracelet-TAB, waar `useFocusEffect` de
+             volledige "Smart Bead Bracelet"-intro-overlay elke keer opnieuw
+             toont bij focus — een gebruiker die zonet zijn eerste plan
+             opsloeg zag zo weer het allereerste marketing-scherm, alsof er
+             niets gebeurd was.
+             Vervolg ("teruggaan naar connected ook niet juist, ik heb al
+             connect gedaan vóór de instelling van planning"): eerste
+             oplossing stuurde terug naar DIT scherm — ook fout, de
+             gebruiker zag dit verbind-scherm al vóór Set your plan, dus
+             nog eens tonen voelt als terugspoelen. `?onboarding=1` laat
+             Set your plan zelf naar `/bracelet-agenda` navigeren (het
+             net-opgeslagen plan bekijken — de échte volgende stap na
+             "verbinden + plan bouwen"), zie de toelichting daar. */
+          router.replace('/bracelet-set-day?onboarding=1' as never);
+        } else if (fromContext !== 'plan') {
+          /* Operator, 1 okt 2026 ("vanuit de agenda sessie starten komt
+             nu in yes you are connected, dat mag niet"): "Try it"/"Start
+             session" vanuit Your bracelet plan (`from=plan`) is een snel,
+             herhaald actie-moment, geen eerste-verbinding-mijlpaal — de
+             marketing-bevestigingspopup hoort daar niet thuis, enkel bij
+             een echte, bewuste Connect-tik. */
+          setShowConnectedPopup(true);
+        }
+      }
+      prevConnRef.current = next;
+      setConn(next);
+    });
     return off;
-  }, [bracelet]);
+  }, [bracelet, braceletOnboardedAt]);
 
-  /* When mode changes, reset duration to that mode's minimum (spec §11.2:
-     default = minimum). Keep it clamped to the new mode's bounds. */
+  /* When mode changes, reset duration to that mode's default (spec §11.2
+     — operator, 16 september 2026: officiële tabel, default is niet meer
+     altijd gelijk aan het minimum). */
   useEffect(() => {
-    setDuration(getModeMeta(selectedMode).minMinutes);
+    setDuration(getModeMeta(selectedMode).defaultMinutes);
   }, [selectedMode]);
 
   /* Detecteer natural completion — sessionActive transitie true → false
@@ -3421,25 +4182,8 @@ export default function BraceletControl() {
          re-anchored is op iedere resume — dus cumulatieve actieve tijd
          ≈ planned (zonder pauzes). pausedAt === null (natural completion
          conditie), dus altijd active-branch. */
-      const realStartedAt =
-        sessionRealStartedAtRef.current ?? sessionStartedAtRef.current;
-      const startedAt = sessionStartedAtRef.current;
-      sessionStartedAtRef.current = null;
-      sessionRealStartedAtRef.current = null;
-      const elapsedMin = Math.max(
-        1,
-        Math.round((Date.now() - startedAt) / 60000),
-      );
-      const planned = clampDuration(selectedMode, duration);
-      recordSession({
-        mode: selectedMode,
-        startedAt: new Date(realStartedAt).toISOString(),
-        endedAt: new Date().toISOString(),
-        durationMin: elapsedMin,
-        plannedMin: planned,
-        status: 'completed',
-        breathwork: buildBreathworkRecord(),
-      });
+      finishSession('completed');
+      void stopBraceletSessionMonitor();
       /* Iter v211 (2026-07-04): popup + audio-cue VERWIJDERD bij
          natural completion. Operator: bracelet-sessies worden vaak in
          professionele context (vergadering) gestart en moeten SUBTIEL
@@ -3451,12 +4195,8 @@ export default function BraceletControl() {
          gedrag gewenst. */
       /* setCompletedModeForModal(selectedMode);   ← popup weg */
       /* playBraceletCompletionCue(selectedMode);  ← audio weg */
-      /* Reset breathwork toggle bij natural completion zodat volgende
-         sessie weer met breathwork=uit start (opt-in default). */
-      setBreathworkEnabled(false);
-      resetBreathworkTracking();
     }
-  }, [status, pausedAt, selectedMode, duration, buildBreathworkRecord, resetBreathworkTracking, endedLocally]);
+  }, [status, pausedAt, selectedMode, duration, endedLocally, finishSession]);
 
   /* Poll status every 5s while connected (spec §8.3/§11.4).
      Tracking opeenvolgende fouten → na 3× falen (15s) markeren we de
@@ -3521,9 +4261,19 @@ export default function BraceletControl() {
      - disconnectAndBackToSource: eerst disconnect (clean stop) → daarna
        navigeren (voor Active-screen).
      Bij geen fromContext gedraagt alles zich exact zoals voorheen. */
+  /* Operator, 1 okt 2026 ("liever tab root, user komt vanuit plan. als
+     die wil kan die vanuit tab terug naar zijn plan"): eerste versie
+     liet 'plan' terug-navigeren naar bracelet-agenda zelf (router.back()
+     — zie de git-geschiedenis van deze toelichting). Operator koos
+     bewust voor de tab-root i.p.v. de pushende pagina: na Start
+     session/End session is de gebruiker "klaar" met dat uitstapje en
+     mag 'ie meteen verder door de tabbar (Audio/Account) — terug naar
+     "Your bracelet plan" blijft gewoon één tik verder bereikbaar vanuit
+     de Bracelet-tab zelf. 'plan' gedraagt zich dus nu identiek aan
+     'bracelet'. */
   const navigateBackToSource = () => {
     if (fromContext === 'audio') router.navigate('/(tabs)/' as never);
-    else if (fromContext === 'bracelet') router.navigate('/(tabs)/bracelet' as never);
+    else if (fromContext === 'bracelet' || fromContext === 'plan') router.navigate('/(tabs)/bracelet' as never);
   };
   const disconnectAndBackToSource = async () => {
     /* Iter 2026-06-05 v2: per BLE spec §8 stopt disconnect alleen de
@@ -3536,13 +4286,13 @@ export default function BraceletControl() {
     } catch (_e) { /* ignore: connect may already have failed */ }
     await onDisconnect();
     if (fromContext === 'audio') router.navigate('/(tabs)/' as never);
-    else if (fromContext === 'bracelet') router.navigate('/(tabs)/bracelet' as never);
+    else if (fromContext === 'bracelet' || fromContext === 'plan') router.navigate('/(tabs)/bracelet' as never);
   };
 
   /* Iter 2026-06-05: label naast back-arrow afgeleid uit fromContext.
      Undefined → BraceletHeader toont alleen "←" (bestaand gedrag). */
   const ctaBackLabel = fromContext === 'audio' ? 'Audio Library'
-                     : fromContext === 'bracelet' ? 'Bracelet'
+                     : fromContext === 'bracelet' || fromContext === 'plan' ? 'Bracelet'
                      : undefined;
 
   /* Auto-connect + auto-start voor Free Breathwork CTA-flow.
@@ -3553,6 +4303,7 @@ export default function BraceletControl() {
      het Active-scherm. De breathwork-strip toont onderaan in idle-state
      met een "Start"-knop — user start breathwork zelf wanneer klaar. */
   const autoStartFiredRef = useRef(false);
+  const [autoStartFailed, setAutoStartFailed] = useState(false);
   useEffect(() => {
     if (autoStartFiredRef.current) return;
     if (!autoStartBracelet) return;
@@ -3563,7 +4314,10 @@ export default function BraceletControl() {
         if (bracelet.getConnectionState() !== 'connected') {
           await bracelet.connect();
         }
-        const dur = clampDuration(initialMode, getModeMeta(initialMode).minMinutes);
+        const dur = clampDuration(
+          initialMode,
+          planDurationMinutes ?? getModeMeta(initialMode).defaultMinutes,
+        );
         /* Iter v200: endedLocally reset op autoStart. */
         setEndedLocally(false);
         await bracelet.sendCommand({
@@ -3575,7 +4329,6 @@ export default function BraceletControl() {
         sessionStartedAtRef.current = startMs;
         sessionRealStartedAtRef.current = startMs;
         sessionPlannedRef.current = dur;
-        resetBreathworkTracking();
         /* Iter 2026-06-05: auto-pause direct na auto-start (operator-
            feedback: in free/CTA-flow mag de bracelet-timer niet vanzelf
            aftellen — user kwam voor breathwork, niet voor een bracelet-
@@ -3589,10 +4342,17 @@ export default function BraceletControl() {
           command: BleCommand.Stop,
         });
         setPausedAt(dur);
+        startBraceletSessionMonitor({ mode: initialMode, totalSec: dur * 60 });
+        pauseBraceletSessionMonitor();
         const st = await bracelet.requestStatus();
         setStatus(st);
       } catch (e) {
         console.warn('[bracelet-control] auto-start failed:', e);
+        /* Operator, 1 okt 2026 ("verschijnt eerst bracelet connect
+           pagina"): bij een falende auto-connect NIET eindeloos op de
+           lichte loader blijven hangen — terugvallen op het normale
+           zoek-scherm (met eigen Retry-knop) i.p.v. een dode lege loader. */
+        setAutoStartFailed(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3604,9 +4364,10 @@ export default function BraceletControl() {
        geblokkeerd worden door de flag van een vorige End. */
     setEndedLocally(false);
     try {
+      const dur = clampDuration(selectedMode, duration);
       await bracelet.sendCommand({
         mode: selectedMode,
-        duration: clampDuration(selectedMode, duration),
+        duration: dur,
         command: BleCommand.Start,
       });
       /* Track wanneer de sessie begon — gebruikt voor stats-recording
@@ -3618,17 +4379,34 @@ export default function BraceletControl() {
       const startMs = Date.now();
       sessionStartedAtRef.current = startMs;
       sessionRealStartedAtRef.current = startMs;
-      sessionPlannedRef.current = clampDuration(selectedMode, duration);
-      /* Iter 9ca: schone start voor breathwork-tracking. */
-      resetBreathworkTracking();
+      sessionPlannedRef.current = dur;
       /* Iter v147 (2026-06-25): voice-cue bij sessie-start. SessionKey
          = mode-duration-startMs zodat opeenvolgende sessies elk hun
          eigen cue krijgen (idempotent voor poll-renders binnen 1
          sessie). */
-      playBraceletStartCue(
-        selectedMode,
-        `${selectedMode}-${sessionPlannedRef.current}-${startMs}`,
-      );
+      playBraceletStartCue(selectedMode, `${selectedMode}-${dur}-${startMs}`);
+      /* Operator, 27 september 2026 ("de sessie moet pas starten nadat
+         gebruiker op play drukt"): Start liet de hardware-timer tot nu
+         toe meteen actief aftellen — de gebruiker kwam op het Active-
+         scherm terecht met de sessie al lopend, zonder ooit zelf op
+         Play/Resume te hebben gedrukt. Zelfde patroon als de bestaande
+         Free-Breathwork-auto-start hierboven: direct na Start een Stop-
+         command sturen (pausedAtElapsedMsRef=0, dus NIETS verstreken) en
+         `pausedAt` op de volle geplande duur zetten — de gebruiker landt
+         zo op een GEPAUZEERD Active-scherm en moet zelf op Resume/Play
+         tikken om de aftelling echt te starten. */
+      pausedAtElapsedMsRef.current = 0;
+      await bracelet.sendCommand({
+        mode: selectedMode,
+        duration: 0,
+        command: BleCommand.Stop,
+      });
+      setPausedAt(dur);
+      /* Operator, 17 september 2026: start de mount-onafhankelijke
+         achtergrond-monitor (lockscreen-melding + live pill-updates,
+         blijft draaien ongeacht welk scherm/tab zichtbaar is). */
+      startBraceletSessionMonitor({ mode: selectedMode, totalSec: dur * 60 });
+      pauseBraceletSessionMonitor();
       const st = await bracelet.requestStatus();
       setStatus(st);
     } finally {
@@ -3660,33 +4438,10 @@ export default function BraceletControl() {
            re-anchored is op resume → cumulatieve actieve tijd over
            meerdere pause/resume cycli heen.
          startedAt-ISO blijft de echte wall-clock Start-druk. */
-      if (sessionStartedAtRef.current !== null) {
-        const realStartedAt =
-          sessionRealStartedAtRef.current ?? sessionStartedAtRef.current;
-        const startedAt = sessionStartedAtRef.current;
-        sessionStartedAtRef.current = null;
-        sessionRealStartedAtRef.current = null;
-        const elapsedMs = isPaused
-          ? pausedAtElapsedMsRef.current
-          : Date.now() - startedAt;
-        const elapsedMin = Math.max(1, Math.round(elapsedMs / 60000));
-        recordSession({
-          mode: selectedMode,
-          startedAt: new Date(realStartedAt).toISOString(),
-          endedAt: new Date().toISOString(),
-          durationMin: elapsedMin,
-          plannedMin: clampDuration(selectedMode, duration),
-          status: 'stopped',
-          breathwork: buildBreathworkRecord(),
-        });
-      }
+      finishSession('stopped');
+      void stopBraceletSessionMonitor();
       pausedAtElapsedMsRef.current = 0;
-      resetBreathworkTracking();
       setPausedAt(null);
-      /* Reset breathwork toggle bij manual End (opt-in begint weer schoon
-         volgende sessie). Bij natural completion gebeurt dit in de
-         useEffect die de modal triggert. */
-      setBreathworkEnabled(false);
       /* Iter v195 (2026-07-04): setStatus na Stop-command moet ALTIJD
          sessionActive=false erin overschrijven. Vroeger vertrouwden we op
          sim.requestStatus() → maar de sim kan (a) niet direct reageren op
@@ -3732,6 +4487,7 @@ export default function BraceletControl() {
         command: BleCommand.Stop,
       });
       setPausedAt(remMinForBle);
+      pauseBraceletSessionMonitor();
       /* Refresh status zodat sessionActive=false meekomt in state. UI
          blijft active dankzij isPaused. */
       const st = await bracelet.requestStatus();
@@ -3777,6 +4533,7 @@ export default function BraceletControl() {
       sessionStartedAtRef.current = Date.now() - exactElapsedMs;
       pausedAtElapsedMsRef.current = 0;
       setPausedAt(null);
+      resumeBraceletSessionMonitor();
       setStatus(st);
     } finally {
       setBusy(false);
@@ -3798,24 +4555,7 @@ export default function BraceletControl() {
       });
       /* Eerst de huidige sessie afsluiten in history (als er één liep).
          Iter 9bl (2026-05-31): actieve tijd, consistent met onStop. */
-      if (sessionStartedAtRef.current !== null) {
-        const realStartedAt =
-          sessionRealStartedAtRef.current ?? sessionStartedAtRef.current;
-        const startedAt = sessionStartedAtRef.current;
-        const elapsedMs = isPaused
-          ? pausedAtElapsedMsRef.current
-          : Date.now() - startedAt;
-        const elapsedMin = Math.max(1, Math.round(elapsedMs / 60000));
-        recordSession({
-          mode: selectedMode,
-          startedAt: new Date(realStartedAt).toISOString(),
-          endedAt: new Date().toISOString(),
-          durationMin: elapsedMin,
-          plannedMin: clampDuration(selectedMode, duration),
-          status: 'stopped',
-          breathwork: buildBreathworkRecord(),
-        });
-      }
+      finishSession('stopped');
       await bracelet.sendCommand({
         mode: selectedMode,
         duration: fullDuration,
@@ -3827,8 +4567,11 @@ export default function BraceletControl() {
       sessionRealStartedAtRef.current = newStartMs;
       sessionPlannedRef.current = fullDuration;
       pausedAtElapsedMsRef.current = 0;
-      resetBreathworkTracking();
       setPausedAt(null);
+      startBraceletSessionMonitor({
+        mode: selectedMode,
+        totalSec: fullDuration * 60,
+      });
       const st = await bracelet.requestStatus();
       setStatus(st);
     } finally {
@@ -3867,27 +4610,116 @@ export default function BraceletControl() {
     return () => clearInterval(id);
   }, [sessionActive]);
 
-  /* BackHandler op active session (iter 8). Bij pressing system-back
-     vanaf de actieve sessie tonen we "End session?"-confirmatie.
+  /* Operator, 17 september 2026: de losse "publish naar bracelet-session-
+     state"-effect die hier stond is VERWIJDERD — bracelet-session-
+     monitor.ts (gestart vanuit onStart/onResume/onRestart hieronder) is
+     nu de ENIGE bron die naar die store schrijft. Twee systemen die
+     hetzelfde deden (dit effect + de monitor) was precies de verwarring
+     achter "seconden kloppen niet": een sessie die vóór de monitor-
+     wiring gestart was, leunde stilzwijgend op dit effect (dat stopt
+     zodra het scherm unmount — exact de oorspronkelijke bug), terwijl de
+     monitor voor DIE sessie nooit geactiveerd was. Nu is er nog maar één
+     waarheid, en die overleeft een unmount echt. */
+
+  /* JS-proces levend houden tijdens lock/achtergrond — het silent-audio-
+     anker dat breath-session.tsx ook gebruikt. Puur voor CONTINUÏTEIT
+     (audio-focus voorkomt dat iOS/Android het JS-proces bevriezen); de
+     ZICHTBARE lockscreen-info komt uit bracelet-session-monitor.ts (zie
+     de start/pause/resume/stop-aanroepen in onStart/onPause/onResume/
+     onStop hieronder) — vandaar `showLockScreenInfo: false`, geen twee
+     gelijktijdige widgets met dezelfde info.
+     Operator, 16-17 september 2026 ("ook bij lockscreen moet de lopende
+     sessie te zien zijn... teller stopt bij minimize/andere pagina's"):
+     eerdere versie was iOS-only (zelfde voorbehoud als breath-session
+     tegen Android's media-notification-voortgangsbalk-verwarring) — maar
+     die verwarring kwam van `setActiveForLockScreen`'s EIGEN title/
+     artist-widget, niet van de audio-focus zelf. Met die widget nu
+     uitgeschakeld (showLockScreenInfo=false) is er geen reden meer om
+     Android hiervan uit te sluiten — juist Android had de zichtbare
+     "niets te zien"-klacht het hardst. */
+  useEffect(() => {
+    if (!sessionActive && !isPaused) {
+      stopSessionKeepAlive();
+      return;
+    }
+    startSessionKeepAlive(undefined, false);
+  }, [sessionActive, isPaused]);
+
+  /* Operator, 17 september 2026 ("als iemand uit de sessie is en
+     terugkomt via het tabblad moet het in preview altijd dezelfde flow
+     zijn"): de BLE-verbinding (`conn`) is een module-level singleton die
+     bewust NIET meer verbreekt bij het verlaten van dit scherm — dat was
+     precies de fix voor "sessie mag niet stoppen bij minimize". Maar
+     voor een preview-bezoeker die GEEN sessie (meer) heeft lopen, wil
+     de operator bij een nieuw bezoek (via de tab, niet via de
+     BraceletMiniIndicator-pill terug de sessie in) steeds opnieuw de
+     volledige "Looking for your bracelet"-flow zien, niet stilzwijgend
+     al verbonden binnenkomen. Disconnect daarom hier bij unmount —
+     MAAR alleen als er op dat exacte moment geen sessie (actief of
+     gepauzeerd) loopt: `isBraceletSessionMonitorActive()` leest de
+     monitor's LIVE state, niet een mogelijk-verouderde closure-waarde,
+     dus dit blijft correct ongeacht wanneer de unmount gebeurt. Alleen
+     voor niet-eigenaars — een echte owner blijft gewoon verbonden. */
+  useEffect(() => {
+    if (isBraceletOwner) return;
+    return () => {
+      if (!isBraceletSessionMonitorActive()) {
+        void bracelet.disconnect();
+      }
+    };
+  }, [isBraceletOwner, bracelet]);
+
+  /* BackHandler.
+     Operator, 16 september 2026 ("nu kan user van hieruit enkel weg
+     door end session... gebruiker moet de mogelijkheid hebben om uit
+     deze pagina te gaan en sessie laten doordoen — gsm moet in de zak
+     kunnen, doordoen als gebruiker andere sites/apps bekijkt"): de
+     vorige versie liet system-back de sessie STOPPEN (zelfde als de
+     End-knop) — dat was fout. Spec §6: de bracelet draait autonoom op
+     hardware-timers zodra gestart; BLE-verbindingsverlies of de app
+     verlaten stopt de sessie NIET.
+     Operator, 16 september 2026 (vervolg — bugreport "kom dan op
+     welcome scherm van smart bead bracelet, dan moet ik opnieuw
+     beginnen"): een eerste fix riep router.back() op, maar owners
+     krijgen BraceletControl INLINE binnen de Bracelet-tab
+     ((tabs)/bracelet.tsx: `return <BraceletControl />`) — géén eigen
+     gepushte route. router.canGoBack() zag dan gewoon `welcome` onderin
+     de root-stack staan en popte helemaal daar naartoe: user uit de
+     hele tab-flow, geen zichtbare weg terug naar de lopende sessie.
+     Voor eigenaars is er dus NIETS om naartoe terug te navigeren — back
+     moet hier het systeem-default doen (app minimaliseren, net als
+     "gsm in de zak"), niet ergens naartoe poppen.
+     Alleen bij een écht gepushte /bracelet-control (niet-eigenaar CTA-
+     flows met fromContext, zie router.push hierboven in dit bestand)
+     is router.back() de juiste keuze — dat popt exact één scherm terug
+     naar de bronpagina, niet helemaal naar welcome.
+     Operator, 17 september 2026 ("ik kan vanuit bracelet connect enkel
+     via de telefoon-back-pijl weg, is dat correct?"): deze handler
+     stond alleen AAN tijdens een actieve/gepauzeerde sessie
+     (`!sessionActive && !isPausedRef.current` early-return) — op het
+     Connect/Idle-scherm gold dus gewoon het React Navigation-default,
+     en voor een eigenaar (ook daar inline, geen pushed screen) is dat
+     PRECIES dezelfde welcome-sprong-bug die hierboven al voor de active
+     sessie gefixt is, alleen dan op het connect-scherm. Guard nu
+     onvoorwaardelijk — dezelfde eigenaar-bewuste logica geldt overal
+     binnen bracelet-control, niet enkel tijdens een sessie.
      Iter 9bm (2026-05-31): useFocusEffect ipv useEffect → handler is
-     ALLEEN actief wanneer bracelet-control geactueerd het focused scherm
-     is. Wanneer user naar /bracelet-history pusht: history wordt focused,
-     bracelet-control unfocused → handler wordt gedeactiveerd → back vanaf
-     history fired GEEN End-session popup meer. Bij terugkomst krijgt
-     bracelet-control focus terug en wordt de handler heractiveerd. */
+     ALLEEN actief wanneer bracelet-control het focused scherm is. */
   useFocusEffect(
     useCallback(() => {
-      if (!sessionActive && !isPausedRef.current) return;
-      /* Iter v214 (2026-07-04): system-back = zelfde als End-knop.
-         Geen navigate — vertrouwen op derived state. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        setEndedLocally(true);
-        void onStop();
-        return true;
+        if (!isBraceletOwner && router.canGoBack()) {
+          router.back();
+          return true;
+        }
+        /* Owner-inline render (geen eigen pushed screen) — laat het
+           systeem-default gebeuren (app minimaliseren). Een eventuele
+           sessie blijft gewoon lopen; alleen de UI verdwijnt naar de
+           achtergrond. */
+        return false;
       });
       return () => handler.remove();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sessionActive]),
+    }, [isBraceletOwner]),
   );
   /* isPausedRef voor BackHandler — vangt ook tijdens pause. */
   const isPausedRef = useRef(false);
@@ -3896,12 +4728,12 @@ export default function BraceletControl() {
   }, [pausedAt]);
   const batteryColor =
     battery == null
-      ? Brand.textDim
+      ? C.textDim
       : criticalBattery
-        ? Brand.error
+        ? C.error
         : lowBattery
           ? WARN
-          : Brand.success;
+          : C.success;
 
   /* Active mode shown in session view — uses status.currentMode (what the
      bracelet is actually running), niet selectedMode (user's last UI pick). */
@@ -3914,178 +4746,86 @@ export default function BraceletControl() {
      avoids deep conditional nesting. The sticky bottom-button content
      is computed per branch and rendered below the ScrollView. */
 
-  /* SCREEN 3: Not connected */
+  /* SCREEN 3: Not connected.
+     Operator, 16 september 2026 ("yes connected moet op de pagina
+     connect zelf gebeuren, pas na verdwijnen en connecten naar volgende
+     pagina"): blijft ook staan zolang showConnectedPopup nog aan is,
+     ook al is conn dan al 'connected' — anders is de switch naar Idle
+     al gebeurd VOORDAT de popup ooit zichtbaar wordt op het juiste
+     scherm. De popup dismisst zichzelf (setShowConnectedPopup(false)),
+     waarna deze conditie alsnog doorvalt naar Idle. */
+  /* Operator, 27 september 2026 ("na yes connected zie ik eerst nog
+     bracelet, moet direct naar bracelet control"): `showConnectedPopup`
+     hoort niet meer bij deze gate — zodra `conn` echt 'connected' is,
+     wisselt het scherm nu meteen door naar de juiste vervolg-branch
+     (Fault/Charging/Active/Idle). De popup rendert zelf verderop als
+     losstaande overlay (`connectedPopupOverlay` in elke branch), dus zijn
+     fade-out onthult voortaan meteen het juiste scherm i.p.v. deze. */
+  /* Operator, 1 okt 2026 ("vanuit bracelet plan tik ik → eerst bracelet
+     connect pagina, dat moet niet"): auto-start (breathwork-CTA én nu
+     ook "Start session" vanuit Your bracelet plan) verbindt zelf op de
+     achtergrond, maar de simulator laat `connect()` altijd ~1.5s door
+     scanning/connecting lopen (spec-getrouw) — zonder deze branch flitst
+     het VOLLEDIGE zoek-scherm (met Retry-knop, activatie-prompt, etc.)
+     zichtbaar op vóórdat de sessie start. Tijdens een auto-start tonen
+     we i.p.v. daarvan een simpele, merk-eigen loader; bij een falende
+     auto-connect (`autoStartFailed`) valt het alsnog terug op het echte
+     zoek-scherm, zodat de gebruiker niet op een dode loader blijft hangen. */
   if (conn !== 'connected') {
+    if (autoStartBracelet && !autoStartFailed) {
+      return <AutoStartLoader />;
+    }
     return (
-      <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <Stack.Screen options={{ headerShown: false }} />
-        {/* Iter v227 (2026-07-07, audit BLE2): showBack ALLEEN bij expliciete
-            fromContext. Inline owner-render binnen (tabs)/bracelet had via
-            router.canGoBack() de back-arrow → tap popte de hele tab-stack
-            terug naar welcome. */}
-        <BraceletHeader
-          title="Bracelet connect"
-          showBack={fromContext !== null}
-          onBack={fromContext ? navigateBackToSource : () => router.back()}
-          backLabel={ctaBackLabel}
-        />
-        {!isBraceletOwner && <PreviewBanner />}
-        {/* Iter 9dq v93 (2026-06-03): top-banner CTA NIET tonen op
-            disconnected-screen wanneer al activation-required is —
-            de hele screen wordt dan al de activate-flow (titel +
-            sub + primary CTA onderaan). Anders 3× "activate your
-            bracelet" op één scherm. Wel zichtbaar op connected/
-            idle als constant reminder tijdens preview. */}
-        <View style={s.searchingWrap}>
-          {/* Iter 8b: statische 3-dot replaced door radar-pulse animatie.
-              Visualiseert actief zoeken — 3 ringen die expanderen en
-              fade-out, staggered, met centrale dot.
-              Iter 9dq v93 (2026-06-03): bij niet-geactiveerde owners
-              vervangen we "Searching" door een eerlijker "Not linked yet"
-              messaging — er VALT niets te zoeken want er is geen bracelet
-              aan dit account gekoppeld. */}
-          {showActivationPrompt ? (
-            <>
-              <Text style={s.searchingTitle}>Bracelet not linked</Text>
-              <Text style={s.searchingSub}>
-                Activate your bracelet with your 12-character code to
-                connect it to this account.
-              </Text>
-            </>
-          ) : (
-            <>
-              <SearchingPulse color={Brand.accent} />
-              <Text style={s.searchingTitle}>
-                {conn === 'scanning'
-                  ? 'Searching'
-                  : conn === 'connecting'
-                    ? 'Connecting'
-                    : 'Looking for your bracelet'}
-              </Text>
-              <Text style={s.searchingSub}>
-                Make sure your bracelet is nearby and powered on.
-              </Text>
-            </>
-          )}
-        </View>
-        <View style={s.bottomBar}>
-          {/* Iter 9dq v93 (2026-06-03): wanneer de bracelet nog NIET
-              geactiveerd is, vervangen we de Connect/Retry-knop door
-              een primaire "Activate your bracelet"-CTA. Connect heeft
-              geen zin zolang er geen bracelet aan dit account hangt.
-              Operator-rationale: "connect knop zou misschien niet actief
-              moeten zijn in pro zolang bracelet niet geactiveerd is". */}
-          {showActivationPrompt ? (
-            <Pressable
-              style={s.primaryBtn}
-              onPress={() => router.navigate('/activate-bracelet' as never)}
-              accessibilityLabel="Activate your bracelet with a code"
-            >
-              <Text style={s.primaryBtnText}>Activate your bracelet</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              style={[s.outlinedBtn, busy && s.btnDisabled]}
-              onPress={onConnect}
-              disabled={busy}
-              accessibilityLabel="Retry searching for bracelet"
-            >
-              {busy ? (
-                <ActivityIndicator color={Brand.text} />
-              ) : (
-                <Text style={s.outlinedBtnText}>
-                  {conn === 'disconnected' ? 'Connect' : 'Retry'}
-                </Text>
-              )}
-            </Pressable>
-          )}
-        </View>
-        {/* Iter v194 (2026-07-04): InlineBraceletTabBar toevoeging weer
-            teruggedraaid. Bracelet-control render is intern in de
-            (tabs) navigator (via BraceletControl-inline in bracelet-tab
-            owner-view) → systeem tab bar was al zichtbaar → mijn stub
-            gaf DUBBELE tab bar. Systeem tab bar is genoeg. */}
-      </SafeAreaView>
+      <SearchingScreen
+        conn={conn}
+        isBraceletOwner={isBraceletOwner}
+        showActivationPrompt={showActivationPrompt}
+        busy={busy}
+        fromContext={fromContext}
+        ctaBackLabel={ctaBackLabel}
+        navigateBackToSource={navigateBackToSource}
+        onConnect={onConnect}
+      />
     );
   }
+
+  const connectedPopupOverlay = showConnectedPopup ? (
+    <ConnectedPopup onDismiss={() => setShowConnectedPopup(false)} />
+  ) : null;
 
   /* SCREEN 6: Fault state (firmware reported error) */
   if (fault) {
     return (
-      <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <BraceletHeader
-          title="Bracelet error"
-          onBack={onDisconnect}
+      <>
+        <FaultScreen
+          isBraceletOwner={isBraceletOwner}
+          showActivationPrompt={showActivationPrompt}
+          busy={busy}
+          bracelet={bracelet}
+          sim={sim}
+          onDisconnect={onDisconnect}
+          onConnect={onConnect}
+          setStatus={setStatus}
         />
-        {!isBraceletOwner && <PreviewBanner />}
-        {showActivationPrompt && <BraceletActivationCta />}
-        <View style={s.faultWrap}>
-          <View style={s.faultIcon}>
-            <Text style={s.faultIconText}>!</Text>
-          </View>
-          <Text style={s.faultTitle}>Something went wrong</Text>
-          <Text style={s.faultSub}>
-            Your bracelet reported an error. Disconnect and reconnect, or
-            contact support if it continues.
-          </Text>
-        </View>
-        <View style={s.bottomBar}>
-          <Pressable
-            style={[s.primaryBtn, busy && s.btnDisabled]}
-            onPress={async () => {
-              await onDisconnect();
-              await onConnect();
-              /* Sim-mode: clear fault zodat user uit deze screen kan
-                 navigeren. Op echte hardware blijft fault staan tot
-                 Start-command (spec §9 rule 4) — daar is sim==null
-                 dus deze line is een no-op. */
-              sim?.simClearFault();
-              const st = await bracelet.requestStatus();
-              setStatus(st);
-            }}
-            disabled={busy}
-            accessibilityLabel="Reconnect bracelet"
-          >
-            <Text style={s.primaryBtnText}>Reconnect</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+        {connectedPopupOverlay}
+      </>
     );
   }
 
   /* SCREEN 4: Charging — sessions paused (spec §11.5) */
   if (charging && !sessionActive) {
     return (
-      <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <BraceletHeader
-          title="Bracelet charging"
-          onBack={onDisconnect}
+      <>
+        <ChargingScreen
+          isBraceletOwner={isBraceletOwner}
+          showActivationPrompt={showActivationPrompt}
+          onDisconnect={onDisconnect}
+          battery={battery}
+          batteryColor={batteryColor}
+          sim={sim}
         />
-        {!isBraceletOwner && <PreviewBanner />}
-        {showActivationPrompt && <BraceletActivationCta />}
-        <View style={s.chargingWrap}>
-          <View style={s.chargingIcon}>
-            <Text style={s.chargingIconText}>⚡</Text>
-          </View>
-          <Text style={s.chargingTitle}>Charging</Text>
-          <Text style={s.chargingSub}>
-            Sessions are paused while the bracelet charges.
-          </Text>
-          <View style={s.chargingStats}>
-            <View style={s.chargingStatRow}>
-              <Text style={s.chargingStatLabel}>Battery</Text>
-              <Text style={[s.chargingStatVal, { color: batteryColor }]}>
-                {battery == null ? '—' : `${battery}%`}
-              </Text>
-            </View>
-          </View>
-        </View>
-        {__DEV__ && sim && <SimDemoBar sim={sim} />}
-        {/* Iter v194 (2026-07-04): InlineBraceletTabBar op charging weg —
-            duplicated systeem tab bar. */}
-      </SafeAreaView>
+        {connectedPopupOverlay}
+      </>
     );
   }
 
@@ -4098,517 +4838,29 @@ export default function BraceletControl() {
      UI-stay-condition: sessionActive OF isPaused — anders zou de
      transitie naar idle de pause-state direct breken. */
   if ((sessionActive || isPaused) && status) {
-    /* Tijdens pause is sessionActive false maar pausedAt heeft de
-       remaining. Tijdens running zit 't in status.remainingMinutes. */
-    const displayRemaining = isPaused ? pausedAt! : status.remainingMinutes;
-    /* Ambient tint-kleur voor de hele active-session bg. Voor Boost
-       (Gamma) wordt rood vervangen door warm amber via getActiveBgTint. */
-    const ambientTint = getActiveBgTint(activeMeta.mode);
-    /* Progress 0..1 voor de circulaire arc rond de timer. Planned
-       komt uit sessionPlannedRef (gezet bij Start/Restart); fallback
-       op huidige UI-duration voor edge-cases. */
-    const planned =
-      sessionPlannedRef.current > 0
-        ? sessionPlannedRef.current
-        : clampDuration(activeMeta.mode, duration);
-    /* Iter 9be → 9bi (2026-05-31): progress baseerd op de LOKALE timer
-       (sessionStartedAtRef), niet op BLE status.
-       - Bij pause: gebruik pausedAtElapsedMsRef (exact-elapsed-bij-press).
-       - Bij active: gebruik (nowMs - sessionStartedAtRef) / planned.
-       Door dezelfde bron als mm:ss-display blijft het water-niveau
-       consistent. Vroeger gebruikte progress BLE remainingMinutes — die
-       resette na resume naar de verse N-min countdown van de bracelet,
-       waardoor de drain-cirkel TERUGVULDE in plaats van door te lopen
-       vanaf de pause-positie. BLE-status blijft fallback voor hot-reload. */
-    const progress = (() => {
-      if (planned <= 0) return 0;
-      if (isPaused) {
-        const elapsedMin = pausedAtElapsedMsRef.current / 60000;
-        return Math.min(1, Math.max(0, elapsedMin / planned));
-      }
-      const startedAt = sessionStartedAtRef.current;
-      if (startedAt !== null) {
-        const elapsedMin = (nowMs - startedAt) / 60000;
-        return Math.min(1, Math.max(0, elapsedMin / planned));
-      }
-      /* Fallback: BLE-status als startedAt onbekend (hot-reload edge). */
-      return Math.min(
-        1,
-        Math.max(0, (planned - displayRemaining) / planned),
-      );
-    })();
     return (
-      <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        {/* Active session blijft immersief voor ALLE accounts.
-            Iter 9dq v109 (2026-06-04): voorheen had non-owner een preview-
-            header met back-arrow tijdens active session. Voor unified
-            UX nu ook hidden — eind-knop is de juiste exit (consistent
-            met spec §11 "één focuspunt").
-            Iter 2026-06-05: ALLEEN voor Free Breathwork CTA-flow voegen
-            we tóch een back-header toe zodat user naar bronpagina terug
-            kan. Non-CTA users zien geen header (bestaand immersief gedrag). */}
-        <Stack.Screen options={{ headerShown: false }} />
-        {fromContext && (
-          <BraceletHeader
-            title=""
-            onBack={disconnectAndBackToSource}
-            backLabel={ctaBackLabel}
-          />
-        )}
-        {/* Ambient tint-overlay — 8% opacity full-screen mood layer.
-            pointerEvents="none" zodat touches doorgaan naar onderliggende
-            UI. Zit BOVEN Brand.bg maar onder alle content (eerste child). */}
-        <View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFillObject,
-            { backgroundColor: hexToTint(ambientTint, 0.08) },
-          ]}
+      <>
+        <ActiveSessionScreen
+          status={status}
+          isPaused={isPaused}
+          pausedAt={pausedAt}
+          activeMeta={activeMeta}
+          duration={duration}
+          selectedMode={selectedMode}
+          sessionPlannedRef={sessionPlannedRef}
+          sessionStartedAtRef={sessionStartedAtRef}
+          pausedAtElapsedMsRef={pausedAtElapsedMsRef}
+          nowMs={nowMs}
+          safeInsets={safeInsets}
+          isBraceletOwner={isBraceletOwner}
+          onResume={onResume}
+          onPause={onPause}
+          busy={busy}
+          setEndedLocally={setEndedLocally}
+          onStop={onStop}
         />
-        {/* Iter 9w: ScrollView vervangen door View — operator-feedback
-            "active pagina mag niet scrollen". Content fit op één scherm
-            door compactere elementen (iter 9j BreathworkStrip + smaller
-            timer-font). Kortere telefoons: BreathworkStrip kan iets
-            samengedrukt worden, maar geen scroll. */}
-        {/* Iter 9bt → 9bv (2026-05-31): paddingBottom genormaliseerd op
-            safeInsets+16 (min 32). De echte fix voor "card afgesneden"
-            zit in compactere breathwork-card hieronder (iter 9bv shrink:
-            -46px verticaal). Te veel paddingBottom maakt 't juist erger
-            want het comprimeert de content nog meer. */}
-        <View
-          style={[
-            s.activeScreen,
-            /* Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
-               48 was nog te krap voor Samsung 3-button nav waar de
-               inset-API onderrapporteert. 72px = consistent met
-               player.tsx en andere bottom-CTAs.
-               Iter v235 (2026-07-09): owner-inline mode zit binnen de
-               (tabs) group → tab-bar (60-72px) overlappt de Voice
-               guidance card. Fix: extra ~80px bottom padding voor
-               owner-inline. Non-owner mode (Stack push) heeft geen tab-
-               bar → normale padding. */
-            {
-              paddingBottom: isBraceletOwner
-                ? Math.max(safeInsets.bottom + 100, 150)
-                : Math.max(safeInsets.bottom + 24, 72),
-            },
-          ]}
-        >
-          {/* Iter 9bz (2026-05-31): PAUSED-eyebrow staat nu BOVEN de
-              mode-naam (was eronder). Voelt natuurlijker — eerst de
-              state, daarna wat-voor-mode. Centered, mode-color, klein. */}
-          {isPaused && (
-            <Text
-              style={[s.pausedLabel, { color: activeMeta.color }]}
-            >
-              PAUSED
-            </Text>
-          )}
-          {/* Mode label */}
-          <View style={s.activeModeRow}>
-            <View
-              style={[s.activeDot, { backgroundColor: activeMeta.color }]}
-            />
-            <Text style={s.activeName}>{activeMeta.name}</Text>
-          </View>
-          {/* Stale-status banner — verschijnt na 3 mislukte polls (15s)
-              zodat user weet dat battery/remaining mogelijk verouderd is.
-              Geen rood/alarm — gedimde tekst, informatief. Bracelet
-              draait autonoom door (BLE §8 design), dus geen paniek. */}
-          {staleStatus && (
-            <Text style={s.staleNote}>
-              Connection unstable — values may be out of date
-            </Text>
-          )}
-          {/* Iter 9bg (2026-05-31): "Resuming will extend"-notice weg.
-              Reden: sinds iter 9bf gebruikt het lokale display de exact-
-              elapsed-ref voor pause én voor resume. De gebruiker ziet de
-              countdown gewoon doortikken vanaf de pause-tijd — de BLE-
-              minimum-extensie speelt zich onder water af en is voor de
-              user onzichtbaar. Notice was alleen verwarrend (operator-
-              feedback: "wat bedoel je met resuming will extend"). */}
-
-          {/* Adem-cirkel + timer + progress-arc.
-              Layering: ProgressArc buitenste laag (300px), PulsingCircle
-              (280) in, timer-tekst center. Klokwaarts vullen van -90°
-              (top) naar +270° (terug bovenaan). */}
-          {/* DrainingCircle = primaire progress-visual (water-metafoor).
-              ProgressArc weggehaald 2026-05-27 iter 3: was redundant
-              met de drain. Drain alleen is duidelijker en kalmer. */}
-          <View style={s.timerWrap}>
-            <DrainingCircle
-              progress={progress}
-              color={activeMeta.color}
-              size={220}
-            />
-            {/* Ambient pulse (vaste 8s/8s, niet breath-paced).
-                2026-05-27 iter 5: breath-pacing is verhuisd naar de
-                opt-in BreathworkStrip onderaan. Centrale cirkel pulseert
-                nu alleen subtiel als "apparaat is aan"-signaal. */}
-            <SlowAmbientPulse color={activeMeta.color} size={280} />
-            <View style={s.timerCenter} pointerEvents="none">
-              {/* Timer-display in mm:ss-formaat (iter 7). Lokaal berekend
-                  vanuit sessionStartedAtRef + sessionPlannedRef → tikt
-                  elke seconde.
-                  Iter 9be (2026-05-31): tijdens pause gebruikt 't nu de
-                  EXACT-elapsed-ms ref (gevangen op press-moment in
-                  onPause) → display blijft op de werkelijke pause-tijd
-                  zoals 14:23 ipv terug te springen naar 14:00. */}
-              {(() => {
-                const startedAt = sessionStartedAtRef.current;
-                const plannedSec = planned * 60;
-                let remSec: number;
-                if (isPaused) {
-                  /* Exact-ms uit ref → mm:ss precisie behouden tijdens
-                     pause. Floor om half-seconde-flicker te voorkomen. */
-                  const elapsedSec = Math.floor(
-                    pausedAtElapsedMsRef.current / 1000,
-                  );
-                  remSec = Math.max(0, plannedSec - elapsedSec);
-                } else if (startedAt) {
-                  const elapsedSec = Math.max(
-                    0,
-                    Math.floor((nowMs - startedAt) / 1000),
-                  );
-                  remSec = Math.max(0, plannedSec - elapsedSec);
-                } else {
-                  /* Fallback: gebruik BLE-minutes als startedAt onbekend
-                     (edge case bij hot-reload mid-session). */
-                  remSec = displayRemaining * 60;
-                }
-                const mm = Math.floor(remSec / 60);
-                const ss = remSec % 60;
-                const totalMM = Math.floor(plannedSec / 60);
-                const totalSS = plannedSec % 60;
-                /* Iter 9ee: contrast-fix voor alle mode-colors. Tijdens
-                   drain wisselt achtergrond per tekst-positie tussen
-                   mode-color (water) en dark-bg (lucht). Voor light
-                   modes (Boost wit): donkere tekst + witte glow.
-                   Voor dark modes (overige): witte tekst + zwarte glow
-                   zodat 't leesbaar blijft op zowel mode-color als de
-                   dark-bg uitloop. */
-                const lightActive = isLightColor(activeMeta.color);
-                const timerColorOverride = lightActive
-                  ? {
-                      color: '#0a0a0a',
-                      textShadowColor: 'rgba(255,255,255,0.45)',
-                      textShadowOffset: { width: 0, height: 0 },
-                      textShadowRadius: 5,
-                    }
-                  : {
-                      color: '#ffffff',
-                      textShadowColor: 'rgba(0,0,0,0.65)',
-                      textShadowOffset: { width: 0, height: 1 },
-                      textShadowRadius: 6,
-                    };
-                return (
-                  <>
-                    {/* Iter 2026-06-05: kleine "BRACELET" caption boven de
-                        timer wanneer user via Free Breathwork CTA komt.
-                        Operator-feedback: anders denkt de breathwork-user
-                        dat de countdown voor breathwork is. */}
-                    {fromContext && (
-                      <Text style={[s.timerContextLabel, timerColorOverride]}>
-                        BRACELET
-                      </Text>
-                    )}
-                    <Text style={[s.timerNum, timerColorOverride]}>
-                      {mm}:{ss.toString().padStart(2, '0')}
-                    </Text>
-                    <Text
-                      style={[
-                        s.timerUnit,
-                        lightActive
-                          ? { color: '#0a0a0a' }
-                          : {
-                              textShadowColor: 'rgba(0,0,0,0.55)',
-                              textShadowOffset: { width: 0, height: 1 },
-                              textShadowRadius: 3,
-                            },
-                      ]}
-                    >
-                      {/* Iter 9by (2026-05-31): tijdens pause altijd
-                          "left" tonen i.p.v. "paused". De PAUSED-eyebrow
-                          boven de mode-naam communiceert de state al;
-                          dubbele "paused" voelde redundant. De tijd is
-                          nog steeds wat over is. */}
-                      left
-                    </Text>
-                    <Text
-                      style={[
-                        s.timerTotal,
-                        lightActive
-                          ? { color: 'rgba(0,0,0,0.55)' }
-                          : {
-                              textShadowColor: 'rgba(0,0,0,0.50)',
-                              textShadowOffset: { width: 0, height: 1 },
-                              textShadowRadius: 3,
-                            },
-                      ]}
-                    >
-                      of {totalMM}:{totalSS.toString().padStart(2, '0')}
-                    </Text>
-                  </>
-                );
-              })()}
-            </View>
-          </View>
-
-          {/* Iter 9aa: Pause + End knoppen DIRECT onder de pulse-ring.
-              Operator-feedback: vroeger waren ze in een bottom-bar maar
-              dat staat te hoog voelt los van de session. Nu fysiek
-              gekoppeld aan timer-cluster, met thumb-friendly afstand. */}
-          {/* Iter 9ab (2026-05-31): expliciete pressed-state styling.
-              Vroeger geen press-callback → platform-default ripple/highlight
-              maakte de bg licht/wit en de witte tekst werd onleesbaar.
-              Nu: pressed = subtiel donkerder bg + iets minder opacity op
-              tekst, zodat contrast altijd gegarandeerd is. */}
-          <View style={s.inlineActionRow}>
-            {isPaused ? (
-              (() => {
-                /* Iter 9ad (2026-05-31): Resume-button contrast-fix. Voor
-                   LIGHT modes (Boost wit) was tekst hardcoded wit op witte
-                   mode-color bg → onleesbaar. Nu: isLightColor() bepaalt
-                   text+spinner. Boost → zwarte tekst, anderen → wit. */
-                const resumeLight = isLightColor(activeMeta.color);
-                const resumeFg = resumeLight ? '#0a0a0a' : '#ffffff';
-                return (
-                  <Pressable
-                    style={({ pressed }) => [
-                      s.inlineActionFilled,
-                      { backgroundColor: activeMeta.color },
-                      /* Light modes krijgen een subtiele witte border zodat
-                         de knop niet "verdwijnt" tegen lichte ambient tint. */
-                      resumeLight && {
-                        borderWidth: 1,
-                        borderColor: 'rgba(255,255,255,0.25)',
-                      },
-                      pressed && { opacity: 0.75 },
-                      busy && s.btnDisabled,
-                    ]}
-                    android_ripple={{
-                      color: resumeLight
-                        ? 'rgba(0,0,0,0.18)'
-                        : 'rgba(255,255,255,0.18)',
-                      borderless: false,
-                    }}
-                    onPress={onResume}
-                    disabled={busy}
-                    accessibilityLabel="Resume session"
-                  >
-                    {busy ? (
-                      <ActivityIndicator color={resumeFg} />
-                    ) : (
-                      <Text
-                        style={[
-                          s.inlineActionFilledText,
-                          { color: resumeFg },
-                        ]}
-                      >
-                        Resume
-                      </Text>
-                    )}
-                  </Pressable>
-                );
-              })()
-            ) : (
-              <Pressable
-                style={({ pressed }) => [
-                  s.inlineActionOutlined,
-                  pressed && s.inlineActionOutlinedPressed,
-                  busy && s.btnDisabled,
-                ]}
-                android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-                onPress={onPause}
-                disabled={busy}
-                accessibilityLabel="Pause session"
-              >
-                {busy ? (
-                  <ActivityIndicator color={Brand.text} />
-                ) : (
-                  <Text style={s.inlineActionOutlinedText}>Pause</Text>
-                )}
-              </Pressable>
-            )}
-            <Pressable
-              style={({ pressed }) => [
-                s.inlineActionOutlined,
-                pressed && s.inlineActionOutlinedPressed,
-                busy && s.btnDisabled,
-              ]}
-              android_ripple={{ color: 'rgba(255,255,255,0.10)', borderless: false }}
-              /* Iter v214 (2026-07-04): End = GEEN navigate meer.
-                 router.back() ging naar Kickstarter marketing (bracelet-
-                 tab main voor non-owner). router.replace idem.
-                 Beide fout omdat user wilde op DEZELFDE bracelet-control
-                 instance blijven, gewoon terug naar Choose Mode idle.
-                 Fix: alleen setEndedLocally + onStop. Derived
-                 sessionActive wordt false → render valt automatisch
-                 terug naar Choose Mode van dezelfde instance
-                 (push voor preview, inline voor owner). Geen navigate
-                 = geen 'verkeerd pad'-risico. */
-              onPress={() => {
-                setEndedLocally(true);
-                void onStop();
-              }}
-              disabled={busy}
-              accessibilityLabel="End session"
-            >
-              {busy ? (
-                <ActivityIndicator color={Brand.text} />
-              ) : (
-                <Text style={s.inlineActionOutlinedText}>End</Text>
-              )}
-            </Pressable>
-          </View>
-
-          {/* Iter v204 (2026-07-04): Close-knop navigeer naar Audio Library
-              (andere tab). Vorige v201 gebruikte router.replace('/(tabs)/bracelet')
-              — user was al op bracelet-tab → replace veroorzaakte remount
-              → BraceletControl unmount + remount → refs reset → sessie
-              'gereset' in UI (operator-feedback). Nu naar Audio Library tab:
-              Bracelet-tab blijft mounted, sessie loopt door in achtergrond.
-              User tikt Bracelet-tab en ziet de sessie nog exact zoals hij
-              hem verliet. */}
-          {/* Iter v208 (2026-07-04): Minimize subtieler met chevron zodat
-              het als tap-affordance leest, niet als plain label. */}
-          <Pressable
-            style={({ pressed }) => [
-              s.closeSessionBtn,
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={() => router.navigate('/(tabs)/' as never)}
-            accessibilityLabel="Minimize — session keeps running in background"
-          >
-            <Text style={s.closeSessionBtnText}>
-              ↓  Minimize · session keeps running
-            </Text>
-          </Pressable>
-
-          {/* BreathingHint weggehaald 2026-05-27 iter 5: ademgids leeft
-              nu in de opt-in BreathworkStrip onderaan, niet meer hier. */}
-
-          {/* Conditional warnings — only when something needs attention. */}
-          {(lowBattery || criticalBattery) && (
-            <View style={s.activeWarn}>
-              <Text style={[s.activeWarnIcon, { color: batteryColor }]}>
-                {criticalBattery ? '⚠' : '🪫'}
-              </Text>
-              <Text style={s.activeWarnText}>
-                {criticalBattery
-                  ? `Critical battery (${battery}%) — session may end early`
-                  : `Low battery (${battery}%)`}
-              </Text>
-            </View>
-          )}
-          {charging && (
-            <View style={s.activeWarn}>
-              <Text style={[s.activeWarnIcon, { color: Brand.success }]}>
-                ⚡
-              </Text>
-              <Text style={s.activeWarnText}>Charging</Text>
-            </View>
-          )}
-
-          {/* Restart-link weggehaald 2026-05-27 (operator-feedback "active
-              scherm moet op één view passen, geen scroll"). User die wil
-              herstarten doet End → opnieuw Start vanaf idle-scherm. */}
-
-          {/* Rotating quote per mode — fade-cross-over om de 22s.
-              Brand-aligned Stoic / direction-georiënteerd. Subtle,
-              niet pushy.
-              Iter 9z: verbergen wanneer breathwork actief — dan is de
-              breathwork-card al de focus en geeft de quote distractie
-              + content-overflow. */}
-          {!breathworkEnabled && (
-            <RotatingQuote quotes={MODE_QUOTES[activeMeta.mode]} />
-          )}
-
-          {/* Stats-strip weggehaald van active screen 2026-05-27 iter 5
-              (operator-keuze): "bracelet+haptic is main, breathwork
-              optioneel". De plek onderaan is nu voor de opt-in
-              BreathworkStrip. Stats blijven zichtbaar op het idle-screen
-              en in de completion-modal (na sessie-eind), dus geen
-              info-verlies. */}
-          {/* Iter 2026-06-05 v2: Context-chip vlak boven de breathwork-card
-              wanneer user via Free Breathwork CTA komt (operator-feedback:
-              eerder bovenaan scherm geplaatst maar moet visueel gekoppeld
-              zijn aan de breathwork-strip). Apple-stijl pill in brand-blauw,
-              zichtbaar maar subtiel. */}
-          {fromContext && (
-            <View style={s.breathContextChip}>
-              <Text style={s.breathContextChipText}>
-                FREE BREATHWORK · {activeMeta.name} mode
-              </Text>
-            </View>
-          )}
-          {/* Iter 8c: mode={selectedMode} ipv activeMeta.mode. Reden:
-              activeMeta wordt uit BLE-status afgeleid, en `currentMode`
-              kan tijdens pauze terugvallen naar 0 (sim/fw resets). Dat
-              triggerde BreathworkStrip's useEffect [enabled, mode] →
-              protocol-loop reset → cyclus weer naar 0. selectedMode is
-              stabiel gedurende de hele sessie (gezet bij idle-pick,
-              niet veranderd tot sessie eindigt). */}
-          <BreathworkStrip
-            mode={selectedMode}
-            enabled={breathworkEnabled}
-            onToggle={() => setBreathworkEnabled((v) => !v)}
-            onProgress={(data) => {
-              breathCurrentRunRef.current = data;
-            }}
-          />
-
-          {/* Iter v208 (2026-07-04): Voice guidance verplaatst naar
-              DIRECT ONDER BreathworkStrip. Voorheen zat 'ie boven de
-              breathwork-card wat verwarrend was — user wist niet
-              waar Voice op sloeg. Nu visueel gekoppeld aan het
-              breathwork blok. */}
-          <Pressable
-            style={[
-              s.voiceToggleRow,
-              voiceCues && {
-                borderColor: activeMeta.color + '55',
-                backgroundColor: activeMeta.color + '14',
-              },
-            ]}
-            onPress={() => setVoiceCues(!voiceCues)}
-            accessibilityLabel={`Voice guidance ${voiceCues ? 'on — tap to mute' : 'off — tap to enable'}`}
-          >
-            {voiceCues ? (
-              <Volume2 size={18} color={activeMeta.color} />
-            ) : (
-              <VolumeX size={18} color={Brand.textDim} />
-            )}
-            <Text
-              style={[
-                s.voiceToggleLabel,
-                voiceCues && { color: Brand.text },
-              ]}
-            >
-              Voice guidance
-            </Text>
-            <Text
-              style={[
-                s.voiceToggleState,
-                voiceCues && { color: activeMeta.color },
-              ]}
-            >
-              {voiceCues ? 'ON' : 'OFF'}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Sim demo bar verhuisd naar idle-screen (operator-feedback:
-            tijdens een actieve sessie hoort er geen dev-noise te zijn).
-            Indien dev nog wil testen tijdens active: zelf wisselen
-            naar idle, knoppen daar bedienen, dan terug naar active. */}
-
-        {/* Action bar — Pause+End (running) of Resume+End (paused).
-            Beide neutrale outlined buttons; Resume krijgt mode-color
-            fill als primary action want user wil door.
-            Iter 9aa: bottom-bar verwijderd. Pause/End nu inline onder
-            de pulse-ring (zie inlineActionRow hierboven in JSX). */}
-      </SafeAreaView>
+        {connectedPopupOverlay}
+      </>
     );
   }
 
@@ -4619,349 +4871,35 @@ export default function BraceletControl() {
      Doel: alles in één blik zichtbaar zonder scrollen, Apple-style
      hiërarchie met eyebrow-headers. */
   return (
-    /* Iter 9bb (2026-05-31): SafeAreaView edges conditional op owner-status.
-       Voor OWNERS (inline render in /bracelet tab, geen native header) =
-       ['top','bottom'] zodat status-bar niet over de content valt.
-       Voor NON-OWNERS (preview met native Stack header) = ['bottom'] only,
-       want de native header consumeert al de top safe-area. Dubbele 'top'
-       inset gaf een grote leegte tussen header en content. */
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <BraceletHeader
-        title="Bracelet control"
-        onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
-        backLabel={ctaBackLabel}
+    <>
+      <IdleScreen
+        fromContext={fromContext}
+        disconnectAndBackToSource={disconnectAndBackToSource}
+        onDisconnect={onDisconnect}
+        ctaBackLabel={ctaBackLabel}
+        isBraceletOwner={isBraceletOwner}
+        showActivationPrompt={showActivationPrompt}
+        safeInsets={safeInsets}
+        criticalBattery={criticalBattery}
+        lowBattery={lowBattery}
+        battery={battery}
+        batteryColor={batteryColor}
+        selectedMode={selectedMode}
+        setSelectedMode={setSelectedMode}
+        meta={meta}
+        duration={duration}
+        setDuration={setDuration}
+        onStart={onStart}
+        busy={busy}
+        stats={stats}
+        completedModeForModal={completedModeForModal}
+        setCompletedModeForModal={setCompletedModeForModal}
+        detailModeForModal={detailModeForModal}
+        setDetailModeForModal={setDetailModeForModal}
+        sim={sim}
       />
-      {!isBraceletOwner && <PreviewBanner />}
-      {showActivationPrompt && <BraceletActivationCta />}
-      {/* Iter 9ae (2026-05-31): expliciete paddingBottom voor safe-zone.
-          Start-button stond op Audio PRO (non-owner standalone) te dicht
-          tegen home-indicator. Math.max zorgt voor minimum 28px buffer
-          ook op Android zonder gesture-bar.
-          Iter 9dq v77 (2026-06-03): floor bumped van 48 → 72.
-          Consistent met player.tsx en andere bottom-CTAs.
-          Iter 9dq v105 (2026-06-04, REVERT): vorige iteraties (v100/v102/
-          v104 — paddingBottom 100/140 + ScrollView-wrapper) hebben
-          owner-inline-render verpest (Start-knop afgesneden, layout
-          stuk). Operator-mandate: terug naar 2 dagen geleden, niet
-          scrollbaar, alles moet in scherm passen. */}
-      <View
-        style={[
-          s.idleSingleScreen,
-          { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-        ]}
-      >
-        {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
-            Stack header toont al "Bracelet preview" + back-arrow voor
-            non-owners → de in-screen pill was dubbele duplicate. Levert
-            ~60px verticale ruimte op, content schuift omhoog (operator
-            wilde hele pagina hoger). PREVIEW-signal blijft in de native
-            header-titel. */}
-        {/* Status row — compact, één regel */}
-        <View style={s.statusRow}>
-          <View style={s.statusDotRow}>
-            <View style={s.statusDot} />
-            <Text style={s.statusInline}>
-              CONNECTED  ·{'  '}
-              {criticalBattery
-                ? 'Critical battery'
-                : lowBattery
-                  ? 'Low battery'
-                  : 'Ready'}
-            </Text>
-          </View>
-          {/* Iter 9dq v106 (2026-06-04): Disconnect-link IN status-row.
-              Iter 9dq v108 (2026-06-04): isBraceletOwner-conditie weg.
-              Operator-mandate: bracelet connect/control/active moet
-              voor alle 3 accounts (Audio PRO, Bracelet PRO, Full PRO)
-              EXACT hetzelfde zijn. Toon Disconnect altijd in connected
-              state behalve tijdens pre-activation banner-flow (waar
-              de banner bovenaan al de primary action is). */}
-          <View style={s.statusRightGroup}>
-            <Text style={[s.statusBattery, { color: batteryColor }]}>
-              {battery == null ? '—' : `${battery}%`}
-            </Text>
-            {!showActivationPrompt && (
-              <Pressable
-                onPress={onDisconnect}
-                hitSlop={10}
-                accessibilityLabel="Disconnect bracelet"
-              >
-                <Text style={s.statusDisconnect}>Disconnect</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* ── Choose mode — horizontale scroll van foto-cards (iter 9b)
-            Operator-feedback: equal-size cards, foto's terug, elegant.
-            Vaste 110pt breed × 140pt hoog per card, foto full-bleed met
-            dark gradient onder voor tekst-legibility. */}
-        <View style={s.modeH2Row}>
-          <Text style={[s.idleH2, { marginTop: 0, marginBottom: 0 }]}>
-            Choose mode
-          </Text>
-          {/* Iter 9m: scroll-affordance hint — vertelt user dat er
-              meer modes zijn dan zichtbaar in viewport. */}
-          <Text style={s.modeScrollHint}>Swipe →</Text>
-        </View>
-        {/* Iter 9d v3: wrapper View met expliciete height. Een
-            horizontal ScrollView in een flex:1 column parent kreeg
-            soms 0px height ondanks `style.height`. Fixed parent
-            forceert correcte allocation. */}
-        <View style={s.modeCardScrollWrap}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.modeCardStrip}
-          >
-          {MODES.map((m: ModeMeta) => {
-            const active = m.mode === selectedMode;
-            const photo = MODE_IMAGES[m.mode];
-            return (
-              <View key={m.mode} style={s.modeCardGroup}>
-              <Pressable
-                style={[
-                  s.modeCardSmall,
-                  active && {
-                    borderColor: m.color,
-                    borderWidth: 2,
-                  },
-                ]}
-                onPress={() => setSelectedMode(m.mode)}
-                accessibilityLabel={`Select ${m.name} mode`}
-              >
-                {photo ? (
-                  <Image
-                    source={{ uri: photo }}
-                    style={s.modeCardSmallPhoto}
-                    resizeMode="cover"
-                    resizeMethod="resize"
-                    fadeDuration={0}
-                  />
-                ) : (
-                  <LinearGradient
-                    colors={[hexToTint(m.color, 0.5), 'rgba(20,20,20,0.95)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={s.modeCardSmallPhoto}
-                  />
-                )}
-                {photo && (
-                  <LinearGradient
-                    colors={[
-                      'rgba(0,0,0,0.05)',
-                      'rgba(0,0,0,0.88)',
-                    ]}
-                    style={s.modeCardSmallOverlay}
-                  />
-                )}
-                <View style={s.modeCardSmallContent}>
-                  <View
-                    style={[s.modeCardSmallDot, { backgroundColor: m.color }]}
-                  />
-                  <View>
-                    <Text style={s.modeCardSmallName} numberOfLines={1}>
-                      {m.name}
-                    </Text>
-                    <Text style={s.modeCardSmallDur}>
-                      {m.minMinutes}–{m.maxMinutes} min
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-              {/* Iter 9l v2: info-button alleen visueel actief onder de
-                  GESELECTEERDE card. Andere cards behouden ruimte voor
-                  layout-consistentie (geen jump), maar button is
-                  onzichtbaar + disabled → user weet meteen dat info
-                  hoort bij de card waar 'ie op staat. */}
-              <Pressable
-                style={[
-                  s.modeInfoBtn,
-                  active && {
-                    backgroundColor: hexToTint(m.color, 0.12),
-                    borderColor: hexToTint(m.color, 0.40),
-                  },
-                  !active && { opacity: 0 },
-                ]}
-                onPress={
-                  active ? () => setDetailModeForModal(m.mode) : undefined
-                }
-                disabled={!active}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                accessibilityLabel={`Learn about ${m.name}`}
-                accessibilityElementsHidden={!active}
-              >
-                <Text
-                  style={[
-                    s.modeInfoBtnText,
-                    active && { color: m.color },
-                  ]}
-                >
-                  ⓘ  More info
-                </Text>
-              </Pressable>
-              </View>
-            );
-          })}
-          </ScrollView>
-          {/* Fade-gradient op rechter-rand — visuele hint dat er meer
-              content is om naar te scrollen. pointerEvents:none zodat
-              touch-events de ScrollView blijven bereiken. */}
-          <LinearGradient
-            colors={['rgba(10,10,10,0)', Brand.bg]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={s.modeCardScrollFade}
-            pointerEvents="none"
-          />
-        </View>
-
-        {/* Iter 9e: inline detail-panel volledig verwijderd. Operator-
-            feedback: "werkt niet, schuift gewoon, voelt niet als popup".
-            Mode-info komt later via aparte i-knop of na sessie-start. */}
-
-        {/* ── Duration — kleine fill-cirkel + slider (iter 9b)
-            Fill-circle terug op verzoek, maar 90pt ipv 200pt zodat 't
-            past in single-screen layout. Getal staat in de cirkel,
-            water-fill geeft visuele context van waar in range. */}
-        <Text style={s.idleH2}>Choose duration</Text>
-        <View style={s.durCircleSmallWrap}>
-          <DurationFillCircle
-            value={duration}
-            min={meta.minMinutes}
-            max={meta.maxMinutes}
-            color={meta.color}
-            size={76}
-          />
-        </View>
-        <DurationSlider
-          min={meta.minMinutes}
-          max={meta.maxMinutes}
-          value={duration}
-          onChange={(v) => setDuration(v)}
-        />
-        {/* Iter 9d: durRangeRow weggehaald — DurationSlider heeft zelf
-            al min/max labels onder de track (sliderLabels-style). Was
-            visuele duplicatie. */}
-
-        {/* Spacer — pushes Start-CTA + footer naar onderkant. Geeft de
-            pagina meer breathing room (operator-feedback iter 9b). */}
-        <View style={{ flex: 1, minHeight: 12 }} />
-
-        {/* Start CTA — kleiner, lager geplaatst (operator-feedback iter 9b).
-            Iter 9d: contrast-fix voor Boost (witte mode-color) — bij
-            light bg-kleur tonen we zwarte text + zwarte arrow. */}
-        {(() => {
-          const light = isLightColor(meta.color);
-          const textColor = light ? '#0a0a0a' : '#ffffff';
-          return (
-            <Pressable
-              style={[
-                s.startBtnSmall,
-                { backgroundColor: meta.color },
-                light && {
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.20)',
-                },
-                busy && s.btnDisabled,
-              ]}
-              onPress={onStart}
-              disabled={busy || criticalBattery}
-              accessibilityLabel={`Start ${meta.name} session`}
-            >
-              {busy ? (
-                <ActivityIndicator color={textColor} />
-              ) : (
-                <>
-                  <Text style={[s.startBtnSmallText, { color: textColor }]}>
-                    Start {meta.name}
-                  </Text>
-                  <Text style={[s.startBtnSmallArrow, { color: textColor }]}>
-                    →
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          );
-        })()}
-
-        {/* Low battery warning (compact, alleen als nodig) */}
-        {lowBattery && (
-          <View style={s.warnChip}>
-            <Text style={s.warnChipIcon}>⚠</Text>
-            <Text style={s.warnChipText}>
-              Battery may not last the full session
-            </Text>
-          </View>
-        )}
-
-        {/* Mini-footer: stats samengevat in 1 regel + history-link.
-            Iter 9bm (2026-05-31): footer is ALTIJD zichtbaar (was alleen
-            bij totalSessions > 0). Operator-feedback: na terugkomst van
-            /bracelet-history kon de link visueel verdwijnen (transient
-            stats-state). Door 'm altijd te tonen kan user altijd terug
-            naar history. Bij 0 sessies: vriendelijke "No sessions yet"
-            i.p.v. de stats-regel. */}
-        <View style={s.idleFooter}>
-          <Text style={s.idleFooterText}>
-            {stats.totalSessions > 0
-              ? `${stats.todaySessions} today  ·  ${stats.totalMinutes} min total`
-              : 'No sessions yet'}
-          </Text>
-          <Pressable
-            onPress={() => router.push('/bracelet-history' as never)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="View session history"
-          >
-            <Text style={s.idleFooterLink}>History →</Text>
-          </Pressable>
-        </View>
-
-        {/* Iter 9dq v105 (2026-06-04): "Complete the system" Audio
-            Library upsell verwijderd op operator-verzoek
-            ("upsell complete the system is hier niet nodig"). Audio
-            upsell-pad blijft beschikbaar via Account-tab subscription-
-            card. Hier op bracelet-control hoorde 't niet thuis —
-            content moet in scherm passen, geen extra cards. */}
-
-        {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
-        {__DEV__ && sim && <SimDemoBar sim={sim} />}
-      </View>
-
-      {/* CompletionModal — toont na natural completion (timer hits 0).
-          Rendert hier omdat na completion de UI vanzelf naar idle gaat. */}
-      {completedModeForModal !== null && (
-        <CompletionModal
-          mode={completedModeForModal}
-          onDismiss={() => setCompletedModeForModal(null)}
-        />
-      )}
-
-      {/* ModeDetailModal — bottom-sheet popup op tap mode-card (iter 9k).
-          Selectie via "Choose [mode]" CTA binnenin; backdrop/X = sluit
-          zonder selecteren. */}
-      {detailModeForModal !== null && (
-        <ModeDetailModal
-          mode={detailModeForModal}
-          onChoose={() => {
-            setSelectedMode(detailModeForModal);
-            setDetailModeForModal(null);
-          }}
-          onClose={() => setDetailModeForModal(null)}
-        />
-      )}
-
-      {/* Iter v209 (2026-07-04): End-session modal VOLLEDIG VERWIJDERD.
-          6 iteraties (v87, v193, v195, v197, v201-202) faalden in
-          productie. Nu directe End-knop actie zonder modal — navigate
-          weg + fire-and-forget Stop. Simpelheid > confirmatie. */}
-      {/* Iter v194 (2026-07-04): InlineBraceletTabBar op idle Choose Mode
-          verwijderd. Bracelet-control zit binnen (tabs) navigator (via
-          bracelet-tab inline-render) → systeem tab bar was er al →
-          mijn stub gaf DUBBELE bar op operator-scherm en verdrong
-          zelfs de Start-knop uit beeld. */}
-    </SafeAreaView>
+      {connectedPopupOverlay}
+    </>
   );
 }
 
@@ -5070,23 +5008,104 @@ function hexToTint(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/* Bepaal of een hex-kleur "licht" is — gebruikt voor button-text-contrast.
-   Boost-mode is #FFFFFF (operator iter 8): witte tekst op witte bg =
-   onleesbaar. Met deze helper kunnen we automatisch zwart op licht
-   tonen en wit op donker. ITU-R BT.601 luminance formule. */
-function isLightColor(hex: string): boolean {
+/* Operator, 16 september 2026 ("subtiel kleurverloop toevoegen aan alle
+   actieve groene elementen — van lichtgroen naar dieper groen"): mengt
+   een hex-kleur richting wit (percent > 0, lichter) of zwart (percent < 0,
+   donkerder). Gebruikt voor de gradient-stops van de actieve mode-kaart
+   en de duration-slider fill. */
+function shadeHex(hex: string, percent: number): string {
   const m = hex.replace('#', '');
   const r = parseInt(m.substring(0, 2), 16);
   const g = parseInt(m.substring(2, 4), 16);
   const b = parseInt(m.substring(4, 6), 16);
-  const luma = (r * 299 + g * 587 + b * 114) / 1000;
-  return luma > 180;
+  const mix = (channel: number) =>
+    percent >= 0
+      ? Math.round(channel + (255 - channel) * percent)
+      : Math.round(channel * (1 + percent));
+  const rr = Math.max(0, Math.min(255, mix(r)));
+  const gg = Math.max(0, Math.min(255, mix(g)));
+  const bb = Math.max(0, Math.min(255, mix(b)));
+  return `#${[rr, gg, bb].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 }
+
+/* `isLightColor` verhuisde naar `@/utils/color.ts` (operator, 20 september
+   2026) — breath-setup.tsx had exact hetzelfde witte-tekst-op-witte-bg-
+   probleem (Clarity's #FFFFFF-accent) en verdiende geen tweede kopie. */
 
 /* ── Styles ──────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Brand.bg },
+  root: { flex: 1, backgroundColor: C.bg },
+  autoStartLoader: { alignItems: 'center', justifyContent: 'center', gap: 14 },
+  autoStartLoaderTxt: { fontFamily: BrandFonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.6)' },
+
+  /* BraceletHeroGlow — nu op SearchingScreen (flexibele gecentreerde
+     layout, niet de vaste single-screen-budget van IdleScreen), dus mag
+     groter: 92→200px. Geen achtergrondvlak meer, enkel de cutout. */
+  /* Operator ("premium apple stijl, doe wat jij denkt dat beste is"):
+     220→238 — de armband-foto is nu het enige pulserende element op dit
+     scherm (SearchingPulse/SignalBeam weg), dus groter/centraler zoals
+     de feedback vroeg ("armband staat niet klein onderin, maar groot en
+     centraal"). heroGlowImg mee opgeschaald, PodPulse-afmetingen mee. */
+  heroGlowWrap: {
+    height: 238,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    /* Operator, 16 september 2026 ("haptic sectie moet lager, nu te dicht
+       tegen preview button"): het hele blok (puls+tekst+armband) groeide
+       met de grotere armband-afbeelding, en kwam te dicht bij de Connect-
+       knop onderaan te staan. Extra ruimte eronder. */
+    marginBottom: 28,
+  },
+  heroGlowImg: {
+    width: 380,
+    height: 238,
+  },
+  /* SignalBeam — signaal-kanaal van de radar-puls naar de zwarte pod op
+     de armband-foto. `top`/`height` per-instance gezet (startY/travel);
+     horizontaal gecentreerd t.o.v. de omringende container (24px breed,
+     alle kinderen zelf ook gecentreerd via left:50%+marginLeft). */
+  signalBeamWrap: {
+    position: 'absolute',
+    left: '50%',
+    width: 24,
+    marginLeft: -12,
+  },
+  /* Chevron i.p.v. cirkel — een driehoekje wijst duidelijk een richting
+     aan ("naar beneden"), een bolletje communiceert geen richting
+     (operator: "zijn dots de juiste vorm om connection weer te geven?"). */
+  signalBeamDot: {
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    marginLeft: -5,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: SIGNAL_BLUE,
+  },
+  /* PreviewBadge — kleine, neutrale badge i.p.v. de volle-breedte oranje
+     PreviewBanner. Inline naast de headertitel, subtiel, geen kleur die
+     om aandacht schreeuwt. */
+  previewPill: {
+    backgroundColor: 'rgba(10,10,12,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(10,10,12,0.10)',
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  previewPillText: {
+    color: C.textDim,
+    fontSize: 10,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.6,
+  },
 
   /* ── Idle screen ─────────────────────────────────────────────────── */
   idleScroll: {
@@ -5108,9 +5127,16 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 48,
+    /* Operator, 27 september 2026 ("bracelet connect moet ook zakken en
+       in safe zone"): title+badge staan nu gestapeld (kolom) i.p.v.
+       naast elkaar, en de badge kreeg een extra marginTop (19) om lager
+       te zakken — dat paste niet meer in de oude vaste 48px hoogte,
+       waardoor de titel bovenaan tegen/buiten de header-rand kwam.
+       48→88 geeft de hele gestapelde titel+badge-kolom genoeg ruimte om
+       volledig binnen de header (en dus binnen de safe area) te blijven. */
+    height: 88,
     paddingHorizontal: 8,
-    backgroundColor: Brand.bg,
+    backgroundColor: C.bg,
   },
   headerSide: {
     width: 44,
@@ -5127,28 +5153,66 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
   },
-  headerBackArrow: {
-    color: Brand.text,
-    fontSize: 26,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 28,
+  /* Status (dot + battery%) + settings-tandwiel samen rechts in de
+     header (operator, 16 september 2026: "connected en batterij mag
+     rechtsboven naast preview"). */
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 12,
+  },
+  headerStatusText: {
+    color: C.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    marginRight: 4,
   },
   /* Iter 2026-06-05: label tekst naast back-arrow. Subtiel, dim, regular.
      Alleen zichtbaar wanneer backLabel prop is gezet (CTA-flow). */
   headerBackLabel: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     lineHeight: 18,
     opacity: 0.85,
   },
+  /* Operator, 16 september 2026 ("ook header moet consistent zijn"): was
+     een kleine (17px), gecentreerde iOS-navbar-titel — de rest van de
+     app (Audio Library, Bracelet-tab) gebruikt sinds deze sessie
+     `TypeScale.pageHeader` (30px Bold, links) als grote paginatitel.
+     Zelfde rol, nu dezelfde bron.
+     Operator, 27 september 2026 ("bovenaan mag ook in hoofdletters en
+     kleiner en centraal", daarna "zelfde voor bracelet preview" —
+     bevestigd voor alle 4 bracelet-headers): terug naar klein +
+     gecentreerd, nu als uppercase eyebrow i.p.v. de grote 30px
+     paginatitel. */
   headerTitle: {
     flex: 1,
-    color: Brand.text,
-    fontSize: 17,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.2,
+    color: C.text,
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
     textAlign: 'center',
+    marginLeft: 4,
+  },
+  /* Operator ("preview mag achter bracelet staan"): rij die titel +
+     optioneel badge samen draagt, i.p.v. de titel alleen — flex:1 zit
+     hier (niet meer los op headerTitle) zodat de rij de resterende
+     ruimte pakt en het badge er direct na kan volgen.
+     Operator, 27 september 2026 ("en preview onder bracelet connect"):
+     row → column — badge (PreviewBadge) stapelt nu ONDER de titel i.p.v.
+     ernaast, beide gecentreerd. */
+  headerTitleRow: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    /* Operator, 27 september 2026 ("preview beetje lager mag niet
+       plakken"): 2→6 — badge zat te dicht tegen de titel aan. */
+    gap: 6,
+    marginLeft: 4,
   },
   /* Section-eyebrow (Apple iOS-style section header — small caps, dim) */
   sectionEyebrow: {
@@ -5160,141 +5224,156 @@ const s = StyleSheet.create({
     marginTop: 18,
     marginBottom: 10,
   },
-  /* Iter 9b: section titles vervangen eyebrows op idle screen
-     (operator-feedback "header moet choose mode en duration zijn").
-     Title-case, proper hierarchy, meer breathing room.
-     Iter 9m: margins zitten nu op modeH2Row wrapper (voor scroll-hint
-     naast title), maar idleH2 wordt ook elders gebruikt (Duration). */
+  /* Operator, 16 september 2026 ("hoe hebben wij de choose...-teksten
+     fontstijl in breathwork, dat moet hier ook consistent zijn"): was
+     een 20px title-case header (iter 9b) — breath.tsx's "CHOOSE YOUR
+     STATE" is een kleine uppercase eyebrow (13px bold, letterSpacing
+     1.5, gedimd). Zelfde behandeling hier, voor dezelfde rol ("Choose
+     mode" / "Choose duration"). */
+  /* Margins altijd via de call site gezet (0/8 voor "Choose mode",
+     durationHeaderRow's 66/8 voor "Choose duration") — geen zinvolle
+     default hier. */
   idleH2: {
-    color: Brand.text,
-    fontSize: 20,
+    color: C.textDim,
+    fontSize: 13,
     fontFamily: BrandFonts.bold,
-    letterSpacing: -0.4,
-    /* Iter 9dq v107 (2026-06-04): margins gecomprimeerd zodat
-       History-footer in scherm past zonder scrollen. Was 22/14. */
-    marginTop: 12,
-    marginBottom: 8,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
-  /* ── Mode card strip (horizontal scroll) ─────────────────────────── */
-  /* Iter 9d: expliciete flex-grow op de ScrollView om te voorkomen dat
-     hij gecomprimeerd wordt door flex-layout. flexGrow:0 + height
-     match met card-hoogte (138) + extra ruimte voor border. */
-  /* Iter 9l: scroll-wrapper hoger om de info-button onder elke card
-     te accommoderen. 148 (alleen card) → 180 (card + button + gap).
-     position:relative zodat de fade-gradient absoluut kan positioneren. */
-  modeCardScrollWrap: {
-    /* Iter 9dq v107: 180 → 156. Card 138 → 116 saves 22. */
-    height: 156,
-    position: 'relative',
-  },
-  /* Iter 9m: fade-gradient over rechter-rand om scroll-affordance te
-     geven. Subtle hint: "er is meer naar rechts". */
-  modeCardScrollFade: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 32,
-  },
-  /* Iter 9m: h2-row met titel + "Swipe →" hint. */
-  modeH2Row: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    /* Iter 9dq v107: margins gecomprimeerd. */
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  modeScrollHint: {
-    color: 'rgba(255,255,255,0.40)',
-    fontSize: 11,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.5,
-  },
-  modeCardScroll: {
-    flexGrow: 0,
-    height: 180,
-  },
-  /* Group = card + info-button verticaal gestapeld (iter 9l). */
-  modeCardGroup: {
+  /* DurationRing — Dribbble-referentie toegepast op Choose duration
+     i.p.v. active-session (operator-correctie, 16 september 2026:
+     "wij zijn aan de choose mode sectie bezig"). */
+  durationRingWrap: {
     alignItems: 'center',
+    /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
+       8→16. */
+    marginBottom: 16,
   },
-  /* Iter 9l v2: info-button als capsule onder de geselecteerde card.
-     Mode-color tint maakt visueel duidelijk welke card 'm hoort. */
-  modeInfoBtn: {
-    /* Iter 9dq v107: 8 → 4. */
-    marginTop: 4,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'transparent',
+  /* Wrapper rond de DurationWheel, direct onder de ring — de ring zelf
+     toont enkel het resultaat (operator: "dat moet meer in deze stijl,
+     breathwork" — vervangt de vorige preset-chips + losse slider). */
+  durationSliderWrap: {
+    width: 266,
+    alignSelf: 'center',
+    /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
+       4/4 → 8/10. */
+    marginBottom: 10,
+    marginTop: 8,
   },
-  modeInfoBtnText: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
-  },
-  modeCardStrip: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingRight: 16, // matched root padding zodat laatste card niet plakt
-    paddingVertical: 2, // ruimte voor selected border
-  },
-  modeCardSmall: {
-    /* Iter 9dq v107: 138 → 116, saves 22px verticaal. */
-    width: 110,
-    height: 116,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  modeCardSmallPhoto: {
+  /* DurationWheel — 1-op-1 overgenomen uit breath-setup.tsx (zie de
+     toelichting bij de component zelf). */
+  wheelWrap: { width: '100%', alignItems: 'center', justifyContent: 'center' },
+  /* Operator, 29 september 2026 ("pill moet correct gecentreerd staan en
+     recommended moet naar rechts"): de vorige pogingen maakten de pil zelf
+     asymmetrisch (links/rechts ongelijk ingesprongen) om ruimte te maken
+     voor het label — dat zag er scheef uit. Nu weer symmetrisch (40/40,
+     echt gecentreerd rond het getal), en het "Recommended"-label schuift
+     in plaats daarvan naar BUITEN de 266px-wrapper (via `left` i.p.v.
+     `right`, geen overflow:hidden op deze wrapper) — start net voorbij de
+     pil-rand (266-40=226, +8px lucht) en mag vrij verder naar rechts
+     lopen in de bestaande witruimte naast de wheel. */
+  /* Operator, 29 september 2026 ("pill kan beetje smaller"): 40/40 → 56/56
+     — nog steeds symmetrisch/gecentreerd, gewoon een smallere pil. */
+  wheelPill: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
+    left: 56,
+    right: 56,
+    top: WHEEL_ITEM_H,
+    height: WHEEL_ITEM_H + 6,
+    marginTop: -3,
+    borderRadius: (WHEEL_ITEM_H + 6) / 2,
   },
-  modeCardSmallOverlay: {
+  /* Operator, 29 september 2026 ("recommended kan beetje meer naar
+     links"): pil is intussen smaller (56/56, rand nu bij 266-56=210) —
+     label mee opgeschoven (234→216, ~6px lucht t.o.v. de pil-rand). */
+  wheelRecommendedTag: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: 216,
+    height: WHEEL_ITEM_H,
+    justifyContent: 'center',
   },
-  modeCardSmallContent: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: 10,
-    justifyContent: 'space-between',
-  },
-  modeCardSmallDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  modeCardSmallName: {
-    color: '#ffffff',
-    fontSize: 14,
+  wheelRecommendedTagTxt: {
     fontFamily: BrandFonts.bold,
-    letterSpacing: -0.2,
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 9,
+    letterSpacing: 0.4,
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
   },
-  modeCardSmallDur: {
-    color: 'rgba(255,255,255,0.72)',
+  wheelRow: { alignItems: 'center', justifyContent: 'center' },
+  wheelTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 16,
+  },
+  wheelTxtOn: {
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 20,
+  },
+  durationRingCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /* Modus-naam boven het getal — klein, gekleurd, uppercase. */
+  durationRingLabel: {
     fontSize: 11,
-    fontFamily: BrandFonts.medium,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  /* Zelfde "geen schaduw, gitzwart/wit, extra dik" behandeling als de
+     active-session-timer — nu geen contrast-probleem meer nodig want de
+     ring staat op de pagina-achtergrond, niet op een wisselende fill. */
+  /* Operator, 16 september 2026 ("minuten moeten veel groter"): 60→88. */
+  durationRingNum: {
+    color: C.text,
+    fontSize: 88,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -2,
+    lineHeight: 92,
+  },
+  durationRingUnit: {
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.3,
     marginTop: 2,
+  },
+  /* Zachte leesbaarheids-shadow voor de ring-center-tekst wanneer die
+     over de bewegende golf-vulling staat (dark mode) — subtiel, geen
+     harde offset-schaduw. */
+  /* Lichte halo i.p.v. donkere — de tekst is nu donker en staat op de
+     lichte golf-vulling (operator: "binnenkant cirkel moet lichte kleur
+     zijn"), dus een lichte gloed helpt tegen de vollere/gekleurde delen
+     van de golf i.p.v. een donkere schaduw die daar juist zou botsen. */
+  /* Operator, 16 september 2026 ("binnenkant cirkel zwart ipv wit"):
+     donkere halo terug i.p.v. de lichte tussenversie — witte tekst op
+     een zwarte/gekleurde golf-achtergrond. */
+  durationRingTextShadow: {
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  /* ── Segmented pill-switcher (operator, 16 september 2026 — "modus-
+     kleur mag ergens een accent worden i.p.v. overal gevuld"): geen
+     gevulde achtergrond meer op de actieve pill, enkel een gekleurde
+     rand + icoon. De hero-kaart is weg — ring bovenaan is nu het ene
+     focuspunt (zie durationRingWrap hieronder). */
+  modeSegmentRow: {
+    flexDirection: 'row',
+    /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
+       8→10. */
+    gap: 10,
+    marginBottom: 12,
+  },
+  modeSegment: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(10,10,12,0.05)',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   /* ── Inline detail-panel onder de cards (iter 9d) ─────────────────
      Iter 9d v2: gestylt als proper card met bg/border + close-X.
@@ -5321,7 +5400,7 @@ const s = StyleSheet.create({
   },
   modeInlinePanelName: {
     flex: 1,
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.2,
@@ -5341,7 +5420,7 @@ const s = StyleSheet.create({
     lineHeight: 14,
   },
   modeInlineDesc: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 14,
     fontFamily: BrandFonts.medium,
     lineHeight: 20,
@@ -5375,12 +5454,6 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.1,
   },
-  /* Duration kleine fill-circle wrap */
-  durCircleSmallWrap: {
-    alignItems: 'center',
-    /* Iter 9dq v107: 16 → 8. */
-    marginBottom: 8,
-  },
   /* ── Breathwork animaties (iter 9f/g) ──────────────────────────────
      Container voor alle protocol-specifieke animaties. */
   boxBreathContainer: {
@@ -5388,34 +5461,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 6,
     minHeight: 110, // ruimte voor labels en padding
-  },
-  /* Iter 9j: compact container voor unified pulse (70pt anim).
-     Doel: card-hoogte ON-state matches OFF-state. */
-  /* Iter 9bv (2026-05-31): compacter ON-state breath container voor
-     cross-platform fit. 78 → 64, marginVertical 4 → 2 (–18px). */
-  boxBreathContainerCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 64,
-    marginVertical: 2,
-  },
-  /* Compact prompt — iter 9bv: marginTop 4→2, marginBottom 6→4 (–4px). */
-  breathOnPromptCompact: {
-    textAlign: 'center',
-    fontSize: 14,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.1,
-    marginTop: 2,
-    marginBottom: 4,
-  },
-  /* Compact meta (count + time inline). */
-  /* Iter 9ee: dark-gray op witte bg */
-  breathOnMetaCompact: {
-    textAlign: 'center',
-    color: 'rgba(0,0,0,0.50)',
-    fontSize: 11,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.2,
   },
   boxBreathWrap: {
     position: 'relative',
@@ -5515,21 +5560,26 @@ const s = StyleSheet.create({
   },
   /* ── ModeDetailModal (iter 9c) ─────────────────────────────────────
      Bottom-sheet popup voor mode-info. Apple-style: slide-up uit
-     onder, donker backdrop, ronde top-corners op de sheet. */
+     onder, ronde top-corners op de sheet.
+     Operator, 16 september 2026 ("achterkant moet helemaal zwart, zo
+     ligt focus op de kaart zelf; kaart schermhoog"): volledig ondoor-
+     zichtig zwarte backdrop (was 55% transparant) + de sheet vult nu de
+     volledige schermhoogte i.p.v. maxHeight 85%. */
   modeModalRoot: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: '#000000',
     justifyContent: 'flex-end',
   },
   modeModalSheet: {
     backgroundColor: '#141414',
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    paddingTop: 10,
-    paddingHorizontal: 22,
+    paddingTop: 16,
+    /* Operator, 16 september 2026 ("meer ademruimte"): 22→26. */
+    paddingHorizontal: 26,
     /* paddingBottom wordt dynamisch toegevoegd vanuit useSafeAreaInsets
        in de component (iter 9m) — base 24 + insets.bottom. */
-    maxHeight: '85%',
+    height: '100%',
   },
   modeModalHandle: {
     alignSelf: 'center',
@@ -5537,157 +5587,148 @@ const s = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.20)',
-    marginBottom: 14,
+    marginBottom: 22,
   },
+  /* Operator, 16 september 2026 ("x mag misschien groter of iets
+     lager"): 30→36 (top wordt dynamisch via insets.top op de call
+     site). */
   modeModalClose: {
     position: 'absolute',
-    top: 14,
     right: 16,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modeModalCloseText: {
     color: 'rgba(255,255,255,0.75)',
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: BrandFonts.semibold,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   modeModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 18,
+    marginTop: 8,
+    marginBottom: 24,
     paddingRight: 40, // ruimte voor close-X
   },
   modeModalDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginRight: 14,
   },
+  /* Operator, 16 september 2026 ("popupkaarten nakijken op fontstijl,
+     clarity deels niet leesbaar"): deze modal is een eigen, altijd-donker
+     paneel (#141414) — los van de module-brede `light`-instelling die
+     de rest van bracelet-control.tsx sinds de light-mode-conversie
+     gebruikt. `C.text` resolveert daar naar bijna-zwart (BrandLight),
+     wat op dit donkere paneel vrijwel onzichtbaar was. Expliciet wit
+     i.p.v. de token, voor elke modus gelijk (niet Clarity-specifiek —
+     trof alle vijf, viel bij Clarity's al-witte content het meest op). */
+  /* Operator, 16 september 2026 ("schermhoog... font groter, en meer
+     ademruimte"): nu de sheet schermhoog is, mag de tekst forser en
+     losser — alle fontSize/lineHeight/margins een stap opgeschaald,
+     dichter bij CompletionModal's maatvoering (titel 22, boodschap 17). */
   modeModalName: {
-    color: Brand.text,
-    fontSize: 22,
+    color: '#ffffff',
+    fontSize: 26,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.4,
   },
   modeModalSub: {
     color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: BrandFonts.medium,
-    marginTop: 2,
+    marginTop: 4,
   },
   /* Intent — de "wat is dit voor"-zin onder de header. Iets groter en
      levendiger dan body-text. */
   modeModalIntent: {
-    color: Brand.text,
-    fontSize: 15,
+    color: '#ffffff',
+    fontSize: 18,
     fontFamily: BrandFonts.semibold,
-    lineHeight: 22,
+    lineHeight: 26,
     letterSpacing: -0.2,
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 8,
+    marginBottom: 8,
   },
   modeModalSectionLbl: {
     color: 'rgba(255,255,255,0.50)',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginTop: 14,
-    marginBottom: 8,
+    marginTop: 24,
+    marginBottom: 12,
   },
   modeModalDesc: {
-    color: Brand.text,
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 16,
     fontFamily: BrandFonts.medium,
-    lineHeight: 22,
+    lineHeight: 25,
     letterSpacing: -0.1,
   },
   modeModalIdeals: {
-    gap: 6,
-    marginBottom: 4,
+    gap: 10,
+    marginBottom: 8,
   },
   modeModalIdealRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   modeModalIdealCheck: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: BrandFonts.bold,
-    marginRight: 10,
-    width: 16,
+    marginRight: 12,
+    width: 18,
   },
   modeModalIdealText: {
     flex: 1,
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
   },
   modeModalProtocol: {
-    color: Brand.text,
-    fontSize: 13,
+    color: '#ffffff',
+    fontSize: 15,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
   },
   modeModalProtocolHint: {
     color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: BrandFonts.regular,
-    lineHeight: 16,
-    marginTop: 4,
-  },
-  modeModalCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    marginTop: 22,
-  },
-  modeModalCtaText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.1,
-  },
-  modeModalCtaArrow: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: BrandFonts.bold,
-  },
-  /* Smaller / lower start button (iter 9b).
-     Iter 9dq v107: marginBottom 14 → 6, padding 14 → 12. */
-  startBtnSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 14,
+    lineHeight: 19,
     marginTop: 6,
-    marginBottom: 6,
+  },
+  /* Kaartje rond de "Optional breath layer"-sectie — zet 'm visueel
+     apart als secundaire, optionele toevoeging (operator, 16 september
+     2026: "optional layer in kaart zetten?"). */
+  modeModalProtocolCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 14,
+    padding: 16,
+  },
+  /* "i"-info-knop — was op de ring-hoek, toen onder de GO-knop, nu onder
+     de Choose mode-pillen (operator, 16 september 2026: "i onder de
+     choose mode buttons"). */
+  /* Operator, 16 september 2026 ("i moet iets hoger staan"): 8→3. */
+  startInfoBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(10,10,12,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'center',
-    minWidth: '70%',
-  },
-  startBtnSmallText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.1,
-  },
-  startBtnSmallArrow: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontFamily: BrandFonts.bold,
+    marginTop: 3,
   },
   /* ── Mode chip-strip (horizontal scrollable picker) ── */
   modeChipStrip: {
@@ -5725,7 +5766,7 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
   modeInfoName: {
-    color: Brand.text,
+    color: C.text,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.1,
   },
@@ -5742,7 +5783,7 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   durBigNum: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 56,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -2,
@@ -5766,32 +5807,11 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.3,
   },
-  /* Idle footer: stats + history-link op één compacte regel */
-  idleFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 4,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-  },
-  idleFooterText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.1,
-  },
-  idleFooterLink: {
-    color: Brand.text,
-    fontSize: 12,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.1,
-  },
   /* Audio Library upsell — alleen zichtbaar voor bracelet-only owners.
      Subtiele accent-tinted card onderaan het idle-screen, voor de
      SimDemoBar. Niet opdringerig (geen full bg-fill), wel zichtbaar
      genoeg om te tappen. Operator-toevoeging 2026-05-30. */
+  /* Huisstijl v4.4: decoratieve upsell-kaart, niet haptic/status — Royal Indigo. */
   audioUpsellCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -5801,88 +5821,52 @@ const s = StyleSheet.create({
     marginBottom: 4,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(58,143,255,0.08)',
-    borderColor: 'rgba(58,143,255,0.28)',
+    backgroundColor: 'rgba(30,42,74,0.08)',
+    borderColor: 'rgba(30,42,74,0.28)',
     borderWidth: 1,
     borderRadius: 14,
   },
   audioUpsellEyebrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.4,
     marginBottom: 4,
   },
   audioUpsellTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.2,
     marginBottom: 4,
   },
   audioUpsellSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     lineHeight: 17,
   },
   audioUpsellArrow: {
-    color: Brand.accent,
+    color: C.accent,
     fontSize: 22,
     fontFamily: BrandFonts.bold,
     marginLeft: 4,
   },
   /* Status row — minimal text-only met groene live-dot. Status-pill
      verwijderd 2026-05-27 (operator-feedback "pillen ouderwets"). */
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    /* Iter 9dq v107: 20 → 10. */
-    marginBottom: 10,
-  },
-  /* Iter 9dq v106 (2026-06-04): Disconnect inline in status-row.
-     statusRightGroup houdt battery% + Disconnect samen rechts. */
-  statusRightGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  statusDisconnect: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(138,138,138,0.40)',
-    paddingVertical: 4,
-  },
-  statusDotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    flexShrink: 1,
-  },
+  /* Operator, 16 september 2026 ("statusbalk strak trekken — klein, chic
+     element direct onder de hoofdtitel, i.p.v. rommelig tegen de
+     zijkanten geperst"): geen space-between-rij met losse Disconnect-
+     link meer — één subtiele regel, dot + dunne tekst. Disconnect zit nu
+     in het tandwiel-icoon in de header. */
   statusDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: Brand.success,
-  },
-  statusInline: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.5,
-    flexShrink: 1,
-  },
-  statusBattery: {
-    fontSize: 13,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.1,
+    backgroundColor: C.success,
   },
   sectionTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 22,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.4,
@@ -5905,7 +5889,7 @@ const s = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: Brand.panel,
+    backgroundColor: C.panel,
   },
   /* Background layer — photo OR mode-color gradient. Vult de hele
      tile via absoluteFillObject; resizeMode cover op de Image schaalt
@@ -5977,122 +5961,56 @@ const s = StyleSheet.create({
     textShadowRadius: 3,
   },
 
-  /* Duration fill-cirkel (water-fill, mode-color stijgt met slider). */
-  durCircleWrap: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  durFillOuter: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* Track is een container; bar is de gevulde portion die van onder
-     omhoog groeit. position:absolute + bottom:0 zorgt voor de "water-
-     fill" effect. */
-  durFillTrack: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  durFillBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    opacity: 0.45,
-  },
-  durFillContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  durFillNum: {
-    color: Brand.text,
-    fontSize: 52,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -2,
-    lineHeight: 56,
-    /* Text-shadow voor leesbaarheid wanneer de fill achter het getal
-       komt (vooral bij hoge slider-waarden). */
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  durFillUnit: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.5,
-    marginTop: 2,
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  /* Slider — touch-area is hoger dan visible track voor betere
-     hit-area. Horizontale padding van 20 zodat de thumb bij min-
-     waarde (x=0) NIET in Android's back-gesture-zone valt (eerste
-     ~24dp vanaf links). Zonder deze padding sleurt elke drag-from-
-     left de gebruiker terug naar de vorige pagina. */
+  /* Operator, 16 september 2026 ("Apple Track" — brede, dikke capsule
+     i.p.v. dun streepje + los stipje, zo dik als de Start-knop).
+     sliderTouch IS nu zelf de track (bg + overflow:hidden + volle
+     capsule-radius), geen apart dun trackje meer erbinnen. Horizontale
+     margin van 20 blijft nodig zodat de balk bij waarde=min (x=0) NIET
+     in Android's back-gesture-zone valt (eerste ~24dp vanaf links). */
   sliderTouch: {
-    height: 44,
+    /* Operator, 16 september 2026: 52→44, daarna "schuifregelaar ook
+       helft smaller" → 44→22. marginHorizontal:20 (Android-gesture-
+       zone-marge) weg — durationSliderWrap is nu al een gecentreerde
+       266px-breedte, ver van de schermrand, dus die marge is overbodig
+       en zou de balk smaller maken dan de minuten-knoppen erboven. */
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(10,10,12,0.06)',
     justifyContent: 'center',
-    marginVertical: 8,
-    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  sliderTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
+  /* Gevulde portie — een LinearGradient (lichter → dieper) i.p.v. een
+     vlakke kleur, voor het "lichte bolling en glans"-effect. Radius
+     matcht sliderTouch zodat de linkerkant netjes rond blijft nu
+     overflow:hidden van de track af is (nodig voor de thumb hieronder). */
   sliderFilled: {
-    height: 6,
-    borderRadius: 3,
     position: 'absolute',
     left: 0,
-    top: '50%',
-    marginTop: -3,
-    /* Neutrale fill (operator-keuze 2026-05-27): mode-color zit nu
-       in de fill-cirkel boven de slider, slider zelf blijft grijs. */
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    top: 0,
+    bottom: 0,
+    borderRadius: 11,
   },
-  sliderThumb: {
+  /* Zichtbare witte thumb op het einde van de fill — operator: "niet
+     duidelijk dat de minutebar scrollbaar is". Maakt in één oogopslag
+     duidelijk dat dit een sleepbare regelaar is, niet enkel een balk.
+     Blijft iets groter dan de (nu dunnere) track zelf — steekt er licht
+     buiten uit, dat is juist wat 'm als grip leesbaar houdt. */
+  sliderThumbHandle: {
     position: 'absolute',
     top: '50%',
-    marginTop: -14,
-    marginLeft: -14,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    marginTop: -12,
+    marginLeft: -12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#ffffff',
-    borderWidth: 2,
-    /* Neutrale border kleur (was mode-color). */
-    borderColor: 'rgba(255,255,255,0.40)',
-    /* Subtle shadow voor "tactile" feel — thumb voelt fysiek. */
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
   },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    /* Matched de marginHorizontal van sliderTouch zodat labels netjes
-       onder de slider-uiteinden uitlijnen. */
-    marginHorizontal: 22,
-    marginTop: 6,
-  },
-  sliderLabel: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.3,
-  },
-
   /* Warning chip (low battery in idle) */
   warnChip: {
     flexDirection: 'row',
@@ -6111,7 +6029,7 @@ const s = StyleSheet.create({
     fontSize: 16,
   },
   warnChipText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     flex: 1,
@@ -6142,28 +6060,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
   },
-  /* Iter 9bw (2026-05-31): marginBottom 26 → 14 om de hele timer-
-     cluster omhoog te brengen → breathwork-card krijgt zo onderaan
-     meer ruimte zonder dat 't tegen de safe-zone plakt. */
-  activeModeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-  },
-  activeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  activeName: {
-    color: Brand.text,
-    fontSize: 18,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.2,
-  },
-  /* Timer-cirkel — 300px om de ProgressArc (300) volledig te
-     omvatten. PulsingCircle (280) zit center-positioned binnenin. */
+  /* Timer-cirkel — 300px, omvat de ActivityRing (264) met ruimte over. */
   /* Iter 9bw: marginBottom 14 → 6 (–8px) zodat Pause/End buttons
      dichter onder de timer-cirkel komen en de breathwork-card meer
      bodem-ruimte heeft. */
@@ -6173,6 +6070,17 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
+  },
+  /* DrainingCircle's eigen SVG-doos — rond zodat de clip-path niet
+     buiten de cirkel-vorm kan "lekken" op Android. Position absolute
+     (zelfde "auto-centreren via de flex align/justify van timerWrap"-
+     truc als pulseWrap) — anders duwt timerCenter er als normale flow-
+     sibling onder, en schuift de bol uit het midden van de 300px-doos
+     t.o.v. de wél-al-absolute SlowAmbientPulse. */
+  drainOuter: {
+    position: 'absolute',
+    borderRadius: 110,
+    overflow: 'hidden',
   },
   pulseWrap: {
     position: 'absolute',
@@ -6186,60 +6094,6 @@ const s = StyleSheet.create({
   pulseCircleInner: {
     position: 'absolute',
   },
-  /* DrainingCircle — vol bij start, leegt naarmate session vordert.
-     overflow:hidden + borderRadius zorgt voor de cirkel-shape clipping
-     van de fill-bar die van onder omhoog groeit. */
-  drainOuter: {
-    position: 'absolute',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  /* drainFill weggehaald iter 7: water-fill wordt nu door SVG path
-     gerenderd binnen DrainingCircle (wave-animatie). */
-  /* rotatingArcWrap verwijderd iter 8 — RotatingArc weggehaald, rotatie
-     leeft nu in SlowAmbientPulse zelf. */
-  /* Start-knop op OFF-card. Mode-color filled, full-width, prominent. */
-  breathStartBtn: {
-    marginTop: 12,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  breathStartBtnText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.3,
-  },
-  /* Iter 9cc — top-row van OFF-card: info links + action-chip rechts */
-  breathOffTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  breathOffInfo: {
-    flex: 1,
-  },
-  /* Compact action-chip rechtsboven — Apple-style (afgerond, prominent) */
-  breathStartChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-  },
-  breathStartChipText: {
-    fontSize: 13,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.2,
-  },
-  breathStartChipArrow: {
-    fontSize: 14,
-    fontFamily: BrandFonts.bold,
-  },
   /* ── CompletionModal ─────────────────────────────────────────── */
   completionOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -6252,10 +6106,63 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
   },
+  /* ConnectedPopup — geen backdrop-press-to-dismiss (het is een
+     zelf-dismissende bevestiging, geen keuze), lichte dim erachter zodat
+     de kaart los van de pagina leest. */
+  connectedPopupOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    /* Operator, 27 september 2026 ("yes connected staat bracelet onder,
+       die bracelet moet weg"): zonder kaart erachter (zie
+       ConnectedPopup) scheen de header-titel ("Bracelet") van het
+       onderliggende scherm door de dunne 25%-dim heen. 0.25→0.94 —
+       dekt het scherm er effectief achter af, zonder een zichtbaar
+       kaart-paneel terug te introduceren.
+       Operator, zelfde dag ("bracelet control blijft zichtbaar op
+       achtergrond"): de popup rendert nu als overlay bovenop het al-
+       omgewisselde scherm (Control/Active/etc.) i.p.v. bovenop het
+       oude, effen-donkere Connect-scherm — de resterende 6% liet
+       Control's veel fellere content (witte CTA, gekleurde ring)
+       duidelijk doorschemeren. 0.94→1 (volledig opaak): niets van het
+       onderliggende scherm is nog zichtbaar zolang de popup toont. */
+    backgroundColor: '#000000',
+  },
+  connectedPopupCircle: {
+    /* Operator, 27 september 2026 ("nu veel te groot, halveer"): 190→95,
+       vinkje mee gehalveerd (zie render, 150→75).
+       Operator, zelfde dag ("connected cirkel 40% groter"): 95→133,
+       enkel de cirkel (vinkje blijft op 75). */
+    width: 133,
+    height: 133,
+    borderRadius: 66.5,
+    /* Operator, 27 september 2026 ("yes connected mag ook in onze
+       accentkleur" → daarna correctie "kom jij weer met dat blauw af"):
+       Signal Blue was fout — dat kanaal is strikt de haptic-puls/"nu
+       actief"-rol (zie huisstijl-memory). Bio-Teal (`AudioAccent`) is
+       de echte, enige accentkleur van de app. */
+    backgroundColor: AudioAccent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    /* Nu de cirkel zelf groot genoeg is om het vinkje te bevatten, is de
+       extra marge van hierboven niet meer nodig — normale afstand tot
+       de tekst eronder. */
+    marginBottom: 18,
+  },
+  connectedPopupText: {
+    /* Operator, 27 september 2026: geen kaart-achtergrond meer (zie
+       ConnectedPopup) — tekst rendert nu los op de (nu bijna-opake)
+       overlay, dus wit i.p.v. C.text. Grootte teruggedraaid naar 17
+       ("yes connected mag niet groter"). */
+    color: '#ffffff',
+    fontSize: 17,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.2,
+  },
   completionCard: {
     width: '85%',
     maxWidth: 380,
-    backgroundColor: Brand.panel,
+    backgroundColor: C.panel,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
@@ -6285,7 +6192,7 @@ const s = StyleSheet.create({
     lineHeight: 34,
   },
   completionTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 22,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.5,
@@ -6299,7 +6206,7 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   completionMsg: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     lineHeight: 22,
@@ -6317,14 +6224,14 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
   completionSubtitle: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.medium,
     textAlign: 'center',
     marginBottom: 18,
   },
   completionMsgLine1: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 17,
     fontFamily: BrandFonts.semibold,
     lineHeight: 23,
@@ -6333,7 +6240,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
   },
   completionMsgLine2: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 15,
     fontFamily: BrandFonts.regular,
     lineHeight: 22,
@@ -6354,74 +6261,80 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
   },
+  /* Position absolute — overlapt de (ook absolute) DrainingCircle/
+     SlowAmbientPulse i.p.v. eronder te stapelen als normale flow-
+     sibling in timerWrap's kolom. */
   timerCenter: {
+    position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /* Timer-getal mm:ss formaat. Iter 8c: pure wit (#FFFFFF) ipv
-     Brand.text (#f4f4f4) voor max contrast op gevulde mode-color
-     achtergrond. Operator-feedback: "tekst in de cirkel blijft bijna
-     onleesbaar" — bij Delta groen was 't met off-white te zwak. */
-  /* Iter 2026-06-05: kleine BRACELET-caption boven de timer (alleen
-     zichtbaar wanneer user via Free Breathwork CTA komt). Erft kleur
-     van timerColorOverride zodat het leesbaar blijft op light + dark
-     mode-achtergronden. */
-  timerContextLabel: {
-    fontSize: 10,
+  /* PAUSED-eyebrow, alleen zichtbaar tijdens pauze — nu IN de ring,
+     boven de mode-naam-rij (operator, 16 september 2026: "timer en info
+     moet in de bol"). */
+  pausedLabel: {
+    fontSize: 11,
     fontFamily: BrandFonts.bold,
-    letterSpacing: 2.4,
-    marginBottom: 6,
+    letterSpacing: 2,
     textAlign: 'center',
-    opacity: 0.7,
+    marginBottom: 4,
   },
-  /* Iter 2026-06-05: Context-chip bovenaan active screen wanneer user
-     via Free Breathwork CTA komt. Apple-stijl pill in brand-blauw,
-     subtiel maar duidelijk — communiceert: "dit scherm draait nu in
-     breathwork-context, de bracelet onderaan is de motor".
-     v2 (2026-06-05): marginTop 16 toegevoegd zodat chip ademruimte
-     heeft tov de Resume/End action-row erboven. Voorheen geen marginTop
-     waardoor chip tegen de knoppen aan kleefde wanneer breathwork-card
-     uitklapte. */
-  breathContextChip: {
-    alignSelf: 'center',
-    marginTop: 16,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 100,
-    backgroundColor: 'rgba(58,143,255,0.10)',
-    borderColor: 'rgba(58,143,255,0.30)',
-    borderWidth: 1,
+  /* Mode-dot + naam-rij — nu IN de ring, boven de mm:ss. */
+  activeModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    /* Operator, 27 september 2026 ("tekst calm control moet boven de
+       cirkel komen"): stond hier al op 6 toen dit nog INSIDE de ring
+       stond (kort onder PAUSED-label); nu als los element BOVEN de
+       240px-ring iets meer ademruimte. */
+    marginBottom: 16,
   },
-  breathContextChipText: {
-    color: Brand.accent,
-    fontSize: 10,
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  activeName: {
+    color: C.text,
+    fontSize: 15,
     fontFamily: BrandFonts.bold,
-    letterSpacing: 1.6,
+    letterSpacing: 0.2,
   },
+  /* Cijfers krijgen een zachte, gecentreerde glow-schaduw (via
+     timerColorOverride op de call site) i.p.v. platte tekst — de
+     DrainingCircle-vulling erachter wisselt van niveau, dus platte
+     tekst zonder contrast-truc zou tegen bepaalde vulniveaus
+     onleesbaar worden.
+     Operator, 16 september 2026 ("bij aftellen zit er veel beweging in
+     de cijfers"): Inter's cijfers zijn niet standaard proportioneel-
+     gelijk breed — "1" is smaller dan "8" — dus elke seconde-tik
+     veranderde de tekstbreedte en schoof het gecentreerde blok zichtbaar
+     heen en weer. fontVariant tabular-nums dwingt vaste cijferbreedte af
+     (zelfde als CSS font-variant-numeric: tabular-nums), zodat de
+     positie stabiel blijft. */
   timerNum: {
-    color: '#FFFFFF',
-    fontSize: 52,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: -1.5,
-    lineHeight: 56,
+    fontSize: 68,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -2.5,
+    lineHeight: 72,
+    fontVariant: ['tabular-nums'],
   },
   timerUnit: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.regular,
+    color: C.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
     letterSpacing: 0.5,
     marginTop: 4,
   },
-  /* "of X:XX" — context-regel onder de timer-unit. Bumped van 30% naar
-     55% opacity (iter 7) — operator-feedback "tekst onder minuten is
-     niet zichtbaar". Nu duidelijk leesbaar. */
+  /* "of X:XX" — context-regel onder de timer-unit. */
   timerTotal: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
+    color: C.textDim,
+    fontSize: 13,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.4,
-    marginTop: 8,
+    marginTop: 6,
   },
   /* BreathingHint — synced met PulsingCircle's 6s cyclus. Smaller +
      dimmer 2026-05-27 (operator-feedback "tekst te druk"). Heeft minder
@@ -6434,52 +6347,11 @@ const s = StyleSheet.create({
     marginTop: 0,
     marginBottom: 10,
   },
-  /* RotatingQuote — onderaan, italic, cross-fade om de 22s. Tightened
-     2026-05-27: smaller + iets dimmer zodat 't ondersteunend voelt, niet
-     concurrent met de timer. Smallere lijn (paddingHorizontal 44) maakt
-     'm meer "pull-quote"-achtig dan een gewone alinea. */
-  rotatingQuote: {
-    color: 'rgba(255,255,255,0.42)',
-    fontSize: 13,
-    fontFamily: BrandFonts.regular,
-    fontStyle: 'italic',
-    letterSpacing: 0.1,
-    lineHeight: 19,
-    textAlign: 'center',
-    marginTop: 22,
-    marginBottom: 0,
-    paddingHorizontal: 44,
-  },
-  /* "PAUSED"-eyebrow nu BOVEN de mode-naam (iter 9bz). Centered, mode-
-     color, ALL CAPS met spacing — duidelijk visueel statement zonder
-     schreeuwerig te zijn. Margins zo dat 't strak boven de mode-naam
-     hangt zonder visuele gap. */
-  pausedLabel: {
-    fontSize: 11,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2.5,
-    textAlign: 'center',
-    marginTop: 0,
-    marginBottom: 4,
-  },
-  /* Stale-poll banner — verschijnt onder mode-row als BLE-status oud
-     is. Geen alarm-rood; subtiele waarschuwing. */
-  staleNote: {
-    color: Brand.textDim,
-    fontSize: 11,
-    fontFamily: BrandFonts.medium,
-    lineHeight: 16,
-    textAlign: 'center',
-    marginTop: -16,
-    marginBottom: 18,
-    paddingHorizontal: 24,
-    maxWidth: 320,
-  },
   /* Inline notice direct onder PAUSED-label — verschijnt alleen als
      resume de duration zal verhogen (BLE-spec minimum). Kleine, gedimde
      tekst — informatief, niet alarmerend. */
   pausedNote: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.regular,
     lineHeight: 18,
@@ -6496,7 +6368,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
   restartLinkText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.medium,
     letterSpacing: -0.1,
@@ -6512,48 +6384,66 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 18,
   },
-  /* Iter 9aa: Pause + End inline onder pulse-ring. Twee gelijke
-     knoppen naast elkaar, thumb-friendly afstand, niet tegen rand. */
-  /* Iter 9bw: marginTop 18 → 4 (–14px). Pause/End direct onder timer
-     verschuift de breathwork-card omhoog → meer ademruimte naar
-     bottom safe-zone. */
-  inlineActionRow: {
-    flexDirection: 'row',
-    gap: 14,
-    marginTop: 4,
+  /* Operator, 16 september 2026 ("ik vind de pils niet mooi, maak 1
+     ronde pauze-knop en eronder end session, niet in pil"): terug naar
+     kolom-layout — enkele ronde Play/Pause-knop, "End session" als
+     tekst-link eronder. */
+  sessionControlColumn: {
+    alignItems: 'center',
+    marginTop: 8,
+    width: '100%',
+  },
+  roundActionBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roundActionBtnOutline: {
+    borderWidth: 1.5,
+  },
+  /* Operator, 17 september 2026 ("twee gelijke capsules, Minimize
+     zachtgrijs, End transparant met rood randje"): twee even-brede
+     capsule-knoppen naast elkaar, direct onder de pauzeknop.
+     Operator, 27 september 2026 ("de pills moeten ook onder elkaar"):
+     row → column — Minimize en End session staan nu gestapeld i.p.v.
+     naast elkaar. */
+  secondaryActionsRow: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 18,
     paddingHorizontal: 24,
     width: '100%',
   },
-  inlineActionFilled: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+  capsuleBtnSecondary: {
+    width: '100%',
+    paddingVertical: 13,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inlineActionFilledText: {
+  /* Minimize — de "veilige" standaardactie: zachtgrijze vulling, zoals
+     het vlak achter het tandwiel-icoon elders op dit scherm. */
+  capsuleBtnMinimize: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  /* Operator, 17 september 2026 ("deze pagina moet altijd rustig zijn,
+     geen negatieve kleuren"): rood randje weg — dit scherm gebruikt
+     bewust nooit een waarschuwings-/gevaar-kleur, ook niet voor End.
+     Transparant + neutraal wit/grijs randje, onderscheiden van Minimize
+     puur door de afwezigheid van een gevuld vlak (nog altijd de
+     "voorzichtiger" van de twee, zonder een kleur die onrust suggereert). */
+  capsuleBtnEnd: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  capsuleBtnSecondaryText: {
     color: '#ffffff',
     fontSize: 14,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.3,
-  },
-  inlineActionOutlined: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.20)',
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* Iter 9ab (2026-05-31): pressed-state. Iets DONKERDER bg ipv lichter,
-     zodat witte tekst altijd contrast houdt (bug: vroeger werd bg licht
-     en tekst onzichtbaar). Border-color blijft gelijk = duidelijke
-     visuele tap-feedback zonder leesbaarheid op te offeren. */
-  inlineActionOutlinedPressed: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderColor: 'rgba(255,255,255,0.30)',
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.2,
   },
   /* Iter 9ac (2026-05-31): preview-mode header voor non-owners. Row met
      left "← Exit preview" pill + right "PREVIEW" badge zodat user direct
@@ -6567,11 +6457,13 @@ const s = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
+  /* Operator, 16 september 2026: witte rgba-vlak/rand → onzichtbaar op
+     de nu lichte achtergrond. */
   previewExitPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(10,10,12,0.04)',
+    borderColor: 'rgba(10,10,12,0.14)',
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 12,
@@ -6579,70 +6471,20 @@ const s = StyleSheet.create({
     gap: 6,
   },
   previewExitArrow: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     lineHeight: 17,
   },
   previewExitText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 12,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.3,
   },
   previewExitBadge: {
-    color: 'rgba(255,255,255,0.45)',
+    color: C.textDim,
     fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 1.4,
-  },
-  inlineActionOutlinedText: {
-    color: Brand.text,
-    fontSize: 14,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
-  },
-  /* Iter v201 (2026-07-04): Close-knop op active session. Discreet,
-     onder Pause+End rij. Verlaat scherm zonder hardware Stop → sessie
-     draait autonoom door op de bracelet. */
-  closeSessionBtn: {
-    marginTop: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  closeSessionBtnText: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.3,
-  },
-  /* Iter v149 v4 (2026-06-25): Voice toggle row op active session.
-     Prominent zichtbaar, niet verstopt — tap-target met label + state.
-     Border + bg veranderen bij ON state om duidelijk visueel feedback
-     te geven. */
-  voiceToggleRow: {
-    marginTop: 12,
-    marginHorizontal: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  voiceToggleLabel: {
-    flex: 1,
-    color: Brand.textDim,
-    fontSize: 14,
-    fontFamily: BrandFonts.semibold,
-    marginLeft: 10,
-    letterSpacing: 0.1,
-  },
-  voiceToggleState: {
-    color: Brand.textDim,
-    fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.4,
   },
@@ -6664,14 +6506,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 22,
   },
   endModalTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 22,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.4,
     marginBottom: 12,
   },
   endModalBody: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     lineHeight: 21,
@@ -6699,7 +6541,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   endModalBtnDestructiveText: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 15,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.2,
@@ -6709,76 +6551,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   endModalBtnCancelText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.semibold,
-  },
-  /* Iter v150: BreathworkStrip completion modal styles (Buddha popup). */
-  bwCompletionBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.78)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  bwCompletionSheet: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#0f0f0f',
-    borderRadius: 22,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  bwCompletionAccentStrip: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 5,
-  },
-  bwCompletionBuddha: {
-    width: 96,
-    height: 96,
-    marginTop: 6,
-    marginBottom: 18,
-  },
-  bwCompletionEyebrow: {
-    fontSize: 11,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  bwCompletionTitle: {
-    color: Brand.text,
-    fontSize: 26,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.5,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  bwCompletionBody: {
-    color: Brand.textDim,
-    fontSize: 14,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 21,
-    marginBottom: 22,
-    textAlign: 'center',
-  },
-  bwCompletionBtn: {
-    paddingVertical: 13,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-  },
-  bwCompletionBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 0.3,
   },
   /* Outlined neutrale action button — voor End/Pause. Iter 8b refinement
      voor professioneler gevoel: stevigere padding, hogere border-
@@ -6795,7 +6570,7 @@ const s = StyleSheet.create({
     minHeight: 54,
   },
   actionBtnOutlinedText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
@@ -6840,25 +6615,6 @@ const s = StyleSheet.create({
     letterSpacing: 0.1,
     lineHeight: 20,
   },
-  /* Warning-chip — alleen tijdens active session, en alleen wanneer
-     condition daadwerkelijk geldt (low battery, charging). Subtiel,
-     niet schreeuwerig — moet de zen niet breken. */
-  activeWarn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    marginTop: 8,
-  },
-  activeWarnIcon: {
-    fontSize: 16,
-  },
-  activeWarnText: {
-    color: Brand.textDim,
-    fontSize: 13,
-    fontFamily: BrandFonts.medium,
-  },
   /* Sim demo bar tijdens active session — kleinere padding, onderin
      tussen scroll-content en stop-button. Niet langer "in your face". */
   activeDemoBar: {
@@ -6872,268 +6628,7 @@ const s = StyleSheet.create({
      cells. Geen card-box; alleen typografie + dividers zoals Apple
      Health-stats. Werkt op zowel idle (boven mode-grid) als active
      (onder de timer). */
-  /* ── BreathworkStrip ────────────────────────────────────────────────
-     Twee staten: OFF (uitnodigende card met benefit + duur) en ON
-     (actieve card met geanimeerde breath-dot, progress, meta, context).
-     Beide gebruiken mode-color als subtiele tint zodat 't visueel
-     gekoppeld is aan de huidige sessie. Iter 6 (2026-05-27): meer
-     "aanwezig" zonder de bracelet als primair element te verdringen. */
 
-  /* OFF-state card — uitnodiging om breathwork in te schakelen. Mode-
-     color border + 6% fill, vol-breedte. Korte hierarchie: eyebrow → titel
-     → benefit → reassurance-hint. Tap-target = hele card. */
-  /* Iter 9bb: compacter card op active screen — ambient pulse staat
-     terug op 280, dus minder ruimte over. marginTop kleiner, padding
-     dichter. */
-  breathOffCard: {
-    width: '100%',
-    marginTop: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  /* Iter 9cc: marginBottom 8 → 4 (tightere stack info-blok links) */
-  breathOffHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  breathOffDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  /* Iter 9ee: text-kleuren voor wit card-bg */
-  breathOffEyebrow: {
-    flex: 1,
-    color: 'rgba(0,0,0,0.55)',
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2,
-  },
-  breathOffPlus: {
-    fontSize: 18,
-    fontFamily: BrandFonts.bold,
-    lineHeight: 18,
-  },
-  /* Iter 9dq v8 (2026-06-02): "Learn more →" link onder de subline.
-     Accent-blauw + arrow = duidelijk tap-target. Vervangt ⓘ icoon dat
-     niet onmiddellijk discoverable was. */
-  breathLearnMore: {
-    marginTop: 6,
-    alignSelf: 'flex-start',
-  },
-  breathLearnMoreText: {
-    color: Brand.accent,
-    fontSize: 12,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
-  },
-  /* ── Info-popup ─────────────────────────────────────────────────── */
-  breathInfoBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  breathInfoCard: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: Brand.panel,
-    borderColor: 'rgba(58, 143, 255, 0.28)',
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingVertical: 22,
-    paddingHorizontal: 22,
-  },
-  breathInfoDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginBottom: 12,
-  },
-  breathInfoEyebrow: {
-    color: 'rgba(255,255,255,0.50)',
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2,
-    marginBottom: 6,
-  },
-  breathInfoTitle: {
-    color: Brand.text,
-    fontSize: 22,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -0.4,
-    marginBottom: 4,
-  },
-  breathInfoMeta: {
-    color: Brand.textDim,
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    marginBottom: 18,
-  },
-  breathInfoSectionLabel: {
-    color: 'rgba(255,255,255,0.50)',
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginTop: 14,
-    marginBottom: 6,
-  },
-  breathInfoBody: {
-    color: Brand.text,
-    fontSize: 13,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 20,
-  },
-  breathInfoClose: {
-    marginTop: 22,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  breathInfoCloseText: {
-    color: Brand.accent,
-    fontSize: 14,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.3,
-  },
-  /* Iter 9ee: zwart op witte card-bg */
-  breathOffTitle: {
-    color: '#0a0a0a',
-    fontSize: 15,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.2,
-  },
-  /* Iter 9ee: micro-info regel — dim-zwart voor wit bg */
-  breathOffSubline: {
-    color: 'rgba(0,0,0,0.50)',
-    fontSize: 11,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.1,
-    marginTop: 2,
-  },
-  /* Iter 9ee: dark-gray op witte card-bg */
-  breathOffBenefit: {
-    color: 'rgba(0,0,0,0.70)',
-    fontSize: 12,
-    fontFamily: BrandFonts.regular,
-    lineHeight: 18,
-    marginTop: 10,
-  },
-  breathOffHint: {
-    color: 'rgba(255,255,255,0.40)',
-    fontSize: 11,
-    fontFamily: BrandFonts.regular,
-    fontStyle: 'italic',
-    lineHeight: 16,
-  },
-
-  /* ON-state card — actieve breathwork. Mode-color border + 8% fill
-     (iets sterker dan OFF om "aan"-staat te markeren). Layout:
-       1. Header — mode-dot + protocol-naam (mode-color) + ✕
-       2. Prompt + geanimeerde breath-dot (centraal, primair)
-       3. Progress-balk
-       4. Meta — counter + tijd resterend
-       5. Benefit — context-footer
-     */
-  /* Iter 9bb: zelfde krimp als off-card */
-  /* Iter 9bv → 9bw: marginTop 8 → 14, paddingVertical blijft 10.
-     De buttons sitten nu hoger (iter 9bw), dus we kunnen iets meer
-     visuele scheiding (marginTop) geven boven de card zonder dat 't
-     onderaan tegen de safe-zone komt. */
-  breathOnCard: {
-    width: '100%',
-    marginTop: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  /* Iter 9bv: header marginBottom 12→4 (–8px). */
-  breathOnHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  breathOnHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  breathOnTitle: {
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 2,
-  },
-  /* Iter 9ee: dim-zwart X-knop op wit bg */
-  breathOnDismiss: {
-    color: 'rgba(0,0,0,0.50)',
-    fontSize: 16,
-    fontFamily: BrandFonts.medium,
-    paddingHorizontal: 4,
-  },
-  /* Prompt-row — prompt-text (left) + breath-dot animation (right). */
-  breathOnPromptWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    marginBottom: 14,
-  },
-  breathOnPrompt: {
-    color: Brand.text,
-    fontSize: 18,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: -0.2,
-  },
-  /* Animated dot — schaalt met phase (0.4 → 1.6) en fade (0.35 → 0.85).
-     Base size 14×14 zodat na 1.6× scale = 22px (still subtle). */
-  breathOnDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  breathOnProgressBar: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  breathOnProgressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  breathOnMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  breathOnCount: {
-    color: Brand.text,
-    fontSize: 12,
-    fontFamily: BrandFonts.semibold,
-    letterSpacing: 0.2,
-  },
-  breathOnTime: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
-    fontFamily: BrandFonts.medium,
-    letterSpacing: 0.2,
-  },
-  breathOnBenefit: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 11,
-    fontFamily: BrandFonts.regular,
-    fontStyle: 'italic',
-    lineHeight: 16,
-    textAlign: 'left',
-  },
   /* History-link onder de stats-strip op idle screen. Subtle, tertiair. */
   historyLink: {
     marginTop: 14,
@@ -7187,7 +6682,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
   statsNum: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 20,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.4,
@@ -7223,22 +6718,27 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.20)',
   },
   searchingDotActive: {
-    backgroundColor: Brand.accent,
+    backgroundColor: C.accent,
   },
+  /* Operator, 16 september 2026 ("schuif de teksten dichter bij elkaar,
+     als één blok — uitleg mag fractie kleiner en iets lichter"): titel
+     en subtekst lazen los van elkaar. marginBottom 10→4 groepeert ze
+     visueel; subtekst 14→13px en een lichtere grijstint dan de gewone
+     C.textDim geeft meer rust/hiërarchie onderin het scherm. */
   searchingTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 24,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.5,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   searchingSub: {
-    color: Brand.textDim,
-    fontSize: 14,
+    color: 'rgba(10,10,12,0.38)',
+    fontSize: 13,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
     maxWidth: 280,
   },
 
@@ -7264,14 +6764,14 @@ const s = StyleSheet.create({
     fontSize: 38,
   },
   chargingTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 26,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.5,
     marginBottom: 10,
   },
   chargingSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
@@ -7295,7 +6795,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
   },
   chargingStatLabel: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 13,
     fontFamily: BrandFonts.medium,
   },
@@ -7324,20 +6824,20 @@ const s = StyleSheet.create({
     marginBottom: 22,
   },
   faultIconText: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 40,
     fontFamily: BrandFonts.extrabold,
     lineHeight: 44,
   },
   faultTitle: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 24,
     fontFamily: BrandFonts.extrabold,
     letterSpacing: -0.5,
     marginBottom: 10,
   },
   faultSub: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 14,
     fontFamily: BrandFonts.regular,
     textAlign: 'center',
@@ -7357,10 +6857,14 @@ const s = StyleSheet.create({
     paddingBottom: 76,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: Brand.bg,
+    backgroundColor: C.bg,
   },
+  /* Operator ("premium apple stijl"): achtergrond was C.accent (Signal
+     Blue/Royal Indigo) — een CTA-achtergrond is NOOIT de accentkleur
+     (huisstijl §3, "altijd wit + donkere tekst"). Tekstkleur mee
+     aangepast van wit naar donker. */
   primaryBtn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
@@ -7369,21 +6873,24 @@ const s = StyleSheet.create({
     gap: 8,
   },
   primaryBtnText: {
-    color: '#ffffff',
+    color: '#1D1D1F',
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.1,
   },
+  /* Operator, 16 september 2026: witte rgba-vlak/rand waren afgestemd op
+     een donkere achtergrond — bijna onzichtbaar geworden op de nu
+     lichte pagina (dit is de Connect/Retry-knop op het zoek-scherm). */
   outlinedBtn: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(10,10,12,0.03)',
+    borderColor: 'rgba(10,10,12,0.16)',
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
   },
   outlinedBtnText: {
-    color: Brand.text,
+    color: C.text,
     fontSize: 15,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
@@ -7430,7 +6937,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   stopBtnText: {
-    color: Brand.error,
+    color: C.error,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.1,
@@ -7446,7 +6953,7 @@ const s = StyleSheet.create({
     opacity: 0.65,
   },
   demoTitle: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
@@ -7463,7 +6970,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 2,
   },
   demoLinkText: {
-    color: Brand.textDim,
+    color: C.textDim,
     fontSize: 12,
     fontFamily: BrandFonts.medium,
   },

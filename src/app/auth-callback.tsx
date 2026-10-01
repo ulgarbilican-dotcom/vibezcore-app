@@ -20,6 +20,10 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor spinners of CTA-knoppen. CTA-regel v4.4 op een
+   donkere achtergrond: witte knop-bg + donkere tekst. */
 import { clearSession, persistSession } from '@/services/auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
@@ -32,7 +36,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
+   voor de referentie-implementatie) — additief, geen layout/logica-
+   wijziging. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* Supabase config uit centrale constants. Eén plek wijzigen = alle
    auth-flows mee. Publishable keys zijn safe in client-code (scoped). */
@@ -49,6 +64,19 @@ export default function AuthCallback() {
     type?: string;
   }>();
   const [state, setState] = useState<State>({ phase: 'loading' });
+
+  /* Press-scale-animatie — één losse shared value per tappable element
+     (zie breath-welcome.tsx `StartCard`). */
+  const signInBtnPressScale = useSharedValue(1);
+  const onSignInBtnPressIn = () => {
+    signInBtnPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onSignInBtnPressOut = () => {
+    signInBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const signInBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: signInBtnPressScale.value }],
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -186,7 +214,7 @@ export default function AuthCallback() {
       <View style={s.center}>
         {state.phase === 'loading' && (
           <>
-            <ActivityIndicator size="large" color={Brand.accent} />
+            <ActivityIndicator size="large" color={Brand.textDim} />
             <Text style={s.title}>Signing you in…</Text>
             <Text style={s.sub}>One moment — verifying your link.</Text>
           </>
@@ -211,13 +239,15 @@ export default function AuthCallback() {
             </View>
             <Text style={s.title}>Link expired</Text>
             <Text style={s.sub}>{state.message}</Text>
-            <Pressable
-              style={s.btn}
+            <AnimatedPressable
+              style={[s.btn, signInBtnPressStyle]}
               onPress={() => router.replace('/account')}
+              onPressIn={onSignInBtnPressIn}
+              onPressOut={onSignInBtnPressOut}
               accessibilityLabel="Go to sign in"
             >
               <Text style={s.btnText}>Go to sign in</Text>
-            </Pressable>
+            </AnimatedPressable>
           </>
         )}
       </View>
@@ -283,14 +313,14 @@ const s = StyleSheet.create({
     lineHeight: 32,
   },
   btn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 32,
     marginTop: 24,
   },
   btnText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,

@@ -11,11 +11,14 @@
    - Volledige chronologische lijst van sessies (incl. PARTIAL tag)
    ───────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+import { router, Stack } from 'expo-router';
+import { ChevronDown, ChevronRight } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -25,6 +28,24 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showVibezAlert } from '@/components/VibezAlert';
+import { StatRing } from '@/components/StatRing';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/* Operator, 11 september 2026: "voorstander van ringen die vullen" — Apple
+   Fitness-stijl. Vervangt het losse hero-getal: een volle ring (spoor +
+   gevulde boog) met het totale-tijd-cijfer IN het midden, gevuld op basis
+   van hoeveel van de laatste 7 dagen een sessie hadden — dezelfde "hoofd-
+   boodschap eerst, cijfers als detail eronder"-volgorde die Apple's eigen
+   Activity-ringen gebruiken. Tekencode zit nu in het gedeelde
+   `components/StatRing.tsx` (ook gebruikt door (tabs)/activity.tsx). */
+const RING_SIZE = 148;
 
 /* Naam en kleur per modus komen uit dezelfde bron als de keuzepagina en het
    sessiescherm. Hier stond een handgeschreven kopie "om geen cross-file dep
@@ -56,6 +77,7 @@ const PATTERN_INFO: Record<string, { name: string; color: string }> =
    vorm klopt ook in een week van drie minuten. */
 function buildWeek(history: BreathHistoryEntry[]) {
   const out: {
+    dateKey: string;
     label: string;
     min: number;
     frac: number;
@@ -81,6 +103,12 @@ function buildWeek(history: BreathHistoryEntry[]) {
       sec: byKey[k] ?? 0,
     })).filter((x) => x.sec > 0);
     out.push({
+      /* Operator, 9 september 2026: "Encountered two children with the
+         same key" — de dagletter ('S', 'T'...) is geen unieke React-key
+         over een week (zondag én zaterdag zijn allebei 'S'). `key`
+         hierboven is al de echte, per-dag-unieke `toDateString()` —
+         gewoon meegeven i.p.v. de letter opnieuw te gebruiken als key. */
+      dateKey: key,
       label: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()],
       min: Math.round(sec / 60),
       frac: 0,
@@ -126,26 +154,34 @@ function formatTotalTime(sec: number): { num: string; unit: string } {
   return { num: hours.toFixed(1), unit: 'hours' };
 }
 
-function formatRelativeTime(ts: number): string {
-  /* Dag én KLOKTIJD (operator, 8 augustus 2026: "welke sessie gedaan om hoe
-     laat? welke datum?"). "3h ago" verschuift onder je ogen en dwingt tot
-     rekenen; "Today · 09:12" is een feit. Vandaag en gisteren houden hun
-     woord — dat leest sneller dan een datum — daarna weekdag en datum. */
+/** YYYY-MM-DD in lokale tijd — groepeersleutel voor de dag-secties
+ *  hieronder. Zelfde vorm als bracelet-history.ts se dayKey, hier lokaal
+ *  gehouden om geen cross-domain dependency toe te voegen voor iets
+ *  triviaals. */
+function localDayKey(ts: number): string {
   const d = new Date(ts);
-  const time = d.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** "Today" / "Yesterday" / "Thu 15 Aug" — voor een hele DAG, geen tijdstip.
+ *  Gedeeld door de sectiekoppen hieronder en (met tijd erbij) door losse
+ *  rijen elders. */
+function dayLabel(ts: number): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const that = new Date(ts);
   that.setHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - that.getTime()) / 864e5);
-  if (days === 0) return `Today · ${time}`;
-  if (days === 1) return `Yesterday · ${time}`;
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  const d = new Date(ts);
   const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${wk} ${d.getDate()} ${months[d.getMonth()]} · ${time}`;
+  return `${wk} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 /* ── Stats berekeningen ──────────────────────────────────────────── */
@@ -223,6 +259,51 @@ function computeStats(history: BreathHistoryEntry[]): StatsResult {
   };
 }
 
+/* Dag-koprij, apart component (i.p.v. inline in de `.map()` hieronder) —
+   hooks mogen niet in een loop. */
+function DayHeadRow({
+  label,
+  metaText,
+  accessibilityLabel,
+  onPress,
+  open,
+}: {
+  label: string;
+  metaText: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+  open: boolean;
+}) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  return (
+    <AnimatedPressable
+      style={[styles.dayHead, pressStyle]}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {open ? (
+        <ChevronDown size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+      ) : (
+        <ChevronRight size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+      )}
+      <Text style={styles.dayHeadLbl}>{label}</Text>
+      <Text style={styles.dayHeadMeta}>{metaText}</Text>
+    </AnimatedPressable>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════════════
    PAGE
    ════════════════════════════════════════════════════════════════════ */
@@ -231,6 +312,7 @@ export default function BreathHistoryScreen() {
   const week7 = useMemo(() => buildWeek(history), [history]);
   const stats = useMemo(() => computeStats(history), [history]);
   const totalTime = formatTotalTime(stats.totalSec);
+  const daysActive = week7.filter((d) => d.min > 0).length;
 
   /* Sorted history (recent eerst) — useBreathHistory geeft vanaf
      nieuwste, maar we sorteren opnieuw om robuust te zijn tegen
@@ -240,8 +322,78 @@ export default function BreathHistoryScreen() {
     [history],
   );
 
+  /* Per dag gegroepeerd i.p.v. één platte lijst (operator, 13 augustus
+     2026: "de rij wordt heel lang... kan dat per dag via een dropdown?").
+     Elke rij droeg tot nu toe zijn eigen volledige datum, en dat herhaalde
+     zich bij elke sessie van dezelfde dag. Nu draagt de DAGKOP de datum,
+     eenmalig, en blijft een rij zelf tot tijd + naam + duur beperkt. */
+  const dayGroups = useMemo(() => {
+    const groups: { key: string; label: string; entries: BreathHistoryEntry[] }[] = [];
+    for (const entry of sortedHistory) {
+      const key = localDayKey(entry.ts);
+      const last = groups[groups.length - 1];
+      if (last && last.key === key) {
+        last.entries.push(entry);
+      } else {
+        groups.push({ key, label: dayLabel(entry.ts), entries: [entry] });
+      }
+    }
+    return groups;
+  }, [sortedHistory]);
+
+  /* Recente dagen staan open, oudere zijn ingeklapt — zoals een bank-app of
+     Strava dat doet: de laatste week is waar je meestal naar kijkt, wat
+     daarvoor ligt is een tik verder. Meerdere dagen mogen tegelijk open
+     staan (geen single-open-accordion) — dat is een onnodige beperking
+     zodra je twee dagen wil vergelijken. */
+  const [openDays, setOpenDays] = useState<Set<string> | null>(null);
+  const effectiveOpenDays = useMemo(
+    () => openDays ?? new Set(dayGroups.slice(0, 7).map((g) => g.key)),
+    [openDays, dayGroups],
+  );
+  const toggleDay = (key: string) => {
+    const next = new Set(effectiveOpenDays);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setOpenDays(next);
+  };
+
+  const emptyBtnPressScale = useSharedValue(1);
+  const onEmptyBtnPressIn = () => {
+    emptyBtnPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onEmptyBtnPressOut = () => {
+    emptyBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const emptyBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emptyBtnPressScale.value }],
+  }));
+
+  const clearBtnPressScale = useSharedValue(1);
+  const onClearBtnPressIn = () => {
+    clearBtnPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onClearBtnPressOut = () => {
+    clearBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const clearBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: clearBtnPressScale.value }],
+  }));
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {/* Operator, 1 okt 2026 ("kijk alles na op consistentie"): had
+         helemaal geen eigen Stack.Screen, leunde volledig op de
+         onaangepaste systeem-terugpijl uit _layout.tsx — nu dezelfde
+         ChevronLeft-stijl (size 20, strokeWidth 2.8) als overal elders. */}
+      <Stack.Screen
+        options={{
+          title: 'Your Practice',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -255,44 +407,71 @@ export default function BreathHistoryScreen() {
             <Text style={styles.emptyBody}>
               Start any breathwork pattern. Every session — completed or partial — will appear here with full stats.
             </Text>
-            <Pressable
-              style={styles.emptyBtn}
+            <AnimatedPressable
+              style={[styles.emptyBtn, emptyBtnPressStyle]}
               onPress={() => router.back()}
+              onPressIn={onEmptyBtnPressIn}
+              onPressOut={onEmptyBtnPressOut}
               android_ripple={{ color: 'rgba(0,0,0,0.10)' }}
             >
               <Text style={styles.emptyBtnTxt}>BACK TO BREATH</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         ) : (
           <>
-            {/* ── Hero stat: total practice time ── */}
+            {/* ── Hero stat: total practice time ──
+                Operator, 11 september 2026: "weergave moet hypermodern" —
+                vlakke paneel-achtergrond vervangen door een zachte
+                accentkleur-gloed (diagonaal verloop, zelfde soort
+                "lichtbron"-taal als de countdown-overlay op
+                breath-session.tsx), zodat het hero-getal boven iets
+                lijkt te zweven i.p.v. in een effen kader te staan. */}
             <View style={styles.hero}>
+              <ExpoGradient
+                colors={[`${AudioAccent}26`, 'rgba(255,255,255,0)']}
+                start={{ x: 0.15, y: 0 }}
+                end={{ x: 0.85, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
               <Text style={styles.heroEyebrow}>TOTAL PRACTICE</Text>
-              <View style={styles.heroNumRow}>
-                <Text style={styles.heroNum}>{totalTime.num}</Text>
-                <Text style={styles.heroUnit}>{totalTime.unit}</Text>
+              <View style={styles.ringWrap}>
+                <StatRing progress={daysActive / 7} accent={AudioAccent} size={RING_SIZE} />
+                <View style={styles.ringCenter} pointerEvents="none">
+                  <View style={styles.heroNumRow}>
+                    <Text style={styles.heroNum}>{totalTime.num}</Text>
+                    <Text style={styles.heroUnit}>{totalTime.unit}</Text>
+                  </View>
+                </View>
               </View>
               <Text style={styles.heroSub}>
                 {stats.totalSessions} session{stats.totalSessions === 1 ? '' : 's'} · {formatMMSS(stats.avgSessionSec)} avg
               </Text>
+              <Text style={styles.ringCaption}>
+                {daysActive}/7 days this week
+              </Text>
             </View>
 
-            {/* ── Stats strip: 3 small cards ── */}
+            {/* ── Stats strip: 3 small cards ──
+                Elk kaartje krijgt nu een lichte tint van zijn EIGEN
+                statistiek-kleur i.p.v. één uniforme, kleurloze achtergrond
+                voor alle drie — het getal en de kaart eronder spreken
+                dezelfde kleurtaal i.p.v. dat de kleur enkel op het cijfer
+                zelf zit. */}
             <View style={styles.statsStrip}>
-              <View style={styles.statCard}>
+              <View style={[styles.statCard, { backgroundColor: 'rgba(255,159,10,0.08)', borderColor: 'rgba(255,159,10,0.22)' }]}>
                 <Text style={[styles.statNum, { color: '#FF9F0A' }]}>
                   {stats.streakDays}
                 </Text>
                 <Text style={styles.statLbl}>DAY STREAK</Text>
               </View>
-              <View style={styles.statCard}>
+              <View style={[styles.statCard, { backgroundColor: `${Brand.success}14`, borderColor: `${Brand.success}38` }]}>
                 <Text style={[styles.statNum, { color: Brand.success }]}>
                   {stats.completionRate}%
                 </Text>
                 <Text style={styles.statLbl}>COMPLETED</Text>
               </View>
-              <View style={styles.statCard}>
-                <Text style={[styles.statNum, { color: Brand.accent }]}>
+              <View style={[styles.statCard, { backgroundColor: `${AudioAccent}14`, borderColor: `${AudioAccent}38` }]}>
+                <Text style={[styles.statNum, { color: AudioAccent }]}>
                   {formatMMSS(stats.avgSessionSec)}
                 </Text>
                 <Text style={styles.statLbl}>AVG SESSION</Text>
@@ -317,7 +496,7 @@ export default function BreathHistoryScreen() {
             <Text style={styles.sectionLbl}>Minutes per day · last 7 days</Text>
             <View style={styles.week}>
               {week7.map((d) => (
-                <View key={d.label} style={styles.weekCol}>
+                <View key={d.dateKey} style={styles.weekCol}>
                   <Text style={styles.weekMin}>{d.min > 0 ? d.min : ''}</Text>
                   {/* Het getal staat BOVEN de balk en het spoor eronder loopt
                       altijd door tot de volle hoogte. Zo zie je waartegen je
@@ -399,47 +578,65 @@ export default function BreathHistoryScreen() {
               })}
             </View>
 
-            {/* ── All sessions chronological ── */}
+            {/* ── All sessions, per dag ── */}
             <Text style={styles.sectionLbl}>All sessions</Text>
-            <View style={styles.sessionsList}>
-              {sortedHistory.map((entry, i) => {
-                const meta = PATTERN_INFO[entry.key] ?? { name: entry.name, color: Brand.text };
-                const isCompleted = entry.completed !== false;
-                return (
-                  <View
-                    key={`${entry.ts}-${i}`}
-                    style={[
-                      styles.sessionRow,
-                      i === sortedHistory.length - 1 && { borderBottomWidth: 0 },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.sessionDot,
-                        { backgroundColor: meta.color, shadowColor: meta.color },
-                      ]}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.sessionHead}>
-                        <Text style={styles.sessionName}>{entry.name}</Text>
-                        {!isCompleted && (
-                          <Text style={styles.sessionPartialTag}>PARTIAL</Text>
-                        )}
-                      </View>
-                      <Text style={styles.sessionMeta}>
-                        {formatRelativeTime(entry.ts)} · {humanDur(entry.durSec)} · {entry.rounds} round{entry.rounds === 1 ? '' : 's'}
-                      </Text>
+            {dayGroups.map((group) => {
+              const open = effectiveOpenDays.has(group.key);
+              const totalSec = group.entries.reduce((sum, e) => sum + e.durSec, 0);
+              return (
+                <View key={group.key} style={styles.dayGroup}>
+                  <DayHeadRow
+                    open={open}
+                    label={group.label}
+                    metaText={`${group.entries.length} session${group.entries.length === 1 ? '' : 's'} · ${humanDur(totalSec)}`}
+                    accessibilityLabel={`${group.label}, ${group.entries.length} session${group.entries.length === 1 ? '' : 's'}, ${open ? 'expanded' : 'collapsed'}`}
+                    onPress={() => toggleDay(group.key)}
+                  />
+
+                  {open && (
+                    <View style={styles.sessionsList}>
+                      {group.entries.map((entry, i) => {
+                        const meta = PATTERN_INFO[entry.key] ?? { name: entry.name, color: Brand.text };
+                        const isCompleted = entry.completed !== false;
+                        return (
+                          <View
+                            key={`${entry.ts}-${i}`}
+                            style={[
+                              styles.sessionRow,
+                              i === group.entries.length - 1 && { borderBottomWidth: 0 },
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.sessionDot,
+                                { backgroundColor: meta.color, shadowColor: meta.color },
+                              ]}
+                            />
+                            <View style={{ flex: 1 }}>
+                              <View style={styles.sessionHead}>
+                                <Text style={styles.sessionName}>{entry.name}</Text>
+                                {!isCompleted && (
+                                  <Text style={styles.sessionPartialTag}>PARTIAL</Text>
+                                )}
+                              </View>
+                              <Text style={styles.sessionMeta}>
+                                {formatTime(entry.ts)} · {humanDur(entry.durSec)} · {entry.rounds} round{entry.rounds === 1 ? '' : 's'}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })}
                     </View>
-                  </View>
-                );
-              })}
-            </View>
+                  )}
+                </View>
+              );
+            })}
 
             {/* ── Clear history knop — destructive action, met dubbele
                 bevestiging via Alert.alert om accidentele clear te
                 voorkomen. Subtle styling onder de lijst zodat het geen
                 primary action is. ── */}
-            <Pressable
+            <AnimatedPressable
               onPress={() => {
                 void showVibezAlert({
                   title: 'Clear practice history?',
@@ -454,11 +651,13 @@ export default function BreathHistoryScreen() {
                   ],
                 });
               }}
-              style={styles.clearBtn}
+              onPressIn={onClearBtnPressIn}
+              onPressOut={onClearBtnPressOut}
+              style={[styles.clearBtn, clearBtnPressStyle]}
               android_ripple={{ color: 'rgba(239,68,68,0.10)' }}
             >
               <Text style={styles.clearBtnTxt}>CLEAR PRACTICE HISTORY</Text>
-            </Pressable>
+            </AnimatedPressable>
 
             <View style={{ height: 24 }} />
           </>
@@ -497,7 +696,7 @@ const styles = StyleSheet.create({
     paddingTop: 80, paddingHorizontal: 24,
   },
   emptyIcon: {
-    fontSize: 56, color: Brand.accent, marginBottom: 16,
+    fontSize: 56, color: AudioAccent, marginBottom: 16,
   },
   emptyTitle: {
     fontFamily: BrandFonts.bold, fontSize: 22,
@@ -509,13 +708,15 @@ const styles = StyleSheet.create({
     color: Brand.textDim, textAlign: 'center',
     lineHeight: 20, maxWidth: 300, marginBottom: 24,
   },
+  /* v4.4 CTA-regel: donkere ondergrond -> witte knop, donkere tekst
+     (geen Signal Blue, geen Royal Indigo op knoppen). */
   emptyBtn: {
     paddingHorizontal: 28, paddingVertical: 13,
-    backgroundColor: Brand.accent, borderRadius: 999,
+    backgroundColor: '#ffffff', borderRadius: 999,
   },
   emptyBtnTxt: {
     fontFamily: BrandFonts.bold, fontSize: 12,
-    letterSpacing: 1.5, color: '#000',
+    letterSpacing: 1.5, color: '#0a0a0a',
   },
 
   /* Hero stat */
@@ -528,24 +729,41 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.panel,
     borderWidth: 1,
     borderColor: Brand.border,
+    /* Klemt de accentkleur-gloed (ExpoGradient) af tot binnen de
+       afgeronde kaart-vorm. */
+    overflow: 'hidden',
   },
   heroEyebrow: {
     fontFamily: BrandFonts.bold, fontSize: 10,
-    letterSpacing: 2, color: Brand.accent,
+    letterSpacing: 2, color: AudioAccent,
     marginBottom: 10,
   },
+  /* Ring — Apple Fitness-stijl, gevuld op basis van dagen-met-sessie deze
+     week. Het cijfer verhuist van los-in-de-kaart naar IN de ring, dus
+     kleiner dan voorheen zodat "1.5 / hours" nog ruim binnen de cirkel
+     past (zie RING_SIZE hierboven). */
+  ringWrap: {
+    width: RING_SIZE, height: RING_SIZE,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12,
+  },
+  ringCenter: { position: 'absolute', alignItems: 'center' },
+  ringCaption: {
+    fontFamily: BrandFonts.semibold, fontSize: 11,
+    letterSpacing: 0.3, color: Brand.textDim,
+    marginTop: 6,
+  },
   heroNumRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 8,
-    marginBottom: 6,
+    flexDirection: 'row', alignItems: 'baseline', gap: 4,
   },
   heroNum: {
-    fontFamily: BrandFonts.black, fontSize: 56,
-    color: Brand.text, letterSpacing: -1.5,
-    lineHeight: 56,
+    fontFamily: BrandFonts.black, fontSize: 32,
+    color: Brand.text, letterSpacing: -1,
+    lineHeight: 34,
   },
   heroUnit: {
-    fontFamily: BrandFonts.semibold, fontSize: 18,
-    color: Brand.textDim, letterSpacing: -0.3,
+    fontFamily: BrandFonts.semibold, fontSize: 12,
+    color: Brand.textDim, letterSpacing: -0.2,
   },
   heroSub: {
     fontFamily: BrandFonts.medium, fontSize: 12.5,
@@ -664,6 +882,21 @@ const styles = StyleSheet.create({
   },
 
   /* Sessions list */
+  dayGroup: { marginBottom: 10 },
+  dayHead: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 8, paddingVertical: 10, paddingHorizontal: 2,
+  },
+  dayHeadLbl: {
+    fontFamily: BrandFonts.semibold, fontSize: 13.5,
+    color: Brand.text,
+  },
+  dayHeadMeta: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: BrandFonts.regular, fontSize: 11.5,
+    color: Brand.textDim,
+  },
   sessionsList: {
     backgroundColor: Brand.panel,
     borderWidth: 1, borderColor: Brand.border,

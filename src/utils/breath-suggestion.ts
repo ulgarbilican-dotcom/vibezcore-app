@@ -17,6 +17,7 @@
 
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { goalRank } from '@/data/goals';
+import { DAY_CANDIDATES, slotForHour } from '@/utils/day-plan';
 import type { BreathHistoryEntry } from '@/utils/breath-history';
 
 export type Suggestion = {
@@ -27,24 +28,21 @@ export type Suggestion = {
   reason: string;
 };
 
-/* Wat past bij welk uur. De avondgrens is hard: na negenen is REST & RESET
-   het enige juiste antwoord, wat de historiek ook zegt. */
+/* Wat past bij welk uur.
+   FIX, 17 september 2026 (operator: "soms zeg jij savonds sharp focus of
+   boost, smorgens rest en reset, smiddags rest en reset..."): dit had tot
+   nu toe zijn EIGEN urenindeling (6/11/15/21), los van `DAY_CANDIDATES` +
+   `slotForHour` (12/17/20) in `utils/day-plan.ts` — de motor achter de
+   Protocol-flow, het dagplan en de onboarding-preview. Twee klokken die
+   elkaar tegenspreken: bv. 16u viel hier in de "calm/clarity/focus/rest"-
+   bucket (REST inbegrepen), terwijl `DAY_CANDIDATES.midday` (tot 17u) Rest
+   juist hard uitsluit — vandaar "smiddags Rest & Reset". Nu dezelfde bron:
+   geen eigen lijst meer, enkel doorverwijzen. De vroegere afweging waarom
+   CLARITY ook 's avonds zou passen is bewust losgelaten — dat weegt nu
+   `DAY_CANDIDATES.evening` (Rest/Calm, "loslaten, niet nadenken"), niet
+   deze functie meer. */
 function byHour(h: number): BreathStateKey[] {
-  /* De avond sloot alles af behalve REST. Gevolg: wie "minder stress" als
-     doel had, kreeg elke avond REST & RESET voorgeschoteld — het doel deed
-     niets meer, want er viel niets te kiezen (operator, 8 augustus 2026).
-
-     De klok hoort te zeggen wat NIET past, niet wat er als enige overblijft.
-     's Avonds is dat activeren: BOOST (vijftien ademhalingen per minuut) om
-     elf uur is onzin. Maar CLARITY en CALM CONTROL zijn 's avonds prima —
-     het zijn allebei langzame ritmes, en een lange uitademing is juist waar
-     de literatuur naar wijst voor spanning. Ze staan achter REST, dus wie
-     geen doel kiest merkt van deze verruiming niets. */
-  if (h < 6) return ['rest', 'clarity'];
-  if (h < 11) return ['boost', 'focus', 'clarity'];
-  if (h < 15) return ['focus', 'clarity', 'calm'];
-  if (h < 21) return ['calm', 'clarity', 'focus', 'rest'];
-  return ['rest', 'clarity', 'calm'];
+  return DAY_CANDIDATES[slotForHour(h)] ?? DAY_CANDIDATES.evening;
 }
 
 const REASON: Record<BreathStateKey, string> = {

@@ -37,13 +37,15 @@ let state: BreathSessionInfo = { ...INITIAL };
 const listeners = new Set<() => void>();
 
 function notify(): void {
-  listeners.forEach((l) => {
-    try {
-      l();
-    } catch {
-      /* één crashende listener mag de rest niet blokkeren */
-    }
-  });
+  setTimeout(() => {
+    listeners.forEach((l) => {
+      try {
+        l();
+      } catch {
+        /* één crashende listener mag de rest niet blokkeren */
+      }
+    });
+  }, 0);
 }
 
 export function getBreathSession(): BreathSessionInfo {

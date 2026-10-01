@@ -69,7 +69,7 @@ let loadPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 /* Iter 9dq v44: migreer vzf_v1 (oude global key) naar de current-bucket

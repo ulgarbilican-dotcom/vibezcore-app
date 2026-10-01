@@ -20,9 +20,8 @@
 
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
-import { Volume2 } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -42,57 +41,125 @@ export type GuidanceConfig = {
   voice: boolean;
 };
 
-/* Volgorde exact zoals opgegeven. */
+/* Volgorde exact zoals opgegeven. Operator, 22 september 2026 ("smartphone
+   haptics moet haptics worden"): korter label, past nu op één regel i.p.v.
+   het eerdere "mag op 2 rijen"-compromis. */
 export const GUIDANCE_MODES: GuidanceConfig[] = [
   { key: 'voice',  label: 'Voice',              color: '#0A84FF', haptic: false, voice: true  },
-  { key: 'haptic', label: 'Smartphone Haptics', color: '#FF9F0A', haptic: true,  voice: false },
+  { key: 'haptic', label: 'Haptics',             color: '#FF9F0A', haptic: true,  voice: false },
   { key: 'both',   label: 'Voice + Haptics',    color: '#BF5AF2', haptic: true,  voice: true  },
   { key: 'silent', label: 'Silent Mode',        color: '#E8ECF2', haptic: false, voice: false },
 ];
 
 const SPRING = { damping: 17, stiffness: 220, mass: 0.85 };
 
-/* Symbolen per modus. Operator koos expliciet ◉))) voor haptics en ☾ voor
-   Silent Mode — die dragen meer betekenis dan een generiek icoon, dus we
-   zetten ze als tekst-glyph i.p.v. lucide-icoon. Voice en Voice+Haptics
-   houden wel een icoon omdat daar geen even sterk symbool voor is. */
-function ModeGlyph({
+/* Standaard press-scale (spec: StartCard in breath-welcome.tsx) — los van
+   de bestaande select-animaties hieronder (fill/pop op ModeCard, puls op
+   BraceletHighlight). Die vuren bij een STATE-wissel (geselecteerd/niet),
+   dit vuurt bij vinger-neer/-op. Om nooit op dezelfde transform te botsen
+   staat de press-scale op de buitenste Pressable (cardWrap/braceletWrap);
+   de fill-scale blijft op `s.card` en de pop-scale op het icoon eronder. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/* Operator, 22 september 2026 (eigen 2×2-iconbeeld i.p.v. losse lucide-
+   iconen, "kan jij die iconen zelf opsplitsen en in juiste kaart zetten"):
+   één PNG (1536×1024, transparant, witte lijntekening) met de vier iconen
+   naast/onder elkaar — geen 4 losse bestanden, dus geen sprake van
+   afzonderlijk hosten. Elke kaart toont zijn kwadrant door de volledige
+   afbeelding op 2× de kwadrant-maat te tekenen en de rest af te snijden
+   (`overflow:'hidden'`) — dezelfde truc als een CSS-spritesheet. */
+export const MODE_ICON_SPRITE_IMG =
+  'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20tap%20see%20hear%20feel.png';
+/* Kwadrant linksboven = Voice (golfvorm) · rechtsboven = Haptics
+   (radiogolven+stip) · linksonder = Voice + Haptics (golf → radiogolven) ·
+   rechtsonder = Silent (luidspreker met streep). */
+const SPRITE_CELL: Record<GuidanceMode, { row: 0 | 1; col: 0 | 1 }> = {
+  voice: { row: 0, col: 0 },
+  haptic: { row: 0, col: 1 },
+  both: { row: 1, col: 0 },
+  silent: { row: 1, col: 1 },
+};
+/* Bronkwadrant is 768×512 (de helft van 1536×1024) — breedte:hoogte = 1,5,
+   dus de kwadrant-container houdt diezelfde verhouding aan om vervorming
+   te voorkomen. */
+const SPRITE_CELL_RATIO = 1.5;
+
+/* Symbolen per modus, uit `MODE_ICON_SPRITE_IMG` geknipt. Gebruikt
+   `tintColor` (ondersteund op zowel iOS als Android) om de kaart-/actieve-
+   kleur toe te passen op de witte bronafbeelding — dezelfde dynamische
+   kleur die de losse lucide-iconen hiervoor ook kregen.
+   Geëxporteerd (operator, 22 september 2026, breath-welcome.tsx se
+   "iconen moeten eigen transparante blur kaarten hebben"): dezelfde 4
+   glyphen, nu ook op de onboarding-tegels i.p.v. losse foto's. `scale`
+   optioneel — de instellingen-kaart hier blijft compact (default 1), de
+   grotere onboarding-tegels geven een hogere waarde mee. */
+/* Operator, 22 september 2026 ("bij voice + haptics zie ik boven aan klein
+   wit puntje dat niet mag"): bij zoom=1 (exact op de kwadrantgrens knippen)
+   lekt er een fractie van de buurcel door — afrondingsverschil bij het
+   schalen, geen fout in de brontekening zelf. `SPRITE_ZOOM` > 1 kadert
+   iets BINNEN elke cel i.p.v. er precies op, zodat dat randpixeltje er
+   nooit meer bij kan. */
+const SPRITE_ZOOM = 1.16;
+
+/* Operator, 22 september 2026: de brontekeningen staan niet allemaal exact
+   gecentreerd in hun eigen cel. Geen ring-fix maar een icoon-fix per geval
+   — het uitsnijvenster schuift een fractie van de celbreedte/-hoogte op,
+   zodat de tekening zelf in het midden van de (voor alle 4 identieke)
+   ring komt.
+   - "cirkel voor voice+haptics raakt rechts het icoon": golf-naar-cirkel-
+     tekening laat links meer lucht dan rechts → venster naar rechts.
+   - "bovenste 2 iconen staan iets lager dan het center": Voice/Haptics
+     laten onder meer lucht dan boven → venster naar beneden.
+   De twee onderste iconen (Voice+Haptics al gecorrigeerd, Silent al goed)
+   krijgen geen y-nudge.
+   Operator, 23 september 2026 ("bovenste 2 cirkels/iconen kloppen niet:
+   linkse icoon iets naar links, rechtse icoon iets naar rechts"): zelfde
+   principe als hierboven, nu ook horizontaal op de bovenste 2 — Voice
+   (linksboven) kreeg een klein zetje richting links, Haptics (rechtsboven)
+   richting rechts (negatieve x = venster naar links = icoon zelf naar
+   rechts, het spiegelbeeld van de `both`-fix hierboven). */
+const SPRITE_NUDGE: Partial<Record<GuidanceMode, { x?: number; y?: number }>> = {
+  voice: { x: 0.06, y: 0.11 },
+  haptic: { x: -0.06, y: 0.11 },
+  both: { x: 0.09 },
+};
+
+export function ModeGlyph({
   mode,
   color,
+  scale = 1,
 }: {
   mode: GuidanceMode;
   color: string;
+  scale?: number;
 }) {
-  switch (mode) {
-    case 'voice':
-      return <Volume2 size={16} color={color} strokeWidth={2.4} />;
-    case 'haptic':
-      return <Text style={[gs.glyph, { color }]}>◉)))</Text>;
-    case 'both':
-      return (
-        <View style={gs.comboGlyph}>
-          <Volume2 size={14} color={color} strokeWidth={2.4} />
-          <Text style={[gs.glyphSmall, { color }]}>◉))</Text>
-        </View>
-      );
-    case 'silent':
-      return <Text style={[gs.glyph, { color }]}>☾</Text>;
-  }
+  const h = 24 * scale;
+  const w = h * SPRITE_CELL_RATIO;
+  const { row, col } = SPRITE_CELL[mode];
+  const fullW = w * 2 * SPRITE_ZOOM;
+  const fullH = h * 2 * SPRITE_ZOOM;
+  /* Houdt het midden van deze cel gecentreerd in de container, ook nu de
+     volledige afbeelding groter dan 2× getekend wordt. */
+  const nudge = SPRITE_NUDGE[mode];
+  const left = w / 2 - SPRITE_ZOOM * (col * w + w / 2) - (nudge?.x ?? 0) * w;
+  const top = h / 2 - SPRITE_ZOOM * (row * h + h / 2) - (nudge?.y ?? 0) * h;
+  return (
+    <View style={{ width: w, height: h, overflow: 'hidden' }}>
+      <Image
+        source={{ uri: MODE_ICON_SPRITE_IMG }}
+        resizeMode="stretch"
+        style={{
+          position: 'absolute',
+          width: fullW,
+          height: fullH,
+          left,
+          top,
+          tintColor: color,
+        }}
+      />
+    </View>
+  );
 }
-
-const gs = StyleSheet.create({
-  glyph: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 13,
-    letterSpacing: -0.5,
-  },
-  glyphSmall: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 11,
-    letterSpacing: -0.5,
-  },
-  comboGlyph: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-});
 
 function ModeCard({
   cfg,
@@ -140,11 +207,30 @@ function ModeCard({
     transform: [{ scale: pop.value }],
   }));
 
+  /* Press-scale — eigen shared value, eigen plek (buitenste Pressable),
+     zodat dit nooit met `cardStyle` (fill-scale op `s.card`) of `popStyle`
+     (select-pop op het icoon) om dezelfde transform-array concurreert. */
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   const fg = active ? '#0a0a0a' : cfg.color;
   const labelColor = active ? '#0a0a0a' : 'rgba(255,255,255,0.78)';
 
   return (
-    <Pressable onPress={onPress} style={s.cardWrap}>
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.cardWrap, pressStyle]}
+    >
       <Animated.View style={[s.glow, glowStyle]} pointerEvents="none" />
       <Animated.View style={[s.card, cardStyle]}>
         <Animated.View style={popStyle}>
@@ -163,7 +249,7 @@ function ModeCard({
           {cfg.label}
         </Text>
       </Animated.View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -189,8 +275,24 @@ export function BraceletHighlight({ onPress }: { onPress?: () => void }) {
     opacity: 0.12 + pulse.value * 0.16,
   }));
 
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   return (
-    <Pressable onPress={onPress} style={s.braceletWrap}>
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.braceletWrap, pressStyle]}
+    >
       <Animated.View style={[s.braceletGlow, glowStyle]} pointerEvents="none" />
       <View style={s.braceletCard}>
         <View style={s.braceletTopRow}>
@@ -204,7 +306,7 @@ export function BraceletHighlight({ onPress }: { onPress?: () => void }) {
           guidance
         </Text>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

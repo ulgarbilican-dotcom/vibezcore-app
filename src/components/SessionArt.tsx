@@ -95,6 +95,13 @@ type Props = {
   focusY?: number;
   /** Ademringen rond de figuur. */
   rings?: boolean;
+  /** Operator, 11 september 2026 (18e ronde): "waar is de lichtbron die
+   *  bij expand vanachter de animatie komt" — nadat de ringen uit gingen
+   *  (`rings=false`) op het actieve sessiescherm, moet de gloed zelf
+   *  duidelijker de ademcue dragen. Standaard `false` (ongewijzigd voor
+   *  elke andere plek die dit component al gebruikt, zoals de kies-je-
+   *  toestand-pagina) — alleen expliciet aangezet vanaf de lopende sessie. */
+  glowBoost?: boolean;
 };
 
 export default function SessionArt({
@@ -105,6 +112,7 @@ export default function SessionArt({
   boxHeight,
   focusY = 0.5,
   rings = false,
+  glowBoost = false,
 }: Props) {
   const boxH = boxHeight;
   const c = size / 2;
@@ -141,9 +149,13 @@ export default function SessionArt({
   const glowStyle = useAnimatedStyle(() => ({
     /* De gloed zwelt harder mee dan het beeld zelf. Dat is wat een figuur
        laat ademen in plaats van alleen schalen: het licht komt op en zakt
-       weg, en dat leest het oog eerder dan een maatverschil. */
-    opacity: 0.1 + breath.value * 0.38,
-    transform: [{ scale: 0.74 + breath.value * 0.34 }],
+       weg, en dat leest het oog eerder dan een maatverschil.
+       `glowBoost`: zichtbaarder basis + amplitude, voor de plekken waar de
+       gloed nu de ENIGE ademcue rond de figuur is (geen ringen meer). */
+    opacity: (glowBoost ? 0.18 : 0.1) + breath.value * (glowBoost ? 0.5 : 0.38),
+    transform: [
+      { scale: (glowBoost ? 0.7 : 0.74) + breath.value * (glowBoost ? 0.44 : 0.34) },
+    ],
   }));
 
   /* De gloed moet UITGEDOOFD zijn vóór de rand van de uitsnede. Stond hij

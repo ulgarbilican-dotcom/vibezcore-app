@@ -63,7 +63,7 @@ export class SimulatedBracelet implements BraceletTransport {
 
   private setConn(s: BleConnectionState) {
     this.conn = s;
-    this.connCbs.forEach((cb) => cb(s));
+    setTimeout(() => { this.connCbs.forEach((cb) => cb(s)); }, 0);
   }
 
   onConnectionChange(cb: (s: BleConnectionState) => void): () => void {

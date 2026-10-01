@@ -17,7 +17,7 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { PreviewBanner } from '@/components/PreviewBanner';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
 import {
   clearHistory,
   getAllSessions,
@@ -27,6 +27,7 @@ import {
 } from '@/utils/bracelet-history';
 import { Stack, router } from 'expo-router';
 import {
+  ChevronLeft,
   Compass,
   Crown,
   Flame,
@@ -48,6 +49,30 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { BraceletMode, MODES, getModeMeta } from '../services/ble-contract';
+import ReanimatedAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
+
+/* Standaardiseerde press-scale (2026-09-23, operator: pas dit toe op elke
+   tappable card/CTA/icon-knop app-breed). Zelfde curve als StartCard in
+   breath-welcome.tsx: snappy press-in, kritisch-gedempte spring terug. */
+const AnimatedPressable = ReanimatedAnimated.createAnimatedComponent(Pressable);
+function usePressScale(scaleTo: number) {
+  const scale = useSharedValue(1);
+  const onPressIn = () => {
+    scale.value = withTiming(scaleTo, { duration: 80 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return { onPressIn, onPressOut, pressStyle };
+}
 
 /* Force-refresh van de session-list elke keer de hook-stats wijzigen.
    useBraceletStats subscribed via listener-set, dus dit triggert ook
@@ -404,12 +429,20 @@ function ModeBreakdown({ stats }: { stats: BraceletStats }) {
    die met Calm Control's kleur conflicteerde. Lookup gaat via protocol-
    naam zodat 'Energizing' en 'Coherent' (beide kind='simple') netjes
    gescheiden blijven. Fallback Brand.accent voor onbekende protocols. */
+/* Operator, 28 september 2026 ("alle breathwork moet kloppen" — audit na
+   fouten op de website): deze keys stonden op de OUDE protocol-namen —
+   `r.breathwork.name` (bracelet-history.ts) slaat de ECHTE, huidige naam
+   uit `BREATH_PROTOCOLS` (bracelet-control.tsx) op, dus 4 van de 5 keys
+   matchten al niet meer (vielen stil terug op Brand.accent/geen label).
+   Erger: de oude 'Box breath'-key MATCHTE toevallig nog wel, maar wees
+   naar Delta (Sleep) — terwijl 'Box breath' nu Alpha's (Calm Control's)
+   naam is, dus een echte Calm-sessie kreeg Sleep's kleur/label. */
 const PROTOCOL_NAME_TO_MODE: Record<string, BraceletMode> = {
-  Energizing: BraceletMode.Gamma, // Boost → wit
-  'Triangle breath': BraceletMode.Beta, // Sharp Focus → oranje
-  Coherent: BraceletMode.Alpha, // Calm Control → blauw
-  'Nadi Shodhana': BraceletMode.Theta, // Clarity → paars
-  'Box breath': BraceletMode.Delta, // Rest & Reset → sage
+  Boost: BraceletMode.Gamma, // Boost → wit
+  'Coherent breath': BraceletMode.Beta, // Sharp Focus → oranje
+  'Box breath': BraceletMode.Alpha, // Calm Control → blauw
+  'Long exhale': BraceletMode.Theta, // Clarity & Relax → paars
+  '4-7-8': BraceletMode.Delta, // Sleep → sage
 };
 
 function getProtocolColor(protocolName: string): string {
@@ -566,10 +599,12 @@ type Milestone = {
 /* Iter 9dq v5: semantische kleur-tokens voor achievements. Hergebruikt
    brand-palet waar mogelijk (Sharp Focus oranje voor vuur, accent blauw
    voor navigatie) en voegt een premium goud toe voor de trophy-klasse. */
+/* Huisstijl v4.4: Signal Blue is voorbehouden voor haptic-pulse/BLE-status,
+   niet voor decoratieve achievement-iconen — AudioAccent i.p.v. blauw. */
 const ACHIEVEMENT_COLORS = {
   flame: '#FF9F0A',  // brand Sharp Focus oranje — warm vuur
   gold: '#fbbf24',   // amber-400 — premium award
-  accent: '#3a8fff', // brand accent blauw — start + exploratie
+  accent: AudioAccent, // start + exploratie
 } as const;
 
 /* Iter 9dq v6 (2026-06-02): subtiele blauwe omlijning op alle cards in
@@ -578,7 +613,8 @@ const ACHIEVEMENT_COLORS = {
    genoeg ingehouden om geen aandacht weg te trekken van de inhoud.
    Eén constante = makkelijk centraal tweaken als 't te subtiel of te
    pop is. */
-const CARD_BORDER = 'rgba(58, 143, 255, 0.28)';
+/* Huisstijl v4.4: decoratieve kaart-border, niet haptic/status — AudioAccent. */
+const CARD_BORDER = 'rgba(110, 133, 196, 0.28)';
 
 /* Iter 9dq v4 (2026-06-02): twee icon-klassen voor visuele hiërarchie.
    1. Flame-ladder (30m → 1h → 3d): 1× / 2× / 3× Flame — escaleert in
@@ -879,11 +915,14 @@ function DayGroupCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const { onPressIn, onPressOut, pressStyle } = usePressScale(0.98);
   return (
     <View style={s.groupCard}>
-      <Pressable
-        style={s.groupHeader}
+      <AnimatedPressable
+        style={[s.groupHeader, pressStyle]}
         onPress={onToggle}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
         accessibilityLabel={`${group.label}: ${expanded ? 'collapse' : 'expand'} sessions`}
       >
         <View style={s.groupHeaderLeft}>
@@ -895,7 +934,7 @@ function DayGroupCard({
           </Text>
         </View>
         <Text style={s.groupChevron}>{expanded ? '▾' : '▸'}</Text>
-      </Pressable>
+      </AnimatedPressable>
       {expanded && (
         <View style={s.groupBody}>
           {group.sessions.map((rec) => (
@@ -907,9 +946,47 @@ function DayGroupCard({
   );
 }
 
+/* Icon-only back chevron voor de header — eigen component zodat het de
+   press-scale hook kan gebruiken (headerLeft's render-functie is geen
+   React-component, kan zelf geen hooks aanroepen). scaleTo 0.92: kleine
+   icon-knop, dichter bij 1 dan een kaart/CTA (recipe §"icon buttons"). */
+function HistoryBackButton() {
+  const { onPressIn, onPressOut, pressStyle } = usePressScale(0.92);
+  return (
+    <AnimatedPressable
+      onPress={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/bracelet');
+      }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      hitSlop={12}
+      accessibilityLabel="Back to bracelet"
+      style={[
+        {
+          paddingHorizontal: 8,
+          paddingVertical: 6,
+        },
+        pressStyle,
+      ]}
+    >
+      {/* Operator, 1 okt 2026 ("headers overal consistent, dit is echt
+         een andere pijl"): platte "←"-tekst-glyph vervangen door dezelfde
+         ChevronLeft-icoon-stijl (size 20, strokeWidth 2.8 — de "officiële
+         iOS-chevron.backward"-stijl uit build-choice.tsx, 18 sept) als
+         overal elders in de app — de gecentreerde titel + pijl-only-links
+         opzet zelf (Calm/Headspace-stijl, zie toelichting hierboven)
+         blijft ongewijzigd, dat was een bewuste keuze. */}
+      <ChevronLeft size={20} color={Brand.text} strokeWidth={2.8} />
+    </AnimatedPressable>
+  );
+}
+
 export default function BraceletHistory() {
   const stats = useBraceletStats();
   const sessions = useSessions();
+  const emptyBtnScale = usePressScale(0.96);
+  const clearBtnScale = usePressScale(0.96);
   /* Iter 9n: groepering per dag + collapsible state. Today expanded
      by default (gebruiker wil meestal recente sessies zien), oudere
      dagen collapsed zodat lijst kort blijft. */
@@ -957,31 +1034,7 @@ export default function BraceletHistory() {
           title: 'Session history',
           headerTitleAlign: 'center',
           headerBackVisible: false,
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) router.back();
-                else router.replace('/bracelet');
-              }}
-              hitSlop={12}
-              accessibilityLabel="Back to bracelet"
-              style={{
-                paddingHorizontal: 8,
-                paddingVertical: 6,
-              }}
-            >
-              <Text
-                style={{
-                  color: Brand.text,
-                  fontSize: 24,
-                  fontFamily: BrandFonts.regular,
-                  lineHeight: 26,
-                }}
-              >
-                ←
-              </Text>
-            </Pressable>
-          ),
+          headerLeft: () => <HistoryBackButton />,
         }}
       />
       {/* Iter v194 (2026-07-04): PreviewBanner weg op sessies-historie.
@@ -1052,13 +1105,15 @@ export default function BraceletHistory() {
             <Text style={s.emptyBody}>
               Start your first bracelet session and it will appear here.
             </Text>
-            <Pressable
-              style={s.emptyBtn}
+            <AnimatedPressable
+              style={[s.emptyBtn, emptyBtnScale.pressStyle]}
               onPress={() => router.back()}
+              onPressIn={emptyBtnScale.onPressIn}
+              onPressOut={emptyBtnScale.onPressOut}
               accessibilityLabel="Back to bracelet control"
             >
               <Text style={s.emptyBtnText}>Back to bracelet</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         ) : (
           <>
@@ -1072,13 +1127,15 @@ export default function BraceletHistory() {
                 />
               ))}
             </View>
-            <Pressable
-              style={s.clearBtn}
+            <AnimatedPressable
+              style={[s.clearBtn, clearBtnScale.pressStyle]}
               onPress={onClear}
+              onPressIn={clearBtnScale.onPressIn}
+              onPressOut={clearBtnScale.onPressOut}
               accessibilityLabel="Clear all session history"
             >
               <Text style={s.clearBtnText}>Clear history</Text>
-            </Pressable>
+            </AnimatedPressable>
           </>
         )}
       </ScrollView>
@@ -1264,8 +1321,9 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.05)',
   },
+  /* Huisstijl v4.4: decoratieve bullet-dot, niet haptic/status — AudioAccent. */
   rowBreathDot: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 14,
     marginRight: 6,
     lineHeight: 14,
@@ -1529,9 +1587,10 @@ const s = StyleSheet.create({
     marginTop: 10,
     overflow: 'hidden',
   },
+  /* Huisstijl v4.4: decoratieve progress-fill, niet haptic/status — AudioAccent. */
   milestoneProgressFill: {
     height: '100%',
-    backgroundColor: Brand.accent,
+    backgroundColor: AudioAccent,
     borderRadius: 2,
   },
   /* ── Empty state ───────────────────────────────────────────────── */
@@ -1554,14 +1613,15 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
+  /* Huisstijl v4.4: CTA op donkere achtergrond = wit bg + donkere tekst, geen Signal Blue. */
   emptyBtn: {
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 12,
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
   },
   emptyBtnText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 14,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,

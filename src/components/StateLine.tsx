@@ -11,8 +11,8 @@
      Boost        — korte golflengte, hoge frequentie, snelst
      Sharp Focus  — vlak en strak; bijna een rechte lijn (= scherpte)
      Calm Control — brede, ronde golf (= kalmte)
-     Clarity      — smalle amplitude, rustig ritme (= helderheid)
-     Rest & Reset — zeer brede golf, extreem traag (= diepe rust)
+     Clarity & Relax — smalle amplitude, rustig ritme (= helderheid)
+     Sleep        — zeer brede golf, extreem traag (= diepe rust)
 
    Bij state-wissel morphen amplitude/frequentie/snelheid met withTiming
    naar de nieuwe waarden — de lijn verandert zichtbaar van aard zonder

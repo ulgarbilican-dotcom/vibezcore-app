@@ -101,13 +101,15 @@ export class MockIAPProvider implements IAPProvider {
     };
 
     /* Notify alle listeners (zelfde gedrag als echte IAP). */
-    this.listeners.forEach((cb) => {
-      try {
-        cb(purchase);
-      } catch (e) {
-        if (__DEV__) console.warn('[MockIAP] listener threw:', e);
-      }
-    });
+    setTimeout(() => {
+      this.listeners.forEach((cb) => {
+        try {
+          cb(purchase);
+        } catch (e) {
+          if (__DEV__) console.warn('[MockIAP] listener threw:', e);
+        }
+      });
+    }, 0);
 
     return { ok: true, purchase };
   }

@@ -21,7 +21,14 @@
                          iOS Safari View Controller, fallback Linking)
    ─────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor eyebrows/links/tints/CTA's. AudioAccent
+   (#6E85C4) is de label-/link-/tint-kleur op donker; CTA-regel v4.4:
+   witte knop-bg + donkere tekst. */
+const ACCENT_TEXT_ON_DARK_RGB = '110,133,196';
 import {
   LEGAL_DOCS,
   LEGAL_ORDER,
@@ -41,7 +48,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
+   voor de referentie-implementatie) — additief, geen layout/logica-
+   wijziging. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* Wordmark als eyebrow ipv platte tekst — huisstijl is het echte
    logo, niet "VIBEZCORE" in blauwe letters (operator 2026-05-30). */
@@ -222,24 +240,57 @@ export default function LegalDoc() {
   const slug = (params.doc ?? '') as LegalSlug;
   const doc = LEGAL_DOCS[slug];
 
+  /* Press-scale-animatie — één losse shared value per tappable element
+     (zie breath-welcome.tsx `StartCard`). Vóór de early return hieronder
+     gedefinieerd zodat hooks onvoorwaardelijk lopen, ongeacht welke
+     render-tak straks gekozen wordt. */
+  const backToAccountPressScale = useSharedValue(1);
+  const onBackToAccountPressIn = () => {
+    backToAccountPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onBackToAccountPressOut = () => {
+    backToAccountPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const backToAccountPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backToAccountPressScale.value }],
+  }));
+
+  const contactBtnPressScale = useSharedValue(1);
+  const onContactBtnPressIn = () => {
+    contactBtnPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onContactBtnPressOut = () => {
+    contactBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const contactBtnPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: contactBtnPressScale.value }],
+  }));
+
   /* Onbekende slug → 404-style fallback. Geen crash. */
   if (!doc) {
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
-          options={{ title: 'Legal', headerBackTitle: 'Back' }}
+          options={{
+            title: 'Legal',
+            headerTitleAlign: 'center',
+            headerBackVisible: false,
+            headerLeft: () => <HeaderBackButton />,
+          }}
         />
         <View style={s.center}>
           <Text style={s.h2}>Page not found</Text>
           <Text style={s.p}>
             The legal document you're looking for doesn't exist.
           </Text>
-          <Pressable
-            style={s.btn}
+          <AnimatedPressable
+            style={[s.btn, backToAccountPressStyle]}
             onPress={() => router.replace('/account')}
+            onPressIn={onBackToAccountPressIn}
+            onPressOut={onBackToAccountPressOut}
           >
             <Text style={s.btnText}>Back to Account</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </SafeAreaView>
     );
@@ -248,7 +299,12 @@ export default function LegalDoc() {
   return (
     <SafeAreaView style={s.root} edges={['bottom']}>
       <Stack.Screen
-        options={{ title: doc.title, headerBackTitle: 'Back' }}
+        options={{
+          title: doc.title,
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
       />
       <ScrollView
         contentContainerStyle={s.scroll}
@@ -300,49 +356,67 @@ export default function LegalDoc() {
             If anything is unclear or to exercise your rights, please reach
             out via the support form.
           </Text>
-          <Pressable
-            style={s.contactBtn}
+          <AnimatedPressable
+            style={[s.contactBtn, contactBtnPressStyle]}
             onPress={() => router.navigate('/support' as never)}
+            onPressIn={onContactBtnPressIn}
+            onPressOut={onContactBtnPressOut}
             accessibilityLabel="Contact VIBEZCORE support"
           >
             <Text style={s.contactBtnText}>Contact Support  →</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* Legal-nav — chips om tussen docs te springen. Active doc
-            krijgt accent-fill, anderen subtle outline. */}
+            krijgt accent-fill, anderen subtle outline. Eigen component
+            (i.p.v. inline in de `.map()`) omdat hooks niet in een loop
+            mogen — zelfde patroon als `StartCard` in breath-welcome.tsx. */}
         <View style={s.legalNav}>
           {LEGAL_ORDER.map((s2) => {
             const d = LEGAL_DOCS[s2];
             const active = d.slug === doc.slug;
-            return (
-              <Pressable
-                key={s2}
-                style={[s.legalNavChip, active && s.legalNavChipActive]}
-                onPress={() =>
-                  active
-                    ? null
-                    : router.replace({
-                        pathname: '/legal/[doc]' as never,
-                        params: { doc: s2 } as never,
-                      })
-                }
-                disabled={active}
-              >
-                <Text
-                  style={[
-                    s.legalNavText,
-                    active && s.legalNavTextActive,
-                  ]}
-                >
-                  {d.short}
-                </Text>
-              </Pressable>
-            );
+            return <LegalNavChip key={s2} slug={s2} label={d.short} active={active} />;
           })}
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/* Eén chip in de legal-nav-rij — eigen component (i.p.v. inline in de
+   `.map()`) omdat hooks niet in een loop mogen, zelfde patroon als
+   `StartCard` in breath-welcome.tsx. */
+function LegalNavChip({
+  slug,
+  label,
+  active,
+}: {
+  slug: LegalSlug;
+  label: string;
+  active: boolean;
+}) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={() => router.replace(`/legal/${slug}` as never)}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.legalNavChip, active && s.legalNavChipActive, pressStyle]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+    >
+      <Text style={[s.legalNavText, active && s.legalNavTextActive]}>{label}</Text>
+    </AnimatedPressable>
   );
 }
 
@@ -368,7 +442,7 @@ const s = StyleSheet.create({
      subtitles indien die nog eyebrow-stijl nodig hebben (bv. de
      section-number die elders gerenderd wordt). */
   eyebrow: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2.4,
@@ -415,7 +489,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
   },
   sectionNumber: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,
@@ -452,7 +526,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
   },
   link: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontFamily: BrandFonts.semibold,
     textDecorationLine: 'underline',
   },
@@ -464,7 +538,7 @@ const s = StyleSheet.create({
     paddingLeft: 4,
   },
   liBullet: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 14,
     fontFamily: BrandFonts.bold,
     marginRight: 10,
@@ -476,8 +550,8 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 12,
-    backgroundColor: 'rgba(58,143,255,0.18)',
-    borderColor: 'rgba(58,143,255,0.45)',
+    backgroundColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.18)`,
+    borderColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.45)`,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -485,7 +559,7 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
   liCheckText: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     lineHeight: 13,
@@ -554,15 +628,15 @@ const s = StyleSheet.create({
   },
   /* ── Highlight box (blue tint) ── */
   highlightBox: {
-    backgroundColor: 'rgba(58,143,255,0.08)',
-    borderColor: 'rgba(58,143,255,0.35)',
+    backgroundColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.08)`,
+    borderColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.35)`,
     borderWidth: 1,
     borderRadius: 14,
     padding: 16,
     marginVertical: 14,
   },
   highlightTitle: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1.5,
@@ -622,14 +696,14 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   contactBtn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 18,
     alignSelf: 'flex-start',
   },
   contactBtnText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 12,
     fontFamily: BrandFonts.bold,
     letterSpacing: 1,
@@ -649,7 +723,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   legalNavChipActive: {
-    backgroundColor: 'rgba(58,143,255,0.10)',
+    backgroundColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.10)`,
   },
   legalNavText: {
     color: 'rgba(255,255,255,0.35)',
@@ -657,18 +731,18 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
   },
   legalNavTextActive: {
-    color: Brand.accent,
+    color: AudioAccent,
   },
   /* ── Fallback (unknown slug) ── */
   btn: {
-    backgroundColor: Brand.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginTop: 20,
   },
   btnText: {
-    color: '#ffffff',
+    color: Brand.bg,
     fontSize: 14,
     fontFamily: BrandFonts.bold,
   },

@@ -24,7 +24,13 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { AUDIO_ENABLED } from '@/constants/features';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
+/* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
+   Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
+   actief" — nooit voor toggle-switches/selectie-indicators. Deze
+   schermen zijn dark, dus AudioAccent is de vervanging. */
+const ACCENT_TEXT_ON_DARK_RGB = '110,133,196';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   SLOTS,
@@ -41,13 +47,15 @@ import {
 import { unload as unloadAudioPlayer } from '@/services/audio-player';
 import { clearHistory } from '@/utils/history';
 import { clearLastPlayed } from '@/utils/last-played';
-import { setSetting, useSetting } from '@/utils/settings';
+import { getSetting, setSetting, useSetting } from '@/utils/settings';
+import { clearActivePlan } from '@/utils/plan-store';
 import { clearAllSavedPositions } from '@/utils/vzp';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,8 +63,74 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { showVibezAlert } from '@/components/VibezAlert';
+import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
+
+/* Operator, 28 september 2026 ("bij lockscreen zie ik geen scherm voor
+   breathwork, dit is wel belangrijk... moet gecommuniceerd worden... als
+   gebruiker nee zegt moet dat later nog aangepast kunnen worden"):
+   `ensurePermission()` (services/reminders.ts) geeft simpelweg `false`
+   terug zodra de OS-toestemming ooit geweigerd is (`canAskAgain:false`,
+   Android 13+/iOS) — de native prompt verschijnt dan NOOIT meer opnieuw,
+   dus was er stilzwijgend geen enkele weg terug: de switch sprong terug
+   naar uit, zonder uitleg, en de gebruiker kon nergens ontdekken waarom
+   z'n lockscreen-melding (breathwork/bracelet, zie startSessionKeepAlive/
+   BreathSessionService.kt) niet verscheen. Deze helper legt dat uit en
+   biedt de ENIGE resterende weg terug — de systeem-app-instellingen
+   openen via `Linking.openSettings()` — zodat het altijd vindbaar en
+   herstelbaar blijft, ook lang na een eerste "nee". */
+async function explainNotificationsBlocked() {
+  const ok = await confirmVibezAlert({
+    title: 'Notifications are off',
+    message:
+      "VIBEZCORE can't show reminders or the lock-screen progress for breathwork and bracelet sessions without notification permission. You can turn it back on in your phone's settings, any time.",
+    confirmText: 'Open Settings',
+    cancelText: 'Not now',
+  });
+  if (ok) void Linking.openSettings();
+}
+
+/* Iter (press-feedback rollout): zelfde druk-vering-recept als
+   breath-welcome.tsx's `StartCard` (Apple-getunede 80ms press-in /
+   220ms-0.73-dampingRatio release). Eén herbruikbare wrapper i.p.v. het
+   per-knop kopiëren van dezelfde vijf hooks, voor de rijen/knoppen op dit
+   scherm die dat nog niet hadden. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function PressFeedback({
+  onPress,
+  style,
+  children,
+  ...rest
+}: React.ComponentProps<typeof Pressable> & { children?: React.ReactNode }) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[style, pressStyle]}
+      {...rest}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
 
 export default function SettingsScreen() {
   const [saveProgress, setSaveProgress] = useSetting('saveProgress');
@@ -162,7 +236,14 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={s.root}>
-      <Stack.Screen options={{ title: 'Settings', headerBackTitle: 'Account' }} />
+      <Stack.Screen
+        options={{
+          title: 'Settings',
+          headerTitleAlign: 'center',
+          headerBackVisible: false,
+          headerLeft: () => <HeaderBackButton />,
+        }}
+      />
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
@@ -194,7 +275,7 @@ export default function SettingsScreen() {
             <Switch
               value={autoPlayNext}
               onValueChange={setAutoPlayNext}
-              trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+              trackColor={{ false: '#3a3a3a', true: AudioAccent }}
               thumbColor="#ffffff"
               ios_backgroundColor="#3a3a3a"
             />
@@ -217,7 +298,7 @@ export default function SettingsScreen() {
             <Switch
               value={saveProgress}
               onValueChange={setSaveProgress}
-              trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+              trackColor={{ false: '#3a3a3a', true: AudioAccent }}
               thumbColor="#ffffff"
               ios_backgroundColor="#3a3a3a"
             />
@@ -231,7 +312,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <View style={s.qualityToggle}>
-              <Pressable
+              <PressFeedback
                 style={[
                   s.qualityBtn,
                   audioQuality === 'low' && s.qualityBtnOn,
@@ -246,8 +327,8 @@ export default function SettingsScreen() {
                 >
                   Low
                 </Text>
-              </Pressable>
-              <Pressable
+              </PressFeedback>
+              <PressFeedback
                 style={[
                   s.qualityBtn,
                   audioQuality === 'high' && s.qualityBtnOn,
@@ -262,7 +343,7 @@ export default function SettingsScreen() {
                 >
                   High
                 </Text>
-              </Pressable>
+              </PressFeedback>
             </View>
           </View>
         </View>
@@ -283,7 +364,7 @@ export default function SettingsScreen() {
             <Switch
               value={trackHistory}
               onValueChange={setTrackHistory}
-              trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+              trackColor={{ false: '#3a3a3a', true: AudioAccent }}
               thumbColor="#ffffff"
               ios_backgroundColor="#3a3a3a"
             />
@@ -321,11 +402,14 @@ export default function SettingsScreen() {
                       ...reminders,
                       [reminderKey('breath', slot.slot)]: v,
                     };
-                    if (v && !(await ensurePermission())) return;
+                    if (v && !(await ensurePermission())) {
+                      void explainNotificationsBlocked();
+                      return;
+                    }
                     await setReminders(next);
                     void syncReminders(next);
                   }}
-                  trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                  trackColor={{ false: '#3a3a3a', true: AudioAccent }}
                   thumbColor="#ffffff"
                   ios_backgroundColor="#3a3a3a"
                 />
@@ -336,7 +420,7 @@ export default function SettingsScreen() {
 
         <Text style={s.subLabel}>General</Text>
         <View style={s.card}>
-          <Pressable
+          <PressFeedback
             style={s.row}
             onPress={async () => {
               await setSetting('breathOnboardingCompletedAt', null);
@@ -351,7 +435,12 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Text style={s.versionText}>›</Text>
-          </Pressable>
+          </PressFeedback>
+          {/* Operator, 15 september 2026: een zelfde rij voor de Audio
+             Library-intro is hier NIET nodig — die toont zich sinds
+             "intro mag zich elke keer tonen" gewoon bij elke montage van
+             de tab (zie (tabs)/index.tsx), geen eenmalige vlag meer om te
+             resetten. */}
         </View>
 
         {/* ── SMART BEAD BRACELET ──────────────────────────────────────
@@ -387,11 +476,14 @@ export default function SettingsScreen() {
                           ...reminders,
                           [reminderKey('bracelet', slot.slot)]: v,
                         };
-                        if (v && !(await ensurePermission())) return;
+                        if (v && !(await ensurePermission())) {
+                          void explainNotificationsBlocked();
+                          return;
+                        }
                         await setReminders(next);
                         void syncReminders(next);
                       }}
-                      trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                      trackColor={{ false: '#3a3a3a', true: AudioAccent }}
                       thumbColor="#ffffff"
                       ios_backgroundColor="#3a3a3a"
                     />
@@ -413,7 +505,7 @@ export default function SettingsScreen() {
                 <Switch
                   value={voiceCues}
                   onValueChange={setVoiceCues}
-                  trackColor={{ false: '#3a3a3a', true: Brand.accent }}
+                  trackColor={{ false: '#3a3a3a', true: AudioAccent }}
                   thumbColor="#ffffff"
                   ios_backgroundColor="#3a3a3a"
                 />
@@ -422,7 +514,7 @@ export default function SettingsScreen() {
           </>
         )}
 
-        <Pressable
+        <PressFeedback
           style={s.dangerRow}
           onPress={onClearData}
           disabled={clearing}
@@ -435,7 +527,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
           <Text style={s.dangerCta}>{clearing ? '…' : 'Clear'}</Text>
-        </Pressable>
+        </PressFeedback>
 
         {/* ── ABOUT ────────────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>About</Text>
@@ -532,17 +624,71 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
               </Pressable>
+              <View style={s.divider} />
+              {/* Operator, 30 september 2026 ("reset onboarding bracelet
+                 dan"): zelfde patroon als de breath-onboarding-reset
+                 hierboven — enkel `braceletOnboardingCompletedAt` terug op
+                 null, geen data wissen. De redirect zelf gebeurt pas bij de
+                 eerstvolgende bracelet-CONNECTIE (bracelet-control.tsx),
+                 dus deze knop opent niet meteen een scherm — anders dan de
+                 breath-versie hierboven, die wél direct linkt. */}
+              <Pressable
+                style={s.row}
+                onPress={async () => {
+                  await setSetting('braceletOnboardingCompletedAt', null);
+                }}
+                accessibilityLabel="Reset bracelet onboarding"
+              >
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Bracelet onboarding — opnieuw</Text>
+                  <Text style={s.rowSub}>
+                    Reset de first-run vlag — verschijnt bij de volgende
+                    bracelet-connectie.
+                  </Text>
+                </View>
+              </Pressable>
+              <View style={s.divider} />
+              {/* Operator, 17 september 2026 ("hoe kan ik nu telkens opnieuw
+                 in dev mode set your goal testen?"): "Clear all local data"
+                 wist ALLES (favorieten, historiek, voortgang) — veel te
+                 grof voor gewoon de Protocol-flow herhaaldelijk te
+                 doorlopen. Dit raakt enkel wat die flow zelf gebruikt:
+                 doelen, intensiteit, de proefronde-vlag, dagdeel-voorkeur
+                 en het actieve protocol zelf — en opent meteen de vork
+                 opnieuw. */}
+              <Pressable
+                style={s.row}
+                onPress={async () => {
+                  await setSetting('goals', []);
+                  await setSetting('intensity', null);
+                  await setSetting('hasBuiltProtocol', false);
+                  const profile = getSetting('profile');
+                  await setSetting('profile', { ...profile, preferredSlots: undefined });
+                  await clearActivePlan();
+                  router.push('/build-choice' as never);
+                }}
+                accessibilityLabel="Reset protocol flow"
+              >
+                <View style={s.rowText}>
+                  <Text style={s.rowTitle}>Protocol flow — opnieuw</Text>
+                  <Text style={s.rowSub}>
+                    Wist doelen, intensiteit, dagdeel-voorkeur, de
+                    proefronde-vlag en het actieve protocol. Opent meteen
+                    "How do you want to build it?".
+                  </Text>
+                </View>
+              </Pressable>
             </View>
           </>
         )}
 
-        <Pressable
+        <PressFeedback
           style={s.backLink}
           onPress={() => router.back()}
           accessibilityLabel="Go back to account"
         >
           <Text style={s.backLinkText}>← Back to Account</Text>
-        </Pressable>
+        </PressFeedback>
       </ScrollView>
     </SafeAreaView>
   );
@@ -652,7 +798,7 @@ const devS = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   rowActive: {
-    backgroundColor: 'rgba(58,143,255,0.08)',
+    backgroundColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.08)`,
   },
   label: {
     color: Brand.text,
@@ -661,7 +807,7 @@ const devS = StyleSheet.create({
     letterSpacing: -0.1,
   },
   labelActive: {
-    color: Brand.accent,
+    color: AudioAccent,
   },
   sub: {
     color: Brand.textDim,
@@ -670,7 +816,7 @@ const devS = StyleSheet.create({
     marginTop: 2,
   },
   tick: {
-    color: Brand.accent,
+    color: AudioAccent,
     fontSize: 14,
     fontFamily: BrandFonts.bold,
     marginLeft: 8,

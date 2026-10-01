@@ -128,8 +128,12 @@ function tickPerSecond(secs: number): number[] {
  *  Apart exporteerbaar zodat de bracelet-firmware straks dezelfde reeksen
  *  kan afleiden in plaats van een eigen versie te verzinnen. */
 export function phaseHapticPattern(phase: PhaseKey, secs: number): number[] {
-  if (phase === 'inhale') return steady(secs);
-  if (phase === 'exhale') return ripple(secs);
+  /* 'inhale-2'/'exhale-2' — operator, 8 september 2026 (V1-protocolset):
+     de tweede inademing van Physiological Sigh en de tweede in/uitademing
+     van Alternate Nostril Breathing voelen als hetzelfde soort beweging als
+     hun eerste helft, dus zelfde patroon. */
+  if (phase === 'inhale' || phase === 'inhale-2') return steady(secs);
+  if (phase === 'exhale' || phase === 'exhale-2') return ripple(secs);
   return tickPerSecond(secs);
 }
 

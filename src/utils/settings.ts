@@ -13,8 +13,29 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { GOAL_KEYS } from '@/data/goal-states';
 
 export const SETTINGS_KEY = 'vzs_v1';
+
+/** Hoeveel tijd iemand per dag aan het protocol besteedt (operator, 13
+ *  augustus 2026, protocol-systeem). Bepaalt zowel het AANTAL sloten per
+ *  dag als WELKE duration binnen een toestand gekozen wordt — zie
+ *  `utils/protocol.ts`, de enige plek die deze waarde interpreteert. */
+/** 'complete' (17 september 2026): 4 sessies/dag — alle 4 dagdelen, enige
+ *  tier die dat mogelijk maakt sinds de dagdeel-kiezer op intensity.tsx
+ *  (zie protocol.ts `INTENSITY_SESSION_COUNT`/`INTENSITY_TARGET_MINUTES`).
+ *  'custom' (17 september 2026, "Build it yourself"): geen vaste tier —
+ *  de gebruiker bepaalt zelf hoeveel sessies per dagdeel, ook meerdere in
+ *  hetzelfde dagdeel. Zie `build-your-day.tsx`/`generateCustomTemplate`. */
+export type Intensity = 'essential' | 'standard' | 'advanced' | 'complete' | 'custom';
+
+/** Ervaringsniveau met breathwork (operator, 21 september 2026: "gebruiker
+ *  moet ook wel het niveau invullen... zodat wij op basis daarvan de
+ *  ademtechniek en timing kunnen opstellen"). Bepaalt WELKE techniek
+ *  `protocol.ts` per toestand kiest — elke toestand heeft 3 technieken,
+ *  altijd in Beginner→Intermediate→Advanced-volgorde (`breath-states.ts`).
+ *  `null` = nog niet gekozen; protocol.ts valt dan terug op Beginner. */
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export type Settings = {
   autoPlayNext: boolean;
@@ -65,6 +86,15 @@ export type Settings = {
    *  Breath-tab-focus-check, dus zij zien de onboarding NIET ondanks
    *  null-waarde. Geen data-migratie nodig. */
   breathOnboardingCompletedAt: number | null;
+  /** Operator, 7 september 2026: "mag maar 1 keer werken, de eerste
+   *  keer" — de volledige, ontgrendelde gratis kennismakingssessie
+   *  (`/breath-session?from=onboarding`) mag maar ÉÉN keer per gebruiker.
+   *  Los van `breathOnboardingCompletedAt`: die vlag wordt bewust
+   *  teruggezet door "Watch the intro again" in Settings (zodat je de
+   *  UITLEG opnieuw kan zien), maar dat mag de gratis-sessie-sperre niet
+   *  meenemen — anders is "intro opnieuw bekijken" een omweg naar
+   *  onbeperkt gratis volledige sessies. null = nog nooit gebruikt. */
+  breathFreeSessionUsedAt: number | null;
   /** Welk achtergrondgeluid bij welke toestand hoort. Per TOESTAND, want wie
    *  voor slapen Deep wil en voor focus Rain hoort dat niet elke keer opnieuw
    *  te kiezen. `null` als waarde betekent bewust GEEN geluid; ontbreekt de
@@ -79,12 +109,20 @@ export type Settings = {
   hapticsPhone: boolean;
   /** Voorkeur PER TOESTAND (operator, 5 augustus 2026).
    *
-   *  Iemand wil bij CALM CONTROL de stem aan en bij REST & RESET alleen
+   *  Iemand wil bij CALM CONTROL de stem aan en bij SLEEP alleen
    *  trilling. Eén stand voor alles kan dat niet, en dwingt hem elke sessie
    *  opnieuw te sleutelen. Ontbreekt er een sleutel, dan geldt de algemene
    *  stand hierboven — dus wie nooit iets per toestand instelt merkt niets
    *  van deze laag. */
-  breathPrefs: Record<string, { voice?: boolean; haptics?: boolean }>;
+  /* `voiceGender` (operator, 20 september 2026: "moet user niet de keuze
+     krijgen om enkel voor deze state of voor alle states te setten?") —
+     zelfde per-toestand-laag als `voice`/`haptics` hierboven, nu ook voor
+     de verteller. Ontbreekt de sleutel, dan geldt de globale `voiceGender`
+     hieronder. */
+  breathPrefs: Record<
+    string,
+    { voice?: boolean; haptics?: boolean; voiceGender?: 'female' | 'male' }
+  >;
   /** Waar iemand naartoe werkt. Leeg = niet gekozen, en dan gedraagt de app
    *  zich zoals zonder doel: klok en historiek bepalen de suggestie.
    *
@@ -115,13 +153,73 @@ export type Settings = {
   profile: {
     gender?: string;
     age?: string;
-    experience?: string;
+    /* `experience` (onboarding stap 4) stond hier tot 22 september 2026 —
+       verhuisd naar het echte `experienceLevel` hieronder, dat door
+       `intensity.tsx`/`utils/protocol.ts` gelezen wordt. Dit veld werd
+       nergens door het protocol-systeem gelezen, enkel door een tekstregel
+       in breath-quiz.tsx (die nu ook `experienceLevel` leest). */
     /** MEERDERE momenten mogelijk (operator, 8 augustus 2026): wie
      *  's ochtends én 's avonds wil oefenen, hoort dat allebei te kunnen
      *  zeggen. Doelen blijven wél op twee — daar betekent alles aanvinken
      *  hetzelfde als niets aanvinken. */
     preferredSlots?: string[];
   };
+  /** Intensiteit van het protocol (operator, 13 augustus 2026,
+   *  protocol-systeem). `null` = nog geen protocol gegenereerd; zie
+   *  `utils/protocol.ts`. Onafhankelijk van `goals` — het doel bepaalt
+   *  WELKE toestanden, de intensiteit bepaalt HOEVEEL en HOE LANG. */
+  intensity: Intensity | null;
+  /** Zie `ExperienceLevel` hierboven. `null` = nog niet gekozen. */
+  experienceLevel: ExperienceLevel | null;
+  /** Heeft deze gebruiker OOIT een volledig protocol bevestigd (operator,
+   *  13 augustus 2026: "user moet wel van 1 volledige versie kunnen
+   *  proeven")? Bepaalt of "Build my protocol" nog gratis doorgaat naar
+   *  intensity.tsx, of eerst de premium-teaser toont. Blijft `true` na een
+   *  eventuele latere upgrade/downgrade — het is een proef die je hebt
+   *  gehad, geen lopende status. */
+  hasBuiltProtocol: boolean;
+  /** Testschakelaar (operator, 13 augustus 2026: "ik wil permanent om
+   *  regelmatig te kunnen testen") — omzeilt de 2-cycli-preview-limiet in
+   *  breath-session.tsx net als de `from=onboarding`-deeplink, maar dan
+   *  zonder telkens een URL te moeten intikken. Puur lokaal, ontgrendelt
+   *  geen echte entitlement — alleen de sessie-lengte. */
+  testFullSessions: boolean;
+  /** Heeft de eenmalige uitleg over "blijf doorlopen als het scherm op slot
+   *  gaat" al getoond (operator, 14 augustus 2026: "iemand die gewoon
+   *  breathwork begint gaat nooit weten dat het hierdoor komt... iedereen
+   *  gaat denken het werkt niet")? Toont zichzelf automatisch bij de eerste
+   *  sessie op Android i.p.v. verstopt te blijven in Settings — zie
+   *  breath-session.tsx `start()`. Blijft `true` na de eerste keer, ongeacht
+   *  het antwoord; wie "Cancel" tikte vindt de rij nog altijd terug in
+   *  Settings. */
+  hasSeenBatteryPrompt: boolean;
+  /** Light/dark-modus (operator-beslissing 2026-09-05: hele app krijgt
+   *  light + dark; operator-omkering 26 september 2026: dark is nu de
+   *  default, niet light). Wordt gelezen door `useAppTheme()`
+   *  in `src/hooks/useAppTheme.ts`. 'system' volgt de telefoon se eigen
+   *  instelling (toegevoegd 6 september 2026 — standaard bij de grote
+   *  apps naast een eigen vaste voorkeur; useAppTheme() lost 'm live op
+   *  via de Appearance-API). */
+  themeMode: 'light' | 'dark' | 'system';
+  /** Operator, 11 september 2026: welke stem de breathwork-cues spreekt —
+   *  'female' (Kylie, UI-naam "Eli") of 'male' (Marius, UI-naam
+   *  "Benjamin"). Eén globale keuze (Settings), niet per sessie — zelfde
+   *  patroon als `voiceCues` hierboven; de per-sessie Voice-knop op
+   *  breath-session.tsx blijft enkel AAN/UIT regelen, niet de identiteit.
+   *  Default 'female': Kylie is de stem die al vóór deze instelling
+   *  bestond, dus bestaande gebruikers merken bij het invoeren van deze
+   *  toggle niets — geen stilzwijgende stemwissel. Zie
+   *  `services/breath-voice.ts` voor welke cue-set elke waarde selecteert. */
+  voiceGender: 'female' | 'male';
+  /** Operator, 29 september 2026 ("na connect, bij eerste connectie door
+   *  klant, soort onboarding"): zelfde rol als `breathOnboardingCompletedAt`
+   *  hierboven, nu voor de bracelet — `null` = nog nooit verbonden geweest,
+   *  dus `bracelet-control.tsx` stuurt de gebruiker na de EERSTE succesvolle
+   *  connectie naar `/bracelet-set-day` i.p.v. rechtstreeks het idle-
+   *  scherm. Daarna blijft dit een timestamp, nooit meer teruggezet (in
+   *  tegenstelling tot de breath-versie, die je zelf via Settings kan
+   *  herstarten — hier is er geen "intro opnieuw bekijken"-equivalent). */
+  braceletOnboardingCompletedAt: number | null;
 };
 
 const defaults: Settings = {
@@ -137,6 +235,7 @@ const defaults: Settings = {
   voiceCues: true,
   voiceCuesChosen: false,
   breathOnboardingCompletedAt: null,
+  breathFreeSessionUsedAt: null,
   soundscapeByState: {},
   hapticsPhone: true,
   breathPrefs: {},
@@ -145,6 +244,14 @@ const defaults: Settings = {
   reminderHours: {},
   reminderAt: {},
   profile: {},
+  intensity: null,
+  experienceLevel: null,
+  hasBuiltProtocol: false,
+  testFullSessions: false,
+  hasSeenBatteryPrompt: false,
+  themeMode: 'dark',
+  voiceGender: 'female',
+  braceletOnboardingCompletedAt: null,
 };
 
 let state: Settings = { ...defaults };
@@ -153,7 +260,7 @@ let loadPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 async function loadOnce(): Promise<void> {
@@ -194,6 +301,10 @@ async function loadOnce(): Promise<void> {
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
               : {}),
+            ...(typeof obj.breathFreeSessionUsedAt === 'number' ||
+            obj.breathFreeSessionUsedAt === null
+              ? { breathFreeSessionUsedAt: obj.breathFreeSessionUsedAt }
+              : {}),
             ...(obj.profile &&
             typeof obj.profile === 'object' &&
             !Array.isArray(obj.profile)
@@ -218,10 +329,23 @@ async function loadOnce(): Promise<void> {
               ? { hapticsPhone: obj.hapticsPhone }
               : {}),
             /* Leest ook de oude enkelvoudige sleutel, zodat wie al een doel
-               had het niet kwijtraakt. */
+               had het niet kwijtraakt.
+               Operator, 22 september 2026 ("peak performance en calm the
+               mind schrappen, van 8 naar 6 doelen"): filtert nu ook tegen
+               `GOAL_KEYS`, de actuele lijst — zonder dit zou een
+               gebruiker die eerder 'peakPerformance'/'calmMind' koos die
+               stale sleutel voor altijd blijven meeslepen (geen crash,
+               maar wel een "undefined"-label zodra `GOAL_NAMES`/
+               `GOAL_STATES` 'm niet meer herkennen, zie day-plan.ts). */
             ...(Array.isArray(obj.goals)
-              ? { goals: obj.goals.filter((g: unknown) => typeof g === 'string') }
-              : typeof obj.goal === 'string'
+              ? {
+                  goals: obj.goals.filter(
+                    (g: unknown): g is string =>
+                      typeof g === 'string' &&
+                      (GOAL_KEYS as string[]).includes(g),
+                  ),
+                }
+              : typeof obj.goal === 'string' && (GOAL_KEYS as string[]).includes(obj.goal)
                 ? { goals: [obj.goal] }
                 : {}),
             ...(obj.breathPrefs &&
@@ -233,6 +357,56 @@ async function loadOnce(): Promise<void> {
             typeof obj.soundscapeByState === 'object' &&
             !Array.isArray(obj.soundscapeByState)
               ? { soundscapeByState: obj.soundscapeByState }
+              : {}),
+            /* BUG (operator, 13 augustus 2026): `intensity` en
+               `hasBuiltProtocol` stonden wel in Settings + defaults, maar
+               hadden hier geen merge-regel — dus las loadOnce() ze na een
+               herstart altijd terug als de default, ook als ze net daarvoor
+               echt opgeslagen waren. Precies zichtbaar geworden toen de
+               teaser-popup na een app-herstart nooit verscheen: de app
+               dacht bij elke cold start weer dat er nog nooit een protocol
+               gebouwd was. */
+            ...(obj.intensity === 'essential' ||
+            obj.intensity === 'standard' ||
+            obj.intensity === 'advanced' ||
+            obj.intensity === 'complete' ||
+            obj.intensity === 'custom' ||
+            obj.intensity === null
+              ? { intensity: obj.intensity }
+              : {}),
+            ...(obj.experienceLevel === 'beginner' ||
+            obj.experienceLevel === 'intermediate' ||
+            obj.experienceLevel === 'advanced' ||
+            obj.experienceLevel === null
+              ? { experienceLevel: obj.experienceLevel }
+              : {}),
+            ...(typeof obj.hasBuiltProtocol === 'boolean'
+              ? { hasBuiltProtocol: obj.hasBuiltProtocol }
+              : {}),
+            ...(typeof obj.testFullSessions === 'boolean'
+              ? { testFullSessions: obj.testFullSessions }
+              : {}),
+            ...(typeof obj.hasSeenBatteryPrompt === 'boolean'
+              ? { hasSeenBatteryPrompt: obj.hasSeenBatteryPrompt }
+              : {}),
+            ...(obj.themeMode === 'light' ||
+            obj.themeMode === 'dark' ||
+            obj.themeMode === 'system'
+              ? { themeMode: obj.themeMode }
+              : {}),
+            /* Operator, 11 september 2026: nieuw veld — zonder deze regel
+               zou een opgeslagen keuze na herstart altijd terugvallen op de
+               default (zelfde klasse bug als hierboven bij voiceCues en
+               intensity/hasBuiltProtocol al eens gebeurde). */
+            ...(obj.voiceGender === 'male' || obj.voiceGender === 'female'
+              ? { voiceGender: obj.voiceGender }
+              : {}),
+            /* Operator, 29 september 2026: nieuw veld — zelfde regel als
+               hierboven, anders vergeet de app na een herstart telkens
+               dat deze gebruiker al eens verbonden is geweest. */
+            ...(typeof obj.braceletOnboardingCompletedAt === 'number' ||
+            obj.braceletOnboardingCompletedAt === null
+              ? { braceletOnboardingCompletedAt: obj.braceletOnboardingCompletedAt }
               : {}),
           };
         }
@@ -272,7 +446,13 @@ export async function setSetting<K extends keyof Settings>(
      leidend, ook als een latere versie een andere standaard kiest. */
   if (key === 'voiceCues') state = { ...state, voiceCuesChosen: true };
   notify();
-  persist();
+  /* Operator, 7 september 2026: elders (settings.tsx) volgt op een
+     `await setSetting(...)` soms een harde `DevSettings.reload()` — als
+     `persist()` hier niet werd afgewacht, resolvet deze functie zodra de
+     schrijf naar AsyncStorage enkel GESTART is, niet klaar. Een reload die
+     daar vlak op volgt kan de JS-engine dan afbreken vóór de schrijf de
+     schijf haalt, en de wijziging is spoorloos weg na de "reset". */
+  await persist();
 }
 
 /** Kicker voor de eerste load. Wordt automatisch aangeroepen bij module

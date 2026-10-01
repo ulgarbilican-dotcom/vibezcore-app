@@ -1,5 +1,5 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Mini player (sticky balk boven tab-bar)
+   VIBEZCORE — Mini player (vaste balk boven de tab-bar)
 
    Gemount in (tabs)/_layout zodat het over elke tab heen ligt maar onder
    de full-player modal. Render-conditie:
@@ -8,163 +8,139 @@
      - usePathname() !== '/welcome'  (niet op Welcome / onboarding)
 
    Tap-zones:
-     - info-Pressable (series + title + progress): opent full-player
+     - hele balk: opent full-player
      - play-knop: togglePlay() — bij previewBlocked opent in plaats daarvan
        de full-player zodat de preview-upsell modal weer vanzelf verschijnt
-     - close-knop: unload() (audio stopt, mini-player verdwijnt vanzelf)
 
-   Styling: exact uit webapp `.player` + `.pl-*`.
+   Operator, 15 september 2026 (Apple-upgrade — "ruimtelijke logica en
+   continuïteit, Apple Music/Podcasts-stijl"): "het meescrollen van de
+   geminimaliseerde player is een absolute designfout... moet transformeren
+   in een vast anker dat boven de Tab Bar vergrendelt". Dit was een reëel
+   architectuurprobleem: de vorige versie was VERSLEEPBAAR (PanResponder +
+   AsyncStorage-positie) — een gebruiker die 'm ooit had verplaatst kon
+   'm zo laten staan middenin de content, wat precies leest als "de player
+   scrollt mee". Volledig herbouwd naar een vaste, niet-versleepbare balk
+   direct boven de tab-bar (`bottom: TAB_BAR_HEIGHT + insets.bottom`),
+   plus een radicaal slankere Apple Music-achtige laag-profiel opmaak:
+   thumbnail · titel+serie · play-knop, geen tijdcodes, geen aparte
+   subtitle-regel, geen sluitknop (sluiten kan enkel door de audio te
+   stoppen — Apple Music/Spotify-conventie).
    ─────────────────────────────────────────────────────────────────────── */
 
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
-import { SERIES_SUBTITLE } from '@/data/audio-library-data';
-import {
-  togglePlay,
-  unload,
-  usePlayerState,
-} from '@/services/audio-player';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
+import { PILLAR_META, SERIES_PHOTO, SERIES_PILLAR } from '@/data/audio-library-data';
+import { AudioAccent } from '@/constants/theme';
+import { togglePlay, unload, usePlayerState } from '@/services/audio-player';
 import { router, usePathname } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
-import {
-  Animated,
-  Dimensions,
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ChevronUp, X } from 'lucide-react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TAB_BAR_HEIGHT = 64; // moet matchen met (tabs)/_layout
-const GAP_ABOVE_TABBAR = 8;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-/* Iter 9dq v149/v150 (operator 2026-06-17): MiniPlayer is draggable.
-   Reden: op breath.tsx en bracelet-control overlapt de player de START-
-   knop, waardoor de gebruiker breathwork niet kan starten.
-   v150: snap-to-top/bottom verwijderd — gebruiker kan player nu op ELKE
-   exacte Y-positie binnen het veilige bereik laten staan (operator-keuze
-   2026-06-17: "kan ik naar exacte plaats draggen?"). Wordt geclamped
-   tussen TOP_Y (safe-area top + gap) en BOTTOM_Y (boven tab-bar) zodat
-   de player nooit buiten het zichtbare gebied valt.
-   Exacte Y persist als number in AsyncStorage. */
-const POSITION_STORAGE_KEY = 'miniPlayerPosition_v2'; // v2: exact Y ipv 'top'|'bottom'
-const CARD_HEIGHT_ESTIMATE = 110; // card hoogte incl. padding — voor BOTTOM_Y math
-const DRAG_THRESHOLD = 8; // px vertikale beweging vóór drag-modus activeert (laat taps door)
+/* Moet matchen met (tabs)/_layout se eigen tab-bar-hoogte. */
+export const TAB_BAR_HEIGHT = 64;
+/* Exportabel zodat schermen met een ScrollView hun eigen
+   `contentContainerStyle.paddingBottom` erop kunnen afstemmen.
+   Operator, 15 september 2026: "mag iets hoger, nu slecht zichtbaar" (64
+   → 76), direct daarna: "doe dubbel zo hoog" — × 2 op die 76. */
+export const MINI_PLAYER_HEIGHT = 152;
 
-const C = {
-  border: 'rgba(58,143,255,0.15)',
-  series: 'rgba(58,143,255,0.85)',
+/* Operator, 26 september 2026 (accentkleur-wissel, audio): Signal Blue
+   (SIGNAL_BLUE) was hier de "nu actief"-voortgangslijn — exact de
+   audio-accentrol. Vervangen door AudioAccent (theme.ts), scope beperkt
+   tot Audio Library/player (zie player.tsx voor de volledige toelichting). */
+
+const DARK = {
+  bg: '#141414',
+  border: 'rgba(255,255,255,0.08)',
   text: '#fff',
-  time: 'rgba(255,255,255,0.4)',
-  trackBg: 'rgba(255,255,255,0.08)',
-  close: 'rgba(255,255,255,0.5)',
-  expand: 'rgba(255,255,255,0.4)',
+  dim: 'rgba(255,255,255,0.5)',
+  art: 'rgba(255,255,255,0.06)',
+  trackBg: 'rgba(255,255,255,0.10)',
+};
+const LIGHT = {
+  bg: '#FFFFFF',
+  border: '#E5E5EA',
+  text: '#1D1D1F',
+  dim: '#8E8E93',
+  art: '#E5E5EA',
+  trackBg: 'rgba(10,10,12,0.08)',
 };
 
-/* Formatteer aantal seconden als "M:SS". Hernoemd van fmt(ms) → fmt(sec)
-   bij de expo-av → expo-audio migratie 2026-05-23. */
-function fmt(sec: number): string {
-  const t = Math.max(0, Math.floor(sec));
-  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-}
-
-export function MiniPlayer() {
+export function MiniPlayer({
+  standalone = false,
+}: {
+  /** Operator, 15 september 2026: "moet de player ook al in Free Sessions
+   *  verschijnen?" — /library/free (en de andere /library/*-pagina's)
+   *  zijn ROOT-level stack-schermen, geen kind van `(tabs)`, dus de ENE
+   *  MiniPlayer-instantie in `(tabs)/_layout.tsx` bestaat daar niet —
+   *  exact dezelfde architectuur-valkuil als eerder bij breath-welcome/
+   *  audio-welcome (zie de toelichting daar). Zo'n scherm rendert zijn
+   *  EIGEN `<MiniPlayer standalone />`: geen tab-bar om boven te
+   *  vergrendelen, dus enkel `insets.bottom` i.p.v.
+   *  `TAB_BAR_HEIGHT + insets.bottom`. */
+  standalone?: boolean;
+}) {
   const state = usePlayerState();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  /* Operator, 26 september 2026: teruggedraaid — de witte balk was juist
+     goed ("witte player was goed draai dat terug"). Hardcoded LIGHT,
+     zelfde patroon als de rest (geen live theme-hook). */
+  const C = LIGHT;
 
-  /* ── Draggable positioning (operator-feature 2026-06-17) ──────────────
-     animY = absolute Y-positie (px van top van het scherm). Default
-     bottom-positie matcht het oude gedrag exact zodat bestaande users
-     geen verschil zien tot ze 'm actief verslepen. */
-  const screenHeight = Dimensions.get('window').height;
-  const TOP_Y = insets.top + GAP_ABOVE_TABBAR;
-  const BOTTOM_Y = useMemo(
-    () =>
-      screenHeight -
-      TAB_BAR_HEIGHT -
-      insets.bottom -
-      GAP_ABOVE_TABBAR -
-      CARD_HEIGHT_ESTIMATE,
-    [screenHeight, insets.bottom],
-  );
-  const animY = useRef(new Animated.Value(BOTTOM_Y)).current;
-
-  /* Persisted exacte Y-positie laden bij mount. Resync wanneer
-     TOP_Y/BOTTOM_Y verandert (rotatie / safe-area). */
-  useEffect(() => {
-    AsyncStorage.getItem(POSITION_STORAGE_KEY).then((v) => {
-      if (v === null) {
-        /* Geen persisted value — default = bottom (oude gedrag). */
-        animY.setValue(BOTTOM_Y);
-        return;
-      }
-      const parsed = parseFloat(v);
-      if (!Number.isFinite(parsed)) {
-        animY.setValue(BOTTOM_Y);
-        return;
-      }
-      /* Clamp persisted value binnen huidig veilig bereik (kan veranderd
-         zijn door rotatie of devicewissel). */
-      const clamped = Math.max(TOP_Y, Math.min(BOTTOM_Y, parsed));
-      animY.setValue(clamped);
-    });
-  }, [TOP_Y, BOTTOM_Y, animY]);
-
-  /* PanResponder: drag-modus activeert alleen bij significant vertikale
-     beweging (>8px). Onder die threshold doorgegeven aan onderliggende
-     Pressables (expand/play/close) zodat taps blijven werken.
-     Geen snap meer (v150) — exacte Y blijft staan waar gebruiker loslaat,
-     binnen het veilige bereik [TOP_Y, BOTTOM_Y]. */
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_evt, gs) =>
-        Math.abs(gs.dy) > DRAG_THRESHOLD,
-      onPanResponderGrant: () => {
-        animY.extractOffset();
-      },
-      onPanResponderMove: Animated.event([null, { dy: animY }], {
-        useNativeDriver: false,
-      }),
-      onPanResponderRelease: () => {
-        animY.flattenOffset();
-        // @ts-expect-error _value is internal maar stabiele Animated API
-        const currentY = animY._value as number;
-        /* Clamp binnen veilig bereik. Als drag verder ging dan TOP_Y of
-           BOTTOM_Y, spring 'm rustig terug naar de grens — anders blijft
-           'ie precies waar de vinger losliet. */
-        const clamped = Math.max(TOP_Y, Math.min(BOTTOM_Y, currentY));
-        if (clamped !== currentY) {
-          Animated.spring(animY, {
-            toValue: clamped,
-            tension: 80,
-            friction: 14,
-            useNativeDriver: false,
-          }).start();
-        }
-        AsyncStorage.setItem(POSITION_STORAGE_KEY, String(clamped)).catch(
-          () => {},
-        );
-      },
-    }),
-  ).current;
+  /* Operator, 26 september 2026 ("zwart scherm bij Identity/Machiavelli-
+     sessies, na eerdere fixes nog steeds"): de ECHTE oorzaak zat hier de
+     hele tijd — de vier hooks hieronder (useSharedValue/useAnimatedStyle)
+     stonden NA drie voorwaardelijke `return null`s. Zodra state.session of
+     pathname wisselt (= precies het moment waarop een sessie geopend
+     wordt en dit component naar '/player' navigeert), verandert het aantal
+     hooks tussen twee renders → React's reconciler gooit "Rendered more
+     hooks than during the previous render." In productie (geen LogBox)
+     zag dat eruit als een stil zwart scherm terwijl de audio bleef spelen.
+     Alle eerdere notify()/setTimeout-fixes elders waren reële, maar
+     secundaire bugs — dit was de hoofdoorzaak. Hooks moeten ONVOORWAARDELIJK
+     vóór elke early return staan. */
+  const rowPressScale = useSharedValue(1);
+  const playPressScale = useSharedValue(1);
+  const rowPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: rowPressScale.value }],
+  }));
+  const playPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: playPressScale.value }],
+  }));
 
   if (!state.session) return null;
   /* Verstop op routes waar de mini-player niet thuishoort. usePathname is
      hier veiliger dan useSegments — modals worden door expo-router als
-     ÉÉN pathname-segment ('/player') gerapporteerd. */
+     ÉÉN pathname-segment ('/player') gerapporteerd.
+     Operator, 26 september 2026 ("sticky mini-player valt over de CTA op
+     welcome-scherm van audio/breath/bracelet"): naast het gedeelde
+     `/welcome`-scherm ook de per-product intro-schermen toegevoegd —
+     `/breath-welcome` (Breath) en `/bracelet-preview` (Bracelet). Deze
+     hebben allemaal een CTA onderaan die anders achter de balk verdwijnt. */
   if (pathname === '/player') return null;
   if (pathname === '/welcome') return null;
+  if (pathname === '/breath-welcome') return null;
+  if (pathname === '/bracelet-preview') return null;
 
   const session = state.session;
   const pct =
     state.durationSec > 0
       ? Math.min(100, (state.positionSec / state.durationSec) * 100)
       : 0;
+  /* Operator ("minimize player moeten de fotos ook aangepast worden naar
+     nieuwe foto"): zelfde bron als de full player — pijler-foto i.p.v.
+     de oude losse reeks-foto (SERIES_PHOTO blijft fallback). */
+  const photo =
+    PILLAR_META[SERIES_PILLAR[session.series]]?.img ?? SERIES_PHOTO[session.series];
 
   const onExpand = () => {
     router.push({
@@ -190,237 +166,161 @@ export function MiniPlayer() {
     togglePlay();
   };
 
+  /* Operator, 15 september 2026: "moet er ook een X komen zodat de
+     luisteraar direct kan sluiten?" — terug, na 'm eerder weggehaald te
+     hebben (Apple Music/Spotify laten sluiten alleen via de audio zelf
+     laten stoppen; dat bleek hier onhandig genoeg om terug te draaien). */
   const onClose = () => {
     unload();
   };
 
-  return (
-    <Animated.View
-      style={[s.wrap, { top: animY }]}
-      pointerEvents="box-none"
-      {...panResponder.panHandlers}
-    >
-      {/* Hele card = tap-zone voor expand. Inner Pressables voor play en
-         close capturen taps (RN gesture system pakt de dichtstbijzijnde
-         Pressable, dus expand vuurt niet wanneer je op play/close tikt).
-         PanResponder boven valt terug op false bij dy < 8px, dus korte
-         taps blijven werken. */}
-      <Pressable
-        onPress={onExpand}
-        android_ripple={{ color: 'rgba(255,255,255,0.03)' }}
-      >
-        <LinearGradient
-          colors={['#181a1f', '#101114']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={s.card}
-        >
-          {/* Drag-handle indicator: kleine horizontale pill bovenaan center.
-              Visuele cue dat de card draggable is — sleep om naar elke
-              gewenste Y-positie te verplaatsen. */}
-          <View style={s.dragHandle} pointerEvents="none">
-            <View style={s.dragHandlePill} />
-          </View>
-          {/* Expand-chevron top-right, omhoog (tap = uitklappen naar full). */}
-          <Text style={s.expand}>⌃</Text>
+  /* Press-schaal, zelfde recept als StartCard (breath-welcome.tsx): geen
+     bounce bij indrukken, wel bij loslaten. Twee losse waarden, want de
+     balk (expand) en de play-knop zijn allebei eigen tikbare doelen.
+     (De useSharedValue/useAnimatedStyle-hooks zelf staan nu bovenaan,
+     vóór de early returns — zie toelichting daar.) */
+  const onRowPressIn = () => {
+    rowPressScale.value = withTiming(0.98, { duration: 80 });
+  };
+  const onRowPressOut = () => {
+    rowPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
 
-          <Text style={s.series} numberOfLines={1}>
-            {session.series.toUpperCase()}
-          </Text>
-          {/* FIX 12: pl-sub regel (subtitle) tussen series en title.
-             Voor Soundscapes geeft dit de lange tag-string "Frequency
-             Sessions · Theta · …". Voor andere series staat hier de
-             "inspired by"-tag uit SERIES_SUBTITLE. Rendert null als
-             het veld leeg is — geen lege ruimte. */}
-          {SERIES_SUBTITLE[session.series] ? (
-            <Text style={s.sub} numberOfLines={1}>
-              {SERIES_SUBTITLE[session.series]}
-            </Text>
-          ) : null}
-          <Text style={s.title} numberOfLines={1}>
+  const onPlayPressIn = () => {
+    playPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPlayPressOut = () => {
+    playPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+
+  return (
+    <View
+      style={[
+        s.wrap,
+        {
+          bottom: standalone ? insets.bottom : TAB_BAR_HEIGHT + insets.bottom,
+          backgroundColor: C.bg,
+          borderTopColor: C.border,
+        },
+      ]}
+      pointerEvents="box-none"
+    >
+      {/* Flinterdunne voortgangslijn over de bovenrand — Signal Blue, de
+         functionele "actieve afspeelstatus"-kleur, ongeacht thema. */}
+      <View style={[s.progressTrack, { backgroundColor: C.trackBg }]}>
+        <View style={[s.progressFill, { width: `${pct}%` }]} />
+      </View>
+
+      {/* Operator, 15 september 2026: "niet duidelijk, moet dat niet zo'n
+         schuine lijn zijn?" — het kleine inline icoontje tussen de tekst
+         en de knop viel niet op. Groter, vetter en gecentreerd BOVENAAN
+         de balk (net onder de voortgangslijn) — de klassieke "sleep/tik
+         omhoog"-positie, meteen het eerste wat opvalt. */}
+      <View style={s.expandHint} pointerEvents="none">
+        <ChevronUp size={20} color={C.dim} strokeWidth={3} />
+      </View>
+
+      <AnimatedPressable
+        onPress={onExpand}
+        onPressIn={onRowPressIn}
+        onPressOut={onRowPressOut}
+        style={[s.row, rowPressStyle]}
+      >
+        <View style={[s.art, { backgroundColor: C.art }]}>
+          {photo ? <Image source={{ uri: photo }} style={s.artImg} /> : null}
+        </View>
+        <View style={s.body}>
+          <Text style={[s.title, { color: C.text }]} numberOfLines={1}>
             {session.title}
           </Text>
-          <View style={s.progressTrack}>
-            <LinearGradient
-              colors={['#3a8fff', '#5ba4ff']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[s.progressFill, { width: `${pct}%` }]}
-            />
-          </View>
-
-          <View style={s.bottomRow}>
-            <Text style={s.time}>
-              {fmt(state.positionSec)} / {fmt(state.durationSec)}
-            </Text>
-            <View style={s.btns}>
-              <Pressable onPress={onPlay} hitSlop={8} style={s.playBtnWrap}>
-                <LinearGradient
-                  colors={['#3a8fff', '#2c7ae8']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={s.playBtnBg}
-                />
-                <PlayPauseGlyph
-                  size={14}
-                  color="#ffffff"
-                  playing={state.playing}
-                />
-              </Pressable>
-              <Pressable onPress={onClose} hitSlop={10} style={s.closeBtn}>
-                <Text style={s.closeGlyph}>✕</Text>
-              </Pressable>
-            </View>
-          </View>
-        </LinearGradient>
-      </Pressable>
-    </Animated.View>
+          <Text style={[s.series, { color: C.dim }]} numberOfLines={1}>
+            {session.series}
+          </Text>
+        </View>
+        <AnimatedPressable
+          onPress={onPlay}
+          onPressIn={onPlayPressIn}
+          onPressOut={onPlayPressOut}
+          hitSlop={10}
+          style={[s.playBtn, playPressStyle]}
+        >
+          <PlayPauseGlyph size={22} color="#ffffff" playing={state.playing} />
+        </AnimatedPressable>
+        <Pressable onPress={onClose} hitSlop={10} style={s.closeBtn}>
+          <X size={18} color={C.dim} strokeWidth={2.2} />
+        </Pressable>
+      </AnimatedPressable>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  /* Absolute over tab-content. pointerEvents:box-none zodat tap onder
-     het balkje door valt op het scherm eronder. */
+  /* Vaste balk direct boven de tab-bar — NIET meer versleepbaar, dus geen
+     PanResponder/AsyncStorage-positielogica meer nodig. */
   wrap: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: 0,
+    right: 0,
+    height: MINI_PLAYER_HEIGHT,
+    borderTopWidth: StyleSheet.hairlineWidth,
     zIndex: 50,
     elevation: 8,
   },
-  card: {
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 16,
-    paddingTop: 14, // +4 om ruimte te maken voor drag-handle pill
-    paddingHorizontal: 12,
-    paddingBottom: 11,
-    /* Donkere shadow boven het balkje (webapp shadow: 0 -8 32) */
-    shadowColor: '#000',
-    shadowOpacity: 0.55,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: -8 },
-  },
-
-  /* Drag-handle indicator — kleine pill bovenaan center.
-     pointerEvents:none op de wrapper zodat de PanResponder van de
-     parent View de drag oppikt zonder dat de handle taps swallowt. */
-  dragHandle: {
-    position: 'absolute',
-    top: 4,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  dragHandlePill: {
-    width: 32,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-  },
-
-  /* Expand-chevron top-right — wijst omhoog: tap = uitklappen naar full.
-     ⌃ (U+2303 UP ARROWHEAD) is een pure tekst-glyph, geen emoji-render. */
-  expand: {
-    position: 'absolute',
-    top: 8,
-    right: 12,
-    color: C.expand,
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  series: {
-    color: C.series,
-    fontSize: 9.5,
-    fontWeight: '700',
-    letterSpacing: 1.24,
-    marginRight: 16, // ruimte voor expand-chevron
-  },
-  /* FIX 12: pl-sub (subtitle). 9px / weight 500 / .04em letter-spacing /
-     rgba(255,255,255,.32). marginBottom 3 zoals webapp. Ellipsis via
-     numberOfLines op de <Text> JSX. */
-  sub: {
-    color: 'rgba(255,255,255,0.32)',
-    fontSize: 9,
-    fontWeight: '500',
-    letterSpacing: 0.36, // .04em op 9px
-    marginTop: 2,
-    marginBottom: 3,
-    marginRight: 16,
-  },
-  title: {
-    color: C.text,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: -0.14,
-    lineHeight: 18,
-    marginTop: 2,
-  },
   progressTrack: {
-    height: 3,
-    backgroundColor: C.trackBg,
-    borderRadius: 99,
+    height: 2,
     overflow: 'hidden',
-    marginTop: 8,
   },
   progressFill: {
     height: '100%',
-    borderRadius: 99,
-    shadowColor: '#3a8fff',
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    backgroundColor: AudioAccent, // accentkleur-wissel (audio): was SIGNAL_BLUE
   },
-
-  bottomRow: {
+  expandHint: {
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  row: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  time: {
-    color: C.time,
-    fontSize: 10,
-    fontWeight: '500',
-    fontVariant: ['tabular-nums'],
-  },
-  btns: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: 12,
     gap: 12,
   },
-  playBtnWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  /* Operator, 15 september 2026: elementen meegeschaald met de dubbele
+     balkhoogte (art/knop groter, tekst groter) i.p.v. een hoge balk met
+     dezelfde kleine iconen er verloren in te laten staan. */
+  art: {
+    width: 76,
+    height: 76,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  artImg: { width: '100%', height: '100%' },
+  body: { flex: 1 },
+  /* Prominent Body-rol, opgeschaald. */
+  title: {
+    fontSize: 19,
+    fontWeight: '500',
+  },
+  series: {
+    fontSize: 15,
+    fontWeight: '400',
+    marginTop: 3,
+  },
+  /* Operator, 26 september 2026 ("kleine player moet ook nieuwe
+     accentkleur"): was nog ROYAL_INDIGO (navy), gemist in de eerdere
+     Bio-Teal-sweep omdat dit een lokale const was, geen theme-import. */
+  playBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: AudioAccent,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    shadowColor: '#3a8fff',
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-  },
-  playBtnBg: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 21,
-  },
-  playGlyph: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
   },
   closeBtn: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  closeGlyph: {
-    color: C.close,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

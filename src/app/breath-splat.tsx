@@ -41,13 +41,17 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
+import Animated, {
   cancelAnimation,
   Easing,
+  useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -64,6 +68,52 @@ const PORTRAIT: string | null =
   'https://vibezcore-audio.b-cdn.net/images/faces.png';
 
 const ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
+
+/* Eigen component (i.p.v. inline in de `.map()` hieronder) omdat hooks
+   niet in een loop mogen. */
+function ModeButton({
+  label,
+  on,
+  accent,
+  accentSoft,
+  onPress,
+}: {
+  label: string;
+  on: boolean;
+  accent: string;
+  accentSoft: string;
+  onPress: () => void;
+}) {
+  const pressScale = useSharedValue(1);
+  const onPressIn = () => {
+    pressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onPressOut = () => {
+    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
+        s.mode,
+        on && { borderColor: accent, backgroundColor: accentSoft },
+        pressStyle,
+      ]}
+    >
+      <Text
+        style={[s.modeTxt, { color: on ? accent : 'rgba(255,255,255,0.5)' }]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </AnimatedPressable>
+  );
+}
 
 export default function BreathSplatScreen() {
   const [stateKey, setStateKey] = useState<BreathStateKey>('calm');
@@ -163,6 +213,28 @@ export default function BreathSplatScreen() {
 
   const label = phaseAt(st, phase).label;
   const via = phaseAt(st, phase).via;
+
+  const closePressScale = useSharedValue(1);
+  const onClosePressIn = () => {
+    closePressScale.value = withTiming(0.92, { duration: 80 });
+  };
+  const onClosePressOut = () => {
+    closePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const closePressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: closePressScale.value }],
+  }));
+
+  const ctaPressScale = useSharedValue(1);
+  const onCtaPressIn = () => {
+    ctaPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onCtaPressOut = () => {
+    ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const ctaPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ctaPressScale.value }],
+  }));
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>

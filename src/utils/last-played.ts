@@ -60,7 +60,7 @@ let loadPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notify(): void {
-  listeners.forEach((l) => l());
+  setTimeout(() => { listeners.forEach((l) => l()); }, 0);
 }
 
 async function loadOnce(): Promise<void> {

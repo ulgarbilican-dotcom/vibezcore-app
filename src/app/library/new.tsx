@@ -7,6 +7,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { LibraryListRow } from '@/components/LibraryListRow';
+import { AudioAccent } from '@/constants/theme';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { isNew } from '@/utils/isNew';
 import { useGatedOpenSession } from '@/utils/openSession';
@@ -19,7 +20,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function LibraryNewScreen() {
   const sessions = useMemo<Session[]>(
@@ -38,14 +47,31 @@ export default function LibraryNewScreen() {
     else router.navigate('/');
   };
 
+  const backPressScale = useSharedValue(1);
+  const onBackPressIn = () => {
+    backPressScale.value = withTiming(0.95, { duration: 80 });
+  };
+  const onBackPressOut = () => {
+    backPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+  };
+  const backPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backPressScale.value }],
+  }));
+
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={s.topbar}>
-        <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+        <AnimatedPressable
+          onPress={goBack}
+          onPressIn={onBackPressIn}
+          onPressOut={onBackPressOut}
+          hitSlop={14}
+          style={[s.backBtn, backPressStyle]}
+        >
           <Text style={s.backChev}>‹</Text>
           <Text style={s.backText}>Back</Text>
-        </Pressable>
+        </AnimatedPressable>
         <Text style={s.topbarTitle}>What's New</Text>
         <View style={s.topbarRight} />
       </View>
@@ -185,7 +211,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 99,
-    backgroundColor: '#3a8fff',
+    /* Operator, 26 september 2026 (accentkleur-wissel, audio): NEW-badge is
+       een label-rol → AudioAccent i.p.v. het oude Signal Blue (#3a8fff). */
+    backgroundColor: AudioAccent,
   },
   newPillTxt: {
     color: '#ffffff',
