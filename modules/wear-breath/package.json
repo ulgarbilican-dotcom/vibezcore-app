@@ -1,0 +1,8 @@
+{
+  "name": "wear-breath",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — stuurt een volledige ademsessie (fasen + haptic-patronen) in één bericht naar een gekoppelde Wear OS-horloge, die daarna zelf de lus draait.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

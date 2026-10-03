@@ -140,6 +140,7 @@
       "@react-native-community/datetimepicker",
       "./plugins/withQuickShortcuts",
       "./modules/breath-background/plugin.js",
+      "./plugins/withWearApp",
       [
         "expo-notifications",
         {
@@ -147,7 +148,8 @@
           "color": "#00A3A3"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,0 +1,8 @@
+{
+  "name": "watch-breath",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — stuurt een volledige ademsessie naar een gekoppelde Apple Watch via WatchConnectivity; de Watch draait de lus daarna zelf.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,0 +1,47 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   VIBEZCORE — Wear OS companion-app (embedded, geen standalone-app).
+
+   Leeft hier buiten `android/` omdat `expo prebuild` die map elke keer
+   opnieuw aanmaakt (zie plugins/withQuickShortcuts.js voor dezelfde
+   constatering) — `plugins/withWearApp.js` kopieert deze map naar
+   `android/wear` en haakt hem in settings.gradle/app/build.gradle in bij
+   elke prebuild. Niet rechtstreeks in `android/wear` bewerken: dat
+   verdwijnt bij de volgende prebuild. */
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+android {
+  namespace 'com.ubili.vibezcoreapp.wear'
+  compileSdk rootProject.ext.compileSdkVersion
+
+  defaultConfig {
+    /* Zelfde applicationId als de telefoon-app — conventie voor een
+       EMBEDDED (niet-standalone) Wear-app die via `wearApp project(':wear')`
+       in de telefoon-APK verpakt wordt. */
+    applicationId 'com.ubili.vibezcoreapp'
+    minSdkVersion 30
+    targetSdkVersion rootProject.ext.targetSdkVersion
+    versionCode 1
+    versionName "1.0.0"
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+}
+
+dependencies {
+  implementation 'androidx.core:core-ktx:1.13.1'
+  implementation 'com.google.android.gms:play-services-wearable:18.2.0'
+}

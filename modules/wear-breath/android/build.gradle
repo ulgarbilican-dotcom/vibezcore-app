@@ -1,0 +1,22 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.ubili.vibezcoreapp.wearbreath'
+version = '1.0.0'
+
+android {
+  namespace "com.ubili.vibezcoreapp.wearbreath"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  /* MessageClient/CapabilityClient — praat met een gekoppelde Wear OS-
+     horloge. Geen extra permissie nodig op de telefoon: Play Services
+     regelt de koppeling, de app vraagt enkel de client-API aan. */
+  implementation "com.google.android.gms:play-services-wearable:18.2.0"
+}

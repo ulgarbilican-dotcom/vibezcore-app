@@ -65,7 +65,7 @@ import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
 } from '@/services/session-keepalive';
-import { playPhaseHaptic } from '@/services/breath-haptics';
+import { phaseHapticPattern, playPhaseHaptic } from '@/services/breath-haptics';
 import { ensurePermission as ensureNotificationPermission } from '@/services/reminders';
 import { addBreathSession } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
@@ -106,6 +106,8 @@ import {
   startBackgroundBreathSession,
   stopBackgroundBreathSession,
 } from '../../modules/breath-background';
+import { sendBreathSessionToWatch, stopBreathSessionOnWatch } from '../../modules/watch-breath';
+import { sendBreathSessionToWatch as sendBreathSessionToWear, stopBreathSessionOnWatch as stopBreathSessionOnWear } from '../../modules/wear-breath';
 import { showVibezAlert } from '@/components/VibezAlert';
 import {
   BlurMask,
@@ -1315,6 +1317,8 @@ export default function BreathSessionScreen() {
   const finish = useCallback((completed = false) => {
     stopAll();
     stopScape(true);
+    stopBreathSessionOnWear();
+    stopBreathSessionOnWatch();
     /* `stopScape()` stopt het geluid maar liet de UI-state ongemoeid — de
        gekozen chip (bv. "RAIN") bleef dus visueel actief staan terwijl er
        niets meer speelde (operator, 11 augustus 2026: "soundscape button
@@ -1918,6 +1922,31 @@ export default function BreathSessionScreen() {
          straks gewoon niet; de sessie draait dan zoals vóór deze module
          bestond. */
       pendingCueUrisRef.current = null;
+    }
+    /* Horloge-begeleiding (Wear OS + Apple Watch): ÉÉN bericht met de
+       volledige sessie, net als de achtergrond-voorbereiding hierboven —
+       geen tik per fase over Bluetooth. Elk platform negeert zijn eigen
+       no-op stil (geen horloge gekoppeld, of het andere OS) — zie de
+       try/catch-regel in wear-breath/watch-breath index.ts. Mag START
+       nooit blokkeren, dus altijd in een eigen try/catch. */
+    try {
+      const phases = techRef.current.phases;
+      sendBreathSessionToWear({
+        phases: phases.map((p) => ({
+          key: p.key,
+          secs: p.secs,
+          pattern: phaseHapticPattern(p.key, p.secs),
+        })),
+        rounds: effectiveRoundsRef.current,
+        modeName: st.eyebrow,
+      });
+      sendBreathSessionToWatch({
+        phases: phases.map((p) => ({ key: p.key, secs: p.secs })),
+        rounds: effectiveRoundsRef.current,
+        modeName: st.eyebrow,
+      });
+    } catch {
+      /* stil — zie toelichting hierboven */
     }
     startWallRef.current = Date.now();
     claimVoiceSource('breath');
