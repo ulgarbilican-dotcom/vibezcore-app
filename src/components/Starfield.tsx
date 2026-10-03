@@ -19,7 +19,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { Canvas, Circle, Group } from '@shopify/react-native-skia';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   Easing,
@@ -112,9 +112,17 @@ export default function Starfield({
   count = 130,
   color = '#9ec5ff',
 }: Props) {
+  /* De doorgegeven width/height (vaak Dimensions.get('window') op module-
+     niveau) komt niet altijd overeen met de echte, op het scherm gelayoute
+     grootte van dit element — met als gevolg dat de Skia Canvas sterren
+     buiten zijn eigen zichtbare gebied plaatst (zwarte band bovenaan op
+     breath-session.tsx). Daarom meten we de werkelijke afmetingen via
+     onLayout en gebruiken die voor de sterposities, niet de props. */
+  const [measured, setMeasured] = useState({ w: width, h: height });
+
   const stars = useMemo(
-    () => makeStars(count, width, height),
-    [count, width, height],
+    () => makeStars(count, measured.w, measured.h),
+    [count, measured.w, measured.h],
   );
 
   /* Eén trage klok voor alle sterren; het onderlinge verschil zit in hun
@@ -129,7 +137,16 @@ export default function Starfield({
   }, [t]);
 
   return (
-    <View style={[StyleSheet.absoluteFill, { width, height }]} pointerEvents="none">
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      onLayout={(e) => {
+        const { width: w, height: h } = e.nativeEvent.layout;
+        if (w > 0 && h > 0 && (w !== measured.w || h !== measured.h)) {
+          setMeasured({ w, h });
+        }
+      }}
+    >
       <Canvas style={{ flex: 1 }}>
         <Group blendMode="plus">
           {stars.map((star, i) => (

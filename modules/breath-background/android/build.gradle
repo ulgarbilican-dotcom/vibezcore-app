@@ -1,0 +1,32 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.ubili.vibezcoreapp.breathbackground'
+version = '1.0.0'
+
+android {
+  namespace "com.ubili.vibezcoreapp.breathbackground"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  /* MediaSessionCompat — nodig om de melding als een MEDIA-melding te
+     tonen (operator, 15 augustus 2026: "nog altijd niets te zien in
+     lockscreen"). Een gewone NotificationCompat-melding, zelfs met
+     VISIBILITY_PUBLIC en POST_NOTIFICATIONS verleend, bleek op dit
+     Samsung-toestel niet te verschijnen op het vergrendelscherm — het
+     eerdere, WEL zichtbare venster (het misleidende "CALM CONTROL
+     00:00/00:01"-venster) kwam van expo-audio's eigen MediaSession/
+     MediaStyle-melding. OneUI's vergrendelscherm behandelt media-
+     mededelingen zichtbaar anders (eigen widget-ruimte) dan gewone
+     mededelingen (onderhevig aan een aparte "mededelingen op
+     vergrendelscherm"-instelling). Met een ECHTE MediaSessionCompat hier
+     krijgen we diezelfde betrouwbare zichtbaarheid terug, nu met de
+     juiste modus/fase/duur i.p.v. de 1-seconde-stilte-lus. */
+  implementation "androidx.media:media:1.7.0"
+}

@@ -24,7 +24,7 @@ import { DurationWheel } from '@/components/DurationWheel';
 import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ChevronDown, ChevronLeft, ChevronRight, Flame, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
+import { ChevronDown, ChevronLeft, ChevronRight, Flame, Info, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
 import { useProtocolLocked, PROTOCOL_LOCKED_SUB } from '@/utils/protocol-gate';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -104,26 +104,16 @@ const titleCase = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpp
    agenda.tsx. */
 const STATE_ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
 
-/* Ring-geometrie — zelfde formules als components/RhythmRing.tsx zelf
-   (niet geëxporteerd, hier herhaald voor de eigen label-laag erbovenop,
-   identiek principe als bracelet-agenda.tsx). `RING_SIZE` moet gelijk
-   blijven aan de `size`-prop op <RhythmRing> hieronder (280, niet
-   bracelet's 240). */
 /* Operator, 1 okt 2026 ("alles beetje naar boven zodat er niet gescrolld
    dient te worden"): 280→240, gelijk aan bracelet-agenda.tsx's ring —
    samen met de krappere marges hieronder past "Your breathwork plan" nu
-   zonder scrollen op een gewoon scherm. */
+   zonder scrollen op een gewoon scherm.
+   Operator, 2-3 okt 2026: de eigen ring-geometrie-herhaling (RING_CX/CY/
+   DOT_RADIUS/angleForMinutes/pointAt) die hier stond voor de losse
+   `RingLabel`-laag is weg samen met die laag zelf — RhythmRing.tsx
+   berekent nu alles intern (`centerItems`/`selectedKeys`), agenda.tsx
+   hoeft de ring-wiskunde niet meer te dupliceren. */
 const RING_SIZE = 240;
-const RING_OUTER_PAD = 40;
-const RING_OUTER = RING_SIZE + RING_OUTER_PAD * 2;
-const RING_CX = RING_OUTER / 2;
-const RING_CY = RING_OUTER / 2;
-const RING_DOT_RADIUS = RING_SIZE / 2 - 14;
-const angleForMinutes = (mins: number) => ((mins % 1440) / 1440) * Math.PI * 2;
-const pointAt = (angleRad: number, radius: number) => ({
-  x: radius * Math.sin(angleRad),
-  y: -radius * Math.cos(angleRad),
-});
 
 function StateCard({
   label,
@@ -153,26 +143,22 @@ function StateCard({
       style={s.cardSlot}
     >
       <Animated.View style={[s.card, on && s.cardOn, pressStyle]}>
-        {color ? (
-          <View style={[s.cardDot, { backgroundColor: color }]} />
-        ) : (
-          <Layers size={15} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />
-        )}
+        {/* Operator, 2-3 okt 2026 ("misschien links in de kaarten i zodat
+           mensen weten dat ze op de kaarten kunnen klikken"): puur een
+           tikbaarheid-hint, geen eigen uitleg-sheet — vandaar geen
+           aparte onPress, gewoon een visueel signaal in de hoek
+           tegenover de kleurbol. */}
+        <View style={s.cardTopRow}>
+          {color ? (
+            <View style={[s.cardDot, { backgroundColor: color }]} />
+          ) : (
+            <Layers size={15} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />
+          )}
+          <Info size={12} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
+        </View>
         <Text style={[s.cardTxt, on && s.cardTxtOn]}>{label}</Text>
       </Animated.View>
     </Pressable>
-  );
-}
-
-function RingLabel({ reminderAt, text, color }: { reminderAt: number; text: string; color: string }) {
-  const p = pointAt(angleForMinutes(reminderAt), RING_DOT_RADIUS + 34);
-  return (
-    <Text
-      pointerEvents="none"
-      style={[s.ringLabel, { left: RING_CX + p.x - 34, top: RING_CY + p.y - 14, color }]}
-    >
-      {text}
-    </Text>
   );
 }
 
@@ -370,7 +356,11 @@ export default function AgendaScreen() {
   /* Operator, 1 okt 2026 ("kaarten-principe van bracelet toepassen"):
      welke state (of 'all') momenteel zijn uur+duur-labels rond de ring
      toont — zie StateCard/RingLabel hierboven. */
-  const [filterMode, setFilterMode] = useState<BreathStateKey | 'all' | null>(null);
+  /* Operator, 2-3 okt 2026 ("show all vervangen door your next session"):
+     `'all'` bestaat niet meer — de nulle staat (null) IS nu "Your next
+     session" (de standaard "Next"-weergave in het midden van de ring,
+     geen staat geselecteerd). */
+  const [filterMode, setFilterMode] = useState<BreathStateKey | null>(null);
   /* Operator, 1 okt 2026 ("bij aanklikken van sessie op de cirkel eerst
      popup met vraag om naar deze sessie te gaan, hoe zou apple dat
      doen"): tikken op een stip opende tot nu toe DIRECT /breath-session —
@@ -684,6 +674,18 @@ export default function AgendaScreen() {
 
         {calendarOpen && (
           <View style={s.calendarDropdown}>
+            {/* Operator, 3 okt 2026 ("bij agenda dropdown moet ook done
+               rechtsboven komen, past dat gaat dat dicht als iemand
+               daarop klikt"): expliciete sluit-knop — een dag kiezen
+               sluit de kalender al (`setCalendarOpen(false)` hierboven
+               bij `MonthCell.onPress`), maar wie enkel wil sluiten zonder
+               een andere dag te kiezen had daarvoor geen directe knop,
+               enkel nogmaals op de datumrij zelf tikken. */}
+            <View style={s.calendarDoneRow}>
+              <Pressable onPress={() => setCalendarOpen(false)} hitSlop={10}>
+                <Text style={s.calendarDoneTxt}>Done</Text>
+              </Pressable>
+            </View>
             <View style={s.monthNav}>
               <AnimatedPressable
                 onPress={() => {
@@ -745,52 +747,69 @@ export default function AgendaScreen() {
            een lijst kaarten, zie components/RhythmRing.tsx voor de
            toelichting (wiskunde, sleep-interactie, beperkingen). */}
         <Animated.View style={[s.ringWrap, ringAnimStyle]}>
-          <RhythmRing
-            size={RING_SIZE}
-            items={(selectedDay?.items ?? []).map((it, i) => ({
+          {(() => {
+            /* Operator, 2-3 okt 2026 ("i op de kaarten, info rond de ring
+               ademt niet, tik op kaart toont info in het midden, bij
+               meerdere sessies van dezelfde staat alle tijden tonen —
+               wat is betere UX?"): de losse `RingLabel`-tekst per bolletje
+               (hieronder tot voor kort) botste onvermijdelijk bij
+               sessies die dicht bij elkaar op de klok staan (bv. Boost
+               vroeg op de dag) — geen stijl-fix lost dat op, het zit in
+               het idee zelf. In de plaats: tik een staat-kaart aan →
+               ALLE bolletjes van die staat pulsen samen (`selectedKeys`)
+               én hun tijden verschijnen gebundeld in het midden
+               (`centerItems`) — geen collision meer mogelijk, en bij
+               meerdere sessies van dezelfde staat staat dat nu gewoon
+               netjes onder elkaar i.p.v. onleesbaar overlappend op de
+               ring-rand. */
+            const ringItems = (selectedDay?.items ?? []).map((it, i) => ({
               key: String(i),
               reminderAt: it.reminderAt,
               minutes: it.minutes,
               color: BREATH_STATES[it.state].accent,
               label: titleCase(BREATH_STATES[it.state].eyebrow),
-            }))}
-            isToday={selectedKey === todayKey}
-            now={new Date()}
-            onTapItem={(key) => {
-              Haptics.selectionAsync();
-              setActionItemIndex(Number(key));
-            }}
-            onDragEnd={(key, newReminderAt) => {
-              void setTimeForIndex(Number(key), newReminderAt);
-            }}
-            /* Operator, 1 okt 2026: de ingebouwde, altijd-aan tijd-labels
-               (`itemLabelMode`'s default 'time') zijn uit — vervangen door
-               de kaarten-gestuurde labels hieronder, exact bracelet-
-               agenda.tsx's principe. */
-            itemLabelMode="none"
-            selectedKey={actionItemIndex !== null ? `${actionItemIndex}` : undefined}
-          />
-          {/* Uur+duur-labels — enkel voor de bolletjes die bij de gekozen
-             kaart horen (of alle, bij "Show all"), zie StateCard/RingLabel
-             hierboven. */}
-          {(selectedDay?.items ?? []).map((it, i) => {
-            if (filterMode === null) return null;
-            if (filterMode !== 'all' && it.state !== filterMode) return null;
+            }));
+            const filteredItems =
+              filterMode !== null
+                ? ringItems.filter((_, i) => (selectedDay?.items ?? [])[i]?.state === filterMode)
+                : null;
             return (
-              <RingLabel
-                key={i}
-                reminderAt={it.reminderAt}
-                text={`${fmtAgendaTime(it.reminderAt)}\n${it.minutes} min`}
-                color={BREATH_STATES[it.state].accent}
+              <RhythmRing
+                size={RING_SIZE}
+                items={ringItems}
+                isToday={selectedKey === todayKey}
+                now={new Date()}
+                onTapItem={(key) => {
+                  Haptics.selectionAsync();
+                  setActionItemIndex(Number(key));
+                }}
+                onDragEnd={(key, newReminderAt) => {
+                  void setTimeForIndex(Number(key), newReminderAt);
+                }}
+                /* Operator, 1 okt 2026: de ingebouwde, altijd-aan
+                   tijd-labels (`itemLabelMode`'s default 'time') zijn
+                   uit — de kaarten hieronder sturen nu welke info waar
+                   verschijnt (midden i.p.v. rond de ring). */
+                itemLabelMode="none"
+                selectedKey={actionItemIndex !== null ? `${actionItemIndex}` : undefined}
+                selectedKeys={filteredItems?.map((it) => it.key)}
+                centerItems={filteredItems}
               />
             );
-          })}
+          })()}
         </Animated.View>
 
         {/* Operator, 1 okt 2026 ("your daily plan principe van bracelet
            vind ik goed"): dezelfde kaarten-legende als bracelet-
-           agenda.tsx — 5 states + "Show all", kiest welke labels op de
-           ring verschijnen. */}
+           agenda.tsx — 5 states + "Your next session", kiest welke tijden
+           in het midden van de ring verschijnen (zie `centerItems`
+           hierboven).
+           Operator, 2-3 okt 2026 ("show all vervangen door your next
+           session"): "Show all" (alle labels tegelijk — net de drukste,
+           meest botsingsgevoelige stand) is vervangen door "Your next
+           session", die simpelweg terugkeert naar de standaard
+           "Next"-weergave (`filterMode = null`) i.p.v. alles tegelijk op
+           te stapelen. */}
         <Animated.View style={listStyle}>
           <View style={s.cardGrid}>
             {STATE_ORDER.map((key) => (
@@ -806,11 +825,11 @@ export default function AgendaScreen() {
               />
             ))}
             <StateCard
-              label="Show all"
-              on={filterMode === 'all'}
+              label="Your next session"
+              on={filterMode === null}
               onPress={() => {
                 Haptics.selectionAsync();
-                setFilterMode((prev) => (prev === 'all' ? null : 'all'));
+                setFilterMode(null);
               }}
             />
           </View>
@@ -821,13 +840,19 @@ export default function AgendaScreen() {
         </Animated.View>
 
         <Animated.View style={[s.bottomActions, actionsStyle]}>
+          {/* Operator, 3 okt 2026 ("onderaan ipv edit times check your
+             protocol?"): zelfde bestemming (/plan — tijden+techniek per
+             moment, met de potlood-iconen als bewerk-affordance), maar nu
+             geframed als "bekijk je protocol" i.p.v. enkel "tijden
+             bewerken" — past beter bij de vraag "hoe ziet mijn opgebouwde
+             protocol er eigenlijk uit", niet enkel een wijzig-actie. */}
           <AnimatedPressable
             style={[s.editBtn, editBtnStyle]}
             onPress={() => router.push('/plan' as never)}
             onPressIn={onEditBtnPressIn}
             onPressOut={onEditBtnPressOut}
           >
-            <Text style={s.editBtnTxt}>Edit times</Text>
+            <Text style={s.editBtnTxt}>Check your protocol</Text>
           </AnimatedPressable>
           {plan && (
             <AnimatedPressable
@@ -1082,6 +1107,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   dayNavTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5, color: '#ffffff' },
+  calendarDoneRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 6 },
+  calendarDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: AudioAccent },
 
   monthNav: {
     flexDirection: 'row',
@@ -1130,20 +1157,10 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   cardOn: { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)' },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch' },
   cardDot: { width: 15, height: 15, borderRadius: 7.5 },
   cardTxt: { fontFamily: BrandFonts.medium, fontSize: 12.5, lineHeight: 15, color: 'rgba(255,255,255,0.65)' },
   cardTxtOn: { color: '#ffffff', fontFamily: BrandFonts.semibold },
-
-  /* Uur+duur-label rond de ring — zelfde maat/plek als bracelet-
-     agenda.tsx's `ringLabel`. */
-  ringLabel: {
-    position: 'absolute',
-    width: 68,
-    textAlign: 'center',
-    fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    lineHeight: 14,
-  },
 
   pickBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
   pickSheet: {

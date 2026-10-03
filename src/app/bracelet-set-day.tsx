@@ -76,7 +76,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -377,7 +377,27 @@ export default function BraceletSetDayScreen() {
     else router.back();
   };
 
+  /* Operator, 4 okt 2026 (smoothness-audit: "geen haptic, 3 awaits zonder
+     dubbeltik-bescherming"): anders dan settings.tsx se simpele writes
+     bewaart `save()` hier het ECHTE bracelet-plan dat `bracelet-agenda.tsx`
+     meteen na navigatie weer inleest — die awaits blijven dus bewust
+     staan (fire-and-forget zou een race geven: het volgende scherm kan
+     dan een leeg/verouderd plan tonen). Wat wél ontbrak: een directe
+     haptic (voelbare bevestiging terwijl de opslag nog loopt) en een
+     dubbeltik-guard, zelfde ref-patroon als breath-session.tsx's
+     `startingRef`/subscribe.tsx's `runIapFlowRunningRef`. */
+  const savingRef = useRef(false);
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await saveImpl();
+    } finally {
+      savingRef.current = false;
+    }
+  };
+  const saveImpl = async () => {
     if (sessions.length === 0) {
       await saveActiveBraceletPlan(null);
       await syncBraceletPlanReminder(null);

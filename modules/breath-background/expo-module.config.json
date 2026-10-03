@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["BreathBackgroundModule"]
+  },
+  "android": {
+    "modules": ["com.ubili.vibezcoreapp.breathbackground.BreathBackgroundModule"]
+  }
+}

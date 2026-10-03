@@ -153,8 +153,12 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
     <Text
       numberOfLines={1}
       style={{
-        marginTop: 8,
-        fontSize: 11,
+        /* Operator, 2 okt 2026 ("vrij hoog, hoe zou Apple dat doen"):
+           Apple's eigen tab bar zet het label vlak onder het icoon (±2pt),
+           niet met 8px lucht ertussen — samen met de kleinere balk-hoogte
+           hierboven maakt dit de hele balk zichtbaar compacter. */
+        marginTop: 2,
+        fontSize: 10,
         fontFamily: focused ? BrandFonts.semibold : BrandFonts.medium,
         letterSpacing: 0.3,
         color: focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR,
@@ -224,12 +228,13 @@ export default function TabLayout() {
                geen `tabBarFootprint`-compensatie meer nodig in de
                tabschermen (die is hier elders weer verwijderd) — exact
                hoe deze balk vóór de "zwevende kaart"-periode ook al werkte. */
-            /* Operator, 25 september 2026, vijfde ronde ("Profile" met de
-               dalende "p" wordt afgesneden): 56 → 62, 6px extra
-               content-ruimte — een dalende letter (p/g/y) steekt onder de
-               kale lettergrootte uit, en de vorige 50px was daar net te
-               krap voor. */
-            height: 62 + insets.bottom,
+            /* Operator, 2 okt 2026 ("staat vrij hoog, hoe zou Apple dat
+               doen"): Apple's eigen `UITabBar` content-hoogte is 49pt
+               (zonder safe-area) — 62 lag daar ver boven. Terug naar
+               Apple's maat, met net genoeg marge (2px) voor de dalende
+               "p" in "Profile" die de vorige 56 liet afsnijden; 51 geeft
+               diezelfde veiligheid zonder de overmaat van 62. */
+            height: 51 + insets.bottom,
             borderRadius: 0,
             backgroundColor: '#ffffff',
             /* Apple se eigen separator-kleur (`separator` in de HIG),
@@ -240,7 +245,7 @@ export default function TabLayout() {
             borderTopWidth: StyleSheet.hairlineWidth,
             borderTopColor: 'rgba(60,60,67,0.29)',
             borderWidth: 0,
-            paddingTop: 6,
+            paddingTop: 4,
             /* GEEN `paddingBottom: 0` meer — @react-navigation/bottom-tabs
                plakt intern zelf `paddingBottom: insets.bottom` bovenop deze
                stijl (zie BottomTabBar.js), en dat is nu precies gewenst:

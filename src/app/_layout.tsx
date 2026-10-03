@@ -628,6 +628,12 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <View style={{ flex: 1, backgroundColor: Brand.bg }}>
+        {/* Operator, 2 okt 2026: bevestigd dat de zwarte band ENKEL op
+           breath-session.tsx voorkomt, geen enkel ander scherm — dus geen
+           Android/statusbalk-instelling (die zou overal zichtbaar zijn).
+           Theorie hieronder was fout, teruggezet naar de oorspronkelijke,
+           simpele versie. Het echte probleem zit specifiek in dat ene
+           scherm, zie daar verder. */}
         <StatusBar style="light" />
         <Stack
         screenOptions={{

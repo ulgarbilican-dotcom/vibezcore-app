@@ -1074,14 +1074,6 @@ export default function BraceletHistory() {
             label="min total"
             value={stats.totalMinutes}
           />
-          {/* Iter 9dm (2026-05-31): "breath cycles" → "breath min".
-              Minuten zijn universeler en menselijker dan cycles
-              (jargon-term). Cycles blijven in de breakdown beschikbaar
-              maar niet meer als top-level metric. */}
-          <StatTile
-            label="breath min"
-            value={stats.totalBreathMinutes}
-          />
         </View>
 
         {/* 7-day mini bar chart — momentum-overzicht */}
@@ -1090,9 +1082,17 @@ export default function BraceletHistory() {
         {/* Mode breakdown — alleen als er sessies zijn */}
         {sessions.length > 0 && <ModeBreakdown stats={stats} />}
 
-        {/* Iter 9dl (2026-05-31): Breath protocols breakdown — alleen
-            als er breathwork gedaan is. */}
-        <BreathBreakdown stats={stats} />
+        {/* Operator, 1 okt 2026 ("ik zie hier nog breathwork staan, dat
+           mag niet meer"): deze "Breathwork"-kaart (BreathBreakdown)
+           toonde een bracelet-eigen ademhalings-begeleidingsfunctie die
+           nog nergens gevoed wordt — `recordSession` (bracelet-control.tsx)
+           zet nooit een `breathwork`-veld, dat wacht nog op firmware (zie
+           project-bracelet-breathwork-firmware-memo). De kaart was dus
+           altijd leeg voor iedereen, en het woord "Breathwork" hier
+           botste bovendien met de regel dat bracelet en breathwork
+           volledig gescheiden blijven (30 sept 2026). Component blijft
+           hieronder bestaan (nuttig zodra de firmware er is), enkel de
+           render hier is weg. */}
 
         {/* Milestones — engagement-laag, altijd zichtbaar */}
         <MilestonesStrip stats={stats} />

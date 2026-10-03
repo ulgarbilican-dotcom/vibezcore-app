@@ -45,6 +45,9 @@ import {
 } from '@/services/reminders';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { claimFreeSessionParam, skipBreathIntroOnce } from '@/utils/breath-entry';
+import { BlurView } from 'expo-blur';
+import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import {
   Bell,
   Check,
@@ -55,6 +58,7 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -63,6 +67,7 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  FadeInUp,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -74,6 +79,45 @@ import {
 } from 'react-native-safe-area-context';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/* Operator, 3 okt 2026 ("Level, routine en plan length" boven het
+   protocol-overzicht): drie APARTE begrippen, niet verwisselbaar — zie
+   intensity.tsx ("Set your routine", de brondefinitie):
+   - Level = `experienceLevel` (globale setting, Beginner/Intermediate/
+     Advanced — bepaalt WELKE techniek/duur per sessie).
+   - Routine = `plan.intensity` (Essential/Standard/Advanced/Complete —
+     HOEVEEL sessies per dag). Was hier eerst verkeerd "Level" genoemd
+     (plan-summary.tsx noemt deze zelfde variabele `INTENSITY_LABEL`, wat
+     de verwarring opleverde) — nu correct als Routine gelabeld.
+   - Plan length = `plan.horizon` (1 week/2 weken/...). */
+const LEVEL_LABEL: Record<string, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
+const ROUTINE_LABEL: Record<string, string> = {
+  essential: 'Essential',
+  standard: 'Standard',
+  advanced: 'Advanced',
+  complete: 'Complete',
+  custom: 'Custom',
+};
+const HORIZON_LABEL: Record<string, string> = {
+  today: 'Today',
+  '1w': '1 week',
+  '2w': '2 weeks',
+  '1m': '1 month',
+  '3m': '3 months',
+  ongoing: 'Ongoing',
+};
+
+/* Operator, 3 okt 2026 ("2 moments a day maar protocol heeft 4 moments"):
+   was een vast array van 3 woorden, geïndexeerd met `visible.length - 1`
+   — kon het werkelijke aantal sessies (`items.length`, kan >3 zijn sinds
+   "Bouw je dag" meerdere sessies per dagdeel toelaat) niet dekken. Woorden
+   tot en met 6, daarna gewoon het cijfer. */
+const MOMENT_WORDS = ['', 'One moment', 'Two moments', 'Three moments', 'Four moments', 'Five moments', 'Six moments'];
+const momentsWord = (n: number) => MOMENT_WORDS[n] ?? `${n} moments`;
 
 /* De twee momenten van een dag. Ochtend zet de toon, avond bouwt af — dat
    zijn de twee waar bijna iedereen ruimte voor heeft, en ze staan het verst
@@ -122,6 +166,9 @@ export default function PlanScreen() {
   const history = useBreathHistory();
   const [goalKeys] = useSetting('goals');
   const [reminders, setReminders] = useSetting('reminders');
+  /* Voor de "Level"-regel in het protocol-overzicht hieronder — zie de
+     toelichting bij LEVEL_LABEL/ROUTINE_LABEL hierboven. */
+  const [experienceLevel] = useSetting('experienceLevel');
   const [hours] = useSetting('reminderHours');
   const [at, setAt] = useSetting('reminderAt');
 
@@ -160,8 +207,16 @@ export default function PlanScreen() {
   /* Press-animatie voor de vaste CTA's onderaan het scherm (niet in een
      loop, dus hooks hier gewoon op componentniveau — zelfde recept als
      `PlanItemCard` hierboven/`StartCard` in breath-welcome.tsx). */
+  /* Operator, 4 okt 2026 (smoothness-audit: "geen enkele haptic in dit
+     bestand"): alle 5 hoofdknoppen hieronder hadden wel de schaal-
+     animatie maar geen haptic — `Haptics.selectionAsync()` toegevoegd aan
+     elke `onPressIn` (zo vroeg mogelijk voelbaar, zelfde moment als de
+     animatie al start). De twee backdrop-sluit-handlers (tik ernaast om
+     een vel te sluiten) blijven bewust zonder haptic — geen primaire
+     actie, enkel "annuleren". */
   const allModesScale = useSharedValue(1);
   const onAllModesPressIn = () => {
+    Haptics.selectionAsync();
     allModesScale.value = withTiming(0.95, { duration: 80 });
   };
   const onAllModesPressOut = () => {
@@ -173,6 +228,7 @@ export default function PlanScreen() {
 
   const primaryCtaScale = useSharedValue(1);
   const onPrimaryCtaPressIn = () => {
+    Haptics.selectionAsync();
     primaryCtaScale.value = withTiming(0.95, { duration: 80 });
   };
   const onPrimaryCtaPressOut = () => {
@@ -184,6 +240,7 @@ export default function PlanScreen() {
 
   const remindScale = useSharedValue(1);
   const onRemindPressIn = () => {
+    Haptics.selectionAsync();
     remindScale.value = withTiming(0.95, { duration: 80 });
   };
   const onRemindPressOut = () => {
@@ -195,6 +252,7 @@ export default function PlanScreen() {
 
   const goalCtaScale = useSharedValue(1);
   const onGoalCtaPressIn = () => {
+    Haptics.selectionAsync();
     goalCtaScale.value = withTiming(0.95, { duration: 80 });
   };
   const onGoalCtaPressOut = () => {
@@ -208,6 +266,7 @@ export default function PlanScreen() {
      kaarten/rijen (zelfde schaalregel als de rest van dit bestand). */
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
+    Haptics.selectionAsync();
     backScale.value = withTiming(0.93, { duration: 80 });
   };
   const onBackPressOut = () => {
@@ -422,13 +481,125 @@ export default function PlanScreen() {
              standaard. */}
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
         </AnimatedPressable>
-        {/* "Set timing" zodra er een actief protocol is — dit scherm is dan
-            geen los overzicht meer maar stap 5 van de protocol-flow
-            (operator, 13 augustus 2026: "kunnen we dit set timing of zoiets
-            noemen"). Zonder protocol blijft de oude, generieke naam. */}
-        <Text style={s.title}>{plan ? 'Set timing' : 'Your plan'}</Text>
+        {/* Operator, 3 okt 2026 ("set timing moet your protocol heten"):
+           was "Set timing" zodra er een actief protocol is (13 augustus
+           2026, stap 5 van de protocol-flow) — dit scherm is nu ook de
+           bestemming van agenda.tsx se "Check your protocol"-knop, dus
+           "Your protocol" past beter bij die binnenkomst. Zonder protocol
+           blijft de oude, generieke naam. */}
+        <Text style={s.title}>{plan ? 'Your protocol' : 'Your plan'}</Text>
         <View style={s.back} />
       </View>
+
+      {/* Operator, 3 okt 2026 ("welke kleur krijgen de kaarten als je erop
+         tikt, die kleur moet in Your protocol gebruikt worden"): het
+         screenshot van "Set your state" toont de tegels ONGESELECTEERD —
+         dat laat nooit de geklikte kleur zien. De ECHTE geselecteerde
+         stijl staat in goal.tsx se `GoalTile` zelf: bij `on` krijgt de
+         VOLLE tegel een diagonale `g.gradient` (2 kleuren, bv. "diep
+         koningsblauw naar paars" voor Sleep better) over de matglas-basis,
+         plus een witte rand (`rgba(255,255,255,0.4)`) — geen bolletje,
+         geen subtiele randtint. Hier 1:1 overgenomen (deze kaarten zijn
+         altijd "gekozen", dus de gradiënt staat hier permanent aan, niet
+         conditioneel op een tik). */}
+      {plan && (
+        <View style={s.protocolMetaWrap}>
+          {/* Operator, 3 okt 2026 ("wat als er maar 1 state gekozen
+             wordt?"): bij 1 doel liet een vaste `width:'48%'` de kaart
+             links staan met lege ruimte rechts ernaast. Geen nieuwe
+             breedte/hoogte-waarde verzinnen — de kaart zelf blijft exact
+             48% (zelfde formaat als altijd), enkel de RIJ centreert 'm
+             als er maar één is, i.p.v. links te laten hangen. */}
+          {/* Operator, 3 okt 2026 ("juiste animatie bij vernieuwingen?"):
+             stond volledig statisch — zelfde gestaffelde entry-protocol
+             als elders deze sessie (feel-now.tsx se kaarten-grid): rechte
+             `FadeInUp`, GEEN `.springify()` (die gaf daar eerder al
+             "te veel bounce"-klachten op een vergelijkbare kaarten-grid). */}
+          <View style={[s.goalCardRow, chosen.length === 1 && s.goalCardRowCenter]}>
+            {chosen.map((g, idx) => (
+              <Animated.View
+                key={g.key}
+                entering={FadeInUp.delay(150 + idx * 40).duration(280)}
+                style={[s.goalCard, s.protoCardSelected]}
+              >
+                <BlurView
+                  intensity={40}
+                  tint="dark"
+                  blurMethod="dimezisBlurViewSdk31Plus"
+                  style={StyleSheet.absoluteFill}
+                />
+                <ExpoGradient
+                  colors={g.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+                {/* Operator, 3 okt 2026 ("iconen ook groter"): 28→44
+                   (image) / 22→34 (lucide-fallback) — dichter bij
+                   goal.tsx se eigen compacte-tegel-maat (46 voor de
+                   meeste doelen). */}
+                {g.image ? (
+                  <Image
+                    source={{ uri: g.image }}
+                    style={{ width: 44, height: 44, tintColor: '#ffffff' }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <g.Icon size={34} color="#ffffff" strokeWidth={1.8} />
+                )}
+                <Text style={s.goalCardTxt}>{g.name}</Text>
+              </Animated.View>
+            ))}
+          </View>
+
+          {/* Operator, 3 okt 2026 ("level en tijd ook in kaarten
+             weergeven"): was één doorlopende tekstregel — nu drie eigen
+             kaarten, zelfde neutrale chrome als de doel-kaarten hierboven
+             (geen accentkleur hier, deze drie horen niet bij een
+             specifiek doel). Entry-stagger vervolgt vanaf waar de
+             doel-kaarten eindigden (`chosen.length`), zodat het hele blok
+             als één doorlopende reveal voelt. */}
+          <View style={s.goalCardRow}>
+            <Animated.View
+              entering={FadeInUp.delay(150 + chosen.length * 40).duration(280)}
+              style={s.metaCard}
+            >
+              <Text style={s.metaCardLabel}>LEVEL</Text>
+              <Text style={s.metaCardTxt}>
+                {LEVEL_LABEL[experienceLevel ?? ''] ?? 'Not set'}
+              </Text>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(150 + (chosen.length + 1) * 40).duration(280)}
+              style={s.metaCard}
+            >
+              <Text style={s.metaCardLabel}>ROUTINE</Text>
+              <Text style={s.metaCardTxt}>
+                {ROUTINE_LABEL[plan.intensity] ?? plan.intensity}
+              </Text>
+              {/* Operator, 3 okt 2026 ("Routine Complete, is dat duidelijk
+                 voor lezer?"): terecht — "Complete" alleen kan lezen als
+                 "voltooid/afgerond" i.p.v. "de volledige routine". Zelfde
+                 verduidelijking als intensity.tsx se eigen `hint`-tekst
+                 ("4 sessions a day"), hier met het al gefixte ECHTE
+                 aantal (`items.length`, zie de toelichting bij
+                 `momentsWord` hierboven) i.p.v. een los, mogelijk
+                 verouderd getal. */}
+              <Text style={s.metaCardHint}>{items.length} sessions a day</Text>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(150 + (chosen.length + 2) * 40).duration(280)}
+              style={s.metaCard}
+            >
+              <Text style={s.metaCardLabel}>PLAN LENGTH</Text>
+              <Text style={s.metaCardTxt}>
+                {HORIZON_LABEL[plan.horizon] ?? plan.horizon}
+              </Text>
+            </Animated.View>
+          </View>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={[
@@ -439,14 +610,24 @@ export default function PlanScreen() {
       >
         {/* Het AANTAL telt mee (operator, 8 augustus 2026): wie in de
             vragenlijst ook de middag koos, ziet drie momenten — dan hoort
-            hier geen "two" te staan. */}
+            hier geen "two" te staan.
+            Operator, 3 okt 2026 ("jij zegt 2 moments a day maar protocol
+            heeft 4 moments"): was `visible.length` — dat is het aantal
+            DAGDELEN uit het sjabloon (max 3: morning/midday/evening), niet
+            het werkelijke aantal sessies. Sinds "Bouw je dag" (17
+            september 2026) kan één dagdeel meerdere sessies dragen (zie
+            `items` hierboven, "één rij per ECHT item uit planDay.items,
+            niet één per dagdeel") — bij een echt protocol moet dus
+            `items.length` tellen, niet `visible.length`. Woorden tot 6,
+            daarna het cijfer zelf (geen zin om tien woorden te verzinnen
+            voor een edge case). */}
         <Text style={s.lead}>
           {chosen.length > 0
-            ? `${['One moment', 'Two moments', 'Three moments'][visible.length - 1]} a day, shaped around ${chosen
+            ? `${momentsWord(items.length)} a day, shaped around ${chosen
                 .slice(0, 2)
                 .map((g) => g.name.toLowerCase())
                 .join(' and ')}.`
-            : `${['One moment', 'Two moments', 'Three moments'][visible.length - 1]} a day. Pick a goal to shape them around what you want.`}
+            : `${momentsWord(items.length)} a day. Pick a goal to shape them around what you want.`}
         </Text>
 
         {justSet && (
@@ -861,7 +1042,14 @@ function PlanItemCard({
   fmtTime: (mins: number) => string;
 }) {
   const pressScale = useSharedValue(1);
+  /* Operator, 4 okt 2026 (smoothness-audit: "geen enkele haptic in dit
+     bestand"): `PlanItemCard` is het meest-aangetikte element op dit
+     scherm (één per sessie-rij) en had, net als de rest van plan.tsx,
+     geen enkele haptic — enkel de schaal-animatie. Op `onPressIn` i.p.v.
+     `onPress`, zelfde "zo vroeg mogelijk voelbaar"-redenering als
+     settings.tsx se `PressFeedback`-fix. */
   const onPressIn = () => {
+    Haptics.selectionAsync();
     pressScale.value = withTiming(0.95, { duration: 80 });
   };
   const onPressOut = () => {
@@ -904,7 +1092,10 @@ function PlanItemCard({
       {plan ? (
         <Pressable
           style={s.detailBtn}
-          onPress={onOpenDuration}
+          onPress={() => {
+            Haptics.selectionAsync();
+            onOpenDuration();
+          }}
           hitSlop={8}
         >
           <Text style={s.detail}>
@@ -930,10 +1121,18 @@ function PlanItemCard({
           vandaag al twee keer misgegaan. */}
       <Pressable
         style={s.timeRow}
-        onPress={onOpenTime}
+        onPress={() => {
+          Haptics.selectionAsync();
+          onOpenTime();
+        }}
       >
         <Clock size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-        <Text style={s.timeLbl}>Reminder</Text>
+        {/* Operator, 3 okt 2026 ("reminder zou ik veranderen naar start of
+           begins, wat is professioneel"): "Start" — directer, zelfde taal
+           als "Start session" elders in de app, i.p.v. "Reminder" dat
+           suggereert dat dit enkel een notificatie-tijdstip is en niet
+           letterlijk WANNEER de sessie begint. */}
+        <Text style={s.timeLbl}>Start</Text>
         <Text style={[s.timeVal, { color: it.state.accent }]}>
           {fmtTime(it.reminderAt)}
         </Text>
@@ -1046,9 +1245,70 @@ const s = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: -0.2,
   },
+  protocolMetaWrap: { paddingHorizontal: 16, marginTop: 10, gap: 12 },
+  /* Operator, 3 okt 2026 ("kaarten geen pills"): echte verticale kaart —
+     icoon boven, label eronder — zelfde chrome/verhouding als goal.tsx se
+     `tile` (borderRadius 20, rand rgba(255,255,255,0.14), 48% breed) en
+     breath-welcome.tsx se modeCard, niet een horizontale pil-rij. */
+  goalCardRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  /* Enkel toegepast bij precies 1 doel (zie JSX) — centreert de ene kaart
+     i.p.v. links te laten hangen met lege ruimte ernaast. */
+  goalCardRowCenter: { justifyContent: 'center' },
+  /* Operator, 3 okt 2026 ("welke kleur krijgen de kaarten als je erop
+     tikt, die kleur moet in Your protocol gebruikt worden"): 1:1
+     overgenomen van goal.tsx se `GoalTile` IN GESELECTEERDE staat (`on`)
+     — volle tegel, `overflow:'hidden'` zodat de BlurView/gradiënt-
+     absoluteFill binnen de ronde hoeken blijft, witte rand. Inhoud
+     gecentreerd (icoon boven, naam eronder) — exact `tileCompact`/
+     `tileCompactCol`'s `alignItems:'center'`/`justifyContent:'center'`,
+     niet onderaan verankerd. De gradiënt zelf (`g.gradient`) staat los op
+     de JSX, dit is enkel de kaart-schil. */
+  goalCard: {
+    width: '48%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  protoCardSelected: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
+  goalCardTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 15,
+    color: '#ffffff',
+    alignSelf: 'stretch',
+    textAlign: 'center',
+  },
+  /* Operator, 3 okt 2026 ("level en tijd ook in kaarten weergeven"): drie
+     smallere kaarten naast elkaar i.p.v. de losse tekstregel — zelfde
+     neutrale chrome als `goalCard`, geen accentkleur (horen niet bij een
+     specifiek doel). */
+  metaCard: {
+    flex: 1,
+    alignItems: 'flex-start',
+    gap: 4,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  metaCardLabel: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  metaCardTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, color: '#ffffff' },
+  metaCardHint: { fontFamily: BrandFonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.4)' },
   scroll: { paddingHorizontal: 16 },
+  /* Operator, 3 okt 2026 ("four moments... moet lager, meer
+     ademruimte"): 6 → 20 — stond te dicht tegen de nieuwe doel-/meta-
+     kaarten hierboven aangeplakt. */
   lead: {
-    marginTop: 6,
+    marginTop: 20,
     marginBottom: 18,
     fontFamily: BrandFonts.regular,
     fontSize: 14,

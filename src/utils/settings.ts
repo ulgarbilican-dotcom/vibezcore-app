@@ -220,6 +220,13 @@ export type Settings = {
    *  tegenstelling tot de breath-versie, die je zelf via Settings kan
    *  herstarten — hier is er geen "intro opnieuw bekijken"-equivalent). */
   braceletOnboardingCompletedAt: number | null;
+  /** Operator, 2 oktober 2026 ("How do you feel"-instant-knop): duur-bijstelling
+   *  op basis van de "Worked"/"Too long"/"Too short"-feedback na een instant-
+   *  gestarte sessie (zie `utils/instant-feel.ts`). Globaal, net als
+   *  `experienceLevel` hierboven — werkt dezelfde "app-breed, niet per
+   *  toestand"-afspraak na. -1 = een duur-tier korter dan de aanbevolen,
+   *  +1 = een tier langer, 0 = geen bijstelling (default). */
+  instantDurationBias: number;
 };
 
 const defaults: Settings = {
@@ -252,6 +259,7 @@ const defaults: Settings = {
   themeMode: 'dark',
   voiceGender: 'female',
   braceletOnboardingCompletedAt: null,
+  instantDurationBias: 0,
 };
 
 let state: Settings = { ...defaults };
@@ -407,6 +415,9 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.braceletOnboardingCompletedAt === 'number' ||
             obj.braceletOnboardingCompletedAt === null
               ? { braceletOnboardingCompletedAt: obj.braceletOnboardingCompletedAt }
+              : {}),
+            ...(typeof obj.instantDurationBias === 'number'
+              ? { instantDurationBias: obj.instantDurationBias }
               : {}),
           };
         }

@@ -116,6 +116,21 @@ type Props = {
    *  je op de ring zelf tikte of op de lijst eronder. Optioneel — zonder
    *  deze prop (agenda.tsx) verandert er niets. */
   selectedKey?: string;
+  /** Operator, 2-3 okt 2026 ("staat vaker gekozen, alle tijdstippen tonen
+   *  in de cirkel" — agenda.tsx se staat-filter-kaarten): meerdere stips
+   *  tegelijk laten pulsen, bv. alle sessies van één gekozen staat op een
+   *  dag. Werkt SAMEN met `selectedKey` (beide tellen mee, geen van
+   *  tweeën verplicht) — bestaande aanroepers (bracelet-agenda.tsx,
+   *  breath-welcome.tsx) gebruiken enkel het enkelvoudige `selectedKey`
+   *  en blijven ongewijzigd werken. */
+  selectedKeys?: string[];
+  /** Operator, 2-3 okt 2026 (agenda.tsx se "tik op een staat-kaart, toon
+   *  de tijden in het midden i.p.v. los rond de ring"-redesign): als
+   *  gezet (en niet leeg), vervangt dit de standaard "Next"-info in het
+   *  midden door deze items — bij één item: staatnaam + tijd, bij
+   *  meerdere: staatnaam + een lijstje van alle tijden. `null`/`undefined`
+   *  (of leeg) valt terug op het bestaande "Next"-gedrag. */
+  centerItems?: RhythmRingItem[] | null;
   /** Operator, 23 september 2026 ("waarom zijn stippen niet meer mooi
    *  rond?"): de gekleurde boogjes (comet-staart terug vanaf elke stip)
    *  gaven op deze kleinere ring een uitgerekte/komeetvorm i.p.v. een
@@ -237,6 +252,8 @@ export default function RhythmRing({
   itemLabelMode = 'time',
   showCenterInfo = true,
   selectedKey,
+  selectedKeys,
+  centerItems,
   showArcs = true,
   animateBreath = true,
 }: Props) {
@@ -370,6 +387,26 @@ export default function RhythmRing({
 
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [previewMinutes, setPreviewMinutes] = useState<number | null>(null);
+  /* Operator, 4 okt 2026 (drag-snap-haptic hieronder): top-level hook i.p.v.
+     in de `.map()`-loop bij `PanResponder.create` zelf — hooks mogen niet
+     in een loop staan (zie de toelichting bij `clusterRadiusOffset`
+     hierboven). Een gewone closure-variabele zou dit ook niet overleven:
+     `setPreviewMinutes` laat `RhythmRing` bij ELKE move-event opnieuw
+     renderen, wat een nieuwe `PanResponder`/closure per item aanmaakt —
+     een lokale variabele zou dan elke keer terugvallen op zijn
+     startwaarde. Eén gedeelde ref (net als `draggingKey`/`previewMinutes`
+     hierboven kan er toch maar één tegelijk slepen). */
+  const lastSnapRef = useRef<number | null>(null);
+  /* Throttle, 4 okt 2026 (niet gebouwd op een vermoeden, maar op de
+     mechanica: snel ronddraaien kan meerdere 5-min-stappen binnen
+     enkele milliseconden passeren, en een trage ERM-motor — gangbaar
+     op budget-Android — kan opeenvolgende korte pulsen niet "afmaken"
+     voor de volgende binnenkomt, wat als één zompige trilling aanvoelt
+     i.p.v. losse tikken). Alleen de haptic-puls wordt overgeslagen bij
+     te snelle opvolging; `lastSnapRef`/`previewMinutes` blijven elke
+     move-event bijwerken, dus de ring zelf blijft 1:1 met de vinger. */
+  const lastHapticAtRef = useRef<number>(0);
+  const MIN_HAPTIC_INTERVAL_MS = 70;
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -584,12 +621,37 @@ export default function RhythmRing({
         );
       })}
 
-      {/* Middenzone — "Next: state om tijd, over X" (vandaag) of gewoon
-         de eerste sessie (andere dag). Overslaan wanneer `showCenterInfo`
-         false is (zie de toelichting bij die prop hierboven). */}
+      {/* Middenzone — Operator, 2-3 okt 2026 ("tik op kaart, toon tijden in
+         het midden i.p.v. los rond de ring — bij meerdere sessies van
+         dezelfde staat alle tijdstippen tonen"): `centerItems` (gezet
+         vanuit agenda.tsx se staat-filter) vervangt hier de standaard
+         "Next"-info met de tijden van de GEKOZEN staat — één tijd bij één
+         sessie, een lijstje bij meerdere. Niet gezet (of leeg) → gewoon
+         het bestaande "Next: state om tijd, over X"-gedrag, ongewijzigd.
+         Overslaan wanneer `showCenterInfo` false is. */}
       {showCenterInfo && (
       <View style={[s.center, { width: outerSize * 0.6, left: (outerSize - outerSize * 0.6) / 2 }]} pointerEvents="none">
-        {nextItem ? (
+        {centerItems ? (
+          centerItems.length > 0 ? (
+            <>
+              <Text style={s.centerLabel}>{centerItems[0].label}</Text>
+              {/* Operator, 2-3 okt 2026 ("meer info nodig in de bol, alle
+                 instellingen weergeven"): enkel de tijd tonen liet de duur
+                 weg — de oude `RingLabel` toonde altijd allebei samen
+                 ("19:00 · 15 min"). Hier hersteld, nu gebundeld per
+                 sessie i.p.v. los op de ring. */}
+              {[...centerItems]
+                .sort((a, b) => a.reminderAt - b.reminderAt)
+                .map((it) => (
+                  <Text key={it.key} style={s.centerTime}>
+                    {fmtHM(it.reminderAt)} · {it.minutes} min
+                  </Text>
+                ))}
+            </>
+          ) : (
+            <Text style={s.centerLabel}>Nothing planned</Text>
+          )
+        ) : nextItem ? (
           <>
             <Text style={s.centerLabel}>{isToday ? 'Next' : 'First today'}</Text>
             <Text style={s.centerState} numberOfLines={1}>
@@ -612,7 +674,9 @@ export default function RhythmRing({
          gepakt is — eenvoudiger en een betrouwbaardere hitbox. */}
       {items.map((it) => {
         const isDragging = draggingKey === it.key;
-        const isSelected = selectedKey !== undefined && selectedKey === it.key;
+        const isSelected =
+          (selectedKey !== undefined && selectedKey === it.key) ||
+          (selectedKeys?.includes(it.key) ?? false);
         const liveMinutes = isDragging && previewMinutes !== null ? previewMinutes : it.reminderAt;
         /* Clustering-offset (zie toelichting hierboven) valt weg zodra je
            sleept — tijdens het slepen wil je de echte ringstraal, geen
@@ -626,6 +690,7 @@ export default function RhythmRing({
           onMoveShouldSetPanResponder: () => true,
           onPanResponderGrant: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            lastSnapRef.current = it.reminderAt;
             setDraggingKey(it.key);
             setPreviewMinutes(it.reminderAt);
           },
@@ -637,7 +702,24 @@ export default function RhythmRing({
             let angle = Math.atan2(dx, -dy);
             if (angle < 0) angle += Math.PI * 2;
             const mins = snap5(Math.round((angle / (Math.PI * 2)) * 1440));
-            setPreviewMinutes((prev) => (prev === mins ? prev : mins));
+            /* Operator, 4 okt 2026 (gedeelde haptics-blueprint, drag-and-
+               drop-sectie: "bij het passeren van een zone — selectionAsync,
+               licht, puur een tik per stap"): ontbrak hier — grab (Medium)
+               en release (Light) stonden er al, maar tijdens het slepen
+               zelf was er geen enkele terugkoppeling per 5-minuten-stap.
+               Een `ref` i.p.v. de vorige `prev`-check in de functionele
+               setter: Haptics mag niet IN een React-state-updater draaien
+               (kan in bepaalde gevallen dubbel aangeroepen worden), een
+               losse synchrone vergelijking vooraf is hier betrouwbaarder. */
+            if (lastSnapRef.current !== mins) {
+              lastSnapRef.current = mins;
+              const now = Date.now();
+              if (now - lastHapticAtRef.current >= MIN_HAPTIC_INTERVAL_MS) {
+                lastHapticAtRef.current = now;
+                Haptics.selectionAsync();
+              }
+            }
+            setPreviewMinutes(mins);
           },
           onPanResponderRelease: () => {
             const finalMinutes = previewMinutes ?? it.reminderAt;

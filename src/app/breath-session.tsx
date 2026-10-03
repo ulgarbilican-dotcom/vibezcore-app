@@ -73,6 +73,7 @@ import {
   skipBreathIntroOnce,
   skipBreathOnboardingRedirectOnce,
 } from '@/utils/breath-entry';
+import { recordInstantFeedback, type InstantFeedback } from '@/utils/instant-feel';
 import {
   GROUP_ORDER,
   GROUP_TINT,
@@ -605,9 +606,19 @@ function PhaseArc({
 function FigureGlow({
   breath,
   color,
+  topOffset,
 }: {
   breath: SharedValue<number>;
   color: string;
+  /* Operator, 2 okt 2026 ("zwarte band snijdt de glow af"): deze gloed
+     stond als KIND van de `ScrollView` met `figureStage` — een ScrollView
+     knipt zijn inhoud altijd af aan zijn eigen zichtbare rand (standaard
+     scroll-gedrag, los van `overflow`-styles), dus de -120px bleed naar
+     boven werd daar hard afgesneden, exact de "band". De gloed is nu een
+     sibling van de ScrollView, buiten die knip-grens — `topOffset` geeft
+     hem de absolute positie die `figureStage`'s top-rand zou hebben, zodat
+     hij er nog steeds exact achter/rond de figuur uitziet. */
+  topOffset: number;
 }) {
   const size = BOX_RUN * 1.9;
   const r = size / 2;
@@ -622,7 +633,7 @@ function FigureGlow({
           position: 'absolute',
           width: size,
           height: size,
-          top: (BOX_RUN - size) / 2,
+          top: topOffset + (BOX_RUN - size) / 2,
           left: (SCREEN_W - size) / 2,
         },
         style,
@@ -705,6 +716,11 @@ export default function BreathSessionScreen() {
        scherm (het staat echt op de stack) vóór we hier verder navigeren.
        Zie `leaveSession` hieronder. */
     fromSetup?: string;
+    /* '1' = gestart via feel-now.tsx se "How do you feel?"-knop (operator,
+       2 okt 2026). Verlengt de preview van 30s naar 60s met een zachte
+       fade i.p.v. harde cut (zie `endPreview`), en toont de niet-
+       blokkerende feedback-regel op het "Well done"-scherm. */
+    instant?: string;
   }>();
   const st: BreathState =
     BREATH_STATES[
@@ -726,8 +742,16 @@ export default function BreathSessionScreen() {
      actieve kanaal-cirkels) is prima zichtbaar tegen de zwarte achtergrond,
      maar een wit icoon DAAROP was onzichtbaar. Icoon-kleur op een gevulde
      accent-cirkel moet dus contrasteren met de accentkleur zelf, niet met
-     de achtergrond. */
-  const activeIconColor = accent.toUpperCase() === '#FFFFFF' ? '#0a0a0c' : '#ffffff';
+     de achtergrond.
+     Operator, 2 okt 2026 ("play-knop van Clarity & Relax moet witter"):
+     die aanname klopt niet meer voor de Play/Pause-knop zelf — die is
+     intussen een doorschijnende donkere blur met slechts een lichte
+     kleurwas (`pauseMainTint`, 20% opacity), geen vol-gevulde cirkel
+     meer. Voor Clarity (wit accent) werd het icoon daardoor bijna zwart
+     (`#0a0a0c`) op een overwegend donkere achtergrond — bijna onzichtbaar,
+     het omgekeerde probleem. Altijd wit, past bij elke accentkleur op
+     deze donkere, doorschijnende knop. */
+  const activeIconColor = '#ffffff';
   const s = useMemo(() => makeStyles(st, accent, accentSoft), [st, accent, accentSoft]);
   /* Welk ritme binnen deze toestand. De eerste is de standaard; wie niets
      kiest merkt van deze laag niets. Alles hieronder rekent vanaf `tech` en
@@ -873,6 +897,16 @@ export default function BreathSessionScreen() {
   }, []);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  /* Operator, 4 okt 2026 (smoothness-audit: "betrouwbaarheid bij
+     aantikken, geen freeze"): de START-knop had geen enkele dubbeltik-
+     bescherming — `running` (React state) update niet synchroon, dus een
+     snelle tweede tik vóór de eerste re-render kon `start()` opnieuw
+     aanroepen (dubbele haptic, dubbele audio/native-bridge-aanroepen).
+     Een `ref` is wél synchroon leesbaar/schrijfbaar binnen dezelfde JS-
+     tick — zelfde patroon als bracelet-control.tsx's `busy`/`isWorking`-
+     guards, hier als ref omdat de render zelf niet opnieuw hoeft op basis
+     hiervan (het bestaande `running`-state doet dat al voor de UI). */
+  const startingRef = useRef(false);
   /* Operator, 8 september 2026: "wij zouden moeten kunnen pauzeren ook". */
   const [paused, setPaused] = useState(false);
   const [done, setDone] = useState(false);
@@ -907,6 +941,14 @@ export default function BreathSessionScreen() {
   /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te
      kopen valt. */
   const askPremium = isFreeOnboardingSession && !isPro;
+  /* Operator, 2 okt 2026 ("Apple-level polish... niet hard-cutten"): sessies
+     gestart via feel-now.tsx se "How do you feel?"-knop dragen `instant=1`.
+     Twee dingen wisselen dan, enkel voor DIT pad: de preview duurt 60s i.p.v.
+     30s (zie PREVIEW_SECONDS hieronder), en de overgang naar de paywall
+     vervaagt de achtergrondscape (`stopScape(false)`, bestaande 1,5s-fade uit
+     soundscape.ts) i.p.v. de instant harde stop (`stopScape(true)`) die de
+     rest van de app hier gebruikt. Zie `endPreview()` hieronder. */
+  const isInstantSession = params.instant === '1';
 
   /* De Voice-knop op dit scherm ÍS de instelling, niet een tweede knop die
      er toevallig op lijkt (3 augustus 2026). Hier stond een eigen
@@ -1326,6 +1368,10 @@ export default function BreathSessionScreen() {
 
     if (completed) setDone(true);
     setRunning(false);
+    /* Reset de dubbeltik-guard (zie `startingRef`'s toelichting hierboven)
+       — zonder dit zou een gestopte sessie nooit meer opnieuw kunnen
+       starten (preview→paywall, retry na END SESSION, enz.). */
+    startingRef.current = false;
     setRound(1);
     setPhase('inhale');
     setSecsLeft(techRef.current.phases[0].secs);
@@ -1452,8 +1498,7 @@ export default function BreathSessionScreen() {
                    paywall — geen afsluitscherm, dat is voor een echt
                    afgemaakte sessie (operator, 10 augustus 2026). */
                 if (previewRef.current) {
-                  finish(false);
-                  setPaywall(true);
+                  endPreview();
                   return;
                 }
                 finish(true);
@@ -1628,8 +1673,7 @@ export default function BreathSessionScreen() {
       const total = effectiveRoundsRef.current * cycle;
       if (trueElapsed >= total) {
         if (previewRef.current) {
-          finish(false);
-          setPaywall(true);
+          endPreview();
           return;
         }
         finish(true);
@@ -1698,8 +1742,30 @@ export default function BreathSessionScreen() {
      per toestand (2x BOOST ≈ 4-6s, 2x REST ≈ 20s). Nu voor elke toestand
      hetzelfde: zoveel rondes als in ~30 seconden passen, met minstens 1
      zodat een trage toestand (bv. REST, 10s/ronde) niet op nul uitkomt. */
+  /* Operator, 2 okt 2026 ("sessie hier via instant reset moet ook locken
+     na 30 sec"): instant-sessies kregen hier een uitzondering (60s i.p.v.
+     de standaard 30s preview) — teruggedraaid, zelfde 30s-grens als elke
+     andere preview-sessie in de app. De zachte fade-overgang (`endPreview`
+     hieronder) blijft wel instant-specifiek bestaan. */
   const PREVIEW_SECONDS = 30;
   const PREVIEW_ROUNDS = Math.max(1, Math.round(PREVIEW_SECONDS / CYCLE_S));
+  /* Zachte overgang i.p.v. harde cut (enkel instant-pad, zie hierboven):
+     laat de achtergrondscape uitvervagen (bestaande 1,5s-fade) vóór de
+     paywall verschijnt, in plaats van `finish()`'s eigen `stopScape(true)`
+     (instant stil). Niet-instant preview-sessies blijven ongewijzigd. */
+  const endPreview = useCallback(() => {
+    if (isInstantSession) {
+      stopScape(false);
+      setTimeout(() => {
+        finish(false);
+        setPaywall(true);
+      }, 1500);
+      return;
+    }
+    finish(false);
+    setPaywall(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInstantSession]);
   const [paywall, setPaywall] = useState(false);
   useEffect(() => {
     if (params.paywall === '1') setPaywall(true);
@@ -1711,6 +1777,17 @@ export default function BreathSessionScreen() {
      elke gewone stop — anders is het een irritante extra tik voor iedereen
      die gewoon een normale sessie afbreekt. */
   const [endTrialConfirm, setEndTrialConfirm] = useState(false);
+  /* Operator, 2 okt 2026: niet-blokkerende feedback na een instant-
+     gestarte, volledig afgeronde sessie — "Worked"/"Too hard"/"Too long"
+     past de gedeelde `experienceLevel`/`instantDurationBias`-instellingen
+     aan (zie utils/instant-feel.ts), app-breed, niet enkel voor dit pad.
+     Geen popup: een kleine tekstregel op het bestaande "Well done"-scherm,
+     genegeerd kan worden zonder enige actie. */
+  const [instantFeedbackGiven, setInstantFeedbackGiven] = useState(false);
+  const onInstantFeedback = useCallback((fb: InstantFeedback) => {
+    setInstantFeedbackGiven(true);
+    void recordInstantFeedback(fb);
+  }, []);
   /* De audiosessie die deze toestand verdiept — één per toestand, gratis. */
   const mindPick = useMemo(() => trainTheMindFor(st.key), [st.key]);
   /* Testschakelaar in Settings (operator, 13 augustus 2026: "ik wil
@@ -1762,6 +1839,8 @@ export default function BreathSessionScreen() {
      hervat, hier voor het eerst aangeroepen vanaf de volle faseduur
      (`phase`/`secsLeft`/`round` staan hier nog op hun initiële waarden). */
   const start = useCallback((preview = false, startPaused = false) => {
+    if (startingRef.current) return;
+    startingRef.current = true;
     previewRef.current = preview;
     effectiveRoundsRef.current = preview
       ? Math.min(roundsRef.current, PREVIEW_ROUNDS)
@@ -2247,18 +2326,16 @@ export default function BreathSessionScreen() {
   const pressImDone = usePressScale(0.95);
 
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
-      {/* Operator, 11 september 2026 (7e ronde): "nog altijd na buddha
-         eerst de session duration selectie pagina te zien" — dat was geen
-         React-state-probleem (de overlay stond al vanaf frame 1 klaar),
-         maar de NATIVE stack-transitie: een gewone `router.push` schuift
-         dit scherm van rechts OVER het vorige scherm, dat er dus nog
-         gedeeltelijk onder zichtbaar was tijdens die schuifbeweging —
-         ongeacht wat wij zelf renderen. `animation: 'fade'` vervangt de
-         schuif door een kruisvervaging: dit scherm (met de al-opake
-         Buddha-overlay erop) vervaagt IN over het vorige scherm i.p.v.
-         het opzij te schuiven, dus er is geen glimp meer van de vorige
-         pagina. */}
+    // Operator, 2 okt 2026 ("die zwarte strook bovenaan moet weg"): was
+    // de sterrenhemel als KIND van de SafeAreaView — die reserveert
+    // bovenaan ruimte voor de statusbalk/notch (`edges:['top']`), dus de
+    // sterrenhemel begon pas ONDER die strook en liet daar enkel de platte
+    // achtergrondkleur zichtbaar. Nu een gewone, niet-inset `View` als
+    // buitenste laag (de sterrenhemel vult hier het ECHTE volledige
+    // scherm, ook achter de statusbalk), met de SafeAreaView als kind
+    // erboven — enkel de knoppen/tekst zelf blijven binnen de veilige
+    // zone, de achtergrond niet meer.
+    <View style={s.root}>
       <Stack.Screen options={{ headerShown: false, animation: 'fade' }} />
 
       {/* Ruimte achter alles. Eén kleur, lage dichtheid, traag fonkelen —
@@ -2273,10 +2350,30 @@ export default function BreathSessionScreen() {
         />
       </View>
 
+      {/* Operator, 2 okt 2026 ("zwarte band snijdt de glow af"): de echte
+         oorzaak was dat deze gloed voorheen ALS KIND van de `ScrollView`
+         rond `figureStage` hing — een ScrollView knipt zijn inhoud altijd
+         af aan zijn eigen zichtbare rand (standaard scroll-gedrag op
+         zowel iOS als Android, los van elke `overflow`-style), dus de
+         -120px bleed naar boven (zie `FigureGlow` hierboven) werd daar
+         hard afgesneden vlak onder de topbar — precies de "band". Hier,
+         buiten de ScrollView, mag hij vrij tot boven de topbar uitdijen.
+         `topOffset` = de top-rand die `figureStage` zou hebben: het
+         statusbalk-inzet (`insets.top`) + de topbar (38px iconBtn + 4px
+         paddingBottom) + de scroll-paddingTop tijdens running (4px). */}
+      {running && (
+        <FigureGlow
+          breath={breath}
+          color={accent}
+          topOffset={insets.top + 38 + 4 + 4}
+        />
+      )}
+
       {/* Operator, 16 september 2026: "de overlay kleur onderaan mag weg"
          — de accentkleur-tint die van transparant bovenaan naar de
          state-kleur onderaan liep is verwijderd. */}
 
+      <SafeAreaView style={s.safeContent} edges={['top']}>
       <View style={s.topbar}>
         {/* Operator, 11 september 2026 (18e ronde): "kruisje bovenaan mag
            ook weg?" — TIJDENS een lopende sessie roept dit kruisje exact
@@ -2310,7 +2407,19 @@ export default function BreathSessionScreen() {
             <X size={18} color={C.dim72} strokeWidth={2.2} />
           </AnimatedPressable>
         )}
-        <Text style={s.eyebrow}>{st.eyebrow}</Text>
+        {/* Operator, 2 okt 2026 ("band staat er nog, ook calm control/
+           clarity moet verdwijnen bij play"): niet enkel de techniek-regel
+           — de VOLLEDIGE kop (staatnaam + techniek) verdwijnt nu samen,
+           zelfde `!running || paused`-voorwaarde als de Voice & Haptics-
+           pil. Echte conditionele render (geen opacity-fade), zodat er
+           tijdens actief ademen niets meer gereserveerd staat in de
+           topbar — enkel de twee icoon-knoppen blijven over. */}
+        {(!running || paused) && (
+          <View style={s.eyebrowCol}>
+            <Text style={s.eyebrow}>{st.eyebrow}</Text>
+            <Text style={s.eyebrowTechnique}>{tech.name}</Text>
+          </View>
+        )}
         {/* Operator, 13 september 2026: "settings knop is weg, wil hem
            terug" — herroept de 24e ronde (11 september) die deze knop
            hier verving door een lege plek (puur voor centrering, zie
@@ -2390,8 +2499,12 @@ export default function BreathSessionScreen() {
              met de helderdere `accent`-kleur (#20B486) die de rest van dit
              scherm gebruikt (boog-stip, eyebrow, etc). Nu dezelfde
              `accent`, zodat de "groene animatie" en de rest van de UI
-             letterlijk dezelfde tint delen. */}
-          {running && <FigureGlow breath={breath} color={accent} />}
+             letterlijk dezelfde tint delen.
+             Operator, 2 okt 2026: deze laag staat niet meer hier — een
+             `ScrollView` knipt zijn inhoud altijd af aan zijn eigen
+             zichtbare rand, dus de opwaartse bleed werd hier hard
+             afgesneden. Nu als sibling van de ScrollView gerenderd, zie
+             verderop in dit bestand. */}
           <View style={s.visualWrap}>
           {running ? (
             <SessionArt
@@ -3616,6 +3729,33 @@ export default function BreathSessionScreen() {
               )}
             </AnimatedPressable>
 
+            {/* Enkel bij instant-gestarte sessies, enkel ná een echte
+               voltooiing (dit is het "Well done"-scherm, geen preview-
+               afbreking) — geen modal, geen sluitknop nodig, het scherm
+               verdwijnt toch zodra de gebruiker verdergaat. */}
+            {isInstantSession && (
+              <View style={s.instantFeedbackRow}>
+                {instantFeedbackGiven ? (
+                  <Text style={s.instantFeedbackThanks}>Thanks — we'll tune it for next time.</Text>
+                ) : (
+                  <>
+                    <Text style={s.instantFeedbackLabel}>How was that?</Text>
+                    <View style={s.instantFeedbackChips}>
+                      <Pressable onPress={() => onInstantFeedback('worked')} hitSlop={6}>
+                        <Text style={s.instantFeedbackChip}>Worked</Text>
+                      </Pressable>
+                      <Pressable onPress={() => onInstantFeedback('too_hard')} hitSlop={6}>
+                        <Text style={s.instantFeedbackChip}>Too hard</Text>
+                      </Pressable>
+                      <Pressable onPress={() => onInstantFeedback('too_long')} hitSlop={6}>
+                        <Text style={s.instantFeedbackChip}>Too long</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
+
             {askPremium ? (
               <>
                 <AnimatedPressable
@@ -3680,7 +3820,8 @@ export default function BreathSessionScreen() {
         </View>
       </Modal>
 
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -3688,6 +3829,9 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   stars: { ...StyleSheet.absoluteFillObject },
+  /* Transparant — de sterrenhemel (buiten deze SafeAreaView, zie hierboven)
+     moet er zichtbaar doorheen blijven schijnen, ook in de top-inset-zone. */
+  safeContent: { flex: 1 },
 
   topbar: {
     flexDirection: 'row',
@@ -3714,11 +3858,23 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   },
   /* Operator, 11 september 2026: exacte specificatie — 14px Bold,
      letterSpacing +1.5. Was 12px/3.6. */
+  /* Operator, 2 okt 2026 ("staatnaam/techniek groter en iets lager, dat
+     verdwijnt toch bij play"): dit blok is enkel zichtbaar vóór/tijdens
+     pauze (`!running || paused`, zie JSX) — geen hoogte-impact tijdens het
+     ademen zelf, dus ruimte geven kan hier vrij. `marginTop` duwt het
+     geheel iets omlaag in de topbar-rij. */
+  eyebrowCol: { alignItems: 'center', marginTop: 6 },
   eyebrow: {
     fontFamily: BrandFonts.bold,
-    fontSize: 12,
+    fontSize: 15,
     letterSpacing: 1.5,
     color: accent,
+  },
+  eyebrowTechnique: {
+    marginTop: 3,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: C.dim50,
   },
 
   scrollView: { flex: 1 },
@@ -4507,6 +4663,31 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     textAlign: 'center',
     fontFamily: BrandFonts.regular,
     fontSize: 11,
+    color: C.dim40,
+  },
+  instantFeedbackRow: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  instantFeedbackLabel: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
+    color: C.dim40,
+    marginBottom: 6,
+  },
+  instantFeedbackChips: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  instantFeedbackChip: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    color: C.dim70,
+    textDecorationLine: 'underline',
+  },
+  instantFeedbackThanks: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
     color: C.dim40,
   },
   doneStrip: {

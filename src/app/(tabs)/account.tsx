@@ -299,8 +299,9 @@ function FreeEnvironmentCard() {
       >
         <View style={{ flex: 1 }}>
           <Text style={s.cardCtaText}>Go Premium</Text>
+          {/* Operator, 1 okt 2026: "49" was fout — correct: 64. */}
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            All 49 Breathwork sessions + full Audio Library
+            All 64 guided sessions + full Audio Library
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>

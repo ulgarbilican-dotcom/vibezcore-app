@@ -24,6 +24,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { AUDIO_ENABLED } from '@/constants/features';
+import * as Haptics from 'expo-haptics';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -110,7 +111,14 @@ function PressFeedback({
   ...rest
 }: React.ComponentProps<typeof Pressable> & { children?: React.ReactNode }) {
   const pressScale = useSharedValue(1);
+  /* Operator, 4 okt 2026 (smoothness-audit: "geen enkele haptic in dit
+     bestand"): `onPressIn` i.p.v. `onPress` — vuurt bij AANRAKING, niet
+     pas als de vinger loskomt, dus de voelbare "klik" komt zo vroeg
+     mogelijk, zelfde moment als de schaal-animatie hieronder al start.
+     Centraal hier gezet zodat élke rij die `PressFeedback` gebruikt dit
+     in één keer meekrijgt, i.p.v. per rij te patchen. */
   const onPressIn = () => {
+    Haptics.selectionAsync();
     pressScale.value = withTiming(0.95, { duration: 80 });
   };
   const onPressOut = () => {
@@ -422,8 +430,14 @@ export default function SettingsScreen() {
         <View style={s.card}>
           <PressFeedback
             style={s.row}
-            onPress={async () => {
-              await setSetting('breathOnboardingCompletedAt', null);
+            /* Operator, 4 okt 2026 (smoothness-audit): was `await
+               setSetting(...)` vóór de navigatie — de schermovergang
+               wachtte op de AsyncStorage-schrijfactie. `void` i.p.v.
+               `await`: de write loopt op de achtergrond door, de
+               navigatie gebeurt meteen (zelfde patroon als goal.tsx se
+               `onTap`). */
+            onPress={() => {
+              void setSetting('breathOnboardingCompletedAt', null);
               router.push('/breath-welcome' as never);
             }}
             accessibilityLabel="Watch the breathwork intro again"
@@ -609,10 +623,18 @@ export default function SettingsScreen() {
               {/* Iter breath-onboarding: zet de completed-vlag terug op null
                  en opent de onboarding direct. Voorkomt dat je de hele
                  app-data moet wissen om de flow opnieuw te doorlopen. */}
-              <Pressable
+              {/* Operator, 4 okt 2026 (smoothness-audit: "geen haptic,
+                 geketende awaits vóór navigatie"): deze 3 rijen gebruikten
+                 platte `Pressable` (geen tik-animatie, geen haptic) en
+                 `await`-ten elke opslag-write vóór de volgende stap. Nu
+                 `PressFeedback` (haptic + schaal-animatie, al centraal
+                 gefixt hierboven) en `void` i.p.v. `await` op de writes —
+                 de schrijfacties lopen op de achtergrond door, de
+                 navigatie/feedback wacht er niet meer op. */}
+              <PressFeedback
                 style={s.row}
-                onPress={async () => {
-                  await setSetting('breathOnboardingCompletedAt', null);
+                onPress={() => {
+                  void setSetting('breathOnboardingCompletedAt', null);
                   router.push('/breath-welcome' as never);
                 }}
                 accessibilityLabel="Replay breath onboarding"
@@ -623,7 +645,7 @@ export default function SettingsScreen() {
                     Reset de first-run vlag en opent de onboarding meteen.
                   </Text>
                 </View>
-              </Pressable>
+              </PressFeedback>
               <View style={s.divider} />
               {/* Operator, 30 september 2026 ("reset onboarding bracelet
                  dan"): zelfde patroon als de breath-onboarding-reset
@@ -632,10 +654,10 @@ export default function SettingsScreen() {
                  eerstvolgende bracelet-CONNECTIE (bracelet-control.tsx),
                  dus deze knop opent niet meteen een scherm — anders dan de
                  breath-versie hierboven, die wél direct linkt. */}
-              <Pressable
+              <PressFeedback
                 style={s.row}
-                onPress={async () => {
-                  await setSetting('braceletOnboardingCompletedAt', null);
+                onPress={() => {
+                  void setSetting('braceletOnboardingCompletedAt', null);
                 }}
                 accessibilityLabel="Reset bracelet onboarding"
               >
@@ -646,7 +668,7 @@ export default function SettingsScreen() {
                     bracelet-connectie.
                   </Text>
                 </View>
-              </Pressable>
+              </PressFeedback>
               <View style={s.divider} />
               {/* Operator, 17 september 2026 ("hoe kan ik nu telkens opnieuw
                  in dev mode set your goal testen?"): "Clear all local data"
@@ -656,15 +678,15 @@ export default function SettingsScreen() {
                  doelen, intensiteit, de proefronde-vlag, dagdeel-voorkeur
                  en het actieve protocol zelf — en opent meteen de vork
                  opnieuw. */}
-              <Pressable
+              <PressFeedback
                 style={s.row}
-                onPress={async () => {
-                  await setSetting('goals', []);
-                  await setSetting('intensity', null);
-                  await setSetting('hasBuiltProtocol', false);
+                onPress={() => {
+                  void setSetting('goals', []);
+                  void setSetting('intensity', null);
+                  void setSetting('hasBuiltProtocol', false);
                   const profile = getSetting('profile');
-                  await setSetting('profile', { ...profile, preferredSlots: undefined });
-                  await clearActivePlan();
+                  void setSetting('profile', { ...profile, preferredSlots: undefined });
+                  void clearActivePlan();
                   router.push('/build-choice' as never);
                 }}
                 accessibilityLabel="Reset protocol flow"
@@ -677,7 +699,7 @@ export default function SettingsScreen() {
                     "How do you want to build it?".
                   </Text>
                 </View>
-              </Pressable>
+              </PressFeedback>
             </View>
           </>
         )}

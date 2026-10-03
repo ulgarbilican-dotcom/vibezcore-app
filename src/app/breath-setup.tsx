@@ -46,7 +46,7 @@ import {
   skipBreathIntroOnce,
 } from '@/utils/breath-entry';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useSetting } from '@/utils/settings';
+import { getSetting, useSetting } from '@/utils/settings';
 import { isLightColor } from '@/utils/color';
 import { DAY_CANDIDATES, SLOT_WINDOW } from '@/utils/day-plan';
 import { HORIZON_OPTIONS } from '@/data/plan-horizon-options';
@@ -267,6 +267,20 @@ const fmtClock = (minutes: number) => {
   const s = totalSecs % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 };
+
+/* Operator, 2 okt 2026 ("app-breed" bevestigd): de gedeelde `experienceLevel`-
+   instelling (ook gelezen door protocol.ts/intensity.tsx/plan-review.tsx,
+   en bijgesteld door de "How do you feel?"-feedback in breath-session.tsx)
+   bepaalt nu ook de standaard-techniek hier — dit scherm las die instelling
+   voorheen nergens, en startte dus altijd op Beginner (index 0), ongeacht
+   wat de gebruiker elders al had aangegeven. `null` valt terug op Beginner,
+   zelfde conventie als de rest van de app (protocol.ts) — enkel het
+   instant-pad (utils/instant-feel.ts) wijkt daar bewust van af. */
+function defaultTechIdxFromExperience(maxIdx: number): number {
+  const level = getSetting('experienceLevel');
+  const idx = level === 'advanced' ? 2 : level === 'intermediate' ? 1 : 0;
+  return Math.min(idx, maxIdx);
+}
 
 /* Operator, 10 september 2026: "custom is bedoeld om meer min in te kunnen
    stellen dan de max op de bestaande knoppen" — daarna: "kijk eerst overal
@@ -1287,7 +1301,7 @@ export default function BreathSetupScreen() {
       const i = st.techniques.findIndex((t) => t.key === params.technique);
       if (i !== -1) return i;
     }
-    return 0;
+    return defaultTechIdxFromExperience(st.techniques.length - 1);
   });
   /* Operator, 17 september 2026 (addToDay, vervolg: "de techniques moet
      ook niets aangeduid staan als user toekomt"): `techIdx` blijft intern
@@ -1415,7 +1429,7 @@ export default function BreathSetupScreen() {
       skipFirstStateReset.current = false;
       return;
     }
-    setTechIdx(0);
+    setTechIdx(defaultTechIdxFromExperience(st.techniques.length - 1));
     setTechniquePicked(!isAddToDay);
     setDurationIdx(0);
     setCustomSelected(false);
@@ -1455,7 +1469,12 @@ export default function BreathSetupScreen() {
        params (quick/minutes) hoort de eerste weergave dus ook op die
        aanbevolen duur te starten, niet op de losse state-terugval. */
     const recIdx = DURATIONS.findIndex((d) => d.recommended);
-    return recIdx !== -1 ? recIdx : st.defaultDuration;
+    const base = recIdx !== -1 ? recIdx : st.defaultDuration;
+    /* Operator, 2 okt 2026: zelfde "How do you feel?"-feedback-bijstelling
+       als in instant-feel.ts, nu ook hier — "Too long"/"Too short" na een
+       instant-sessie verschuift ook de standaard-duur op dit scherm. */
+    const bias = getSetting('instantDurationBias');
+    return Math.max(0, Math.min(DURATIONS.length - 1, base + bias));
   });
   /* Operator, 10 september 2026: "custom is bedoeld om meer min in te
      kunnen instellen dan de max op de bestaande knoppen" — een vrij
@@ -1921,7 +1940,7 @@ export default function BreathSetupScreen() {
   const resetAll = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelState(smartDefaultState);
-    setTechIdx(0);
+    setTechIdx(defaultTechIdxFromExperience(BREATH_STATES[smartDefaultState].techniques.length - 1));
     setTechniquePicked(false);
     setDurationIdx(0);
     setCustomSelected(false);
@@ -2735,7 +2754,15 @@ export default function BreathSetupScreen() {
               setCustomSelected(false);
             }}
           />
+          {/* Operator, 2 okt 2026 ("i-knop staat daar nog niet goed" —
+             zweefde los in lege ruimte, geen label/context, in
+             tegenstelling tot de duur-infoknop hieronder die wél naast
+             de naam van de gekozen duur-preset staat): zelfde rij-patroon
+             nu ook hier — de naam van de gekozen techniek ernaast, zodat
+             de "i" een zichtbare referent heeft i.p.v. een losse cirkel
+             in het niets. */}
           <View style={s.durationPresetRow}>
+            <Text style={s.durationPresetName}>{tech.name}</Text>
             <Pressable
               onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
               hitSlop={10}

@@ -432,9 +432,11 @@ export default function BreathSampleScreen() {
             <Text style={s.modalEyebrow}>SESSION COMPLETE</Text>
             <Text style={s.modalTitle}>{isPro ? 'Nice.' : 'Loved it?'}</Text>
             <Text style={s.modalBody}>
+              {/* Operator, 1 okt 2026: "49" was fout — correct: 64 (15
+                 technieken × hun benoemde duur-varianten). */}
               {isPro
-                ? 'That was a taste. All 49 breathwork sessions and bracelet guidance are already unlocked in your account.'
-                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all 49 breathwork sessions and the complete audio library.'}
+                ? 'That was a taste. All 64 guided sessions and bracelet guidance are already unlocked in your account.'
+                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all 64 guided sessions and the complete audio library.'}
             </Text>
 
             {isPro ? (

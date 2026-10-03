@@ -213,7 +213,10 @@ export default function PremiumPaywallModal({ visible, onClose }: Props) {
           <Text style={s.payTitle}>Unlock every session</Text>
           <View style={s.payList}>
             {[
-              'All 49 breathwork sessions — five states, every rhythm and duration',
+              /* Operator, 1 okt 2026: "49" was fout, nergens in de data
+                 terug te vinden — geverifieerd correct: 15 technieken
+                 (5 states × 3 niveaus) × hun benoemde duur-varianten = 64. */
+              'All 64 guided sessions — five states, every rhythm and duration',
               'Voice, haptic and visual guidance',
               'Soundscapes, goals and your daily plan',
               (() => {

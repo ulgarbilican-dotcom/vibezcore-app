@@ -164,13 +164,10 @@ export default function ActivityScreen() {
            6 kaarten + header zonder scrollen passen. */}
         <Text style={s.groupLabel}>BREATHWORK</Text>
         <View>
-          <Row
-            large
-            Icon={protocolLocked ? Lock : Target}
-            title="Set your goal"
-            info={protocolLocked ? PROTOCOL_LOCKED_SUB : (goalNames || 'Choose what you are working toward')}
-            onPress={() => router.push('/build-choice' as never)}
-          />
+          {/* Operator, 3 okt 2026 ("your daily plan breathwork en bracelet
+             als eerste telkens"): "Your daily plan" verhuisd naar de
+             eerste plek in deze groep (stond voorheen na "Set your
+             goal") — zelfde herschikking hieronder bij BRACELET. */}
           <Row
             large
             Icon={CalendarDays}
@@ -185,6 +182,13 @@ export default function ActivityScreen() {
                     : 'Two moments a day'
             }
             onPress={() => router.push('/agenda' as never)}
+          />
+          <Row
+            large
+            Icon={protocolLocked ? Lock : Target}
+            title="Set your goal"
+            info={protocolLocked ? PROTOCOL_LOCKED_SUB : (goalNames || 'Choose what you are working toward')}
+            onPress={() => router.push('/build-choice' as never)}
           />
           {/* Operator, 29 september 2026 ("hoe kan gebruiker in 1 oogopslag
              checken wat hij wil, nu onduidelijk wat breathwork en bracelet
@@ -227,6 +231,15 @@ export default function ActivityScreen() {
              ALTIJD naar `/bracelet-agenda`, zelfde reden als breathwork's
              eigen "moet ook naar agenda gaan"-fix: dat scherm toont zelf
              al een lege staat + CTA als er nog geen plan is. */}
+          {/* Operator, 3 okt 2026: "Your daily plan" ook hier naar de
+             eerste plek, zelfde herschikking als BREATHWORK hierboven. */}
+          <Row
+            large
+            Icon={CalendarDays}
+            title="Your daily plan"
+            info={braceletPlan ? 'Your bracelet plan, tracked day by day' : 'Nothing planned yet'}
+            onPress={() => router.push('/bracelet-agenda' as never)}
+          />
           <Row
             large
             Icon={Target}
@@ -237,13 +250,6 @@ export default function ActivityScreen() {
                 : 'Choose your states, times and duration'
             }
             onPress={() => router.push('/bracelet-set-day' as never)}
-          />
-          <Row
-            large
-            Icon={CalendarDays}
-            title="Your daily plan"
-            info={braceletPlan ? 'Your bracelet plan, tracked day by day' : 'Nothing planned yet'}
-            onPress={() => router.push('/bracelet-agenda' as never)}
           />
           <Row
             large

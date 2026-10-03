@@ -109,7 +109,12 @@ export default function ProtocolTeaserModal({
           </View>
           <View style={s.row}>
             <Crown size={16} color={AudioAccent} strokeWidth={2.2} />
-            <Text style={s.rowTxt}>Full access to all 49 breathwork sessions</Text>
+            {/* Operator, 1 okt 2026 ("fout getal bij breathwork popup na
+               30 sec"): was "49", nergens in de data te vinden. Correcte,
+               geverifieerde telling: 15 technieken (5 states × 3 niveaus)
+               × hun benoemde duur-varianten = 64, zie de toelichting bij
+               "guided sessions" elders in de app/marketing-copy. */}
+            <Text style={s.rowTxt}>Full access to all 64 guided sessions</Text>
           </View>
 
           <AnimatedPressable

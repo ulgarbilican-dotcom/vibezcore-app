@@ -1,0 +1,26 @@
+# EAS Build archive-uitsluitingen. Valt normaal terug op .gitignore, maar
+# LOSSE (niet-getrackte) bestanden/mappen in de projectroot tellen daar niet
+# in mee — die glippen er dus doorheen tenzij ze hier ook expliciet staan.
+# Reden: op 25 september 2026 blies een vergeten map met video-frame-
+# extracties (frames/, frames2/, frames3/, framesF/, framesG/, samen
+# ~360MB, nooit gecommit) het build-archief op tot 709MB, wat de upload
+# enorm vertraagde.
+
+node_modules/
+.expo/
+.git/
+.claude/
+.build-logs/
+android/
+ios/
+docs/
+screenshots/
+scratchpad/
+*.tsbuildinfo
+
+# Losse werkmappen die hier niet thuishoren, mochten ze terugkomen.
+frames/
+frames2/
+frames3/
+framesF/
+framesG/

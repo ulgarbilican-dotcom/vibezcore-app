@@ -65,3 +65,37 @@ app-example
 # local screenshots / temp artefacts (developer-only)
 .tmp-screenshot.png
 screenshots/
+
+# debug/verify screenshots, recordings, xml dumps, logs (repo-root clutter van Claude-sessies)
+.claude-*.png
+.claude-*.xml
+*.output.png
+build_*.log
+metro*.log
+/*.png
+/*.mp4
+/uiA.xml
+/ui?.xml
+uiA.xml
+uiB.xml
+uiC.xml
+uiD.xml
+uiE.xml
+uiF.xml
+uiG.xml
+uiH.xml
+uiI.xml
+uiJ.xml
+uiK.xml
+uiL.xml
+uiM.xml
+uiN.xml
+uiO.xml
+FONT_AUDIT.*
+card-zoom-test.html
+crop-test.html
+
+# native module build output (Gradle), not source
+modules/**/android/build/
+modules/**/android/.gradle/
+modules/**/ios/build/

@@ -1,0 +1,8 @@
+{
+  "name": "breath-background",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — native achtergrond fase-loop voor begeleide ademsessies (Doze-bestendig op Android, achtergrond-audio op iOS).",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

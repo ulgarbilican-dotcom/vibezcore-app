@@ -408,6 +408,11 @@ function CardBounce({
   onLongPress,
   androidRipple,
   accessibilityLabel,
+  /* Operator, 4 okt 2026 (smoothness-audit): optionele doorgave — enkele
+     van de kleinere elementen die deze wrapper nu ook gebruiken (bv. de
+     navigatie-snelkoppelingen) hadden als kale `Pressable` een eigen
+     `hitSlop`, die anders verloren zou gaan bij de overstap. */
+  hitSlop,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -415,6 +420,7 @@ function CardBounce({
   onLongPress?: () => void;
   androidRipple?: { color: string };
   accessibilityLabel?: string;
+  hitSlop?: number | { top?: number; bottom?: number; left?: number; right?: number };
 }) {
   const scale = useSharedValue(1);
   const bounceStyle = useAnimatedStyle(() => ({
@@ -425,6 +431,7 @@ function CardBounce({
       style={style}
       onPress={onPress}
       onLongPress={onLongPress}
+      hitSlop={hitSlop}
       onPressIn={() => {
         scale.value = withTiming(0.96, { duration: 90 });
         /* Operator ("kaarten hebben geen haptische trilling, pas het
@@ -1763,11 +1770,16 @@ function AudioScreen({
             conditie. In productie heeft real bracelet owner een token
             (isSignedIn=true), maar dev-override 'bracelet' niet. Beide
             scenarios moeten dezelfde upsell-banner zien. */}
+        {/* Operator, 4 okt 2026 (smoothness-audit: "geen tik-animatie/
+           haptic, inconsistent met de rest van de app"): was een kale
+           `Pressable` — nu `CardBounce` (al bestaande, correcte wrapper
+           elders in dit bestand), zelfde patroon als 8 andere plekken
+           hieronder. */}
         {!hasSub && isBraceletOwner && (
-          <Pressable
+          <CardBounce
             style={s.braceletUpsellBanner}
             onPress={() => requestScrollTo('pricing')}
-            android_ripple={{ color: 'rgba(58,143,255,0.10)' }}
+            androidRipple={{ color: 'rgba(58,143,255,0.10)' }}
             accessibilityLabel="Add the Audio Library to your bracelet"
           >
             <View style={{ flex: 1 }}>
@@ -1783,7 +1795,7 @@ function AudioScreen({
               </Text>
             </View>
             <Text style={s.braceletUpsellArrow}>→</Text>
-          </Pressable>
+          </CardBounce>
         )}
 
         {/* Operator, 15 september 2026: "hero moet ook weg niet?" — klopt,
@@ -1815,57 +1827,60 @@ function AudioScreen({
            losse vlakken. Blijven wel losse navigatie-ingangen naar
            verschillende schermen (/history, /library/free of /new,
            /favorites), geen "actieve staat"-toggle. */}
+        {/* Operator, 4 okt 2026 (smoothness-audit): deze 4 segmenten
+           gebruikten kale `Pressable`s zonder tik-animatie/haptic — nu
+           `CardBounce`, zelfde patroon als de rest van dit bestand. */}
         <View style={s.libQuickLinksBar}>
-          <Pressable
+          <CardBounce
             style={s.libQuickLinkSegment}
             onPress={() => navigateAway(() => router.push('/history'))}
             hitSlop={8}
             accessibilityLabel="View your listening journey"
           >
             <Text style={s.libQuickLinkText}>Your Journey</Text>
-          </Pressable>
+          </CardBounce>
           <View style={s.libQuickLinkDivider} />
           {lastPlayed ? (
-            <Pressable
+            <CardBounce
               style={s.libQuickLinkSegment}
               onPress={showWelcomePopup}
               hitSlop={8}
               accessibilityLabel="Resume your last listened session"
             >
               <Text style={s.libQuickLinkText}>Last Listened</Text>
-            </Pressable>
+            </CardBounce>
           ) : !hasSub ? (
-            <Pressable
+            <CardBounce
               style={s.libQuickLinkSegment}
               onPress={() => navigateAway(() => router.push('/library/free'))}
               hitSlop={8}
               accessibilityLabel="Browse all free sessions"
             >
               <Text style={s.libQuickLinkText}>Free Sessions</Text>
-            </Pressable>
+            </CardBounce>
           ) : (
-            <Pressable
+            <CardBounce
               style={s.libQuickLinkSegment}
               onPress={() => navigateAway(() => router.push('/library/new'))}
               hitSlop={8}
               accessibilityLabel="Browse new sessions"
             >
               <Text style={s.libQuickLinkText}>New</Text>
-            </Pressable>
+            </CardBounce>
           )}
           <View style={s.libQuickLinkDivider} />
           {/* Operator, 26 september 2026 ("waar is favorites?"): stond
              alleen bij PRO — favoriteren werkt net zo goed op de gratis
              sessies, dus nu voor iedereen zichtbaar. `/library/favorites`
              heeft zelf geen tier-gate. */}
-          <Pressable
+          <CardBounce
             style={s.libQuickLinkSegment}
             onPress={() => navigateAway(() => router.push('/library/favorites'))}
             hitSlop={8}
             accessibilityLabel="Browse favorites"
           >
             <Text style={s.libQuickLinkText}>Favorites</Text>
-          </Pressable>
+          </CardBounce>
         </View>
 
         {/* Operator, 15 september 2026: "BUILT ON + Emerson quote" hier
@@ -2389,11 +2404,11 @@ function AudioScreen({
                     {seriesMatches.slice(0, 5).map((ser) => {
                       const photo = SERIES_PHOTO[ser.name];
                       return (
-                        <Pressable
+                        <CardBounce
                           key={'ser:' + ser.name}
                           style={s.acRow}
                           onPress={() => openSerieFromSearch(ser.name, false)}
-                          android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
+                          androidRipple={{ color: 'rgba(255,255,255,0.04)' }}
                         >
                           <View style={s.acArt}>
                             {photo ? (
@@ -2419,7 +2434,7 @@ function AudioScreen({
                             </Text>
                           </View>
                           <Text style={s.acChev}>›</Text>
-                        </Pressable>
+                        </CardBounce>
                       );
                     })}
                     {seriesMatches.length > 5 && (
@@ -2440,13 +2455,13 @@ function AudioScreen({
                         PILLAR_META[SERIES_PILLAR[sess.series]]?.img ?? SERIES_PHOTO[sess.series];
                       const isFav = favorites.has(sess.url);
                       return (
-                        <Pressable
+                        <CardBounce
                           key={'sess:' + sess.url}
                           style={s.acRow}
                           onPress={() =>
                             openSerieFromSearch(sess.series, true)
                           }
-                          android_ripple={{
+                          androidRipple={{
                             color: 'rgba(255,255,255,0.04)',
                           }}
                         >
@@ -2486,7 +2501,7 @@ function AudioScreen({
                             active={isFav}
                             onPress={() => toggleFavorite(sess)}
                           />
-                        </Pressable>
+                        </CardBounce>
                       );
                     })}
                     {sessionMatches.length > 5 && (
@@ -2506,13 +2521,13 @@ function AudioScreen({
                       );
                       const count = ser ? ser.sessions.length : 0;
                       return (
-                        <Pressable
+                        <CardBounce
                           key={'insp:' + insp.name}
                           style={s.acRow}
                           onPress={() =>
                             openSerieFromSearch(insp.seriesName, false)
                           }
-                          android_ripple={{
+                          androidRipple={{
                             color: 'rgba(255,255,255,0.04)',
                           }}
                         >
@@ -2531,7 +2546,7 @@ function AudioScreen({
                             </Text>
                           </View>
                           <Text style={s.acChev}>›</Text>
-                        </Pressable>
+                        </CardBounce>
                       );
                     })}
                     {inspiratorMatches.length > 5 && (
@@ -2990,10 +3005,13 @@ function AudioScreen({
                    vlak (`C.surface`) ONDER de foto i.p.v. een absolute
                    laag erover — exact hetzelfde "kaart + los blok
                    eronder"-patroon dat de FREE-balk hier al gebruikte. */}
-                <Pressable
+                {/* Operator, 4 okt 2026 (smoothness-audit: "geen tik-
+                   animatie/haptic — het meest-aangetikte element van dit
+                   scherm"): kale `Pressable` → `CardBounce`. */}
+                <CardBounce
                   style={s.libCard}
                   onPress={() => toggle(ser.name)}
-                  android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+                  androidRipple={{ color: 'rgba(255,255,255,0.06)' }}
                   accessibilityLabel={
                     isOpen
                       ? 'Hide sessions'
@@ -3062,7 +3080,7 @@ function AudioScreen({
                       </View>
                     </View>
                   )}
-                </Pressable>
+                </CardBounce>
                 {/* FIX 5: 3px progress-strip — stond voorheen "net boven
                    libCardBody" binnen dezelfde flex-end-container als de
                    foto; nu een gewone sibling exact op de naad foto/tekst,
@@ -3080,10 +3098,10 @@ function AudioScreen({
                     />
                   </View>
                 ) : null}
-                <Pressable
+                <CardBounce
                   style={s.libCardBody}
                   onPress={() => toggle(ser.name)}
-                  android_ripple={{ color: 'rgba(10,10,12,0.05)' }}
+                  androidRipple={{ color: 'rgba(10,10,12,0.05)' }}
                   accessibilityLabel={
                     isOpen
                       ? 'Hide sessions'
@@ -3115,7 +3133,7 @@ function AudioScreen({
                       <Text style={s.libCardSubline}>{subline}</Text>
                     ) : null}
                   </View>
-                </Pressable>
+                </CardBounce>
 
                 {/* FREE-balk(en) onder de kaart — bron .vz-free-under-card.
                    Eén balk per gratis sessie. ALLEEN tonen voor guest/non-PRO
@@ -3147,14 +3165,14 @@ function AudioScreen({
                         )
                       : 0;
                   return (
-                    <Pressable
+                    <CardBounce
                       key={sess.url}
                       style={[
                         s.libFreeRow,
                         isActive && s.libFreeRowActive,
                       ]}
                       onPress={() => navigateAway(() => openGated(sess))}
-                      android_ripple={{
+                      androidRipple={{
                         color: isActive
                           ? 'rgba(58,143,255,0.18)'
                           : 'rgba(255,255,255,0.10)',
@@ -3265,7 +3283,7 @@ function AudioScreen({
                           />
                         </View>
                       ) : null}
-                    </Pressable>
+                    </CardBounce>
                   );
                 })}
 
@@ -3315,10 +3333,12 @@ function AudioScreen({
                       const subOpen = !!subExpanded[subName];
                       return (
                         <View key={subName} style={s.libSubcatUnit}>
-                          <Pressable
+                          {/* Operator, 4 okt 2026 (smoothness-audit): kale
+                             `Pressable` → `CardBounce`. */}
+                          <CardBounce
                             style={s.libSubcatCard}
                             onPress={() => toggleSub(subName)}
-                            android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+                            androidRipple={{ color: 'rgba(255,255,255,0.06)' }}
                           >
                             <Image
                               source={{ uri: info.photo }}
@@ -3340,7 +3360,7 @@ function AudioScreen({
                               </Text>
                               <Text style={s.libSubcatTitle}>{subName}</Text>
                             </View>
-                          </Pressable>
+                          </CardBounce>
                           {subOpen && (
                             <View style={s.libExpand}>
                               {subSessions.map((sess, i) => (
@@ -3661,20 +3681,23 @@ function AudioScreen({
              huisstijl v5.7-bron (.plan-cta) toont deze knop altijd solide
              wit, nooit transparant als ruststand. Terug naar die
              betrouwbare versie; scale/opacity blijft voor tik-feedback. */}
-          <Pressable
-            style={({ pressed }) => [
-              s.ctaBtn,
-              pressed && { transform: [{ scale: 0.97 }], opacity: 0.85 },
-            ]}
+          {/* Operator, 4 okt 2026 (smoothness-audit: "geen haptic, enkel
+             RN's eigen `pressed`-callback — een bridge-rondweg i.p.v. de
+             Reanimated-worklet die de rest van de app gebruikt"):
+             `CardBounce` i.p.v. de handmatige `pressed &&`-stijl — dit is
+             de betaal-knop, verdient dezelfde directe feedback als elke
+             andere primaire actie. */}
+          <CardBounce
+            style={s.ctaBtn}
             onPress={openCheckout}
-            android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+            androidRipple={{ color: 'rgba(0,0,0,0.08)' }}
           >
             <Text style={s.ctaTxt}>
               {plan === 'yearly'
                 ? 'Start your free trial'
                 : `Get Monthly · ${monthlyPriceLabel}/mo`}
             </Text>
-          </Pressable>
+          </CardBounce>
 
           {/* Operator, 16 september 2026 ("in een app verloopt betaling
              altijd veilig via de App Store/Play Store, de gebruiker weet

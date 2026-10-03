@@ -68,7 +68,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -284,12 +284,18 @@ function StateThumb({
   t,
   on,
   onPress,
+  onInfoPress,
   thumbPulseStyle,
 }: {
   k: BreathStateKey;
   t: BreathState;
   on: boolean;
   onPress: () => void;
+  /* Operator, 2 okt 2026 ("cta moet gecentreerd blijven, zet de i boven
+     de state-cirkel"): "How it works" hoort bij de GESELECTEERDE staat,
+     dus hier, niet naast de CTA (die blijft nu weer gewoon gecentreerd,
+     ongewijzigd). Enkel getoond op de actieve cirkel (`on`). */
+  onInfoPress: () => void;
   thumbPulseStyle: AnimatedStyle<ViewStyle>;
 }) {
   const pressScale = useSharedValue(1);
@@ -309,6 +315,24 @@ function StateThumb({
       style={[s.thumbCol, pressStyle]}
       accessibilityLabel={t.eyebrow}
     >
+      {/* Operator, 2 okt 2026: losse, geneste tikzone boven de cirkel —
+         binnenste responder wint de touch (zelfde patroon als elders in
+         de app), dus geen interferentie met `onPress` (staat kiezen)
+         hierboven. Enkel op de geselecteerde cirkel, anders 5× dezelfde
+         knop tonen voor steeds dezelfde "How it works"-popup. */}
+      {/* Operator, 2 okt 2026 ("cirkel niet heel wit maar grijs, en naar
+         boven laten gaan samen met de i"): dezelfde `translateY` als
+         `thumbSelected` hieronder, zodat de knop mee omhoog schuift met
+         de cirkel i.p.v. een losse sibling die blijft staan. */}
+      {on && (
+        <Pressable
+          onPress={onInfoPress}
+          hitSlop={10}
+          style={[s.thumbInfoBtn, { transform: [{ translateY: -6 }] }]}
+        >
+          <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+        </Pressable>
+      )}
       <View style={[s.thumb, on && s.thumbSelected]}>
         {/* Operator, 24 september 2026, definitief: "ook bij aanklikken
            geen halo buiten de grote ring, enkel een beetje gloed-kleur
@@ -339,12 +363,15 @@ function StateThumb({
            Control op het screenshot) — dat is exact de kleur die weg moet,
            niet enkel een gloed erachter. Wit i.p.v. `t.accent`, enkel dikker
            bij selectie (1.5 i.p.v. 1) — kleur draagt de selectie nergens
-           meer op dit rijtje, enkel opaciteit/dikte/schaal. */}
+           meer op dit rijtje, enkel opaciteit/dikte/schaal.
+           Operator, 2 okt 2026 ("niet heel wit maar grijs"): zuiver wit
+           → `#AEAEB2` (iOS systemGray2) — nog duidelijk lichter/helderder
+           dan de gedimde staat (0.22 wit), maar niet stekend fel. */}
         <View
           style={[
             s.thumbOutline,
             {
-              borderColor: on ? '#ffffff' : 'rgba(255,255,255,0.22)',
+              borderColor: on ? '#AEAEB2' : 'rgba(255,255,255,0.22)',
               borderWidth: on ? 1.5 : 1,
             },
           ]}
@@ -355,8 +382,11 @@ function StateThumb({
             size={THUMB * 0.5}
             /* Operator, 24 september 2026, vervolg ("dimmen nog steeds niet
                echt merkbaar bij aantikken"): 0.32 → 0.22, nog duidelijker
-               contrast met het actieve icoon. */
-            color={on ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.22)'}
+               contrast met het actieve icoon.
+               Operator, 2 okt 2026 ("niet heel wit maar grijs"): zelfde
+               `#AEAEB2` als de rand hierboven, icoon en rand nu één
+               consistente grijstint bij selectie. */
+            color={on ? '#AEAEB2' : 'rgba(255,255,255,0.22)'}
             strokeWidth={1.8}
           />
         </Animated.View>
@@ -404,6 +434,14 @@ function GoalButton({
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
   }));
+  /* Operator, 2 okt 2026 ("hoe zou Apple dit doen?" — onderzocht: HIG
+     raadt icoon+tekstlabel in een header-zone expliciet af, "crowds the
+     header bar" — en max één extra control naast titel/terugknop.
+     Tekstlabel ("Goal"/"Plan") weg, zelfde icoon-only behandeling als
+     `histBtn` (het symmetrische geschiedenis-icoon links). Vervolg
+     ("knop moet duidelijk wit"): zonder het label moet het icoon zelf nu
+     het signaal dragen — 0.5 opaciteit (gedeeld met histBtn) was prima
+     MET een label erbij, maar te vaag als enige aanwijzing. Nu 0.85. */
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -414,11 +452,10 @@ function GoalButton({
       accessibilityLabel="Your goal and daily plan"
     >
       {!plan && protocolLocked ? (
-        <Lock size={19} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+        <Lock size={19} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
       ) : (
-        <Target size={19} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+        <Target size={19} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
       )}
-      <Text style={s.goalBtnLbl}>{plan ? 'Plan' : 'Goal'}</Text>
     </AnimatedPressable>
   );
 }
@@ -443,9 +480,18 @@ export default function BreathScreen() {
      zie utils/protocol-gate.ts. Deze knop is te klein voor tekst, dus
      enkel het icoon wisselt naar een slot. */
   const protocolLocked = useProtocolLocked();
+  /* Operator, 2 okt 2026: "Instant Reset" vaste knoptekst voor iedereen —
+     overschrijft de eerdere free/Premium-wisseling (Try it now/Feel
+     better now). Vervolg ("onduidelijk, beter Instant Sessions"): tekst
+     herdoopt, zelfde vaste-tekst-voor-iedereen-principe. De onderliggende
+     30s-preview-met-zachte-fade voor niet-Premium-gebruikers (zie
+     breath-session.tsx, `instant=1` — teruggedraaid naar de standaard
+     30s, zie daar) blijft ongewijzigd, enkel de knoptekst zelf wisselt
+     niet meer mee. */
 
   const [index, setIndex] = useState(FALLBACK_INDEX);
   const [infoOpen, setInfoOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   /* ── Het welkomstbeeld gaat vooraf ──────────────────────────────────
      Wie op de Breath-tab tikt ziet eerst de gezichten die in de mandala
@@ -555,16 +601,6 @@ export default function BreathScreen() {
      een echte spring-schaal bij aanraken (niet enkel de Android-ripple). */
   const ctaScale = useSharedValue(1);
   const ctaPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
-  const infoBtnScale = useSharedValue(1);
-  const onInfoBtnPressIn = () => {
-    infoBtnScale.value = withTiming(0.95, { duration: 80 });
-  };
-  const onInfoBtnPressOut = () => {
-    infoBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const infoBtnPressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: infoBtnScale.value }],
-  }));
   const histBtnScale = useSharedValue(1);
   const onHistBtnPressIn = () => {
     histBtnScale.value = withTiming(0.92, { duration: 80 });
@@ -574,16 +610,6 @@ export default function BreathScreen() {
   };
   const histBtnPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: histBtnScale.value }],
-  }));
-  const specAskScale = useSharedValue(1);
-  const onSpecAskPressIn = () => {
-    specAskScale.value = withTiming(0.94, { duration: 80 });
-  };
-  const onSpecAskPressOut = () => {
-    specAskScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const specAskPressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: specAskScale.value }],
   }));
   const shimmer = useSharedValue(-1);
   useEffect(() => {
@@ -952,6 +978,31 @@ export default function BreathScreen() {
               </Animated.View>
             </Pressable>
           </Animated.View>
+
+          {/* Operator, 2 okt 2026 ("de knop moet op de pagina komen die
+             gebruiker ziet bij openen app... hij moet niet verder naar
+             andere pagina"): de instant-ingang staat hier, op de intro-
+             overlay zelf — het eerste scherm van deze tab, geen navigatie
+             nodig om 'm te bereiken. Vervangt de oude "How do you want to
+             feel?"-swipe-deur volledig (feel-now.tsx is herbouwd rond
+             "How do you feel?" — huidige toestand, niet doel-toestand).
+             Prominente, transparante ghost-pil direct onder de hoofd-CTA
+             (pasted Apple-referentie: "straalt uit dat je met één tik uit
+             de waan van de dag kan stappen"). Vaste tekst "Instant
+             Sessions" voor iedereen (vervolg, "Instant Reset" →
+             "onduidelijk, beter Instant Sessions") — zie de toelichting
+             bij `protocolLocked` hierboven voor waarom dit NIET meer
+             free/Premium wisselt. De onderliggende 30s-preview-met-
+             zachte-fade voor niet-Premium-gebruikers (`instant=1`, zie
+             breath-session.tsx) blijft wel bestaan, enkel de knoptekst
+             zelf wisselt niet meer mee. */}
+          <Pressable
+            onPress={() => router.push('/feel-now' as never)}
+            hitSlop={8}
+            style={s.feelNowLink}
+          >
+            <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
+          </Pressable>
         </View>
       ) : (
         <>
@@ -1060,14 +1111,37 @@ export default function BreathScreen() {
            staat per toestand wat hij doet én wat elk van zijn ritmes is, in
            één zin per stuk. Niet op het scherm zelf: wie het al weet hoeft
            het niet elke keer te lezen. */}
+      {/* Operator, 2 okt 2026 ("ook hier de popup aanpassen van onder en
+         done, achtergrond dimmen"): zelfde ombouw als feel-now.tsx en
+         breath-setup.tsx se duur-infosheet — was een gecentreerde
+         fade-kaart met "Got it" onderaan, nu een vanonder opschuivend vel
+         (`animationType="slide"`) met gedimde backdrop, tikbare grip, en
+         "Done" rechtsboven i.p.v. een losse knop onderaan. */}
       <Modal
         visible={infoOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setInfoOpen(false)}
       >
         <Pressable style={s.infoBackdrop} onPress={() => setInfoOpen(false)}>
-          <Pressable style={s.infoCard} onPress={() => {}}>
+          <Pressable
+            style={[s.infoCard, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}
+            onPress={() => {}}
+          >
+            <Pressable
+              onPress={() => setInfoOpen(false)}
+              hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
+            >
+              <View style={s.infoGrip} />
+            </Pressable>
+            <View style={s.infoHeader}>
+              <Text style={[s.infoEyebrow, { color: accentText }]}>
+                {sentenceCase(st.eyebrow)}
+              </Text>
+              <Pressable onPress={() => setInfoOpen(false)} hitSlop={10}>
+                <Text style={[s.infoDoneTxt, { color: accentText }]}>Done</Text>
+              </Pressable>
+            </View>
             {/* Operator, 10 september 2026: "moet tonen wat de ademtechniek
                doet en varieert van de andere 2... niet als je niet verder
                kan lezen" — daarna expliciet: "popup scrollbaar niet, gewoon
@@ -1081,9 +1155,6 @@ export default function BreathScreen() {
                cijfers. Naam en hook zonder `numberOfLines`-afkap: de hook
                is al kort (eerste zin na de streep uit `explain`), dus dat
                past zonder scroll. */}
-            <Text style={[s.infoEyebrow, { color: accentText }]}>
-              {sentenceCase(st.eyebrow)}
-            </Text>
             <Text style={s.infoTitle}>{st.title}</Text>
             <Text style={s.infoBody}>{st.description}</Text>
 
@@ -1109,24 +1180,15 @@ export default function BreathScreen() {
                 </View>
               );
             })}
-
-            <AnimatedPressable
-              style={[s.infoBtn, { borderColor: accentText }, infoBtnPressStyle]}
-              onPress={() => setInfoOpen(false)}
-              onPressIn={onInfoBtnPressIn}
-              onPressOut={onInfoBtnPressOut}
-            >
-              <Text style={[s.infoBtnTxt, { color: accentText }]}>Got it</Text>
-            </AnimatedPressable>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* Operator, 8 september 2026 (5e ronde): "choose your state in grijs
-         kleine hoofdletters boven de cirkels zetten centreel" — vervangt de
-         losse kop bovenaan het scherm; dit label hoort nu direct bij de rij
-         die het beschrijft. */}
-      <Text style={s.chooseStateLabel}>CHOOSE YOUR STATE</Text>
+      {/* Operator, 2 okt 2026 ("choose your state boven de i knop moet
+         weg"): botste met de nieuwe "i"-knop die nu boven de
+         geselecteerde cirkel zweeft (`thumbInfoBtn`, top:-24) — te dicht
+         op elkaar. Label weg, de cirkels + namen eronder zijn zelf al
+         duidelijk genoeg wat ze zijn, geen aparte kop meer nodig. */}
 
       {/* ── De vijf, altijd zichtbaar ──
           Op volle kleur, niet weggedimd. Ze zijn hier geen knopjes maar de
@@ -1149,6 +1211,7 @@ export default function BreathScreen() {
             t={BREATH_STATES[k]}
             on={i === index}
             onPress={() => goTo(i)}
+            onInfoPress={() => setInfoOpen(true)}
             thumbPulseStyle={thumbPulseStyle}
           />
         ))}
@@ -1207,21 +1270,21 @@ export default function BreathScreen() {
           </Text>
         </Pressable>
       </Animated.View>
-      {/* Operator, 24 september 2026 (pasted Apple-referentie, "de tekst
-         met pijltje verbreekt de rust van de interface, i-icoontje rechts-
-         boven houdt de focus onderin op de cta"): "How it works" als
-         tekstlink onder de CTA vervangen door een klein info-icoontje
-         rechtsboven — zelfde `setInfoOpen`-popup, enkel de ingang
-         verandert. */}
-      <AnimatedPressable
-        onPress={() => setInfoOpen(true)}
-        onPressIn={onSpecAskPressIn}
-        onPressOut={onSpecAskPressOut}
-        hitSlop={10}
-        style={[s.howItWorksBtn, specAskPressStyle, fadeStyle]}
+
+      {/* Operator, 2 okt 2026, vervolg ("terug uit een sessie land je hier
+         zonder pad naar het intro-scherm, verwarrend"): i.p.v. een pad
+         terug naar de intro-overlay te herstellen (die skip-na-sessie-
+         logica is zelf ook bewust zo gebouwd — zie breath-entry.ts),
+         staat de instant-ingang nu OOK hier, zelfde plek/stijl als op de
+         intro-overlay. Overal beschikbaar i.p.v. navigatie-acrobatiek om
+         er te raken — zo zou Apple dit oplossen. */}
+      <Pressable
+        onPress={() => router.push('/feel-now' as never)}
+        hitSlop={8}
+        style={s.feelNowLink}
       >
-        <Info size={18} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
-      </AnimatedPressable>
+        <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
+      </Pressable>
 
       {/* Operator, 8 september 2026 (2e ronde): "verwijder more than
          breathwork" — sluitregel weer weg. */}
@@ -1379,15 +1442,55 @@ const s = StyleSheet.create({
      eerstvolgende vrije hoek en behoudt dezelfde bedoeling: een rustig
      hoekicoontje, niet meer een tekstlink die de aandacht van de CTA
      wegtrekt. */
+  /* Operator, 2 okt 2026 ("i-knop moet bij de knop zelf staan, nu niet
+     duidelijk wat dat is"): was `position:absolute, left:10, top:56` —
+     helemaal in de linkerbovenhoek, los van de CTA die hij uitlegt. Nu
+     gewoon een sibling IN `ctaRow` naast de CTA (zie JSX), zelfde
+     `iconBtn`-chrome (cirkel, dunne rand) als andere icoon-knoppen
+     elders in de app, zodat 'ie leest als "bij deze knop hoort uitleg"
+     i.p.v. een losstaand element. */
   howItWorksBtn: {
-    position: 'absolute',
-    left: 10,
-    top: 56,
     width: 40,
     height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5,
+  },
+  /* Operator, 2 okt 2026, vervolg ("groter/kleiner/even groot als Explore
+     modes?"): kleiner EN smaller dan de hoofd-CTA (die blijft 50px/volle
+     breedte) — een gecentreerde pil i.p.v. edge-to-edge, zodat dit
+     duidelijk de secundaire actie blijft, geen gelijkwaardig alternatief. */
+  /* Operator, 2 okt 2026 ("klopt de vorm t.o.v. de cta erboven?"): radius
+     19 (= helft van de hoogte) was een volledige pil-vorm — een andere
+     vorm-taal dan de hoofd-CTA, die app-breed vast op `borderRadius:14`
+     staat (zie `cta` hierboven). Apple onderscheidt primair/secundair via
+     vulling en gewicht, nooit via een andere hoekvorm — nu gelijkgetrokken. */
+  /* Operator, 2 okt 2026 ("instant sessions even groot maken als explore
+     modes en set calm control..."): was een kleinere pil (38px, auto-
+     breedte) — nu dezelfde maat als de hoofd-CTA's (`introCtaMatch`/
+     `cta`: 50px hoog, volle breedte via `marginHorizontal:26`). Blijft
+     wel de ghost-stijl (transparant, enkel een rand) — enkel de
+     AFMETING matcht, niet de vulling, zodat het duidelijk de secundaire
+     actie blijft. */
+  feelNowLink: {
+    marginTop: 14,
+    height: 50,
+    marginHorizontal: 26,
+    alignSelf: 'stretch',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feelNowLinkTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 16,
+    letterSpacing: 0.1,
+    color: '#ffffff',
   },
   goalBtn: {
     position: 'absolute',
@@ -1397,14 +1500,7 @@ const s = StyleSheet.create({
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
     zIndex: 5,
-  },
-  goalBtnLbl: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 9.5,
-    letterSpacing: 0.3,
-    color: 'rgba(255,255,255,0.55)',
   },
   /* Licht gewicht met veel letterafstand, zoals de koppen in de onboarding.
      Het gewicht doet niets, de ruimte doet alles. */
@@ -1448,23 +1544,6 @@ const s = StyleSheet.create({
      tot dit blok, exact hetzelfde patroon als breath-welcome.tsx (zonder
      die begrenzing centreert de mandala zich op de HELE pagina i.p.v.
      achter de kop — bekende bug uit die flow). */
-  /* Operator, 8 september 2026 (5e ronde): "choose your state in grijs
-     kleine hoofdletters boven de cirkels zetten centreel" — vervangt de
-     vaste kop bovenaan (die zelf al twee eerdere pogingen doorging, zie
-     git-historie) volledig. Klein, grijs, geen sluier/schaduw nodig — dit
-     label zit dicht genoeg boven de rij van vijf om altijd over de
-     donkerdere onderkant van de foto te vallen. */
-  /* Operator, 11 september 2026: exacte specificatie — 13px Bold,
-     letterSpacing +1.5. Was semibold/12px/1.6. */
-  chooseStateLabel: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 13,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
   spec: {
     marginTop: 12,
     fontFamily: BrandFonts.semibold,
@@ -1485,21 +1564,40 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
 
-  /* ── De uitleg-popup ── */
+  /* ── De uitleg-popup ── Operator, 2 okt 2026 ("popup aanpassen van
+     onder en done, achtergrond dimmen"): van gecentreerde fade-kaart naar
+     vanonder-opschuivend vel — zelfde patroon als feel-now.tsx/
+     breath-setup.tsx se duur-infosheet. */
   infoBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.58)',
+    justifyContent: 'flex-end',
   },
   infoCard: {
-    width: '100%',
-    borderRadius: 22,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     backgroundColor: '#161616',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    padding: 22,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+  },
+  infoGrip: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: 10,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  infoDoneTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
   },
   /* Operator, 7 september 2026 (typografie-feedback): "vrij veel bold —
      high-end interfaces gebruiken contrast tussen regular/medium/semibold
@@ -1564,15 +1662,6 @@ const s = StyleSheet.create({
     lineHeight: 16,
     color: 'rgba(255,255,255,0.5)',
   },
-  infoBtn: {
-    marginTop: 22,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, letterSpacing: 0.8 },
 
   /* Operator, 11 september 2026: "cta hier is beetje klein, is dat
      professioneel en zou apple dat zo doen?" — nee: dit was een
@@ -1582,16 +1671,17 @@ const s = StyleSheet.create({
      primaire actie op een scherm is precies dat: breed en prominent, geen
      kleine pil. `marginHorizontal` i.p.v. `alignSelf:'center'` zodat hij
      nu ook stretcht — zelfde breedte-taal als het setup-scherm. */
+  /* Operator, 2 okt 2026 ("i bij de cta" → vervolg "cta moet gecentreerd
+     blijven, zet de i boven de state-cirkel"): de rij-variant (CTA +
+     info-knop naast elkaar) is terug uitgedraaid — de "i" hoort nu bij
+     de staat-cirkel, niet bij de CTA. `cta` weer de oorspronkelijke,
+     volle-breedte/gecentreerde marges. */
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     marginHorizontal: 26,
-    /* Operator, 7 september 2026: "de cta op eerste pagina beetje naar
-       boven" — 26 → 14.
-       Operator, 11 september 2026: "cta nog beetje laten zakken, dicht bij
-       how it works" — verder omlaag, samen met de bredere vorm hierboven. */
     marginTop: 34,
     height: 50,
     /* Operator, zelfde dag: "vorm van de cta is anders dan onboarding, is
@@ -1636,6 +1726,18 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
   },
   thumbCol: { width: THUMB_COL, alignItems: 'center' },
+  /* Boven de cirkel, gecentreerd binnen de kolom — `thumbCol` is al
+     `alignItems:'center'`, dus `width:'100%'` + `alignItems:'center'`
+     hier volstaat om de knop te centreren zonder de cirkel se eigen
+     breedte te hoeven kennen. */
+  thumbInfoBtn: {
+    position: 'absolute',
+    top: -24,
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 4,
+    zIndex: 2,
+  },
   /* Geen kader om de vier die je niet gekozen hebt, en géén `overflow:
      hidden`: de zonnestralen en de punten van het kristal steken buiten hun
      cirkel uit, en afgesneden stralen zijn precies wat een illustratie tot
@@ -1648,7 +1750,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbSelected: { transform: [{ scale: 1.1 }] },
+  /* Operator, 2 okt 2026 ("cirkel naar boven laten gaan, samen met de i"):
+     translateY toegevoegd naast de bestaande schaal — zelfde -6 als de
+     "i"-knop hierboven (`thumbInfoBtn`'s inline transform), zodat beide
+     als één geheel omhoog schuiven bij selectie. */
+  thumbSelected: { transform: [{ scale: 1.1 }, { translateY: -6 }] },
   /* Operator, 18 september 2026 ("geen kleur, cirkels hebben omlijning"):
      dunne cirkelrand i.p.v. een gevulde schijf ÉN i.p.v. de vorige, apart
      uitvergrote `thumbRing` — doorzichtig middenvlak, enkel de rand

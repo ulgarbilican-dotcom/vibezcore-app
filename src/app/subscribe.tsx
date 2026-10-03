@@ -60,7 +60,7 @@ import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { validateEmail, emailHintText } from '@/utils/validate-email';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -407,7 +407,24 @@ export default function SubscribeScreen() {
   };
 
   /* ── Sub-flow: account-create wanneer nodig, dan IAP popup ─── */
+  /* Operator, 4 okt 2026 (smoothness-audit: "betrouwbaarheid bij
+     aantikken, geen freeze"): deze functie triggert een ECHTE aankoop —
+     de impliciete bescherming (`phase` weg van `'form'` zodra de knop
+     niet meer getoond wordt) is niet synchroon, dus een zeer snelle
+     dubbeltik vóór de eerste re-render kon `purchase()` tweemaal
+     aanroepen. `runningRef` is wél synchroon binnen dezelfde JS-tick —
+     zelfde ref-guard-aanpak als breath-session.tsx's `startingRef`. */
+  const runIapFlowRunningRef = useRef(false);
   const runIapFlow = async () => {
+    if (runIapFlowRunningRef.current) return;
+    runIapFlowRunningRef.current = true;
+    try {
+      await runIapFlowImpl();
+    } finally {
+      runIapFlowRunningRef.current = false;
+    }
+  };
+  const runIapFlowImpl = async () => {
     setErrMsg(null);
     /* Iter v230 (2026-07-08, audit BUG 4): tier-switch attempt → stuur
        user naar Play Store change-plan flow ipv rauwe already_owned error.
@@ -1108,7 +1125,8 @@ export default function SubscribeScreen() {
                 <Text style={s.donePerkTitle}>
                   During your trial, you have access to:
                 </Text>
-                <Text style={s.donePerkLine}>· All 49 Breathwork sessions — every state, every rhythm</Text>
+                {/* Operator, 1 okt 2026: "49" was fout — correct: 64. */}
+                <Text style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</Text>
                 <Text style={s.donePerkLine}>
                   · {TRIAL_SESSION_COUNT} Audio Library sessions
                 </Text>
@@ -1120,7 +1138,7 @@ export default function SubscribeScreen() {
             ) : (
               <>
                 <Text style={s.donePerkTitle}>One membership, you now have access to:</Text>
-                <Text style={s.donePerkLine}>· All 49 Breathwork sessions — every state, every rhythm</Text>
+                <Text style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</Text>
                 <Text style={s.donePerkLine}>
                   · {TOTAL_SESSION_COUNT} Audio Library sessions across 4 pillars of growth
                 </Text>
@@ -1258,8 +1276,10 @@ export default function SubscribeScreen() {
           enableOnAndroid={true}
         >
           <Text style={s.heading}>Choose your plan</Text>
+          {/* Operator, 1 okt 2026: "49" was fout — correct: 64 (15
+             technieken × hun benoemde duur-varianten). */}
           <Text style={s.sub}>
-            All 49 breathwork sessions — every state, every rhythm — plus
+            All 64 guided sessions — every state, every rhythm — plus
             the full VIBEZCORE Audio Library. Cancel anytime.
           </Text>
 
