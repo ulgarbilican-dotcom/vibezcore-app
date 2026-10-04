@@ -1,0 +1,15 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.ubili.vibezcoreapp.statehaptics'
+version = '1.0.0'
+
+android {
+  namespace "com.ubili.vibezcoreapp.statehaptics"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}

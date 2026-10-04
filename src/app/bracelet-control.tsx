@@ -29,6 +29,7 @@ import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
 import {
+  pauseModeSessionHaptic,
   playModePreviewHaptic,
   playModeSessionHaptic,
   stopModePreviewHaptic,
@@ -2888,17 +2889,18 @@ function ActiveSessionScreen({
      aan. Er bestaat nog geen echte bracelet-hardware (CLAUDE.md), dus de
      telefoon moet tijdens een actieve sessie zelf de rol van de pols-
      haptiek spelen, niet enkel in een losse preview-popup. Start/stopt
-     met de echte sessie, pauzeert mee met isPaused. Na resume start het
-     tempo opnieuw op rust-hartslag en daalt/stijgt weer geleidelijk —
-     zie services/bracelet-haptics.ts (Motokawa-protocol). */
+     met de echte sessie, pauzeert mee met isPaused (hervatten binnen 2
+     min gaat verder waar de curve was — zie services/bracelet-haptics.ts). */
   useEffect(() => {
     if (isPaused) {
-      stopModePreviewHaptic();
+      pauseModeSessionHaptic();
       return;
     }
-    playModeSessionHaptic(activeMeta.mode);
-    return () => stopModePreviewHaptic();
+    const remainingSec = getBraceletMonitorRemainingSec() ?? status.remainingMinutes * 60;
+    playModeSessionHaptic(activeMeta.mode, remainingSec);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMeta.mode, isPaused]);
+  useEffect(() => stopModePreviewHaptic, []);
 
   /* Tijdens pause is sessionActive false maar pausedAt heeft de
      remaining. Tijdens running zit 't in status.remainingMinutes. */

@@ -91,21 +91,32 @@ activeert. De 5 modi zijn dus 5 eindtempo's op één arousal-as.
    aansluiten bij waar iemand zit, dan leiden — de gebruiker voelt eerst
    "de eigen hartslag". Motokawa Study 2 hield ook 10 s op 75 bpm vóór de
    daling (getest samen met muziek).
-2. **2 min glijden** naar het eindtempo, voor élke modus dezelfde VASTE
-   duur — zo deed Motokawa Study 1 het (vibratie zonder muziek,
-   significant): de duur lag vast, de grootte van de daling verschilde
-   per persoon. Een vaste snelheid (eerdere versie, tot ~3 min) was een
-   eigen interpretatie zonder bron en is vervangen.
-3. Daarna het eindtempo aanhouden. Of het effect blijft na die 2 min is
-   niet gemeten (de studie stopte daar).
+2. **Glijden** naar het eindtempo. De duur volgt het bewijs per modus:
+   - **Grote daling (Clarity, Sleep): 2 min.** Motokawa Study 1
+     (vibratie zonder muziek): glijden in een vaste 2 min was
+     significant, een vast tempo meteen op 50 bpm NIET. Korter is niet
+     getest. (Een eerdere versie gebruikte een vaste snelheid tot ~3 min
+     — eigen interpretatie zonder bron, vervangen.)
+   - **Calm Control (−20%): 30 s.** Doppel sprong zonder glijden meteen
+     naar −20% onder de hartslag, en dat werkte.
+   - **Focus, Boost: 30 s.** Valente en Wang gebruikten meteen een vast
+     snel tempo; een stijgend verloop is nergens getest.
+   - 30 s is een productkeuze tussen "meteen" (getest) en "2 min"
+     (getest) in, om de overgang zacht te houden.
+3. Daarna het eindtempo aanhouden. Of het effect blijft na het glijden
+   is niet gemeten (Motokawa stopte na 2 min).
+4. **Pauze:** hervatten binnen 2 min gaat verder waar de curve was;
+   later hervatten begint opnieuw met de basislijn (productlogica: het
+   lichaam drijft terug op ongeveer de tijdschaal waarop het werd
+   meegenomen — geen studie).
 
-| Staat | Eindtempo | Verloop na 10 s basislijn | Bewijsniveau |
+| Staat | Eindtempo | Glijden na 10 s basislijn | Bewijsniveau |
 |---|---:|---:|---|
 | Sleep | 40 bpm (0,67 Hz) | 2 min dalend | 🟠 Doppel's ondergrens; dalen tot hier niet getest |
 | Clarity & Relax | 50 bpm (0,83 Hz) | 2 min dalend | 🟢 Motokawa Study 1 (exact) |
-| **Calm Control** | **60 bpm (1,0 Hz)** | 2 min dalend | 🟢 Doppel (−20% onder rust-HR) + Motokawa-verloop |
-| Sharp Focus | 90 bpm (1,5 Hz) | 2 min stijgend | 🟡 Hypothese binnen getest bereik (75–110); stijgend verloop niet getest |
-| Boost | 110 bpm (1,83 Hz) | 2 min stijgend | 🟢 eindtempo Valente 2024 (HR↑, HRV↓); stijgend verloop niet getest |
+| **Calm Control** | **60 bpm (1,0 Hz)** | 30 s dalend | 🟢 Doppel (−20%, zonder glijden effectief) |
+| Sharp Focus | 90 bpm (1,5 Hz) | 30 s stijgend | 🟡 Hypothese binnen getest bereik (75–110) |
+| Boost | 110 bpm (1,83 Hz) | 30 s stijgend | 🟢 eindtempo Valente 2024 (HR↑, HRV↓) |
 
 **Waarschuwing (Wang et al. 2023):** sneller dan de eigen hartslag
 verhoogt hartslag én zelf-gerapporteerde angst. Boost/Focus = arousal,
@@ -130,20 +141,29 @@ lub→dub = 30% van de cyclus, max 350 ms (fysiologisch S1–S2-interval).
 Weinig tikken per cyclus is bewust: affective-ratings-literatuur vindt
 herhaalde korte pulsen "alarming/unpleasant", lange/rustige "pleasant".
 
-**Amplitude:** lager = minder arousal en aangenamer.
+**Amplitude:** lager = minder arousal en aangenamer. Doppel liet de
+gebruiker zelf de intensiteit kiezen — een intensiteitsregelaar is de
+logische volgende stap.
 
-| Staat | lub | dub |
+| Staat | lub / dub (Android native, 0–255) | Terugval expo-haptics |
 |---|---|---|
-| Sleep | Soft | Soft |
-| Clarity & Relax | Soft | Soft |
-| Calm Control | Light | Soft |
-| Sharp Focus | Medium | Light |
-| Boost | Heavy | Medium |
+| Sleep | 18 / 13 | Soft / Soft |
+| Clarity & Relax | 21 / 15 | Soft / Soft |
+| Calm Control | 24 / 17 | Soft / Soft |
+| Sharp Focus | 45 / 32 | Medium / Light |
+| Boost | 65 / 45 | Heavy / Medium |
 
-Op telefoon via `expo-haptics` (Android: Soft/Light = 30/255, Medium =
-50, Heavy = 70 — geverifieerd in de package-broncode). React Native's
-rauwe `Vibration`-API vuurt altijd op volle kracht en is daarom
-ongeschikt.
+Pulsduur: lub 45 ms, dub 35 ms (boven de ~25–30 ms waarnemingsdrempel).
+
+**Afspelen op Android** (`modules/state-haptics`): de hele curve gaat in
+één keer als waveform naar de systeem-trilmotor, met echte amplitudes.
+Dat is subtieler dan expo-haptics' zachtste stand (30/255) én loopt door
+zonder JS-timers — die bevriest Android als het scherm op slot staat
+(gemeten augustus 2026, zie `modules/breath-background`). Zonder
+amplitude-sturing (of op iOS) valt de app terug op expo-haptics (Android:
+Soft/Light = 30/255, Medium = 50, Heavy = 70, geverifieerd in de
+package-broncode). React Native's rauwe `Vibration`-API vuurt altijd op
+volle kracht en is daarom ongeschikt.
 
 **Bracelet-firmware (ontwerpregel, nog te bouwen):** de DRV2605L kan
 continue amplitude sturen. Daar mag bovenop het hartslagritme een

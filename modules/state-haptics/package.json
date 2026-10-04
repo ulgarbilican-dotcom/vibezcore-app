@@ -1,0 +1,8 @@
+{
+  "name": "state-haptics",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — speelt een volledige State Control-hartslagcurve (tijden + amplitudes) in één keer af op de trilmotor, met echte amplitude-sturing, los van de JS-thread.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}
