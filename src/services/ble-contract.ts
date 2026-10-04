@@ -32,11 +32,23 @@
    breath-states.ts. */
 
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — BLE Contract (spec v2.3 §8)
+   VIBEZCORE — BLE Contract (spec v2.4 §8)
 
    This is the BINDING contract between app and bracelet. Both the simulation
    (now) and the real nRF52 firmware (later) implement EXACTLY this. Nothing
-   here is invented — every field maps 1:1 to Haptic_Bracelet_Spec_v2.3 §8.
+   here is invented — every field maps 1:1 to Haptic_Bracelet_Spec_v2.4 §8.
+
+   GEWIJZIGD t.o.v. v2.3 (4 okt 2026, operator deelde de volledige v2.4-
+   spec): Pause/Resume is nu een ECHT BLE-commando (0x04/0x05), niet langer
+   een workaround op de app-kant. bracelet-control.tsx deed tot nu toe
+   "pause" door een echte Stop te sturen + de resterende tijd lokaal te
+   onthouden (`pausedAt`-boekhouding, zie de operator-comments daar bij
+   "spec §8.1 kent geen Pause-opcode") — dat was CORRECT voor v2.3, dat
+   commando bestond toen simpelweg niet. Dit bestand + bracelet-sim.ts
+   spreken nu v2.4; bracelet-control.tsx's eigen pause-workaround is
+   NOG NIET omgebouwd naar de echte opcodes — dat is een aparte, grotere
+   stap (de huidige workaround lost een stapeling van eerdere mount/
+   resume-bugs op en moet voorzichtig vervangen worden, niet blind).
 
    The app NEVER shows technical params (PPS, burst_ms, amplitude, RTP) to the
    user (spec §11.5). Those live only in firmware. This file is the only
@@ -52,25 +64,28 @@ export enum BraceletMode {
   Delta = 4, // app name: Sleep
 }
 
-/* Command byte — spec §8.1 */
+/* Command byte — spec v2.4 §8.1 (0x04/0x05 zijn NIEUW t.o.v. v2.3) */
 export enum BleCommand {
   Start = 0x01,
   Stop = 0x02,
   StatusRequest = 0x03,
+  Pause = 0x04,
+  Resume = 0x05,
 }
 
-/* App → Bracelet — spec §8.1 ble_command_t (3 bytes) */
+/* App → Bracelet — spec v2.4 §8.1 ble_command_t */
 export interface BleCommandPacket {
   mode: BraceletMode;
   duration: number; // minutes — firmware clamps automatically (spec §7.1)
   command: BleCommand;
 }
 
-/* Bracelet → App — spec §8.2 ble_status_t (6 bytes) */
+/* Bracelet → App — spec v2.4 §8.2 ble_status_t */
 export interface BleStatusPacket {
-  sessionActive: boolean; // spec: session_active 0/1
+  sessionActive: boolean; // spec: session_active — 0=idle, 1=actieve OF gepauzeerde sessie
+  sessionPaused: boolean; // spec v2.4 NIEUW: session_paused — 0=actief lopend, 1=gepauzeerd
   currentMode: BraceletMode; // spec: current_mode 0–4
-  remainingMinutes: number; // spec: remaining_minutes
+  remainingMinutes: number; // spec: remaining_minutes — bevroren tijdens pause
   batteryPercent: number; // spec: battery_percent 0–100
   charging: boolean; // spec: charging 0/1
   fault: boolean; // spec: fault 0=OK 1=DRV2605L fault

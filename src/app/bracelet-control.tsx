@@ -28,6 +28,7 @@
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
+import { playModePreviewHaptic, stopModePreviewHaptic } from '@/services/bracelet-haptics';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -1183,19 +1184,41 @@ function ModeDetailModal({
      Android) zodat de CTA niet onder system-UI valt. */
   const insets = useSafeAreaInsets();
 
+  /* "Feel it" — operator-testknop (4 okt 2026): laat de omschreven textuur
+     ("Sharp, brisk"/"Steady rhythmic"/...) voelen op de telefoon zelf, zie
+     services/bracelet-haptics.ts voor de toelichting waarom dit GEEN kopie
+     van de echte firmware-puls is. Stopt altijd bij het sluiten van deze
+     modal — nooit laten doorlopen nadat de popup weg is. */
+  const [feeling, setFeeling] = useState(false);
+  useEffect(() => stopModePreviewHaptic, []);
+  const toggleFeel = () => {
+    Haptics.selectionAsync();
+    if (feeling) {
+      stopModePreviewHaptic();
+      setFeeling(false);
+    } else {
+      playModePreviewHaptic(mode);
+      setFeeling(true);
+    }
+  };
+  const handleClose = () => {
+    stopModePreviewHaptic();
+    onClose();
+  };
+
   return (
     <Modal
       visible
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
       statusBarTranslucent
     >
       <View style={s.modeModalRoot}>
         {/* Backdrop — tap-anywhere-to-close */}
         <Pressable
           style={StyleSheet.absoluteFill}
-          onPress={onClose}
+          onPress={handleClose}
           accessibilityLabel="Close mode details"
         />
         {/* Bottom sheet card */}
@@ -1222,7 +1245,7 @@ function ModeDetailModal({
              geschoven met insets.top. */}
           <Pressable
             style={[s.modeModalClose, { top: insets.top + 14 }]}
-            onPress={onClose}
+            onPress={handleClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel="Close"
           >
@@ -1248,6 +1271,18 @@ function ModeDetailModal({
           {/* How the bracelet helps — state-language description */}
           <Text style={s.modeModalSectionLbl}>How the bracelet helps</Text>
           <Text style={s.modeModalDesc}>{desc.braceletDoes}</Text>
+
+          {/* "Feel it" — operator-testknop, zie toelichting hierboven bij
+             `feeling`. Enkel een voelbare preview op de telefoon, geen
+             firmware-simulatie. */}
+          <Pressable
+            onPress={toggleFeel}
+            style={[s.feelItBtn, { borderColor: meta.color }]}
+          >
+            <Text style={[s.feelItBtnTxt, { color: meta.color }]}>
+              {feeling ? 'Stop feeling it' : 'Feel it'}
+            </Text>
+          </Pressable>
 
           {/* Use this for — ideals checklist */}
           <Text style={s.modeModalSectionLbl}>Use this for</Text>
@@ -3921,6 +3956,12 @@ export default function BraceletControl() {
     resumeSnapshot
       ? {
           sessionActive: !resumeSnapshot.paused,
+          /* v2.4-veld — deze hydratie-snapshot gebruikt nog de oude
+             pause-is-een-Stop-semantiek (zie ble-contract.ts-toelichting),
+             dus altijd false hier; de eerste echte poll erna corrigeert
+             dit zodra bracelet-control.tsx zelf naar CMD_PAUSE/RESUME
+             omgebouwd wordt. */
+          sessionPaused: false,
           currentMode: resumeSnapshot.mode as BraceletMode,
           remainingMinutes: Math.max(0, Math.ceil(resumeRemainingSec / 60)),
           batteryPercent: 100,
@@ -5671,6 +5712,21 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     lineHeight: 25,
     letterSpacing: -0.1,
+  },
+  /* "Feel it" — zelfde ghost-button-chrome als elders (rand in meta.color,
+     geen gevulde achtergrond — CTA-chrome blijft voorbehouden aan de
+     echte Start/Choose-knoppen, dit is een secundaire testactie). */
+  feelItBtn: {
+    marginTop: 14,
+    alignSelf: 'flex-start',
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  feelItBtnTxt: {
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
   },
   modeModalIdeals: {
     gap: 10,

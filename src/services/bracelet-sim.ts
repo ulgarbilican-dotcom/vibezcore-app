@@ -1,20 +1,25 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Simulated Bracelet (pro-approach, spec v2.3 faithful)
+   VIBEZCORE — Simulated Bracelet (pro-approach, spec v2.4 faithful)
 
    Implements BraceletTransport behind the EXACT BLE contract. Behaves like
    the real firmware so the bracelet app is fully demonstrable now (investors,
    Kickstarter pre-launch). When real firmware exists, RealBracelet implements
    the same interface and USE_SIMULATED_BLE flips — UI unchanged.
 
-   Spec-faithful behaviour (STRUCTUUR_en_BLE_contract_v2 §7):
+   Spec-faithful behaviour (Haptic Bracelet Spec v2.4 §7/§8/§9/§18):
      - CMD_START clamps duration to mode bounds (spec §7.1)
      - session runs autonomously on an internal timer (spec §8.3) — keeps
        running regardless of "connection"
+     - CMD_PAUSE/CMD_RESUME (v2.4 NIEUW, §8.1/§8.4): echte state-transitie
+       IDLE→ACTIVE→PAUSED→ACTIVE, geen Stop+lokale-boekhouding-omweg meer
+       nodig op firmware/sim-niveau (de app-kant, bracelet-control.tsx,
+       gebruikt dit nog niet — zie toelichting in ble-contract.ts)
+     - PAUSE > 60 min → sessie auto-beëindigd (spec §9 rule 9, idle timeout)
      - battery drains gradually during a session
      - <20% low battery: internal amplitude -20% (spec §3B); app shows only
        battery% (no amplitude — spec §11.5)
-     - <5% critical: session ends, motor off (spec §9 rule 3)
-     - charging detected: session stops immediately (spec §9 rule 2)
+     - <5% critical: session ends, motor off (spec §9 rule 3) — ook tijdens PAUSE (§8.4)
+     - charging detected: session stops immediately (spec §9 rule 2) — ook tijdens PAUSE (§8.4)
      - fault: session ends, fault flag set (spec §9 rule 4)
      - invalid mode >4 ignored / bad duration clamped (spec §9 rule 6/7)
    ─────────────────────────────────────────────────────────────────────────── */
@@ -44,10 +49,14 @@ export class SimulatedBracelet implements BraceletTransport {
   private conn: BleConnectionState = 'disconnected';
   private connCbs: ((s: BleConnectionState) => void)[] = [];
 
-  /* Session state — mirrors what real firmware tracks internally. */
-  private sessionActive = false;
+  /* Session state — mirrors what real firmware tracks internally.
+     spec v2.4 §18 state machine: IDLE → ACTIVE ⇄ PAUSED → IDLE/FAULT. */
+  private sessionActive = false; // session_active: idle vs. (active OR paused)
+  private sessionPaused = false; // session_paused — spec v2.4 NIEUW
   private currentMode: BraceletMode = BraceletMode.Alpha;
-  private sessionEndsAt = 0; // epoch ms — autonomous timer (spec §8.3)
+  private sessionEndsAt = 0; // epoch ms — autonomous timer (spec §8.3), enkel geldig terwijl ACTIVE
+  private pausedRemainingMs = 0; // bevroren resterende tijd, enkel geldig terwijl PAUSED
+  private pausedAt = 0; // epoch ms — voor de 60-min pause-timeout (spec §9 rule 9)
   private clampedDuration = 0; // minutes, after spec §7.1 clamp
 
   private battery = SIM.startBattery;
@@ -101,6 +110,9 @@ export class SimulatedBracelet implements BraceletTransport {
     }
 
     if (packet.command === BleCommand.Start) {
+      /* Spec §8.4: CMD_START tijdens PAUSED wordt genegeerd — moet eerst
+         STOP of RESUME. Enkel vanuit IDLE start een nieuwe sessie. */
+      if (this.sessionActive) return;
       this.tickBattery();
       if (this.battery < 5) return; // can't start on critical battery
       this.fault = false;
@@ -108,11 +120,38 @@ export class SimulatedBracelet implements BraceletTransport {
       /* Spec §7.1 / §9 rule 7: always clamp duration to mode bounds. */
       this.clampedDuration = clampDuration(packet.mode, packet.duration);
       this.sessionActive = true;
+      this.sessionPaused = false;
       this.sessionEndsAt = Date.now() + this.clampedDuration * 60_000;
     } else if (packet.command === BleCommand.Stop) {
+      /* Spec §8.4: Stop tijdens PAUSED = sessie beëindigd ("pause + stop
+         = end") — endSession() dekt dat al, geen apart pad nodig. */
       this.endSession();
+    } else if (packet.command === BleCommand.Pause) {
+      this.pauseSession();
+    } else if (packet.command === BleCommand.Resume) {
+      this.resumeSession();
     }
     /* StatusRequest handled by requestStatus() (the app's 5s poll). */
+  }
+
+  /* Spec §7.1/§8.4 CMD_PAUSE: enkel geldig vanuit ACTIVE. "CMD_PAUSE
+     tijdens IDLE of PAUSED → genegeerd (geen error)". */
+  private pauseSession() {
+    if (!this.sessionActive || this.sessionPaused) return;
+    this.pausedRemainingMs = Math.max(0, this.sessionEndsAt - Date.now());
+    this.sessionPaused = true;
+    this.pausedAt = Date.now();
+    /* real firmware: motor_off() + timers bevriezen — niets te doen in sim. */
+  }
+
+  /* Spec §7.1/§8.4 CMD_RESUME: enkel geldig vanuit PAUSED. "CMD_RESUME
+     tijdens IDLE of ACTIVE → genegeerd". */
+  private resumeSession() {
+    if (!this.sessionActive || !this.sessionPaused) return;
+    this.sessionEndsAt = Date.now() + this.pausedRemainingMs;
+    this.sessionPaused = false;
+    this.pausedRemainingMs = 0;
+    this.pausedAt = 0;
   }
 
   /* ── Status poll (app calls every 5s — spec §8.3/§11.4) ──────────────── */
@@ -123,7 +162,17 @@ export class SimulatedBracelet implements BraceletTransport {
     this.evaluateSafety();
 
     let remaining = 0;
-    if (this.sessionActive) {
+    if (this.sessionActive && this.sessionPaused) {
+      /* Spec §8.2: "remaining_minutes ... bij pause: bevroren" — de
+         ACTIEVE klok staat stil, dus NOOIT herberekenen uit sessionEndsAt
+         (die loopt hier niet mee), enkel de bevroren waarde tonen. */
+      remaining = Math.ceil(this.pausedRemainingMs / 60_000);
+      /* Spec §9 rule 9: pause > 60 min → sessie auto-beëindigd. */
+      if (Date.now() - this.pausedAt >= 60 * 60_000) {
+        this.endSession();
+        remaining = 0;
+      }
+    } else if (this.sessionActive) {
       remaining = Math.max(
         0,
         Math.ceil((this.sessionEndsAt - Date.now()) / 60_000)
@@ -137,6 +186,7 @@ export class SimulatedBracelet implements BraceletTransport {
 
     return {
       sessionActive: this.sessionActive,
+      sessionPaused: this.sessionPaused,
       currentMode: this.currentMode,
       remainingMinutes: remaining,
       batteryPercent: Math.round(this.battery),
@@ -155,7 +205,10 @@ export class SimulatedBracelet implements BraceletTransport {
 
     if (this.charging) {
       this.battery = Math.min(100, this.battery + minutes * 2.0);
-    } else if (this.sessionActive) {
+    } else if (this.sessionActive && !this.sessionPaused) {
+      /* Motor draait enkel tijdens een ACTIEVE (niet gepauzeerde) sessie —
+         tijdens PAUSED is de motor uit (spec §7.1: "motor uit, timers
+         bevroren"), dus idle-verbruik, geen sessie-verbruik. */
       this.battery = Math.max(0, this.battery - minutes * SIM.drainPerMinute);
     } else {
       this.battery = Math.max(
@@ -187,7 +240,10 @@ export class SimulatedBracelet implements BraceletTransport {
 
   private endSession() {
     this.sessionActive = false;
+    this.sessionPaused = false;
     this.sessionEndsAt = 0;
+    this.pausedRemainingMs = 0;
+    this.pausedAt = 0;
     /* real firmware: motor_off() first — nothing to do in sim. */
   }
 
