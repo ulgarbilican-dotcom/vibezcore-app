@@ -1,126 +1,197 @@
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Voelbare preview van de 5 bracelet-modi, op de telefoon.
 
-   HERONTWORPEN 4 okt 2026, op basis van grondig geverifieerd onderzoek
-   (elke bron hieronder apart gecheckt tegen de originele publicatie —
-   zie het gesprek). Vervangt het eerdere ontwerp dat op het ongeverifieerde
-   "Haptic Bracelet Spec v2.4"-document leunde.
+   HERBOUWD 4 okt 2026 — TWEEDE RONDE (operator: "ik heb het gevoel dat er
+   verkeerd wordt geredeneerd, er is geen enkel haptic ritme dat rust gaat
+   brengen, bv. sleep voelt te snel/hard"). De EERSTE fix van vandaag
+   (commit met PWM-achtige "sine-zwel" van 7 micro-tikjes) loste het
+   verkeerde probleem op. Grondig herzocht, elke bron opnieuw apart
+   gecheckt tegen de originele publicatie:
 
-   ARCHITECTUUR: twee gescheiden lagen, niet één PPS-getal.
-     - CARRIER: de fysieke resonantiefrequentie van de LRA-motor zelf
-       (±200-250 Hz voor een typische coin-LRA zoals de Vybronics
-       VG0640001D — 210 Hz resonantie, geverifieerd tegen de echte
-       datasheet). Vast, verandert niet per modus. De telefoon heeft een
-       ANDER motortype — dit is dus sowieso niet na te bootsen, net als
-       eerder al gedocumenteerd.
-     - ENVELOPE/RITME: hoe vaak een puls terugkomt. DIT is wat de 5 modi
-       van elkaar onderscheidt, en waar onderstaande getallen op rusten.
-   Deze scheiding is zelf het patroon dat de geciteerde onderzoeken
-   gebruiken (bv. Hallihan & Siegle: 89 Hz carrier gemoduleerd op 0,1 Hz
-   of 4 Hz) — niet een losse aanname.
+   FOUT #1 — AMPLITUDE. React Native's `Vibration.vibrate(pattern)` stuurt
+   op Android `VibrationEffect.createWaveform(timings, amplitudes=-1, …)`
+   — amplitude -1 = VibrationEffect.DEFAULT_AMPLITUDE, dus ELKE puls
+   (ook de "zachte" 12-24ms randjes van de vorige zwel) vuurde op VOLLE
+   kracht af. Dat verklaart "hard": de vorm (duur) van een puls veranderen
+   deed niets aan hoe hard hij aanvoelde.
+     Oplossing: `expo-haptics` (al elders in de app gebruikt, bv. voor
+     tab-taps) gebruikt ZELF `VibrationEffect.createWaveform` met ECHTE,
+     lage amplitudes — geverifieerd in de package-broncode
+     (node_modules/expo-haptics/android/.../HapticsImpactType.kt):
+       Soft/Light  → 50ms @ amplitude 30/255 (≈12%)
+       Medium/Rigid→ 43ms @ amplitude 50/255 (≈20%)
+       Heavy       → 60ms @ amplitude 70/255 (≈27%)
+     Dit bestand gebruikt nu UITSLUITEND `Haptics.impactAsync(style)`,
+     zelf getimed via setTimeout — geen rauwe `Vibration` meer.
 
-   MECHANISME-KEUZE (4 okt 2026, herzien — zie het gesprek): er bestaan
-   twee aparte, allebei gevalideerde routes naar kalmerende pols-haptiek:
-     - PIV (0,08-0,15 Hz): werkt via EXPLICIETE ademhalings-synchronisatie
-       — de gebruiker ademt bewust mee.
-     - Doppel (~0,67-1,08 Hz, 20% onder rust-hartslag): werkt IMPLICIET —
-       geen ademinstructie, enkel een hartslag-achtig ritme.
-   VIBEZCORE's bracelet geeft GEEN ademinstructie (dat is een losse,
-   optionele laag) — Doppel is dus de mechanistisch betere match, niet
-   PIV. Eerdere versie van dit bestand koos per ongeluk tóch de
-   PIV-waardes; hersteld naar het Doppel-geankerde model.
+   FOUT #2 — AANTAL PULSEN PER CYCLUS. Onderzoek naar vibrotactiele
+   valentie (affective-ratings-literatuur, zie bronnen) is expliciet:
+   "repeated short vibrations were felt to be alarming and unpleasant"
+   terwijl "long vibrations were perceived as pleasant". De vorige zwel
+   (7 korte tikjes per cyclus) deed structureel het tegenovergestelde van
+   wat "kalm" vraagt — ongeacht de sinusvorm.
+     Oplossing: terug naar WEINIG pulsen per cyclus (1-2), niet veel.
 
-   PER MODUS, met bronvermelding en eerlijke vertrouwensgraad:
+   FOUT #3 — VORM VAN DOPPEL ZELF NIET GEBRUIKT. Doppel (de sterkste
+   directe bron, zie hieronder) is zelf geen "zwel" — de eigen
+   productbeschrijving noemt het expliciet "a double heartbeat-like
+   rhythm tactile sensation" (lub-dub, twee korte tikken per cyclus,
+   zoals een echt hartslaggeluid S1→S2). Vorige versie verzon een eigen
+   7-pulse sinusvorm die geen basis had in de geciteerde bron.
+     Oplossing: Sleep/Clarity/Calm Control spelen nu een ECHTE lub-dub
+     (1 of 2 tikken, Soft/Light) i.p.v. een zelfverzonnen zwel.
 
-   Calm Control — 0,97 Hz. 🟢 Directe evidence: Doppel, een gepubliceerde
-   RCT (Nature Sci Rep 2017) met een pols-wearable die ~20% ONDER
-   rust-hartslag trilt (gemiddeld 58,2 BPM ≈ 0,97 Hz) — significant
+   ARCHITECTUUR (ongewijzigd): envelopeHz (herhalingsritme) blijft het
+   Doppel-geankerde model — zie HAPTIC_RESEARCH_BASIS.md §5, "niet
+   verder wijzigen op basis van literatuur". Enkel de PULSVORM (aantal
+   tikken + amplitude per tik) binnen elke cyclus is herzien.
+
+   PER MODUS:
+
+   Sleep — 0,60 Hz, 1 zachte tik (Soft) per cyclus. Geen lub-dub: het
+   traagste/diepste ritme, bewust het minst aanwezige signaal — "long
+   [gap], pleasant" i.p.v. nog een extra tik toevoegen.
+
+   Clarity & Relax — 0,80 Hz, lub-dub (Soft+Soft) per cyclus.
+
+   Calm Control — 0,97 Hz, lub-dub (Soft+Light). 🟢 Dit is het enige punt
+   met directe evidence: Doppel, Azevedo et al. (2017, Scientific
+   Reports 7:2285) — pols-wearable, ~20% onder rust-hartslag (gem. 58,2
+   BPM ≈ 0,97 Hz), EIGEN "double heartbeat-like rhythm"-vorm, significant
    lagere skin-conductance (p=0,029) EN angst (p=0,007) vs controle.
+   Aanvullend: Zhou, Murata & Watanabe (2020, IEEE Haptics Symposium,
+   "The Calming Effect of Heartbeat Vibration") — tweede, onafhankelijke
+   hartslag-vibratie-studie die fysiologische ontspanning (HRV) bevestigt
+   via hetzelfde mechanisme.
 
-   Sleep — 0,60 Hz, Clarity — 0,80 Hz. 🟠 Extrapolatie/interpolatie onder
-   de Doppel-ankerwaarde — geen directe bron voor deze twee exacte
-   getallen, wel logisch (dieper dan "kalm" moet trager zijn).
+   Sharp Focus — 1,50 Hz, 1 brisk tik (Medium) per cyclus — bewust GEEN
+   lub-dub: ander karakter dan de kalme familie (scherp, alert), hogere
+   amplitude (Medium i.p.v. Soft) — vibrotactiele affective-ratings-
+   literatuur: amplitude correleert positief met arousal.
 
-   Sharp Focus — 1,50 Hz. 🟡 Ontwerp-hypothese: boven de Doppel-
-   ankerwaarde (Doppel's eigen studie beschrijft zelf "slow vibrations
-   calming, faster vibrations increase focus"), getemperd door
-   Yerkes-Dodson (focus = gematigde, niet piek-arousal — dus niet te
-   dicht bij Boost).
+   Boost — 2,75 Hz, 1 tik (Heavy) per cyclus — snelste ritme + hoogste
+   amplitude, zelfde arousal-principe verder doorgetrokken.
 
-   Boost — 2,75 Hz. 🟡 Ontwerp-hypothese: richting ondersteund (sneller
-   ritme → hogere ervaren urgentie, meerdere bronnen w.o. BoostMeUp),
-   geen bron valideert dit exacte getal.
+   GEVAARLIJKE RICHTING EXPLICIET VERMEDEN: "Increasing Heart Rate and
+   Anxiety Level with Vibrotactile and Audio Presentation of Fast
+   Heartbeat" (ACM, 2023) toont dat een VERSNELD hartslag-ritme angst/
+   hartslag juist VERHOOGT — bevestigt waarom Sleep/Clarity/Calm Control
+   trager dan rust-hartslag moeten blijven (wat al zo was) en nooit
+   sneller gemaakt mogen worden.
 
    NIET kan overeenkomen met echte hardware (platformgrens, geen
-   bouwfout): AMPLITUDE (React Native's Vibration-API kent geen
-   sterkteregeling) en een ECHTE vloeiende envelope. De "smooth"-modi
-   hieronder zijn dus NIET een echte PIV/Hallihan-stijl op-/afbouwende
-   golf — enkel een korte PULS PER CYCLUS (sparse pulse repetition).
-   Perceptueel een ander signaal dan een echte envelope; eerlijk zo
-   benoemd, niet verkocht als "smooth". Op echte firmware (met
-   amplitude-controle) hoort Sleep/Clarity/Calm Control wél een
-   vloeiende op-/afbouw te krijgen, Focus/Boost een scherpe pulse-train —
-   die keuze blijft overeind, enkel de telefoon kan 'm niet uitvoeren. */
+   bouwfout): de telefoon heeft een ander motortype dan de bracelet
+   (Vybronics VG0640001D LRA, 210 Hz resonantie) — dit blijft een
+   benadering, nu wel met echte lage amplitude i.p.v. enkel getimede
+   on/off-pulsen.
+
+   Primaire bronnen (elk apart gecheckt):
+   - Azevedo et al. (2017). Scientific Reports 7, 2285.
+     https://www.nature.com/articles/s41598-017-02274-2
+   - Zhou, Murata & Watanabe (2020). "The Calming Effect of Heartbeat
+     Vibration." IEEE Haptics Symposium (HAPTICS), 677–683.
+   - "Increasing Heart Rate and Anxiety Level with Vibrotactile and Audio
+     Presentation of Fast Heartbeat." ACM (2023).
+     https://dl.acm.org/doi/fullHtml/10.1145/3577190.3614161
+   - Vibrotactile affective-ratings-literatuur (amplitude ↔ arousal/
+     valence; "repeated short vibrations... alarming" vs "long
+     vibrations... pleasant") — samenvattend overzicht geciteerd in het
+     gesprek van 4 okt 2026.
+   - expo-haptics Android-broncode (amplitude-waardes per impact-style),
+     geverifieerd tegen node_modules/expo-haptics/android/.../
+     HapticsImpactType.kt in dit project. */
 
 import { BraceletMode } from './ble-contract';
-import { Vibration } from 'react-native';
+import * as Haptics from 'expo-haptics';
+
+type Beat = {
+  /** Wanneer (ms na cyclusstart) deze tik afvuurt. */
+  atMs: number;
+  style: Haptics.ImpactFeedbackStyle;
+};
 
 type ModeHapticSpec = {
-  /** Validated/semi-validated herhalingsfrequentie — zie bestandscomment
-   *  per modus voor bron en vertrouwensgraad. */
-  envelopeHz: number;
-  /** 'sparse-pulse' = langzame modi, één korte tik per cyclus — géén
-   *  echte vloeiende op-/afbouw (zie bestandscomment, dat kan de
-   *  telefoon niet). 'pulse-train' = snellere modi, een duidelijke
-   *  aan/uit-pulsreeks per cyclus. */
-  waveform: 'sparse-pulse' | 'pulse-train';
-  /** Voor 'sparse-pulse': duur van de representatieve tik. Voor
-   *  'pulse-train': duur van de AAN-fase binnen elke cyclus. */
-  onMs: number;
+  /** Doppel-geankerd herhalingsritme — zie bestandscomment per modus
+   *  voor bron en vertrouwensgraad. Ongewijzigd t.o.v. vorige ronde. */
+  cycleMs: number;
+  /** 1 tik (Sleep/Focus/Boost) of lub-dub (Clarity/Calm Control) — zie
+   *  bestandscomment "Fout #3" voor waarom dit geen zelfverzonnen vorm
+   *  meer is. Elke `style` gebruikt expo-haptics' eigen, echte lage
+   *  amplitude (zie "Fout #1"), nooit de rauwe Vibration-API. */
+  beats: Beat[];
 };
 
-/* Doppel-geankerd model (zie bestandscomment) — vervangt het eerdere
-   PIV-geankerde model (0.10/0.18/0.35/1.25/3.70). */
+const hz = (envelopeHz: number) => Math.round(1000 / envelopeHz);
+
 const SPECS: Record<BraceletMode, ModeHapticSpec> = {
-  [BraceletMode.Gamma]: { envelopeHz: 2.75, waveform: 'pulse-train', onMs: 120 },
-  [BraceletMode.Beta]: { envelopeHz: 1.50, waveform: 'pulse-train', onMs: 200 },
-  [BraceletMode.Alpha]: { envelopeHz: 0.97, waveform: 'sparse-pulse', onMs: 200 },
-  [BraceletMode.Theta]: { envelopeHz: 0.80, waveform: 'sparse-pulse', onMs: 220 },
-  [BraceletMode.Delta]: { envelopeHz: 0.60, waveform: 'sparse-pulse', onMs: 250 },
+  [BraceletMode.Delta]: {
+    // Sleep — 0,60 Hz, 1 zachte tik, geen lub-dub.
+    cycleMs: hz(0.6),
+    beats: [{ atMs: 0, style: Haptics.ImpactFeedbackStyle.Soft }],
+  },
+  [BraceletMode.Theta]: {
+    // Clarity & Relax — 0,80 Hz, lub-dub (Soft+Soft).
+    cycleMs: hz(0.8),
+    beats: [
+      { atMs: 0, style: Haptics.ImpactFeedbackStyle.Soft },
+      { atMs: Math.round(hz(0.8) * 0.3), style: Haptics.ImpactFeedbackStyle.Soft },
+    ],
+  },
+  [BraceletMode.Alpha]: {
+    // Calm Control — 0,97 Hz. 🟢 Doppel-geankerd, lub-dub (Soft+Light).
+    cycleMs: hz(0.97),
+    beats: [
+      { atMs: 0, style: Haptics.ImpactFeedbackStyle.Soft },
+      { atMs: Math.round(hz(0.97) * 0.3), style: Haptics.ImpactFeedbackStyle.Light },
+    ],
+  },
+  [BraceletMode.Beta]: {
+    // Sharp Focus — 1,50 Hz, 1 brisk tik (Medium), geen lub-dub.
+    cycleMs: hz(1.5),
+    beats: [{ atMs: 0, style: Haptics.ImpactFeedbackStyle.Medium }],
+  },
+  [BraceletMode.Gamma]: {
+    // Boost — 2,75 Hz, 1 tik (Heavy), hoogste amplitude + tempo.
+    cycleMs: hz(2.75),
+    beats: [{ atMs: 0, style: Haptics.ImpactFeedbackStyle.Heavy }],
+  },
 };
 
-/** Eén volledige envelope-cyclus als React Native Vibration-patroon
- *  ([0, aan, uit]). `Vibration.vibrate(p, true)` herhaalt 'm. */
-function buildPattern(spec: ModeHapticSpec): number[] {
-  const cycleMs = Math.round(1000 / spec.envelopeHz);
-  const on = Math.min(spec.onMs, cycleMs - 10);
-  const off = cycleMs - on;
-  return [0, on, off];
+/* Scheduler-state — generation-counter i.p.v. een losse `active`-bool,
+   zodat een snel op elkaar volgende play(modeA) → play(modeB) nooit de
+   oude cyclus van modeA kan laten doortikken nadat modeB al gestart is. */
+let generation = 0;
+const pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+function clearPending(): void {
+  pendingTimeouts.forEach(clearTimeout);
+  pendingTimeouts.length = 0;
 }
 
-const PATTERNS: Record<BraceletMode, number[]> = {
-  [BraceletMode.Gamma]: buildPattern(SPECS[BraceletMode.Gamma]),
-  [BraceletMode.Beta]: buildPattern(SPECS[BraceletMode.Beta]),
-  [BraceletMode.Alpha]: buildPattern(SPECS[BraceletMode.Alpha]),
-  [BraceletMode.Theta]: buildPattern(SPECS[BraceletMode.Theta]),
-  [BraceletMode.Delta]: buildPattern(SPECS[BraceletMode.Delta]),
-};
+function scheduleCycle(spec: ModeHapticSpec, myGeneration: number): void {
+  if (myGeneration !== generation) return;
+  spec.beats.forEach((beat) => {
+    const id = setTimeout(() => {
+      if (myGeneration !== generation) return;
+      Haptics.impactAsync(beat.style).catch(() => {
+        /* stil — toestel/emulator zonder trilmotor mag niets breken */
+      });
+    }, beat.atMs);
+    pendingTimeouts.push(id);
+  });
+  const nextId = setTimeout(() => scheduleCycle(spec, myGeneration), spec.cycleMs);
+  pendingTimeouts.push(nextId);
+}
 
 /** Speelt de preview-reeks van één modus herhaald af, tot stopModePreviewHaptic().
  *  Faalt stil: een toestel/emulator zonder trilmotor mag niets breken. */
 export function playModePreviewHaptic(mode: BraceletMode): void {
-  try {
-    Vibration.cancel();
-    Vibration.vibrate(PATTERNS[mode], true);
-  } catch {
-    /* stil */
-  }
+  generation += 1;
+  clearPending();
+  scheduleCycle(SPECS[mode], generation);
 }
 
 export function stopModePreviewHaptic(): void {
-  try {
-    Vibration.cancel();
-  } catch {
-    /* stil */
-  }
+  generation += 1;
+  clearPending();
 }

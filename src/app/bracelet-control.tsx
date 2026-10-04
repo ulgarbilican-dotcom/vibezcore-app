@@ -2877,6 +2877,23 @@ function ActiveSessionScreen({
   setEndedLocally,
   onStop,
 }: ActiveSessionScreenProps) {
+  /* Operator, 4 okt 2026 ("er is letterlijk geen haptic" tijdens een
+     echte sessie): playModePreviewHaptic/stopModePreviewHaptic zaten tot
+     nu toe ENKEL achter de "Feel it"-testknop in ModeDetailModal — een
+     gestarte sessie (dit scherm) dreef zelf geen enkele telefoon-trilling
+     aan. Er bestaat nog geen echte bracelet-hardware (CLAUDE.md), dus de
+     telefoon moet tijdens een actieve sessie zelf de rol van de pols-
+     haptiek spelen, niet enkel in een losse preview-popup. Start/stopt
+     met de echte sessie, pauzeert mee met isPaused. */
+  useEffect(() => {
+    if (isPaused) {
+      stopModePreviewHaptic();
+      return;
+    }
+    playModePreviewHaptic(activeMeta.mode);
+    return () => stopModePreviewHaptic();
+  }, [activeMeta.mode, isPaused]);
+
   /* Tijdens pause is sessionActive false maar pausedAt heeft de
      remaining. Tijdens running zit 't in status.remainingMinutes. */
   const displayRemaining = isPaused ? pausedAt! : status.remainingMinutes;

@@ -201,13 +201,40 @@ claims, enkel toestand-taal).
 
 ## 10. Finale beslissing
 
-**De huidige `022edda`-configuratie is goedgekeurd als V1-baseline.**
-Niet verder wijzigen op basis van de tot nu toe doorgenomen literatuur —
-meer literatuuronderzoek levert geen tweede Doppel-achtig bewezen punt
-voor de overige vier modi op, want dat bestaat niet. Dit is het plafond
-van wat wetenschappelijk onderbouwbaar is zonder een eigen prototype te
-testen. Volgende stap is **fysieke kalibratie op een echt prototype**,
-niet meer onderzoek.
+**De `022edda`-envelopeHz-waardes (§5, het RITME) blijven de V1-
+baseline — niet verder wijzigen op basis van literatuur.** Meer
+literatuuronderzoek levert geen tweede Doppel-achtig bewezen punt voor
+de overige vier modi op, want dat bestaat niet.
+
+**HERZIEN 4 oktober 2026, tweede ronde (operator: "er is geen enkel
+haptic ritme dat rust gaat brengen, sleep voelt te snel/hard"):** het
+RITME (§5) klopte, de PULSVORM niet. Twee fouten, beide nu gefixt in
+`src/services/bracelet-haptics.ts`:
+1. React Native's rauwe `Vibration`-API vuurt altijd op volle (default)
+   amplitude — ongeacht hoe kort/zacht een puls getimed was, voelde hij
+   hard aan. Opgelost door over te stappen op `expo-haptics`
+   (`Haptics.impactAsync`), dat op Android écht lage amplitudes gebruikt
+   (Soft/Light ≈ 12%, Medium ≈ 20%, Heavy ≈ 27% van 255 — geverifieerd
+   in de package-broncode).
+2. De eerdere implementatie gebruikte een zelfverzonnen 7-pulse
+   "sinuszwel" zonder basis in de geciteerde bronnen. Vibrotactiele
+   affective-ratings-literatuur is expliciet: herhaalde korte pulsen
+   voelen "alarming/unpleasant", lange(re) pulsen "pleasant". Doppel
+   zelf is bovendien geen zwel — de eigen productbeschrijving noemt het
+   een "double heartbeat-like rhythm" (lub-dub, 2 tikken). Sleep/
+   Clarity/Calm Control spelen nu 1-2 echte, zachte tikken per cyclus
+   i.p.v. veel micro-tikjes.
+
+Aanvullende bron toegevoegd: Zhou, Murata & Watanabe (2020, IEEE
+Haptics Symposium, "The Calming Effect of Heartbeat Vibration") — een
+tweede, onafhankelijke hartslag-vibratie-studie die fysiologische
+ontspanning (HRV) bevestigt, en een ACM-studie (2023) die toont dat een
+VERSNELD hartslagritme angst juist verhoogt — bevestigt waarom de
+kalme familie nooit sneller dan rust-hartslag gemaakt mag worden.
+
+Volgende stap blijft **fysieke kalibratie op een echt prototype**, niet
+meer literatuuronderzoek — de telefoon-preview is en blijft een
+benadering (ander motortype dan de bracelet).
 
 ---
 
