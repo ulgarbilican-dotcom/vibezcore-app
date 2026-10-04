@@ -25,10 +25,34 @@
    `isBraceletOwner` wordt hier niet meer gebruikt — BraceletControl.tsx
    bepaalt zelf (via dezelfde hook) wat een owner vs. niet-owner ziet
    (bv. PreviewBadge). Tab-bar blijft zichtbaar want dit is nog steeds een
-   tab-screen, geen Stack-push. */
+   tab-screen, geen Stack-push.
 
+   TOEGEVOEGD 4 oktober 2026: eenmalige welcome-gate, zelfde patroon als
+   (tabs)/breath.tsx gebruikt voor breath-welcome.tsx. `stateControlWelcome
+   CompletedAt` null = nog nooit gezien → eerste focus stuurt naar
+   /state-control-welcome. De 700ms-vertraging geeft AsyncStorage de tijd
+   om de setting te laden vóór er beslist wordt (zelfde reden als
+   breath.tsx's eigen commentaar daarbij). */
+
+import { useSetting } from '@/utils/settings';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef } from 'react';
 import BraceletControl from '../bracelet-control';
 
 export default function BraceletScreen() {
+  const [welcomeDoneAt] = useSetting('stateControlWelcomeCompletedAt');
+  const flagRef = useRef(welcomeDoneAt);
+  flagRef.current = welcomeDoneAt;
+
+  useFocusEffect(
+    useCallback(() => {
+      const id = setTimeout(() => {
+        if (flagRef.current !== null) return;
+        router.replace('/state-control-welcome' as never);
+      }, 700);
+      return () => clearTimeout(id);
+    }, []),
+  );
+
   return <BraceletControl />;
 }
