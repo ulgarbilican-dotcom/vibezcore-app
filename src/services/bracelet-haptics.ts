@@ -15,9 +15,10 @@
    TEMPOVERLOOP: Motokawa & Kato 2025 (BMC Psychology 13:1100), Study 1 —
    de enige vibratie-zonder-muziek-vergelijking: tempo dat start op de
    hartslag en in 2 min geleidelijk daalt naar 50 bpm was significant
-   (p<0,05), een VAST tempo niet. Daarom: elke modus start op de
-   aangenomen rust-hartslag en schuift aan hetzelfde tempo (25 bpm per
-   120 s) naar zijn eindtempo, en blijft daar.
+   (p<0,05), een VAST tempo niet. Daarom: elke modus speelt eerst 10 s
+   de aangenomen rust-hartslag (iso-principe: eerst aansluiten, dan
+   leiden — Motokawa Study 2 hield ook 10 s op 75 bpm), en glijdt dan in
+   een VASTE duur van 2 min (Study 1) naar zijn eindtempo, en blijft daar.
 
    AANGENOMEN RUST-HARTSLAG: 75 bpm (Doppel-baseline gem. 75,8; Motokawa
    Study 2 startte ook op 75). Er is nog geen hartslagsensor gekoppeld —
@@ -49,9 +50,14 @@ import { BraceletMode } from './ble-contract';
 import * as Haptics from 'expo-haptics';
 
 const ASSUMED_RESTING_BPM = 75;
-/** Motokawa Study 1: 75 → 50 bpm in 120 s. */
-const BPM_PER_SECOND = 25 / 120;
-/** "Feel it"-preview: zelfde richting, ingekort zodat je het eindtempo voelt. */
+/** Eerst de "eigen hartslag" laten voelen (iso-principe), dan pas leiden —
+ *  Motokawa Study 2: 10 s op 75 bpm vóór de daling begint. */
+const SESSION_HOLD_SECONDS = 10;
+/** Motokawa Study 1: van de hartslag naar het eindtempo in een VASTE duur
+ *  van 2 min, ongeacht hoe groot de verschuiving is. */
+const SESSION_RAMP_SECONDS = 120;
+/** "Feel it"-preview: zelfde verloop, ingekort zodat je het eindtempo voelt. */
+const PREVIEW_HOLD_SECONDS = 2;
 const PREVIEW_RAMP_SECONDS = 8;
 const LUB_DUB_FRACTION = 0.3;
 const LUB_DUB_MAX_MS = 350;
@@ -72,8 +78,11 @@ const SPECS: Record<BraceletMode, ModeHapticSpec> = {
   [BraceletMode.Gamma]: { targetBpm: 110, lub: S.Heavy, dub: S.Medium },
 };
 
-function bpmAt(spec: ModeHapticSpec, elapsedSec: number, rampSec: number): number {
-  const progress = rampSec <= 0 ? 1 : Math.min(1, elapsedSec / rampSec);
+type Timing = { holdSec: number; rampSec: number };
+
+function bpmAt(spec: ModeHapticSpec, elapsedSec: number, timing: Timing): number {
+  const rampElapsed = Math.max(0, elapsedSec - timing.holdSec);
+  const progress = timing.rampSec <= 0 ? 1 : Math.min(1, rampElapsed / timing.rampSec);
   return ASSUMED_RESTING_BPM + (spec.targetBpm - ASSUMED_RESTING_BPM) * progress;
 }
 
@@ -91,12 +100,12 @@ function fire(style: Haptics.ImpactFeedbackStyle): void {
   });
 }
 
-function scheduleBeat(spec: ModeHapticSpec, startedAt: number, rampSec: number, myGeneration: number): void {
+function scheduleBeat(spec: ModeHapticSpec, startedAt: number, timing: Timing, myGeneration: number): void {
   if (myGeneration !== generation) return;
   // Oude timers van vorige cycli opruimen, anders groeit de lijst onbeperkt.
   pendingTimeouts.length = 0;
 
-  const cycleMs = 60000 / bpmAt(spec, (Date.now() - startedAt) / 1000, rampSec);
+  const cycleMs = 60000 / bpmAt(spec, (Date.now() - startedAt) / 1000, timing);
   const dubAt = Math.min(cycleMs * LUB_DUB_FRACTION, LUB_DUB_MAX_MS);
 
   fire(spec.lub);
@@ -104,25 +113,24 @@ function scheduleBeat(spec: ModeHapticSpec, startedAt: number, rampSec: number, 
     setTimeout(() => {
       if (myGeneration === generation) fire(spec.dub);
     }, dubAt),
-    setTimeout(() => scheduleBeat(spec, startedAt, rampSec, myGeneration), cycleMs),
+    setTimeout(() => scheduleBeat(spec, startedAt, timing, myGeneration), cycleMs),
   );
 }
 
-function start(mode: BraceletMode, rampSec: number): void {
+function start(mode: BraceletMode, timing: Timing): void {
   generation += 1;
   clearPending();
-  scheduleBeat(SPECS[mode], Date.now(), rampSec, generation);
+  scheduleBeat(SPECS[mode], Date.now(), timing, generation);
 }
 
-/** Echte sessie: geleidelijk tempo volgens Motokawa (minuten-lang). */
+/** Echte sessie: 10 s basislijn, dan in 2 min naar het eindtempo. */
 export function playModeSessionHaptic(mode: BraceletMode): void {
-  const spec = SPECS[mode];
-  start(mode, Math.abs(spec.targetBpm - ASSUMED_RESTING_BPM) / BPM_PER_SECOND);
+  start(mode, { holdSec: SESSION_HOLD_SECONDS, rampSec: SESSION_RAMP_SECONDS });
 }
 
 /** "Feel it"-preview: zelfde verloop, ingekort tot een paar seconden. */
 export function playModePreviewHaptic(mode: BraceletMode): void {
-  start(mode, PREVIEW_RAMP_SECONDS);
+  start(mode, { holdSec: PREVIEW_HOLD_SECONDS, rampSec: PREVIEW_RAMP_SECONDS });
 }
 
 export function stopModePreviewHaptic(): void {

@@ -85,19 +85,27 @@ route loopt via het autonome zenuwstelsel: een ritmische pols-tik wordt
 als hartslag gelezen — trager dan de eigen hartslag kalmeert, sneller
 activeert. De 5 modi zijn dus 5 eindtempo's op één arousal-as.
 
-**Tempoverloop (Motokawa & Kato 2025, Study 1, vibratie zonder muziek):**
-start op de hartslag, daal geleidelijk (75 → 50 bpm in 120 s). Alle
-modi volgen hetzelfde verloop-tempo (25 bpm / 120 s) vanaf een
-aangenomen rust-hartslag van 75 bpm (Doppel-baseline 75,8) naar hun
-eindtempo, en houden dat aan.
+**Tempoverloop:**
+1. **10 s basislijn** op de aangenomen rust-hartslag van 75 bpm
+   (Doppel-baseline 75,8). Iso-principe uit de muziektherapie: eerst
+   aansluiten bij waar iemand zit, dan leiden — de gebruiker voelt eerst
+   "de eigen hartslag". Motokawa Study 2 hield ook 10 s op 75 bpm vóór de
+   daling (getest samen met muziek).
+2. **2 min glijden** naar het eindtempo, voor élke modus dezelfde VASTE
+   duur — zo deed Motokawa Study 1 het (vibratie zonder muziek,
+   significant): de duur lag vast, de grootte van de daling verschilde
+   per persoon. Een vaste snelheid (eerdere versie, tot ~3 min) was een
+   eigen interpretatie zonder bron en is vervangen.
+3. Daarna het eindtempo aanhouden. Of het effect blijft na die 2 min is
+   niet gemeten (de studie stopte daar).
 
-| Staat | Eindtempo | Opbouw vanaf 75 bpm | Bewijsniveau |
+| Staat | Eindtempo | Verloop na 10 s basislijn | Bewijsniveau |
 |---|---:|---:|---|
-| Sleep | 40 bpm (0,67 Hz) | ~168 s dalend | 🟠 Doppel's ondergrens; dalend protocol tot hier niet getest |
-| Clarity & Relax | 50 bpm (0,83 Hz) | 120 s dalend | 🟢 Motokawa Study 1 (exact) |
-| **Calm Control** | **60 bpm (1,0 Hz)** | ~72 s dalend | 🟢 Doppel (−20% onder rust-HR) + Motokawa-verloop |
-| Sharp Focus | 90 bpm (1,5 Hz) | ~72 s stijgend | 🟡 Hypothese binnen getest bereik (75–110) |
-| Boost | 110 bpm (1,83 Hz) | ~168 s stijgend | 🟢 Valente 2024 (110 bpm, ook pols: HR↑, HRV↓) |
+| Sleep | 40 bpm (0,67 Hz) | 2 min dalend | 🟠 Doppel's ondergrens; dalen tot hier niet getest |
+| Clarity & Relax | 50 bpm (0,83 Hz) | 2 min dalend | 🟢 Motokawa Study 1 (exact) |
+| **Calm Control** | **60 bpm (1,0 Hz)** | 2 min dalend | 🟢 Doppel (−20% onder rust-HR) + Motokawa-verloop |
+| Sharp Focus | 90 bpm (1,5 Hz) | 2 min stijgend | 🟡 Hypothese binnen getest bereik (75–110); stijgend verloop niet getest |
+| Boost | 110 bpm (1,83 Hz) | 2 min stijgend | 🟢 eindtempo Valente 2024 (HR↑, HRV↓); stijgend verloop niet getest |
 
 **Waarschuwing (Wang et al. 2023):** sneller dan de eigen hartslag
 verhoogt hartslag én zelf-gerapporteerde angst. Boost/Focus = arousal,
