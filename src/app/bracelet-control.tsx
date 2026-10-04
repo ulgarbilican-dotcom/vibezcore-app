@@ -3007,7 +3007,7 @@ function ActiveSessionScreen({
                gekoppeld aan de route, niet aan isBraceletOwner (zie
                Minimize hieronder, 5 okt 2026). */
             paddingBottom: !isPushedRoute
-              ? Math.max(safeInsets.bottom + 100, 150)
+              ? Math.max(safeInsets.bottom + 56, 96)
               : Math.max(safeInsets.bottom + 24, 72),
           },
         ]}
@@ -6191,6 +6191,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
+    /* Operator, 5 okt 2026 ("cirkel mag ook een klein beetje zakken"). */
+    marginTop: 28,
   },
   /* DrainingCircle's eigen SVG-doos — rond zodat de clip-path niet
      buiten de cirkel-vorm kan "lekken" op Android. Position absolute
@@ -6509,9 +6511,13 @@ const s = StyleSheet.create({
      ronde pauze-knop en eronder end session, niet in pil"): terug naar
      kolom-layout — enkele ronde Play/Pause-knop, "End session" als
      tekst-link eronder. */
+  /* Operator, 5 okt 2026 ("play en end session minstens 3 cm laten
+     zakken"): marginTop 'auto' duwt Play + End session naar de onderkant
+     van het scherm (net boven de tab-balk) i.p.v. vlak onder de cirkel —
+     werkt op elke schermhoogte, geen vaste afstand. */
   sessionControlColumn: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 'auto',
     width: '100%',
   },
   roundActionBtn: {
