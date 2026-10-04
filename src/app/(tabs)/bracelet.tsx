@@ -100,7 +100,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       <SafeAreaView style={s.introWrap} edges={['bottom']}>
         <View style={s.stackTitle}>
           <Text style={s.introEyebrow}>STATE CONTROL</Text>
-          <Text style={s.introTitle}>Guided by touch, on your wrist.</Text>
+          <Text style={s.introTitle}>Guided by touch,{'\n'}on your wrist.</Text>
         </View>
         <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
           <Pressable
