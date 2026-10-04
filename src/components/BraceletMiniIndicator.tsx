@@ -79,9 +79,14 @@ export function BraceletMiniIndicator() {
      de marketing-etalage, geen active-view. Daar juist de pill tonen
      zodat er een directe weg terug is i.p.v. eerst de CTA moeten
      opzoeken. */
+  /* Operator, 5 okt 2026 ("lijkt alsof er een andere sessie loopt"): sinds
+     4 okt staat de marketing-etalage op /smart-bead-bracelet en toont de
+     /bracelet-tab (State Control) de sessie zelf voor IEDEREEN — de
+     uitzondering hierboven voor niet-eigenaars geldt niet meer, en de pill
+     schoof daar over de modusnaam van het eigen sessiescherm. */
   if (!snap.active) return null;
   if (pathname === '/bracelet-control') return null;
-  if (pathname === '/bracelet' && isBraceletOwner) return null;
+  if (pathname === '/bracelet') return null;
   if (pathname === '/welcome') return null;
 
   const topY = insets.top + 8;

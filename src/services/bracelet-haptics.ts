@@ -270,6 +270,7 @@ function silence(): void {
 function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: number): void {
   silence();
   const spec = SPECS[mode];
+  console.log('[haptics] play', { mode, native: hasNativeWaveform(), amp: canPlayNativeWaveform(), offsetSec, totalSec });
   if (hasNativeWaveform()) {
     const { timings, amplitudes, repeat } = buildWaveform(
       spec,

@@ -16,7 +16,8 @@ type StateHapticsNativeModule = {
 let native: StateHapticsNativeModule | null = null;
 try {
   native = requireNativeModule<StateHapticsNativeModule>('StateHaptics');
-} catch {
+} catch (e) {
+  console.log('[state-haptics] native module not available', String(e));
   native = null;
 }
 

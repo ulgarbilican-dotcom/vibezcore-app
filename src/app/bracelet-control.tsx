@@ -2883,6 +2883,7 @@ function ActiveSessionScreen({
   setEndedLocally,
   onStop,
 }: ActiveSessionScreenProps) {
+  const isPushedRoute = usePathname() === '/bracelet-control';
   /* Operator, 4 okt 2026 ("er is letterlijk geen haptic" tijdens een
      echte sessie): playModePreviewHaptic/stopModePreviewHaptic zaten tot
      nu toe ENKEL achter de "Feel it"-testknop in ModeDetailModal — een
@@ -3002,7 +3003,10 @@ function ActiveSessionScreen({
              owner-inline. Non-owner mode (Stack push) heeft geen tab-
              bar → normale padding. */
           {
-            paddingBottom: isBraceletOwner
+            /* Inline in de tab (tab-balk eronder) vs. geduwd scherm —
+               gekoppeld aan de route, niet aan isBraceletOwner (zie
+               Minimize hieronder, 5 okt 2026). */
+            paddingBottom: !isPushedRoute
               ? Math.max(safeInsets.bottom + 100, 150)
               : Math.max(safeInsets.bottom + 24, 72),
           },
@@ -3283,7 +3287,13 @@ function ActiveSessionScreen({
                 <Text style={s.capsuleBtnSecondaryText}>End session</Text>
               )}
             </Pressable>
-            {!isBraceletOwner && (
+            {/* Operator, 5 okt 2026 ("die minimize staat op deze pagina,
+               dat mag niet"): Minimize hoort enkel bij het GEDUWDE scherm
+               (/bracelet-control, router.back() heeft daar een doel). In de
+               State Control-tab staat dit scherm sinds 4 okt inline voor
+               iedereen — daar is er niets om naar terug te gaan. Gekoppeld
+               aan de route i.p.v. aan isBraceletOwner. */}
+            {isPushedRoute && (
               <Pressable
                 style={({ pressed }) => [
                   s.capsuleBtnSecondary,
