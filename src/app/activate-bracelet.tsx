@@ -350,9 +350,9 @@ export default function ActivateBraceletScreen() {
             onPress={() => router.replace('/(tabs)/bracelet' as never)}
             onPressIn={doneBtnScale.onPressIn}
             onPressOut={doneBtnScale.onPressOut}
-            accessibilityLabel="Open Bracelet Control screen"
+            accessibilityLabel="Open Session Control screen"
           >
-            <Text style={s.doneBtnText}>Open Bracelet Control</Text>
+            <Text style={s.doneBtnText}>Open Session Control</Text>
           </AnimatedPressable>
 
           <Text style={s.doneFooter}>

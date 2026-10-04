@@ -873,7 +873,7 @@ function PreviewBadge({ dark }: { dark?: boolean }) {
       ]}
     >
       <Text style={[s.previewPillText, dark && { color: 'rgba(255,255,255,0.6)' }]}>
-        PREVIEW
+        DEMO
       </Text>
     </View>
   );
@@ -3416,7 +3416,7 @@ function IdleScreen({
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
-        title="Bracelet control"
+        title="Session Control"
         onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
         backLabel={ctaBackLabel}
         dark={idleDark}

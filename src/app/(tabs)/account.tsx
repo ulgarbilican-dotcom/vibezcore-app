@@ -629,9 +629,9 @@ function BraceletCard() {
            Bracelet tab waar BraceletControl inline rendert + tab-bar
            zichtbaar blijft voor uitstappen via andere tabs. */
         onPress={() => router.navigate('/bracelet' as never)}
-        accessibilityLabel="Open bracelet control"
+        accessibilityLabel="Open Session Control"
       >
-        <Text style={s.cardCtaText}>Open Bracelet Control</Text>
+        <Text style={s.cardCtaText}>Open Session Control</Text>
         <Text style={s.cardCtaArrow}>→</Text>
       </PressScale>
       {/* Iter 9gg (operator-correctie): bracelet heeft VERVANGBARE bead-

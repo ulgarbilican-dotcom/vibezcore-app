@@ -1478,7 +1478,7 @@ export default function BraceletScreen() {
                    (zie (tabs)/_layout.tsx). Terug naar de al vastgelegde
                    tekst van vóór deze redesign: "Preview the bracelet
                    app". */}
-                <Text style={s.heroCtaText}>Preview the Bracelet App</Text>
+                <Text style={s.heroCtaText}>Try the Bracelet App</Text>
               </Pressable>
             </ReAnimated.View>
           </ReAnimated.View>
@@ -1627,7 +1627,7 @@ export default function BraceletScreen() {
               <View style={s.ownerDot} />
               <View>
                 <Text style={s.ownerTitle}>Your bracelet is active</Text>
-                <Text style={s.ownerSub}>Tap to open Bracelet Control</Text>
+                <Text style={s.ownerSub}>Tap to open Session Control</Text>
               </View>
             </View>
             <Text style={s.ownerArrow}>›</Text>
