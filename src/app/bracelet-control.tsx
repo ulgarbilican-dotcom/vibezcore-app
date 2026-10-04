@@ -2505,12 +2505,12 @@ function BraceletHeader({
    ~1.5s auto-connect-wachttijd tijdens een auto-start (breathwork-CTA
    / "Start session" vanuit Your bracelet plan) — i.p.v. het volledige
    zoek-scherm met Retry-knop/activatie-prompt kort te laten opflitsen. */
-function AutoStartLoader() {
+function AutoStartLoader({ text = 'Starting your session…' }: { text?: string }) {
   return (
     <View style={[s.root, s.autoStartLoader]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ActivityIndicator color="#ffffff" />
-      <Text style={s.autoStartLoaderTxt}>Starting your session…</Text>
+      <Text style={s.autoStartLoaderTxt}>{text}</Text>
     </View>
   );
 }
@@ -3746,7 +3746,9 @@ function IdleScreen({
   );
 }
 
-export default function BraceletControl() {
+export default function BraceletControl({
+  autoConnect = false,
+}: { autoConnect?: boolean } = {}) {
   const bracelet = getBracelet();
   const sim = getSimHooks(); // null on real hardware
   /* Iter 9x: safe-area insets voor bottomBarDual padding. Wanneer
@@ -4403,6 +4405,21 @@ export default function BraceletControl() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* Stil auto-connect voor `autoConnect` (4 okt 2026, State Control-
+     intro) — enkel VERBINDEN, geen sessie starten zoals autoStartBracelet
+     hierboven doet. Landt op Idle met een lege modus-keuze, niet op een
+     vooraf-geladen gepauzeerde sessie. */
+  const autoConnectFiredRef = useRef(false);
+  useEffect(() => {
+    if (autoConnectFiredRef.current) return;
+    if (!autoConnect) return;
+    autoConnectFiredRef.current = true;
+    if (bracelet.getConnectionState() !== 'connected') {
+      void bracelet.connect();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onStart = async () => {
     setBusy(true);
     /* Iter v197 (2026-07-04): endedLocally reset — nieuwe sessie mag niet
@@ -4819,6 +4836,9 @@ export default function BraceletControl() {
   if (conn !== 'connected') {
     if (autoStartBracelet && !autoStartFailed) {
       return <AutoStartLoader />;
+    }
+    if (autoConnect) {
+      return <AutoStartLoader text="Connecting…" />;
     }
     return (
       <SearchingScreen

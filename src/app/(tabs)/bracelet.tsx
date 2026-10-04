@@ -48,6 +48,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -63,12 +64,22 @@ import BraceletControl from '../bracelet-control';
    vervangen worden. */
 const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pic%20welcome%20app%20new.png';
 
+/* Ken Burns-"ademing" + gefaseerde reveal — exact dezelfde recept als de
+   oude bracelet-intro (smart-bead-bracelet.tsx se `introKenBurnsStyle`/
+   `introEyebrowStyle`/`introTitleStyle`), 1-op-1 hergebruikt, niet
+   opnieuw verzonnen. Geen horizontale/verticale shift hier (die was
+   foto-crop-specifiek afgesteld) — enkel de trage, herhalende zoom. */
+const INTRO_ZOOM = 1.1;
+
 function StateControlIntro({ onDone }: { onDone: () => void }) {
   const ctaScale = useSharedValue(1);
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],
   }));
   const shimmer = useSharedValue(-1);
+  const kenBurns = useSharedValue(1);
+  const eyebrowReveal = useSharedValue(0);
+  const titleReveal = useSharedValue(0);
   useEffect(() => {
     shimmer.value = withRepeat(
       withSequence(
@@ -79,19 +90,39 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       -1,
       false,
     );
+    kenBurns.value = withRepeat(
+      withTiming(1.04, { duration: 18000, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+    eyebrowReveal.value = withDelay(300, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
+    titleReveal.value = withDelay(520, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shimmer.value * 220 }, { rotate: '18deg' }],
   }));
+  const kenBurnsStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: kenBurns.value * INTRO_ZOOM }],
+  }));
+  const eyebrowStyle = useAnimatedStyle(() => ({
+    opacity: eyebrowReveal.value,
+    transform: [{ translateY: 10 * (1 - eyebrowReveal.value) }],
+  }));
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: titleReveal.value,
+    transform: [{ translateY: 10 * (1 - titleReveal.value) }],
+  }));
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <Image
-        source={{ uri: BG_IMG }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
+      <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
+        <Image
+          source={{ uri: BG_IMG }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      </Animated.View>
       <LinearGradient
         colors={['rgba(10,10,10,0.15)', 'rgba(10,10,10,0.6)', '#0a0a0a']}
         locations={[0.3, 0.72, 1]}
@@ -99,8 +130,8 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       />
       <SafeAreaView style={s.introWrap} edges={['bottom']}>
         <View style={s.stackTitle}>
-          <Text style={s.introEyebrow}>STATE CONTROL</Text>
-          <Text style={s.introTitle}>Guided by touch,{'\n'}on your wrist.</Text>
+          <Animated.Text style={[s.introEyebrow, eyebrowStyle]}>STATE CONTROL</Animated.Text>
+          <Animated.Text style={[s.introTitle, titleStyle]}>Guided by touch,{'\n'}on your wrist.</Animated.Text>
         </View>
         <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
           <Pressable
@@ -152,7 +183,11 @@ export default function BraceletScreen() {
     return <StateControlIntro onDone={() => setShowIntro(false)} />;
   }
 
-  return <BraceletControl />;
+  /* Operator, 4 okt 2026 ("looking for your device-scherm overbodig"):
+     stil verbinden op de achtergrond i.p.v. het volledige zoek-scherm
+     doorlopen — haptiek werkt sowieso zonder enige verbinding, dit is
+     enkel voor wanneer er ooit een echte bracelet gekoppeld is. */
+  return <BraceletControl autoConnect />;
 }
 
 const s = StyleSheet.create({
