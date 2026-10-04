@@ -86,10 +86,6 @@ export type Settings = {
    *  Breath-tab-focus-check, dus zij zien de onboarding NIET ondanks
    *  null-waarde. Geen data-migratie nodig. */
   breathOnboardingCompletedAt: number | null;
-  /** Zelfde rol als breathOnboardingCompletedAt, maar voor State Control
-   *  (voorheen de Bracelet-tab). null = nog nooit gezien → tab-focus
-   *  stuurt eenmalig naar /state-control-welcome. */
-  stateControlWelcomeCompletedAt: number | null;
   /** Operator, 7 september 2026: "mag maar 1 keer werken, de eerste
    *  keer" — de volledige, ontgrendelde gratis kennismakingssessie
    *  (`/breath-session?from=onboarding`) mag maar ÉÉN keer per gebruiker.
@@ -246,7 +242,6 @@ const defaults: Settings = {
   voiceCues: true,
   voiceCuesChosen: false,
   breathOnboardingCompletedAt: null,
-  stateControlWelcomeCompletedAt: null,
   breathFreeSessionUsedAt: null,
   soundscapeByState: {},
   hapticsPhone: true,
@@ -313,10 +308,6 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.breathOnboardingCompletedAt === 'number' ||
             obj.breathOnboardingCompletedAt === null
               ? { breathOnboardingCompletedAt: obj.breathOnboardingCompletedAt }
-              : {}),
-            ...(typeof obj.stateControlWelcomeCompletedAt === 'number' ||
-            obj.stateControlWelcomeCompletedAt === null
-              ? { stateControlWelcomeCompletedAt: obj.stateControlWelcomeCompletedAt }
               : {}),
             ...(typeof obj.breathFreeSessionUsedAt === 'number' ||
             obj.breathFreeSessionUsedAt === null

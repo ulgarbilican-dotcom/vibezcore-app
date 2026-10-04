@@ -41,9 +41,10 @@
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
 import { BrandFonts } from '@/constants/theme';
-import { useSetting, setSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -68,15 +69,18 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
     transform: [{ scale: ctaScale.value }],
   }));
   const shimmer = useSharedValue(-1);
-  shimmer.value = withRepeat(
-    withSequence(
-      withTiming(-1, { duration: 0 }),
-      withDelay(2600, withTiming(1, { duration: 1100 })),
-      withDelay(1200, withTiming(1, { duration: 0 })),
-    ),
-    -1,
-    false,
-  );
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(-1, { duration: 0 }),
+        withDelay(2600, withTiming(1, { duration: 1100 })),
+        withDelay(1200, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shimmer.value * 220 }, { rotate: '18deg' }],
   }));
@@ -132,14 +136,22 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
 }
 
 export default function BraceletScreen() {
-  const [welcomeDoneAt] = useSetting('stateControlWelcomeCompletedAt');
+  /* Operator, 4 okt 2026 ("bij wegklikken tab en terugkomen moet welcome
+     bracelet scherm terug zichtbaar worden"): GEEN eenmalige, permanent
+     opgeslagen vlag meer (dat was de vorige opzet) — de intro moet bij
+     ELK bezoek aan deze tab opnieuw verschijnen, niet enkel de allereerste
+     keer. Puur lokale state (geen settings-persistentie) die reset zodra
+     de tab de focus verliest, zodat de volgende keer weer vers begint. */
+  const [showIntro, setShowIntro] = useState(true);
 
-  if (welcomeDoneAt === null) {
-    return (
-      <StateControlIntro
-        onDone={() => setSetting('stateControlWelcomeCompletedAt', Date.now())}
-      />
-    );
+  useFocusEffect(
+    useCallback(() => {
+      return () => setShowIntro(true);
+    }, []),
+  );
+
+  if (showIntro) {
+    return <StateControlIntro onDone={() => setShowIntro(false)} />;
   }
 
   return <BraceletControl />;

@@ -850,34 +850,11 @@ function PrimaryCtaButton({
   );
 }
 
-/* Operator ("preview mag achter bracelet staan"): compacte inline variant
-   i.p.v. een los, volle-breedte gecentreerd blok onder de header — staat
-   nu direct ná de titel-tekst in BraceletHeader's `badge`-slot (zie
-   daar), op alle 4 schermen die 'm tonen (Searching/Fault/Charging/
-   Control). `dark` volgt het scherm se eigen header-thema: de
-   oorspronkelijke kleuren (donkere tekst/rand op bijna-wit) waren enkel
-   voor een lichte header getekend en zouden onleesbaar zijn op
-   Searching-scherm se zwarte header. */
-function PreviewBadge({ dark }: { dark?: boolean }) {
-  return (
-    <View
-      style={[
-        s.previewPill,
-        /* Operator, 27 september 2026 ("badge nog 0.5 cm laten
-           zakken"): extra 19px marginTop bovenop de headerTitleRow-gap. */
-        { marginTop: 19 },
-        dark && {
-          backgroundColor: 'rgba(255,255,255,0.08)',
-          borderColor: 'rgba(255,255,255,0.18)',
-        },
-      ]}
-    >
-      <Text style={[s.previewPillText, dark && { color: 'rgba(255,255,255,0.6)' }]}>
-        DEMO
-      </Text>
-    </View>
-  );
-}
+/* Operator, 4 oktober 2026 ("ik wil nergens nog demo zien staan, ook niet
+   bij connect"): de DEMO-badge (voorheen PreviewBadge) is volledig weg —
+   van alle 4 schermen die 'm ooit toonden (Searching/Fault/Charging/
+   Control). Geen vervanging nodig; de schermen tonen zonder badge gewoon
+   hun eigen status. */
 
 /* ── DurationWheel — verticale scroll-picker, zelfde bewezen implementatie
    als breath-setup.tsx's DurationWheel/DurationWheelRow (operator: "dat
@@ -2585,12 +2562,11 @@ function SearchingScreen({
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
-        title="Bracelet connect"
+        title="Connect Device"
         showBack={isPushedRoute}
         onBack={fromContext ? navigateBackToSource : () => router.back()}
         backLabel={ctaBackLabel}
         dark={searchingDark}
-        badge={!isBraceletOwner ? <PreviewBadge dark={searchingDark} /> : undefined}
       />
       {/* Iter 9dq v93 (2026-06-03): top-banner CTA NIET tonen op
           disconnected-screen wanneer al activation-required is —
@@ -2768,7 +2744,6 @@ function FaultScreen({
       <BraceletHeader
         title="Bracelet error"
         onBack={onDisconnect}
-        badge={!isBraceletOwner ? <PreviewBadge /> : undefined}
       />
       {showActivationPrompt && <BraceletActivationCta />}
       <View style={s.faultWrap}>
@@ -2829,7 +2804,6 @@ function ChargingScreen({
       <BraceletHeader
         title="Bracelet charging"
         onBack={onDisconnect}
-        badge={!isBraceletOwner ? <PreviewBadge /> : undefined}
       />
       {showActivationPrompt && <BraceletActivationCta />}
       <View style={s.chargingWrap}>
@@ -5159,23 +5133,6 @@ const s = StyleSheet.create({
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: SIGNAL_BLUE,
-  },
-  /* PreviewBadge — kleine, neutrale badge i.p.v. de volle-breedte oranje
-     PreviewBanner. Inline naast de headertitel, subtiel, geen kleur die
-     om aandacht schreeuwt. */
-  previewPill: {
-    backgroundColor: 'rgba(10,10,12,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(10,10,12,0.10)',
-    borderRadius: 999,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  previewPillText: {
-    color: C.textDim,
-    fontSize: 10,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 1.6,
   },
 
   /* ── Idle screen ─────────────────────────────────────────────────── */
