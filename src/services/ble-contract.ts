@@ -32,20 +32,28 @@
    breath-states.ts. */
 
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — BLE Contract (spec v2.4 §8)
+   VIBEZCORE — BLE Contract (werkontwerp "v2.4", NIET hardware-geverifieerd)
 
-   This is the BINDING contract between app and bracelet. Both the simulation
-   (now) and the real nRF52 firmware (later) implement EXACTLY this. Nothing
-   here is invented — every field maps 1:1 to Haptic_Bracelet_Spec_v2.4 §8.
+   BELANGRIJKE STATUS-CORRECTIE (4 okt 2026): dit bestand werd eerder "de
+   BINDENDE spec v2.4" genoemd, alsof het een door een firmware-engineer
+   geverifieerd document was. Dat klopt niet — operator heeft geen
+   hardware-/firmware-team; het "v2.4"-document kwam uit een AI-chat en is
+   NOOIT tegen een DRV2605L-datasheet, een echte LRA-motor of een echte
+   batterij-ontladingscurve getest. Behandel elk concreet getal hieronder
+   (timing, drempels, amplitude) als ONTWERPKEUZE, niet als vaststaand feit
+   — zie [[feedback-ai-spec-not-verified]] in memory voor de volledige
+   toelichting. De STRUCTUUR (Pause/Resume als los commando, een expliciete
+   state machine, een pause-timeout) is wél degelijke software-architectuur,
+   los van of de exacte cijfers ooit hardware-gevalideerd worden.
 
-   GEWIJZIGD t.o.v. v2.3 (4 okt 2026, operator deelde de volledige v2.4-
-   spec): Pause/Resume is nu een ECHT BLE-commando (0x04/0x05), niet langer
-   een workaround op de app-kant. bracelet-control.tsx deed tot nu toe
-   "pause" door een echte Stop te sturen + de resterende tijd lokaal te
-   onthouden (`pausedAt`-boekhouding, zie de operator-comments daar bij
-   "spec §8.1 kent geen Pause-opcode") — dat was CORRECT voor v2.3, dat
-   commando bestond toen simpelweg niet. Dit bestand + bracelet-sim.ts
-   spreken nu v2.4; bracelet-control.tsx's eigen pause-workaround is
+   Nieuw t.o.v. de vorige staat (4 okt 2026): Pause/Resume is nu een apart
+   BLE-commando (0x04/0x05) in plaats van een workaround op de app-kant.
+   bracelet-control.tsx deed tot nu toe "pause" door een echte Stop te
+   sturen + de resterende tijd lokaal te onthouden (`pausedAt`-boekhouding,
+   zie de operator-comments daar bij "geen Pause-opcode") — dat was de
+   enige optie zolang er geen Pause-commando bestond. Dit bestand +
+   bracelet-sim.ts hebben dat commando nu wel; bracelet-control.tsx's eigen
+   pause-workaround is
    NOG NIET omgebouwd naar de echte opcodes — dat is een aparte, grotere
    stap (de huidige workaround lost een stapeling van eerdere mount/
    resume-bugs op en moet voorzichtig vervangen worden, niet blind).

@@ -1,12 +1,20 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Simulated Bracelet (pro-approach, spec v2.4 faithful)
+   VIBEZCORE — Simulated Bracelet (pro-approach, volgt het werkontwerp "v2.4")
 
-   Implements BraceletTransport behind the EXACT BLE contract. Behaves like
-   the real firmware so the bracelet app is fully demonstrable now (investors,
-   Kickstarter pre-launch). When real firmware exists, RealBracelet implements
-   the same interface and USE_SIMULATED_BLE flips — UI unchanged.
+   STATUS (4 okt 2026): het "v2.4"-document dat de getallen/regels hieronder
+   voedt is NIET hardware-geverifieerd — zie de uitgebreide toelichting in
+   ble-contract.ts. Dit bestand is dus consistent met een ONTWERP, niet met
+   een door een engineer bevestigde firmware-spec. Prima als demo-simulator
+   (dat was en blijft het doel), maar niet blind overnemen in echte firmware
+   zonder eerst de drempelwaardes (batterij, timing) te laten valideren.
 
-   Spec-faithful behaviour (Haptic Bracelet Spec v2.4 §7/§8/§9/§18):
+   Implements BraceletTransport behind the (ontwerp-)BLE contract. Behaves
+   like the real firmware so the bracelet app is fully demonstrable now
+   (investors, Kickstarter pre-launch). When real firmware exists,
+   RealBracelet implements the same interface and USE_SIMULATED_BLE flips —
+   UI unchanged.
+
+   Ontwerp-consistent gedrag (werkontwerp §7/§8/§9/§18):
      - CMD_START clamps duration to mode bounds (spec §7.1)
      - session runs autonomously on an internal timer (spec §8.3) — keeps
        running regardless of "connection"
