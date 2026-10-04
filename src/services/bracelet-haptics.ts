@@ -19,37 +19,48 @@
    gebruiken (bv. Hallihan & Siegle: 89 Hz carrier gemoduleerd op 0,1 Hz
    of 4 Hz) — niet een losse aanname.
 
+   MECHANISME-KEUZE (4 okt 2026, herzien — zie het gesprek): er bestaan
+   twee aparte, allebei gevalideerde routes naar kalmerende pols-haptiek:
+     - PIV (0,08-0,15 Hz): werkt via EXPLICIETE ademhalings-synchronisatie
+       — de gebruiker ademt bewust mee.
+     - Doppel (~0,67-1,08 Hz, 20% onder rust-hartslag): werkt IMPLICIET —
+       geen ademinstructie, enkel een hartslag-achtig ritme.
+   VIBEZCORE's bracelet geeft GEEN ademinstructie (dat is een losse,
+   optionele laag) — Doppel is dus de mechanistisch betere match, niet
+   PIV. Eerdere versie van dit bestand koos per ongeluk tóch de
+   PIV-waardes; hersteld naar het Doppel-geankerde model.
+
    PER MODUS, met bronvermelding en eerlijke vertrouwensgraad:
 
-   Sleep — 0,10 Hz envelope. Sterkste anker: PIV, een gepubliceerde
-   vibrotactiele ademhalings-pacer (Stanford/ACM CHI 2020/PIV++), gebruikt
-   voor affectregulatie, 0,08-0,15 Hz. PIV++ vond een gematigd effect
-   (Cohen's d=0,33) op angstreductie vs d=0,05 controle.
+   Calm Control — 0,97 Hz. 🟢 Directe evidence: Doppel, een gepubliceerde
+   RCT (Nature Sci Rep 2017) met een pols-wearable die ~20% ONDER
+   rust-hartslag trilt (gemiddeld 58,2 BPM ≈ 0,97 Hz) — significant
+   lagere skin-conductance (p=0,029) EN angst (p=0,007) vs controle.
 
-   Clarity — 0,18 Hz, Calm Control — 0,35 Hz. Interpolatie tussen Sleep
-   (0,10 Hz) en de Doppel-ankerwaarde (zie Sharp Focus) — geen directe
-   bron, wel logisch tussenliggend op dezelfde monotone schaal.
+   Sleep — 0,60 Hz, Clarity — 0,80 Hz. 🟠 Extrapolatie/interpolatie onder
+   de Doppel-ankerwaarde — geen directe bron voor deze twee exacte
+   getallen, wel logisch (dieper dan "kalm" moet trager zijn).
 
-   Sharp Focus — gebaseerd op Doppel: een gepubliceerde RCT (Nature
-   Sci Rep 2017) met een pols-wearable die ~20% ONDER rust-hartslag trilt
-   (gemiddeld 58,2 BPM ≈ 0,97 Hz, range 40-65 BPM ≈ 0,67-1,08 Hz) —
-   significant lagere skin-conductance (p=0,029) EN angst (p=0,007) vs
-   controle. Focus hoort per Yerkes-Dodson GEMATIGDE arousal te zijn
-   (piek-focus ≠ piek-opwinding), dus net iets boven Doppel se kalme
-   ankerwaarde: 1,25 Hz.
+   Sharp Focus — 1,50 Hz. 🟡 Ontwerp-hypothese: boven de Doppel-
+   ankerwaarde (Doppel's eigen studie beschrijft zelf "slow vibrations
+   calming, faster vibrations increase focus"), getemperd door
+   Yerkes-Dodson (focus = gematigde, niet piek-arousal — dus niet te
+   dicht bij Boost).
 
-   Boost — 3,70 Hz. Richting ondersteund (meerdere bronnen: sneller ritme
-   → hogere ervaren urgentie/arousal — bv. BoostMeUp, 72 deelnemers,
-   Apple Watch, snel ritme → meer angst/lagere HRV/slechtere prestatie als
-   TEGENGESTELDE richting bevestigd), maar geen bron valideert exact dit
-   getal als "optimaal Boost". Minst onderbouwde van de vijf.
+   Boost — 2,75 Hz. 🟡 Ontwerp-hypothese: richting ondersteund (sneller
+   ritme → hogere ervaren urgentie, meerdere bronnen w.o. BoostMeUp),
+   geen bron valideert dit exacte getal.
 
    NIET kan overeenkomen met echte hardware (platformgrens, geen
    bouwfout): AMPLITUDE (React Native's Vibration-API kent geen
-   sterkteregeling), een ECHTE vloeiende envelope (enkel aan/uit, geen
-   geleidelijke op-/afbouw — de "smooth"-modi hieronder worden daarom
-   benaderd met één korte representatieve tik per envelope-cyclus, niet
-   een echte vloeiende golf), en de carrier-textuur zelf. */
+   sterkteregeling) en een ECHTE vloeiende envelope. De "smooth"-modi
+   hieronder zijn dus NIET een echte PIV/Hallihan-stijl op-/afbouwende
+   golf — enkel een korte PULS PER CYCLUS (sparse pulse repetition).
+   Perceptueel een ander signaal dan een echte envelope; eerlijk zo
+   benoemd, niet verkocht als "smooth". Op echte firmware (met
+   amplitude-controle) hoort Sleep/Clarity/Calm Control wél een
+   vloeiende op-/afbouw te krijgen, Focus/Boost een scherpe pulse-train —
+   die keuze blijft overeind, enkel de telefoon kan 'm niet uitvoeren. */
 
 import { BraceletMode } from './ble-contract';
 import { Vibration } from 'react-native';
@@ -58,21 +69,24 @@ type ModeHapticSpec = {
   /** Validated/semi-validated herhalingsfrequentie — zie bestandscomment
    *  per modus voor bron en vertrouwensgraad. */
   envelopeHz: number;
-  /** 'smooth' = langzame modi, benaderd met één korte tik per cyclus
-   *  (de telefoon kan geen echte vloeiende op-/afbouw). 'pulse-train' =
-   *  snellere modi, een echte aan/uit-pulsreeks per cyclus. */
-  waveform: 'smooth' | 'pulse-train';
-  /** Voor 'smooth': duur van de representatieve tik. Voor 'pulse-train':
-   *  duur van de AAN-fase binnen elke cyclus. */
+  /** 'sparse-pulse' = langzame modi, één korte tik per cyclus — géén
+   *  echte vloeiende op-/afbouw (zie bestandscomment, dat kan de
+   *  telefoon niet). 'pulse-train' = snellere modi, een duidelijke
+   *  aan/uit-pulsreeks per cyclus. */
+  waveform: 'sparse-pulse' | 'pulse-train';
+  /** Voor 'sparse-pulse': duur van de representatieve tik. Voor
+   *  'pulse-train': duur van de AAN-fase binnen elke cyclus. */
   onMs: number;
 };
 
+/* Doppel-geankerd model (zie bestandscomment) — vervangt het eerdere
+   PIV-geankerde model (0.10/0.18/0.35/1.25/3.70). */
 const SPECS: Record<BraceletMode, ModeHapticSpec> = {
-  [BraceletMode.Gamma]: { envelopeHz: 3.70, waveform: 'pulse-train', onMs: 110 },
-  [BraceletMode.Beta]: { envelopeHz: 1.25, waveform: 'pulse-train', onMs: 200 },
-  [BraceletMode.Alpha]: { envelopeHz: 0.35, waveform: 'smooth', onMs: 200 },
-  [BraceletMode.Theta]: { envelopeHz: 0.18, waveform: 'smooth', onMs: 220 },
-  [BraceletMode.Delta]: { envelopeHz: 0.10, waveform: 'smooth', onMs: 250 },
+  [BraceletMode.Gamma]: { envelopeHz: 2.75, waveform: 'pulse-train', onMs: 120 },
+  [BraceletMode.Beta]: { envelopeHz: 1.50, waveform: 'pulse-train', onMs: 200 },
+  [BraceletMode.Alpha]: { envelopeHz: 0.97, waveform: 'sparse-pulse', onMs: 200 },
+  [BraceletMode.Theta]: { envelopeHz: 0.80, waveform: 'sparse-pulse', onMs: 220 },
+  [BraceletMode.Delta]: { envelopeHz: 0.60, waveform: 'sparse-pulse', onMs: 250 },
 };
 
 /** Eén volledige envelope-cyclus als React Native Vibration-patroon
