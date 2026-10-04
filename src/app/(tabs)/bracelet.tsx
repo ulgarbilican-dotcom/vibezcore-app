@@ -99,9 +99,9 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       />
       <SafeAreaView style={s.introWrap} edges={['bottom']}>
         <View style={s.stackTitle}>
-          <Text style={s.introTitle}>Control your state.</Text>
+          <Text style={s.introEyebrow}>STATE CONTROL</Text>
+          <Text style={s.introTitle}>Guided by touch, on your wrist.</Text>
         </View>
-        <Text style={s.introSub}>Guided by touch, on your wrist.</Text>
         <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
           <Pressable
             onPress={() => {
@@ -164,16 +164,19 @@ const s = StyleSheet.create({
     paddingBottom: 34,
   },
   stackTitle: { alignItems: 'center' },
-  introSub: {
-    marginTop: 4,
+  /* Eyebrow + titel i.p.v. titel + tagline — operator: "zoals audio
+     library tab doen, state control als eyebrow en guided by touch...
+     groter". Exact `introEyebrow`/`introTitle` uit (tabs)/index.tsx
+     (Library-tab), 1-op-1 hergebruikt, niet opnieuw verzonnen. */
+  introEyebrow: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
     textAlign: 'center',
-    color: 'rgba(255,255,255,0.65)',
-    fontFamily: BrandFonts.regular,
-    fontSize: 16,
+    marginBottom: 8,
   },
-  /* Volzin-titel i.p.v. een 3-woorden-stapel (die paste bij losse woorden
-     als "Breathe/Build/Become", niet bij een volledige zin) — exact
-     `introTitle` uit (tabs)/index.tsx (Library-tab), 1-op-1 hergebruikt. */
   introTitle: {
     color: '#ffffff',
     fontSize: 32,
