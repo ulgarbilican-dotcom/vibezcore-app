@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- WAKE_LOCK en FOREGROUND_SERVICE(_MEDIA_PLAYBACK) staan al app-breed
+       (app.json + modules/breath-background/plugin.js). Hier enkel de
+       service zelf; de manifest-merger neemt hem op in de app. -->
+  <application>
+    <service
+      android:name="com.ubili.vibezcoreapp.statehaptics.StateHapticsService"
+      android:exported="false"
+      android:foregroundServiceType="mediaPlayback" />
+  </application>
+</manifest>

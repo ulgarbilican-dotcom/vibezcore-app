@@ -15,7 +15,9 @@ package com.ubili.vibezcoreapp.statehaptics
    ───────────────────────────────────────────────────────────────────────── */
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import androidx.core.content.ContextCompat
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -64,6 +66,36 @@ class StateHapticsModule : Module() {
     Function("stop") {
       try {
         vibrator()?.cancel()
+      } catch (_: Exception) {
+      }
+    }
+
+    /** Echte sessie: de curve gaat naar StateHapticsService, die ze laat
+     *  doorlopen met het scherm op slot (zie die klasse). Moet starten
+     *  terwijl de app in de voorgrond is — dat is zo: de gebruiker drukt
+     *  net op Play. */
+    Function("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String ->
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@Function
+      if (timings.isEmpty() || timings.size != amplitudes.size) return@Function
+      try {
+        val intent = Intent(context, StateHapticsService::class.java).apply {
+          action = StateHapticsService.ACTION_START
+          putExtra(StateHapticsService.EXTRA_TIMINGS, LongArray(timings.size) { timings[it].toLong() })
+          putExtra(StateHapticsService.EXTRA_AMPLITUDES, IntArray(amplitudes.size) { amplitudes[it].coerceIn(0, 255) })
+          putExtra(StateHapticsService.EXTRA_TITLE, title)
+        }
+        ContextCompat.startForegroundService(context, intent)
+      } catch (_: Exception) {
+        /* stil — zonder service trilt het enkel niet door op slot */
+      }
+    }
+
+    /* stopService i.p.v. een STOP-intent via startForegroundService: werkt
+       ook als de app al op de achtergrond staat, en start de service niet
+       onnodig op als hij niet liep. */
+    Function("stopSession") {
+      try {
+        context.stopService(Intent(context, StateHapticsService::class.java))
       } catch (_: Exception) {
       }
     }

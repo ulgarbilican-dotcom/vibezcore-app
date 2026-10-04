@@ -11,13 +11,14 @@ type StateHapticsNativeModule = {
   hasAmplitudeControl(): boolean;
   play(timings: number[], amplitudes: number[], repeat: number): void;
   stop(): void;
+  startSession(timings: number[], amplitudes: number[], title: string): void;
+  stopSession(): void;
 };
 
 let native: StateHapticsNativeModule | null = null;
 try {
   native = requireNativeModule<StateHapticsNativeModule>('StateHaptics');
-} catch (e) {
-  console.log('[state-haptics] native module not available', String(e));
+} catch {
   native = null;
 }
 
@@ -50,6 +51,24 @@ export function playNativeWaveform(timings: number[], amplitudes: number[], repe
 export function stopNativeWaveform(): void {
   try {
     native?.stop();
+  } catch {
+    /* stil */
+  }
+}
+
+/** Echte sessie via de voorgrondservice — loopt door met het scherm op
+ *  slot (Android breekt gewone app-trillingen af bij vergrendelen). */
+export function startNativeSession(timings: number[], amplitudes: number[], title: string): void {
+  try {
+    native?.startSession(timings, amplitudes, title);
+  } catch {
+    /* stil */
+  }
+}
+
+export function stopNativeSession(): void {
+  try {
+    native?.stopSession();
   } catch {
     /* stil */
   }

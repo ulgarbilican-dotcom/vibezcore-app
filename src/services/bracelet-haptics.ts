@@ -55,8 +55,11 @@ import {
   canPlayNativeWaveform,
   hasNativeWaveform,
   playNativeWaveform,
+  startNativeSession,
+  stopNativeSession,
   stopNativeWaveform,
 } from '../../modules/state-haptics';
+import { getModeMeta } from './ble-contract';
 
 const ASSUMED_RESTING_BPM = 75;
 const SESSION_HOLD_SECONDS = 10;
@@ -268,12 +271,12 @@ function silence(): void {
   generation += 1;
   clearPending();
   stopNativeWaveform();
+  stopNativeSession();
 }
 
 function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: number): void {
   silence();
   const spec = SPECS[mode];
-  console.log('[haptics] play', { mode, native: hasNativeWaveform(), amp: canPlayNativeWaveform(), offsetSec, totalSec });
   if (hasNativeWaveform()) {
     const { timings, amplitudes, repeat } = buildWaveform(
       spec,
@@ -283,7 +286,12 @@ function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: 
       canPlayNativeWaveform(),
     );
     const anchorWallMs = Date.now();
-    playNativeWaveform(timings, amplitudes, repeat);
+    if (totalSec !== undefined) {
+      /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. */
+      startNativeSession(timings, amplitudes, getModeMeta(mode).name);
+    } else {
+      playNativeWaveform(timings, amplitudes, repeat);
+    }
     scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation);
   } else {
     scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);

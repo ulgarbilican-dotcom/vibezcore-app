@@ -13,3 +13,8 @@ android {
     versionName "1.0.0"
   }
 }
+
+dependencies {
+  /* NotificationCompat + ContextCompat.registerReceiver (RECEIVER_NOT_EXPORTED). */
+  implementation "androidx.core:core:1.13.1"
+}
