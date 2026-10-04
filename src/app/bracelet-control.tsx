@@ -3420,7 +3420,14 @@ function IdleScreen({
         onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
         backLabel={ctaBackLabel}
         dark={idleDark}
-        badge={!isBraceletOwner ? <PreviewBadge dark={idleDark} /> : undefined}
+        /* Operator, 4 okt 2026 ("waarom heb je demo gezet op session
+           control?"): DEMO-badge hier weggehaald — dit scherm is sinds
+           de Session Control-herstructurering een ECHTE, volwaardige
+           feature voor iedereen (telefoon + horloge-haptiek werkt zonder
+           bracelet), geen demo van iets dat nog niet bestaat. Enkel de
+           bracelet-HARDWARE zelf (batterij/verbinding) is nog gesimuleerd
+           voor niet-eigenaars — dat blijft zichtbaar via de Searching/
+           Fault/Charging-schermen, niet via dit hoofdscherm. */
         right={
           /* Operator, 16 september 2026 ("die connected en batterij mag
              rechtsboven naast preview"): de status-regel verhuist van een
@@ -3704,6 +3711,29 @@ function IdleScreen({
             upsell-pad blijft beschikbaar via Account-tab subscription-
             card. Hier op bracelet-control hoorde 't niet thuis —
             content moet in scherm passen, geen extra cards. */}
+
+        {/* GEWIJZIGD 4 oktober 2026: Session Control (dit scherm) is nu
+           bereikbaar zonder de fysieke Smart Bead Bracelet — werkt via
+           telefoon/smartwatch-haptiek. De hardware-marketing/showcase-
+           content (verhuisd naar smart-bead-bracelet.tsx) is daardoor
+           niet meer de default van de Bracelet-tab, en verdient hier een
+           kleine, ondergeschikte vindbaarheids-link — niet prominenter
+           dan de Start-CTA hierboven, dit scherm blijft de hoofdzaak. */}
+        <Pressable
+          style={s.braceletUpsellLink}
+          onPress={() => router.push('/smart-bead-bracelet' as never)}
+          hitSlop={8}
+          accessibilityLabel="Also works with the Smart Bead Bracelet — launching Fall 2026"
+        >
+          <Text
+            style={[
+              s.braceletUpsellLinkText,
+              idleDark && { color: 'rgba(255,255,255,0.4)' },
+            ]}
+          >
+            Also works with the Smart Bead Bracelet — launching Fall 2026
+          </Text>
+        </Pressable>
 
         {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
         {__DEV__ && sim && <SimDemoBar sim={sim} />}
@@ -6089,6 +6119,23 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     flex: 1,
+  },
+
+  /* GEWIJZIGD 4 oktober 2026: kleine, ondergeschikte vindbaarheids-link
+     naar de Smart Bead Bracelet marketing-pagina (smart-bead-bracelet.tsx)
+     — zelfde dimtekst-conventie als warnChipText/stateInfoDuration elders
+     in dit bestand, bewust GEEN CTA-chrome (geen achtergrond/rand), dit
+     scherm (Session Control) blijft de hoofdzaak. */
+  braceletUpsellLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  braceletUpsellLinkText: {
+    color: C.textDim,
+    fontSize: 12,
+    fontFamily: BrandFonts.regular,
+    textAlign: 'center',
   },
 
   /* ── Active session screen (kalm, één focuspunt) ──────────────────── */

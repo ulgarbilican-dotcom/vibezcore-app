@@ -304,12 +304,15 @@ export default function TabLayout() {
         <Tabs.Screen
           name="bracelet"
           options={{
-            title: 'Bracelet',
+            /* GEWIJZIGD 4 oktober 2026: deze tab toont nu altijd Session
+               Control (geen marketing-etalage meer, zie (tabs)/bracelet.tsx)
+               — "State Control" beschrijft die functie beter dan "Bracelet". */
+            title: 'State Control',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
               <TabGlyph Icon={BraceletIcon} focused={focused} />
             ),
             tabBarLabel: ({ focused }: { focused: boolean }) => (
-              <TabLabel label="Bracelet" focused={focused} />
+              <TabLabel label="State Control" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
           }}

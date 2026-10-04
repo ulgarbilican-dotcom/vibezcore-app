@@ -32,7 +32,11 @@ import { Check, Crown, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { BrandFonts } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
-import { PRICING } from '@/app/(tabs)/bracelet';
+/* GEWIJZIGD 4 oktober 2026: PRICING verhuisd van (tabs)/bracelet.tsx naar
+   smart-bead-bracelet.tsx (marketing/showcase-content verplaatst uit de
+   Bracelet-tab, die nu altijd Session Control toont — zie smart-bead-
+   bracelet.tsx's bovenste comment-blok voor de volledige uitleg). */
+import { PRICING } from '@/app/smart-bead-bracelet';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
