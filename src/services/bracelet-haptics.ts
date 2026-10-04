@@ -88,11 +88,14 @@ type ModeHapticSpec = {
 };
 
 const SPECS: Record<BraceletMode, ModeHapticSpec> = {
-  [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 26, dubMsNoAmp: 20, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 28, dubMsNoAmp: 20, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 30, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 30, dubMsNoAmp: 22, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 30, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 40, dubMsNoAmp: 30, lubStyle: S.Medium, dubStyle: S.Light },
-  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 30, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 50, dubMsNoAmp: 38, lubStyle: S.Heavy, dubStyle: S.Medium },
+  /* NoAmp-duren: 5 okt 2026 eerst 26–30 ms → op de Galaxy A16 "bijna niet
+     voelbaar" (operator). 50 ms (expo Soft) was voelbaar maar mocht
+     subtieler → nu ertussen. */
+  [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 30, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 30, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
+  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 30, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
 };
 
 type Timing = { holdSec: number; rampSec: number };
