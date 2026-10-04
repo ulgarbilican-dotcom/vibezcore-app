@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Status:** Approved design baseline
-**Reference implementation:** `src/services/bracelet-haptics.ts` — commit `022edda`
+**Reference implementation:** `src/services/bracelet-haptics.ts` — ronde 3 (4 okt 2026, zie §5–§6 en §10)
 **Geverifieerd:** elke citatie in dit document is apart gecheckt tegen de
 originele publicatie (4 oktober 2026) — niet overgenomen op gezag.
 
@@ -33,8 +33,8 @@ is** — enkel dat een onderdeel met deze naam en specs echt bestaat.
 
 ### B. Temporele modulatie/pulsritme
 De veel tragere ritmische structuur die op de actuator-output gelegd
-wordt (bv. 0,97 Hz = één cyclus per ~1,03 sec). Dit is NIET de LRA zelf
-op 0,97 Hz laten draaien — de LRA blijft op zijn eigen resonantie, enkel
+wordt (bv. 60 bpm = 1 Hz = één cyclus per seconde). Dit is NIET de LRA zelf
+op 1 Hz laten draaien — de LRA blijft op zijn eigen resonantie, enkel
 het ritme van de pulsen verandert. Dit onderscheid is fundamenteel voor
 de architectuur.
 
@@ -70,51 +70,84 @@ gemeten, actieve conditie significant beter dan controle.
 
 ---
 
-## 5. Finale frequentie-mapping
+## 5. Finale tempo-mapping (HERZIEN 4 okt 2026, ronde 3)
 
-| Staat | Ritme | Cyclus | Bewijsniveau |
+> Vervangt de vaste 0,60 / 0,80 / 0,97 / 1,50 / 2,75 Hz-tabel uit commit
+> `022edda`. Reden: (1) Motokawa & Kato 2025 vond dat enkel een
+> GELEIDELIJK veranderend tempo significant werkt, een vast tempo niet;
+> (2) Sleep (36 bpm) lag onder Doppel's bewuste ondergrens van 40 bpm;
+> (3) Boost (165 bpm) lag ver boven het hoogste geteste tempo (110 bpm).
+
+**Bottom-up mechanisme.** Gamma/Beta/Alpha/Theta/Delta zijn top-down
+labels voor de doeltoestand. Een pols-puls stuurt geen hersengolven
+(Pomper 2023: 10 Hz tactiel ritme → geen entrainment). De bottom-up
+route loopt via het autonome zenuwstelsel: een ritmische pols-tik wordt
+als hartslag gelezen — trager dan de eigen hartslag kalmeert, sneller
+activeert. De 5 modi zijn dus 5 eindtempo's op één arousal-as.
+
+**Tempoverloop (Motokawa & Kato 2025, Study 1, vibratie zonder muziek):**
+start op de hartslag, daal geleidelijk (75 → 50 bpm in 120 s). Alle
+modi volgen hetzelfde verloop-tempo (25 bpm / 120 s) vanaf een
+aangenomen rust-hartslag van 75 bpm (Doppel-baseline 75,8) naar hun
+eindtempo, en houden dat aan.
+
+| Staat | Eindtempo | Opbouw vanaf 75 bpm | Bewijsniveau |
 |---|---:|---:|---|
-| Sleep | 0,60 Hz | 1667 ms | 🟠 Extrapolatie |
-| Clarity & Relax | 0,80 Hz | 1250 ms | 🟠 Interpolatie |
-| **Calm Control** | **0,97 Hz** | **1031 ms** | 🟢 Sterke directe analogie (Doppel) |
-| Sharp Focus | 1,50 Hz | 667 ms | 🟡 Ontwerphypothese |
-| Boost | 2,75 Hz | 364 ms | 🟡 Ontwerphypothese |
+| Sleep | 40 bpm (0,67 Hz) | ~168 s dalend | 🟠 Doppel's ondergrens; dalend protocol tot hier niet getest |
+| Clarity & Relax | 50 bpm (0,83 Hz) | 120 s dalend | 🟢 Motokawa Study 1 (exact) |
+| **Calm Control** | **60 bpm (1,0 Hz)** | ~72 s dalend | 🟢 Doppel (−20% onder rust-HR) + Motokawa-verloop |
+| Sharp Focus | 90 bpm (1,5 Hz) | ~72 s stijgend | 🟡 Hypothese binnen getest bereik (75–110) |
+| Boost | 110 bpm (1,83 Hz) | ~168 s stijgend | 🟢 Valente 2024 (110 bpm, ook pols: HR↑, HRV↓) |
 
-Volgorde is bewust strikt monotoon: Sleep → Clarity & Relax → Calm
-Control → Sharp Focus → Boost, met oplopende temporele dichtheid.
+**Waarschuwing (Wang et al. 2023):** sneller dan de eigen hartslag
+verhoogt hartslag én zelf-gerapporteerde angst. Boost/Focus = arousal,
+niet "zich goed voelen" — en de kalme familie mag nooit sneller dan de
+rust-hartslag worden.
 
-**Calm Control (0,97 Hz) is het enige punt met een kwantitatief sterke
-match tegen een gepubliceerde RCT** (58,2 BPM ≈ 0,97 Hz). Sleep en
-Clarity & Relax verlengen het trage-ritme-principe naar nog tragere
-ontwerpwaardes. Sharp Focus past bredere literatuur toe over ritmische
-haptiek en aandacht (zie §7) zonder te claimen dat 1,50 Hz zelf getest
-is. Boost past het bredere snel-vs-traag-arousalprincipe toe zonder te
-claimen dat 2,75 Hz klinisch bewezen sympathische activering geeft.
+**Sleep-claim (Lee et al. 2025, smartwatch):** meer parasympathische
+activiteit en ervaren ontspanning, maar GEEN effect op inslaap-maten.
+Sleep = "tot rust komen voor het slapen", nooit "sneller inslapen".
+
+**Beperking:** zonder hartslagsensor is 75 bpm een populatie-aanname.
+De gouden standaard is closed-loop op de echte hartslag (Doppel-app,
+ambienBeat) — mogelijk zodra de smartwatch-hartslag gekoppeld is.
 
 ---
 
-## 6. Pulsduur en sparse-pulse vs. pulse-train
+## 6. Pulsvorm en amplitude (HERZIEN 4 okt 2026, ronde 3)
 
-| Staat | Pulsduur | Patroon |
-|---|---:|---|
-| Sleep | 250 ms | sparse-pulse |
-| Clarity & Relax | 220 ms | sparse-pulse |
-| Calm Control | 200 ms | sparse-pulse |
-| Sharp Focus | 200 ms | pulse-train |
-| Boost | 120 ms | pulse-train |
+**Vorm:** elke modus = lub-dub (dubbele hartslagtik), zoals Doppel's
+"double heartbeat-like rhythm". Tweede tik zachter (S2 < S1). Afstand
+lub→dub = 30% van de cyclus, max 350 ms (fysiologisch S1–S2-interval).
+Weinig tikken per cyclus is bewust: affective-ratings-literatuur vindt
+herhaalde korte pulsen "alarming/unpleasant", lange/rustige "pleasant".
 
-Dit zijn **engineering-parameters**, geen zelfstandig wetenschappelijk
-gevalideerde therapeutische waardes — er bestaat geen literatuur die een
-universele optimale pulsduur voor VIBEZCORE's specifieke actuator,
-plaatsing, amplitude en golfvorm vastlegt. De VG0640001D's 15 ms
-rise-tijd en 70 ms fall-tijd betekenen bovendien dat de elektrische
-AAN/UIT-timing niet 1-op-1 de mechanische golfvorm is die de gebruiker
-voelt.
+**Amplitude:** lager = minder arousal en aangenamer.
 
-Trage staten (Sleep/Clarity/Calm Control) gebruiken sparse-pulse: een
-lage-dichtheid ritmische cue. Actieve staten (Focus/Boost) gebruiken
-pulse-train: hogere dichtheid, directer waarneembaar/salient. Dit is een
-product-ontwerpkeuze, geen klinisch gevalideerde classificatie.
+| Staat | lub | dub |
+|---|---|---|
+| Sleep | Soft | Soft |
+| Clarity & Relax | Soft | Soft |
+| Calm Control | Light | Soft |
+| Sharp Focus | Medium | Light |
+| Boost | Heavy | Medium |
+
+Op telefoon via `expo-haptics` (Android: Soft/Light = 30/255, Medium =
+50, Heavy = 70 — geverifieerd in de package-broncode). React Native's
+rauwe `Vibration`-API vuurt altijd op volle kracht en is daarom
+ongeschikt.
+
+**Bracelet-firmware (ontwerpregel, nog te bouwen):** de DRV2605L kan
+continue amplitude sturen. Daar mag bovenop het hartslagritme een
+Apollo-achtige gladde amplitude-envelope komen (patent US11260198:
+draaggolf × sinus-envelope, afbouwend voor slaap, opbouwend voor
+energie). Dit is 🟡: Apollo's enige peer-reviewed bewijs is Hallihan &
+Siegle 2022 (n=22, enkel voor de per persoon meest kalmerende vibe).
+Telefoon en Apple Watch kunnen dit niet (enkel losse tikken).
+
+Pulsduur/amplitude blijven **engineering-parameters**: er bestaat geen
+literatuur die een universeel optimale waarde voor deze actuator,
+plaatsing en golfvorm vastlegt.
 
 ---
 
@@ -125,7 +158,7 @@ Haptics*, DOI 10.1109/toh.2016.2531662) gebruikte 15 Hz sinusoïdale
 vibrotactiele stimulatie op de palm en vond een significante SMR-band-
 toename plus verbeterde T.O.V.A.-aandachtsscore. Dit ondersteunt het
 bredere principe dat ritmische vibrotactiele stimulatie aandacht kan
-beïnvloeden — **niet** dat 1,50 Hz specifiek getest is, en **niet** dat
+beïnvloeden — **niet** dat 90 bpm specifiek getest is, en **niet** dat
 een getal binnen het conventionele EEG-delta-bereik vallen betekent dat
 een tactiele puls op die frequentie corticale delta-entrainment
 veroorzaakt.
@@ -133,7 +166,10 @@ veroorzaakt.
 **Boost:** bredere snel-vs-traag-wearable-haptiek-onderzoek (o.a.
 BoostMeUp, 72 deelnemers, Apple Watch, langzaam vs. snel hartslag-ritme)
 ondersteunt de richting (sneller ritme → hogere ervaren
-urgentie/arousal), niet het exacte getal 2,75 Hz.
+urgentie/arousal). Het eindtempo 110 bpm is rechtstreeks getest door
+Valente et al. (UIST 2024, o.a. op de pols): 110 bpm verhoogde de
+hartslag en verlaagde HRV t.o.v. 50 bpm. Wang et al. (ICMI 2023): een
+snelle hartslag-vibratie verhoogt hartslag én zelf-gerapporteerde angst.
 
 **Bredere evidentie:** Lee et al. (2026), *Affective Wearable Haptic
 Interventions: A Systematic Literature Review*, Proceedings of the ACM
@@ -173,23 +209,24 @@ Sleep-frequentie.
 > Toegestaan: "geïnformeerd door onderzoek naar traag, hartslag-achtig
 > tactiel ritme via de pols, dat fysiologische arousal en subjectieve
 > angst verminderde tijdens experimenteel opgewekte sociale stress."
-> NIET: "0,97 Hz is wetenschappelijk bewezen kalmte te produceren."
+> NIET: "60 bpm is wetenschappelijk bewezen kalmte te produceren."
 
 **Sharp Focus:**
 > Toegestaan: "sneller ritmisch haptisch patroon, geïnformeerd door
 > onderzoek dat toont dat ritmische vibrotactiele stimulatie aandacht en
 > cognitieve prestatie kan beïnvloeden."
-> NIET: "1,50 Hz brengt de hersenen in delta en produceert focus."
+> NIET: "het ritme brengt je hersenen in bèta en produceert focus."
 
 **Boost:**
 > Toegestaan: "sneller, opvallender ritmisch haptisch patroon, ontworpen
 > als activerende sensorische cue."
-> NIET: "2,75 Hz activeert direct het sympathisch zenuwstelsel."
+> NIET: "110 bpm activeert direct het sympathisch zenuwstelsel."
 
 **Sleep:**
 > Toegestaan: "het traagste ritmische patroon in het VIBEZCORE-systeem,
 > ontworpen als laag-tempo sensorische cue."
-> NIET: "0,60 Hz induceert slaap."
+> NIET: "40 bpm induceert slaap" of "je valt sneller in slaap" (Lee et al.
+> 2025 vond met smartwatch-haptiek geen effect op inslaap-maten).
 
 NOOIT gebruiken voor eender welke van deze vijf frequenties: "klinisch
 bewezen", "neurologisch optimaal", "hersengolf-specifiek",
@@ -199,14 +236,30 @@ claims, enkel toestand-taal).
 
 ---
 
-## 10. Finale beslissing
+## 10. Beslissingsgeschiedenis
 
-**De `022edda`-envelopeHz-waardes (§5, het RITME) blijven de V1-
-baseline — niet verder wijzigen op basis van literatuur.** Meer
-literatuuronderzoek levert geen tweede Doppel-achtig bewezen punt voor
-de overige vier modi op, want dat bestaat niet.
+**Ronde 3, 4 oktober 2026 (operator: "baseer ons op de meest logische
+en bewezen wetenschap") — HUIDIGE BASELINE.** Twee onderbouwde families
+van passieve kalmerende pols-haptiek vergeleken:
+- **A. Hartslag-tikken** trager/sneller dan de eigen hartslag (Doppel,
+  Zhou, Motokawa, Valente, Wang) — meerdere onafhankelijke studies,
+  getest met losse tikken op de pols.
+- **B. Gladde ademgolf** rond 0,1 Hz op een draaggolf (Apollo-patent,
+  Hallihan & Siegle) — één peer-reviewed studie (n=22). Het sterke
+  0,1 Hz-bewijs uit HRV-biofeedback geldt voor ACTIEF meeademen; passief
+  voelen meesleept de ademhaling niet betrouwbaar.
 
-**HERZIEN 4 oktober 2026, tweede ronde (operator: "er is geen enkel
+Gekozen: **familie A** voor telefoon en smartwatch (meest bewezen én
+het enige wat die toestellen kunnen: losse tikken), met het
+Motokawa-verloop (geleidelijk naar het eindtempo, want een vast tempo
+was niet significant). Familie B = ontwerpregel voor de bracelet-
+firmware, als laag bovenop A, 🟡. Zie §5–§6.
+
+Vorige beslissing (ronde 1, `022edda`: "vaste envelopeHz niet verder
+wijzigen") is hiermee vervangen — Motokawa & Kato 2025 is nieuw bewijs
+dat precies dat vaste tempo onderuit haalt.
+
+**Ronde 2, 4 oktober 2026 (operator: "er is geen enkel
 haptic ritme dat rust gaat brengen, sleep voelt te snel/hard"):** het
 RITME (§5) klopte, de PULSVORM niet. Twee fouten, beide nu gefixt in
 `src/services/bracelet-haptics.ts`:
@@ -256,6 +309,28 @@ benadering (ander motortype dan de bracelet).
   Systematic Literature Review.* Proceedings of the ACM on IMWUT.
   DOI: 10.1145/3790116
 - Vybronics VG0640001D — fabrikant-datasheet (LRA-specificaties).
+- Motokawa, T. & Kato, T. (2025). *Exploring combined vibration and
+  music interventions for acute stress reduction: insights from two
+  experimental studies.* BMC Psychology, 13, 1100.
+  https://doi.org/10.1186/s40359-025-03293-9
+- Zhou, Y., Murata, A. & Watanabe, J. (2020). *The Calming Effect of
+  Heartbeat Vibration.* IEEE Haptics Symposium, 677–683.
+- Wang, R., Zhang, H., Macdonald, S. A. & Di Campli San Vito, P. (2023).
+  *Increasing Heart Rate and Anxiety Level with Vibrotactile and Audio
+  Presentation of Fast Heartbeat.* ICMI 2023. DOI 10.1145/3577190.3614161
+- Valente, A., Lee, D., Choi, S., Billinghurst, M. & Esteves, A. (2024).
+  *Modulating Heart Activity and Task Performance using Haptic
+  Heartbeat Feedback: A Study Across Four Body Placements.* UIST '24.
+  DOI 10.1145/3654777.3676435
+- Lee, J. et al. (2025). *Closed-Loop Rhythmic Haptic Biofeedback via
+  Smartwatch for Relaxation and Sleep Onset.* ISWC 2025.
+  https://arxiv.org/abs/2507.02432
+- Pomper, U. (2023). *No evidence for tactile entrainment of attention.*
+  Frontiers in Psychology. https://pmc.ncbi.nlm.nih.gov/articles/PMC10250593/
+- Apollo Neuroscience — patent US11260198 (*Systems and methods of wave
+  generation for transcutaneous vibration*).
+- Choi, K. Y. & Ishii, H. (2020). *ambienBeat: Wrist-worn Mobile Tactile
+  Biofeedback for Heart Rate Rhythmic Regulation.* TEI 2020.
 
 ---
 

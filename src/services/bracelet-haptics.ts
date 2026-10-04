@@ -1,165 +1,82 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Voelbare preview van de 5 bracelet-modi, op de telefoon.
+   VIBEZCORE — haptiek van de 5 modi op telefoon (en later smartwatch).
 
-   HERBOUWD 4 okt 2026 — TWEEDE RONDE (operator: "ik heb het gevoel dat er
-   verkeerd wordt geredeneerd, er is geen enkel haptic ritme dat rust gaat
-   brengen, bv. sleep voelt te snel/hard"). De EERSTE fix van vandaag
-   (commit met PWM-achtige "sine-zwel" van 7 micro-tikjes) loste het
-   verkeerde probleem op. Grondig herzocht, elke bron opnieuw apart
-   gecheckt tegen de originele publicatie:
+   RONDE 3, 4 okt 2026 — operator: "baseer ons op de meest logische en
+   bewezen wetenschap". Volledige onderbouwing + bronnen:
+   docs/HAPTIC_RESEARCH_BASIS.md (§5–§6). Kort:
 
-   FOUT #1 — AMPLITUDE. React Native's `Vibration.vibrate(pattern)` stuurt
-   op Android `VibrationEffect.createWaveform(timings, amplitudes=-1, …)`
-   — amplitude -1 = VibrationEffect.DEFAULT_AMPLITUDE, dus ELKE puls
-   (ook de "zachte" 12-24ms randjes van de vorige zwel) vuurde op VOLLE
-   kracht af. Dat verklaart "hard": de vorm (duur) van een puls veranderen
-   deed niets aan hoe hard hij aanvoelde.
-     Oplossing: `expo-haptics` (al elders in de app gebruikt, bv. voor
-     tab-taps) gebruikt ZELF `VibrationEffect.createWaveform` met ECHTE,
-     lage amplitudes — geverifieerd in de package-broncode
-     (node_modules/expo-haptics/android/.../HapticsImpactType.kt):
-       Soft/Light  → 50ms @ amplitude 30/255 (≈12%)
-       Medium/Rigid→ 43ms @ amplitude 50/255 (≈20%)
-       Heavy       → 60ms @ amplitude 70/255 (≈27%)
-     Dit bestand gebruikt nu UITSLUITEND `Haptics.impactAsync(style)`,
-     zelf getimed via setTimeout — geen rauwe `Vibration` meer.
+   BOTTOM-UP MECHANISME: een pols-puls bereikt geen hersengolven (Pomper
+   2023: 10 Hz tactiel → geen entrainment). Het zenuwstelsel leest een
+   ritmische pols-tik als hartslag: TRAGER dan de eigen hartslag →
+   parasympathisch/kalmer (Doppel 2017, Zhou 2020, Lee 2025), SNELLER →
+   hartslag en arousal omhoog (Wang 2023, Valente 2024). De 5 modi zijn
+   dus 5 eindtempo's op één arousal-as t.o.v. de hartslag.
 
-   FOUT #2 — AANTAL PULSEN PER CYCLUS. Onderzoek naar vibrotactiele
-   valentie (affective-ratings-literatuur, zie bronnen) is expliciet:
-   "repeated short vibrations were felt to be alarming and unpleasant"
-   terwijl "long vibrations were perceived as pleasant". De vorige zwel
-   (7 korte tikjes per cyclus) deed structureel het tegenovergestelde van
-   wat "kalm" vraagt — ongeacht de sinusvorm.
-     Oplossing: terug naar WEINIG pulsen per cyclus (1-2), niet veel.
+   TEMPOVERLOOP: Motokawa & Kato 2025 (BMC Psychology 13:1100), Study 1 —
+   de enige vibratie-zonder-muziek-vergelijking: tempo dat start op de
+   hartslag en in 2 min geleidelijk daalt naar 50 bpm was significant
+   (p<0,05), een VAST tempo niet. Daarom: elke modus start op de
+   aangenomen rust-hartslag en schuift aan hetzelfde tempo (25 bpm per
+   120 s) naar zijn eindtempo, en blijft daar.
 
-   FOUT #3 — VORM VAN DOPPEL ZELF NIET GEBRUIKT. Doppel (de sterkste
-   directe bron, zie hieronder) is zelf geen "zwel" — de eigen
-   productbeschrijving noemt het expliciet "a double heartbeat-like
-   rhythm tactile sensation" (lub-dub, twee korte tikken per cyclus,
-   zoals een echt hartslaggeluid S1→S2). Vorige versie verzon een eigen
-   7-pulse sinusvorm die geen basis had in de geciteerde bron.
-     Oplossing: Sleep/Clarity/Calm Control spelen nu een ECHTE lub-dub
-     (1 of 2 tikken, Soft/Light) i.p.v. een zelfverzonnen zwel.
+   AANGENOMEN RUST-HARTSLAG: 75 bpm (Doppel-baseline gem. 75,8; Motokawa
+   Study 2 startte ook op 75). Er is nog geen hartslagsensor gekoppeld —
+   met de smartwatch kan dit later de echte hartslag worden (gouden
+   standaard, closed-loop zoals ambienBeat/Doppel-app).
 
-   ARCHITECTUUR (ongewijzigd): envelopeHz (herhalingsritme) blijft het
-   Doppel-geankerde model — zie HAPTIC_RESEARCH_BASIS.md §5, "niet
-   verder wijzigen op basis van literatuur". Enkel de PULSVORM (aantal
-   tikken + amplitude per tik) binnen elke cyclus is herzien.
+   EINDTEMPO PER MODUS:
+     Calm Control    60 bpm  🟢 Doppel: −20% onder rust-HR (gem. 58,2)
+     Clarity & Relax 50 bpm  🟢 Motokawa Study 1-eindpunt
+     Sleep           40 bpm  🟠 Doppel's ondergrens (trager = "onnatuurlijk
+                                traag", bewust uitgesloten). Doorgezette
+                                daling, niet als dalend protocol getest.
+     Sharp Focus     90 bpm  🟡 boven rust-HR, onder Boost (Yerkes-Dodson)
+     Boost          110 bpm  🟢 Valente 2024: 110 bpm (ook pols) → HR↑, HRV↓
 
-   PER MODUS:
+   PULSVORM: lub-dub (dubbele hartslagtik, zoals Doppel's "double
+   heartbeat-like rhythm"), tweede tik zachter (S2 < S1). Afstand lub→dub
+   = 30% van de cyclus, max 350 ms (fysiologisch S1–S2-interval).
+   Amplitude via expo-haptics (Android: Soft/Light 30/255, Medium 50,
+   Heavy 70) — rauwe RN `Vibration` vuurt altijd op volle kracht en is
+   daarom niet bruikbaar. Lagere amplitude = minder arousal/aangenamer,
+   dus kalme modi zacht, Focus/Boost sterker.
 
-   Sleep — 0,60 Hz, 1 zachte tik (Soft) per cyclus. Geen lub-dub: het
-   traagste/diepste ritme, bewust het minst aanwezige signaal — "long
-   [gap], pleasant" i.p.v. nog een extra tik toevoegen.
-
-   Clarity & Relax — 0,80 Hz, lub-dub (Soft+Soft) per cyclus.
-
-   Calm Control — 0,97 Hz, lub-dub (Soft+Light). 🟢 Dit is het enige punt
-   met directe evidence: Doppel, Azevedo et al. (2017, Scientific
-   Reports 7:2285) — pols-wearable, ~20% onder rust-hartslag (gem. 58,2
-   BPM ≈ 0,97 Hz), EIGEN "double heartbeat-like rhythm"-vorm, significant
-   lagere skin-conductance (p=0,029) EN angst (p=0,007) vs controle.
-   Aanvullend: Zhou, Murata & Watanabe (2020, IEEE Haptics Symposium,
-   "The Calming Effect of Heartbeat Vibration") — tweede, onafhankelijke
-   hartslag-vibratie-studie die fysiologische ontspanning (HRV) bevestigt
-   via hetzelfde mechanisme.
-
-   Sharp Focus — 1,50 Hz, 1 brisk tik (Medium) per cyclus — bewust GEEN
-   lub-dub: ander karakter dan de kalme familie (scherp, alert), hogere
-   amplitude (Medium i.p.v. Soft) — vibrotactiele affective-ratings-
-   literatuur: amplitude correleert positief met arousal.
-
-   Boost — 2,75 Hz, 1 tik (Heavy) per cyclus — snelste ritme + hoogste
-   amplitude, zelfde arousal-principe verder doorgetrokken.
-
-   GEVAARLIJKE RICHTING EXPLICIET VERMEDEN: "Increasing Heart Rate and
-   Anxiety Level with Vibrotactile and Audio Presentation of Fast
-   Heartbeat" (ACM, 2023) toont dat een VERSNELD hartslag-ritme angst/
-   hartslag juist VERHOOGT — bevestigt waarom Sleep/Clarity/Calm Control
-   trager dan rust-hartslag moeten blijven (wat al zo was) en nooit
-   sneller gemaakt mogen worden.
-
-   NIET kan overeenkomen met echte hardware (platformgrens, geen
-   bouwfout): de telefoon heeft een ander motortype dan de bracelet
-   (Vybronics VG0640001D LRA, 210 Hz resonantie) — dit blijft een
-   benadering, nu wel met echte lage amplitude i.p.v. enkel getimede
-   on/off-pulsen.
-
-   Primaire bronnen (elk apart gecheckt):
-   - Azevedo et al. (2017). Scientific Reports 7, 2285.
-     https://www.nature.com/articles/s41598-017-02274-2
-   - Zhou, Murata & Watanabe (2020). "The Calming Effect of Heartbeat
-     Vibration." IEEE Haptics Symposium (HAPTICS), 677–683.
-   - "Increasing Heart Rate and Anxiety Level with Vibrotactile and Audio
-     Presentation of Fast Heartbeat." ACM (2023).
-     https://dl.acm.org/doi/fullHtml/10.1145/3577190.3614161
-   - Vibrotactile affective-ratings-literatuur (amplitude ↔ arousal/
-     valence; "repeated short vibrations... alarming" vs "long
-     vibrations... pleasant") — samenvattend overzicht geciteerd in het
-     gesprek van 4 okt 2026.
-   - expo-haptics Android-broncode (amplitude-waardes per impact-style),
-     geverifieerd tegen node_modules/expo-haptics/android/.../
-     HapticsImpactType.kt in dit project. */
+   NIET op deze manier na te bootsen op telefoon/watch: Apollo-achtige
+   gladde amplitude-golf (vraagt continue amplitude-sturing) — die hoort
+   in de bracelet-firmware (DRV2605L kan dat), zie het onderzoeksdoc. */
 
 import { BraceletMode } from './ble-contract';
 import * as Haptics from 'expo-haptics';
 
-type Beat = {
-  /** Wanneer (ms na cyclusstart) deze tik afvuurt. */
-  atMs: number;
-  style: Haptics.ImpactFeedbackStyle;
-};
+const ASSUMED_RESTING_BPM = 75;
+/** Motokawa Study 1: 75 → 50 bpm in 120 s. */
+const BPM_PER_SECOND = 25 / 120;
+/** "Feel it"-preview: zelfde richting, ingekort zodat je het eindtempo voelt. */
+const PREVIEW_RAMP_SECONDS = 8;
+const LUB_DUB_FRACTION = 0.3;
+const LUB_DUB_MAX_MS = 350;
+
+const S = Haptics.ImpactFeedbackStyle;
 
 type ModeHapticSpec = {
-  /** Doppel-geankerd herhalingsritme — zie bestandscomment per modus
-   *  voor bron en vertrouwensgraad. Ongewijzigd t.o.v. vorige ronde. */
-  cycleMs: number;
-  /** 1 tik (Sleep/Focus/Boost) of lub-dub (Clarity/Calm Control) — zie
-   *  bestandscomment "Fout #3" voor waarom dit geen zelfverzonnen vorm
-   *  meer is. Elke `style` gebruikt expo-haptics' eigen, echte lage
-   *  amplitude (zie "Fout #1"), nooit de rauwe Vibration-API. */
-  beats: Beat[];
+  targetBpm: number;
+  lub: Haptics.ImpactFeedbackStyle;
+  dub: Haptics.ImpactFeedbackStyle;
 };
-
-const hz = (envelopeHz: number) => Math.round(1000 / envelopeHz);
 
 const SPECS: Record<BraceletMode, ModeHapticSpec> = {
-  [BraceletMode.Delta]: {
-    // Sleep — 0,60 Hz, 1 zachte tik, geen lub-dub.
-    cycleMs: hz(0.6),
-    beats: [{ atMs: 0, style: Haptics.ImpactFeedbackStyle.Soft }],
-  },
-  [BraceletMode.Theta]: {
-    // Clarity & Relax — 0,80 Hz, lub-dub (Soft+Soft).
-    cycleMs: hz(0.8),
-    beats: [
-      { atMs: 0, style: Haptics.ImpactFeedbackStyle.Soft },
-      { atMs: Math.round(hz(0.8) * 0.3), style: Haptics.ImpactFeedbackStyle.Soft },
-    ],
-  },
-  [BraceletMode.Alpha]: {
-    // Calm Control — 0,97 Hz. 🟢 Doppel-geankerd, lub-dub (Soft+Light).
-    cycleMs: hz(0.97),
-    beats: [
-      { atMs: 0, style: Haptics.ImpactFeedbackStyle.Soft },
-      { atMs: Math.round(hz(0.97) * 0.3), style: Haptics.ImpactFeedbackStyle.Light },
-    ],
-  },
-  [BraceletMode.Beta]: {
-    // Sharp Focus — 1,50 Hz, 1 brisk tik (Medium), geen lub-dub.
-    cycleMs: hz(1.5),
-    beats: [{ atMs: 0, style: Haptics.ImpactFeedbackStyle.Medium }],
-  },
-  [BraceletMode.Gamma]: {
-    // Boost — 2,75 Hz, 1 tik (Heavy), hoogste amplitude + tempo.
-    cycleMs: hz(2.75),
-    beats: [{ atMs: 0, style: Haptics.ImpactFeedbackStyle.Heavy }],
-  },
+  [BraceletMode.Delta]: { targetBpm: 40, lub: S.Soft, dub: S.Soft },
+  [BraceletMode.Theta]: { targetBpm: 50, lub: S.Soft, dub: S.Soft },
+  [BraceletMode.Alpha]: { targetBpm: 60, lub: S.Light, dub: S.Soft },
+  [BraceletMode.Beta]: { targetBpm: 90, lub: S.Medium, dub: S.Light },
+  [BraceletMode.Gamma]: { targetBpm: 110, lub: S.Heavy, dub: S.Medium },
 };
 
-/* Scheduler-state — generation-counter i.p.v. een losse `active`-bool,
-   zodat een snel op elkaar volgende play(modeA) → play(modeB) nooit de
-   oude cyclus van modeA kan laten doortikken nadat modeB al gestart is. */
+function bpmAt(spec: ModeHapticSpec, elapsedSec: number, rampSec: number): number {
+  const progress = rampSec <= 0 ? 1 : Math.min(1, elapsedSec / rampSec);
+  return ASSUMED_RESTING_BPM + (spec.targetBpm - ASSUMED_RESTING_BPM) * progress;
+}
+
 let generation = 0;
 const pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
 
@@ -168,27 +85,44 @@ function clearPending(): void {
   pendingTimeouts.length = 0;
 }
 
-function scheduleCycle(spec: ModeHapticSpec, myGeneration: number): void {
-  if (myGeneration !== generation) return;
-  spec.beats.forEach((beat) => {
-    const id = setTimeout(() => {
-      if (myGeneration !== generation) return;
-      Haptics.impactAsync(beat.style).catch(() => {
-        /* stil — toestel/emulator zonder trilmotor mag niets breken */
-      });
-    }, beat.atMs);
-    pendingTimeouts.push(id);
+function fire(style: Haptics.ImpactFeedbackStyle): void {
+  Haptics.impactAsync(style).catch(() => {
+    /* toestel/emulator zonder trilmotor mag niets breken */
   });
-  const nextId = setTimeout(() => scheduleCycle(spec, myGeneration), spec.cycleMs);
-  pendingTimeouts.push(nextId);
 }
 
-/** Speelt de preview-reeks van één modus herhaald af, tot stopModePreviewHaptic().
- *  Faalt stil: een toestel/emulator zonder trilmotor mag niets breken. */
-export function playModePreviewHaptic(mode: BraceletMode): void {
+function scheduleBeat(spec: ModeHapticSpec, startedAt: number, rampSec: number, myGeneration: number): void {
+  if (myGeneration !== generation) return;
+  // Oude timers van vorige cycli opruimen, anders groeit de lijst onbeperkt.
+  pendingTimeouts.length = 0;
+
+  const cycleMs = 60000 / bpmAt(spec, (Date.now() - startedAt) / 1000, rampSec);
+  const dubAt = Math.min(cycleMs * LUB_DUB_FRACTION, LUB_DUB_MAX_MS);
+
+  fire(spec.lub);
+  pendingTimeouts.push(
+    setTimeout(() => {
+      if (myGeneration === generation) fire(spec.dub);
+    }, dubAt),
+    setTimeout(() => scheduleBeat(spec, startedAt, rampSec, myGeneration), cycleMs),
+  );
+}
+
+function start(mode: BraceletMode, rampSec: number): void {
   generation += 1;
   clearPending();
-  scheduleCycle(SPECS[mode], generation);
+  scheduleBeat(SPECS[mode], Date.now(), rampSec, generation);
+}
+
+/** Echte sessie: geleidelijk tempo volgens Motokawa (minuten-lang). */
+export function playModeSessionHaptic(mode: BraceletMode): void {
+  const spec = SPECS[mode];
+  start(mode, Math.abs(spec.targetBpm - ASSUMED_RESTING_BPM) / BPM_PER_SECOND);
+}
+
+/** "Feel it"-preview: zelfde verloop, ingekort tot een paar seconden. */
+export function playModePreviewHaptic(mode: BraceletMode): void {
+  start(mode, PREVIEW_RAMP_SECONDS);
 }
 
 export function stopModePreviewHaptic(): void {

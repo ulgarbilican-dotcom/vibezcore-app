@@ -28,7 +28,11 @@
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
-import { playModePreviewHaptic, stopModePreviewHaptic } from '@/services/bracelet-haptics';
+import {
+  playModePreviewHaptic,
+  playModeSessionHaptic,
+  stopModePreviewHaptic,
+} from '@/services/bracelet-haptics';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -2884,13 +2888,15 @@ function ActiveSessionScreen({
      aan. Er bestaat nog geen echte bracelet-hardware (CLAUDE.md), dus de
      telefoon moet tijdens een actieve sessie zelf de rol van de pols-
      haptiek spelen, niet enkel in een losse preview-popup. Start/stopt
-     met de echte sessie, pauzeert mee met isPaused. */
+     met de echte sessie, pauzeert mee met isPaused. Na resume start het
+     tempo opnieuw op rust-hartslag en daalt/stijgt weer geleidelijk —
+     zie services/bracelet-haptics.ts (Motokawa-protocol). */
   useEffect(() => {
     if (isPaused) {
       stopModePreviewHaptic();
       return;
     }
-    playModePreviewHaptic(activeMeta.mode);
+    playModeSessionHaptic(activeMeta.mode);
     return () => stopModePreviewHaptic();
   }, [activeMeta.mode, isPaused]);
 
