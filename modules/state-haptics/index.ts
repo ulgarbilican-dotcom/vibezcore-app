@@ -5,6 +5,7 @@
    `native` null en valt bracelet-haptics.ts terug op expo-haptics. */
 
 import { requireNativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 type StateHapticsNativeModule = {
   hasAmplitudeControl(): boolean;
@@ -19,10 +20,11 @@ try {
   native = null;
 }
 
-/** Native module gelinkt (Android-dev/prod-build) — dan kan de hele curve
- *  los van de JS-thread afspelen, ook met het scherm op slot. */
+/** Native module gelinkt én Android 8+ (API 26, VibrationEffect.createWaveform)
+ *  — dan kan de hele curve los van de JS-thread afspelen, ook met het
+ *  scherm op slot. Android 7 valt terug op expo-haptics. */
 export function hasNativeWaveform(): boolean {
-  return native !== null;
+  return native !== null && Platform.OS === 'android' && Number(Platform.Version) >= 26;
 }
 
 /** true als het toestel ook echte amplitude-sturing heeft. Zonder (bv.
