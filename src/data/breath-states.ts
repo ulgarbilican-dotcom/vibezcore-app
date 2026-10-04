@@ -774,11 +774,15 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
        Operator, 16 september 2026: "het groen is echt lelijk, gebruik
        het groen van WhatsApp" — vierde en (voorlopig) laatste wissel,
        naar het herkenbare WhatsApp-groen (#25D366). Zelfde groenfamilie/
-       rol als voorheen, enkel de exacte tint. */
-    accent: '#25D366',
-    accentSoft: 'rgba(37,211,102,0.15)',
-    glow: '#0E7A3C',
-    gradient: ['#0E7A3C', '#25D366', '#8CF0AE'],
+       rol als voorheen, enkel de exacte tint.
+       Operator, 5 oktober 2026: "maak van dat groen ons groen — het
+       accentgroen van VIBEZCORE" — Bio-Teal (#00A3A3, theme.ts
+       AudioAccent), met het lichte merk-teal (#4AF0D4) als oplichtend
+       uiteinde van de gradient. */
+    accent: '#00A3A3',
+    accentSoft: 'rgba(0,163,163,0.15)',
+    glow: '#006B6B',
+    gradient: ['#006B6B', '#00A3A3', '#4AF0D4'],
     artScale: 0.7,
     art: 'tree',
     focusY: 0.5,

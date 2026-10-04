@@ -30,7 +30,7 @@ const STATES = [
   { key: 'calm', name: 'Calm Control', accent: '#B478FF' },
   { key: 'boost', name: 'Boost', accent: '#F5A524' },
   { key: 'focus', name: 'Sharp Focus', accent: '#3E9BFF' },
-  { key: 'rest', name: 'Sleep', accent: '#25D366' },
+  { key: 'rest', name: 'Sleep', accent: '#00A3A3' },
 ] as const;
 
 export default function BreathPacerPreview() {

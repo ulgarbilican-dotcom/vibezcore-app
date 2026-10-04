@@ -3,7 +3,7 @@
    kleuren als de vijf ademtoestanden:
 
      BOOST   amber  #F5A524      CLARITY  wit    #FFFFFF
-     FOCUS   blauw  #3E9BFF      REST     groen  #25D366
+     FOCUS   blauw  #3E9BFF      REST     teal   #00A3A3
      CALM    violet #B478FF
 
    Dit VERVANGT de tabel in CLAUDE.md §5, die daar is bijgewerkt. De reden:
@@ -177,7 +177,7 @@ export const MODES: ModeMeta[] = [
     mode: BraceletMode.Delta,
     name: 'Sleep',
     blurb: 'Deep rest and the transition to sleep.',
-    color: '#25D366', // REST-groen (WhatsApp-groen), gelijk aan breathwork (breath-states.ts, 16 september 2026)
+    color: '#00A3A3', // SLEEP — VIBEZCORE Bio-Teal, gelijk aan breathwork (breath-states.ts, 5 oktober 2026)
     minMinutes: 30,
     /* Operator, 16 september 2026: 45→50 (operator-keuze — NSDR-
        onderzoek ondersteunt zelfs tot 60 min, maar 50 is een

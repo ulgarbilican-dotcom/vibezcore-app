@@ -172,7 +172,7 @@ methodiek als de Sleep-hernoeming hierboven. Enkel de naam wijzigt; index
 | 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min | 15 min |
 | 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min | 20 min |
 | 3 | Theta | Clarity & Relax | Wit #FFFFFF | 20 – 45 min | 25 min |
-| 4 | Delta | Sleep | WhatsApp-groen #25D366 | 30 – 50 min | 30 min |
+| 4 | Delta | Sleep | Bio-Teal #00A3A3 | 30 – 50 min | 30 min |
 
 **GEWIJZIGD 16 september 2026 (operator, officiële hardware-spec-tabel
 Haptic_Bracelet_Spec_v2_3): duur-ranges + defaults bijgewerkt** — was
@@ -216,6 +216,11 @@ jade binnen dezelfde groenfamilie.
 het groen van WhatsApp"): Rest & Reset van jade/smaragd #20B486 naar
 WhatsApp-groen #25D366.** Vierde bijstelling — herkenbare, gangbare groentint
 i.p.v. de zelfgekozen jade-tint.
+
+**GEWIJZIGD 5 oktober 2026 (operator: "maak van dat groen ons groen — het
+accentgroen van VIBEZCORE"): Sleep van WhatsApp-groen #25D366 naar Bio-Teal
+#00A3A3** (theme.ts `AudioAccent`; gradient loopt uit in #4AF0D4). Geldt voor
+ademsessie én bracelet (breath-states.ts → ble-contract.ts).
 
 App toont NOOIT technische parameters (PPS, burst_ms, amplitude, RTP) — spec §11.5.
 Alleen modusnaam, duur, resterende tijd, batterij, status.
