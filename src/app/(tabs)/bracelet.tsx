@@ -99,11 +99,9 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       />
       <SafeAreaView style={s.introWrap} edges={['bottom']}>
         <View style={s.stackTitle}>
-          <Text style={s.stackWord1}>Feel</Text>
-          <Text style={s.stackWord2}>State</Text>
-          <Text style={s.stackWord3}>Control</Text>
+          <Text style={s.introTitle}>Control your state.</Text>
         </View>
-        <Text style={s.introSub}>Choose your state. Feel it instantly.</Text>
+        <Text style={s.introSub}>Guided by touch, on your wrist.</Text>
         <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
           <Pressable
             onPress={() => {
@@ -173,31 +171,16 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 16,
   },
-  stackWord1: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 28,
-    letterSpacing: -0.2,
-    lineHeight: 32,
-    color: 'rgba(255,255,255,0.62)',
-    textAlign: 'center',
-  },
-  stackWord2: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 48,
-    letterSpacing: 0,
-    lineHeight: 52,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  stackWord3: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 50,
-    letterSpacing: -1.2,
-    lineHeight: 52,
+  /* Volzin-titel i.p.v. een 3-woorden-stapel (die paste bij losse woorden
+     als "Breathe/Build/Become", niet bij een volledige zin) — exact
+     `introTitle` uit (tabs)/index.tsx (Library-tab), 1-op-1 hergebruikt. */
+  introTitle: {
     color: '#ffffff',
+    fontSize: 32,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.4,
+    lineHeight: 36,
     textAlign: 'center',
-    marginTop: 2,
   },
   introCtaMatch: {
     flexDirection: 'row',
