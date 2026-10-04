@@ -19,9 +19,15 @@ try {
   native = null;
 }
 
-/** true enkel als de native module gelinkt is ÉN het toestel echte
- *  amplitude-sturing heeft — anders klopt "subtiel" niet en hoort de
- *  aanroeper terug te vallen. */
+/** Native module gelinkt (Android-dev/prod-build) — dan kan de hele curve
+ *  los van de JS-thread afspelen, ook met het scherm op slot. */
+export function hasNativeWaveform(): boolean {
+  return native !== null;
+}
+
+/** true als het toestel ook echte amplitude-sturing heeft. Zonder (bv.
+ *  Galaxy A16: capabilities = []) negeert de hardware elke sterkte en
+ *  bepaalt enkel de DUUR van een tik hoe sterk hij voelt. */
 export function canPlayNativeWaveform(): boolean {
   try {
     return native?.hasAmplitudeControl() ?? false;

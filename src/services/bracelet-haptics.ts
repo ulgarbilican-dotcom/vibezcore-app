@@ -35,14 +35,15 @@
    PULSVORM: lub-dub (Doppel's "double heartbeat-like rhythm"), dub
    zachter. Lub→dub = 30% van de cyclus, max 350 ms (fysiologisch S1–S2).
 
-   AFSPELEN — twee paden:
-     1. Android met amplitude-sturing (modules/state-haptics): de HELE
-        curve gaat in één keer naar de systeem-trilmotor. Echte lage
-        amplitudes (subtieler dan expo-haptics' zachtste 30/255) én het
-        ritme loopt door zonder JS-timers — die bevriest Android als het
-        scherm op slot gaat (gemeten aug 2026, zie breath-background).
-     2. Anders (iOS, toestel zonder amplitude-sturing): expo-haptics op
-        JS-timers, zachtste beschikbare stijlen.
+   AFSPELEN — op Android gaat de HELE curve in één keer naar de systeem-
+   trilmotor (modules/state-haptics), zodat het ritme doorloopt zonder
+   JS-timers — die bevriest Android als het scherm op slot gaat (gemeten
+   aug 2026, zie breath-background). Twee varianten:
+     1. MET amplitude-sturing: vaste tikduur, sterkte via echte lage
+        amplitudes (subtieler dan expo-haptics' zachtste 30/255).
+     2. ZONDER (bv. Galaxy A16, gemeten 5 okt 2026: capabilities = [] —
+        de hardware negeert elke sterkte): sterkte via de tikduur.
+   Zonder native module (iOS/web): expo-haptics op JS-timers.
 
    PAUZE: hervatten binnen 2 min gaat verder waar de curve was (het
    lichaam is nog "meegenomen"); later hervatten begint opnieuw met de
@@ -52,6 +53,7 @@ import { BraceletMode } from './ble-contract';
 import * as Haptics from 'expo-haptics';
 import {
   canPlayNativeWaveform,
+  hasNativeWaveform,
   playNativeWaveform,
   stopNativeWaveform,
 } from '../../modules/state-haptics';
@@ -63,6 +65,7 @@ const PREVIEW_RAMP_SECONDS = 8;
 const RESUME_WINDOW_SECONDS = 120;
 const LUB_DUB_FRACTION = 0.3;
 const LUB_DUB_MAX_MS = 350;
+/** Met amplitude-sturing: vaste tikduur, sterkte via amplitude. */
 const LUB_MS = 45;
 const DUB_MS = 35;
 
@@ -71,20 +74,25 @@ const S = Haptics.ImpactFeedbackStyle;
 type ModeHapticSpec = {
   targetBpm: number;
   rampSec: number;
-  /** Native amplitude 0–255 — engineering-waarden, af te stemmen op gevoel. */
+  /** Native amplitude 0–255 (toestel MET amplitude-sturing). */
   lubAmp: number;
   dubAmp: number;
-  /** Terugval-pad (expo-haptics). */
+  /** Tikduur in ms (toestel ZONDER amplitude-sturing — daar bepaalt
+   *  enkel de duur de sterkte). Niet onder ~25 ms: daaronder worden
+   *  vibrotactiele pulsen vaak niet meer waargenomen. */
+  lubMsNoAmp: number;
+  dubMsNoAmp: number;
+  /** Terugval-pad zonder native module (iOS/web): expo-haptics. */
   lubStyle: Haptics.ImpactFeedbackStyle;
   dubStyle: Haptics.ImpactFeedbackStyle;
 };
 
 const SPECS: Record<BraceletMode, ModeHapticSpec> = {
-  [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 30, lubAmp: 24, dubAmp: 17, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 30, lubAmp: 45, dubAmp: 32, lubStyle: S.Medium, dubStyle: S.Light },
-  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 30, lubAmp: 65, dubAmp: 45, lubStyle: S.Heavy, dubStyle: S.Medium },
+  [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 26, dubMsNoAmp: 20, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 28, dubMsNoAmp: 20, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 30, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 30, dubMsNoAmp: 22, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 30, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 40, dubMsNoAmp: 30, lubStyle: S.Medium, dubStyle: S.Light },
+  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 30, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 50, dubMsNoAmp: 38, lubStyle: S.Heavy, dubStyle: S.Medium },
 };
 
 type Timing = { holdSec: number; rampSec: number };
@@ -104,16 +112,26 @@ function beatAt(spec: ModeHapticSpec, elapsedSec: number, timing: Timing) {
 /** De volledige curve vanaf `offsetSec` als één Android-waveform. Met
  *  `totalSec` eindig (sessie), zonder herhaalt de laatste tel eindeloos
  *  (preview, stopt bij het sluiten). */
-function buildWaveform(spec: ModeHapticSpec, timing: Timing, offsetSec: number, totalSec?: number) {
+function buildWaveform(
+  spec: ModeHapticSpec,
+  timing: Timing,
+  offsetSec: number,
+  totalSec: number | undefined,
+  amplitudeControl: boolean,
+) {
   const timings: number[] = [];
   const amplitudes: number[] = [];
   const curveEnd = timing.holdSec + timing.rampSec;
   let t = offsetSec;
   let repeat = -1;
 
+  const lubMs = amplitudeControl ? LUB_MS : spec.lubMsNoAmp;
+  const dubMs = amplitudeControl ? DUB_MS : spec.dubMsNoAmp;
+  const lubAmp = amplitudeControl ? spec.lubAmp : 255;
+  const dubAmp = amplitudeControl ? spec.dubAmp : 255;
   const pushBeat = (cycleMs: number, dubAt: number) => {
-    timings.push(LUB_MS, dubAt - LUB_MS, DUB_MS, cycleMs - dubAt - DUB_MS);
-    amplitudes.push(spec.lubAmp, 0, spec.dubAmp, 0);
+    timings.push(lubMs, dubAt - lubMs, dubMs, cycleMs - dubAt - dubMs);
+    amplitudes.push(lubAmp, 0, dubAmp, 0);
   };
 
   while (t < curveEnd && (totalSec === undefined || t - offsetSec < totalSec)) {
@@ -135,7 +153,38 @@ function buildWaveform(spec: ModeHapticSpec, timing: Timing, offsetSec: number, 
   return { timings, amplitudes, repeat };
 }
 
-/* ── Terugval-pad: expo-haptics op JS-timers ─────────────────────────── */
+/* ── Pols-klok voor het beeld ────────────────────────────────────────────
+   De animatie (HapticPulseRings) verzint geen eigen tempo: ze krijgt een
+   event per tik uit exact dezelfde curve en hetzelfde ankerpunt als de
+   trilmotor — haptiek en beeld vanuit één bron. */
+
+export type HapticPulse = {
+  kind: 'lub' | 'dub';
+  mode: BraceletMode;
+  /** Duur van de huidige hartslagcyclus — het beeld schaalt zijn ring-
+   *  beweging hierop: traag tempo = trage, brede ring. */
+  cycleMs: number;
+};
+
+type PulseListener = (pulse: HapticPulse) => void;
+const pulseListeners = new Set<PulseListener>();
+
+export function subscribeHapticPulse(listener: PulseListener): () => void {
+  pulseListeners.add(listener);
+  return () => {
+    pulseListeners.delete(listener);
+  };
+}
+
+function emitPulse(pulse: HapticPulse): void {
+  pulseListeners.forEach((l) => {
+    try {
+      l(pulse);
+    } catch {
+      /* een kapotte luisteraar mag de haptiek niet raken */
+    }
+  });
+}
 
 let generation = 0;
 const pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
@@ -145,22 +194,68 @@ function clearPending(): void {
   pendingTimeouts.length = 0;
 }
 
+/** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
+ *  af (zelfde afgeronde cycleMs, zelfde startpunt) puur voor het beeld.
+ *  Corrigeert zichzelf op de wandklok, zodat er geen drift opbouwt. */
+function scheduleVisual(
+  mode: BraceletMode,
+  spec: ModeHapticSpec,
+  timing: Timing,
+  anchorWallMs: number,
+  offsetSec: number,
+  curveSec: number,
+  myGeneration: number,
+): void {
+  if (myGeneration !== generation) return;
+  pendingTimeouts.length = 0;
+  /* Na scherm-op-slot liep JS achter: spring stil naar de tik van NU in
+     plaats van alle gemiste tikken als salvo te tonen. */
+  let beat = beatAt(spec, curveSec, timing);
+  while (anchorWallMs + (curveSec + beat.cycleMs / 1000 - offsetSec) * 1000 < Date.now()) {
+    curveSec += beat.cycleMs / 1000;
+    beat = beatAt(spec, curveSec, timing);
+  }
+  const { cycleMs, dubAt } = beat;
+  emitPulse({ kind: 'lub', mode, cycleMs });
+  const beatWallMs = anchorWallMs + (curveSec - offsetSec) * 1000;
+  const nextCurveSec = curveSec + cycleMs / 1000;
+  const nextWallMs = anchorWallMs + (nextCurveSec - offsetSec) * 1000;
+  pendingTimeouts.push(
+    setTimeout(() => {
+      if (myGeneration === generation) emitPulse({ kind: 'dub', mode, cycleMs });
+    }, Math.max(0, beatWallMs + dubAt - Date.now())),
+    setTimeout(
+      () => scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, nextCurveSec, myGeneration),
+      Math.max(0, nextWallMs - Date.now()),
+    ),
+  );
+}
+
 function fire(style: Haptics.ImpactFeedbackStyle): void {
   Haptics.impactAsync(style).catch(() => {
     /* toestel/emulator zonder trilmotor mag niets breken */
   });
 }
 
-function scheduleBeat(spec: ModeHapticSpec, curveStartedAt: number, timing: Timing, myGeneration: number): void {
+function scheduleBeat(
+  mode: BraceletMode,
+  spec: ModeHapticSpec,
+  curveStartedAt: number,
+  timing: Timing,
+  myGeneration: number,
+): void {
   if (myGeneration !== generation) return;
   pendingTimeouts.length = 0;
   const { cycleMs, dubAt } = beatAt(spec, (Date.now() - curveStartedAt) / 1000, timing);
   fire(spec.lubStyle);
+  emitPulse({ kind: 'lub', mode, cycleMs });
   pendingTimeouts.push(
     setTimeout(() => {
-      if (myGeneration === generation) fire(spec.dubStyle);
+      if (myGeneration !== generation) return;
+      fire(spec.dubStyle);
+      emitPulse({ kind: 'dub', mode, cycleMs });
     }, dubAt),
-    setTimeout(() => scheduleBeat(spec, curveStartedAt, timing, myGeneration), cycleMs),
+    setTimeout(() => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration), cycleMs),
   );
 }
 
@@ -175,11 +270,19 @@ function silence(): void {
 function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: number): void {
   silence();
   const spec = SPECS[mode];
-  if (canPlayNativeWaveform()) {
-    const { timings, amplitudes, repeat } = buildWaveform(spec, timing, offsetSec, totalSec);
+  if (hasNativeWaveform()) {
+    const { timings, amplitudes, repeat } = buildWaveform(
+      spec,
+      timing,
+      offsetSec,
+      totalSec,
+      canPlayNativeWaveform(),
+    );
+    const anchorWallMs = Date.now();
     playNativeWaveform(timings, amplitudes, repeat);
+    scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation);
   } else {
-    scheduleBeat(spec, Date.now() - offsetSec * 1000, timing, generation);
+    scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);
   }
 }
 

@@ -28,6 +28,7 @@
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
+import { HapticPulseRings } from '@/components/HapticPulseRings';
 import {
   pauseModeSessionHaptic,
   playModePreviewHaptic,
@@ -3042,6 +3043,11 @@ function ActiveSessionScreen({
              RingAmbientGlow/SlowAmbientPulse proportioneel meegeschaald
              (dezelfde onderlinge afstand als voorheen). */}
           <RingAmbientGlow color={activeMeta.color} size={214} />
+          {/* Operator, 5 okt 2026: de haptiek zichtbaar maken — één ring
+             per tik, exact uit dezelfde curve als de motor (zie
+             components/HapticPulseRings.tsx). Achter de cirkel, zodat de
+             ringen vanaf de rand naar buiten uitzetten. */}
+          <HapticPulseRings size={240} />
           <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
           {/* Operator, 27 september 2026 ("doe die draaiende buitenlijn
              weg"): SlowAmbientPulse-render verwijderd — DrainingCircle's
