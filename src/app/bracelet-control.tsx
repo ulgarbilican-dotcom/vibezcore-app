@@ -150,8 +150,10 @@ import ReanimatedAnimated, {
   interpolate,
   Extrapolation,
   Easing as ReanimatedEasing,
+  runOnJS,
   type SharedValue,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
 import type { SimulatedBracelet } from '../services/bracelet-sim';
 import {
@@ -1517,6 +1519,12 @@ function ModeDetailModal({
    veeg de sessie stoppen. */
 const SWIPE_DISTANCE = 320;
 
+/* Vervolg (operator, 5 okt 2026: "hapert / schokt"): de veeg liep via
+   PanResponder op de JS-thread, dezelfde thread waarop de golfanimatie in
+   de cirkel zich ~15-60× per seconde hertekent — elke vingerbeweging
+   moest daartussen wachten. Nu Gesture Handler + Reanimated: volgen,
+   loslaten en terugveren gebeuren volledig op de UI-thread, los van JS.
+   Enkel de modus-wissel zelf gaat naar JS. */
 function ModeSwipeRing({
   mode,
   onChange,
@@ -1528,76 +1536,88 @@ function ModeSwipeRing({
   onTap: () => void;
   children: ReactNode;
 }) {
-  const x = useRef(new Animated.Value(0)).current;
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
+  const last = MODES.length - 1;
+  const index = MODES.findIndex((m) => m.mode === mode);
+  const x = useSharedValue(0);
+  const indexSV = useSharedValue(index);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const onTapRef = useRef(onTap);
   onTapRef.current = onTap;
+  /* Richting van de lopende wissel: de nieuwe modus schuift pas binnen
+     NADAT React hem getekend heeft (anders zie je de oude even terugkomen). */
+  const pendingDirRef = useRef(0);
 
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderMove: (_, g) => {
-          const i = MODES.findIndex((m) => m.mode === modeRef.current);
-          const atEdge = (g.dx > 0 && i === 0) || (g.dx < 0 && i === MODES.length - 1);
-          x.setValue(atEdge ? g.dx * 0.25 : g.dx);
-        },
-        onPanResponderRelease: (_, g) => {
-          const springBack = () =>
-            Animated.spring(x, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 6 }).start();
-          if (Math.abs(g.dx) < 8 && Math.abs(g.dy) < 8) {
-            springBack();
-            onTapRef.current();
-            return;
-          }
-          const i = MODES.findIndex((m) => m.mode === modeRef.current);
-          const dir = g.dx < -50 || g.vx < -0.5 ? 1 : g.dx > 50 || g.vx > 0.5 ? -1 : 0;
-          const next = i + dir;
-          if (dir === 0 || next < 0 || next >= MODES.length) {
-            springBack();
-            return;
-          }
-          Animated.timing(x, {
-            toValue: -dir * SWIPE_DISTANCE,
-            duration: 140,
-            useNativeDriver: true,
-          }).start(() => {
-            onChangeRef.current(MODES[next].mode);
-            x.setValue(dir * SWIPE_DISTANCE);
-            Animated.spring(x, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
-          });
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(x, { toValue: 0, useNativeDriver: true }).start();
-        },
-      }),
-    [x],
-  );
-  const opacity = x.interpolate({
-    inputRange: [-SWIPE_DISTANCE, 0, SWIPE_DISTANCE],
-    outputRange: [0, 1, 0],
-  });
+  useEffect(() => {
+    indexSV.value = index;
+    const dir = pendingDirRef.current;
+    if (dir !== 0) {
+      pendingDirRef.current = 0;
+      x.value = dir * SWIPE_DISTANCE;
+      x.value = withSpring(0, { damping: 22, stiffness: 190, mass: 0.9 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+
+  const commit = (nextIndex: number, dir: number) => {
+    pendingDirRef.current = dir;
+    onChangeRef.current(MODES[nextIndex].mode);
+  };
+  const tapJS = () => onTapRef.current();
+
+  const pan = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-16, 16])
+    .onUpdate((e) => {
+      const i = indexSV.value;
+      const atEdge = (e.translationX > 0 && i === 0) || (e.translationX < 0 && i === last);
+      x.value = atEdge ? e.translationX * 0.25 : e.translationX;
+    })
+    .onEnd((e) => {
+      const i = indexSV.value;
+      const dir =
+        e.translationX < -40 || e.velocityX < -500 ? 1 : e.translationX > 40 || e.velocityX > 500 ? -1 : 0;
+      const next = i + dir;
+      if (dir === 0 || next < 0 || next > last) {
+        x.value = withSpring(0, { damping: 18, stiffness: 240 });
+        return;
+      }
+      x.value = withTiming(-dir * SWIPE_DISTANCE, { duration: 130 }, (finished) => {
+        if (finished) runOnJS(commit)(next, dir);
+      });
+    });
+  const tap = Gesture.Tap()
+    .maxDistance(10)
+    .onEnd((_e, success) => {
+      if (success) runOnJS(tapJS)();
+    });
+  const gesture = Gesture.Exclusive(pan, tap);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }],
+    opacity: interpolate(Math.abs(x.value), [0, SWIPE_DISTANCE], [1, 0], Extrapolation.CLAMP),
+  }));
+
   return (
-    <Animated.View
-      {...responder.panHandlers}
-      style={{ transform: [{ translateX: x }], opacity }}
-      accessibilityRole="adjustable"
-      accessibilityLabel={`${getModeMeta(mode).name}. Swipe left or right to change mode, tap for details.`}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }, { name: 'activate' }]}
-      onAccessibilityAction={(e) => {
-        const i = MODES.findIndex((m) => m.mode === mode);
-        if (e.nativeEvent.actionName === 'activate') onTap();
-        else if (e.nativeEvent.actionName === 'increment' && i < MODES.length - 1) onChange(MODES[i + 1].mode);
-        else if (e.nativeEvent.actionName === 'decrement' && i > 0) onChange(MODES[i - 1].mode);
-      }}
-    >
-      {children}
-    </Animated.View>
+    /* flex: 0 — standaard rekt de root zich uit (flex: 1) en lag de
+       cirkel over de stipjes en de duurkiezer. */
+    <GestureHandlerRootView style={{ flex: 0 }}>
+      <GestureDetector gesture={gesture}>
+        <ReanimatedAnimated.View
+          style={style}
+          accessibilityRole="adjustable"
+          accessibilityLabel={`${getModeMeta(mode).name}. Swipe left or right to change mode, tap for details.`}
+          accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }, { name: 'activate' }]}
+          onAccessibilityAction={(e) => {
+            if (e.nativeEvent.actionName === 'activate') onTap();
+            else if (e.nativeEvent.actionName === 'increment' && index < last) onChange(MODES[index + 1].mode);
+            else if (e.nativeEvent.actionName === 'decrement' && index > 0) onChange(MODES[index - 1].mode);
+          }}
+        >
+          {children}
+        </ReanimatedAnimated.View>
+      </GestureDetector>
+    </GestureHandlerRootView>
   );
 }
 
