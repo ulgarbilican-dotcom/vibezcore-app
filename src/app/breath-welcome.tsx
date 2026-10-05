@@ -98,6 +98,7 @@ import {
   Waves,
   Zap,
 } from 'lucide-react-native';
+import { STATE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
@@ -2590,13 +2591,8 @@ function ExperienceWaveFill({ level, active }: { level: number; active: boolean 
    → Target, Moon → MoonStar — dichter bij de officiële SF Symbols-vormen,
    ook doorgevoerd in bracelet-control.tsx's MODE_ICONS zodat beide sets
    identiek blijven. */
-const STATE_ICONS: Record<BreathStateKey, typeof Zap> = {
-  boost: Zap,
-  focus: Target,
-  calm: Waves,
-  clarity: Sparkles,
-  rest: MoonStar,
-};
+/* Dezelfde vijf tekens als de Breath-tab (operator, 5 okt 2026). */
+const STATE_ICONS = STATE_GLYPH_ICONS;
 
 /* Sleutels van `experienceLevel` (stap 4) naar een leesbaar niveau —
    zelfde labels als `protocol.ts`'s eigen (module-lokale) `LEVEL_LABEL`. */

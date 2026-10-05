@@ -153,6 +153,7 @@ import ReanimatedAnimated, {
   runOnJS,
   type SharedValue,
 } from 'react-native-reanimated';
+import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
 import type { SimulatedBracelet } from '../services/bracelet-sim';
@@ -199,13 +200,8 @@ const HERO_BRACELET_IMG =
    Vervolg, 23 september 2026 ("SF Symbols zoals target/moon.stars.fill"):
    Crosshair → Target, Moon → MoonStar — ook doorgevoerd in
    breath-welcome.tsx's `STATE_ICONS` zodat beide sets identiek blijven. */
-const MODE_ICONS: Record<BraceletMode, typeof Zap> = {
-  [BraceletMode.Gamma]: Zap,
-  [BraceletMode.Beta]: Target,
-  [BraceletMode.Alpha]: Waves,
-  [BraceletMode.Theta]: Sparkles,
-  [BraceletMode.Delta]: MoonStar,
-};
+/* Dezelfde vijf tekens als de Breath-tab (operator, 5 okt 2026). */
+const MODE_ICONS = MODE_GLYPH_ICONS;
 
 /* Operator, 16 september 2026: min/default blijven de officiële hardware-
    spec-waardes (PPS blijft firmware-only, spec §11.5, NOOIT in de UI).

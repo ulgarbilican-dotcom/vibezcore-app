@@ -75,6 +75,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react-native';
+import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -101,13 +102,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    badge draagt de kleur al via zijn tint-achtergrond, dus het icoon zelf
    hoeft geen tweede kleurdrager te zijn — exact hoe Apple een gekleurd
    SF-Symbol-vlak behandelt (System Settings: wit glyph, gekleurde tegel). */
-const MODE_ICONS: Record<BraceletMode, typeof Zap> = {
-  [BraceletMode.Gamma]: Zap,
-  [BraceletMode.Beta]: Target,
-  [BraceletMode.Alpha]: Waves,
-  [BraceletMode.Theta]: Sparkles,
-  [BraceletMode.Delta]: MoonStar,
-};
+/* Operator, 5 okt 2026: dezelfde vijf tekens als de Breath-tab
+   (`StateGlyph`), zie components/ModeGlyph.tsx. */
+const MODE_ICONS = MODE_GLYPH_ICONS;
 
 const fmtTime = (mins: number) => {
   const d = new Date();
@@ -142,7 +139,7 @@ function ModeTile({
   onInfo,
 }: {
   m: ModeMeta;
-  Icon: LucideIcon;
+  Icon: LucideIcon | GlyphIcon;
   onPress: () => void;
   onInfo: () => void;
 }) {
@@ -186,8 +183,17 @@ function ModeTile({
           <Info size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
         </Animated.View>
       </Pressable>
-      <View style={s.tileIconBadge}>
-        <Icon size={22} color="#ffffff" strokeWidth={2} />
+      {/* Operator, 5 okt 2026: rond glazen bolletje met een lichte tint in
+          de kleur van de toestand (Apple Liquid Glass, subtiel) — zo leert
+          de gebruiker vanzelf welke kleur bij welke toestand hoort; het
+          teken zelf is hetzelfde als op de Breath-tab. */}
+      <View
+        style={[
+          s.tileIconBadge,
+          { backgroundColor: `${m.color}2E`, borderColor: `${m.color}66` },
+        ]}
+      >
+        <Icon size={22} color="#ffffff" strokeWidth={1.9} />
       </View>
       <Text style={s.tileName} numberOfLines={2}>
         {m.name}
@@ -774,9 +780,10 @@ const s = StyleSheet.create({
      ondergrond zoals goal.tsx's aurora-achtergrond) i.p.v. 5 losse
      kleuren, dus één rustig, consistent beeld over alle tegels. */
   tileIconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
