@@ -1562,18 +1562,11 @@ export default function BreathSetupScreen() {
   const maxDurationVal = isCyclesBased
     ? Math.max(...DURATIONS.map((d) => d.cycles ?? d.minutes))
     : Math.max(presetMaxMinutes, customMaxMinutes);
-  /* Operator, 9 september 2026: "bij hogere minuten stijgt waterlijn?" —
-     de golf-waterlijn schuift mee tussen "bijna leeg" (kortste duur) en
-     "bijna vol" (langste duur) voor de HUIDIGE techniek, zodat de cirkel
-     zelf meevertelt hoeveel tijd er gekozen is, niet enkel het cijfer. */
-  const minDurationVal = isCyclesBased
-    ? Math.min(...DURATIONS.map((d) => d.cycles ?? d.minutes))
-    : presetMinMinutes;
   const chosenVal = chosen.cycles ?? chosen.minutes;
-  const fillRatio =
-    maxDurationVal === minDurationVal
-      ? 0.5
-      : (chosenVal - minDurationVal) / (maxDurationVal - minDurationVal);
+  /* Operator, 5 okt 2026 ("als 5 een volle cirkel is, mag 2 min niet leeg
+     zijn"): gevuld vanaf nul, niet vanaf de kortste keuze — de cirkel toont
+     het deel van de langste duur van deze techniek. */
+  const fillRatio = maxDurationVal > 0 ? Math.min(1, chosenVal / maxDurationVal) : 0.5;
   const waterlineY = useMemo(() => {
     const EMPTY_Y = WAVE_D * 0.86;
     /* Operator, 10 september 2026: "bij max minuten moet de cirkel
