@@ -31,7 +31,6 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import VibezGlass from '@/components/VibezGlass';
-import { SwipeDots, SwipeRing } from '@/components/SwipeRing';
 import { BrandFonts, CTA } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
 /* Operator, 19 september 2026 ("ja doen" — echte glas-blur i.p.v. de
@@ -2041,7 +2040,7 @@ export default function BreathSetupScreen() {
   const pickTechnique = (i: number) => {
     const t = st.techniques[i];
     if (!t) return;
-    Haptics.selectionAsync();
+    /* Geen eigen tik-trilling: het wiel geeft die al bij elke stap. */
     setTechIdx(i);
     setTechniquePicked(true);
     const durs = t.durations ?? st.durations;
@@ -2294,14 +2293,6 @@ export default function BreathSetupScreen() {
            Operator, 18 september 2026: enkel nog de NORMALE flow — addToDay
            gebruikt `AddToDayHero` hierboven. */}
         {!isAddToDay && (
-        <SwipeRing
-          count={st.techniques.length}
-          index={techIdx}
-          still
-          onChange={(i) => pickTechnique(i)}
-          onTap={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-          accessibilityLabel={`${tech.name}, ${fmtClock(chosen.minutes)}. Swipe left or right to change technique, tap for details.`}
-        >
         <View style={s.heroWrap}>
           {/* Operator, 11 september 2026: "binnenkant van de cirkel moet
              duidelijker grijs" — de ring had zelf geen vulling (`fill=
@@ -2417,11 +2408,10 @@ export default function BreathSetupScreen() {
             {/* Operator, 5 okt 2026 ("in de ring de gekozen technieknaam
                en tijd tonen, de rest onder i — 'Session length' mag weg,
                dat zien gebruikers wel"). Het ademritme staat in de info. */}
-            {/* Operator, 5 okt 2026 ("de cirkel blijft één cirkel" + "hoe
-               zou Apple dit minimalistisch doen?"): niets schuift — de
-               cirkel staat stil, naam en tijd vloeien ter plekke zacht in
-               elkaar over bij een andere techniek. De stipjes eronder
-               tonen waar je zit. */}
+            {/* Operator, 5 okt 2026 ("de cirkel laat gewoon een samenvatting
+               zien van gekozen minuten en techniek, alvorens iemand op Start
+               session tikt"): enkel weergave, geen gebaar. Naam en tijd
+               vloeien zacht over bij een andere keuze. */}
             <Animated.Text
               key={`clock-${tech.key}`}
               entering={FadeIn.duration(240)}
@@ -2439,26 +2429,8 @@ export default function BreathSetupScreen() {
             </Animated.Text>
           </View>
         </View>
-        </SwipeRing>
         )}
 
-        {/* Operator, 5 okt 2026 ("de 3 technieken ook met swipe, en i
-           telkens eronder"): de cirkel veeg je door (zoals State Control),
-           de stipjes tonen welke van de drie, de i eronder opent de uitleg.
-           Vervangt de segmented control. */}
-        {!isAddToDay && (
-          <>
-            <SwipeDots count={st.techniques.length} index={techIdx} />
-            <Pressable
-              onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-              hitSlop={10}
-              style={s.techInfoBtn}
-              accessibilityLabel={`About ${tech.name}`}
-            >
-              <Info size={15} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-            </Pressable>
-          </>
-        )}
 
         {/* Operator, 18 september 2026 ("kunnen we deze richting gaan" —
            nieuwe mockup): Time/State/Technique/Duration los-op-de-pagina
@@ -2799,6 +2771,31 @@ export default function BreathSetupScreen() {
            Daily Grounding-info: denk na"): geen kaart meer, een stil
            label; de naam van de duurzone staat rechts op dezelfde regel
            met de i ernaast — één regel i.p.v. een extra rij onder het wiel. */}
+        {/* Operator, 5 okt 2026 ("de technieken buiten de cirkel, in een
+           pill met verticale scroll zoals bij de minuten"): zelfde wiel als
+           de duur hieronder; de i op de labelregel opent de uitleg. */}
+        <View style={[s.durationHead, s.techHead]}>
+          <Text style={s.durationHeadLbl}>TECHNIQUE</Text>
+          <Pressable
+            onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+            hitSlop={10}
+            style={s.durationZoneBtn}
+            accessibilityLabel={`About ${tech.name}`}
+          >
+            <Text style={s.durationZoneTxt}>{tech.level}</Text>
+            <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+          </Pressable>
+        </View>
+        <View style={s.durationPlain}>
+          <DurationWheel
+            options={st.techniques.map((t, i) => ({ value: i, label: techShortLabel(t) }))}
+            value={techIdx}
+            accent={accent}
+            trackColor={light ? '#8E8E93' : 'rgba(255,255,255,0.4)'}
+            onChange={(i) => pickTechnique(i)}
+          />
+        </View>
+
         <View style={s.durationHead}>
           <Text style={s.durationHeadLbl}>DURATION</Text>
           {zoneFor(chosen.minutes) ? (
@@ -4046,6 +4043,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     fontSize: 12.5,
     color: 'rgba(255,255,255,0.6)',
   },
+  techHead: { marginTop: 22 },
   durationPlain: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
