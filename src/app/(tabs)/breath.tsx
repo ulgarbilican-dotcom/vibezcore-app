@@ -32,6 +32,7 @@ import SessionArt, {
 } from '@/components/SessionArt';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import VibezGlass from '@/components/VibezGlass';
+import { getBreathHost, subscribeBreathHost } from '@/services/breath-session-host';
 import StateGlyph from '@/components/StateGlyph';
 import { usePlayerState } from '@/services/audio-player';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -606,6 +607,8 @@ export default function BreathScreen() {
   const skipIntroRef = useRef(
     entry.from === 'reminder' || entry.from === 'shortcut',
   );
+  /* Of deze tab nu gefocust is — zie het sessie-laag-effect hieronder. */
+  const focusedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
       /* Altijd terug naar CALM CONTROL bij een verse binnenkomst vanaf een
@@ -627,8 +630,31 @@ export default function BreathScreen() {
       }
       setIntro(true);
       setIntroRun((n) => n + 1);
+      focusedRef.current = true;
+      return () => {
+        focusedRef.current = false;
+      };
     }, []),
   );
+
+  /* Operator, 5 okt 2026 ("end session gaat naar welcome breathwork"): de
+     ademsessie is een laag boven de app (services/breath-session-host.ts),
+     geen navigatiescherm meer. Startte je ze vanaf deze tab zelf (bv. de
+     Instant Sessions op het welkomstbeeld), dan blijft deze tab gefocust en
+     draait het focus-effect hierboven bij het sluiten nooit opnieuw — de
+     intro bleef dan gewoon staan. Daarom hier ook luisteren naar het sluiten
+     van de laag. Niet gefocust (er staat nog een scherm boven, bv.
+     breath-setup)? Dan laten we de vlag voor het focus-effect liggen. */
+  useEffect(() => {
+    let wasOpen = getBreathHost() !== null;
+    return subscribeBreathHost(() => {
+      const open = getBreathHost() !== null;
+      if (wasOpen && !open && focusedRef.current && consumeBreathIntroSkip()) {
+        setIntro(false);
+      }
+      wasOpen = open;
+    });
+  }, []);
 
   /* Twee getallen uit de historiek. Berekend en niet opgeslagen: een streak
      die als getal wordt bewaard loopt uit de pas zodra iemand een dag mist en
