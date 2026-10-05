@@ -641,7 +641,7 @@ export default function BraceletAgendaScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
-  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6 },
+  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 4 },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   /* Operator, 30 september 2026 ("kan Your bracelet plan naast de pijl?
      zo hebben we meer ruimte"): zelfde patroon als bracelet-set-day.tsx's
