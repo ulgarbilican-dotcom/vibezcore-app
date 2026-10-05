@@ -11,7 +11,11 @@
    (/bracelet-set-day), zoals bij breathwork.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { MODE_GLYPH_ICONS, MODE_STATE_KEY } from '@/components/ModeGlyph';
 import { Brand, BrandFonts } from '@/constants/theme';
+import { BREATH_STATES } from '@/data/breath-states';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
 import { dayKey, useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { openStateControl } from '@/utils/state-control-ui';
@@ -82,18 +86,38 @@ export default function BraceletProtocol() {
           </View>
         ) : (
           <>
-            {/* De gekozen modi, in hun eigen kleur. */}
-            <View style={s.modeRow}>
-              {modesUsed.map((m, i) => (
-                <Animated.View
-                  key={m.mode}
-                  entering={FadeInUp.delay(120 + i * 40).duration(280)}
-                  style={[s.modeChip, { backgroundColor: `${m.color}22`, borderColor: `${m.color}55` }]}
-                >
-                  <View style={[s.modeDot, { backgroundColor: m.color }]} />
-                  <Text style={s.modeChipTxt}>{m.name}</Text>
-                </Animated.View>
-              ))}
+            {/* De gekozen modi als grote vierkante kaarten, twee naast
+                elkaar en gecentreerd bij één — zoals breathwork's protocol
+                (plan.tsx), in de kleurverloop van de toestand en met het
+                teken van de Breath-tab (operator, 5 okt 2026). */}
+            <View style={[s.modeRow, modesUsed.length === 1 && { justifyContent: 'center' }]}>
+              {modesUsed.map((m, i) => {
+                const stateKey = MODE_STATE_KEY[m.mode];
+                const Glyph = MODE_GLYPH_ICONS[m.mode];
+                return (
+                  <Animated.View
+                    key={m.mode}
+                    entering={FadeInUp.delay(120 + i * 40).duration(280)}
+                    style={s.modeCard}
+                  >
+                    <BlurView
+                      intensity={40}
+                      tint="dark"
+                      blurMethod="dimezisBlurViewSdk31Plus"
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <LinearGradient
+                      colors={BREATH_STATES[stateKey].gradient as unknown as [string, string, ...string[]]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[StyleSheet.absoluteFill, { opacity: 0.85 }]}
+                      pointerEvents="none"
+                    />
+                    <Glyph size={40} color="#ffffff" strokeWidth={1.8} />
+                    <Text style={s.modeCardTxt}>{m.name}</Text>
+                  </Animated.View>
+                );
+              })}
             </View>
 
             {/* Kerncijfers — elk één keer, zoals breathwork's protocol. */}
@@ -172,7 +196,27 @@ const s = StyleSheet.create({
   },
   scroll: { paddingHorizontal: 20, paddingTop: 12 },
 
-  modeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  modeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
+  /* 1:1 plan.tsx se `goalCard` + `protoCardSelected`. */
+  modeCard: {
+    width: '48%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  modeCardTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 15,
+    color: '#ffffff',
+    alignSelf: 'stretch',
+    textAlign: 'center',
+  },
   modeChip: {
     flexDirection: 'row',
     alignItems: 'center',
