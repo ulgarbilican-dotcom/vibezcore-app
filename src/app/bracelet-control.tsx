@@ -29,7 +29,11 @@ import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
-import { playModePreviewHaptic, stopModePreviewHaptic } from '@/services/bracelet-haptics';
+import {
+  playModePreviewHaptic,
+  stopModePreviewHaptic,
+  subscribeHapticPulse,
+} from '@/services/bracelet-haptics';
 import { hasNativeWaveform } from '../../modules/state-haptics';
 import { setActiveSessionVisible } from '@/utils/state-control-ui';
 import {
@@ -526,14 +530,18 @@ type ModeDescription = {
   protocol: string;
   protocolHow: string;
 };
-/* Iter v155 (2026-06-25): protocol-strings + protocolHow 1:1 IDENTIEK
+/* 5 okt 2026 (operator: "klopt 'sharp, brisk haptic…' nog? wij hebben de
+   haptics aangepast"): `braceletDoes` herschreven naar het huidige
+   hartslag-model (services/bracelet-haptics.ts) — start op rust-tempo,
+   dan geleidelijk naar het eindtempo. Toestand-taal, geen claims.
+   Iter v155 (2026-06-25): protocol-strings + protocolHow 1:1 IDENTIEK
    met breath-tab PATTERNS. Operator wil exact dezelfde breathwork in
    bracelet active page als in breath tab. */
 const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Gamma]: {
     intent: 'Alert, energized — primed for high-output moments.',
     braceletDoes:
-      'Sharp, brisk haptic pulses wake the system up and break through fatigue.',
+      'A heartbeat-like rhythm that starts at a resting pace, then quickens to a brisk, energizing pulse.',
     protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
       'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
@@ -541,7 +549,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Beta]: {
     intent: 'Locked-in focus — attention that holds the line.',
     braceletDoes:
-      'Steady rhythmic haptic anchors your attention to one task at a time.',
+      'A heartbeat-like rhythm that settles just above a resting pace — steady and even, for one task at a time.',
     protocol: 'Coherent breath 5-5 · 5 min',
     protocolHow:
       'Inhale 5 seconds, exhale 5 seconds. Six breaths per minute — a resonance pace used in focus-research traditions.',
@@ -549,7 +557,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Alpha]: {
     intent: 'Steady and composed — alert but relaxed.',
     braceletDoes:
-      'Slow gentle pulses guide the system toward calm without dulling alertness.',
+      'A heartbeat-like rhythm that eases just below a resting pace — calm, while you stay present.',
     protocol: 'Box breath 4-4-4-4 · 5 min',
     protocolHow:
       'Inhale 4, hold 4, exhale 4, hold 4. Used by special forces for stress recovery — the symmetric holds slow the system down.',
@@ -557,7 +565,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Theta]: {
     intent: 'Quieter mind — space for thought, decompression.',
     braceletDoes:
-      'Soft undulating haptic invites an inward turn and lets mental noise settle.',
+      'A soft heartbeat-like rhythm that slows gradually over two minutes, giving your mind room to settle.',
     protocol: 'Long-exhale 4-2-6 · 4 min',
     protocolHow:
       'Inhale 4, brief 2-second hold, exhale 6 through the mouth. Inspired by extended-exhale practices used in reflection traditions.',
@@ -565,7 +573,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Delta]: {
     intent: 'Wind-down — recovery, pre-sleep, after stressful days.',
     braceletDoes:
-      'Slow restful haptic pattern eases the system toward recovery mode.',
+      'The softest, slowest rhythm — it slows gradually over two minutes as you wind down.',
     protocol: '4-7-8 breath · 4 min',
     protocolHow:
       'Inhale 4, hold 7, exhale 8 through the mouth. Popularized by Dr. Andrew Weil — the extended exhale signals the body to slow down.',
@@ -851,6 +859,101 @@ function PrimaryCtaButton({
     >
       <ReanimatedAnimated.View style={[style, pressStyle]}>{children}</ReanimatedAnimated.View>
     </Pressable>
+  );
+}
+
+/* ── FeelItCircle — voelbare preview van een modus ──
+   Operator, 5 okt 2026: "ronde volle cirkel in de juiste kleur met witte
+   tekst". Klopt zichtbaar mee met elke tik (subscribeHapticPulse — zelfde
+   bron als de motor). Witte modus (Clarity) → donkere tekst, anders
+   onleesbaar. Uitgeschakeld tijdens een lopende sessie. */
+const FEEL_SIZE = 92;
+
+function FeelItCircle({
+  color,
+  feeling,
+  disabled,
+  onPress,
+}: {
+  color: string;
+  feeling: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const beat = useSharedValue(1);
+  useEffect(() => {
+    if (!feeling) return;
+    return subscribeHapticPulse((p) => {
+      beat.value = withSequence(
+        withTiming(p.kind === 'lub' ? 1.08 : 1.04, { duration: 70 }),
+        withTiming(1, { duration: 260 }),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feeling]);
+  const beatStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
+  const fg = isLightColor(color) ? '#0a0a0a' : '#ffffff';
+
+  return (
+    <View style={s.feelWrap}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={feeling ? 'Stop the preview' : 'Feel this mode'}
+      >
+        <ReanimatedAnimated.View
+          style={[
+            s.feelCircle,
+            { backgroundColor: color, opacity: disabled ? 0.3 : 1 },
+            beatStyle,
+          ]}
+        >
+          <Text style={[s.feelCircleTxt, { color: fg }]}>{feeling ? 'Stop' : 'Feel it'}</Text>
+        </ReanimatedAnimated.View>
+      </Pressable>
+      {disabled && <Text style={s.feelHint}>Not available during a session</Text>}
+    </View>
+  );
+}
+
+/* ── SwitchSessionConfirm — bevestiging bij wisselen van modus ──
+   VIBEZCORE-stijl (geen systeem-Alert): donker paneel, witte hoofdknop,
+   Cancel als tekst. */
+function SwitchSessionConfirm({
+  visible,
+  fromName,
+  toName,
+  onCancel,
+  onConfirm,
+}: {
+  visible: boolean;
+  fromName: string;
+  toName: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
+      <Pressable style={s.switchBackdrop} onPress={onCancel}>
+        <Pressable style={s.switchCard} onPress={() => {}}>
+          <Text style={s.switchTitle}>Switch to {toName}?</Text>
+          <Text style={s.switchBody}>
+            Your {fromName} session will end and {toName} starts in its place.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [s.primaryBtn, s.switchBtn, pressed && { opacity: 0.85 }]}
+            onPress={onConfirm}
+            accessibilityLabel={`Switch to ${toName}`}
+          >
+            <Text style={s.primaryBtnText}>Switch</Text>
+          </Pressable>
+          <Pressable onPress={onCancel} hitSlop={10} style={s.switchCancel} accessibilityLabel="Cancel">
+            <Text style={s.switchCancelTxt}>Cancel</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -1197,19 +1300,34 @@ function ModeDetailModal({
      van de echte firmware-puls is. Stopt altijd bij het sluiten van deze
      modal — nooit laten doorlopen nadat de popup weg is. */
   const [feeling, setFeeling] = useState(false);
-  useEffect(() => stopModePreviewHaptic, []);
+  /* Tijdens een lopende sessie (5 okt 2026): geen preview — die zou door
+     het sessie-ritme heen trillen — en bij sluiten NIETS stoppen, anders
+     legt het openen van deze uitleg de sessie-haptiek stil. Enkel een
+     preview die hier zelf gestart werd, wordt hier ook gestopt. */
+  const sessionRunning = getBraceletSessionSnapshot().active;
+  const feelingRef = useRef(false);
+  useEffect(
+    () => () => {
+      if (feelingRef.current) stopModePreviewHaptic();
+    },
+    [],
+  );
   const toggleFeel = () => {
+    if (sessionRunning) return;
     Haptics.selectionAsync();
     if (feeling) {
       stopModePreviewHaptic();
+      feelingRef.current = false;
       setFeeling(false);
     } else {
       playModePreviewHaptic(mode);
+      feelingRef.current = true;
       setFeeling(true);
     }
   };
   const handleClose = () => {
-    stopModePreviewHaptic();
+    if (feelingRef.current) stopModePreviewHaptic();
+    feelingRef.current = false;
     onClose();
   };
 
@@ -1279,17 +1397,15 @@ function ModeDetailModal({
           <Text style={s.modeModalSectionLbl}>How the bracelet helps</Text>
           <Text style={s.modeModalDesc}>{desc.braceletDoes}</Text>
 
-          {/* "Feel it" — operator-testknop, zie toelichting hierboven bij
-             `feeling`. Enkel een voelbare preview op de telefoon, geen
-             firmware-simulatie. */}
-          <Pressable
+          {/* "Feel it" — operator, 5 okt 2026: "moet beter en
+             professioneler — een ronde volle cirkel in de juiste kleur met
+             witte tekst". Klopt mee met elke tik die je voelt. */}
+          <FeelItCircle
+            color={meta.color}
+            feeling={feeling}
+            disabled={sessionRunning}
             onPress={toggleFeel}
-            style={[s.feelItBtn, { borderColor: meta.color }]}
-          >
-            <Text style={[s.feelItBtnTxt, { color: meta.color }]}>
-              {feeling ? 'Stop feeling it' : 'Feel it'}
-            </Text>
-          </Pressable>
+          />
 
           {/* Use this for — ideals checklist */}
           <Text style={s.modeModalSectionLbl}>Use this for</Text>
@@ -3407,6 +3523,8 @@ type IdleScreenProps = {
   /** Er loopt (of pauzeert) een sessie terwijl de moduskeuze getoond wordt. */
   sessionRunning: boolean;
   onReturnToSession: () => void;
+  /** Lopende sessie beëindigen en de geselecteerde modus starten. */
+  onSwitchMode: () => Promise<void>;
   fromContext: 'audio' | 'bracelet' | 'plan' | null;
   disconnectAndBackToSource: () => Promise<void>;
   onDisconnect: () => Promise<void>;
@@ -3444,6 +3562,7 @@ function IdleScreen({
   onMinimize,
   sessionRunning,
   onReturnToSession,
+  onSwitchMode,
   fromContext,
   disconnectAndBackToSource,
   onDisconnect,
@@ -3487,6 +3606,9 @@ function IdleScreen({
     new Animated.Value(MODES.findIndex((m) => m.mode === selectedMode)),
   ).current;
   const idleInTab = usePathname() === '/bracelet';
+  const [runSnap, setRunSnap] = useState(getBraceletSessionSnapshot());
+  useEffect(() => subscribeBraceletSession(setRunSnap), []);
+  const [confirmSwitch, setConfirmSwitch] = useState(false);
   useEffect(() => {
     Animated.spring(infoBtnAnim, {
       toValue: MODES.findIndex((m) => m.mode === selectedMode),
@@ -3780,8 +3902,20 @@ function IdleScreen({
            kleur). `PrimaryCtaButton` = dezelfde haptiek+press-scale-
            wrapper als het Connect/Retry-scherm hierboven in dit bestand,
            voor consistentie binnen bracelet-control.tsx zelf. */}
-        {sessionRunning ? (
+        {sessionRunning && runSnap.mode === selectedMode ? (
           <RunningSessionBar onPress={onReturnToSession} />
+        ) : sessionRunning ? (
+          /* Operator, 5 okt 2026: andere modus bekijken tijdens een lopende
+             sessie mag; wisselen vraagt één bevestiging (een sessie stoppen
+             is onomkeerbaar). */
+          <PrimaryCtaButton
+            style={[s.primaryBtn, busy && s.btnDisabled]}
+            onPress={() => setConfirmSwitch(true)}
+            disabled={busy}
+            accessibilityLabel={`Switch to ${meta.name}`}
+          >
+            <Text style={s.primaryBtnText}>Switch to {meta.name}</Text>
+          </PrimaryCtaButton>
         ) : (
           <PrimaryCtaButton
             style={[s.primaryBtn, (busy || criticalBattery) && s.btnDisabled]}
@@ -3796,6 +3930,16 @@ function IdleScreen({
             )}
           </PrimaryCtaButton>
         )}
+        <SwitchSessionConfirm
+          visible={confirmSwitch}
+          fromName={runSnap.modeName}
+          toName={meta.name}
+          onCancel={() => setConfirmSwitch(false)}
+          onConfirm={() => {
+            setConfirmSwitch(false);
+            void onSwitchMode();
+          }}
+        />
 
         {/* Low battery warning (compact, alleen als nodig) */}
         {lowBattery && (
@@ -5104,6 +5248,11 @@ function BraceletControlScreen({
         onMinimize={onMinimize}
         sessionRunning={sessionActive || isPaused}
         onReturnToSession={() => setMinimized(false)}
+        onSwitchMode={async () => {
+          setEndedLocally(true);
+          await onStop();
+          await onStart();
+        }}
         fromContext={fromContext}
         disconnectAndBackToSource={disconnectAndBackToSource}
         onDisconnect={onDisconnect}
@@ -5890,6 +6039,29 @@ const s = StyleSheet.create({
   /* "Feel it" — zelfde ghost-button-chrome als elders (rand in meta.color,
      geen gevulde achtergrond — CTA-chrome blijft voorbehouden aan de
      echte Start/Choose-knoppen, dit is een secundaire testactie). */
+  feelWrap: {
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 6,
+  },
+  feelCircle: {
+    width: FEEL_SIZE,
+    height: FEEL_SIZE,
+    borderRadius: FEEL_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feelCircleTxt: {
+    fontSize: 15,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 0.2,
+  },
+  feelHint: {
+    marginTop: 8,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    color: 'rgba(255,255,255,0.45)',
+  },
   feelItBtn: {
     marginTop: 14,
     alignSelf: 'flex-start',
@@ -7162,6 +7334,48 @@ const s = StyleSheet.create({
      aangepast van wit naar donker. */
   runningBar: {
     gap: 10,
+  },
+  switchBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  switchCard: {
+    backgroundColor: '#161616',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    padding: 24,
+  },
+  switchTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  switchBody: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 15,
+    fontFamily: BrandFonts.regular,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 22,
+  },
+  switchBtn: {
+    width: '100%',
+  },
+  switchCancel: {
+    alignSelf: 'center',
+    marginTop: 14,
+    paddingVertical: 4,
+  },
+  switchCancelTxt: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 15,
+    fontFamily: BrandFonts.semibold,
   },
   runningDot: {
     width: 10,
