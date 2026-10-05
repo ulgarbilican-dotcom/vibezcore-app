@@ -1605,7 +1605,7 @@ const s = StyleSheet.create({
      op de eyebrow. */
   infoEyebrow: { fontFamily: BrandFonts.semibold, fontSize: 11, letterSpacing: 1.5 },
   infoTitle: {
-    marginTop: 6,
+    marginTop: 16,
     fontFamily: BrandFonts.bold,
     fontSize: 22,
     letterSpacing: -0.3,
@@ -1615,21 +1615,23 @@ const s = StyleSheet.create({
     marginTop: 10,
     fontFamily: BrandFonts.regular,
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 22,
     color: 'rgba(255,255,255,0.6)',
   },
   infoSection: {
-    marginTop: 20,
+    marginTop: 28,
     fontFamily: BrandFonts.semibold,
     fontSize: 13,
     letterSpacing: 0,
   },
+  /* Meer ademruimte (operator, 5 okt 2026: "kaarten te dicht opeen"). */
   infoTechRow: {
-    marginTop: 10,
+    marginTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
+    gap: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -1661,7 +1663,7 @@ const s = StyleSheet.create({
     color: '#ffffff',
   },
   infoTechHook: {
-    marginTop: 3,
+    marginTop: 5,
     fontFamily: BrandFonts.regular,
     fontSize: 12,
     lineHeight: 16,
