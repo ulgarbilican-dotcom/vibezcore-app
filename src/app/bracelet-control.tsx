@@ -3807,6 +3807,13 @@ function IdleScreen({
   const [runSnap, setRunSnap] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setRunSnap), []);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
+  /* Modus én zijn standaardduur in één render zetten: anders tekende de
+     cirkel eerst de nieuwe modus met de duur van de vorige, en sprong de
+     vulling pas een frame later naar de juiste hoogte. */
+  const pickMode = (next: BraceletMode) => {
+    setSelectedMode(next);
+    setDuration(getModeMeta(next).defaultMinutes);
+  };
 
   return (
     /* Iter 9bb (2026-05-31): SafeAreaView edges conditional op owner-status.
@@ -3934,11 +3941,16 @@ function IdleScreen({
             mode={selectedMode}
             onChange={(next) => {
               Haptics.selectionAsync();
-              setSelectedMode(next);
+              pickMode(next);
             }}
             onTap={() => setDetailModeForModal(selectedMode)}
           >
+            {/* key = modus: elke modus is een eigen "wijzerplaat" die meteen
+                met zijn eigen vulling binnenkomt, niet klotsend vanaf het
+                niveau van de vorige (operator, 5 okt 2026: "de vulling
+                verandert telkens"). */}
             <DurationRing
+              key={selectedMode}
               min={meta.minMinutes}
               max={meta.maxMinutes}
               value={duration}
@@ -3962,7 +3974,7 @@ function IdleScreen({
                 hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                 onPress={() => {
                   Haptics.selectionAsync();
-                  setSelectedMode(m.mode);
+                  pickMode(m.mode);
                 }}
                 accessibilityLabel={`Select ${m.name} mode`}
                 accessibilityState={{ selected: active }}
