@@ -2427,6 +2427,15 @@ export default function BreathSetupScreen() {
             >
               {tech.name}
             </Animated.Text>
+            {/* Operator, 5 okt 2026: het niveau onder de techniek, in de
+               cirkel (stond rechts naast het TECHNIQUE-label). */}
+            <Animated.Text
+              key={`level-${tech.key}`}
+              entering={FadeIn.duration(240)}
+              style={s.heroLevel}
+            >
+              {tech.level}
+            </Animated.Text>
           </View>
         </View>
         )}
@@ -2782,8 +2791,7 @@ export default function BreathSetupScreen() {
             style={s.durationZoneBtn}
             accessibilityLabel={`About ${tech.name}`}
           >
-            <Text style={s.durationZoneTxt}>{tech.level}</Text>
-            <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+            <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
           </Pressable>
         </View>
         <View style={s.durationPlain}>
@@ -4044,6 +4052,14 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
   techHead: { marginTop: 22 },
+  heroLevel: {
+    marginTop: 4,
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+  },
   durationPlain: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
