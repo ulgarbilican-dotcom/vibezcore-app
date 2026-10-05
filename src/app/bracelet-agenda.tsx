@@ -484,6 +484,31 @@ export default function BraceletAgendaScreen() {
                   />
                 );
               })()}
+              {/* Operator, 5 okt 2026 ("tap to start in de cirkel als user
+                  op een kaart tikt — zelf beslissen of hij die sessie nu al
+                  doet i.p.v. op het ingestelde uur"): een tik in het midden
+                  start de eerstvolgende sessie van die modus vandaag (anders
+                  de eerste), met de duur uit het plan. */}
+              {filterMode !== null && filterMode !== 'all' && (() => {
+                const modeItems = (day?.items ?? [])
+                  .filter((it) => it.mode === filterMode)
+                  .sort((a, b) => a.reminderAt - b.reminderAt);
+                if (modeItems.length === 0) return null;
+                const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+                const next =
+                  selectedKey === todayKey
+                    ? (modeItems.find((it) => it.reminderAt >= nowMins) ?? modeItems[0])
+                    : modeItems[0];
+                return (
+                  <Pressable
+                    style={s.tapStartZone}
+                    onPress={() => tryItem(next.mode as BraceletMode, next.durationMinutes)}
+                    accessibilityLabel={`Start ${getModeMeta(next.mode as BraceletMode).name} now`}
+                  >
+                    <Text style={s.tapStartTxt}>Tap to start</Text>
+                  </Pressable>
+                );
+              })()}
             </View>
 
             {/* Operator, 1 okt 2026 ("niet duidelijk of je op de bollen
@@ -530,12 +555,12 @@ export default function BraceletAgendaScreen() {
         {plan ? (
           <View style={s.bottomActions}>
             <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
-              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
+              <VibezGlass radius={22} style={StyleSheet.absoluteFill} />
               <Text style={s.pillBtnTxt}>Check your protocol</Text>
             </Pressable>
             <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-set-day' as never)}>
-              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
-              <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
+              <VibezGlass radius={22} style={StyleSheet.absoluteFill} />
+              <Pencil size={14} color="rgba(255,255,255,0.75)" strokeWidth={2.2} />
               <Text style={s.pillBtnTxt}>Change protocol</Text>
             </Pressable>
           </View>
@@ -655,20 +680,20 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 18,
+    gap: 12,
+    marginTop: 30,
   },
   pillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 16,
-    height: 36,
-    borderRadius: 18,
+    paddingHorizontal: 20,
+    height: 44,
+    borderRadius: 22,
     overflow: 'hidden',
   },
-  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
+  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.9)' },
   /* Zelfde datumregel als agenda.tsx (breathwork). */
   dateRow: {
     flexDirection: 'row',
@@ -718,6 +743,8 @@ const s = StyleSheet.create({
   cardSlot: { width: '31.5%' },
   /* Operator, 5 okt 2026 ("alles mooi op het scherm zonder scroll"):
      lager dan vierkant — de twee kaartrijen namen de meeste hoogte in. */
+  /* Gekozen = zacht lichter vlak, geen harde witte rand (operator, 5 okt
+     2026: "bij aantikken toont Apple geen duidelijke omlijning"). */
   card: {
     aspectRatio: 1.45,
     flexDirection: 'column',
@@ -725,11 +752,28 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 12,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  cardOn: { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)' },
+  cardOn: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  /* "Tap to start" — onderaan het middenvlak van de ring, onder de tijden. */
+  tapStartZone: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '50%',
+    marginTop: -75,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 10,
+  },
+  tapStartTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.75)',
+  },
   cardDot: { width: 15, height: 15, borderRadius: 7.5 },
   cardTxt: { fontFamily: BrandFonts.medium, fontSize: 12.5, lineHeight: 15, color: 'rgba(255,255,255,0.65)' },
   cardTxtOn: { color: '#ffffff', fontFamily: BrandFonts.semibold },
