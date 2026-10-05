@@ -516,10 +516,25 @@ export default function BraceletAgendaScreen() {
           </>
         )}
 
-        <Pressable style={s.editLink} onPress={() => router.push('/bracelet-set-day' as never)}>
-          <Pencil size={12} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-          <Text style={s.editLinkTxt}>{plan ? 'Edit your plan' : 'Set your plan'}</Text>
-        </Pressable>
+        {/* Zoals breathwork (agenda.tsx): "Check your protocol" opent het
+            overzicht van wat je samenstelde, "Change protocol" de bouwer
+            (operator, 5 okt 2026). */}
+        {plan ? (
+          <View style={s.bottomActions}>
+            <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
+              <Text style={s.pillBtnTxt}>Check your protocol</Text>
+            </Pressable>
+            <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-set-day' as never)}>
+              <Pencil size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+              <Text style={s.pillBtnTxt}>Change protocol</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable style={s.editLink} onPress={() => router.push('/bracelet-set-day' as never)}>
+            <Pencil size={12} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+            <Text style={s.editLinkTxt}>Set your plan</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* Actie-schermpje voor een aangetikt bolletje op de ring — "Try
@@ -625,6 +640,26 @@ const s = StyleSheet.create({
   monthDot: { width: 5, height: 5, borderRadius: 2.5 },
 
   ringWrap: { alignItems: 'center', marginTop: 12, marginBottom: 22, position: 'relative' },
+  /* Zelfde knoppen als agenda.tsx (breathwork) — `editBtn`/`changeProtocolBtn`. */
+  bottomActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 18,
+  },
+  pillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.7)' },
   /* Zelfde datumregel als agenda.tsx (breathwork). */
   dateRow: {
     flexDirection: 'row',
