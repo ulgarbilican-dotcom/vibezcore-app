@@ -31,11 +31,17 @@ export function SwipeRing({
   onChange,
   onTap,
   accessibilityLabel,
+  still = false,
   children,
 }: {
   count: number;
   index: number;
-  onChange: (next: number) => void;
+  /** `dir`: 1 = naar de volgende geveegd (naar links), -1 = naar de vorige. */
+  onChange: (next: number, dir: number) => void;
+  /** Operator, 5 okt 2026 ("de cirkel moet één cirkel blijven, enkel de
+   *  technieken scrollbaar"): de cirkel zelf blijft staan; enkel de
+   *  inhoud die de ouder per keuze wisselt beweegt (zie `dir`). */
+  still?: boolean;
   onTap: () => void;
   accessibilityLabel: string;
   children: ReactNode;
@@ -53,7 +59,9 @@ export function SwipeRing({
   useEffect(() => {
     indexSV.value = index;
     const dir = pendingDirRef.current;
-    if (dir !== 0) {
+    if (dir !== 0 && still) {
+      pendingDirRef.current = 0;
+    } else if (dir !== 0) {
       pendingDirRef.current = 0;
       x.value = dir * SWIPE_DISTANCE;
       x.value = withSpring(0, { damping: 22, stiffness: 190, mass: 0.9 });
@@ -63,7 +71,7 @@ export function SwipeRing({
 
   const commit = (next: number, dir: number) => {
     pendingDirRef.current = dir;
-    onChangeRef.current(next);
+    onChangeRef.current(next, dir);
   };
   const tapJS = () => onTapRef.current();
 
@@ -73,7 +81,8 @@ export function SwipeRing({
     .onUpdate((e) => {
       const i = indexSV.value;
       const atEdge = (e.translationX > 0 && i === 0) || (e.translationX < 0 && i === last);
-      x.value = atEdge ? e.translationX * 0.25 : e.translationX;
+      const t = still ? 0 : e.translationX;
+      x.value = atEdge ? t * 0.25 : t;
     })
     .onEnd((e) => {
       const i = indexSV.value;
@@ -82,6 +91,12 @@ export function SwipeRing({
       const next = i + dir;
       if (dir === 0 || next < 0 || next > last) {
         x.value = withSpring(0, { damping: 18, stiffness: 240 });
+        return;
+      }
+      if (still) {
+        /* Cirkel veert terug op zijn plek; de wissel zelf meteen. */
+        x.value = withSpring(0, { damping: 20, stiffness: 260 });
+        runOnJS(commit)(next, dir);
         return;
       }
       x.value = withTiming(-dir * SWIPE_DISTANCE, { duration: 130 }, (finished) => {
@@ -97,7 +112,7 @@ export function SwipeRing({
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }],
-    opacity: interpolate(Math.abs(x.value), [0, SWIPE_DISTANCE], [1, 0], Extrapolation.CLAMP),
+    opacity: still ? 1 : interpolate(Math.abs(x.value), [0, SWIPE_DISTANCE], [1, 0], Extrapolation.CLAMP),
   }));
 
   return (
@@ -111,8 +126,8 @@ export function SwipeRing({
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }, { name: 'activate' }]}
           onAccessibilityAction={(e) => {
             if (e.nativeEvent.actionName === 'activate') onTap();
-            else if (e.nativeEvent.actionName === 'increment' && index < last) onChange(index + 1);
-            else if (e.nativeEvent.actionName === 'decrement' && index > 0) onChange(index - 1);
+            else if (e.nativeEvent.actionName === 'increment' && index < last) onChange(index + 1, 1);
+            else if (e.nativeEvent.actionName === 'decrement' && index > 0) onChange(index - 1, -1);
           }}
         >
           {children}

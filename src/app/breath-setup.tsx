@@ -97,6 +97,7 @@ import Animated, {
   cancelAnimation,
   Easing,
   Extrapolation,
+  FadeIn,
   interpolate,
   interpolateColor,
   type SharedValue,
@@ -2296,7 +2297,8 @@ export default function BreathSetupScreen() {
         <SwipeRing
           count={st.techniques.length}
           index={techIdx}
-          onChange={pickTechnique}
+          still
+          onChange={(i) => pickTechnique(i)}
           onTap={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
           accessibilityLabel={`${tech.name}, ${fmtClock(chosen.minutes)}. Swipe left or right to change technique, tap for details.`}
         >
@@ -2415,10 +2417,26 @@ export default function BreathSetupScreen() {
             {/* Operator, 5 okt 2026 ("in de ring de gekozen technieknaam
                en tijd tonen, de rest onder i — 'Session length' mag weg,
                dat zien gebruikers wel"). Het ademritme staat in de info. */}
-            <Text style={s.heroClock}>{fmtClock(chosen.minutes)}</Text>
-            <Text style={s.heroTech} numberOfLines={2}>
+            {/* Operator, 5 okt 2026 ("de cirkel blijft één cirkel" + "hoe
+               zou Apple dit minimalistisch doen?"): niets schuift — de
+               cirkel staat stil, naam en tijd vloeien ter plekke zacht in
+               elkaar over bij een andere techniek. De stipjes eronder
+               tonen waar je zit. */}
+            <Animated.Text
+              key={`clock-${tech.key}`}
+              entering={FadeIn.duration(240)}
+              style={s.heroClock}
+            >
+              {fmtClock(chosen.minutes)}
+            </Animated.Text>
+            <Animated.Text
+              key={tech.key}
+              entering={FadeIn.duration(240)}
+              style={s.heroTech}
+              numberOfLines={2}
+            >
               {tech.name}
-            </Text>
+            </Animated.Text>
           </View>
         </View>
         </SwipeRing>
@@ -3695,7 +3713,10 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.iconBtnBg,
+    /* Operator, 5 okt 2026 ("grijze bol rechtsboven moet weg — moet de
+       terugpijl in een cirkel?"): nee, app-breed is het een kale chevron
+       (components/HeaderBackButton). Geen vlak meer achter pijl of spacer. */
+    backgroundColor: 'transparent',
   },
   scroll: { alignItems: 'center' },
   /* Operator, 9 september 2026: titel/tagline/beschrijving weg — enkel de
