@@ -62,6 +62,7 @@ import {
   onReminderTap,
   reminderParams,
   reminderRoute,
+  resyncAllPlanReminders,
   syncReminders,
   tappedReminderOnLaunch,
   type TappedReminder,
@@ -316,6 +317,9 @@ export default function RootLayout() {
       if (Object.values(on).some(Boolean)) {
         await syncReminders(on, getSetting('reminderAt'), getSetting('goals'));
       }
+      /* Planmeldingen gelijkzetten met plan + instelling; ruimt ook de oude
+         tweede "Still time"-meldingen op (5 okt 2026). */
+      await resyncAllPlanReminders();
       /* Het oude kanaal opruimen, anders staat er in de instellingen van het
          toestel een tweede regel die nergens meer bij hoort. */
       if (Platform.OS === 'android') {

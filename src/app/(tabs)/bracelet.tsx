@@ -61,7 +61,7 @@ import BraceletControl from '../bracelet-control';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
-const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20state%20control.png';
+const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20state%20control%202.png';
 
 /* Ken Burns-"ademing" + gefaseerde reveal — exact dezelfde recept als de
    oude bracelet-intro (smart-bead-bracelet.tsx se `introKenBurnsStyle`/
@@ -74,7 +74,7 @@ const INTRO_ZOOM = 1;
    (1122×1402); schermvullend (cover) sneed de zijkanten weg. Nu over de
    volle breedte bovenaan, onderaan zacht uitlopend in de achtergrond —
    titel en knop staan daaronder op het donker, niet over de foto. */
-const BG_ASPECT = 1122 / 1402;
+const BG_ASPECT = 1024 / 1536; // staand 2:3 — past precies in het fotovlak hieronder
 
 function StateControlIntro({ onDone }: { onDone: () => void }) {
   const ctaScale = useSharedValue(1);

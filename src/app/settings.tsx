@@ -37,6 +37,7 @@ import {
   SLOTS,
   ensurePermission,
   reminderKey,
+  resyncAllPlanReminders,
   syncReminders,
 } from '@/services/reminders';
 import {
@@ -149,6 +150,8 @@ export default function SettingsScreen() {
      preferences horen hier"). */
   const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
   const [reminders, setReminders] = useSetting('reminders');
+  const [planReminders, setPlanReminders] = useSetting('planReminders');
+  const [braceletPlanReminders, setBraceletPlanReminders] = useSetting('braceletPlanReminders');
   const [voiceCues, setVoiceCues] = useSetting('voiceCues');
   const sub = useSubscription();
   const hasBracelet = sub.hasBracelet;
@@ -426,6 +429,35 @@ export default function SettingsScreen() {
           ))}
         </View>
 
+        {/* Operator, 5 okt 2026 ("hoe kan de user deze meldingen afzetten?
+            moet echt duidelijk zijn"): de herinneringen van het dagplan
+            hadden geen eigen schakelaar — de rijen hierboven gelden enkel
+            voor de vaste dagmomenten. */}
+        <View style={s.card}>
+          <View style={s.row}>
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Plan reminders</Text>
+              <Text style={s.rowSub}>
+                One reminder for each session in your daily plan. Your plan stays as it is.
+              </Text>
+            </View>
+            <Switch
+              value={planReminders}
+              onValueChange={async (v) => {
+                if (v && !(await ensurePermission())) {
+                  void explainNotificationsBlocked();
+                  return;
+                }
+                await setPlanReminders(v);
+                void resyncAllPlanReminders();
+              }}
+              trackColor={{ false: '#3a3a3a', true: AudioAccent }}
+              thumbColor="#ffffff"
+              ios_backgroundColor="#3a3a3a"
+            />
+          </View>
+        </View>
+
         <Text style={s.subLabel}>General</Text>
         <View style={s.card}>
           <PressFeedback
@@ -455,6 +487,36 @@ export default function SettingsScreen() {
              "intro mag zich elke keer tonen" gewoon bij elke montage van
              de tab (zie (tabs)/index.tsx), geen eenmalige vlag meer om te
              resetten. */}
+        </View>
+
+        {/* ── STATE CONTROL ────────────────────────────────────────────
+            Een State Control-dagplan bestaat voor iedereen (telefoon-
+            haptiek), niet enkel voor bracelet-bezitters — dus deze
+            schakelaar staat buiten het bracelet-blok. */}
+        <Text style={s.sectionLabel}>State Control</Text>
+        <View style={s.card}>
+          <View style={s.row}>
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Plan reminders</Text>
+              <Text style={s.rowSub}>
+                One reminder for each session in your daily State Control plan. Your plan stays as it is.
+              </Text>
+            </View>
+            <Switch
+              value={braceletPlanReminders}
+              onValueChange={async (v) => {
+                if (v && !(await ensurePermission())) {
+                  void explainNotificationsBlocked();
+                  return;
+                }
+                await setBraceletPlanReminders(v);
+                void resyncAllPlanReminders();
+              }}
+              trackColor={{ false: '#3a3a3a', true: AudioAccent }}
+              thumbColor="#ffffff"
+              ios_backgroundColor="#3a3a3a"
+            />
+          </View>
         </View>
 
         {/* ── SMART BEAD BRACELET ──────────────────────────────────────

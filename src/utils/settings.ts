@@ -137,6 +137,12 @@ export type Settings = {
    *  een app die ongevraagd begint te porren verliest precies de mensen die
    *  hij wil houden. */
   reminders: Record<string, boolean>;
+  /** Herinneringen voor de sessies in je dagplan (breathwork / bracelet).
+   *  Operator, 5 okt 2026 ("hoe kan de user deze meldingen afzetten? moet
+   *  echt duidelijk zijn"): eigen schakelaar in Settings, standaard aan —
+   *  wie een plan maakt vraagt erom herinnerd te worden. */
+  planReminders: boolean;
+  braceletPlanReminders: boolean;
   /** Op welk UUR een herinnering valt, per sleutel (`breath:morning`).
    *  Ontbreekt er een, dan geldt het standaarduur van dat moment. Bewust
    *  alleen hele uren: een keuze uit 24 dingen is te doen, een keuze uit
@@ -248,6 +254,8 @@ const defaults: Settings = {
   breathPrefs: {},
   goals: [],
   reminders: {},
+  planReminders: true,
+  braceletPlanReminders: true,
   reminderHours: {},
   reminderAt: {},
   profile: {},
@@ -335,6 +343,12 @@ async function loadOnce(): Promise<void> {
               : {}),
             ...(typeof obj.hapticsPhone === 'boolean'
               ? { hapticsPhone: obj.hapticsPhone }
+              : {}),
+            ...(typeof obj.planReminders === 'boolean'
+              ? { planReminders: obj.planReminders }
+              : {}),
+            ...(typeof obj.braceletPlanReminders === 'boolean'
+              ? { braceletPlanReminders: obj.braceletPlanReminders }
               : {}),
             /* Leest ook de oude enkelvoudige sleutel, zodat wie al een doel
                had het niet kwijtraakt.

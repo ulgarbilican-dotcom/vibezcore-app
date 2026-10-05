@@ -28,6 +28,7 @@ import { pickStatesForDay, reasonForPick } from '@/utils/day-plan';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { dayKey } from '@/utils/bracelet-history';
 import type { ActivePlan } from '@/utils/plan-store';
+import { ensureSettingsLoaded, getSetting } from '@/utils/settings';
 import { getModeMeta, type BraceletMode } from '@/services/ble-contract';
 
 /* Operator, 11 september 2026: nieuw vierde moment "after work / on the
@@ -297,6 +298,8 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
     } catch {}
   }
   if (!plan) return;
+  /* Uit in Settings → Breathwork → Plan reminders. */
+  if (!getSetting('planReminders')) return;
 
   const today = plan.days[dayKey(new Date())];
   if (!today || today.items.length === 0) return;
@@ -312,10 +315,12 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
     const why = reasonForPick(it.state, plan.goals, slotDef?.label ?? it.slot);
     const hour = Math.floor(it.reminderAt / 60) % 24;
     const minute = it.reminderAt % 60;
-    const second = it.reminderAt + 15;
-    const hour2 = Math.floor(second / 60) % 24;
-    const minute2 = second % 60;
 
+    /* Operator, 5 okt 2026 ("regelmatig herinnering 'still time'... dat is
+       storend"): EEN melding per geplande sessie. De tweede ("Still time
+       for your session today", 15 min later) kwam ook als de sessie al
+       gedaan was — hij stond vast ingepland en wist dat niet. De cancel-
+       loop hierboven ruimt de nog ingeplande tweede meldingen op. */
     try {
       await Notifications.scheduleNotificationAsync({
         identifier: planIdFor(index, 1),
@@ -326,17 +331,6 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
           ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
-      });
-      await Notifications.scheduleNotificationAsync({
-        identifier: planIdFor(index, 2),
-        content: {
-          /* Zacht, geen schuldgevoel — meldt alleen dat het er nog staat. */
-          title: 'Still time for your session today',
-          body: `${titleCase(st.eyebrow)} — ${it.minutes} min, whenever you're ready.`,
-          data: { kind: 'breath', slot: it.slot, state: it.state },
-          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
-        },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: hour2, minute: minute2 },
       });
     } catch {
       /* Eén moment dat niet lukt mag de andere niet meeslepen. */
@@ -371,6 +365,8 @@ export async function syncBraceletPlanReminder(
       await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 2));
     } catch {}
   }
+  /* Uit in Settings → Smart Bead Bracelet → Plan reminders. */
+  if (!getSetting('braceletPlanReminders')) return;
   const today = plan?.days[dayKey(new Date())];
   if (!today || today.items.length === 0) return;
   if (!(await ensurePermission())) return;
@@ -381,18 +377,14 @@ export async function syncBraceletPlanReminder(
     const meta = getModeMeta(item.mode as BraceletMode);
     const hour = Math.floor(item.reminderAt / 60) % 24;
     const minute = item.reminderAt % 60;
-    const second = item.reminderAt + 15;
-    const hour2 = Math.floor(second / 60) % 24;
-    const minute2 = second % 60;
 
+    /* Eén melding per sessie — zie syncPlanReminders (5 okt 2026). */
     try {
       await Notifications.scheduleNotificationAsync({
         identifier: braceletPlanIdFor(index, 1),
         content: {
-          /* De melding ÍS de vraag: tikken opent meteen /bracelet-control
-             met modus+duur al ingevuld, verbonden en klaar — 1 tik op
-             Resume i.p.v. een hele flow. Zie
-             `reminderRoute`/`reminderParams`. */
+          /* De melding ÍS de vraag: tikken opent meteen State Control met
+             modus+duur al ingevuld. Zie `reminderRoute`/`reminderParams`. */
           title: `Your ${meta.name} session is ready`,
           body: 'One press. No screen, no sound, no effort.',
           data: {
@@ -404,27 +396,28 @@ export async function syncBraceletPlanReminder(
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
       });
-      await Notifications.scheduleNotificationAsync({
-        identifier: braceletPlanIdFor(index, 2),
-        content: {
-          title: 'Still time for your bracelet session',
-          body: `${meta.name} — ${item.durationMinutes} min, whenever you're ready.`,
-          data: {
-            kind: 'bracelet-plan',
-            braceletMode: item.mode,
-            braceletDuration: item.durationMinutes,
-          },
-          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: hour2,
-          minute: minute2,
-        },
-      });
     } catch {
       /* Eén sessie die niet lukt mag de andere niet meeslepen. */
     }
+  }
+}
+
+/** Bij het opstarten: de planmeldingen gelijkzetten met de huidige plannen
+ *  en instellingen. Ruimt zo ook de oude "Still time"-meldingen op die nog
+ *  op toestellen ingepland stonden (5 okt 2026). */
+export async function resyncAllPlanReminders(): Promise<void> {
+  try {
+    await ensureSettingsLoaded();
+    /* Dynamisch: de plan-stores importeren zelf niets hiervan, maar zo kan
+       er ook later geen kringverwijzing ontstaan. */
+    const planStore = await import('@/utils/plan-store');
+    const braceletStore = await import('@/utils/bracelet-plan-store');
+    await planStore.reloadActivePlan();
+    await braceletStore.reloadActiveBraceletPlan();
+    await syncPlanReminders(planStore.getActivePlan());
+    await syncBraceletPlanReminder(braceletStore.getActiveBraceletPlan());
+  } catch {
+    /* nooit de app-start breken */
   }
 }
 
