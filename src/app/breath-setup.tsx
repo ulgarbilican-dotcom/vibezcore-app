@@ -42,7 +42,6 @@ import { STATE_PHOTOS } from '@/services/offline-assets';
 import { assetUri } from '@/services/asset-cache';
 import DurationSlider from '@/components/DurationSlider';
 import { DurationWheel } from '@/components/DurationWheel';
-import { DurationRuler } from '@/components/DurationRuler';
 import { confirmVibezAlert } from '@/components/VibezAlert';
 import { BREATH_STATES, roundsFor, type BreathStateKey, type TechniqueDef, type DurationDef } from '@/data/breath-states';
 import {
@@ -855,7 +854,11 @@ function TechniqueSegmentedControl({
       {/* Operator, 5 okt 2026: van rand tot rand, echt vervaagd glas over
          de toestandsfoto (`blurTarget`). De gekozen naam groot en wit, de
          andere gedimd — geen kussentje. */}
-      <VibezGlass radius={0} level="subtle" blurTarget={blurTarget} style={StyleSheet.absoluteFill} />
+      <VibezGlass radius={0} level="subtle" blurTarget={blurTarget} style={StyleSheet.absoluteFill}>
+        {/* Even donker als de pagina eromheen (operator, 5 okt 2026: "te
+           zware streep") — enkel de vervaging laat de balk zien. */}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.7)' }]} />
+      </VibezGlass>
       {/* Operator, 24 september 2026 (referentie: "het kussentje is wit/
          lichtgrijs met een zachte schaduw, geen accentkleur"): was
          `accent` — de vulling zelf droeg voorheen de state-kleur; nu
@@ -2352,7 +2355,17 @@ export default function BreathSetupScreen() {
              kale paginakleur, nauwelijks te onderscheiden van de rest van
              het scherm. Een effen grijze schijf erachter, licht ingezet
              t.o.v. de ringlijn zelf. */}
-          <View style={[s.heroFill, { backgroundColor: heroFillColor }]} />
+          {/* Operator, 5 okt 2026: de cirkel in hetzelfde glas als de balk —
+             de sfeer van de foto schemert zacht door, één materiaal op het
+             scherm (was een effen zwarte schijf). */}
+          <VibezGlass
+            radius={(HERO_SIZE - HERO_STROKE * 4) / 2}
+            level="normal"
+            blurTarget={bgTargetRef}
+            style={[s.heroFill, { backgroundColor: 'transparent' }]}
+          >
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.55)' }]} />
+          </VibezGlass>
           <Svg width={HERO_SIZE} height={HERO_SIZE} style={StyleSheet.absoluteFill}>
             <Circle
               cx={HERO_SIZE / 2}
@@ -2397,28 +2410,9 @@ export default function BreathSetupScreen() {
              cirkel bovenop de golven en verdwijnen die (gebeurde eerder —
              golven leken toen "verdwenen", maar lagen gewoon onder een
              ondoorzichtige cirkel). */}
-          <View style={s.heroShineMask} pointerEvents="none">
-            {/* Operator, 11 september 2026: "wit op wit, alles moet
-               logisch" — een vaste bleke wit/blauwe glans (`shineMid`)
-               las voor een paarse state als een onzichtbare witte streep
-               op de witte cirkel. In light gebruikt de glans nu de eigen
-               `st.accent` (met alpha) i.p.v. een vast, state-loze kleur —
-               dezelfde reden waarom golven/ring/CTA hieronder al
-               `st.accent` gebruiken. */}
-            <Animated.View style={[s.heroShineStrip, shineStyle]}>
-              <LinearGradient
-                colors={
-                  light
-                    ? ['#ffffff00', `${ringAccent}66`, '#ffffff00']
-                    : ['#ffffff00', C.shineMid, '#ffffff00']
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-            </Animated.View>
-            <View style={[s.heroShinePunch, { backgroundColor: heroFillColor }]} />
-          </View>
+          {/* De glans-flits over de ring is weg (5 okt 2026): hij ponste zijn
+             midden uit met een effen vlak in de vulkleur, en dat kan niet
+             meer nu de cirkel van glas is. */}
 
           <View style={s.heroLiquidMask} pointerEvents="none">
             {/* Operator, 11 september 2026 (2e correctie): "bijna
@@ -2875,12 +2869,14 @@ export default function BreathSetupScreen() {
           ) : null}
         </View>
         <View style={s.rulerWrap}>
-          <DurationRuler
-            options={durationWheelOptions.map((o) => o.value)}
+          {/* Operator, 5 okt 2026 ("liniaal vind ik niet goed, terug het
+             wiel"). */}
+          <DurationWheel
+            options={durationWheelOptions}
             value={chosen.minutes}
+            accent={accent}
+            trackColor="rgba(255,255,255,0.4)"
             recommendedValue={recommendedZone?.minutes}
-            accent={waveAccent}
-            fadeEdges={false}
             onChange={(v) => {
               const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
               if (presetIdx !== -1) {
