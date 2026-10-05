@@ -183,7 +183,7 @@ async function finishCompleted(s: MonitorState): Promise<void> {
 }
 
 let state: MonitorState | null = null;
-let tickHandle: ReturnType<typeof setInterval> | null = null;
+let tickHandle: ReturnType<typeof setTimeout> | null = null;
 let resyncHandle: ReturnType<typeof setInterval> | null = null;
 let channelReady = false;
 let lastNotifPushAt = 0;
@@ -324,7 +324,7 @@ async function publish(force: boolean): Promise<void> {
 }
 
 function clearTimers(): void {
-  if (tickHandle) clearInterval(tickHandle);
+  if (tickHandle) clearTimeout(tickHandle);
   if (resyncHandle) clearInterval(resyncHandle);
   tickHandle = null;
   resyncHandle = null;
@@ -344,9 +344,22 @@ function persist(): void {
   );
 }
 
+/* Tick net na de omslag van elke seconde van de resterende tijd, niet op
+   een vrij interval — anders slaat de teller (pill, melding) soms een
+   seconde over (operator, 5 okt 2026). */
+function scheduleTick(): void {
+  const rem = state ? currentRemainingSec() : 0;
+  const frac = rem - Math.floor(rem);
+  const delay = state?.paused ? TICK_MS : Math.max(20, Math.round(frac * 1000) + 20);
+  tickHandle = setTimeout(() => {
+    tick();
+    if (state) scheduleTick();
+  }, delay);
+}
+
 function startTimers(): void {
   clearTimers();
-  tickHandle = setInterval(tick, TICK_MS);
+  scheduleTick();
   resyncHandle = setInterval(() => void resync(), RESYNC_MS);
 }
 

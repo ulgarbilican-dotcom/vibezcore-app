@@ -92,6 +92,7 @@ import {
   type SetStateAction,
 } from 'react';
 import {
+  AppState,
   ActivityIndicator,
   Alert,
   Animated,
@@ -1534,17 +1535,39 @@ function CompletionModal({
   const ring = useSharedValue(0);
   const check = useSharedValue(0);
   const textIn = useSharedValue(0);
+  const ripple = useSharedValue(0);
 
+  /* Operator, 5 okt 2026 ("het einde is statisch, hoe zou Apple dat
+     doen?"): de animatie speelde bij het AANMAKEN van dit scherm — kwam
+     je via de "Session complete"-melding binnen, dan gebeurde dat nog vóór
+     de app zichtbaar was en zag je enkel het eindbeeld. Nu start ze pas
+     als de app echt in beeld is (net als Apple's ring die zich sluit
+     terwijl je kijkt), met na het vinkje één zachte golf naar buiten. */
   useEffect(() => {
-    fade.value = withTiming(1, { duration: 300 });
-    ring.value = withDelay(
-      150,
-      withTiming(1, { duration: 900, easing: ReanimatedEasing.out(ReanimatedEasing.cubic) }),
-    );
-    check.value = withDelay(950, withSpring(1, { damping: 12, stiffness: 160 }));
-    textIn.value = withDelay(1050, withTiming(1, { duration: 450 }));
+    let started = false;
+    const run = () => {
+      if (started) return;
+      started = true;
+      fade.value = withTiming(1, { duration: 300 });
+      ring.value = withDelay(
+        250,
+        withTiming(1, { duration: 1000, easing: ReanimatedEasing.out(ReanimatedEasing.cubic) }),
+      );
+      check.value = withDelay(1150, withSpring(1, { damping: 12, stiffness: 160 }));
+      ripple.value = withDelay(1200, withTiming(1, { duration: 1100, easing: ReanimatedEasing.out(ReanimatedEasing.quad) }));
+      textIn.value = withDelay(1300, withTiming(1, { duration: 500 }));
+    };
+    if (AppState.currentState === 'active') run();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') run();
+    });
+    return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const rippleStyle = useAnimatedStyle(() => ({
+    opacity: ripple.value === 0 ? 0 : 0.55 * (1 - ripple.value),
+    transform: [{ scale: 1 + 0.45 * ripple.value }],
+  }));
 
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: RING_CIRC * (1 - ring.value) }));
@@ -1561,6 +1584,14 @@ function CompletionModal({
   return (
     <ReanimatedAnimated.View style={[s.completionOverlay, s.completionFull, fadeStyle]}>
       <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+        <ReanimatedAnimated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { borderRadius: RING_SIZE / 2, borderWidth: 2, borderColor: meta.color },
+            rippleStyle,
+          ]}
+        />
         <Svg width={RING_SIZE} height={RING_SIZE} style={StyleSheet.absoluteFill}>
           <Circle
             cx={RING_SIZE / 2}
@@ -5213,8 +5244,22 @@ function BraceletControlScreen({
        sprong. Nu: setNowMs(Date.now()) op het moment dat sessionActive
        true wordt → eerste post-resume render is in sync. */
     setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
+    /* Operator, 5 okt 2026 ("de sessie slaat soms seconden over"): een
+       interval van "ongeveer" 1 s die net te laat vuurt, sprong van 3:10
+       naar 3:08. Nu ververst het scherm net NA de omslag van elke seconde
+       van de resterende tijd (zoals Apple's timers aan de klok gekoppeld
+       zijn) — elke seconde precies één keer. */
+    let id: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const rem = getBraceletMonitorRemainingSec();
+      const frac = rem === null ? 0 : rem - Math.floor(rem);
+      id = setTimeout(() => {
+        setNowMs(Date.now());
+        schedule();
+      }, Math.max(20, Math.round(frac * 1000) + 20));
+    };
+    schedule();
+    return () => clearTimeout(id);
   }, [sessionActive]);
 
   /* Operator, 17 september 2026: de losse "publish naar bracelet-session-
