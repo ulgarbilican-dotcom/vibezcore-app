@@ -54,6 +54,7 @@ import * as Haptics from 'expo-haptics';
 import {
   canPlayNativeWaveform,
   hasNativeWaveform,
+  pauseNativeSession,
   playNativeWaveform,
   startNativeSession,
   stopNativeSession,
@@ -288,11 +289,25 @@ function scheduleBeat(
 
 /* ── Gemeenschappelijk ───────────────────────────────────────────────── */
 
-function silence(): void {
+/** Draait de voorgrondservice (lopend of gepauzeerd met melding)? */
+let nativeSessionAlive = false;
+
+export function isNativeSessionAlive(): boolean {
+  return nativeSessionAlive;
+}
+
+function endNativeSession(): void {
+  stopNativeSession();
+  nativeSessionAlive = false;
+}
+
+/** `keepService`: de service krijgt meteen een nieuwe curve — niet eerst
+ *  stoppen, anders verdwijnt de melding even van het vergrendelscherm. */
+function silence(keepService = false): void {
   generation += 1;
   clearPending();
   stopNativeWaveform();
-  stopNativeSession();
+  if (!keepService) endNativeSession();
 }
 
 type SessionClock = { elapsedSec: number; totalSec: number };
@@ -304,7 +319,7 @@ function play(
   totalSec?: number,
   clock?: SessionClock,
 ): void {
-  silence();
+  silence(!!clock && hasNativeWaveform());
   const spec = SPECS[mode];
   if (hasNativeWaveform()) {
     const { timings, amplitudes, repeat } = buildWaveform(
@@ -324,6 +339,7 @@ function play(
         clock?.totalSec ?? totalSec,
         clock?.elapsedSec ?? 0,
       );
+      nativeSessionAlive = true;
     } else {
       playNativeWaveform(timings, amplitudes, repeat);
     }
@@ -366,7 +382,12 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
 }
 
 export function pauseModeSessionHaptic(): void {
-  silence();
+  /* De service blijft draaien in pauze-stand: zo blijft de sessie op het
+     vergrendelscherm staan, met een hervat-knop. */
+  generation += 1;
+  clearPending();
+  stopNativeWaveform();
+  if (nativeSessionAlive) pauseNativeSession();
   sessionEndsAt = null;
   if (session && session.pausedAt === null) session.pausedAt = Date.now();
 }
@@ -414,7 +435,10 @@ export function stopModePreviewHaptic(): void {
   clearPending();
   if (!endingNaturally) {
     stopNativeWaveform();
-    stopNativeSession();
+    endNativeSession();
+  } else {
+    /* De service speelt het eind-signaal uit en stopt dan zelf. */
+    nativeSessionAlive = false;
   }
   session = null;
   sessionEndsAt = null;

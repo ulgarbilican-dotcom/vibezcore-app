@@ -40,6 +40,20 @@ class StateHapticsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("StateHaptics")
 
+    /* Knop op het vergrendelscherm ("pause"/"resume") → JS, zodat de
+       sessie-monitor (bron van waarheid) en de bracelet meegaan. */
+    Events("onRemoteControl")
+
+    OnCreate {
+      StateHapticsService.remoteListener = { action ->
+        sendEvent("onRemoteControl", mapOf("action" to action))
+      }
+    }
+
+    OnDestroy {
+      StateHapticsService.remoteListener = null
+    }
+
     /* Zonder amplitude-sturing rondt Android elke niet-nul amplitude af
        naar 100% — dan hoort de JS-kant terug te vallen op expo-haptics. */
     Function("hasAmplitudeControl") {
@@ -86,7 +100,12 @@ class StateHapticsModule : Module() {
           putExtra(StateHapticsService.EXTRA_SESSION_TOTAL_MS, (sessionTotalSec * 1000).toLong())
           putExtra(StateHapticsService.EXTRA_SESSION_ELAPSED_MS, (sessionElapsedSec * 1000).toLong())
         }
-        ContextCompat.startForegroundService(context, intent)
+        val running = StateHapticsService.instance
+        if (running != null) {
+          running.applySessionOnMain(intent)
+        } else {
+          ContextCompat.startForegroundService(context, intent)
+        }
       } catch (_: Exception) {
         /* stil — zonder service trilt het enkel niet door op slot */
       }
@@ -95,6 +114,13 @@ class StateHapticsModule : Module() {
     /* stopService i.p.v. een STOP-intent via startForegroundService: werkt
        ook als de app al op de achtergrond staat, en start de service niet
        onnodig op als hij niet liep. */
+    /** Pauze vanuit de app: de service blijft (melding met hervat-knop op
+     *  het vergrendelscherm), enkel ritme en klok staan stil. Draait de
+     *  service niet, dan gebeurt er niets. */
+    Function("pauseSession") {
+      StateHapticsService.instance?.pauseFromApp()
+    }
+
     Function("stopSession") {
       try {
         context.stopService(Intent(context, StateHapticsService::class.java))

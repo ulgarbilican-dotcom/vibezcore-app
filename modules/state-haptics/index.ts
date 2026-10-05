@@ -18,7 +18,12 @@ type StateHapticsNativeModule = {
     sessionTotalSec: number,
     sessionElapsedSec: number,
   ): void;
+  pauseSession(): void;
   stopSession(): void;
+  addListener(
+    event: 'onRemoteControl',
+    cb: (e: { action: 'pause' | 'resume' }) => void,
+  ): { remove(): void };
 };
 
 let native: StateHapticsNativeModule | null = null;
@@ -84,5 +89,26 @@ export function stopNativeSession(): void {
     native?.stopSession();
   } catch {
     /* stil */
+  }
+}
+
+/** Pauzeert de lopende service-sessie: de melding blijft op het vergrendel-
+ *  scherm staan met een hervat-knop. */
+export function pauseNativeSession(): void {
+  try {
+    native?.pauseSession();
+  } catch {
+    /* stil */
+  }
+}
+
+/** Pauze/hervat-knop op het vergrendelscherm. De service reageert zelf al
+ *  meteen; dit laat de app (sessie-monitor, bracelet) meegaan. */
+export function addRemoteControlListener(cb: (action: 'pause' | 'resume') => void): () => void {
+  try {
+    const sub = native?.addListener('onRemoteControl', (e) => cb(e.action));
+    return () => sub?.remove();
+  } catch {
+    return () => {};
   }
 }

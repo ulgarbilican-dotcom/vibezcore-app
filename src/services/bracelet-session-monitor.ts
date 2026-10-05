@@ -41,8 +41,9 @@ import { AppState, Platform } from 'react-native';
 import { getBracelet } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
-import { hasNativeWaveform } from '../../modules/state-haptics';
+import { addRemoteControlListener, hasNativeWaveform } from '../../modules/state-haptics';
 import {
+  isNativeSessionAlive,
   pauseModeSessionHaptic,
   playModeSessionHaptic,
   stopModePreviewHaptic,
@@ -249,10 +250,11 @@ async function publish(force: boolean): Promise<void> {
   }
   /* Android met de native haptics-service: die toont zelf de vergrendel-
      scherm-melding (modus + aftellende tijd, media-stijl — een gewone
-     melding zoals deze verschijnt op OneUI niet op het vergrendelscherm).
-     Geen tweede, dubbele melding. Gepauzeerd draait de service niet, dan
-     toont deze melding "Paused". */
-  if (Platform.OS === 'android' && hasNativeWaveform() && !state.paused) {
+     melding zoals deze verschijnt op OneUI niet op het vergrendelscherm),
+     ook gepauzeerd (met hervat-knop). Geen tweede, dubbele melding. Enkel
+     als de service (nog) niet draait — bv. gepauzeerd vóór de eerste
+     Play — toont deze melding de sessie. */
+  if (Platform.OS === 'android' && hasNativeWaveform() && isNativeSessionAlive()) {
     try {
       await Notifications.dismissNotificationAsync(NOTIF_ID);
     } catch {
@@ -420,6 +422,68 @@ export async function stopBraceletSessionMonitor(): Promise<void> {
     /* Cosmetisch. */
   }
 }
+
+/* ── Pauze/hervat vanaf het vergrendelscherm (5 okt 2026) ─────────────
+   De service reageert zelf al meteen op de knop (ritme stil of verder);
+   hier gaan de monitor (bron van waarheid) en de bracelet mee, via
+   dezelfde stappen als de knoppen in de app. Eerst de monitor (synchroon),
+   dan pas de bracelet: met het scherm op slot kan een bracelet-aanroep
+   wachten tot het toestel ontgrendeld wordt, en de tijd mag daar niet op
+   wachten. Een geopend sessiescherm luistert mee en werkt zijn eigen
+   weergave bij. */
+export type RemoteControlChange = { action: 'pause' | 'resume'; remainingSec: number };
+const remoteListeners = new Set<(c: RemoteControlChange) => void>();
+
+export function subscribeRemoteControl(cb: (c: RemoteControlChange) => void): () => void {
+  remoteListeners.add(cb);
+  return () => {
+    remoteListeners.delete(cb);
+  };
+}
+
+function notifyRemote(c: RemoteControlChange): void {
+  remoteListeners.forEach((cb) => {
+    try {
+      cb(c);
+    } catch {
+      /* een kapotte luisteraar mag de sessie niet breken */
+    }
+  });
+}
+
+async function remotePause(): Promise<void> {
+  if (!state || state.paused) return;
+  const mode = state.mode;
+  pauseBraceletSessionMonitor();
+  notifyRemote({ action: 'pause', remainingSec: currentRemainingSec() });
+  try {
+    await getBracelet().sendCommand({ mode, duration: 0, command: BleCommand.Stop });
+  } catch {
+    /* Geen verbinding — de bracelet loopt op zijn eigen timer. */
+  }
+}
+
+async function remoteResume(): Promise<void> {
+  if (!state || !state.paused) return;
+  const mode = state.mode;
+  const remSec = currentRemainingSec();
+  resumeBraceletSessionMonitor();
+  notifyRemote({ action: 'resume', remainingSec: remSec });
+  try {
+    await getBracelet().sendCommand({
+      mode,
+      duration: Math.max(1, Math.ceil(remSec / 60)),
+      command: BleCommand.Start,
+    });
+  } catch {
+    /* Geen verbinding — de haptiek op de telefoon loopt al. */
+  }
+}
+
+addRemoteControlListener((action) => {
+  if (action === 'pause') void remotePause();
+  else void remoteResume();
+});
 
 export function isBraceletSessionMonitorActive(): boolean {
   return state !== null;

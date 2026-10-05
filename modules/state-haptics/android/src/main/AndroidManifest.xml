@@ -2,8 +2,6 @@
   <!-- WAKE_LOCK en FOREGROUND_SERVICE(_MEDIA_PLAYBACK) staan al app-breed
        (app.json + modules/breath-background/plugin.js). Hier enkel de
        service zelf; de manifest-merger neemt hem op in de app. -->
-  <!-- Android 16: Live Update voor de lopende sessie (Now Bar/statusbalk). -->
-  <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
   <application>
     <service
       android:name="com.ubili.vibezcoreapp.statehaptics.StateHapticsService"

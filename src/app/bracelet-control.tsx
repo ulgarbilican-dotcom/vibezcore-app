@@ -53,6 +53,7 @@ import {
   resumeBraceletSessionMonitor,
   startBraceletSessionMonitor,
   stopBraceletSessionMonitor,
+  subscribeRemoteControl,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
 import { Check, ChevronDown, ChevronLeft, ChevronUp, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
@@ -4617,6 +4618,28 @@ function BraceletControlScreen({
      eerste render vóór zijn declaratie — TypeScript meldde het terecht, en
      dat het toch werkte was transpiler-geluk, geen correctheid. */
   const [endedLocally, setEndedLocally] = useState(false);
+
+  /* Pauze/hervat vanaf het vergrendelscherm (5 okt 2026): de monitor en de
+     bracelet zijn al bijgewerkt; dit scherm zet enkel zijn eigen weergave
+     gelijk, met dezelfde refs als onPause/onResume. */
+  useEffect(
+    () =>
+      subscribeRemoteControl((c) => {
+        const elapsedMs = Math.max(0, sessionPlannedRef.current * 60 - c.remainingSec) * 1000;
+        if (c.action === 'pause') {
+          pausedAtElapsedMsRef.current = elapsedMs;
+          setPausedAt(Math.max(1, Math.ceil(c.remainingSec / 60)));
+        } else {
+          sessionStartedAtRef.current = Date.now() - elapsedMs;
+          pausedAtElapsedMsRef.current = 0;
+          setEndedLocally(false);
+          setPausedAt(null);
+        }
+        void bracelet.requestStatus().then(setStatus).catch(() => {});
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   /* GEWIJZIGD 5 okt 2026 (audit): het natuurlijke einde wordt niet meer
      HIER afgeleid uit de bracelet-status (die bij hervatten tot het modus-

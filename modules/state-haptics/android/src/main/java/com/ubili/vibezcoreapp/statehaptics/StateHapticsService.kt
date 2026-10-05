@@ -52,6 +52,16 @@ class StateHapticsService : Service() {
     const val CHANNEL_ID = "state_control_session"
     const val NOTIFICATION_ID = 8422
     const val ACTION_START = "com.ubili.vibezcoreapp.statehaptics.action.START"
+    /* Knoppen op het vergrendelscherm / in de melding (Android < 13 gebruikt
+       deze acties; 13+ stuurt dezelfde knoppen via de MediaSession). */
+    const val ACTION_REMOTE_PAUSE = "com.ubili.vibezcoreapp.statehaptics.action.REMOTE_PAUSE"
+    const val ACTION_REMOTE_RESUME = "com.ubili.vibezcoreapp.statehaptics.action.REMOTE_RESUME"
+
+    /** De draaiende service (of null) — de module pauzeert hem rechtstreeks. */
+    @Volatile var instance: StateHapticsService? = null
+    /** Meldt een knop op het vergrendelscherm aan JS ("pause"/"resume"),
+     *  zodat de sessie-monitor (bron van waarheid) meegaat. */
+    @Volatile var remoteListener: ((String) -> kotlin.Unit)? = null
     const val EXTRA_TIMINGS = "timings"
     const val EXTRA_AMPLITUDES = "amplitudes"
     const val EXTRA_TITLE = "title"
@@ -62,8 +72,6 @@ class StateHapticsService : Service() {
     /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
     const val LATE_SKIP_MS = 150L
     private const val END_MARGIN_MS = 400L
-    /** Bio-Teal, de VIBEZCORE-accentkleur, voor de voortgangsbalk. */
-    private const val ACCENT = 0xFF00A3A3.toInt()
 
     /* Expliciet MEDIA i.p.v. het afgeleide TOUCH (gemeten 5 okt 2026): als
        aanraakfeedback volgen de tikken de instelling "trillen bij aanraken"
@@ -104,6 +112,12 @@ class StateHapticsService : Service() {
   private var sessionTotalMs = 0L
   private var sessionElapsedAtStartMs = 0L
   private var mediaSession: MediaSessionCompat? = null
+  /* Pauze (5 okt 2026, operator: "bouw wat nodig is om bug proof te
+     worden"): de service blijft voorgrond zodat de sessie op het
+     vergrendelscherm zichtbaar blijft en daar hervat kan worden. */
+  private var paused = false
+  private var pausedSessionElapsedMs = 0L
+  private var pausedCurveElapsedMs = 0L
   private val tickRunnable = object : Runnable {
     override fun run() {
       updateNotification()
@@ -184,8 +198,32 @@ class StateHapticsService : Service() {
 
   override fun onBind(intent: Intent?): IBinder? = null
 
+  override fun onCreate() {
+    super.onCreate()
+    instance = this
+  }
+
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     ensureChannel()
+    when (intent?.action) {
+      ACTION_REMOTE_PAUSE -> {
+        remotePause()
+        return START_NOT_STICKY
+      }
+      ACTION_REMOTE_RESUME -> {
+        remoteResume()
+        return START_NOT_STICKY
+      }
+    }
+    applySession(intent)
+    return START_NOT_STICKY
+  }
+
+  /** Nieuwe curve toepassen — ook op een al draaiende service, rechtstreeks
+   *  vanuit de module: met het scherm op slot mag een app een voorgrond-
+   *  service niet opnieuw STARTEN (Android 12+), wel een draaiende bijsturen. */
+  fun applySession(intent: Intent?) {
+    paused = false
     title = intent?.getStringExtra(EXTRA_TITLE) ?: "State Control"
     val t = intent?.getLongArrayExtra(EXTRA_TIMINGS) ?: LongArray(0)
     val a = intent?.getIntArrayExtra(EXTRA_AMPLITUDES) ?: IntArray(0)
@@ -200,7 +238,7 @@ class StateHapticsService : Service() {
 
     if (t.isEmpty() || t.size != a.size) {
       stopSelfCleanly()
-      return START_NOT_STICKY
+      return
     }
     handler.removeCallbacks(tickRunnable)
     handler.postDelayed(tickRunnable, 1000L)
@@ -215,10 +253,10 @@ class StateHapticsService : Service() {
     handler.removeCallbacks(endRunnable)
     handler.postAtTime(endRunnable, startUptime + totalMs + END_MARGIN_MS)
     scheduleNextUnit()
-    return START_NOT_STICKY
   }
 
   override fun onDestroy() {
+    if (instance === this) instance = null
     handler.removeCallbacksAndMessages(null)
     beatHandler.removeCallbacksAndMessages(null)
     beatThread.quitSafely()
@@ -244,13 +282,71 @@ class StateHapticsService : Service() {
     stopSelf()
   }
 
+  fun applySessionOnMain(intent: Intent) {
+    handler.post { applySession(intent) }
+  }
+
+  /** Pauze gevraagd door de app (sessie-monitor). Ritme en klok stoppen,
+   *  de melding blijft en toont "Paused" met een hervat-knop. */
+  fun pauseFromApp() {
+    handler.post { enterPaused() }
+  }
+
+  private fun enterPaused() {
+    if (paused || units.isEmpty()) return
+    pausedSessionElapsedMs = sessionElapsedNowMs()
+    pausedCurveElapsedMs = (SystemClock.uptimeMillis() - startUptime).coerceAtLeast(0L)
+    paused = true
+    beatHandler.removeCallbacks(beatRunnable)
+    handler.removeCallbacks(endRunnable)
+    handler.removeCallbacks(tickRunnable)
+    try {
+      vibratorOf(this)?.cancel()
+    } catch (_: Exception) {
+    }
+    releaseWakeLock()
+    updateNotification()
+  }
+
+  /** Hervat het eigen ritme meteen vanaf de pauzeplek. De app vervangt de
+   *  curve daarna door de zijne (na een lange pauze opnieuw vanaf de
+   *  basislijn), maar de gebruiker voelt nooit een gat. */
+  private fun leavePaused() {
+    if (!paused) return
+    paused = false
+    sessionElapsedAtStartMs = pausedSessionElapsedMs
+    startRealtime = SystemClock.elapsedRealtime()
+    startUptime = SystemClock.uptimeMillis() - pausedCurveElapsedMs
+    acquireWakeLock()
+    handler.removeCallbacks(endRunnable)
+    handler.postAtTime(endRunnable, startUptime + totalMs + END_MARGIN_MS)
+    handler.removeCallbacks(tickRunnable)
+    handler.postDelayed(tickRunnable, 1000L)
+    scheduleNextUnit()
+    updateNotification()
+  }
+
+  private fun remotePause() {
+    if (paused) return
+    enterPaused()
+    remoteListener?.invoke("pause")
+  }
+
+  private fun remoteResume() {
+    if (!paused) return
+    leavePaused()
+    remoteListener?.invoke("resume")
+  }
+
   private fun sessionElapsedNowMs(): Long =
-    (sessionElapsedAtStartMs + (SystemClock.elapsedRealtime() - startRealtime))
+    if (paused) pausedSessionElapsedMs
+    else (sessionElapsedAtStartMs + (SystemClock.elapsedRealtime() - startRealtime))
       .coerceIn(0L, sessionTotalMs.coerceAtLeast(0L))
 
   private fun remainingLabel(): String {
     val remSec = ((sessionTotalMs - sessionElapsedNowMs()) / 1000L).coerceAtLeast(0L)
-    return "%d:%02d left".format(remSec / 60, remSec % 60)
+    val clock = "%d:%02d left".format(remSec / 60, remSec % 60)
+    return if (paused) "Paused · $clock" else clock
   }
 
   /* Operator, 5 okt 2026 ("op lockscreen zie ik een muzieknoot, daar moet
@@ -280,6 +376,16 @@ class StateHapticsService : Service() {
   private fun ensureMediaSession(): MediaSessionCompat {
     mediaSession?.let { return it }
     val s = MediaSessionCompat(this, "VibezcoreStateControl")
+    /* Android 13+ tekent de knoppen van de mediakaart zelf uit de
+       PlaybackState en stuurt een tik hierheen. */
+    s.setCallback(object : MediaSessionCompat.Callback() {
+      override fun onPause() {
+        handler.post { remotePause() }
+      }
+      override fun onPlay() {
+        handler.post { remoteResume() }
+      }
+    })
     s.isActive = true
     mediaSession = s
     return s
@@ -314,8 +420,16 @@ class StateHapticsService : Service() {
     )
     s.setPlaybackState(
       PlaybackStateCompat.Builder()
-        .setActions(0L)
-        .setState(PlaybackStateCompat.STATE_PLAYING, sessionElapsedNowMs(), 1.0f, SystemClock.elapsedRealtime())
+        .setActions(
+          if (paused) PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PLAY_PAUSE
+          else PlaybackStateCompat.ACTION_PAUSE or PlaybackStateCompat.ACTION_PLAY_PAUSE,
+        )
+        .setState(
+          if (paused) PlaybackStateCompat.STATE_PAUSED else PlaybackStateCompat.STATE_PLAYING,
+          sessionElapsedNowMs(),
+          if (paused) 0f else 1.0f,
+          SystemClock.elapsedRealtime(),
+        )
         .build(),
     )
   }
@@ -365,24 +479,25 @@ class StateHapticsService : Service() {
      les als BreathSessionService). bracelet-session-monitor.ts toont zijn
      eigen melding dan NIET, zodat er geen dubbele is. */
   private fun buildNotification(): Notification {
-    val launch = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    /* Tik op de melding = rechtstreeks naar de lopende sessie (zelfde
+       `open`-parameter als openStateControl in de app), niet naar het
+       scherm waar de app toevallig stond. */
+    val launch = Intent(
+      Intent.ACTION_VIEW,
+      android.net.Uri.parse("vibezcoreapp://bracelet?open=${System.currentTimeMillis()}"),
+    ).apply {
+      setPackage(packageName)
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
     }
     val pending = launch?.let {
       PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
-    /* Android 16+: een Live Update (operator, 5 okt 2026: "de tekst moet
-       mooi gecentreerd staan"). Als media-melding zet OneUI de tekst
-       bovenaan de Now Bar en houdt eronder plaats vrij voor afspeelknoppen
-       die een haptische sessie niet heeft. Een Live Update is het Android-
-       equivalent van Apple's Live Activity: Now Bar en statusbalk tonen
-       modus, resterende tijd en voortgang zonder lege rij. */
-    /* Gemeten 5 okt 2026 (Galaxy A16, OneUI 8.5): Android promoveert de
-       melding wel (PROMOTED_ONGOING), maar Samsung toont Live Updates in de
-       Now Bar enkel voor partner-apps op een eigen lijst (settings
-       `key_now_bar_<pakket>`). Daar dus de mediakaart, die wel verschijnt. */
-    val samsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
-    if (Build.VERSION.SDK_INT >= 36 && !samsung) return buildLiveUpdate(pending)
+    /* EEN weergave op elk toestel (operator, 5 okt 2026: "niet alleen bij
+       mij maar op alle toestellen"): de mediakaart, die op het vergrendel-
+       scherm van elke Android-fabrikant verschijnt. Een Android 16 Live
+       Update werd op Samsung genegeerd (Now Bar enkel voor partner-apps,
+       gemeten Galaxy A16 / OneUI 8.5); een tweede weergave zou een
+       ongeteste tweede weg zijn. */
     val text = "VIBEZCORE · ${remainingLabel()}"
     updateMediaSession(remainingLabel())
     val builder = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -397,38 +512,29 @@ class StateHapticsService : Service() {
       .setCategory(NotificationCompat.CATEGORY_SERVICE)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setContentIntent(pending)
-      .setStyle(MediaNotificationCompat.MediaStyle().setMediaSession(ensureMediaSession().sessionToken))
+      .addAction(
+        if (paused) {
+          NotificationCompat.Action(android.R.drawable.ic_media_play, "Resume", remotePending(ACTION_REMOTE_RESUME))
+        } else {
+          NotificationCompat.Action(android.R.drawable.ic_media_pause, "Pause", remotePending(ACTION_REMOTE_PAUSE))
+        },
+      )
+      .setStyle(
+        MediaNotificationCompat.MediaStyle()
+          .setMediaSession(ensureMediaSession().sessionToken)
+          .setShowActionsInCompactView(0),
+      )
     if (sessionTotalMs > 0) {
       builder.setProgress(sessionTotalMs.toInt(), sessionElapsedNowMs().toInt(), false)
     }
     return builder.build()
   }
 
-  @androidx.annotation.RequiresApi(36)
-  private fun buildLiveUpdate(pending: PendingIntent?): Notification {
-    val total = sessionTotalMs.coerceAtLeast(1L)
-    val elapsed = sessionElapsedNowMs()
-    val remSec = ((total - elapsed) / 1000L).coerceAtLeast(0L)
-    val clock = "%d:%02d".format(remSec / 60, remSec % 60)
-    val style = Notification.ProgressStyle()
-      .setStyledByProgress(false)
-      .setProgressSegments(listOf(Notification.ProgressStyle.Segment(1000).setColor(ACCENT)))
-      .setProgress(((elapsed * 1000L) / total).toInt().coerceIn(0, 1000))
-    val b = Notification.Builder(this, CHANNEL_ID)
-      .setSmallIcon(smallIconRes())
-      .setContentTitle(title)
-      .setContentText("$clock left")
-      .setShortCriticalText(clock)
-      .setOngoing(true)
-      .setOnlyAlertOnce(true)
-      .setCategory(Notification.CATEGORY_PROGRESS)
-      .setVisibility(Notification.VISIBILITY_PUBLIC)
-      .setContentIntent(pending)
-      .setStyle(style)
-    artBitmap?.let { b.setLargeIcon(android.graphics.drawable.Icon.createWithBitmap(it)) }
-    /* Vraagt de promotie tot Live Update aan (vereist
-       POST_PROMOTED_NOTIFICATIONS in het manifest). */
-    b.extras.putBoolean("android.requestPromotedOngoing", true)
-    return b.build()
-  }
+  private fun remotePending(action: String): PendingIntent =
+    PendingIntent.getService(
+      this,
+      if (action == ACTION_REMOTE_PAUSE) 1 else 2,
+      Intent(this, StateHapticsService::class.java).setAction(action),
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 }
