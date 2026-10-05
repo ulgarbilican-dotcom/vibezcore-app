@@ -1,52 +1,35 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — Breath history page
+   VIBEZCORE — Your Practice (geschiedenis van de ademsessies)
 
-   Pushed-screen vanuit de Breath-tab ("Your Practice" link). Volgt
-   hetzelfde routing-pattern als bracelet-history.
-
-   Toont:
-   - Hero stats: totale practice-tijd + sessie-count
-   - Stats-strip: streak · completion rate · avg session
-   - Per-pattern breakdown: aantal + totale tijd per protocol
-   - Volledige chronologische lijst van sessies (incl. PARTIAL tag)
+   Operator, 5 okt 2026 ("volledig herstructureren zoals Apple — te veel
+   kleuren, moet superduidelijk" + "breathwork en State Control history
+   gebruiken een andere layout en iconen"): opgebouwd uit dezelfde gedeelde
+   stukken als de State Control-geschiedenis (components/WeekSummaryCard +
+   components/HistoryList): weekkaart, per toestand, alle sessies per dag.
+   Kleur zit enkel nog in de toestand-icoontjes.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { Brand } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
-import { router, Stack } from 'expo-router';
-import { ChevronDown, ChevronRight } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { showVibezAlert } from '@/components/VibezAlert';
+  ClearHistoryButton,
+  HistoryDayHeader,
+  HistoryEmpty,
+  HistoryGroup,
+  HistoryRow,
+  HistorySectionLabel,
+  humanDur,
+  stateName,
+} from '@/components/HistoryList';
 import { WeekSummaryCard } from '@/components/WeekSummaryCard';
-import VibezGlass from '@/components/VibezGlass';
-import StateGlyph from '@/components/StateGlyph';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { showVibezAlert } from '@/components/VibezAlert';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-/* Naam en kleur per modus komen uit dezelfde bron als de keuzepagina en het
-   sessiescherm. Hier stond een handgeschreven kopie "om geen cross-file dep
-   te creëren", en die kopie liep uit de pas: ze droeg nog de kleuren van de
-   bracelet (CLAUDE.md §5) en de oude namen, terwijl de ademsessies sinds
-   1 augustus 2026 hun eigen palet hebben. Eén afhankelijkheid is goedkoper
-   dan vijf regels die stilletjes verouderen. */
-/* De vijf toestanden in de volgorde van de keuzepagina, zodat een kleur altijd
-   op dezelfde hoogte in de stapel zit. */
 const STATE_ORDER: BreathStateKey[] = [
   'boost',
   'focus',
@@ -55,30 +38,11 @@ const STATE_ORDER: BreathStateKey[] = [
   'rest',
 ];
 
-/** "Calm Control", "Clarity & Relax" — de modusnaam in gewone schrijfwijze. */
-function stateName(key: BreathStateKey): string {
-  return BREATH_STATES[key].eyebrow
-    .split(' ')
-    .map((w) => (w.length > 1 ? w.charAt(0) + w.slice(1).toLowerCase() : w))
-    .join(' ');
-}
-
 /** Het ritme binnen de toestand (bv. "Box breathing"), als dat bewaard is. */
 function techniqueName(entry: BreathHistoryEntry): string | null {
   if (!entry.techniqueKey) return null;
   const st = BREATH_STATES[entry.key as BreathStateKey];
   return st?.techniques.find((t) => t.key === entry.techniqueKey)?.name ?? null;
-}
-
-/* Toestand-icoon in een getinte glazen badge — hetzelfde teken als op de
-   Breath-tab en in de plannen. De enige kleur in de lijsten. */
-function StateBadge({ stateKey }: { stateKey: BreathStateKey }) {
-  return (
-    <View style={styles.badgeSlot}>
-      <VibezGlass radius={10} tint={BREATH_STATES[stateKey].accent} level="raised" style={StyleSheet.absoluteFill} />
-      <StateGlyph stateKey={stateKey} size={16} color="#ffffff" strokeWidth={1.9} />
-    </View>
-  );
 }
 
 /* ── De laatste zeven dagen ─────────────────────────────────────────────
@@ -141,15 +105,6 @@ function buildWeek(history: BreathHistoryEntry[]) {
 }
 
 /* ── Formatters ──────────────────────────────────────────────────── */
-
-/** Duur in mensentaal. "5:29" leest als een kloktijd en dwingt tot
- *  rekenen (operator, 8 augustus 2026); "5 min" is een feit. Onder de
- *  minuut zeggen we seconden, daarboven ronde minuten — de seconden erbij
- *  zijn schijnprecisie die niemand iets vertelt. */
-function humanDur(sec: number): string {
-  if (sec < 60) return `${Math.max(1, Math.round(sec))} sec`;
-  return `${Math.round(sec / 60)} min`;
-}
 
 /** YYYY-MM-DD in lokale tijd — groepeersleutel voor de dag-secties
  *  hieronder. Zelfde vorm als bracelet-history.ts se dayKey, hier lokaal
@@ -256,51 +211,6 @@ function computeStats(history: BreathHistoryEntry[]): StatsResult {
   };
 }
 
-/* Dag-koprij, apart component (i.p.v. inline in de `.map()` hieronder) —
-   hooks mogen niet in een loop. */
-function DayHeadRow({
-  label,
-  metaText,
-  accessibilityLabel,
-  onPress,
-  open,
-}: {
-  label: string;
-  metaText: string;
-  accessibilityLabel: string;
-  onPress: () => void;
-  open: boolean;
-}) {
-  const pressScale = useSharedValue(1);
-  const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
-  };
-  const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const pressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pressScale.value }],
-  }));
-  return (
-    <AnimatedPressable
-      style={[styles.dayHead, pressStyle]}
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      {open ? (
-        <ChevronDown size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-      ) : (
-        <ChevronRight size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-      )}
-      <Text style={styles.dayHeadLbl}>{label}</Text>
-      <Text style={styles.dayHeadMeta}>{metaText}</Text>
-    </AnimatedPressable>
-  );
-}
-
 /* ════════════════════════════════════════════════════════════════════
    PAGE
    ════════════════════════════════════════════════════════════════════ */
@@ -357,34 +267,25 @@ export default function BreathHistoryScreen() {
     setOpenDays(next);
   };
 
-  const emptyBtnPressScale = useSharedValue(1);
-  const onEmptyBtnPressIn = () => {
-    emptyBtnPressScale.value = withTiming(0.95, { duration: 80 });
+  const onClear = () => {
+    void showVibezAlert({
+      title: 'Clear practice history?',
+      message: `This will permanently delete all ${history.length} session${history.length === 1 ? '' : 's'} from Your Practice. This cannot be undone.`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear all',
+          style: 'destructive',
+          onPress: () => {
+            void clearBreathHistory();
+          },
+        },
+      ],
+    });
   };
-  const onEmptyBtnPressOut = () => {
-    emptyBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const emptyBtnPressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: emptyBtnPressScale.value }],
-  }));
-
-  const clearBtnPressScale = useSharedValue(1);
-  const onClearBtnPressIn = () => {
-    clearBtnPressScale.value = withTiming(0.95, { duration: 80 });
-  };
-  const onClearBtnPressOut = () => {
-    clearBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const clearBtnPressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: clearBtnPressScale.value }],
-  }));
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Operator, 1 okt 2026 ("kijk alles na op consistentie"): had
-         helemaal geen eigen Stack.Screen, leunde volledig op de
-         onaangepaste systeem-terugpijl uit _layout.tsx — nu dezelfde
-         ChevronLeft-stijl (size 20, strokeWidth 2.8) als overal elders. */}
       <Stack.Screen
         options={{
           title: 'Your Practice',
@@ -393,144 +294,75 @@ export default function BreathHistoryScreen() {
           headerLeft: () => <HeaderBackButton />,
         }}
       />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Empty state ── */}
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <WeekSummaryCard
+          days={week7.map((d) => ({ key: d.dateKey, letter: d.label, minutes: d.sec / 60 }))}
+          sessions={weekSessions}
+          streak={stats.streakDays}
+          allTimeMinutes={stats.totalSec / 60}
+        />
+
         {history.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>○</Text>
-            <Text style={styles.emptyTitle}>No sessions yet</Text>
-            <Text style={styles.emptyBody}>
-              Start any breathwork pattern. Every session — completed or partial — will appear here with full stats.
-            </Text>
-            <AnimatedPressable
-              style={[styles.emptyBtn, emptyBtnPressStyle]}
-              onPress={() => router.back()}
-              onPressIn={onEmptyBtnPressIn}
-              onPressOut={onEmptyBtnPressOut}
-              android_ripple={{ color: 'rgba(0,0,0,0.10)' }}
-            >
-              <Text style={styles.emptyBtnTxt}>BACK TO BREATH</Text>
-            </AnimatedPressable>
-          </View>
+          <HistoryEmpty
+            title="No sessions yet"
+            body="Start a breathing session and it will appear here."
+            cta="Back to Breath"
+            onPress={() => router.back()}
+          />
         ) : (
           <>
-            {/* Operator, 5 okt 2026 ("Your Practice volledig herstructureren
-                zoals Apple — te veel kleuren, moet superduidelijk"): ring,
-                drie gekleurde tegels en de veelkleurige weekbalken zijn weg.
-                Nu dezelfde opbouw als de State Control-geschiedenis: één
-                weekkaart (één accentkleur), dan per toestand, dan alle
-                sessies. Kleur zit enkel nog in de toestand-icoontjes. */}
-            <WeekSummaryCard
-              days={week7.map((d) => ({ key: d.dateKey, letter: d.label, minutes: d.sec / 60 }))}
-              sessions={weekSessions}
-              streak={stats.streakDays}
-              allTimeMinutes={stats.totalSec / 60}
-            />
-
-            <Text style={styles.sectionLbl}>By state</Text>
-            <View style={styles.group}>
-              {stats.patternCounts.map((pc, i) => {
-                const st = BREATH_STATES[pc.key as BreathStateKey];
-                if (!st) return null;
-                return (
-                  <View
+            <HistorySectionLabel>By state</HistorySectionLabel>
+            <HistoryGroup>
+              {stats.patternCounts
+                .filter((pc) => BREATH_STATES[pc.key as BreathStateKey])
+                .map((pc, i) => (
+                  <HistoryRow
                     key={pc.key}
-                    style={styles.groupRow}
-                  >
-                    {i > 0 && <View style={styles.sep} />}
-                    <StateBadge stateKey={st.key} />
-                    <View style={styles.groupRowMain}>
-                      <Text style={styles.rowTitle}>{stateName(st.key)}</Text>
-                      <Text style={styles.rowSub}>
-                        {pc.count} session{pc.count === 1 ? '' : 's'}
-                      </Text>
-                    </View>
-                    <Text style={styles.rowValue}>{humanDur(pc.totalSec)}</Text>
-                  </View>
-                );
-              })}
-            </View>
+                    first={i === 0}
+                    stateKey={pc.key as BreathStateKey}
+                    title={stateName(pc.key as BreathStateKey)}
+                    sub={`${pc.count} session${pc.count === 1 ? '' : 's'}`}
+                    value={humanDur(pc.totalSec)}
+                  />
+                ))}
+            </HistoryGroup>
 
-            {/* ── Alle sessies, per dag ── */}
-            <Text style={styles.sectionLbl}>All sessions</Text>
+            <HistorySectionLabel>All sessions</HistorySectionLabel>
             {dayGroups.map((group) => {
               const open = effectiveOpenDays.has(group.key);
               const totalSec = group.entries.reduce((sum, e) => sum + e.durSec, 0);
               return (
-                <View key={group.key} style={styles.dayGroup}>
-                  <DayHeadRow
+                <View key={group.key}>
+                  <HistoryDayHeader
                     open={open}
                     label={group.label}
-                    metaText={`${group.entries.length} session${group.entries.length === 1 ? '' : 's'} · ${humanDur(totalSec)}`}
-                    accessibilityLabel={`${group.label}, ${group.entries.length} session${group.entries.length === 1 ? '' : 's'}, ${open ? 'expanded' : 'collapsed'}`}
+                    meta={`${group.entries.length} session${group.entries.length === 1 ? '' : 's'} · ${humanDur(totalSec)}`}
                     onPress={() => toggleDay(group.key)}
                   />
-
                   {open && (
-                    <View style={styles.group}>
+                    <HistoryGroup>
                       {group.entries.map((entry, i) => {
-                        const st = BREATH_STATES[entry.key as BreathStateKey];
-                        const isCompleted = entry.completed !== false;
+                        const known = BREATH_STATES[entry.key as BreathStateKey] ? (entry.key as BreathStateKey) : undefined;
+                        const tech = techniqueName(entry);
                         return (
-                          <View
+                          <HistoryRow
                             key={`${entry.ts}-${i}`}
-                            style={styles.groupRow}
-                          >
-                            {i > 0 && <View style={styles.sep} />}
-                            {st ? <StateBadge stateKey={st.key} /> : <View style={styles.badgeSlot} />}
-                            <View style={styles.groupRowMain}>
-                              <Text style={styles.rowTitle} numberOfLines={1}>
-                                {st ? stateName(st.key) : entry.name}
-                              </Text>
-                              <Text style={styles.rowSub} numberOfLines={1}>
-                                {formatTime(entry.ts)}
-                                {techniqueName(entry) ? ` · ${techniqueName(entry)}` : ''}
-                              </Text>
-                            </View>
-                            <View style={styles.rowValueCol}>
-                              <Text style={styles.rowValue}>{humanDur(entry.durSec)}</Text>
-                              {!isCompleted && <Text style={styles.rowFlag}>Ended early</Text>}
-                            </View>
-                          </View>
+                            first={i === 0}
+                            stateKey={known}
+                            title={known ? stateName(known) : entry.name}
+                            sub={tech ? `${formatTime(entry.ts)} · ${tech}` : formatTime(entry.ts)}
+                            value={humanDur(entry.durSec)}
+                            flag={entry.completed === false ? 'Ended early' : null}
+                          />
                         );
                       })}
-                    </View>
+                    </HistoryGroup>
                   )}
                 </View>
               );
             })}
 
-            {/* ── Clear history knop — destructive action, met dubbele
-                bevestiging via Alert.alert om accidentele clear te
-                voorkomen. Subtle styling onder de lijst zodat het geen
-                primary action is. ── */}
-            <AnimatedPressable
-              onPress={() => {
-                void showVibezAlert({
-                  title: 'Clear practice history?',
-                  message: `This will permanently delete all ${history.length} session${history.length === 1 ? '' : 's'} from Your Practice. This cannot be undone.`,
-                  buttons: [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Clear all',
-                      style: 'destructive',
-                      onPress: () => { void clearBreathHistory(); },
-                    },
-                  ],
-                });
-              }}
-              onPressIn={onClearBtnPressIn}
-              onPressOut={onClearBtnPressOut}
-              style={[styles.clearBtn, clearBtnPressStyle]}
-            >
-              <Text style={styles.clearBtnTxt}>Clear practice history</Text>
-            </AnimatedPressable>
-
-            <View style={{ height: 24 }} />
+            <ClearHistoryButton label="Clear history" onPress={onClear} />
           </>
         )}
       </ScrollView>
@@ -540,126 +372,5 @@ export default function BreathHistoryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Brand.bg },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
-
-  /* Clear history knop — subtle destructive action */
-  /* Operator, 5 okt 2026: gewone rode tekstknop zoals Apple's
-     "Delete All Data" — geen rand of vlak. */
-  clearBtn: {
-    alignSelf: 'center',
-    marginTop: 28,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-  },
-  clearBtnTxt: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 15,
-    color: '#ef4444',
-  },
-
-  /* Empty state */
-  emptyWrap: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingTop: 80, paddingHorizontal: 24,
-  },
-  emptyIcon: {
-    fontSize: 56, color: AudioAccent, marginBottom: 16,
-  },
-  emptyTitle: {
-    fontFamily: BrandFonts.bold, fontSize: 22,
-    color: Brand.text, marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  emptyBody: {
-    fontFamily: BrandFonts.regular, fontSize: 14,
-    color: Brand.textDim, textAlign: 'center',
-    lineHeight: 20, maxWidth: 300, marginBottom: 24,
-  },
-  /* v4.4 CTA-regel: donkere ondergrond -> witte knop, donkere tekst
-     (geen Signal Blue, geen Royal Indigo op knoppen). */
-  emptyBtn: {
-    paddingHorizontal: 28, paddingVertical: 13,
-    backgroundColor: '#ffffff', borderRadius: 999,
-  },
-  emptyBtnTxt: {
-    fontFamily: BrandFonts.bold, fontSize: 12,
-    letterSpacing: 1.5, color: '#0a0a0a',
-  },
-
-  /* Section labels — stil grijs, zoals de kaartkoppen op Activity. */
-  sectionLbl: {
-    fontFamily: BrandFonts.semibold, fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
-    marginTop: 26, marginBottom: 8, marginLeft: 4,
-  },
-
-  /* Gegroepeerde lijst (Apple inset-grouped): één paneel, rijen met een
-     dunne scheidingslijn die bij de tekst begint, niet bij de rand. */
-  group: {
-    backgroundColor: Brand.panel,
-    borderRadius: 14,
-    paddingLeft: 14,
-  },
-  groupRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 11,
-    paddingRight: 14,
-  },
-  /* Scheidingslijn begint bij de tekst, niet bij de rand (zoals iOS). */
-  sep: {
-    position: 'absolute',
-    top: 0,
-    left: 44,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  groupRowMain: { flex: 1, minWidth: 0 },
-  badgeSlot: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowTitle: {
-    fontFamily: BrandFonts.semibold, fontSize: 15,
-    color: Brand.text,
-  },
-  rowSub: {
-    fontFamily: BrandFonts.regular, fontSize: 13,
-    color: Brand.textDim, marginTop: 1,
-  },
-  rowValue: {
-    fontFamily: BrandFonts.medium, fontSize: 15,
-    color: Brand.textDim,
-    fontVariant: ['tabular-nums'],
-  },
-
-  rowValueCol: { alignItems: 'flex-end' },
-  rowFlag: {
-    fontFamily: BrandFonts.regular, fontSize: 12,
-    color: 'rgba(255,255,255,0.4)', marginTop: 1,
-  },
-
-  /* Dagkop boven elke dag */
-  dayGroup: { marginBottom: 6 },
-  dayHead: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 8, paddingVertical: 10, paddingHorizontal: 4,
-  },
-  dayHeadLbl: {
-    fontFamily: BrandFonts.semibold, fontSize: 14,
-    color: Brand.text,
-  },
-  dayHeadMeta: {
-    flex: 1,
-    textAlign: 'right',
-    fontFamily: BrandFonts.regular, fontSize: 13,
-    color: Brand.textDim,
-  },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
 });
