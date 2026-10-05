@@ -76,7 +76,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { openStateControl } from '@/utils/state-control-ui';
-import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
 import { syncBraceletPlanReminder } from '@/services/reminders';
@@ -231,21 +231,6 @@ function StateCard({
   );
 }
 
-/* Uur+duur-label voor één bolletje op de ring — zie de toelichting
-   bovenaan dit bestand over waarom dit een eigen laag is i.p.v.
-   RhythmRing's ingebouwde (alles-of-niets) `itemLabelMode`. */
-function RingLabel({ reminderAt, text, color }: { reminderAt: number; text: string; color: string }) {
-  const p = pointAt(angleForMinutes(reminderAt), RING_DOT_RADIUS + 34);
-  return (
-    <Text
-      pointerEvents="none"
-      style={[s.ringLabel, { left: RING_CX + p.x - 34, top: RING_CY + p.y - 14, color }]}
-    >
-      {text}
-    </Text>
-  );
-}
-
 export default function BraceletAgendaScreen() {
   const insets = useSafeAreaInsets();
   const { plan } = useActiveBraceletPlan();
@@ -364,7 +349,7 @@ export default function BraceletAgendaScreen() {
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
         </Pressable>
         <Text style={s.barTitle} numberOfLines={1}>
-          Your bracelet plan
+          Your State Control plan
         </Text>
         <View style={s.back} />
       </View>
@@ -376,78 +361,47 @@ export default function BraceletAgendaScreen() {
         {!plan ? (
           <View style={s.emptyWrap}>
             <Watch size={22} color="rgba(255,255,255,0.3)" strokeWidth={2} />
-            <Text style={s.emptyT}>No bracelet plan yet</Text>
+            <Text style={s.emptyT}>No State Control plan yet</Text>
             <Text style={s.emptyB}>Choose your states and times to get started.</Text>
           </View>
         ) : (
           <>
-            {/* Cirkel — 1-op-1 breathwork's `RhythmRing`, hier zonder de
-               ingebouwde "Next sessie + aftellen"-middenzone
-               (`showCenterInfo={false}`) — operator: "in de cirkel
-               datum [en] duration van plan". Eigen tikbare laag
-               erbovenop i.p.v. de component zelf uit te breiden (die
-               kent geen datum/horizon-concept, enkel "eerstvolgende
-               sessie" — zie de toelichting bovenaan dit bestand). Zelfde
-               verticale plek (`top:'38%'`) als de component se eigen
-               (nu uitgeschakelde) middenzone. */}
-            <View style={s.ringWrap}>
-              <RhythmRing
-                size={RING_SIZE}
-                items={ringItems}
-                isToday={selectedKey === todayKey}
-                now={new Date()}
-                onTapItem={(key) => {
-                  Haptics.selectionAsync();
-                  setActionItemIndex(Number(key));
-                }}
-                onDragEnd={(key, newReminderAt) => void onDragEnd(key, newReminderAt)}
-                itemLabelMode="none"
-                showCenterInfo={false}
-                selectedKey={actionItemIndex !== null ? `${actionItemIndex}` : undefined}
+            {/* Operator, 5 okt 2026 ("doe zoals bij breathwork"): zelfde
+               opbouw als agenda.tsx — datumregel met uitklapbare kalender
+               BOVEN de ring (met Done, zodat hij altijd te sluiten is), en
+               in de ring: standaard de eerstvolgende sessie, of na een tik
+               op een modus-kaart alle tijden van die modus in het midden
+               terwijl hun bolletjes oplichten. Vervangt de losse uur-labels
+               rond de ring en de datum in het midden. */}
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                setCalendarOpen((o) => !o);
+              }}
+              style={s.dateRow}
+              hitSlop={8}
+            >
+              <Text style={s.dateRowTxt}>
+                {selectedKey === todayKey
+                  ? 'Today'
+                  : selected.toLocaleDateString([], { month: 'long', day: 'numeric' })}
+              </Text>
+              <Text style={s.dateRowSub}> · {HORIZON_LABEL[plan.horizon] ?? plan.horizon}</Text>
+              <ChevronDown
+                size={16}
+                color="rgba(255,255,255,0.7)"
+                strokeWidth={2.6}
+                style={calendarOpen ? { transform: [{ rotate: '180deg' }] } : undefined}
               />
-              {/* Uur+duur-labels — enkel voor de bolletjes die bij de
-                 gekozen pil horen (of alle, bij "Show all"), zie de
-                 toelichting bovenaan dit bestand. */}
-              {day?.items.map((it, i) => {
-                if (filterMode === null) return null;
-                if (filterMode !== 'all' && it.mode !== filterMode) return null;
-                const meta = getModeMeta(it.mode as BraceletMode);
-                return (
-                  <RingLabel
-                    key={i}
-                    reminderAt={it.reminderAt}
-                    text={`${fmtTime(it.reminderAt)}\n${it.durationMinutes} min`}
-                    color={meta.color}
-                  />
-                );
-              })}
-              <Pressable
-                style={s.ringCenter}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setCalendarOpen((o) => !o);
-                }}
-                hitSlop={8}
-              >
-                <Text style={s.ringCenterDate} numberOfLines={1}>
-                  {selectedKey === todayKey ? 'Today' : selected.toLocaleDateString([], { weekday: 'long' })}
-                </Text>
-                <View style={s.ringCenterChevronRow}>
-                  <Text style={s.ringCenterSub}>
-                    {selected.toLocaleDateString([], { month: 'short', day: 'numeric' })} · {HORIZON_LABEL[plan.horizon] ?? plan.horizon}
-                  </Text>
-                  <ChevronDown
-                    size={13}
-                    color="rgba(255,255,255,0.5)"
-                    strokeWidth={2.6}
-                    style={calendarOpen ? { transform: [{ rotate: '180deg' }] } : undefined}
-                  />
-                </View>
-              </Pressable>
-            </View>
+            </Pressable>
 
             {calendarOpen && (
               <View style={s.calendarDropdown}>
+                <View style={s.calendarDoneRow}>
+                  <Pressable onPress={() => setCalendarOpen(false)} hitSlop={10}>
+                    <Text style={s.calendarDoneTxt}>Done</Text>
+                  </Pressable>
+                </View>
                 <View style={s.monthNav}>
                   <Pressable
                     onPress={() => {
@@ -499,11 +453,37 @@ export default function BraceletAgendaScreen() {
               </View>
             )}
 
+            <View style={s.ringWrap}>
+              {(() => {
+                const filteredItems =
+                  filterMode !== null && filterMode !== 'all'
+                    ? ringItems.filter((_, i) => day?.items[i]?.mode === filterMode)
+                    : null;
+                return (
+                  <RhythmRing
+                    size={RING_SIZE}
+                    items={ringItems}
+                    isToday={selectedKey === todayKey}
+                    now={new Date()}
+                    onTapItem={(key) => {
+                      Haptics.selectionAsync();
+                      setActionItemIndex(Number(key));
+                    }}
+                    onDragEnd={(key, newReminderAt) => void onDragEnd(key, newReminderAt)}
+                    itemLabelMode="none"
+                    selectedKey={actionItemIndex !== null ? `${actionItemIndex}` : undefined}
+                    selectedKeys={filteredItems?.map((it) => it.key)}
+                    centerItems={filteredItems}
+                  />
+                );
+              })()}
+            </View>
+
             {/* Operator, 1 okt 2026 ("niet duidelijk of je op de bollen
                moet drukken"): korte hint boven de kaarten — de bolletjes
                op de ring zelf zijn ook tikbaar (Try it/Remove), niet
                enkel deze kaarten. */}
-            <Text style={s.ringHint}>Tap a dot on the ring to try or remove that session</Text>
+            <Text style={s.ringHint}>Tap a dot on the ring to start or remove that session</Text>
 
             {/* Kaarten — 5 modi + "Show all", zie de toelichting bovenaan
                dit bestand. Kiest WELKE uur+duur-labels op de ring
@@ -522,12 +502,14 @@ export default function BraceletAgendaScreen() {
                   }}
                 />
               ))}
+              {/* Zoals breathwork: terug naar de standaardweergave (de
+                  eerstvolgende sessie in het midden) i.p.v. "Show all". */}
               <StateCard
-                label="Show all"
-                on={filterMode === 'all'}
+                label="Your next session"
+                on={filterMode === null}
                 onPress={() => {
                   Haptics.selectionAsync();
-                  setFilterMode((prev) => (prev === 'all' ? null : 'all'));
+                  setFilterMode(null);
                 }}
               />
             </View>
@@ -643,18 +625,21 @@ const s = StyleSheet.create({
   monthDot: { width: 5, height: 5, borderRadius: 2.5 },
 
   ringWrap: { alignItems: 'center', marginTop: 12, marginBottom: 22, position: 'relative' },
+  /* Zelfde datumregel als agenda.tsx (breathwork). */
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  dateRowTxt: { fontFamily: BrandFonts.semibold, fontSize: 17, color: '#ffffff' },
+  dateRowSub: { fontFamily: BrandFonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
+  calendarDoneRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 6 },
+  calendarDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: AudioAccent },
   /* Datum + plan-duur in de cirkel — zelfde verticale plek (`top:'38%'`)
      als RhythmRing's eigen (hier uitgeschakelde) middenzone. */
-  ringCenter: {
-    position: 'absolute',
-    top: '38%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  ringCenterDate: { fontFamily: BrandFonts.regular, fontSize: 19, color: '#ffffff' },
-  ringCenterChevronRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  ringCenterSub: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)' },
+
 
   emptyWrap: { alignItems: 'center', paddingVertical: 40, gap: 8 },
   emptyT: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#ffffff' },
