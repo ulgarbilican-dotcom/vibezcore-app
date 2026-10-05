@@ -17,7 +17,12 @@ import { router } from 'expo-router';
 export function openStateControl(params: Record<string, string | number> = {}): void {
   const p: Record<string, string> = {};
   for (const [k, v] of Object.entries(params)) p[k] = String(v);
-  router.navigate({ pathname: '/bracelet', params: { ...p, open: String(Date.now()) } } as never);
+  /* dismissTo i.p.v. navigate (audit 5 okt 2026): vanuit een scherm BOVEN
+     de tabbladen (plan, protocol, bracelet-pagina) zette navigate een
+     TWEEDE set tabbladen op de stapel — terugknop-lussen en "verdwaalde"
+     schermen. dismissTo keert terug naar de bestaande tabbladen en kiest
+     daar State Control. */
+  router.dismissTo({ pathname: '/bracelet', params: { ...p, open: String(Date.now()) } } as never);
 }
 
 type Listener = (visible: boolean) => void;

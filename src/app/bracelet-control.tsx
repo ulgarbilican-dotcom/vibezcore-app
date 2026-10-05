@@ -54,6 +54,7 @@ import {
   startBraceletSessionMonitor,
   stopBraceletSessionMonitor,
   subscribeRemoteControl,
+  startStateControlNow,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
@@ -4412,8 +4413,11 @@ function BraceletControlScreen({
     }
     return suggestBraceletMode(new Date());
   })();
+  /* Plan-starts (melding, plan-link) lopen nu via de link-effect verderop
+     (startStateControlNow) — die werkt ook als dit scherm al open stond
+     (audit 5 okt 2026). Enkel de breathwork-strip gebruikt nog dit pad. */
   const autoStartBracelet =
-    freshLink && !resumeSnapshot && (params.breathwork === '1' || params.plan === '1');
+    freshLink && !resumeSnapshot && params.breathwork === '1';
   /* Enkel gezet bij een dagplan-tik — auto-start gebruikt anders gewoon de
      modus-default (zie de auto-start-effect verderop). */
   const planDurationMinutes: number | null = (() => {
@@ -4433,13 +4437,12 @@ function BraceletControlScreen({
      geen echte navigatie). `plan` is een derde context: user kwam hier
      via een pushed route vanuit "Your bracelet plan" en hoort daar met
      router.back() op terug te landen, niet op het connect-scherm. */
-  const fromContext: 'audio' | 'bracelet' | 'plan' | null = (() => {
-    if (!freshLink) return null;
-    if (params.from === 'audio') return 'audio';
-    if (params.from === 'bracelet') return 'bracelet';
-    if (params.from === 'plan') return 'plan';
-    return null;
-  })();
+  /* Audit 5 okt 2026: één terug-regel in State Control — terug = sessie
+     minimaliseren / naar het intro, ongeacht vanwaar je kwam. De link-
+     afhankelijke terugknoppen ("Audio Library", "Bracelet") stuurden naar
+     het scherm waar je al was of naar een andere plek dan hun label; ze
+     zijn uitgeschakeld (altijd null). */
+  const fromContext = null as 'audio' | 'bracelet' | 'plan' | null;
 
   const [selectedMode, setSelectedMode] = useState<BraceletMode>(initialMode);
   const meta = getModeMeta(selectedMode);
@@ -5023,6 +5026,38 @@ function BraceletControlScreen({
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscription.isLoading]);
+
+  /* Elke NIEUWE link (uniek `open`-token) — ook als dit scherm al open
+     stond, waar de eenmalige `freshLink`-logica hierboven niets meer doet
+     (audit 5 okt 2026: een plan-melding toonde dan enkel de moduskeuze).
+     - plan-start (melding/plan): sessie meteen starten via de monitor,
+       of de paywall zonder toegang — exact zoals "Tap to start";
+     - enkel een modus: die modus (en zijn standaardduur) klaarzetten. */
+  const lastLinkTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    const token = typeof params.open === 'string' ? params.open : null;
+    if (!token || lastLinkTokenRef.current === token) return;
+    const modeNum = typeof params.mode === 'string' ? Number(params.mode) : NaN;
+    if (params.plan === '1' && Number.isFinite(modeNum)) {
+      if (subscription.isLoading) return; // wachten, de effect loopt opnieuw
+      lastLinkTokenRef.current = token;
+      if (sessionsLocked) {
+        setPaywallOpen(true);
+        return;
+      }
+      const m = modeNum as BraceletMode;
+      const d = Number(params.duration) || getModeMeta(m).defaultMinutes;
+      void startStateControlNow(m, d);
+      return;
+    }
+    lastLinkTokenRef.current = token;
+    if (Number.isFinite(modeNum) && !isBraceletSessionMonitorActive() && params.breathwork !== '1') {
+      const m = modeNum as BraceletMode;
+      setSelectedMode(m);
+      setDuration(getModeMeta(m).defaultMinutes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.open, subscription.isLoading]);
 
   /* Stil auto-connect voor `autoConnect` (4 okt 2026, State Control-
      intro) — enkel VERBINDEN, geen sessie starten zoals autoStartBracelet

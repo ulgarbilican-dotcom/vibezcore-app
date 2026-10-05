@@ -252,7 +252,7 @@ export function BraceletUpsellModal() {
        klaar. */
     dismissEndedPanel();
     hideBraceletUpsell();
-    setTimeout(() => router.push('/(tabs)/bracelet'), 150);
+    setTimeout(() => router.dismissTo('/bracelet'), 150);
   };
 
   return (

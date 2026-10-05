@@ -134,7 +134,7 @@ export default function BraceletPreviewScreen(): React.ReactElement {
 
         <AnimatedPressable
           style={[s.btn, s.btnPrimary, primaryScale.pressStyle]}
-          onPress={() => router.replace('/bracelet')}
+          onPress={() => router.dismissTo('/bracelet')}
           onPressIn={primaryScale.onPressIn}
           onPressOut={primaryScale.onPressOut}
           accessibilityLabel="Reserve your bracelet"

@@ -106,7 +106,7 @@ export default function AboutScreen() {
           title="Guided Breathwork"
           desc="All 35 guided sessions across five states — energy, focus, calm, clarity, rest. Voice, visuals and haptics carry every breath, with the full Audio Library included."
           ctaLabel="Start Breathing"
-          onPress={() => router.navigate('/(tabs)/breath' as never)}
+          onPress={() => router.dismissTo('/breath' as never)}
         />
         {/* Derde productkaart toegevoegd (operator, 11 augustus 2026: "je
             hebt onder blok personal development engineered de audio
@@ -119,7 +119,7 @@ export default function AboutScreen() {
           title="The Audio Library"
           desc="A structured library built on neuroscience, psychology and philosophy — training the mind for change that lasts. Included with Breathwork Premium."
           ctaLabel="Explore Library"
-          onPress={() => router.navigate('/(tabs)' as never)}
+          onPress={() => router.dismissTo('/' as never)}
         />
         {/* Vijfde ronde (operator, 11 augustus 2026: "verwijder gewoon die
             blok met bracelet info" — de losse "EXCLUSIVE ADDITION"-sectie
@@ -134,7 +134,7 @@ export default function AboutScreen() {
           title="Smart Bead Bracelet"
           desc="One HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. Calm, focus or recovery on demand. And for breathwork, a selling point on its own: a pre-set, structured session carried entirely through haptic pulses on your wrist, no screen needed."
           ctaLabel="Explore Bracelet"
-          onPress={() => router.navigate('/(tabs)/bracelet' as never)}
+          onPress={() => router.dismissTo('/bracelet' as never)}
         />
 
         {/* ── 01. Why ── */}

@@ -347,7 +347,7 @@ export default function ActivateBraceletScreen() {
                BraceletControl inline voor owners MET tab-bar; standalone
                stack-route had geen tab-bar en back-button popte naar
                welcome. */
-            onPress={() => router.replace('/(tabs)/bracelet' as never)}
+            onPress={() => router.dismissTo('/bracelet' as never)}
             onPressIn={doneBtnScale.onPressIn}
             onPressOut={doneBtnScale.onPressOut}
             accessibilityLabel="Open Session Control screen"

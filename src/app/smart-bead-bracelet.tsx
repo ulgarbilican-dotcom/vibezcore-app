@@ -1229,7 +1229,7 @@ export default function SmartBeadBraceletScreen() {
           </Pressable>
           <Pressable
             style={s.landingBackLink}
-            onPress={() => router.navigate('/')}
+            onPress={() => router.dismissTo('/')}
             hitSlop={12}
             accessibilityLabel="Back to Audio Library"
           >

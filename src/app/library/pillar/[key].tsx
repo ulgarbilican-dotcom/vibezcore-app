@@ -203,7 +203,7 @@ export default function PillarFocusScreen() {
     /* Operator ("bij back moet ik naar de audio library gaan niet naar
        welcome pagina"): expliciet naar de tabs-group i.p.v. het
        dubbelzinnige '/' — zelfde patroon als about.tsx. */
-    else router.navigate('/(tabs)' as never);
+    else router.dismissTo('/' as never);
   };
 
   /* Onbekende/foute key (bv. een verlopen deeplink) — geen crash op een

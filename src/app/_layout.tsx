@@ -23,6 +23,7 @@ import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { BreathSessionHost } from '@/components/BreathSessionHost';
+import { getBreathHost, openBreathSession, restoreBreathSession } from '@/services/breath-session-host';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { VibezAlertHost } from '@/components/VibezAlert';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
@@ -244,7 +245,17 @@ export default function RootLayout() {
     /* En zolang de app draait: een tik terwijl hij op de achtergrond staat.
        `navigate` en niet `replace`, want dan blijft de weg terug bestaan. */
     const off = onReminderTap((t) => {
-      router.navigate({
+      /* Ademsessie: rechtstreeks de sessie-laag (loopt er al een, dan die
+         terughalen — een melding vervangt nooit een lopende sessie). */
+      if (reminderRoute(t) === '/breath-session') {
+        if (getBreathHost()) restoreBreathSession();
+        else openBreathSession({ from: 'reminder', ...reminderParams(t) });
+        return;
+      }
+      /* dismissTo i.p.v. navigate (audit 5 okt 2026): stond er een scherm
+         boven de tabbladen open (plan, protocol …), dan zette navigate een
+         tweede set tabbladen op de stapel. */
+      router.dismissTo({
         pathname: reminderRoute(t),
         params: { from: 'reminder', ...reminderParams(t) },
       } as never);

@@ -558,12 +558,12 @@ export default function AgendaScreen() {
           params: { resumeStep: '4' },
         } as never)
       : plan
-        ? router.navigate('/(tabs)/activity' as never)
+        ? router.dismissTo('/activity' as never)
         : onboarding
           ? router.canGoBack()
             ? router.back()
             : router.replace('/breath' as never)
-          : router.navigate('/(tabs)/activity' as never);
+          : router.dismissTo('/activity' as never);
 
   if (!loaded) {
     return <SafeAreaView style={s.root} edges={['top']} />;
