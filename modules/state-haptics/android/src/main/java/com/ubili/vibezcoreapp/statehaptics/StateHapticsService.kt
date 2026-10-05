@@ -61,6 +61,7 @@ class StateHapticsService : Service() {
     const val EXTRA_SESSION_ELAPSED_MS = "sessionElapsedMs"
     /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
     const val LATE_SKIP_MS = 150L
+    private const val END_MARGIN_MS = 400L
 
     /* Expliciet MEDIA i.p.v. het afgeleide TOUCH (gemeten 5 okt 2026): als
        aanraakfeedback volgen de tikken de instelling "trillen bij aanraken"
@@ -203,11 +204,14 @@ class StateHapticsService : Service() {
     handler.postDelayed(tickRunnable, 1000L)
 
     acquireWakeLock()
-    handler.removeCallbacks(endRunnable)
-    handler.postDelayed(endRunnable, totalMs)
     units = buildUnits(t, a)
     nextUnit = 0
     startUptime = SystemClock.uptimeMillis()
+    /* Stoppen op dezelfde klok als de tikken, met marge: anders kan de stop
+       net vóór de laatste tik van het eindsignaal vallen en die afkappen
+       (audit 5 okt 2026). */
+    handler.removeCallbacks(endRunnable)
+    handler.postAtTime(endRunnable, startUptime + totalMs + END_MARGIN_MS)
     scheduleNextUnit()
     return START_NOT_STICKY
   }

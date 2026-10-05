@@ -41,3 +41,26 @@ export function subscribeActiveSessionVisible(listener: Listener): () => void {
     listeners.delete(listener);
   };
 }
+
+/* Het State Control-intro staat in beeld (5 okt 2026, audit): dan moet de
+   sessie-pill zichtbaar zijn als er een sessie loopt — het intro zelf toont
+   die sessie nergens. */
+let introVisible = false;
+const introListeners = new Set<Listener>();
+
+export function setStateControlIntroVisible(visible: boolean): void {
+  if (introVisible === visible) return;
+  introVisible = visible;
+  introListeners.forEach((l) => l(visible));
+}
+
+export function isStateControlIntroVisible(): boolean {
+  return introVisible;
+}
+
+export function subscribeStateControlIntroVisible(listener: Listener): () => void {
+  introListeners.add(listener);
+  return () => {
+    introListeners.delete(listener);
+  };
+}

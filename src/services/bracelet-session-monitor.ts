@@ -39,7 +39,8 @@
 import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
 import { getBracelet } from './bracelet';
-import { BraceletMode, getModeMeta } from './ble-contract';
+import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
+import { recordSession } from '@/utils/bracelet-history';
 import { hasNativeWaveform } from '../../modules/state-haptics';
 import {
   pauseModeSessionHaptic,
@@ -76,7 +77,79 @@ type MonitorState = {
   runStartedAt: number | null;
   /** Al verstreken seconden vóór dit segment (opgebouwd over eerdere pauzes). */
   elapsedBeforeRunSec: number;
+  /** Echte startmoment van de sessie (voor de geschiedenis). */
+  startedAtIso: string;
 };
+
+/* ── Natuurlijk einde — ÉÉN bron van waarheid (5 okt 2026) ─────────────
+   Audit: het scherm besliste over "afgelopen" op basis van de bracelet-
+   (sim)status, de monitor op basis van de echte tijd. Bij hervatten zet de
+   bracelet (spec §7.1, ook de echte firmware) de duur op minstens het
+   modus-minimum → het scherm bleef tot 10 min op 0:00 hangen zonder
+   afsluiting, en een sessie die afliep terwijl State Control niet op het
+   scherm stond, werd nooit afgesloten of bewaard. Nu beslist enkel de
+   monitor: hij stopt de bracelet op het echte einde, schrijft de
+   geschiedenis en zet de afsluiting klaar (ook als niemand kijkt). */
+export type SessionCompletion = { mode: BraceletMode; minutes: number };
+let pendingCompletion: SessionCompletion | null = null;
+const completionListeners = new Set<(c: SessionCompletion) => void>();
+
+export function subscribeSessionCompletion(cb: (c: SessionCompletion) => void): () => void {
+  completionListeners.add(cb);
+  return () => {
+    completionListeners.delete(cb);
+  };
+}
+
+/** Haalt een afsluiting op die klaarstaat (en wist ze) — voor een scherm dat
+ *  pas NA het einde gemount wordt. */
+export function consumePendingCompletion(): SessionCompletion | null {
+  const c = pendingCompletion;
+  pendingCompletion = null;
+  return c;
+}
+
+/** De lopende sessie zoals de monitor ze kent — de modus die ECHT loopt,
+ *  los van wat er op de moduskeuze aangetikt staat. */
+export function getBraceletMonitorSession(): {
+  mode: BraceletMode;
+  totalSec: number;
+  startedAtIso: string;
+  paused: boolean;
+} | null {
+  return state
+    ? { mode: state.mode, totalSec: state.totalSec, startedAtIso: state.startedAtIso, paused: state.paused }
+    : null;
+}
+
+async function completeNaturally(): Promise<void> {
+  const s = state;
+  if (!s) return;
+  try {
+    await getBracelet().sendCommand({ mode: s.mode, duration: 0, command: BleCommand.Stop });
+  } catch {
+    /* Geen verbinding — de bracelet stopt zelf op zijn eigen timer. */
+  }
+  const minutes = Math.max(1, Math.round(s.totalSec / 60));
+  void recordSession({
+    mode: s.mode,
+    startedAt: s.startedAtIso,
+    endedAt: new Date().toISOString(),
+    durationMin: minutes,
+    plannedMin: minutes,
+    status: 'completed',
+  });
+  const completion: SessionCompletion = { mode: s.mode, minutes };
+  pendingCompletion = completion;
+  await stopBraceletSessionMonitor();
+  completionListeners.forEach((cb) => {
+    try {
+      cb(completion);
+    } catch {
+      /* een kapotte luisteraar mag de afsluiting niet breken */
+    }
+  });
+}
 
 let state: MonitorState | null = null;
 let tickHandle: ReturnType<typeof setInterval> | null = null;
@@ -228,11 +301,7 @@ function clearTimers(): void {
 function tick(): void {
   if (!state) return;
   if (!state.paused && currentRemainingSec() <= 0) {
-    /* Natuurlijk afgelopen terwijl niemand keek — stoppen en opruimen.
-       bracelet-control.tsx's eigen status-poll ziet dit bij terugkeer
-       toch al (sessionActive false), maar dit voorkomt dat de melding/
-       pill op 0:00 blijft hangen tot dat moment. */
-    void stopBraceletSessionMonitor();
+    void completeNaturally();
     return;
   }
   void publish(false);
@@ -244,8 +313,11 @@ async function resync(): Promise<void> {
     const st = await getBracelet().requestStatus();
     if (!st.sessionActive) {
       /* Hardware zegt: voorbij (battery-cut/fault/charging/natural —
-         spec §9). Vertrouw de hardware, niet onze eigen projectie. */
-      void stopBraceletSessionMonitor();
+         spec §9). Vertrouw de hardware, niet onze eigen projectie. Vlak bij
+         het einde (de bracelet-timer startte een fractie eerder) is dat
+         gewoon het natuurlijke einde — dan ook zo afsluiten. */
+      if (currentRemainingSec() <= 5) void completeNaturally();
+      else void stopBraceletSessionMonitor();
     }
   } catch {
     /* Geen verbinding — de sessie draait autonoom door op de hardware
@@ -270,7 +342,9 @@ export function startBraceletSessionMonitor(opts: {
     paused: false,
     runStartedAt: Date.now(),
     elapsedBeforeRunSec: opts.elapsedSec ?? 0,
+    startedAtIso: new Date().toISOString(),
   };
+  pendingCompletion = null;
   /* De snapshot/pill-kant werkt sowieso ongeacht toestemming — publish nu
      meteen zodat de pill nooit hoeft te wachten. De lockscreen-melding
      zelf heeft toestemming nodig; de EERSTE keer ooit moet de gebruiker
@@ -333,6 +407,9 @@ export function resumeBraceletSessionMonitor(): void {
 /** Aanroepen vanuit onStop / finishSession (manual End, natural completion,
  *  fault/charging/battery-cut). Ruimt melding + snapshot op. */
 export async function stopBraceletSessionMonitor(): Promise<void> {
+  /* Al gestopt → niets doen. Een tweede stop (bv. het scherm dat het einde
+     ook opmerkt) zou anders het eind-signaal van de service afbreken. */
+  if (!state) return;
   clearTimers();
   state = null;
   syncHaptics();

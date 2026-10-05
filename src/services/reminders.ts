@@ -446,6 +446,9 @@ export type TappedReminder = {
    *  opende een tik alleen de generieke Breath-tab, die op zijn eigen
    *  standaard landt — nooit per se de toestand uit de melding. */
   state?: BreathStateKey;
+  /** Tik op de LOPENDE-sessie-melding (5 okt 2026): meteen naar de sessie,
+   *  niet naar het State Control-intro. */
+  session?: boolean;
   /** Enkel bij `kind === 'bracelet-plan'` — de exacte modus/duur die de
    *  melding beloofde, zie `syncBraceletPlanReminder`. */
   braceletMode?: number;
@@ -480,7 +483,9 @@ export const reminderRoute = (t: TappedReminder) =>
  *  auto-pauze-sequentie op bracelet-control.tsx als breathwork's
  *  `breathwork=1` — zie de toelichting bij `autoStartBracelet` daar. */
 export const reminderParams = (t: TappedReminder): Record<string, string> =>
-  t.kind === 'breath' && t.state
+  t.kind === 'bracelet' && t.session
+    ? { open: String(Date.now()) }
+    : t.kind === 'breath' && t.state
     ? { state: t.state, autostart: '1' }
     : t.kind === 'bracelet-plan' && t.braceletMode !== undefined
       ? {
@@ -512,7 +517,7 @@ function fromResponse(
      dit bestand (reminderRoute/reminderParams/TappedReminder) er niets
      extra's van hoeft te weten. */
   if (data?.kind === 'bracelet-session') {
-    return { kind: 'bracelet', slot: data.slot, state: data.state };
+    return { kind: 'bracelet', slot: data.slot, state: data.state, session: true };
   }
   if (data?.kind === 'bracelet-plan') {
     return {

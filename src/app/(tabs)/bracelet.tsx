@@ -58,6 +58,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import BraceletControl from '../bracelet-control';
+import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
 /* Zelfde placeholder-foto als eerder — operator levert de echte foto nog
    aan (4 okt 2026: "ik bezorg nog de foto"). Enkel deze constante moet dan
@@ -192,6 +193,19 @@ export default function BraceletScreen() {
       return () => setShowIntro(true);
     }, []),
   );
+
+  /* Pill op het intro tonen als er een sessie loopt (audit 5 okt 2026). */
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  useEffect(() => {
+    setStateControlIntroVisible(focused && showIntro);
+    return () => setStateControlIntroVisible(false);
+  }, [focused, showIntro]);
 
   /* Stabiele referentie: het sessiescherm koppelt er de terugknop aan in een
      focus-effect — een nieuwe functie per render zou dat steeds opnieuw

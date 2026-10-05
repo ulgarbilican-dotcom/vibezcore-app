@@ -27,7 +27,11 @@
    intact (module-singleton), dus dat scherm herkent de lopende sessie
    meteen en toont ActiveSessionScreen, geen connect/reconnect-stap. */
 
-import { openStateControl } from '@/utils/state-control-ui';
+import {
+  isStateControlIntroVisible,
+  openStateControl,
+  subscribeStateControlIntroVisible,
+} from '@/utils/state-control-ui';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   getBraceletSessionSnapshot,
@@ -69,6 +73,8 @@ export function BraceletMiniIndicator() {
     const unsub = subscribeBraceletSession((next) => setSnap(next));
     return unsub;
   }, []);
+  const [introVisible, setIntroVisible] = useState(isStateControlIntroVisible());
+  useEffect(() => subscribeStateControlIntroVisible(setIntroVisible), []);
 
   /* Verberg op bracelet-control zelf (dan is er al een active-view) en
      op welcome. Anders altijd zichtbaar wanneer active.
@@ -87,7 +93,9 @@ export function BraceletMiniIndicator() {
      schoof daar over de modusnaam van het eigen sessiescherm. */
   if (!snap.active) return null;
   if (pathname === '/bracelet-control') return null;
-  if (pathname === '/bracelet') return null;
+  /* Op het State Control-intro WEL tonen — daar is de sessie verder nergens
+     te zien (audit 5 okt 2026). */
+  if (pathname === '/bracelet' && !introVisible) return null;
   if (pathname === '/welcome') return null;
 
   const topY = insets.top + 8;

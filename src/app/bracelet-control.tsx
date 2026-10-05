@@ -36,14 +36,18 @@ import {
   subscribeHapticPulse,
 } from '@/services/bracelet-haptics';
 import { hasNativeWaveform } from '../../modules/state-haptics';
-import { setActiveSessionVisible } from '@/utils/state-control-ui';
+import { isActiveSessionVisible, setActiveSessionVisible } from '@/utils/state-control-ui';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
 } from '@/services/session-keepalive';
 import {
+  consumePendingCompletion,
   getBraceletMonitorRemainingSec,
+  getBraceletMonitorSession,
   isBraceletSessionMonitorActive,
+  subscribeSessionCompletion,
+  type SessionCompletion,
   pauseBraceletSessionMonitor,
   resumeBraceletSessionMonitor,
   startBraceletSessionMonitor,
@@ -3686,7 +3690,15 @@ function IdleScreen({
         /* In de State Control-tab: terug naar het intro (zelfde als de
            chevron/terugknop elders, 5 okt 2026). `onDisconnect` liet de tab
            anders op "Connecting…" hangen (stil verbinden gebeurt één keer). */
-        onBack={fromContext ? disconnectAndBackToSource : onMinimize ?? onDisconnect}
+        /* Audit 5 okt 2026: met een lopende sessie stopt de terugpijl NOOIT
+           de sessie (disconnectAndBackToSource roept onStop aan). */
+        onBack={
+          sessionRunning
+            ? onMinimize ?? (() => router.navigate('/bracelet' as never))
+            : fromContext
+              ? disconnectAndBackToSource
+              : onMinimize ?? onDisconnect
+        }
         backLabel={ctaBackLabel}
         dark={idleDark}
         /* Operator, 4 okt 2026 ("waarom heb je demo gezet op session
@@ -4058,6 +4070,9 @@ function IdleScreen({
    nu één plek: de State Control-tab. Elke weg naar /bracelet-control
    wordt doorgestuurd, met dezelfde parameters (modus/duur/plan/…) — de tab
    slaat dan het intro over (zie (tabs)/bracelet.tsx). */
+/** `open`-tokens van links die al afgehandeld zijn (zie `freshLink`). */
+const handledLinkTokens = new Set<string>();
+
 export default function BraceletControl(props: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
   const pathname = usePathname();
   const params = useLocalSearchParams();
@@ -4225,11 +4240,23 @@ function BraceletControlScreen({
     plan?: string;
     duration?: string;
     from?: string;
+    open?: string;
   }>();
+  /* Audit 5 okt 2026: parameters van een link (plan / Audio Library /
+     melding) blijven op de tab-route hangen. Ze gelden enkel voor de ÉÉN
+     opening die ze meebracht (uniek `open`-token, zie openStateControl) —
+     anders startte elke latere intro→Explore opnieuw een sessie, en bleef
+     de terugpijl naar het plan/de bibliotheek wijzen. */
+  const [freshLink] = useState(() => {
+    const token = typeof params.open === 'string' ? params.open : undefined;
+    if (!token || handledLinkTokens.has(token)) return false;
+    handledLinkTokens.add(token);
+    return true;
+  });
 
   const initialMode: BraceletMode = (() => {
     if (resumeSnapshot) return resumeSnapshot.mode as BraceletMode;
-    const raw = params.mode;
+    const raw = freshLink ? params.mode : undefined;
     if (typeof raw === 'string') {
       const n = parseInt(raw, 10);
       if (n >= 0 && n <= 4) return n as BraceletMode;
@@ -4237,11 +4264,11 @@ function BraceletControlScreen({
     return suggestBraceletMode(new Date());
   })();
   const autoStartBracelet =
-    !resumeSnapshot && (params.breathwork === '1' || params.plan === '1');
+    freshLink && !resumeSnapshot && (params.breathwork === '1' || params.plan === '1');
   /* Enkel gezet bij een dagplan-tik — auto-start gebruikt anders gewoon de
      modus-default (zie de auto-start-effect verderop). */
   const planDurationMinutes: number | null = (() => {
-    if (params.plan !== '1' || typeof params.duration !== 'string') return null;
+    if (!freshLink || params.plan !== '1' || typeof params.duration !== 'string') return null;
     const n = parseInt(params.duration, 10);
     return Number.isFinite(n) && n > 0 ? n : null;
   })();
@@ -4258,6 +4285,7 @@ function BraceletControlScreen({
      via een pushed route vanuit "Your bracelet plan" en hoort daar met
      router.back() op terug te landen, niet op het connect-scherm. */
   const fromContext: 'audio' | 'bracelet' | 'plan' | null = (() => {
+    if (!freshLink) return null;
     if (params.from === 'audio') return 'audio';
     if (params.from === 'bracelet') return 'bracelet';
     if (params.from === 'plan') return 'plan';
@@ -4357,12 +4385,18 @@ function BraceletControlScreen({
         ? pausedAtElapsedMsRef.current
         : Date.now() - startedAt;
       const elapsedMin = Math.max(1, Math.round(elapsedMs / 60000));
+      /* De modus die ECHT liep (monitor), niet wat er nu op de moduskeuze
+         aangetikt staat — audit 5 okt 2026 (bv. bij "Switch to …"). */
+      const running = getBraceletMonitorSession();
+      const runMode = (running?.mode ?? selectedMode) as BraceletMode;
       recordSession({
-        mode: selectedMode,
-        startedAt: new Date(realStartedAt).toISOString(),
+        mode: runMode,
+        startedAt: running?.startedAtIso ?? new Date(realStartedAt).toISOString(),
         endedAt: new Date().toISOString(),
         durationMin: elapsedMin,
-        plannedMin: clampDuration(selectedMode, duration),
+        plannedMin: running
+          ? Math.max(1, Math.round(running.totalSec / 60))
+          : clampDuration(runMode, duration),
         status: finalStatus,
       });
       return elapsedMin;
@@ -4384,6 +4418,10 @@ function BraceletControlScreen({
      onderaan"): geminimaliseerd = de moduskeuze tonen terwijl de sessie
      doorloopt, met een "nu bezig"-balk om terug te keren. */
   const [minimized, setMinimized] = useState(false);
+  /* Stabiele referentie (audit): een nieuwe functie per render liet het
+     sessiescherm z'n terugknop-koppeling en de tabbalk-vlag elke seconde
+     opnieuw zetten. */
+  const minimizeSession = useCallback(() => setMinimized(true), []);
 
   /* Iter 9k: mode-detail popup terug op state-cards. Tap card opent
      bottom-sheet met "intent / bracelet / breath / use this for"
@@ -4400,8 +4438,11 @@ function BraceletControlScreen({
      lopende (niet-gepauzeerde) sessie herontdekken na een fresh mount —
      reconstrueert de wall-clock start uit total/remaining zodat de
      lokale seconden-tik meteen weer klopt i.p.v. null te blijven. */
+  /* Audit 5 okt 2026: ook bij een GEPAUZEERDE sessie hydrateren — anders
+     sloeg finishSession (null-check) het opslaan in de geschiedenis over
+     als je een gepauzeerde sessie na wegnavigeren beëindigde. */
   const sessionStartedAtRef = useRef<number | null>(
-    resumeSnapshot && !resumeSnapshot.paused
+    resumeSnapshot
       ? Date.now() - (resumeSnapshot.totalSec - resumeRemainingSec) * 1000
       : null,
   );
@@ -4442,7 +4483,7 @@ function BraceletControlScreen({
      de gereconstrueerde tijd is het beste beschikbare alternatief, dus
      zelfde waarde als sessionStartedAtRef hierboven. */
   const sessionRealStartedAtRef = useRef<number | null>(
-    resumeSnapshot && !resumeSnapshot.paused
+    resumeSnapshot
       ? Date.now() - (resumeSnapshot.totalSec - resumeRemainingSec) * 1000
       : null,
   );
@@ -4478,7 +4519,14 @@ function BraceletControlScreen({
            gebruiker verbindt, gaat 'ie naar /bracelet-set-day i.p.v. de
            gewone "Yes, connected!"-popup + idle-scherm. Nadien (tweede
            connectie en verder) gewoon het bestaande gedrag. */
-        if (braceletOnboardedAt === null) {
+        /* Audit 5 okt 2026: het STILLE verbinden van de State Control-tab
+           (autoConnect) is geen "eerste bracelet-koppeling" — geen
+           onboarding-doorverwijzing en geen "Yes, connected!"-popup; anders
+           belandde elke nieuwe gebruiker bij zijn eerste bezoek in het
+           bracelet-plan, en verscheen de popup na het stille verbinden. */
+        if (autoConnect) {
+          /* niets — stil verbonden */
+        } else if (braceletOnboardedAt === null) {
           /* Operator, 30 september 2026 ("na Set your plan land ik op de
              Bracelet-tab se welkomstscherm, is dat correct?"): nee — deze
              route verving bracelet-control al via `replace` (geen
@@ -4511,12 +4559,21 @@ function BraceletControlScreen({
       setConn(next);
     });
     return off;
-  }, [bracelet, braceletOnboardedAt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bracelet, braceletOnboardedAt, autoConnect]);
 
   /* When mode changes, reset duration to that mode's default (spec §11.2
      — operator, 16 september 2026: officiële tabel, default is niet meer
      altijd gelijk aan het minimum). */
+  /* Niet bij de eerste render: dan staat de duur al juist (bv. hersteld uit
+     een lopende sessie) en zou deze effect hem overschrijven (audit 5 okt
+     2026). Enkel bij een echte moduswissel. */
+  const modeEffectMountedRef = useRef(false);
   useEffect(() => {
+    if (!modeEffectMountedRef.current) {
+      modeEffectMountedRef.current = true;
+      return;
+    }
     setDuration(getModeMeta(selectedMode).defaultMinutes);
   }, [selectedMode]);
 
@@ -4536,60 +4593,34 @@ function BraceletControlScreen({
      dat het toch werkte was transpiler-geluk, geen correctheid. */
   const [endedLocally, setEndedLocally] = useState(false);
 
+  /* GEWIJZIGD 5 okt 2026 (audit): het natuurlijke einde wordt niet meer
+     HIER afgeleid uit de bracelet-status (die bij hervatten tot het modus-
+     minimum doorloopt, en die enkel werkt zolang dit scherm gemount is).
+     De sessie-monitor beslist, bewaart de geschiedenis en meldt het einde;
+     dit scherm toont enkel de afsluiting — meteen, of bij de eerstvolgende
+     mount als het einde viel terwijl State Control niet in beeld was.
+     Geen geluid (operator, juli 2026: vergaderingen); het eind-signaal zit
+     in de trilling. Zonder native module (iOS) geeft expo-haptics de tik. */
   useEffect(() => {
-    if (!status) return;
-    const wasActive = prevSessionActiveRef.current;
-    prevSessionActiveRef.current = status.sessionActive;
-
-    /* Conditie voor natural-completion recording:
-       - sessie was actief, is nu niet meer (transitie)
-       - we hebben nog een startedAt-timestamp (= niet expliciet gewist)
-       - we zijn niet in paused state (anders is dit een pause-stop)
-       Iter v210 (2026-07-04): endedLocally guard — bij manual End tikt
-       user, we zetten setStatus force sessionActive=false + endedLocally=true
-       DIRECT vóór onStop's cleanup runt. Zonder deze guard triggerde deze
-       useEffect kort de natural-completion path → CompletionModal + audio-cue.
-       Als user End tikte, is 't geen natural completion. Skip. */
-    if (
-      wasActive &&
-      !status.sessionActive &&
-      sessionStartedAtRef.current !== null &&
-      pausedAt === null &&
-      !endedLocally
-    ) {
-      /* Iter 9bl (2026-05-31): duration = ACTIEVE tijd, consistent met
-         onStop/onRestart. Voor natural completion (bracelet timer auto-
-         eindigt) is dit (now - sessionStartedAtRef) waar startedAt
-         re-anchored is op iedere resume — dus cumulatieve actieve tijd
-         ≈ planned (zonder pauzes). pausedAt === null (natural completion
-         conditie), dus altijd active-branch. */
-      finishSession('completed');
-      void stopBraceletSessionMonitor();
-      /* Iter v211 (2026-07-04): popup + audio-cue VERWIJDERD bij
-         natural completion. Operator: bracelet-sessies worden vaak in
-         professionele context (vergadering) gestart en moeten SUBTIEL
-         + STIL zijn. User voelt zelf de haptics stoppen op de pols
-         (echte bracelet firmware) — dat is signaal genoeg. UI valt
-         vanzelf terug naar Choose Mode.
-         Breathwork completion (breath-voice.ts + breath-tab) is een
-         apart pad en behoudt wél popup + audio — daar is expressief
-         gedrag gewenst. */
-      /* Operator, 5 okt 2026 ("op einde moet er een felicitatie komen, met
-         haptics duidelijk dat het einde is — nu springt het abrupt naar
-         session control; hoe zou Apple dit doen"): popup TERUG, zoals de
-         Apple Watch na een sessie een samenvatting + succes-tik toont.
-         Audio blijft weg (reden van juli: vergaderingen, stil). Het eind-
-         signaal in trilling zit achteraan de native curve (bracelet-
-         haptics.ts) — voelbaar, ook met het scherm op slot. Zonder native
-         module (iOS) geeft expo-haptics de succes-tik. */
-      setCompletedMinutes(sessionPlannedRef.current > 0 ? sessionPlannedRef.current : null);
-      setCompletedModeForModal(selectedMode);
+    const show = (c: SessionCompletion) => {
+      sessionStartedAtRef.current = null;
+      sessionRealStartedAtRef.current = null;
+      setMinimized(false);
+      setCompletedMinutes(c.minutes);
+      setCompletedModeForModal(c.mode);
       if (!hasNativeWaveform()) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      /* playBraceletCompletionCue(selectedMode);  ← audio bewust weg */
-    }
-  }, [status, pausedAt, selectedMode, duration, endedLocally, finishSession]);
+      void bracelet.requestStatus().then(setStatus).catch(() => {});
+    };
+    const pending = consumePendingCompletion();
+    if (pending) show(pending);
+    return subscribeSessionCompletion((c) => {
+      consumePendingCompletion();
+      show(c);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Poll status every 5s while connected (spec §8.3/§11.4).
      Tracking opeenvolgende fouten → na 3× falen (15s) markeren we de
@@ -4919,7 +4950,12 @@ function BraceletControlScreen({
        één synchrone batch → één render i.p.v. twee → geen glitch. */
   const onResume = async () => {
     if (pausedAt === null) return;
-    const resumeDuration = clampDuration(selectedMode, pausedAt);
+    /* Audit 5 okt 2026: de ECHT lopende modus (niet de aangetikte) en de
+       echte resterende minuten — geen clamp naar het modus-minimum meer
+       hier; het einde bewaakt de monitor (die de bracelet zelf stopt). */
+    const runMode = (getBraceletMonitorSession()?.mode ?? selectedMode) as BraceletMode;
+    const remainingSecNow = getBraceletMonitorRemainingSec() ?? pausedAt * 60;
+    const resumeDuration = Math.max(1, Math.ceil(remainingSecNow / 60));
     const exactElapsedMs = pausedAtElapsedMsRef.current;
     setBusy(true);
     /* Iter v200 (2026-07-04): endedLocally reset op Resume. Anders zou
@@ -4928,7 +4964,7 @@ function BraceletControlScreen({
     setEndedLocally(false);
     try {
       await bracelet.sendCommand({
-        mode: selectedMode,
+        mode: runMode,
         duration: resumeDuration,
         command: BleCommand.Start,
       });
@@ -5119,19 +5155,22 @@ function BraceletControlScreen({
      ALLEEN actief wanneer bracelet-control het focused scherm is. */
   useFocusEffect(
     useCallback(() => {
+      /* Audit 5 okt 2026: het geduwde /bracelet-control-scherm bestaat niet
+         meer (alles opent de tab). Eén consistente regel:
+         - actief sessiescherm in beeld → dat scherm handelt het af
+           (minimaliseren naar de moduskeuze);
+         - moduskeuze in de tab → terug naar het State Control-intro, net
+           als de "<"-pijl. Nooit meer router.back() naar een ander scherm. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (!isBraceletOwner && router.canGoBack()) {
-          router.back();
+        if (isActiveSessionVisible()) return false;
+        if (onMinimize) {
+          onMinimize();
           return true;
         }
-        /* Owner-inline render (geen eigen pushed screen) — laat het
-           systeem-default gebeuren (app minimaliseren). Een eventuele
-           sessie blijft gewoon lopen; alleen de UI verdwijnt naar de
-           achtergrond. */
         return false;
       });
       return () => handler.remove();
-    }, [isBraceletOwner]),
+    }, [onMinimize]),
   );
   /* isPausedRef voor BackHandler — vangt ook tijdens pause. */
   const isPausedRef = useRef(false);
@@ -5256,7 +5295,7 @@ function BraceletControlScreen({
     return (
       <>
         <ActiveSessionScreen
-          onMinimize={() => setMinimized(true)}
+          onMinimize={minimizeSession}
           status={status}
           isPaused={isPaused}
           pausedAt={pausedAt}
