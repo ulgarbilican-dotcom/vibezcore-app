@@ -2810,15 +2810,17 @@ export default function BreathSetupScreen() {
                   style={StyleSheet.absoluteFill}
                 />
                 {/* Operator, 5 okt 2026: de i per kaart, rechtsboven — uitleg
-                   van precies die techniek. */}
+                   van precies die techniek; enkel op de gekozen kaart. */}
+                {on && (
                 <Pressable
                   onPress={() => setInfoModal({ title: t.name, techniqueKey: t.key })}
                   hitSlop={10}
                   style={s.tileInfo}
                   accessibilityLabel={`About ${t.name}`}
                 >
-                  <Info size={13} color={on ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)'} strokeWidth={2.2} />
+                  <Info size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
                 </Pressable>
+                )}
                 <Icon size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} strokeWidth={2.1} />
                 <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
                   {techShortLabel(t)}
