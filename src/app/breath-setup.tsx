@@ -747,6 +747,8 @@ function TechniqueSegmentButton({
   indicatorX,
   segW,
   onPress,
+  selected,
+  onInfo,
 }: {
   t: TechniqueDef;
   index: number;
@@ -754,6 +756,9 @@ function TechniqueSegmentButton({
   indicatorX: SharedValue<number>;
   segW: number;
   onPress: () => void;
+  /** Operator, 5 okt 2026: de i enkel bij de gekozen techniek. */
+  selected?: boolean;
+  onInfo?: () => void;
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
@@ -794,9 +799,16 @@ function TechniqueSegmentButton({
       onPressOut={onPressOut}
       style={[tsc.segment, pressStyle]}
     >
-      <Animated.Text style={[tsc.segmentTxt, textStyle]} numberOfLines={1}>
-        {techShortLabel(t)}
-      </Animated.Text>
+      <View style={tsc.segmentRow}>
+        <Animated.Text style={[tsc.segmentTxt, textStyle]} numberOfLines={1}>
+          {techShortLabel(t)}
+        </Animated.Text>
+        {selected && onInfo ? (
+          <Pressable onPress={onInfo} hitSlop={12} accessibilityLabel={`About ${t.name}`}>
+            <Info size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+          </Pressable>
+        ) : null}
+      </View>
     </AnimatedPressable>
   );
 }
@@ -807,6 +819,7 @@ function TechniqueSegmentedControl({
   techniquePicked,
   onPick,
   blurTarget,
+  onInfo,
 }: {
   techniques: TechniqueDef[];
   techIdx: number;
@@ -814,6 +827,8 @@ function TechniqueSegmentedControl({
   onPick: (index: number, t: TechniqueDef) => void;
   /** Achtergrond om echt te vervagen (Android, zie VibezGlass). */
   blurTarget?: React.RefObject<View | null>;
+  /** Uitleg van de gekozen techniek (i naast de naam). */
+  onInfo?: (t: TechniqueDef) => void;
 }) {
   const [trackWidth, setTrackWidth] = useState(0);
   const segW = techniques.length > 0 ? trackWidth / techniques.length : 0;
@@ -877,6 +892,8 @@ function TechniqueSegmentedControl({
           indicatorX={indicatorX}
           segW={segW}
           onPress={() => onPick(i, t)}
+          selected={i === techIdx}
+          onInfo={onInfo ? () => onInfo(t) : undefined}
         />
       ))}
     </View>
@@ -952,6 +969,7 @@ const tsc = StyleSheet.create({
     /* Hogere balk (operator, 5 okt 2026). */
     height: 58,
   },
+  segmentRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   segmentTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 13,
@@ -2768,21 +2786,12 @@ export default function BreathSetupScreen() {
            balk, transparant blur — hebben we elders al"): de glazen
            segmented control met het schuivende kussentje. De i rechts op de
            labelregel opent de uitleg van de gekozen techniek. */}
-        {/* Eén i onder de cirkel (operator, 5 okt 2026): één uitleg voor
-           techniek, niveau én de gekozen duur. */}
-        <Pressable
-          onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-          hitSlop={12}
-          style={s.ringInfo}
-          accessibilityLabel={`About ${tech.name}`}
-        >
-          <Info size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-        </Pressable>
         <View style={s.segWrap}>
           <TechniqueSegmentedControl
             techniques={st.techniques}
             techIdx={techIdx}
             techniquePicked
+            onInfo={(t) => setInfoModal({ title: t.name, techniqueKey: t.key })}
             onPick={(i) => {
               if (i === techIdx) return;
               Haptics.selectionAsync();
@@ -4079,7 +4088,9 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   },
   /* Operator, 5 okt 2026: eerst van rand tot rand; daarna ("is dat
      premium?") terug binnen de marges, even breed als Start session. */
-  segWrap: { alignSelf: 'stretch', marginHorizontal: 26, marginTop: 26 },
+  /* Operator, 5 okt 2026 ("ruimte tussen alles, minuten ver naar
+     beneden"). */
+  segWrap: { alignSelf: 'stretch', marginHorizontal: 26, marginTop: 44 },
   ringInfo: { alignSelf: 'center', marginTop: 12, padding: 4 },
   tileRow: {
     alignSelf: 'stretch',
@@ -4112,7 +4123,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
     fontVariant: ['tabular-nums'],
   },
-  rulerWrap: { alignSelf: 'stretch', marginHorizontal: 10 },
+  rulerWrap: { alignSelf: 'stretch', marginHorizontal: 10, marginTop: 64 },
   settingsCard: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
