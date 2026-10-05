@@ -868,7 +868,7 @@ function PrimaryCtaButton({
    tekst". Klopt zichtbaar mee met elke tik (subscribeHapticPulse — zelfde
    bron als de motor). Witte modus (Clarity) → donkere tekst, anders
    onleesbaar. Uitgeschakeld tijdens een lopende sessie. */
-const FEEL_SIZE = 76;
+const FEEL_SIZE = 108;
 
 function FeelItCircle({
   color,
@@ -6048,10 +6048,12 @@ const s = StyleSheet.create({
   /* "Feel it" — zelfde ghost-button-chrome als elders (rand in meta.color,
      geen gevulde achtergrond — CTA-chrome blijft voorbehouden aan de
      echte Start/Choose-knoppen, dit is een secundaire testactie). */
+  /* Operator, 5 okt 2026 ("feel it groter en laten zakken, alles moet
+     ademen") — sinds het ademblok weg is, is er ruimte. */
   feelWrap: {
     alignItems: 'center',
-    marginTop: 14,
-    marginBottom: 2,
+    marginTop: 44,
+    marginBottom: 40,
   },
   /* Korte ritme-regel onder de intentiezin (5 okt 2026). */
   modeModalRhythm: {
@@ -6069,7 +6071,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   feelCircleTxt: {
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
   },
