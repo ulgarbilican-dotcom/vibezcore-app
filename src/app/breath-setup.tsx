@@ -2173,37 +2173,10 @@ export default function BreathSetupScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Operator, 5 okt 2026 ("saai en nietszeggend" + "echt transparant
-         blur"): de foto van de gekozen toestand — dezelfde als op Choose
-         your state — achter het hele scherm, donker gemaakt. Zo draagt deze
-         pagina de sfeer van de toestand, en heeft het glas eindelijk iets
-         om te vervagen. `BlurTargetView` is wat het glas op Android echt
-         vervaagt. Enkel in de normale flow, niet in addToDay. */}
-      {!isAddToDay && (
-        /* Geen BlurTargetView meer (5 okt 2026): op Android ving hij alle
-           aanrakingen op (wiel/balk reageerden niet), en ingepakt maakte
-           hij het glas lichtgrijs. Op deze donkere foto zag je de echte
-           vervaging nauwelijks — betrouwbaar aanraken gaat voor. */
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { top: -insets.top }]}>
-          <Image
-            key={st.key}
-            source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-          {/* Lichte demping binnenin: dit is wat het glas vervaagt. */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.5)' }]} />
-        </View>
-      )}
-      {/* De echte verdonkering ligt BUITEN de BlurTargetView: lagen daarbinnen
-         werden op Android niet zichtbaar over de foto getekend (operator:
-         "moet donkerder" → "nog donkerder"). */}
-      {!isAddToDay && (
-        <View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { top: -insets.top, backgroundColor: 'rgba(10,10,10,0.78)' }]}
-        />
-      )}
+      {/* Operator, 5 okt 2026 ("het scherm is zeer onoverzichtelijk, overal
+         staat iets"): de toestandsfoto als achtergrond is weer weg — de
+         gezichten waren ruis achter alles. De sfeer komt uit de kleur van de
+         toestand in de cirkel. */}
 
       {/* Operator, 11 september 2026: "weg met saai wit, een zachte
          paarse gloed bovenin achter de cirkel" — anders dan de eerder
@@ -2351,16 +2324,7 @@ export default function BreathSetupScreen() {
              kale paginakleur, nauwelijks te onderscheiden van de rest van
              het scherm. Een effen grijze schijf erachter, licht ingezet
              t.o.v. de ringlijn zelf. */}
-          {/* Operator, 5 okt 2026: de cirkel in hetzelfde glas als de balk —
-             de sfeer van de foto schemert zacht door, één materiaal op het
-             scherm (was een effen zwarte schijf). */}
-          <VibezGlass
-            radius={(HERO_SIZE - HERO_STROKE * 4) / 2}
-            level="normal"
-            style={[s.heroFill, { backgroundColor: 'transparent' }]}
-          >
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.55)' }]} />
-          </VibezGlass>
+          <View style={[s.heroFill, { backgroundColor: heroFillColor }]} />
           <Svg width={HERO_SIZE} height={HERO_SIZE} style={StyleSheet.absoluteFill}>
             <Circle
               cx={HERO_SIZE / 2}
@@ -2386,13 +2350,6 @@ export default function BreathSetupScreen() {
             {/* Operator, 24 september 2026: markeert het uiteinde van de
                boog — volgt `heroProgress` rond de ring, dezelfde duur die
                de boog zelf ook tekent. */}
-            <AnimatedRect
-              width={HERO_DOT_SIZE}
-              height={HERO_DOT_SIZE}
-              rx={HERO_DOT_SIZE / 3}
-              fill={ringAccent}
-              animatedProps={heroDotProps}
-            />
           </Svg>
 
           {/* Operator, 9 september 2026: "enkel over de lijn van de cirkel
@@ -2470,11 +2427,6 @@ export default function BreathSetupScreen() {
             >
               {tech.name}
             </Animated.Text>
-            {/* Operator, 5 okt 2026 ("strepen en dots maar niets — enkel
-               namen in de kaarten, in de cirkel naam + moeilijkheidsgraad"). */}
-            <Animated.View key={`level-${tech.key}`} entering={FadeIn.duration(240)} style={s.heroLevelRow}>
-              <Text style={s.heroLevel}>{tech.level}</Text>
-            </Animated.View>
           </View>
         </View>
         )}
@@ -2823,16 +2775,16 @@ export default function BreathSetupScreen() {
            balk, transparant blur — hebben we elders al"): de glazen
            segmented control met het schuivende kussentje. De i rechts op de
            labelregel opent de uitleg van de gekozen techniek. */}
-        <View style={s.pickHead}>
-          <Text style={s.durationHeadLbl}>TECHNIQUE</Text>
-          <Pressable
-            onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-            hitSlop={10}
-            accessibilityLabel={`About ${tech.name}`}
-          >
-            <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-          </Pressable>
-        </View>
+        {/* Eén i onder de cirkel (operator, 5 okt 2026): één uitleg voor
+           techniek, niveau én de gekozen duur. */}
+        <Pressable
+          onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+          hitSlop={12}
+          style={s.ringInfo}
+          accessibilityLabel={`About ${tech.name}`}
+        >
+          <Info size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+        </Pressable>
         <View style={s.segWrap}>
           <TechniqueSegmentedControl
             techniques={st.techniques}
@@ -2846,22 +2798,6 @@ export default function BreathSetupScreen() {
           />
         </View>
 
-        <View style={[s.pickHead, { marginTop: 26 }]}>
-          <Text style={s.durationHeadLbl}>DURATION</Text>
-          {zoneFor(chosen.minutes) ? (
-            <Pressable
-              onPress={() => setDurationInfoOpen(true)}
-              hitSlop={10}
-              style={s.durationZoneBtn}
-              disabled={!zoneFor(chosen.minutes)?.why}
-            >
-              <Text style={s.durationZoneTxt}>{zoneFor(chosen.minutes)?.name}</Text>
-              {zoneFor(chosen.minutes)?.why ? (
-                <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-              ) : null}
-            </Pressable>
-          ) : null}
-        </View>
         <View style={s.rulerWrap}>
           {/* Operator, 5 okt 2026 ("liniaal vind ik niet goed, terug het
              wiel"). */}
@@ -2871,6 +2807,7 @@ export default function BreathSetupScreen() {
             accent={accent}
             trackColor="rgba(255,255,255,0.4)"
             recommendedValue={recommendedZone?.minutes}
+            recommendedAsDot
             onChange={(v) => {
               const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
               if (presetIdx !== -1) {
@@ -3079,6 +3016,24 @@ export default function BreathSetupScreen() {
                       />
                       <Text style={s.modalCaution}>{modalTech.safetyNote}</Text>
                     </View>
+                  ) : null}
+                  {/* De gekozen duur, in dezelfde uitleg (5 okt 2026 — één i). */}
+                  {modalTech.key === tech.key && zoneFor(chosen.minutes) ? (
+                    <>
+                      <Text style={s.sheetSectionLabel}>
+                        {fmtClock(chosen.minutes)} · {zoneFor(chosen.minutes)?.name?.toUpperCase()}
+                      </Text>
+                      {zoneFor(chosen.minutes)?.why ? (
+                        <Text style={s.sheetInfoBody}>{zoneFor(chosen.minutes)?.why}</Text>
+                      ) : null}
+                      {zoneFor(chosen.minutes)?.recommended ? (
+                        <Text style={s.sheetRecommendedNote}>
+                          {zoneFor(chosen.minutes)?.researchProtocol
+                            ? 'VIBEZCORE recommended · research protocol — the exact dose used in the cited study.'
+                            : 'VIBEZCORE recommended — not the only right length, just the one that works for most people, most days.'}
+                        </Text>
+                      ) : null}
+                    </>
                   ) : null}
                   </ScrollView>
                 </>
@@ -4131,7 +4086,8 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   },
   /* Operator, 5 okt 2026: eerst van rand tot rand; daarna ("is dat
      premium?") terug binnen de marges, even breed als Start session. */
-  segWrap: { alignSelf: 'stretch', marginHorizontal: 26 },
+  segWrap: { alignSelf: 'stretch', marginHorizontal: 26, marginTop: 26 },
+  ringInfo: { alignSelf: 'center', marginTop: 12, padding: 4 },
   tileRow: {
     alignSelf: 'stretch',
     marginHorizontal: 26,

@@ -95,6 +95,7 @@ export function DurationWheel({
   trackColor,
   visibleRows = DURATION_WHEEL_VISIBLE,
   recommendedValue,
+  recommendedAsDot = false,
 }: {
   options: { value: number; label: string }[];
   value: number;
@@ -103,6 +104,8 @@ export function DurationWheel({
   trackColor: string;
   visibleRows?: number;
   recommendedValue?: number;
+  /** Klein stipje naast de aanbevolen waarde i.p.v. het woord (5 okt 2026). */
+  recommendedAsDot?: boolean;
 }) {
   const viewportHeight = DURATION_WHEEL_ITEM_H * visibleRows;
   const listRef = useRef<Animated.ScrollView>(null);
@@ -167,9 +170,13 @@ export function DurationWheel({
           style={[s.wheelRecommendedTag, { top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2 }]}
           pointerEvents="none"
         >
-          <Text style={s.wheelRecommendedTagTxt} numberOfLines={1}>
-            Recommended
-          </Text>
+          {recommendedAsDot ? (
+            <View style={[s.recDot, { backgroundColor: accent }]} />
+          ) : (
+            <Text style={s.wheelRecommendedTagTxt} numberOfLines={1}>
+              Recommended
+            </Text>
+          )}
         </View>
       )}
       <Animated.ScrollView
@@ -228,6 +235,7 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
     textTransform: 'uppercase',
   },
+  recDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 70 },
   wheelRow: { alignItems: 'center', justifyContent: 'center' },
   wheelTxt: {
     fontFamily: BrandFonts.semibold,
