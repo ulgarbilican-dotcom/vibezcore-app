@@ -701,7 +701,8 @@ export default function BraceletSetDayScreen() {
         >
           <Pressable style={s.infoBackdrop} onPress={() => setInfoMode(null)}>
             <Pressable style={s.infoCard} onPress={() => {}}>
-              <View style={[s.infoIconBadge, { backgroundColor: `${infoModeMeta.color}22` }]}>
+              <View style={s.infoIconBadge}>
+                <VibezGlass radius={22} tint={infoModeMeta.color} level="raised" style={StyleSheet.absoluteFill} />
                 {(() => {
                   const InfoIcon = MODE_ICONS[infoModeMeta.mode];
                   return <InfoIcon size={22} color="#ffffff" strokeWidth={2} />;
@@ -710,16 +711,14 @@ export default function BraceletSetDayScreen() {
               <Text style={s.infoTitle}>{infoModeMeta.name}</Text>
               <Text style={s.infoBody}>{infoModeMeta.blurb}</Text>
 
-              <View style={s.infoColorRow}>
-                <View style={[s.infoColorSwatch, { backgroundColor: infoModeMeta.color }]} />
-                <Text style={s.infoColorTxt}>{infoModeMeta.color.toUpperCase()}</Text>
-              </View>
-
+              {/* Operator, 5 okt 2026: geen hexcode-rij meer (zegt een
+                  gebruiker niets — de kleur staat al in het icoon), en de
+                  knop in onze eigen CTA-stijl: wit, hoek 14, geen ovaal. */}
               <Pressable
-                style={[s.infoBtn, { borderColor: infoModeMeta.color }]}
+                style={({ pressed }) => [s.infoBtn, pressed && { opacity: 0.85 }]}
                 onPress={() => setInfoMode(null)}
               >
-                <Text style={[s.infoBtnTxt, { color: infoModeMeta.color }]}>Got it</Text>
+                <Text style={s.infoBtnTxt}>Got it</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -1008,7 +1007,8 @@ const s = StyleSheet.create({
   infoIconBadge: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 22,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -1026,32 +1026,16 @@ const s = StyleSheet.create({
     lineHeight: 21,
     color: 'rgba(255,255,255,0.6)',
   },
-  infoColorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 18,
-  },
-  infoColorSwatch: {
-    width: 16,
-    height: 16,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  infoColorTxt: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 12.5,
-    letterSpacing: 0.4,
-    color: 'rgba(255,255,255,0.6)',
-  },
+
+
+
   infoBtn: {
     marginTop: 22,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, letterSpacing: 0.8 },
+  infoBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#1D1D1F' },
 });
