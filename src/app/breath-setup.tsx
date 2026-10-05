@@ -1268,9 +1268,14 @@ export default function BreathSetupScreen() {
      onleesbaar. Losse tokens per rol i.p.v. één `accent` voor alles. */
   const isNeutralAccent = light && st.accent.toUpperCase() === '#FFFFFF';
   const accent = isNeutralAccent ? '#2C2C2E' : st.accent; // vulling: geselecteerde pil/cirkel, CTA-basis
-  const ringAccent = isNeutralAccent ? '#AEAEB2' : st.accent; // dunne ring/shine-lijn om de timer-cirkel
+  const ringAccent = isNeutralAccent ? '#AEAEB2' : st.key === 'rest' ? '#4AF0D4' : st.accent; // dunne ring/shine-lijn om de timer-cirkel
   const glowAccent = isNeutralAccent ? '#E9ECEF' : st.accent; // achtergrond-gloed bovenin
-  const labelAccent = isNeutralAccent ? '#8E8E93' : st.accent; // subtekst onder de duur-cirkel ("Total Alignment")
+  const labelAccent = isNeutralAccent ? '#8E8E93' : st.accent;
+  /* Operator, 5 okt 2026 ("groen veel te donker"): Sleep's #00A3A3 op lage
+     dekking werd op zwart een modderig donkergroen. Golven en boog gebruiken
+     daar het lichte Bio-Teal (zelfde keuze als de terugkeer-gloed op
+     Activity); de andere toestanden blijven ongewijzigd. */
+  const waveAccent = st.key === 'rest' ? '#4AF0D4' : accent; // subtekst onder de duur-cirkel ("Total Alignment")
   const ctaBg = isNeutralAccent ? '#1C1C1E' : accent;
   const ctaTextColor = isNeutralAccent ? '#ffffff' : '#0a0a0a';
   const modalBtnTextColor = isNeutralAccent ? '#ffffff' : '#0a0a0a';
@@ -2382,8 +2387,8 @@ export default function BreathSetupScreen() {
               <Svg width={WAVE_D * 2} height={WAVE_D}>
                 <AnimatedPath
                   animatedProps={wavePathBackProps}
-                  fill={isNeutralAccent ? '#000000' : accent}
-                  fillOpacity={isNeutralAccent ? 0.07 : 0.1}
+                  fill={isNeutralAccent ? '#000000' : waveAccent}
+                  fillOpacity={isNeutralAccent ? 0.07 : st.key === 'rest' ? 0.2 : 0.1}
                 />
               </Svg>
             </Animated.View>
@@ -2391,8 +2396,8 @@ export default function BreathSetupScreen() {
               <Svg width={WAVE_D * 2} height={WAVE_D}>
                 <AnimatedPath
                   animatedProps={wavePathFrontProps}
-                  fill={isNeutralAccent ? '#000000' : accent}
-                  fillOpacity={isNeutralAccent ? 0.1 : 0.15}
+                  fill={isNeutralAccent ? '#000000' : waveAccent}
+                  fillOpacity={isNeutralAccent ? 0.1 : st.key === 'rest' ? 0.3 : 0.15}
                 />
               </Svg>
             </Animated.View>
