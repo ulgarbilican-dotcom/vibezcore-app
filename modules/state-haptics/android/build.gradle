@@ -17,4 +17,8 @@ android {
 dependencies {
   /* NotificationCompat + ContextCompat.registerReceiver (RECEIVER_NOT_EXPORTED). */
   implementation "androidx.core:core:1.13.1"
+  /* MediaSessionCompat + MediaStyle: op Samsung/OneUI verschijnt enkel een
+     MEDIA-melding betrouwbaar op het vergrendelscherm (zelfde les als
+     breath-background, augustus 2026). */
+  implementation "androidx.media:media:1.7.0"
 }

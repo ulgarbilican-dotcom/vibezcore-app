@@ -279,7 +279,15 @@ function silence(): void {
   stopNativeSession();
 }
 
-function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: number): void {
+type SessionClock = { elapsedSec: number; totalSec: number };
+
+function play(
+  mode: BraceletMode,
+  timing: Timing,
+  offsetSec: number,
+  totalSec?: number,
+  clock?: SessionClock,
+): void {
   silence();
   const spec = SPECS[mode];
   if (hasNativeWaveform()) {
@@ -293,7 +301,13 @@ function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: 
     const anchorWallMs = Date.now();
     if (totalSec !== undefined) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. */
-      startNativeSession(timings, amplitudes, getModeMeta(mode).name);
+      startNativeSession(
+        timings,
+        amplitudes,
+        getModeMeta(mode).name,
+        clock?.totalSec ?? totalSec,
+        clock?.elapsedSec ?? 0,
+      );
     } else {
       playNativeWaveform(timings, amplitudes, repeat);
     }
@@ -303,31 +317,32 @@ function play(mode: BraceletMode, timing: Timing, offsetSec: number, totalSec?: 
   }
 }
 
-type SessionState = { mode: BraceletMode; curveStartedAt: number; pausedAt: number | null };
+/* Curve-positie volgt de WERKELIJK verstreken (actieve) sessietijd, niet
+   het moment waarop een scherm mount — operator, 5 okt 2026: na weg- en
+   terugnavigeren begon de curve opnieuw bij 75 bpm ("volledig fout
+   ritme"). `curveZero` = de verstreken sessietijd waarop de curve begon
+   (0 bij de start; verschuift enkel na een lange pauze, zie hieronder). */
+type SessionState = { mode: BraceletMode; curveZeroSec: number; pausedAt: number | null };
 let session: SessionState | null = null;
 
-/** Echte sessie. Hervat waar de curve was als dezelfde modus binnen 2 min
- *  na een pauze verdergaat, anders opnieuw vanaf de basislijn.
- *  `remainingSec` maakt de native curve eindig (stopt ook als JS stilvalt). */
-export function playModeSessionHaptic(mode: BraceletMode, remainingSec?: number): void {
+/** Echte sessie — aangeroepen door bracelet-session-monitor.ts bij start/
+ *  hervatten, NIET door een scherm. `elapsedSec` = actieve sessietijd tot
+ *  nu, `remainingSec` maakt de native curve eindig. Na een pauze langer dan
+ *  2 min begint de curve opnieuw met de basislijn. */
+export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, remainingSec: number): void {
   const now = Date.now();
-  if (
-    session &&
-    session.mode === mode &&
-    session.pausedAt !== null &&
-    now - session.pausedAt <= RESUME_WINDOW_SECONDS * 1000
-  ) {
-    session.curveStartedAt += now - session.pausedAt;
-    session.pausedAt = null;
-  } else {
-    session = { mode, curveStartedAt: now, pausedAt: null };
+  if (!session || session.mode !== mode || elapsedSec < session.curveZeroSec) {
+    session = { mode, curveZeroSec: elapsedSec, pausedAt: null };
+  } else if (session.pausedAt !== null && now - session.pausedAt > RESUME_WINDOW_SECONDS * 1000) {
+    session.curveZeroSec = elapsedSec;
   }
-  const total = remainingSec !== undefined && remainingSec > 0 ? remainingSec : undefined;
+  session.pausedAt = null;
   play(
     mode,
     { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[mode].rampSec },
-    (now - session.curveStartedAt) / 1000,
-    total,
+    Math.max(0, elapsedSec - session.curveZeroSec),
+    remainingSec > 0 ? remainingSec : undefined,
+    { elapsedSec, totalSec: elapsedSec + remainingSec },
   );
 }
 

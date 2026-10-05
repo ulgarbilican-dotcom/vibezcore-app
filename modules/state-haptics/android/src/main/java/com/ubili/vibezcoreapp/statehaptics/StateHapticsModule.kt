@@ -74,7 +74,7 @@ class StateHapticsModule : Module() {
      *  doorlopen met het scherm op slot (zie die klasse). Moet starten
      *  terwijl de app in de voorgrond is — dat is zo: de gebruiker drukt
      *  net op Play. */
-    Function("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String ->
+    Function("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String, sessionTotalSec: Double, sessionElapsedSec: Double ->
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@Function
       if (timings.isEmpty() || timings.size != amplitudes.size) return@Function
       try {
@@ -83,6 +83,8 @@ class StateHapticsModule : Module() {
           putExtra(StateHapticsService.EXTRA_TIMINGS, LongArray(timings.size) { timings[it].toLong() })
           putExtra(StateHapticsService.EXTRA_AMPLITUDES, IntArray(amplitudes.size) { amplitudes[it].coerceIn(0, 255) })
           putExtra(StateHapticsService.EXTRA_TITLE, title)
+          putExtra(StateHapticsService.EXTRA_SESSION_TOTAL_MS, (sessionTotalSec * 1000).toLong())
+          putExtra(StateHapticsService.EXTRA_SESSION_ELAPSED_MS, (sessionElapsedSec * 1000).toLong())
         }
         ContextCompat.startForegroundService(context, intent)
       } catch (_: Exception) {

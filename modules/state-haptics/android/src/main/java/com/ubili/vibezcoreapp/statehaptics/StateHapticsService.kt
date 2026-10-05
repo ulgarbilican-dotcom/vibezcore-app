@@ -35,8 +35,12 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.media.app.NotificationCompat as MediaNotificationCompat
 
 class StateHapticsService : Service() {
 
@@ -47,6 +51,11 @@ class StateHapticsService : Service() {
     const val EXTRA_TIMINGS = "timings"
     const val EXTRA_AMPLITUDES = "amplitudes"
     const val EXTRA_TITLE = "title"
+    /* Voor de vergrendelscherm-melding: volledige sessieduur + al verstreken
+       tijd bij de start van deze curve (de curve zelf = de resterende tijd). */
+    const val EXTRA_SESSION_TOTAL_MS = "sessionTotalMs"
+    const val EXTRA_SESSION_ELAPSED_MS = "sessionElapsedMs"
+    const val LATE_TOLERANCE_MS = 40L
 
     fun vibratorOf(context: Context): Vibrator? =
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -63,6 +72,15 @@ class StateHapticsService : Service() {
   private var totalMs = 0L
   private var startRealtime = 0L
   private var title = "State Control"
+  private var sessionTotalMs = 0L
+  private var sessionElapsedAtStartMs = 0L
+  private var mediaSession: MediaSessionCompat? = null
+  private val tickRunnable = object : Runnable {
+    override fun run() {
+      updateNotification()
+      handler.postDelayed(this, 1000L)
+    }
+  }
   private var wakeLock: PowerManager.WakeLock? = null
   private var receiverRegistered = false
   private val endRunnable = Runnable { stopSelfCleanly() }
@@ -72,10 +90,39 @@ class StateHapticsService : Service() {
      (vanuit een voorgrondservice) blijft wel lopen. */
   private val screenReceiver = object : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
-      if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-        handler.postDelayed({ playFromNow() }, 300L)
+      when (intent?.action) {
+        Intent.ACTION_SCREEN_OFF -> handler.postDelayed({ playFromNow() }, 300L)
+        /* Gemeten 5 okt 2026: het eigen ontgrendel-tikje van het systeem
+           VERDRINGT onze trilling (cancelled_superseded) — daarna opnieuw
+           oppakken. */
+        Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT ->
+          handler.postDelayed({ playFromNow() }, 600L)
       }
     }
+  }
+
+  /* Elke andere trilling (melding, toetsenbord) kan de onze verdringen, en
+     Android meldt dat niet. Dus om de ~30 s opnieuw aanbieden — telkens
+     PRECIES op het begin van een tik, zodat er geen halve tik wegvalt. */
+  private val resyncRunnable = object : Runnable {
+    override fun run() {
+      playFromNow()
+      scheduleResync()
+    }
+  }
+
+  private fun scheduleResync() {
+    handler.removeCallbacks(resyncRunnable)
+    val elapsed = SystemClock.elapsedRealtime() - startRealtime
+    val target = elapsed + 30_000L
+    var acc = 0L
+    var i = 0
+    while (i < timings.size && (acc < target || i % 4 != 0)) {
+      acc += timings[i]
+      i++
+    }
+    if (i >= timings.size) return
+    handler.postDelayed(resyncRunnable, (acc - elapsed).coerceAtLeast(0L))
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -83,24 +130,30 @@ class StateHapticsService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     ensureChannel()
     title = intent?.getStringExtra(EXTRA_TITLE) ?: "State Control"
-    startForeground(NOTIFICATION_ID, buildNotification())
-
     val t = intent?.getLongArrayExtra(EXTRA_TIMINGS) ?: LongArray(0)
     val a = intent?.getIntArrayExtra(EXTRA_AMPLITUDES) ?: IntArray(0)
-    if (t.isEmpty() || t.size != a.size) {
-      stopSelfCleanly()
-      return START_NOT_STICKY
-    }
     timings = t
     amplitudes = a
     totalMs = t.sum()
     startRealtime = SystemClock.elapsedRealtime()
+    sessionElapsedAtStartMs = intent?.getLongExtra(EXTRA_SESSION_ELAPSED_MS, 0L) ?: 0L
+    sessionTotalMs = intent?.getLongExtra(EXTRA_SESSION_TOTAL_MS, sessionElapsedAtStartMs + totalMs)
+      ?: (sessionElapsedAtStartMs + totalMs)
+    startForeground(NOTIFICATION_ID, buildNotification())
+
+    if (t.isEmpty() || t.size != a.size) {
+      stopSelfCleanly()
+      return START_NOT_STICKY
+    }
+    handler.removeCallbacks(tickRunnable)
+    handler.postDelayed(tickRunnable, 1000L)
 
     acquireWakeLock()
     registerScreenReceiver()
     handler.removeCallbacks(endRunnable)
     handler.postDelayed(endRunnable, totalMs)
     playFromNow()
+    scheduleResync()
     return START_NOT_STICKY
   }
 
@@ -112,6 +165,7 @@ class StateHapticsService : Service() {
     }
     unregisterScreenReceiver()
     releaseWakeLock()
+    releaseMediaSession()
     super.onDestroy()
   }
 
@@ -132,10 +186,17 @@ class StateHapticsService : Service() {
     if (i >= timings.size) return
     val outT = ArrayList<Long>(timings.size - i)
     val outA = ArrayList<Int>(timings.size - i)
-    val remainderOfCurrent = acc + timings[i] - elapsed
-    /* Een halve tik heeft geen zin — midden in een tik start de rest stil. */
-    outT.add(remainderOfCurrent)
-    outA.add(if (amplitudes[i] > 0 && remainderOfCurrent < timings[i]) 0 else amplitudes[i])
+    val into = elapsed - acc
+    if (amplitudes[i] > 0 && into <= LATE_TOLERANCE_MS) {
+      /* Net (enkele ms) te laat op het begin van een tik — de Handler is
+         nooit exact. Speel de tik dan volledig i.p.v. hem te laten vallen. */
+      outT.add(timings[i])
+      outA.add(amplitudes[i])
+    } else {
+      /* Een halve tik heeft geen zin — midden in een tik start de rest stil. */
+      outT.add(timings[i] - into)
+      outA.add(if (amplitudes[i] > 0) 0 else amplitudes[i])
+    }
     for (j in i + 1 until timings.size) {
       outT.add(timings[j])
       outA.add(amplitudes[j])
@@ -156,18 +217,72 @@ class StateHapticsService : Service() {
     }
     unregisterScreenReceiver()
     releaseWakeLock()
+    releaseMediaSession()
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
   }
 
+  private fun sessionElapsedNowMs(): Long =
+    (sessionElapsedAtStartMs + (SystemClock.elapsedRealtime() - startRealtime))
+      .coerceIn(0L, sessionTotalMs.coerceAtLeast(0L))
+
+  private fun remainingLabel(): String {
+    val remSec = ((sessionTotalMs - sessionElapsedNowMs()) / 1000L).coerceAtLeast(0L)
+    return "%d:%02d left".format(remSec / 60, remSec % 60)
+  }
+
+  private fun ensureMediaSession(): MediaSessionCompat {
+    mediaSession?.let { return it }
+    val s = MediaSessionCompat(this, "VibezcoreStateControl")
+    s.isActive = true
+    mediaSession = s
+    return s
+  }
+
+  private fun releaseMediaSession() {
+    try {
+      mediaSession?.isActive = false
+      mediaSession?.release()
+    } catch (_: Exception) {
+    }
+    mediaSession = null
+  }
+
+  /* Zelfde aanpak als BreathSessionService: OneUI interpoleert de positie
+     niet zelf, dus elke seconde verse metadata + status. */
+  private fun updateMediaSession(text: String) {
+    val s = ensureMediaSession()
+    s.setMetadata(
+      MediaMetadataCompat.Builder()
+        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, text)
+        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
+        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, sessionTotalMs)
+        .build(),
+    )
+    s.setPlaybackState(
+      PlaybackStateCompat.Builder()
+        .setActions(0L)
+        .setState(PlaybackStateCompat.STATE_PLAYING, sessionElapsedNowMs(), 1.0f, SystemClock.elapsedRealtime())
+        .build(),
+    )
+  }
+
+  private fun updateNotification() {
+    try {
+      getSystemService(NotificationManager::class.java)?.notify(NOTIFICATION_ID, buildNotification())
+    } catch (_: Exception) {
+    }
+  }
+
   private fun registerScreenReceiver() {
     if (receiverRegistered) return
-    ContextCompat.registerReceiver(
-      this,
-      screenReceiver,
-      IntentFilter(Intent.ACTION_SCREEN_OFF),
-      ContextCompat.RECEIVER_NOT_EXPORTED,
-    )
+    val filter = IntentFilter().apply {
+      addAction(Intent.ACTION_SCREEN_OFF)
+      addAction(Intent.ACTION_SCREEN_ON)
+      addAction(Intent.ACTION_USER_PRESENT)
+    }
+    ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     receiverRegistered = true
   }
 
@@ -211,9 +326,12 @@ class StateHapticsService : Service() {
     }
   }
 
-  /* Verplicht voor een voorgrondservice. Bewust stil en niet op het
-     vergrendelscherm (VISIBILITY_SECRET): de "X:XX left"-info komt al uit
-     bracelet-session-monitor.ts — geen tweede, dubbele lockscreen-melding. */
+  /* Operator, 5 okt 2026 ("bij lockscreen zie ik enkel een V-icoon — welke
+     sessie actief en hoe lang nog"): DE lockscreen-melding van een lopende
+     State Control-sessie. MediaStyle + eigen MediaSessionCompat, want een
+     gewone melding verschijnt op OneUI niet op het vergrendelscherm (zelfde
+     les als BreathSessionService). bracelet-session-monitor.ts toont zijn
+     eigen melding dan NIET, zodat er geen dubbele is. */
   private fun buildNotification(): Notification {
     val launch = packageManager.getLaunchIntentForPackage(packageName)?.apply {
       flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -221,17 +339,23 @@ class StateHapticsService : Service() {
     val pending = launch?.let {
       PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
-    return NotificationCompat.Builder(this, CHANNEL_ID)
+    val text = "VIBEZCORE · ${remainingLabel()}"
+    updateMediaSession(remainingLabel())
+    val builder = NotificationCompat.Builder(this, CHANNEL_ID)
       .setContentTitle(title)
-      .setContentText("Haptic rhythm active")
+      .setContentText(text)
       .setSmallIcon(applicationInfo.icon)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setSilent(true)
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .setCategory(NotificationCompat.CATEGORY_SERVICE)
-      .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setContentIntent(pending)
-      .build()
+      .setStyle(MediaNotificationCompat.MediaStyle().setMediaSession(ensureMediaSession().sessionToken))
+    if (sessionTotalMs > 0) {
+      builder.setProgress(sessionTotalMs.toInt(), sessionElapsedNowMs().toInt(), false)
+    }
+    return builder.build()
   }
 }

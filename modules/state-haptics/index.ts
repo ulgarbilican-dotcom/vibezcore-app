@@ -11,7 +11,13 @@ type StateHapticsNativeModule = {
   hasAmplitudeControl(): boolean;
   play(timings: number[], amplitudes: number[], repeat: number): void;
   stop(): void;
-  startSession(timings: number[], amplitudes: number[], title: string): void;
+  startSession(
+    timings: number[],
+    amplitudes: number[],
+    title: string,
+    sessionTotalSec: number,
+    sessionElapsedSec: number,
+  ): void;
   stopSession(): void;
 };
 
@@ -57,10 +63,17 @@ export function stopNativeWaveform(): void {
 }
 
 /** Echte sessie via de voorgrondservice — loopt door met het scherm op
- *  slot (Android breekt gewone app-trillingen af bij vergrendelen). */
-export function startNativeSession(timings: number[], amplitudes: number[], title: string): void {
+ *  slot (Android breekt gewone app-trillingen af bij vergrendelen) en toont
+ *  modus + resterende tijd op het vergrendelscherm. */
+export function startNativeSession(
+  timings: number[],
+  amplitudes: number[],
+  title: string,
+  sessionTotalSec: number,
+  sessionElapsedSec: number,
+): void {
   try {
-    native?.startSession(timings, amplitudes, title);
+    native?.startSession(timings, amplitudes, title, sessionTotalSec, sessionElapsedSec);
   } catch {
     /* stil */
   }

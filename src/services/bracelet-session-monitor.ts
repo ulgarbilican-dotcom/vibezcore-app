@@ -40,6 +40,12 @@ import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
 import { getBracelet } from './bracelet';
 import { BraceletMode, getModeMeta } from './ble-contract';
+import { hasNativeWaveform } from '../../modules/state-haptics';
+import {
+  pauseModeSessionHaptic,
+  playModeSessionHaptic,
+  stopModePreviewHaptic,
+} from './bracelet-haptics';
 import {
   clearBraceletSession,
   setBraceletSessionSnapshot,
@@ -168,6 +174,19 @@ async function publish(force: boolean): Promise<void> {
        bijgewerkt; alleen de OS-melding zelf slaan we over. */
     return;
   }
+  /* Android met de native haptics-service: die toont zelf de vergrendel-
+     scherm-melding (modus + aftellende tijd, media-stijl — een gewone
+     melding zoals deze verschijnt op OneUI niet op het vergrendelscherm).
+     Geen tweede, dubbele melding. Gepauzeerd draait de service niet, dan
+     toont deze melding "Paused". */
+  if (Platform.OS === 'android' && hasNativeWaveform() && !state.paused) {
+    try {
+      await Notifications.dismissNotificationAsync(NOTIF_ID);
+    } catch {
+      /* cosmetisch */
+    }
+    return;
+  }
   const now = Date.now();
   if (!force && now - lastNotifPushAt < NOTIF_UPDATE_MS) return;
   lastNotifPushAt = now;
@@ -268,6 +287,25 @@ export function startBraceletSessionMonitor(opts: {
   })();
   tickHandle = setInterval(tick, TICK_MS);
   resyncHandle = setInterval(() => void resync(), RESYNC_MS);
+  /* onStart pauzeert meteen ("sessie start pas na Play", 27 sept) — pas
+     na die synchrone pauze beslissen of er haptiek moet spelen. */
+  setTimeout(syncHaptics, 0);
+}
+
+/* Haptiek hangt aan de SESSIE (deze mount-onafhankelijke monitor), niet
+   aan een scherm — operator, 5 okt 2026: minimaliseren en terugkomen
+   herstartte de curve. */
+function syncHaptics(): void {
+  if (!state) {
+    stopModePreviewHaptic();
+    return;
+  }
+  if (state.paused) {
+    pauseModeSessionHaptic();
+    return;
+  }
+  const remSec = currentRemainingSec();
+  playModeSessionHaptic(state.mode, state.totalSec - remSec, remSec);
 }
 
 /** Aanroepen vanuit onPause. Bevriest de projectie op het exacte moment. */
@@ -280,6 +318,7 @@ export function pauseBraceletSessionMonitor(): void {
     elapsedBeforeRunSec: state.totalSec - remSec,
     runStartedAt: null,
   };
+  syncHaptics();
   void publish(true);
 }
 
@@ -287,6 +326,7 @@ export function pauseBraceletSessionMonitor(): void {
 export function resumeBraceletSessionMonitor(): void {
   if (!state) return;
   state = { ...state, paused: false, runStartedAt: Date.now() };
+  syncHaptics();
   void publish(true);
 }
 
@@ -295,6 +335,7 @@ export function resumeBraceletSessionMonitor(): void {
 export async function stopBraceletSessionMonitor(): Promise<void> {
   clearTimers();
   state = null;
+  syncHaptics();
   clearBraceletSession();
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID);

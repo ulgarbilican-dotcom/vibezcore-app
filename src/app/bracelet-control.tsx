@@ -29,12 +29,7 @@ import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
-import {
-  pauseModeSessionHaptic,
-  playModePreviewHaptic,
-  playModeSessionHaptic,
-  stopModePreviewHaptic,
-} from '@/services/bracelet-haptics';
+import { playModePreviewHaptic, stopModePreviewHaptic } from '@/services/bracelet-haptics';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -2893,16 +2888,10 @@ function ActiveSessionScreen({
      haptiek spelen, niet enkel in een losse preview-popup. Start/stopt
      met de echte sessie, pauzeert mee met isPaused (hervatten binnen 2
      min gaat verder waar de curve was — zie services/bracelet-haptics.ts). */
-  useEffect(() => {
-    if (isPaused) {
-      pauseModeSessionHaptic();
-      return;
-    }
-    const remainingSec = getBraceletMonitorRemainingSec() ?? status.remainingMinutes * 60;
-    playModeSessionHaptic(activeMeta.mode, remainingSec);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMeta.mode, isPaused]);
-  useEffect(() => stopModePreviewHaptic, []);
+  /* GEWIJZIGD 5 okt 2026: de haptiek start/pauzeert/stopt niet meer hier
+     (aan dit scherm gekoppeld → minimaliseren en terugkomen herstartte de
+     curve), maar in services/bracelet-session-monitor.ts, die de sessie
+     zelf volgt los van welk scherm open staat. */
 
   /* Tijdens pause is sessionActive false maar pausedAt heeft de
      remaining. Tijdens running zit 't in status.remainingMinutes. */
@@ -3009,9 +2998,10 @@ function ActiveSessionScreen({
             /* Operator, 5 okt 2026 ("onderste blok 2 cm laten zakken,
                ademruimte"): geduwd scherm tot net boven de systeem-
                navigatiebalk — meer kan niet zonder eronder te vallen. */
-            paddingBottom: !isPushedRoute
-              ? Math.max(safeInsets.bottom + 56, 96)
-              : Math.max(safeInsets.bottom + 6, 20),
+            /* In de tab: de tabbalk neemt sinds 25 sept zelf zijn ruimte in
+               (geen zwevende overlay meer) — de oude +100-compensatie hield
+               het blok ~2 cm te hoog. */
+            paddingBottom: !isPushedRoute ? 12 : Math.max(safeInsets.bottom + 6, 20),
           },
         ]}
       >
