@@ -20,6 +20,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
 import { dayKey, useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { openStateControl } from '@/utils/state-control-ui';
+import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import { useStartStateControl } from '@/hooks/useStartStateControl';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react-native';
@@ -45,6 +47,9 @@ function fmtTime(minutes: number): string {
 
 export default function BraceletProtocol() {
   const { plan } = useActiveBraceletPlan();
+  /* Rechtstreeks starten + paywall zonder toegang (zie
+     hooks/useStartStateControl.ts). */
+  const { start: startNow, paywallOpen, closePaywall } = useStartStateControl();
   const insets = useSafeAreaInsets();
 
   /* Vandaag, of — als vandaag leeg is — de eerste dag van het plan met
@@ -65,6 +70,7 @@ export default function BraceletProtocol() {
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
+      <PremiumPaywallModal visible={paywallOpen} onClose={closePaywall} context="state-control" />
       <View style={s.bar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
@@ -146,15 +152,7 @@ export default function BraceletProtocol() {
                 <Pressable
                   key={`${it.reminderAt}-${i}`}
                   style={({ pressed }) => [s.card, pressed && { opacity: 0.85 }]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    openStateControl({
-                      plan: 1,
-                      mode: it.mode,
-                      duration: it.durationMinutes,
-                      from: 'plan',
-                    });
-                  }}
+                  onPress={() => startNow(it.mode as BraceletMode, it.durationMinutes)}
                   accessibilityLabel={`Start ${meta.name} at ${fmtTime(it.reminderAt)}, ${it.durationMinutes} minutes`}
                 >
                   <View style={[s.cardAccent, { backgroundColor: meta.color }]} />

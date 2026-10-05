@@ -613,6 +613,27 @@ addRemoteControlListener((action) => {
   else void remoteResume();
 });
 
+/** Start een State Control-sessie meteen, los van welk scherm open staat
+ *  (operator, 5 okt 2026: "Tap to start" vanuit het plan toonde soms de
+ *  moduskeuze — het State Control-scherm voerde de start-vraag enkel uit bij
+ *  zijn EERSTE opening). De monitor is de bron van waarheid; het scherm
+ *  volgt hem en toont daarna vanzelf de lopende sessie. Loopt er al een
+ *  sessie, dan gebeurt er niets (false) — de aanroeper opent die dan. */
+export async function startStateControlNow(mode: BraceletMode, minutes: number): Promise<boolean> {
+  if (state) return false;
+  const meta = getModeMeta(mode);
+  const dur = Math.max(meta.minMinutes, Math.min(meta.maxMinutes, Math.round(minutes)));
+  startBraceletSessionMonitor({ mode, totalSec: dur * 60 });
+  try {
+    const b = getBracelet();
+    if (b.getConnectionState() !== 'connected') await b.connect();
+    await b.sendCommand({ mode, duration: dur, command: BleCommand.Start });
+  } catch {
+    /* Geen bracelet bereikbaar — de haptiek op de telefoon loopt al. */
+  }
+  return true;
+}
+
 export function isBraceletSessionMonitorActive(): boolean {
   return state !== null;
 }

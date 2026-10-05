@@ -76,6 +76,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { openStateControl } from '@/utils/state-control-ui';
+import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import { useStartStateControl } from '@/hooks/useStartStateControl';
 import { AudioAccent, Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
@@ -330,13 +332,13 @@ export default function BraceletAgendaScreen() {
      `?plan=1&mode=X&duration=Y`-deeplink (dezelfde die de connectie-
      onboarding al gebruikt), start meteen de simulatie op de telefoon se
      eigen trilmotor. */
+  /* Operator, 5 okt 2026: start de sessie rechtstreeks (sessie-monitor)
+     en opent dan State Control — vroeger een link met start-parameters die
+     het al geopende scherm soms negeerde (moduskeuze + verdwaalde
+     terugknop). Zie hooks/useStartStateControl.ts. */
+  const { start: startNow, paywallOpen, closePaywall } = useStartStateControl();
   const tryItem = (mode: BraceletMode, durationMinutes: number) => {
-    Haptics.selectionAsync();
-    /* Operator, 1 okt 2026 ("back komt op de connect-pagina, niet ok"):
-       `from=plan` laat bracelet-control.tsx's back-knop echt hierheen
-       terugnavigeren i.p.v. terugvallen op het owner/inline connect-
-       scherm-gedrag — zie de toelichting daar bij `fromContext`. */
-    openStateControl({ plan: 1, mode, duration: durationMinutes, from: 'plan' });
+    startNow(mode, durationMinutes);
   };
 
   return (
@@ -573,6 +575,8 @@ export default function BraceletAgendaScreen() {
           </Pressable>
         )}
       </ScrollView>
+
+      <PremiumPaywallModal visible={paywallOpen} onClose={closePaywall} context="state-control" />
 
       {/* Actie-schermpje voor een aangetikt bolletje op de ring — "Try
          it" (volledige sessie in de bracelet-control-simulatie) en
