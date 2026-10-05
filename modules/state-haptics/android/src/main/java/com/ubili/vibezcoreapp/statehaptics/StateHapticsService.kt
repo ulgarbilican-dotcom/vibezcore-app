@@ -377,7 +377,12 @@ class StateHapticsService : Service() {
        die een haptische sessie niet heeft. Een Live Update is het Android-
        equivalent van Apple's Live Activity: Now Bar en statusbalk tonen
        modus, resterende tijd en voortgang zonder lege rij. */
-    if (Build.VERSION.SDK_INT >= 36) return buildLiveUpdate(pending)
+    /* Gemeten 5 okt 2026 (Galaxy A16, OneUI 8.5): Android promoveert de
+       melding wel (PROMOTED_ONGOING), maar Samsung toont Live Updates in de
+       Now Bar enkel voor partner-apps op een eigen lijst (settings
+       `key_now_bar_<pakket>`). Daar dus de mediakaart, die wel verschijnt. */
+    val samsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+    if (Build.VERSION.SDK_INT >= 36 && !samsung) return buildLiveUpdate(pending)
     val text = "VIBEZCORE · ${remainingLabel()}"
     updateMediaSession(remainingLabel())
     val builder = NotificationCompat.Builder(this, CHANNEL_ID)
