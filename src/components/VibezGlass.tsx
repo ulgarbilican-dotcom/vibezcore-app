@@ -27,7 +27,7 @@ type Props = {
   /** Apple-principe bij keuzes (operator, 5 okt 2026): de gekozen optie is
    *  lichter glas en "zweeft" boven de rest, niet-gekozen opties zijn
    *  doorzichtiger. 'normal' = gewone secundaire knop. */
-  level?: 'subtle' | 'normal' | 'raised';
+  level?: 'subtle' | 'normal' | 'raised' | 'sheet';
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
@@ -36,6 +36,9 @@ const LEVEL = {
   subtle: { base: 'rgba(58,58,66,0.16)', sheen: 0.09 },
   normal: { base: 'rgba(58,58,66,0.34)', sheen: 0.17 },
   raised: { base: 'rgba(96,96,106,0.42)', sheen: 0.26 },
+  /* Uitschuifpaneel met veel tekst: de foto schemert door, maar donker
+     genoeg om lange tekst rustig te lezen (Apple's "thick material"). */
+  sheet: { base: 'rgba(20,20,24,0.74)', sheen: 0.07 },
 } as const;
 
 export default function VibezGlass({ radius, tint, level = 'normal', style, children }: Props) {

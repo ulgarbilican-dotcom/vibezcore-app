@@ -1099,6 +1099,13 @@ export default function BreathScreen() {
             style={[s.infoCard, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}
             onPress={() => {}}
           >
+            {/* Operator, 5 okt 2026 (Apple-referentie): het paneel is van
+                VIBEZCORE-glas — de foto schemert zacht door. */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <Pressable
               onPress={() => setInfoOpen(false)}
               hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
@@ -1106,9 +1113,16 @@ export default function BreathScreen() {
               <View style={s.infoGrip} />
             </Pressable>
             <View style={s.infoHeader}>
-              <Text style={[s.infoEyebrow, { color: accentText }]}>
-                {sentenceCase(st.eyebrow)}
-              </Text>
+              <View style={s.infoHeaderLeft}>
+                {/* Zelfde glazen toestandsicoon als in "Set your plan". */}
+                <View style={s.infoStateBadge}>
+                  <VibezGlass radius={18} tint={st.accent} level="raised" style={StyleSheet.absoluteFill} />
+                  <StateGlyph stateKey={st.key} size={18} color="#ffffff" strokeWidth={1.9} />
+                </View>
+                <Text style={[s.infoEyebrow, { color: accentText }]}>
+                  {sentenceCase(st.eyebrow)}
+                </Text>
+              </View>
               <Pressable onPress={() => setInfoOpen(false)} hitSlop={10}>
                 <Text style={[s.infoDoneTxt, { color: accentText }]}>Done</Text>
               </Pressable>
@@ -1135,16 +1149,21 @@ export default function BreathScreen() {
             {st.techniques.map((t) => {
               const Icon = techniqueIcon(t.key);
               return (
+                /* Elk ritme in een eigen glaskaart; het niveau als zachte
+                   capsule in de toestandskleur met witte tekst (geen eigen
+                   kleur per niveau — dat zou botsen met de 5 toestands-
+                   kleuren). */
                 <View key={t.key} style={s.infoTechRow}>
+                  <VibezGlass radius={16} level="subtle" style={StyleSheet.absoluteFill} />
                   <View style={[s.infoTechIcon, { backgroundColor: `${st.accent}22` }]}>
                     <Icon size={16} color={accentText} strokeWidth={2.2} />
                   </View>
                   <View style={s.infoTechCopy}>
                     <View style={s.infoTechTop}>
                       <Text style={s.infoTechName}>{t.name}</Text>
-                      <Text style={[s.infoTechLevel, { color: accentText }]}>
-                        {t.level}
-                      </Text>
+                      <View style={[s.infoTechLevelPill, { backgroundColor: `${st.accent}38` }]}>
+                        <Text style={s.infoTechLevel}>{t.level}</Text>
+                      </View>
                     </View>
                     <Text style={s.infoTechHook}>{t.effect}</Text>
                   </View>
@@ -1548,9 +1567,7 @@ const s = StyleSheet.create({
   infoCard: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    backgroundColor: '#161616',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
     paddingHorizontal: 22,
     paddingTop: 10,
   },
@@ -1566,6 +1583,15 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  infoHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  infoStateBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoDoneTxt: {
     fontFamily: BrandFonts.semibold,
@@ -1597,10 +1623,13 @@ const s = StyleSheet.create({
     letterSpacing: 0,
   },
   infoTechRow: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    padding: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   infoTechIcon: {
     width: 34,
@@ -1619,16 +1648,18 @@ const s = StyleSheet.create({
   infoTechName: {
     flexShrink: 1,
     fontFamily: BrandFonts.semibold,
-    fontSize: 13.5,
+    fontSize: 15,
     color: '#ffffff',
   },
+  infoTechLevelPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   infoTechLevel: {
     fontFamily: BrandFonts.semibold,
     fontSize: 10.5,
     letterSpacing: 0.3,
+    color: '#ffffff',
   },
   infoTechHook: {
-    marginTop: 2,
+    marginTop: 3,
     fontFamily: BrandFonts.regular,
     fontSize: 12,
     lineHeight: 16,
