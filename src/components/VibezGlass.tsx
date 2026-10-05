@@ -17,7 +17,7 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 type Props = {
   /** Hoekafronding van de vorm (999 = pil/cirkel). */
@@ -44,8 +44,18 @@ const LEVEL = {
   sheet: { base: 'rgba(20,20,24,0.74)', sheen: 0.07, blur: 90 },
 } as const;
 
+/* Android vervaagt zonder `blurTarget` nog niet echt (expo-blur valt dan
+   terug op "none" — zie de waarschuwing in de Metro-log). Een paneel met
+   lange tekst wordt daar dus bijna dekkend, anders lees je de pagina erachter
+   door de tekst heen (operator, 5 okt 2026, info-popup op de setup).
+   Weg te halen zodra de echte vervaging op Android werkt. */
+const ANDROID_SHEET_BASE = 'rgb(24,24,28)';
+
 export default function VibezGlass({ radius, tint, level = 'normal', style, children }: Props) {
-  const L = LEVEL[level];
+  const L =
+    level === 'sheet' && Platform.OS === 'android'
+      ? { ...LEVEL.sheet, base: ANDROID_SHEET_BASE }
+      : LEVEL[level];
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView

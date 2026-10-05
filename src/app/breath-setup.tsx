@@ -31,6 +31,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import VibezGlass from '@/components/VibezGlass';
+import { SwipeDots, SwipeRing } from '@/components/SwipeRing';
 import { BrandFonts, CTA } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
 /* Operator, 19 september 2026 ("ja doen" — echte glas-blur i.p.v. de
@@ -2032,6 +2033,22 @@ export default function BreathSetupScreen() {
      `View` van voorheen, ongewijzigd. */
   const ContentWrap: typeof View | typeof ScrollView = isAddToDay ? ScrollView : View;
 
+  /* Techniek kiezen (veeg over de cirkel). Springt naar de eigen aanbevolen
+     duur van die techniek (operator, 17 september 2026), en een custom-
+     waarde van de vorige techniek vervalt — elke techniek heeft eigen
+     grenzen (`NO_EXTEND_TECHNIQUE_KEYS`/`CUSTOM_CEILING_MIN`). */
+  const pickTechnique = (i: number) => {
+    const t = st.techniques[i];
+    if (!t) return;
+    Haptics.selectionAsync();
+    setTechIdx(i);
+    setTechniquePicked(true);
+    const durs = t.durations ?? st.durations;
+    const recIdx = durs.findIndex((d) => d.recommended);
+    setDurationIdx(recIdx !== -1 ? recIdx : Math.min(durationIdx, durs.length - 1));
+    setCustomSelected(false);
+  };
+
   /* Operator (druk-vering op elke tikbare knop van dit scherm — cards, CTA
      én icoon-only knoppen, geen uitzonderingen): losse gedeelde waarde per
      knop zodat overlappende drukstaten (die hier niet voorkomen, maar toch)
@@ -2227,15 +2244,8 @@ export default function BreathSetupScreen() {
           <Text style={s.stateHeaderTxt} numberOfLines={1}>
             {displayName(st.eyebrow)}
           </Text>
-          {/* Operator, 24 september 2026 (pasted analyse: "STATE →
-             TECHNIQUE → DURATION" — de gebruiker denkt niet in staat-namen
-             maar in "ik ben opgejaagd"): `need` stond al in de data sinds
-             de vorige ronde maar werd nergens getoond — dode data. Dit is
-             de enige logische plek: direct onder de staat-naam, vóór de
-             gebruiker een techniek of duur kiest. */}
-          <Text style={s.stateNeedTxt} numberOfLines={1}>
-            {st.need}
-          </Text>
+          {/* Operator, 5 okt 2026 ("heel druk — de 'From high activation…'-
+             tekst mag weg"): enkel nog de naam van de toestand. */}
         </View>
         )}
 
@@ -2283,6 +2293,13 @@ export default function BreathSetupScreen() {
            Operator, 18 september 2026: enkel nog de NORMALE flow — addToDay
            gebruikt `AddToDayHero` hierboven. */}
         {!isAddToDay && (
+        <SwipeRing
+          count={st.techniques.length}
+          index={techIdx}
+          onChange={pickTechnique}
+          onTap={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+          accessibilityLabel={`${tech.name}, ${fmtClock(chosen.minutes)}. Swipe left or right to change technique, tap for details.`}
+        >
         <View style={s.heroWrap}>
           {/* Operator, 11 september 2026: "binnenkant van de cirkel moet
              duidelijker grijs" — de ring had zelf geen vulling (`fill=
@@ -2395,13 +2412,34 @@ export default function BreathSetupScreen() {
                moest onveranderd blijven"): terug naar het originele,
                ongewijzigde statische cijfer. De wheel picker staat als los
                blok ONDER de ring — zie verderop. */}
-            <Text style={s.heroLabel}>Session length</Text>
+            {/* Operator, 5 okt 2026 ("in de ring de gekozen technieknaam
+               en tijd tonen, de rest onder i — 'Session length' mag weg,
+               dat zien gebruikers wel"). Het ademritme staat in de info. */}
             <Text style={s.heroClock}>{fmtClock(chosen.minutes)}</Text>
             <Text style={s.heroTech} numberOfLines={2}>
-              {readablePattern(tech.phases)}
+              {tech.name}
             </Text>
           </View>
         </View>
+        </SwipeRing>
+        )}
+
+        {/* Operator, 5 okt 2026 ("de 3 technieken ook met swipe, en i
+           telkens eronder"): de cirkel veeg je door (zoals State Control),
+           de stipjes tonen welke van de drie, de i eronder opent de uitleg.
+           Vervangt de segmented control. */}
+        {!isAddToDay && (
+          <>
+            <SwipeDots count={st.techniques.length} index={techIdx} />
+            <Pressable
+              onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+              hitSlop={10}
+              style={s.techInfoBtn}
+              accessibilityLabel={`About ${tech.name}`}
+            >
+              <Info size={15} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+            </Pressable>
+          </>
         )}
 
         {/* Operator, 18 september 2026 ("kunnen we deze richting gaan" —
@@ -2722,51 +2760,6 @@ export default function BreathSetupScreen() {
            nu enkel nog (geen popup); een apart, klein "i"-knopje eronder
            (zelfde patroon als de duur-infoknop hierboven) toont de uitleg
            enkel wie er zelf naar vraagt. */}
-        {!isAddToDay && (
-          <View style={{ marginTop: 22, alignSelf: 'stretch', marginHorizontal: CARD_MARGIN_H }}>
-          <TechniqueSegmentedControl
-            techniques={st.techniques}
-            techIdx={techIdx}
-            techniquePicked={techniquePicked}
-            onPick={(i, t) => {
-              Haptics.selectionAsync();
-              setTechIdx(i);
-              setTechniquePicked(true);
-              /* Operator, 17 september 2026 ("recommended tijd moet per
-                 techniek aangegeven worden"): spring naar DIE techniek se
-                 eigen aanbevolen duur i.p.v. enkel de vorige index te
-                 klemmen — zo toont de "★ Recommended"-badge (verderop)
-                 meteen de juiste duur bij elke technieken-wissel, niet
-                 toevallig welke index de vorige techniek had. */
-              const durs = t.durations ?? st.durations;
-              const recIdx = durs.findIndex((d) => d.recommended);
-              setDurationIdx(recIdx !== -1 ? recIdx : Math.min(durationIdx, durs.length - 1));
-              /* Elke techniek heeft zijn eigen grenzen (zie
-                 `NO_EXTEND_TECHNIQUE_KEYS`/`CUSTOM_CEILING_MIN`) — een
-                 custom-waarde van de vorige techniek kan hier ongeldig
-                 zijn, dus gewoon uit bij het wisselen. */
-              setCustomSelected(false);
-            }}
-          />
-          {/* Operator, 2 okt 2026 ("i-knop staat daar nog niet goed" —
-             zweefde los in lege ruimte, geen label/context, in
-             tegenstelling tot de duur-infoknop hieronder die wél naast
-             de naam van de gekozen duur-preset staat): zelfde rij-patroon
-             nu ook hier — de naam van de gekozen techniek ernaast, zodat
-             de "i" een zichtbare referent heeft i.p.v. een losse cirkel
-             in het niets. */}
-          <View style={s.durationPresetRow}>
-            <Text style={s.durationPresetName}>{tech.name}</Text>
-            <Pressable
-              onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-              hitSlop={10}
-              style={s.durationInfoBtn}
-            >
-              <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-            </Pressable>
-          </View>
-          </View>
-        )}
 
         {/* Operator, 24 september 2026 ("minutenpicker komt onderaan, niet
            in de bestaande cirkel — die is voor weergave en moest
@@ -2783,13 +2776,28 @@ export default function BreathSetupScreen() {
            de kaart komen, maak de kaart kleiner"): label verhuisd VÓÓR de
            BlurView i.p.v. erbinnen — eigen marge i.p.v. de kaart se
            `padding`. */}
-        <Text style={[s.sectionLabel, s.durationLabelOutside]}>Choose your duration</Text>
-        <BlurView
-          intensity={40}
-          tint="dark"
-          blurMethod="dimezisBlurViewSdk31Plus"
-          style={[s.section, s.durationSectionSmall]}
-        >
+        {/* Operator, 5 okt 2026 ("kaart achter de minutenscroll weg,
+           'Choose your duration' → 'Duration' in kleine hoofdletters,
+           Daily Grounding-info: denk na"): geen kaart meer, een stil
+           label; de naam van de duurzone staat rechts op dezelfde regel
+           met de i ernaast — één regel i.p.v. een extra rij onder het wiel. */}
+        <View style={s.durationHead}>
+          <Text style={s.durationHeadLbl}>DURATION</Text>
+          {zoneFor(chosen.minutes) ? (
+            <Pressable
+              onPress={() => setDurationInfoOpen(true)}
+              hitSlop={10}
+              style={s.durationZoneBtn}
+              disabled={!zoneFor(chosen.minutes)?.why}
+            >
+              <Text style={s.durationZoneTxt}>{zoneFor(chosen.minutes)?.name}</Text>
+              {zoneFor(chosen.minutes)?.why ? (
+                <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+              ) : null}
+            </Pressable>
+          ) : null}
+        </View>
+        <View style={s.durationPlain}>
           <DurationWheel
             options={durationWheelOptions}
             value={chosen.minutes}
@@ -2807,30 +2815,7 @@ export default function BreathSetupScreen() {
               }
             }}
           />
-          {/* Operator, 24 september 2026 ("wat is deze tijdzone goed voor" →
-             "2-30 min Quick Reset kan toch niet?" → "je begrijpt het niet,
-             echte zones — 2 tot 5 min is Quick, 10 tot 15 is ..."): toont nu
-             de naam van de ZONE waar `chosen.minutes` binnenvalt
-             (`zoneFor`, elke minuut in het bereik, niet enkel het exacte
-             preset-getal) — altijd een naam, geen aparte "Custom"-tak meer
-             nodig want de zones dekken samen het volledige bereik.
-             Vervolg ("gaan gebruikers weten waar dat voor is?" → "of i
-             icoon"): "i"-knop ernaast opent de `why`-uitleg uit de data. */}
-          <View style={s.durationPresetRow}>
-            <Text style={s.durationPresetName}>
-              {zoneFor(chosen.minutes)?.name ?? `${presetMinMinutes}–${customMaxMinutes} min`}
-            </Text>
-            {zoneFor(chosen.minutes)?.why && (
-              <Pressable
-                onPress={() => setDurationInfoOpen(true)}
-                hitSlop={10}
-                style={s.durationInfoBtn}
-              >
-                <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-              </Pressable>
-            )}
-          </View>
-        </BlurView>
+        </View>
         </>
         )}
 
@@ -2917,7 +2902,14 @@ export default function BreathSetupScreen() {
       >
         <View style={s.sheetRoot}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setInfoModal(null)} />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+            {/* Operator, 5 okt 2026 ("popup hetzelfde als in Choose your
+               state"): VIBEZCORE-glas, witte tekst, kleur enkel in het icoon. */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             {(() => {
               const modalTech = st.techniques.find(
@@ -2928,9 +2920,15 @@ export default function BreathSetupScreen() {
               return (
                 <>
                   <View style={s.sheetHeader}>
-                    <Text style={[s.modalTitle, { color: accent }]}>
-                      {infoModal?.title}
-                    </Text>
+                    <View style={s.sheetTitleRow}>
+                      <View style={s.sheetBadge}>
+                        <VibezGlass radius={18} tint={st.accent} level="raised" style={StyleSheet.absoluteFill} />
+                        <Icon size={18} color="#ffffff" strokeWidth={2.2} />
+                      </View>
+                      <Text style={[s.modalTitle, s.sheetTitleTxt]} numberOfLines={1}>
+                        {infoModal?.title}
+                      </Text>
+                    </View>
                     <AnimatedPressable
                       onPress={() => setInfoModal(null)}
                       onPressIn={modalGotItPressIn}
@@ -2951,15 +2949,12 @@ export default function BreathSetupScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
                   >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={[s.modalIcon, { backgroundColor: `${accent}22`, marginBottom: 0 }]}>
-                      <Icon size={20} color={accent} strokeWidth={2.2} />
-                    </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
                     {/* Operator, 24 september 2026 (pasted analyse, "Best
                        for: Downshifting" i.p.v. de gebruiker op techniek-
                        naam laten kiezen): `bestFor` bovenaan, naast het
                        icoon — de FUNCTIE van dit protocol, vóór alles. */}
-                    <Text style={[s.modalPattern, { color: accent, letterSpacing: 0.6 }]}>
+                    <Text style={[s.modalPattern, s.sheetEyebrow]}>
                       BEST FOR · {modalTech.bestFor.toUpperCase()}
                     </Text>
                   </View>
@@ -2984,7 +2979,7 @@ export default function BreathSetupScreen() {
                       <View style={s.momentsList}>
                         {modalTech.moments.map((m) => (
                           <View key={m} style={s.momentRow}>
-                            <View style={[s.momentDot, { backgroundColor: accent }]} />
+                            <View style={[s.momentDot, { backgroundColor: 'rgba(255,255,255,0.55)' }]} />
                             <Text style={s.momentTxt}>{m}</Text>
                           </View>
                         ))}
@@ -3000,8 +2995,8 @@ export default function BreathSetupScreen() {
                      blijven als korte technische bijlage onderaan, niet
                      meer als hoofdinhoud. */}
                   <View style={s.modalMetaRow}>
-                    <View style={[s.modalLevelBadge, { borderColor: `${accent}55` }]}>
-                      <Text style={[s.modalLevelTxt, { color: accent }]}>
+                    <View style={[s.modalLevelBadge, { borderWidth: 0, backgroundColor: `${st.accent}38` }]}>
+                      <Text style={[s.modalLevelTxt, { color: '#ffffff' }]}>
                         {modalTech.level}
                       </Text>
                     </View>
@@ -3050,10 +3045,17 @@ export default function BreathSetupScreen() {
             style={StyleSheet.absoluteFill}
             onPress={() => setDurationInfoOpen(false)}
           />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+            {/* Operator, 5 okt 2026 ("popup hetzelfde als in Choose your
+               state"): VIBEZCORE-glas, witte tekst, kleur enkel in het icoon. */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             <View style={s.sheetHeader}>
-              <Text style={[s.modalTitle, { color: accent }]}>
+              <Text style={[s.modalTitle, s.sheetTitleTxt]}>
                 {zoneFor(chosen.minutes)?.name ?? 'This duration'}
               </Text>
               <AnimatedPressable
@@ -3093,7 +3095,7 @@ export default function BreathSetupScreen() {
                 const z = zoneFor(chosen.minutes);
                 if (!z || z.start === z.end) return null;
                 return (
-                  <Text style={[s.modalPattern, { color: accent, letterSpacing: 0.6, marginBottom: 10 }]}>
+                  <Text style={[s.modalPattern, s.sheetEyebrow, { marginBottom: 10 }]}>
                     RANGE · {fmtClock(z.start)}–{fmtClock(z.end)}
                   </Text>
                 );
@@ -3993,6 +3995,41 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   durationInfoBtn: {
     padding: 2,
   },
+  /* Operator, 5 okt 2026 — i onder de stipjes, label + zone boven het wiel. */
+  techInfoBtn: {
+    alignSelf: 'center',
+    marginTop: 10,
+    padding: 4,
+  },
+  durationHead: {
+    alignSelf: 'stretch',
+    marginHorizontal: 30,
+    marginTop: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  durationHeadLbl: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  durationZoneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  durationZoneTxt: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  durationPlain: {
+    alignSelf: 'stretch',
+    marginHorizontal: 26,
+    marginTop: 4,
+  },
   /* ── addToDay (18 september 2026, mockup "kunnen we deze richting
      gaan"): ring bovenaan + 4 tikbare kaartjes (Time/State/Technique/
      Duration) die elk hun eigen kiezer-modal openen, plus een blijvend
@@ -4339,6 +4376,34 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
        tegelijk gefixt (ook de 5 sheets krijgen simpelweg iets extra lucht
        ONDER hun eigen scroll-padding, geen probleem). */
     paddingBottom: 24,
+  },
+  /* Glazen variant voor de twee info-sheets (5 okt 2026). */
+  sheetGlass: {
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+  sheetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+  },
+  sheetBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetTitleTxt: {
+    color: '#ffffff',
+    textAlign: 'left',
+    flexShrink: 1,
+  },
+  sheetEyebrow: {
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 0.6,
   },
   sheetHandle: {
     alignSelf: 'center',

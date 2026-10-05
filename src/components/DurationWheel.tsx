@@ -25,6 +25,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
@@ -128,8 +129,14 @@ export function DurationWheel({
       return;
     }
     listRef.current?.scrollTo({ y: settledIndex * DURATION_WHEEL_ITEM_H, animated: true });
+    /* Operator, 5 okt 2026 (gekozen getal bijna onzichtbaar na een
+       techniek-wissel): staat de lijst al op die plek, of klemt Android de
+       scrollpositie stil bij een kortere lijst, dan komt er geen scroll-
+       event en bleef `scrollY` op de oude plek hangen — de vervaging rekende
+       dan met de verkeerde afstand. Zelf meezetten. */
+    scrollY.value = withTiming(settledIndex * DURATION_WHEEL_ITEM_H, { duration: 250 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, options.length]);
 
   const commit = (offsetY: number) => {
     const idx = Math.min(options.length - 1, Math.max(0, Math.round(offsetY / DURATION_WHEEL_ITEM_H)));
