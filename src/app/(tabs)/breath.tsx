@@ -371,8 +371,12 @@ function StateThumb({
           style={[
             s.thumbOutline,
             {
-              borderColor: on ? '#AEAEB2' : 'rgba(255,255,255,0.22)',
-              borderWidth: on ? 1.5 : 1,
+              /* Operator, 5 okt 2026 ("ringen bij aantikken veel te hard,
+                 lichter, Apple-stijl"): zachte, halfdoorzichtige rand
+                 i.p.v. massief grijs — de selectie draagt al schaal en
+                 helderheid van icoon en naam. */
+              borderColor: on ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.16)',
+              borderWidth: 1,
             },
           ]}
         />
