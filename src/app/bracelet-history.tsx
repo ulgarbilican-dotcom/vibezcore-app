@@ -1113,7 +1113,7 @@ const s = StyleSheet.create({
   weekHeadline: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
+    gap: 3,
     marginTop: 8,
   },
   weekNumber: {
