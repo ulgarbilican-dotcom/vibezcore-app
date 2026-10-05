@@ -505,7 +505,9 @@ export default function BraceletAgendaScreen() {
                     onPress={() => tryItem(next.mode as BraceletMode, next.durationMinutes)}
                     accessibilityLabel={`Start ${getModeMeta(next.mode as BraceletMode).name} now`}
                   >
-                    <Text style={s.tapStartTxt}>Tap to start</Text>
+                    <Text style={s.tapStartTxt}>
+                      {modeItems.length > 1 ? `Tap to start · ${fmtTime(next.reminderAt)}` : 'Tap to start'}
+                    </Text>
                   </Pressable>
                 );
               })()}
@@ -555,12 +557,12 @@ export default function BraceletAgendaScreen() {
         {plan ? (
           <View style={s.bottomActions}>
             <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
-              <VibezGlass radius={22} style={StyleSheet.absoluteFill} />
+              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
               <Text style={s.pillBtnTxt}>Check your protocol</Text>
             </Pressable>
             <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-set-day' as never)}>
-              <VibezGlass radius={22} style={StyleSheet.absoluteFill} />
-              <Pencil size={14} color="rgba(255,255,255,0.75)" strokeWidth={2.2} />
+              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
+              <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.pillBtnTxt}>Change protocol</Text>
             </Pressable>
           </View>
@@ -688,12 +690,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 20,
-    height: 44,
-    borderRadius: 22,
+    paddingHorizontal: 16,
+    height: 36,
+    borderRadius: 18,
     overflow: 'hidden',
   },
-  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.9)' },
+  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
   /* Zelfde datumregel als agenda.tsx (breathwork). */
   dateRow: {
     flexDirection: 'row',
@@ -746,7 +748,9 @@ const s = StyleSheet.create({
   /* Gekozen = zacht lichter vlak, geen harde witte rand (operator, 5 okt
      2026: "bij aantikken toont Apple geen duidelijke omlijning"). */
   card: {
-    aspectRatio: 1.45,
+    /* Terug vierkant, zelfde formaat als het breathwork-plan (operator,
+       5 okt 2026: "de kaarten moesten groter"). */
+    aspectRatio: 1,
     flexDirection: 'column',
     justifyContent: 'space-between',
     alignItems: 'flex-start',

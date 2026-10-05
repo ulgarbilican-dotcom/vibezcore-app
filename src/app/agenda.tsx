@@ -804,6 +804,42 @@ export default function AgendaScreen() {
               />
             );
           })()}
+          {/* Operator, 5 okt 2026: "Tap to start" in de ring voor de
+              aangetikte toestand — start de EERSTVOLGENDE sessie van die
+              toestand vandaag (anders de eerste). Meerdere momenten: het uur
+              staat erbij; een ander moment start je via zijn bolletje. */}
+          {filterMode !== null && (() => {
+            const items = (selectedDay?.items ?? [])
+              .filter((it) => it.state === filterMode)
+              .sort((a, b) => a.reminderAt - b.reminderAt);
+            if (items.length === 0) return null;
+            const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+            const next =
+              selectedKey === todayKey
+                ? (items.find((it) => it.reminderAt >= nowM) ?? items[0])
+                : items[0];
+            return (
+              <Pressable
+                style={s.tapStartZone}
+                onPress={() =>
+                  router.push({
+                    pathname: '/breath-session',
+                    params: {
+                      ...claimFreeSessionParam(),
+                      state: next.state,
+                      minutes: String(next.minutes),
+                      autostart: '1',
+                    },
+                  })
+                }
+                accessibilityLabel={`Start ${titleCase(BREATH_STATES[next.state].eyebrow)} now`}
+              >
+                <Text style={s.tapStartTxt}>
+                  {items.length > 1 ? `Tap to start · ${fmtAgendaTime(next.reminderAt)}` : 'Tap to start'}
+                </Text>
+              </Pressable>
+            );
+          })()}
         </Animated.View>
 
         {/* Operator, 1 okt 2026 ("your daily plan principe van bracelet
@@ -1148,6 +1184,26 @@ const s = StyleSheet.create({
   monthDot: { width: 5, height: 5, borderRadius: 2.5 },
 
   ringWrap: { alignItems: 'center', marginBottom: 8, position: 'relative' },
+  /* "Tap to start" — onderaan het middenvlak van de ring (zelfde als
+     bracelet-agenda.tsx). */
+  tapStartZone: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '50%',
+    marginTop: -75,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 10,
+  },
+  tapStartTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.75)',
+  },
 
   /* Operator, 1 okt 2026 ("kaarten-principe van bracelet toepassen"):
      1-op-1 bracelet-agenda.tsx's `cardGrid`/`cardSlot`/`card`/`cardOn`/
@@ -1162,11 +1218,11 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 12,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  cardOn: { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)' },
+  /* Gekozen = zacht lichter vlak, geen harde rand — zelfde als het State
+     Control-plan (operator, 5 okt 2026). */
+  cardOn: { backgroundColor: 'rgba(255,255,255,0.14)' },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch' },
   cardDot: { width: 15, height: 15, borderRadius: 7.5 },
   cardTxt: { fontFamily: BrandFonts.medium, fontSize: 12.5, lineHeight: 15, color: 'rgba(255,255,255,0.65)' },
