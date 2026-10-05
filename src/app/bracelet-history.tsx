@@ -782,7 +782,8 @@ function MilestoneChip({
      unlocked is. Locked blijft neutraal donker. */
   const unlockedChipStyle = milestone.unlocked
     ? {
-        borderColor: `${milestone.color}80`, // 50% alpha border
+        /* Operator, 5 okt 2026 ("randen veel te hard"): 50% → 20%. */
+        borderColor: `${milestone.color}33`, // 20% alpha border
         backgroundColor: `${milestone.color}1A`, // 10% alpha fill
         shadowColor: milestone.color,
       }
