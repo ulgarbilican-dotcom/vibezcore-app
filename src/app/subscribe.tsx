@@ -1298,9 +1298,9 @@ export default function SubscribeScreen() {
              komt eerst, daarna de andere twee. */}
           <Text style={s.sub}>
             {params.returnTo === 'state-control'
-              ? 'Every State Control session — every haptic state, any duration — plus all 64 guided breathwork sessions and the full VIBEZCORE Audio Library. Cancel anytime.'
+              ? 'Every State Control session — every haptic state, any duration — plus full VIBEZCORE Breathwork and the full VIBEZCORE Audio Library. Cancel anytime.'
               : params.returnTo === 'audio'
-                ? 'The full VIBEZCORE Audio Library, plus all 64 guided breathwork sessions and every State Control session. Cancel anytime.'
+                ? 'The full VIBEZCORE Audio Library, plus full VIBEZCORE Breathwork and every State Control session. Cancel anytime.'
                 : 'All 64 guided sessions — every state, every rhythm — plus every State Control session and the full VIBEZCORE Audio Library. Cancel anytime.'}
           </Text>
 

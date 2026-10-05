@@ -176,7 +176,7 @@ function benefitLines(context: PaywallContext, audioWorth: string | undefined): 
     'Voice, haptic and visual guidance',
     'Soundscapes, goals and your daily plan',
   ];
-  const breathworkShort = 'All 64 guided breathwork sessions';
+  const breathworkShort = 'Full VIBEZCORE Breathwork included';
   const stateControlShort = 'State Control — every haptic state, any duration';
   if (context === 'state-control') return [...stateControl, breathworkShort, audio];
   if (context === 'audio') return ['Full VIBEZCORE Audio Library', breathworkShort, stateControlShort];
