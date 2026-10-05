@@ -12,7 +12,6 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
-import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -28,7 +27,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showVibezAlert } from '@/components/VibezAlert';
-import { StatRing } from '@/components/StatRing';
+import { WeekSummaryCard } from '@/components/WeekSummaryCard';
+import VibezGlass from '@/components/VibezGlass';
+import StateGlyph from '@/components/StateGlyph';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -37,15 +38,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-/* Operator, 11 september 2026: "voorstander van ringen die vullen" — Apple
-   Fitness-stijl. Vervangt het losse hero-getal: een volle ring (spoor +
-   gevulde boog) met het totale-tijd-cijfer IN het midden, gevuld op basis
-   van hoeveel van de laatste 7 dagen een sessie hadden — dezelfde "hoofd-
-   boodschap eerst, cijfers als detail eronder"-volgorde die Apple's eigen
-   Activity-ringen gebruiken. Tekencode zit nu in het gedeelde
-   `components/StatRing.tsx` (ook gebruikt door (tabs)/activity.tsx). */
-const RING_SIZE = 148;
 
 /* Naam en kleur per modus komen uit dezelfde bron als de keuzepagina en het
    sessiescherm. Hier stond een handgeschreven kopie "om geen cross-file dep
@@ -63,13 +55,31 @@ const STATE_ORDER: BreathStateKey[] = [
   'rest',
 ];
 
-const PATTERN_INFO: Record<string, { name: string; color: string }> =
-  Object.fromEntries(
-    Object.values(BREATH_STATES).map((st) => [
-      st.key,
-      { name: st.eyebrow, color: st.accent },
-    ]),
+/** "Calm Control", "Clarity & Relax" — de modusnaam in gewone schrijfwijze. */
+function stateName(key: BreathStateKey): string {
+  return BREATH_STATES[key].eyebrow
+    .split(' ')
+    .map((w) => (w.length > 1 ? w.charAt(0) + w.slice(1).toLowerCase() : w))
+    .join(' ');
+}
+
+/** Het ritme binnen de toestand (bv. "Box breathing"), als dat bewaard is. */
+function techniqueName(entry: BreathHistoryEntry): string | null {
+  if (!entry.techniqueKey) return null;
+  const st = BREATH_STATES[entry.key as BreathStateKey];
+  return st?.techniques.find((t) => t.key === entry.techniqueKey)?.name ?? null;
+}
+
+/* Toestand-icoon in een getinte glazen badge — hetzelfde teken als op de
+   Breath-tab en in de plannen. De enige kleur in de lijsten. */
+function StateBadge({ stateKey }: { stateKey: BreathStateKey }) {
+  return (
+    <View style={styles.badgeSlot}>
+      <VibezGlass radius={10} tint={BREATH_STATES[stateKey].accent} level="raised" style={StyleSheet.absoluteFill} />
+      <StateGlyph stateKey={stateKey} size={16} color="#ffffff" strokeWidth={1.9} />
+    </View>
   );
+}
 
 /* ── De laatste zeven dagen ─────────────────────────────────────────────
    Van oud naar nieuw, met vandaag rechts. Berekend uit dezelfde historiek als
@@ -80,6 +90,7 @@ function buildWeek(history: BreathHistoryEntry[]) {
     dateKey: string;
     label: string;
     min: number;
+    sec: number;
     frac: number;
     /** Elke toestand van die dag, met zijn eigen tijd. */
     segments: { key: string; color: string; sec: number }[];
@@ -111,6 +122,7 @@ function buildWeek(history: BreathHistoryEntry[]) {
       dateKey: key,
       label: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()],
       min: Math.round(sec / 60),
+      sec,
       frac: 0,
       segments,
       today: i === 0,
@@ -137,21 +149,6 @@ function buildWeek(history: BreathHistoryEntry[]) {
 function humanDur(sec: number): string {
   if (sec < 60) return `${Math.max(1, Math.round(sec))} sec`;
   return `${Math.round(sec / 60)} min`;
-}
-
-function formatMMSS(sec: number): string {
-  const total = Math.max(0, Math.round(sec));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function formatTotalTime(sec: number): { num: string; unit: string } {
-  if (sec < 60) return { num: `${Math.round(sec)}`, unit: 'sec' };
-  const totalMin = sec / 60;
-  if (totalMin < 60) return { num: `${Math.round(totalMin)}`, unit: 'min' };
-  const hours = totalMin / 60;
-  return { num: hours.toFixed(1), unit: 'hours' };
 }
 
 /** YYYY-MM-DD in lokale tijd — groepeersleutel voor de dag-secties
@@ -247,7 +244,7 @@ function computeStats(history: BreathHistoryEntry[]): StatsResult {
   }
   const patternCounts = Array.from(byKey.entries())
     .map(([key, v]) => ({ key, ...v }))
-    .sort((a, b) => b.count - a.count); /* meest gebruikt eerst */
+    .sort((a, b) => b.totalSec - a.totalSec); /* meeste tijd eerst */
 
   return {
     totalSec,
@@ -311,8 +308,10 @@ export default function BreathHistoryScreen() {
   const history = useBreathHistory();
   const week7 = useMemo(() => buildWeek(history), [history]);
   const stats = useMemo(() => computeStats(history), [history]);
-  const totalTime = formatTotalTime(stats.totalSec);
-  const daysActive = week7.filter((d) => d.min > 0).length;
+  const weekSessions = useMemo(() => {
+    const keys = new Set(week7.map((d) => d.dateKey));
+    return history.filter((e) => keys.has(new Date(e.ts).toDateString())).length;
+  }, [history, week7]);
 
   /* Sorted history (recent eerst) — useBreathHistory geeft vanaf
      nieuwste, maar we sorteren opnieuw om robuust te zijn tegen
@@ -419,166 +418,44 @@ export default function BreathHistoryScreen() {
           </View>
         ) : (
           <>
-            {/* ── Hero stat: total practice time ──
-                Operator, 11 september 2026: "weergave moet hypermodern" —
-                vlakke paneel-achtergrond vervangen door een zachte
-                accentkleur-gloed (diagonaal verloop, zelfde soort
-                "lichtbron"-taal als de countdown-overlay op
-                breath-session.tsx), zodat het hero-getal boven iets
-                lijkt te zweven i.p.v. in een effen kader te staan. */}
-            <View style={styles.hero}>
-              <ExpoGradient
-                colors={[`${AudioAccent}26`, 'rgba(255,255,255,0)']}
-                start={{ x: 0.15, y: 0 }}
-                end={{ x: 0.85, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.heroEyebrow}>TOTAL PRACTICE</Text>
-              <View style={styles.ringWrap}>
-                <StatRing progress={daysActive / 7} accent={AudioAccent} size={RING_SIZE} />
-                <View style={styles.ringCenter} pointerEvents="none">
-                  <View style={styles.heroNumRow}>
-                    <Text style={styles.heroNum}>{totalTime.num}</Text>
-                    <Text style={styles.heroUnit}>{totalTime.unit}</Text>
-                  </View>
-                </View>
-              </View>
-              <Text style={styles.heroSub}>
-                {stats.totalSessions} session{stats.totalSessions === 1 ? '' : 's'} · {formatMMSS(stats.avgSessionSec)} avg
-              </Text>
-              <Text style={styles.ringCaption}>
-                {daysActive}/7 days this week
-              </Text>
-            </View>
+            {/* Operator, 5 okt 2026 ("Your Practice volledig herstructureren
+                zoals Apple — te veel kleuren, moet superduidelijk"): ring,
+                drie gekleurde tegels en de veelkleurige weekbalken zijn weg.
+                Nu dezelfde opbouw als de State Control-geschiedenis: één
+                weekkaart (één accentkleur), dan per toestand, dan alle
+                sessies. Kleur zit enkel nog in de toestand-icoontjes. */}
+            <WeekSummaryCard
+              days={week7.map((d) => ({ key: d.dateKey, letter: d.label, minutes: d.sec / 60 }))}
+              sessions={weekSessions}
+              streak={stats.streakDays}
+              allTimeMinutes={stats.totalSec / 60}
+            />
 
-            {/* ── Stats strip: 3 small cards ──
-                Elk kaartje krijgt nu een lichte tint van zijn EIGEN
-                statistiek-kleur i.p.v. één uniforme, kleurloze achtergrond
-                voor alle drie — het getal en de kaart eronder spreken
-                dezelfde kleurtaal i.p.v. dat de kleur enkel op het cijfer
-                zelf zit. */}
-            <View style={styles.statsStrip}>
-              <View style={[styles.statCard, { backgroundColor: 'rgba(255,159,10,0.08)', borderColor: 'rgba(255,159,10,0.22)' }]}>
-                <Text style={[styles.statNum, { color: '#FF9F0A' }]}>
-                  {stats.streakDays}
-                </Text>
-                <Text style={styles.statLbl}>DAY STREAK</Text>
-              </View>
-              <View style={[styles.statCard, { backgroundColor: `${Brand.success}14`, borderColor: `${Brand.success}38` }]}>
-                <Text style={[styles.statNum, { color: Brand.success }]}>
-                  {stats.completionRate}%
-                </Text>
-                <Text style={styles.statLbl}>COMPLETED</Text>
-              </View>
-              <View style={[styles.statCard, { backgroundColor: `${AudioAccent}14`, borderColor: `${AudioAccent}38` }]}>
-                <Text style={[styles.statNum, { color: AudioAccent }]}>
-                  {formatMMSS(stats.avgSessionSec)}
-                </Text>
-                <Text style={styles.statLbl}>AVG SESSION</Text>
-              </View>
-            </View>
-
-            {/* ── DE WEEK ────────────────────────────────────────────
-                Zeven balkjes, één per dag, in de kleur van de toestand waar
-                die dag het langst aan besteed is. Dit is wat er ontbrak: de
-                cijfers erboven zeggen hoeveel je in totaal deed, maar niet
-                hoe het verloopt. Een reeks van vier dagen en dan drie lege
-                zie je hier in één oogopslag, en dat is precies de informatie
-                waar iemand zijn gewoonte op bijstuurt.
-
-                De hoogste dag bepaalt de schaal, dus de vorm klopt altijd —
-                ook in een week van drie minuten. Lege dagen krijgen een
-                streepje in plaats van niets: een gat hoort zichtbaar te zijn,
-                anders lijkt de week korter dan hij was. */}
-            {/* De kop noemt de eenheid. "LAST 7 DAYS" met een 1 erboven laat
-                open of dat één minuut of één sessie is (operator, 7 augustus
-                2026: "het is niet duidelijk wat die cijfers betekenen"). */}
-            <Text style={styles.sectionLbl}>Minutes per day · last 7 days</Text>
-            <View style={styles.week}>
-              {week7.map((d) => (
-                <View key={d.dateKey} style={styles.weekCol}>
-                  <Text style={styles.weekMin}>{d.min > 0 ? d.min : ''}</Text>
-                  {/* Het getal staat BOVEN de balk en het spoor eronder loopt
-                      altijd door tot de volle hoogte. Zo zie je waartegen je
-                      kijkt: een korte balk in een lang spoor is een korte dag,
-                      en dat is af te lezen zonder de andere dagen erbij. */}
-                  <View style={styles.weekBarBox}>
-                    <View
-                      style={[
-                        styles.weekBar,
-                        { height: d.min > 0 ? Math.max(3, d.frac * 76) : 0 },
-                      ]}
-                    >
-                      {d.segments.map((seg) => (
-                        <View
-                          key={seg.key}
-                          style={{
-                            flexGrow: seg.sec,
-                            flexBasis: 0,
-                            backgroundColor: seg.color,
-                          }}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  <Text style={[styles.weekDay, d.today && styles.weekToday]}>
-                    {d.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {/* ── Waar je tijd heenging ──────────────────────────────
-                Herzien (operator, 8 augustus 2026: "ik heb geen idee wat ik
-                hier zie"). Het oude blok had drie losse gegevens per rij —
-                aantal rechts, balk in het midden, "5:29 total" eronder — en
-                geen daarvan verklaarde de andere. Nu draagt één rij één
-                verhaal: naam, percentage groot rechts (de balk is exact dat
-                percentage), en eronder in gewone taal wat het was. Niets om
-                te ontcijferen. */}
-            <Text style={styles.sectionLbl}>Where your time went</Text>
-            <View style={styles.patternList}>
-              {stats.patternCounts.map((pc) => {
-                const meta = PATTERN_INFO[pc.key];
-                if (!meta) return null;
-                const pct =
-                  stats.totalSec > 0
-                    ? Math.round((pc.totalSec / stats.totalSec) * 100)
-                    : 0;
+            <Text style={styles.sectionLbl}>By state</Text>
+            <View style={styles.group}>
+              {stats.patternCounts.map((pc, i) => {
+                const st = BREATH_STATES[pc.key as BreathStateKey];
+                if (!st) return null;
                 return (
-                  <View key={pc.key} style={styles.patternRow}>
-                    <View
-                      style={[
-                        styles.patternDot,
-                        { backgroundColor: meta.color, shadowColor: meta.color },
-                      ]}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.patternHead}>
-                        <Text style={styles.patternName}>{meta.name}</Text>
-                        <Text style={[styles.patternPct, { color: meta.color }]}>
-                          {pct}%
-                        </Text>
-                      </View>
-                      <View style={styles.patternBarTrack}>
-                        <View
-                          style={[
-                            styles.patternBarFill,
-                            { width: `${pct}%`, backgroundColor: meta.color },
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.patternMeta}>
-                        {humanDur(pc.totalSec)} across {pc.count} session
-                        {pc.count === 1 ? '' : 's'}
+                  <View
+                    key={pc.key}
+                    style={styles.groupRow}
+                  >
+                    {i > 0 && <View style={styles.sep} />}
+                    <StateBadge stateKey={st.key} />
+                    <View style={styles.groupRowMain}>
+                      <Text style={styles.rowTitle}>{stateName(st.key)}</Text>
+                      <Text style={styles.rowSub}>
+                        {pc.count} session{pc.count === 1 ? '' : 's'}
                       </Text>
                     </View>
+                    <Text style={styles.rowValue}>{humanDur(pc.totalSec)}</Text>
                   </View>
                 );
               })}
             </View>
 
-            {/* ── All sessions, per dag ── */}
+            {/* ── Alle sessies, per dag ── */}
             <Text style={styles.sectionLbl}>All sessions</Text>
             {dayGroups.map((group) => {
               const open = effectiveOpenDays.has(group.key);
@@ -594,34 +471,29 @@ export default function BreathHistoryScreen() {
                   />
 
                   {open && (
-                    <View style={styles.sessionsList}>
+                    <View style={styles.group}>
                       {group.entries.map((entry, i) => {
-                        const meta = PATTERN_INFO[entry.key] ?? { name: entry.name, color: Brand.text };
+                        const st = BREATH_STATES[entry.key as BreathStateKey];
                         const isCompleted = entry.completed !== false;
                         return (
                           <View
                             key={`${entry.ts}-${i}`}
-                            style={[
-                              styles.sessionRow,
-                              i === group.entries.length - 1 && { borderBottomWidth: 0 },
-                            ]}
+                            style={styles.groupRow}
                           >
-                            <View
-                              style={[
-                                styles.sessionDot,
-                                { backgroundColor: meta.color, shadowColor: meta.color },
-                              ]}
-                            />
-                            <View style={{ flex: 1 }}>
-                              <View style={styles.sessionHead}>
-                                <Text style={styles.sessionName}>{entry.name}</Text>
-                                {!isCompleted && (
-                                  <Text style={styles.sessionPartialTag}>PARTIAL</Text>
-                                )}
-                              </View>
-                              <Text style={styles.sessionMeta}>
-                                {formatTime(entry.ts)} · {humanDur(entry.durSec)} · {entry.rounds} round{entry.rounds === 1 ? '' : 's'}
+                            {i > 0 && <View style={styles.sep} />}
+                            {st ? <StateBadge stateKey={st.key} /> : <View style={styles.badgeSlot} />}
+                            <View style={styles.groupRowMain}>
+                              <Text style={styles.rowTitle} numberOfLines={1}>
+                                {st ? stateName(st.key) : entry.name}
                               </Text>
+                              <Text style={styles.rowSub} numberOfLines={1}>
+                                {formatTime(entry.ts)}
+                                {techniqueName(entry) ? ` · ${techniqueName(entry)}` : ''}
+                              </Text>
+                            </View>
+                            <View style={styles.rowValueCol}>
+                              <Text style={styles.rowValue}>{humanDur(entry.durSec)}</Text>
+                              {!isCompleted && <Text style={styles.rowFlag}>Ended early</Text>}
                             </View>
                           </View>
                         );
@@ -654,9 +526,8 @@ export default function BreathHistoryScreen() {
               onPressIn={onClearBtnPressIn}
               onPressOut={onClearBtnPressOut}
               style={[styles.clearBtn, clearBtnPressStyle]}
-              android_ripple={{ color: 'rgba(239,68,68,0.10)' }}
             >
-              <Text style={styles.clearBtnTxt}>CLEAR PRACTICE HISTORY</Text>
+              <Text style={styles.clearBtnTxt}>Clear practice history</Text>
             </AnimatedPressable>
 
             <View style={{ height: 24 }} />
@@ -673,20 +544,17 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
 
   /* Clear history knop — subtle destructive action */
+  /* Operator, 5 okt 2026: gewone rode tekstknop zoals Apple's
+     "Delete All Data" — geen rand of vlak. */
   clearBtn: {
     alignSelf: 'center',
     marginTop: 28,
     paddingHorizontal: 16,
     paddingVertical: 11,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.32)',
-    backgroundColor: 'rgba(239,68,68,0.06)',
   },
   clearBtnTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 11,
-    letterSpacing: 1.4,
+    fontFamily: BrandFonts.medium,
+    fontSize: 15,
     color: '#ef4444',
   },
 
@@ -719,218 +587,79 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5, color: '#0a0a0a',
   },
 
-  /* Hero stat */
-  hero: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-    borderRadius: 16,
-    backgroundColor: Brand.panel,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    /* Klemt de accentkleur-gloed (ExpoGradient) af tot binnen de
-       afgeronde kaart-vorm. */
-    overflow: 'hidden',
-  },
-  heroEyebrow: {
-    fontFamily: BrandFonts.bold, fontSize: 10,
-    letterSpacing: 2, color: AudioAccent,
-    marginBottom: 10,
-  },
-  /* Ring — Apple Fitness-stijl, gevuld op basis van dagen-met-sessie deze
-     week. Het cijfer verhuist van los-in-de-kaart naar IN de ring, dus
-     kleiner dan voorheen zodat "1.5 / hours" nog ruim binnen de cirkel
-     past (zie RING_SIZE hierboven). */
-  ringWrap: {
-    width: RING_SIZE, height: RING_SIZE,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
-  },
-  ringCenter: { position: 'absolute', alignItems: 'center' },
-  ringCaption: {
-    fontFamily: BrandFonts.semibold, fontSize: 11,
-    letterSpacing: 0.3, color: Brand.textDim,
-    marginTop: 6,
-  },
-  heroNumRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 4,
-  },
-  heroNum: {
-    fontFamily: BrandFonts.black, fontSize: 32,
-    color: Brand.text, letterSpacing: -1,
-    lineHeight: 34,
-  },
-  heroUnit: {
-    fontFamily: BrandFonts.semibold, fontSize: 12,
-    color: Brand.textDim, letterSpacing: -0.2,
-  },
-  heroSub: {
-    fontFamily: BrandFonts.medium, fontSize: 12.5,
-    color: Brand.textDim, letterSpacing: 0.3,
-  },
-
-  /* Stats strip */
-  statsStrip: {
-    flexDirection: 'row', gap: 10, marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 6,
-    backgroundColor: 'rgba(255,255,255,0.025)',
-    borderWidth: 1, borderColor: Brand.border,
-    borderRadius: 12, alignItems: 'center',
-  },
-  statNum: {
-    fontFamily: BrandFonts.black, fontSize: 22,
-    letterSpacing: -0.5, marginBottom: 4,
-    lineHeight: 24,
-  },
-  statLbl: {
-    fontFamily: BrandFonts.bold, fontSize: 8.5,
-    letterSpacing: 1.4, color: Brand.textDim,
-  },
-
-  /* Section labels */
-  /* Gewone tekst in een rustig grijs — zelfde stem als de kaartkoppen op
-     Activity. Blauwe gespatieerde kapitalen schreeuwden hier het hardst van
-     de hele pagina, terwijl een sectielabel juist het stilste hoort te zijn. */
+  /* Section labels — stil grijs, zoals de kaartkoppen op Activity. */
   sectionLbl: {
-    fontFamily: BrandFonts.medium, fontSize: 12.5,
-    letterSpacing: 0, color: 'rgba(255,255,255,0.4)',
-    marginBottom: 10, marginLeft: 2,
+    fontFamily: BrandFonts.semibold, fontSize: 13,
+    color: 'rgba(255,255,255,0.45)',
+    marginTop: 26, marginBottom: 8, marginLeft: 4,
   },
 
-  /* Per-pattern */
-  week: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 4,
-    marginBottom: 22,
-  },
-  weekCol: { alignItems: 'center', flex: 1, gap: 4 },
-  /* Hetzelfde spoor als op Activity: één taal voor dezelfde grafiek, anders
-     lijken het twee metingen van twee verschillende dingen. */
-  weekBarBox: {
-    height: 76,
-    width: 18,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  weekBar: { width: '100%', borderRadius: 6, overflow: 'hidden' },
-  weekMin: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 10,
-    color: Brand.textDim,
-    height: 12,
-  },
-  weekDay: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 10,
-    letterSpacing: 0.6,
-    color: 'rgba(255,255,255,0.34)',
-  },
-  weekToday: { color: Brand.text },
-
-  patternList: {
+  /* Gegroepeerde lijst (Apple inset-grouped): één paneel, rijen met een
+     dunne scheidingslijn die bij de tekst begint, niet bij de rand. */
+  group: {
     backgroundColor: Brand.panel,
-    borderWidth: 1, borderColor: Brand.border,
     borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 6,
-    marginBottom: 24,
+    paddingLeft: 14,
   },
-  patternRow: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 12, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 11,
+    paddingRight: 14,
   },
-  patternDot: {
-    width: 10, height: 10, borderRadius: 5,
-    marginTop: 4,
-    shadowOpacity: 0.6, shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 6, elevation: 3,
+  /* Scheidingslijn begint bij de tekst, niet bij de rand (zoals iOS). */
+  sep: {
+    position: 'absolute',
+    top: 0,
+    left: 44,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  patternHead: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 6,
+  groupRowMain: { flex: 1, minWidth: 0 },
+  badgeSlot: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  patternName: {
-    fontFamily: BrandFonts.semibold, fontSize: 14,
+  rowTitle: {
+    fontFamily: BrandFonts.semibold, fontSize: 15,
     color: Brand.text,
   },
-  patternCount: {
-    fontFamily: BrandFonts.bold, fontSize: 11,
-    letterSpacing: 0.5, color: Brand.textDim,
+  rowSub: {
+    fontFamily: BrandFonts.regular, fontSize: 13,
+    color: Brand.textDim, marginTop: 1,
   },
-  patternPct: {
-    fontFamily: BrandFonts.extrabold,
-    fontSize: 15,
-  },
-  patternBarTrack: {
-    height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    overflow: 'hidden', marginBottom: 5,
-  },
-  patternBarFill: { height: 4, borderRadius: 2 },
-  patternMeta: {
-    fontFamily: BrandFonts.regular, fontSize: 11,
-    color: Brand.textDim, letterSpacing: 0.2,
+  rowValue: {
+    fontFamily: BrandFonts.medium, fontSize: 15,
+    color: Brand.textDim,
+    fontVariant: ['tabular-nums'],
   },
 
-  /* Sessions list */
-  dayGroup: { marginBottom: 10 },
+  rowValueCol: { alignItems: 'flex-end' },
+  rowFlag: {
+    fontFamily: BrandFonts.regular, fontSize: 12,
+    color: 'rgba(255,255,255,0.4)', marginTop: 1,
+  },
+
+  /* Dagkop boven elke dag */
+  dayGroup: { marginBottom: 6 },
   dayHead: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 8, paddingVertical: 10, paddingHorizontal: 2,
+    gap: 8, paddingVertical: 10, paddingHorizontal: 4,
   },
   dayHeadLbl: {
-    fontFamily: BrandFonts.semibold, fontSize: 13.5,
+    fontFamily: BrandFonts.semibold, fontSize: 14,
     color: Brand.text,
   },
   dayHeadMeta: {
     flex: 1,
     textAlign: 'right',
-    fontFamily: BrandFonts.regular, fontSize: 11.5,
+    fontFamily: BrandFonts.regular, fontSize: 13,
     color: Brand.textDim,
-  },
-  sessionsList: {
-    backgroundColor: Brand.panel,
-    borderWidth: 1, borderColor: Brand.border,
-    borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 4,
-  },
-  sessionRow: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 12, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  sessionDot: {
-    width: 10, height: 10, borderRadius: 5,
-    marginTop: 4,
-    shadowOpacity: 0.6, shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 6, elevation: 3,
-  },
-  sessionHead: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 8, marginBottom: 2,
-  },
-  sessionName: {
-    fontFamily: BrandFonts.semibold, fontSize: 14,
-    color: Brand.text,
-  },
-  sessionPartialTag: {
-    fontFamily: BrandFonts.bold, fontSize: 8.5,
-    letterSpacing: 1.2, color: '#FF9F0A',
-    backgroundColor: 'rgba(255,159,10,0.12)',
-    paddingHorizontal: 6, paddingVertical: 1.5,
-    borderRadius: 4,
-  },
-  sessionMeta: {
-    fontFamily: BrandFonts.regular, fontSize: 12,
-    color: Brand.textDim, letterSpacing: 0.2,
   },
 });

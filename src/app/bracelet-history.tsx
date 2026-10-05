@@ -16,6 +16,7 @@
    src/app/_layout.tsx als losse Stack.Screen.
    ─────────────────────────────────────────────────────────────────── */
 
+import { WeekSummaryCard } from '@/components/WeekSummaryCard';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Brand, BrandFonts, AudioAccent, AudioAccentLight } from '@/constants/theme';
 import {
@@ -257,84 +258,20 @@ function SessionRow({ rec }: { rec: SessionRecord }) {
    echt deed i.p.v. hoe je dag zich verhoudt tot je beste dag (één dag
    met sessies was voorheen altijd 100% vol). Vervangt de losse tegels
    Today / Day streak / Min total en de oude 7-dagengrafiek. */
-/* Ronde schaal met een rond middengetal (0 · 30 · 60 …). */
-const AXIS_STEPS = [30, 60, 90, 120, 180, 240];
-
-function niceAxisMax(maxDay: number): number {
-  return AXIS_STEPS.find((v) => v >= maxDay) ?? Math.ceil(maxDay / 60) * 60;
-}
-
+/* Operator, 5 okt 2026: de kaart zelf is gedeeld met Your Practice
+   (components/WeekSummaryCard) zodat beide geschiedenissen één taal
+   spreken. */
 function WeekSummary({ stats, sessions }: { stats: BraceletStats; sessions: SessionRecord[] }) {
   const days = stats.last7Days;
-  const weekMinutes = days.reduce((sum, d) => sum + d.minutes, 0);
   const weekKeys = new Set(days.map((d) => d.dayKey));
   const weekSessions = sessions.filter((r) => weekKeys.has(getDayKey(new Date(r.endedAt)))).length;
-  const axisMax = niceAxisMax(Math.max(0, ...days.map((d) => d.minutes)));
-  const sub = [
-    `${weekSessions} ${weekSessions === 1 ? 'session' : 'sessions'}`,
-    stats.streak > 0 ? `${stats.streak}-day streak` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
   return (
-    <View style={s.weekCard}>
-      <Text style={s.weekEyebrow}>THIS WEEK</Text>
-      <View style={s.weekHeadline}>
-        <Text style={s.weekNumber}>{weekMinutes}</Text>
-        <Text style={s.weekUnit}>min</Text>
-      </View>
-      <Text style={s.weekSub}>{sub}</Text>
-
-      <View style={s.weekChart}>
-        {/* Hulplijnen + schaal rechts (0 · midden · max), zoals Apple. */}
-        {[1, 0.5, 0].map((f) => (
-          <View key={f} style={[s.weekGridLine, { bottom: `${f * 100}%` }]}>
-            <View style={s.weekGridRule} />
-            <Text style={s.weekGridLabel}>{Math.round(axisMax * f)}</Text>
-          </View>
-        ))}
-        <View style={s.weekBars}>
-          {days.map((d, i) => {
-            const isToday = i === days.length - 1;
-            const pct = d.minutes > 0 ? Math.max(3, (d.minutes / axisMax) * 100) : 0;
-            return (
-              <View key={d.dayKey} style={s.weekBarCol}>
-                <View style={s.weekBarSlot}>
-                  {pct > 0 && (
-                    <View
-                      style={[
-                        s.weekBarFill,
-                        {
-                          height: `${pct}%`,
-                          backgroundColor: isToday ? AudioAccentLight : AudioAccent,
-                        },
-                      ]}
-                    />
-                  )}
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-      <View style={s.weekDayRow}>
-        {days.map((d, i) => (
-          <Text
-            key={d.dayKey}
-            style={[s.weekDayLabel, i === days.length - 1 && s.weekDayLabelToday]}
-            numberOfLines={1}
-          >
-            {i === days.length - 1 ? 'Today' : d.dayLabel.slice(0, 1)}
-          </Text>
-        ))}
-      </View>
-
-      <View style={s.weekFooter}>
-        <Text style={s.weekFooterLabel}>All time</Text>
-        <Text style={s.weekFooterValue}>{stats.totalMinutes} min</Text>
-      </View>
-    </View>
+    <WeekSummaryCard
+      days={days.map((d) => ({ key: d.dayKey, letter: d.dayLabel.slice(0, 1), minutes: d.minutes }))}
+      sessions={weekSessions}
+      streak={stats.streak}
+      allTimeMinutes={stats.totalMinutes}
+    />
   );
 }
 
@@ -1095,130 +1032,6 @@ export default function BraceletHistory() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
-  /* ── WeekSummary ───────────────────────────────────────────────── */
-  weekCard: {
-    borderRadius: 18,
-    backgroundColor: Brand.panel,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 18,
-  },
-  weekEyebrow: {
-    color: Brand.textDim,
-    fontSize: 11,
-    fontFamily: BrandFonts.bold,
-    letterSpacing: 1.5,
-  },
-  weekHeadline: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-    marginTop: 8,
-  },
-  weekNumber: {
-    color: Brand.text,
-    fontSize: 44,
-    lineHeight: 48,
-    fontFamily: BrandFonts.extrabold,
-    letterSpacing: -1,
-    fontVariant: ['tabular-nums'],
-  },
-  weekUnit: {
-    color: Brand.textDim,
-    fontSize: 18,
-    fontFamily: BrandFonts.semibold,
-  },
-  weekSub: {
-    color: Brand.textDim,
-    fontSize: 14,
-    fontFamily: BrandFonts.medium,
-    marginTop: 4,
-  },
-  weekChart: {
-    height: 140,
-    marginTop: 22,
-    paddingRight: 30,
-  },
-  weekGridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 14,
-    marginBottom: -7,
-  },
-  weekGridRule: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  weekGridLabel: {
-    width: 30,
-    textAlign: 'right',
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 10,
-    fontFamily: BrandFonts.medium,
-    fontVariant: ['tabular-nums'],
-  },
-  weekBars: {
-    ...StyleSheet.absoluteFillObject,
-    right: 30,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  weekBarCol: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  weekBarSlot: {
-    width: '46%',
-    height: '100%',
-    justifyContent: 'flex-end',
-  },
-  weekBarFill: {
-    width: '100%',
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-  },
-  weekDayRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-    paddingRight: 30,
-  },
-  weekDayLabel: {
-    flex: 1,
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
-    fontFamily: BrandFonts.semibold,
-  },
-  weekDayLabelToday: {
-    color: Brand.text,
-  },
-  weekFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.12)',
-  },
-  weekFooterLabel: {
-    color: Brand.textDim,
-    fontSize: 13,
-    fontFamily: BrandFonts.medium,
-  },
-  weekFooterValue: {
-    color: Brand.text,
-    fontSize: 13,
-    fontFamily: BrandFonts.semibold,
-    fontVariant: ['tabular-nums'],
-  },
   scroll: { padding: 20, paddingBottom: 32 },
   /* ── Stats-grid ────────────────────────────────────────────────── */
   statsGrid: {
