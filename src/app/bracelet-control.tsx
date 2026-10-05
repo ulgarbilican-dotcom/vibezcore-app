@@ -4757,11 +4757,14 @@ function BraceletControlScreen({
      het laden niet op slot, anders flitst de paywall bij een betalende
      gebruiker. Feel it (30 s) blijft voor iedereen. */
   const subscription = useSubscription();
+  /* useBraceletOwner volgt ook de dev-override (Settings → Developer →
+     Simulate user type), net als isPro — zo is elk gebruikerstype testbaar. */
+  const ownsBracelet = useBraceletOwner();
   const [testFullSessions] = useSetting('testFullSessions');
   const sessionsLocked =
     !subscription.isLoading &&
     !subscription.isPro &&
-    !subscription.hasBracelet &&
+    !ownsBracelet &&
     !testFullSessions;
   const [paywallOpen, setPaywallOpen] = useState(false);
 
