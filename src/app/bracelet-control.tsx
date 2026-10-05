@@ -27,7 +27,7 @@
 
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
-import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
+import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import { playModePreviewHaptic, stopModePreviewHaptic } from '@/services/bracelet-haptics';
 import { hasNativeWaveform } from '../../modules/state-haptics';
@@ -45,7 +45,7 @@ import {
   stopBraceletSessionMonitor,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronDown, ChevronLeft, Info, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronLeft, ChevronUp, Info, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -851,6 +851,32 @@ function PrimaryCtaButton({
     >
       <ReanimatedAnimated.View style={[style, pressStyle]}>{children}</ReanimatedAnimated.View>
     </Pressable>
+  );
+}
+
+/* ── RunningSessionBar — "nu bezig" op de moduskeuze ──
+   Operator, 5 okt 2026: terug/minimaliseren vanuit de actieve sessie gaat
+   altijd naar de moduskeuze (met tabbalk), ook als de sessie loopt. Dan
+   vervangt deze balk de Start-knop — zelfde plek, zelfde witte vorm (Apple
+   Music's "Now Playing"-balk als voorbeeld): modus + live resterende tijd,
+   tik = terug naar de sessie. Een tweede sessie starten kan zo niet. */
+function RunningSessionBar({ onPress }: { onPress: () => void }) {
+  const [snap, setSnap] = useState(getBraceletSessionSnapshot());
+  useEffect(() => subscribeBraceletSession(setSnap), []);
+  const rem = Math.max(0, Math.floor(snap.remainingSec));
+  const time = `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, '0')}`;
+  return (
+    <PrimaryCtaButton
+      style={[s.primaryBtn, s.runningBar]}
+      onPress={onPress}
+      accessibilityLabel={`Return to your ${snap.modeName} session`}
+    >
+      <View style={[s.runningDot, { backgroundColor: snap.modeColor }]} />
+      <Text style={s.primaryBtnText} numberOfLines={1}>
+        {snap.modeName} · {snap.paused ? 'Paused' : `${time} left`}
+      </Text>
+      <ChevronUp size={20} color="#1D1D1F" strokeWidth={2.4} />
+    </PrimaryCtaButton>
   );
 }
 
@@ -3378,6 +3404,9 @@ function ActiveSessionScreen({
 
 type IdleScreenProps = {
   onMinimize?: () => void;
+  /** Er loopt (of pauzeert) een sessie terwijl de moduskeuze getoond wordt. */
+  sessionRunning: boolean;
+  onReturnToSession: () => void;
   fromContext: 'audio' | 'bracelet' | 'plan' | null;
   disconnectAndBackToSource: () => Promise<void>;
   onDisconnect: () => Promise<void>;
@@ -3413,6 +3442,8 @@ type IdleScreenProps = {
    hiërarchie met eyebrow-headers. */
 function IdleScreen({
   onMinimize,
+  sessionRunning,
+  onReturnToSession,
   fromContext,
   disconnectAndBackToSource,
   onDisconnect,
@@ -3749,18 +3780,22 @@ function IdleScreen({
            kleur). `PrimaryCtaButton` = dezelfde haptiek+press-scale-
            wrapper als het Connect/Retry-scherm hierboven in dit bestand,
            voor consistentie binnen bracelet-control.tsx zelf. */}
-        <PrimaryCtaButton
-          style={[s.primaryBtn, (busy || criticalBattery) && s.btnDisabled]}
-          onPress={onStart}
-          disabled={busy || criticalBattery}
-          accessibilityLabel={`Start ${meta.name} session`}
-        >
-          {busy ? (
-            <ActivityIndicator color="#1D1D1F" />
-          ) : (
-            <Text style={s.primaryBtnText}>Start {meta.name}</Text>
-          )}
-        </PrimaryCtaButton>
+        {sessionRunning ? (
+          <RunningSessionBar onPress={onReturnToSession} />
+        ) : (
+          <PrimaryCtaButton
+            style={[s.primaryBtn, (busy || criticalBattery) && s.btnDisabled]}
+            onPress={onStart}
+            disabled={busy || criticalBattery}
+            accessibilityLabel={`Start ${meta.name} session`}
+          >
+            {busy ? (
+              <ActivityIndicator color="#1D1D1F" />
+            ) : (
+              <Text style={s.primaryBtnText}>Start {meta.name}</Text>
+            )}
+          </PrimaryCtaButton>
+        )}
 
         {/* Low battery warning (compact, alleen als nodig) */}
         {lowBattery && (
@@ -4155,6 +4190,12 @@ function BraceletControlScreen({
     useState<BraceletMode | null>(null);
   /* Duur van de voltooide sessie, voor de afsluiting (5 okt 2026). */
   const [completedMinutes, setCompletedMinutes] = useState<number | null>(null);
+  /* Operator, 5 okt 2026 ("back-knop van telefoon vanuit session active —
+     ook als de sessie loopt — moet ALTIJD naar choose mode van state
+     control, ook bij minimize; van daaruit kiest de gebruiker via de tabs
+     onderaan"): geminimaliseerd = de moduskeuze tonen terwijl de sessie
+     doorloopt, met een "nu bezig"-balk om terug te keren. */
+  const [minimized, setMinimized] = useState(false);
 
   /* Iter 9k: mode-detail popup terug op state-cards. Tap card opent
      bottom-sheet met "intent / bracelet / breath / use this for"
@@ -4761,6 +4802,10 @@ function BraceletControlScreen({
 
   /* ── Derived state ─────────────────────────────────────────────── */
   const sessionActive = !endedLocally && (status?.sessionActive ?? false);
+  /* Geen sessie meer → niets om "geminimaliseerd" te houden. */
+  useEffect(() => {
+    if (!sessionActive && !isPaused) setMinimized(false);
+  }, [sessionActive, isPaused]);
   const battery = status?.batteryPercent ?? null;
   const charging = status?.charging ?? false;
   const fault = status?.fault ?? false;
@@ -5019,11 +5064,11 @@ function BraceletControlScreen({
          Resume-button (mode-color filled) ipv Pause
      UI-stay-condition: sessionActive OF isPaused — anders zou de
      transitie naar idle de pause-state direct breken. */
-  if ((sessionActive || isPaused) && status) {
+  if ((sessionActive || isPaused) && status && !minimized) {
     return (
       <>
         <ActiveSessionScreen
-          onMinimize={onMinimize}
+          onMinimize={() => setMinimized(true)}
           status={status}
           isPaused={isPaused}
           pausedAt={pausedAt}
@@ -5057,6 +5102,8 @@ function BraceletControlScreen({
     <>
       <IdleScreen
         onMinimize={onMinimize}
+        sessionRunning={sessionActive || isPaused}
+        onReturnToSession={() => setMinimized(false)}
         fromContext={fromContext}
         disconnectAndBackToSource={disconnectAndBackToSource}
         onDisconnect={onDisconnect}
@@ -7113,6 +7160,14 @@ const s = StyleSheet.create({
      Blue/Royal Indigo) — een CTA-achtergrond is NOOIT de accentkleur
      (huisstijl §3, "altijd wit + donkere tekst"). Tekstkleur mee
      aangepast van wit naar donker. */
+  runningBar: {
+    gap: 10,
+  },
+  runningDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
   primaryBtn: {
     backgroundColor: '#ffffff',
     borderRadius: 14,
