@@ -854,7 +854,7 @@ function TechniqueSegmentedControl({
       {/* Operator, 5 okt 2026: van rand tot rand, echt vervaagd glas over
          de toestandsfoto (`blurTarget`). De gekozen naam groot en wit, de
          andere gedimd — geen kussentje. */}
-      <VibezGlass radius={0} level="subtle" blurTarget={blurTarget} style={StyleSheet.absoluteFill}>
+      <VibezGlass radius={14} level="subtle" blurTarget={blurTarget} style={StyleSheet.absoluteFill}>
         {/* Even donker als de pagina eromheen (operator, 5 okt 2026: "te
            zware streep") — enkel de vervaging laat de balk zien. */}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.7)' }]} />
@@ -923,7 +923,8 @@ const tsc = StyleSheet.create({
   track: {
     alignSelf: 'stretch',
     flexDirection: 'row',
-    borderRadius: 0,
+    /* Zelfde afronding als de Start session-knop. */
+    borderRadius: 14,
     overflow: 'hidden',
     padding: 3,
   },
@@ -4135,8 +4136,9 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  /* Operator, 5 okt 2026 ("balk helemaal doorlopen"): van rand tot rand. */
-  segWrap: { alignSelf: 'stretch', marginHorizontal: 0 },
+  /* Operator, 5 okt 2026: eerst van rand tot rand; daarna ("is dat
+     premium?") terug binnen de marges, even breed als Start session. */
+  segWrap: { alignSelf: 'stretch', marginHorizontal: 26 },
   tileRow: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
