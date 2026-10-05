@@ -33,6 +33,7 @@ import {
   subscribeStateControlIntroVisible,
 } from '@/utils/state-control-ui';
 import { Brand, BrandFonts } from '@/constants/theme';
+import VibezGlass from './VibezGlass';
 import {
   getBraceletSessionSnapshot,
   subscribeBraceletSession,
@@ -126,14 +127,7 @@ function ActiveSessionPill({
   return (
     <View style={[s.wrap, { top: topY }]} pointerEvents="box-none">
       <AnimatedPressable
-        style={[
-          s.pill,
-          {
-            borderColor: snap.modeColor + '55',
-            backgroundColor: snap.modeColor + '18',
-          },
-          pressStyle,
-        ]}
+        style={pressStyle}
         /* 5 okt 2026: voor iedereen dezelfde plek — de State Control-tab,
            meteen op de lopende sessie (geen intro). */
         onPress={() => openStateControl()}
@@ -141,6 +135,8 @@ function ActiveSessionPill({
         onPressOut={onPressOut}
         accessibilityLabel={`Open active ${snap.modeName} session`}
       >
+        {/* VIBEZCORE-glas, zonder rand (operator, 5 okt 2026). */}
+        <VibezGlass radius={999} tint={snap.modeColor} style={s.pill}>
         <View style={[s.dot, { backgroundColor: snap.modeColor }]} />
         <Text style={s.label} numberOfLines={1}>
           State Control · {snap.modeName}
@@ -148,6 +144,7 @@ function ActiveSessionPill({
         <Text style={[s.time, { color: snap.modeColor }]}>
           {fmtMMSS(snap.remainingSec)}
         </Text>
+        </VibezGlass>
       </AnimatedPressable>
     </View>
   );
@@ -167,8 +164,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
     maxWidth: '90%',
   },
   dot: {

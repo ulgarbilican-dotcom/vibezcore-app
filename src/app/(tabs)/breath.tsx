@@ -31,6 +31,7 @@ import SessionArt, {
   prefetchSessionArt,
 } from '@/components/SessionArt';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
+import VibezGlass from '@/components/VibezGlass';
 import StateGlyph from '@/components/StateGlyph';
 import { usePlayerState } from '@/services/audio-player';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -334,51 +335,14 @@ function StateThumb({
         </Pressable>
       )}
       <View style={[s.thumb, on && s.thumbSelected]}>
-        {/* Operator, 24 september 2026, definitief: "ook bij aanklikken
-           geen halo buiten de grote ring, enkel een beetje gloed-kleur
-           BINNEN de ring, in de state-kleur." `haloOuter` (1.28×) en
-           `haloMid` (1.04×) waren allebei GROTER dan de ring zelf
-           (`thumbOutline`, exact THUMB) — dat mag dus nooit meer, ook niet
-           bij selectie. Volledig weg. Wat overblijft: `haloInner` (0.7×,
-           wit, ruim binnen de ring) plus, enkel bij selectie, een kleine
-           gloed in de eigen accentkleur van de staat — ook die blijft
-           BINNEN de ringrand (0.82×, nog altijd kleiner dan de ring). */}
-        {on && (
-          <View
-            style={[
-              s.halo,
-              { width: THUMB * 0.82, height: THUMB * 0.82, backgroundColor: t.accent, opacity: 0.18 },
-            ]}
-          />
-        )}
-        <View
-          style={[
-            s.halo,
-            s.haloInner,
-            { backgroundColor: '#ffffff', opacity: on ? 0.13 : 0.06 },
-          ]}
-        />
-        {/* Operator, 24 september 2026 ("cirkel kleur moet weg"): de rand
-           droeg bij selectie de accentkleur van de staat (paars voor Calm
-           Control op het screenshot) — dat is exact de kleur die weg moet,
-           niet enkel een gloed erachter. Wit i.p.v. `t.accent`, enkel dikker
-           bij selectie (1.5 i.p.v. 1) — kleur draagt de selectie nergens
-           meer op dit rijtje, enkel opaciteit/dikte/schaal.
-           Operator, 2 okt 2026 ("niet heel wit maar grijs"): zuiver wit
-           → `#AEAEB2` (iOS systemGray2) — nog duidelijk lichter/helderder
-           dan de gedimde staat (0.22 wit), maar niet stekend fel. */}
-        <View
-          style={[
-            s.thumbOutline,
-            {
-              /* Operator, 5 okt 2026 ("ringen bij aantikken veel te hard,
-                 lichter, Apple-stijl"): zachte, halfdoorzichtige rand
-                 i.p.v. massief grijs — de selectie draagt al schaal en
-                 helderheid van icoon en naam. */
-              borderColor: on ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.16)',
-              borderWidth: 1,
-            },
-          ]}
+        {/* Operator, 5 okt 2026 (voorbeeldpagina VIBEZCORE-glas, Apple's
+           Liquid Glass als referentie, geen rand): elk bolletje is een
+           glazen schijf; bij selectie kleurt het glas licht in de eigen
+           toestandskleur. Vervangt de halo's en de omlijning. */}
+        <VibezGlass
+          radius={THUMB / 2}
+          tint={on ? t.accent : undefined}
+          style={StyleSheet.absoluteFill}
         />
         <Animated.View style={on ? thumbPulseStyle : undefined}>
           <StateGlyph
@@ -390,7 +354,7 @@ function StateThumb({
                Operator, 2 okt 2026 ("niet heel wit maar grijs"): zelfde
                `#AEAEB2` als de rand hierboven, icoon en rand nu één
                consistente grijstint bij selectie. */
-            color={on ? '#AEAEB2' : 'rgba(255,255,255,0.22)'}
+            color={on ? '#ffffff' : 'rgba(255,255,255,0.55)'}
             strokeWidth={1.8}
           />
         </Animated.View>
@@ -1003,8 +967,10 @@ export default function BreathScreen() {
           <Pressable
             onPress={() => router.push('/feel-now' as never)}
             hitSlop={8}
-            style={s.feelNowLink}
+            style={({ pressed }) => [s.feelNowLink, pressed && { opacity: 0.85 }]}
           >
+            {/* VIBEZCORE-glas i.p.v. de witte omlijning (5 okt 2026). */}
+            <VibezGlass radius={14} style={StyleSheet.absoluteFill} />
             <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
           </Pressable>
         </View>
@@ -1285,8 +1251,10 @@ export default function BreathScreen() {
       <Pressable
         onPress={() => router.push('/feel-now' as never)}
         hitSlop={8}
-        style={s.feelNowLink}
+        style={({ pressed }) => [s.feelNowLink, pressed && { opacity: 0.85 }]}
       >
+        {/* VIBEZCORE-glas i.p.v. de witte omlijning (5 okt 2026). */}
+        <VibezGlass radius={14} style={StyleSheet.absoluteFill} />
         <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
       </Pressable>
 
@@ -1484,8 +1452,7 @@ const s = StyleSheet.create({
     marginHorizontal: 26,
     alignSelf: 'stretch',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
