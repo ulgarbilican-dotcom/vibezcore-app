@@ -4044,12 +4044,14 @@ function IdleScreen({
           })}
         </View>
         <Pressable
-          style={[s.startInfoBtn, { marginTop: 14, marginBottom: 14 }, idleDark && { backgroundColor: 'rgba(255,255,255,0.08)' }]}
+          style={[s.startInfoBtn, { marginTop: 14, marginBottom: 14, width: 30, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: 'transparent' }]}
           onPress={() => setDetailModeForModal(selectedMode)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityLabel={`Learn about ${meta.name}`}
         >
-          <Info size={14} color={idleDark ? 'rgba(255,255,255,0.6)' : C.textDim} strokeWidth={2.2} />
+          {/* VIBEZCORE-glas (5 okt 2026). */}
+          <VibezGlass radius={15} style={StyleSheet.absoluteFill} />
+          <Info size={14} color="rgba(255,255,255,0.75)" strokeWidth={2.2} />
         </Pressable>
 
         {/* Operator ("dat moet meer in deze stijl, breathwork"): de losse

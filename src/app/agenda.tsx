@@ -25,6 +25,7 @@ import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDown, ChevronLeft, ChevronRight, Flame, Info, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
+import VibezGlass from '@/components/VibezGlass';
 import { STATE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import { useProtocolLocked, PROTOCOL_LOCKED_SUB } from '@/utils/protocol-gate';
 import { useEffect, useMemo, useState } from 'react';
@@ -859,6 +860,7 @@ export default function AgendaScreen() {
             onPressIn={onEditBtnPressIn}
             onPressOut={onEditBtnPressOut}
           >
+            <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
             <Text style={s.editBtnTxt}>Check your protocol</Text>
           </AnimatedPressable>
           {plan && (
@@ -873,7 +875,8 @@ export default function AgendaScreen() {
               onPressIn={onChangeProtocolPressIn}
               onPressOut={onChangeProtocolPressOut}
             >
-              <Pencil size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
+              <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.changeProtocolTxt}>Change protocol</Text>
             </AnimatedPressable>
           )}
@@ -1037,8 +1040,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    /* VIBEZCORE-glas i.p.v. omlijning (5 okt 2026). */
+    overflow: 'hidden',
   },
   changeProtocolTxt: {
     fontFamily: BrandFonts.semibold,
@@ -1221,8 +1224,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    /* VIBEZCORE-glas i.p.v. omlijning (5 okt 2026). */
+    overflow: 'hidden',
   },
   editBtnTxt: {
     fontFamily: BrandFonts.semibold,
