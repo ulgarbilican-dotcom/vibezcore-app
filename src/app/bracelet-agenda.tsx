@@ -226,7 +226,11 @@ function StateCard({
     >
       <Animated.View style={[s.card, on && s.cardOn, pressStyle]}>
         {Icon && color ? (
-          <Icon size={20} color={color} strokeWidth={2} />
+          /* Zelfde glazen badge als "Set your plan" (operator, 5 okt 2026). */
+          <View style={s.cardBadge}>
+            <VibezGlass radius={16} tint={color} level="raised" style={StyleSheet.absoluteFill} />
+            <Icon size={17} color="#ffffff" strokeWidth={1.9} />
+          </View>
         ) : color ? (
           <View style={[s.cardDot, { backgroundColor: color }]} />
         ) : (
@@ -783,6 +787,14 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
   },
   cardDot: { width: 15, height: 15, borderRadius: 7.5 },
+  cardBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardTxt: { fontFamily: BrandFonts.medium, fontSize: 12.5, lineHeight: 15, color: 'rgba(255,255,255,0.65)' },
   cardTxtOn: { color: '#ffffff', fontFamily: BrandFonts.semibold },
 
