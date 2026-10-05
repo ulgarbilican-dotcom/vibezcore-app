@@ -33,12 +33,15 @@ type Props = {
 };
 
 const LEVEL = {
-  subtle: { base: 'rgba(58,58,66,0.16)', sheen: 0.09 },
-  normal: { base: 'rgba(58,58,66,0.34)', sheen: 0.17 },
-  raised: { base: 'rgba(96,96,106,0.42)', sheen: 0.26 },
+  subtle: { base: 'rgba(58,58,66,0.16)', sheen: 0.09, blur: 32 },
+  normal: { base: 'rgba(58,58,66,0.34)', sheen: 0.17, blur: 32 },
+  raised: { base: 'rgba(96,96,106,0.42)', sheen: 0.26, blur: 32 },
   /* Uitschuifpaneel met veel tekst: de foto schemert door, maar donker
      genoeg om lange tekst rustig te lezen (Apple's "thick material"). */
-  sheet: { base: 'rgba(20,20,24,0.74)', sheen: 0.07 },
+  /* Sterkere vervaging (operator, 5 okt 2026: "verwarrend als de
+     achtergrond doorkomt?"): van de foto blijft enkel een zachte
+     kleurgloed over, geen herkenbare vormen achter de tekst. */
+  sheet: { base: 'rgba(20,20,24,0.74)', sheen: 0.07, blur: 90 },
 } as const;
 
 export default function VibezGlass({ radius, tint, level = 'normal', style, children }: Props) {
@@ -46,7 +49,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView
-        intensity={32}
+        intensity={L.blur}
         tint="dark"
         blurMethod="dimezisBlurViewSdk31Plus"
         style={StyleSheet.absoluteFill}
