@@ -1516,11 +1516,11 @@ export default function BreathSetupScreen() {
        aanbevolen duur te starten, niet op de losse state-terugval. */
     const recIdx = DURATIONS.findIndex((d) => d.recommended);
     const base = recIdx !== -1 ? recIdx : st.defaultDuration;
-    /* Operator, 2 okt 2026: zelfde "How do you feel?"-feedback-bijstelling
-       als in instant-feel.ts, nu ook hier — "Too long"/"Too short" na een
-       instant-sessie verschuift ook de standaard-duur op dit scherm. */
-    const bias = getSetting('instantDurationBias');
-    return Math.max(0, Math.min(DURATIONS.length - 1, base + bias));
+    /* Operator, 5 okt 2026 ("bij toekomen moet dat op recommended per
+       techniek staan"): geen "Too long/Too short"-bijsturing meer op dit
+       scherm (die van 2 okt) — die liet je naast de aanbevolen duur landen.
+       De bijsturing blijft wel gelden voor de instant-sessies zelf. */
+    return Math.max(0, Math.min(DURATIONS.length - 1, base));
   });
   /* Operator, 10 september 2026: "custom is bedoeld om meer min in te
      kunnen instellen dan de max op de bestaande knoppen" — een vrij
@@ -2434,6 +2434,16 @@ export default function BreathSetupScreen() {
                zien van gekozen minuten en techniek, alvorens iemand op Start
                session tikt"): enkel weergave, geen gebaar. Naam en tijd
                vloeien zacht over bij een andere keuze. */}
+            {/* Operator, 5 okt 2026 ("recommended in de cirkel boven de
+               minuten, met een dotje ervoor"): enkel zichtbaar op de
+               aanbevolen duur; de ruimte blijft, zodat de tijd niet springt. */}
+            <View
+              style={[s.heroRecRow, { opacity: chosen.minutes === recommendedZone?.minutes ? 1 : 0 }]}
+              accessibilityElementsHidden={chosen.minutes !== recommendedZone?.minutes}
+            >
+              <View style={[s.heroRecDot, { backgroundColor: waveAccent }]} />
+              <Text style={s.heroRecTxt}>Recommended</Text>
+            </View>
             <Animated.Text
               key={`clock-${tech.key}`}
               entering={FadeIn.duration(240)}
@@ -2821,8 +2831,6 @@ export default function BreathSetupScreen() {
             value={chosen.minutes}
             accent={accent}
             trackColor="rgba(255,255,255,0.4)"
-            recommendedValue={recommendedZone?.minutes}
-            recommendedAsDot
             onChange={(v) => {
               const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
               if (presetIdx !== -1) {
@@ -4104,6 +4112,14 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   /* Operator, 5 okt 2026 ("ruimte tussen alles, minuten ver naar
      beneden"). */
   segWrap: { alignSelf: 'stretch', marginHorizontal: 26, marginTop: 44 },
+  heroRecRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: -2 },
+  heroRecDot: { width: 6, height: 6, borderRadius: 3 },
+  heroRecTxt: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.6)',
+  },
   ringInfo: { alignSelf: 'center', marginTop: 12, padding: 4 },
   tileRow: {
     alignSelf: 'stretch',
