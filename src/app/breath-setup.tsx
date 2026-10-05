@@ -40,6 +40,7 @@ import AddToDayHero from '@/components/AddToDayHero';
 import { BlurView } from 'expo-blur';
 import DurationSlider from '@/components/DurationSlider';
 import { DurationWheel } from '@/components/DurationWheel';
+import { DurationRuler } from '@/components/DurationRuler';
 import { confirmVibezAlert } from '@/components/VibezAlert';
 import { BREATH_STATES, roundsFor, type BreathStateKey, type TechniqueDef, type DurationDef } from '@/data/breath-states';
 import {
@@ -1786,8 +1787,7 @@ export default function BreathSetupScreen() {
      de tekst er altijd bij te proppen (te veel voor de kleine kaart). */
   const [durationInfoOpen, setDurationInfoOpen] = useState(false);
   /* Keuzelijst van de drie technieken (5 okt 2026). */
-  const [techSheetOpen, setTechSheetOpen] = useState(false);
-  const [durationSheetOpen, setDurationSheetOpen] = useState(false);
+
 
   /* Operator, 17 september 2026 (addToDay, "gewoon alles wat nodig is op
      1 kaart"): tijdstip erbij, enkel relevant in deze modus — de normale
@@ -2778,40 +2778,89 @@ export default function BreathSetupScreen() {
            de kaart komen, maak de kaart kleiner"): label verhuisd VÓÓR de
            BlurView i.p.v. erbinnen — eigen marge i.p.v. de kaart se
            `padding`. */}
-        {/* Operator, 5 okt 2026 (Apple-analyse: "geen groot wiel midden op
-           het scherm, een compacte regel die een kiezer opent" + "2 zelfde
-           pills niet mooi"): één glazen kaart met twee regels, zoals Apple's
-           instelschermen. Duur en techniek openen elk hun eigen paneel; de
-           cirkel erboven vat de keuze samen. */}
-        <View style={s.settingsCard}>
-          <VibezGlass radius={16} level="subtle" style={StyleSheet.absoluteFill} />
+        {/* Operator, 5 okt 2026 ("tijd en techniek kiezen is saai en
+           lelijk"): de keuzes laten zelf iets zien. Techniek = drie tegels
+           naast elkaar (icoon, naam, ritme) — verschillen in één oogopslag.
+           Duur = een liniaal zoals de zoomknop van de camera; de cirkel
+           erboven telt live mee. */}
+        <View style={s.pickHead}>
+          <Text style={s.durationHeadLbl}>TECHNIQUE</Text>
           <Pressable
-            onPress={() => setDurationSheetOpen(true)}
-            style={({ pressed }) => [s.settingsRow, pressed && s.settingsRowPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={`Duration, ${fmtClock(chosen.minutes)}. Tap to change.`}
+            onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+            hitSlop={10}
+            accessibilityLabel={`About ${tech.name}`}
           >
-            <Text style={s.settingsLbl}>Duration</Text>
-            <View style={s.settingsRight}>
-              <Text style={s.settingsValue}>{fmtClock(chosen.minutes)}</Text>
-              <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.2} />
-            </View>
+            <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
           </Pressable>
-          <View style={s.settingsSep} />
-          <Pressable
-            onPress={() => setTechSheetOpen(true)}
-            style={({ pressed }) => [s.settingsRow, pressed && s.settingsRowPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={`Technique, ${tech.name}. Tap to change.`}
-          >
-            <Text style={s.settingsLbl}>Technique</Text>
-            <View style={s.settingsRight}>
-              <Text style={s.settingsValue} numberOfLines={1}>
-                {tech.name}
-              </Text>
-              <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.2} />
-            </View>
-          </Pressable>
+        </View>
+        <View style={s.tileRow}>
+          {st.techniques.map((t, i) => {
+            const on = i === techIdx;
+            const Icon = techniqueIcon(t.key);
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => {
+                  if (on) return;
+                  Haptics.selectionAsync();
+                  pickTechnique(i);
+                }}
+                style={({ pressed }) => [s.tile, pressed && { transform: [{ scale: 0.97 }] }]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${t.name}, ${techniquePattern(t.phases)}`}
+              >
+                <VibezGlass
+                  radius={16}
+                  level={on ? 'raised' : 'subtle'}
+                  tint={on ? st.accent : undefined}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Icon size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} strokeWidth={2.1} />
+                <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
+                  {techShortLabel(t)}
+                </Text>
+                <Text style={s.tilePattern} numberOfLines={1}>
+                  {t.phases.map((ph) => ph.secs).join(' · ')}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={[s.pickHead, { marginTop: 26 }]}>
+          <Text style={s.durationHeadLbl}>DURATION</Text>
+          {zoneFor(chosen.minutes) ? (
+            <Pressable
+              onPress={() => setDurationInfoOpen(true)}
+              hitSlop={10}
+              style={s.durationZoneBtn}
+              disabled={!zoneFor(chosen.minutes)?.why}
+            >
+              <Text style={s.durationZoneTxt}>{zoneFor(chosen.minutes)?.name}</Text>
+              {zoneFor(chosen.minutes)?.why ? (
+                <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+              ) : null}
+            </Pressable>
+          ) : null}
+        </View>
+        <View style={s.rulerWrap}>
+          <DurationRuler
+            options={durationWheelOptions.map((o) => o.value)}
+            value={chosen.minutes}
+            recommendedValue={recommendedZone?.minutes}
+            accent={waveAccent}
+            onChange={(v) => {
+              const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
+              if (presetIdx !== -1) {
+                setCustomSelected(false);
+                setDurationIdx(presetIdx);
+              } else {
+                setCustomMinutes(v);
+                setCustomSelected(true);
+              }
+            }}
+          />
         </View>
         </>
         )}
@@ -3031,141 +3080,6 @@ export default function BreathSetupScreen() {
          lengte) worden hier samengevoegd tot één doorlopende alinea i.p.v.
          twee losse punten — nog steeds geen nieuwe copy, enkel anders
          geschreven. */}
-      {/* Duurkiezer (operator, 5 okt 2026): het minutenwiel in een glazen
-         paneel; de duurzone met i bovenaan. */}
-      <Modal
-        visible={durationSheetOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDurationSheetOpen(false)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDurationSheetOpen(false)} />
-          <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
-            <VibezGlass
-              radius={24}
-              level="sheet"
-              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
-            />
-            <View style={s.sheetHandle} />
-            <View style={s.sheetHeader}>
-              <Text style={[s.modalTitle, s.sheetTitleTxt]}>Duration</Text>
-              <Pressable onPress={() => setDurationSheetOpen(false)} hitSlop={10}>
-                <Text style={[s.sheetDoneTxt, { color: '#ffffff' }]}>Done</Text>
-              </Pressable>
-            </View>
-            {zoneFor(chosen.minutes) ? (
-              <Pressable
-                onPress={() => {
-                  if (!zoneFor(chosen.minutes)?.why) return;
-                  setDurationSheetOpen(false);
-                  setTimeout(() => setDurationInfoOpen(true), 320);
-                }}
-                hitSlop={8}
-                style={s.sheetZoneRow}
-              >
-                <Text style={s.durationZoneTxt}>{zoneFor(chosen.minutes)?.name}</Text>
-                {zoneFor(chosen.minutes)?.why ? (
-                  <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-                ) : null}
-              </Pressable>
-            ) : null}
-            <View style={s.sheetWheel}>
-              <DurationWheel
-                options={durationWheelOptions}
-                value={chosen.minutes}
-                accent={accent}
-                trackColor={light ? '#8E8E93' : 'rgba(255,255,255,0.4)'}
-                recommendedValue={recommendedZone?.minutes}
-                onChange={(v) => {
-                  const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
-                  if (presetIdx !== -1) {
-                    setCustomSelected(false);
-                    setDurationIdx(presetIdx);
-                  } else {
-                    setCustomMinutes(v);
-                    setCustomSelected(true);
-                  }
-                }}
-              />
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* Keuzelijst technieken (operator, 5 okt 2026 — Timer-model): drie
-         rijen in het glazen vel, de gekozen met een vinkje. Tik = kiezen en
-         sluiten; de i opent de volledige uitleg. */}
-      <Modal
-        visible={techSheetOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setTechSheetOpen(false)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setTechSheetOpen(false)} />
-          <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
-            <VibezGlass
-              radius={24}
-              level="sheet"
-              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
-            />
-            <View style={s.sheetHandle} />
-            <View style={s.sheetHeader}>
-              <Text style={[s.modalTitle, s.sheetTitleTxt]}>Technique</Text>
-              <Pressable onPress={() => setTechSheetOpen(false)} hitSlop={10}>
-                <Text style={[s.sheetDoneTxt, { color: '#ffffff' }]}>Done</Text>
-              </Pressable>
-            </View>
-            <View style={s.techList}>
-              {st.techniques.map((t, i) => {
-                const on = i === techIdx;
-                const Icon = techniqueIcon(t.key);
-                return (
-                  <Pressable
-                    key={t.key}
-                    onPress={() => {
-                      pickTechnique(i);
-                      Haptics.selectionAsync();
-                      setTechSheetOpen(false);
-                    }}
-                    style={({ pressed }) => [s.techListRow, pressed && { opacity: 0.7 }]}
-                  >
-                    <VibezGlass radius={16} level={on ? 'raised' : 'subtle'} style={StyleSheet.absoluteFill} />
-                    <View style={s.sheetBadgeSm}>
-                      <VibezGlass radius={14} tint={st.accent} level="raised" style={StyleSheet.absoluteFill} />
-                      <Icon size={15} color="#ffffff" strokeWidth={2.2} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={s.techListTop}>
-                        <Text style={s.techListName} numberOfLines={1}>{t.name}</Text>
-                        <View style={[s.techListLevel, { backgroundColor: `${st.accent}38` }]}>
-                          <Text style={s.techListLevelTxt}>{t.level}</Text>
-                        </View>
-                      </View>
-                      <Text style={s.techListSub} numberOfLines={1}>
-                        Best for {t.bestFor.toLowerCase()} · {techniquePattern(t.phases)}
-                      </Text>
-                    </View>
-                    {on ? <Check size={18} color="#ffffff" strokeWidth={2.6} /> : <View style={{ width: 18 }} />}
-                    <Pressable
-                      hitSlop={8}
-                      onPress={() => {
-                        setTechSheetOpen(false);
-                        setTimeout(() => setInfoModal({ title: t.name, techniqueKey: t.key }), 320);
-                      }}
-                      accessibilityLabel={`About ${t.name}`}
-                    >
-                      <Info size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-                    </Pressable>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
       <Modal
         visible={durationInfoOpen}
         transparent
@@ -4184,7 +4098,44 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
   techList: { gap: 10, marginTop: 6, marginBottom: 12 },
-  /* Instelkaart onder de cirkel (5 okt 2026). */
+  /* Tegels + liniaal onder de cirkel (5 okt 2026). */
+  pickHead: {
+    alignSelf: 'stretch',
+    marginHorizontal: 30,
+    marginTop: 28,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tileRow: {
+    alignSelf: 'stretch',
+    marginHorizontal: 26,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tile: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 16,
+    overflow: 'hidden',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  tileName: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    color: '#ffffff',
+  },
+  tileNameOff: { color: 'rgba(255,255,255,0.6)' },
+  tilePattern: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.45)',
+    fontVariant: ['tabular-nums'],
+  },
+  rulerWrap: { alignSelf: 'stretch', marginHorizontal: 10 },
   settingsCard: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
