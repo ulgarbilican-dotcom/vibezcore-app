@@ -2827,7 +2827,7 @@ export default function BreathSetupScreen() {
                 </Pressable>
                 )}
                 {/* Operator, 5 okt 2026: moeilijkheid i.p.v. het ritme. */}
-                <LevelDots level={t.level} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} />
+                <LevelDots level={t.level} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} />
                 <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
                   {techShortLabel(t)}
                 </Text>

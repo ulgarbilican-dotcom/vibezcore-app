@@ -3,6 +3,9 @@
 
    Operator, 5 okt 2026 ("een symbool dat moeilijkheid weergeeft i.p.v. de
    staafjes"): één gevuld = Beginner, twee = Intermediate, drie = Advanced.
+   Vervolg ("zijn die dotjes modern?"): geen stipjes met lege ringetjes meer
+   maar een kleine segmentbalk — drie korte afgeronde streepjes, leeg = zacht
+   grijs vlak. Strakker, en dezelfde streepjes-taal als de duurliniaal.
    Leest meteen, zonder woord, en zegt per toestand ook hoe de drie
    technieken zich tot elkaar verhouden (ze lopen altijd op).
    ───────────────────────────────────────────────────────────────────────── */
@@ -31,7 +34,7 @@ export function LevelDots({
           key={i}
           style={[
             s.dot,
-            i < n ? { backgroundColor: color } : { borderWidth: 1.2, borderColor: color, opacity: 0.45 },
+            { backgroundColor: i < n ? color : 'rgba(255,255,255,0.14)' },
           ]}
         />
       ))}
@@ -40,6 +43,6 @@ export function LevelDots({
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 4, height: 22, alignItems: 'center' },
-  dot: { width: 7, height: 7, borderRadius: 3.5 },
+  row: { flexDirection: 'row', gap: 3, height: 22, alignItems: 'center' },
+  dot: { width: 12, height: 4, borderRadius: 2 },
 });
