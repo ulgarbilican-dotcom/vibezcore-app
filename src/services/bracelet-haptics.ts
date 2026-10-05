@@ -63,13 +63,15 @@ import { getModeMeta } from './ble-contract';
 
 const ASSUMED_RESTING_BPM = 75;
 const SESSION_HOLD_SECONDS = 10;
-const PREVIEW_HOLD_SECONDS = 2;
-const PREVIEW_RAMP_SECONDS = 8;
+const PREVIEW_HOLD_SECONDS = 3;
+const PREVIEW_RAMP_SECONDS = 12;
 /** "Feel it" is een VOORPROEF, geen gratis sessie (operator, 5 okt 2026:
  *  "als de cyclus blijft draaien mag niet, anders is de sessie gratis").
- *  15 s = basislijn + glijden + een paar tikken op het eindtempo, dan het
- *  eind-signaal. */
-export const PREVIEW_MAX_SECONDS = 15;
+ *  Operator, 5 okt 2026: 30 s, en binnen die 30 s moet elke modus op zijn
+ *  eindtempo staan — 3 s basislijn, 12 s glijden, dan 15 s het echte
+ *  eindritme, gevolgd door het eind-signaal. Het glijden is korter dan in
+ *  een sessie (Sleep: 2 min); een voorproef toont waar de sessie heen gaat. */
+export const PREVIEW_MAX_SECONDS = 30;
 const RESUME_WINDOW_SECONDS = 120;
 const LUB_DUB_FRACTION = 0.3;
 const LUB_DUB_MAX_MS = 350;
@@ -369,7 +371,16 @@ export function pauseModeSessionHaptic(): void {
   if (session && session.pausedAt === null) session.pausedAt = Date.now();
 }
 
-/** "Feel it"-preview: zelfde verloop, ingekort tot een paar seconden. */
+/** Duurt het glijden naar het eindtempo in een echte sessie langer dan in
+ *  de voorproef? Dan de sessieduur ervan in minuten (de UI zegt dat de
+ *  voorproef ingekort is), anders null. Operator, 5 okt 2026: "moet dan wel
+ *  duidelijk zijn dat het voor preview aangepast is". */
+export function previewCondensedRampMinutes(mode: BraceletMode): number | null {
+  const ramp = SPECS[mode].rampSec;
+  return ramp > PREVIEW_RAMP_SECONDS ? Math.round(ramp / 60) : null;
+}
+
+/** "Feel it"-preview: zelfde verloop, ingekort tot PREVIEW_MAX_SECONDS. */
 export function playModePreviewHaptic(mode: BraceletMode): void {
   session = null;
   play(

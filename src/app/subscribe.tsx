@@ -200,7 +200,7 @@ export default function SubscribeScreen() {
        onboarding-status. Ontbreekt dit param (bv. vanuit account.tsx,
        geen duidelijke context), dan valt de 'done'-routing terug op de
        plan-check en daarna de bestaande Audio Library-standaard. */
-    returnTo?: 'breathwork' | 'audio';
+    returnTo?: 'breathwork' | 'audio' | 'state-control';
   }>();
   /* Iter v167 (2026-06-28): plan-picker step. Voorheen defaultten we naar
      'yearly' wanneer er geen ?tier= query param was — operator-feedback:
@@ -1094,7 +1094,9 @@ export default function SubscribeScreen() {
     const doneDestination =
       params.returnTo === 'breathwork'
         ? '/breath'
-        : params.returnTo === 'audio'
+        : params.returnTo === 'state-control'
+          ? `/bracelet?open=${Date.now()}`
+          : params.returnTo === 'audio'
           ? '/'
           : planJustBuilt
             ? '/plan'
@@ -1102,7 +1104,9 @@ export default function SubscribeScreen() {
     const doneCtaLabel =
       params.returnTo === 'breathwork'
         ? 'Start breathing'
-        : planJustBuilt
+        : params.returnTo === 'state-control'
+          ? 'Start your session'
+          : planJustBuilt
           ? 'View your plan'
           : 'Start listening';
     return (

@@ -153,9 +153,13 @@ type Tier = 'yearly' | 'monthly';
 type Props = {
   visible: boolean;
   onClose: () => void;
+  /** Waar de popup opengaat — bepaalt enkel de eyebrow en waar de gebruiker
+   *  na aankoop terugkomt. Het pakket zelf is overal hetzelfde (operator,
+   *  5 okt 2026: audio, breathwork en State Control zijn één pakket). */
+  context?: 'breathwork' | 'state-control';
 };
 
-export default function PremiumPaywallModal({ visible, onClose }: Props) {
+export default function PremiumPaywallModal({ visible, onClose, context = 'breathwork' }: Props) {
   const { getProduct } = useIAP();
   const [selected, setSelected] = useState<Tier>('yearly');
 
@@ -213,7 +217,9 @@ export default function PremiumPaywallModal({ visible, onClose }: Props) {
           >
             <X size={18} color="rgba(10,10,12,0.45)" strokeWidth={2.2} />
           </AnimatedPressable>
-          <Text style={s.payEyebrow}>VIBEZCORE BREATHWORK</Text>
+          <Text style={s.payEyebrow}>
+            {context === 'state-control' ? 'VIBEZCORE STATE CONTROL' : 'VIBEZCORE BREATHWORK'}
+          </Text>
           <Text style={s.payTitle}>Unlock every session</Text>
           <View style={s.payList}>
             {[
@@ -222,6 +228,9 @@ export default function PremiumPaywallModal({ visible, onClose }: Props) {
                  (5 states × 3 niveaus) × hun benoemde duur-varianten = 64. */
               'All 64 guided sessions — five states, every rhythm and duration',
               'Voice, haptic and visual guidance',
+              /* Operator, 5 okt 2026: State Control-sessies horen bij
+                 hetzelfde pakket als breathwork en audio. */
+              'State Control — every haptic state, any duration',
               'Soundscapes, goals and your daily plan',
               (() => {
                 const worth = getProduct('monthly')?.regularPriceLabel;
@@ -289,7 +298,7 @@ export default function PremiumPaywallModal({ visible, onClose }: Props) {
                  context, dus vast `returnTo=breathwork` i.p.v. dat te
                  gissen uit onboarding-status (onbetrouwbaar — zie
                  toelichting in subscribe.tsx). */
-              router.push(`/subscribe?tier=${selected}&returnTo=breathwork` as never);
+              router.push(`/subscribe?tier=${selected}&returnTo=${context}` as never);
             }}
             onPressIn={onCtaPressIn}
             onPressOut={onCtaPressOut}

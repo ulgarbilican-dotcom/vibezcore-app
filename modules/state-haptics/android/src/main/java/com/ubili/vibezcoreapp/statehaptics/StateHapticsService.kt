@@ -62,6 +62,8 @@ class StateHapticsService : Service() {
     /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
     const val LATE_SKIP_MS = 150L
     private const val END_MARGIN_MS = 400L
+    /** Bio-Teal, de VIBEZCORE-accentkleur, voor de voortgangsbalk. */
+    private const val ACCENT = 0xFF00A3A3.toInt()
 
     /* Expliciet MEDIA i.p.v. het afgeleide TOUCH (gemeten 5 okt 2026): als
        aanraakfeedback volgen de tikken de instelling "trillen bij aanraken"
@@ -369,6 +371,13 @@ class StateHapticsService : Service() {
     val pending = launch?.let {
       PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
+    /* Android 16+: een Live Update (operator, 5 okt 2026: "de tekst moet
+       mooi gecentreerd staan"). Als media-melding zet OneUI de tekst
+       bovenaan de Now Bar en houdt eronder plaats vrij voor afspeelknoppen
+       die een haptische sessie niet heeft. Een Live Update is het Android-
+       equivalent van Apple's Live Activity: Now Bar en statusbalk tonen
+       modus, resterende tijd en voortgang zonder lege rij. */
+    if (Build.VERSION.SDK_INT >= 36) return buildLiveUpdate(pending)
     val text = "VIBEZCORE · ${remainingLabel()}"
     updateMediaSession(remainingLabel())
     val builder = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -388,5 +397,33 @@ class StateHapticsService : Service() {
       builder.setProgress(sessionTotalMs.toInt(), sessionElapsedNowMs().toInt(), false)
     }
     return builder.build()
+  }
+
+  @androidx.annotation.RequiresApi(36)
+  private fun buildLiveUpdate(pending: PendingIntent?): Notification {
+    val total = sessionTotalMs.coerceAtLeast(1L)
+    val elapsed = sessionElapsedNowMs()
+    val remSec = ((total - elapsed) / 1000L).coerceAtLeast(0L)
+    val clock = "%d:%02d".format(remSec / 60, remSec % 60)
+    val style = Notification.ProgressStyle()
+      .setStyledByProgress(false)
+      .setProgressSegments(listOf(Notification.ProgressStyle.Segment(1000).setColor(ACCENT)))
+      .setProgress(((elapsed * 1000L) / total).toInt().coerceIn(0, 1000))
+    val b = Notification.Builder(this, CHANNEL_ID)
+      .setSmallIcon(smallIconRes())
+      .setContentTitle(title)
+      .setContentText("$clock left")
+      .setShortCriticalText(clock)
+      .setOngoing(true)
+      .setOnlyAlertOnce(true)
+      .setCategory(Notification.CATEGORY_PROGRESS)
+      .setVisibility(Notification.VISIBILITY_PUBLIC)
+      .setContentIntent(pending)
+      .setStyle(style)
+    artBitmap?.let { b.setLargeIcon(android.graphics.drawable.Icon.createWithBitmap(it)) }
+    /* Vraagt de promotie tot Live Update aan (vereist
+       POST_PROMOTED_NOTIFICATIONS in het manifest). */
+    b.extras.putBoolean("android.requestPromotedOngoing", true)
+    return b.build()
   }
 }

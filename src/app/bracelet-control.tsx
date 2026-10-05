@@ -31,6 +31,7 @@ import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import {
   PREVIEW_MAX_SECONDS,
+  previewCondensedRampMinutes,
   playModePreviewHaptic,
   stopModePreviewHaptic,
   subscribeHapticPulse,
@@ -54,7 +55,7 @@ import {
   stopBraceletSessionMonitor,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronDown, ChevronLeft, ChevronUp, Info, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronLeft, ChevronUp, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -157,6 +158,7 @@ import {
 import { useSetting } from '@/utils/settings';
 import { isLightColor } from '@/utils/color';
 import { useSubscription } from '@/hooks/useSubscription';
+import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import {
   useBraceletOwner,
   useDevBraceletActivated,
@@ -879,7 +881,10 @@ function FeelItCircle({
   feeling,
   disabled,
   onPress,
+  condensedRampMinutes,
 }: {
+  /** Gezet wanneer de voorproef het glijden inkort t.o.v. een sessie. */
+  condensedRampMinutes: number | null;
   color: string;
   feeling: boolean;
   disabled: boolean;
@@ -951,6 +956,12 @@ function FeelItCircle({
           <ReanimatedAnimated.View style={[s.feelBar, { backgroundColor: color }, barStyle]} />
         </View>
         <Text style={s.feelTimer}>0:{String(secondsLeft).padStart(2, '0')}</Text>
+        {condensedRampMinutes !== null && (
+          <Text style={s.feelCondensed}>
+            This preview is sped up. In a full session, the rhythm slows down
+            gradually.
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -1459,6 +1470,7 @@ function ModeDetailModal({
             feeling={feeling}
             disabled={sessionRunning}
             onPress={toggleFeel}
+            condensedRampMinutes={previewCondensedRampMinutes(mode)}
           />
 
           {/* Use this for — ideals checklist */}
@@ -3589,7 +3601,10 @@ type IdleScreenProps = {
   meta: ModeMeta;
   duration: number;
   setDuration: Dispatch<SetStateAction<number>>;
-  onStart: () => Promise<void>;
+  onStart: () => void | Promise<void>;
+  /** Sessies zitten in het VIBEZCORE-pakket; zonder abonnement opent Start
+   *  de paywall (Feel it blijft vrij als voorproef). */
+  startLocked: boolean;
   busy: boolean;
   stats: BraceletStats;
   completedModeForModal: BraceletMode | null;
@@ -3628,6 +3643,7 @@ function IdleScreen({
   duration,
   setDuration,
   onStart,
+  startLocked,
   busy,
   stats,
   completedModeForModal,
@@ -3977,10 +3993,19 @@ function IdleScreen({
             style={[s.primaryBtn, (busy || criticalBattery) && s.btnDisabled]}
             onPress={onStart}
             disabled={busy || criticalBattery}
-            accessibilityLabel={`Start ${meta.name} session`}
+            accessibilityLabel={
+              startLocked ? `Unlock ${meta.name} sessions` : `Start ${meta.name} session`
+            }
           >
             {busy ? (
               <ActivityIndicator color="#1D1D1F" />
+            ) : startLocked ? (
+              /* Vooraf zichtbaar dat dit achter het abonnement zit (zelfde
+                 les als protocol-gate.ts: geen verrassing pas na de tik). */
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Lock size={16} color="#1D1D1F" strokeWidth={2.4} />
+                <Text style={s.primaryBtnText}>Start {meta.name}</Text>
+              </View>
             ) : (
               <Text style={s.primaryBtnText}>Start {meta.name}</Text>
             )}
@@ -4726,12 +4751,37 @@ function BraceletControlScreen({
      sendCommand Start. Daarna gaat de render-branch automatisch naar
      het Active-scherm. De breathwork-strip toont onderaan in idle-state
      met een "Start"-knop — user start breathwork zelf wanneer klaar. */
+  /* Operator, 5 okt 2026: State Control-sessies zitten achter de paywall,
+     samen met breathwork en audio als één pakket. Ontgrendeld met het
+     abonnement (ook tijdens de trial) of een geactiveerde bracelet. Tijdens
+     het laden niet op slot, anders flitst de paywall bij een betalende
+     gebruiker. Feel it (30 s) blijft voor iedereen. */
+  const subscription = useSubscription();
+  const [testFullSessions] = useSetting('testFullSessions');
+  const sessionsLocked =
+    !subscription.isLoading &&
+    !subscription.isPro &&
+    !subscription.hasBracelet &&
+    !testFullSessions;
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
   const autoStartFiredRef = useRef(false);
+  /* De link-intentie bij mount vasthouden: de effect kan later pas lopen
+     (abonnementsstatus laadt nog) wanneer de link al als verwerkt telt. */
+  const autoStartWantedRef = useRef(autoStartBracelet);
   const [autoStartFailed, setAutoStartFailed] = useState(false);
   useEffect(() => {
     if (autoStartFiredRef.current) return;
-    if (!autoStartBracelet) return;
+    if (!autoStartWantedRef.current) return;
+    /* Abonnementsstatus nog aan het laden: wachten, niet gokken. */
+    if (subscription.isLoading) return;
     autoStartFiredRef.current = true;
+    if (sessionsLocked) {
+      /* Plan/breathwork-link zonder abonnement: niet stil starten, de
+         paywall tonen (operator, 5 okt 2026). */
+      setPaywallOpen(true);
+      return;
+    }
 
     (async () => {
       try {
@@ -4780,7 +4830,7 @@ function BraceletControlScreen({
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [subscription.isLoading]);
 
   /* Stil auto-connect voor `autoConnect` (4 okt 2026, State Control-
      intro) — enkel VERBINDEN, geen sessie starten zoals autoStartBracelet
@@ -4796,6 +4846,14 @@ function BraceletControlScreen({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoConnect, conn]);
+
+  const onStartGated = () => {
+    if (sessionsLocked) {
+      setPaywallOpen(true);
+      return;
+    }
+    void onStart();
+  };
 
   const onStart = async () => {
     setBusy(true);
@@ -5352,7 +5410,8 @@ function BraceletControlScreen({
         meta={meta}
         duration={duration}
         setDuration={setDuration}
-        onStart={onStart}
+        onStart={onStartGated}
+        startLocked={sessionsLocked}
         busy={busy}
         stats={stats}
         completedModeForModal={completedModeForModal}
@@ -5361,6 +5420,11 @@ function BraceletControlScreen({
         detailModeForModal={detailModeForModal}
         setDetailModeForModal={setDetailModeForModal}
         sim={sim}
+      />
+      <PremiumPaywallModal
+        visible={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        context="state-control"
       />
       {connectedPopupOverlay}
     </>
@@ -6170,6 +6234,15 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     fontVariant: ['tabular-nums'],
+  },
+  feelCondensed: {
+    marginTop: 6,
+    fontSize: 12,
+    fontFamily: BrandFonts.medium,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 17,
   },
   feelHint: {
     marginTop: 8,
