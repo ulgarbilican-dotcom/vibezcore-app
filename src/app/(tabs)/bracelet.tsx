@@ -60,7 +60,8 @@ import BraceletControl from '../bracelet-control';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
-const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20state%20control%202.png';
+/* Operator, 5 okt 2026: terug naar de eerste foto. */
+const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20state%20control.png';
 
 /* Ken Burns-"ademing" + gefaseerde reveal — exact dezelfde recept als de
    oude bracelet-intro (smart-bead-bracelet.tsx se `introKenBurnsStyle`/
@@ -73,22 +74,26 @@ const INTRO_ZOOM = 1;
    (1122×1402); schermvullend (cover) sneed de zijkanten weg. Nu over de
    volle breedte bovenaan, onderaan zacht uitlopend in de achtergrond —
    titel en knop staan daaronder op het donker, niet over de foto. */
-const BG_ASPECT = 1024 / 1536; // staand 2:3 — past precies in het fotovlak hieronder
+const BG_ASPECT = 1122 / 1402;
 
 /* Operator, 5 okt 2026 ("de foto moet groter, full screen"): schermvullend
    op volle hoogte. De 2:3-foto is dan breder dan het scherm; de uitsnede
    begint op 19% van de breedte, zodat beide gezichten (man links, vrouw
    rechts) in beeld blijven — wat wegvalt is been en betonrand. */
-const PHOTO_FOCUS_LEFT = 0.145;
-/* Vervolg ("foto meer naar boven, pols moet in beeld"): de polsen (horloge
-   en armband) zitten op ~80% van de fotohoogte, achter de tekst. 17%
-   hoger: wat bovenaan wegvalt is lucht, de polsen komen boven de titel. */
-const PHOTO_SHIFT_UP = 0.17;
+/* Afgesteld op de eerste foto (breder, hoofden hoog): schermvullend
+   vielen hoofd van de man en gezicht van de vrouw weg. De foto vult
+   bovenaan 66% van de hoogte (vanaf 5%; operator: "meer uitzoomen"), de uitsnede begint op 12,5%
+   van de breedte — beide gezichten volledig in beeld, de onderkant
+   loopt uit in het donker achter titel en knop. */
+const PHOTO_TOP = 0.05;
+const PHOTO_HEIGHT = 0.66;
+const PHOTO_FOCUS_LEFT = 0.125;
 
 function photoFrame(w: number, h: number) {
-  const width = h * BG_ASPECT;
+  const height = h * PHOTO_HEIGHT;
+  const width = height * BG_ASPECT;
   const left = Math.min(0, Math.max(w - width, -width * PHOTO_FOCUS_LEFT));
-  return { position: 'absolute' as const, top: -h * PHOTO_SHIFT_UP, left, height: h, width };
+  return { position: 'absolute' as const, top: h * PHOTO_TOP, left, height, width };
 }
 
 function StateControlIntro({ onDone }: { onDone: () => void }) {
@@ -152,7 +157,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
         </Animated.View>
         <LinearGradient
           colors={['rgba(10,10,10,0.35)', 'rgba(10,10,10,0)', 'rgba(10,10,10,0)', 'rgba(10,10,10,0.85)', '#0a0a0a']}
-          locations={[0, 0.12, 0.55, 0.74, 0.82]}
+          locations={[0, 0.1, 0.5, 0.66, 0.72]}
           style={StyleSheet.absoluteFill}
         />
       </View>
