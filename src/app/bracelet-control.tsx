@@ -48,7 +48,7 @@ import {
   stopBraceletSessionMonitor,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronLeft, Info, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronLeft, Info, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -3028,11 +3028,29 @@ function ActiveSessionScreen({
            cirkel komen"): mode-naam/dot terug verhuisd naar BOVEN de
            ring — enkel dat ene element, PAUSED-label blijft binnenin
            (niet expliciet gevraagd om ook te verplaatsen). */}
-        <View style={s.activeModeRow}>
-          <View style={[s.activeDot, { backgroundColor: activeMeta.color }]} />
-          <Text style={[s.activeName, activeDark && { color: '#ffffff' }]}>
-            {activeMeta.name}
-          </Text>
+        <View style={s.activeHeaderRow}>
+          {/* Operator, 5 okt 2026 ("geen tabbalk onderaan — chevron gebruiken
+             zoals Apple"): neerwaartse chevron linksboven, zoals Now Playing
+             in Apple Music — vervangt de Minimize-knop. De sessie loopt door;
+             het pilletje op de andere schermen brengt je terug. */}
+          <Pressable
+            style={s.minimizeChevron}
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.navigate('/welcome' as never);
+            }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Minimize — session keeps running"
+          >
+            <ChevronDown size={30} color="#ffffff" strokeWidth={2.2} />
+          </Pressable>
+          <View style={s.activeModeRow}>
+            <View style={[s.activeDot, { backgroundColor: activeMeta.color }]} />
+            <Text style={[s.activeName, activeDark && { color: '#ffffff' }]}>
+              {activeMeta.name}
+            </Text>
+          </View>
         </View>
         <View style={s.timerWrap}>
           {/* Operator, 16 september 2026 ("ambient glow, voelt anders aan
@@ -3287,27 +3305,8 @@ function ActiveSessionScreen({
                 <Text style={s.capsuleBtnSecondaryText}>End session</Text>
               )}
             </Pressable>
-            {/* Operator, 5 okt 2026 ("die minimize staat op deze pagina,
-               dat mag niet"): Minimize hoort enkel bij het GEDUWDE scherm
-               (/bracelet-control, router.back() heeft daar een doel). In de
-               State Control-tab staat dit scherm sinds 4 okt inline voor
-               iedereen — daar is er niets om naar terug te gaan. Gekoppeld
-               aan de route i.p.v. aan isBraceletOwner. */}
-            {isPushedRoute && (
-              <Pressable
-                style={({ pressed }) => [
-                  s.capsuleBtnSecondary,
-                  s.capsuleBtnMinimize,
-                  pressed && { opacity: 0.8 },
-                ]}
-                onPress={() => {
-                  if (router.canGoBack()) router.back();
-                }}
-                accessibilityLabel="Minimize — session keeps running"
-              >
-                <Text style={s.capsuleBtnSecondaryText}>Minimize</Text>
-              </Pressable>
-            )}
+            {/* Minimize-knop vervangen door de chevron linksboven
+               (operator, 5 okt 2026 — zie activeHeaderRow). */}
           </View>
         </View>
 
@@ -6403,6 +6402,19 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   /* Mode-dot + naam-rij — nu IN de ring, boven de mm:ss. */
+  /* Volle breedte zodat de chevron links kan staan terwijl de modusnaam
+     gecentreerd blijft. */
+  activeHeaderRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  minimizeChevron: {
+    position: 'absolute',
+    left: 4,
+    top: -4,
+    padding: 4,
+  },
   activeModeRow: {
     flexDirection: 'row',
     alignItems: 'center',
