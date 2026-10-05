@@ -17,7 +17,7 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import {
   useBraceletStats,
 } from '@/utils/bracelet-history';
@@ -445,7 +445,7 @@ const s = StyleSheet.create({
   /* Oplichten bij terugkeer (zie `flash` hierboven) — operator: "niet
      exact Apple nabouwen": geen grijze iOS-selectie maar een zachte gloed
      in ons Bio-Teal-accent die rustig uitdooft. */
-  rowFlash: { borderRadius: 14, backgroundColor: `${AudioAccentLight}24` },
+  rowFlash: { borderRadius: 14, backgroundColor: 'rgba(214,255,247,0.16)' },
   rowFlashLarge: { borderRadius: 16 },
   rowIconBadge: {
     width: 40,
