@@ -2188,6 +2188,9 @@ export default function BreathSetupScreen() {
             source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
+            /* Operator, 5 okt 2026: zoals Apple Music — het beeld vervaagd
+               tot sfeer, zodat gezichten niet met de cirkel concurreren. */
+            blurRadius={14}
           />
           {/* Lichte demping binnenin: dit is wat het glas vervaagt. */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.5)' }]} />
