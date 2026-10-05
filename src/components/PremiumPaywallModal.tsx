@@ -156,8 +156,32 @@ type Props = {
   /** Waar de popup opengaat — bepaalt enkel de eyebrow en waar de gebruiker
    *  na aankoop terugkomt. Het pakket zelf is overal hetzelfde (operator,
    *  5 okt 2026: audio, breathwork en State Control zijn één pakket). */
-  context?: 'breathwork' | 'state-control';
+  context?: PaywallContext;
 };
+
+export type PaywallContext = 'breathwork' | 'state-control' | 'audio';
+
+/** Voordelen in volgorde van relevantie: het eigen product eerst. Operator,
+ *  1 okt 2026: 64 = 15 technieken × hun benoemde duur-varianten. */
+function benefitLines(context: PaywallContext, audioWorth: string | undefined): string[] {
+  const audio = audioWorth
+    ? `Full Audio Library included — worth ${audioWorth}/mo`
+    : 'Full VIBEZCORE Audio Library included';
+  const stateControl = [
+    'State Control — every haptic state, any duration',
+    'Keeps running with your screen locked',
+  ];
+  const breathwork = [
+    'All 64 guided sessions — five states, every rhythm and duration',
+    'Voice, haptic and visual guidance',
+    'Soundscapes, goals and your daily plan',
+  ];
+  const breathworkShort = 'All 64 guided breathwork sessions';
+  const stateControlShort = 'State Control — every haptic state, any duration';
+  if (context === 'state-control') return [...stateControl, breathworkShort, audio];
+  if (context === 'audio') return ['Full VIBEZCORE Audio Library', breathworkShort, stateControlShort];
+  return [...breathwork, stateControlShort, audio];
+}
 
 export default function PremiumPaywallModal({ visible, onClose, context = 'breathwork' }: Props) {
   const { getProduct } = useIAP();
@@ -218,26 +242,19 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
             <X size={18} color="rgba(10,10,12,0.45)" strokeWidth={2.2} />
           </AnimatedPressable>
           <Text style={s.payEyebrow}>
-            {context === 'state-control' ? 'VIBEZCORE STATE CONTROL' : 'VIBEZCORE BREATHWORK'}
+            {context === 'state-control'
+              ? 'VIBEZCORE STATE CONTROL'
+              : context === 'audio'
+                ? 'VIBEZCORE AUDIO LIBRARY'
+                : 'VIBEZCORE BREATHWORK'}
           </Text>
           <Text style={s.payTitle}>Unlock every session</Text>
           <View style={s.payList}>
             {[
-              /* Operator, 1 okt 2026: "49" was fout, nergens in de data
-                 terug te vinden — geverifieerd correct: 15 technieken
-                 (5 states × 3 niveaus) × hun benoemde duur-varianten = 64. */
-              'All 64 guided sessions — five states, every rhythm and duration',
-              'Voice, haptic and visual guidance',
-              /* Operator, 5 okt 2026: State Control-sessies horen bij
-                 hetzelfde pakket als breathwork en audio. */
-              'State Control — every haptic state, any duration',
-              'Soundscapes, goals and your daily plan',
-              (() => {
-                const worth = getProduct('monthly')?.regularPriceLabel;
-                return worth
-                  ? `Full Audio Library included — worth ${worth}/mo`
-                  : 'Full VIBEZCORE Audio Library included';
-              })(),
+              /* Operator, 5 okt 2026 ("elke popup moet beginnen met het eigen
+                 relevante product"): eerst de voordelen van het product waar
+                 de gebruiker vandaan komt, daarna de andere twee. */
+              ...benefitLines(context, getProduct('monthly')?.regularPriceLabel),
             ].map((line) => (
               <View key={line} style={s.payRow}>
                 <View style={s.payCheck}>

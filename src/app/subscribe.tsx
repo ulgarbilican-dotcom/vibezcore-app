@@ -1129,8 +1129,14 @@ export default function SubscribeScreen() {
                 <Text style={s.donePerkTitle}>
                   During your trial, you have access to:
                 </Text>
+                {params.returnTo === 'state-control' && (
+                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                )}
                 {/* Operator, 1 okt 2026: "49" was fout — correct: 64. */}
                 <Text style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</Text>
+                {params.returnTo !== 'state-control' && (
+                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                )}
                 <Text style={s.donePerkLine}>
                   · {TRIAL_SESSION_COUNT} Audio Library sessions
                 </Text>
@@ -1142,7 +1148,13 @@ export default function SubscribeScreen() {
             ) : (
               <>
                 <Text style={s.donePerkTitle}>One membership, you now have access to:</Text>
+                {params.returnTo === 'state-control' && (
+                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                )}
                 <Text style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</Text>
+                {params.returnTo !== 'state-control' && (
+                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                )}
                 <Text style={s.donePerkLine}>
                   · {TOTAL_SESSION_COUNT} Audio Library sessions across 4 pillars of growth
                 </Text>
@@ -1282,9 +1294,14 @@ export default function SubscribeScreen() {
           <Text style={s.heading}>Choose your plan</Text>
           {/* Operator, 1 okt 2026: "49" was fout — correct: 64 (15
              technieken × hun benoemde duur-varianten). */}
+          {/* Operator, 5 okt 2026: het product waar de gebruiker vandaan
+             komt eerst, daarna de andere twee. */}
           <Text style={s.sub}>
-            All 64 guided sessions — every state, every rhythm — plus
-            the full VIBEZCORE Audio Library. Cancel anytime.
+            {params.returnTo === 'state-control'
+              ? 'Every State Control session — every haptic state, any duration — plus all 64 guided breathwork sessions and the full VIBEZCORE Audio Library. Cancel anytime.'
+              : params.returnTo === 'audio'
+                ? 'The full VIBEZCORE Audio Library, plus all 64 guided breathwork sessions and every State Control session. Cancel anytime.'
+                : 'All 64 guided sessions — every state, every rhythm — plus every State Control session and the full VIBEZCORE Audio Library. Cancel anytime.'}
           </Text>
 
           <AnimatedPressable
