@@ -895,6 +895,32 @@ function FeelItCircle({
   const beatStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
   const fg = isLightColor(color) ? '#0a0a0a' : '#ffffff';
 
+  /* Operator, 5 okt 2026: "laat ook aftellen met een progressiebar en een
+     timer onder die bar" — de voorproef is eindig (PREVIEW_MAX_SECONDS). */
+  const progress = useSharedValue(1);
+  const [secondsLeft, setSecondsLeft] = useState(PREVIEW_MAX_SECONDS);
+  useEffect(() => {
+    if (!feeling) {
+      cancelAnimation(progress);
+      progress.value = 1;
+      setSecondsLeft(PREVIEW_MAX_SECONDS);
+      return;
+    }
+    const started = Date.now();
+    progress.value = 1;
+    progress.value = withTiming(0, {
+      duration: PREVIEW_MAX_SECONDS * 1000,
+      easing: ReanimatedEasing.linear,
+    });
+    const id = setInterval(() => {
+      const left = Math.max(0, PREVIEW_MAX_SECONDS - Math.floor((Date.now() - started) / 1000));
+      setSecondsLeft(left);
+    }, 250);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feeling]);
+  const barStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
+
   return (
     <View style={s.feelWrap}>
       <Pressable
@@ -914,6 +940,14 @@ function FeelItCircle({
         </ReanimatedAnimated.View>
       </Pressable>
       {disabled && <Text style={s.feelHint}>Not available during a session</Text>}
+      {/* Altijd ruimte gereserveerd (opacity i.p.v. weglaten), zodat de
+          lay-out niet verspringt bij starten/stoppen. */}
+      <View style={[s.feelProgressWrap, { opacity: feeling ? 1 : 0 }]}>
+        <View style={s.feelTrack}>
+          <ReanimatedAnimated.View style={[s.feelBar, { backgroundColor: color }, barStyle]} />
+        </View>
+        <Text style={s.feelTimer}>0:{String(secondsLeft).padStart(2, '0')}</Text>
+      </View>
     </View>
   );
 }
@@ -6074,6 +6108,28 @@ const s = StyleSheet.create({
     fontSize: 17,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,
+  },
+  feelProgressWrap: {
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  feelTrack: {
+    width: 160,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  feelBar: {
+    height: 4,
+    borderRadius: 2,
+  },
+  feelTimer: {
+    marginTop: 8,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    fontVariant: ['tabular-nums'],
   },
   feelHint: {
     marginTop: 8,
