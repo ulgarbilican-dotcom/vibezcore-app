@@ -26,6 +26,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -231,6 +233,30 @@ class StateHapticsService : Service() {
     return "%d:%02d left".format(remSec / 60, remSec % 60)
   }
 
+  /* Operator, 5 okt 2026 ("op lockscreen zie ik een muzieknoot, daar moet
+     het V-icoon komen"): zonder album-art toont OneUI een muzieknoot. Het
+     app-icoon (V) als art + de witte V (notification_icon, zelfde als
+     expo-notifications gebruikt) als klein icoon. */
+  private val artBitmap: Bitmap? by lazy {
+    try {
+      val d = packageManager.getApplicationIcon(packageName)
+      val w = d.intrinsicWidth.coerceAtLeast(1)
+      val h = d.intrinsicHeight.coerceAtLeast(1)
+      val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+      val c = Canvas(b)
+      d.setBounds(0, 0, w, h)
+      d.draw(c)
+      b
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  private fun smallIconRes(): Int {
+    val id = resources.getIdentifier("notification_icon", "drawable", packageName)
+    return if (id != 0) id else applicationInfo.icon
+  }
+
   private fun ensureMediaSession(): MediaSessionCompat {
     mediaSession?.let { return it }
     val s = MediaSessionCompat(this, "VibezcoreStateControl")
@@ -258,6 +284,12 @@ class StateHapticsService : Service() {
         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, text)
         .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, sessionTotalMs)
+        .apply {
+          artBitmap?.let {
+            putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
+            putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, it)
+          }
+        }
         .build(),
     )
     s.setPlaybackState(
@@ -344,7 +376,8 @@ class StateHapticsService : Service() {
     val builder = NotificationCompat.Builder(this, CHANNEL_ID)
       .setContentTitle(title)
       .setContentText(text)
-      .setSmallIcon(applicationInfo.icon)
+      .setSmallIcon(smallIconRes())
+      .setLargeIcon(artBitmap)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setSilent(true)

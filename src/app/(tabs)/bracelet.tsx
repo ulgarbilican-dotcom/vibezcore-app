@@ -187,7 +187,11 @@ export default function BraceletScreen() {
      stil verbinden op de achtergrond i.p.v. het volledige zoek-scherm
      doorlopen — haptiek werkt sowieso zonder enige verbinding, dit is
      enkel voor wanneer er ooit een echte bracelet gekoppeld is. */
-  return <BraceletControl autoConnect />;
+  /* Chevron in de actieve sessie → terug naar dit intro (operator, 5 okt
+     2026: "minimize moet naar welcome state control gaan"). De sessie zelf
+     loopt door — haptiek hangt aan bracelet-session-monitor, niet aan dit
+     scherm. */
+  return <BraceletControl autoConnect onMinimize={() => setShowIntro(true)} />;
 }
 
 const s = StyleSheet.create({

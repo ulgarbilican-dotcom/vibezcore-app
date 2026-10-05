@@ -28,7 +28,9 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { BrandFonts } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
+import { isActiveSessionVisible, subscribeActiveSessionVisible } from '@/utils/state-control-ui';
 import { router, Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ChartNoAxesColumn,
   CircleUserRound,
@@ -189,6 +191,10 @@ export default function TabLayout() {
      zodat er altijd een vaste eigen content-ruimte overblijft, ongeacht
      toestel — zie `tabBarStyle.height` verderop voor de exacte waarde. */
   const insets = useSafeAreaInsets();
+  /* Actieve State Control-sessie = volledig scherm, geen tabbalk (operator,
+     5 okt 2026) — zie utils/state-control-ui.ts. */
+  const [hideStateControlBar, setHideStateControlBar] = useState(isActiveSessionVisible());
+  useEffect(() => subscribeActiveSessionVisible(setHideStateControlBar), []);
 
   /* Wrap Tabs in een View zodat we de MiniPlayer ernaast (absolute,
      boven de tab-bar) kunnen mounten. MiniPlayer rendert zelf null
@@ -315,6 +321,9 @@ export default function TabLayout() {
               <TabLabel label="State Control" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
+            /* Sleutel enkel meegeven als de balk weg moet — een `undefined`
+               zou de stijl uit screenOptions overschrijven. */
+            ...(hideStateControlBar ? { tabBarStyle: { display: 'none' as const } } : {}),
           }}
         />
         {/* Wat je gedaan hebt verdient een eigen plek in de balk (operator,

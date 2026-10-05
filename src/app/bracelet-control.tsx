@@ -30,6 +30,8 @@ import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import { playModePreviewHaptic, stopModePreviewHaptic } from '@/services/bracelet-haptics';
+import { hasNativeWaveform } from '../../modules/state-haptics';
+import { setActiveSessionVisible } from '@/utils/state-control-ui';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -1353,23 +1355,14 @@ function CompletionModal({
         </Text>
         <Text style={s.completionMsgLine1}>{msg.line1}</Text>
         <Text style={s.completionMsgLine2}>{msg.line2}</Text>
+        {/* Huisstijl (27 sept 2026): CTA altijd wit met donkere tekst,
+            nooit de modus-/accentkleur. */}
         <Pressable
-          style={[s.completionBtn, { backgroundColor: meta.color }]}
+          style={[s.completionBtn, { backgroundColor: '#ffffff' }]}
           onPress={onDismiss}
           accessibilityLabel="Done"
         >
-          {/* Iter 2026-06-05: contrast-fix voor light modes (Boost = wit).
-              Witte tekst op witte achtergrond = onzichtbaar. Voor light
-              mode-colors switchen we naar zwarte tekst, anders houden we
-              wit (bestaand gedrag voor dark modes). */}
-          <Text
-            style={[
-              s.completionBtnText,
-              isLightColor(meta.color) && { color: '#0a0a0a' },
-            ]}
-          >
-            Done
-          </Text>
+          <Text style={[s.completionBtnText, { color: '#0a0a0a' }]}>Done</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -2849,6 +2842,8 @@ type ActiveSessionScreenProps = {
   busy: boolean;
   setEndedLocally: Dispatch<SetStateAction<boolean>>;
   onStop: () => Promise<void>;
+  /** Inline in de tab: terug naar het State Control-intro. */
+  onMinimize?: () => void;
 };
 
 /* SCREEN 2: Active session — kalm, één focuspunt.
@@ -2877,8 +2872,17 @@ function ActiveSessionScreen({
   busy,
   setEndedLocally,
   onStop,
+  onMinimize,
 }: ActiveSessionScreenProps) {
   const isPushedRoute = usePathname() === '/bracelet-control';
+  /* Volledig scherm, geen tabbalk (operator, 5 okt 2026) — de tab-indeling
+     leest dit via utils/state-control-ui.ts. */
+  useFocusEffect(
+    useCallback(() => {
+      setActiveSessionVisible(true);
+      return () => setActiveSessionVisible(false);
+    }, []),
+  );
   /* Operator, 4 okt 2026 ("er is letterlijk geen haptic" tijdens een
      echte sessie): playModePreviewHaptic/stopModePreviewHaptic zaten tot
      nu toe ENKEL achter de "Feel it"-testknop in ModeDetailModal — een
@@ -3028,9 +3032,11 @@ function ActiveSessionScreen({
              het pilletje op de andere schermen brengt je terug. */}
           <Pressable
             style={s.minimizeChevron}
+            /* Operator, 5 okt 2026: "minimize moet naar welcome state
+               control gaan" — het intro-scherm van de State Control-tab. */
             onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.navigate('/welcome' as never);
+              if (onMinimize) onMinimize();
+              else router.navigate('/bracelet' as never);
             }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
@@ -3397,6 +3403,7 @@ function IdleScreen({
   const infoBtnAnim = useRef(
     new Animated.Value(MODES.findIndex((m) => m.mode === selectedMode)),
   ).current;
+  const idleInTab = usePathname() === '/bracelet';
   useEffect(() => {
     Animated.spring(infoBtnAnim, {
       toValue: MODES.findIndex((m) => m.mode === selectedMode),
@@ -3419,7 +3426,10 @@ function IdleScreen({
        inset gaf een grote leegte tussen header en content. */
     <SafeAreaView
       style={[s.root, idleDark && { backgroundColor: '#000000' }]}
-      edges={['top', 'bottom']}
+      /* In de tab neemt de tabbalk de onderste systeemrand al voor zijn
+         rekening — hier nogmaals reserveren duwde de Start-knop onder de
+         balk (operator, 5 okt 2026). */
+      edges={idleInTab ? ['top'] : ['top', 'bottom']}
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
@@ -3481,7 +3491,7 @@ function IdleScreen({
       <View
         style={[
           s.idleSingleScreen,
-          { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
+          { paddingBottom: idleInTab ? 16 : Math.max(safeInsets.bottom + 24, 72) },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
@@ -3781,7 +3791,8 @@ function IdleScreen({
 
 export default function BraceletControl({
   autoConnect = false,
-}: { autoConnect?: boolean } = {}) {
+  onMinimize,
+}: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
   const bracelet = getBracelet();
   const sim = getSimHooks(); // null on real hardware
   /* Iter 9x: safe-area insets voor bottomBarDual padding. Wanneer
@@ -4273,8 +4284,19 @@ export default function BraceletControl({
          Breathwork completion (breath-voice.ts + breath-tab) is een
          apart pad en behoudt wél popup + audio — daar is expressief
          gedrag gewenst. */
-      /* setCompletedModeForModal(selectedMode);   ← popup weg */
-      /* playBraceletCompletionCue(selectedMode);  ← audio weg */
+      /* Operator, 5 okt 2026 ("op einde moet er een felicitatie komen, met
+         haptics duidelijk dat het einde is — nu springt het abrupt naar
+         session control; hoe zou Apple dit doen"): popup TERUG, zoals de
+         Apple Watch na een sessie een samenvatting + succes-tik toont.
+         Audio blijft weg (reden van juli: vergaderingen, stil). Het eind-
+         signaal in trilling zit achteraan de native curve (bracelet-
+         haptics.ts) — voelbaar, ook met het scherm op slot. Zonder native
+         module (iOS) geeft expo-haptics de succes-tik. */
+      setCompletedModeForModal(selectedMode);
+      if (!hasNativeWaveform()) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      /* playBraceletCompletionCue(selectedMode);  ← audio bewust weg */
     }
   }, [status, pausedAt, selectedMode, duration, endedLocally, finishSession]);
 
@@ -4939,6 +4961,7 @@ export default function BraceletControl({
     return (
       <>
         <ActiveSessionScreen
+          onMinimize={onMinimize}
           status={status}
           isPaused={isPaused}
           pausedAt={pausedAt}

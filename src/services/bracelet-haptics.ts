@@ -96,13 +96,14 @@ const SPECS: Record<BraceletMode, ModeHapticSpec> = {
      subtieler → nu ertussen. */
   [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Soft, dubStyle: S.Soft },
   [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Soft, dubStyle: S.Soft },
-  /* rampSec 0 = na de basislijn METEEN naar het eindtempo — zo testten
-     Doppel (−20%) en Valente/Wang (110 bpm) het, met effect. Een overgang
-     voor deze modi is nergens getest (operator, 5 okt 2026: "welke is
-     beter en meer bewezen"). */
-  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 0, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 0, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
-  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 0, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
+  /* rampSec 10 = na de basislijn in 10 s naar het eindtempo (vol op 20 s).
+     Doppel (−20%) en Valente/Wang (110 bpm) gingen meteen naar hun tempo;
+     operator, 5 okt 2026: "geen abrupte overgang, er moet een flow zijn,
+     op 20 s bij max". 10 s is vrijwel meteen — binnen het geteste gebied,
+     enkel de schok eruit. */
+  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 10, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 10, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
+  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 10, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
 };
 
 type Timing = { holdSec: number; rampSec: number };
@@ -160,6 +161,14 @@ function buildWaveform(
       pushBeat(steady.cycleMs, steady.dubAt);
       t += steady.cycleMs / 1000;
     }
+    /* Eind-signaal (operator, 5 okt 2026: "met haptics duidelijk dat het
+       einde van de sessie is"): na een korte stilte drie tikken die
+       sterker worden — duidelijk anders dan het hartslag-ritme, ook
+       voelbaar met het scherm op slot. Geen geluid: bracelet-sessies lopen
+       vaak tijdens vergaderingen (operator, juli 2026). */
+    const strong = (amp: number) => (amplitudeControl ? amp : 255);
+    timings.push(600, 70, 120, 90, 120, 160);
+    amplitudes.push(0, strong(90), 0, strong(130), 0, strong(180));
   }
   return { timings, amplitudes, repeat };
 }
@@ -324,6 +333,8 @@ function play(
    (0 bij de start; verschuift enkel na een lange pauze, zie hieronder). */
 type SessionState = { mode: BraceletMode; curveZeroSec: number; pausedAt: number | null };
 let session: SessionState | null = null;
+/** Wandklok-moment waarop de lopende sessie natuurlijk eindigt. */
+let sessionEndsAt: number | null = null;
 
 /** Echte sessie — aangeroepen door bracelet-session-monitor.ts bij start/
  *  hervatten, NIET door een scherm. `elapsedSec` = actieve sessietijd tot
@@ -337,6 +348,7 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
     session.curveZeroSec = elapsedSec;
   }
   session.pausedAt = null;
+  sessionEndsAt = now + remainingSec * 1000;
   play(
     mode,
     { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[mode].rampSec },
@@ -348,6 +360,7 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
 
 export function pauseModeSessionHaptic(): void {
   silence();
+  sessionEndsAt = null;
   if (session && session.pausedAt === null) session.pausedAt = Date.now();
 }
 
@@ -361,8 +374,17 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
   );
 }
 
-/** Stopt alles en vergeet een eventuele gepauzeerde sessie. */
+/** Stopt alles en vergeet een eventuele gepauzeerde sessie. Bij een
+ *  NATUURLIJK einde blijft de native service ongemoeid: die speelt zelf
+ *  nog het eind-signaal uit en stopt dan vanzelf. */
 export function stopModePreviewHaptic(): void {
-  silence();
+  const endingNaturally = sessionEndsAt !== null && Date.now() >= sessionEndsAt - 1500;
+  generation += 1;
+  clearPending();
+  if (!endingNaturally) {
+    stopNativeWaveform();
+    stopNativeSession();
+  }
   session = null;
+  sessionEndsAt = null;
 }
