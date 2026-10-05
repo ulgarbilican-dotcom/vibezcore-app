@@ -26,7 +26,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.media.AudioAttributes
 import android.os.Build
+import android.os.HandlerThread
+import android.os.Process
+import android.os.VibrationAttributes
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -58,6 +62,22 @@ class StateHapticsService : Service() {
     /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
     const val LATE_SKIP_MS = 150L
 
+    /* Expliciet MEDIA i.p.v. het afgeleide TOUCH (gemeten 5 okt 2026): als
+       aanraakfeedback volgen de tikken de instelling "trillen bij aanraken"
+       — staat die uit, dan viel de hele sessie stil. */
+    fun vibrateAsMedia(v: Vibrator?, effect: VibrationEffect) {
+      if (v == null) return
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        v.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_MEDIA))
+      } else {
+        @Suppress("DEPRECATION")
+        v.vibrate(
+          effect,
+          AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build(),
+        )
+      }
+    }
+
     fun vibratorOf(context: Context): Vibrator? =
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
@@ -68,6 +88,11 @@ class StateHapticsService : Service() {
   }
 
   private val handler = Handler(Looper.getMainLooper())
+  /* Eigen thread met hoge prioriteit enkel voor het ritme (5 okt 2026):
+     op de hoofdthread schoof elke tik mee met UI-werk (animaties, ringen,
+     tikken) — gemeten tot ±90 ms afwijking. */
+  private val beatThread = HandlerThread("vibezcore-beats", Process.THREAD_PRIORITY_URGENT_AUDIO).apply { start() }
+  private val beatHandler = Handler(beatThread.looper)
   private var timings = LongArray(0)
   private var amplitudes = IntArray(0)
   private var totalMs = 0L
@@ -135,7 +160,7 @@ class StateHapticsService : Service() {
     if (now - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
       try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          vibratorOf(this)?.vibrate(VibrationEffect.createWaveform(u.t, u.a, -1))
+          vibrateAsMedia(vibratorOf(this), VibrationEffect.createWaveform(u.t, u.a, -1))
         }
       } catch (_: Exception) {
       }
@@ -145,13 +170,13 @@ class StateHapticsService : Service() {
   }
 
   private fun scheduleNextUnit() {
-    handler.removeCallbacks(beatRunnable)
+    beatHandler.removeCallbacks(beatRunnable)
     val now = SystemClock.uptimeMillis()
     while (nextUnit < units.size && startUptime + units[nextUnit].offsetMs < now - LATE_SKIP_MS) {
       nextUnit++
     }
     if (nextUnit >= units.size) return
-    handler.postAtTime(beatRunnable, startUptime + units[nextUnit].offsetMs)
+    beatHandler.postAtTime(beatRunnable, startUptime + units[nextUnit].offsetMs)
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -189,6 +214,8 @@ class StateHapticsService : Service() {
 
   override fun onDestroy() {
     handler.removeCallbacksAndMessages(null)
+    beatHandler.removeCallbacksAndMessages(null)
+    beatThread.quitSafely()
     try {
       vibratorOf(this)?.cancel()
     } catch (_: Exception) {
@@ -200,6 +227,7 @@ class StateHapticsService : Service() {
 
   private fun stopSelfCleanly() {
     handler.removeCallbacksAndMessages(null)
+    beatHandler.removeCallbacksAndMessages(null)
     try {
       vibratorOf(this)?.cancel()
     } catch (_: Exception) {

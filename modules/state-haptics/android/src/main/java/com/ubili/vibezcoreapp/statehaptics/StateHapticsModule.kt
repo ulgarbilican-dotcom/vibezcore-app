@@ -57,7 +57,7 @@ class StateHapticsModule : Module() {
         val t = LongArray(timings.size) { timings[it].toLong() }
         val a = IntArray(amplitudes.size) { amplitudes[it].coerceIn(0, 255) }
         val r = if (repeat in t.indices) repeat else -1
-        v.vibrate(VibrationEffect.createWaveform(t, a, r))
+        StateHapticsService.vibrateAsMedia(v, VibrationEffect.createWaveform(t, a, r))
       } catch (_: Exception) {
         /* stil — een trilmotor die niet meewerkt mag de sessie niet breken */
       }

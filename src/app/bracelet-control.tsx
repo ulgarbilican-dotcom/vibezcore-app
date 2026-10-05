@@ -3235,10 +3235,11 @@ function ActiveSessionScreen({
             /* Operator, 5 okt 2026 ("onderste blok 2 cm laten zakken,
                ademruimte"): geduwd scherm tot net boven de systeem-
                navigatiebalk — meer kan niet zonder eronder te vallen. */
-            /* In de tab: de tabbalk neemt sinds 25 sept zelf zijn ruimte in
-               (geen zwevende overlay meer) — de oude +100-compensatie hield
-               het blok ~2 cm te hoog. */
-            paddingBottom: !isPushedRoute ? 12 : Math.max(safeInsets.bottom + 6, 20),
+            /* 5 okt 2026: het actieve sessiescherm toont nooit een tabbalk
+               meer (volledig scherm) en staat altijd in de tab — één vaste
+               ademruimte boven de systeemnavigatie (de SafeAreaView telt de
+               systeemrand zelf al mee). 12 bleek "te laag". */
+            paddingBottom: 44,
           },
         ]}
       >
