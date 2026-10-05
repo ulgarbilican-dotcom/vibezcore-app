@@ -2189,12 +2189,18 @@ export default function BreathSetupScreen() {
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
-          <LinearGradient
-            colors={['rgba(10,10,10,0.62)', 'rgba(10,10,10,0.8)', 'rgba(10,10,10,0.94)']}
-            locations={[0, 0.5, 1]}
-            style={StyleSheet.absoluteFill}
-          />
+          {/* Lichte demping binnenin: dit is wat het glas vervaagt. */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.5)' }]} />
         </BlurTargetView>
+      )}
+      {/* De echte verdonkering ligt BUITEN de BlurTargetView: lagen daarbinnen
+         werden op Android niet zichtbaar over de foto getekend (operator:
+         "moet donkerder" → "nog donkerder"). */}
+      {!isAddToDay && (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { top: -insets.top, backgroundColor: 'rgba(10,10,10,0.78)' }]}
+        />
       )}
 
       {/* Operator, 11 september 2026: "weg met saai wit, een zachte
