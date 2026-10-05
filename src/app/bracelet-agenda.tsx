@@ -99,6 +99,7 @@ import {
   Play,
   Watch,
 } from 'lucide-react-native';
+import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -193,11 +194,14 @@ function MonthCell({
 function StateCard({
   label,
   color,
+  Icon,
   on,
   onPress,
 }: {
   label: string;
   color?: string;
+  /** Teken van de toestand (zelfde als de Breath-tab) i.p.v. het bolletje. */
+  Icon?: GlyphIcon;
   on: boolean;
   onPress: () => void;
 }) {
@@ -218,7 +222,9 @@ function StateCard({
       style={s.cardSlot}
     >
       <Animated.View style={[s.card, on && s.cardOn, pressStyle]}>
-        {color ? (
+        {Icon && color ? (
+          <Icon size={20} color={color} strokeWidth={2} />
+        ) : color ? (
           <View style={[s.cardDot, { backgroundColor: color }]} />
         ) : (
           <Layers size={15} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />
@@ -495,6 +501,7 @@ export default function BraceletAgendaScreen() {
                   key={m.mode}
                   label={m.name}
                   color={m.color}
+                  Icon={MODE_GLYPH_ICONS[m.mode]}
                   on={filterMode === m.mode}
                   onPress={() => {
                     Haptics.selectionAsync();

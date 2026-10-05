@@ -25,6 +25,7 @@ import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDown, ChevronLeft, ChevronRight, Flame, Info, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
+import { STATE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import { useProtocolLocked, PROTOCOL_LOCKED_SUB } from '@/utils/protocol-gate';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -118,11 +119,14 @@ const RING_SIZE = 240;
 function StateCard({
   label,
   color,
+  Icon,
   on,
   onPress,
 }: {
   label: string;
   color?: string;
+  /** Teken van de toestand i.p.v. het bolletje (5 okt 2026). */
+  Icon?: GlyphIcon;
   on: boolean;
   onPress: () => void;
 }) {
@@ -149,7 +153,9 @@ function StateCard({
            aparte onPress, gewoon een visueel signaal in de hoek
            tegenover de kleurbol. */}
         <View style={s.cardTopRow}>
-          {color ? (
+          {Icon && color ? (
+            <Icon size={20} color={color} strokeWidth={2} />
+          ) : color ? (
             <View style={[s.cardDot, { backgroundColor: color }]} />
           ) : (
             <Layers size={15} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />
@@ -817,6 +823,7 @@ export default function AgendaScreen() {
                 key={key}
                 label={titleCase(BREATH_STATES[key].eyebrow)}
                 color={BREATH_STATES[key].accent}
+                Icon={STATE_GLYPH_ICONS[key]}
                 on={filterMode === key}
                 onPress={() => {
                   Haptics.selectionAsync();

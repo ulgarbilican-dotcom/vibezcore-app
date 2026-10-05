@@ -26,6 +26,7 @@ import {
   cycleSeconds,
   roundsFor,
   type BreathState,
+  type BreathStateKey,
   type TechniqueDef,
 } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
@@ -56,6 +57,7 @@ import {
   Clock,
   Pencil,
 } from 'lucide-react-native';
+import { STATE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
@@ -1029,7 +1031,7 @@ function PlanItemCard({
 }: {
   it: {
     done: boolean;
-    state: { accent: string; eyebrow: string };
+    state: { accent: string; eyebrow: string; key: BreathStateKey };
     moment: { label: string };
     techName: string;
     minutes: number;
@@ -1088,7 +1090,15 @@ function PlanItemCard({
         )}
       </View>
 
-      <Text style={s.state}>{it.state.eyebrow}</Text>
+      {/* Teken van de toestand naast de naam, zelfde als de Breath-tab
+          (operator, 5 okt 2026). */}
+      <View style={s.stateRow}>
+        {(() => {
+          const Glyph = STATE_GLYPH_ICONS[it.state.key];
+          return <Glyph size={17} color={it.state.accent} strokeWidth={2} />;
+        })()}
+        <Text style={[s.state, s.stateInRow]}>{it.state.eyebrow}</Text>
+      </View>
       {plan ? (
         <Pressable
           style={s.detailBtn}
@@ -1340,6 +1350,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  stateRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  stateInRow: { marginTop: 0 },
   state: {
     marginTop: 10,
     fontFamily: BrandFonts.bold,

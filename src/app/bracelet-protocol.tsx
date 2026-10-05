@@ -159,7 +159,13 @@ export default function BraceletProtocol() {
                   <View style={[s.cardAccent, { backgroundColor: meta.color }]} />
                   <Text style={s.cardTime}>{fmtTime(it.reminderAt)}</Text>
                   <View style={s.cardMain}>
-                    <Text style={s.cardMode}>{meta.name}</Text>
+                    <View style={s.cardModeRow}>
+                      {(() => {
+                        const Glyph = MODE_GLYPH_ICONS[it.mode as BraceletMode];
+                        return <Glyph size={16} color={meta.color} strokeWidth={2} />;
+                      })()}
+                      <Text style={s.cardMode}>{meta.name}</Text>
+                    </View>
                     <Text style={s.cardSub} numberOfLines={1}>
                       {it.durationMinutes} min · {meta.blurb}
                     </Text>
@@ -277,6 +283,7 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   cardMain: { flex: 1 },
+  cardModeRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   cardMode: { fontFamily: BrandFonts.semibold, fontSize: 15.5, color: '#ffffff' },
   cardSub: { fontFamily: BrandFonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 },
 
