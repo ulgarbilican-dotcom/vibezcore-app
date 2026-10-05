@@ -1780,6 +1780,8 @@ export default function BreathSetupScreen() {
      "i"-icoon-naar-modal-patroon als de techniek-info hierboven, i.p.v.
      de tekst er altijd bij te proppen (te veel voor de kleine kaart). */
   const [durationInfoOpen, setDurationInfoOpen] = useState(false);
+  /* Keuzelijst van de drie technieken (5 okt 2026). */
+  const [techSheetOpen, setTechSheetOpen] = useState(false);
 
   /* Operator, 17 september 2026 (addToDay, "gewoon alles wat nodig is op
      1 kaart"): tijdstip erbij, enkel relevant in deze modus — de normale
@@ -2423,19 +2425,14 @@ export default function BreathSetupScreen() {
               key={tech.key}
               entering={FadeIn.duration(240)}
               style={s.heroTech}
-              numberOfLines={2}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
             >
               {tech.name}
             </Animated.Text>
-            {/* Operator, 5 okt 2026: het niveau onder de techniek, in de
-               cirkel (stond rechts naast het TECHNIQUE-label). */}
-            <Animated.Text
-              key={`level-${tech.key}`}
-              entering={FadeIn.duration(240)}
-              style={s.heroLevel}
-            >
-              {tech.level}
-            </Animated.Text>
+            {/* Het niveau staat in de techniek-keuzelijst, niet in de cirkel
+               (operator, 5 okt 2026). */}
           </View>
         </View>
         )}
@@ -2780,30 +2777,6 @@ export default function BreathSetupScreen() {
            Daily Grounding-info: denk na"): geen kaart meer, een stil
            label; de naam van de duurzone staat rechts op dezelfde regel
            met de i ernaast — één regel i.p.v. een extra rij onder het wiel. */}
-        {/* Operator, 5 okt 2026 ("de technieken buiten de cirkel, in een
-           pill met verticale scroll zoals bij de minuten"): zelfde wiel als
-           de duur hieronder; de i op de labelregel opent de uitleg. */}
-        <View style={[s.durationHead, s.techHead]}>
-          <Text style={s.durationHeadLbl}>TECHNIQUE</Text>
-          <Pressable
-            onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-            hitSlop={10}
-            style={s.durationZoneBtn}
-            accessibilityLabel={`About ${tech.name}`}
-          >
-            <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-          </Pressable>
-        </View>
-        <View style={s.durationPlain}>
-          <DurationWheel
-            options={st.techniques.map((t, i) => ({ value: i, label: techShortLabel(t) }))}
-            value={techIdx}
-            accent={accent}
-            trackColor={light ? '#8E8E93' : 'rgba(255,255,255,0.4)'}
-            onChange={(i) => pickTechnique(i)}
-          />
-        </View>
-
         <View style={s.durationHead}>
           <Text style={s.durationHeadLbl}>DURATION</Text>
           {zoneFor(chosen.minutes) ? (
@@ -2839,6 +2812,27 @@ export default function BreathSetupScreen() {
             }}
           />
         </View>
+
+        {/* Operator, 5 okt 2026 ("2 zelfde pills niet mooi — hoe doen Apple
+           en andere groten dit?"): Apple's HIG — een wiel voor lange lijsten,
+           een pull-down voor korte. Naar het model van de Timer in Apple's
+           Klok-app: één wiel (de duur), daaronder één rij die een korte
+           keuzelijst opent. Drie technieken = korte lijst. */}
+        <Pressable
+          onPress={() => setTechSheetOpen(true)}
+          style={({ pressed }) => [s.techPickRow, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Technique, ${tech.name}. Tap to change.`}
+        >
+          <VibezGlass radius={14} level="normal" style={StyleSheet.absoluteFill} />
+          <Text style={s.techRowLbl}>Technique</Text>
+          <View style={s.techRowRight}>
+            <Text style={s.techRowValue} numberOfLines={1}>
+              {techShortLabel(tech)}
+            </Text>
+            <ChevronRight size={16} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+          </View>
+        </Pressable>
         </>
         )}
 
@@ -3057,6 +3051,79 @@ export default function BreathSetupScreen() {
          lengte) worden hier samengevoegd tot één doorlopende alinea i.p.v.
          twee losse punten — nog steeds geen nieuwe copy, enkel anders
          geschreven. */}
+      {/* Keuzelijst technieken (operator, 5 okt 2026 — Timer-model): drie
+         rijen in het glazen vel, de gekozen met een vinkje. Tik = kiezen en
+         sluiten; de i opent de volledige uitleg. */}
+      <Modal
+        visible={techSheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTechSheetOpen(false)}
+      >
+        <View style={s.sheetRoot}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setTechSheetOpen(false)} />
+          <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
+            <View style={s.sheetHandle} />
+            <View style={s.sheetHeader}>
+              <Text style={[s.modalTitle, s.sheetTitleTxt]}>Technique</Text>
+              <Pressable onPress={() => setTechSheetOpen(false)} hitSlop={10}>
+                <Text style={[s.sheetDoneTxt, { color: '#ffffff' }]}>Done</Text>
+              </Pressable>
+            </View>
+            <View style={s.techList}>
+              {st.techniques.map((t, i) => {
+                const on = i === techIdx;
+                const Icon = techniqueIcon(t.key);
+                return (
+                  <Pressable
+                    key={t.key}
+                    onPress={() => {
+                      pickTechnique(i);
+                      Haptics.selectionAsync();
+                      setTechSheetOpen(false);
+                    }}
+                    style={({ pressed }) => [s.techListRow, pressed && { opacity: 0.7 }]}
+                  >
+                    <VibezGlass radius={16} level={on ? 'raised' : 'subtle'} style={StyleSheet.absoluteFill} />
+                    <View style={s.sheetBadgeSm}>
+                      <VibezGlass radius={14} tint={st.accent} level="raised" style={StyleSheet.absoluteFill} />
+                      <Icon size={15} color="#ffffff" strokeWidth={2.2} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={s.techListTop}>
+                        <Text style={s.techListName} numberOfLines={1}>{t.name}</Text>
+                        <View style={[s.techListLevel, { backgroundColor: `${st.accent}38` }]}>
+                          <Text style={s.techListLevelTxt}>{t.level}</Text>
+                        </View>
+                      </View>
+                      <Text style={s.techListSub} numberOfLines={1}>
+                        Best for {t.bestFor.toLowerCase()} · {techniquePattern(t.phases)}
+                      </Text>
+                    </View>
+                    {on ? <Check size={18} color="#ffffff" strokeWidth={2.6} /> : <View style={{ width: 18 }} />}
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => {
+                        setTechSheetOpen(false);
+                        setTimeout(() => setInfoModal({ title: t.name, techniqueKey: t.key }), 320);
+                      }}
+                      accessibilityLabel={`About ${t.name}`}
+                    >
+                      <Info size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+                    </Pressable>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
       <Modal
         visible={durationInfoOpen}
         transparent
@@ -4051,7 +4118,62 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     fontSize: 12.5,
     color: 'rgba(255,255,255,0.6)',
   },
-  techHead: { marginTop: 22 },
+  techPickRow: {
+    alignSelf: 'stretch',
+    marginHorizontal: 26,
+    marginTop: 22,
+    height: 52,
+    borderRadius: 14,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  techRowLbl: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 15,
+    color: '#ffffff',
+  },
+  techRowRight: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  techRowValue: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  techList: { gap: 10, marginTop: 6, marginBottom: 12 },
+  techListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  sheetBadgeSm: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  techListTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  techListName: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
+    color: '#ffffff',
+    flexShrink: 1,
+  },
+  techListLevel: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  techListLevelTxt: { fontFamily: BrandFonts.semibold, fontSize: 10.5, color: '#ffffff' },
+  techListSub: {
+    marginTop: 3,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.55)',
+  },
   heroLevel: {
     marginTop: 4,
     fontFamily: BrandFonts.medium,
