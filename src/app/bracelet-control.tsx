@@ -541,7 +541,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Gamma]: {
     intent: 'Alert, energized — primed for high-output moments.',
     braceletDoes:
-      'A heartbeat-like rhythm that starts at a resting pace, then quickens to a brisk, energizing pulse.',
+      'Starts at a resting pace, then quickens to a brisk rhythm.',
     protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
       'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
@@ -549,7 +549,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Beta]: {
     intent: 'Locked-in focus — attention that holds the line.',
     braceletDoes:
-      'A heartbeat-like rhythm that settles just above a resting pace — steady and even, for one task at a time.',
+      'Settles just above a resting pace — steady and even.',
     protocol: 'Coherent breath 5-5 · 5 min',
     protocolHow:
       'Inhale 5 seconds, exhale 5 seconds. Six breaths per minute — a resonance pace used in focus-research traditions.',
@@ -557,7 +557,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Alpha]: {
     intent: 'Steady and composed — alert but relaxed.',
     braceletDoes:
-      'A heartbeat-like rhythm that eases just below a resting pace — calm, while you stay present.',
+      'Eases just below a resting pace — calm, yet present.',
     protocol: 'Box breath 4-4-4-4 · 5 min',
     protocolHow:
       'Inhale 4, hold 4, exhale 4, hold 4. Used by special forces for stress recovery — the symmetric holds slow the system down.',
@@ -565,7 +565,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Theta]: {
     intent: 'Quieter mind — space for thought, decompression.',
     braceletDoes:
-      'A soft heartbeat-like rhythm that slows gradually over two minutes, giving your mind room to settle.',
+      'Slows gently over two minutes to a soft, quiet rhythm.',
     protocol: 'Long-exhale 4-2-6 · 4 min',
     protocolHow:
       'Inhale 4, brief 2-second hold, exhale 6 through the mouth. Inspired by extended-exhale practices used in reflection traditions.',
@@ -573,7 +573,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Delta]: {
     intent: 'Wind-down — recovery, pre-sleep, after stressful days.',
     braceletDoes:
-      'The softest, slowest rhythm — it slows gradually over two minutes as you wind down.',
+      'The slowest, softest rhythm — easing down over two minutes.',
     protocol: '4-7-8 breath · 4 min',
     protocolHow:
       'Inhale 4, hold 7, exhale 8 through the mouth. Popularized by Dr. Andrew Weil — the extended exhale signals the body to slow down.',
@@ -867,7 +867,7 @@ function PrimaryCtaButton({
    tekst". Klopt zichtbaar mee met elke tik (subscribeHapticPulse — zelfde
    bron als de motor). Witte modus (Clarity) → donkere tekst, anders
    onleesbaar. Uitgeschakeld tijdens een lopende sessie. */
-const FEEL_SIZE = 92;
+const FEEL_SIZE = 76;
 
 function FeelItCircle({
   color,
@@ -1393,9 +1393,10 @@ function ModeDetailModal({
           {/* Intent — what state this mode is for */}
           <Text style={s.modeModalIntent}>{desc.intent}</Text>
 
-          {/* How the bracelet helps — state-language description */}
-          <Text style={s.modeModalSectionLbl}>How the bracelet helps</Text>
-          <Text style={s.modeModalDesc}>{desc.braceletDoes}</Text>
+          {/* Operator, 5 okt 2026 ("intent behouden, kleiner kort eronder;
+             'How the bracelet helps' klopt niet meer — is geen bracelet"):
+             geen sectiekop meer, enkel één korte regel over het ritme. */}
+          <Text style={s.modeModalRhythm}>{desc.braceletDoes}</Text>
 
           {/* "Feel it" — operator, 5 okt 2026: "moet beter en
              professioneler — een ronde volle cirkel in de juiste kleur met
@@ -6041,8 +6042,16 @@ const s = StyleSheet.create({
      echte Start/Choose-knoppen, dit is een secundaire testactie). */
   feelWrap: {
     alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 6,
+    marginTop: 14,
+    marginBottom: 2,
+  },
+  /* Korte ritme-regel onder de intentiezin (5 okt 2026). */
+  modeModalRhythm: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    lineHeight: 20,
+    marginTop: -4,
   },
   feelCircle: {
     width: FEEL_SIZE,
