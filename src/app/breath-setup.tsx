@@ -782,8 +782,8 @@ function TechniqueSegmentButton({
     }
     const dist = Math.min(1, Math.abs(index - indicatorX.value / segW));
     return {
-      color: interpolateColor(dist, [0, 1], ['#ffffff', 'rgba(255,255,255,0.4)']),
-      fontSize: interpolate(dist, [0, 1], [14.5, 13], Extrapolation.CLAMP),
+      color: interpolateColor(dist, [0, 1], ['#ffffff', 'rgba(255,255,255,0.35)']),
+      fontSize: interpolate(dist, [0, 1], [18, 14], Extrapolation.CLAMP),
     };
   });
   return (
@@ -847,18 +847,16 @@ function TechniqueSegmentedControl({
     >
       {/* VIBEZCORE-glas (5 okt 2026): de balk doorzichtig glas, het
           gekozen kussentje lichter glas dat erboven zweeft — geen randen. */}
-      <VibezGlass radius={20} level="subtle" style={StyleSheet.absoluteFill} />
+      <VibezGlass radius={22} level="subtle" style={StyleSheet.absoluteFill} />
       {/* Operator, 24 september 2026 (referentie: "het kussentje is wit/
          lichtgrijs met een zachte schaduw, geen accentkleur"): was
          `accent` — de vulling zelf droeg voorheen de state-kleur; nu
          altijd wit, `isLightColor` was enkel nodig om daarop leesbare
          tekst te kiezen (die tekst is nu sowieso altijd donker, zie
          `TechniqueSegmentButton`), dus die stap valt weg. */}
-      {techniquePicked && segW > 0 && (
-        <Animated.View style={[tsc.indicator, indicatorStyle]}>
-          <VibezGlass radius={17} level="raised" style={StyleSheet.absoluteFill} />
-        </Animated.View>
-      )}
+      {/* Operator, 5 okt 2026 ("transparant blur, aangeduide techniek
+         wordt groter en de andere 2 dimmen"): geen kussentje meer — de
+         keuze zit in de letter zelf (zie `TechniqueSegmentButton`). */}
       {techniques.map((t, i) => (
         <TechniqueSegmentButton
           key={t.key}
@@ -914,7 +912,7 @@ const tsc = StyleSheet.create({
   track: {
     alignSelf: 'stretch',
     flexDirection: 'row',
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
     padding: 3,
   },
@@ -939,7 +937,8 @@ const tsc = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 11,
+    /* Hogere balk (operator, 5 okt 2026). */
+    height: 58,
   },
   segmentTxt: {
     fontFamily: BrandFonts.semibold,
