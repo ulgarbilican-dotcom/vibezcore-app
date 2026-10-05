@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import VibezGlass from '@/components/VibezGlass';
 import { BrandFonts, CTA } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
 /* Operator, 19 september 2026 ("ja doen" — echte glas-blur i.p.v. de
@@ -841,6 +842,9 @@ function TechniqueSegmentedControl({
       style={tsc.track}
       onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
     >
+      {/* VIBEZCORE-glas (5 okt 2026): de balk doorzichtig glas, het
+          gekozen kussentje lichter glas dat erboven zweeft — geen randen. */}
+      <VibezGlass radius={20} level="subtle" style={StyleSheet.absoluteFill} />
       {/* Operator, 24 september 2026 (referentie: "het kussentje is wit/
          lichtgrijs met een zachte schaduw, geen accentkleur"): was
          `accent` — de vulling zelf droeg voorheen de state-kleur; nu
@@ -848,7 +852,9 @@ function TechniqueSegmentedControl({
          tekst te kiezen (die tekst is nu sowieso altijd donker, zie
          `TechniqueSegmentButton`), dus die stap valt weg. */}
       {techniquePicked && segW > 0 && (
-        <Animated.View style={[tsc.indicator, indicatorStyle]} />
+        <Animated.View style={[tsc.indicator, indicatorStyle]}>
+          <VibezGlass radius={17} level="raised" style={StyleSheet.absoluteFill} />
+        </Animated.View>
       )}
       {techniques.map((t, i) => (
         <TechniqueSegmentButton
@@ -906,9 +912,6 @@ const tsc = StyleSheet.create({
     alignSelf: 'stretch',
     flexDirection: 'row',
     borderRadius: 20,
-    backgroundColor: '#121214',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
     padding: 3,
   },
@@ -927,14 +930,7 @@ const tsc = StyleSheet.create({
     bottom: 3,
     left: 0,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.13)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    overflow: 'hidden',
   },
   segment: {
     flex: 1,
