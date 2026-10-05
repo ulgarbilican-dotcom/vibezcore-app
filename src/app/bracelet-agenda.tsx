@@ -523,7 +523,8 @@ export default function BraceletAgendaScreen() {
                moet drukken"): korte hint boven de kaarten — de bolletjes
                op de ring zelf zijn ook tikbaar (Try it/Remove), niet
                enkel deze kaarten. */}
-            <Text style={s.ringHint}>Tap a dot on the ring to start or remove that session</Text>
+            {/* Hint weg (operator, 5 okt 2026: "volledig zelfde indeling als
+                het breathwork-plan") — "Tap to start" staat nu in de ring. */}
 
             {/* Kaarten — 5 modi + "Show all", zie de toelichting bovenaan
                dit bestand. Kiest WELKE uur+duur-labels op de ring
@@ -654,7 +655,9 @@ const s = StyleSheet.create({
     letterSpacing: -0.3,
     color: '#ffffff',
   },
-  scroll: { paddingHorizontal: 20, paddingTop: 4 },
+  /* Zelfde maten als agenda.tsx (breathwork-plan): marge, ring, raster en
+     knoppen — één indeling voor beide plannen (operator, 5 okt 2026). */
+  scroll: { paddingHorizontal: 16 },
 
   /* Kalender-dropdown — 1-op-1 agenda.tsx's `calendarDropdown`/`monthNav`/
      `monthGrid`/`monthCell`/`monthCircle`/`monthDot`, exact dezelfde
@@ -684,14 +687,14 @@ const s = StyleSheet.create({
   monthNum: { fontFamily: BrandFonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.7)' },
   monthDot: { width: 5, height: 5, borderRadius: 2.5 },
 
-  ringWrap: { alignItems: 'center', marginTop: 2, marginBottom: 10, position: 'relative' },
+  ringWrap: { alignItems: 'center', marginBottom: 8, position: 'relative' },
   /* Zelfde knoppen als agenda.tsx (breathwork) — `editBtn`/`changeProtocolBtn`. */
   bottomActions: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 30,
+    gap: 10,
+    marginTop: 2,
   },
   pillBtn: {
     flexDirection: 'row',
@@ -749,7 +752,7 @@ const s = StyleSheet.create({
      hoeveel regels de naam nodig heeft (`flex-end` duwt de tekst altijd
      naar de onderkant). 3-koloms grid, `cardSlot` draagt de breedte
      zodat de press-animatie op `card` zelf de layout niet verstoort. */
-  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
   cardSlot: { width: '31.5%' },
   /* Operator, 5 okt 2026 ("alles mooi op het scherm zonder scroll"):
      lager dan vierkant — de twee kaartrijen namen de meeste hoogte in. */
