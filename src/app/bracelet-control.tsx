@@ -3950,9 +3950,9 @@ function IdleScreen({
           </ModeSwipeRing>
         </View>
 
-        {/* Paginabolletjes zoals iOS: waar je zit, hoeveel modi er zijn, en
-            een tik springt meteen naar die modus (5 okt 2026 — vervangt de
-            rij met vijf knoppen). */}
+        {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
+            zijn, en een tik springt meteen naar die modus (5 okt 2026 —
+            vervangt de rij met vijf knoppen). */}
         <View style={s.modeDots}>
           {MODES.map((m: ModeMeta) => {
             const active = m.mode === selectedMode;
@@ -3970,7 +3970,8 @@ function IdleScreen({
                 <View
                   style={[
                     s.modeDot,
-                    { backgroundColor: m.color, opacity: active ? 1 : 0.35, width: active ? 22 : 8 },
+                    /* Wit, zoals iOS-paginabolletjes (operator, 5 okt 2026). */
+                    { backgroundColor: '#ffffff', opacity: active ? 1 : 0.3, width: active ? 22 : 8 },
                   ]}
                 />
               </Pressable>
