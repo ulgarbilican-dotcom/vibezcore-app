@@ -53,6 +53,7 @@ import { BraceletMode } from './ble-contract';
 import * as Haptics from 'expo-haptics';
 import {
   canPlayNativeWaveform,
+  getNativeSessionStatus,
   hasNativeWaveform,
   pauseNativeSession,
   playNativeWaveform,
@@ -289,16 +290,15 @@ function scheduleBeat(
 
 /* ── Gemeenschappelijk ───────────────────────────────────────────────── */
 
-/** Draait de voorgrondservice (lopend of gepauzeerd met melding)? */
-let nativeSessionAlive = false;
-
+/** Draait de voorgrondservice (lopend, opstartend of gepauzeerd met
+ *  melding)? De service zelf is de bron — geen JS-vlag die na een herlaad
+ *  of een zelf-stop van de service achterloopt. */
 export function isNativeSessionAlive(): boolean {
-  return nativeSessionAlive;
+  return hasNativeWaveform() && getNativeSessionStatus() !== 'none';
 }
 
 function endNativeSession(): void {
   stopNativeSession();
-  nativeSessionAlive = false;
 }
 
 /** `keepService`: de service krijgt meteen een nieuwe curve — niet eerst
@@ -339,7 +339,6 @@ function play(
         clock?.totalSec ?? totalSec,
         clock?.elapsedSec ?? 0,
       );
-      nativeSessionAlive = true;
     } else {
       playNativeWaveform(timings, amplitudes, repeat);
     }
@@ -387,7 +386,10 @@ export function pauseModeSessionHaptic(): void {
   generation += 1;
   clearPending();
   stopNativeWaveform();
-  if (nativeSessionAlive) pauseNativeSession();
+  /* Altijd doorgeven: start en pauze lopen in volgorde over dezelfde
+     native wachtrij, dus ook een pauze vlak na Play (service nog aan het
+     opstarten) komt goed aan. Zonder service doet de module niets. */
+  if (hasNativeWaveform()) pauseNativeSession();
   sessionEndsAt = null;
   if (session && session.pausedAt === null) session.pausedAt = Date.now();
 }
@@ -426,6 +428,17 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
   );
 }
 
+/** Natuurlijk einde volgens de sessie-monitor: JS-kant opruimen, de
+ *  native service NIET stoppen — die speelt het eind-signaal uit, toont
+ *  "Session complete" en stopt dan zelf. (Na een herlaad van de app kent
+ *  deze module het eindmoment niet meer, dus de monitor zegt het.) */
+export function releaseSessionHapticAtNaturalEnd(): void {
+  generation += 1;
+  clearPending();
+  session = null;
+  sessionEndsAt = null;
+}
+
 /** Stopt alles en vergeet een eventuele gepauzeerde sessie. Bij een
  *  NATUURLIJK einde blijft de native service ongemoeid: die speelt zelf
  *  nog het eind-signaal uit en stopt dan vanzelf. */
@@ -436,10 +449,9 @@ export function stopModePreviewHaptic(): void {
   if (!endingNaturally) {
     stopNativeWaveform();
     endNativeSession();
-  } else {
-    /* De service speelt het eind-signaal uit en stopt dan zelf. */
-    nativeSessionAlive = false;
   }
+  /* Bij een natuurlijk einde speelt de service het eind-signaal uit en
+     stopt dan zelf. */
   session = null;
   sessionEndsAt = null;
 }

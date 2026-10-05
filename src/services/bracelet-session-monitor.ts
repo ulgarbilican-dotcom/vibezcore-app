@@ -36,16 +36,23 @@
    bestand vervangt.
    ─────────────────────────────────────────────────────────────────────── */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
-import { getBracelet } from './bracelet';
+import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
-import { addRemoteControlListener, hasNativeWaveform } from '../../modules/state-haptics';
+import {
+  addRemoteControlListener,
+  dismissCompletionNotice,
+  getNativeSessionStatus,
+  hasNativeWaveform,
+} from '../../modules/state-haptics';
 import {
   isNativeSessionAlive,
   pauseModeSessionHaptic,
   playModeSessionHaptic,
+  releaseSessionHapticAtNaturalEnd,
   stopModePreviewHaptic,
 } from './bracelet-haptics';
 import {
@@ -123,26 +130,49 @@ export function getBraceletMonitorSession(): {
     : null;
 }
 
+/** Het moment waarop de sessie op de klok eindigt(e) — niet het moment
+ *  waarop de app het merkt (die kan op slot bevroren zijn geweest). */
+function endTimeMs(s: MonitorState): number {
+  if (s.paused || s.runStartedAt === null) return Date.now();
+  return s.runStartedAt + (s.totalSec - s.elapsedBeforeRunSec) * 1000;
+}
+
+let completing = false;
+
 async function completeNaturally(): Promise<void> {
   const s = state;
-  if (!s) return;
+  /* Eén keer: na ontgrendelen vuren de achterstallige tick én resync vlak
+     na elkaar (audit 5 okt 2026 — anders twee keer in de geschiedenis). */
+  if (!s || completing) return;
+  completing = true;
   try {
-    await getBracelet().sendCommand({ mode: s.mode, duration: 0, command: BleCommand.Stop });
-  } catch {
-    /* Geen verbinding — de bracelet stopt zelf op zijn eigen timer. */
+    await finishCompleted(s);
+  } finally {
+    completing = false;
   }
+}
+
+async function finishCompleted(s: MonitorState): Promise<void> {
   const minutes = Math.max(1, Math.round(s.totalSec / 60));
   void recordSession({
     mode: s.mode,
     startedAt: s.startedAtIso,
-    endedAt: new Date().toISOString(),
+    endedAt: new Date(Math.min(Date.now(), endTimeMs(s))).toISOString(),
     durationMin: minutes,
     plannedMin: minutes,
     status: 'completed',
   });
   const completion: SessionCompletion = { mode: s.mode, minutes };
   pendingCompletion = completion;
-  await stopBraceletSessionMonitor();
+  /* In de app zelf toont het scherm de afsluiting; de "Session complete"-
+     melding van de service is dan dubbel. */
+  if (appIsForeground) dismissCompletionNotice();
+  await stopBraceletSessionMonitor({ natural: true });
+  try {
+    await getBracelet().sendCommand({ mode: s.mode, duration: 0, command: BleCommand.Stop });
+  } catch {
+    /* Geen verbinding — de bracelet stopt zelf op zijn eigen timer. */
+  }
   completionListeners.forEach((cb) => {
     try {
       cb(completion);
@@ -300,6 +330,83 @@ function clearTimers(): void {
   resyncHandle = null;
 }
 
+/* ── Bewaren & herstellen (audit 5 okt 2026) ───────────────────────────
+   De sessie leeft anders enkel in het geheugen: ruimt Android de app op
+   (bv. 's nachts na een Sleep-sessie) of herlaadt ze, dan was ze weg —
+   geen geschiedenis, geen afsluiting, terwijl de native service misschien
+   nog trilde. Nu staat ze op de telefoon en herstelt de monitor ze. */
+const STORE_KEY = 'vzc.stateControl.session.v1';
+
+function persist(): void {
+  const s = state;
+  void (s ? AsyncStorage.setItem(STORE_KEY, JSON.stringify(s)) : AsyncStorage.removeItem(STORE_KEY)).catch(
+    () => {},
+  );
+}
+
+function startTimers(): void {
+  clearTimers();
+  tickHandle = setInterval(tick, TICK_MS);
+  resyncHandle = setInterval(() => void resync(), RESYNC_MS);
+}
+
+function isMonitorState(v: unknown): v is MonitorState {
+  const o = v as MonitorState;
+  return (
+    !!o &&
+    typeof o.mode === 'number' &&
+    typeof o.totalSec === 'number' &&
+    typeof o.paused === 'boolean' &&
+    typeof o.elapsedBeforeRunSec === 'number' &&
+    typeof o.startedAtIso === 'string'
+  );
+}
+
+async function restoreFromStorage(): Promise<void> {
+  let saved: MonitorState | null = null;
+  try {
+    const raw = await AsyncStorage.getItem(STORE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    saved = isMonitorState(parsed) ? parsed : null;
+  } catch {
+    saved = null;
+  }
+  if (!saved || state) return;
+  const native = Platform.OS === 'android' && hasNativeWaveform() ? getNativeSessionStatus() : 'none';
+  const elapsedNow =
+    saved.paused || saved.runStartedAt === null
+      ? saved.elapsedBeforeRunSec
+      : saved.elapsedBeforeRunSec + (Date.now() - saved.runStartedAt) / 1000;
+
+  if (native !== 'none' || saved.paused) {
+    /* De service draait nog (de app is enkel herladen), of de sessie stond
+       op pauze: gewoon verder volgen, de haptiek niet opnieuw starten. */
+    state = { ...saved, paused: native === 'paused' || (native === 'none' && saved.paused) };
+    if (state.paused && !saved.paused) {
+      state = { ...state, elapsedBeforeRunSec: Math.min(saved.totalSec, elapsedNow), runStartedAt: null };
+    }
+    startTimers();
+    void publish(true);
+    persist();
+    return;
+  }
+  if (elapsedNow >= saved.totalSec - 5) {
+    /* Afgelopen terwijl de app weg was: alsnog bewaren en de afsluiting
+       klaarzetten (het scherm toont ze bij de volgende keer openen). */
+    state = saved;
+    await completeNaturally();
+    return;
+  }
+  /* De app (en dus de service) werd midden in de sessie beëindigd: als
+     gepauzeerd terugzetten, zodat de gebruiker kan hervatten of afsluiten. */
+  state = { ...saved, paused: true, runStartedAt: null, elapsedBeforeRunSec: elapsedNow };
+  startTimers();
+  void publish(true);
+  persist();
+}
+
+void restoreFromStorage();
+
 function tick(): void {
   if (!state) return;
   if (!state.paused && currentRemainingSec() <= 0) {
@@ -311,6 +418,10 @@ function tick(): void {
 
 async function resync(): Promise<void> {
   if (!state || state.paused) return;
+  /* De gesimuleerde bracelet is geen hardware: zijn eigen timer (afgerond
+     op minuten) en nagebootste batterij mogen een sessie op de telefoon
+     nooit afbreken (audit 5 okt 2026). De monitor zelf bewaakt het einde. */
+  if (USE_SIMULATED_BLE) return;
   try {
     const st = await getBracelet().requestStatus();
     if (!st.sessionActive) {
@@ -361,8 +472,8 @@ export function startBraceletSessionMonitor(opts: {
     const granted = await ensureNotificationPermission();
     if (granted) void publish(true);
   })();
-  tickHandle = setInterval(tick, TICK_MS);
-  resyncHandle = setInterval(() => void resync(), RESYNC_MS);
+  startTimers();
+  persist();
   /* onStart pauzeert meteen ("sessie start pas na Play", 27 sept) — pas
      na die synchrone pauze beslissen of er haptiek moet spelen. */
   setTimeout(syncHaptics, 0);
@@ -394,6 +505,7 @@ export function pauseBraceletSessionMonitor(): void {
     elapsedBeforeRunSec: state.totalSec - remSec,
     runStartedAt: null,
   };
+  persist();
   syncHaptics();
   void publish(true);
 }
@@ -402,19 +514,22 @@ export function pauseBraceletSessionMonitor(): void {
 export function resumeBraceletSessionMonitor(): void {
   if (!state) return;
   state = { ...state, paused: false, runStartedAt: Date.now() };
+  persist();
   syncHaptics();
   void publish(true);
 }
 
 /** Aanroepen vanuit onStop / finishSession (manual End, natural completion,
  *  fault/charging/battery-cut). Ruimt melding + snapshot op. */
-export async function stopBraceletSessionMonitor(): Promise<void> {
+export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): Promise<void> {
   /* Al gestopt → niets doen. Een tweede stop (bv. het scherm dat het einde
      ook opmerkt) zou anders het eind-signaal van de service afbreken. */
   if (!state) return;
   clearTimers();
   state = null;
-  syncHaptics();
+  persist();
+  if (opts?.natural) releaseSessionHapticAtNaturalEnd();
+  else syncHaptics();
   clearBraceletSession();
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID);

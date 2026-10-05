@@ -24,6 +24,7 @@ import android.os.VibratorManager
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.functions.Queues
 
 class StateHapticsModule : Module() {
   private val context: Context
@@ -71,7 +72,7 @@ class StateHapticsModule : Module() {
         val t = LongArray(timings.size) { timings[it].toLong() }
         val a = IntArray(amplitudes.size) { amplitudes[it].coerceIn(0, 255) }
         val r = if (repeat in t.indices) repeat else -1
-        StateHapticsService.vibrateAsMedia(v, VibrationEffect.createWaveform(t, a, r))
+        StateHapticsService.vibrateForSession(context, v, VibrationEffect.createWaveform(t, a, r))
       } catch (_: Exception) {
         /* stil — een trilmotor die niet meewerkt mag de sessie niet breken */
       }
@@ -85,12 +86,15 @@ class StateHapticsModule : Module() {
     }
 
     /** Echte sessie: de curve gaat naar StateHapticsService, die ze laat
-     *  doorlopen met het scherm op slot (zie die klasse). Moet starten
-     *  terwijl de app in de voorgrond is — dat is zo: de gebruiker drukt
-     *  net op Play. */
-    Function("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String, sessionTotalSec: Double, sessionElapsedSec: Double ->
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@Function
-      if (timings.isEmpty() || timings.size != amplitudes.size) return@Function
+     *  doorlopen met het scherm op slot (zie die klasse). De eerste start
+     *  gebeurt terwijl de app in de voorgrond is (de gebruiker drukt op
+     *  Play); daarna stuurt de module de DRAAIENDE service bij, want met het
+     *  scherm op slot mag een app een voorgrondservice niet opnieuw starten.
+     *  Start/pauze/stop draaien allemaal op de hoofdthread: zo komen ze in
+     *  volgorde aan en nooit tegelijk met een stop van de service zelf. */
+    AsyncFunction("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String, sessionTotalSec: Double, sessionElapsedSec: Double ->
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@AsyncFunction
+      if (timings.isEmpty() || timings.size != amplitudes.size) return@AsyncFunction
       try {
         val intent = Intent(context, StateHapticsService::class.java).apply {
           action = StateHapticsService.ACTION_START
@@ -100,31 +104,59 @@ class StateHapticsModule : Module() {
           putExtra(StateHapticsService.EXTRA_SESSION_TOTAL_MS, (sessionTotalSec * 1000).toLong())
           putExtra(StateHapticsService.EXTRA_SESSION_ELAPSED_MS, (sessionElapsedSec * 1000).toLong())
         }
+        StateHapticsService.pendingPause = false
+        StateHapticsService.pendingStop = false
         val running = StateHapticsService.instance
         if (running != null) {
-          running.applySessionOnMain(intent)
+          running.applyFromApp(intent)
         } else {
+          StateHapticsService.startPending = true
           ContextCompat.startForegroundService(context, intent)
         }
       } catch (_: Exception) {
+        StateHapticsService.startPending = false
         /* stil — zonder service trilt het enkel niet door op slot */
       }
-    }
+    }.runOnQueue(Queues.MAIN)
 
-    /* stopService i.p.v. een STOP-intent via startForegroundService: werkt
-       ook als de app al op de achtergrond staat, en start de service niet
-       onnodig op als hij niet liep. */
     /** Pauze vanuit de app: de service blijft (melding met hervat-knop op
-     *  het vergrendelscherm), enkel ritme en klok staan stil. Draait de
-     *  service niet, dan gebeurt er niets. */
-    Function("pauseSession") {
-      StateHapticsService.instance?.pauseFromApp()
+     *  het vergrendelscherm), enkel ritme en klok staan stil. Komt de pauze
+     *  terwijl de service nog opstart, dan voert hij ze uit zodra hij er is. */
+    AsyncFunction("pauseSession") {
+      val running = StateHapticsService.instance
+      if (running != null) running.pauseFromApp()
+      else if (StateHapticsService.startPending) StateHapticsService.pendingPause = true
+    }.runOnQueue(Queues.MAIN)
+
+    /* Een service die nog opstart NIET met stopService stoppen: Android
+       crasht de app als een via startForegroundService gestarte service
+       stopt vóór hij startForeground aanriep. Dan stopt hij zelf, meteen na
+       het opstarten. */
+    AsyncFunction("stopSession") {
+      StateHapticsService.pendingPause = false
+      val running = StateHapticsService.instance
+      if (running != null) {
+        running.stopFromApp()
+      } else if (StateHapticsService.startPending) {
+        StateHapticsService.pendingStop = true
+      }
+    }.runOnQueue(Queues.MAIN)
+
+    Function("dismissCompletionNotice") {
+      StateHapticsService.dismissCompletionNotice(context)
     }
 
-    Function("stopSession") {
+    Function("sessionStatus") {
+      StateHapticsService.status()
+    }
+
+    /** false op toestellen zonder trilmotor (tablets): dan voelt de
+     *  gebruiker niets en hoort de app dat te zeggen. */
+    Function("hasVibrator") {
       try {
-        context.stopService(Intent(context, StateHapticsService::class.java))
+        vibrator()?.hasVibrator() ?: false
       } catch (_: Exception) {
+        true
       }
     }
   }

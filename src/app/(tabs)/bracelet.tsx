@@ -60,17 +60,21 @@ import Animated, {
 import BraceletControl from '../bracelet-control';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
-/* Zelfde placeholder-foto als eerder — operator levert de echte foto nog
-   aan (4 okt 2026: "ik bezorg nog de foto"). Enkel deze constante moet dan
-   vervangen worden. */
-const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pic%20welcome%20app%20new.png';
+/* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
+const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20state%20control.png';
 
 /* Ken Burns-"ademing" + gefaseerde reveal — exact dezelfde recept als de
    oude bracelet-intro (smart-bead-bracelet.tsx se `introKenBurnsStyle`/
    `introEyebrowStyle`/`introTitleStyle`), 1-op-1 hergebruikt, niet
    opnieuw verzonnen. Geen horizontale/verticale shift hier (die was
    foto-crop-specifiek afgesteld) — enkel de trage, herhalende zoom. */
-const INTRO_ZOOM = 1.1;
+const INTRO_ZOOM = 1;
+/* Operator, 5 okt 2026 ("meer uitgezoomd, de mensen staan er niet
+   volledig in, vooral de vrouw niet"): de foto is bijna vierkant
+   (1122×1402); schermvullend (cover) sneed de zijkanten weg. Nu over de
+   volle breedte bovenaan, onderaan zacht uitlopend in de achtergrond —
+   titel en knop staan daaronder op het donker, niet over de foto. */
+const BG_ASPECT = 1122 / 1402;
 
 function StateControlIntro({ onDone }: { onDone: () => void }) {
   const ctaScale = useSharedValue(1);
@@ -116,19 +120,17 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
   }));
 
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
-        <Image
-          source={{ uri: BG_IMG }}
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0a0a0a' }]}>
+      <View style={s.introPhotoWrap}>
+        <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
+          <Image source={{ uri: BG_IMG }} style={s.introPhoto} resizeMode="cover" />
+        </Animated.View>
+        <LinearGradient
+          colors={['#0a0a0a', 'rgba(10,10,10,0)', 'rgba(10,10,10,0)', '#0a0a0a']}
+          locations={[0, 0.12, 0.7, 1]}
           style={StyleSheet.absoluteFill}
-          resizeMode="cover"
         />
-      </Animated.View>
-      <LinearGradient
-        colors={['rgba(10,10,10,0.15)', 'rgba(10,10,10,0.6)', '#0a0a0a']}
-        locations={[0.3, 0.72, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      </View>
       <SafeAreaView style={s.introWrap} edges={['bottom']}>
         <View style={s.stackTitle}>
           <Animated.Text style={[s.introEyebrow, eyebrowStyle]}>STATE CONTROL</Animated.Text>
@@ -228,6 +230,27 @@ export default function BraceletScreen() {
 }
 
 const s = StyleSheet.create({
+  /* Vervolg ("te klein, personen in groot formaat"): de foto vult de
+     bovenste 72% van het scherm op volle hoogte. Breder dan het scherm,
+     dus rechts uitgelijnd: wat wegvalt is de linkerrand (arm/been van de
+     man), de vrouw rechts blijft volledig in beeld. */
+  /* Operator ("kan de foto zakken?"): niet tegen de statusbalk aan —
+     bovenaan zacht uitlopend in het donker, net als onderaan. */
+  introPhotoWrap: {
+    position: 'absolute',
+    top: '7%',
+    left: 0,
+    right: 0,
+    height: '70%',
+    overflow: 'hidden',
+  },
+  introPhoto: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    height: '100%',
+    aspectRatio: BG_ASPECT,
+  },
   introWrap: {
     flex: 1,
     alignItems: 'center',

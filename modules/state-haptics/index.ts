@@ -17,14 +17,19 @@ type StateHapticsNativeModule = {
     title: string,
     sessionTotalSec: number,
     sessionElapsedSec: number,
-  ): void;
-  pauseSession(): void;
-  stopSession(): void;
+  ): Promise<void>;
+  pauseSession(): Promise<void>;
+  stopSession(): Promise<void>;
+  hasVibrator(): boolean;
+  sessionStatus(): NativeSessionStatus;
+  dismissCompletionNotice(): void;
   addListener(
     event: 'onRemoteControl',
     cb: (e: { action: 'pause' | 'resume' }) => void,
   ): { remove(): void };
 };
+
+export type NativeSessionStatus = 'none' | 'starting' | 'running' | 'paused';
 
 let native: StateHapticsNativeModule | null = null;
 try {
@@ -78,7 +83,7 @@ export function startNativeSession(
   sessionElapsedSec: number,
 ): void {
   try {
-    native?.startSession(timings, amplitudes, title, sessionTotalSec, sessionElapsedSec);
+    void native?.startSession(timings, amplitudes, title, sessionTotalSec, sessionElapsedSec).catch(() => {});
   } catch {
     /* stil */
   }
@@ -86,7 +91,7 @@ export function startNativeSession(
 
 export function stopNativeSession(): void {
   try {
-    native?.stopSession();
+    void native?.stopSession().catch(() => {});
   } catch {
     /* stil */
   }
@@ -96,7 +101,7 @@ export function stopNativeSession(): void {
  *  scherm staan met een hervat-knop. */
 export function pauseNativeSession(): void {
   try {
-    native?.pauseSession();
+    void native?.pauseSession().catch(() => {});
   } catch {
     /* stil */
   }
@@ -110,5 +115,36 @@ export function addRemoteControlListener(cb: (action: 'pause' | 'resume') => voi
     return () => sub?.remove();
   } catch {
     return () => {};
+  }
+}
+
+/** false op een toestel zonder trilmotor (bv. veel tablets): daar voelt de
+ *  gebruiker niets, en dat hoort de app te zeggen in plaats van een sessie
+ *  te tonen die "loopt". Zonder native module: aanname true. */
+export function deviceCanVibrate(): boolean {
+  try {
+    return native?.hasVibrator() ?? true;
+  } catch {
+    return true;
+  }
+}
+
+/** Bestaat er een service-sessie (ook als JS net herladen is)? De service is
+ *  de bron van waarheid, niet een vlag in JS. */
+export function getNativeSessionStatus(): NativeSessionStatus {
+  try {
+    return native?.sessionStatus() ?? 'none';
+  } catch {
+    return 'none';
+  }
+}
+
+/** Haalt de "Session complete"-melding van de service weg — de app toont de
+ *  afsluiting zelf, een tweede melding is dan dubbel. */
+export function dismissCompletionNotice(): void {
+  try {
+    native?.dismissCompletionNotice();
+  } catch {
+    /* stil */
   }
 }

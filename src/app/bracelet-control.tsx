@@ -36,7 +36,7 @@ import {
   stopModePreviewHaptic,
   subscribeHapticPulse,
 } from '@/services/bracelet-haptics';
-import { hasNativeWaveform } from '../../modules/state-haptics';
+import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible } from '@/utils/state-control-ui';
 import {
   startSessionKeepAlive,
@@ -100,6 +100,7 @@ import {
   Image,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -3327,7 +3328,21 @@ function ActiveSessionScreen({
              al voldoende. */}
           <View style={s.timerCenter} pointerEvents="none">
             {isPaused && (
-              <Text style={[s.pausedLabel, { color: activeMeta.color }]}>PAUSED</Text>
+              /* Zelfde contrastregel als de cijfers eronder: de cirkel IS de
+                 moduskleur, dus het label in die kleur was onzichtbaar
+                 (5 okt 2026). */
+              <Text
+                style={[
+                  s.pausedLabel,
+                  {
+                    color: isLightColor(activeMeta.color)
+                      ? 'rgba(10,10,10,0.7)'
+                      : 'rgba(255,255,255,0.85)',
+                  },
+                ]}
+              >
+                PAUSED
+              </Text>
             )}
             {/* Timer-display in mm:ss-formaat (iter 7). Lokaal berekend
                 vanuit sessionStartedAtRef + sessionPlannedRef → tikt
@@ -4023,6 +4038,18 @@ function IdleScreen({
           }}
         />
 
+        {/* Toestel zonder trilmotor (veel tablets): eerlijk zeggen dat je
+            hier niets voelt, i.p.v. een sessie die enkel lijkt te lopen
+            (audit 5 okt 2026). */}
+        {!deviceCanVibrate() && (
+          <View style={s.warnChip}>
+            <Text style={s.warnChipIcon}>⚠</Text>
+            <Text style={s.warnChipText}>
+              This device has no vibration motor, so sessions can&apos;t be felt here
+            </Text>
+          </View>
+        )}
+
         {/* Low battery warning (compact, alleen als nodig) */}
         {lowBattery && (
           <View style={s.warnChip}>
@@ -4444,6 +4471,13 @@ function BraceletControlScreen({
      onderaan"): geminimaliseerd = de moduskeuze tonen terwijl de sessie
      doorloopt, met een "nu bezig"-balk om terug te keren. */
   const [minimized, setMinimized] = useState(false);
+  /* Een nieuwe opening van buitenaf (melding, pill, "Session complete")
+     toont de lopende sessie, ook als ze eerder geminimaliseerd werd — dit
+     scherm blijft daarbij gemount, dus de minimaliseerstand bleef anders
+     staan (audit 5 okt 2026). */
+  useEffect(() => {
+    if (params.open) setMinimized(false);
+  }, [params.open]);
   /* Stabiele referentie (audit): een nieuwe functie per render liet het
      sessiescherm z'n terugknop-koppeling en de tabbalk-vlag elke seconde
      opnieuw zetten. */
@@ -4651,6 +4685,7 @@ function BraceletControlScreen({
      in de trilling. Zonder native module (iOS) geeft expo-haptics de tik. */
   useEffect(() => {
     const show = (c: SessionCompletion) => {
+      dismissCompletionNotice();
       sessionStartedAtRef.current = null;
       sessionRealStartedAtRef.current = null;
       setMinimized(false);
@@ -4874,6 +4909,9 @@ function BraceletControlScreen({
   }, [autoConnect, conn]);
 
   const onStartGated = () => {
+    /* Toegang nog onbekend (koude start, traag netwerk): niets doen i.p.v.
+       een sessie te starten die achteraf niet toegestaan blijkt. */
+    if (subscription.isLoading) return;
     if (sessionsLocked) {
       setPaywallOpen(true);
       return;
@@ -5170,6 +5208,11 @@ function BraceletControlScreen({
      Android hiervan uit te sluiten — juist Android had de zichtbare
      "niets te zien"-klacht het hardst. */
   useEffect(() => {
+    /* Android met de native service: die houdt de sessie zelf levend en
+       toont ze op het vergrendelscherm. Het stille audio-anker is daar niet
+       nodig en stopte bovendien de muziek van de gebruiker (Spotify) bij
+       Start, en ving de knoppen van oordopjes op (audit 5 okt 2026). */
+    if (Platform.OS === 'android' && hasNativeWaveform()) return;
     if (!sessionActive && !isPaused) {
       stopSessionKeepAlive();
       return;
