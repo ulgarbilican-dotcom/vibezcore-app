@@ -30,7 +30,8 @@ export const FACES_URL = 'https://vibezcore-audio.b-cdn.net/images/faces.png';
    deze lijst (miniaturen toonden andere foto's dan de achtergrond) —
    vandaar: één plek, geen tweede kopie meer. */
 export const STATE_PHOTOS: Record<string, string> = {
-  boost: 'https://vibezcore-audio.b-cdn.net/images/pic%20boost%20new%201.png',
+  /* Operator, 5 okt 2026: nieuwe Boost-foto. */
+  boost: 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20boost%20correct.png',
   focus: 'https://vibezcore-audio.b-cdn.net/images/pic%20sharp%20focus%20new.png',
   calm: 'https://vibezcore-audio.b-cdn.net/images/pic%20calm%20control%20app%205.png',
   clarity: 'https://vibezcore-audio.b-cdn.net/images/pic%20clarity%20app%204.png',
