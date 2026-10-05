@@ -355,7 +355,7 @@ export default function BraceletAgendaScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 14) + 32 }]}
+        contentContainerStyle={[s.scroll, { flexGrow: 1, paddingBottom: Math.max(insets.bottom, 14) + 12 }]}
         showsVerticalScrollIndicator={false}
       >
         {!plan ? (
@@ -639,7 +639,7 @@ const s = StyleSheet.create({
   monthNum: { fontFamily: BrandFonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.7)' },
   monthDot: { width: 5, height: 5, borderRadius: 2.5 },
 
-  ringWrap: { alignItems: 'center', marginTop: 12, marginBottom: 22, position: 'relative' },
+  ringWrap: { alignItems: 'center', marginTop: 2, marginBottom: 10, position: 'relative' },
   /* Zelfde knoppen als agenda.tsx (breathwork) — `editBtn`/`changeProtocolBtn`. */
   bottomActions: {
     flexDirection: 'row',
@@ -693,7 +693,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
 
   /* Operator, 1 okt 2026 ("vierkant, bolletje groter linksboven, tekst
@@ -707,8 +707,10 @@ const s = StyleSheet.create({
      zodat de press-animatie op `card` zelf de layout niet verstoort. */
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   cardSlot: { width: '31.5%' },
+  /* Operator, 5 okt 2026 ("alles mooi op het scherm zonder scroll"):
+     lager dan vierkant — de twee kaartrijen namen de meeste hoogte in. */
   card: {
-    aspectRatio: 1,
+    aspectRatio: 1.45,
     flexDirection: 'column',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
