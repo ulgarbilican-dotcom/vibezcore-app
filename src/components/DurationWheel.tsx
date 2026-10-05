@@ -177,13 +177,9 @@ export function DurationWheel({
         style={{ height: viewportHeight }}
         /* Operator, 5 okt 2026 (wiel toonde 9:00 bij een gekozen 5:00): de
            scrollTo bij het monteren kwam op Android soms vóór de layout en
-           werd genegeerd. Startpositie meegeven + na de layout nog eens
-           zetten, en `scrollY` meteen gelijk. */
+           werd genegeerd. Startpositie meegeven. (Een extra scrollTo in
+           onLayout zette het wiel tijdens het draaien steeds terug — weg.) */
         contentOffset={{ x: 0, y: settledIndex * DURATION_WHEEL_ITEM_H }}
-        onLayout={() => {
-          listRef.current?.scrollTo({ y: settledIndex * DURATION_WHEEL_ITEM_H, animated: false });
-          scrollY.value = settledIndex * DURATION_WHEEL_ITEM_H;
-        }}
         showsVerticalScrollIndicator={false}
         snapToInterval={DURATION_WHEEL_ITEM_H}
         decelerationRate="fast"

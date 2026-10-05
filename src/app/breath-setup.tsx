@@ -37,7 +37,7 @@ import AddToDayHero from '@/components/AddToDayHero';
    rgba-truc): `expo-blur` zit al in de huidige native build (welcome.tsx
    gebruikt 'm al voor de pil-knoppen), dus geen nieuwe `expo run:android`
    nodig voor deze ene kaart. */
-import { BlurTargetView, BlurView } from 'expo-blur';
+import { BlurView } from 'expo-blur';
 import { STATE_PHOTOS } from '@/services/offline-assets';
 import { assetUri } from '@/services/asset-cache';
 import DurationSlider from '@/components/DurationSlider';
@@ -1797,8 +1797,6 @@ export default function BreathSetupScreen() {
      "i"-icoon-naar-modal-patroon als de techniek-info hierboven, i.p.v.
      de tekst er altijd bij te proppen (te veel voor de kleine kaart). */
   const [durationInfoOpen, setDurationInfoOpen] = useState(false);
-  /* De achtergrondfoto, voor echt vervaagd glas op Android. */
-  const bgTargetRef = useRef<View | null>(null);
   /* Keuzelijst van de drie technieken (5 okt 2026). */
 
 
@@ -2182,23 +2180,20 @@ export default function BreathSetupScreen() {
          om te vervagen. `BlurTargetView` is wat het glas op Android echt
          vervaagt. Enkel in de normale flow, niet in addToDay. */}
       {!isAddToDay && (
-        <BlurTargetView
-          ref={bgTargetRef}
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { top: -insets.top }]}
-        >
+        /* Geen BlurTargetView meer (5 okt 2026): op Android ving hij alle
+           aanrakingen op (wiel/balk reageerden niet), en ingepakt maakte
+           hij het glas lichtgrijs. Op deze donkere foto zag je de echte
+           vervaging nauwelijks — betrouwbaar aanraken gaat voor. */
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { top: -insets.top }]}>
           <Image
             key={st.key}
             source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
-            /* Operator, 5 okt 2026: zoals Apple Music — het beeld vervaagd
-               tot sfeer, zodat gezichten niet met de cirkel concurreren. */
-            blurRadius={3}
           />
           {/* Lichte demping binnenin: dit is wat het glas vervaagt. */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.5)' }]} />
-        </BlurTargetView>
+        </View>
       )}
       {/* De echte verdonkering ligt BUITEN de BlurTargetView: lagen daarbinnen
          werden op Android niet zichtbaar over de foto getekend (operator:
@@ -2362,7 +2357,6 @@ export default function BreathSetupScreen() {
           <VibezGlass
             radius={(HERO_SIZE - HERO_STROKE * 4) / 2}
             level="normal"
-            blurTarget={bgTargetRef}
             style={[s.heroFill, { backgroundColor: 'transparent' }]}
           >
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.55)' }]} />
@@ -2844,7 +2838,6 @@ export default function BreathSetupScreen() {
             techniques={st.techniques}
             techIdx={techIdx}
             techniquePicked
-            blurTarget={bgTargetRef}
             onPick={(i) => {
               if (i === techIdx) return;
               Haptics.selectionAsync();
