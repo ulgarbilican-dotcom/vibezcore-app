@@ -788,8 +788,12 @@ function TechniqueSegmentButton({
     }
     const dist = Math.min(1, Math.abs(index - indicatorX.value / segW));
     return {
-      color: interpolateColor(dist, [0, 1], ['#ffffff', 'rgba(255,255,255,0.35)']),
-      fontSize: interpolate(dist, [0, 1], [18, 14], Extrapolation.CLAMP),
+      /* Operator, 5 okt 2026 ("meer diepte: gekozen komt echt naar voor,
+         andere naar de achtergrond"): groter verschil in grootte en
+         helderheid, plus de andere twee zakken een fractie weg. */
+      color: interpolateColor(dist, [0, 1], ['#ffffff', 'rgba(255,255,255,0.24)']),
+      fontSize: interpolate(dist, [0, 1], [20, 13.5], Extrapolation.CLAMP),
+      transform: [{ translateY: interpolate(dist, [0, 1], [0, 1.5], Extrapolation.CLAMP) }],
     };
   });
   return (
@@ -800,7 +804,10 @@ function TechniqueSegmentButton({
       style={[tsc.segment, pressStyle]}
     >
       <View style={tsc.segmentRow}>
-        <Animated.Text style={[tsc.segmentTxt, textStyle]} numberOfLines={1}>
+        <Animated.Text
+          style={[tsc.segmentTxt, selected && tsc.segmentTxtGlow, textStyle]}
+          numberOfLines={1}
+        >
           {techShortLabel(t)}
         </Animated.Text>
         {selected && onInfo ? (
@@ -970,6 +977,12 @@ const tsc = StyleSheet.create({
     height: 58,
   },
   segmentRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  /* Zachte gloed rond de gekozen naam — komt naar voren. */
+  segmentTxtGlow: {
+    textShadowColor: 'rgba(255,255,255,0.35)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
   segmentTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 13,

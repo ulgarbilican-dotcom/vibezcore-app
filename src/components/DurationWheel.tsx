@@ -39,6 +39,7 @@ function DurationWheelRow({
   trackColor,
   scrollY,
   viewportHeight,
+  dotColor,
 }: {
   index: number;
   label: string;
@@ -46,6 +47,8 @@ function DurationWheelRow({
   trackColor: string;
   scrollY: SharedValue<number>;
   viewportHeight: number;
+  /** Stipje naast het getal = aanbevolen duur (5 okt 2026). */
+  dotColor?: string;
 }) {
   const rowStyle = useAnimatedStyle(() => {
     const itemOffsetTop = DURATION_WHEEL_ITEM_H + index * DURATION_WHEEL_ITEM_H;
@@ -73,16 +76,23 @@ function DurationWheelRow({
   });
   return (
     <View style={[s.wheelRow, { height: DURATION_WHEEL_ITEM_H }]}>
-      <Animated.Text
-        style={[
-          s.wheelTxt,
-          { color: on ? '#ffffff' : trackColor },
-          on && s.wheelTxtOn,
-          rowStyle,
-        ]}
-      >
-        {label}
-      </Animated.Text>
+      <View style={s.rowInner}>
+        <Animated.Text
+          style={[
+            s.wheelTxt,
+            { color: on ? '#ffffff' : trackColor },
+            on && s.wheelTxtOn,
+            rowStyle,
+          ]}
+        >
+          {label}
+        </Animated.Text>
+        {dotColor ? (
+          /* Zelfde vaste plek rechts van het getal; `opacity` volgt de rij
+             niet, zodat je het stipje ook ver van het midden ziet. */
+          <View style={[s.rowDot, { backgroundColor: dotColor }]} />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -165,18 +175,14 @@ export function DurationWheel({
         ]}
         pointerEvents="none"
       />
-      {recommendedValue !== undefined && value === recommendedValue && (
+      {!recommendedAsDot && recommendedValue !== undefined && value === recommendedValue && (
         <View
           style={[s.wheelRecommendedTag, { top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2 }]}
           pointerEvents="none"
         >
-          {recommendedAsDot ? (
-            <View style={[s.recDot, { backgroundColor: accent }]} />
-          ) : (
-            <Text style={s.wheelRecommendedTagTxt} numberOfLines={1}>
-              Recommended
-            </Text>
-          )}
+          <Text style={s.wheelRecommendedTagTxt} numberOfLines={1}>
+            Recommended
+          </Text>
         </View>
       )}
       <Animated.ScrollView
@@ -204,6 +210,7 @@ export function DurationWheel({
             trackColor={trackColor}
             scrollY={scrollY}
             viewportHeight={viewportHeight}
+            dotColor={recommendedAsDot && o.value === recommendedValue ? accent : undefined}
           />
         ))}
       </Animated.ScrollView>
@@ -235,7 +242,9 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
     textTransform: 'uppercase',
   },
-  recDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 70 },
+  rowInner: { flexDirection: 'row', alignItems: 'center' },
+  /* Absoluut naast het getal, zodat het getal zelf gecentreerd blijft. */
+  rowDot: { position: 'absolute', right: -14, width: 6, height: 6, borderRadius: 3 },
   wheelRow: { alignItems: 'center', justifyContent: 'center' },
   wheelTxt: {
     fontFamily: BrandFonts.semibold,
