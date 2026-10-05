@@ -97,12 +97,13 @@ activeert. De 5 modi zijn dus 5 eindtempo's op één arousal-as.
      significant, een vast tempo meteen op 50 bpm NIET. Korter is niet
      getest. (Een eerdere versie gebruikte een vaste snelheid tot ~3 min
      — eigen interpretatie zonder bron, vervangen.)
-   - **Calm Control (−20%): 30 s.** Doppel sprong zonder glijden meteen
-     naar −20% onder de hartslag, en dat werkte.
-   - **Focus, Boost: 30 s.** Valente en Wang gebruikten meteen een vast
-     snel tempo; een stijgend verloop is nergens getest.
-   - 30 s is een productkeuze tussen "meteen" (getest) en "2 min"
-     (getest) in, om de overgang zacht te houden.
+   - **Calm Control (−20%): meteen.** Doppel (RCT) sprong zonder glijden
+     naar −20% onder de hartslag, en dat werkte. Motokawa's niet-
+     significante vaste tempo was een veel grotere sprong (naar 50 bpm).
+   - **Focus, Boost: meteen.** Valente en Wang gebruikten meteen een vast
+     snel tempo, met effect; een stijgend verloop is nergens getest.
+   - (Een eerdere versie gebruikte 30 s — een eigen tussenkeuze zonder
+     bron, vervangen door de geteste variant.)
 3. Daarna het eindtempo aanhouden. Of het effect blijft na het glijden
    is niet gemeten (Motokawa stopte na 2 min).
 4. **Pauze:** hervatten binnen 2 min gaat verder waar de curve was;
@@ -114,9 +115,9 @@ activeert. De 5 modi zijn dus 5 eindtempo's op één arousal-as.
 |---|---:|---:|---|
 | Sleep | 40 bpm (0,67 Hz) | 2 min dalend | 🟠 Doppel's ondergrens; dalen tot hier niet getest |
 | Clarity & Relax | 50 bpm (0,83 Hz) | 2 min dalend | 🟢 Motokawa Study 1 (exact) |
-| **Calm Control** | **60 bpm (1,0 Hz)** | 30 s dalend | 🟢 Doppel (−20%, zonder glijden effectief) |
-| Sharp Focus | 90 bpm (1,5 Hz) | 30 s stijgend | 🟡 Hypothese binnen getest bereik (75–110) |
-| Boost | 110 bpm (1,83 Hz) | 30 s stijgend | 🟢 eindtempo Valente 2024 (HR↑, HRV↓) |
+| **Calm Control** | **60 bpm (1,0 Hz)** | meteen | 🟢 Doppel (−20%, zonder glijden effectief) |
+| Sharp Focus | 90 bpm (1,5 Hz) | meteen | 🟡 Hypothese binnen getest bereik (75–110) |
+| Boost | 110 bpm (1,83 Hz) | meteen | 🟢 Valente 2024 (110 bpm meteen: HR↑, HRV↓) |
 
 **Waarschuwing (Wang et al. 2023):** sneller dan de eigen hartslag
 verhoogt hartslag én zelf-gerapporteerde angst. Boost/Focus = arousal,

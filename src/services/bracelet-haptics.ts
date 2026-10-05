@@ -18,11 +18,11 @@
      - Grote daling (Clarity, Sleep): 120 s. Motokawa Study 1: een vast
        tempo meteen op 50 bpm was NIET significant, 2 min glijden wel.
        Korter is niet getest.
-     - Calm Control (−20%): 30 s. Doppel sprong zonder glijden meteen
-       naar −20% onder de hartslag, en dat werkte.
-     - Focus, Boost: 30 s. Valente/Wang gebruikten meteen een vast snel
+     - Calm Control (−20%): meteen. Doppel sprong zonder glijden naar −20%
+       onder de hartslag, en dat werkte (RCT).
+     - Focus, Boost: meteen. Valente/Wang gebruikten meteen een vast snel
        tempo; een stijgend verloop is nergens getest.
-     30 s is een productkeuze tussen "meteen" en "2 min" in.
+     (Eerder 30 s — een eigen tussenkeuze zonder bron, vervangen.)
 
    EINDTEMPO:
      Calm Control    60 bpm  🟢 Doppel: −20% onder rust-HR (gem. 58,2)
@@ -96,15 +96,20 @@ const SPECS: Record<BraceletMode, ModeHapticSpec> = {
      subtieler → nu ertussen. */
   [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Soft, dubStyle: S.Soft },
   [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 30, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 30, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
-  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 30, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
+  /* rampSec 0 = na de basislijn METEEN naar het eindtempo — zo testten
+     Doppel (−20%) en Valente/Wang (110 bpm) het, met effect. Een overgang
+     voor deze modi is nergens getest (operator, 5 okt 2026: "welke is
+     beter en meer bewezen"). */
+  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 0, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 0, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
+  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 0, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
 };
 
 type Timing = { holdSec: number; rampSec: number };
 
 function bpmAt(spec: ModeHapticSpec, elapsedSec: number, timing: Timing): number {
-  const rampElapsed = Math.max(0, elapsedSec - timing.holdSec);
+  if (elapsedSec < timing.holdSec) return ASSUMED_RESTING_BPM;
+  const rampElapsed = elapsedSec - timing.holdSec;
   const progress = timing.rampSec <= 0 ? 1 : Math.min(1, rampElapsed / timing.rampSec);
   return ASSUMED_RESTING_BPM + (spec.targetBpm - ASSUMED_RESTING_BPM) * progress;
 }
@@ -334,7 +339,11 @@ export function pauseModeSessionHaptic(): void {
 /** "Feel it"-preview: zelfde verloop, ingekort tot een paar seconden. */
 export function playModePreviewHaptic(mode: BraceletMode): void {
   session = null;
-  play(mode, { holdSec: PREVIEW_HOLD_SECONDS, rampSec: PREVIEW_RAMP_SECONDS }, 0);
+  play(
+    mode,
+    { holdSec: PREVIEW_HOLD_SECONDS, rampSec: SPECS[mode].rampSec > 0 ? PREVIEW_RAMP_SECONDS : 0 },
+    0,
+  );
 }
 
 /** Stopt alles en vergeet een eventuele gepauzeerde sessie. */
