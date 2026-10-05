@@ -163,7 +163,7 @@ export type PaywallContext = 'breathwork' | 'state-control' | 'audio';
 
 /** Voordelen in volgorde van relevantie: het eigen product eerst. Operator,
  *  1 okt 2026: 64 = 15 technieken × hun benoemde duur-varianten. */
-function benefitLines(context: PaywallContext, audioWorth: string | undefined): string[] {
+function benefitLines(context: PaywallContext): string[] {
   /* Operator, 5 okt 2026: zelfde opbouw voor alle drie — eerst de eigen
      voordelen, daarna de andere twee als "Full VIBEZCORE … included". */
   const stateControl = [
@@ -181,9 +181,8 @@ function benefitLines(context: PaywallContext, audioWorth: string | undefined): 
   ];
   const stateControlIncluded = 'Full VIBEZCORE State Control included';
   const breathworkIncluded = 'Full VIBEZCORE Breathwork included';
-  const audioIncluded = audioWorth
-    ? `Full VIBEZCORE Audio Library included — worth ${audioWorth}/mo`
-    : 'Full VIBEZCORE Audio Library included';
+  /* Operator, 5 okt 2026: geen "worth €X/mo" meer achter de audio-regel. */
+  const audioIncluded = 'Full VIBEZCORE Audio Library included';
   if (context === 'state-control') return [...stateControl, breathworkIncluded, audioIncluded];
   if (context === 'audio') return [...audio, breathworkIncluded, stateControlIncluded];
   return [...breathwork, stateControlIncluded, audioIncluded];
@@ -260,7 +259,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
               /* Operator, 5 okt 2026 ("elke popup moet beginnen met het eigen
                  relevante product"): eerst de voordelen van het product waar
                  de gebruiker vandaan komt, daarna de andere twee. */
-              ...benefitLines(context, getProduct('monthly')?.regularPriceLabel),
+              ...benefitLines(context),
             ].map((line) => (
               <View key={line} style={s.payRow}>
                 <View style={s.payCheck}>
