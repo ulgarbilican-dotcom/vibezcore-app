@@ -17,13 +17,13 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+import { AudioAccent, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import {
   useBraceletStats,
 } from '@/utils/bracelet-history';
 import { useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useActivePlan } from '@/utils/plan-store';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { useProtocolLocked } from '@/utils/protocol-gate';
@@ -37,7 +37,7 @@ import {
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -51,6 +51,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
+  withDelay,
 } from 'react-native-reanimated';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -102,6 +103,26 @@ export default function ActivityScreen() {
   }, [history]);
   const bStats = useBraceletStats();
   const { plan: braceletPlan } = useActiveBraceletPlan();
+
+  /* Operator, 5 okt 2026 ("als gebruiker op back klikt moet hij direct
+     zien op welke kaart hij had getikt — nu elke keer zoeken"): zoals een
+     iOS-lijst licht de kaart waarop je tikte kort op als je terugkomt, en
+     dooft dan uit. */
+  const pendingRef = useRef<string | null>(null);
+  const [flash, setFlash] = useState<{ id: string; n: number } | null>(null);
+  const open = (id: string, path: string) => {
+    pendingRef.current = id;
+    router.push(path as never);
+  };
+  useFocusEffect(
+    useCallback(() => {
+      if (pendingRef.current) {
+        setFlash({ id: pendingRef.current, n: Date.now() });
+        pendingRef.current = null;
+      }
+    }, []),
+  );
+  const flashFor = (id: string) => (flash?.id === id ? flash.n : undefined);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -160,13 +181,15 @@ export default function ActivityScreen() {
             large
             Icon={CalendarDays}
             title="Your daily plan"
-            onPress={() => router.push('/agenda' as never)}
+            flashKey={flashFor('breathPlan')}
+            onPress={() => open('breathPlan', '/agenda')}
           />
           <Row
             large
             Icon={protocolLocked ? Lock : Target}
             title="Set your goal"
-            onPress={() => router.push('/build-choice' as never)}
+            flashKey={flashFor('breathGoal')}
+            onPress={() => open('breathGoal', '/build-choice')}
           />
           {/* Operator, 29 september 2026 ("hoe kan gebruiker in 1 oogopslag
              checken wat hij wil, nu onduidelijk wat breathwork en bracelet
@@ -185,7 +208,8 @@ export default function ActivityScreen() {
                 ? `${weekBreathSessions} session${weekBreathSessions === 1 ? '' : 's'} this week`
                 : 'View your session history'
             }
-            onPress={() => router.push('/breath-history')}
+            flashKey={flashFor('breathHistory')}
+            onPress={() => open('breathHistory', '/breath-history')}
           />
         </View>
 
@@ -217,13 +241,15 @@ export default function ActivityScreen() {
             large
             Icon={CalendarDays}
             title="Your daily plan"
-            onPress={() => router.push('/bracelet-agenda' as never)}
+            flashKey={flashFor('scPlan')}
+            onPress={() => open('scPlan', '/bracelet-agenda')}
           />
           <Row
             large
             Icon={Target}
             title="Set your plan"
-            onPress={() => router.push('/bracelet-set-day' as never)}
+            flashKey={flashFor('scSetPlan')}
+            onPress={() => open('scSetPlan', '/bracelet-set-day')}
           />
           <Row
             large
@@ -234,7 +260,8 @@ export default function ActivityScreen() {
                 ? `${bStats.weekSessions} session${bStats.weekSessions === 1 ? '' : 's'} this week`
                 : 'View your session history'
             }
-            onPress={() => router.push('/bracelet-history')}
+            flashKey={flashFor('scHistory')}
+            onPress={() => open('scHistory', '/bracelet-history')}
           />
         </View>
       </ScrollView>
@@ -255,6 +282,7 @@ function Row({
   title,
   sub,
   onPress,
+  flashKey,
   /* Operator, 29 september 2026 ("maak de kaarten groter"): "Set your
      goal"/"Your daily plan" zijn de essentie van breathwork, mogen meer
      gewicht hebben dan de smalle lijstrijen onderaan ("All breathwork
@@ -266,8 +294,17 @@ function Row({
   title: string;
   sub?: string;
   onPress: () => void;
+  /** Verandert bij terugkeer naar Activity als dit de getikte kaart was. */
+  flashKey?: number;
   large?: boolean;
 }) {
+  const hl = useSharedValue(0);
+  useEffect(() => {
+    if (!flashKey) return;
+    hl.value = 1;
+    hl.value = withDelay(500, withTiming(0, { duration: 1100 }));
+  }, [flashKey, hl]);
+  const hlStyle = useAnimatedStyle(() => ({ opacity: hl.value }));
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -285,6 +322,10 @@ function Row({
       onPressIn={onPressIn}
       onPressOut={onPressOut}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, s.rowFlash, large && s.rowFlashLarge, hlStyle]}
+      />
       {large ? (
         <View style={s.rowIconBadge}>
           <Icon size={21} color={ink(0.8)} strokeWidth={2.2} />
@@ -401,6 +442,11 @@ const s = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 13,
   },
+  /* Oplichten bij terugkeer (zie `flash` hierboven) — operator: "niet
+     exact Apple nabouwen": geen grijze iOS-selectie maar een zachte gloed
+     in ons Bio-Teal-accent die rustig uitdooft. */
+  rowFlash: { borderRadius: 14, backgroundColor: `${AudioAccent}2E` },
+  rowFlashLarge: { borderRadius: 16 },
   rowIconBadge: {
     width: 40,
     height: 40,
