@@ -56,7 +56,7 @@ import {
   subscribeRemoteControl,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronDown, ChevronLeft, ChevronUp, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -1504,6 +1504,100 @@ function ModeDetailModal({
         </View>
       </View>
     </Modal>
+  );
+}
+
+/* ── ModeSwipeRing — modus kiezen door over de cirkel te vegen ─────────
+   Operator, 5 okt 2026 ("het idee van één cirkel die je kan
+   doorswipen"): zoals wijzerplaten wisselen op een Apple Watch. Links/
+   rechts vegen = volgende/vorige modus (de cirkel volgt je vinger, schuift
+   weg en de nieuwe schuift binnen); tikken = het info-popup van die modus
+   (uitleg + Feel it). Aan de uiteinden rekt hij even mee en veert terug —
+   geen rondloop. ENKEL op het keuzescherm: op een lopende sessie zou één
+   veeg de sessie stoppen. */
+const SWIPE_DISTANCE = 320;
+
+function ModeSwipeRing({
+  mode,
+  onChange,
+  onTap,
+  children,
+}: {
+  mode: BraceletMode;
+  onChange: (next: BraceletMode) => void;
+  onTap: () => void;
+  children: ReactNode;
+}) {
+  const x = useRef(new Animated.Value(0)).current;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onTapRef = useRef(onTap);
+  onTapRef.current = onTap;
+
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+        onPanResponderTerminationRequest: () => false,
+        onPanResponderMove: (_, g) => {
+          const i = MODES.findIndex((m) => m.mode === modeRef.current);
+          const atEdge = (g.dx > 0 && i === 0) || (g.dx < 0 && i === MODES.length - 1);
+          x.setValue(atEdge ? g.dx * 0.25 : g.dx);
+        },
+        onPanResponderRelease: (_, g) => {
+          const springBack = () =>
+            Animated.spring(x, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 6 }).start();
+          if (Math.abs(g.dx) < 8 && Math.abs(g.dy) < 8) {
+            springBack();
+            onTapRef.current();
+            return;
+          }
+          const i = MODES.findIndex((m) => m.mode === modeRef.current);
+          const dir = g.dx < -50 || g.vx < -0.5 ? 1 : g.dx > 50 || g.vx > 0.5 ? -1 : 0;
+          const next = i + dir;
+          if (dir === 0 || next < 0 || next >= MODES.length) {
+            springBack();
+            return;
+          }
+          Animated.timing(x, {
+            toValue: -dir * SWIPE_DISTANCE,
+            duration: 140,
+            useNativeDriver: true,
+          }).start(() => {
+            onChangeRef.current(MODES[next].mode);
+            x.setValue(dir * SWIPE_DISTANCE);
+            Animated.spring(x, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
+          });
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(x, { toValue: 0, useNativeDriver: true }).start();
+        },
+      }),
+    [x],
+  );
+  const opacity = x.interpolate({
+    inputRange: [-SWIPE_DISTANCE, 0, SWIPE_DISTANCE],
+    outputRange: [0, 1, 0],
+  });
+  return (
+    <Animated.View
+      {...responder.panHandlers}
+      style={{ transform: [{ translateX: x }], opacity }}
+      accessibilityRole="adjustable"
+      accessibilityLabel={`${getModeMeta(mode).name}. Swipe left or right to change mode, tap for details.`}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }, { name: 'activate' }]}
+      onAccessibilityAction={(e) => {
+        const i = MODES.findIndex((m) => m.mode === mode);
+        if (e.nativeEvent.actionName === 'activate') onTap();
+        else if (e.nativeEvent.actionName === 'increment' && i < MODES.length - 1) onChange(MODES[i + 1].mode);
+        else if (e.nativeEvent.actionName === 'decrement' && i > 0) onChange(MODES[i - 1].mode);
+      }}
+    >
+      {children}
+    </Animated.View>
   );
 }
 
@@ -3709,29 +3803,10 @@ function IdleScreen({
      Eén boolean hier i.p.v. de module-brede `light` omzetten. */
   const idleDark = true;
 
-  /* Operator, 16 september 2026 ("kan de i-button mee onder de juiste
-     kaart komen bij aanklikken"): animeert het info-knopje naar de
-     kolom van de actieve modus. 5 gelijke flex:1-kolommen → de kolom-
-     middens liggen altijd exact op 10/30/50/70/90% van de rijbreedte. */
-  const infoBtnAnim = useRef(
-    new Animated.Value(MODES.findIndex((m) => m.mode === selectedMode)),
-  ).current;
   const idleInTab = usePathname() === '/bracelet';
   const [runSnap, setRunSnap] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setRunSnap), []);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
-  useEffect(() => {
-    Animated.spring(infoBtnAnim, {
-      toValue: MODES.findIndex((m) => m.mode === selectedMode),
-      useNativeDriver: false,
-      friction: 8,
-      tension: 60,
-    }).start();
-  }, [selectedMode, infoBtnAnim]);
-  const infoBtnLeft = infoBtnAnim.interpolate({
-    inputRange: [0, 1, 2, 3, 4],
-    outputRange: ['10%', '30%', '50%', '70%', '90%'],
-  });
 
   return (
     /* Iter 9bb (2026-05-31): SafeAreaView edges conditional op owner-status.
@@ -3843,151 +3918,73 @@ function IdleScreen({
            vulling + modus-naam/tijd), de DurationSlider eronder bedient
            de waarde. */}
         <View style={s.durationRingWrap}>
-          <DurationRing
-            min={meta.minMinutes}
-            max={meta.maxMinutes}
-            value={duration}
-            color={meta.color}
-            label={meta.name}
-            size={240}
-            dark={idleDark}
-          />
+          {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
+              aan het uiteinde). */}
+          {MODES.findIndex((m) => m.mode === selectedMode) > 0 && (
+            <View pointerEvents="none" style={[s.swipeHint, { left: 6 }]}>
+              <ChevronLeft size={22} color="rgba(255,255,255,0.22)" strokeWidth={2} />
+            </View>
+          )}
+          {MODES.findIndex((m) => m.mode === selectedMode) < MODES.length - 1 && (
+            <View pointerEvents="none" style={[s.swipeHint, { right: 6 }]}>
+              <ChevronRight size={22} color="rgba(255,255,255,0.22)" strokeWidth={2} />
+            </View>
+          )}
+          <ModeSwipeRing
+            mode={selectedMode}
+            onChange={(next) => {
+              Haptics.selectionAsync();
+              setSelectedMode(next);
+            }}
+            onTap={() => setDetailModeForModal(selectedMode)}
+          >
+            <DurationRing
+              min={meta.minMinutes}
+              max={meta.maxMinutes}
+              value={duration}
+              color={meta.color}
+              label={meta.name}
+              size={240}
+              dark={idleDark}
+            />
+          </ModeSwipeRing>
         </View>
 
-        {/* Operator, 16 september 2026 ("ring moet groter... iconen
-           moeten zakken"): meer ruimte boven de pill-rij nu de ring
-           groter is (230px), zodat ze niet tegen elkaar aan zitten. */}
-        {/* Operator, 16 september 2026: 40→14 — "cta moet hoger, nu
-           buiten beeld": met de ring op 240px + alle secties eronder past
-           het scherm niet meer, dus ruimte terugwinnen waar het kan. */}
-        <Text
-          style={[
-            s.idleH2,
-            /* Operator, 27 september 2026 ("geef alles voldoende
-               ademruimte"): 14/8 → 20/14. */
-            /* 5 okt 2026: 20/14 → 12/10 — de inhoud liep in de tab (met
-               tabbalk) over, waardoor Start onder de balk viel. */
-            { marginTop: 12, marginBottom: 10, textAlign: 'center' },
-            idleDark && { color: 'rgba(255,255,255,0.5)' },
-          ]}
-        >
-          Choose mode
-        </Text>
-        {/* Operator, 16 september 2026 ("kan de i-button mee onder de
-           juiste kaart komen bij aanklikken"): het i-knopje verschuift
-           nu mee naar de kolom van de actief-getikte pill i.p.v. altijd
-           gecentreerd onder de hele rij te blijven staan. Pills zijn
-           gelijke flex:1-kolommen, dus percentage-posities (10/30/50/
-           70/90%) matchen exact het midden van elke kolom, ongeacht
-           schermbreedte — geen onLayout-meting nodig. */}
-        {/* Operator, 27 september 2026 ("geef alles voldoende
-           ademruimte"): 28→34. */}
-        <View style={{ position: 'relative', marginBottom: 20 }}>
-          <View style={s.modeSegmentRow}>
-            {MODES.map((m: ModeMeta) => {
+        {/* Paginabolletjes zoals iOS: waar je zit, hoeveel modi er zijn, en
+            een tik springt meteen naar die modus (5 okt 2026 — vervangt de
+            rij met vijf knoppen). */}
+        <View style={s.modeDots}>
+          {MODES.map((m: ModeMeta) => {
             const active = m.mode === selectedMode;
-            const ModeIcon = MODE_ICONS[m.mode];
-            /* Operator, 16 september 2026 ("zet [de iconen] al in de
-               eigen kleuren"): icoon toont altijd zijn eigen modus-kleur,
-               niet enkel wanneer actief — actief blijft zichtbaar via de
-               rand. Contrast-fix voor witte modus-kleur (Boost) — anders
-               onzichtbaar op de neutrale pill-achtergrond.
-               Operator, zelfde dag ("dark-redesign, bento-stijl: actieve
-               knop volledig paars met verloop, icoontje wit; niet-
-               actieve knoppen donkergrijze capsules #1C1C1E, icoontjes
-               heel lichtgrijs"): in idleDark vervangt dat de eerdere
-               accent-only (rand-only) behandeling. */
-            const segFg = idleDark
-              ? 'rgba(255,255,255,0.55)'
-              : isLightColor(m.color)
-                ? C.textDim
-                : m.color;
-            /* Contrast-fix ("witte button icoon niet zichtbaar"): bij een
-               lichte modus-kleur (Clarity, wit) is de actieve pill zelf
-               ook wit gevuld — een wit icoon erop verdween volledig. */
-            const activeFg = isLightColor(m.color)
-              ? '#0a0a0a'
-              : idleDark
-                ? '#ffffff'
-                : m.color;
             return (
-              /* Operator, 16 september 2026 ("bij elke switch zakt de
-                 onderkant beetje, cta komt buiten scherm... enkel de
-                 aangetikte knop mag even groter worden"): PressableScale
-                 bleek dezelfde layout-bug te hebben als de GO-knop (de
-                 interne flex:1-Animated.View respecteerde de vaste
-                 height:40 niet altijd correct, wat bij herhaald tikken
-                 de rest van het scherm cumulatief liet zakken). Kale
-                 Pressable met een inline scale-transform op `pressed` —
-                 geen extra layout-laag, dus kan niet meer "groeien". */
               <Pressable
                 key={m.mode}
-                style={({ pressed }) => [
-                  s.modeSegment,
-                  idleDark && { backgroundColor: '#1C1C1E', borderColor: 'transparent' },
-                  active && !idleDark && { borderColor: activeFg },
-                  /* Operator, 16 september 2026 (Apple-critique): "geen los
-                     ovaaltje erachter — kleur de HELE capsule volledig
-                     blauw/paars". Een genest gradient-overlay in een
-                     geneste Animated.View bleek onbetrouwbaar te clippen
-                     (vorige poging). Simpelste, waterdichte fix: platte
-                     backgroundColor rechtstreeks op de Pressable zelf —
-                     zelfde element dat de borderRadius al heeft, geen
-                     aparte clip-laag nodig. */
-                  active && idleDark && { backgroundColor: m.color, borderColor: 'transparent' },
-                  { transform: [{ scale: pressed ? 1.08 : 1 }] },
-                ]}
+                hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                 onPress={() => {
-                  /* Operator, 15 september 2026 ("de gebruiker kan virtueel
-                     op de modi tikken en de trillingen direct voelen via
-                     de trilmotor van zijn eigen telefoon"): dit scherm IS
-                     al de interactieve demo (bereikt via de "Preview the
-                     bracelet app"-CTA) — tikbare tactiele feedback op elke
-                     mode-selectie geeft precies dat "proef de interface"-
-                     gevoel, zonder de complexe sessie-puls-loop verderop
-                     in dit bestand aan te raken. */
                   Haptics.selectionAsync();
                   setSelectedMode(m.mode);
                 }}
                 accessibilityLabel={`Select ${m.name} mode`}
+                accessibilityState={{ selected: active }}
               >
-                <ModeIcon
-                  size={18}
-                  color={active ? activeFg : segFg}
-                  strokeWidth={2}
+                <View
+                  style={[
+                    s.modeDot,
+                    { backgroundColor: m.color, opacity: active ? 1 : 0.35, width: active ? 22 : 8 },
+                  ]}
                 />
               </Pressable>
             );
           })}
-          </View>
-
-          {/* Operator, 16 september 2026 ("i onder de choose mode
-             buttons" → "kan de i-button mee onder de juiste kaart komen
-             bij aanklikken"): info-icoontje schuift nu mee naar de
-             kolom van de geselecteerde modus. */}
-          <Animated.View
-            pointerEvents="box-none"
-            style={{
-              position: 'absolute',
-              top: 44,
-              left: infoBtnLeft,
-              marginLeft: -13,
-            }}
-          >
-            <Pressable
-              style={[s.startInfoBtn, idleDark && { backgroundColor: 'rgba(255,255,255,0.08)' }]}
-              onPress={() => setDetailModeForModal(selectedMode)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={`Learn about ${meta.name}`}
-            >
-              <Info
-                size={14}
-                color={idleDark ? 'rgba(255,255,255,0.6)' : C.textDim}
-                strokeWidth={2.2}
-              />
-            </Pressable>
-          </Animated.View>
         </View>
+        <Pressable
+          style={[s.startInfoBtn, { marginTop: 14, marginBottom: 14 }, idleDark && { backgroundColor: 'rgba(255,255,255,0.08)' }]}
+          onPress={() => setDetailModeForModal(selectedMode)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel={`Learn about ${meta.name}`}
+        >
+          <Info size={14} color={idleDark ? 'rgba(255,255,255,0.6)' : C.textDim} strokeWidth={2.2} />
+        </Pressable>
 
         {/* Operator ("dat moet meer in deze stijl, breathwork"): de losse
            preset-chip-rij + aparte slider vervangen door dezelfde
@@ -5909,8 +5906,27 @@ const s = StyleSheet.create({
   /* DurationRing — Dribbble-referentie toegepast op Choose duration
      i.p.v. active-session (operator-correctie, 16 september 2026:
      "wij zijn aan de choose mode sectie bezig"). */
+  swipeHint: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  modeDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  modeDot: {
+    height: 8,
+    borderRadius: 4,
+  },
   durationRingWrap: {
     alignItems: 'center',
+    alignSelf: 'stretch',
     /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
        8→16. 5 okt 2026: 16→8 (paste anders niet boven de tabbalk). */
     marginBottom: 8,
