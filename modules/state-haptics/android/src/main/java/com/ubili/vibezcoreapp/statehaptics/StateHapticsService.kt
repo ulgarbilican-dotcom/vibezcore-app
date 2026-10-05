@@ -22,10 +22,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Build
@@ -57,7 +55,8 @@ class StateHapticsService : Service() {
        tijd bij de start van deze curve (de curve zelf = de resterende tijd). */
     const val EXTRA_SESSION_TOTAL_MS = "sessionTotalMs"
     const val EXTRA_SESSION_ELAPSED_MS = "sessionElapsedMs"
-    const val LATE_TOLERANCE_MS = 40L
+    /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
+    const val LATE_SKIP_MS = 150L
 
     fun vibratorOf(context: Context): Vibrator? =
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -84,47 +83,75 @@ class StateHapticsService : Service() {
     }
   }
   private var wakeLock: PowerManager.WakeLock? = null
-  private var receiverRegistered = false
   private val endRunnable = Runnable { stopSelfCleanly() }
 
-  /* Kort na SCREEN_OFF herstarten: het systeem annuleert de lopende trilling
-     als onderdeel van het uitschakelen, een nieuwe trilling NA dat moment
-     (vanuit een voorgrondservice) blijft wel lopen. */
-  private val screenReceiver = object : BroadcastReceiver() {
-    override fun onReceive(context: Context?, intent: Intent?) {
-      when (intent?.action) {
-        Intent.ACTION_SCREEN_OFF -> handler.postDelayed({ playFromNow() }, 300L)
-        /* Gemeten 5 okt 2026: het eigen ontgrendel-tikje van het systeem
-           VERDRINGT onze trilling (cancelled_superseded) — daarna opnieuw
-           oppakken. */
-        Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT ->
-          handler.postDelayed({ playFromNow() }, 600L)
-      }
-    }
-  }
+  /* TIK PER TIK (operator, 5 okt 2026: "de sessie mag in geen enkel geval
+     onderbroken of beïnvloed worden door andere handelingen op de
+     telefoon"). Gemeten: elke andere trilling — tik-feedback, gebaren,
+     toetsenbord, meldingen, ontgrendelen — VERDRINGT een lopende app-
+     trilling (cancelled_superseded), en vergrendelen breekt ze af
+     (cancelled_by_screen_off). Eén lange trilling voor de hele sessie viel
+     daardoor telkens stil tot de volgende herstart (gaten tot 19 s).
+     Nu speelt elke tik als EIGEN korte trilling op zijn exacte moment
+     (Handler + wake lock, zelfde aanpak als BreathSessionService): een
+     verdringing kost hooguit één tik, de volgende komt gewoon. */
+  private class Unit(val offsetMs: Long, val t: LongArray, val a: IntArray)
 
-  /* Elke andere trilling (melding, toetsenbord) kan de onze verdringen, en
-     Android meldt dat niet. Dus om de ~30 s opnieuw aanbieden — telkens
-     PRECIES op het begin van een tik, zodat er geen halve tik wegvalt. */
-  private val resyncRunnable = object : Runnable {
+  private var units: List<Unit> = emptyList()
+  private var nextUnit = 0
+  private var startUptime = 0L
+
+  private val beatRunnable = object : Runnable {
     override fun run() {
-      playFromNow()
-      scheduleResync()
+      playDueUnitAndScheduleNext()
     }
   }
 
-  private fun scheduleResync() {
-    handler.removeCallbacks(resyncRunnable)
-    val elapsed = SystemClock.elapsedRealtime() - startRealtime
-    val target = elapsed + 30_000L
+  /** Curve (lub, gap, dub, rust)×N [+ eind-signaal van 6 stappen] →
+   *  losse tikken met hun begintijd. */
+  private fun buildUnits(t: LongArray, a: IntArray): List<Unit> {
+    val out = ArrayList<Unit>()
+    val sigStart =
+      if (t.size >= 6 && (t.size - 6) % 4 == 0 && a[t.size - 6] == 0) t.size - 6 else t.size
     var acc = 0L
     var i = 0
-    while (i < timings.size && (acc < target || i % 4 != 0)) {
-      acc += timings[i]
-      i++
+    while (i + 3 < sigStart) {
+      out.add(Unit(acc, longArrayOf(t[i], t[i + 1], t[i + 2]), intArrayOf(a[i], 0, a[i + 2])))
+      acc += t[i] + t[i + 1] + t[i + 2] + t[i + 3]
+      i += 4
     }
-    if (i >= timings.size) return
-    handler.postDelayed(resyncRunnable, (acc - elapsed).coerceAtLeast(0L))
+    if (sigStart < t.size) {
+      out.add(Unit(acc, t.copyOfRange(sigStart, t.size), a.copyOfRange(sigStart, t.size)))
+    }
+    return out
+  }
+
+  private fun playDueUnitAndScheduleNext() {
+    if (nextUnit >= units.size) return
+    val now = SystemClock.uptimeMillis()
+    val u = units[nextUnit]
+    /* Te laat (bv. CPU was even bezet)? Die tik overslaan i.p.v. hem uit de
+       maat te spelen. */
+    if (now - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          vibratorOf(this)?.vibrate(VibrationEffect.createWaveform(u.t, u.a, -1))
+        }
+      } catch (_: Exception) {
+      }
+    }
+    nextUnit++
+    scheduleNextUnit()
+  }
+
+  private fun scheduleNextUnit() {
+    handler.removeCallbacks(beatRunnable)
+    val now = SystemClock.uptimeMillis()
+    while (nextUnit < units.size && startUptime + units[nextUnit].offsetMs < now - LATE_SKIP_MS) {
+      nextUnit++
+    }
+    if (nextUnit >= units.size) return
+    handler.postAtTime(beatRunnable, startUptime + units[nextUnit].offsetMs)
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -151,11 +178,12 @@ class StateHapticsService : Service() {
     handler.postDelayed(tickRunnable, 1000L)
 
     acquireWakeLock()
-    registerScreenReceiver()
     handler.removeCallbacks(endRunnable)
     handler.postDelayed(endRunnable, totalMs)
-    playFromNow()
-    scheduleResync()
+    units = buildUnits(t, a)
+    nextUnit = 0
+    startUptime = SystemClock.uptimeMillis()
+    scheduleNextUnit()
     return START_NOT_STICKY
   }
 
@@ -165,50 +193,9 @@ class StateHapticsService : Service() {
       vibratorOf(this)?.cancel()
     } catch (_: Exception) {
     }
-    unregisterScreenReceiver()
     releaseWakeLock()
     releaseMediaSession()
     super.onDestroy()
-  }
-
-  /** Speelt het nog resterende deel van de curve vanaf de huidige positie. */
-  private fun playFromNow() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || timings.isEmpty()) return
-    val elapsed = SystemClock.elapsedRealtime() - startRealtime
-    if (elapsed >= totalMs) {
-      stopSelfCleanly()
-      return
-    }
-    var acc = 0L
-    var i = 0
-    while (i < timings.size && acc + timings[i] <= elapsed) {
-      acc += timings[i]
-      i++
-    }
-    if (i >= timings.size) return
-    val outT = ArrayList<Long>(timings.size - i)
-    val outA = ArrayList<Int>(timings.size - i)
-    val into = elapsed - acc
-    if (amplitudes[i] > 0 && into <= LATE_TOLERANCE_MS) {
-      /* Net (enkele ms) te laat op het begin van een tik — de Handler is
-         nooit exact. Speel de tik dan volledig i.p.v. hem te laten vallen. */
-      outT.add(timings[i])
-      outA.add(amplitudes[i])
-    } else {
-      /* Een halve tik heeft geen zin — midden in een tik start de rest stil. */
-      outT.add(timings[i] - into)
-      outA.add(if (amplitudes[i] > 0) 0 else amplitudes[i])
-    }
-    for (j in i + 1 until timings.size) {
-      outT.add(timings[j])
-      outA.add(amplitudes[j])
-    }
-    try {
-      val v = vibratorOf(this) ?: return
-      v.cancel()
-      v.vibrate(VibrationEffect.createWaveform(outT.toLongArray(), outA.toIntArray(), -1))
-    } catch (_: Exception) {
-    }
   }
 
   private fun stopSelfCleanly() {
@@ -217,7 +204,6 @@ class StateHapticsService : Service() {
       vibratorOf(this)?.cancel()
     } catch (_: Exception) {
     }
-    unregisterScreenReceiver()
     releaseWakeLock()
     releaseMediaSession()
     stopForeground(STOP_FOREGROUND_REMOVE)
@@ -305,26 +291,6 @@ class StateHapticsService : Service() {
       getSystemService(NotificationManager::class.java)?.notify(NOTIFICATION_ID, buildNotification())
     } catch (_: Exception) {
     }
-  }
-
-  private fun registerScreenReceiver() {
-    if (receiverRegistered) return
-    val filter = IntentFilter().apply {
-      addAction(Intent.ACTION_SCREEN_OFF)
-      addAction(Intent.ACTION_SCREEN_ON)
-      addAction(Intent.ACTION_USER_PRESENT)
-    }
-    ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-    receiverRegistered = true
-  }
-
-  private fun unregisterScreenReceiver() {
-    if (!receiverRegistered) return
-    try {
-      unregisterReceiver(screenReceiver)
-    } catch (_: Exception) {
-    }
-    receiverRegistered = false
   }
 
   private fun acquireWakeLock() {
