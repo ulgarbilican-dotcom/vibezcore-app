@@ -1,3 +1,4 @@
+import { openStateControl } from '@/utils/state-control-ui';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale } from '@/constants/theme';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
@@ -3922,9 +3923,7 @@ function AudioScreen({
                       onPress={() => {
                         setBreathChooserOpen(false);
                         navigateAway(() =>
-                          router.push(
-                            `/bracelet-control?mode=${opt.mode}&breathwork=1&from=audio` as never,
-                          ),
+                          openStateControl({ mode: opt.mode, breathwork: 1, from: 'audio' }),
                         );
                       }}
                       accessibilityLabel={`Open ${opt.purpose} breathwork — ${opt.technique}`}

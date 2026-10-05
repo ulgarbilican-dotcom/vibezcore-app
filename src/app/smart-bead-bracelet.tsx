@@ -47,6 +47,7 @@
      aangepast (operator-besluit 2026-05-25).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { openStateControl } from '@/utils/state-control-ui';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import { PreviewPill } from '@/components/PreviewPill';
 import { usePlayerState } from '@/services/audio-player';
@@ -1500,7 +1501,7 @@ export default function SmartBeadBraceletScreen() {
             <ReAnimated.View style={[{ width: '100%' }, heroCtaPressStyle]}>
               <Pressable
                 style={s.heroCta}
-                onPress={() => router.push('/bracelet-control')}
+                onPress={() => openStateControl()}
                 onPressIn={() => {
                   heroCtaScale.value = withTiming(0.97, { duration: 80 });
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1665,7 +1666,7 @@ export default function SmartBeadBraceletScreen() {
         {isBraceletOwner ? (
           <Pressable
             style={s.ownerBanner}
-            onPress={() => router.push('/bracelet-control')}
+            onPress={() => openStateControl()}
             android_ripple={{ color: 'rgba(10,10,12,0.10)' }}
             accessibilityLabel="Open your bracelet control screen"
           >

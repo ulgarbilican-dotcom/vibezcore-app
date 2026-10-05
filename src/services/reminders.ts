@@ -458,9 +458,12 @@ export type TappedReminder = {
    Een bracelet-DAGPLAN-melding (`'bracelet-plan'`) kent al modus + duur —
    die gaat rechtstreeks naar `/bracelet-control`, net als breathwork naar
    `/breath-session` gaat. */
+/* 5 okt 2026: bracelet-plan opent de State Control-TAB (één scherm, geen
+   apart /bracelet-control meer — zie utils/state-control-ui.ts); `open` in
+   reminderParams slaat het intro over. */
 export const reminderRoute = (t: TappedReminder) =>
   t.kind === 'bracelet-plan'
-    ? '/bracelet-control'
+    ? '/bracelet'
     : t.kind === 'bracelet'
       ? '/bracelet'
       : t.state
@@ -483,6 +486,7 @@ export const reminderParams = (t: TappedReminder): Record<string, string> =>
       ? {
           mode: String(t.braceletMode),
           plan: '1',
+          open: String(Date.now()),
           ...(t.braceletDuration !== undefined
             ? { duration: String(t.braceletDuration) }
             : {}),

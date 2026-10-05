@@ -68,7 +68,7 @@ import {
 } from '@/utils/bracelet-history';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, ClipPath, Defs, G, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
-import { Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
+import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
 import {
   useCallback,
   useEffect,
@@ -2917,8 +2917,19 @@ function ActiveSessionScreen({
   useFocusEffect(
     useCallback(() => {
       setActiveSessionVisible(true);
-      return () => setActiveSessionVisible(false);
-    }, []),
+      /* Operator, 5 okt 2026: de terugknop van de telefoon doet hier
+         hetzelfde als de chevron — sessie minimaliseren naar het State
+         Control-intro, de sessie loopt door. */
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (!onMinimize) return false;
+        onMinimize();
+        return true;
+      });
+      return () => {
+        sub.remove();
+        setActiveSessionVisible(false);
+      };
+    }, [onMinimize]),
   );
   /* Operator, 4 okt 2026 ("er is letterlijk geen haptic" tijdens een
      echte sessie): playModePreviewHaptic/stopModePreviewHaptic zaten tot
@@ -3366,6 +3377,7 @@ function ActiveSessionScreen({
 }
 
 type IdleScreenProps = {
+  onMinimize?: () => void;
   fromContext: 'audio' | 'bracelet' | 'plan' | null;
   disconnectAndBackToSource: () => Promise<void>;
   onDisconnect: () => Promise<void>;
@@ -3400,6 +3412,7 @@ type IdleScreenProps = {
    Doel: alles in één blik zichtbaar zonder scrollen, Apple-style
    hiërarchie met eyebrow-headers. */
 function IdleScreen({
+  onMinimize,
   fromContext,
   disconnectAndBackToSource,
   onDisconnect,
@@ -3473,7 +3486,10 @@ function IdleScreen({
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
         title="Session Control"
-        onBack={fromContext ? disconnectAndBackToSource : onDisconnect}
+        /* In de State Control-tab: terug naar het intro (zelfde als de
+           chevron/terugknop elders, 5 okt 2026). `onDisconnect` liet de tab
+           anders op "Connecting…" hangen (stil verbinden gebeurt één keer). */
+        onBack={fromContext ? disconnectAndBackToSource : onMinimize ?? onDisconnect}
         backLabel={ctaBackLabel}
         dark={idleDark}
         /* Operator, 4 okt 2026 ("waarom heb je demo gezet op session
@@ -3530,7 +3546,7 @@ function IdleScreen({
       <View
         style={[
           s.idleSingleScreen,
-          { paddingBottom: idleInTab ? 16 : Math.max(safeInsets.bottom + 24, 72) },
+          { paddingBottom: idleInTab ? 24 : Math.max(safeInsets.bottom + 24, 72) },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
@@ -3577,7 +3593,9 @@ function IdleScreen({
             s.idleH2,
             /* Operator, 27 september 2026 ("geef alles voldoende
                ademruimte"): 14/8 → 20/14. */
-            { marginTop: 20, marginBottom: 14, textAlign: 'center' },
+            /* 5 okt 2026: 20/14 → 12/10 — de inhoud liep in de tab (met
+               tabbalk) over, waardoor Start onder de balk viel. */
+            { marginTop: 12, marginBottom: 10, textAlign: 'center' },
             idleDark && { color: 'rgba(255,255,255,0.5)' },
           ]}
         >
@@ -3592,7 +3610,7 @@ function IdleScreen({
            schermbreedte — geen onLayout-meting nodig. */}
         {/* Operator, 27 september 2026 ("geef alles voldoende
            ademruimte"): 28→34. */}
-        <View style={{ position: 'relative', marginBottom: 34 }}>
+        <View style={{ position: 'relative', marginBottom: 20 }}>
           <View style={s.modeSegmentRow}>
             {MODES.map((m: ModeMeta) => {
             const active = m.mode === selectedMode;
@@ -3768,28 +3786,9 @@ function IdleScreen({
             card. Hier op bracelet-control hoorde 't niet thuis —
             content moet in scherm passen, geen extra cards. */}
 
-        {/* GEWIJZIGD 4 oktober 2026: Session Control (dit scherm) is nu
-           bereikbaar zonder de fysieke Smart Bead Bracelet — werkt via
-           telefoon/smartwatch-haptiek. De hardware-marketing/showcase-
-           content (verhuisd naar smart-bead-bracelet.tsx) is daardoor
-           niet meer de default van de Bracelet-tab, en verdient hier een
-           kleine, ondergeschikte vindbaarheids-link — niet prominenter
-           dan de Start-CTA hierboven, dit scherm blijft de hoofdzaak. */}
-        <Pressable
-          style={s.braceletUpsellLink}
-          onPress={() => router.push('/smart-bead-bracelet' as never)}
-          hitSlop={8}
-          accessibilityLabel="Also works with the Smart Bead Bracelet — launching Fall 2026"
-        >
-          <Text
-            style={[
-              s.braceletUpsellLinkText,
-              idleDark && { color: 'rgba(255,255,255,0.4)' },
-            ]}
-          >
-            Also works with the Smart Bead Bracelet — launching Fall 2026
-          </Text>
-        </Pressable>
+        {/* Operator, 5 okt 2026: "verwijder tekst 'Also works with…' onder
+           de CTA" — de link naar /smart-bead-bracelet is hier weg; de
+           bracelet-pagina blijft bereikbaar via de rest van de app. */}
 
         {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
         {__DEV__ && sim && <SimDemoBar sim={sim} />}
@@ -3829,7 +3828,27 @@ function IdleScreen({
   );
 }
 
-export default function BraceletControl({
+/* Operator, 5 okt 2026 ("foto 2 is andere UI dan foto 1 — zorg voor
+   professionele consistentie, niet vanalles door elkaar"): er bestond een
+   tweede, GEDUWDE versie van dit scherm (/bracelet-control, via de pill,
+   de bracelet-pagina, meldingen en het plan) met een eigen opmaak. Er is
+   nu één plek: de State Control-tab. Elke weg naar /bracelet-control
+   wordt doorgestuurd, met dezelfde parameters (modus/duur/plan/…) — de tab
+   slaat dan het intro over (zie (tabs)/bracelet.tsx). */
+export default function BraceletControl(props: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
+  const pathname = usePathname();
+  const params = useLocalSearchParams();
+  if (pathname === '/bracelet-control') {
+    return (
+      <Redirect
+        href={{ pathname: '/bracelet', params: { ...params, open: String(Date.now()) } } as never}
+      />
+    );
+  }
+  return <BraceletControlScreen {...props} />;
+}
+
+function BraceletControlScreen({
   autoConnect = false,
   onMinimize,
 }: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
@@ -4507,16 +4526,16 @@ export default function BraceletControl({
      intro) — enkel VERBINDEN, geen sessie starten zoals autoStartBracelet
      hierboven doet. Landt op Idle met een lege modus-keuze, niet op een
      vooraf-geladen gepauzeerde sessie. */
-  const autoConnectFiredRef = useRef(false);
+  /* 5 okt 2026: niet meer één keer per mount — telkens de verbinding
+     'disconnected' is opnieuw verbinden. Eén poging liet het scherm na een
+     herlaad of een verbroken verbinding eindeloos op "Connecting…" hangen. */
   useEffect(() => {
-    if (autoConnectFiredRef.current) return;
     if (!autoConnect) return;
-    autoConnectFiredRef.current = true;
-    if (bracelet.getConnectionState() !== 'connected') {
+    if (conn === 'disconnected') {
       void bracelet.connect();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoConnect, conn]);
 
   const onStart = async () => {
     setBusy(true);
@@ -5037,6 +5056,7 @@ export default function BraceletControl({
   return (
     <>
       <IdleScreen
+        onMinimize={onMinimize}
         fromContext={fromContext}
         disconnectAndBackToSource={disconnectAndBackToSource}
         onDisconnect={onDisconnect}
@@ -5394,8 +5414,8 @@ const s = StyleSheet.create({
   durationRingWrap: {
     alignItems: 'center',
     /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
-       8→16. */
-    marginBottom: 16,
+       8→16. 5 okt 2026: 16→8 (paste anders niet boven de tabbalk). */
+    marginBottom: 8,
   },
   /* Wrapper rond de DurationWheel, direct onder de ring — de ring zelf
      toont enkel het resultaat (operator: "dat moet meer in deze stijl,
@@ -5404,9 +5424,9 @@ const s = StyleSheet.create({
     width: 266,
     alignSelf: 'center',
     /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
-       4/4 → 8/10. */
-    marginBottom: 10,
-    marginTop: 8,
+       4/4 → 8/10. 5 okt 2026: → 4/6 (zie durationRingWrap). */
+    marginBottom: 6,
+    marginTop: 4,
   },
   /* DurationWheel — 1-op-1 overgenomen uit breath-setup.tsx (zie de
      toelichting bij de component zelf). */

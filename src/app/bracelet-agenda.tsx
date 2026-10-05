@@ -75,6 +75,7 @@
    `/bracelet-set-day`, dat hier bereikbaar is via "Edit your plan".
    ───────────────────────────────────────────────────────────────────────── */
 
+import { openStateControl } from '@/utils/state-control-ui';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
@@ -343,7 +344,7 @@ export default function BraceletAgendaScreen() {
        `from=plan` laat bracelet-control.tsx's back-knop echt hierheen
        terugnavigeren i.p.v. terugvallen op het owner/inline connect-
        scherm-gedrag — zie de toelichting daar bij `fromContext`. */
-    router.push(`/bracelet-control?plan=1&mode=${mode}&duration=${durationMinutes}&from=plan` as never);
+    openStateControl({ plan: 1, mode, duration: durationMinutes, from: 'plan' });
   };
 
   return (

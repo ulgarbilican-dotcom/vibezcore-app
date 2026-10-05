@@ -8,6 +8,18 @@
    indeling ((tabs)/_layout.tsx) verbergt dan de balk voor deze tab.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { router } from 'expo-router';
+
+/** De ENIGE manier om State Control van elders te openen (pill, melding,
+ *  plan, bracelet-pagina, audio-bibliotheek): de tab zelf, zonder intro,
+ *  met eventuele parameters (mode/duration/plan/breathwork/from). Vervangt
+ *  het oude losse /bracelet-control-scherm met zijn afwijkende opmaak. */
+export function openStateControl(params: Record<string, string | number> = {}): void {
+  const p: Record<string, string> = {};
+  for (const [k, v] of Object.entries(params)) p[k] = String(v);
+  router.navigate({ pathname: '/bracelet', params: { ...p, open: String(Date.now()) } } as never);
+}
+
 type Listener = (visible: boolean) => void;
 
 let activeSessionVisible = false;

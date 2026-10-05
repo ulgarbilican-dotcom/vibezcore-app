@@ -27,6 +27,7 @@
    intact (module-singleton), dus dat scherm herkent de lopende sessie
    meteen en toont ActiveSessionScreen, geen connect/reconnect-stap. */
 
+import { openStateControl } from '@/utils/state-control-ui';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   getBraceletSessionSnapshot,
@@ -125,10 +126,9 @@ function ActiveSessionPill({
           },
           pressStyle,
         ]}
-        onPress={() => {
-          if (isBraceletOwner) router.navigate('/bracelet');
-          else router.navigate('/bracelet-control' as never);
-        }}
+        /* 5 okt 2026: voor iedereen dezelfde plek — de State Control-tab,
+           meteen op de lopende sessie (geen intro). */
+        onPress={() => openStateControl()}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         accessibilityLabel={`Open active ${snap.modeName} bracelet session`}

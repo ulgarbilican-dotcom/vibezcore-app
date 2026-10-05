@@ -43,8 +43,8 @@
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -171,13 +171,32 @@ export default function BraceletScreen() {
      ELK bezoek aan deze tab opnieuw verschijnen, niet enkel de allereerste
      keer. Puur lokale state (geen settings-persistentie) die reset zodra
      de tab de focus verliest, zodat de volgende keer weer vers begint. */
-  const [showIntro, setShowIntro] = useState(true);
+  /* Een directe weg hierheen (pill, melding, plan, bracelet-pagina — allemaal
+     via de doorverwijzing in bracelet-control.tsx) draagt een uniek
+     `open`-token: dan GEEN intro, meteen naar de sessie/moduskeuze. Elk
+     token telt één keer, zodat een gewone tab-tik nadien weer het intro
+     toont. */
+  const { open } = useLocalSearchParams<{ open?: string }>();
+  const consumedOpen = useRef<string | undefined>(open);
+  const [showIntro, setShowIntro] = useState(!open);
+
+  useEffect(() => {
+    if (open && open !== consumedOpen.current) {
+      consumedOpen.current = open;
+      setShowIntro(false);
+    }
+  }, [open]);
 
   useFocusEffect(
     useCallback(() => {
       return () => setShowIntro(true);
     }, []),
   );
+
+  /* Stabiele referentie: het sessiescherm koppelt er de terugknop aan in een
+     focus-effect — een nieuwe functie per render zou dat steeds opnieuw
+     doen (en de tabbalk laten flikkeren). */
+  const minimize = useCallback(() => setShowIntro(true), []);
 
   if (showIntro) {
     return <StateControlIntro onDone={() => setShowIntro(false)} />;
@@ -191,7 +210,7 @@ export default function BraceletScreen() {
      2026: "minimize moet naar welcome state control gaan"). De sessie zelf
      loopt door — haptiek hangt aan bracelet-session-monitor, niet aan dit
      scherm. */
-  return <BraceletControl autoConnect onMinimize={() => setShowIntro(true)} />;
+  return <BraceletControl autoConnect onMinimize={minimize} />;
 }
 
 const s = StyleSheet.create({
