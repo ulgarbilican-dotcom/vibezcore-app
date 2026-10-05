@@ -41,7 +41,6 @@ import { BlurView } from 'expo-blur';
 import DurationSlider from '@/components/DurationSlider';
 import { DurationWheel } from '@/components/DurationWheel';
 import { DurationRuler } from '@/components/DurationRuler';
-import { LevelDots } from '@/components/LevelDots';
 import { confirmVibezAlert } from '@/components/VibezAlert';
 import { BREATH_STATES, roundsFor, type BreathStateKey, type TechniqueDef, type DurationDef } from '@/data/breath-states';
 import {
@@ -2438,11 +2437,9 @@ export default function BreathSetupScreen() {
             >
               {tech.name}
             </Animated.Text>
-            {/* Operator, 5 okt 2026 ("in de cirkel duidelijk maken wat 1, 2
-               en 3 dots zijn"): dezelfde stipjes als op de kaarten, met het
-               woord erbij — de legende staat waar je kijkt. */}
+            {/* Operator, 5 okt 2026 ("strepen en dots maar niets — enkel
+               namen in de kaarten, in de cirkel naam + moeilijkheidsgraad"). */}
             <Animated.View key={`level-${tech.key}`} entering={FadeIn.duration(240)} style={s.heroLevelRow}>
-              <LevelDots level={tech.level} color="rgba(255,255,255,0.75)" />
               <Text style={s.heroLevel}>{tech.level}</Text>
             </Animated.View>
           </View>
@@ -2826,8 +2823,6 @@ export default function BreathSetupScreen() {
                   <Info size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
                 </Pressable>
                 )}
-                {/* Operator, 5 okt 2026: moeilijkheid i.p.v. het ritme. */}
-                <LevelDots level={t.level} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} />
                 <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
                   {techShortLabel(t)}
                 </Text>
@@ -4127,9 +4122,9 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     minWidth: 0,
     borderRadius: 16,
     overflow: 'hidden',
-    paddingVertical: 14,
+    paddingVertical: 20,
     paddingHorizontal: 8,
-    gap: 8,
+    justifyContent: 'center',
     /* Operator, 5 okt 2026: icoon + naam, gecentreerd; het ritme staat in
        de uitleg onder de i, niet op de tegel. */
     alignItems: 'center',
