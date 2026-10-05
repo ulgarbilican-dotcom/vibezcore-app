@@ -154,6 +154,7 @@ import ReanimatedAnimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
+import VibezGlass from '@/components/VibezGlass';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
 import type { SimulatedBracelet } from '../services/bracelet-sim';
@@ -3733,6 +3734,9 @@ function ActiveSessionScreen({
               disabled={busy}
               accessibilityLabel="End session"
             >
+              {/* Secundaire knop = VIBEZCORE-glas, de hoofdknop (Play/Pause)
+                  blijft solide (operator, 5 okt 2026). */}
+              <VibezGlass radius={999} style={StyleSheet.absoluteFill} />
               {busy ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
@@ -7326,8 +7330,7 @@ const s = StyleSheet.create({
      "voorzichtiger" van de twee, zonder een kleur die onrust suggereert). */
   capsuleBtnEnd: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
+    overflow: 'hidden',
   },
   capsuleBtnSecondaryText: {
     color: '#ffffff',

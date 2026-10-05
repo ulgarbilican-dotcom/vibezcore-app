@@ -342,6 +342,7 @@ function StateThumb({
         <VibezGlass
           radius={THUMB / 2}
           tint={on ? t.accent : undefined}
+          level={on ? 'raised' : 'subtle'}
           style={StyleSheet.absoluteFill}
         />
         <Animated.View style={on ? thumbPulseStyle : undefined}>

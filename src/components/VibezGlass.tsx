@@ -24,11 +24,22 @@ type Props = {
   radius: number;
   /** Optionele kleurtoets, bv. de kleur van de lopende toestand. */
   tint?: string;
+  /** Apple-principe bij keuzes (operator, 5 okt 2026): de gekozen optie is
+   *  lichter glas en "zweeft" boven de rest, niet-gekozen opties zijn
+   *  doorzichtiger. 'normal' = gewone secundaire knop. */
+  level?: 'subtle' | 'normal' | 'raised';
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
 
-export default function VibezGlass({ radius, tint, style, children }: Props) {
+const LEVEL = {
+  subtle: { base: 'rgba(58,58,66,0.16)', sheen: 0.09 },
+  normal: { base: 'rgba(58,58,66,0.34)', sheen: 0.17 },
+  raised: { base: 'rgba(96,96,106,0.42)', sheen: 0.26 },
+} as const;
+
+export default function VibezGlass({ radius, tint, level = 'normal', style, children }: Props) {
+  const L = LEVEL[level];
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView
@@ -43,7 +54,7 @@ export default function VibezGlass({ radius, tint, style, children }: Props) {
            vlak zichtbaar blijven (zoals Apple's glas op dark iets lichter
            oogt dan zijn omgeving); op een lichte foto dempt het nog genoeg
            voor leesbare tekst. */
-        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(58,58,66,0.34)' }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: L.base }]}
       />
       {tint ? (
         <View
@@ -53,7 +64,7 @@ export default function VibezGlass({ radius, tint, style, children }: Props) {
       ) : null}
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(255,255,255,0.17)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0)']}
+        colors={[`rgba(255,255,255,${L.sheen})`, `rgba(255,255,255,${L.sheen * 0.3})`, 'rgba(255,255,255,0)']}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />

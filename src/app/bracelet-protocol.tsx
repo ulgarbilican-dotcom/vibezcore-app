@@ -12,6 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { MODE_GLYPH_ICONS, MODE_STATE_KEY } from '@/components/ModeGlyph';
+import VibezGlass from '@/components/VibezGlass';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { BlurView } from 'expo-blur';
@@ -179,7 +180,8 @@ export default function BraceletProtocol() {
               style={s.change}
               onPress={() => router.push('/bracelet-set-day' as never)}
             >
-              <Pencil size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
+              <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.changeTxt}>Change protocol</Text>
             </Pressable>
           </>
@@ -296,8 +298,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
     marginTop: 14,
   },
   changeTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.7)' },

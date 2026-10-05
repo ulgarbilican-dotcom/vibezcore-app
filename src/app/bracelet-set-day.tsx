@@ -76,6 +76,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
+import VibezGlass from '@/components/VibezGlass';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -229,7 +230,8 @@ function HorizonChip({
         scale.value = withTiming(1, { duration: 120 });
       }}
     >
-      <Animated.View style={[s.horizonChip, on && s.horizonChipOn, pressStyle]}>
+      <Animated.View style={[s.horizonChip, pressStyle]}>
+        <VibezGlass radius={12} level={on ? 'raised' : 'subtle'} style={StyleSheet.absoluteFill} />
         <Text style={[s.horizonChipTxt, on && s.horizonChipTxtOn]}>{label}</Text>
       </Animated.View>
     </Pressable>
@@ -865,12 +867,13 @@ const s = StyleSheet.create({
   sessionSub: { marginTop: 2, ...TypeScale.cardDetail, color: 'rgba(255,255,255,0.5)' },
 
   horizonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  /* VIBEZCORE-glas, geen rand (operator, 5 okt 2026): gekozen = lichter
+     glas, niet-gekozen = doorzichtiger. */
   horizonChip: {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
   },
   /* Operator, 30 september 2026 ("de gemaakte selectie een lichte
      omlijning geven, gebroken wit of grijs, wat we bij breathwork ook al

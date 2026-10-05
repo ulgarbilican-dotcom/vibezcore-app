@@ -100,6 +100,7 @@ import {
   Watch,
 } from 'lucide-react-native';
 import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
+import VibezGlass from '@/components/VibezGlass';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -529,10 +530,12 @@ export default function BraceletAgendaScreen() {
         {plan ? (
           <View style={s.bottomActions}>
             <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
+              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
               <Text style={s.pillBtnTxt}>Check your protocol</Text>
             </Pressable>
             <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-set-day' as never)}>
-              <Pencil size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+              <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
+              <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.pillBtnTxt}>Change protocol</Text>
             </Pressable>
           </View>
@@ -663,10 +666,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
   },
-  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  pillBtnTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
   /* Zelfde datumregel als agenda.tsx (breathwork). */
   dateRow: {
     flexDirection: 'row',
