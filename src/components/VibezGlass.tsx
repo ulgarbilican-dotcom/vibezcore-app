@@ -16,7 +16,7 @@
 
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 type Props = {
@@ -30,6 +30,10 @@ type Props = {
   level?: 'subtle' | 'normal' | 'raised' | 'sheet';
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
+  /** Android: verwijzing naar de `BlurTargetView` met wat eronder ligt.
+   *  Zonder deze valt expo-blur op Android terug op géén vervaging; mét
+   *  deze is het echte vervaagd glas (5 okt 2026). iOS heeft hem niet nodig. */
+  blurTarget?: RefObject<View | null>;
 };
 
 const LEVEL = {
@@ -51,7 +55,7 @@ const LEVEL = {
    Weg te halen zodra de echte vervaging op Android werkt. */
 const ANDROID_SHEET_BASE = 'rgb(24,24,28)';
 
-export default function VibezGlass({ radius, tint, level = 'normal', style, children }: Props) {
+export default function VibezGlass({ radius, tint, level = 'normal', style, children, blurTarget }: Props) {
   const L =
     level === 'sheet' && Platform.OS === 'android'
       ? { ...LEVEL.sheet, base: ANDROID_SHEET_BASE }
@@ -62,6 +66,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
         intensity={L.blur}
         tint="dark"
         blurMethod="dimezisBlurViewSdk31Plus"
+        blurTarget={blurTarget}
         style={StyleSheet.absoluteFill}
       />
       <View

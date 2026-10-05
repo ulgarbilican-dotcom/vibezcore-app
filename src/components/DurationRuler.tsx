@@ -33,6 +33,7 @@ export function DurationRuler({
   recommendedValue,
   accent,
   edgeColor = '#0a0a0a',
+  fadeEdges = true,
 }: {
   /** Kiesbare waarden in minuten, oplopend. */
   options: number[];
@@ -42,6 +43,8 @@ export function DurationRuler({
   accent: string;
   /** Achtergrondkleur waar de randen naar uitlopen (6-cijferige hex). */
   edgeColor?: string;
+  /** Uit op een foto-achtergrond: een effen uitloop gaf daar een donker blok. */
+  fadeEdges?: boolean;
 }) {
   const ref = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
@@ -115,6 +118,7 @@ export function DurationRuler({
         </ScrollView>
       )}
       {/* Randen lopen zacht uit naar de achtergrond — geen afgesneden getal. */}
+      {fadeEdges && (
       <LinearGradient
         pointerEvents="none"
         colors={[edgeColor, `${edgeColor}00`]}
@@ -122,6 +126,8 @@ export function DurationRuler({
         end={{ x: 1, y: 0 }}
         style={[s.fade, { left: 0 }]}
       />
+      )}
+      {fadeEdges && (
       <LinearGradient
         pointerEvents="none"
         colors={[`${edgeColor}00`, edgeColor]}
@@ -129,6 +135,7 @@ export function DurationRuler({
         end={{ x: 1, y: 0 }}
         style={[s.fade, { right: 0 }]}
       />
+      )}
       {/* De keuze: vaste lijn in het midden. */}
       <View pointerEvents="none" style={[s.center, { left: width / 2 - 1 }]} />
     </View>

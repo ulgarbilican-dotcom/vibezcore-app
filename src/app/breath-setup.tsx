@@ -37,7 +37,9 @@ import AddToDayHero from '@/components/AddToDayHero';
    rgba-truc): `expo-blur` zit al in de huidige native build (welcome.tsx
    gebruikt 'm al voor de pil-knoppen), dus geen nieuwe `expo run:android`
    nodig voor deze ene kaart. */
-import { BlurView } from 'expo-blur';
+import { BlurTargetView, BlurView } from 'expo-blur';
+import { STATE_PHOTOS } from '@/services/offline-assets';
+import { assetUri } from '@/services/asset-cache';
 import DurationSlider from '@/components/DurationSlider';
 import { DurationWheel } from '@/components/DurationWheel';
 import { DurationRuler } from '@/components/DurationRuler';
@@ -805,11 +807,14 @@ function TechniqueSegmentedControl({
   techIdx,
   techniquePicked,
   onPick,
+  blurTarget,
 }: {
   techniques: TechniqueDef[];
   techIdx: number;
   techniquePicked: boolean;
   onPick: (index: number, t: TechniqueDef) => void;
+  /** Achtergrond om echt te vervagen (Android, zie VibezGlass). */
+  blurTarget?: React.RefObject<View | null>;
 }) {
   const [trackWidth, setTrackWidth] = useState(0);
   const segW = techniques.length > 0 ? trackWidth / techniques.length : 0;
@@ -847,9 +852,10 @@ function TechniqueSegmentedControl({
     >
       {/* VIBEZCORE-glas (5 okt 2026): de balk doorzichtig glas, het
           gekozen kussentje lichter glas dat erboven zweeft — geen randen. */}
-      {/* Operator, 5 okt 2026 ("doe echt transparant zwart"): geen vlak
-         achter de balk — enkel de namen op de pagina; de gekozen is groot
-         en wit, de andere gedimd. */}
+      {/* Operator, 5 okt 2026: van rand tot rand, echt vervaagd glas over
+         de toestandsfoto (`blurTarget`). De gekozen naam groot en wit, de
+         andere gedimd — geen kussentje. */}
+      <VibezGlass radius={0} level="subtle" blurTarget={blurTarget} style={StyleSheet.absoluteFill} />
       {/* Operator, 24 september 2026 (referentie: "het kussentje is wit/
          lichtgrijs met een zachte schaduw, geen accentkleur"): was
          `accent` — de vulling zelf droeg voorheen de state-kleur; nu
@@ -1787,6 +1793,8 @@ export default function BreathSetupScreen() {
      "i"-icoon-naar-modal-patroon als de techniek-info hierboven, i.p.v.
      de tekst er altijd bij te proppen (te veel voor de kleine kaart). */
   const [durationInfoOpen, setDurationInfoOpen] = useState(false);
+  /* De achtergrondfoto, voor echt vervaagd glas op Android. */
+  const bgTargetRef = useRef<View | null>(null);
   /* Keuzelijst van de drie technieken (5 okt 2026). */
 
 
@@ -2162,6 +2170,32 @@ export default function BreathSetupScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Operator, 5 okt 2026 ("saai en nietszeggend" + "echt transparant
+         blur"): de foto van de gekozen toestand — dezelfde als op Choose
+         your state — achter het hele scherm, donker gemaakt. Zo draagt deze
+         pagina de sfeer van de toestand, en heeft het glas eindelijk iets
+         om te vervagen. `BlurTargetView` is wat het glas op Android echt
+         vervaagt. Enkel in de normale flow, niet in addToDay. */}
+      {!isAddToDay && (
+        <BlurTargetView
+          ref={bgTargetRef}
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { top: -insets.top }]}
+        >
+          <Image
+            key={st.key}
+            source={{ uri: assetUri(STATE_PHOTOS[st.key]) }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(10,10,10,0.62)', 'rgba(10,10,10,0.8)', 'rgba(10,10,10,0.94)']}
+            locations={[0, 0.5, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </BlurTargetView>
+      )}
 
       {/* Operator, 11 september 2026: "weg met saai wit, een zachte
          paarse gloed bovenin achter de cirkel" — anders dan de eerder
@@ -2806,6 +2840,7 @@ export default function BreathSetupScreen() {
             techniques={st.techniques}
             techIdx={techIdx}
             techniquePicked
+            blurTarget={bgTargetRef}
             onPick={(i) => {
               if (i === techIdx) return;
               Haptics.selectionAsync();
@@ -2836,6 +2871,7 @@ export default function BreathSetupScreen() {
             value={chosen.minutes}
             recommendedValue={recommendedZone?.minutes}
             accent={waveAccent}
+            fadeEdges={false}
             onChange={(v) => {
               const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
               if (presetIdx !== -1) {
