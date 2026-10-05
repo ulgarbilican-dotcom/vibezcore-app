@@ -1119,12 +1119,14 @@ export default function BreathScreen() {
                   <VibezGlass radius={18} tint={st.accent} level="raised" style={StyleSheet.absoluteFill} />
                   <StateGlyph stateKey={st.key} size={18} color="#ffffff" strokeWidth={1.9} />
                 </View>
-                <Text style={[s.infoEyebrow, { color: accentText }]}>
+                {/* Wit i.p.v. de toestandskleur (operator, 5 okt 2026: "anders
+                    te veel kleur") — de kleur zit al in het icoon. */}
+                <Text style={[s.infoEyebrow, { color: '#ffffff' }]}>
                   {sentenceCase(st.eyebrow)}
                 </Text>
               </View>
               <Pressable onPress={() => setInfoOpen(false)} hitSlop={10}>
-                <Text style={[s.infoDoneTxt, { color: accentText }]}>Done</Text>
+                <Text style={[s.infoDoneTxt, { color: '#ffffff' }]}>Done</Text>
               </Pressable>
             </View>
             {/* Operator, 10 september 2026: "moet tonen wat de ademtechniek
@@ -1143,7 +1145,7 @@ export default function BreathScreen() {
             <Text style={s.infoTitle}>{st.title}</Text>
             <Text style={s.infoBody}>{st.description}</Text>
 
-            <Text style={[s.infoSection, { color: accentText }]}>
+            <Text style={[s.infoSection, { color: 'rgba(255,255,255,0.55)' }]}>
               RHYTHMS
             </Text>
             {st.techniques.map((t) => {
