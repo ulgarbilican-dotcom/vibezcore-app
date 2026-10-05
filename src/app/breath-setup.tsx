@@ -2785,13 +2785,6 @@ export default function BreathSetupScreen() {
            erboven telt live mee. */}
         <View style={s.pickHead}>
           <Text style={s.durationHeadLbl}>TECHNIQUE</Text>
-          <Pressable
-            onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-            hitSlop={10}
-            accessibilityLabel={`About ${tech.name}`}
-          >
-            <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-          </Pressable>
         </View>
         <View style={s.tileRow}>
           {st.techniques.map((t, i) => {
@@ -2816,6 +2809,16 @@ export default function BreathSetupScreen() {
                   tint={on ? st.accent : undefined}
                   style={StyleSheet.absoluteFill}
                 />
+                {/* Operator, 5 okt 2026: de i per kaart, rechtsboven — uitleg
+                   van precies die techniek. */}
+                <Pressable
+                  onPress={() => setInfoModal({ title: t.name, techniqueKey: t.key })}
+                  hitSlop={10}
+                  style={s.tileInfo}
+                  accessibilityLabel={`About ${t.name}`}
+                >
+                  <Info size={13} color={on ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)'} strokeWidth={2.2} />
+                </Pressable>
                 <Icon size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} strokeWidth={2.1} />
                 <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
                   {techShortLabel(t)}
@@ -4129,6 +4132,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     color: '#ffffff',
   },
   tileNameOff: { color: 'rgba(255,255,255,0.6)' },
+  tileInfo: { position: 'absolute', top: 8, right: 8, zIndex: 2 },
   tilePattern: {
     fontFamily: BrandFonts.medium,
     fontSize: 11.5,
