@@ -2222,7 +2222,9 @@ function WaveFillCircle({
   fraction,
   color,
   size,
+  fillOnMount,
 }: {
+  fillOnMount?: boolean;
   /** 0..1 — hoe vol, 0 = leeg (min-duur), 1 = vol (max-duur) */
   fraction: number;
   color: string;
@@ -2238,13 +2240,36 @@ function WaveFillCircle({
      de nieuwe waarde bij elke slider-drag — enkel de rimpel golfde. Nu
      eest het niveau zelf naar de nieuwe fractie met een zachte easing
      (~550ms), terwijl de rimpel-animatie daarbovenop blijft lopen. */
-  const levelAnim = useRef(new Animated.Value(clamped)).current;
-  const [levelVal, setLevelVal] = useState(clamped);
+  /* Operator, 5 okt 2026 ("bij verschuiving alles leeg en vullen bij
+     aankomst"): bij een modus-wissel komt de cirkel leeg binnen en vult
+     hij zich pas als hij op zijn plaats staat — zoals een nieuwe
+     wijzerplaat, nooit water dat van de ene modus naar de andere klotst. */
+  const EMPTY_LEVEL = 0.02;
+  const levelAnim = useRef(new Animated.Value(fillOnMount ? EMPTY_LEVEL : clamped)).current;
+  const [levelVal, setLevelVal] = useState(fillOnMount ? EMPTY_LEVEL : clamped);
+  const mountedFillRef = useRef(!fillOnMount);
+  useEffect(() => {
+    if (mountedFillRef.current) return;
+    mountedFillRef.current = true;
+    Animated.timing(levelAnim, {
+      toValue: clamped,
+      duration: 700,
+      delay: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const id = levelAnim.addListener(({ value }) => setLevelVal(value));
     return () => levelAnim.removeListener(id);
   }, [levelAnim]);
+  const firstLevelRunRef = useRef(true);
   useEffect(() => {
+    if (firstLevelRunRef.current) {
+      firstLevelRunRef.current = false;
+      return;
+    }
     /* Operator, 16 september 2026: 550→900→1500ms, daarna "golf reageert
        te traag op regelaar, moet dat niet gelijk gaan?" — het echte
        probleem was niet de duur an sich, maar dat élke tussenwaarde
@@ -2402,7 +2427,10 @@ function DurationRing({
   label,
   size = 180,
   dark,
+  fillOnMount,
 }: {
+  /** Leeg binnenkomen en pas na aankomst vullen (modus-wissel). */
+  fillOnMount?: boolean;
   min: number;
   max: number;
   value: number;
@@ -2545,7 +2573,7 @@ function DurationRing({
           backgroundColor: dark ? '#000000' : 'rgba(10,10,12,0.85)',
         }}
       >
-        <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} />
+        <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} fillOnMount={fillOnMount} />
       </View>
       <View pointerEvents="none" style={s.durationRingCenter}>
         <Text style={[s.durationRingLabel, { color: fg }, textShadow]}>
@@ -3810,7 +3838,11 @@ function IdleScreen({
   /* Modus én zijn standaardduur in één render zetten: anders tekende de
      cirkel eerst de nieuwe modus met de duur van de vorige, en sprong de
      vulling pas een frame later naar de juiste hoogte. */
+  /* Pas na een eerste wissel leeg-en-vullen; bij het openen van het scherm
+     staat de cirkel meteen gevuld. */
+  const modeChangedRef = useRef(false);
   const pickMode = (next: BraceletMode) => {
+    modeChangedRef.current = true;
     setSelectedMode(next);
     setDuration(getModeMeta(next).defaultMinutes);
   };
@@ -3951,6 +3983,7 @@ function IdleScreen({
                 verandert telkens"). */}
             <DurationRing
               key={selectedMode}
+              fillOnMount={modeChangedRef.current}
               min={meta.minMinutes}
               max={meta.maxMinutes}
               value={duration}
