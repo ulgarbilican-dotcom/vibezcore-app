@@ -139,11 +139,11 @@ function ActiveSessionPill({
         onPress={() => openStateControl()}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        accessibilityLabel={`Open active ${snap.modeName} bracelet session`}
+        accessibilityLabel={`Open active ${snap.modeName} session`}
       >
         <View style={[s.dot, { backgroundColor: snap.modeColor }]} />
         <Text style={s.label} numberOfLines={1}>
-          Bracelet · {snap.modeName}
+          State Control · {snap.modeName}
         </Text>
         <Text style={[s.time, { color: snap.modeColor }]}>
           {fmtMMSS(snap.remainingSec)}

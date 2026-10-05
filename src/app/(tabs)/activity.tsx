@@ -211,7 +211,9 @@ export default function ActivityScreen() {
           />
         </View>
 
-        <Text style={[s.groupLabel, { marginTop: 16 }]}>BRACELET</Text>
+        {/* Operator, 5 okt 2026: State Control werkt ook zonder armband —
+           sectie en kaart heten zoals de tab. */}
+        <Text style={[s.groupLabel, { marginTop: 16 }]}>STATE CONTROL</Text>
         <View>
           {/* Operator, 29 september 2026 ("uw set your goal (bracelet) is
              eigenlijk niets momenteel, had evengoed go to bracelet kunnen
@@ -237,7 +239,7 @@ export default function ActivityScreen() {
             large
             Icon={CalendarDays}
             title="Your daily plan"
-            info={braceletPlan ? 'Your bracelet plan, tracked day by day' : 'Nothing planned yet'}
+            info={braceletPlan ? 'Your State Control plan, tracked day by day' : 'Nothing planned yet'}
             onPress={() => router.push('/bracelet-agenda' as never)}
           />
           <Row
@@ -254,11 +256,11 @@ export default function ActivityScreen() {
           <Row
             large
             Icon={Watch}
-            title="Bracelet activity"
+            title="State Control activity"
             sub={
               bStats.weekSessions > 0
                 ? `${bStats.weekSessions} session${bStats.weekSessions === 1 ? '' : 's'} this week`
-                : 'View your bracelet session history'
+                : 'View your session history'
             }
             onPress={() => router.push('/bracelet-history')}
           />

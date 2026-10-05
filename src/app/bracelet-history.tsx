@@ -990,7 +990,7 @@ export default function BraceletHistory() {
     void showVibezAlert({
       title: 'Clear all history?',
       message:
-        'This will permanently delete all bracelet session records on this device. Cannot be undone.',
+        'This will permanently delete all State Control session records on this device. Cannot be undone.',
       buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1053,16 +1053,16 @@ export default function BraceletHistory() {
           <View style={s.empty}>
             <Text style={s.emptyTitle}>No sessions yet</Text>
             <Text style={s.emptyBody}>
-              Start your first bracelet session and it will appear here.
+              Start your first State Control session and it will appear here.
             </Text>
             <AnimatedPressable
               style={[s.emptyBtn, emptyBtnScale.pressStyle]}
               onPress={() => router.back()}
               onPressIn={emptyBtnScale.onPressIn}
               onPressOut={emptyBtnScale.onPressOut}
-              accessibilityLabel="Back to bracelet control"
+              accessibilityLabel="Back to State Control"
             >
-              <Text style={s.emptyBtnText}>Back to bracelet</Text>
+              <Text style={s.emptyBtnText}>Back to State Control</Text>
             </AnimatedPressable>
           </View>
         ) : (
