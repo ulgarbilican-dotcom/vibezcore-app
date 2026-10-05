@@ -718,6 +718,10 @@ export default function BreathSessionScreen() {
        scherm (het staat echt op de stack) vóór we hier verder navigeren.
        Zie `leaveSession` hieronder. */
     fromSetup?: string;
+    /* '1' = gestart vanuit het dagplan (agenda.tsx: "Tap to start" of een
+       bolletje). "End session" gaat dan terug naar het plan i.p.v. naar de
+       keuzepagina — terug naar waar je vandaan kwam (operator, 5 okt 2026). */
+    fromPlan?: string;
     /* '1' = gestart via feel-now.tsx se "How do you feel?"-knop (operator,
        2 okt 2026). Verlengt de preview van 30s naar 60s met een zachte
        fade i.p.v. harde cut (zie `endPreview`), en toont de niet-
@@ -2191,12 +2195,16 @@ export default function BreathSessionScreen() {
        geen tussenliggende animatie-frame van een ander scherm). Valt hij
        — heel uitzonderlijk, bv. een deeplink die nooit langs (tabs)/breath
        kwam — terug op de oude `replace` als vangnet. */
+    if (params.fromPlan === '1' && router.canDismiss()) {
+      router.dismissTo('/agenda' as never);
+      return;
+    }
     if (router.canDismiss()) {
       router.dismissTo('/breath');
     } else {
       router.replace('/breath');
     }
-  }, []);
+  }, [params.fromPlan]);
 
   const requestStop = useCallback(() => {
     if (isFreeOnboardingSession) {

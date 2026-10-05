@@ -829,6 +829,7 @@ export default function AgendaScreen() {
                       state: next.state,
                       minutes: String(next.minutes),
                       autostart: '1',
+                      fromPlan: '1',
                     },
                   })
                 }
@@ -1016,6 +1017,7 @@ export default function AgendaScreen() {
                           state: it.state,
                           minutes: String(it.minutes),
                           autostart: '1',
+                          fromPlan: '1',
                         },
                       });
                     }}
