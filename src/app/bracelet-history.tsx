@@ -17,7 +17,7 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { PreviewBanner } from '@/components/PreviewBanner';
-import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
+import { Brand, BrandFonts, AudioAccent, AudioAccentLight } from '@/constants/theme';
 import {
   clearHistory,
   getAllSessions,
@@ -187,24 +187,6 @@ function groupByDay(sessions: SessionRecord[]): DayGroup[] {
   return Array.from(map.values());
 }
 
-function StatTile({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: string | number;
-  unit?: string;
-}) {
-  return (
-    <View style={s.statTile}>
-      <Text style={s.statValue}>{value}</Text>
-      {unit && <Text style={s.statUnit}>{unit}</Text>}
-      <Text style={s.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function SessionRow({ rec }: { rec: SessionRecord }) {
   const meta = getModeMeta(rec.mode as BraceletMode);
   /* Iter 9ca (2026-05-31): redesigned row met mode-color verticale
@@ -266,92 +248,91 @@ function SessionRow({ rec }: { rec: SessionRecord }) {
   );
 }
 
-/* ── 7-day bar chart ────────────────────────────────────────────────
-   Compact mini-chart die per dag de totale minuten toont. Last 7
-   days van oudste → nieuwste. Bars schalen op de hoogste waarde in de
-   week (relatief, niet absoluut) zodat de variatie altijd zichtbaar is. */
-function SevenDayChart({ stats }: { stats: BraceletStats }) {
+/* ── WeekSummary — één kaart bovenaan (operator, 5 okt 2026) ─────────
+   "Ik begrijp de statistieken niet, today helemaal vol wit en 35
+   bovenaan, rommelig — hoe pakt Apple dat aan?" Zoals Apple Fitness /
+   Mindfulness: één samenvatting (week-minuten groot, sessies en reeks
+   klein eronder — elk getal één keer), daaronder een grafiek met een
+   VASTE, ronde schaal en hulplijnen, zodat een staaf toont hoeveel je
+   echt deed i.p.v. hoe je dag zich verhoudt tot je beste dag (één dag
+   met sessies was voorheen altijd 100% vol). Vervangt de losse tegels
+   Today / Day streak / Min total en de oude 7-dagengrafiek. */
+/* Ronde schaal met een rond middengetal (0 · 30 · 60 …). */
+const AXIS_STEPS = [30, 60, 90, 120, 180, 240];
+
+function niceAxisMax(maxDay: number): number {
+  return AXIS_STEPS.find((v) => v >= maxDay) ?? Math.ceil(maxDay / 60) * 60;
+}
+
+function WeekSummary({ stats, sessions }: { stats: BraceletStats; sessions: SessionRecord[] }) {
   const days = stats.last7Days;
-  /* Iter 9cb → 9cc (2026-05-31): meer realistische schaal.
-     MIN_SCALE 30 → 15 want 30 min/dag is een hoog target voor een
-     gewone gebruiker → 2 min op 30-schaal = 7% = nauwelijks zichtbaar.
-     15 min als ondergrens-schaal voelt natuurlijker (één goede sessie),
-     en de chart schaalt nog steeds mee bij topdagen.
-     Plus: MIN_VISIBLE_PCT = 10% → elke non-zero waarde toont minstens
-     een dunne maar zichtbare balk zodat "2 min" niet lijkt op "0 min". */
-  /* Iter 9cd → 9ch (2026-05-31): MIN_SCALE 15 → 30. Voor een wellness-
-     app is 10–15 min/dag het normale doel; 30 min = een echt top-dag.
-     Met schaal 15 leek 11 min "bijna max" → user-feedback "balk bijna
-     vol". Met schaal 30 voelt 11 min als ~37% = goede dag, niet top —
-     veel realistischer mental model.
-     MIN_VISIBLE_PCT 15% blijft → 1 min sessies tonen nog duidelijk
-     genoeg om te lezen, geen verdwijning. */
-  const MIN_SCALE = 30;
-  const MIN_VISIBLE_PCT = 15;
-  const maxMin = Math.max(MIN_SCALE, ...days.map((d) => d.minutes));
-  const weekTotal = days.reduce((sum, d) => sum + d.minutes, 0);
+  const weekMinutes = days.reduce((sum, d) => sum + d.minutes, 0);
+  const weekKeys = new Set(days.map((d) => d.dayKey));
+  const weekSessions = sessions.filter((r) => weekKeys.has(getDayKey(new Date(r.endedAt)))).length;
+  const axisMax = niceAxisMax(Math.max(0, ...days.map((d) => d.minutes)));
+  const sub = [
+    `${weekSessions} ${weekSessions === 1 ? 'session' : 'sessions'}`,
+    stats.streak > 0 ? `${stats.streak}-day streak` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <View style={s.chartCard}>
-      <View style={s.chartHeader}>
-        <View>
-          <Text style={s.chartTitle}>Last 7 days</Text>
-          <Text style={s.chartSubtitle}>
-            min per day · scale {maxMin}m
-          </Text>
-        </View>
-        <Text style={s.chartTotal}>{weekTotal} min</Text>
+    <View style={s.weekCard}>
+      <Text style={s.weekEyebrow}>THIS WEEK</Text>
+      <View style={s.weekHeadline}>
+        <Text style={s.weekNumber}>{weekMinutes}</Text>
+        <Text style={s.weekUnit}>min</Text>
       </View>
-      <View style={s.chartBars}>
-        {days.map((d, i) => {
-          const isToday = i === days.length - 1;
-          const rawPct = (d.minutes / maxMin) * 100;
-          const heightPct =
-            d.minutes > 0 ? Math.max(MIN_VISIBLE_PCT, rawPct) : 0;
-          const hasValue = d.minutes > 0;
-          const fillColor = hasValue
-            ? isToday
-              ? Brand.text
-              : 'rgba(255,255,255,0.55)'
-            : 'rgba(255,255,255,0.06)';
-          return (
-            <View key={d.dayKey} style={s.chartBarCol}>
-              {/* Iter 9ce (2026-05-31): waarde-label BOVEN de bar voor
-                  non-zero dagen. Zo zie je direct "3" boven Today's bar
-                  → onmiddellijk duidelijk hoeveel min die dag = welke
-                  proportie. Today value krijgt full-wit emphasis. */}
-              <Text
-                style={[
-                  s.chartBarValue,
-                  isToday && s.chartBarValueActive,
-                  !hasValue && s.chartBarValueEmpty,
-                ]}
-                numberOfLines={1}
-              >
-                {hasValue ? d.minutes : ' '}
-              </Text>
-              <View style={s.chartBarTrack}>
-                <View
-                  style={[
-                    s.chartBarFill,
-                    {
-                      height: `${heightPct}%`,
-                      backgroundColor: fillColor,
-                    },
-                  ]}
-                />
+      <Text style={s.weekSub}>{sub}</Text>
+
+      <View style={s.weekChart}>
+        {/* Hulplijnen + schaal rechts (0 · midden · max), zoals Apple. */}
+        {[1, 0.5, 0].map((f) => (
+          <View key={f} style={[s.weekGridLine, { bottom: `${f * 100}%` }]}>
+            <View style={s.weekGridRule} />
+            <Text style={s.weekGridLabel}>{Math.round(axisMax * f)}</Text>
+          </View>
+        ))}
+        <View style={s.weekBars}>
+          {days.map((d, i) => {
+            const isToday = i === days.length - 1;
+            const pct = d.minutes > 0 ? Math.max(3, (d.minutes / axisMax) * 100) : 0;
+            return (
+              <View key={d.dayKey} style={s.weekBarCol}>
+                <View style={s.weekBarSlot}>
+                  {pct > 0 && (
+                    <View
+                      style={[
+                        s.weekBarFill,
+                        {
+                          height: `${pct}%`,
+                          backgroundColor: isToday ? AudioAccentLight : AudioAccent,
+                        },
+                      ]}
+                    />
+                  )}
+                </View>
               </View>
-              <Text
-                style={[
-                  s.chartBarLabel,
-                  isToday && s.chartBarLabelActive,
-                ]}
-                numberOfLines={1}
-              >
-                {d.dayLabel}
-              </Text>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
+      </View>
+      <View style={s.weekDayRow}>
+        {days.map((d, i) => (
+          <Text
+            key={d.dayKey}
+            style={[s.weekDayLabel, i === days.length - 1 && s.weekDayLabelToday]}
+            numberOfLines={1}
+          >
+            {i === days.length - 1 ? 'Today' : d.dayLabel.slice(0, 1)}
+          </Text>
+        ))}
+      </View>
+
+      <View style={s.weekFooter}>
+        <Text style={s.weekFooterLabel}>All time</Text>
+        <Text style={s.weekFooterValue}>{stats.totalMinutes} min</Text>
       </View>
     </View>
   );
@@ -1044,40 +1025,8 @@ export default function BraceletHistory() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Iter 9ca (2026-05-31): top-stats — 4 compacte tiles met de
-            meest waardevolle metrics. Streak met 🔥 als 'ie >0. */}
-        <View style={s.statsGrid}>
-          <StatTile
-            label="today"
-            value={stats.todaySessions}
-            unit={
-              stats.todayMinutes > 0
-                ? `${stats.todayMinutes} min`
-                : undefined
-            }
-          />
-          {/* Iter 9dk (2026-05-31): aparte streak-tile met vlam als
-              eigen Text-element. Inter (de Brand-font) heeft geen
-              emoji-glyphs → vroegere string-postfix "1🔥" viel weg of
-              werd raar gerenderd op sommige Android-builds. Nu: getal
-              in Brand-font + vlam in default system font ernaast. */}
-          <View style={s.statTile}>
-            <View style={s.statStreakRow}>
-              <Text style={s.statValue}>{stats.streak}</Text>
-              {stats.streak > 0 && (
-                <Text style={s.statFlame}>🔥</Text>
-              )}
-            </View>
-            <Text style={s.statLabel}>day streak</Text>
-          </View>
-          <StatTile
-            label="min total"
-            value={stats.totalMinutes}
-          />
-        </View>
-
-        {/* 7-day mini bar chart — momentum-overzicht */}
-        <SevenDayChart stats={stats} />
+        {/* Eén weekkaart i.p.v. losse tegels + grafiek (5 okt 2026). */}
+        <WeekSummary stats={stats} sessions={sessions} />
 
         {/* Mode breakdown — alleen als er sessies zijn */}
         {sessions.length > 0 && <ModeBreakdown stats={stats} />}
@@ -1145,6 +1094,130 @@ export default function BraceletHistory() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  /* ── WeekSummary ───────────────────────────────────────────────── */
+  weekCard: {
+    borderRadius: 18,
+    backgroundColor: Brand.panel,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 18,
+  },
+  weekEyebrow: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+  },
+  weekHeadline: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginTop: 8,
+  },
+  weekNumber: {
+    color: Brand.text,
+    fontSize: 44,
+    lineHeight: 48,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
+  weekUnit: {
+    color: Brand.textDim,
+    fontSize: 18,
+    fontFamily: BrandFonts.semibold,
+  },
+  weekSub: {
+    color: Brand.textDim,
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    marginTop: 4,
+  },
+  weekChart: {
+    height: 140,
+    marginTop: 22,
+    paddingRight: 30,
+  },
+  weekGridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 14,
+    marginBottom: -7,
+  },
+  weekGridRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  weekGridLabel: {
+    width: 30,
+    textAlign: 'right',
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
+    fontFamily: BrandFonts.medium,
+    fontVariant: ['tabular-nums'],
+  },
+  weekBars: {
+    ...StyleSheet.absoluteFillObject,
+    right: 30,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  weekBarCol: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  weekBarSlot: {
+    width: '46%',
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  weekBarFill: {
+    width: '100%',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+  },
+  weekDayRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    paddingRight: 30,
+  },
+  weekDayLabel: {
+    flex: 1,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 11,
+    fontFamily: BrandFonts.semibold,
+  },
+  weekDayLabelToday: {
+    color: Brand.text,
+  },
+  weekFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+  },
+  weekFooterLabel: {
+    color: Brand.textDim,
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+  },
+  weekFooterValue: {
+    color: Brand.text,
+    fontSize: 13,
+    fontFamily: BrandFonts.semibold,
+    fontVariant: ['tabular-nums'],
+  },
   scroll: { padding: 20, paddingBottom: 32 },
   /* ── Stats-grid ────────────────────────────────────────────────── */
   statsGrid: {
