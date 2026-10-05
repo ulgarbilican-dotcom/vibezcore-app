@@ -41,7 +41,7 @@ import { BlurView } from 'expo-blur';
 import DurationSlider from '@/components/DurationSlider';
 import { DurationWheel } from '@/components/DurationWheel';
 import { DurationRuler } from '@/components/DurationRuler';
-import { RhythmGlyph } from '@/components/RhythmGlyph';
+import { LevelDots } from '@/components/LevelDots';
 import { confirmVibezAlert } from '@/components/VibezAlert';
 import { BREATH_STATES, roundsFor, type BreathStateKey, type TechniqueDef, type DurationDef } from '@/data/breath-states';
 import {
@@ -2821,7 +2821,8 @@ export default function BreathSetupScreen() {
                   <Info size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
                 </Pressable>
                 )}
-                <RhythmGlyph phases={t.phases} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} />
+                {/* Operator, 5 okt 2026: moeilijkheid i.p.v. het ritme. */}
+                <LevelDots level={t.level} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} />
                 <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
                   {techShortLabel(t)}
                 </Text>
