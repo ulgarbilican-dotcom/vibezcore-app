@@ -164,9 +164,8 @@ export type PaywallContext = 'breathwork' | 'state-control' | 'audio';
 /** Voordelen in volgorde van relevantie: het eigen product eerst. Operator,
  *  1 okt 2026: 64 = 15 technieken × hun benoemde duur-varianten. */
 function benefitLines(context: PaywallContext, audioWorth: string | undefined): string[] {
-  const audio = audioWorth
-    ? `Full Audio Library included — worth ${audioWorth}/mo`
-    : 'Full VIBEZCORE Audio Library included';
+  /* Operator, 5 okt 2026: zelfde opbouw voor alle drie — eerst de eigen
+     voordelen, daarna de andere twee als "Full VIBEZCORE … included". */
   const stateControl = [
     'State Control — every haptic state, any duration',
     'Keeps running with your screen locked',
@@ -176,11 +175,18 @@ function benefitLines(context: PaywallContext, audioWorth: string | undefined): 
     'Voice, haptic and visual guidance',
     'Soundscapes, goals and your daily plan',
   ];
-  const breathworkShort = 'Full VIBEZCORE Breathwork included';
-  const stateControlShort = 'State Control — every haptic state, any duration';
-  if (context === 'state-control') return [...stateControl, breathworkShort, audio];
-  if (context === 'audio') return ['Full VIBEZCORE Audio Library', breathworkShort, stateControlShort];
-  return [...breathwork, stateControlShort, audio];
+  const audio = [
+    'Every Audio Library session across 4 pillars of growth',
+    'New sessions added regularly',
+  ];
+  const stateControlIncluded = 'Full VIBEZCORE State Control included';
+  const breathworkIncluded = 'Full VIBEZCORE Breathwork included';
+  const audioIncluded = audioWorth
+    ? `Full VIBEZCORE Audio Library included — worth ${audioWorth}/mo`
+    : 'Full VIBEZCORE Audio Library included';
+  if (context === 'state-control') return [...stateControl, breathworkIncluded, audioIncluded];
+  if (context === 'audio') return [...audio, breathworkIncluded, stateControlIncluded];
+  return [...breathwork, stateControlIncluded, audioIncluded];
 }
 
 export default function PremiumPaywallModal({ visible, onClose, context = 'breathwork' }: Props) {
