@@ -126,6 +126,7 @@ import { suggestBraceletMode } from '@/utils/bracelet-suggestion';
 import ReanimatedAnimated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedProps,
   useAnimatedScrollHandler,
   withTiming,
   withSpring,
@@ -1302,70 +1303,106 @@ function ModeDetailModal({
   );
 }
 
+/* ── StateControlCompletion — afsluiting van een State Control-sessie ──
+   Operator, 5 okt 2026: "op einde moet er een felicitatie komen — hoe zou
+   Apple dit doen" + "die felicitatie (boeddha / Congratulations) is voor
+   breathwork". Eigen afsluiting, naar de samenvatting die de Apple Watch na
+   een sessie toont: volledig zwart scherm, een ring in de moduskleur die
+   zich sluit, een vinkje, modus + "Session complete" + de duur, één witte
+   Done-knop (huisstijl: CTA wit, donkere tekst). Geen geluid — het eind-
+   signaal zit in de trilling (services/bracelet-haptics.ts). */
+const RING_R = 56;
+const RING_STROKE = 4;
+const RING_SIZE = (RING_R + RING_STROKE) * 2;
+const RING_CIRC = 2 * Math.PI * RING_R;
+const AnimatedRingCircle = ReanimatedAnimated.createAnimatedComponent(Circle);
+
 function CompletionModal({
   mode,
+  minutes,
   onDismiss,
 }: {
   mode: BraceletMode;
+  minutes: number | null;
   onDismiss: () => void;
 }) {
   const meta = getModeMeta(mode);
-  const msg = COMPLETION_MESSAGES[mode];
+  const fade = useSharedValue(0);
+  const ring = useSharedValue(0);
+  const check = useSharedValue(0);
+  const textIn = useSharedValue(0);
 
-  /* Subtle fade-in voor het hele paneel */
-  const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 350,
-      useNativeDriver: true,
-    }).start();
-  }, [opacity]);
+    fade.value = withTiming(1, { duration: 300 });
+    ring.value = withDelay(
+      150,
+      withTiming(1, { duration: 900, easing: ReanimatedEasing.out(ReanimatedEasing.cubic) }),
+    );
+    check.value = withDelay(950, withSpring(1, { damping: 12, stiffness: 160 }));
+    textIn.value = withDelay(1050, withTiming(1, { duration: 450 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const ringProps = useAnimatedProps(() => ({ strokeDashoffset: RING_CIRC * (1 - ring.value) }));
+  const checkStyle = useAnimatedStyle(() => ({
+    opacity: check.value,
+    transform: [{ scale: 0.6 + 0.4 * check.value }],
+  }));
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textIn.value,
+    transform: [{ translateY: 8 * (1 - textIn.value) }],
+  }));
+  const checkColor = isLightColor(meta.color) ? '#ffffff' : meta.color;
 
   return (
-    <Animated.View style={[s.completionOverlay, { opacity }]}>
-      <Pressable
-        style={s.completionBackdrop}
-        onPress={onDismiss}
-        accessibilityLabel="Dismiss completion"
-      />
-      <View style={s.completionCard}>
-        {/* Iter v181 (2026-07-02): Buddha-figuur toegevoegd voor visuele
-            parity met Breath tab en breathwork completion in deze zelfde
-            file (§2926+). Operator: "popup breathwork mist budha in bracelet
-            active" — deze CompletionModal (natural completion) had 'm nog
-            niet. Nu wel: exact zelfde Bunny-URL asset als breath.tsx. */}
-        <Image
-          source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png' }}
-          resizeMode="contain"
-          style={s.completionBuddha}
-        />
-        {/* Iter v168 (2026-06-28): popup-layout uitgelijnd met Breath tab
-            completion. Eyebrow + 'Well done.' + 'You completed X' subtitle
-            + line1/line2 messages — exact dezelfde structuur en copy als
-            (tabs)/breath.tsx. Voorheen had bracelet een eigen check-icon
-            + 'Session complete' + één-regelige msg → operator wees dit
-            af als 'zelf gegenereerd'. */}
-        <Text style={[s.completionEyebrow, { color: meta.color }]}>
-          ✦ CONGRATULATIONS ✦
-        </Text>
-        <Text style={s.completionTitle}>Well done.</Text>
-        <Text style={s.completionSubtitle}>
-          You completed {meta.name}
-        </Text>
-        <Text style={s.completionMsgLine1}>{msg.line1}</Text>
-        <Text style={s.completionMsgLine2}>{msg.line2}</Text>
-        {/* Huisstijl (27 sept 2026): CTA altijd wit met donkere tekst,
-            nooit de modus-/accentkleur. */}
+    <ReanimatedAnimated.View style={[s.completionOverlay, s.completionFull, fadeStyle]}>
+      <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={RING_SIZE} height={RING_SIZE} style={StyleSheet.absoluteFill}>
+          <Circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_R}
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth={RING_STROKE}
+            fill="none"
+          />
+          <AnimatedRingCircle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_R}
+            stroke={meta.color}
+            strokeWidth={RING_STROKE}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={`${RING_CIRC} ${RING_CIRC}`}
+            animatedProps={ringProps}
+            transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+          />
+        </Svg>
+        <ReanimatedAnimated.View style={checkStyle}>
+          <Check size={46} color={checkColor} strokeWidth={2.6} />
+        </ReanimatedAnimated.View>
+      </View>
+
+      <ReanimatedAnimated.View style={[{ alignItems: 'center', marginTop: 32 }, textStyle]}>
+        <Text style={[s.completionEyebrow, { color: meta.color }]}>{meta.name}</Text>
+        <Text style={s.completionTitleLarge}>Session complete</Text>
+        {minutes !== null && minutes > 0 && (
+          <Text style={s.completionDuration}>{minutes} min</Text>
+        )}
+      </ReanimatedAnimated.View>
+
+      <ReanimatedAnimated.View style={[s.completionDoneWrap, textStyle]}>
         <Pressable
-          style={[s.completionBtn, { backgroundColor: '#ffffff' }]}
+          style={({ pressed }) => [s.completionBtn, s.completionBtnWide, pressed && { opacity: 0.85 }]}
           onPress={onDismiss}
           accessibilityLabel="Done"
         >
           <Text style={[s.completionBtnText, { color: '#0a0a0a' }]}>Done</Text>
         </Pressable>
-      </View>
-    </Animated.View>
+      </ReanimatedAnimated.View>
+    </ReanimatedAnimated.View>
   );
 }
 
@@ -3349,6 +3386,7 @@ type IdleScreenProps = {
   busy: boolean;
   stats: BraceletStats;
   completedModeForModal: BraceletMode | null;
+  completedMinutes: number | null;
   setCompletedModeForModal: Dispatch<SetStateAction<BraceletMode | null>>;
   detailModeForModal: BraceletMode | null;
   setDetailModeForModal: Dispatch<SetStateAction<BraceletMode | null>>;
@@ -3382,6 +3420,7 @@ function IdleScreen({
   busy,
   stats,
   completedModeForModal,
+  completedMinutes,
   setCompletedModeForModal,
   detailModeForModal,
   setDetailModeForModal,
@@ -3761,6 +3800,7 @@ function IdleScreen({
       {completedModeForModal !== null && (
         <CompletionModal
           mode={completedModeForModal}
+          minutes={completedMinutes}
           onDismiss={() => setCompletedModeForModal(null)}
         />
       )}
@@ -4094,6 +4134,8 @@ export default function BraceletControl({
      juiste copy + kleur uit COMPLETION_MESSAGES wordt gerendered. */
   const [completedModeForModal, setCompletedModeForModal] =
     useState<BraceletMode | null>(null);
+  /* Duur van de voltooide sessie, voor de afsluiting (5 okt 2026). */
+  const [completedMinutes, setCompletedMinutes] = useState<number | null>(null);
 
   /* Iter 9k: mode-detail popup terug op state-cards. Tap card opent
      bottom-sheet met "intent / bracelet / breath / use this for"
@@ -4292,6 +4334,7 @@ export default function BraceletControl({
          signaal in trilling zit achteraan de native curve (bracelet-
          haptics.ts) — voelbaar, ook met het scherm op slot. Zonder native
          module (iOS) geeft expo-haptics de succes-tik. */
+      setCompletedMinutes(sessionPlannedRef.current > 0 ? sessionPlannedRef.current : null);
       setCompletedModeForModal(selectedMode);
       if (!hasNativeWaveform()) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -5014,6 +5057,7 @@ export default function BraceletControl({
         busy={busy}
         stats={stats}
         completedModeForModal={completedModeForModal}
+        completedMinutes={completedMinutes}
         setCompletedModeForModal={setCompletedModeForModal}
         detailModeForModal={detailModeForModal}
         setDetailModeForModal={setDetailModeForModal}
@@ -6239,6 +6283,37 @@ const s = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1000,
     elevation: 1000,
+  },
+  /* State Control-afsluiting: volledig zwart scherm, gecentreerd (5 okt 2026). */
+  completionFull: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 24,
+  },
+  completionTitleLarge: {
+    color: '#ffffff',
+    fontSize: 30,
+    fontFamily: BrandFonts.extrabold,
+    letterSpacing: -0.6,
+    textAlign: 'center',
+  },
+  completionDuration: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 17,
+    fontFamily: BrandFonts.semibold,
+    marginTop: 10,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  completionDoneWrap: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    bottom: 48,
+  },
+  completionBtnWide: {
+    backgroundColor: '#ffffff',
+    width: '100%',
+    paddingVertical: 16,
   },
   completionBackdrop: {
     ...StyleSheet.absoluteFillObject,
