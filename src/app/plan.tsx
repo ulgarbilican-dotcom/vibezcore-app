@@ -45,6 +45,7 @@ import {
   syncReminders,
 } from '@/services/reminders';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { openBreathSession } from '@/services/breath-session-host';
 import { claimFreeSessionParam, skipBreathIntroOnce } from '@/utils/breath-entry';
 import { BlurView } from 'expo-blur';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
@@ -651,19 +652,7 @@ export default function PlanScreen() {
             it={it}
             plan={plan}
             onOpenSession={() =>
-              router.push({
-                pathname: '/breath-session',
-                /* `minutes` erbij (operator, 13 augustus 2026: "alles moet
-                   mee logisch aangepast en weergegeven worden") — anders
-                   opent de sessie op de ALGEMENE standaardduur van de
-                   toestand, los van wat het protocol er zelf voor koos.
-                   `claimFreeSessionParam()` erbij (operator, 7 september
-                   2026: "als user via 'Customize your full plan' naar hier
-                   doorklikt, is hij de gratis trial dan kwijt?") — wie zijn
-                   ENE gratis kennismakingssessie nog niet verbruikt had,
-                   kan die nu ook via déze kaart claimen, niet enkel via de
-                   ene knop in breath-welcome.tsx. */
-                params: {
+              openBreathSession({
                   ...claimFreeSessionParam(),
                   state: it.state.key,
                   minutes: String(it.minutes),
@@ -673,8 +662,9 @@ export default function PlanScreen() {
                      mee, dus er valt niets te kiezen; zonder `autostart`
                      toonde het scherm zijn eigen, overbodige kies-UI. */
                   autostart: '1',
-                },
-              })
+                  /* terug naar het protocol na de sessie (audit 5 okt 2026) */
+                  fromPlan: '1',
+})
             }
             onOpenDuration={() => setDurationPicking(index)}
             onOpenTime={() => setPicking(index)}

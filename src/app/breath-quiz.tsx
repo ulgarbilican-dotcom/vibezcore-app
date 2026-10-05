@@ -49,6 +49,7 @@ import { SLOTS } from '@/services/reminders';
 import { useSetting, type ExperienceLevel } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
+import { openBreathSession } from '@/services/breath-session-host';
 import { Check, ChevronLeft, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -171,9 +172,7 @@ export default function BreathQuizScreen() {
          `autostart=1` erbij (operator, 11 september 2026: "check alles
          overal, de oude selectiepagina mag nooit meer verschijnen") —
          mode staat hier al vast, er valt niets te kiezen. */
-      router.replace(
-        ('/breath-session?from=onboarding&mode=' + first + '&autostart=1') as never,
-      );
+      openBreathSession({ from: 'onboarding', mode: first, autostart: '1' });
     }
   };
 

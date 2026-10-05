@@ -38,6 +38,7 @@ import {
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
+import { openBreathSession } from '@/services/breath-session-host';
 import {
   Activity,
   Angry,
@@ -130,17 +131,14 @@ export default function FeelNowScreen() {
       const technique = pickInstantTechnique(st, situation);
       const duration = pickInstantDuration(st, technique, situation);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      router.replace({
-        pathname: '/breath-session',
-        params: {
+      openBreathSession({
           ...claimFreeSessionParam(),
           state: st.key,
           technique: technique.key,
           minutes: String(duration.minutes),
           autostart: '1',
           instant: '1',
-        },
-      } as never);
+        });
     }, 900);
   };
 

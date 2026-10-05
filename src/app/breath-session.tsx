@@ -122,8 +122,17 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useBreathHost, useBreathParams } from '@/components/breath-host-context';
 import {
+  closeBreathSession,
+  minimizeBreathSession,
+  openBreathSession,
+  getBreathHost,
+  restoreBreathSession,
+} from '@/services/breath-session-host';
+import {
+  ChevronDown,
   BatteryWarning,
   ChevronRight,
   Gem,
@@ -666,14 +675,18 @@ function FigureGlow({
 
 /* ── Scherm ──────────────────────────────────────────────────────────── */
 
-export default function BreathSessionScreen() {
+/* Operator, 5 okt 2026 (minimaliseren): de sessie leeft in de laag boven
+   de app (components/BreathSessionHost) i.p.v. als navigatiescherm — zie
+   services/breath-session-host.ts. Parameters komen uit die laag. */
+export function BreathSession() {
+  const { minimized } = useBreathHost();
   /* De onderrand komt van het TOESTEL, niet van een gok. SafeAreaView deed
      de onderkant eerder zelf, maar een vastgezette voet valt buiten die
      opvulling — vandaar dat de knop tegen de home-balk aan lag. Nu rekenen
      we de inzet expliciet mee, op de enige plek waar hij telt. */
   const insets = useSafeAreaInsets();
 
-  const params = useLocalSearchParams<{
+  const params = useBreathParams<{
     state?: string;
     /** Zelfde rol als `state`, maar URL-VEILIG. `state` is intern een
         gereserveerd woord in de router: bij navigatie via een URL —
@@ -1823,13 +1836,20 @@ export default function BreathSessionScreen() {
      Herchecked bij elke focus (niet alleen mount), zodat 'm oplossen via
      de knop en teruggaan de banner meteen laat verdwijnen. */
   const [batteryRestricted, setBatteryRestricted] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
+  /* Geen navigatiescherm meer (sessie-laag): bij openen en telkens de app
+     terug op de voorgrond komt opnieuw kijken. */
+  useEffect(() => {
+    const check = () => {
       if (Platform.OS === 'android') {
         setBatteryRestricted(!isIgnoringBatteryOptimizations());
       }
-    }, []),
-  );
+    };
+    check();
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') check();
+    });
+    return () => sub.remove();
+  }, []);
 
   /* Operator, 11 september 2026 (25e ronde): "breathwork active pagina
      moet op pauze starten, user moet zelf op play drukken" — anders dan
@@ -2195,14 +2215,16 @@ export default function BreathSessionScreen() {
        geen tussenliggende animatie-frame van een ander scherm). Valt hij
        — heel uitzonderlijk, bv. een deeplink die nooit langs (tabs)/breath
        kwam — terug op de oude `replace` als vangnet. */
-    if (params.fromPlan === '1' && router.canDismiss()) {
-      router.dismissTo('/agenda' as never);
-      return;
-    }
+    /* Sessie-laag (5 okt 2026): sluiten = de laag weg; eronder staat nog
+       het scherm waar je de sessie startte. Gestart vanuit een plan → daar
+       blijven. Anders zoals voorheen naar de keuzepagina van Breath
+       (dismissTo pop't eventuele tussenschermen zoals breath-setup weg). */
+    closeBreathSession();
+    if (params.fromPlan === '1') return;
     if (router.canDismiss()) {
       router.dismissTo('/breath');
     } else {
-      router.replace('/breath');
+      router.navigate('/breath');
     }
   }, [params.fromPlan]);
 
@@ -2237,8 +2259,11 @@ export default function BreathSessionScreen() {
      gebruikte de standaard stack-pop en sloeg die aanroep over. Zelfde
      functie nu op BEIDE gekoppeld. */
   const handleTopbarBack = useCallback(() => {
+    /* Operator, 5 okt 2026: tijdens een sessie minimaliseert terug (chevron
+       of de terugknop van de telefoon) — de sessie loopt door, de pill
+       brengt je terug. Stoppen enkel via "End session". */
     if (running) {
-      requestStop();
+      minimizeBreathSession();
       return;
     }
     skipBreathIntroOnce();
@@ -2246,12 +2271,16 @@ export default function BreathSessionScreen() {
   }, [running, requestStop, leaveSession]);
 
   useEffect(() => {
+    /* Geminimaliseerd: de terugknop hoort bij het scherm eronder, niet bij
+       de sessie (audit 5 okt 2026 — anders stopte een terug-tik elders de
+       sessie). */
+    if (minimized) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       handleTopbarBack();
       return true;
     });
     return () => sub.remove();
-  }, [handleTopbarBack]);
+  }, [handleTopbarBack, minimized]);
 
   useEffect(
     () => () => {
@@ -2373,8 +2402,6 @@ export default function BreathSessionScreen() {
     // erboven — enkel de knoppen/tekst zelf blijven binnen de veilige
     // zone, de achtergrond niet meer.
     <View style={s.root}>
-      <Stack.Screen options={{ headerShown: false, animation: 'fade' }} />
-
       {/* Ruimte achter alles. Eén kleur, lage dichtheid, traag fonkelen —
           het geeft diepte zodat de figuur ergens IN hangt in plaats van
           op een zwart vlak te liggen. Ligt onder alle content. */}
@@ -2427,7 +2454,18 @@ export default function BreathSessionScreen() {
            breedte/hoogte voor het centreren van de titel eronder, zonder
            rand of achtergrond. */}
         {running ? (
-          <View style={s.spacerBtn} />
+          /* Minimaliseren (operator, 5 okt 2026) — zelfde Apple-chevron als
+             de State Control-sessie; de sessie loopt door. */
+          <AnimatedPressable
+            onPress={minimizeBreathSession}
+            onPressIn={pressBack.onPressIn}
+            onPressOut={pressBack.onPressOut}
+            hitSlop={12}
+            style={[s.iconBtn, pressBack.style]}
+            accessibilityLabel="Minimize session"
+          >
+            <ChevronDown size={22} color={C.dim72} strokeWidth={2.4} />
+          </AnimatedPressable>
         ) : (
           <AnimatedPressable
             /* De onboarding komt hier binnen met `replace`, dus er is geen
@@ -2462,7 +2500,14 @@ export default function BreathSessionScreen() {
            hier verving door een lege plek (puur voor centrering, zie
            die toelichting). settings.tsx is terug, dus deze link ook. */}
         <AnimatedPressable
-          onPress={() => router.push('/settings')}
+          onPress={() => {
+            /* Naar een ander scherm: de sessie-laag eerst opzij (lopend →
+               minimaliseren, anders sluiten), anders opent het scherm
+               onzichtbaar ónder de laag. */
+            if (running) minimizeBreathSession();
+            else closeBreathSession();
+            router.push('/settings');
+          }}
           onPressIn={pressSettings.onPressIn}
           onPressOut={pressSettings.onPressOut}
           hitSlop={12}
@@ -3599,7 +3644,11 @@ export default function BreathSessionScreen() {
                         {
                           text: 'View Preview',
                           style: 'primary',
-                          onPress: () => router.navigate('/(tabs)/bracelet' as never),
+                          onPress: () => {
+                            if (running) minimizeBreathSession();
+                            else closeBreathSession();
+                            router.dismissTo('/bracelet' as never);
+                          },
                         },
                       ],
                     });
@@ -3714,6 +3763,7 @@ export default function BreathSessionScreen() {
                 onPressOut={pressMindCard.onPressOut}
                 onPress={() => {
                   dismissDone();
+                  closeBreathSession();
                   router.push({
                     pathname: '/player',
                     params: {
@@ -3746,7 +3796,10 @@ export default function BreathSessionScreen() {
               onPressOut={pressBrowseLibrary.onPressOut}
               onPress={() => {
                 dismissDone();
-                router.push({
+                closeBreathSession();
+                /* dismissTo i.p.v. push: geen tweede tab-navigator op de
+                   stapel (audit 5 okt 2026). */
+                router.dismissTo({
                   pathname: '/',
                   params: { from: 'breath' },
                 } as never);
@@ -3804,7 +3857,8 @@ export default function BreathSessionScreen() {
                     /* Operator, 10 september 2026: breathwork-context —
                        zie toelichting in subscribe.tsx voor waarom dit
                        betrouwbaarder is dan raden uit onboarding-status. */
-                    router.replace('/subscribe?returnTo=breathwork' as never);
+                    closeBreathSession();
+                    router.push('/subscribe?returnTo=breathwork' as never);
                   }}
                   android_ripple={{ color: C.dim10 }}
                 >
@@ -4902,4 +4956,27 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
 
   /* Premium-popup-stijlen verhuisd naar PremiumPaywallModal.tsx. */
   });
+}
+
+/* ── Route /breath-session ────────────────────────────────────────────
+   Deeplinks en meldingen openen nog deze route. Ze geeft de parameters
+   door aan de sessie-laag en verdwijnt meteen weer; loopt er al een
+   sessie, dan wordt die enkel teruggehaald (audit 5 okt 2026: een melding
+   tijdens een sessie verving anders de lopende sessie). */
+export default function BreathSessionRoute() {
+  const raw = useLocalSearchParams();
+  useEffect(() => {
+    const params: Record<string, string | undefined> = {};
+    for (const [k, v] of Object.entries(raw)) params[k] = Array.isArray(v) ? v[0] : v;
+    if (getBreathHost()) restoreBreathSession();
+    else openBreathSession(params);
+    if (router.canGoBack()) router.back();
+    else router.replace('/breath');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      <Stack.Screen options={{ headerShown: false, animation: 'none' }} />
+    </View>
+  );
 }

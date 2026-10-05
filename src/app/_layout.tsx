@@ -22,6 +22,7 @@
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
+import { BreathSessionHost } from '@/components/BreathSessionHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { VibezAlertHost } from '@/components/VibezAlert';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
@@ -787,9 +788,10 @@ export default function RootLayout() {
           Subscription-relevant copy + send-feedback link. */}
       <WelcomeBackWarrior />
 
-      {/* Iter v149 v3 (2026-06-25): floating breath mini-control —
-          verschijnt wanneer een breath-sessie loopt en user is niet op de
-          /breath route. Tap → naar breath-tab, X → stop sessie. */}
+      {/* Operator, 5 okt 2026: de ademsessie leeft als laag boven de hele
+          app (zie services/breath-session-host.ts) zodat ze kan
+          minimaliseren zonder te stoppen; de pill haalt ze terug. */}
+      <BreathSessionHost />
       <BreathMiniControl />
 
       {/* Iter v167 (2026-06-28): VIBEZCORE-styled alert host. Queue-based

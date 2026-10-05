@@ -57,6 +57,7 @@ import { preloadBreathCues } from '@/services/breath-voice';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { openBreathSession } from '@/services/breath-session-host';
 import {
   AlertTriangle,
   CalendarRange,
@@ -1974,9 +1975,7 @@ export default function BreathSetupScreen() {
        patroon als (tabs)/breath.tsx, plan.tsx en agenda.tsx, zodat het
        niet uitmaakt via welk scherm de user zijn eerste sessie start. */
     const freeParam = claimFreeSessionParam();
-    router.push({
-      pathname: '/breath-session',
-      params: {
+    openBreathSession({
         ...freeParam,
         mode: st.key,
         technique: tech.key,
@@ -1995,8 +1994,7 @@ export default function BreathSetupScreen() {
            Deze vlag laat breath-session.tsx weten dat 'm overslaan
            moet — zie de `fromSetup`-check daar. */
         fromSetup: '1',
-      },
-    });
+      });
   };
 
   /* Operator, 7 september 2026: "back buttons gaan naar welcome

@@ -24,6 +24,7 @@ import { DurationWheel } from '@/components/DurationWheel';
 import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { openBreathSession } from '@/services/breath-session-host';
 import { ChevronDown, ChevronLeft, ChevronRight, Flame, Info, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
 import VibezGlass from '@/components/VibezGlass';
 import { STATE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
@@ -826,16 +827,13 @@ export default function AgendaScreen() {
               <Pressable
                 style={s.tapStartZone}
                 onPress={() =>
-                  router.push({
-                    pathname: '/breath-session',
-                    params: {
+                  openBreathSession({
                       ...claimFreeSessionParam(),
                       state: next.state,
                       minutes: String(next.minutes),
                       autostart: '1',
                       fromPlan: '1',
-                    },
-                  })
+                    })
                 }
                 accessibilityLabel={`Start ${titleCase(BREATH_STATES[next.state].eyebrow)} now`}
               >
@@ -1014,16 +1012,13 @@ export default function AgendaScreen() {
                     style={s.actionPlayBtn}
                     onPress={() => {
                       setActionItemIndex(null);
-                      router.push({
-                        pathname: '/breath-session',
-                        params: {
+                      openBreathSession({
                           ...claimFreeSessionParam(),
                           state: it.state,
                           minutes: String(it.minutes),
                           autostart: '1',
                           fromPlan: '1',
-                        },
-                      });
+                        });
                     }}
                   >
                     <Text style={s.actionPlayTxt}>Start session</Text>
