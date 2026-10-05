@@ -24,22 +24,20 @@ import {
 import { useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
 import { router } from 'expo-router';
-import { goalsByKeys } from '@/data/goals';
 import { useActivePlan } from '@/utils/plan-store';
-import { useActiveBraceletPlan, dayKey } from '@/utils/bracelet-plan-store';
-import { useProtocolLocked, PROTOCOL_LOCKED_SUB } from '@/utils/protocol-gate';
+import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
+import { useProtocolLocked } from '@/utils/protocol-gate';
 import {
   Activity as ActivityIcon,
   CalendarDays,
   ChevronRight,
-  Info,
   Lock,
   Target,
   Watch,
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -87,15 +85,6 @@ export default function ActivityScreen() {
      hoort dat VOORAF te zeggen, niet pas na 3 stappen via de teaser-popup.
      Zie `utils/protocol-gate.ts`. */
   const protocolLocked = useProtocolLocked();
-  /* Operator, 29 september 2026 ("in set your goal kaart moeten de 2
-     states elk eigen regel krijgen"): was `.join(' · ')` — 2 gekozen
-     doelen liepen dan achter elkaar op 1 regel. \n i.p.v. ' · ' laat elk
-     doel zijn eigen regel krijgen in de sub-tekst (RN's Text rendert \n
-     gewoon als linebreak, geen aparte opmaak nodig). */
-  const goalNames = goalsByKeys(goals)
-    .map((g) => g.name)
-    .join('\n');
-
   /* Operator, 29 september 2026 ("breathwork activity en bracelet activity
      moeten hier weg, aparte pagina bij aanklikken"): de volledige ring/
      streak-badge/staafdiagram/donut-uitwerking is hier verwijderd — die
@@ -113,7 +102,6 @@ export default function ActivityScreen() {
   }, [history]);
   const bStats = useBraceletStats();
   const { plan: braceletPlan } = useActiveBraceletPlan();
-  const braceletTodaySessions = braceletPlan?.days[dayKey(new Date())]?.items.length ?? 0;
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -172,22 +160,12 @@ export default function ActivityScreen() {
             large
             Icon={CalendarDays}
             title="Your daily plan"
-            info={
-              plan
-                ? 'Your protocol, tracked day by day'
-                : protocolLocked
-                  ? PROTOCOL_LOCKED_SUB
-                  : (profile.preferredSlots ?? []).includes('midday')
-                    ? 'Three moments a day'
-                    : 'Two moments a day'
-            }
             onPress={() => router.push('/agenda' as never)}
           />
           <Row
             large
             Icon={protocolLocked ? Lock : Target}
             title="Set your goal"
-            info={protocolLocked ? PROTOCOL_LOCKED_SUB : (goalNames || 'Choose what you are working toward')}
             onPress={() => router.push('/build-choice' as never)}
           />
           {/* Operator, 29 september 2026 ("hoe kan gebruiker in 1 oogopslag
@@ -239,18 +217,12 @@ export default function ActivityScreen() {
             large
             Icon={CalendarDays}
             title="Your daily plan"
-            info={braceletPlan ? 'Your State Control plan, tracked day by day' : 'Nothing planned yet'}
             onPress={() => router.push('/bracelet-agenda' as never)}
           />
           <Row
             large
             Icon={Target}
             title="Set your plan"
-            info={
-              braceletTodaySessions > 0
-                ? `${braceletTodaySessions} session${braceletTodaySessions === 1 ? '' : 's'} planned today`
-                : 'Choose your states, times and duration'
-            }
             onPress={() => router.push('/bracelet-set-day' as never)}
           />
           <Row
@@ -282,7 +254,6 @@ function Row({
   Icon,
   title,
   sub,
-  info,
   onPress,
   /* Operator, 29 september 2026 ("maak de kaarten groter"): "Set your
      goal"/"Your daily plan" zijn de essentie van breathwork, mogen meer
@@ -294,11 +265,9 @@ function Row({
   Icon: LucideIcon;
   title: string;
   sub?: string;
-  info?: string;
   onPress: () => void;
   large?: boolean;
 }) {
-  const [showInfo, setShowInfo] = useState(false);
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -325,21 +294,8 @@ function Row({
       )}
       <View style={{ flex: 1 }}>
         <Text style={s.rowTitle}>{title}</Text>
-        {info ? (
-          showInfo && (
-            <Text style={[s.rowSub, large && s.rowSubLarge]} numberOfLines={2}>
-              {info}
-            </Text>
-          )
-        ) : (
-          sub && <Text style={[s.rowSub, large && s.rowSubLarge]}>{sub}</Text>
-        )}
+        {sub && <Text style={[s.rowSub, large && s.rowSubLarge]}>{sub}</Text>}
       </View>
-      {info && (
-        <Pressable hitSlop={10} onPress={() => setShowInfo((v) => !v)} style={s.rowInfoBtn}>
-          <Info size={13} color={ink(0.5)} strokeWidth={2.2} />
-        </Pressable>
-      )}
       <ChevronRight size={large ? 19 : 16} color={ink(0.3)} />
     </AnimatedPressable>
   );
@@ -454,15 +410,4 @@ const s = StyleSheet.create({
     backgroundColor: ink(0.06),
   },
   rowSubLarge: { marginTop: 3, lineHeight: 18 },
-  /* De "i"-toggle die `SquareCard` had, nu op de lange `Row`-kaart —
-     zelfde plek/maat als `squareInfoBtn` had, enkel niet meer absoluut
-     gepositioneerd (de rechthoekige rij heeft al ruimte naast de tekst). */
-  rowInfoBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ink(0.06),
-  },
 });

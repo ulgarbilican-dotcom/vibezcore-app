@@ -25,7 +25,7 @@ import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { openBreathSession } from '@/services/breath-session-host';
-import { ChevronDown, ChevronLeft, ChevronRight, Flame, Info, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
+import { ChevronDown, ChevronLeft, ChevronRight, Flame, Layers, Lock, Pencil, Trophy } from 'lucide-react-native';
 import VibezGlass from '@/components/VibezGlass';
 import { STATE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import { useProtocolLocked, PROTOCOL_LOCKED_SUB } from '@/utils/protocol-gate';
@@ -149,11 +149,8 @@ function StateCard({
       style={s.cardSlot}
     >
       <Animated.View style={[s.card, on && s.cardOn, pressStyle]}>
-        {/* Operator, 2-3 okt 2026 ("misschien links in de kaarten i zodat
-           mensen weten dat ze op de kaarten kunnen klikken"): puur een
-           tikbaarheid-hint, geen eigen uitleg-sheet — vandaar geen
-           aparte onPress, gewoon een visueel signaal in de hoek
-           tegenover de kleurbol. */}
+        {/* Operator, 5 okt 2026: de "i"-hint in de hoek is weg — geen
+           meerwaarde. */}
         <View style={s.cardTopRow}>
           {Icon && color ? (
             /* Zelfde glazen badge als "Set your plan" (operator, 5 okt 2026). */
@@ -166,7 +163,6 @@ function StateCard({
           ) : (
             <Layers size={15} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />
           )}
-          <Info size={12} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
         </View>
         <Text style={[s.cardTxt, on && s.cardTxtOn]}>{label}</Text>
       </Animated.View>
