@@ -3006,9 +3006,12 @@ function ActiveSessionScreen({
             /* Inline in de tab (tab-balk eronder) vs. geduwd scherm —
                gekoppeld aan de route, niet aan isBraceletOwner (zie
                Minimize hieronder, 5 okt 2026). */
+            /* Operator, 5 okt 2026 ("onderste blok 2 cm laten zakken,
+               ademruimte"): geduwd scherm tot net boven de systeem-
+               navigatiebalk — meer kan niet zonder eronder te vallen. */
             paddingBottom: !isPushedRoute
               ? Math.max(safeInsets.bottom + 56, 96)
-              : Math.max(safeInsets.bottom + 24, 72),
+              : Math.max(safeInsets.bottom + 6, 20),
           },
         ]}
       >
