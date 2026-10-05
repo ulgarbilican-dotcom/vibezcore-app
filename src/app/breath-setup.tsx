@@ -1782,6 +1782,7 @@ export default function BreathSetupScreen() {
   const [durationInfoOpen, setDurationInfoOpen] = useState(false);
   /* Keuzelijst van de drie technieken (5 okt 2026). */
   const [techSheetOpen, setTechSheetOpen] = useState(false);
+  const [durationSheetOpen, setDurationSheetOpen] = useState(false);
 
   /* Operator, 17 september 2026 (addToDay, "gewoon alles wat nodig is op
      1 kaart"): tijdstip erbij, enkel relevant in deze modus — de normale
@@ -2772,67 +2773,41 @@ export default function BreathSetupScreen() {
            de kaart komen, maak de kaart kleiner"): label verhuisd VÓÓR de
            BlurView i.p.v. erbinnen — eigen marge i.p.v. de kaart se
            `padding`. */}
-        {/* Operator, 5 okt 2026 ("kaart achter de minutenscroll weg,
-           'Choose your duration' → 'Duration' in kleine hoofdletters,
-           Daily Grounding-info: denk na"): geen kaart meer, een stil
-           label; de naam van de duurzone staat rechts op dezelfde regel
-           met de i ernaast — één regel i.p.v. een extra rij onder het wiel. */}
-        <View style={s.durationHead}>
-          <Text style={s.durationHeadLbl}>DURATION</Text>
-          {zoneFor(chosen.minutes) ? (
-            <Pressable
-              onPress={() => setDurationInfoOpen(true)}
-              hitSlop={10}
-              style={s.durationZoneBtn}
-              disabled={!zoneFor(chosen.minutes)?.why}
-            >
-              <Text style={s.durationZoneTxt}>{zoneFor(chosen.minutes)?.name}</Text>
-              {zoneFor(chosen.minutes)?.why ? (
-                <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-              ) : null}
-            </Pressable>
-          ) : null}
+        {/* Operator, 5 okt 2026 (Apple-analyse: "geen groot wiel midden op
+           het scherm, een compacte regel die een kiezer opent" + "2 zelfde
+           pills niet mooi"): één glazen kaart met twee regels, zoals Apple's
+           instelschermen. Duur en techniek openen elk hun eigen paneel; de
+           cirkel erboven vat de keuze samen. */}
+        <View style={s.settingsCard}>
+          <VibezGlass radius={16} level="subtle" style={StyleSheet.absoluteFill} />
+          <Pressable
+            onPress={() => setDurationSheetOpen(true)}
+            style={({ pressed }) => [s.settingsRow, pressed && s.settingsRowPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`Duration, ${fmtClock(chosen.minutes)}. Tap to change.`}
+          >
+            <Text style={s.settingsLbl}>Duration</Text>
+            <View style={s.settingsRight}>
+              <Text style={s.settingsValue}>{fmtClock(chosen.minutes)}</Text>
+              <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.2} />
+            </View>
+          </Pressable>
+          <View style={s.settingsSep} />
+          <Pressable
+            onPress={() => setTechSheetOpen(true)}
+            style={({ pressed }) => [s.settingsRow, pressed && s.settingsRowPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`Technique, ${tech.name}. Tap to change.`}
+          >
+            <Text style={s.settingsLbl}>Technique</Text>
+            <View style={s.settingsRight}>
+              <Text style={s.settingsValue} numberOfLines={1}>
+                {tech.name}
+              </Text>
+              <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.2} />
+            </View>
+          </Pressable>
         </View>
-        <View style={s.durationPlain}>
-          <DurationWheel
-            options={durationWheelOptions}
-            value={chosen.minutes}
-            accent={accent}
-            trackColor={light ? '#8E8E93' : 'rgba(255,255,255,0.4)'}
-            recommendedValue={recommendedZone?.minutes}
-            onChange={(v) => {
-              const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
-              if (presetIdx !== -1) {
-                setCustomSelected(false);
-                setDurationIdx(presetIdx);
-              } else {
-                setCustomMinutes(v);
-                setCustomSelected(true);
-              }
-            }}
-          />
-        </View>
-
-        {/* Operator, 5 okt 2026 ("2 zelfde pills niet mooi — hoe doen Apple
-           en andere groten dit?"): Apple's HIG — een wiel voor lange lijsten,
-           een pull-down voor korte. Naar het model van de Timer in Apple's
-           Klok-app: één wiel (de duur), daaronder één rij die een korte
-           keuzelijst opent. Drie technieken = korte lijst. */}
-        <Pressable
-          onPress={() => setTechSheetOpen(true)}
-          style={({ pressed }) => [s.techPickRow, pressed && { opacity: 0.7 }]}
-          accessibilityRole="button"
-          accessibilityLabel={`Technique, ${tech.name}. Tap to change.`}
-        >
-          <VibezGlass radius={14} level="normal" style={StyleSheet.absoluteFill} />
-          <Text style={s.techRowLbl}>Technique</Text>
-          <View style={s.techRowRight}>
-            <Text style={s.techRowValue} numberOfLines={1}>
-              {techShortLabel(tech)}
-            </Text>
-            <ChevronRight size={16} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-          </View>
-        </Pressable>
         </>
         )}
 
@@ -3051,6 +3026,68 @@ export default function BreathSetupScreen() {
          lengte) worden hier samengevoegd tot één doorlopende alinea i.p.v.
          twee losse punten — nog steeds geen nieuwe copy, enkel anders
          geschreven. */}
+      {/* Duurkiezer (operator, 5 okt 2026): het minutenwiel in een glazen
+         paneel; de duurzone met i bovenaan. */}
+      <Modal
+        visible={durationSheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDurationSheetOpen(false)}
+      >
+        <View style={s.sheetRoot}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDurationSheetOpen(false)} />
+          <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
+            <View style={s.sheetHandle} />
+            <View style={s.sheetHeader}>
+              <Text style={[s.modalTitle, s.sheetTitleTxt]}>Duration</Text>
+              <Pressable onPress={() => setDurationSheetOpen(false)} hitSlop={10}>
+                <Text style={[s.sheetDoneTxt, { color: '#ffffff' }]}>Done</Text>
+              </Pressable>
+            </View>
+            {zoneFor(chosen.minutes) ? (
+              <Pressable
+                onPress={() => {
+                  if (!zoneFor(chosen.minutes)?.why) return;
+                  setDurationSheetOpen(false);
+                  setTimeout(() => setDurationInfoOpen(true), 320);
+                }}
+                hitSlop={8}
+                style={s.sheetZoneRow}
+              >
+                <Text style={s.durationZoneTxt}>{zoneFor(chosen.minutes)?.name}</Text>
+                {zoneFor(chosen.minutes)?.why ? (
+                  <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
+                ) : null}
+              </Pressable>
+            ) : null}
+            <View style={s.sheetWheel}>
+              <DurationWheel
+                options={durationWheelOptions}
+                value={chosen.minutes}
+                accent={accent}
+                trackColor={light ? '#8E8E93' : 'rgba(255,255,255,0.4)'}
+                recommendedValue={recommendedZone?.minutes}
+                onChange={(v) => {
+                  const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
+                  if (presetIdx !== -1) {
+                    setCustomSelected(false);
+                    setDurationIdx(presetIdx);
+                  } else {
+                    setCustomMinutes(v);
+                    setCustomSelected(true);
+                  }
+                }}
+              />
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
       {/* Keuzelijst technieken (operator, 5 okt 2026 — Timer-model): drie
          rijen in het glazen vel, de gekozen met een vinkje. Tik = kiezen en
          sluiten; de i opent de volledige uitleg. */}
@@ -4142,6 +4179,47 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
   techList: { gap: 10, marginTop: 6, marginBottom: 12 },
+  /* Instelkaart onder de cirkel (5 okt 2026). */
+  settingsCard: {
+    alignSelf: 'stretch',
+    marginHorizontal: 26,
+    marginTop: 30,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  settingsRow: {
+    height: 52,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settingsRowPressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  settingsSep: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 16,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  settingsLbl: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 15,
+    color: '#ffffff',
+  },
+  settingsRight: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  settingsValue: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.55)',
+    fontVariant: ['tabular-nums'],
+  },
+  sheetZoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  sheetWheel: { marginTop: 4, marginBottom: 16 },
   techListRow: {
     flexDirection: 'row',
     alignItems: 'center',
