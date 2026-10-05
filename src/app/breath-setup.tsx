@@ -847,7 +847,10 @@ function TechniqueSegmentedControl({
     >
       {/* VIBEZCORE-glas (5 okt 2026): de balk doorzichtig glas, het
           gekozen kussentje lichter glas dat erboven zweeft — geen randen. */}
-      <VibezGlass radius={22} level="subtle" style={StyleSheet.absoluteFill} />
+      {/* Rand tot rand, bijna doorzichtig: een lichte glaslaag zonder
+         hoeken (operator, 5 okt 2026 — "helemaal doorlopen, echt
+         transparant"). */}
+      <VibezGlass radius={0} level="subtle" style={StyleSheet.absoluteFill} />
       {/* Operator, 24 september 2026 (referentie: "het kussentje is wit/
          lichtgrijs met een zachte schaduw, geen accentkleur"): was
          `accent` — de vulling zelf droeg voorheen de state-kleur; nu
@@ -912,7 +915,7 @@ const tsc = StyleSheet.create({
   track: {
     alignSelf: 'stretch',
     flexDirection: 'row',
-    borderRadius: 22,
+    borderRadius: 0,
     overflow: 'hidden',
     padding: 3,
   },
@@ -4092,7 +4095,8 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  segWrap: { alignSelf: 'stretch', marginHorizontal: 26 },
+  /* Operator, 5 okt 2026 ("balk helemaal doorlopen"): van rand tot rand. */
+  segWrap: { alignSelf: 'stretch', marginHorizontal: 0 },
   tileRow: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
