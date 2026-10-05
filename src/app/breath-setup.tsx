@@ -2438,8 +2438,13 @@ export default function BreathSetupScreen() {
             >
               {tech.name}
             </Animated.Text>
-            {/* Het niveau staat in de techniek-keuzelijst, niet in de cirkel
-               (operator, 5 okt 2026). */}
+            {/* Operator, 5 okt 2026 ("in de cirkel duidelijk maken wat 1, 2
+               en 3 dots zijn"): dezelfde stipjes als op de kaarten, met het
+               woord erbij — de legende staat waar je kijkt. */}
+            <Animated.View key={`level-${tech.key}`} entering={FadeIn.duration(240)} style={s.heroLevelRow}>
+              <LevelDots level={tech.level} color="rgba(255,255,255,0.75)" />
+              <Text style={s.heroLevel}>{tech.level}</Text>
+            </Animated.View>
           </View>
         </View>
         )}
@@ -4215,8 +4220,13 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     fontSize: 12.5,
     color: 'rgba(255,255,255,0.55)',
   },
+  heroLevelRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
   heroLevel: {
-    marginTop: 4,
     fontFamily: BrandFonts.medium,
     fontSize: 12.5,
     letterSpacing: 0.3,
