@@ -1304,6 +1304,7 @@ export default function SubscribeScreen() {
                 : 'All 64 guided sessions — every state, every rhythm — plus every State Control session and the full VIBEZCORE Audio Library. Cancel anytime.'}
           </Text>
 
+          <Text style={s.launchLabel}>LAUNCH PRICE</Text>
           <AnimatedPressable
             style={[s.planCard, yearlyCardPress.pressStyle]}
             onPress={() => setTier('yearly')}
@@ -1866,6 +1867,13 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
     paddingVertical: 6,
     paddingHorizontal: 8,
+  },
+  launchLabel: {
+    color: Brand.textDim,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    marginBottom: 8,
   },
   sub: {
     color: Brand.textDim,

@@ -276,6 +276,8 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
               (not {PRICING.bracelet.eurOld})
             </Text>
           </View>
+          {/* Operator, 5 okt 2026: enkel het label, geen belofte of bedrag. */}
+          <Text style={s.payLaunch}>LAUNCH PRICE</Text>
           {(['yearly', 'monthly'] as const).map((tier) => {
             const prod = getProduct(tier);
             const yr = getProduct('yearly')?.priceAmountMicros;
@@ -371,6 +373,13 @@ const s = StyleSheet.create({
     letterSpacing: 1.5,
     color: LIGHT_BLUE,
     marginBottom: 6,
+  },
+  payLaunch: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: LIGHT_BLUE,
+    marginBottom: 8,
   },
   payTitle: {
     fontFamily: BrandFonts.bold,
