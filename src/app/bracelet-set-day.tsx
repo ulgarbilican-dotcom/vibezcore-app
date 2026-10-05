@@ -188,12 +188,8 @@ function ModeTile({
           de kleur van de toestand (Apple Liquid Glass, subtiel) — zo leert
           de gebruiker vanzelf welke kleur bij welke toestand hoort; het
           teken zelf is hetzelfde als op de Breath-tab. */}
-      <View
-        style={[
-          s.tileIconBadge,
-          { backgroundColor: `${m.color}2E`, borderColor: `${m.color}66` },
-        ]}
-      >
+      <View style={s.tileIconBadge}>
+        <VibezGlass radius={20} tint={m.color} level="raised" style={StyleSheet.absoluteFill} />
         <Icon size={22} color="#ffffff" strokeWidth={1.9} />
       </View>
       <Text style={s.tileName} numberOfLines={2}>
@@ -222,6 +218,7 @@ function HorizonChip({
   }));
   return (
     <Pressable
+      style={s.horizonSlot}
       onPress={onPress}
       onPressIn={() => {
         scale.value = withTiming(0.97, { duration: 80 });
@@ -643,7 +640,15 @@ export default function BraceletSetDayScreen() {
             onPress={() => {}}
           >
             <View style={s.pickHandle} />
-            <Text style={s.pickTitle}>Your plan</Text>
+            {/* Ons sheet-protocol (breath-setup.tsx): titel links, "Done"
+                rechts — een X is hier verwarrend naast de verwijder-X per
+                sessie. */}
+            <View style={s.sheetHeader}>
+              <Text style={[s.pickTitle, { marginBottom: 0 }]}>Your plan</Text>
+              <Pressable onPress={() => setPlanPopupOpen(false)} hitSlop={10}>
+                <Text style={s.sheetDoneTxt}>Done</Text>
+              </Pressable>
+            </View>
             <ScrollView style={{ width: '100%', maxHeight: 360 }} showsVerticalScrollIndicator={false}>
               {sessions.map((sess, i) => {
                 const meta = getModeMeta(sess.mode);
@@ -651,6 +656,7 @@ export default function BraceletSetDayScreen() {
                 return (
                   <View key={i} style={s.sessionRow}>
                     <View style={s.sessionIconBadge}>
+                      <VibezGlass radius={20} tint={meta.color} level="raised" style={StyleSheet.absoluteFill} />
                       <ModeIcon size={18} color="#ffffff" strokeWidth={2} />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -781,14 +787,15 @@ const s = StyleSheet.create({
      achtergrond (niet volledig kaal, dit grid heeft geen matglas-vrije
      ondergrond zoals goal.tsx's aurora-achtergrond) i.p.v. 5 losse
      kleuren, dus één rustig, consistent beeld over alle tegels. */
+  /* Glazen schijf in de toestandskleur, wit teken, GEEN rand (operator,
+     5 okt 2026) — zelfde look als een gekozen bolletje op de Breath-tab. */
   tileIconBadge: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
     marginBottom: 8,
   },
   /* `cardHeadline` i.p.v. het eerdere `cardEyebrow` (10.5px, bedoeld voor
@@ -858,23 +865,26 @@ const s = StyleSheet.create({
   sessionIconBadge: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 20,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   sessionTitle: { ...TypeScale.compactCardTitle, color: '#ffffff' },
   sessionSub: { marginTop: 2, ...TypeScale.cardDetail, color: 'rgba(255,255,255,0.5)' },
 
-  horizonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  /* Even brede pills in een vast raster van 3 kolommen (operator, 5 okt
+     2026: "allemaal even groot en mooi uitgelijnd"). */
+  horizonRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: '2.75%', rowGap: 8 },
   /* VIBEZCORE-glas, geen rand (operator, 5 okt 2026): gekozen = lichter
      glas, niet-gekozen = doorzichtiger. */
   horizonChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderRadius: 12,
     overflow: 'hidden',
+    alignItems: 'center',
   },
+  horizonSlot: { width: '31.5%' },
   /* Operator, 30 september 2026 ("de gemaakte selectie een lichte
      omlijning geven, gebroken wit of grijs, wat we bij breathwork ook al
      gebruiken"): eerste poging hield de Bio-Teal-tint als achtergrond —
@@ -889,9 +899,11 @@ const s = StyleSheet.create({
   ctaFloat: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 10 },
   /* Huisstijl CTA v4.4 (theme.ts): donkere achtergrond → witte knop +
      donkere tekst. Nooit de accentkleur als knop-achtergrond. */
+  /* Zelfde vorm als elke hoofdknop in de app (breath.tsx `cta`): hoogte
+     50, hoek 14 — geen volle pil (operator, 5 okt 2026). */
   saveBtn: {
-    height: 52,
-    borderRadius: 26,
+    height: 50,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
@@ -954,6 +966,14 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
     marginBottom: 14,
   },
+  sheetHeader: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sheetDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   pickTitle: {
     alignSelf: 'flex-start',
     marginBottom: 14,
