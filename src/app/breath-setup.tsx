@@ -2786,49 +2786,31 @@ export default function BreathSetupScreen() {
            naast elkaar (icoon, naam, ritme) — verschillen in één oogopslag.
            Duur = een liniaal zoals de zoomknop van de camera; de cirkel
            erboven telt live mee. */}
+        {/* Operator, 5 okt 2026 ("i.p.v. 3 losse kaarten een doorlopende
+           balk, transparant blur — hebben we elders al"): de glazen
+           segmented control met het schuivende kussentje. De i rechts op de
+           labelregel opent de uitleg van de gekozen techniek. */}
         <View style={s.pickHead}>
           <Text style={s.durationHeadLbl}>TECHNIQUE</Text>
+          <Pressable
+            onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+            hitSlop={10}
+            accessibilityLabel={`About ${tech.name}`}
+          >
+            <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
+          </Pressable>
         </View>
-        <View style={s.tileRow}>
-          {st.techniques.map((t, i) => {
-            const on = i === techIdx;
-            return (
-              <Pressable
-                key={t.key}
-                onPress={() => {
-                  if (on) return;
-                  Haptics.selectionAsync();
-                  pickTechnique(i);
-                }}
-                style={({ pressed }) => [s.tile, pressed && { transform: [{ scale: 0.97 }] }]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={`${t.name}, ${techniquePattern(t.phases)}`}
-              >
-                <VibezGlass
-                  radius={16}
-                  level={on ? 'raised' : 'subtle'}
-                  tint={on ? st.accent : undefined}
-                  style={StyleSheet.absoluteFill}
-                />
-                {/* Operator, 5 okt 2026: de i per kaart, rechtsboven — uitleg
-                   van precies die techniek; enkel op de gekozen kaart. */}
-                {on && (
-                <Pressable
-                  onPress={() => setInfoModal({ title: t.name, techniqueKey: t.key })}
-                  hitSlop={10}
-                  style={s.tileInfo}
-                  accessibilityLabel={`About ${t.name}`}
-                >
-                  <Info size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
-                </Pressable>
-                )}
-                <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
-                  {techShortLabel(t)}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={s.segWrap}>
+          <TechniqueSegmentedControl
+            techniques={st.techniques}
+            techIdx={techIdx}
+            techniquePicked
+            onPick={(i) => {
+              if (i === techIdx) return;
+              Haptics.selectionAsync();
+              pickTechnique(i);
+            }}
+          />
         </View>
 
         <View style={[s.pickHead, { marginTop: 26 }]}>
@@ -4111,6 +4093,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  segWrap: { alignSelf: 'stretch', marginHorizontal: 26 },
   tileRow: {
     alignSelf: 'stretch',
     marginHorizontal: 26,
