@@ -151,7 +151,7 @@ import ReanimatedAnimated, {
   Easing as ReanimatedEasing,
   type SharedValue,
 } from 'react-native-reanimated';
-import { getBracelet, getSimHooks } from '../services/bracelet';
+import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
 import type { SimulatedBracelet } from '../services/bracelet-sim';
 import {
   playBraceletStartCue,
@@ -4416,7 +4416,42 @@ function BraceletControlScreen({
       ? Math.max(1, Math.ceil(resumeRemainingSec / 60))
       : null,
   );
-  const isPaused = pausedAt !== null;
+  /* BRON VAN WAARHEID = de sessie-monitor (audit 5 okt 2026). Dit scherm
+     leidde "loopt er een sessie / is ze gepauzeerd" af uit zijn eigen
+     staat en de (gesimuleerde) bracelet-status. Na een herstel van de
+     monitor (app herladen of door Android opgeruimd) liep de sessie wel —
+     pill, vergrendelscherm, trillingen — maar toonde dit scherm "Start
+     Boost" en opende de pill de moduskeuze. Nu volgt het scherm de monitor;
+     de bracelet-status levert enkel nog batterij/fout/laden. */
+  const [monitorSnap, setMonitorSnap] = useState(getBraceletSessionSnapshot());
+  useEffect(() => subscribeBraceletSession(setMonitorSnap), []);
+  const isPaused = USE_SIMULATED_BLE
+    ? monitorSnap.active && monitorSnap.paused
+    : pausedAt !== null;
+
+  /* Herstelde (of elders gestarte) sessie: de eigen refs van dit scherm
+     — duur, start, pauzepositie — gelijkzetten met de monitor, zodat de
+     teller, voortgang en pauze/hervat kloppen. */
+  useEffect(() => {
+    if (!monitorSnap.active) return;
+    const plannedMin = Math.round(monitorSnap.totalSec / 60);
+    const elapsedMs = Math.max(0, monitorSnap.totalSec - monitorSnap.remainingSec) * 1000;
+    if (sessionPlannedRef.current !== plannedMin || sessionStartedAtRef.current === null) {
+      sessionPlannedRef.current = plannedMin;
+      sessionStartedAtRef.current = Date.now() - elapsedMs;
+      const startedIso = getBraceletMonitorSession()?.startedAtIso;
+      sessionRealStartedAtRef.current = startedIso ? Date.parse(startedIso) : Date.now() - elapsedMs;
+    }
+    if (monitorSnap.paused) {
+      if (pausedAt === null) {
+        pausedAtElapsedMsRef.current = elapsedMs;
+        setPausedAt(Math.max(1, Math.ceil(monitorSnap.remainingSec / 60)));
+      }
+    } else if (pausedAt !== null && USE_SIMULATED_BLE) {
+      setPausedAt(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monitorSnap.active, monitorSnap.paused, monitorSnap.totalSec]);
 
   /* Eén plek voor "sluit de lopende sessie af en registreer 'm" (operator-
      audit, 13 augustus 2026) — deze logica stond bijna identiek 3x
@@ -5071,12 +5106,12 @@ function BraceletControlScreen({
      - requestStatus VÓÓR de state-updates → setPausedAt en setStatus in
        één synchrone batch → één render i.p.v. twee → geen glitch. */
   const onResume = async () => {
-    if (pausedAt === null) return;
+    if (!isPaused) return;
     /* Audit 5 okt 2026: de ECHT lopende modus (niet de aangetikte) en de
        echte resterende minuten — geen clamp naar het modus-minimum meer
        hier; het einde bewaakt de monitor (die de bracelet zelf stopt). */
     const runMode = (getBraceletMonitorSession()?.mode ?? selectedMode) as BraceletMode;
-    const remainingSecNow = getBraceletMonitorRemainingSec() ?? pausedAt * 60;
+    const remainingSecNow = getBraceletMonitorRemainingSec() ?? (pausedAt ?? 1) * 60;
     const resumeDuration = Math.max(1, Math.ceil(remainingSecNow / 60));
     const exactElapsedMs = pausedAtElapsedMsRef.current;
     setBusy(true);
@@ -5147,7 +5182,9 @@ function BraceletControlScreen({
 
 
   /* ── Derived state ─────────────────────────────────────────────── */
-  const sessionActive = !endedLocally && (status?.sessionActive ?? false);
+  const sessionActive = USE_SIMULATED_BLE
+    ? monitorSnap.active && !monitorSnap.paused
+    : !endedLocally && (status?.sessionActive ?? false);
   /* Geen sessie meer → niets om "geminimaliseerd" te houden. */
   useEffect(() => {
     if (!sessionActive && !isPaused) setMinimized(false);
@@ -5315,7 +5352,11 @@ function BraceletControlScreen({
 
   /* Active mode shown in session view — uses status.currentMode (what the
      bracelet is actually running), niet selectedMode (user's last UI pick). */
-  const activeMeta = status ? getModeMeta(status.currentMode) : meta;
+  const activeMeta = monitorSnap.active
+    ? getModeMeta(monitorSnap.mode as BraceletMode)
+    : status
+      ? getModeMeta(status.currentMode)
+      : meta;
   const presets = useMemo(() => durationPresets(selectedMode), [selectedMode]);
 
   /* ── Render branches ────────────────────────────────────────────────

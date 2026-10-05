@@ -46,7 +46,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -76,7 +75,24 @@ const INTRO_ZOOM = 1;
    titel en knop staan daaronder op het donker, niet over de foto. */
 const BG_ASPECT = 1024 / 1536; // staand 2:3 — past precies in het fotovlak hieronder
 
+/* Operator, 5 okt 2026 ("de foto moet groter, full screen"): schermvullend
+   op volle hoogte. De 2:3-foto is dan breder dan het scherm; de uitsnede
+   begint op 19% van de breedte, zodat beide gezichten (man links, vrouw
+   rechts) in beeld blijven — wat wegvalt is been en betonrand. */
+const PHOTO_FOCUS_LEFT = 0.145;
+/* Vervolg ("foto meer naar boven, pols moet in beeld"): de polsen (horloge
+   en armband) zitten op ~80% van de fotohoogte, achter de tekst. 17%
+   hoger: wat bovenaan wegvalt is lucht, de polsen komen boven de titel. */
+const PHOTO_SHIFT_UP = 0.17;
+
+function photoFrame(w: number, h: number) {
+  const width = h * BG_ASPECT;
+  const left = Math.min(0, Math.max(w - width, -width * PHOTO_FOCUS_LEFT));
+  return { position: 'absolute' as const, top: -h * PHOTO_SHIFT_UP, left, height: h, width };
+}
+
 function StateControlIntro({ onDone }: { onDone: () => void }) {
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const ctaScale = useSharedValue(1);
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],
@@ -121,17 +137,29 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0a0a0a' }]}>
-      <View style={s.introPhotoWrap}>
+      <View
+        style={StyleSheet.absoluteFill}
+        onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      >
         <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
-          <Image source={{ uri: BG_IMG }} style={s.introPhoto} resizeMode="cover" />
+          {box && (
+            <Image
+              source={{ uri: BG_IMG }}
+              style={photoFrame(box.w, box.h)}
+              resizeMode="cover"
+            />
+          )}
         </Animated.View>
         <LinearGradient
-          colors={['#0a0a0a', 'rgba(10,10,10,0)', 'rgba(10,10,10,0)', '#0a0a0a']}
-          locations={[0, 0.12, 0.7, 1]}
+          colors={['rgba(10,10,10,0.35)', 'rgba(10,10,10,0)', 'rgba(10,10,10,0)', 'rgba(10,10,10,0.85)', '#0a0a0a']}
+          locations={[0, 0.12, 0.55, 0.74, 0.82]}
           style={StyleSheet.absoluteFill}
         />
       </View>
-      <SafeAreaView style={s.introWrap} edges={['bottom']}>
+      {/* Zelfde plaatsing als het Audio Library-intro ((tabs)/index.tsx
+          `introTextWrap`): 34 boven de tabbalk, géén extra onderste
+          veilige zone — die zit al in de tabbalk (operator, 5 okt 2026). */}
+      <View style={s.introWrap}>
         <View style={s.stackTitle}>
           <Animated.Text style={[s.introEyebrow, eyebrowStyle]}>STATE CONTROL</Animated.Text>
           <Animated.Text style={[s.introTitle, titleStyle]}>Guided by touch,{'\n'}on your wrist.</Animated.Text>
@@ -162,7 +190,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
             </Animated.View>
           </Pressable>
         </Animated.View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -230,27 +258,6 @@ export default function BraceletScreen() {
 }
 
 const s = StyleSheet.create({
-  /* Vervolg ("te klein, personen in groot formaat"): de foto vult de
-     bovenste 72% van het scherm op volle hoogte. Breder dan het scherm,
-     dus rechts uitgelijnd: wat wegvalt is de linkerrand (arm/been van de
-     man), de vrouw rechts blijft volledig in beeld. */
-  /* Operator ("kan de foto zakken?"): niet tegen de statusbalk aan —
-     bovenaan zacht uitlopend in het donker, net als onderaan. */
-  introPhotoWrap: {
-    position: 'absolute',
-    top: '7%',
-    left: 0,
-    right: 0,
-    height: '70%',
-    overflow: 'hidden',
-  },
-  introPhoto: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    height: '100%',
-    aspectRatio: BG_ASPECT,
-  },
   introWrap: {
     flex: 1,
     alignItems: 'center',
