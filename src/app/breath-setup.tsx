@@ -2820,9 +2820,6 @@ export default function BreathSetupScreen() {
                 <Text style={[s.tileName, !on && s.tileNameOff]} numberOfLines={1}>
                   {techShortLabel(t)}
                 </Text>
-                <Text style={s.tilePattern} numberOfLines={1}>
-                  {t.phases.map((ph) => ph.secs).join(' · ')}
-                </Text>
               </Pressable>
             );
           })}
@@ -4119,9 +4116,12 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     minWidth: 0,
     borderRadius: 16,
     overflow: 'hidden',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    gap: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    gap: 8,
+    /* Operator, 5 okt 2026: icoon + naam, gecentreerd; het ritme staat in
+       de uitleg onder de i, niet op de tegel. */
+    alignItems: 'center',
   },
   tileName: {
     fontFamily: BrandFonts.semibold,
