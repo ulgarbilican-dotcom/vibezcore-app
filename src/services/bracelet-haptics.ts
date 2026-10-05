@@ -65,6 +65,11 @@ const ASSUMED_RESTING_BPM = 75;
 const SESSION_HOLD_SECONDS = 10;
 const PREVIEW_HOLD_SECONDS = 2;
 const PREVIEW_RAMP_SECONDS = 8;
+/** "Feel it" is een VOORPROEF, geen gratis sessie (operator, 5 okt 2026:
+ *  "als de cyclus blijft draaien mag niet, anders is de sessie gratis").
+ *  15 s = basislijn + glijden + een paar tikken op het eindtempo, dan het
+ *  eind-signaal. */
+export const PREVIEW_MAX_SECONDS = 15;
 const RESUME_WINDOW_SECONDS = 120;
 const LUB_DUB_FRACTION = 0.3;
 const LUB_DUB_MAX_MS = 350;
@@ -308,7 +313,7 @@ function play(
       canPlayNativeWaveform(),
     );
     const anchorWallMs = Date.now();
-    if (totalSec !== undefined) {
+    if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. */
       startNativeSession(
         timings,
@@ -371,6 +376,21 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
     mode,
     { holdSec: PREVIEW_HOLD_SECONDS, rampSec: SPECS[mode].rampSec > 0 ? PREVIEW_RAMP_SECONDS : 0 },
     0,
+    PREVIEW_MAX_SECONDS,
+  );
+  /* Eindig: na de voorproef stopt ook het beeld (en op toestellen zonder
+     native module de JS-tikken). De native curve is zelf al eindig en
+     speelt nog het eind-signaal uit. */
+  const myGeneration = generation;
+  pendingTimeouts.push(
+    setTimeout(() => {
+      if (myGeneration !== generation) return;
+      generation += 1;
+      clearPending();
+      if (!hasNativeWaveform()) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    }, PREVIEW_MAX_SECONDS * 1000),
   );
 }
 

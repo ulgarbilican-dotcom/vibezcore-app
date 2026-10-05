@@ -30,6 +30,7 @@ import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import {
+  PREVIEW_MAX_SECONDS,
   playModePreviewHaptic,
   stopModePreviewHaptic,
   subscribeHapticPulse,
@@ -1312,9 +1313,19 @@ function ModeDetailModal({
     },
     [],
   );
+  /* Voorproef is eindig (PREVIEW_MAX_SECONDS) — knop springt daarna zelf
+     terug naar "Feel it". */
+  const feelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (feelTimer.current) clearTimeout(feelTimer.current);
+    },
+    [],
+  );
   const toggleFeel = () => {
     if (sessionRunning) return;
     Haptics.selectionAsync();
+    if (feelTimer.current) clearTimeout(feelTimer.current);
     if (feeling) {
       stopModePreviewHaptic();
       feelingRef.current = false;
@@ -1323,6 +1334,10 @@ function ModeDetailModal({
       playModePreviewHaptic(mode);
       feelingRef.current = true;
       setFeeling(true);
+      feelTimer.current = setTimeout(() => {
+        feelingRef.current = false;
+        setFeeling(false);
+      }, PREVIEW_MAX_SECONDS * 1000 + 1200);
     }
   };
   const handleClose = () => {
@@ -1423,18 +1438,11 @@ function ModeDetailModal({
             ))}
           </View>
 
-          {/* Optional breath layer — verhuisd naar onderaan (iter 9l):
-              bracelet is hoofd-ervaring, breath is een aparte laag.
-              Operator, 16 september 2026 ("optional layer in kaart
-              zetten?"): eigen kaartje i.p.v. losse platte tekst — zet 'm
-              visueel apart als secundaire, optionele toevoeging. */}
-          <Text style={s.modeModalSectionLbl}>Optional breath layer</Text>
-          <View style={s.modeModalProtocolCard}>
-            <Text style={[s.modeModalProtocol, { color: meta.color }]}>
-              {desc.protocol}
-            </Text>
-            <Text style={s.modeModalProtocolHint}>{desc.protocolHow}</Text>
-          </View>
+          {/* Operator, 5 okt 2026: "Optional breath layer" weg — State
+             Control belooft "je hoeft niets te doen"; een ademoefening met
+             tellen eronder verwatert die belofte, en is hier niet eens te
+             starten. Breathwork woont in de Breath-tab. (`desc.protocol` /
+             `protocolHow` blijven bestaan in MODE_DESCRIPTIONS.) */}
 
           {/* Operator, 16 september 2026 ("in de popup choose cta moet
              weg"): geen aparte Choose-knop meer — modus kiezen gebeurt
