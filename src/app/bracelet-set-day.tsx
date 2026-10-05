@@ -556,7 +556,10 @@ export default function BraceletSetDayScreen() {
       >
         {/* Operator, 30 september 2026 ("tekst is te lang, lijkt een info
            sectie, hoe doet apple dit"): 1 korte regel i.p.v. een alinea. */}
-        <Text style={s.lead}>Choose your states, then how often.</Text>
+        {/* Operator, 5 okt 2026 ("choose your states then how often is
+            raar"): zegt meteen wat je doet — een tik voegt een sessie toe.
+            Hoeveel per dag staat al in de regel onder de kaarten. */}
+        <Text style={s.lead}>Tap a state to add a session to your day.</Text>
 
         {/* Operator, 30 september 2026 ("5 verikante kaarten transparant
            blur tekst en iconen links"): echte `BlurView`-matglas-tegels
