@@ -1655,7 +1655,14 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: '#ffffff',
   },
-  infoTechLevelPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+  /* Vaste breedte: Beginner, Intermediate en Advanced even groot
+     (operator, 5 okt 2026) — breed genoeg voor "Intermediate". */
+  infoTechLevelPill: {
+    width: 92,
+    alignItems: 'center',
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
   infoTechLevel: {
     fontFamily: BrandFonts.semibold,
     fontSize: 10.5,
