@@ -21,6 +21,7 @@
    toont het resultaat, wheel eronder bedient de waarde.
    ───────────────────────────────────────────────────────────────────────── */
 
+import LiquidWave from '@/components/LiquidWave';
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -97,119 +98,17 @@ function ModeColorRing({ color, size }: { color: string; size: number }) {
 }
 
 function WaveFillCircle({ fraction, color, size }: { fraction: number; color: string; size: number }) {
-  const clamped = Math.max(0.08, Math.min(1, fraction));
-
-  const levelAnim = useRef(new Animated.Value(clamped)).current;
-  const [levelVal, setLevelVal] = useState(clamped);
-  useEffect(() => {
-    const id = levelAnim.addListener(({ value }) => setLevelVal(value));
-    return () => levelAnim.removeListener(id);
-  }, [levelAnim]);
-  useEffect(() => {
-    Animated.timing(levelAnim, {
-      toValue: clamped,
-      duration: 160,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: false,
-    }).start();
-  }, [clamped, levelAnim]);
-
-  const waterTopY = size * (1 - levelVal);
-
-  const wave1Phase = useRef(new Animated.Value(0)).current;
-  const wave2Phase = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    let cancelled = false;
-    let currentLoop1: Animated.CompositeAnimation | null = null;
-    let currentLoop2: Animated.CompositeAnimation | null = null;
-    const runLoop1 = () => {
-      wave1Phase.setValue(0);
-      currentLoop1 = Animated.timing(wave1Phase, {
-        toValue: 1,
-        duration: 6000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      });
-      currentLoop1.start(() => {
-        if (!cancelled) runLoop1();
-      });
-    };
-    const runLoop2 = () => {
-      wave2Phase.setValue(0);
-      currentLoop2 = Animated.timing(wave2Phase, {
-        toValue: 1,
-        duration: 9000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      });
-      currentLoop2.start(() => {
-        if (!cancelled) runLoop2();
-      });
-    };
-    runLoop1();
-    runLoop2();
-    return () => {
-      cancelled = true;
-      currentLoop1?.stop();
-      currentLoop2?.stop();
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  const buildWavePath = (phase: number, amp: number, periods: number, topOffset = 0): string => {
-    const steps = 24;
-    const baseline = waterTopY + topOffset;
-    const firstY = baseline + Math.sin(phase * Math.PI * 2) * amp;
-    let d = `M 0 ${firstY.toFixed(2)}`;
-    for (let i = 1; i <= steps; i++) {
-      const x = (i / steps) * size;
-      const y =
-        baseline + Math.sin((i / steps) * Math.PI * 2 * periods + phase * Math.PI * 2) * amp;
-      d += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
-    }
-    d += ` L ${size} ${size} L 0 ${size} Z`;
-    return d;
-  };
-
-  const THROTTLE_MS = 66;
-  const [phase1Val, setPhase1Val] = useState(0);
-  const [phase2Val, setPhase2Val] = useState(0);
-  useEffect(() => {
-    let last1 = 0;
-    let last2 = 0;
-    const id1 = wave1Phase.addListener(({ value }) => {
-      const now = Date.now();
-      if (now - last1 < THROTTLE_MS) return;
-      last1 = now;
-      setPhase1Val(value);
-    });
-    const id2 = wave2Phase.addListener(({ value }) => {
-      const now = Date.now();
-      if (now - last2 < THROTTLE_MS) return;
-      last2 = now;
-      setPhase2Val(value);
-    });
-    return () => {
-      wave1Phase.removeListener(id1);
-      wave2Phase.removeListener(id2);
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  const path1 = buildWavePath(phase1Val, 2, 2, 0);
-  const path2 = buildWavePath(phase2Val, 0.8, 3, 6);
-  const clipId = useRef(`durationWaveClip-${Math.random().toString(36).slice(2)}`).current;
-
+  /* Operator, 6 okt 2026 ("wave overal hetzelfde, supersmooth"): dezelfde
+     golf als de breath-setup (components/LiquidWave, UI-thread) i.p.v. een
+     eigen JS-golf die ±15× per seconde opnieuw getekend werd. */
   return (
-    <Svg width={size} height={size}>
-      <Defs>
-        <ClipPath id={clipId}>
-          <Circle cx={size / 2} cy={size / 2} r={size / 2} />
-        </ClipPath>
-      </Defs>
-      <G clipPath={`url(#${clipId})`}>
-        <Path d={path2} fill={color} opacity={0.22} />
-        <Path d={path1} fill={color} opacity={0.35} />
-      </G>
-    </Svg>
+    <LiquidWave
+      size={size}
+      level={Math.max(0.08, Math.min(1, fraction))}
+      color={color}
+      backOpacity={0.22}
+      frontOpacity={0.35}
+    />
   );
 }
 

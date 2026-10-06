@@ -156,6 +156,7 @@ import ReanimatedAnimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
+import LiquidWave from '@/components/LiquidWave';
 import VibezGlass from '@/components/VibezGlass';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
@@ -1932,187 +1933,42 @@ function DrainingCircle({
   size: number;
 }) {
   const clamped = Math.max(0, Math.min(1, progress));
-  const waterTopY = size * clamped;
-
-  const wave1Phase = useRef(new Animated.Value(0)).current;
-  const wave2Phase = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    /* Operator, 16 september 2026 ("wateranimatie professioneler"): iets
-       trager (6000/9000 → 7000/11000) voor een kalmere, minder
-       "kloppende" beweging — past bij het rustige, premium gevoel dat
-       gevraagd werd.
-       Operator, 27 september 2026 ("flashen op andere plaats terwijl de
-       lijn blijft ronddraaien"): zelfde `Animated.loop`-valkuil als
-       SlowAmbientPulse hierboven — een onderbreking (JS-thread-suspend
-       tijdens app-backgrounding, hier zelfs waarschijnlijker want
-       `useNativeDriver:false` draait via de JS-bridge, die tijdens
-       backgrounding volledig pauzeert) laat de timing met
-       `finished:false` eindigen, en `Animated.loop` herstart dan NOOIT
-       meer — deze golf-loop viel dus stil terwijl SlowAmbientPulse's
-       (al herstelde, native-driven) rotatie gewoon doortikte. Zelfde
-       fix: zelf-kettende animaties die onvoorwaardelijk herstarten, met
-       een ref naar de actief lopende animatie zodat cleanup 'm ECHT
-       stopt (niet enkel toekomstige herstarts blokkeert). */
-    let cancelled = false;
-    let currentLoop1: Animated.CompositeAnimation | null = null;
-    let currentLoop2: Animated.CompositeAnimation | null = null;
-    const runLoop1 = () => {
-      wave1Phase.setValue(0);
-      currentLoop1 = Animated.timing(wave1Phase, {
-        toValue: 1,
-        duration: 7000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      });
-      currentLoop1.start(() => {
-        if (!cancelled) runLoop1();
-      });
-    };
-    const runLoop2 = () => {
-      wave2Phase.setValue(0);
-      currentLoop2 = Animated.timing(wave2Phase, {
-        toValue: 1,
-        duration: 11000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      });
-      currentLoop2.start(() => {
-        if (!cancelled) runLoop2();
-      });
-    };
-    runLoop1();
-    runLoop2();
-    return () => {
-      cancelled = true;
-      currentLoop1?.stop();
-      currentLoop2?.stop();
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  /* Operator, 16 september 2026 ("wateranimatie professioneler"): de
-     vorige versie tekende de golf als polyline (rechte segmenten tussen
-     24 sample-punten) over een an-zich-al-vloeiende sinus-curve — dat
-     gaf zichtbare facetten/knikken, vooral bij de toppen. Nu: dubbel
-     zoveel samples + quadratic-bezier-door-middelpunten (klassieke
-     "smooth line through points"-truc, elk punt wordt het controlepunt
-     van een curve naar het midden met het volgende punt) voor een echt
-     ronde golf. Geeft ook een losse surfaceD terug voor een glazen
-     highlight-lijn op het wateroppervlak. */
-  const buildWavePath = (
-    phase: number,
-    amp: number,
-    periods: number,
-    topOffset: number = 0,
-  ): { fillD: string; surfaceD: string } => {
-    const steps = 48;
-    const baseline = waterTopY + topOffset;
-    const pts: { x: number; y: number }[] = [];
-    for (let i = 0; i <= steps; i++) {
-      const x = (i / steps) * size;
-      const y =
-        baseline +
-        Math.sin((i / steps) * Math.PI * 2 * periods + phase * Math.PI * 2) *
-          amp;
-      pts.push({ x, y });
-    }
-    let surfaceD = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
-    for (let i = 1; i < pts.length; i++) {
-      const mx = (pts[i - 1].x + pts[i].x) / 2;
-      const my = (pts[i - 1].y + pts[i].y) / 2;
-      surfaceD += ` Q ${pts[i - 1].x.toFixed(2)} ${pts[i - 1].y.toFixed(2)} ${mx.toFixed(2)} ${my.toFixed(2)}`;
-    }
-    const last = pts[pts.length - 1];
-    surfaceD += ` Q ${last.x.toFixed(2)} ${last.y.toFixed(2)} ${size} ${last.y.toFixed(2)}`;
-    const fillD = `${surfaceD} L ${size} ${size} L 0 ${size} Z`;
-    return { fillD, surfaceD };
-  };
-
-  /* ~15fps throttle — een trage waterrimpel heeft geen 60fps nodig. */
-  const THROTTLE_MS = 66;
-  const [phase1Val, setPhase1Val] = useState(0);
-  const [phase2Val, setPhase2Val] = useState(0);
-  useEffect(() => {
-    let last1 = 0;
-    let last2 = 0;
-    const id1 = wave1Phase.addListener(({ value }) => {
-      const now = Date.now();
-      if (now - last1 < THROTTLE_MS) return;
-      last1 = now;
-      setPhase1Val(value);
-    });
-    const id2 = wave2Phase.addListener(({ value }) => {
-      const now = Date.now();
-      if (now - last2 < THROTTLE_MS) return;
-      last2 = now;
-      setPhase2Val(value);
-    });
-    return () => {
-      wave1Phase.removeListener(id1);
-      wave2Phase.removeListener(id2);
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  /* Amplitude iets kleiner dan voorheen (3/1 → 2.2/0.8) — subtieler,
-     leest rustiger/premium i.p.v. druk kabbelend. */
-  /* Operator, 16 september 2026 ("golven moeten wel duidelijk"): amp
-     terug omhoog (2.2/0.8 → 4/1.8) — te subtiel getemperd, nu weer
-     duidelijk zichtbaar bewegend water i.p.v. bijna vlak. */
-  const { fillD: path2 } = buildWavePath(phase2Val, 1.8, 3, 6);
-  const { fillD: path1, surfaceD: surface1 } = buildWavePath(phase1Val, 4, 2, 0);
-
-  /* Operator, 16 september 2026: subtiel kleurverloop (lichter boven,
-     dieper onder) i.p.v. platte vlakke kleur — geeft het water een
-     beetje diepte/glans i.p.v. een egaal geverfd vlak. */
-  const gradId = `drainGrad-${color.replace('#', '')}`;
-
+  /* Operator, 6 okt 2026 ("wave overal hetzelfde, supersmooth, mag niet
+     onderbroken worden of blijven hangen"): dezelfde golf als de
+     breath-setup (components/LiquidWave) — op de UI-thread, het peil
+     glijdt elke seconde vloeiend verder i.p.v. een JS-golf die ±15× per
+     seconde opnieuw getekend werd en stokte zodra JavaScript bezig was.
+     Wat bleef: de lichte basistint over de hele cirkel (27 sept, "moet
+     cirkel volledig vullen bij zakken") en de outline (27 sept). */
   return (
-    <Svg width={size} height={size} style={s.drainOuter}>
-      <Defs>
-        <ClipPath id="drainClip">
-          <Circle cx={size / 2} cy={size / 2} r={size / 2} />
-        </ClipPath>
-        <SvgLinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={shadeHex(color, 0.16)} />
-          <Stop offset="1" stopColor={shadeHex(color, -0.1)} />
-        </SvgLinearGradient>
-      </Defs>
-      <G clipPath="url(#drainClip)">
-        {/* Operator, 27 september 2026 ("de lichte doorschijnende
-           binnenkleur bij zakken water moet cirkel volledig vullen"):
-           basisvulling over de HELE cirkel, ONDER de golven — zodra het
-           water zakt, was het leeggelopen bovenstuk gewoon de kale
-           achtergrond; nu blijft dat deel een lichte, doorschijnende
-           tint van de modus-kleur i.p.v. leeg/blanco te ogen. */}
-        <Rect x={0} y={0} width={size} height={size} fill={color} opacity={0.14} />
-        <Path d={path2} fill={color} opacity={0.35} />
-        <Path d={path1} fill={`url(#${gradId})`} opacity={0.88} />
-        {/* Glazen highlight-lijn op het wateroppervlak — een dunne,
-           lichte streep die het idee van een glanzend vloeistof-
-           oppervlak geeft i.p.v. een matte vlakke vulling. */}
-        <Path
-          d={surface1}
-          stroke="#ffffff"
-          strokeWidth={1.5}
-          strokeOpacity={0.35}
+    <View style={[s.drainOuter, { width: size, height: size, borderRadius: size / 2 }]}>
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { borderRadius: size / 2, backgroundColor: color, opacity: 0.14 },
+        ]}
+      />
+      <LiquidWave
+        size={size}
+        level={1 - clamped}
+        color={color}
+        backOpacity={0.35}
+        frontOpacity={0.88}
+        motion="drain"
+      />
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={size / 2 - 1}
+          stroke={color}
+          strokeWidth={2}
+          strokeOpacity={0.7}
           fill="none"
         />
-      </G>
-      {/* Operator, 27 september 2026 ("bracelet active pagina moet bij
-         leeglopen een outline hebben"): zonder eigen rand had de cirkel
-         geen zichtbare grens meer zodra de vulling bijna leeg was — enkel
-         de golf zelf tekende de vorm. Dunne modus-kleur-stroke op de
-         buitenrand, buiten de clipPath (dus altijd zichtbaar, ook bij een
-         (bijna) lege vulling), geeft de cirkel een constante outline. */}
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={size / 2 - 1}
-        stroke={color}
-        strokeWidth={2}
-        strokeOpacity={0.7}
-        fill="none"
-      />
-    </Svg>
+      </Svg>
+    </View>
   );
 }
 
@@ -2244,189 +2100,24 @@ function WaveFillCircle({
   fillOnMount,
 }: {
   fillOnMount?: boolean;
-  /** 0..1 — hoe vol, 0 = leeg (min-duur), 1 = vol (max-duur) */
+  /** 0..1 — hoe vol (aandeel van de langste duur). */
   fraction: number;
   color: string;
   size: number;
 }) {
-  /* Operator, 16 september 2026 ("bij min moet ook een beetje golven
-     zichtbaar zijn"): ondergrens van 8% i.p.v. een volledig platte,
-     onzichtbare vulling bij de minimale duur. */
-  const clamped = Math.max(0.08, Math.min(1, fraction));
-
-  /* Operator, 16 september 2026 ("animatie van vullen moet mooier en
-     rustiger flowen"): het waterNIVEAU zelf sprong voorheen instant naar
-     de nieuwe waarde bij elke slider-drag — enkel de rimpel golfde. Nu
-     eest het niveau zelf naar de nieuwe fractie met een zachte easing
-     (~550ms), terwijl de rimpel-animatie daarbovenop blijft lopen. */
-  /* Operator, 5 okt 2026 ("bij verschuiving alles leeg en vullen bij
-     aankomst"): bij een modus-wissel komt de cirkel leeg binnen en vult
-     hij zich pas als hij op zijn plaats staat — zoals een nieuwe
-     wijzerplaat, nooit water dat van de ene modus naar de andere klotst. */
-  const EMPTY_LEVEL = 0.02;
-  const levelAnim = useRef(new Animated.Value(fillOnMount ? EMPTY_LEVEL : clamped)).current;
-  const [levelVal, setLevelVal] = useState(fillOnMount ? EMPTY_LEVEL : clamped);
-  const mountedFillRef = useRef(!fillOnMount);
-  useEffect(() => {
-    if (mountedFillRef.current) return;
-    mountedFillRef.current = true;
-    Animated.timing(levelAnim, {
-      toValue: clamped,
-      duration: 700,
-      delay: 260,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useEffect(() => {
-    const id = levelAnim.addListener(({ value }) => setLevelVal(value));
-    return () => levelAnim.removeListener(id);
-  }, [levelAnim]);
-  const firstLevelRunRef = useRef(true);
-  useEffect(() => {
-    if (firstLevelRunRef.current) {
-      firstLevelRunRef.current = false;
-      return;
-    }
-    /* Operator, 16 september 2026: 550→900→1500ms, daarna "golf reageert
-       te traag op regelaar, moet dat niet gelijk gaan?" — het echte
-       probleem was niet de duur an sich, maar dat élke tussenwaarde
-       tijdens het slepen een NIEUWE 1500ms-tween start vanaf de nog-
-       animerende positie, wat zich opstapelt tot zichtbare vertraging
-       achter de duim aan. Terug naar kort (160ms) zodat het bij
-       continu slepen als "gelijk" aanvoelt, met net genoeg easing om
-       een harde teleport bij een preset-tik te voorkomen. */
-    Animated.timing(levelAnim, {
-      toValue: clamped,
-      duration: 160,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: false,
-    }).start();
-  }, [clamped, levelAnim]);
-
-  const waterTopY = size * (1 - levelVal);
-
-  const wave1Phase = useRef(new Animated.Value(0)).current;
-  const wave2Phase = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    /* Operator, zelfde dag: trager + kleinere amplitude dan voorheen
-       (4000/6200ms → 6000/9000ms, amp 3/1 → 2/0.8) voor een kalmere,
-       minder "kloppende" golfbeweging.
-       Operator, 27 september 2026: zelfde `Animated.loop`-fix als
-       DrainingCircle/SlowAmbientPulse — onvoorwaardelijk zelf-herstarten
-       + de actief lopende animatie écht stoppen bij cleanup, i.p.v.
-       `Animated.loop` die na een onderbreking (bv. app-backgrounding)
-       stilzwijgend nooit meer herstart. */
-    let cancelled = false;
-    let currentLoop1: Animated.CompositeAnimation | null = null;
-    let currentLoop2: Animated.CompositeAnimation | null = null;
-    const runLoop1 = () => {
-      wave1Phase.setValue(0);
-      currentLoop1 = Animated.timing(wave1Phase, {
-        toValue: 1,
-        duration: 6000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      });
-      currentLoop1.start(() => {
-        if (!cancelled) runLoop1();
-      });
-    };
-    const runLoop2 = () => {
-      wave2Phase.setValue(0);
-      currentLoop2 = Animated.timing(wave2Phase, {
-        toValue: 1,
-        duration: 9000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      });
-      currentLoop2.start(() => {
-        if (!cancelled) runLoop2();
-      });
-    };
-    runLoop1();
-    runLoop2();
-    return () => {
-      cancelled = true;
-      currentLoop1?.stop();
-      currentLoop2?.stop();
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  const buildWavePath = (
-    phase: number,
-    amp: number,
-    periods: number,
-    topOffset: number = 0,
-  ): string => {
-    const steps = 24;
-    const baseline = waterTopY + topOffset;
-    const firstY = baseline + Math.sin(phase * Math.PI * 2) * amp;
-    let d = `M 0 ${firstY.toFixed(2)}`;
-    for (let i = 1; i <= steps; i++) {
-      const x = (i / steps) * size;
-      const y =
-        baseline +
-        Math.sin((i / steps) * Math.PI * 2 * periods + phase * Math.PI * 2) *
-          amp;
-      d += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
-    }
-    d += ` L ${size} ${size} L 0 ${size} Z`;
-    return d;
-  };
-
-  /* Zelfde throttle als voorheen (~15fps i.p.v. elke frame) — een trage
-     waterrimpel heeft geen 60fps nodig, en dit scheelt merkbaar op
-     goedkopere toestellen tijdens de hele idle-render. */
-  const THROTTLE_MS = 66;
-  const [phase1Val, setPhase1Val] = useState(0);
-  const [phase2Val, setPhase2Val] = useState(0);
-  useEffect(() => {
-    let last1 = 0;
-    let last2 = 0;
-    const id1 = wave1Phase.addListener(({ value }) => {
-      const now = Date.now();
-      if (now - last1 < THROTTLE_MS) return;
-      last1 = now;
-      setPhase1Val(value);
-    });
-    const id2 = wave2Phase.addListener(({ value }) => {
-      const now = Date.now();
-      if (now - last2 < THROTTLE_MS) return;
-      last2 = now;
-      setPhase2Val(value);
-    });
-    return () => {
-      wave1Phase.removeListener(id1);
-      wave2Phase.removeListener(id2);
-    };
-  }, [wave1Phase, wave2Phase]);
-
-  const path1 = buildWavePath(phase1Val, 2, 2, 0);
-  const path2 = buildWavePath(phase2Val, 0.8, 3, 6);
-
+  /* Operator, 6 okt 2026 ("wave overal hetzelfde, supersmooth, mag niet
+     haperen"): dezelfde golf als de breath-setup (components/LiquidWave,
+     UI-thread). Was hier een eigen JS-golf die ±15× per seconde opnieuw
+     getekend werd. Kleursterkte blijft 22/35% zoals op 27 sept gekozen. */
   return (
-    <Svg width={size} height={size}>
-      <Defs>
-        <ClipPath id="durationWaveClip">
-          <Circle cx={size / 2} cy={size / 2} r={size / 2} />
-        </ClipPath>
-      </Defs>
-      {/* Operator, 16 september 2026 ("groen is te flauw, dat is niet
-         whatsappgroen toch?"): de hex-waarde was al correct (#25D366),
-         maar bij 40/70% dekking over de zwarte achtergrond kleurde de
-         golf een gedoofde versie ervan. Voller (60/92%) leest dichter
-         bij de pure accentkleur.
-         Operator, 27 september 2026 ("kleur in de ring moet transparant
-         gekleurd, meer in breathwork-stijl"): 60/92% oogde solide i.p.v.
-         een lichte tint — terug naar een transparante golf-vulling
-         (22/35%), dichter bij breath-setup's wave-opacity. */}
-      <G clipPath="url(#durationWaveClip)">
-        <Path d={path2} fill={color} opacity={0.22} />
-        <Path d={path1} fill={color} opacity={0.35} />
-      </G>
-    </Svg>
+    <LiquidWave
+      size={size}
+      level={Math.max(0.08, Math.min(1, fraction))}
+      color={color}
+      backOpacity={0.22}
+      frontOpacity={0.35}
+      fillOnMount={fillOnMount}
+    />
   );
 }
 
