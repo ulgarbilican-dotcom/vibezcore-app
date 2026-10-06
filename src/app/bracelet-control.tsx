@@ -4182,8 +4182,9 @@ function IdleScreen({
            de CTA" — de link naar /smart-bead-bracelet is hier weg; de
            bracelet-pagina blijft bereikbaar via de rest van de app. */}
 
-        {/* Sim demo controls — alleen in sim-mode, helemaal onderaan */}
-        {__DEV__ && sim && <SimDemoBar sim={sim} />}
+        {/* Sim demo-balk weg van dit scherm (operator, 6 okt 2026: "wil niet
+            meer zien") — ook in de testversie het scherm zoals gebruikers
+            het krijgen. */}
       </View>
 
       {/* CompletionModal — toont na natural completion (timer hits 0).
