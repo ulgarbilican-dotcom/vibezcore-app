@@ -41,6 +41,7 @@ import { onWatchAction as onAppleWatchAction } from '../../modules/watch-breath'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { endLiveSession, showLiveSession } from '../../modules/live-activity';
 import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
@@ -108,6 +109,28 @@ async function cancelIosDone(): Promise<void> {
   try {
     await Notifications.cancelScheduledNotificationAsync(IOS_DONE_ID);
   } catch {}
+}
+
+/* iPhone: de lopende sessie als Live Activity op het vergrendelscherm en in
+   het Dynamic Island (6 okt 2026) — de tegenhanger van de media-melding op
+   Android. Het systeem telt zelf af; we sturen enkel start/pauze/hervatten/
+   stop. Sleep krijgt het lichte teal, zoals de ring in de app. */
+function syncLiveActivity(): void {
+  if (Platform.OS !== 'ios') return;
+  if (!state) {
+    endLiveSession();
+    return;
+  }
+  const meta = getModeMeta(state.mode);
+  showLiveSession({
+    kind: 'state',
+    title: meta.name,
+    subtitle: 'State Control',
+    colorHex: meta.color.toUpperCase() === '#00A3A3' ? '#4AF0D4' : meta.color,
+    remainingSec: currentRemainingSec(),
+    totalSec: state.totalSec,
+    paused: state.paused,
+  });
 }
 
 function syncIosKeepAwake(): void {
@@ -556,6 +579,7 @@ export function startBraceletSessionMonitor(opts: {
    herstartte de curve. */
 function syncHaptics(): void {
   syncIosKeepAwake();
+  syncLiveActivity();
   void scheduleIosDone();
   if (!state) {
     stopModePreviewHaptic();
@@ -605,6 +629,7 @@ export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): 
   if (opts?.natural) {
     releaseSessionHapticAtNaturalEnd();
     syncIosKeepAwake();
+    syncLiveActivity();
   } else {
     syncHaptics();
     void cancelIosDone();

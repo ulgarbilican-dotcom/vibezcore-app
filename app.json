@@ -13,6 +13,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSSupportsLiveActivities": true,
         "UIBackgroundModes": [
           "audio"
         ]

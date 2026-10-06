@@ -61,6 +61,7 @@ import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import VibezGlass from '@/components/VibezGlass';
 import { goToTab } from '@/utils/state-control-ui';
 import { useKeepAwake } from 'expo-keep-awake';
+import { endLiveSession, pauseLiveSession, resumeLiveSession, showLiveSession } from '../../modules/live-activity';
 import {
   ensureAudioModeSet,
   startSessionKeepAlive,
@@ -1375,6 +1376,7 @@ export function BreathSession() {
        van een verslag van wat er gebeurd is. Onder de tien seconden slaan we
        niets op: dat is een vergissing, geen sessie. */
     stopSessionKeepAlive();
+    endLiveSession();
     /* De EERLIJKE duur: de wandklok, niet de getikte seconden. Wordt de app
        ooit toch even bevroren (agressieve batterijstand), dan lopen de tikken
        achter op de werkelijkheid — de historiek hoort de echte tijd te
@@ -1577,6 +1579,7 @@ export function BreathSession() {
     cancelAnimation(arc);
     pausedAtWallRef.current = Date.now();
     setPaused(true);
+    pauseLiveSession();
   }, [arc, breath, clearTimers]);
 
   const resumeSession = useCallback(() => {
@@ -1587,6 +1590,7 @@ export function BreathSession() {
       pausedAtWallRef.current = 0;
     }
     setPaused(false);
+    resumeLiveSession();
     /* Operator, 24 september 2026 (10de melding, de echte oorzaak): bij de
        ALLEREERSTE hervatting (na `start(preview, startPaused=true)`) is de
        huidige fase nog nooit gesproken — `runPhase()` hieronder kondigt
@@ -1912,6 +1916,19 @@ export function BreathSession() {
        heeft nog geen eigen achtergrond-cyclus (geen wake lock-equivalent
        hier), dus blijft op dit anker leunen. */
     if (Platform.OS !== 'android') {
+      /* iPhone: de ademsessie als Live Activity op het vergrendelscherm en in
+         het Dynamic Island (6 okt 2026). Begint gepauzeerd als de sessie op
+         Play wacht; hervatten/pauzeren werken hem bij. */
+      const liveTotal = Math.round(effectiveRoundsRef.current * cycleRef.current);
+      showLiveSession({
+        kind: 'breath',
+        title: st.eyebrow.charAt(0) + st.eyebrow.slice(1).toLowerCase().replace(/ (\w)/g, (m) => m.toUpperCase()),
+        subtitle: tech.name,
+        colorHex: st.key === 'rest' ? '#4AF0D4' : st.accent,
+        remainingSec: liveTotal,
+        totalSec: liveTotal,
+        paused: startPaused,
+      });
       try {
         startSessionKeepAlive({ title: st.eyebrow, subtitle: tech.name });
       } catch {
@@ -2304,6 +2321,7 @@ export function BreathSession() {
       stopAll();
       stopScape(true);
       stopSessionKeepAlive();
+      endLiveSession();
       /* Symmetrisch met de start: de native achtergrond-loop mag niet
          doortikken nadat de JS-sessie al is afgesloten. Onschadelijk als hij
          nooit succesvol begon. */

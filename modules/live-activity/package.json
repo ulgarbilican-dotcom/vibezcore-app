@@ -1,0 +1,8 @@
+{
+  "name": "live-activity",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — toont een lopende sessie (State Control of ademsessie) als Live Activity op het vergrendelscherm en in het Dynamic Island van de iPhone.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}
