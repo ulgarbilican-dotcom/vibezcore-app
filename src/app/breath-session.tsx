@@ -144,6 +144,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { levelForTechnique, techniqueForLevel, type UserLevel } from '@/utils/breath-level';
 import {
   AppState,
   BackHandler,
@@ -717,6 +718,8 @@ export function BreathSession() {
        anders wint altijd de standaard (index 0). Sleutel i.p.v. index: een
        index zou breken als de volgorde van `techniques` ooit verandert. */
     technique?: string;
+    /** Ervaringsniveau met deze techniek (utils/breath-level.ts). */
+    level?: string;
     /* '1' = kwam van `breath-setup.tsx`, dus mode/ritme/duur staan al vast —
        start meteen, toon niet nog eens het (nu overbodige) keuzescherm
        hieronder. */
@@ -781,7 +784,21 @@ export function BreathSession() {
     const i = st.techniques.findIndex((t) => t.key === params.technique);
     return i === -1 ? 0 : i;
   });
-  const tech = st.techniques[techIdx] ?? st.techniques[0];
+  /* Operator, 6 okt 2026: het ritme volgt de ervaring van de gebruiker met
+     deze techniek (utils/breath-level.ts). Het setup-scherm geeft het niveau
+     mee; elders (plan, melding, deeplink) rekenen we het zelf uit, zodat het
+     ritme overal hetzelfde is. Eén keer vastgezet bij het openen — het
+     niveau mag niet halverwege een sessie veranderen. */
+  const baseTech = st.techniques[techIdx] ?? st.techniques[0];
+  const [sessionLevel] = useState<UserLevel>(() =>
+    params.level === 'beginner' || params.level === 'intermediate' || params.level === 'advanced'
+      ? params.level
+      : levelForTechnique(st.key, baseTech.key),
+  );
+  const tech = useMemo(
+    () => techniqueForLevel(st.key, baseTech, sessionLevel),
+    [st.key, baseTech, sessionLevel],
+  );
 
   /* ── Het gekozen ritme, ook nog tijdens de sessie ────────────────────────
      De fase-loop is bewust ÉÉN keer opgebouwd: hij roept zichzelf aan vanuit

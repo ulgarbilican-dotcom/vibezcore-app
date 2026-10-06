@@ -49,7 +49,14 @@ import {
   skipBreathIntroOnce,
 } from '@/utils/breath-entry';
 import { useSubscription } from '@/hooks/useSubscription';
-import { getSetting, useSetting } from '@/utils/settings';
+import { getSetting, setSetting, useSetting } from '@/utils/settings';
+import { useBreathHistory } from '@/utils/breath-history';
+import {
+  levelForTechnique,
+  levelSeenKey,
+  recommendedForLevel,
+  techniqueForLevel,
+} from '@/utils/breath-level';
 import { isLightColor } from '@/utils/color';
 import { DAY_CANDIDATES, SLOT_WINDOW } from '@/utils/day-plan';
 import { HORIZON_OPTIONS } from '@/data/plan-horizon-options';
@@ -1492,7 +1499,20 @@ export default function BreathSetupScreen() {
     setHorizonTouched(false);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [selState]);
-  const tech = st.techniques[techIdx] ?? st.techniques[0];
+  /* Operator, 6 okt 2026 (onderzoek + "ok go"): het ritme en de aanbevolen
+     duur volgen de ervaring van de gebruiker met DEZE techniek — zie
+     utils/breath-level.ts. `baseTech` is de techniek uit de data, `tech`
+     dezelfde met het ritme van zijn niveau. */
+  const baseTech = st.techniques[techIdx] ?? st.techniques[0];
+  const breathHistory = useBreathHistory();
+  const userLevel = useMemo(
+    () => levelForTechnique(st.key, baseTech.key, breathHistory),
+    [st.key, baseTech.key, breathHistory],
+  );
+  const tech = useMemo(
+    () => techniqueForLevel(st.key, baseTech, userLevel),
+    [st.key, baseTech, userLevel],
+  );
   const DURATIONS = tech.durations ?? st.durations;
   const [durationIdx, setDurationIdx] = useState(() => {
     if (params.quick === '1') return 0;
@@ -1532,6 +1552,13 @@ export default function BreathSetupScreen() {
      zie toelichting daar) ofwel `CUSTOM_CEILING_MIN` (de andere, op
      onderzoek gebaseerde bovengrens). */
   const isCyclesBased = DURATIONS.some((d) => d.cycles != null);
+  /** Aanbevolen waarde (minuten, of cycli bij 4-7-8) voor dit niveau. */
+  const recValue =
+    recommendedForLevel(st.key, baseTech.key, userLevel) ??
+    (() => {
+      const d = DURATIONS.find((x) => x.recommended);
+      return d ? (d.cycles ?? d.minutes) : null;
+    })();
   const presetMinutes = DURATIONS.map((d) => d.minutes);
   const presetMinMinutes = Math.min(...presetMinutes);
   const presetMaxMinutes = Math.max(...presetMinutes);
@@ -1594,6 +1621,13 @@ export default function BreathSetupScreen() {
     ? Math.max(...DURATIONS.map((d) => d.cycles ?? d.minutes))
     : Math.max(presetMaxMinutes, customMaxMinutes);
   const chosenVal = chosen.cycles ?? chosen.minutes;
+  const isRecommendedChoice = recValue != null && chosenVal === recValue;
+  const [levelSeen] = useSetting('breathLevelSeen');
+  const prevSeen = levelSeen[levelSeenKey(st.key, baseTech.key)];
+  const steppedUp =
+    !!prevSeen &&
+    ['beginner', 'intermediate', 'advanced'].indexOf(userLevel) >
+      ['beginner', 'intermediate', 'advanced'].indexOf(prevSeen);
   /* Operator, 5 okt 2026 ("als 5 een volle cirkel is, mag 2 min niet leeg
      zijn"): gevuld vanaf nul, niet vanaf de kortste keuze — de cirkel toont
      het deel van de langste duur van deze techniek. */
@@ -2019,10 +2053,13 @@ export default function BreathSetupScreen() {
        patroon als (tabs)/breath.tsx, plan.tsx en agenda.tsx, zodat het
        niet uitmaakt via welk scherm de user zijn eerste sessie start. */
     const freeParam = claimFreeSessionParam();
+    setSetting('breathLevelSeen', { ...levelSeen, [levelSeenKey(st.key, baseTech.key)]: userLevel });
     openBreathSession({
         ...freeParam,
         mode: st.key,
         technique: tech.key,
+        /* Zelfde ritme als hier getoond (utils/breath-level.ts). */
+        level: userLevel,
         minutes: String(chosen.minutes),
         autostart: '1',
         /* Operator, 10 september 2026: custom-duur — zonder deze vlag zou
@@ -2087,10 +2124,38 @@ export default function BreathSetupScreen() {
     setTechIdx(i);
     setTechniquePicked(true);
     const durs = t.durations ?? st.durations;
-    const recIdx = durs.findIndex((d) => d.recommended);
-    setDurationIdx(recIdx !== -1 ? recIdx : Math.min(durationIdx, durs.length - 1));
-    setCustomSelected(false);
+    const lvl = levelForTechnique(st.key, t.key, breathHistory);
+    applyRecommended(durs, recommendedForLevel(st.key, t.key, lvl));
   };
+
+  /* Zet het wiel op de aanbevolen waarde voor het niveau van de gebruiker:
+     een preset als die bestaat, anders als vrije duur (bv. Coherent 15). */
+  function applyRecommended(durs: DurationDef[], rec: number | null) {
+    const presetIdx =
+      rec == null ? -1 : durs.findIndex((d) => (d.cycles ?? d.minutes) === rec);
+    if (presetIdx !== -1) {
+      setDurationIdx(presetIdx);
+      setCustomSelected(false);
+      return;
+    }
+    if (rec != null && !durs.some((d) => d.cycles != null)) {
+      setCustomMinutes(rec);
+      setCustomSelected(true);
+      return;
+    }
+    const dataRec = durs.findIndex((d) => d.recommended);
+    setDurationIdx(dataRec !== -1 ? dataRec : 0);
+    setCustomSelected(false);
+  }
+
+  /* Bij binnenkomst (zonder duur uit een plan of snelkoppeling): op de
+     aanbevolen duur van dit niveau. Pas na de eerste render, want de
+     geschiedenis en het niveau moeten er zijn. */
+  useEffect(() => {
+    if (params.quick === '1' || params.minutes || isAddToDay) return;
+    applyRecommended(DURATIONS, recValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLevel]);
 
   /* Operator (druk-vering op elke tikbare knop van dit scherm — cards, CTA
      én icoon-only knoppen, geen uitzonderingen): losse gedeelde waarde per
@@ -2438,11 +2503,14 @@ export default function BreathSetupScreen() {
                minuten, met een dotje ervoor"): enkel zichtbaar op de
                aanbevolen duur; de ruimte blijft, zodat de tijd niet springt. */}
             <View
-              style={[s.heroRecRow, { opacity: chosen.minutes === recommendedZone?.minutes ? 1 : 0 }]}
-              accessibilityElementsHidden={chosen.minutes !== recommendedZone?.minutes}
+              style={[s.heroRecRow, { opacity: isRecommendedChoice ? 1 : 0 }]}
+              accessibilityElementsHidden={!isRecommendedChoice}
             >
               <View style={[s.heroRecDot, { backgroundColor: waveAccent }]} />
-              <Text style={s.heroRecTxt}>Recommended</Text>
+              <Text style={s.heroRecTxt}>
+                {/* Een stap omhoog wordt één keer gemeld, nooit stil. */}
+                {steppedUp ? 'Recommended · built up' : 'Recommended'}
+              </Text>
             </View>
             <Animated.Text
               key={`clock-${tech.key}`}

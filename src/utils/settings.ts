@@ -143,6 +143,10 @@ export type Settings = {
    *  wie een plan maakt vraagt erom herinnerd te worden. */
   planReminders: boolean;
   braceletPlanReminders: boolean;
+  /** Per techniek (`state:techniek`) het ervaringsniveau dat de gebruiker al
+   *  te zien kreeg — zodat een stap omhoog één keer gemeld wordt, nooit
+   *  stilletjes (operator, 6 okt 2026). Zie utils/breath-level.ts. */
+  breathLevelSeen: Record<string, string>;
   /** Op welk UUR een herinnering valt, per sleutel (`breath:morning`).
    *  Ontbreekt er een, dan geldt het standaarduur van dat moment. Bewust
    *  alleen hele uren: een keuze uit 24 dingen is te doen, een keuze uit
@@ -256,6 +260,7 @@ const defaults: Settings = {
   reminders: {},
   planReminders: true,
   braceletPlanReminders: true,
+  breathLevelSeen: {},
   reminderHours: {},
   reminderAt: {},
   profile: {},
@@ -349,6 +354,11 @@ async function loadOnce(): Promise<void> {
               : {}),
             ...(typeof obj.braceletPlanReminders === 'boolean'
               ? { braceletPlanReminders: obj.braceletPlanReminders }
+              : {}),
+            ...(obj.breathLevelSeen &&
+            typeof obj.breathLevelSeen === 'object' &&
+            !Array.isArray(obj.breathLevelSeen)
+              ? { breathLevelSeen: obj.breathLevelSeen }
               : {}),
             /* Leest ook de oude enkelvoudige sleutel, zodat wie al een doel
                had het niet kwijtraakt.

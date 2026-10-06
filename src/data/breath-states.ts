@@ -697,27 +697,11 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         ],
       },
       {
-        key: 'deep-extended-exhale',
-        name: 'Deep Extended Exhale',
-        level: 'Intermediate',
-        safetyTier: 'green',
-        explain:
-          'Four in, eight out — twice as long out as in, and no pause. A deeper version of extended-exhale breathing.',
-        effect: 'A longer exhale gives circling thoughts room to untangle and settle.',
-        bestFor: 'Untangling thoughts',
-        changes: 'Exhale twice as long as the inhale.',
-        moments: ['When your mind feels stuck in loops', 'Before making a decision', 'Quieting an overactive mind'],
-        phases: [inhale(4, 'Nose'), exhale(8, 'Mouth')],
-        durations: [
-          { minutes: 3, rounds: 15, name: 'Center Check', why: 'A brief pause to clear the deck before choosing what to pick up next.' },
-          { minutes: 5, rounds: 25, name: 'Equilibrium', why: 'The everyday length. A longer exhale than inhale is what lets mental noise settle instead of circling.', recommended: true },
-          { minutes: 10, rounds: 50, name: 'Extended Reflection', why: 'For when there is time to let the longer exhale properly take over — before a decision that has been sitting unresolved.' },
-        ],
-      },
-      {
+        /* Operator, 6 okt 2026 (onderzoeksrapport): niveau en volgorde
+           aangepast op de fysiologie — zie utils/breath-level.ts. */
         key: 'physiological-sigh',
         name: 'Physiological Sigh',
-        level: 'Advanced',
+        level: 'Intermediate',
         safetyTier: 'green',
         explain:
           'Two inhales through the nose — one full, one short and quick on top — followed by one long, slow exhale through the mouth. Studied as a short daily practice, not a long session; the timing here is a VIBEZCORE default within the range researchers used, not an exact prescription.',
@@ -730,6 +714,24 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
           { minutes: 1, rounds: 7, name: 'Quick Reset', why: 'A brief version — proof that a short window is enough to feel the shift.' },
           { minutes: 3, rounds: 20, name: 'Center Check', why: 'Enough cycles to feel the pattern settle before you move on.' },
           { minutes: 5, rounds: 33, name: 'Equilibrium', why: 'The dose used in the original Stanford study — five minutes a day.', recommended: true, researchProtocol: true },
+        ],
+      },
+      {
+        key: 'deep-extended-exhale',
+        name: 'Deep Extended Exhale',
+        level: 'Advanced',
+        safetyTier: 'green',
+        explain:
+          'Four in, eight out — twice as long out as in, and no pause. A deeper version of extended-exhale breathing.',
+        effect: 'A longer exhale gives circling thoughts room to untangle and settle.',
+        bestFor: 'Untangling thoughts',
+        changes: 'Exhale twice as long as the inhale.',
+        moments: ['When your mind feels stuck in loops', 'Before making a decision', 'Quieting an overactive mind'],
+        phases: [inhale(4, 'Nose'), exhale(8, 'Mouth')],
+        durations: [
+          { minutes: 3, rounds: 15, name: 'Center Check', why: 'A brief pause to clear the deck before choosing what to pick up next.' },
+          { minutes: 5, rounds: 25, name: 'Equilibrium', why: 'The everyday length. A longer exhale than inhale is what lets mental noise settle instead of circling.', recommended: true },
+          { minutes: 10, rounds: 50, name: 'Extended Reflection', why: 'For when there is time to let the longer exhale properly take over — before a decision that has been sitting unresolved.' },
         ],
       },
     ],
@@ -791,6 +793,55 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     phases: [inhale(5, 'Nose'), exhale(10, 'Nose')],
     techniques: [
       {
+        /* Operator, 6 okt 2026 (onderzoeksrapport): niveau en volgorde
+           aangepast op de fysiologie — zie utils/breath-level.ts. */
+        key: 'slow-extended-exhale',
+        name: 'Slow Extended Exhale',
+        level: 'Beginner',
+        safetyTier: 'green',
+        explain:
+          /* Operator, 10 september 2026: "at a slower overall pace" was
+             feitelijk fout — deze cyclus (5+7=12s) en Clarity's Deep
+             Extended Exhale (4+8=12s) zijn EXACT even lang, dus zelfde
+             tempo. Het echte verschil is de verhouding (5:7 i.p.v. 4:8),
+             niet de snelheid. Gecorrigeerd.
+             Operator, 24 september 2026 ("niet vergelijkend, gebuiker heeft
+             de andere staat mogelijk nooit gezien"): stond nog vergeleken
+             met "Clarity offers" — een andere STAAT, nog onwaarschijnlijker
+             dat de gebruiker dat al zag dan een andere techniek binnen
+             dezelfde staat. Standalone gemaakt. */
+          'Five in, seven out — a long, slow exhale with a small gap between in and out, built for winding all the way down.',
+        effect: 'A long, gentle exhale rhythm, built for winding all the way down.',
+        bestFor: 'Deep wind-down',
+        changes: 'A long, slower-paced exhale.',
+        moments: ['When tomorrow keeps creeping in', 'Guarding the line between thinking and resting', 'The last, conscious act of letting go'],
+        phases: [inhale(5, 'Nose'), exhale(7, 'Nose')],
+        durations: [
+          { minutes: 5, rounds: 25, name: 'Pulse Down', why: 'A quick, comforting transition when fatigue is setting in and you want to drift off soon.' },
+          { minutes: 10, rounds: 50, name: 'Deep Wind-Down', why: 'The evening length, for the nights the day will not quite let go.', recommended: true },
+          { minutes: 20, rounds: 100, name: 'Sleep Wind-Down', why: 'For full wind-down, when the goal is letting go completely.' },
+        ],
+      },
+      {
+        key: '478',
+        name: '4-7-8 Breathing',
+        level: 'Intermediate',
+        safetyTier: 'amber',
+        safetyNote:
+          'Start with four cycles for at least the first month, as originally taught by Dr. Andrew Weil — more than that too soon is the most common reason people feel light-headed.',
+        explain:
+          'Four in, seven held, eight out — the longest hold of any VIBEZCORE rhythm. Begin with four cycles; build toward eight only after weeks of practice.',
+        effect: 'A wind-down ritual, one of the best-known ways to ease into sleep.',
+        bestFor: 'Structured wind-down',
+        changes: 'A held breath, timed and counted.',
+        moments: ['After a stretch of stress or overthinking', 'When your mind will not stop planning in the dark', 'Before an early start'],
+        phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
+        durations: [
+          { minutes: 1, cycles: 4, rounds: 4, name: 'Starter', why: 'Four cycles — the safe entry point, meant to be practiced regularly.', recommended: true },
+          { minutes: 3, cycles: 8, rounds: 8, name: 'Practised', why: 'Eight cycles — build up to this over about a month, not sooner.' },
+        ],
+      },
+      {
         key: 'slow',
         /* Operator, 24 september 2026 ("nu staat daar 2x slow"): was 'Slow
            Breathing' — botste met 'Slow Extended Exhale' hieronder, extra
@@ -799,7 +850,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
            onderscheiden, en herkenbare vaktaal zoals '4-7-8 Breathing'/
            'Box Breathing' elders al in de app. */
         name: '1:2 Breathing',
-        level: 'Beginner',
+        level: 'Advanced',
         safetyTier: 'green',
         /* Operator, 24 september 2026 (2e ronde, "1 sec verschil lijkt
            verzonnen"): 5/6 (eerste fix) stond te dicht op deze staat se
@@ -826,53 +877,6 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
           { minutes: 5, rounds: 20, name: 'Pulse Down', why: 'A gentle landing when you are already on the edge of sleep.' },
           { minutes: 10, rounds: 40, name: 'Deep Wind-Down', why: 'The evening standard — so unhurried you will stop counting somewhere along the way.', recommended: true },
           { minutes: 20, rounds: 80, name: 'Sleep Wind-Down', why: 'For a night with no early alarm, when a full, unhurried wind-down is the priority.' },
-        ],
-      },
-      {
-        key: '478',
-        name: '4-7-8 Breathing',
-        level: 'Intermediate',
-        safetyTier: 'amber',
-        safetyNote:
-          'Start with four cycles for at least the first month, as originally taught by Dr. Andrew Weil — more than that too soon is the most common reason people feel light-headed.',
-        explain:
-          'Four in, seven held, eight out — the longest hold of any VIBEZCORE rhythm. Begin with four cycles; build toward eight only after weeks of practice.',
-        effect: 'A wind-down ritual, one of the best-known ways to ease into sleep.',
-        bestFor: 'Structured wind-down',
-        changes: 'A held breath, timed and counted.',
-        moments: ['After a stretch of stress or overthinking', 'When your mind will not stop planning in the dark', 'Before an early start'],
-        phases: [inhale(4, 'Nose'), hold(7, 'hold-in'), exhale(8, 'Mouth')],
-        durations: [
-          { minutes: 1, cycles: 4, rounds: 4, name: 'Starter', why: 'Four cycles — the safe entry point, meant to be practiced regularly.', recommended: true },
-          { minutes: 3, cycles: 8, rounds: 8, name: 'Practised', why: 'Eight cycles — build up to this over about a month, not sooner.' },
-        ],
-      },
-      {
-        key: 'slow-extended-exhale',
-        name: 'Slow Extended Exhale',
-        level: 'Advanced',
-        safetyTier: 'green',
-        explain:
-          /* Operator, 10 september 2026: "at a slower overall pace" was
-             feitelijk fout — deze cyclus (5+7=12s) en Clarity's Deep
-             Extended Exhale (4+8=12s) zijn EXACT even lang, dus zelfde
-             tempo. Het echte verschil is de verhouding (5:7 i.p.v. 4:8),
-             niet de snelheid. Gecorrigeerd.
-             Operator, 24 september 2026 ("niet vergelijkend, gebuiker heeft
-             de andere staat mogelijk nooit gezien"): stond nog vergeleken
-             met "Clarity offers" — een andere STAAT, nog onwaarschijnlijker
-             dat de gebruiker dat al zag dan een andere techniek binnen
-             dezelfde staat. Standalone gemaakt. */
-          'Five in, seven out — a long, slow exhale with a small gap between in and out, built for winding all the way down.',
-        effect: 'A long, gentle exhale rhythm, built for winding all the way down.',
-        bestFor: 'Deep wind-down',
-        changes: 'A long, slower-paced exhale.',
-        moments: ['When tomorrow keeps creeping in', 'Guarding the line between thinking and resting', 'The last, conscious act of letting go'],
-        phases: [inhale(5, 'Nose'), exhale(7, 'Nose')],
-        durations: [
-          { minutes: 5, rounds: 25, name: 'Pulse Down', why: 'A quick, comforting transition when fatigue is setting in and you want to drift off soon.' },
-          { minutes: 10, rounds: 50, name: 'Deep Wind-Down', why: 'The evening length, for the nights the day will not quite let go.', recommended: true },
-          { minutes: 20, rounds: 100, name: 'Sleep Wind-Down', why: 'For full wind-down, when the goal is letting go completely.' },
         ],
       },
     ],
