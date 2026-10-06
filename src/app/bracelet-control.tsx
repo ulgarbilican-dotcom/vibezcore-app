@@ -156,7 +156,7 @@ import ReanimatedAnimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
-import LiquidWave from '@/components/LiquidWave';
+import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import VibezGlass from '@/components/VibezGlass';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
@@ -2113,9 +2113,7 @@ function WaveFillCircle({
     <LiquidWave
       size={size}
       level={Math.max(0.08, Math.min(1, fraction))}
-      color={color}
-      backOpacity={0.22}
-      frontOpacity={0.35}
+      {...breathWaveLook(color)}
       fillOnMount={fillOnMount}
     />
   );

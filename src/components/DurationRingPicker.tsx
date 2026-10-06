@@ -21,7 +21,7 @@
    toont het resultaat, wheel eronder bedient de waarde.
    ───────────────────────────────────────────────────────────────────────── */
 
-import LiquidWave from '@/components/LiquidWave';
+import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -105,9 +105,7 @@ function WaveFillCircle({ fraction, color, size }: { fraction: number; color: st
     <LiquidWave
       size={size}
       level={Math.max(0.08, Math.min(1, fraction))}
-      color={color}
-      backOpacity={0.22}
-      frontOpacity={0.35}
+      {...breathWaveLook(color)}
     />
   );
 }

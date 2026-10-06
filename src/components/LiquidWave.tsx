@@ -136,6 +136,15 @@ export default function LiquidWave({
   );
 }
 
+/** De kleur en doorschijnendheid van de breath-setup-golf (operator, 6 okt
+ *  2026: "visueel niet hetzelfde — breathwork heeft nog een transparante
+ *  laag"): 10/15%, zodat beide lagen apart te zien zijn. Sleep (Bio-Teal)
+ *  gebruikt daar de lichte #4AF0D4 op 20/30%, anders verdwijnt hij op zwart. */
+export function breathWaveLook(color: string): { color: string; backOpacity: number; frontOpacity: number } {
+  if (color.toUpperCase() === '#00A3A3') return { color: '#4AF0D4', backOpacity: 0.2, frontOpacity: 0.3 };
+  return { color, backOpacity: 0.1, frontOpacity: 0.15 };
+}
+
 /** Zelfde pad als breath-setup.tsx: vier S-bochten over twee breedtes
  *  (periode = size/2), onderaan dichtgemaakt. */
 function wavePath(size: number, y: number, amp: number): string {
