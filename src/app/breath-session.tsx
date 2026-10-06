@@ -3764,7 +3764,7 @@ export function BreathSession() {
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={s.modalTitle}>Well done.</Text>
             <Text style={s.modalBody}>
-              You completed {rounds} rounds of {st.title}. Carry the
+              You completed {rounds} rounds of {tech.name}. Carry the
               breath with you.
             </Text>
 
