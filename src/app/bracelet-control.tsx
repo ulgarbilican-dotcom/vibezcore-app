@@ -80,6 +80,7 @@ import {
 } from '@/utils/bracelet-history';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, ClipPath, Defs, G, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { BlurView } from 'expo-blur';
 import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
 import {
   useCallback,
@@ -3614,125 +3615,54 @@ function ActiveSessionScreen({
            naar een enkele ronde Play/Pause-knop, gecentreerd — "End
            session" nu als tekst-link ERONDER (i.p.v. ernaast) i.p.v. een
            tweede capsule. */}
+        {/* Operator, 6 okt 2026 ("de vorm van onze knop is hier anders, is
+           dat bewust?" — nee): dezelfde bediening als de ademsessie. Een
+           ronde glazen knop met een lichte tint van de toestand, en END
+           SESSION als rustige tekst eronder (een stop is onomkeerbaar, dus
+           niet de knop die opvalt). Wat de knoppen doen is ongewijzigd. */}
         <View style={s.sessionControlColumn}>
-          {isPaused ? (
-            (() => {
-              /* Iter 9ad (2026-05-31): Resume-button contrast-fix. Voor
-                 LIGHT modes (Boost wit) was tekst hardcoded wit op witte
-                 mode-color bg → onleesbaar. Nu: isLightColor() bepaalt
-                 icon-kleur. Boost → zwart, anderen → wit. */
-              const resumeLight = isLightColor(activeMeta.color);
-              const resumeFg = resumeLight ? '#0a0a0a' : '#ffffff';
-              return (
-                <Pressable
-                  style={({ pressed }) => [
-                    s.roundActionBtn,
-                    { backgroundColor: activeMeta.color },
-                    resumeLight && {
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.25)',
-                    },
-                    pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
-                    busy && s.btnDisabled,
-                  ]}
-                  android_ripple={{
-                    color: resumeLight
-                      ? 'rgba(0,0,0,0.18)'
-                      : 'rgba(255,255,255,0.18)',
-                    borderless: true,
-                  }}
-                  onPress={onResume}
-                  disabled={busy}
-                  accessibilityLabel="Resume session"
-                >
-                  {busy ? (
-                    <ActivityIndicator color={resumeFg} />
-                  ) : (
-                    <Play size={26} color={resumeFg} fill={resumeFg} />
-                  )}
-                </Pressable>
-              );
-            })()
-          ) : (
-            (() => {
-              const pauseFg = activeDark ? '#ffffff' : C.text;
-              return (
-                <Pressable
-                  style={({ pressed }) => [
-                    s.roundActionBtn,
-                    s.roundActionBtnOutline,
-                    { borderColor: pauseFg },
-                    pressed && {
-                      backgroundColor: `${pauseFg}14`,
-                      transform: [{ scale: 0.95 }],
-                    },
-                    busy && s.btnDisabled,
-                  ]}
-                  android_ripple={{ color: `${pauseFg}30`, borderless: true }}
-                  onPress={onPause}
-                  disabled={busy}
-                  accessibilityLabel="Pause session"
-                >
-                  {busy ? (
-                    <ActivityIndicator color={pauseFg} />
-                  ) : (
-                    <Pause size={24} color={pauseFg} fill={pauseFg} />
-                  )}
-                </Pressable>
-              );
-            })()
-          )}
-          {/* Operator, 17 september 2026 ("twee gelijke capsules,
-             Minimize zachtgrijs gevuld, End transparant met rood
-             randje"): terug naar twee even-brede capsule-knoppen naast
-             elkaar, direct onder de pauzeknop — maar nu met bewuste
-             hiërarchie i.p.v. twee identieke vlakken: Minimize is de
-             "veilige" standaardactie (zachte grijze vulling, zoals het
-             vlak achter het tandwiel-icoon elders op dit scherm), End
-             is de definitieve actie (transparant + dun rood randje,
-             Apple's eigen taal voor destructieve acties — geen gevuld
-             vlak, zodat 'ie niet per ongeluk aangetikt wordt). */}
-          <View style={s.secondaryActionsRow}>
-            {/* Operator, 27 september 2026 ("minimize onder end session
-               dan"): volgorde omgedraaid — End session eerst, Minimize
-               eronder. */}
-            {/* Operator, 16 september 2026: End is een definitieve actie. */}
-            <Pressable
-              style={({ pressed }) => [
-                s.capsuleBtnSecondary,
-                s.capsuleBtnEnd,
-                pressed && { backgroundColor: 'rgba(255,255,255,0.08)' },
-                busy && s.btnDisabled,
-              ]}
-              /* Iter v214 (2026-07-04): End = GEEN navigate meer.
-                 router.back() ging naar Kickstarter marketing (bracelet-
-                 tab main voor non-owner). router.replace idem.
-                 Beide fout omdat user wilde op DEZELFDE bracelet-control
-                 instance blijven, gewoon terug naar Choose Mode idle.
-                 Fix: alleen setEndedLocally + onStop. Derived
-                 sessionActive wordt false → render valt automatisch
-                 terug naar Choose Mode van dezelfde instance
-                 (push voor preview, inline voor owner). Geen navigate
-                 = geen 'verkeerd pad'-risico. */
-              onPress={() => {
-                setEndedLocally(true);
-                void onStop();
-              }}
-              disabled={busy}
-              accessibilityLabel="End session"
-            >
-              {/* Secundaire knop = VIBEZCORE-glas, de hoofdknop (Play/Pause)
-                  blijft solide (operator, 5 okt 2026). */}
-              <VibezGlass radius={999} style={StyleSheet.absoluteFill} />
-              {busy ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={s.capsuleBtnSecondaryText}>End session</Text>
-              )}
-            </Pressable>
-            {/* Minimize-knop vervangen door de chevron linksboven
-               (operator, 5 okt 2026 — zie activeHeaderRow). */}
-          </View>
+          <Pressable
+            style={({ pressed }) => [
+              s.pauseMain,
+              pressed && { transform: [{ scale: 0.95 }] },
+              busy && s.btnDisabled,
+            ]}
+            onPress={isPaused ? onResume : onPause}
+            disabled={busy}
+            accessibilityLabel={isPaused ? 'Resume session' : 'Pause session'}
+          >
+            <BlurView
+              intensity={40}
+              tint="dark"
+              blurMethod="dimezisBlurViewSdk31Plus"
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              style={[StyleSheet.absoluteFill, s.pauseMainTint, { backgroundColor: activeMeta.color }]}
+            />
+            {busy ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : isPaused ? (
+              <Play size={24} color="#ffffff" strokeWidth={2.2} />
+            ) : (
+              <Pause size={24} color="#ffffff" strokeWidth={2.2} />
+            )}
+          </Pressable>
+          {/* Iter v214 (2026-07-04): End = GEEN navigate — enkel
+              setEndedLocally + onStop; de render valt vanzelf terug naar
+              Choose Mode van dezelfde instance. */}
+          <Pressable
+            style={({ pressed }) => [s.endTxtWrap, pressed && { opacity: 0.6 }]}
+            hitSlop={10}
+            onPress={() => {
+              setEndedLocally(true);
+              void onStop();
+            }}
+            disabled={busy}
+            accessibilityLabel="End session"
+          >
+            <Text style={s.endTxt}>END SESSION</Text>
+          </Pressable>
         </View>
 
         {/* Operator, 13 augustus 2026: "alles op de pagina active weg
@@ -7349,6 +7279,25 @@ const s = StyleSheet.create({
      zakken"): marginTop 'auto' duwt Play + End session naar de onderkant
      van het scherm (net boven de tab-balk) i.p.v. vlak onder de cirkel —
      werkt op elke schermhoogte, geen vaste afstand. */
+  /* Zelfde maten als breath-session.tsx (pauseMain/pauseMainTint/endTxt). */
+  pauseMain: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
+  },
+  pauseMainTint: { opacity: 0.2 },
+  endTxtWrap: { marginTop: 14 },
+  endTxt: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: 'rgba(255,255,255,0.72)',
+  },
   sessionControlColumn: {
     alignItems: 'center',
     marginTop: 'auto',
