@@ -195,8 +195,11 @@ async function hasPendingAuthDeepLink(): Promise<boolean> {
    banner maar laat 'm wel in de lijst/lockscreen staan (shouldShowList). */
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
+    /* Ook geen banner voor de vooraf ingeplande iPhone-"Session complete"
+       als de app open staat: dan toont het scherm de afsluiting zelf. */
     const isBraceletSessionTicker =
-      notification.request.content.data?.kind === 'bracelet-session';
+      notification.request.content.data?.kind === 'bracelet-session' ||
+      notification.request.content.data?.kind === 'bracelet-done';
     return {
       shouldShowBanner: !isBraceletSessionTicker,
       shouldShowList: true,

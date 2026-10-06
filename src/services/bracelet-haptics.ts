@@ -403,6 +403,10 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
    exact dezelfde curve zelf (docs/WATCH_PROTOCOL.md), ook met de pols
    omlaag. Bevestigt het horloge, dan zwijgt de telefoon — één ritme. */
 let watchHasRhythm = false;
+/** Speelt een gekoppeld horloge het ritme? (iPhone-tip in de sessie, 6 okt 2026) */
+export function isWatchPlayingRhythm(): boolean {
+  return watchHasRhythm;
+}
 let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; at: number } | null = null;
 
 function relayToWatch(mode: BraceletMode, curveOffsetSec: number, remainingSec: number): void {

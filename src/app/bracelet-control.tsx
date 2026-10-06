@@ -35,6 +35,7 @@ import {
   playModePreviewHaptic,
   stopModePreviewHaptic,
   subscribeHapticPulse,
+  isWatchPlayingRhythm,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
@@ -3357,6 +3358,12 @@ function ActiveSessionScreen({
           >
             <Text style={s.endTxt}>END SESSION</Text>
           </Pressable>
+          {/* iPhone trilt enkel zolang de app in beeld is (Apple staat geen
+              haptiek op de achtergrond toe). Eerlijk zeggen, tenzij een
+              Apple Watch het ritme al overneemt (6 okt 2026). */}
+          {Platform.OS === 'ios' && !isWatchPlayingRhythm() && (
+            <Text style={s.iosKeepOpen}>Keep VIBEZCORE open to feel the rhythm</Text>
+          )}
         </View>
 
         {/* Operator, 13 augustus 2026: "alles op de pagina active weg
@@ -6989,6 +6996,13 @@ const s = StyleSheet.create({
   },
   pauseMainTint: { opacity: 0.2 },
   endTxtWrap: { marginTop: 22 },
+  iosKeepOpen: {
+    marginTop: 14,
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+  },
   endTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11,

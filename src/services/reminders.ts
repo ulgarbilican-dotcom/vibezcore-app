@@ -539,7 +539,7 @@ function fromResponse(
      hetzelfde weg als 'bracelet' — genormaliseerd hier zodat de rest van
      dit bestand (reminderRoute/reminderParams/TappedReminder) er niets
      extra's van hoeft te weten. */
-  if (data?.kind === 'bracelet-session') {
+  if (data?.kind === 'bracelet-session' || data?.kind === 'bracelet-done') {
     return { kind: 'bracelet', slot: data.slot, state: data.state, session: true };
   }
   if (data?.kind === 'bracelet-plan') {

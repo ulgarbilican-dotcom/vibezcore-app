@@ -40,6 +40,7 @@ import { onWatchAction as onWearWatchAction } from '../../modules/wear-breath';
 import { onWatchAction as onAppleWatchAction } from '../../modules/watch-breath';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
@@ -64,6 +65,56 @@ import {
 import { ensurePermission as ensureNotificationPermission } from './reminders';
 
 const NOTIF_ID = 'bracelet-session';
+/* ── iPhone (operator, 6 okt 2026: "bouw altijd simultaan iOS en Android") ──
+   iOS laat een app NIET trillen op de achtergrond of met het scherm op slot
+   (Apple: "no way to run haptics in the background"), en bevriest dan ook
+   de JS-timers. Daarom op iPhone:
+     · het scherm blijft wakker zolang het ritme speelt (anders vergrendelt
+       het na ±30 s en valt het ritme stil zonder dat iemand weet waarom);
+     · geen lopende "x left"-melding (die bleef op een oude tijd hangen);
+     · de "Session complete"-melding wordt bij start/hervatten VOORAF
+       ingepland op het eindmoment, zodat ze ook komt als de app op de
+       achtergrond staat. Pauze/stop annuleert ze. */
+const IOS_DONE_ID = 'bracelet-session-done';
+const KEEP_AWAKE_TAG = 'state-control-session';
+
+async function scheduleIosDone(): Promise<void> {
+  if (Platform.OS !== 'ios') return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(IOS_DONE_ID);
+  } catch {}
+  if (!state || state.paused) return;
+  const end = endTimeMs(state);
+  if (end <= Date.now() + 1000) return;
+  const meta = getModeMeta(state.mode);
+  const minutes = Math.max(1, Math.round(state.totalSec / 60));
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: IOS_DONE_ID,
+      content: {
+        title: 'Session complete',
+        body: `${meta.name} · ${minutes} min`,
+        data: { kind: 'bracelet-done' },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(end) },
+    });
+  } catch {
+    /* geen toestemming — de app toont de afsluiting bij openen */
+  }
+}
+
+async function cancelIosDone(): Promise<void> {
+  if (Platform.OS !== 'ios') return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(IOS_DONE_ID);
+  } catch {}
+}
+
+function syncIosKeepAwake(): void {
+  if (Platform.OS !== 'ios') return;
+  if (state && !state.paused) void activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+  else void deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
+}
 const CHANNEL_ID = 'bracelet-session';
 /** Hoe vaak de in-memory snapshot (voor de pill) ververst — goedkoop,
  *  puur een JS-object + subscriber-notify, dus 1s voor een live teller. */
@@ -168,7 +219,11 @@ async function finishCompleted(s: MonitorState): Promise<void> {
   pendingCompletion = completion;
   /* In de app zelf toont het scherm de afsluiting; de "Session complete"-
      melding van de service is dan dubbel. */
-  if (appIsForeground) dismissCompletionNotice();
+  if (appIsForeground) {
+    dismissCompletionNotice();
+    void cancelIosDone();
+    void Notifications.dismissNotificationAsync(IOS_DONE_ID).catch(() => {});
+  }
   await stopBraceletSessionMonitor({ natural: true });
   try {
     await getBracelet().sendCommand({ mode: s.mode, duration: 0, command: BleCommand.Stop });
@@ -274,6 +329,8 @@ async function publish(force: boolean): Promise<void> {
     totalSec: state.totalSec,
     paused: state.paused,
   });
+  /* iPhone: geen lopende tijdmelding — zie IOS_DONE_ID bovenaan. */
+  if (Platform.OS === 'ios') return;
   if (appIsForeground) {
     /* Geen melding zolang de app zelf open staat — zie de AppState-
        listener hierboven. De snapshot (pill/hydratie) is hierboven al
@@ -304,8 +361,8 @@ async function publish(force: boolean): Promise<void> {
       content: {
         title: meta.name,
         body: state.paused
-          ? `VIBEZCORE Bracelet · ${fmtMMSS(remSec)} left · Paused`
-          : `VIBEZCORE Bracelet · ${fmtMMSS(remSec)} left`,
+          ? `State Control · ${fmtMMSS(remSec)} left · Paused`
+          : `State Control · ${fmtMMSS(remSec)} left`,
         /* kind:'bracelet-session' — EIGEN kind, apart van de dagelijkse
            'bracelet'-reminders: de notification-handler in _layout.tsx
            gebruikt dit om de heads-up-banner te onderdrukken bij elke
@@ -498,6 +555,8 @@ export function startBraceletSessionMonitor(opts: {
    aan een scherm — operator, 5 okt 2026: minimaliseren en terugkomen
    herstartte de curve. */
 function syncHaptics(): void {
+  syncIosKeepAwake();
+  void scheduleIosDone();
   if (!state) {
     stopModePreviewHaptic();
     return;
@@ -543,8 +602,13 @@ export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): 
   clearTimers();
   state = null;
   persist();
-  if (opts?.natural) releaseSessionHapticAtNaturalEnd();
-  else syncHaptics();
+  if (opts?.natural) {
+    releaseSessionHapticAtNaturalEnd();
+    syncIosKeepAwake();
+  } else {
+    syncHaptics();
+    void cancelIosDone();
+  }
   clearBraceletSession();
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID);
