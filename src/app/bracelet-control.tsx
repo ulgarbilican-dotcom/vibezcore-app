@@ -3602,25 +3602,9 @@ function ActiveSessionScreen({
                   <Text style={[s.timerNum, timerColorOverride]}>
                     {mm}:{ss.toString().padStart(2, '0')}
                   </Text>
-                  <Text
-                    style={[
-                      s.timerUnit,
-                      activeDark && { color: 'rgba(255,255,255,0.75)' },
-                    ]}
-                  >
-                    {/* Iter 9by (2026-05-31): tijdens pause altijd
-                        "left" tonen i.p.v. "paused" — dat communiceert
-                        het PAUSED-label boven de tijd al. */}
-                    left
-                  </Text>
-                  <Text
-                    style={[
-                      s.timerTotal,
-                      activeDark && { color: 'rgba(255,255,255,0.6)' },
-                    ]}
-                  >
-                    of {totalMM}:{totalSS.toString().padStart(2, '0')}
-                  </Text>
+                  {/* "left" en "of 30:00" weg (operator, 6 okt 2026: "de
+                      countdown is goed, de tekst eronder is overbodig") —
+                      een aftellende klok spreekt voor zich. */}
                 </>
               );
             })()}
