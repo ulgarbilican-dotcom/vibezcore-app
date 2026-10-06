@@ -18,14 +18,13 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
 import MembershipPlans from '@/components/MembershipPlans';
 import VibezGlass from '@/components/VibezGlass';
-import { GlassSheet, rootBlurRef } from '@/components/GlassSheetHost';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { restorePurchases } from '@/services/restore-purchases';
 
@@ -93,14 +92,13 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
   };
 
   return (
-    /* In hetzelfde venster als de app (GlassSheetHost), zodat het glas op
-       Android echt vervaagt wat erachter ligt — een Modal kan dat niet. */
-    <GlassSheet visible={visible} onClose={onClose}>
-        <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      {/* Gedimde achtergrond: tik = sluiten, zoals de andere sheets. */}
+      <Pressable style={s.backdrop} onPress={onClose}>
+        <Pressable style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]} onPress={() => {}}>
           <VibezGlass
             radius={24}
             level="sheet"
-            blurTarget={rootBlurRef}
             style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
           />
           <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
@@ -141,14 +139,16 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
               onRestore={() => void restore()}
             />
           </ScrollView>
-        </View>
-    </GlassSheet>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 const s = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.58)', justifyContent: 'flex-end' },
   sheet: {
-    flexShrink: 1,
+    maxHeight: '92%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -166,7 +166,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   eyebrow: { fontFamily: BrandFonts.semibold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)' },
   done: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
-  scroll: { flexGrow: 0, flexShrink: 1 },
+  scroll: { flexGrow: 0 },
   title: { fontFamily: BrandFonts.bold, fontSize: 26, letterSpacing: -0.4, color: '#ffffff', marginTop: 6 },
   list: { marginTop: 14, marginBottom: 20, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

@@ -19,8 +19,6 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
-import { BlurTargetView } from 'expo-blur';
-import { GlassSheetHost, rootBlurRef } from '@/components/GlassSheetHost';
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
@@ -657,10 +655,6 @@ export default function RootLayout() {
            simpele versie. Het echte probleem zit specifiek in dat ene
            scherm, zie daar verder. */}
         <StatusBar style="light" />
-        {/* De hele app in één BlurTargetView (7 okt 2026): het glas van de
-            sheets in GlassSheetHost (onderaan, BUITEN deze target) vervaagt
-            dit — zo is het ook op Android echt glas. */}
-        <BlurTargetView ref={rootBlurRef} style={{ flex: 1 }}>
         <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Brand.bg },
@@ -820,8 +814,6 @@ export default function RootLayout() {
           immersion across every app-emitted confirm/notify. Native store
           popups (Google Play "Fout", Apple StoreKit) are intentionally
           left untouched (we have no control over those). */}
-      </BlurTargetView>
-      <GlassSheetHost />
       <VibezAlertHost />
       </View>
     </ErrorBoundary>
