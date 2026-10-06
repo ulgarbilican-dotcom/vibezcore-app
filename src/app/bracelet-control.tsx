@@ -1629,7 +1629,8 @@ function ModeSwipeRing({
    zich sluit, een vinkje, modus + "Session complete" + de duur, één witte
    Done-knop (huisstijl: CTA wit, donkere tekst). Geen geluid — het eind-
    signaal zit in de trilling (services/bracelet-haptics.ts). */
-const RING_R = 56;
+/* Groter (operator, 6 okt 2026: "cirkel te klein"): 56 → 84. */
+const RING_R = 84;
 const RING_STROKE = 4;
 const RING_SIZE = (RING_R + RING_STROKE) * 2;
 const RING_CIRC = 2 * Math.PI * RING_R;
@@ -1645,6 +1646,7 @@ function CompletionModal({
   onDismiss: () => void;
 }) {
   const meta = getModeMeta(mode);
+  const insets = useSafeAreaInsets();
   const fade = useSharedValue(0);
   const ring = useSharedValue(0);
   const check = useSharedValue(0);
@@ -1668,7 +1670,17 @@ function CompletionModal({
         withTiming(1, { duration: 1000, easing: ReanimatedEasing.out(ReanimatedEasing.cubic) }),
       );
       check.value = withDelay(1150, withSpring(1, { damping: 12, stiffness: 160 }));
-      ripple.value = withDelay(1200, withTiming(1, { duration: 1100, easing: ReanimatedEasing.out(ReanimatedEasing.quad) }));
+      /* Operator, 6 okt 2026 ("hadden we niet gezegd dat de cirkel
+         geanimeerd zou worden? zachte puls"): na het vinkje blijft een
+         zachte golf rustig naar buiten lopen tot je op Done tikt. */
+      ripple.value = withDelay(
+        1200,
+        withRepeat(
+          withTiming(1, { duration: 2600, easing: ReanimatedEasing.out(ReanimatedEasing.quad) }),
+          -1,
+          false,
+        ),
+      );
       textIn.value = withDelay(1300, withTiming(1, { duration: 500 }));
     };
     if (AppState.currentState === 'active') run();
@@ -1679,8 +1691,8 @@ function CompletionModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const rippleStyle = useAnimatedStyle(() => ({
-    opacity: ripple.value === 0 ? 0 : 0.55 * (1 - ripple.value),
-    transform: [{ scale: 1 + 0.45 * ripple.value }],
+    opacity: ripple.value === 0 ? 0 : 0.45 * (1 - ripple.value),
+    transform: [{ scale: 1 + 0.35 * ripple.value }],
   }));
 
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
@@ -1729,7 +1741,7 @@ function CompletionModal({
           />
         </Svg>
         <ReanimatedAnimated.View style={checkStyle}>
-          <Check size={46} color={checkColor} strokeWidth={2.6} />
+          <Check size={64} color={checkColor} strokeWidth={2.4} />
         </ReanimatedAnimated.View>
       </View>
 
@@ -1741,7 +1753,11 @@ function CompletionModal({
         )}
       </ReanimatedAnimated.View>
 
-      <ReanimatedAnimated.View style={[s.completionDoneWrap, textStyle]}>
+      {/* Op dezelfde hoogte en breedte als "Start session" (6 okt 2026: "knop
+          zit te laag") — boven de systeembalk, niet erop. */}
+      <ReanimatedAnimated.View
+        style={[s.completionDoneWrap, { bottom: Math.max(insets.bottom, 12) + 26 }, textStyle]}
+      >
         <Pressable
           style={({ pressed }) => [s.completionBtn, s.completionBtnWide, pressed && { opacity: 0.85 }]}
           onPress={onDismiss}
@@ -6645,14 +6661,15 @@ const s = StyleSheet.create({
   },
   completionDoneWrap: {
     position: 'absolute',
-    left: 24,
-    right: 24,
-    bottom: 48,
+    left: 26,
+    right: 26,
   },
   completionBtnWide: {
     backgroundColor: '#ffffff',
     width: '100%',
-    paddingVertical: 16,
+    height: 56,
+    paddingVertical: 0,
+    justifyContent: 'center',
   },
   completionBackdrop: {
     ...StyleSheet.absoluteFillObject,
