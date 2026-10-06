@@ -25,6 +25,7 @@
 import BraceletIcon from '@/components/BraceletIcon';
 import { BraceletMiniIndicator } from '@/components/BraceletMiniIndicator';
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { PremiumPill } from '@/components/PremiumPill';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { BrandFonts } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
@@ -391,6 +392,9 @@ export default function TabLayout() {
          launch veroorzaakte (nooit met zekerheid geïsoleerd welke van
          de twee) — kleiner risico-oppervlak. */}
       <BraceletMiniIndicator />
+      {/* Vaste Premium-ingang (6 okt 2026) — niet op schermen zonder
+          tabbalk (lopende sessie, State Control-keuzescherm). */}
+      <PremiumPill hidden={hideStateControlBar} />
     </View>
   );
 }
