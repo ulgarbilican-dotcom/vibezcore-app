@@ -16,7 +16,7 @@
 
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode, RefObject } from 'react';
+import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 type Props = {
@@ -64,6 +64,18 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
              het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
           { ...LEVEL.sheet, base: 'rgba(20,20,24,0.16)', blur: 70 }
         : LEVEL[level];
+  /* expo-blur (Android) stelt het glas in bij de EERSTE weergave, nog vóór
+     het weet wat zijn blurTarget is; het valt dan terug op een egale grijze
+     kleur en zet de vervaging daarna niet meer aan (7 okt 2026: "na
+     herladen is het glas weg"). Daarom: eerst zonder vervaging tekenen en
+     ze pas inschakelen zodra de target gekoppeld is — de wissel van
+     blurMethod laat expo-blur alles opnieuw en goed instellen. */
+  const [armed, setArmed] = useState(!blurTarget);
+  useEffect(() => {
+    if (!blurTarget) return;
+    const t = setTimeout(() => setArmed(true), 80);
+    return () => clearTimeout(t);
+  }, [blurTarget]);
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView
@@ -72,8 +84,8 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
            legt "dark" zelf al ~62% grijs over het glas, samen met onze
            eigen laag werd dat dekkend (operator, 7 okt 2026: "helemaal
            niet transparant"). */
-        tint={blurTarget ? 'systemUltraThinMaterialDark' : 'dark'}
-        blurMethod="dimezisBlurViewSdk31Plus"
+        tint={blurTarget && armed ? 'systemUltraThinMaterialDark' : 'dark'}
+        blurMethod={armed ? 'dimezisBlurViewSdk31Plus' : 'none'}
         blurTarget={blurTarget}
         style={StyleSheet.absoluteFill}
       />
