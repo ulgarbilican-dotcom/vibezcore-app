@@ -2661,10 +2661,10 @@ function StateInfoModal({
         {cfg && (
           <View style={s.stateInfoCard}>
             <Text style={[s.stateInfoEyebrow, { color: cfg.accent }]}>{cfg.eyebrow}</Text>
-            {/* Niet de figuurnaam ("Lotus") — dat is enkel de vorm van de
+            {/* Niet de figuurnaam ("Lotus") en ook niet de tagline erbij
+                ("Stillness in motion") — dat hoort bij de vorm van de
                 animatie, geen info voor de gebruiker (operator, 6 okt 2026). */}
             <Text style={s.stateInfoTitle}>{cfg.subtitle}</Text>
-            <Text style={s.stateInfoTagline}>{cfg.tagline}</Text>
             <Text style={s.stateInfoDesc}>{cfg.description}</Text>
             <Pressable onPress={onClose} style={s.braceletModalClose}>
               <Text style={s.braceletModalCloseTxt}>Got it</Text>
