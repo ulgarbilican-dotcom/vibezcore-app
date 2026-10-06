@@ -66,6 +66,29 @@ export function subscribeActiveSessionVisible(listener: Listener): () => void {
   };
 }
 
+/* Het keuzescherm (Session Control) staat in beeld (operator, 6 okt 2026:
+   "bij breathwork zijn de tabs onderaan weg, bij session control niet —
+   meer ademruimte"): ook dan geen tabbalk, zoals de breathwork-setup. */
+let chooseVisible = false;
+const chooseListeners = new Set<Listener>();
+
+export function setChooseScreenVisible(visible: boolean): void {
+  if (chooseVisible === visible) return;
+  chooseVisible = visible;
+  chooseListeners.forEach((l) => l(visible));
+}
+
+export function isChooseScreenVisible(): boolean {
+  return chooseVisible;
+}
+
+export function subscribeChooseScreenVisible(listener: Listener): () => void {
+  chooseListeners.add(listener);
+  return () => {
+    chooseListeners.delete(listener);
+  };
+}
+
 /* Het State Control-intro staat in beeld (5 okt 2026, audit): dan moet de
    sessie-pill zichtbaar zijn als er een sessie loopt — het intro zelf toont
    die sessie nergens. */

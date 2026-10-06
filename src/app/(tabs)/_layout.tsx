@@ -28,7 +28,15 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { BrandFonts } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
-import { isActiveSessionVisible, setTabsOnTop, subscribeActiveSessionVisible } from '@/utils/state-control-ui';
+import {
+  isActiveSessionVisible,
+  isChooseScreenVisible,
+  isStateControlIntroVisible,
+  setTabsOnTop,
+  subscribeActiveSessionVisible,
+  subscribeChooseScreenVisible,
+  subscribeStateControlIntroVisible,
+} from '@/utils/state-control-ui';
 import { router, Tabs, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -193,8 +201,15 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   /* Actieve State Control-sessie = volledig scherm, geen tabbalk (operator,
      5 okt 2026) — zie utils/state-control-ui.ts. */
-  const [hideStateControlBar, setHideStateControlBar] = useState(isActiveSessionVisible());
-  useEffect(() => subscribeActiveSessionVisible(setHideStateControlBar), []);
+  const [sessionVisible, setSessionVisible] = useState(isActiveSessionVisible());
+  useEffect(() => subscribeActiveSessionVisible(setSessionVisible), []);
+  /* Ook het keuzescherm zonder tabbalk, zoals de breathwork-setup (6 okt
+     2026) — maar niet zolang het intro erover ligt. */
+  const [chooseVisible, setChooseVisible] = useState(isChooseScreenVisible());
+  useEffect(() => subscribeChooseScreenVisible(setChooseVisible), []);
+  const [introVisible, setIntroVisible] = useState(isStateControlIntroVisible());
+  useEffect(() => subscribeStateControlIntroVisible(setIntroVisible), []);
+  const hideStateControlBar = sessionVisible || (chooseVisible && !introVisible);
   /* Voor openStateControl: tab wisselen als de tabbladen bovenaan liggen,
      anders terugkeren naar de tabbladen (6 okt 2026). */
   useFocusEffect(

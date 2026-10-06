@@ -37,7 +37,7 @@ import {
   subscribeHapticPulse,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
-import { isActiveSessionVisible, setActiveSessionVisible } from '@/utils/state-control-ui';
+import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -2446,9 +2446,12 @@ function DurationRing({
   size = 180,
   dark,
   fillOnMount,
+  recommended,
 }: {
   /** Leeg binnenkomen en pas na aankomst vullen (modus-wissel). */
   fillOnMount?: boolean;
+  /** De gekozen duur is de aanbevolen duur → "● Recommended" onder de tijd. */
+  recommended?: boolean;
   min: number;
   max: number;
   value: number;
@@ -2593,25 +2596,26 @@ function DurationRing({
       >
         <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} fillOnMount={fillOnMount} />
       </View>
+      {/* Operator, 6 okt 2026 ("kijk of de look zelfde is als bij
+         breathwork"): dezelfde opbouw en maten als de breath-setup-ring —
+         tijd 54 bold, naam 14 gedimd, "● Recommended" 12. Hier: de naam
+         met de i erbij BOVEN de tijd (tik op de ring opent de uitleg), en
+         Recommended ONDER de tijd. De rij blijft staan als hij leeg is,
+         zodat de tijd niet verspringt. */}
       <View pointerEvents="none" style={s.durationRingCenter}>
-        <Text style={[s.durationRingLabel, { color: fg }, textShadow]}>
-          {label.toUpperCase()}
+        <View style={s.ringNameRow}>
+          <Text style={[s.ringName, textShadow]} numberOfLines={1}>
+            {label}
+          </Text>
+          <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+        </View>
+        <Text style={[s.ringClock, { color: numColor }, textShadow]}>
+          {`${value}:00`}
         </Text>
-        {/* Operator, 16 september 2026 ("tekst in de cirkel wit en
-           minuten moeten veel groter", daarna "minuten in Clarity liever
-           wit met zwarte rand"): bij een lichte modus-kleur kreeg het
-           getal een dunne zwarte outline-stack, om op te vallen tegen een
-           toen nog bijna-opake witte golf-vulling.
-           Operator, 27 september 2026: die golf-vulling is nu transparant
-           (zie WaveFillCircle) — de binnenkant is bij elke modus-kleur
-           overwegend zwart, dus de outline-stack is niet meer nodig. Altijd
-           gewone witte tekst + de standaard donkere halo (`textShadow`). */}
-        <Text style={[s.durationRingNum, { color: numColor }, textShadow]}>
-          {value}
-        </Text>
-        <Text style={[s.durationRingUnit, { color: fg }, textShadow]}>
-          min
-        </Text>
+        <View style={[s.ringRecRow, { opacity: recommended ? 1 : 0 }]}>
+          <View style={[s.ringRecDot, { backgroundColor: color }]} />
+          <Text style={s.ringRecTxt}>Recommended</Text>
+        </View>
       </View>
     </View>
   );
@@ -3853,6 +3857,15 @@ function IdleScreen({
   const idleDark = true;
 
   const idleInTab = usePathname() === '/bracelet';
+  /* Geen tabbalk op dit keuzescherm, zoals de breathwork-setup (operator,
+     6 okt 2026: "zo krijgt de pagina meer ademruimte"). */
+  useFocusEffect(
+    useCallback(() => {
+      if (!idleInTab) return undefined;
+      setChooseScreenVisible(true);
+      return () => setChooseScreenVisible(false);
+    }, [idleInTab]),
+  );
   const [runSnap, setRunSnap] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setRunSnap), []);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
@@ -3880,7 +3893,7 @@ function IdleScreen({
       /* In de tab neemt de tabbalk de onderste systeemrand al voor zijn
          rekening — hier nogmaals reserveren duwde de Start-knop onder de
          balk (operator, 5 okt 2026). */
-      edges={idleInTab ? ['top'] : ['top', 'bottom']}
+      edges={['top']}
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
@@ -3953,7 +3966,9 @@ function IdleScreen({
       <View
         style={[
           s.idleSingleScreen,
-          { paddingBottom: idleInTab ? 24 : Math.max(safeInsets.bottom + 24, 72) },
+          /* Zonder tabbalk: de knop op dezelfde hoogte als "Start session"
+             in de breathwork-setup (6 okt 2026). */
+          { paddingBottom: Math.max(safeInsets.bottom, 12) + 26 },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
@@ -4010,8 +4025,11 @@ function IdleScreen({
               value={duration}
               color={meta.color}
               label={meta.name}
-              size={240}
+              size={230}
               dark={idleDark}
+              recommended={
+                duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
+              }
             />
           </ModeSwipeRing>
         </View>
@@ -4044,16 +4062,8 @@ function IdleScreen({
             );
           })}
         </View>
-        <Pressable
-          style={[s.startInfoBtn, { marginTop: 14, marginBottom: 14, width: 30, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: 'transparent' }]}
-          onPress={() => setDetailModeForModal(selectedMode)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel={`Learn about ${meta.name}`}
-        >
-          {/* VIBEZCORE-glas (5 okt 2026). */}
-          <VibezGlass radius={15} style={StyleSheet.absoluteFill} />
-          <Info size={14} color="rgba(255,255,255,0.75)" strokeWidth={2.2} />
-        </Pressable>
+        {/* De losse i-knop hier is weg: de i staat nu in de ring, naast de
+            naam van de toestand (6 okt 2026). */}
 
         {/* Operator ("dat moet meer in deze stijl, breathwork"): de losse
            preset-chip-rij + aparte slider vervangen door dezelfde
@@ -4070,9 +4080,6 @@ function IdleScreen({
             onChange={setDuration}
             accent={meta.color}
             trackColor={idleDark ? 'rgba(255,255,255,0.4)' : C.textDim}
-            recommendedValue={
-              DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
-            }
           />
         </View>
 
@@ -4094,16 +4101,16 @@ function IdleScreen({
              sessie mag; wisselen vraagt één bevestiging (een sessie stoppen
              is onomkeerbaar). */
           <PrimaryCtaButton
-            style={[s.primaryBtn, busy && s.btnDisabled]}
+            style={[s.primaryBtn, s.chooseCta, busy && s.btnDisabled]}
             onPress={() => setConfirmSwitch(true)}
             disabled={busy}
             accessibilityLabel={`Switch to ${meta.name}`}
           >
-            <Text style={s.primaryBtnText}>Switch to {meta.name}</Text>
+            <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Switch to {meta.name}</Text>
           </PrimaryCtaButton>
         ) : (
           <PrimaryCtaButton
-            style={[s.primaryBtn, (busy || criticalBattery) && s.btnDisabled]}
+            style={[s.primaryBtn, s.chooseCta, (busy || criticalBattery) && s.btnDisabled]}
             onPress={onStart}
             disabled={busy || criticalBattery}
             accessibilityLabel={
@@ -4117,10 +4124,10 @@ function IdleScreen({
                  les als protocol-gate.ts: geen verrassing pas na de tik). */
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Lock size={16} color="#1D1D1F" strokeWidth={2.4} />
-                <Text style={s.primaryBtnText}>Start {meta.name}</Text>
+                <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Start {meta.name}</Text>
               </View>
             ) : (
-              <Text style={s.primaryBtnText}>Start {meta.name}</Text>
+              <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Start {meta.name}</Text>
             )}
           </PrimaryCtaButton>
         )}
@@ -6102,6 +6109,36 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.extrabold,
     fontSize: 20,
   },
+  /* Zelfde maten als de breath-setup-ring (heroClock/heroTech/heroRec*). */
+  ringNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 },
+  ringName: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 14,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  ringClock: {
+    marginTop: 4,
+    fontFamily: BrandFonts.bold,
+    fontSize: 54,
+    letterSpacing: -1,
+  },
+  ringRecRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  ringRecDot: { width: 6, height: 6, borderRadius: 3 },
+  ringRecTxt: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  /* De CTA zoals "Start session" in de breathwork-setup: 56 hoog, zelfde
+     zijmarge (16 + 10 = 26), semibold. */
+  chooseCta: {
+    height: 56,
+    paddingVertical: 0,
+    marginHorizontal: 10,
+  },
+  chooseCtaTxt: { fontFamily: BrandFonts.semibold, letterSpacing: 0.1 },
   durationRingCenter: {
     position: 'absolute',
     alignItems: 'center',
