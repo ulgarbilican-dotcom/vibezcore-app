@@ -53,7 +53,7 @@ import {
 } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { ChartNoAxesColumn, Info, Lock, Target } from 'lucide-react-native';
+import { CalendarDays, Info, Lock } from 'lucide-react-native';
 import { useActivePlan } from '@/utils/plan-store';
 import { useProtocolLocked } from '@/utils/protocol-gate';
 import { techniqueIcon } from '@/utils/technique-copy';
@@ -424,7 +424,8 @@ function GoalButton({
       {!plan && protocolLocked ? (
         <Lock size={19} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
       ) : (
-        <Target size={19} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
+        /* Kalender (6 okt 2026): Apple's teken voor schema en plan. */
+        <CalendarDays size={20} color="rgba(255,255,255,0.85)" strokeWidth={2} />
       )}
     </AnimatedPressable>
   );
@@ -571,16 +572,6 @@ export default function BreathScreen() {
      een echte spring-schaal bij aanraken (niet enkel de Android-ripple). */
   const ctaScale = useSharedValue(1);
   const ctaPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
-  const histBtnScale = useSharedValue(1);
-  const onHistBtnPressIn = () => {
-    histBtnScale.value = withTiming(0.92, { duration: 80 });
-  };
-  const onHistBtnPressOut = () => {
-    histBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const histBtnPressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: histBtnScale.value }],
-  }));
   const shimmer = useSharedValue(-1);
   useEffect(() => {
     shimmer.value = withRepeat(
@@ -1003,21 +994,9 @@ export default function BreathScreen() {
         </View>
       ) : (
         <>
-      {/* Een ZICHTBARE ingang naar de historiek (operator, 5 augustus 2026:
-          "waar staat die history, ik zie geen knop"). Hij stond alleen als
-          gedimde tekstregel onderaan, en dat leest niet als een knop — zeker
-          niet op een scherm waar de rest van de aandacht naar de figuur gaat.
-          Linksboven, tegenover niets, zodat hij nooit met de kop botst. */}
-      <AnimatedPressable
-        onPress={() => router.push('/breath-history')}
-        onPressIn={onHistBtnPressIn}
-        onPressOut={onHistBtnPressOut}
-        hitSlop={14}
-        style={[s.histBtn, histBtnPressStyle]}
-        accessibilityLabel="Your practice"
-      >
-        <ChartNoAxesColumn size={19} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-      </AnimatedPressable>
+      {/* Operator, 6 okt 2026: de "Your practice"-knop linksboven is weg —
+          de Activity-tab opent dezelfde historiek (Apple: elk tabblad één
+          taak, linksboven is de plek voor "terug"). */}
 
       {/* Operator, 11 september 2026: "set your goal en daily plan een
          eigen plaats geven, ook in de breath-tab" — stonden tot nu toe
