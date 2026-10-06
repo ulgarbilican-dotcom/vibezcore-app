@@ -1652,7 +1652,7 @@ function CompletionModal({
   const ring = useSharedValue(0);
   const check = useSharedValue(0);
   const textIn = useSharedValue(0);
-  const ripple = useSharedValue(0);
+  const pulse = useSharedValue(0);
 
   /* Operator, 5 okt 2026 ("het einde is statisch, hoe zou Apple dat
      doen?"): de animatie speelde bij het AANMAKEN van dit scherm — kwam
@@ -1671,15 +1671,15 @@ function CompletionModal({
         withTiming(1, { duration: 1000, easing: ReanimatedEasing.out(ReanimatedEasing.cubic) }),
       );
       check.value = withDelay(1150, withSpring(1, { damping: 12, stiffness: 160 }));
-      /* Operator, 6 okt 2026 ("hadden we niet gezegd dat de cirkel
-         geanimeerd zou worden? zachte puls"): na het vinkje blijft een
-         zachte golf rustig naar buiten lopen tot je op Done tikt. */
-      ripple.value = withDelay(
+      /* Operator, 6 okt 2026 ("zachte puls" — en daarna: "de ring zelf moet
+         pulseren, geen extra pulsring"): na het vinkje ademt de ring zelf
+         rustig groter en kleiner tot je op Done tikt. */
+      pulse.value = withDelay(
         1200,
         withRepeat(
-          withTiming(1, { duration: 2600, easing: ReanimatedEasing.out(ReanimatedEasing.quad) }),
+          withTiming(1, { duration: 1800, easing: ReanimatedEasing.inOut(ReanimatedEasing.sin) }),
           -1,
-          false,
+          true,
         ),
       );
       textIn.value = withDelay(1300, withTiming(1, { duration: 500 }));
@@ -1691,9 +1691,9 @@ function CompletionModal({
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const rippleStyle = useAnimatedStyle(() => ({
-    opacity: ripple.value === 0 ? 0 : 0.45 * (1 - ripple.value),
-    transform: [{ scale: 1 + 0.35 * ripple.value }],
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: 1 - 0.3 * pulse.value,
+    transform: [{ scale: 1 + 0.045 * pulse.value }],
   }));
 
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
@@ -1711,15 +1711,8 @@ function CompletionModal({
   return (
     <ReanimatedAnimated.View style={[s.completionOverlay, s.completionFull, fadeStyle]}>
       <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' }}>
-        <ReanimatedAnimated.View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius: RING_SIZE / 2, borderWidth: 2, borderColor: meta.color },
-            rippleStyle,
-          ]}
-        />
-        <Svg width={RING_SIZE} height={RING_SIZE} style={StyleSheet.absoluteFill}>
+        <ReanimatedAnimated.View pointerEvents="none" style={[StyleSheet.absoluteFill, pulseStyle]}>
+        <Svg width={RING_SIZE} height={RING_SIZE}>
           <Circle
             cx={RING_SIZE / 2}
             cy={RING_SIZE / 2}
@@ -1741,6 +1734,7 @@ function CompletionModal({
             transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
           />
         </Svg>
+        </ReanimatedAnimated.View>
         <ReanimatedAnimated.View style={checkStyle}>
           <Check size={64} color={checkColor} strokeWidth={2.4} />
         </ReanimatedAnimated.View>
