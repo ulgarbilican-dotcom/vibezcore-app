@@ -12,6 +12,7 @@ package com.ubili.vibezcoreapp.wear
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -45,6 +46,52 @@ class MainActivity : Activity() {
 
     pauseButton.setOnClickListener { onPauseTap() }
     endButton.setOnClickListener { onEndTap() }
+    runDemo(intent)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    runDemo(intent)
+  }
+
+  /* Testingang, ENKEL in een debug-build (nooit in de winkelversie): een
+     sessie starten zonder gekoppelde telefoon, alsof de telefoon die stuurde.
+       adb shell am start -n com.ubili.vibezcoreapp/com.ubili.vibezcoreapp.wear.MainActivity --es vz_demo state|breath|pause|stop */
+  private fun runDemo(intent: Intent?) {
+    if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) return
+    when (intent?.getStringExtra("vz_demo")) {
+      "state" -> startForegroundService(
+        Intent(this, WearStateSessionService::class.java).apply {
+          action = WearStateSessionService.ACTION_START
+          putExtra(
+            WearStateSessionService.EXTRA_START_JSON,
+            """{"title":"Sharp Focus","colorHex":"#3E9BFF","targetBpm":90,"holdSec":10,"rampSec":0,"curveOffsetSec":0,"remainingSec":900,"lubAmp":45,"dubAmp":32,"lubMsNoAmp":50,"dubMsNoAmp":40}""",
+          )
+        },
+      )
+      "breath" -> startForegroundService(
+        Intent(this, WearBreathSessionService::class.java).apply {
+          action = WearBreathSessionService.ACTION_START
+          putExtra(
+            WearBreathSessionService.EXTRA_SESSION_JSON,
+            """{"modeName":"Calm Control","colorHex":"#B478FF","rounds":12,"phases":[{"key":"inhale","secs":4,"pattern":[0,60]},{"key":"hold","secs":4,"pattern":[0,40]},{"key":"exhale","secs":4,"pattern":[0,60]},{"key":"hold-2","secs":4,"pattern":[0,40]}]}""",
+          )
+        },
+      )
+      "pause" -> {
+        if (StateSessionState.current.active) {
+          startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_PAUSE })
+        } else if (WearBreathSessionService.instance != null) {
+          startService(Intent(this, WearBreathSessionService::class.java).apply { action = WearBreathSessionService.ACTION_PAUSE })
+        }
+      }
+      "stop" -> {
+        startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_STOP })
+        if (WearBreathSessionService.instance != null) {
+          startService(Intent(this, WearBreathSessionService::class.java).apply { action = WearBreathSessionService.ACTION_STOP })
+        }
+      }
+    }
   }
 
   override fun onStart() {
