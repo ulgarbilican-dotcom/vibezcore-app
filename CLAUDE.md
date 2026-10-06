@@ -260,7 +260,11 @@ veranderen NIET bij omschakeling.
   ook een lichte variant (`BrandLight`), maar opent standaard in dark.
 - **Kleuren (rol-gesplitst, exact — zie theme.ts):** achtergrond `#0a0a0a`
   (dark) / `#F5F5F7` (light) · Signal Blue `#3a8fff` UITSLUITEND voor
-  haptic-pulsen/"nu actief" in de player, nooit CTA/tekst/vlakken · Royal
+  haptic-pulsen/"nu actief" in de player, nooit CTA/tekst/vlakken
+  (GEWIJZIGD 6 oktober 2026, operator: de pulsringen rond de cirkel in een
+  lopende State Control-sessie in de app krijgen de kleur van de TOESTAND;
+  Signal Blue blijft voor de haptics op bracelet-foto's, website en
+  marketingbeelden) · Royal
   Indigo `#6E85C4` (op dark) / `#1E2A4A` (op light) voor accent-tekst/labels,
   nooit knoppen · Bio-Teal `#00A3A3`/`#4AF0D4` als accent BINNEN Audio Library
   (player, mini-player, library-schermen) — nog niet app-breed · succes

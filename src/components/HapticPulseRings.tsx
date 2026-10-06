@@ -29,6 +29,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+/* Standaard Signal Blue. In een lopende sessie krijgen de ringen de kleur
+   van de toestand (operator, 6 okt 2026: "per toestand de kleur van de
+   state — de huisstijl geldt voor de haptics op bracelet-foto's e.d."). */
 const RING_COLOR = BrandDark.accent;
 const POOL_SIZE = 6;
 
@@ -50,7 +53,7 @@ function lookFor(pulse: HapticPulse): RingLook {
 
 type RingHandle = { fire: (look: RingLook, reduced: boolean) => void };
 
-const Ring = forwardRef<RingHandle, { size: number }>(function Ring({ size }, ref) {
+const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ring({ size, color }, ref) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
   const stroke = useSharedValue(1.5);
@@ -82,12 +85,12 @@ const Ring = forwardRef<RingHandle, { size: number }>(function Ring({ size }, re
   return (
     <Animated.View
       pointerEvents="none"
-      style={[s.ring, { width: size, height: size, borderRadius: size / 2 }, style]}
+      style={[s.ring, { width: size, height: size, borderRadius: size / 2, borderColor: color }, style]}
     />
   );
 });
 
-export function HapticPulseRings({ size }: { size: number }) {
+export function HapticPulseRings({ size, color = RING_COLOR }: { size: number; color?: string }) {
   const reduced = useReducedMotion();
   const rings = useRef<(RingHandle | null)[]>([]);
   const next = useRef(0);
@@ -106,6 +109,7 @@ export function HapticPulseRings({ size }: { size: number }) {
         <Ring
           key={i}
           size={size}
+          color={color}
           ref={(r) => {
             rings.current[i] = r;
           }}
@@ -123,6 +127,5 @@ const s = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
-    borderColor: RING_COLOR,
   },
 });

@@ -3178,7 +3178,9 @@ function ActiveSessionScreen({
              per tik, exact uit dezelfde curve als de motor (zie
              components/HapticPulseRings.tsx). Achter de cirkel, zodat de
              ringen vanaf de rand naar buiten uitzetten. */}
-          <HapticPulseRings size={240} />
+          {/* In de kleur van de toestand (operator, 6 okt 2026), zelfde tint
+             als de rand — Sleep dus licht teal. */}
+          <HapticPulseRings size={240} color={breathWaveLook(activeMeta.color).color} />
           <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
           {/* Operator, 27 september 2026 ("doe die draaiende buitenlijn
              weg"): SlowAmbientPulse-render verwijderd — DrainingCircle's
