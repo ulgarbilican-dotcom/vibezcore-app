@@ -22,6 +22,7 @@
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
+import { goToTab } from '@/utils/state-control-ui';
 import { BreathSessionHost } from '@/components/BreathSessionHost';
 import { getBreathHost, openBreathSession, restoreBreathSession } from '@/services/breath-session-host';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -255,10 +256,10 @@ export default function RootLayout() {
       /* dismissTo i.p.v. navigate (audit 5 okt 2026): stond er een scherm
          boven de tabbladen open (plan, protocol …), dan zette navigate een
          tweede set tabbladen op de stapel. */
-      router.dismissTo({
+      goToTab({
         pathname: reminderRoute(t),
         params: { from: 'reminder', ...reminderParams(t) },
-      } as never);
+      });
     });
     return () => {
       cancelled = true;

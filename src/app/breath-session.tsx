@@ -59,6 +59,7 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import VibezGlass from '@/components/VibezGlass';
+import { goToTab } from '@/utils/state-control-ui';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   ensureAudioModeSet,
@@ -3662,7 +3663,7 @@ export function BreathSession() {
                           onPress: () => {
                             if (running) minimizeBreathSession();
                             else closeBreathSession();
-                            router.dismissTo('/bracelet' as never);
+                            goToTab('/bracelet');
                           },
                         },
                       ],
@@ -3780,10 +3781,7 @@ export function BreathSession() {
                 closeBreathSession();
                 /* dismissTo i.p.v. push: geen tweede tab-navigator op de
                    stapel (audit 5 okt 2026). */
-                router.dismissTo({
-                  pathname: '/',
-                  params: { from: 'breath' },
-                } as never);
+                goToTab({ pathname: '/', params: { from: 'breath' } });
               }}
               hitSlop={8}
               style={[s.feedMind, pressBrowseLibrary.style]}

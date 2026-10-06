@@ -26,7 +26,7 @@
    propageren naar player.tsx → Play next direct tikbaar.
    ─────────────────────────────────────────────────────────────────────── */
 
-import { useRouter } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -225,7 +225,6 @@ const ps = StyleSheet.create({
 });
 
 export function BraceletUpsellModal() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const visible = useBraceletUpsellVisible();
 
@@ -252,7 +251,7 @@ export function BraceletUpsellModal() {
        klaar. */
     dismissEndedPanel();
     hideBraceletUpsell();
-    setTimeout(() => router.dismissTo('/bracelet'), 150);
+    setTimeout(() => goToTab('/bracelet'), 150);
   };
 
   return (

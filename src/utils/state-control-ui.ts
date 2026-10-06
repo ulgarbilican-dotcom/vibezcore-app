@@ -22,7 +22,26 @@ export function openStateControl(params: Record<string, string | number> = {}): 
      TWEEDE set tabbladen op de stapel — terugknop-lussen en "verdwaalde"
      schermen. dismissTo keert terug naar de bestaande tabbladen en kiest
      daar State Control. */
-  router.dismissTo({ pathname: '/bracelet', params: { ...p, open: String(Date.now()) } } as never);
+  goToTab({ pathname: '/bracelet', params: { ...p, open: String(Date.now()) } });
+}
+
+/** Naar een tabblad, van waar ook. Operator, 6 okt 2026 ("tikken op de
+ *  geminimaliseerde pill werkt niet meer — gisteren nog wel"): dismissTo
+ *  deed NIETS wanneer de tabbladen zelf bovenaan liggen (pill, Activity,
+ *  sessie-laag) — er valt dan niets te sluiten. Daar gewoon van tab
+ *  wisselen; dismissTo enkel vanaf een scherm BOVEN de tabbladen (anders
+ *  komt er een tweede set tabbladen op de stapel). */
+export function goToTab(href: string | { pathname: string; params?: Record<string, string> }): void {
+  if (tabsOnTop) router.navigate(href as never);
+  else router.dismissTo(href as never);
+}
+
+/* Liggen de tabbladen bovenaan (geen plan/protocol/… erboven)? Gezet door
+   (tabs)/_layout.tsx via de focus van de tab-groep. */
+let tabsOnTop = false;
+
+export function setTabsOnTop(onTop: boolean): void {
+  tabsOnTop = onTop;
 }
 
 type Listener = (visible: boolean) => void;

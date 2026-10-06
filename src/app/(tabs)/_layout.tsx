@@ -28,9 +28,9 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { BrandFonts } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
-import { isActiveSessionVisible, subscribeActiveSessionVisible } from '@/utils/state-control-ui';
-import { router, Tabs } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { isActiveSessionVisible, setTabsOnTop, subscribeActiveSessionVisible } from '@/utils/state-control-ui';
+import { router, Tabs, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ChartNoAxesColumn,
   CircleUserRound,
@@ -195,6 +195,14 @@ export default function TabLayout() {
      5 okt 2026) — zie utils/state-control-ui.ts. */
   const [hideStateControlBar, setHideStateControlBar] = useState(isActiveSessionVisible());
   useEffect(() => subscribeActiveSessionVisible(setHideStateControlBar), []);
+  /* Voor openStateControl: tab wisselen als de tabbladen bovenaan liggen,
+     anders terugkeren naar de tabbladen (6 okt 2026). */
+  useFocusEffect(
+    useCallback(() => {
+      setTabsOnTop(true);
+      return () => setTabsOnTop(false);
+    }, []),
+  );
 
   /* Wrap Tabs in een View zodat we de MiniPlayer ernaast (absolute,
      boven de tab-bar) kunnen mounten. MiniPlayer rendert zelf null
