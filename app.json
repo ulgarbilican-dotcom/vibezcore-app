@@ -10,6 +10,7 @@
     "ios": {
       "icon": "./assets/vibezcore_icon.png",
       "bundleIdentifier": "com.ubili.vibezcoreapp",
+      "appleTeamId": "88AL3UW7L7",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

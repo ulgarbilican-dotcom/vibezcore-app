@@ -5,6 +5,7 @@
 // iOS-build bevestigt het.
 
 import ActivityKit
+import AppIntents
 import ExpoModulesCore
 import Foundation
 
@@ -34,9 +35,65 @@ struct LiveSessionRecord: Record {
   @Field var totalSec: Int = 0
 }
 
+/// Darwin-signaal van de pauze/hervat-knop in de Live Activity.
+let vibezLiveToggleName = "com.ubili.vibezcoreapp.live.toggle"
+
+/// Zelfde intent als in targets/live-activity. Voert iOS hem in het
+/// app-proces uit, dan gaat het signaal hier meteen naar JS; voert iOS hem
+/// in de widget-extensie uit, dan komt het via het Darwin-signaal binnen.
+@available(iOS 17.0, *)
+struct VibezToggleSessionIntent: LiveActivityIntent {
+  static var title: LocalizedStringResource = "Pause or resume session"
+  static var isDiscoverable: Bool = false
+
+  init() {}
+
+  func perform() async throws -> some IntentResult {
+    LiveActivityModule.current?.emitToggle()
+    return .result()
+  }
+}
+
 public class LiveActivityModule: Module {
+  static weak var current: LiveActivityModule?
+
+  func emitToggle() {
+    sendEvent("onLiveAction", ["action": "toggle"])
+  }
+
+  private func observeToggle() {
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    CFNotificationCenterAddObserver(
+      center, observer,
+      { _, observer, _, _, _ in
+        guard let observer = observer else { return }
+        let module = Unmanaged<LiveActivityModule>.fromOpaque(observer).takeUnretainedValue()
+        DispatchQueue.main.async { module.emitToggle() }
+      },
+      vibezLiveToggleName as CFString, nil, .deliverImmediately
+    )
+  }
+
+  private func stopObserving() {
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    CFNotificationCenterRemoveEveryObserver(center, Unmanaged.passUnretained(self).toOpaque())
+  }
+
   public func definition() -> ModuleDefinition {
     Name("LiveActivity")
+
+    Events("onLiveAction")
+
+    OnCreate {
+      LiveActivityModule.current = self
+      self.observeToggle()
+    }
+
+    OnDestroy {
+      self.stopObserving()
+      if LiveActivityModule.current === self { LiveActivityModule.current = nil }
+    }
 
     Function("isSupported") { () -> Bool in
       if #available(iOS 16.2, *) {

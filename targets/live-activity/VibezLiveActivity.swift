@@ -8,6 +8,7 @@
 // app op de achtergrond stillegt.
 
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -53,6 +54,51 @@ private func deepLink(_ kind: String, _ state: VibezSessionAttributes.ContentSta
   // al bovenop.
   let token = Int(state.endDate.timeIntervalSince1970)
   return URL(string: kind == "state" ? "vibezcoreapp://bracelet?open=live\(token)" : "vibezcoreapp://")
+}
+
+// ── Pauze / hervatten vanaf het vergrendelscherm (iOS 17+) ──────────────
+// De knop voert deze intent uit in de widget-extensie. Die stuurt een
+// Darwin-signaal; de app (modules/live-activity) luistert ernaar en
+// pauzeert of hervat de sessie op exact dezelfde manier als de knop in de
+// app. Werkt zolang de app nog draait — bij een ademsessie houdt het
+// audio-anker de app actief. Is de app intussen gesloten, dan opent een tik
+// op de activity zelf de sessie.
+@available(iOS 17.0, *)
+struct VibezToggleSessionIntent: LiveActivityIntent {
+  static var title: LocalizedStringResource = "Pause or resume session"
+  static var isDiscoverable: Bool = false
+
+  init() {}
+
+  func perform() async throws -> some IntentResult {
+    CFNotificationCenterPostNotification(
+      CFNotificationCenterGetDarwinNotifyCenter(),
+      CFNotificationName("com.ubili.vibezcoreapp.live.toggle" as CFString),
+      nil, nil, true
+    )
+    return .result()
+  }
+}
+
+private struct ToggleButton: View {
+  let state: VibezSessionAttributes.ContentState
+  var size: CGFloat = 40
+  var body: some View {
+    if #available(iOS 17.0, *) {
+      Button(intent: VibezToggleSessionIntent()) {
+        ZStack {
+          Circle().fill(Color(vzHex: state.colorHex).opacity(0.22))
+          Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+          Image(systemName: state.paused ? "play.fill" : "pause.fill")
+            .font(.system(size: size * 0.38, weight: .semibold))
+            .foregroundColor(.white)
+        }
+        .frame(width: size, height: size)
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(state.paused ? "Resume session" : "Pause session")
+    }
+  }
 }
 
 private struct TimerLabel: View {
@@ -111,6 +157,8 @@ private struct LockScreenView: View {
           .foregroundColor(state.paused ? Color.white.opacity(0.6) : .white)
           .multilineTextAlignment(.trailing)
           .frame(maxWidth: 120, alignment: .trailing)
+        ToggleButton(state: state, size: 40)
+          .padding(.leading, 10)
       }
       ProgressLine(state: state)
     }
@@ -146,11 +194,14 @@ struct VibezSessionLiveActivity: Widget {
             .padding(.trailing, 4)
         }
         DynamicIslandExpandedRegion(.bottom) {
-          VStack(alignment: .leading, spacing: 6) {
-            Text(context.state.paused ? "Paused" : context.state.subtitle)
-              .font(.system(size: 13))
-              .foregroundColor(Color.white.opacity(0.6))
-            ProgressLine(state: context.state)
+          HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+              Text(context.state.paused ? "Paused" : context.state.subtitle)
+                .font(.system(size: 13))
+                .foregroundColor(Color.white.opacity(0.6))
+              ProgressLine(state: context.state)
+            }
+            ToggleButton(state: context.state, size: 36)
           }
           .padding(.horizontal, 4)
         }

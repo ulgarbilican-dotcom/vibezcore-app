@@ -21,7 +21,7 @@ module.exports = {
   name: 'VIBEZCORE Live',
   bundleIdentifier: 'com.ubili.vibezcoreapp.liveactivity',
   deploymentTarget: '16.2',
-  frameworks: ['SwiftUI', 'WidgetKit', 'ActivityKit'],
+  frameworks: ['SwiftUI', 'WidgetKit', 'ActivityKit', 'AppIntents'],
   colors: {
     $accent: '#00A3A3',
   },

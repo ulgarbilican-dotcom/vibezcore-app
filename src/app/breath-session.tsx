@@ -61,7 +61,7 @@ import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import VibezGlass from '@/components/VibezGlass';
 import { goToTab } from '@/utils/state-control-ui';
 import { useKeepAwake } from 'expo-keep-awake';
-import { endLiveSession, pauseLiveSession, resumeLiveSession, showLiveSession } from '../../modules/live-activity';
+import { endLiveSession, onLiveToggle, pauseLiveSession, resumeLiveSession, showLiveSession } from '../../modules/live-activity';
 import {
   ensureAudioModeSet,
   startSessionKeepAlive,
@@ -1608,6 +1608,18 @@ export function BreathSession() {
     runPhase(phase, round, secsLeft);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [phase, round, secsLeft, runPhase, speak, byKey]);
+
+  /* iPhone: de pauze/hervat-knop in de Live Activity (vergrendelscherm en
+     Dynamic Island, iOS 17+) bedient deze sessie zoals de knop hier. */
+  useEffect(
+    () =>
+      onLiveToggle('breath', () => {
+        if (!runningRef.current) return;
+        if (pausedRef.current) resumeSession();
+        else pauseSession();
+      }),
+    [pauseSession, resumeSession],
+  );
 
   /* ── De inhaalslag ─────────────────────────────────────────────────
      Het vangnet ONDER het audio-anker. Houdt Android het proces toch tegen

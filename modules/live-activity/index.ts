@@ -11,7 +11,7 @@
    pauze, hervatten, stop. Bij een pauze rekent deze module zelf de
    resterende tijd uit, bij hervatten het nieuwe eindmoment. */
 
-import { requireNativeModule } from 'expo-modules-core';
+import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
 type NativeRecord = {
@@ -26,6 +26,7 @@ type NativeRecord = {
 };
 
 type NativeModule = {
+  addListener(event: 'onLiveAction', cb: (e: { action: 'toggle' }) => void): EventSubscription;
   isSupported(): boolean;
   show(record: NativeRecord): Promise<void>;
   end(): Promise<void>;
@@ -78,4 +79,29 @@ export function endLiveSession(): void {
   last = null;
   if (!native) return;
   native.end().catch(() => {});
+}
+
+/* ── De pauze/hervat-knop op het vergrendelscherm (iOS 17+) ──
+   Eén luisteraar per soort: State Control (de monitor) en de ademsessie
+   registreren elk hun eigen. Enkel die van de sessie die nu op het
+   vergrendelscherm staat, krijgt de tik. */
+const toggleHandlers: Partial<Record<'state' | 'breath', () => void>> = {};
+let subscribed = false;
+
+export function onLiveToggle(kind: 'state' | 'breath', cb: () => void): () => void {
+  toggleHandlers[kind] = cb;
+  if (native && !subscribed) {
+    subscribed = true;
+    try {
+      native.addListener('onLiveAction', () => {
+        const k = last?.kind;
+        if (k) toggleHandlers[k]?.();
+      });
+    } catch {
+      subscribed = false;
+    }
+  }
+  return () => {
+    if (toggleHandlers[kind] === cb) delete toggleHandlers[kind];
+  };
 }

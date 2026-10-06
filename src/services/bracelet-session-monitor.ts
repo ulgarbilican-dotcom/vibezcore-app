@@ -41,7 +41,7 @@ import { onWatchAction as onAppleWatchAction } from '../../modules/watch-breath'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { endLiveSession, showLiveSession } from '../../modules/live-activity';
+import { endLiveSession, onLiveToggle, showLiveSession } from '../../modules/live-activity';
 import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
@@ -702,6 +702,14 @@ async function remoteResume(): Promise<void> {
 addRemoteControlListener((action) => {
   if (action === 'pause') void remotePause();
   else void remoteResume();
+});
+
+/* iPhone: de pauze/hervat-knop in de Live Activity (vergrendelscherm en
+   Dynamic Island, iOS 17+) — dezelfde weg als de knop op de Android-melding. */
+onLiveToggle('state', () => {
+  if (!state) return;
+  if (state.paused) void remoteResume();
+  else void remotePause();
 });
 
 /* ── Stop vanaf het horloge (6 okt 2026) ────────────────────────────────
