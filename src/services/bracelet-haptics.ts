@@ -62,6 +62,18 @@ import {
   stopNativeWaveform,
 } from '../../modules/state-haptics';
 import { getModeMeta } from './ble-contract';
+import {
+  onStateAck as onWearStateAck,
+  pauseStateSessionOnWatch as pauseWearState,
+  sendStateSessionToWatch as sendWearState,
+  stopStateSessionOnWatch as stopWearState,
+} from '../../modules/wear-breath';
+import {
+  onStateAck as onAppleStateAck,
+  pauseStateSessionOnWatch as pauseAppleState,
+  sendStateSessionToWatch as sendAppleState,
+  stopStateSessionOnWatch as stopAppleState,
+} from '../../modules/watch-breath';
 
 const ASSUMED_RESTING_BPM = 75;
 const SESSION_HOLD_SECONDS = 10;
@@ -318,17 +330,16 @@ function play(
   offsetSec: number,
   totalSec?: number,
   clock?: SessionClock,
+  /** Het horloge speelt het ritme (6 okt 2026): de telefoon houdt sessie,
+   *  timer en melding aan, maar trilt niet mee. */
+  silent = false,
 ): void {
   silence(!!clock && hasNativeWaveform());
   const spec = SPECS[mode];
   if (hasNativeWaveform()) {
-    const { timings, amplitudes, repeat } = buildWaveform(
-      spec,
-      timing,
-      offsetSec,
-      totalSec,
-      canPlayNativeWaveform(),
-    );
+    const built = buildWaveform(spec, timing, offsetSec, totalSec, canPlayNativeWaveform());
+    const { timings, repeat } = built;
+    const amplitudes = silent ? built.amplitudes.map(() => 0) : built.amplitudes;
     const anchorWallMs = Date.now();
     if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. */
@@ -343,7 +354,7 @@ function play(
       playNativeWaveform(timings, amplitudes, repeat);
     }
     scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation);
-  } else {
+  } else if (!silent) {
     scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);
   }
 }
@@ -371,6 +382,11 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
   }
   session.pausedAt = null;
   sessionEndsAt = now + remainingSec * 1000;
+  lastClock = { mode, elapsedSec, remainingSec, at: now };
+  /* Elke (her)start: eerst speelt de telefoon zelf, tot het horloge
+     bevestigt dat het overneemt (`state-ack`, zie hieronder). Zo voel je
+     altijd iets, ook als er geen horloge-app is. */
+  watchHasRhythm = false;
   play(
     mode,
     { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[mode].rampSec },
@@ -378,7 +394,57 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
     remainingSec > 0 ? remainingSec : undefined,
     { elapsedSec, totalSec: elapsedSec + remainingSec },
   );
+  relayToWatch(mode, Math.max(0, elapsedSec - session.curveZeroSec), remainingSec);
 }
+
+/* ── Het ritme op de pols: smartwatch (6 okt 2026) ─────────────────────
+   Operator: "de haptics van State Control zijn bedoeld om via de pols te
+   gaan". De telefoon stuurt de parameters; het horloge berekent en speelt
+   exact dezelfde curve zelf (docs/WATCH_PROTOCOL.md), ook met de pols
+   omlaag. Bevestigt het horloge, dan zwijgt de telefoon — één ritme. */
+let watchHasRhythm = false;
+let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; at: number } | null = null;
+
+function relayToWatch(mode: BraceletMode, curveOffsetSec: number, remainingSec: number): void {
+  if (remainingSec <= 0) return;
+  const spec = SPECS[mode];
+  const meta = getModeMeta(mode);
+  const start = {
+    title: meta.name,
+    colorHex: meta.color,
+    targetBpm: spec.targetBpm,
+    holdSec: SESSION_HOLD_SECONDS,
+    rampSec: spec.rampSec,
+    curveOffsetSec,
+    remainingSec: Math.round(remainingSec),
+    lubAmp: spec.lubAmp,
+    dubAmp: spec.dubAmp,
+    lubMsNoAmp: spec.lubMsNoAmp,
+    dubMsNoAmp: spec.dubMsNoAmp,
+  };
+  sendWearState(start);
+  sendAppleState(start);
+}
+
+function onWatchTookOver(): void {
+  if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
+  watchHasRhythm = true;
+  /* Zelfde plek in de curve, nu stil — sessie, timer en melding blijven. */
+  const passed = (Date.now() - lastClock.at) / 1000;
+  const elapsedSec = lastClock.elapsedSec + passed;
+  const remainingSec = Math.max(0, lastClock.remainingSec - passed);
+  if (remainingSec <= 1) return;
+  play(
+    lastClock.mode,
+    { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[lastClock.mode].rampSec },
+    Math.max(0, elapsedSec - session.curveZeroSec),
+    remainingSec,
+    { elapsedSec, totalSec: elapsedSec + remainingSec },
+    true,
+  );
+}
+onWearStateAck(onWatchTookOver);
+onAppleStateAck(onWatchTookOver);
 
 export function pauseModeSessionHaptic(): void {
   /* De service blijft draaien in pauze-stand: zo blijft de sessie op het
@@ -390,6 +456,9 @@ export function pauseModeSessionHaptic(): void {
      native wachtrij, dus ook een pauze vlak na Play (service nog aan het
      opstarten) komt goed aan. Zonder service doet de module niets. */
   if (hasNativeWaveform()) pauseNativeSession();
+  pauseWearState();
+  pauseAppleState();
+  watchHasRhythm = false;
   sessionEndsAt = null;
   if (session && session.pausedAt === null) session.pausedAt = Date.now();
 }
@@ -449,7 +518,16 @@ export function stopModePreviewHaptic(): void {
   if (!endingNaturally) {
     stopNativeWaveform();
     endNativeSession();
+    /* Enkel als er een echte sessie liep — een voorproef gaat niet naar
+       het horloge. Bij een natuurlijk einde speelt het horloge zelf het
+       eind-signaal en stopt het vanzelf. */
+    if (session) {
+      stopWearState();
+      stopAppleState();
+    }
   }
+  watchHasRhythm = false;
+  lastClock = null;
   /* Bij een natuurlijk einde speelt de service het eind-signaal uit en
      stopt dan zelf. */
   session = null;

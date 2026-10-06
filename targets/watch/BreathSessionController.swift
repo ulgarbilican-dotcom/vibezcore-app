@@ -1,5 +1,4 @@
 import Foundation
-import WatchConnectivity
 import WatchKit
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -25,7 +24,10 @@ private struct WatchPhase {
   let secs: Int
 }
 
-final class BreathSessionController: NSObject, ObservableObject, WCSessionDelegate {
+/* 6 okt 2026: geen WCSessionDelegate meer — PhoneConnector.swift is de
+   enige delegate en routeert "start"/"stop" hierheen (op main). Tijdens een
+   sessie houdt RuntimeSessionManager de app wakker met de pols omlaag. */
+final class BreathSessionController: NSObject, ObservableObject {
   static let shared = BreathSessionController()
 
   @Published var phaseLabel: String = "Waiting for phone…"
@@ -39,33 +41,8 @@ final class BreathSessionController: NSObject, ObservableObject, WCSessionDelega
   private var tickTimer: Timer?
   private var generation = 0
 
-  func activate() {
-    guard WCSession.isSupported() else { return }
-    WCSession.default.delegate = self
-    WCSession.default.activate()
-  }
-
-  func session(
-    _ session: WCSession,
-    activationDidCompleteWith activationState: WCSessionActivationState,
-    error: Error?
-  ) {}
-
-  func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-    handle(message)
-  }
-
-  func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-    handle(applicationContext)
-  }
-
-  private func handle(_ message: [String: Any]) {
-    DispatchQueue.main.async { [weak self] in
-      self?.apply(message)
-    }
-  }
-
-  private func apply(_ message: [String: Any]) {
+  /** Altijd op main aanroepen (PhoneConnector doet dat). */
+  func apply(_ message: [String: Any]) {
     let type = message["type"] as? String ?? "start"
     if type == "stop" {
       stop()
@@ -82,6 +59,7 @@ final class BreathSessionController: NSObject, ObservableObject, WCSessionDelega
     totalRounds = max(1, message["rounds"] as? Int ?? 1)
     modeName = message["modeName"] as? String ?? "Breathwork"
     running = true
+    RuntimeSessionManager.shared.acquire(.breath)
 
     generation += 1
     runPhase(gen: generation, round: 1, idx: 0)
@@ -153,5 +131,6 @@ final class BreathSessionController: NSObject, ObservableObject, WCSessionDelega
     modeName = ""
     round = 0
     totalRounds = 0
+    RuntimeSessionManager.shared.release(.breath)
   }
 }

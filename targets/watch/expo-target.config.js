@@ -11,7 +11,13 @@
    met een vaste set van 9 types. De haptiek hier is dus een METRONOOM-
    vertaling van het bestaande alfabet (breath-haptics.ts), geen 1-op-1
    kopie van de telefoon-textuur. Zie AppDelegate.swift/
-   BreathHapticPlayer.swift voor de vertaling. */
+   BreathHapticPlayer.swift voor de vertaling.
+
+   Info.plist (6 okt 2026): deze plugin kent geen `infoPlist`-optie in de
+   config. Ze gebruikt `targets/watch/Info.plist` als INFOPLIST_FILE (naast
+   GENERATE_INFOPLIST_FILE) en maakt dat bestand enkel aan als het
+   ontbreekt — dus het staat in git, met WKBackgroundModes = [mindfulness]
+   voor de WKExtendedRuntimeSession (RuntimeSessionManager.swift). */
 
 /** @type {import('@bacons/apple-targets/app.plugin').Config} */
 module.exports = {

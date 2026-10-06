@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <!-- Android 14+: een foreground service van het type "health" vereist
+         naast FOREGROUND_SERVICE_HEALTH ook één van ACTIVITY_RECOGNITION /
+         BODY_SENSORS / HIGH_SAMPLING_RATE_SENSORS. Deze laatste is een
+         gewone (install-time) toestemming — geen dialoog, geen sensorgebruik. -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -45,11 +50,20 @@
                     android:scheme="wear"
                     android:host="*"
                     android:pathPrefix="/vibezcore/breath" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/vibezcore/state" />
             </intent-filter>
         </service>
 
         <service
             android:name=".WearBreathSessionService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
+        <service
+            android:name=".WearStateSessionService"
             android:exported="false"
             android:foregroundServiceType="health" />
 

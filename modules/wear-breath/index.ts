@@ -6,7 +6,13 @@
    bewust zonder platform-check — de module zelf is Android-only gelinkt
    (expo-module.config.json: "platforms": ["android"]), dus op iOS/web is
    `requireNativeModule` altijd een no-op via de catch hieronder, net als
-   breath-background dat voor zijn eigen web/Expo Go-val doet. */
+   breath-background dat voor zijn eigen web/Expo Go-val doet.
+
+   NIEUW (4 okt 2026): dit kanaal is nu TWEERICHTINGS, zie
+   WearBreathModule.kt voor de native routering — zelfde API-vorm als
+   watch-breath/index.ts (Apple Watch), zodat breath-session.tsx/
+   bracelet-control.tsx één en dezelfde aanroep kunnen gebruiken voor beide
+   platforms. */
 
 import { requireNativeModule } from 'expo-modules-core';
 
@@ -24,10 +30,52 @@ export type WearBreathSession = {
   modeName: string;
 };
 
+export type WearBraceletStatus = {
+  title: string;
+  colorHex: string;
+  remainingMinutes: number;
+  paused: boolean;
+  active: boolean;
+};
+
+export type WatchAction = {
+  action: 'pause' | 'resume' | 'stop';
+  kind: 'breath' | 'bracelet';
+};
+
+/** `state-start` uit docs/WATCH_PROTOCOL.md — het horloge rekent het ritme
+ *  zelf uit met de formule van bracelet-haptics.ts. */
+export type StateSessionStart = {
+  /** modusnaam zoals in de app */
+  title: string;
+  /** kleur van de toestand */
+  colorHex: string;
+  targetBpm: number;
+  holdSec: number;
+  rampSec: number;
+  /** waar in de curve we beginnen */
+  curveOffsetSec: number;
+  /** resterende sessietijd vanaf ontvangst */
+  remainingSec: number;
+  /** 0–255, Wear OS met amplitude-sturing */
+  lubAmp: number;
+  dubAmp: number;
+  /** tikduur zonder amplitude-sturing */
+  lubMsNoAmp: number;
+  dubMsNoAmp: number;
+};
+
 type WearBreathNativeModule = {
   isWatchReachable(): Promise<boolean>;
   sendBreathSession(session: WearBreathSession): void;
   stopBreathSession(): void;
+  sendBraceletStatus(status: WearBraceletStatus): void;
+  stopBraceletRelay(): void;
+  sendStateSession(start: StateSessionStart): void;
+  pauseStateSession(): void;
+  stopStateSession(): void;
+  addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): { remove(): void };
+  addListener(eventName: 'onStateAck', listener: () => void): { remove(): void };
 };
 
 let native: WearBreathNativeModule | null = null;
@@ -64,5 +112,72 @@ export function stopBreathSessionOnWatch(): void {
     native?.stopBreathSession();
   } catch {
     /* stil */
+  }
+}
+
+/** Aanroepen bij elke bracelet-statuspoll (bracelet-control.tsx, elke 5s). */
+export function sendBraceletStatusToWatch(status: WearBraceletStatus): void {
+  try {
+    native?.sendBraceletStatus(status);
+  } catch {
+    /* stil */
+  }
+}
+
+export function stopBraceletRelayOnWatch(): void {
+  try {
+    native?.stopBraceletRelay();
+  } catch {
+    /* stil */
+  }
+}
+
+/** Luistert naar Pause/Resume/Stop-tikken vanaf het horloge. Retourneert
+ *  een cleanup-functie — altijd aanroepen bij unmount. */
+export function onWatchAction(cb: (event: WatchAction) => void): () => void {
+  try {
+    const sub = native?.addListener('onWatchAction', cb);
+    return () => sub?.remove();
+  } catch {
+    return () => {};
+  }
+}
+
+/* ── State Control op de pols (docs/WATCH_PROTOCOL.md) ─────────────────── */
+
+/** Start (of hervat — vervangt een lopende/gepauzeerde sessie) State
+ *  Control op het horloge. Faalt stil. */
+export function sendStateSessionToWatch(start: StateSessionStart): void {
+  try {
+    native?.sendStateSession(start);
+  } catch {
+    /* stil */
+  }
+}
+
+export function pauseStateSessionOnWatch(): void {
+  try {
+    native?.pauseStateSession();
+  } catch {
+    /* stil */
+  }
+}
+
+export function stopStateSessionOnWatch(): void {
+  try {
+    native?.stopStateSession();
+  } catch {
+    /* stil */
+  }
+}
+
+/** Het horloge meldt dat het State Control echt speelt (`state-ack`) — dan
+ *  legt de telefoon zijn eigen trilling stil. Retourneert een cleanup. */
+export function onStateAck(cb: () => void): () => void {
+  try {
+    const sub = native?.addListener('onStateAck', () => cb());
+    return () => sub?.remove();
+  } catch {
+    return () => {};
   }
 }

@@ -36,6 +36,8 @@
    bestand vervangt.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { onWatchAction as onWearWatchAction } from '../../modules/wear-breath';
+import { onWatchAction as onAppleWatchAction } from '../../modules/watch-breath';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
@@ -559,7 +561,7 @@ export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): 
    wachten tot het toestel ontgrendeld wordt, en de tijd mag daar niet op
    wachten. Een geopend sessiescherm luistert mee en werkt zijn eigen
    weergave bij. */
-export type RemoteControlChange = { action: 'pause' | 'resume'; remainingSec: number };
+export type RemoteControlChange = { action: 'pause' | 'resume' | 'stop'; remainingSec: number };
 const remoteListeners = new Set<(c: RemoteControlChange) => void>();
 
 export function subscribeRemoteControl(cb: (c: RemoteControlChange) => void): () => void {
@@ -612,6 +614,47 @@ addRemoteControlListener((action) => {
   if (action === 'pause') void remotePause();
   else void remoteResume();
 });
+
+/* ── Stop vanaf het horloge (6 okt 2026) ────────────────────────────────
+   Staat het State Control-scherm open, dan handelt dát de stop af precies
+   zoals de End-knop (opslaan als 'stopped', bracelet stoppen, weergave).
+   Staat het niet open, dan doet de monitor het zelf — zo wordt een sessie
+   nooit dubbel of helemaal niet bewaard. */
+async function remoteStop(): Promise<void> {
+  if (!state) return;
+  const remSec = currentRemainingSec();
+  if (remoteListeners.size > 0) {
+    notifyRemote({ action: 'stop', remainingSec: remSec });
+    return;
+  }
+  const s = state;
+  const activeSec = Math.max(0, s.totalSec - remSec);
+  void recordSession({
+    mode: s.mode,
+    startedAt: s.startedAtIso,
+    endedAt: new Date().toISOString(),
+    durationMin: Math.max(1, Math.round(activeSec / 60)),
+    plannedMin: Math.max(1, Math.round(s.totalSec / 60)),
+    status: 'stopped',
+  });
+  await stopBraceletSessionMonitor();
+  try {
+    await getBracelet().sendCommand({ mode: s.mode, duration: 0, command: BleCommand.Stop });
+  } catch {
+    /* Geen verbinding — de bracelet stopt op zijn eigen timer. */
+  }
+}
+
+/* Knoppen op het horloge (Wear OS én Apple Watch) — zie
+   docs/WATCH_PROTOCOL.md. `bracelet` = State Control. */
+const onWatchStateAction = (e: { action: string; kind: string }) => {
+  if (e.kind !== 'bracelet') return;
+  if (e.action === 'pause') void remotePause();
+  else if (e.action === 'resume') void remoteResume();
+  else if (e.action === 'stop') void remoteStop();
+};
+onWearWatchAction(onWatchStateAction);
+onAppleWatchAction(onWatchStateAction);
 
 /** Start een State Control-sessie meteen, los van welk scherm open staat
  *  (operator, 5 okt 2026: "Tap to start" vanuit het plan toonde soms de

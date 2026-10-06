@@ -1,53 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0A0A"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:paddingStart="28dp"
-    android:paddingEnd="28dp"
-    android:paddingTop="20dp"
-    android:paddingBottom="20dp">
+    android:background="#0A0A0A">
 
-    <TextView
-        android:id="@+id/modeLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="VIBEZCORE"
-        android:textColor="#8A8A8A"
-        android:textSize="11sp"
-        android:letterSpacing="0.1"
-        android:gravity="center" />
+    <!-- Breathwork (ongewijzigd) -->
+    <LinearLayout
+        android:id="@+id/breathContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp">
 
-    <TextView
-        android:id="@+id/phaseLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Waiting for phone…"
-        android:textColor="#F4F4F4"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:gravity="center" />
+        <TextView
+            android:id="@+id/modeLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="VIBEZCORE"
+            android:textColor="#8A8A8A"
+            android:textSize="11sp"
+            android:letterSpacing="0.1"
+            android:gravity="center" />
 
-    <TextView
-        android:id="@+id/roundLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text=""
-        android:textColor="#8A8A8A"
-        android:textSize="12sp"
-        android:gravity="center" />
+        <TextView
+            android:id="@+id/phaseLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Waiting for phone…"
+            android:textColor="#F4F4F4"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center" />
 
-    <Button
-        android:id="@+id/stopButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:text="Stop"
-        android:visibility="gone" />
+        <TextView
+            android:id="@+id/roundLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text=""
+            android:textColor="#8A8A8A"
+            android:textSize="12sp"
+            android:gravity="center" />
 
-</LinearLayout>
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Stop"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- State Control: zichtbaar zolang er een sessie loopt of gepauzeerd is -->
+    <LinearLayout
+        android:id="@+id/stateContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp"
+        android:visibility="gone">
+
+        <View
+            android:id="@+id/stateAccent"
+            android:layout_width="28dp"
+            android:layout_height="4dp"
+            android:background="#00A3A3" />
+
+        <TextView
+            android:id="@+id/stateTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text=""
+            android:textColor="#F4F4F4"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/stateRemaining"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text=""
+            android:textColor="#8A8A8A"
+            android:textSize="12sp"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/statePauseButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pause" />
+
+            <Button
+                android:id="@+id/stateStopButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="Stop" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

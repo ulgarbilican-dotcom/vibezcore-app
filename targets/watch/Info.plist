@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- WKExtendedRuntimeSession-type: adem-/stilte-sessie (max. 1 uur,
+	     haptiek met het scherm uit). Zie RuntimeSessionManager.swift.
+	     Door @bacons/apple-targets niet overschreven: het maakt dit bestand
+	     enkel aan als het ontbreekt; GENERATE_INFOPLIST_FILE voegt de rest toe. -->
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>mindfulness</string>
+	</array>
+</dict>
+</plist>

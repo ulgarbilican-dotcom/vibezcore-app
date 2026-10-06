@@ -1,6 +1,6 @@
 package com.ubili.vibezcoreapp.wear
 
-/* Ontvangt de twee berichten die WearBreathModule.kt (telefoon-kant) kan
+/* Ontvangt de berichten die WearBreathModule.kt (telefoon-kant) kan
    sturen, en zet ze meteen door naar de Service die de lus écht draait.
    Logica-loos — zelfde verdeling als BreathListenerService/
    BreathSessionService op de telefoon-kant van deze module. */
@@ -11,6 +11,11 @@ import com.google.android.gms.wearable.WearableListenerService
 
 private const val PATH_START = "/vibezcore/breath/start"
 private const val PATH_STOP = "/vibezcore/breath/stop"
+/* State Control (docs/WATCH_PROTOCOL.md) — zelfde doorgeefluik, andere
+   service: WearStateSessionService speelt het ritme lokaal af. */
+private const val PATH_STATE_START = "/vibezcore/state/start"
+private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
+private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 
 class BreathListenerService : WearableListenerService() {
   override fun onMessageReceived(event: MessageEvent) {
@@ -34,6 +39,27 @@ class BreathListenerService : WearableListenerService() {
              Komt dit bericht toch zonder actieve sessie binnen, dan vangt
              de catch hieronder een eventuele achtergrond-restrictie op —
              er is dan toch niets te stoppen. */
+          startService(intent)
+        }
+        PATH_STATE_START -> {
+          val json = String(event.data, Charsets.UTF_8)
+          val intent = Intent(this, WearStateSessionService::class.java).apply {
+            action = WearStateSessionService.ACTION_START
+            putExtra(WearStateSessionService.EXTRA_START_JSON, json)
+          }
+          startForegroundService(intent)
+        }
+        PATH_STATE_PAUSE, PATH_STATE_STOP -> {
+          /* Zonder lopende service is er niets te pauzeren/stoppen — dan
+             ook geen service opstarten (dat zou een achtergrond-start zijn). */
+          if (WearStateSessionService.instance == null) return
+          val intent = Intent(this, WearStateSessionService::class.java).apply {
+            action = if (event.path == PATH_STATE_PAUSE) {
+              WearStateSessionService.ACTION_PAUSE
+            } else {
+              WearStateSessionService.ACTION_STOP
+            }
+          }
           startService(intent)
         }
       }

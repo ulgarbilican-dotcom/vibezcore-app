@@ -4793,6 +4793,11 @@ function BraceletControlScreen({
   useEffect(
     () =>
       subscribeRemoteControl((c) => {
+        /* Stop vanaf het horloge (6 okt 2026): exact de End-knop. */
+        if (c.action === 'stop') {
+          void onStopRef.current?.();
+          return;
+        }
         const elapsedMs = Math.max(0, sessionPlannedRef.current * 60 - c.remainingSec) * 1000;
         if (c.action === 'pause') {
           pausedAtElapsedMsRef.current = elapsedMs;
@@ -5141,6 +5146,9 @@ function BraceletControlScreen({
     }
   };
 
+  /* Zodat de stopknop van het horloge (remote 'stop') de End-knop kan
+     aanroepen, ook al is de luisteraar al bij de eerste render gemaakt. */
+  const onStopRef = useRef<(() => Promise<void>) | null>(null);
   const onStop = async () => {
     setBusy(true);
     /* Iter v197 (2026-07-04): endedLocally flag DIRECT true. Overruled
@@ -5185,6 +5193,7 @@ function BraceletControlScreen({
       setBusy(false);
     }
   };
+  onStopRef.current = onStop;
 
   /* Pause — sla resterende tijd op en zet de bracelet stop. UI blijft
      op active-screen via de isPaused-check.
