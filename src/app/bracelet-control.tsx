@@ -7280,10 +7280,12 @@ const s = StyleSheet.create({
      van het scherm (net boven de tab-balk) i.p.v. vlak onder de cirkel —
      werkt op elke schermhoogte, geen vaste afstand. */
   /* Zelfde maten als breath-session.tsx (pauseMain/pauseMainTint/endTxt). */
+  /* 64 → 72, en meer lucht tot END SESSION (operator, 6 okt 2026) —
+     ademsessie en State Control blijven gelijk. */
   pauseMain: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -7291,7 +7293,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   pauseMainTint: { opacity: 0.2 },
-  endTxtWrap: { marginTop: 14 },
+  endTxtWrap: { marginTop: 22 },
   endTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11,

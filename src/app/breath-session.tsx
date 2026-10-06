@@ -4557,10 +4557,12 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      iets rustiger"): 0.4 → 0.25 → 0.15 dekking, dunne dikte blijft — de
      echte `BlurView` (`dimezisBlurViewSdk31Plus`, zie JSX) staat er nog
      gewoon op, enkel de randkleur werd verder getemperd. */
+  /* 64 → 72, en meer lucht tot END SESSION (operator, 6 okt 2026) —
+     ademsessie en State Control blijven gelijk. */
   pauseMain: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -4572,7 +4574,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      blijven"): 0.12 → 0.2 — nog steeds een tint, geen vol vlak. */
   pauseMainTint: { opacity: 0.2 },
   endTxtWrap: {
-    marginTop: 14,
+    marginTop: 22,
   },
   /* Operator, 11 september 2026 (18e ronde): "end session mag kleiner".
      Operator, 12 september 2026: "strak en clean in het donkergrijs/
