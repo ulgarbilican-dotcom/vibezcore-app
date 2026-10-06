@@ -1665,8 +1665,11 @@ function AudioScreen({
                getemperd — de tab bar/mini-player-hoogte zelf blijft
                volledig gereserveerd, enkel de extra ademruimte erbovenop
                is kleiner. */
-            paddingBottom:
-              64 + safeInsets.bottom + (playerState.session ? MINI_PLAYER_HEIGHT + 4 : 10),
+            /* Operator, 7 okt 2026 ("te veel ruimte over"): de tabbalk is
+               sinds 25 september een gewone balk die zijn eigen plek inneemt
+               — hier nog eens 64 + inset reserveren was dubbel. Enkel de
+               mini-speler (zweeft boven de balk) krijgt nog ruimte. */
+            paddingBottom: playerState.session ? MINI_PLAYER_HEIGHT + 16 : 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
