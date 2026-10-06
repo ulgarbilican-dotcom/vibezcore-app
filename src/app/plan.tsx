@@ -400,6 +400,7 @@ export default function PlanScreen() {
           moment: m,
           state: st,
           techName: tech.name,
+          techKey: tech.key,
           minutes: planItem.minutes,
           exact: roundsFor(tech, planItem.minutes) * cycleSeconds(tech),
           done: doneInWindow(m.from, m.to),
@@ -430,6 +431,7 @@ export default function PlanScreen() {
         moment: m,
         state: st,
         techName: tech.name,
+        techKey: tech.key,
         minutes,
         exact: roundsFor(tech, minutes) * cycleSeconds(tech),
         done: doneInWindow(m.from, m.to),
@@ -655,6 +657,8 @@ export default function PlanScreen() {
               openBreathSession({
                   ...claimFreeSessionParam(),
                   state: it.state.key,
+                  /* De geplande techniek, niet de standaard (6 okt 2026). */
+                  technique: it.techKey,
                   minutes: String(it.minutes),
                   /* Operator, 11 september 2026: "check alles overal, de
                      oude selectiepagina op breath-session.tsx mag nooit

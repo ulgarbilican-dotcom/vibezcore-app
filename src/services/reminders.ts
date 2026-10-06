@@ -22,6 +22,7 @@
    (CLAUDE.md §1).
    ───────────────────────────────────────────────────────────────────────── */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { pickStatesForDay, reasonForPick } from '@/utils/day-plan';
@@ -330,7 +331,18 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
           /* Kort, zodat hij niet wordt afgekapt (6 okt 2026). */
           title: `${titleCase(st.eyebrow)} · ${it.minutes} min`,
           body: `${why} — tap to start`,
-          data: { kind: 'breath', slot: it.slot, state: it.state },
+          /* De geplande sessie zelf, niet enkel de toestand (operator, 6 okt
+             2026: "belangrijk dat de herinnering effectief naar de geplande
+             sessie met vooraf ingesteld protocol gaat"). Zonder techniek en
+             duur opende hij de standaardtechniek en -duur. */
+          data: {
+            kind: 'breath',
+            slot: it.slot,
+            state: it.state,
+            technique: it.techniqueKey,
+            minutes: it.minutes,
+            plan: 1,
+          },
           ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
@@ -450,6 +462,10 @@ export type TappedReminder = {
    *  melding beloofde, zie `syncBraceletPlanReminder`. */
   braceletMode?: number;
   braceletDuration?: number;
+  /** Ademplan-melding: de geplande techniek en duur (6 okt 2026). */
+  technique?: string;
+  minutes?: number;
+  plan?: boolean;
 };
 
 /* Waarheen per soort. Een breath-melding met een bekende toestand opent die
@@ -483,7 +499,14 @@ export const reminderParams = (t: TappedReminder): Record<string, string> =>
   t.kind === 'bracelet' && t.session
     ? { open: String(Date.now()) }
     : t.kind === 'breath' && t.state
-    ? { state: t.state, autostart: '1' }
+    ? {
+        state: t.state,
+        autostart: '1',
+        ...(t.technique ? { technique: t.technique } : {}),
+        ...(t.minutes ? { minutes: String(t.minutes) } : {}),
+        /* Na afloop terug naar het plan, zoals "Start session" daar. */
+        ...(t.plan ? { fromPlan: '1' } : {}),
+      }
     : t.kind === 'bracelet-plan' && t.braceletMode !== undefined
       ? {
           mode: String(t.braceletMode),
@@ -505,6 +528,9 @@ function fromResponse(
         state?: BreathStateKey;
         braceletMode?: number;
         braceletDuration?: number;
+        technique?: string;
+        minutes?: number;
+        plan?: number;
       }
     | undefined;
   /* 'bracelet-session' (bracelet-session-monitor.ts's lopende-status-
@@ -524,7 +550,14 @@ function fromResponse(
     };
   }
   if (data?.kind !== 'breath' && data?.kind !== 'bracelet') return null;
-  return { kind: data.kind, slot: data.slot, state: data.state };
+  return {
+    kind: data.kind,
+    slot: data.slot,
+    state: data.state,
+    technique: data.technique,
+    minutes: data.minutes,
+    plan: data.plan === 1,
+  };
 }
 
 /** De melding waarmee de app zojuist geopend is, of `null`.
@@ -533,17 +566,31 @@ function fromResponse(
  *  oude tik zou de app dagen later nog kunnen omleiden. Vandaar de grens van
  *  tien minuten: verder terug is het geen "ik open dit nu" meer. */
 export async function tappedReminderOnLaunch(): Promise<TappedReminder | null> {
+  /* Operator, 6 okt 2026 ("ik krijg een herinnering maar zit in lockscreen,
+     ik tik erop — wat dan?"): de grens van tien minuten (gerekend vanaf
+     wanneer de melding BINNENKWAM, niet vanaf de tik) liet een herinnering
+     die even op het vergrendelscherm had gelegen op het welkomstscherm
+     landen. Nu: elke melding wordt precies één keer afgehandeld, hoe lang
+     hij ook gewacht heeft — een oud, al afgehandeld antwoord herkennen we
+     aan zijn eigen sleutel (id + aankomsttijd). Na een dag telt hij niet
+     meer (een herinnering van gisteren hoort niet meer te openen). */
   try {
     const r = await Notifications.getLastNotificationResponseAsync();
     const t = fromResponse(r);
-    if (!t) return null;
-    const when = r?.notification.date;
+    if (!t || !r) return null;
+    const when = r.notification.date;
+    const key = `${r.notification.request.identifier}:${when}`;
+    const seen = await AsyncStorage.getItem(HANDLED_TAP_KEY);
+    if (seen === key) return null;
+    await AsyncStorage.setItem(HANDLED_TAP_KEY, key);
     const age = typeof when === 'number' ? Date.now() - when : 0;
-    return age > 10 * 60_000 ? null : t;
+    return age > 24 * 60 * 60_000 ? null : t;
   } catch {
     return null;
   }
 }
+
+const HANDLED_TAP_KEY = 'vz.reminders.lastHandledTap';
 
 /** Luistert zolang de app draait. Geeft de opzegging terug. */
 export function onReminderTap(cb: (t: TappedReminder) => void): () => void {

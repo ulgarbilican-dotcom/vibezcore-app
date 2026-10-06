@@ -826,6 +826,7 @@ export default function AgendaScreen() {
                   openBreathSession({
                       ...claimFreeSessionParam(),
                       state: next.state,
+                      technique: next.techniqueKey,
                       minutes: String(next.minutes),
                       autostart: '1',
                       fromPlan: '1',
@@ -1011,6 +1012,7 @@ export default function AgendaScreen() {
                       openBreathSession({
                           ...claimFreeSessionParam(),
                           state: it.state,
+                          technique: it.techniqueKey,
                           minutes: String(it.minutes),
                           autostart: '1',
                           fromPlan: '1',
