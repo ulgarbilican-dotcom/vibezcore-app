@@ -230,13 +230,15 @@ export async function syncReminders(
           title:
             k === 'breath'
               ? why
-                ? `Your ${titleCase(st.eyebrow)} session is ready`
+                ? /* Kort, zodat hij niet wordt afgekapt (operator, 6 okt
+                     2026: "Your Sharp Focus session i…" oogde slordig). */
+                  `${titleCase(st.eyebrow)} · ${st.durations[st.defaultDuration].minutes} min`
                 : s.title
               : 'Your bracelet is ready',
           body:
             k === 'breath'
               ? why
-                ? `${why} — ${st.durations[st.defaultDuration].minutes} min.`
+                ? `${why} — tap to start`
                 : s.body
               : 'One press. No screen, no sound, no effort.',
           /* Waar een tik naartoe moet. Zonder dit opent de app op het
@@ -325,8 +327,9 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
       await Notifications.scheduleNotificationAsync({
         identifier: planIdFor(index, 1),
         content: {
-          title: `Your ${titleCase(st.eyebrow)} session is ready`,
-          body: `${why} — ${it.minutes} min.`,
+          /* Kort, zodat hij niet wordt afgekapt (6 okt 2026). */
+          title: `${titleCase(st.eyebrow)} · ${it.minutes} min`,
+          body: `${why} — tap to start`,
           data: { kind: 'breath', slot: it.slot, state: it.state },
           ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
@@ -385,7 +388,8 @@ export async function syncBraceletPlanReminder(
         content: {
           /* De melding ÍS de vraag: tikken opent meteen State Control met
              modus+duur al ingevuld. Zie `reminderRoute`/`reminderParams`. */
-          title: `Your ${meta.name} session is ready`,
+          /* Kort, zodat hij niet wordt afgekapt (6 okt 2026). */
+          title: `${meta.name} · ${item.durationMinutes} min`,
           body: 'One press. No screen, no sound, no effort.',
           data: {
             kind: 'bracelet-plan',
