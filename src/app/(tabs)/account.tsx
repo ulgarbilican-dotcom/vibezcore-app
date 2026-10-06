@@ -1984,10 +1984,12 @@ export default function AccountScreen() {
             />
             <Text style={s.productStatusLabel}>AVAILABLE NOW</Text>
           </View>
-          <Text style={s.productTitle}>Guided Breathwork</Text>
-          {/* Tekst woordelijk uit de mockup (operator, 11 augustus 2026). */}
+          {/* Operator, 6 okt 2026: deze kaart verkoopt het abonnement, en dat
+             bevat sinds 5 okt alle drie — titel en tekst zeggen dat nu ook
+             (was "Guided Breathwork", uit de mockup van 11 augustus). */}
+          <Text style={s.productTitle}>VIBEZCORE Premium</Text>
           <Text style={s.productOneLiner}>
-            Premium sessions to improve focus, sleep and performance.
+            Breathwork, State Control and the full Audio Library.
           </Text>
           {/* Tekstlink met pijltje, geen volle knop (operator-mockup). */}
           <PressScale
