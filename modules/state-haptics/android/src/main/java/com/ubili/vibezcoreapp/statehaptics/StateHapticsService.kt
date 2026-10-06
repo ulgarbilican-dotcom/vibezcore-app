@@ -217,8 +217,11 @@ class StateHapticsService : Service() {
         this, 3, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
       )
       val n = NotificationCompat.Builder(this, DONE_CHANNEL_ID)
+        /* Geen groot icoon (operator, 6 okt 2026: "professionele
+           weergave?"): het herhaalde enkel het app-icoon dat links al
+           staat. Groot icoon is voor inhoud (foto, albumhoes) — de lopende
+           sessie houdt het wel, voor het vergrendelscherm (zie artBitmap). */
         .setSmallIcon(smallIconRes())
-        .setLargeIcon(artBitmap)
         .setContentTitle("Session complete")
         .setContentText("$title · $minutes min")
         .setAutoCancel(true)
