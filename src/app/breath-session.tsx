@@ -69,7 +69,7 @@ import {
 } from '@/services/session-keepalive';
 import { phaseHapticPattern, playPhaseHaptic } from '@/services/breath-haptics';
 import { ensurePermission as ensureNotificationPermission } from '@/services/reminders';
-import { addBreathSession } from '@/utils/breath-history';
+import { addBreathSession, useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
 import {
   skipBreathIntroOnce,
@@ -792,11 +792,26 @@ export function BreathSession() {
      ritme overal hetzelfde is. Eén keer vastgezet bij het openen — het
      niveau mag niet halverwege een sessie veranderen. */
   const baseTech = st.techniques[techIdx] ?? st.techniques[0];
-  const [sessionLevel] = useState<UserLevel>(() =>
+  const levelFromSetup =
     params.level === 'beginner' || params.level === 'intermediate' || params.level === 'advanced'
       ? params.level
-      : levelForTechnique(st.key, baseTech.key),
+      : null;
+  const [sessionLevel, setSessionLevel] = useState<UserLevel>(
+    () => levelFromSetup ?? levelForTechnique(st.key, baseTech.key),
   );
+  /* Opent de sessie vóór de opgeslagen geschiedenis geladen is (bv. een tik
+     op een herinnering terwijl de app dicht was), dan rekende hij met een
+     lege geschiedenis en startte hij op het beginniveau. Zodra de
+     geschiedenis binnen is: opnieuw bepalen — maar enkel zolang de sessie
+     nog niet loopt (6 okt 2026, "alles wat we beweren moet kloppen"). */
+  const breathHistory = useBreathHistory();
+  useEffect(() => {
+    if (levelFromSetup) return;
+    if (runningRef.current || startingRef.current) return;
+    const next = levelForTechnique(st.key, baseTech.key, breathHistory);
+    if (next !== sessionLevel) setSessionLevel(next);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [breathHistory]);
   const tech = useMemo(
     () => techniqueForLevel(st.key, baseTech, sessionLevel),
     [st.key, baseTech, sessionLevel],
