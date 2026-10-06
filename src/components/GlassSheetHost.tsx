@@ -139,6 +139,7 @@ export function GlassSheetHost() {
 }
 
 const s = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.58)' },
+  /* Operator, 7 okt 2026: de pagina erachter dieper dimmen. */
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.74)' },
   sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '92%' },
 });

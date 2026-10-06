@@ -62,7 +62,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
       : level === 'sheet' && blurTarget
         ? /* Echte vervaging (GlassSheetHost, 7 okt 2026): dunnere tint, zodat
              het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
-          { ...LEVEL.sheet, base: 'rgba(16,16,20,0.32)', blur: 70 }
+          { ...LEVEL.sheet, base: 'rgba(20,20,24,0.16)', blur: 100 }
         : LEVEL[level];
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
@@ -89,6 +89,17 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
         <View
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: `${tint}1F` }]}
+        />
+      ) : null}
+      {level === 'sheet' && blurTarget ? (
+        /* Onderaan dieper glas (operator, 7 okt 2026: "onderaan is de tekst
+           niet leesbaar door de witte CTA erachter") — kleine lettertjes
+           staan onderaan, en daar ligt in de app vaak een witte knop. */
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(12,12,15,0)', 'rgba(12,12,15,0.35)', 'rgba(12,12,15,0.72)']}
+          locations={[0, 0.5, 1]}
+          style={StyleSheet.absoluteFill}
         />
       ) : null}
       <LinearGradient
