@@ -57,7 +57,7 @@ const ANDROID_SHEET_BASE = 'rgb(24,24,28)';
 
 export default function VibezGlass({ radius, tint, level = 'normal', style, children, blurTarget }: Props) {
   const L =
-    level === 'sheet' && Platform.OS === 'android'
+    level === 'sheet' && Platform.OS === 'android' && !blurTarget
       ? { ...LEVEL.sheet, base: ANDROID_SHEET_BASE }
       : LEVEL[level];
   return (
