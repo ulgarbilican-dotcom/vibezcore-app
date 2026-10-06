@@ -58,7 +58,7 @@ import {
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
-import { trainTheMindFor } from '@/data/train-the-mind';
+import VibezGlass from '@/components/VibezGlass';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   ensureAudioModeSet,
@@ -1827,7 +1827,6 @@ export function BreathSession() {
     void recordInstantFeedback(fb);
   }, []);
   /* De audiosessie die deze toestand verdiept — één per toestand, gratis. */
-  const mindPick = useMemo(() => trainTheMindFor(st.key), [st.key]);
   /* Testschakelaar in Settings (operator, 13 augustus 2026: "ik wil
      permanent om regelmatig te kunnen testen") — zelfde bypass als de
      from=onboarding-deeplink, maar dan zonder telkens een URL te moeten
@@ -2402,7 +2401,6 @@ export function BreathSession() {
   const pressAvDone = usePressScale(0.95);
   const pressNarratorChip = usePressScale(0.95); // gedeeld: female/male, nu inline in Audio & Haptics
   const pressDurationInfoDone = usePressScale(0.95);
-  const pressMindCard = usePressScale(0.95);
   const pressBrowseLibrary = usePressScale(0.95);
   const pressContinuePremium = usePressScale(0.95);
   const pressNotYet = usePressScale(0.94);
@@ -3753,61 +3751,27 @@ export function BreathSession() {
           gebruiker vandaan komt niet. */}
       <Modal visible={done} transparent animationType="fade">
         <View style={s.modalBackdrop}>
-          <View style={s.doneCard}>
+          {/* Glas (operator, 6 okt 2026): zelfde materiaal als de rest van de
+              sessie. De toestandskleur zit enkel IN de kaart — de streep
+              bovenaan en een vleugje tint in het glas — nooit in de tekst. */}
+          <VibezGlass radius={22} level="sheet" tint={accent} style={s.doneCard}>
             <View style={s.doneStrip} />
             <Image
               source={{ uri: BUDDHA_IMG }}
               resizeMode="contain"
               style={s.doneBuddha}
             />
-            <Text style={s.modalEyebrow}>✦ CONGRATULATIONS ✦</Text>
+            <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={s.modalTitle}>Well done.</Text>
             <Text style={s.modalBody}>
               You completed {rounds} rounds of {st.title}. Carry the
               breath with you.
             </Text>
 
-            {/* ── Train the mind ──────────────────────────────────────
-                De brug naar de audiobibliotheek, op het enige moment
-                waarop hij zich mag aandienen: NA het ademen, wanneer
-                iemand kalm en ontvankelijk is (operator, 9 augustus
-                2026). Eén vaste sessie per toestand, gratis, dus dit
-                werkt voor iedereen — zie data/train-the-mind.ts. */}
-            {mindPick && (
-              <AnimatedPressable
-                style={[s.mindCard, pressMindCard.style]}
-                onPressIn={pressMindCard.onPressIn}
-                onPressOut={pressMindCard.onPressOut}
-                onPress={() => {
-                  dismissDone();
-                  closeBreathSession();
-                  router.push({
-                    pathname: '/player',
-                    params: {
-                      title: mindPick.title,
-                      series: mindPick.series,
-                      url: mindPick.url,
-                      free: mindPick.free ? 'true' : 'false',
-                      desc: mindPick.desc,
-                    },
-                  } as never);
-                }}
-                android_ripple={{ color: C.dim06 }}
-              >
-                <Text style={s.mindEyebrow}>You're calm — train the mind</Text>
-                <Text style={s.mindTitle}>{mindPick.title}</Text>
-                <Text style={s.mindMeta}>
-                  {mindPick.series} · Listen now ▸
-                </Text>
-              </AnimatedPressable>
-            )}
-
-            {/* De tweede deur naar de volledige bibliotheek (operator,
-                9 augustus 2026: eerst een bijna onzichtbaar regeltje, nu
-                een leesbare regel die de belofte meteen meegeeft — gratis
-                proeven, volledig ontgrendeld bij Premium). Nog altijd
-                kleiner dan de kaart erboven: dit is de tweede deur, niet
-                een tweede aanbod ernaast. */}
+            {/* Feed the mind (operator, 6 okt 2026): geen voorgestelde
+                sessie meer, enkel de uitnodiging om na het ademen ook de
+                mind te voeden — één regel, één deur naar de bibliotheek.
+                Neutraal van kleur: het accent blijft bij de kaart zelf. */}
             <AnimatedPressable
               onPressIn={pressBrowseLibrary.onPressIn}
               onPressOut={pressBrowseLibrary.onPressOut}
@@ -3822,18 +3786,10 @@ export function BreathSession() {
                 } as never);
               }}
               hitSlop={8}
-              style={[{ marginBottom: 4 }, pressBrowseLibrary.style]}
+              style={[s.feedMind, pressBrowseLibrary.style]}
             >
-              <Text style={s.mindMore}>Browse the full Audio Library ▸</Text>
-              {/* Alleen relevant voor wie het nog NIET heeft (operator, 13
-                  augustus 2026: "niet nodig bij premium breathwork") — een
-                  Premium-gebruiker heeft dit allang, "gratis proeven"
-                  spreekt hem niet aan en klopt ook niet meer voor hem. */}
-              {!isPro && (
-                <Text style={s.mindMoreSub}>
-                  Free to sample, full access with Premium
-                </Text>
-              )}
+              <Text style={s.feedMindLead}>Your breath is settled. Now feed the mind.</Text>
+              <Text style={s.feedMindLink}>Go to the Audio Library ▸</Text>
             </AnimatedPressable>
 
             {/* Enkel bij instant-gestarte sessies, enkel ná een echte
@@ -3866,7 +3822,7 @@ export function BreathSession() {
             {askPremium ? (
               <>
                 <AnimatedPressable
-                  style={[s.modalBtn, pressContinuePremium.style]}
+                  style={[s.modalBtn, s.doneBtn, pressContinuePremium.style]}
                   onPressIn={pressContinuePremium.onPressIn}
                   onPressOut={pressContinuePremium.onPressOut}
                   onPress={() => {
@@ -3902,7 +3858,7 @@ export function BreathSession() {
               </>
             ) : (
               <AnimatedPressable
-                style={[s.modalBtn, pressImDone.style]}
+                style={[s.modalBtn, s.doneBtn, pressImDone.style]}
                 onPressIn={pressImDone.onPressIn}
                 onPressOut={pressImDone.onPressOut}
                 onPress={() => {
@@ -3924,7 +3880,7 @@ export function BreathSession() {
                 <Text style={s.modalBtnTxt}>I'M DONE</Text>
               </AnimatedPressable>
             )}
-          </View>
+          </VibezGlass>
         </View>
       </Modal>
 
@@ -4715,10 +4671,6 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   /* ── Het afsluitscherm ── */
   doneCard: {
     width: '100%',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: accentSoft,
-    backgroundColor: C.cardBg,
     paddingTop: 26,
     paddingBottom: 22,
     paddingHorizontal: 22,
@@ -4728,50 +4680,28 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   },
   /* Een streep in de kleur van de toestand, zoals bij de bracelet. Geeft het
      scherm zijn identiteit terug zonder er een gekleurd vlak van te maken. */
-  /* De Train-the-mind-kaart: het accent van de toestand als rand, want de
-     sessie hoort bij wat je net gedaan hebt. */
-  mindCard: {
-    width: '100%',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: `${accent}55`,
-    backgroundColor: `${accent}0E`,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+  doneEyebrow: { color: C.dim50 },
+  /* Volle breedte: de kaart centreert zijn inhoud, anders krimpt de knop
+     tot zijn tekst ("I'M DONE" viel tegen de rand). */
+  doneBtn: { alignSelf: 'stretch' },
+  feedMind: {
+    alignItems: 'center',
+    marginTop: 4,
     marginBottom: 12,
+    gap: 4,
   },
-  mindEyebrow: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 11.5,
-    color: C.dim50,
-  },
-  mindTitle: {
-    marginTop: 3,
-    fontFamily: BrandFonts.bold,
-    fontSize: 15,
-    color: C.text,
-  },
-  mindMeta: {
-    marginTop: 3,
-    fontFamily: BrandFonts.medium,
-    fontSize: 11.5,
-    color: accent,
-  },
-  mindMore: {
-    marginTop: -4,
-    marginBottom: 10,
-    textAlign: 'center',
-    fontFamily: BrandFonts.semibold,
-    fontSize: 13,
-    color: C.dim70,
-  },
-  mindMoreSub: {
-    marginTop: -6,
-    marginBottom: 10,
+  feedMindLead: {
     textAlign: 'center',
     fontFamily: BrandFonts.regular,
-    fontSize: 11,
-    color: C.dim40,
+    fontSize: 13,
+    lineHeight: 19,
+    color: C.dim50,
+  },
+  feedMindLink: {
+    textAlign: 'center',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    color: C.text,
   },
   instantFeedbackRow: {
     alignItems: 'center',
