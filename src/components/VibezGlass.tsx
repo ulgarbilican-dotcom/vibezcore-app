@@ -62,7 +62,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
       : level === 'sheet' && blurTarget
         ? /* Echte vervaging (GlassSheetHost, 7 okt 2026): dunnere tint, zodat
              het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
-          { ...LEVEL.sheet, base: 'rgba(20,20,24,0.16)', blur: 100 }
+          { ...LEVEL.sheet, base: 'rgba(20,20,24,0.16)', blur: 70 }
         : LEVEL[level];
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
