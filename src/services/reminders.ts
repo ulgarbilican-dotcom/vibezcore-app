@@ -578,7 +578,12 @@ export async function tappedReminderOnLaunch(): Promise<TappedReminder | null> {
     const r = await Notifications.getLastNotificationResponseAsync();
     const t = fromResponse(r);
     if (!t || !r) return null;
-    const when = r.notification.date;
+    /* iOS geeft de aankomsttijd in SECONDEN, Android in milliseconden
+       (expo-notifications: timeIntervalSince1970 vs getTime()). Zonder
+       omrekenen leek elke iPhone-melding decennia oud en werd hij genegeerd
+       (6 okt 2026: "niet alleen Android, ook iPhone"). */
+    const raw = r.notification.date;
+    const when = typeof raw === 'number' && raw < 1e12 ? raw * 1000 : raw;
     const key = `${r.notification.request.identifier}:${when}`;
     const seen = await AsyncStorage.getItem(HANDLED_TAP_KEY);
     if (seen === key) return null;
