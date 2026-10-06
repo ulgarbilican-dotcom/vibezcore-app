@@ -295,13 +295,14 @@ function FreeEnvironmentCard() {
       <PressScale
         style={s.cardCta}
         onPress={() => router.navigate('/subscribe' as never)}
-        accessibilityLabel="Go Premium — unlock Breathwork and the Audio Library"
+        accessibilityLabel="Go Premium — unlock Breathwork, State Control and the Audio Library"
       >
         <View style={{ flex: 1 }}>
           <Text style={s.cardCtaText}>Go Premium</Text>
-          {/* Operator, 1 okt 2026: "49" was fout — correct: 64. */}
+          {/* Operator, 6 okt 2026: het abonnement noemt altijd alle drie —
+             Breathwork, State Control, Audio Library. */}
           <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            All 64 guided sessions + full Audio Library
+            Breathwork, State Control and the full Audio Library
           </Text>
         </View>
         <Text style={s.cardCtaArrow}>→</Text>
@@ -419,7 +420,7 @@ function SubscriptionCard() {
        precies dezelfde vrije proefsessies als ieder ander, geen volledige
        bibliotheek. De regel zegt dat nu eerlijk, in dezelfde "compleet
        maken"-toon als de rest van deze branche. */
-    subText = 'Add Premium to unlock every breathwork state and the Audio Library';
+    subText = 'Add Premium to unlock Breathwork, State Control and the Audio Library';
   } else {
     /* tier kan undefined zijn (defensief — backend zou dat niet
        moeten doen voor een active=true sub, maar we crashen er niet
@@ -477,7 +478,7 @@ function SubscriptionCard() {
      kopen, dus voor hem verdwijnt de knop hieronder via showUpgrade. */
   const upgradeCtaText = 'Go Premium';
   const upgradeAccessibilityLabel =
-    'Go Premium — unlock Breathwork and the Audio Library';
+    'Go Premium — unlock Breathwork, State Control and the Audio Library';
 
   return (
     <View style={s.card}>
@@ -1992,7 +1993,7 @@ export default function AccountScreen() {
           <PressScale
             style={s.productCtaLink}
             onPress={() => router.navigate('/subscribe' as never)}
-            accessibilityLabel="Go Premium — unlock Breathwork and the Audio Library"
+            accessibilityLabel="Go Premium — unlock Breathwork, State Control and the Audio Library"
           >
             <Text style={[s.productCtaLinkText, { color: C.accent }]}>
               Go Premium

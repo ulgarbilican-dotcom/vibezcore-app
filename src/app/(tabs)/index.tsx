@@ -3585,7 +3585,7 @@ function AudioScreen({
              + Audio Library" — zegt expliciet dat het ÉÉN abonnement is
              dat beide ontgrendelt, niet twee losse aankopen. */}
           <Text style={s.buyHeroSub}>
-            One VIBEZCORE membership unlocks Breathwork and the Audio Library
+            One VIBEZCORE membership unlocks Breathwork, State Control and the Audio Library
           </Text>
 
           {/* Operator, 16 september 2026 ("schrap de webshop-kortingen —
