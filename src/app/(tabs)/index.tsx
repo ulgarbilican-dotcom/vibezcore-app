@@ -1,7 +1,4 @@
 import { openStateControl } from '@/utils/state-control-ui';
-import { restorePurchases } from '@/services/restore-purchases';
-import { showVibezAlert } from '@/components/VibezAlert';
-import MembershipPlans, { type MembershipPlan } from '@/components/MembershipPlans';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale } from '@/constants/theme';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
@@ -29,7 +26,6 @@ import {
   tierBadgeLabel,
 } from '@/utils/access-tier';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import { getToken } from '@/services/auth';
@@ -1149,56 +1145,6 @@ function AudioScreen({
      iOS / gesture-bar Android moeten ruimte krijgen). */
   const safeInsets = useSafeAreaInsets();
 
-  /* Iter 9dq v135 (2026-06-15): pull IAP-products zodat pricing-cards in
-     LOKALE valuta van de user tonen ($ voor US, € voor EU, £ voor UK, etc).
-     localizedPrice is een al-opgemaakte string van StoreKit / Google Play
-     Billing — wij doen GEEN valutaconversie zelf. Fallback naar EUR-defaults
-     als products nog niet geladen zijn (eerste paint vóór StoreKit-call). */
-  const { getProduct: getIapProduct } = useIAP();
-  const monthlyProduct = getIapProduct('monthly');
-  const yearlyProduct = getIapProduct('yearly');
-  const monthlyPriceLabel = monthlyProduct?.localizedPrice ?? '€9.99';
-  const yearlyTotalLabel = yearlyProduct?.localizedPrice ?? '€69.99';
-
-  /* Helper: vervang het numerieke deel in een localizedPrice ("€9.99",
-     "$9.99", "9,99 €") door een nieuwe value, behoud valuta-symbool. We
-     gebruiken bewust GEEN Intl.NumberFormat (Hermes-compat-risico op
-     oudere RN-builds). Werkt voor leading-symbol locales ($/€/£/¥) en
-     valt terug op currency-code voor trailing-symbol locales. */
-  const reformatWithSymbol = (sample: string, currency: string, newValue: number): string => {
-    const formatted = newValue.toFixed(2);
-    const leading = sample.match(/^([^\d\s]+)/);
-    if (leading) return `${leading[1]}${formatted}`;
-    return `${formatted} ${currency}`;
-  };
-
-  /* Per-maand-equivalent voor yearly = yearly_total / 12, in dezelfde
-     valuta als yearly localizedPrice. Fallback: €5.83 (operator-pricing
-     2026-06-20: yearly intro €69.99/year = €5.83/month, save 61% vs
-     monthly regular €14.99). */
-  const yearlyPerMonthLabel = (() => {
-    if (!yearlyProduct?.priceAmountMicros) return '€5.83';
-    const monthlyValue = yearlyProduct.priceAmountMicros / 12 / 1_000_000;
-    return reformatWithSymbol(yearlyProduct.localizedPrice, yearlyProduct.currency, monthlyValue);
-  })();
-
-  /* Operator, 16 september 2026 ("geen doorgestreepte prijzen, geen SAVE
-     42% — vertrouw op de intelligentie van je klant"): de strikethrough-
-     vergelijking bleef geschrapt (geen verzonnen 'was'-prijs).
-     Operator, 26 september 2026 (website-referentie): het SAVE%-label
-     zelf komt terug — geen strikethrough, gewoon een informatief
-     percentage naast "Yearly", berekend uit de echte IAP-bedragen i.p.v.
-     hardcoded, zodat het nooit uit sync raakt met de winkelprijzen. */
-  const yearlySavePercent = (() => {
-    const monthlyValue = monthlyProduct?.priceAmountMicros
-      ? monthlyProduct.priceAmountMicros / 1_000_000
-      : 9.99;
-    const yearlyMonthlyValue = yearlyProduct?.priceAmountMicros
-      ? yearlyProduct.priceAmountMicros / 12 / 1_000_000
-      : 5.83;
-    if (monthlyValue <= 0) return null;
-    return Math.round((1 - yearlyMonthlyValue / monthlyValue) * 100);
-  })();
   /* (verwijderd: storeName per platform — operator wil beide platforms
      tonen voor vertrouwen ongeacht device). */
   /* Uitklap-state voor de disclaimer onderaan de pagina — default DICHT. */
@@ -1286,9 +1232,6 @@ function AudioScreen({
      scroll-index/snap-ref meer nodig (dat hoorde bij de horizontale
      carrousel-versie, zie git-historie). */
 
-  /* Y-positie van de pricing-section (buyBlock). Doel voor scroll-intent
-     'pricing' vanuit de player ("Full library access" / "Get Full Access"). */
-  const pricingYRef = useRef<number | null>(null);
   /* Y-positie van de auto-play-setting card. Doel voor scroll-intent
      'library-settings' vanuit Account → "Library settings". */
   const settingCardYRef = useRef<number | null>(null);
@@ -1312,7 +1255,8 @@ function AudioScreen({
     };
     const handle = (target: string) => {
       if (target === 'top') scrollToTarget(0);
-      else if (target === 'pricing') scrollToTarget(pricingYRef.current);
+      else if (target === 'pricing')
+        navigateAway(() => router.push('/subscribe?returnTo=audio' as never));
       else if (target === 'library-settings')
         scrollToTarget(settingCardYRef.current);
       else if (target === 'library')
@@ -1400,49 +1344,6 @@ function AudioScreen({
       router.push(
         `/library/pillar/${targetPillar}?play=${encodeURIComponent(sess.url)}` as never,
       ),
-    );
-  };
-  /* Open de subscribe-flow voor de geselecteerde plan-tier.
-     Iter 9dq v64 (2026-06-03): voorheen opende dit Gumroad direct in een
-     WebBrowser (Custom Tab) — werkt prima voor web/sideload maar Apple
-     en Google staan dit pad NIET toe voor digital subscriptions in een
-     app-store gepubliceerde app. Nu pushen we naar /subscribe?tier=<plan>
-     waar de IAP-bridge het overneemt: account-create form indien nodig,
-     dan Apple StoreKit / Google Play Billing popup, dan receipt-verify
-     naar backend.
-
-     De GUMROAD_URLS-constant blijft in code maar wordt niet meer direct
-     gebruikt — handig als referentie voor de webapp / als noodknop. */
-  /* Restore Purchases in de Library-kaart: meteen herstellen (Apple 3.1.1),
-     niet eerst naar een aankoopscherm. Zelfde meldingen als /subscribe. */
-  const restoreFromLibrary = async () => {
-    const result = await restorePurchases();
-    if (result.ok && result.restoredCount > 0) {
-      void showVibezAlert({ title: 'Subscription restored', message: 'Your full library is unlocked.' });
-    } else if (result.ok && result.accountMismatch) {
-      void showVibezAlert({
-        title: 'Active on your account, not on this device',
-        message:
-          "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore Purchases again.",
-      });
-    } else if (result.ok) {
-      void showVibezAlert({
-        title: 'Nothing to restore',
-        message: 'No active subscriptions were found for this Apple ID or Google account.',
-      });
-    } else {
-      void showVibezAlert({ title: 'Could not restore', message: 'Please check your connection and try again.' });
-    }
-  };
-  const openCheckout = async (plan: MembershipPlan) => {
-    if (__DEV__) console.log('[VIBEZCORE] openCheckout → /subscribe, plan =', plan);
-    /* Operator, 10 september 2026: "hoe weten wij of user audio of
-       breathwork wil" — dit is de Audio-tab, dus audio-context meegeven
-       zodat subscribe.tsx na aankoop hierheen kan terugsturen i.p.v.
-       altijd naar de Audio Library-root (wat toevallig hetzelfde is,
-       maar nu expliciet i.p.v. toeval). */
-    navigateAway(() =>
-      router.push(`/subscribe?tier=${plan}&returnTo=audio` as never),
     );
   };
   /* Accordion-toggle: zelfde serie nogmaals tikken → dicht (null).
@@ -3547,54 +3448,10 @@ function AudioScreen({
           )}
         </View>
 
-        {/* ── AANKOOPBLOK — bron index_2_correct.html regel 3746+ ──
-            Titel + Monthly/Yearly tikbare kaarten + OUR MISSION-blok +
-            GET FULL ACCESS-knop → Gumroad-checkout van het geselecteerde
-            plan. Yearly is standaard uitgelicht én geselecteerd.
-            Verbergen tijdens search zodat de autocomplete-overlay focus
-            houdt. PRO-users zien dit blok NIET — zij zijn al abonnee,
-            ruis (operator-besluit 2026-05-23). Independent-Content-
-            disclaimer eronder (regel 1427+) blijft wel zichtbaar — eigen
-            conditional block, juridische tekst geldt voor iedereen. */}
-        {!searchActive && !hasSub && (
-        /* Operator, 26 september 2026 ("echt helemaal wit transparant, nu
-           lijkt dat grijs"): de donkere `C.surface`-bg (#1e1e1e) onder de
-           witte gradient-sheen gaf per saldo grijs, niet echt "glas".
-           Echte BlurView i.p.v. een platte bg + gok-gradient erbovenop.
-           `tint="dark"` (NIET "light"!) — alle tekst hier is wit/C.text,
-           die zou op een lichte tint onleesbaar worden. Dit geeft alsnog
-           een transparant, vervaagd glaseffect, enkel donker getint. */
-        <BlurView
-          intensity={50}
-          tint="dark"
-          style={[s.buyBlock, { overflow: 'hidden' }]}
-          onLayout={(e) => {
-            /* Y t.o.v. de ScrollView-content (buyBlock is een directe
-               child van de scroll-container, zelfde patroon als
-               searchBarYRef). Doel voor scroll-intent 'pricing'. */
-            pricingYRef.current = e.nativeEvent.layout.y;
-          }}
-        >
-          {/* Operator, 26 september 2026 ("de grote kaart moet een
-             transparant witte highlight krijgen" — huisstijl v5.7 exacte
-             bron .plan: "glas zonder lichtbron"): volledige-hoogte zachte
-             witte gradient (.075 → .025), geen gekleurde gloed. */}
-          <LinearGradient
-            colors={['rgba(255,255,255,0.075)', 'rgba(255,255,255,0.025)']}
-            locations={[0, 1]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          {/* Operator, 7 okt 2026: één gedeelde abonnementskaart voor de
-             Library én /subscribe, met Apple's voorwaarden (het afgeschreven
-             bedrag het grootst, proef + verlenging bij de knop) — zie
-             components/MembershipPlans.tsx. */}
-          <MembershipPlans
-            onContinue={(p) => openCheckout(p)}
-            onRestore={() => void restoreFromLibrary()}
-          />
-        </BlurView>
-        )}
+        {/* Operator, 7 okt 2026: het kopen-blok onderaan is weg — de
+           Premium-knop bovenaan en het abonnementsscherm (/subscribe, zelfde
+           kaart) zijn de plek om te kiezen. Wie hier vroeger naartoe
+           scrolde ('pricing'), gaat nu rechtstreeks naar /subscribe. */}
 
         {/* ── DISCLAIMER — Independent Content & Third-Party References ──
             Uitklapbaar, default DICHT. Visueel + tekst exact uit bron
