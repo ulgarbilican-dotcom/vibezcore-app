@@ -53,9 +53,8 @@ import {
 } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, Info, Lock } from 'lucide-react-native';
+import { CalendarDays, Info } from 'lucide-react-native';
 import { useActivePlan } from '@/utils/plan-store';
-import { useProtocolLocked } from '@/utils/protocol-gate';
 import { techniqueIcon } from '@/utils/technique-copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -385,15 +384,7 @@ function StateThumb({
   );
 }
 
-function GoalButton({
-  plan,
-  protocolLocked,
-  onPress,
-}: {
-  plan: unknown;
-  protocolLocked: boolean;
-  onPress: () => void;
-}) {
+function GoalButton({ onPress }: { onPress: () => void }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -421,12 +412,10 @@ function GoalButton({
       style={[s.goalBtn, pressStyle]}
       accessibilityLabel="Your goal and daily plan"
     >
-      {!plan && protocolLocked ? (
-        <Lock size={19} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
-      ) : (
-        /* Kalender (6 okt 2026): Apple's teken voor schema en plan. */
-        <CalendarDays size={20} color="rgba(255,255,255,0.85)" strokeWidth={2} />
-      )}
+      {/* Altijd de kalender (operator, 7 okt 2026): het slot las als een
+          winkelmandje en gaf de knop een andere betekenis. Dat het plan
+          Premium is, ziet een gratis gebruiker in "Choose your path" zelf. */}
+      <CalendarDays size={20} color="rgba(255,255,255,0.85)" strokeWidth={2} />
     </AnimatedPressable>
   );
 }
@@ -447,10 +436,6 @@ export default function BreathScreen() {
   /* Voor de doel/dagplan-knop hieronder — zelfde "slimme bestemming"-logica
      als de "Your daily plan"-rij op Activity. */
   const { plan } = useActivePlan();
-  /* Operator, 17 september 2026: zelfde vooraf-signaal als op Activity —
-     zie utils/protocol-gate.ts. Deze knop is te klein voor tekst, dus
-     enkel het icoon wisselt naar een slot. */
-  const protocolLocked = useProtocolLocked();
   /* Operator, 2 okt 2026: "Instant Reset" vaste knoptekst voor iedereen —
      overschrijft de eerdere free/Premium-wisseling (Try it now/Feel
      better now). Vervolg ("onduidelijk, beter Instant Sessions"): tekst
@@ -1012,8 +997,6 @@ export default function BreathScreen() {
          "statistieken" uitstraalt). Tekstlabel eronder erbij, zelfde
          patroon als een tabblad-icoon met caption. */}
       <GoalButton
-        plan={plan}
-        protocolLocked={protocolLocked}
         onPress={() => router.push((plan ? '/agenda' : '/build-choice') as never)}
       />
 
