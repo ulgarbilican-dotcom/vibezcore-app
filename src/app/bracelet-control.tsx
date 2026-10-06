@@ -2058,22 +2058,23 @@ function ModeColorRing({
         }}
         pointerEvents="none"
       >
-        {/* Witte basis — altijd volledig zichtbaar, ook vóór de eerste
-           modus-keuze en tijdens de inkleur-animatie zelf. */}
+        {/* Basis-spoor zoals de breath-setup-ring (10% wit, operator 6 okt
+           2026: "de kleuren van de cirkels zijn anders") — was volledig wit. */}
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#ffffff"
+          stroke="rgba(255,255,255,0.10)"
           strokeWidth={stroke}
           fill="none"
         />
         {/* Gekleurde overlay — veegt klokwaarts in bij elke modus-wissel. */}
+        {/* Sleep in het lichte teal, zoals de breath-setup-ring. */}
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={color}
+          stroke={breathWaveLook(color).color}
           strokeWidth={stroke}
           strokeLinecap="round"
           fill="none"
