@@ -10,6 +10,8 @@ import ExpoModulesCore
 import Foundation
 
 /// MOET identiek zijn aan targets/live-activity/VibezLiveActivity.swift.
+/// @available: deze pod bouwt vanaf iOS 15.1, ActivityKit bestaat pas vanaf 16.1.
+@available(iOS 16.1, *)
 struct VibezSessionAttributes: ActivityAttributes {
   public struct ContentState: Codable, Hashable {
     var title: String
@@ -43,8 +45,8 @@ let vibezLiveToggleName = "com.ubili.vibezcoreapp.live.toggle"
 /// in de widget-extensie uit, dan komt het via het Darwin-signaal binnen.
 @available(iOS 17.0, *)
 struct VibezToggleSessionIntent: LiveActivityIntent {
-  static var title: LocalizedStringResource = "Pause or resume session"
-  static var isDiscoverable: Bool = false
+  static let title: LocalizedStringResource = "Pause or resume session"
+  static let isDiscoverable: Bool = false
 
   init() {}
 

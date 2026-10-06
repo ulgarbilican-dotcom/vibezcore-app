@@ -28,7 +28,7 @@ module.exports = {
   colors: {
     $accent: '#00A3A3',
   },
-  entitlements: {
-    'com.apple.security.application-groups': ['group.com.ubili.vibezcoreapp'],
-  },
+  /* Geen App Group (6 okt 2026): werd nergens gebruikt — telefoon en Watch
+     praten via WatchConnectivity — en vroeg wel een extra registratie bij
+     Apple die de build kon laten falen. */
 };

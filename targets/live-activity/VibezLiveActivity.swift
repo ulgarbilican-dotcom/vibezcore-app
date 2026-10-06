@@ -65,8 +65,8 @@ private func deepLink(_ kind: String, _ state: VibezSessionAttributes.ContentSta
 // op de activity zelf de sessie.
 @available(iOS 17.0, *)
 struct VibezToggleSessionIntent: LiveActivityIntent {
-  static var title: LocalizedStringResource = "Pause or resume session"
-  static var isDiscoverable: Bool = false
+  static let title: LocalizedStringResource = "Pause or resume session"
+  static let isDiscoverable: Bool = false
 
   init() {}
 
