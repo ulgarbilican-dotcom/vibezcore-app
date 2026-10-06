@@ -49,6 +49,10 @@ public class WatchBreathModule: Module {
       WatchBridge.shared.sendSession(session)
     }
 
+    Function("pauseBreathSession") {
+      WatchBridge.shared.pauseSession()
+    }
+
     Function("stopBreathSession") {
       WatchBridge.shared.stopSession()
     }
@@ -103,6 +107,14 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     var message = payload
     message["type"] = "start"
     deliver(message)
+  }
+
+  /* Pauze (6 okt 2026): de Watch stopt het ritme en toont Resume. Hervatten
+     = een nieuwe "start" met de plek in de sessie (startRound/startPhase/
+     phaseRemainingMs), die gaan vanzelf mee in `sendSession`. */
+  func pauseSession() {
+    guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+    deliver(["type": "pause"])
   }
 
   func stopSession() {

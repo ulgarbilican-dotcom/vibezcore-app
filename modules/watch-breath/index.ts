@@ -22,6 +22,11 @@ export type WatchBreathSession = {
   phases: WatchBreathPhase[];
   rounds: number;
   modeName: string;
+  /** Hervatten: ronde (1-based), fase-index en resterende ms van die fase
+   *  (weglaten = vooraan beginnen). */
+  startRound?: number;
+  startPhase?: number;
+  phaseRemainingMs?: number;
 };
 
 /** Lichtgewicht, periodiek te hersturen status voor Instant State Control
@@ -62,6 +67,7 @@ type Subscription = { remove(): void };
 type WatchBreathNativeModule = {
   isWatchReachable(): Promise<boolean>;
   sendBreathSession(session: WatchBreathSession): void;
+  pauseBreathSession(): void;
   stopBreathSession(): void;
   sendBraceletStatus(status: WatchBraceletStatus): void;
   stopBraceletRelay(): void;
@@ -94,6 +100,16 @@ export async function isWatchReachable(): Promise<boolean> {
 export function sendBreathSessionToWatch(session: WatchBreathSession): void {
   try {
     native?.sendBreathSession(session);
+  } catch {
+    /* stil */
+  }
+}
+
+/** Pauzeert de ademsessie op de Watch (hervatten = opnieuw
+ *  `sendBreathSessionToWatch` met de plek in de sessie). Faalt stil. */
+export function pauseBreathSessionOnWatch(): void {
+  try {
+    native?.pauseBreathSession();
   } catch {
     /* stil */
   }

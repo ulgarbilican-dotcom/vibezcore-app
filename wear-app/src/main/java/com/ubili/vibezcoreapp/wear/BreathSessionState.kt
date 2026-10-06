@@ -10,6 +10,8 @@ object BreathSessionState {
     val round: Int,
     val totalRounds: Int,
     val running: Boolean,
+    /** Gepauzeerd (op telefoon of horloge): toon Resume, het ritme staat stil. */
+    val paused: Boolean = false,
   )
 
   @Volatile

@@ -108,8 +108,18 @@ import {
   startBackgroundBreathSession,
   stopBackgroundBreathSession,
 } from '../../modules/breath-background';
-import { sendBreathSessionToWatch, stopBreathSessionOnWatch } from '../../modules/watch-breath';
-import { sendBreathSessionToWatch as sendBreathSessionToWear, stopBreathSessionOnWatch as stopBreathSessionOnWear } from '../../modules/wear-breath';
+import {
+  onWatchAction as onAppleWatchAction,
+  pauseBreathSessionOnWatch,
+  sendBreathSessionToWatch,
+  stopBreathSessionOnWatch,
+} from '../../modules/watch-breath';
+import {
+  onWatchAction as onWearWatchAction,
+  pauseBreathSessionOnWatch as pauseBreathSessionOnWear,
+  sendBreathSessionToWatch as sendBreathSessionToWear,
+  stopBreathSessionOnWatch as stopBreathSessionOnWear,
+} from '../../modules/wear-breath';
 import { showVibezAlert } from '@/components/VibezAlert';
 import {
   BlurMask,
@@ -1595,6 +1605,9 @@ export function BreathSession() {
     pausedAtWallRef.current = Date.now();
     setPaused(true);
     pauseLiveSession();
+    /* Eén sessie, twee bedieningen (6 okt 2026): de pols pauzeert mee. */
+    pauseBreathSessionOnWear();
+    pauseBreathSessionOnWatch();
   }, [arc, breath, clearTimers]);
 
   const resumeSession = useCallback(() => {
@@ -1606,6 +1619,13 @@ export function BreathSession() {
     }
     setPaused(false);
     resumeLiveSession();
+    /* De pols gaat verder op exact dezelfde plek: zelfde ronde, zelfde fase,
+       met wat er van die fase nog over is (6 okt 2026). */
+    relayBreathToWatches({
+      startRound: round,
+      startPhase: Math.max(0, techRef.current.phases.findIndex((p) => p.key === phase)),
+      phaseRemainingMs: Math.round(secsLeft * 1000),
+    });
     /* Operator, 24 september 2026 (10de melding, de echte oorzaak): bij de
        ALLEREERSTE hervatting (na `start(preview, startPaused=true)`) is de
        huidige fase nog nooit gesproken — `runPhase()` hieronder kondigt
@@ -1914,6 +1934,37 @@ export function BreathSession() {
      rest — dezelfde functie die ook een echte pauze MIDDEN in een sessie
      hervat, hier voor het eerst aangeroepen vanaf de volle faseduur
      (`phase`/`secsLeft`/`round` staan hier nog op hun initiële waarden). */
+  /* ── Horloge-begeleiding (Wear OS + Apple Watch) ───────────────────────
+     ÉÉN bericht met de volledige sessie — geen tik per fase over Bluetooth.
+     `at` = waar het horloge verder moet na een pauze (ronde, fase, wat er
+     van die fase nog over is). Faalt stil: geen horloge, of het andere OS. */
+  const relayBreathToWatches = useCallback(
+    (at?: { startRound: number; startPhase: number; phaseRemainingMs: number }) => {
+      try {
+        const phases = techRef.current.phases;
+        sendBreathSessionToWear({
+          phases: phases.map((p) => ({
+            key: p.key,
+            secs: p.secs,
+            pattern: phaseHapticPattern(p.key, p.secs),
+          })),
+          rounds: effectiveRoundsRef.current,
+          modeName: st.eyebrow,
+          ...(at ?? {}),
+        });
+        sendBreathSessionToWatch({
+          phases: phases.map((p) => ({ key: p.key, secs: p.secs })),
+          rounds: effectiveRoundsRef.current,
+          modeName: st.eyebrow,
+          ...(at ?? {}),
+        });
+      } catch {
+        /* stil */
+      }
+    },
+    [st.eyebrow],
+  );
+
   const start = useCallback((preview = false, startPaused = false) => {
     if (startingRef.current) return;
     startingRef.current = true;
@@ -2014,25 +2065,10 @@ export function BreathSession() {
        no-op stil (geen horloge gekoppeld, of het andere OS) — zie de
        try/catch-regel in wear-breath/watch-breath index.ts. Mag START
        nooit blokkeren, dus altijd in een eigen try/catch. */
-    try {
-      const phases = techRef.current.phases;
-      sendBreathSessionToWear({
-        phases: phases.map((p) => ({
-          key: p.key,
-          secs: p.secs,
-          pattern: phaseHapticPattern(p.key, p.secs),
-        })),
-        rounds: effectiveRoundsRef.current,
-        modeName: st.eyebrow,
-      });
-      sendBreathSessionToWatch({
-        phases: phases.map((p) => ({ key: p.key, secs: p.secs })),
-        rounds: effectiveRoundsRef.current,
-        modeName: st.eyebrow,
-      });
-    } catch {
-      /* stil — zie toelichting hierboven */
-    }
+    /* 6 okt 2026: enkel als de sessie echt loopt. Wacht ze nog op Play
+       (startPaused), dan gaat ze pas bij de eerste hervatting naar het
+       horloge — anders liep de pols al terwijl de telefoon stilstond. */
+    if (!startPaused) relayBreathToWatches();
     startWallRef.current = Date.now();
     claimVoiceSource('breath');
     /* Het achtergrondgeluid hoort bij de sessie, niet bij het scherm: het komt
@@ -2311,6 +2347,32 @@ export function BreathSession() {
       leaveSession();
     }
   }, [isFreeOnboardingSession, locked, stop, leaveSession]);
+
+  /* ── Knoppen op het horloge (Wear OS + Apple Watch, 6 okt 2026) ─────────
+     Eén sessie, twee bedieningen: Pause / Resume / Stop op de pols bedienen
+     deze sessie precies zoals de knoppen hier. De telefoon blijft de bron
+     van waarheid en stuurt daarna zelf de nieuwe stand naar het horloge. */
+  const watchHandlersRef = useRef({ pauseSession, resumeSession, requestStop });
+  watchHandlersRef.current = { pauseSession, resumeSession, requestStop };
+  useEffect(() => {
+    const handle = (e: { action: 'pause' | 'resume' | 'stop'; kind: string }) => {
+      if (e.kind !== 'breath' || !runningRef.current) return;
+      const h = watchHandlersRef.current;
+      if (e.action === 'pause') {
+        if (!pausedRef.current) h.pauseSession();
+      } else if (e.action === 'resume') {
+        if (pausedRef.current) h.resumeSession();
+      } else if (e.action === 'stop') {
+        h.requestStop();
+      }
+    };
+    const offWear = onWearWatchAction(handle);
+    const offApple = onAppleWatchAction(handle);
+    return () => {
+      offWear();
+      offApple();
+    };
+  }, []);
 
   /* Operator, 10 september 2026: "de backknoppen van de telefoon moeten
      enkel 1 pagina terug gaan" — de X-knop bovenaan riep `skipBreathIntroOnce()`

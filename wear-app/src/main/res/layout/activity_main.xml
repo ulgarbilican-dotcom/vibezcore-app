@@ -48,13 +48,28 @@
             android:textSize="12sp"
             android:gravity="center" />
 
-        <Button
-            android:id="@+id/stopButton"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="Stop"
-            android:visibility="gone" />
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/breathPauseButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pause"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/stopButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="Stop"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

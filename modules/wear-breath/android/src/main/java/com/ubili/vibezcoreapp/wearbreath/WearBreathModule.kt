@@ -41,6 +41,12 @@ class WearBreathSession(
   @Field val phases: List<WearBreathPhase> = emptyList(),
   @Field val rounds: Int = 1,
   @Field val modeName: String = "Breathwork",
+  /* Hervatten (6 okt 2026): waar in de sessie het horloge verder moet —
+     ronde (1-based), fase-index en wat er van die fase nog over is
+     (-1 = de fase begint vooraan, met zijn trilpatroon). */
+  @Field val startRound: Int = 1,
+  @Field val startPhase: Int = 0,
+  @Field val phaseRemainingMs: Int = -1,
 ) : Record
 
 /** Lichtgewicht, periodiek te hersturen status voor Instant State Control
@@ -71,6 +77,7 @@ class WearStateSessionStart(
 
 private const val PATH_BREATH_START = "/vibezcore/breath/start"
 private const val PATH_BREATH_STOP = "/vibezcore/breath/stop"
+private const val PATH_BREATH_PAUSE = "/vibezcore/breath/pause"
 private const val PATH_BRACELET_STATUS = "/vibezcore/bracelet/status"
 private const val PATH_BRACELET_STOP = "/vibezcore/bracelet/stop"
 private const val PATH_WATCH_ACTION = "/vibezcore/watch/action"
@@ -123,6 +130,10 @@ class WearBreathModule : Module() {
 
     Function("sendBreathSession") { session: WearBreathSession ->
       broadcast(PATH_BREATH_START, toJson(session).toString().toByteArray(Charsets.UTF_8))
+    }
+
+    Function("pauseBreathSession") {
+      broadcast(PATH_BREATH_PAUSE, ByteArray(0))
     }
 
     Function("stopBreathSession") {
@@ -187,6 +198,9 @@ class WearBreathModule : Module() {
       put("phases", phasesArr)
       put("rounds", session.rounds)
       put("modeName", session.modeName)
+      put("startRound", session.startRound)
+      put("startPhase", session.startPhase)
+      put("phaseRemainingMs", session.phaseRemainingMs)
     }
   }
 

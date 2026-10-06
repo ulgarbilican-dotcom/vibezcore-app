@@ -28,6 +28,11 @@ export type WearBreathSession = {
   phases: WearBreathPhase[];
   rounds: number;
   modeName: string;
+  /** Hervatten: ronde (1-based), fase-index en resterende ms van die fase
+   *  (weglaten = vooraan beginnen). */
+  startRound?: number;
+  startPhase?: number;
+  phaseRemainingMs?: number;
 };
 
 export type WearBraceletStatus = {
@@ -68,6 +73,7 @@ export type StateSessionStart = {
 type WearBreathNativeModule = {
   isWatchReachable(): Promise<boolean>;
   sendBreathSession(session: WearBreathSession): void;
+  pauseBreathSession(): void;
   stopBreathSession(): void;
   sendBraceletStatus(status: WearBraceletStatus): void;
   stopBraceletRelay(): void;
@@ -102,6 +108,16 @@ export async function isWatchReachable(): Promise<boolean> {
 export function sendBreathSessionToWatch(session: WearBreathSession): void {
   try {
     native?.sendBreathSession(session);
+  } catch {
+    /* stil */
+  }
+}
+
+/** Pauzeert de ademsessie op het horloge (hervatten = opnieuw
+ *  `sendBreathSessionToWatch` met de plek in de sessie). Faalt stil. */
+export function pauseBreathSessionOnWatch(): void {
+  try {
+    native?.pauseBreathSession();
   } catch {
     /* stil */
   }

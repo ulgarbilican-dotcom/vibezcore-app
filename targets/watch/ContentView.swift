@@ -28,15 +28,23 @@ struct ContentView: View {
         .multilineTextAlignment(.center)
         .foregroundColor(.white)
 
-      if controller.running {
+      if controller.running || controller.paused {
         Text("Round \(controller.round) / \(controller.totalRounds)")
           .font(.system(size: 12))
           .foregroundColor(.gray)
 
-        Button("Stop") {
-          controller.stop()
+        /* Eén sessie, twee bedieningen: deze knoppen bedienen de sessie op de
+           iPhone (6 okt 2026). */
+        HStack(spacing: 8) {
+          Button(controller.paused ? "Resume" : "Pause") {
+            controller.requestPauseOrResume()
+          }
+          Button("Stop") {
+            controller.requestStop()
+          }
+          .tint(.gray)
         }
-        .padding(.top, 8)
+        .padding(.top, 6)
       }
     }
   }

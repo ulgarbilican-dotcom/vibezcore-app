@@ -14,6 +14,7 @@ class MainActivity : Activity() {
   private lateinit var roundLabel: TextView
   private lateinit var modeLabel: TextView
   private lateinit var stopButton: Button
+  private lateinit var breathPauseButton: Button
 
   private lateinit var stateContainer: View
   private lateinit var stateAccent: View
@@ -33,12 +34,36 @@ class MainActivity : Activity() {
     roundLabel = findViewById(R.id.roundLabel)
     modeLabel = findViewById(R.id.modeLabel)
     stopButton = findViewById(R.id.stopButton)
+    breathPauseButton = findViewById(R.id.breathPauseButton)
+    /* Eén sessie, twee bedieningen (6 okt 2026): de knoppen vragen het de
+       telefoon (bron van waarheid). Pauze en stop gebeuren hier meteen ook
+       al, zodat de pols niet blijft tikken als de telefoon even ver weg is;
+       de telefoon bevestigt daarna. Hervatten kan enkel via de telefoon —
+       die stuurt de sessie terug vanaf de juiste plek. */
+    breathPauseButton.setOnClickListener {
+      val paused = BreathSessionState.current.paused
+      PhoneLink.sendWatchAction(this, if (paused) "resume" else "pause", "breath")
+      if (!paused && WearBreathSessionService.instance != null) {
+        startService(
+          Intent(this, WearBreathSessionService::class.java).apply {
+            action = WearBreathSessionService.ACTION_PAUSE
+          },
+        )
+      }
+    }
     stopButton.setOnClickListener {
-      startService(
-        Intent(this, WearBreathSessionService::class.java).apply {
-          action = WearBreathSessionService.ACTION_STOP
-        },
-      )
+      PhoneLink.sendWatchAction(this, "stop", "breath")
+      if (WearBreathSessionService.instance != null) {
+        startService(
+          Intent(this, WearBreathSessionService::class.java).apply {
+            action = WearBreathSessionService.ACTION_STOP
+          },
+        )
+      } else {
+        BreathSessionState.update(
+          BreathSessionState.Snapshot("Waiting for phone…", "", 0, 0, running = false),
+        )
+      }
     }
 
     stateContainer = findViewById(R.id.stateContainer)
@@ -74,8 +99,11 @@ class MainActivity : Activity() {
   private fun renderBreath(s: BreathSessionState.Snapshot) {
     phaseLabel.text = s.phaseLabel
     modeLabel.text = if (s.modeName.isNotBlank()) s.modeName.uppercase() else "VIBEZCORE"
-    roundLabel.text = if (s.running) "Round ${s.round} / ${s.totalRounds}" else ""
-    stopButton.visibility = if (s.running) Button.VISIBLE else Button.GONE
+    val inSession = s.running || s.paused
+    roundLabel.text = if (inSession) "Round ${s.round} / ${s.totalRounds}" else ""
+    stopButton.visibility = if (inSession) Button.VISIBLE else Button.GONE
+    breathPauseButton.visibility = if (inSession) Button.VISIBLE else Button.GONE
+    breathPauseButton.text = if (s.paused) "Resume" else "Pause"
   }
 
   private fun renderState(s: StateSessionState.Snapshot) {

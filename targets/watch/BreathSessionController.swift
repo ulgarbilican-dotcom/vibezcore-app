@@ -35,6 +35,8 @@ final class BreathSessionController: NSObject, ObservableObject {
   @Published var round: Int = 0
   @Published var totalRounds: Int = 0
   @Published var running: Bool = false
+  /// Gepauzeerd (op iPhone of Watch): het ritme staat stil, de knop toont Resume.
+  @Published var paused: Bool = false
 
   private var phases: [WatchPhase] = []
   private var phaseTimer: Timer?
@@ -48,6 +50,10 @@ final class BreathSessionController: NSObject, ObservableObject {
       stop()
       return
     }
+    if type == "pause" {
+      pauseLocally()
+      return
+    }
     guard let phasesRaw = message["phases"] as? [[String: Any]] else { return }
     let parsed: [WatchPhase] = phasesRaw.compactMap { p in
       guard let key = p["key"] as? String, let secs = p["secs"] as? Int, secs > 0 else { return nil }
@@ -59,13 +65,26 @@ final class BreathSessionController: NSObject, ObservableObject {
     totalRounds = max(1, message["rounds"] as? Int ?? 1)
     modeName = message["modeName"] as? String ?? "Breathwork"
     running = true
+    paused = false
     RuntimeSessionManager.shared.acquire(.breath)
 
+    /* Hervatten (6 okt 2026): verder op exact de plek waar de iPhone
+       pauzeerde — ronde, fase en wat er van die fase nog over was. */
+    let startRound = min(max(1, message["startRound"] as? Int ?? 1), totalRounds)
+    let startPhase = min(max(0, message["startPhase"] as? Int ?? 0), phases.count - 1)
+    let remainingMs = message["phaseRemainingMs"] as? Int ?? -1
+    let midPhase = remainingMs >= 0 && remainingMs < phases[startPhase].secs * 1000
+
     generation += 1
-    runPhase(gen: generation, round: 1, idx: 0)
+    runPhase(
+      gen: generation, round: startRound, idx: startPhase,
+      firstDelay: midPhase ? TimeInterval(remainingMs) / 1000 : nil
+    )
   }
 
-  private func runPhase(gen: Int, round: Int, idx: Int) {
+  /// `firstDelay`: hervatten midden in een fase — die fase is al getrild,
+  /// dus enkel de resterende tijd afwachten.
+  private func runPhase(gen: Int, round: Int, idx: Int, firstDelay: TimeInterval? = nil) {
     guard gen == generation else { return }
     guard round <= totalRounds else {
       stop()
@@ -74,13 +93,15 @@ final class BreathSessionController: NSObject, ObservableObject {
     let phase = phases[idx]
     phaseLabel = displayLabel(for: phase.key)
     self.round = round
-    playHaptics(for: phase.key, secs: phase.secs)
+    if firstDelay == nil {
+      playHaptics(for: phase.key, secs: phase.secs)
+    }
 
     let nextIdx = (idx + 1) % phases.count
     let nextRound = nextIdx == 0 ? round + 1 : round
 
     phaseTimer?.invalidate()
-    phaseTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(phase.secs), repeats: false) { [weak self] _ in
+    phaseTimer = Timer.scheduledTimer(withTimeInterval: firstDelay ?? TimeInterval(phase.secs), repeats: false) { [weak self] _ in
       self?.runPhase(gen: gen, round: nextRound, idx: nextIdx)
     }
   }
@@ -122,11 +143,40 @@ final class BreathSessionController: NSObject, ObservableObject {
     }
   }
 
+  // MARK: Eén sessie, twee bedieningen (6 okt 2026) — de iPhone is de bron
+  // van waarheid. Pauze en stop gebeuren hier meteen ook al (de pols mag
+  // niet blijven tikken als de iPhone even onbereikbaar is); de iPhone
+  // bevestigt daarna. Hervatten kan enkel via de iPhone: die stuurt de
+  // sessie terug vanaf de juiste plek.
+
+  func requestPauseOrResume() {
+    let action = paused ? "resume" : "pause"
+    PhoneConnector.shared.send(["type": "watch_action", "action": action, "kind": "breath"])
+    if action == "pause" { pauseLocally() }
+  }
+
+  func requestStop() {
+    PhoneConnector.shared.send(["type": "watch_action", "action": "stop", "kind": "breath"])
+    stop()
+  }
+
+  func pauseLocally() {
+    guard running else { return }
+    generation += 1
+    phaseTimer?.invalidate()
+    tickTimer?.invalidate()
+    running = false
+    paused = true
+    phaseLabel = "Paused"
+    RuntimeSessionManager.shared.release(.breath)
+  }
+
   func stop() {
     generation += 1
     phaseTimer?.invalidate()
     tickTimer?.invalidate()
     running = false
+    paused = false
     phaseLabel = "Waiting for phone…"
     modeName = ""
     round = 0

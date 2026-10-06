@@ -11,6 +11,7 @@ import com.google.android.gms.wearable.WearableListenerService
 
 private const val PATH_START = "/vibezcore/breath/start"
 private const val PATH_STOP = "/vibezcore/breath/stop"
+private const val PATH_PAUSE = "/vibezcore/breath/pause"
 /* State Control (docs/WATCH_PROTOCOL.md) — zelfde doorgeefluik, andere
    service: WearStateSessionService speelt het ritme lokaal af. */
 private const val PATH_STATE_START = "/vibezcore/state/start"
@@ -29,7 +30,23 @@ class BreathListenerService : WearableListenerService() {
           }
           startForegroundService(intent)
         }
+        PATH_PAUSE -> {
+          /* Loopt er niets (al gepauzeerd), dan is er niets te doen. */
+          if (WearBreathSessionService.instance == null) return
+          startService(
+            Intent(this, WearBreathSessionService::class.java).apply {
+              action = WearBreathSessionService.ACTION_PAUSE
+            },
+          )
+        }
         PATH_STOP -> {
+          /* Gepauzeerd = geen lopende service: enkel het scherm terugzetten. */
+          if (WearBreathSessionService.instance == null) {
+            BreathSessionState.update(
+              BreathSessionState.Snapshot("Waiting for phone…", "", 0, 0, running = false),
+            )
+            return
+          }
           val intent = Intent(this, WearBreathSessionService::class.java).apply {
             action = WearBreathSessionService.ACTION_STOP
           }

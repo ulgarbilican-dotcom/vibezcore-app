@@ -91,8 +91,29 @@ telefoon geen stop: het horloge speelt zelf het eind-signaal na
 | state-ack | `/vibezcore/state/ack` (horloge → telefoon) | `type: "state_ack"` |
 | watch-action | `/vibezcore/watch/action` (bestaat al) | `type: "watch_action"` (bestaat al) |
 
-Breathwork-berichten blijven zoals ze zijn (`/vibezcore/breath/start|stop`,
-`type: "start"|"stop"`).
+## Breathwork — één sessie, twee bedieningen (6 okt 2026)
+
+Operator: "moet de gebruiker via beide kunnen stoppen en pauzeren?" — ja.
+De telefoon is de bron van waarheid, zoals bij State Control.
+
+| | Wear OS | Apple Watch |
+|---|---|---|
+| start (ook hervatten) | `/vibezcore/breath/start` | `type: "start"` |
+| pauze | `/vibezcore/breath/pause` (leeg) | `type: "pause"` |
+| stop | `/vibezcore/breath/stop` | `type: "stop"` |
+
+`start` draagt de volledige sessie (fasen, rondes, modeName) plus, bij
+hervatten, de plek: `startRound` (1-based), `startPhase` (index),
+`phaseRemainingMs` (-1 of weglaten = vooraan, mét trilpatroon; anders
+enkel de resterende tijd afwachten, de fase is al getrild).
+
+- De telefoon stuurt `start` pas als de sessie echt loopt (een sessie die
+  op Play wacht, gaat bij de eerste hervatting naar het horloge).
+- Pauze op de telefoon → `pause`; hervatten → `start` met de plek.
+- Horloge-knoppen Pause / Resume / Stop → `watch-action` met
+  `kind: "breath"`. Pauze en stop past het horloge meteen ook zelf toe
+  (de pols blijft niet tikken als de telefoon even weg is); hervatten kan
+  enkel via de telefoon (die kent de plek).
 
 ## Telefoon-API (JS, `modules/wear-breath` en `modules/watch-breath`)
 

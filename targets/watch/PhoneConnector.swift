@@ -7,7 +7,7 @@ import WatchConnectivity
    Er mag maar één delegate zijn; voorheen was dat BreathSessionController.
    Nu er ook State Control binnenkomt, routeert deze klasse op `type`
    (docs/WATCH_PROTOCOL.md):
-     "start" | "stop"                       → BreathSessionController
+     "start" | "stop" | "pause"             → BreathSessionController
      "state_start" | "state_pause" | "state_stop" → StateSessionController
      "bracelet_status" | "bracelet_stop"    → genegeerd (enkel weergave-
                                               relay, hier niet getoond)
@@ -83,7 +83,7 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
       switch type {
       case "state_start", "state_pause", "state_stop":
         StateSessionController.shared.apply(type: type, message: message)
-      case "start", "stop":
+      case "start", "stop", "pause":
         BreathSessionController.shared.apply(message)
       default:
         break

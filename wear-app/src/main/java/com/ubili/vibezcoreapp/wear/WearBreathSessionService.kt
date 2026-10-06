@@ -57,6 +57,7 @@ class WearBreathSessionService : Service() {
     when (intent?.action) {
       ACTION_START -> startSession(intent.getStringExtra(EXTRA_SESSION_JSON) ?: return START_NOT_STICKY)
       ACTION_STOP -> stopSession()
+      ACTION_PAUSE -> pauseSession()
     }
     return START_NOT_STICKY
   }
@@ -73,6 +74,11 @@ class WearBreathSessionService : Service() {
       Phase(p.getString("key"), p.getInt("secs"), pattern)
     }
     if (phases.isEmpty()) return
+    /* Hervatten (6 okt 2026): verder op exact de plek waar de telefoon
+       pauzeerde — ronde, fase en wat er van die fase nog over was. */
+    val startRound = json.optInt("startRound", 1).coerceIn(1, rounds)
+    val startPhase = json.optInt("startPhase", 0).coerceIn(0, phases.size - 1)
+    val phaseRemainingMs = json.optLong("phaseRemainingMs", -1L)
 
     acquireWakeLock()
     val notification = buildNotification("Starting…", modeName)
@@ -83,7 +89,12 @@ class WearBreathSessionService : Service() {
     }
 
     val myGeneration = ++generation
-    runPhase(myGeneration, phases, rounds, modeName, round = 1, phaseIdx = 0)
+    instance = this
+    val midPhase = phaseRemainingMs in 0 until phases[startPhase].secs * 1000L
+    runPhase(
+      myGeneration, phases, rounds, modeName, round = startRound, phaseIdx = startPhase,
+      firstDelayMs = if (midPhase) phaseRemainingMs else null,
+    )
   }
 
   private fun runPhase(
@@ -93,6 +104,9 @@ class WearBreathSessionService : Service() {
     modeName: String,
     round: Int,
     phaseIdx: Int,
+    /** Hervatten midden in een fase: die fase is al aangekondigd en getrild,
+     *  dus enkel de resterende tijd afwachten. */
+    firstDelayMs: Long? = null,
   ) {
     if (gen != generation) return // een nieuwere START (of STOP) heeft dit overruled
     if (round > totalRounds) {
@@ -102,10 +116,12 @@ class WearBreathSessionService : Service() {
     val phase = phases[phaseIdx]
     val label = phaseDisplayLabel(phase.key)
 
-    try {
-      vibrator?.vibrate(VibrationEffect.createWaveform(phase.pattern, -1))
-    } catch (_: Exception) {
-      /* een toestel/emulator zonder trilmotor mag de lus niet stoppen */
+    if (firstDelayMs == null) {
+      try {
+        vibrator?.vibrate(VibrationEffect.createWaveform(phase.pattern, -1))
+      } catch (_: Exception) {
+        /* een toestel/emulator zonder trilmotor mag de lus niet stoppen */
+      }
     }
 
     BreathSessionState.update(
@@ -118,7 +134,7 @@ class WearBreathSessionService : Service() {
 
     handler?.postDelayed(
       { runPhase(gen, phases, totalRounds, modeName, nextRound, nextPhaseIdx) },
-      phase.secs * 1000L,
+      firstDelayMs ?: (phase.secs * 1000L),
     )
   }
 
@@ -126,6 +142,25 @@ class WearBreathSessionService : Service() {
     "inhale", "inhale-2" -> "Breathe in"
     "exhale", "exhale-2" -> "Breathe out"
     else -> "Hold"
+  }
+
+  /** Pauze: het ritme stopt, het scherm toont Resume. Hervatten komt als een
+   *  nieuwe START van de telefoon, met de plek in de sessie. */
+  private fun pauseSession() {
+    generation++
+    handler?.removeCallbacksAndMessages(null)
+    try {
+      vibrator?.cancel()
+    } catch (_: Exception) {
+    }
+    val cur = BreathSessionState.current
+    BreathSessionState.update(
+      BreathSessionState.Snapshot("Paused", cur.modeName, cur.round, cur.totalRounds, running = false, paused = true),
+    )
+    releaseWakeLock()
+    stopForeground(STOP_FOREGROUND_REMOVE)
+    instance = null
+    stopSelf()
   }
 
   private fun stopSession() {
@@ -144,6 +179,7 @@ class WearBreathSessionService : Service() {
     )
     releaseWakeLock()
     stopForeground(STOP_FOREGROUND_REMOVE)
+    instance = null
     stopSelf()
   }
 
@@ -191,6 +227,7 @@ class WearBreathSessionService : Service() {
   }
 
   override fun onDestroy() {
+    if (instance === this) instance = null
     releaseWakeLock()
     thread?.quitSafely()
     super.onDestroy()
@@ -201,6 +238,11 @@ class WearBreathSessionService : Service() {
   companion object {
     const val ACTION_START = "com.ubili.vibezcoreapp.wear.action.START"
     const val ACTION_STOP = "com.ubili.vibezcoreapp.wear.action.STOP"
+    const val ACTION_PAUSE = "com.ubili.vibezcoreapp.wear.action.PAUSE"
+
+    /** De lopende service, of null — dan is er niets te pauzeren/stoppen. */
+    @Volatile
+    var instance: WearBreathSessionService? = null
     const val EXTRA_SESSION_JSON = "sessionJson"
   }
 }
