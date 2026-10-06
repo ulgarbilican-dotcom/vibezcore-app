@@ -25,6 +25,7 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
+import MembershipPlans from '@/components/MembershipPlans';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
@@ -320,8 +321,6 @@ export default function SubscribeScreen() {
   const saveSubPress = usePressScale(0.95);
   const tryAgainPress = usePressScale(0.96);
   const contactSupportPress = usePressScale(0.95);
-  const yearlyCardPress = usePressScale(0.95);
-  const monthlyCardPress = usePressScale(0.95);
   const checkoutPress = usePressScale(0.96);
   const cancelPress = usePressScale(0.95);
   const googlePress = usePressScale(0.95);
@@ -1272,10 +1271,8 @@ export default function SubscribeScreen() {
      vóór de form/review-flow. Twee tap-cards: Monthly + Yearly met live
      prijzen vanuit het IAP-product (fallback naar hardcoded EU-prijzen). */
   if (tier === null) {
-    const monthlyProduct = getProduct('monthly');
-    const yearlyProduct = getProduct('yearly');
-    const monthlyPrice = monthlyProduct?.localizedPrice ?? '€9,99';
-    const yearlyPrice = yearlyProduct?.localizedPrice ?? '€69,99';
+    /* Operator, 7 okt 2026: dezelfde kaart als het Library-kopen-blok,
+       met Apple's voorwaarden — zie components/MembershipPlans.tsx. */
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
@@ -1291,63 +1288,7 @@ export default function SubscribeScreen() {
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
         >
-          <Text style={s.heading}>Choose your plan</Text>
-          {/* Operator, 1 okt 2026: "49" was fout — correct: 64 (15
-             technieken × hun benoemde duur-varianten). */}
-          {/* Operator, 5 okt 2026: het product waar de gebruiker vandaan
-             komt eerst, daarna de andere twee. */}
-          <Text style={s.sub}>
-            {params.returnTo === 'state-control'
-              ? 'Every State Control session — every haptic state, any duration — plus full VIBEZCORE Breathwork and the full VIBEZCORE Audio Library. Cancel anytime.'
-              : params.returnTo === 'audio'
-                ? 'The full VIBEZCORE Audio Library, plus full VIBEZCORE Breathwork and every State Control session. Cancel anytime.'
-                : 'All 64 guided sessions — every state, every rhythm — plus every State Control session and the full VIBEZCORE Audio Library. Cancel anytime.'}
-          </Text>
-
-          <Text style={s.launchLabel}>LAUNCH PRICE</Text>
-          <AnimatedPressable
-            style={[s.planCard, yearlyCardPress.pressStyle]}
-            onPress={() => setTier('yearly')}
-            onPressIn={yearlyCardPress.onPressIn}
-            onPressOut={yearlyCardPress.onPressOut}
-            accessibilityLabel={`Select yearly plan — ${yearlyPrice} per year, best value`}
-            accessibilityRole="button"
-          >
-            <View style={s.planCardHeader}>
-              <Text style={s.planCardTitle}>Yearly</Text>
-              <Text style={s.planCardBadge}>BEST VALUE</Text>
-            </View>
-            <Text style={s.planCardPrice}>
-              {yearlyPrice}
-              <Text style={s.planCardPeriod}>/year</Text>
-            </Text>
-            <Text style={s.planCardSub}>
-              {yearlyProduct?.freeTrialDays
-                ? `${yearlyProduct.freeTrialDays} days free, then ${yearlyPrice}/year · cancel anytime`
-                : 'Launch offer · one payment a year'}
-            </Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            style={[s.planCardAlt, monthlyCardPress.pressStyle]}
-            onPress={() => setTier('monthly')}
-            onPressIn={monthlyCardPress.onPressIn}
-            onPressOut={monthlyCardPress.onPressOut}
-            accessibilityLabel="Select monthly plan"
-            accessibilityRole="button"
-          >
-            <View style={s.planCardHeader}>
-              <Text style={s.planCardTitle}>Monthly</Text>
-            </View>
-            <Text style={s.planCardPrice}>
-              {monthlyPrice}
-              <Text style={s.planCardPeriod}>/month</Text>
-            </Text>
-            <Text style={s.planCardSub}>Launch offer · cancel anytime</Text>
-          </AnimatedPressable>
-
-          {LegalLine}
-          {RestoreLink}
+          <MembershipPlans onContinue={(p) => setTier(p)} onRestore={() => void handleRestore()} />
         </KeyboardAwareScrollView>
       </SafeAreaView>
     );

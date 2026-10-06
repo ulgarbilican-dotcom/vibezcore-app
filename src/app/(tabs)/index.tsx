@@ -1,4 +1,7 @@
 import { openStateControl } from '@/utils/state-control-ui';
+import { restorePurchases } from '@/services/restore-purchases';
+import { showVibezAlert } from '@/components/VibezAlert';
+import MembershipPlans, { type MembershipPlan } from '@/components/MembershipPlans';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale } from '@/constants/theme';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
@@ -1145,9 +1148,6 @@ function AudioScreen({
   /* Iter 9bbb: safe-area inset voor pillar-modal bottom (home-indicator
      iOS / gesture-bar Android moeten ruimte krijgen). */
   const safeInsets = useSafeAreaInsets();
-  /* Plan-keuze in het aankoopblok — Yearly standaard geselecteerd
-     (blauwdruk §3.6: "Yearly visueel uitgelicht, aanbevolen"). */
-  const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
 
   /* Iter 9dq v135 (2026-06-15): pull IAP-products zodat pricing-cards in
      LOKALE valuta van de user tonen ($ voor US, € voor EU, £ voor UK, etc).
@@ -1413,7 +1413,28 @@ function AudioScreen({
 
      De GUMROAD_URLS-constant blijft in code maar wordt niet meer direct
      gebruikt — handig als referentie voor de webapp / als noodknop. */
-  const openCheckout = async () => {
+  /* Restore Purchases in de Library-kaart: meteen herstellen (Apple 3.1.1),
+     niet eerst naar een aankoopscherm. Zelfde meldingen als /subscribe. */
+  const restoreFromLibrary = async () => {
+    const result = await restorePurchases();
+    if (result.ok && result.restoredCount > 0) {
+      void showVibezAlert({ title: 'Subscription restored', message: 'Your full library is unlocked.' });
+    } else if (result.ok && result.accountMismatch) {
+      void showVibezAlert({
+        title: 'Active on your account, not on this device',
+        message:
+          "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore Purchases again.",
+      });
+    } else if (result.ok) {
+      void showVibezAlert({
+        title: 'Nothing to restore',
+        message: 'No active subscriptions were found for this Apple ID or Google account.',
+      });
+    } else {
+      void showVibezAlert({ title: 'Could not restore', message: 'Please check your connection and try again.' });
+    }
+  };
+  const openCheckout = async (plan: MembershipPlan) => {
     if (__DEV__) console.log('[VIBEZCORE] openCheckout → /subscribe, plan =', plan);
     /* Operator, 10 september 2026: "hoe weten wij of user audio of
        breathwork wil" — dit is de Audio-tab, dus audio-context meegeven
@@ -1812,7 +1833,11 @@ function AudioScreen({
            duidelijk "je bent hier"-anker had. Eén grote, linksgeaande
            paginatitel lost dat op, voor beide tiers (PRO zag hiervoor
            helemaal geen titel op dit scherm — alleen de zoekbalk). */}
-        <Text style={s.libPageTitle}>Audio Library</Text>
+        {/* Ruimte voor de Premium-knop bovenaan (PremiumPill, 7 okt 2026):
+           zonder deze extra marge zat de knop tegen de titel. */}
+        <Text style={[s.libPageTitle, !sub.isLoading && !sub.isPro && { paddingTop: 54 }]}>
+          Audio Library
+        </Text>
 
         {/* Operator, 26 september 2026 ("verwijder subheader"): de 4-fasen-
            regel (Understanding · Awareness · Regulation · Integration)
@@ -3560,174 +3585,14 @@ function AudioScreen({
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          {/* Iter 9zz: OUR MISSION terug bovenaan als context-intro,
-              geïntegreerd ipv los panel. Zet de "waarom" vóór de "hoe
-              veel" — natuurlijke flow van waarde → keuze → actie.
-              Breathwork erbij in label + statement (operator, 10 augustus
-              2026: "breathwork is het mainproduct in dit verhaal, naam
-              moet natuurlijk breathwork + audio library") — dit blok was
-              zuiver audio-taal en noemde breathwork nergens, terwijl de
-              échte hoofd-paywall (in breath-session.tsx) al wél zo leest. */}
-          {/* Operator, 16 september 2026 ("Apple verkoopt geen abonnement,
-             Apple verkoopt toegang tot een betere versie van jezelf —
-             titel wordt korter, emotioneler en groter, geen kleine sub-
-             kopjes"): de feitelijke eyebrow + statement-zin ("Guided
-             breathwork and personal growth, made accessible.") zijn weg.
-             Eén groot, kort, emotioneel statement i.p.v. uitleg. De
-             "Breathwork + Audio Library"-vermelding blijft — bewust
-             behouden na eerder deze sessie expliciet gevraagd te zijn
-             ("cta moet duidelijk maken dat breathwork en audio library
-             in het abonnement zitten") — maar nu als kleine, rustige
-             regel ONDER de grote titel i.p.v. een ALL-CAPS eyebrow erboven. */}
-          <Text style={s.buyHero}>Unlock Your Potential.</Text>
-          {/* Operator, 26 september 2026 (huisstijl v5.7-bron): "One
-             VIBEZCORE membership unlocks..." i.p.v. de kortere "Breathwork
-             + Audio Library" — zegt expliciet dat het ÉÉN abonnement is
-             dat beide ontgrendelt, niet twee losse aankopen. */}
-          <Text style={s.buyHeroSub}>
-            One VIBEZCORE membership unlocks Breathwork, State Control and the Audio Library
-          </Text>
-
-          {/* Operator, 16 september 2026 ("schrap de webshop-kortingen —
-             geen doorgestreepte prijzen, geen SAVE 42%, geen BEST VALUE-
-             sticker, vertrouw op de intelligentie van je klant"): beide
-             kaarten tonen nu alleen naam + prijs + meta, verder niets.
-             De klant ziet zelf dat €X,XX/maand goedkoper is dan €Y,YY. */}
-          <View style={s.priceRow}>
-            {/* ── MONTHLY-kaart — Operator, 26 september 2026: zelfde
-               BlurView + witte selectie-rand als Yearly, de rand
-               verspringt mee met `plan` i.p.v. vast op Yearly te staan. ── */}
-            {/* Operator, 26 september 2026 (huisstijl v5.7, exacte bron —
-               .plan-opt): geen BlurView per tegel (alleen de buitenste
-               kaart is glas) — gewoon transparante rgba-vlakken. Rand
-               ALTIJD 1.5px, alleen de kleur wisselt (grijs ↔ wit),
-               zodat beide tegels nooit qua omlijning-dikte verschillen. */}
-            {/* Operator ("dezelfde principes overal toepassen"): huisstijl
-               §5 noemt "pricing-kaart" expliciet als bounce-voorbeeld
-               (scale .95 → spring-overshoot 1.02) — de platte knop-
-               formule (.97/opacity, geen overshoot) was hier de
-               verkeerde animatie-rol. */}
-            <CardBounce
-              style={s.cardOuter}
-              onPress={() => setPlan('monthly')}
-              androidRipple={{ color: 'rgba(255,255,255,0.06)' }}
-            >
-              <View style={[s.cardClip, plan === 'monthly' && s.cardClipSelected]}>
-                <Text style={s.planLabel}>Monthly</Text>
-                {/* Operator, 26 september 2026 ("prijs op zelfde lijn voor
-                   beide kaarten"): Yearly's "Save X%"-regel duwde die prijs
-                   lager — deze regel geeft Monthly dezelfde hoogte, grijs
-                   i.p.v. teal omdat het geen promo is. */}
-                <Text style={s.planNeutralBadge}>Flexible</Text>
-                <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>{monthlyPriceLabel}</Text>
-                  <Text style={s.priceBigPer}>/mo</Text>
-                </View>
-                <Text style={s.priceMeta}>Cancel anytime</Text>
-                {/* Selectie-vinkje: leeg grijs ringetje inactief, gevuld
-                   Bio-Teal + wit vinkje actief (huisstijl v5.7 .po-check). */}
-                <View
-                  style={[s.selCircle, plan === 'monthly' && s.selCircleOn]}
-                  pointerEvents="none"
-                >
-                  {plan === 'monthly' && <Text style={s.selCircleCheck}>✓</Text>}
-                </View>
-              </View>
-            </CardBounce>
-
-            {/* ── YEARLY-tegel — zelfde behandeling, rand conditioneel op
-               `plan === 'yearly'`. ── */}
-            <CardBounce
-              style={s.cardOuter}
-              onPress={() => setPlan('yearly')}
-              androidRipple={{ color: 'rgba(58,143,255,0.10)' }}
-            >
-              <View style={[s.cardClip, plan === 'yearly' && s.cardClipSelected]}>
-                <Text style={s.planLabel}>Yearly</Text>
-                {/* .po-name .save — huisstijl v5.7: eigen regel (display:
-                   block), niet inline naast "Yearly". */}
-                {yearlySavePercent !== null && yearlySavePercent > 0 && (
-                  <Text style={s.planSaveBadge}>{`Save ${yearlySavePercent}%`}</Text>
-                )}
-                <View style={s.priceBig}>
-                  <Text style={s.priceBigAmount}>{yearlyPerMonthLabel}</Text>
-                  <Text style={s.priceBigPer}>/mo</Text>
-                </View>
-                <Text style={s.priceMeta}>{yearlyTotalLabel}/year after trial</Text>
-                {/* huisstijl v5.7 .po-trial — Bio-Teal Light (#4AF0D4), niet
-                   de donkere Bio-Teal van het vinkje. */}
-                <Text style={s.planTrialText}>7-day free trial</Text>
-                <View
-                  style={[s.selCircle, plan === 'yearly' && s.selCircleOn]}
-                  pointerEvents="none"
-                >
-                  {plan === 'yearly' && <Text style={s.selCircleCheck}>✓</Text>}
-                </View>
-              </View>
-            </CardBounce>
-          </View>
-
-          {/* Iter 9yy: OUR MISSION weggehaald uit pricing-blok. Was
-              visueel disruptief tussen cards en CTA. Mission leeft al
-              elders op de page (hero + pillars + emerson). */}
-
-          {/* Operator, 26 september 2026 (huisstijl v5.7 .plan-cta): de
-             knoptekst wisselt weer mee met de geselecteerde tegel — "Start
-             your free trial" (yearly) / "Get Monthly · €X/mo" (monthly).
-             Dat "Start your free trial" bij Monthly klopte niet (geen
-             trial op Monthly) — exacte bron-tekst lost dat nu op. */}
-          {/* Operator, 26 september 2026: transparant/geactiveerd-bij-tik
-             experiment teruggedraaid — de press-flash was niet duidelijk
-             zichtbaar (ook overlapt door android_ripple) en de originele
-             huisstijl v5.7-bron (.plan-cta) toont deze knop altijd solide
-             wit, nooit transparant als ruststand. Terug naar die
-             betrouwbare versie; scale/opacity blijft voor tik-feedback. */}
-          {/* Operator, 4 okt 2026 (smoothness-audit: "geen haptic, enkel
-             RN's eigen `pressed`-callback — een bridge-rondweg i.p.v. de
-             Reanimated-worklet die de rest van de app gebruikt"):
-             `CardBounce` i.p.v. de handmatige `pressed &&`-stijl — dit is
-             de betaal-knop, verdient dezelfde directe feedback als elke
-             andere primaire actie. */}
-          <CardBounce
-            style={s.ctaBtn}
-            onPress={openCheckout}
-            androidRipple={{ color: 'rgba(0,0,0,0.08)' }}
-          >
-            <Text style={s.ctaTxt}>
-              {plan === 'yearly'
-                ? 'Start your free trial'
-                : `Get Monthly · ${monthlyPriceLabel}/mo`}
-            </Text>
-          </CardBounce>
-
-          {/* Operator, 16 september 2026 ("in een app verloopt betaling
-             altijd veilig via de App Store/Play Store, de gebruiker weet
-             dat al — schrap de vinkjes, het store-logo en de checkout-
-             teksten"): store-logo-rij, de 3 checks, de "Prices incl.
-             tax"-fineline en de 🔒 SECURE CHECKOUT-regel zijn allemaal
-             weg. Alleen de wettelijk verplichte links blijven, heel klein
-             en zachtgrijs — zelfde bestemmingen als op /subscribe. */}
-          <View style={s.legalLinksRow}>
-            <Pressable onPress={() => navigateAway(() => router.push('/legal/terms'))} hitSlop={8}>
-              <Text style={s.legalLinkText}>Terms of Service</Text>
-            </Pressable>
-            <Text style={s.legalLinkSep}>·</Text>
-            <Pressable onPress={() => navigateAway(() => router.push('/legal/privacy'))} hitSlop={8}>
-              <Text style={s.legalLinkText}>Privacy Policy</Text>
-            </Pressable>
-            <Text style={s.legalLinkSep}>·</Text>
-            <Pressable
-              onPress={() =>
-                navigateAway(() =>
-                  router.push('/subscribe?tier=yearly&returnTo=audio' as never),
-                )
-              }
-              hitSlop={8}
-              accessibilityLabel="Restore previous purchases"
-            >
-              <Text style={s.legalLinkText}>Restore Purchases</Text>
-            </Pressable>
-          </View>
+          {/* Operator, 7 okt 2026: één gedeelde abonnementskaart voor de
+             Library én /subscribe, met Apple's voorwaarden (het afgeschreven
+             bedrag het grootst, proef + verlenging bij de knop) — zie
+             components/MembershipPlans.tsx. */}
+          <MembershipPlans
+            onContinue={(p) => openCheckout(p)}
+            onRestore={() => void restoreFromLibrary()}
+          />
         </BlurView>
         )}
 
