@@ -4070,7 +4070,8 @@ function IdleScreen({
            verticale DurationWheel als breath-setup.tsx — gekozen waarde
            groot/wit gecentreerd, "Recommended" ernaast wanneer van
            toepassing, geen los sterretje/legend-regel meer nodig. */}
-        <View style={s.durationSliderWrap}>
+        {/* Lager, met meer lucht onder de bolletjes (operator, 6 okt 2026). */}
+        <View style={[s.durationSliderWrap, { marginTop: 90 }]}>
           <DurationWheel
             options={DURATION_PRESETS[selectedMode].map((p) => ({
               value: p.value,
