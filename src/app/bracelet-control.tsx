@@ -1935,36 +1935,28 @@ function DrainingCircle({
   const clamped = Math.max(0, Math.min(1, progress));
   /* Operator, 6 okt 2026 ("wave overal hetzelfde, supersmooth, mag niet
      onderbroken worden of blijven hangen"): dezelfde golf als de
-     breath-setup (components/LiquidWave) — op de UI-thread, het peil
-     glijdt elke seconde vloeiend verder i.p.v. een JS-golf die ±15× per
-     seconde opnieuw getekend werd en stokte zodra JavaScript bezig was.
-     Wat bleef: de lichte basistint over de hele cirkel (27 sept, "moet
-     cirkel volledig vullen bij zakken") en de outline (27 sept). */
+     breath-setup (components/LiquidWave) — op de UI-thread, het peil glijdt
+     elke seconde vloeiend verder.
+     Vervolg, zelfde dag ("weergave glas en andere full color?"): ook
+     dezelfde LOOK als de breath-setup-ring — donker binnenvlak, transparante
+     golf (10/15%, Sleep licht teal) en een dunne rand in de kleur van de
+     toestand, i.p.v. een bijna volle kleurvulling. Het zakkende peil blijft
+     zichtbaar door de twee lagen en de rand. */
+  const look = breathWaveLook(color);
   return (
     <View style={[s.drainOuter, { width: size, height: size, borderRadius: size / 2 }]}>
       <View
         pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          { borderRadius: size / 2, backgroundColor: color, opacity: 0.14 },
-        ]}
+        style={[StyleSheet.absoluteFill, { borderRadius: size / 2, backgroundColor: '#0a0a0a' }]}
       />
-      <LiquidWave
-        size={size}
-        level={1 - clamped}
-        color={color}
-        backOpacity={0.35}
-        frontOpacity={0.88}
-        motion="drain"
-      />
+      <LiquidWave size={size} level={1 - clamped} motion="drain" {...look} />
       <Svg width={size} height={size} style={StyleSheet.absoluteFill} pointerEvents="none">
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={size / 2 - 1}
-          stroke={color}
+          stroke={look.color}
           strokeWidth={2}
-          strokeOpacity={0.7}
           fill="none"
         />
       </Svg>
@@ -3201,9 +3193,9 @@ function ActiveSessionScreen({
                 style={[
                   s.pausedLabel,
                   {
-                    color: isLightColor(activeMeta.color)
-                      ? 'rgba(10,10,10,0.7)'
-                      : 'rgba(255,255,255,0.85)',
+                    /* Altijd wit: het binnenvlak is donker glas, ook bij
+                       Clarity (6 okt 2026). */
+                    color: 'rgba(255,255,255,0.85)',
                   },
                 ]}
               >
@@ -3272,20 +3264,14 @@ function ActiveSessionScreen({
                  Licht-versus-donker mode-kleur (isLightColor) bepaalt of
                  de cijfers zelf donker-met-licht-vangnet of wit-met-
                  donker-vangnet zijn. */
-              const lightActive = isLightColor(activeMeta.color);
-              const timerColorOverride = lightActive
-                ? {
-                    color: '#0a0a0a',
-                    textShadowColor: 'rgba(255,255,255,0.3)',
-                    textShadowOffset: { width: 0, height: 0 },
-                    textShadowRadius: 3,
-                  }
-                : {
-                    color: '#ffffff',
-                    textShadowColor: 'rgba(0,0,0,0.3)',
-                    textShadowOffset: { width: 0, height: 0 },
-                    textShadowRadius: 3,
-                  };
+              /* Altijd wit: het binnenvlak is donker glas, ook bij Clarity
+                 (6 okt 2026 — was donkere tekst op een witte vulling). */
+              const timerColorOverride = {
+                color: '#ffffff',
+                textShadowColor: 'rgba(0,0,0,0.3)',
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 3,
+              };
               return (
                 <>
                   <Text style={[s.timerNum, timerColorOverride]}>
