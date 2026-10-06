@@ -385,6 +385,11 @@ function StateThumb({
 }
 
 function GoalButton({ onPress }: { onPress: () => void }) {
+  /* Zelfde middellijn als de Premium-knop (PremiumPill: insets.top + 8,
+     ~32 hoog) — op elk toestel, ongeacht de hoogte van de statusbalk
+     (7 okt 2026: op de Samsung stond hij 13dp lager). 52 = eigen hoogte. */
+  const insets = useSafeAreaInsets();
+  const alignTop = insets.top + 8 + 16 - 26;
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -409,7 +414,7 @@ function GoalButton({ onPress }: { onPress: () => void }) {
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       hitSlop={10}
-      style={[s.goalBtn, pressStyle]}
+      style={[s.goalBtn, { top: alignTop }, pressStyle]}
       accessibilityLabel="Your goal and daily plan"
     >
       {/* Altijd de kalender (operator, 7 okt 2026): het slot las als een

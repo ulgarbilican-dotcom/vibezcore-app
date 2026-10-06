@@ -57,9 +57,13 @@ const ANDROID_SHEET_BASE = 'rgb(24,24,28)';
 
 export default function VibezGlass({ radius, tint, level = 'normal', style, children, blurTarget }: Props) {
   const L =
-    level === 'sheet' && Platform.OS === 'android'
+    level === 'sheet' && Platform.OS === 'android' && !blurTarget
       ? { ...LEVEL.sheet, base: ANDROID_SHEET_BASE }
-      : LEVEL[level];
+      : level === 'sheet' && blurTarget
+        ? /* Echte vervaging (GlassSheetHost, 7 okt 2026): dunnere tint, zodat
+             het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
+          { ...LEVEL.sheet, base: 'rgba(26,26,30,0.58)' }
+        : LEVEL[level];
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView
