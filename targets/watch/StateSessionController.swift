@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 import WatchKit
@@ -85,6 +86,11 @@ private struct StateParams {
 
 final class StateSessionController: ObservableObject {
   static let shared = StateSessionController()
+
+  /// Elke echte tik op de pols, voor het scherm (true = lub, false = dub).
+  let beats = PassthroughSubject<Bool, Never>()
+  /// Totale duur van deze sessie (langste resterende tijd), voor het waterpeil.
+  @Published private(set) var totalSec: Double = 0
 
   /** Een State Control-sessie is bekend (spelend of gepauzeerd). */
   @Published private(set) var active = false
@@ -181,6 +187,8 @@ final class StateSessionController: ObservableObject {
   private func play(_ p: StateParams, curveOffsetSec: Double, remainingSec: Double) {
     cancelTimers()
     generation += 1
+    if !active || title != p.title { totalSec = 0 }
+    totalSec = max(totalSec, remainingSec)
     params = p
     title = p.title
     color = Color(hex: p.colorHex) ?? color
@@ -296,10 +304,12 @@ final class StateSessionController: ObservableObject {
     }
     let beatDate = wallDate(forCurve: nextBeatT)
     WKInterfaceDevice.current().play(.click)
+    beats.send(true)
     if playDub {
       dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000)) { [weak self] in
         guard let self = self, gen == self.generation else { return }
         WKInterfaceDevice.current().play(.click)
+        self.beats.send(false)
       }
     }
     nextBeatT += beat.cycleMs / 1000

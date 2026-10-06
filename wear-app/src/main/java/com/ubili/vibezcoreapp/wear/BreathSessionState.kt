@@ -12,6 +12,14 @@ object BreathSessionState {
     val running: Boolean,
     /** Gepauzeerd (op telefoon of horloge): toon Resume, het ritme staat stil. */
     val paused: Boolean = false,
+    /** Kleur van de toestand (6 okt 2026, zelfde look als de app). */
+    val colorHex: String = "#00A3A3",
+    /** Waterpeil van..tot over de lopende fase (inademen stijgt, uitademen
+     *  zakt, vasthouden blijft) en wanneer die fase eindigt (uptime ms). */
+    val levelFrom: Float = 0.3f,
+    val levelTo: Float = 0.3f,
+    val phaseStartUptime: Long = 0L,
+    val phaseEndUptime: Long = 0L,
   )
 
   @Volatile

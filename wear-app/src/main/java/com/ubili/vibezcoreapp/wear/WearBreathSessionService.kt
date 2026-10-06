@@ -23,6 +23,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -39,6 +40,9 @@ class WearBreathSessionService : Service() {
   private var wakeLock: PowerManager.WakeLock? = null
   private var vibrator: Vibrator? = null
   private var generation = 0 // elke nieuwe START annuleert vorige geplande callbacks
+  private var colorHex = "#00A3A3"
+  /** Waterpeil op het scherm: stijgt bij inademen, zakt bij uitademen. */
+  private var level = 0.3f
 
   override fun onCreate() {
     super.onCreate()
@@ -65,6 +69,7 @@ class WearBreathSessionService : Service() {
   private fun startSession(sessionJson: String) {
     val json = JSONObject(sessionJson)
     val modeName = json.optString("modeName", "Breathwork")
+    colorHex = json.optString("colorHex", "#00A3A3")
     val rounds = json.optInt("rounds", 1).coerceAtLeast(1)
     val phasesArr = json.getJSONArray("phases")
     val phases = (0 until phasesArr.length()).map { i ->
@@ -122,11 +127,23 @@ class WearBreathSessionService : Service() {
       } catch (_: Exception) {
         /* een toestel/emulator zonder trilmotor mag de lus niet stoppen */
       }
+      BeatBus.beat(true)
     }
 
+    val durMs = firstDelayMs ?: (phase.secs * 1000L)
+    val target = when {
+      phase.key.startsWith("inhale") -> 0.85f
+      phase.key.startsWith("exhale") -> 0.18f
+      else -> level
+    }
+    val now = SystemClock.uptimeMillis()
     BreathSessionState.update(
-      BreathSessionState.Snapshot(label, modeName, round, totalRounds, running = true),
+      BreathSessionState.Snapshot(
+        label, modeName, round, totalRounds, running = true, paused = false, colorHex = colorHex,
+        levelFrom = level, levelTo = target, phaseStartUptime = now, phaseEndUptime = now + durMs,
+      ),
     )
+    level = target
     updateNotification(label, modeName, round, totalRounds)
 
     val nextPhaseIdx = (phaseIdx + 1) % phases.size
@@ -154,8 +171,14 @@ class WearBreathSessionService : Service() {
     } catch (_: Exception) {
     }
     val cur = BreathSessionState.current
+    /* Het water blijft staan waar het nu is. */
+    val now = SystemClock.uptimeMillis()
+    val span = (cur.phaseEndUptime - cur.phaseStartUptime).coerceAtLeast(1L)
+    val k = ((now - cur.phaseStartUptime).toFloat() / span).coerceIn(0f, 1f)
+    val here = cur.levelFrom + (cur.levelTo - cur.levelFrom) * k
+    level = here
     BreathSessionState.update(
-      BreathSessionState.Snapshot("Paused", cur.modeName, cur.round, cur.totalRounds, running = false, paused = true),
+      cur.copy(phaseLabel = "Paused", running = false, paused = true, levelFrom = here, levelTo = here),
     )
     releaseWakeLock()
     stopForeground(STOP_FOREGROUND_REMOVE)

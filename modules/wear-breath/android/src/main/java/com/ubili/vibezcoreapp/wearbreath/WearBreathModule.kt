@@ -41,6 +41,8 @@ class WearBreathSession(
   @Field val phases: List<WearBreathPhase> = emptyList(),
   @Field val rounds: Int = 1,
   @Field val modeName: String = "Breathwork",
+  /** Kleur van de toestand, voor de cirkel op het horloge (6 okt 2026). */
+  @Field val colorHex: String = "#00A3A3",
   /* Hervatten (6 okt 2026): waar in de sessie het horloge verder moet —
      ronde (1-based), fase-index en wat er van die fase nog over is
      (-1 = de fase begint vooraan, met zijn trilpatroon). */
@@ -198,6 +200,7 @@ class WearBreathModule : Module() {
       put("phases", phasesArr)
       put("rounds", session.rounds)
       put("modeName", session.modeName)
+      put("colorHex", session.colorHex)
       put("startRound", session.startRound)
       put("startPhase", session.startPhase)
       put("phaseRemainingMs", session.phaseRemainingMs)

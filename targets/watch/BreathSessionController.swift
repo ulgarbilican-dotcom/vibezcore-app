@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import WatchKit
 
@@ -37,6 +38,17 @@ final class BreathSessionController: NSObject, ObservableObject {
   @Published var running: Bool = false
   /// Gepauzeerd (op iPhone of Watch): het ritme staat stil, de knop toont Resume.
   @Published var paused: Bool = false
+  /// Kleur van de toestand (6 okt 2026, zelfde look als de app).
+  @Published var colorHex: String = "#00A3A3"
+  /// Waterpeil van..tot over de lopende fase: inademen stijgt, uitademen
+  /// zakt, vasthouden blijft.
+  @Published var levelFrom: Double = 0.3
+  @Published var levelTo: Double = 0.3
+  @Published var phaseStart = Date()
+  @Published var phaseEnd = Date()
+  /// Elke fasewissel = een tik op de pols, voor het scherm.
+  let beats = PassthroughSubject<Bool, Never>()
+  private var level: Double = 0.3
 
   private var phases: [WatchPhase] = []
   private var phaseTimer: Timer?
@@ -64,6 +76,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     phases = parsed
     totalRounds = max(1, message["rounds"] as? Int ?? 1)
     modeName = message["modeName"] as? String ?? "Breathwork"
+    colorHex = message["colorHex"] as? String ?? "#00A3A3"
     running = true
     paused = false
     RuntimeSessionManager.shared.acquire(.breath)
@@ -95,7 +108,22 @@ final class BreathSessionController: NSObject, ObservableObject {
     self.round = round
     if firstDelay == nil {
       playHaptics(for: phase.key, secs: phase.secs)
+      beats.send(true)
     }
+    let duration = firstDelay ?? TimeInterval(phase.secs)
+    let target: Double
+    if phase.key.hasPrefix("inhale") {
+      target = 0.85
+    } else if phase.key.hasPrefix("exhale") {
+      target = 0.18
+    } else {
+      target = level
+    }
+    levelFrom = level
+    levelTo = target
+    phaseStart = Date()
+    phaseEnd = phaseStart.addingTimeInterval(duration)
+    level = target
 
     let nextIdx = (idx + 1) % phases.count
     let nextRound = nextIdx == 0 ? round + 1 : round
@@ -168,6 +196,12 @@ final class BreathSessionController: NSObject, ObservableObject {
     running = false
     paused = true
     phaseLabel = "Paused"
+    /* Het water blijft staan waar het nu is. */
+    let span = max(0.001, phaseEnd.timeIntervalSince(phaseStart))
+    let k = min(1, max(0, Date().timeIntervalSince(phaseStart) / span))
+    level = levelFrom + (levelTo - levelFrom) * k
+    levelFrom = level
+    levelTo = level
     RuntimeSessionManager.shared.release(.breath)
   }
 

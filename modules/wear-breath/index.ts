@@ -28,6 +28,8 @@ export type WearBreathSession = {
   phases: WearBreathPhase[];
   rounds: number;
   modeName: string;
+  /** Kleur van de toestand, voor de cirkel op het horloge. */
+  colorHex?: string;
   /** Hervatten: ronde (1-based), fase-index en resterende ms van die fase
    *  (weglaten = vooraan beginnen). */
   startRound?: number;

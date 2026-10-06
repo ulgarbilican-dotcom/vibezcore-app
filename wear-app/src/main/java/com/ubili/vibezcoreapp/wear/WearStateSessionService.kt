@@ -161,6 +161,9 @@ class WearStateSessionService : Service() {
   private var sessionEndUptime = 0L
   private var paused = false
   private var pausedRemainingMs = 0L
+  /** Langste resterende tijd binnen deze sessie = de totale duur (voor het
+   *  waterpeil op het scherm; hervatten stuurt enkel wat er nog over is). */
+  private var sessionTotalSec = 0
 
   private val beatRunnable = Runnable { playDueUnitAndScheduleNext() }
   /** startId van de lopende START — een natuurlijk einde stopt de service
@@ -232,6 +235,8 @@ class WearStateSessionService : Service() {
   private fun start(s: StateStart, startId: Int) {
     clearScheduled()
     cancelVibration()
+    if (StateSessionState.current.active.not() || StateSessionState.current.title != s.title) sessionTotalSec = 0
+    sessionTotalSec = maxOf(sessionTotalSec, s.remainingSec.roundToLong().toInt())
     session = s
     sessionStartId = startId
     paused = false
@@ -299,6 +304,11 @@ class WearStateSessionService : Service() {
     val u = units[nextUnit]
     if (SystemClock.uptimeMillis() - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
       vibrate(u.t, u.a)
+      if (nextUnit < units.size - 1) {
+        BeatBus.beat(true)
+        val dubDelay = u.t[0] + u.t[1]
+        beatHandler.postDelayed({ if (!paused) BeatBus.beat(false) }, dubDelay)
+      }
     }
     nextUnit++
     scheduleNextUnit()
@@ -376,9 +386,11 @@ class WearStateSessionService : Service() {
       title = s.title,
       colorHex = s.colorHex,
       remainingMinutes = minutes,
+      remainingSec = ceil(remainingMs / 1000.0).toInt(),
+      totalSec = sessionTotalSec,
     )
     StateSessionState.update(snapshot)
-    if (before != snapshot) {
+    if (before.remainingMinutes != snapshot.remainingMinutes || before.paused != snapshot.paused || !before.active) {
       val text = if (paused) "Paused · $minutes min left" else "$minutes min left"
       notify(buildNotification(text, s.title))
     }

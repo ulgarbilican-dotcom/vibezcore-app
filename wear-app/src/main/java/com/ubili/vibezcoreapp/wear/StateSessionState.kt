@@ -10,6 +10,9 @@ object StateSessionState {
     val title: String,
     val colorHex: String,
     val remainingMinutes: Int,
+    /** Voor het scherm (6 okt 2026): aftellen in mm:ss en het waterpeil. */
+    val remainingSec: Int = 0,
+    val totalSec: Int = 0,
   )
 
   val IDLE = Snapshot(active = false, paused = false, title = "", colorHex = "#00A3A3", remainingMinutes = 0)

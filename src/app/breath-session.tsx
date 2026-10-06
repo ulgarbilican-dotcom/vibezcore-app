@@ -1942,6 +1942,10 @@ export function BreathSession() {
     (at?: { startRound: number; startPhase: number; phaseRemainingMs: number }) => {
       try {
         const phases = techRef.current.phases;
+        /* Zelfde naam en kleur als in de app ("Calm Control", Sleep in het
+           lichte teal), voor de cirkel op het horloge (6 okt 2026). */
+        const name = st.eyebrow.charAt(0) + st.eyebrow.slice(1).toLowerCase().replace(/ (\w)/g, (m) => m.toUpperCase());
+        const colorHex = st.key === 'rest' ? '#4AF0D4' : st.accent;
         sendBreathSessionToWear({
           phases: phases.map((p) => ({
             key: p.key,
@@ -1949,20 +1953,22 @@ export function BreathSession() {
             pattern: phaseHapticPattern(p.key, p.secs),
           })),
           rounds: effectiveRoundsRef.current,
-          modeName: st.eyebrow,
+          modeName: name,
+          colorHex,
           ...(at ?? {}),
         });
         sendBreathSessionToWatch({
           phases: phases.map((p) => ({ key: p.key, secs: p.secs })),
           rounds: effectiveRoundsRef.current,
-          modeName: st.eyebrow,
+          modeName: name,
+          colorHex,
           ...(at ?? {}),
         });
       } catch {
         /* stil */
       }
     },
-    [st.eyebrow],
+    [st.eyebrow, st.key, st.accent],
   );
 
   const start = useCallback((preview = false, startPaused = false) => {
