@@ -3570,8 +3570,6 @@ function ActiveSessionScreen({
               }
               const mm = Math.floor(remSec / 60);
               const ss = remSec % 60;
-              const totalMM = Math.floor(plannedSec / 60);
-              const totalSS = plannedSec % 60;
               /* De ring-achtergrond wisselt van kleur/vulling (Draining-
                  Circle) — dus de cijfers hebben nog altijd een minimale
                  contrast-vangnet nodig, maar operator-feedback ("harde
