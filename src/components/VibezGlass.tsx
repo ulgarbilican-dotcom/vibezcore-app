@@ -109,8 +109,10 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
            staan onderaan, en daar ligt in de app vaak een witte knop. */
         <LinearGradient
           pointerEvents="none"
-          colors={['rgba(12,12,15,0)', 'rgba(12,12,15,0.35)', 'rgba(12,12,15,0.72)']}
-          locations={[0, 0.5, 1]}
+          /* Operator, 7 okt 2026 ("onderkant niet transparant, kleine tekst
+             niet leesbaar"): onderste kwart zo goed als dekkend. */
+          colors={['rgba(12,12,15,0)', 'rgba(12,12,15,0.4)', 'rgba(12,12,15,0.94)', 'rgba(12,12,15,0.97)']}
+          locations={[0, 0.5, 0.74, 1]}
           style={StyleSheet.absoluteFill}
         />
       ) : null}
