@@ -62,13 +62,17 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
       : level === 'sheet' && blurTarget
         ? /* Echte vervaging (GlassSheetHost, 7 okt 2026): dunnere tint, zodat
              het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
-          { ...LEVEL.sheet, base: 'rgba(26,26,30,0.58)' }
+          { ...LEVEL.sheet, base: 'rgba(20,20,24,0.16)', blur: 70 }
         : LEVEL[level];
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView
         intensity={L.blur}
-        tint="dark"
+        /* Echte vervaging (blurTarget): de dunste donkere tint — op Android
+           legt "dark" zelf al ~62% grijs over het glas, samen met onze
+           eigen laag werd dat dekkend (operator, 7 okt 2026: "helemaal
+           niet transparant"). */
+        tint={blurTarget ? 'systemUltraThinMaterialDark' : 'dark'}
         blurMethod="dimezisBlurViewSdk31Plus"
         blurTarget={blurTarget}
         style={StyleSheet.absoluteFill}
