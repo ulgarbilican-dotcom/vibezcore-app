@@ -313,10 +313,10 @@ export default function WelcomeScreen() {
       <Animated.Image
         source={{ uri: BG_IMG }}
         /* Operator, 7 okt 2026 ("foto stukje omlaag"): het beeldvlak steekt
-           140 pt onder het scherm uit (bovenrand blijft op 0, geen zwarte
-           strook) — het midden zakt 70 pt, de personen staan lager en het
+           80 pt onder het scherm uit (bovenrand blijft op 0, geen zwarte
+           strook) — het midden zakt 40 pt, de personen staan lager en het
            logo meer lucht heeft. */
-        style={[StyleSheet.absoluteFill, { bottom: -140 }, bgStyle]}
+        style={[StyleSheet.absoluteFill, { bottom: -80 }, bgStyle]}
         resizeMode="cover"
       />
       {/* Operator, 19 september 2026 ("gradient bovenaan — VIBEZCORE en
@@ -426,7 +426,7 @@ const s = StyleSheet.create({
   top: {
     alignItems: 'center',
     /* Operator, 7 okt 2026 ("logo moet lager, boven meer ruimte"). */
-    paddingTop: 40,
+    paddingTop: 26,
   },
   topWordmark: {
     marginTop: 12,
