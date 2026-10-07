@@ -379,6 +379,7 @@ pace": meten / zelf invullen / gemiddelde).
 | 7 okt 2026 | Camerameting (fase 2), laagste-meting-regel, uitschieterregel, hartslag-van-nu als startpunt (15 min) |
 | 7 okt 2026 | Nooit sneller dan rust (min 2 bpm onder R) |
 | 7 okt 2026 | Quick Chill / Quick Boost, 5 min |
+| 7 okt 2026 | **Geen hartslagmeting in "How do you feel?"**: het gevoel van de gebruiker bepaalt de ademsessie (🟢 ademstudies maten effect op gevoel; geen studie kiest techniek op hartslag); meten zou de snelheid van die functie breken. Hartslag blijft de kern van State Control. Later (fase 3) mag een verse horloge-meting stil de duur bijstellen, zonder extra stap |
 
 ---
 
