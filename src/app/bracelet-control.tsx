@@ -3550,6 +3550,8 @@ function IdleScreen({
                 {pulse.bpm} bpm{pulse.source === 'average' ? ' · avg' : ''}
               </Text>
               {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+              {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}
+              <ChevronRight size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.4} style={{ marginLeft: -1 }} />
             </Pressable>
           ) : null}
         </View>
@@ -5622,9 +5624,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     height: 24,
-    paddingHorizontal: 9,
+    paddingLeft: 9,
+    paddingRight: 6,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.08)',
+    /* Dunne rand: leest als knop, niet als label. */
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   ringPulseTxt: {
     color: 'rgba(255,255,255,0.8)',
