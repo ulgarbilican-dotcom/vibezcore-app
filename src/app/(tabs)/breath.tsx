@@ -26,6 +26,8 @@
    eindigt in een volledige gratis sessie.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import SessionArt, {
   SESSION_ART,
   prefetchSessionArt,
@@ -1081,22 +1083,16 @@ export default function BreathScreen() {
          fade-kaart met "Got it" onderaan, nu een vanonder opschuivend vel
          (`animationType="slide"`) met gedimde backdrop, tikbare grip, en
          "Done" rechtsboven i.p.v. een losse knop onderaan. */}
-      <Modal
-        visible={infoOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setInfoOpen(false)}
-      >
-        <Pressable style={s.infoBackdrop} onPress={() => setInfoOpen(false)}>
-          <Pressable
-            style={[s.infoCard, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}
-            onPress={() => {}}
-          >
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={infoOpen} onClose={() => setInfoOpen(false)}>
+          <View style={[s.infoCard, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
             {/* Operator, 5 okt 2026 (Apple-referentie): het paneel is van
                 VIBEZCORE-glas — de foto schemert zacht door. */}
             <VibezGlass
               radius={24}
               level="sheet"
+              blurTarget={rootBlurRef}
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <Pressable
@@ -1135,7 +1131,9 @@ export default function BreathScreen() {
                cijfers. Naam en hook zonder `numberOfLines`-afkap: de hook
                is al kort (eerste zin na de streep uit `explain`), dus dat
                past zonder scroll. */}
-            <Text style={s.infoTitle}>{st.title}</Text>
+            {/* Geen figuurnaam ("Lotus", "Crystal", …) meer als titel (operator,
+                7 okt 2026 — eerder al: "Lotus is gewoon de vorm van de
+                ademanimatie"); de toestandsnaam staat al in de kop. */}
             <Text style={s.infoBody}>{st.description}</Text>
 
             <Text style={[s.infoSection, { color: 'rgba(255,255,255,0.55)' }]}>
@@ -1165,9 +1163,8 @@ export default function BreathScreen() {
                 </View>
               );
             })}
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* Operator, 2 okt 2026 ("choose your state boven de i knop moet
          weg"): botste met de nieuwe "i"-knop die nu boven de
@@ -1604,12 +1601,14 @@ const s = StyleSheet.create({
     letterSpacing: -0.3,
     color: '#ffffff',
   },
+  /* Zonder figuurnaam erboven is dit de openingszin van het paneel —
+     iets groter en lichter (7 okt 2026). */
   infoBody: {
-    marginTop: 10,
-    fontFamily: BrandFonts.regular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: 'rgba(255,255,255,0.6)',
+    marginTop: 14,
+    fontFamily: BrandFonts.medium,
+    fontSize: 16,
+    lineHeight: 23,
+    color: 'rgba(255,255,255,0.86)',
   },
   infoSection: {
     marginTop: 28,

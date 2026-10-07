@@ -1,4 +1,7 @@
 import { openStateControl } from '@/utils/state-control-ui';
+import VibezGlass from '@/components/VibezGlass';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale } from '@/constants/theme';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
@@ -3607,25 +3610,19 @@ function AudioScreen({
           mode + breathwork pre-enabled, zodat de user direct op de juiste
           breathwork-ready screen landt. */}
       {breathChooserOpen && (
-        <Modal
-          visible
-          transparent
-          animationType="slide"
-          onRequestClose={() => setBreathChooserOpen(false)}
-          statusBarTranslucent
-        >
-          <View style={s.pillarModalRoot}>
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => setBreathChooserOpen(false)}
-              accessibilityLabel="Close"
-            />
+        <GlassSheet visible={true} onClose={() => setBreathChooserOpen(false)}>
             <View
               style={[
                 s.pillarModalSheet,
-                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-              ]}
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
             >
+              {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+              <VibezGlass
+                radius={24}
+                level="sheet"
+                blurTarget={rootBlurRef}
+                style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+              />
               <View style={s.pillarModalHandle} />
               <Pressable
                 style={s.pillarModalClose}
@@ -3673,35 +3670,28 @@ function AudioScreen({
                 })}
               </View>
             </View>
-          </View>
-        </Modal>
+        </GlassSheet>
       )}
 
       {/* Iter 9aaa: Pillar-detail bottom sheet — Apple-style minimal.
           Backdrop tap = close, ✕ rechtsboven, korte declaratieve copy. */}
       {detailPillar && (
-        <Modal
-          visible
-          transparent
-          animationType="slide"
-          onRequestClose={() => setDetailPillar(null)}
-          statusBarTranslucent
-        >
-          <View style={s.pillarModalRoot}>
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => setDetailPillar(null)}
-              accessibilityLabel="Close"
-            />
+        <GlassSheet visible={true} onClose={() => setDetailPillar(null)}>
             <View
               style={[
                 s.pillarModalSheet,
                 /* Iter 9bbb → 9dq v77 (2026-06-03): harmonised CTA-
                    bottom formula. Floor 72px clears Samsung 3-button
                    nav waar safeInsets.bottom soms onderrapporteert. */
-                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-              ]}
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
             >
+              {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+              <VibezGlass
+                radius={24}
+                level="sheet"
+                blurTarget={rootBlurRef}
+                style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+              />
               <View style={s.pillarModalHandle} />
               <Pressable
                 style={s.pillarModalClose}
@@ -3719,8 +3709,7 @@ function AudioScreen({
               </Text>
               <Text style={s.pillarModalDesc}>{detailPillar.desc}</Text>
             </View>
-          </View>
-        </Modal>
+        </GlassSheet>
       )}
 
       {/* ── AUTO-PLAY INFO MODAL ── (operator-fix 2026-06-18, iter 9dq v156)
@@ -3728,25 +3717,19 @@ function AudioScreen({
           nuttig is. Zelfde bottom-sheet styling als de pillar-detail
           modal — VIBEZCORE-stijl ipv generic OS Alert. */}
       {autoPlayInfoOpen && (
-        <Modal
-          visible
-          transparent
-          animationType="slide"
-          onRequestClose={() => setAutoPlayInfoOpen(false)}
-          statusBarTranslucent
-        >
-          <View style={s.pillarModalRoot}>
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => setAutoPlayInfoOpen(false)}
-              accessibilityLabel="Close"
-            />
+        <GlassSheet visible={true} onClose={() => setAutoPlayInfoOpen(false)}>
             <View
               style={[
                 s.pillarModalSheet,
-                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-              ]}
+                { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
             >
+              {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+              <VibezGlass
+                radius={24}
+                level="sheet"
+                blurTarget={rootBlurRef}
+                style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+              />
               <View style={s.pillarModalHandle} />
               <Pressable
                 style={s.pillarModalClose}
@@ -3852,8 +3835,7 @@ function AudioScreen({
                 </Text>
               </Pressable>
             </View>
-          </View>
-        </Modal>
+        </GlassSheet>
       )}
     </SafeAreaView>
   );

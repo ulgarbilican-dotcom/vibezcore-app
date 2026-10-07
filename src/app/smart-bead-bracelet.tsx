@@ -47,6 +47,9 @@
      aangepast (operator-besluit 2026-05-25).
    ─────────────────────────────────────────────────────────────────────── */
 
+import VibezGlass from '@/components/VibezGlass';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { openStateControl } from '@/utils/state-control-ui';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import { PreviewPill } from '@/components/PreviewPill';
@@ -1535,25 +1538,19 @@ export default function SmartBeadBraceletScreen() {
            Zelfde bottom-sheet-patroon als de andere sheets in dit bestand
            (howItWorksOpen/breathChooserOpen). */}
         {closerLookIndex !== null && (
-          <Modal
-            visible
-            transparent
-            animationType="slide"
-            onRequestClose={() => setCloserLookIndex(null)}
-            statusBarTranslucent
-          >
-            <View style={s.breathChooserModalRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setCloserLookIndex(null)}
-                accessibilityLabel="Close"
-              />
+          <GlassSheet visible={true} onClose={() => setCloserLookIndex(null)}>
               <View
                 style={[
                   s.breathChooserSheet,
-                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-                ]}
+                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
               >
+                {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.breathChooserHandle} />
                 <Pressable
                   style={s.breathChooserClose}
@@ -1580,8 +1577,7 @@ export default function SmartBeadBraceletScreen() {
                   ))}
                 </View>
               </View>
-            </View>
-          </Modal>
+          </GlassSheet>
         )}
 
         {/* ── State-infopopup (1 sheet, alle 5 haptic-modi) ────────────────
@@ -1591,25 +1587,19 @@ export default function SmartBeadBraceletScreen() {
            eigen kleur-stip + naam + blurb + echte duur (BLE_MODES, bron
            van waarheid ble-contract.ts). */}
         {statesInfoOpen && (
-          <Modal
-            visible
-            transparent
-            animationType="slide"
-            onRequestClose={() => setStatesInfoOpen(false)}
-            statusBarTranslucent
-          >
-            <View style={s.breathChooserModalRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setStatesInfoOpen(false)}
-                accessibilityLabel="Close"
-              />
+          <GlassSheet visible={true} onClose={() => setStatesInfoOpen(false)}>
               <View
                 style={[
                   s.breathChooserSheet,
-                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-                ]}
+                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
               >
+                {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.breathChooserHandle} />
                 <Pressable
                   style={s.breathChooserClose}
@@ -1651,8 +1641,7 @@ export default function SmartBeadBraceletScreen() {
                   </View>
                 </ScrollView>
               </View>
-            </View>
-          </Modal>
+          </GlassSheet>
         )}
 
         {/* ── PERSONALISATIE-BANNER ─────────────────────────────────────
@@ -1724,25 +1713,19 @@ export default function SmartBeadBraceletScreen() {
          bovenaan dit bestand) staan hier nog steeds volledig — enkel niet
          meer standaard zichtbaar op het hoofdscherm. */}
       {howItWorksOpen && (
-        <Modal
-          visible
-          transparent
-          animationType="slide"
-          onRequestClose={() => setHowItWorksOpen(false)}
-          statusBarTranslucent
-        >
-          <View style={s.breathChooserModalRoot}>
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => setHowItWorksOpen(false)}
-              accessibilityLabel="Close"
-            />
+        <GlassSheet visible={true} onClose={() => setHowItWorksOpen(false)}>
             <View
               style={[
                 s.breathChooserSheet,
-                { maxHeight: '80%', paddingBottom: Math.max(safeInsets.bottom + 24, 72) },
-              ]}
+                { maxHeight: '80%', paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
             >
+              {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+              <VibezGlass
+                radius={24}
+                level="sheet"
+                blurTarget={rootBlurRef}
+                style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+              />
               <View style={s.breathChooserHandle} />
               <Pressable
                 style={s.breathChooserClose}
@@ -1774,8 +1757,7 @@ export default function SmartBeadBraceletScreen() {
                 </View>
               </ScrollView>
             </View>
-          </View>
-        </Modal>
+        </GlassSheet>
       )}
 
       {/* Operator, 26 september 2026: edition-detail-overlay verwijderd

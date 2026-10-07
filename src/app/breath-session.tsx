@@ -39,6 +39,8 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
 import BreathPacer from '@/components/BreathPacer';
 import LotusPacer from '@/components/LotusPacer';
@@ -3436,23 +3438,16 @@ export function BreathSession() {
            groepen als kopjes. Off staat bovenaan en los: dat is geen geluid
            maar een keuze. Tikken speelt meteen, zodat je hoort wat je pakt
            in plaats van dertien namen te moeten raden. */}
-      <Modal
-        visible={scapeOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setScapeOpen(false)}
-      >
-        <Pressable style={s.sheetBackdrop} onPress={() => setScapeOpen(false)}>
-          <Pressable
-            style={[
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={scapeOpen} onClose={() => setScapeOpen(false)}>
+          <View style={[
               s.sheet,
               /* De navigatiebalk van het toestel hoort er NIET overheen te
                  vallen. Zonder deze inzet stond Done half onder de balk en was
                  niet te lezen wat er stond. */
               { paddingBottom: Math.max(insets.bottom, 12) + 12 },
-            ]}
-            onPress={() => {}}
-          >
+            ]}>
             {/* Operator, 25 september 2026 ("streep bovenaan doet niets,
                kan daarmee niet sluiten"): het streepje was puur decoratief.
                Nu tikbaar — sluit hetzelfde als een backdrop-tap. */}
@@ -3568,9 +3563,8 @@ export function BreathSession() {
             >
               <Text style={s.modalBtnTxt}>Done</Text>
             </AnimatedPressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* ── Audio & Haptics (geconsolideerd) ────────────────────────────────
            Operator, 19 september 2026: vervangt de vier losse kanaal-
@@ -3584,17 +3578,10 @@ export function BreathSession() {
            echte hardware-verbinding (`braceletReady` is nog altijd
            `false`, Fall 2026), dus een schuifregelaar zou een instelling
            voorspiegelen die nergens naartoe gaat. */}
-      <Modal
-        visible={avSheetOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAvSheetOpen(false)}
-      >
-        <Pressable style={s.sheetBackdrop} onPress={() => setAvSheetOpen(false)}>
-          <Pressable
-            style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}
-            onPress={() => {}}
-          >
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={avSheetOpen} onClose={() => setAvSheetOpen(false)}>
+          <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
             {/* Operator, 25 september 2026 ("streep bovenaan doet niets,
                kan daarmee niet sluiten"): het streepje was puur decoratief.
                Nu tikbaar — sluit hetzelfde als een backdrop-tap. */}
@@ -3806,9 +3793,8 @@ export function BreathSession() {
             >
               <Text style={s.modalBtnTxt}>Done</Text>
             </AnimatedPressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* ── Waarom deze lengte ── */}
       <Modal

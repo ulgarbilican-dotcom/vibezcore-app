@@ -30,6 +30,8 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import VibezGlass from '@/components/VibezGlass';
 import { BrandFonts, CTA } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
@@ -2989,20 +2991,16 @@ export default function BreathSetupScreen() {
          kaart + "Got it"-knop onderaan meer — nu dezelfde ECHTE bottom-sheet
          (`sheetRoot`/`sheetContainer`/`sheetHandle`/`sheetHeader`, "Done" in
          de header, altijd wit) als de andere sheets in dit bestand. */}
-      <Modal
-        visible={infoModal !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setInfoModal(null)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setInfoModal(null)} />
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={infoModal !== null} onClose={() => setInfoModal(null)}>
           <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
             {/* Operator, 5 okt 2026 ("popup hetzelfde als in Choose your
                state"): VIBEZCORE-glas, witte tekst, kleur enkel in het icoon. */}
             <VibezGlass
               radius={24}
               level="sheet"
+              blurTarget={rootBlurRef}
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.sheetHandle} />
@@ -3131,8 +3129,7 @@ export default function BreathSetupScreen() {
               );
             })()}
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* Operator, 24 september 2026 ("gaan gebruikers weten waar die
          sessies voor zijn?" → "of i icoon"), zelfde dag (vervolg, pasted
@@ -3147,23 +3144,16 @@ export default function BreathSetupScreen() {
          lengte) worden hier samengevoegd tot één doorlopende alinea i.p.v.
          twee losse punten — nog steeds geen nieuwe copy, enkel anders
          geschreven. */}
-      <Modal
-        visible={durationInfoOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDurationInfoOpen(false)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setDurationInfoOpen(false)}
-          />
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={durationInfoOpen} onClose={() => setDurationInfoOpen(false)}>
           <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
             {/* Operator, 5 okt 2026 ("popup hetzelfde als in Choose your
                state"): VIBEZCORE-glas, witte tekst, kleur enkel in het icoon. */}
             <VibezGlass
               radius={24}
               level="sheet"
+              blurTarget={rootBlurRef}
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.sheetHandle} />
@@ -3230,8 +3220,7 @@ export default function BreathSetupScreen() {
               )}
             </ScrollView>
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* Operator, 18 september 2026 ("popupkaarten mogen over volledig
          scherm of achterkant moet donker worden bij popup... achterkant
@@ -3247,18 +3236,16 @@ export default function BreathSetupScreen() {
          `View` errond (geen eigen touch-responder) lost dat op. */}
       {isAddToDay && (
         <>
-          <Modal
-            visible={activePicker === 'time'}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setActivePicker(null)}
-          >
-            <View style={s.sheetRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setActivePicker(null)}
-              />
-              <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          {/* Echt glas, ook op Android: in hetzelfde venster als de app
+              (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+          <GlassSheet visible={activePicker === 'time'} onClose={() => setActivePicker(null)}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.sheetHandle} />
                 <View style={s.sheetHeader}>
                   <Text style={[s.modalTitle, { color: accent }]}>Time</Text>
@@ -3358,21 +3345,18 @@ export default function BreathSetupScreen() {
                 />
               </View>
               </SafeAreaView>
-            </View>
-          </Modal>
+          </GlassSheet>
 
-          <Modal
-            visible={activePicker === 'state'}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setActivePicker(null)}
-          >
-            <View style={s.sheetRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setActivePicker(null)}
-              />
-              <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          {/* Echt glas, ook op Android: in hetzelfde venster als de app
+              (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+          <GlassSheet visible={activePicker === 'state'} onClose={() => setActivePicker(null)}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.sheetHandle} />
                 <View style={s.sheetHeader}>
                   <Text style={[s.modalTitle, { color: accent }]}>State</Text>
@@ -3445,21 +3429,18 @@ export default function BreathSetupScreen() {
                 </View>
               </ScrollView>
               </SafeAreaView>
-            </View>
-          </Modal>
+          </GlassSheet>
 
-          <Modal
-            visible={activePicker === 'technique'}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setActivePicker(null)}
-          >
-            <View style={s.sheetRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setActivePicker(null)}
-              />
-              <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          {/* Echt glas, ook op Android: in hetzelfde venster als de app
+              (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+          <GlassSheet visible={activePicker === 'technique'} onClose={() => setActivePicker(null)}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.sheetHandle} />
                 <View style={s.sheetHeader}>
                   <Text style={[s.modalTitle, { color: accent }]}>Technique</Text>
@@ -3553,21 +3534,18 @@ export default function BreathSetupScreen() {
                 </View>
               </ScrollView>
               </SafeAreaView>
-            </View>
-          </Modal>
+          </GlassSheet>
 
-          <Modal
-            visible={activePicker === 'duration'}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setActivePicker(null)}
-          >
-            <View style={s.sheetRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setActivePicker(null)}
-              />
-              <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          {/* Echt glas, ook op Android: in hetzelfde venster als de app
+              (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+          <GlassSheet visible={activePicker === 'duration'} onClose={() => setActivePicker(null)}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.sheetHandle} />
                 <View style={s.sheetHeader}>
                   <Text style={[s.modalTitle, { color: accent }]}>Duration</Text>
@@ -3661,26 +3639,23 @@ export default function BreathSetupScreen() {
                 )}
               </ScrollView>
               </SafeAreaView>
-            </View>
-          </Modal>
+          </GlassSheet>
 
           {/* Operator, 18 september 2026 ("aantal dagen moet in add to day
              komen"): 5e kiezer, zelfde vormtaal als de andere 4 — lijst van
              `HORIZON_OPTIONS` (dezelfde bron als voorheen op
              plan-review.tsx). Geen "Done"-knop nodig, tikken op een rij
              kiest en sluit meteen, zelfde patroon als State/Technique. */}
-          <Modal
-            visible={activePicker === 'horizon'}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setActivePicker(null)}
-          >
-            <View style={s.sheetRoot}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setActivePicker(null)}
-              />
-              <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+          {/* Echt glas, ook op Android: in hetzelfde venster als de app
+              (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+          <GlassSheet visible={activePicker === 'horizon'} onClose={() => setActivePicker(null)}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.sheetHandle} />
                 <View style={s.sheetHeader}>
                   <Text style={[s.modalTitle, { color: accent }]}>Plan length</Text>
@@ -3760,8 +3735,7 @@ export default function BreathSetupScreen() {
                   </View>
                 </ScrollView>
               </SafeAreaView>
-            </View>
-          </Modal>
+          </GlassSheet>
         </>
       )}
     </SafeAreaView>

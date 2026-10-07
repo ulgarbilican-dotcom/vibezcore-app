@@ -26,6 +26,9 @@
    plaats van een harde cut, Premium/bracelet-eigenaars de volledige sessie
    zonder enige limiet. */
 
+import VibezGlass from '@/components/VibezGlass';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
 import {
@@ -238,17 +241,17 @@ export default function FeelNowScreen() {
          (`technique.effect`/`duration.why` uit breath-states.ts), alleen
          anders samengevoegd zodat het antwoord op "waarom dit voor MIJ"
          leesbaar wordt, niet een nieuw verzonnen claim. */}
-      <Modal
-        visible={infoFor !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setInfoFor(null)}
-      >
-        <Pressable style={s.sheetBackdrop} onPress={() => setInfoFor(null)}>
-          <Pressable
-            style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 24 }]}
-            onPress={() => {}}
-          >
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={infoFor !== null} onClose={() => setInfoFor(null)}>
+          <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 24 }, { backgroundColor: 'transparent', overflow: 'hidden' }]}>
+            {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             {infoFor !== null && (() => {
               const st = stateFor(infoFor.state);
               const technique = pickInstantTechnique(st, infoFor);
@@ -296,9 +299,8 @@ export default function FeelNowScreen() {
                 </>
               );
             })()}
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
     </SafeAreaView>
   );
 }

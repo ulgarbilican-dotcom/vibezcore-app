@@ -47,6 +47,9 @@
    levend overzicht van de 4 keuzes — zelfde cirkel-taal als "Build it
    yourself", nu ook hier. */
 
+import VibezGlass from '@/components/VibezGlass';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { BrandDark, BrandFonts, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import AddToDayHero from '@/components/AddToDayHero';
@@ -1008,15 +1011,17 @@ export default function IntensityScreen() {
       </View>
 
       {/* ── State-popup ── */}
-      <Modal
-        visible={activePicker === 'state'}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActivePicker(null)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActivePicker(null)} />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={activePicker === 'state'} onClose={() => setActivePicker(null)}>
+          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+            {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             <View style={s.sheetHeader}>
               <Text style={s.modalTitle}>State</Text>
@@ -1051,19 +1056,20 @@ export default function IntensityScreen() {
               </View>
             </ScrollView>
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* ── Routine-popup ── */}
-      <Modal
-        visible={activePicker === 'routine'}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActivePicker(null)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActivePicker(null)} />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={activePicker === 'routine'} onClose={() => setActivePicker(null)}>
+          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+            {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             <View style={s.sheetHeader}>
               <Text style={s.modalTitle}>Routine</Text>
@@ -1100,19 +1106,20 @@ export default function IntensityScreen() {
               </View>
             </ScrollView>
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* ── Level-popup ── */}
-      <Modal
-        visible={activePicker === 'level'}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActivePicker(null)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActivePicker(null)} />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={activePicker === 'level'} onClose={() => setActivePicker(null)}>
+          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+            {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             <View style={s.sheetHeader}>
               <Text style={s.modalTitle}>Level</Text>
@@ -1160,19 +1167,20 @@ export default function IntensityScreen() {
               })}
             </View>
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* ── Plan length-popup ── */}
-      <Modal
-        visible={activePicker === 'horizon'}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActivePicker(null)}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActivePicker(null)} />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={activePicker === 'horizon'} onClose={() => setActivePicker(null)}>
+          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+            {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             <View style={s.sheetHeader}>
               <Text style={s.modalTitle}>Plan length</Text>
@@ -1226,19 +1234,20 @@ export default function IntensityScreen() {
               })}
             </View>
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* ── Times-popup ── */}
-      <Modal
-        visible={activePicker === 'times'}
-        transparent
-        animationType="slide"
-        onRequestClose={closeTimes}
-      >
-        <View style={s.sheetRoot}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeTimes} />
-          <SafeAreaView style={s.sheetContainer} edges={['bottom']}>
+      {/* Echt glas, ook op Android: in hetzelfde venster als de app
+          (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
+      <GlassSheet visible={activePicker === 'times'} onClose={closeTimes}>
+          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+            {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.sheetHandle} />
             <View style={s.sheetHeader}>
               <Text style={s.modalTitle}>Times</Text>
@@ -1314,8 +1323,7 @@ export default function IntensityScreen() {
               </View>
             </ScrollView>
           </SafeAreaView>
-        </View>
-      </Modal>
+      </GlassSheet>
 
       {/* Sub-popup voor het exacte uur binnen een gekozen dagdeel — bovenop
          de Times-sheet, zelfde patroon als daarvoor. */}
