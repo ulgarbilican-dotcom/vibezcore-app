@@ -103,7 +103,7 @@ const PILLARS: Pillar[] = [
     key: 'bracelet',
     Icon: BraceletIcon,
     product: 'Feel',
-    title: 'Instant State Control',
+    title: 'Control Your State', // operator 7 okt 2026: zelfde ritme als Reset Yourself / Train Your Mind
     onPress: () => router.navigate('/bracelet'),
   },
   {
