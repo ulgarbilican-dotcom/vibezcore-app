@@ -139,11 +139,14 @@ Flow per gebruiker:
 - **Bracelet-koper zonder account** → account maken + activatiecode
   (QR + leesbare terugvalcode) → code bepaalt pakket (bracelet of
   bracelet+audio) → ontgrendelt automatisch.
-- **Reeds ingelogd** → ZIET HET WELKOMSTSCHERM OOK. Gewijzigd 7 augustus
-  2026 (operator): "Stop Drifting" is het merkbeeld waarmee de app opent en
-  dat hoort iedereen te zien. Vervangt de oude regel "welkomstscherm
-  overslaan". Enige uitzondering: een openstaande auth-deeplink — anders
-  slokt welcome het verify-scherm op.
+- **Reeds ingelogd** → SLAAT HET WELKOMSTSCHERM OVER en opent in het
+  laatst gebruikte tabblad. GEWIJZIGD 7 oktober 2026 (operator: "ik volg
+  apple niveau"): zoals Apple's eigen apps — welkomstscherm enkel bij de
+  eerste keer en voor wie uitgelogd is; daarna opent de app waar je was.
+  "Stop Drifting" blijft het merkbeeld via het korte opstartscherm (geen
+  knoppen). Vervangt de regel van 7 augustus 2026 ("welkomstscherm voor
+  iedereen"). Uitzonderingen blijven: een openstaande auth-deeplink en een
+  tik op een herinnering gaan voor.
 
 NOOIT een keuzescherm "wat ben jij / wat heb je". Bezit wordt door
 inloggen of activatiecode bepaald, niet aan de gebruiker gevraagd.
