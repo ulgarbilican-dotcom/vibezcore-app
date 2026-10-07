@@ -1140,7 +1140,7 @@ export default function SmartBeadBraceletScreen() {
      niet meteen marketing-flash voelt voor wie al PRO is. */
   if (showAudioProLanding && !exploreUnlocked) {
     return (
-      <SafeAreaView edges={braceletIntro ? [] : ['top', 'left', 'right']} style={s.root}>
+      <SafeAreaView edges={braceletIntro ? [] : ['left', 'right']} style={s.root}>
         {/* GEWIJZIGD 4 oktober 2026: standalone route nu (was inline tab-
            content) — eigen Stack-header met terugknop, zelfde patroon als
            activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
@@ -1278,7 +1278,7 @@ export default function SmartBeadBraceletScreen() {
   }
 
   return (
-    <SafeAreaView edges={braceletIntro ? [] : ['top', 'left', 'right']} style={s.root}>
+    <SafeAreaView edges={braceletIntro ? [] : ['left', 'right']} style={s.root}>
       {/* GEWIJZIGD 4 oktober 2026: standalone route nu (was inline tab-
          content) — eigen Stack-header met terugknop, zelfde patroon als
          activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
@@ -1744,7 +1744,7 @@ export default function SmartBeadBraceletScreen() {
          hieronder. Vervangt de losse tekst-sectie die eerder op het
          hoofdscherm stond. */}
       <Pressable
-        style={[s.infoBtn, { top: safeInsets.top + 10 }]}
+        style={[s.infoBtn, { top: 10 }]}
         onPress={() => setHowItWorksOpen(true)}
         hitSlop={10}
         accessibilityLabel="How the bracelet works"
