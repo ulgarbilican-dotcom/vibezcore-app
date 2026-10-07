@@ -190,6 +190,20 @@ export const MODES: ModeMeta[] = [
   },
 ];
 
+/* ── Snelle sessies (operator, 7 okt 2026) ─────────────────────────────
+   Eén tik, 5 minuten — de duur waarin de studies hun effect maten
+   (Motokawa: 2–3,5 min; Balban: 5 min/dag). Quick Chill = de korte versie
+   van Clarity & Relax (70% van je rusthartslag, 2 min glijden — vrijwel
+   exact Motokawa Study 1); Quick Boost = Boost (110 bpm). Op de telefoon
+   en het horloge; de bracelet-firmware kent (nog) geen sessie korter dan
+   het minimum per modus (spec §7.1) — zie docs/VIBEZCORE_SCIENCE_A_TOT_Z.md. */
+export const QUICK_SESSION_MINUTES = 5;
+export type QuickSession = { key: 'chill' | 'boost'; label: string; mode: BraceletMode };
+export const QUICK_SESSIONS: QuickSession[] = [
+  { key: 'chill', label: 'Quick Chill', mode: BraceletMode.Theta },
+  { key: 'boost', label: 'Quick Boost', mode: BraceletMode.Gamma },
+];
+
 export function getModeMeta(mode: BraceletMode): ModeMeta {
   return MODES[mode];
 }

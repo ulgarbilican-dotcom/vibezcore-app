@@ -759,10 +759,17 @@ onAppleWatchAction(onWatchStateAction);
  *  zijn EERSTE opening). De monitor is de bron van waarheid; het scherm
  *  volgt hem en toont daarna vanzelf de lopende sessie. Loopt er al een
  *  sessie, dan gebeurt er niets (false) — de aanroeper opent die dan. */
-export async function startStateControlNow(mode: BraceletMode, minutes: number): Promise<boolean> {
+export async function startStateControlNow(
+  mode: BraceletMode,
+  minutes: number,
+  opts: { quick?: boolean } = {},
+): Promise<boolean> {
   if (state) return false;
   const meta = getModeMeta(mode);
-  const dur = Math.max(meta.minMinutes, Math.min(meta.maxMinutes, Math.round(minutes)));
+  /* Snelle sessie (Quick Chill/Boost, 5 min): onder het modus-minimum mag
+     hier — de telefoon/het horloge bewaakt zelf het einde. */
+  const min = opts.quick ? 3 : meta.minMinutes;
+  const dur = Math.max(min, Math.min(meta.maxMinutes, Math.round(minutes)));
   startBraceletSessionMonitor({ mode, totalSec: dur * 60 });
   try {
     const b = getBracelet();

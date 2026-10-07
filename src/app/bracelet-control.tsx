@@ -33,6 +33,7 @@ import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
+import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -3596,8 +3597,42 @@ function IdleScreen({
            verticale DurationWheel als breath-setup.tsx — gekozen waarde
            groot/wit gecentreerd, "Recommended" ernaast wanneer van
            toepassing, geen los sterretje/legend-regel meer nodig. */}
+        {/* Quick Chill / Quick Boost (operator, 7 okt 2026): één tik, 5 min,
+            meteen bezig — afgestemd op je hart onder de motorkap. Niet
+            tijdens een lopende sessie (dan geldt "Switch to…"). */}
+        {!sessionRunning && !trialRunning ? (
+          <View style={s.quickRow}>
+            {QUICK_SESSIONS.map((q) => {
+              const QIcon = q.key === 'chill' ? MoonStar : Zap;
+              return (
+                <Pressable
+                  key={q.key}
+                  disabled={busy}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (startLocked) {
+                      onStart();
+                      return;
+                    }
+                    withRhythm(() => {
+                      void startStateControlNow(q.mode, QUICK_SESSION_MINUTES, { quick: true });
+                    })();
+                  }}
+                  style={({ pressed }) => [s.quickBtn, pressed && { opacity: 0.6 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes, starts right away`}
+                >
+                  <QIcon size={15} color={getModeMeta(q.mode).color} strokeWidth={2.2} />
+                  <Text style={s.quickTxt}>{q.label}</Text>
+                  <Text style={s.quickMin}>{QUICK_SESSION_MINUTES} min</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
         {/* Lager, met meer lucht onder de bolletjes (operator, 6 okt 2026). */}
-        <View style={[s.durationSliderWrap, { marginTop: 90 }]}>
+        <View style={[s.durationSliderWrap, { marginTop: sessionRunning || trialRunning ? 90 : 26 }]}>
           <DurationWheel
             options={DURATION_PRESETS[selectedMode].map((p) => ({
               value: p.value,
@@ -5593,6 +5628,20 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 1,
   },
+  quickRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 26 },
+  quickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  quickTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
+  quickMin: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 13 },
   modeDots: {
     flexDirection: 'row',
     alignItems: 'center',
