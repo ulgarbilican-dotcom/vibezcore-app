@@ -5800,6 +5800,9 @@ const s = StyleSheet.create({
     gap: 6,
     height: 36,
     paddingHorizontal: 10,
+    /* Optisch centreren: het hartje is breder dan het pijltje, de groep
+       stond 2 pt links van het midden (gemeten op de A16, 7 okt 2026). */
+    marginLeft: 4,
   },
   ringPulseTxt: {
     color: 'rgba(255,255,255,0.9)',
