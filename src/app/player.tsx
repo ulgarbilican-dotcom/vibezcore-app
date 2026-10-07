@@ -793,20 +793,30 @@ export default function PlayerScreen() {
             (marginTop:'auto' binnen de flex:1 content-kolom) — vlak boven
             de CTA. Iter v175 (2026-06-30): Sleep-knop weg, zie
             audio-player.ts voor rationale (expo-audio limitation). */}
+        {/* Operator, 7 okt 2026 ("hartje en speed staan rommelig — mooi in
+            lijn", Apple Podcasts): één rij, links de snelheid als tekst,
+            rechts het hartje, gelijk met de randen van de tijdbalk. Geen
+            labels en geen cirkel — alles even groot, één kleur. */}
         <View style={[s.extrasRow, { marginTop: 'auto' }]}>
-          {/* Operator, 26 september 2026 (finishing touch): Unicode-glyph
-             ♡/♥ verving door het echte lucide Heart-icoon — sluit qua
-             lijndikte aan bij Share hiernaast en de skip-knoppen. */}
+          <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
+          {session.free && (
+            <ExtraBtn
+              icon={<Share2 size={22} color={C.text} strokeWidth={2} />}
+              label="Share"
+              onPress={onShare}
+            />
+          )}
           <ExtraBtn
+            align="end"
             icon={
               <Heart
-                size={24}
+                size={22}
                 color={isFav ? C.heart : C.text}
                 fill={isFav ? C.heart : 'transparent'}
-                strokeWidth={2.3}
+                strokeWidth={2}
               />
             }
-            label="Favorite"
+            label={isFav ? 'Remove from favorites' : 'Add to favorites'}
             onPress={() =>
               toggleFav({
                 url: session.url,
@@ -815,10 +825,6 @@ export default function PlayerScreen() {
               })
             }
           />
-          <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
-          {session.free && (
-            <ExtraBtn icon={<Share2 size={24} color={C.text} strokeWidth={2.3} />} label="Share" onPress={onShare} />
-          )}
         </View>
 
         {/* ── Full library access CTA ───────────────────────────────────
@@ -1092,23 +1098,33 @@ function ExtraBtn({
   label,
   color,
   onPress,
+  align = 'center',
 }: {
   icon: string | ReactNode;
   label: string;
   color?: string;
   onPress: () => void;
+  align?: 'start' | 'center' | 'end';
 }) {
   /* Iter v174 (2026-06-30): icon mag string of ReactNode zijn. Share-button
      gebruikt Share2-glyph van lucide (officieel Android share-symbool); andere
      extras blijven met Unicode-glyph strings werken. */
   return (
-    <Pressable onPress={onPress} hitSlop={8} style={s.extraBtn}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={[
+        s.extraBtn,
+        { alignItems: align === 'start' ? 'flex-start' : align === 'end' ? 'flex-end' : 'center' },
+      ]}
+    >
       {typeof icon === 'string' ? (
         <Text style={[s.extraIcon, color ? { color } : null]}>{icon}</Text>
       ) : (
         <View style={s.extraIconBox}>{icon}</View>
       )}
-      <Text style={s.extraLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -1121,11 +1137,14 @@ function SpeedBtn({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} hitSlop={8} style={s.extraBtn}>
-      <View style={s.speedCircle}>
-        <Text style={s.speedText}>{rate.toFixed(1)}×</Text>
-      </View>
-      <Text style={s.extraLabel}>Speed</Text>
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={`Playback speed ${rate}x`}
+      style={[s.extraBtn, { alignItems: 'flex-start' }]}
+    >
+      <Text style={s.speedText}>{`${Number.isInteger(rate) ? rate : rate.toFixed(rate * 10 % 1 === 0 ? 1 : 2)}×`}</Text>
     </Pressable>
   );
 }
@@ -1471,12 +1490,11 @@ const s = StyleSheet.create({
   /* Extras row */
   extrasRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: 48,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
-  extraBtn: { alignItems: 'center', minWidth: 56 },
+  extraBtn: { minWidth: 44, height: 44, justifyContent: 'center' },
   extraIcon: {
     color: C.text,
     fontSize: 24,
@@ -1505,7 +1523,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  speedText: { color: C.text, fontSize: 14, fontFamily: BrandFonts.bold },
+  speedText: { color: C.text, fontSize: 17, fontFamily: BrandFonts.semibold, fontVariant: ['tabular-nums'] },
 
   /* CTA — Operator, 26 september 2026 (Apple-redesign): de volle witte
      pil eiste te veel aandacht tijdens actief luisteren ("een verkoopknop
