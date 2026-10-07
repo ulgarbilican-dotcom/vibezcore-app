@@ -170,7 +170,7 @@ methodiek als de Sleep-hernoeming hierboven. Enkel de naam wijzigt; index
 |-----|--------|----------------------|-------|-------------------|---------|
 | 0 | Gamma | Boost | Amber #F5A524 | 8 – 20 min | 10 min |
 | 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min | 15 min |
-| 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min | 20 min |
+| 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min | 18 min |
 | 3 | Theta | Clarity & Relax | Wit #FFFFFF | 20 – 45 min | 25 min |
 | 4 | Delta | Sleep | Bio-Teal #00A3A3 | 30 – 50 min | 30 min |
 
@@ -189,6 +189,12 @@ tot 60 min, 50 is een batterij-bewustere tussenstap voor overnight-
 gebruik — check bij hardware/firmware of de batterij een volle sessie
 op het maximum aankan voor dit verder omhoog gaat). Calm Control
 ongewijzigd bevestigd (30 min max, weinig extra meerwaarde erboven).
+**GEWIJZIGD 7 oktober 2026 (operator, na onderzoek per toestand): Calm
+Control aanbevolen 20 → 18 min** — trage hartslagtrilling (Azevedo 2017) en
+trage ademhaling (5–20 min gelijk effect) werken al kort; niet 15 zodat elke
+toestand een eigen waarde heeft. De andere vier bleven gesteund door
+onderzoek (Boost kort, Sharp Focus = 15 min aandachtsdip, Clarity binnen
+NSDR 11–30 min, Sleep dekt inslapen 10–20 min).
 Bron van waarheid: `services/ble-contract.ts`'s
 `ModeMeta.defaultMinutes`/`minMinutes`/`maxMinutes`.
 

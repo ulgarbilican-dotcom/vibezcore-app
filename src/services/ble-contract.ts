@@ -160,7 +160,10 @@ export const MODES: ModeMeta[] = [
     /* Operator, 16 september 2026: ongewijzigd bevestigd — relaxation-
        onderzoek toont weinig extra meerwaarde voorbij 30 min. */
     maxMinutes: 30,
-    defaultMinutes: 20,
+    /* Operator, 7 okt 2026 (onderzoek): trage hartslagtrilling en trage
+       ademhaling werken al na 5–15 min, langer geeft weinig extra — 20 → 18
+       (niet 15: elke toestand een eigen aanbevolen duur). */
+    defaultMinutes: 18,
   },
   {
     mode: BraceletMode.Theta,

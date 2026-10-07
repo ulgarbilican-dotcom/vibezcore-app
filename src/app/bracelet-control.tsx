@@ -233,7 +233,8 @@ const DURATION_PRESETS: Record<BraceletMode, { value: number; recommended?: bool
   ],
   [BraceletMode.Alpha]: [
     { value: 15 },
-    { value: 20, recommended: true },
+    { value: 18, recommended: true },
+    { value: 20 },
     { value: 25 },
     { value: 30 },
   ],
@@ -556,7 +557,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Gamma]: {
     intent: 'Alert, energized — primed for high-output moments.',
     braceletDoes:
-      'Starts at a resting pace, then quickens to a brisk rhythm.',
+      'Starts at a resting pace, then quickens to a brisk rhythm. Keep it short — a quick reset, not a long session.',
     protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
       'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
