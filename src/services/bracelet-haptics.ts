@@ -501,6 +501,34 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
   );
 }
 
+/** "Try 30 seconds free" op het State Control-keuzescherm (operator, 7 okt
+ *  2026): dezelfde ingekorte voorproef als "Feel it", maar ook op een
+ *  gekoppeld horloge — wie er een draagt, voelt het meteen op de pols.
+ *  Het horloge krijgt exact dezelfde ingekorte curve en stopt zelf na
+ *  PREVIEW_MAX_SECONDS. */
+let previewOnWatch = false;
+export function playModeTrialHaptic(mode: BraceletMode): void {
+  playModePreviewHaptic(mode);
+  const spec = SPECS[mode];
+  const meta = getModeMeta(mode);
+  const start = {
+    title: meta.name,
+    colorHex: meta.color,
+    targetBpm: spec.targetBpm,
+    holdSec: PREVIEW_HOLD_SECONDS,
+    rampSec: spec.rampSec > 0 ? PREVIEW_RAMP_SECONDS : 0,
+    curveOffsetSec: 0,
+    remainingSec: PREVIEW_MAX_SECONDS,
+    lubAmp: spec.lubAmp,
+    dubAmp: spec.dubAmp,
+    lubMsNoAmp: spec.lubMsNoAmp,
+    dubMsNoAmp: spec.dubMsNoAmp,
+  };
+  sendWearState(start);
+  sendAppleState(start);
+  previewOnWatch = true;
+}
+
 /** Natuurlijk einde volgens de sessie-monitor: JS-kant opruimen, de
  *  native service NIET stoppen — die speelt het eind-signaal uit, toont
  *  "Session complete" en stopt dan zelf. (Na een herlaad van de app kent
@@ -525,11 +553,12 @@ export function stopModePreviewHaptic(): void {
     /* Enkel als er een echte sessie liep — een voorproef gaat niet naar
        het horloge. Bij een natuurlijk einde speelt het horloge zelf het
        eind-signaal en stopt het vanzelf. */
-    if (session) {
+    if (session || previewOnWatch) {
       stopWearState();
       stopAppleState();
     }
   }
+  previewOnWatch = false;
   watchHasRhythm = false;
   lastClock = null;
   /* Bij een natuurlijk einde speelt de service het eind-signaal uit en

@@ -33,6 +33,7 @@ import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
   playModePreviewHaptic,
+  playModeTrialHaptic,
   stopModePreviewHaptic,
   subscribeHapticPulse,
   isWatchPlayingRhythm,
@@ -2141,7 +2142,13 @@ function DurationRing({
   dark,
   fillOnMount,
   recommended,
+  clockOverride,
+  subOverride,
 }: {
+  /** Voorproef (7 okt 2026): de teller i.p.v. de gekozen duur. */
+  clockOverride?: string;
+  /** Voorproef: "Preview" i.p.v. "Recommended". */
+  subOverride?: string;
   /** Leeg binnenkomen en pas na aankomst vullen (modus-wissel). */
   fillOnMount?: boolean;
   /** De gekozen duur is de aanbevolen duur → "● Recommended" onder de tijd. */
@@ -2304,11 +2311,11 @@ function DurationRing({
           <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
         </View>
         <Text style={[s.ringClock, { color: numColor }, textShadow]}>
-          {`${value}:00`}
+          {clockOverride ?? `${value}:00`}
         </Text>
-        <View style={[s.ringRecRow, { opacity: recommended ? 1 : 0 }]}>
+        <View style={[s.ringRecRow, { opacity: subOverride || recommended ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
-          <Text style={s.ringRecTxt}>Recommended</Text>
+          <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
         </View>
       </View>
     </View>
@@ -3406,6 +3413,8 @@ type IdleScreenProps = {
   /** Sessies zitten in het VIBEZCORE-pakket; zonder abonnement opent Start
    *  de paywall (Feel it blijft vrij als voorproef). */
   startLocked: boolean;
+  /** Einde van de gratis voorproef → paywall. */
+  onTrialEnd: () => void;
   busy: boolean;
   stats: BraceletStats;
   completedModeForModal: BraceletMode | null;
@@ -3445,6 +3454,7 @@ function IdleScreen({
   setDuration,
   onStart,
   startLocked,
+  onTrialEnd,
   busy,
   stats,
   completedModeForModal,
@@ -3476,6 +3486,41 @@ function IdleScreen({
   const [runSnap, setRunSnap] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setRunSnap), []);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
+
+  /* ── "Try 30 seconds free" (operator, 7 okt 2026) ──
+     Zonder abonnement was alles op slot en zat de gratis voorproef ver-
+     stopt achter de i. Nu is de grote knop zelf de voorproef: het ritme
+     van deze toestand op de telefoon (en een gekoppeld horloge), de ring
+     telt af, daarna de paywall — zoals de Breathwork-proef. */
+  const [trialLeft, setTrialLeft] = useState<number | null>(null);
+  const trialTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopTrial = useCallback((ended: boolean) => {
+    /* Enkel opruimen als er echt een voorproef liep — anders zou een
+       moduswissel tijdens een lopende sessie haar haptiek stilleggen. */
+    if (!trialTimer.current) return;
+    clearInterval(trialTimer.current);
+    trialTimer.current = null;
+    setTrialLeft(null);
+    if (!ended) stopModePreviewHaptic();
+  }, []);
+  const startTrial = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    playModeTrialHaptic(selectedMode);
+    const started = Date.now();
+    setTrialLeft(PREVIEW_MAX_SECONDS);
+    trialTimer.current = setInterval(() => {
+      const left = Math.max(0, PREVIEW_MAX_SECONDS - Math.floor((Date.now() - started) / 1000));
+      setTrialLeft(left);
+      if (left <= 0) {
+        stopTrial(true);
+        onTrialEnd();
+      }
+    }, 250);
+  };
+  /* Andere toestand, ander scherm of weg: voorproef stopt. */
+  useEffect(() => () => stopTrial(false), [selectedMode, stopTrial]);
+  const trialRunning = trialLeft !== null;
+  const condensedMinutes = previewCondensedRampMinutes(selectedMode);
   /* Modus én zijn standaardduur in één render zetten: anders tekende de
      cirkel eerst de nieuwe modus met de duur van de vorige, en sprong de
      vulling pas een frame later naar de juiste hoogte. */
@@ -3624,8 +3669,15 @@ function IdleScreen({
                 met zijn eigen vulling binnenkomt, niet klotsend vanaf het
                 niveau van de vorige (operator, 5 okt 2026: "de vulling
                 verandert telkens"). */}
+            {trialRunning ? (
+              <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+                <HapticPulseRings size={230} color={breathWaveLook(meta.color).color} />
+              </View>
+            ) : null}
             <DurationRing
               key={selectedMode}
+              clockOverride={trialRunning ? `0:${String(trialLeft).padStart(2, '0')}` : undefined}
+              subOverride={trialRunning ? 'Preview' : undefined}
               fillOnMount={modeChangedRef.current}
               min={meta.minMinutes}
               max={meta.maxMinutes}
@@ -3719,26 +3771,39 @@ function IdleScreen({
         ) : (
           <PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, (busy || criticalBattery) && s.btnDisabled]}
-            onPress={onStart}
+            onPress={startLocked ? (trialRunning ? () => stopTrial(false) : startTrial) : onStart}
             disabled={busy || criticalBattery}
             accessibilityLabel={
-              startLocked ? `Unlock ${meta.name} sessions` : `Start ${meta.name} session`
+              startLocked
+                ? trialRunning
+                  ? 'Stop the preview'
+                  : `Try ${meta.name} free for 30 seconds`
+                : `Start ${meta.name} session`
             }
           >
             {busy ? (
               <ActivityIndicator color="#1D1D1F" />
             ) : startLocked ? (
-              /* Vooraf zichtbaar dat dit achter het abonnement zit (zelfde
-                 les als protocol-gate.ts: geen verrassing pas na de tik). */
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Lock size={16} color="#1D1D1F" strokeWidth={2.4} />
-                <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Start {meta.name}</Text>
-              </View>
+              <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>
+                {trialRunning ? 'Stop preview' : 'Try 30 seconds free'}
+              </Text>
             ) : (
               <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Start {meta.name}</Text>
             )}
           </PrimaryCtaButton>
         )}
+        {startLocked && !sessionRunning ? (
+          <View style={s.trialInfo}>
+            <Text style={s.trialInfoTxt}>
+              {trialRunning && condensedMinutes !== null
+                ? 'Sped up for the preview — a full session slows down gradually'
+                : "You'll feel it on your phone and paired watch"}
+            </Text>
+            <Pressable onPress={onStart} hitSlop={10} accessibilityRole="button" accessibilityLabel="Unlock all sessions">
+              <Text style={s.trialUnlockTxt}>Unlock all sessions</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <SwitchSessionConfirm
           visible={confirmSwitch}
           fromName={runSnap.modeName}
@@ -5292,6 +5357,7 @@ function BraceletControlScreen({
         setDuration={setDuration}
         onStart={onStartGated}
         startLocked={sessionsLocked}
+        onTrialEnd={() => setPaywallOpen(true)}
         busy={busy}
         stats={stats}
         completedModeForModal={completedModeForModal}
@@ -5652,6 +5718,15 @@ const s = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  trialInfo: { alignItems: 'center', gap: 10, marginTop: 14 },
+  trialInfoTxt: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  trialUnlockTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
   durationRingWrap: {
     alignItems: 'center',
     alignSelf: 'stretch',
