@@ -193,6 +193,29 @@ function extractFreeTrialDaysFromPackage(
   return days > 0 ? days : undefined;
 }
 
+/* Operator, 7 okt 2026 (account-audit): iOS geeft geen Google-
+   "pricingPhases" maar één `introPrice` (gratis proefperiode of
+   kortingsprijs). Zonder deze helper kreeg een iPhone-gebruiker nooit de
+   proefperiode of introprijs te zien. Of de klant er recht op heeft, wordt
+   apart gecontroleerd in getProducts() (Apple meldt de introPrice ook aan
+   wie hem al gebruikte). */
+function extractIosIntro(
+  pkg: PurchasesPackage
+): { trialDays?: number; intro?: { label: string; micros: number } } {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ip = (pkg.product as any)?.introPrice;
+  if (!ip) return {};
+  const unit: string = String(ip.periodUnit ?? '').toUpperCase();
+  const per = Number(ip.periodNumberOfUnits ?? 0) * Math.max(1, Number(ip.cycles ?? 1));
+  const days =
+    unit === 'DAY' ? per : unit === 'WEEK' ? per * 7 : unit === 'MONTH' ? per * 30 : unit === 'YEAR' ? per * 365 : 0;
+  if (Number(ip.price) === 0) return days > 0 ? { trialDays: days } : {};
+  if (typeof ip.priceString === 'string' && typeof ip.price === 'number') {
+    return { intro: { label: ip.priceString, micros: Math.round(ip.price * 1_000_000) } };
+  }
+  return {};
+}
+
 function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
   const productId = pkg.product.identifier;
   const tier = tierFromProductId(productId);
@@ -202,10 +225,12 @@ function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
      toon die prijs als localizedPrice ipv base price. Google Play stuurt
      alleen de intro als user eligible is — dus als extractIntroPrice()
      iets returnt = deze klant KRIJGT het intro-tarief. */
-  const intro = extractIntroPriceFromPackage(pkg);
+  const ios = Platform.OS === 'ios' ? extractIosIntro(pkg) : {};
+  const intro = Platform.OS === 'ios' ? ios.intro ?? null : extractIntroPriceFromPackage(pkg);
   const displayLabel = intro?.label ?? pkg.product.priceString;
   const displayMicros = intro?.micros ?? Math.round(pkg.product.price * 1_000_000);
-  const freeTrialDays = extractFreeTrialDaysFromPackage(pkg);
+  const freeTrialDays =
+    Platform.OS === 'ios' ? ios.trialDays : extractFreeTrialDaysFromPackage(pkg);
   return {
     productId,
     tier,
@@ -216,8 +241,9 @@ function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
     currency: pkg.product.currencyCode,
     priceAmountMicros: displayMicros,
     subscriptionPeriod: tier === 'monthly' ? 'P1M' : 'P1Y',
-    regularPriceLabel: reg?.label,
-    regularPriceMicros: reg?.micros,
+    regularPriceLabel: Platform.OS === 'ios' && intro ? pkg.product.priceString : reg?.label,
+    regularPriceMicros:
+      Platform.OS === 'ios' && intro ? Math.round(pkg.product.price * 1_000_000) : reg?.micros,
   };
 }
 
@@ -307,6 +333,33 @@ export class RealIAPProvider implements IAPProvider {
     for (const pkg of current.availablePackages) {
       const mapped = mapPackageToProduct(pkg);
       if (mapped) products.push(mapped);
+    }
+    /* iOS: proefperiode/introprijs enkel tonen aan wie er recht op heeft
+       (WYSIWYG). Lukt de controle niet, dan tonen we ze niet. */
+    if (Platform.OS === 'ios' && products.some((p) => p.freeTrialDays || p.regularPriceLabel)) {
+      let elig: Record<string, { status?: number }> = {};
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        elig = await (Purchases as any).checkTrialOrIntroductoryPriceEligibility(
+          products.map((p) => p.productId),
+        );
+      } catch {
+        elig = {};
+      }
+      const ELIGIBLE = 2; /* INTRO_ELIGIBILITY_STATUS_ELIGIBLE */
+      return products.map((p) => {
+        if (elig[p.productId]?.status === ELIGIBLE) return p;
+        if (!p.freeTrialDays && !p.regularPriceLabel) return p;
+        const base = current.availablePackages.find((k) => k.product.identifier === p.productId)?.product;
+        return {
+          ...p,
+          freeTrialDays: undefined,
+          localizedPrice: base?.priceString ?? p.localizedPrice,
+          priceAmountMicros: base ? Math.round(base.price * 1_000_000) : p.priceAmountMicros,
+          regularPriceLabel: undefined,
+          regularPriceMicros: undefined,
+        };
+      });
     }
     return products;
   }

@@ -53,6 +53,11 @@ function getCurrentVersion(): string {
  *  startup. Idempotent — meerdere calls binnen één startup doen niets
  *  meer na de eerste. */
 export async function clearSessionIfBuildChanged(): Promise<void> {
+  /* Operator, 7 okt 2026 (account-audit): enkel nog in testbuilds. In een
+     store-build logde dit iedereen uit bij elke update — en RevenueCat was
+     op dat moment nog niet geconfigureerd, dus die bleef op de vorige
+     gebruiker staan. Normale apps bewaren de sessie over updates heen. */
+  if (!__DEV__) return;
   try {
     const current = getCurrentVersion();
     const last = await AsyncStorage.getItem(LAST_VERSION_KEY);

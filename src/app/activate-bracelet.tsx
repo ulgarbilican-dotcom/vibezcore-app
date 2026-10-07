@@ -19,6 +19,7 @@
      backer; geen alternatief koop-pad in app (bracelet via webshop, niet IAP)
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SESSIONS } from '@/data/audio-library-data';
 import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { clearSession, getToken, login, signup } from '@/services/auth';
@@ -203,8 +204,8 @@ export default function ActivateBraceletScreen() {
           justSignedUp = true;
         }
       } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        setErrMsg(`Signup failed: ${message}`);
+        if (__DEV__) console.warn('[activate] signup failed:', e);
+        setErrMsg("We couldn't create your account. Check your connection and try again.");
         setPhase('form');
         return;
       }
@@ -239,8 +240,8 @@ export default function ActivateBraceletScreen() {
       result = await activateBracelet(code);
     } catch (e) {
       if (justSignedUp) await clearSession().catch(() => {});
-      const message = e instanceof Error ? e.message : String(e);
-      setErrMsg(`Activation failed: ${message}`);
+      if (__DEV__) console.warn('[activate] activation failed:', e);
+      setErrMsg("We couldn't activate your bracelet. Check your connection and try again.");
       setPhase('form');
       return;
     }
@@ -334,7 +335,7 @@ export default function ActivateBraceletScreen() {
             <Text style={s.donePerkLine}>· Session history and progress tracking</Text>
             {isBundle && (
               <>
-                <Text style={s.donePerkLine}>· 144 audio sessions across 4 pillars</Text>
+                <Text style={s.donePerkLine}>· {SESSIONS.length} audio sessions across 4 pillars</Text>
                 <Text style={s.donePerkLine}>· 1 year of Audio Library access</Text>
               </>
             )}

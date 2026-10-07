@@ -182,11 +182,11 @@ export async function activateBracelet(
         message: 'Please sign in to activate your bracelet.',
       };
     }
-    const message = e instanceof Error ? e.message : String(e);
+    if (__DEV__) console.warn('[bracelet-activation] failed:', e);
     return {
       ok: false,
       code: 'network',
-      message: message || 'Could not reach the server. Please try again.',
+      message: 'Could not reach the server. Please try again.',
     };
   }
 }

@@ -42,10 +42,12 @@ import {
 } from '@/services/iap-recovery';
 import { restorePurchases } from '@/services/restore-purchases';
 import {
+  fetchWithTimeout,
   getLastLoginEmail,
   getToken,
   getUserEmail,
   login as authLogin,
+  markGuestPurchase,
   signup as authSignup,
   VZ_BACKEND_URL,
 } from '@/services/auth';
@@ -613,6 +615,17 @@ export default function SubscribeScreen() {
           customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
         setPurchaseWasTrial(activeEntitlement?.periodType === 'TRIAL');
 
+        /* Operator, 7 okt 2026 (account-audit): gekocht zonder account →
+           onthoud op welke anonieme RevenueCat-ID. Maakt deze koper later
+           een account, dan gaat de aankoop mee (auth.ts linkRevenueCatUser). */
+        try {
+          if (!(await getToken())) {
+            await markGuestPurchase(customerInfo?.originalAppUserId);
+          }
+        } catch {
+          /* swallow — mag de betaalflow nooit breken */
+        }
+
         /* Acknowledge bij store zodat de purchase niet na 3 dagen wordt
            gerefund. RevenueCat doet dit eigenlijk al automatisch, maar
            we behouden onze eigen acknowledge() voor symmetrie. */
@@ -669,8 +682,7 @@ export default function SubscribeScreen() {
       await queuePendingVerify(purchaseData);
       setErrMsg(
         "Your purchase went through, but we couldn't confirm it just now. " +
-          "We'll finish setting up your subscription automatically the next " +
-          'time you open the app. No action needed.',
+          'Open the app again in a moment — or tap Restore Purchases in Profile.',
       );
       setErrDebug(`entitlement · queued · audio_pro inactive after purchase`);
       setPhase('error');
@@ -682,8 +694,7 @@ export default function SubscribeScreen() {
       await queuePendingVerify(purchaseData);
       setErrMsg(
         "Your purchase went through, but we couldn't confirm it just now. " +
-          "We'll finish setting up your subscription automatically the next " +
-          'time you open the app. No action needed.',
+          'Open the app again in a moment — or tap Restore Purchases in Profile.',
       );
       setErrDebug(`entitlement · queued · ${e?.message ?? String(e)}`);
       setPhase('error');
@@ -786,7 +797,7 @@ export default function SubscribeScreen() {
       try {
         const token = await getToken();
         if (token) {
-          const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+          const res = await fetchWithTimeout(`${VZ_BACKEND_URL}/api/subscription-status`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {
@@ -821,16 +832,10 @@ export default function SubscribeScreen() {
      duidelijke uitweg voor users die hun wachtwoord kwijt zijn. Operator
      kan op vibezcore.com/reset-password een Supabase password-reset email
      triggeren via een simpel formulier. */
+  /* Operator, 7 okt 2026 (account-audit): dezelfde in-app flow als
+     Profile — geen externe pagina en geen e-mailadres in een URL. */
   const onForgotPassword = () => {
-    const target = email.trim()
-      ? `${VZ_BACKEND_URL}/reset-password?email=${encodeURIComponent(email.trim())}`
-      : `${VZ_BACKEND_URL}/reset-password`;
-    void Linking.openURL(target).catch(() => {
-      void showVibezAlert({
-        title: 'Reset password',
-        message: `Open this link in your browser to reset your password:\n\n${target}`,
-      });
-    });
+    router.navigate('/forgot-password' as never);
   };
 
   /* Iter v142: social sign-in beschikbaarheid. Google = synchroon check op
@@ -859,7 +864,7 @@ export default function SubscribeScreen() {
         return;
       }
       if (__DEV__) console.warn('[subscribe] Google sign-in failed:', r.reason, r.error);
-      setErrMsg(friendlyError(r.error));
+      setErrMsg(r.error);
       /* Iter v153 (2026-06-25): raw reason+error zichtbaar voor diagnose.
          Operator vroeg om de raw error te kunnen lezen — friendlyError()
          zegt alleen 'Something went wrong' en verbergt de echte oorzaak
@@ -883,7 +888,7 @@ export default function SubscribeScreen() {
     try {
       const token = await getToken();
       if (token) {
-        const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+        const res = await fetchWithTimeout(`${VZ_BACKEND_URL}/api/subscription-status`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -934,7 +939,7 @@ export default function SubscribeScreen() {
     try {
       const token = await getToken();
       if (token) {
-        const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+        const res = await fetchWithTimeout(`${VZ_BACKEND_URL}/api/subscription-status`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -960,7 +965,8 @@ export default function SubscribeScreen() {
   /* ── Render ─────────────────────────────────────────────────────── */
 
   const tierLabel = tierForCompute === 'yearly' ? 'Yearly' : 'Monthly';
-  const priceLabel = product?.localizedPrice ?? (tierForCompute === 'yearly' ? '€69,99' : '€9,99');
+  /* WYSIWYG (operator): enkel de store-prijs, nooit een vaste euro-waarde. */
+  const priceLabel = product?.localizedPrice ?? '—';
   const periodLabel = tierForCompute === 'yearly' ? '/year' : '/month';
   /* De trialregel voor het besteloverzicht. Eén bron (het store-product),
      dus hij verschijnt alleen wanneer de trial echt geldt voor deze klant. */
@@ -1236,7 +1242,7 @@ export default function SubscribeScreen() {
               accessibilityLabel="Create an account to sync this subscription across your devices"
             >
               <Text style={s.linkText}>
-                Save your subscription — create an account
+                Create your free account to stream the Audio Library and use Premium on all your devices
               </Text>
             </AnimatedPressable>
           )}
@@ -1271,7 +1277,7 @@ export default function SubscribeScreen() {
           <Text style={s.busyTitle}>Something went wrong</Text>
           <Text style={s.busySub}>{errMsg ?? 'Please try again.'}</Text>
 
-          {errDebug && (
+          {__DEV__ && errDebug && (
             <Text selectable style={s.debugInfo}>
               {errDebug}
             </Text>
@@ -1558,7 +1564,7 @@ export default function SubscribeScreen() {
         {/* Iter v153: raw debug-info bij signin/Google-failures zodat
             operator/support de echte oorzaak kan zien (SHA-1 mismatch,
             OAuth config, etc.) ipv alleen 'Something went wrong'. */}
-        {errDebug && (
+        {__DEV__ && errDebug && (
           <Text selectable style={s.debugInfo}>
             {errDebug}
           </Text>

@@ -53,6 +53,32 @@ const GOOGLE_WEB_CLIENT_ID: string | undefined =
     'googleWebClientId'
   ] as string | undefined;
 
+/* iOS-client-ID (Google Cloud → OAuth client type iOS). Zonder deze
+   waarde én de bijhorende `iosUrlScheme` in de plugin-config werkt Google
+   op iOS niet — dan tonen we de knop daar niet (operator, 7 okt 2026,
+   account-audit). Apple Sign-In blijft op iOS altijd beschikbaar. */
+const GOOGLE_IOS_CLIENT_ID: string | undefined =
+  (Constants.expoConfig?.extra as Record<string, unknown> | undefined)?.[
+    'googleIosClientId'
+  ] as string | undefined;
+
+/* Operator, 7 okt 2026 (account-audit): de Google-SDK geeft technische
+   foutcodes ("DEVELOPER_ERROR: Follow troubleshooting instructions…").
+   Die zijn voor ons, niet voor de gebruiker. Eén gewone zin per geval;
+   de echte code blijft in de dev-log. */
+const GOOGLE_UNAVAILABLE_MSG =
+  "Google sign-in isn't available right now. Use your email and password instead.";
+function friendlyGoogleError(code: unknown, message: string): string {
+  const c = String(code ?? '');
+  const m = message || '';
+  if (/network|timeout|7|NETWORK_ERROR/i.test(c) || /network|timed out|offline/i.test(m)) {
+    return 'No internet connection. Check your connection and try again.';
+  }
+  if (/DEVELOPER_ERROR|10/.test(c) || /DEVELOPER_ERROR/.test(m)) return GOOGLE_UNAVAILABLE_MSG;
+  if (/IN_PROGRESS/.test(c)) return 'Google sign-in is already open.';
+  return GOOGLE_UNAVAILABLE_MSG;
+}
+
 let googleConfigured = false;
 
 async function ensureGoogleConfigured(): Promise<boolean> {
@@ -69,6 +95,7 @@ async function ensureGoogleConfigured(): Promise<boolean> {
     const mod = await import('@react-native-google-signin/google-signin');
     mod.GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID,
+      ...(GOOGLE_IOS_CLIENT_ID ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
       offlineAccess: false,
     });
     googleConfigured = true;
@@ -115,6 +142,11 @@ export async function signInWithGoogle(): Promise<SocialAuthResult> {
        Defensief: probeer beide. */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const r: any = response;
+    /* v13+: wegtikken van de accountkiezer geeft `{type:'cancelled'}`
+       terug i.p.v. een fout te gooien — geen foutmelding tonen. */
+    if (r?.type === 'cancelled') {
+      return { ok: false, provider: 'google', reason: 'cancelled', error: 'Sign in cancelled.' };
+    }
     const idToken: string | undefined =
       r?.data?.idToken ?? r?.idToken ?? r?.user?.idToken;
     if (!idToken) {
@@ -163,14 +195,19 @@ export async function signInWithGoogle(): Promise<SocialAuthResult> {
           error: 'Google Play Services is not available on this device.',
         };
       }
+      if (statusCodes.IN_PROGRESS && e?.code === statusCodes.IN_PROGRESS) {
+        return { ok: false, provider: 'google', reason: 'cancelled', error: 'Sign in cancelled.' };
+      }
     } catch {
       /* Module-load faalde — val terug op generic error */
     }
+    if (__DEV__) console.warn('[social-auth] Google sign-in error:', e?.code, e?.message);
+    const raw = e?.message ?? String(e);
     return {
       ok: false,
       provider: 'google',
-      reason: 'unknown',
-      error: e?.message ?? String(e),
+      reason: /DEVELOPER_ERROR/.test(raw) || String(e?.code) === '10' ? 'config' : 'unknown',
+      error: friendlyGoogleError(e?.code, raw),
     };
   }
 }
@@ -238,11 +275,12 @@ export async function signInWithApple(): Promise<SocialAuthResult> {
         error: 'Sign in cancelled.',
       };
     }
+    if (__DEV__) console.warn('[social-auth] Apple sign-in error:', e?.code, e?.message);
     return {
       ok: false,
       provider: 'apple',
       reason: 'unknown',
-      error: e?.message ?? String(e),
+      error: "Apple sign-in didn't work. Try again, or use your email and password.",
     };
   }
 }
@@ -250,7 +288,9 @@ export async function signInWithApple(): Promise<SocialAuthResult> {
 /** Is Google sign-in beschikbaar (web client ID gezet + SDK importeerbaar)?
  *  Voor UI-render-beslissing zodat we de knop niet tonen als 't toch faalt. */
 export function isGoogleSignInAvailable(): boolean {
-  return Boolean(GOOGLE_WEB_CLIENT_ID);
+  if (!GOOGLE_WEB_CLIENT_ID) return false;
+  if (Platform.OS === 'ios') return Boolean(GOOGLE_IOS_CLIENT_ID);
+  return true;
 }
 
 /** Is Apple sign-in beschikbaar (iOS + system support)? Async omdat

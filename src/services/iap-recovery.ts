@@ -128,41 +128,39 @@ export async function drainPendingVerifies(): Promise<number> {
   return activated;
 }
 
-/** Volledige startup-recovery: drain de queue + silent restorePurchases.
- *  Wordt eenmalig per app-launch geroepen (zie app/_layout.tsx). */
+/** Startup-recovery. Operator, 7 okt 2026 (account-audit):
+ *  - GEEN stille restorePurchases meer bij elke start. Dat was precies het
+ *    pad dat een abonnement van een andere gebruiker op hetzelfde Google-/
+ *    Apple-account naar dit VIBEZCORE-account trok (zelfde lek als v237c),
+ *    en op iOS kan het een Apple ID-venster openen bij het opstarten.
+ *    Herstellen gebeurt enkel nog op een tik op "Restore Purchases".
+ *  - Een aankoop die tijdens de bevestiging bleef hangen, wordt niet meer
+ *    naar /api/iap-verify gestuurd (die weigert RevenueCat-ID's met 400,
+ *    waardoor de wachtrij stil verdween). RevenueCat heeft de aankoop zelf
+ *    al gevalideerd: syncPurchases + customerInfo volstaan. Werkt ook voor
+ *    een gast zonder account. */
 export async function recoverOnStartup(): Promise<void> {
-  /* Geen recovery zonder ingelogde user — anders kunnen we de verify
-     niet authenticated doen. */
-  const token = await getToken();
-  if (!token) return;
-
-  try {
-    await drainPendingVerifies();
-  } catch (e) {
-    if (__DEV__) console.warn('[iap-recovery] drainPendingVerifies:', e);
-  }
-
-  /* Silent restorePurchases — vraag Apple/Google welke active subs deze
-     account heeft en sync ze met onze backend. Dekt het scenario waar
-     user installeert app op nieuw toestel of na fresh install. */
+  const queue = await loadQueue();
+  if (queue.length === 0) return;
   try {
     const iap = getIAP();
     await iap.init();
-    const purchases = await iap.restorePurchases();
-    for (const p of purchases) {
-      const outcome = await verifyWithRetry(p);
-      if (!outcome.ok && outcome.retriable) {
-        await queuePendingVerify(p);
-      } else if (outcome.ok && outcome.active) {
-        try {
-          await getIAP().acknowledge(p.transactionId);
-        } catch {
-          /* non-fatal */
-        }
-      }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Purchases = require('react-native-purchases').default;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ENTITLEMENT_AUDIO_PRO } = require('./iap-real');
+    if (typeof Purchases?.syncPurchases === 'function') {
+      await Purchases.syncPurchases();
+    }
+    const info = await Purchases.getCustomerInfo();
+    if (info?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO]) {
+      await AsyncStorage.removeItem(PENDING_KEY);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { refreshSubscription } = require('@/hooks/useSubscription');
+      void refreshSubscription();
     }
   } catch (e) {
-    if (__DEV__) console.warn('[iap-recovery] restorePurchases:', e);
+    if (__DEV__) console.warn('[iap-recovery] recoverOnStartup:', e);
   }
 }
 

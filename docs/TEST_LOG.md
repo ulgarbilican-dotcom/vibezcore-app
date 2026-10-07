@@ -68,6 +68,26 @@
 | 29 | Breath-intro eyebrow GUIDED BREATHWORK | A16 | ⏳ |
 | 30 | Paywall na vroegtijdig End session (voorproef) zonder glas | A16 | ❌ eerste fix toonde oud rust-scherm → teruggedraaid; ✅ pauzeren i.p.v. stoppen — operator: "goed" |
 
+### Account-flow, inloggen, Premium (7 okt 2026, nacht — code-audit + fixes)
+Gevonden met een volledige code-audit (operator: "kan je de volledige flow
+nakijken voor account login, create premium, create account, sign in").
+Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
+| # | Test | Toestel | Resultaat |
+|---|------|---------|-----------|
+| 31 | Google Sign-In op testbuild | A16 | ❌ `DEVELOPER_ERROR` rauw in rood. Oorzaak: debug-SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25` niet in Google Cloud (operator registreert). Melding nu gewone zin. ⏳ na registratie |
+| 32 | Gast koopt Premium → content open | A16 | ⏳ was ❌ (bleef Free); nu RevenueCat-status ook voor gasten |
+| 33 | Gast koopt → maakt account → Premium op account (+ 2e toestel) | A16 | ⏳ was ❌ (geblokkeerd door v237c); nu gast-aankoop-marker |
+| 34 | Gast-Premium opent Audio Library-sessie | A16 | ⏳ verwacht "One more step — Create account" |
+| 35 | App-update logt niet meer uit | A16 | ⏳ (versie-check enkel nog in testbuilds) |
+| 36 | Geen stille "restore" bij app-start | A16 | ⏳ |
+| 37 | Account aanmaken in Profile: < 8 tekens geweigerd; "check your inbox" niet in rood; bestaand e-mailadres → "Sign in" | A16 | ⏳ |
+| 38 | Welcome "Already a member? Sign in" opent formulier meteen | A16 | ⏳ |
+| 39 | Google-account: geen "Change password"-rij | A16 | ⏳ |
+| 40 | Delete account → welkomstscherm, audio + bracelet gestopt | A16 | ⏳ |
+| 41 | E-mailbevestiging / wachtwoordreset via link → daarna kopen staat op account | A16 | ⏳ |
+| 42 | Paywall zonder storeverbinding: geen vaste €-prijzen of "7-day" | A16 | ⏳ |
+| 43 | iPhone: proefperiode/introprijs + "App Store"-teksten; Google-knop verborgen tot iOS-client er is | iPhone | ⏳ iOS-build nodig |
+
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |
 |---|---|---|

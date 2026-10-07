@@ -39,6 +39,7 @@ import { BookAudio, ChevronRight, Wind, type LucideIcon } from 'lucide-react-nat
 import BraceletIcon from '@/components/BraceletIcon';
 import Svg, { Polygon } from 'react-native-svg';
 import { router } from 'expo-router';
+import { requestScrollTo } from '@/utils/scroll-intent';
 import { useEffect, useState } from 'react';
 import { getSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
@@ -398,7 +399,11 @@ export default function WelcomeScreen() {
           </AnimatedPressable>
           <AnimatedPressable
             accessibilityRole="link"
-            onPress={() => router.navigate('/account')}
+            onPress={() => {
+              /* Formulier meteen open (operator, 7 okt 2026, account-audit). */
+              requestScrollTo('account-top');
+              router.navigate('/account');
+            }}
             onPressIn={onSignInPressIn}
             onPressOut={onSignInPressOut}
             hitSlop={10}

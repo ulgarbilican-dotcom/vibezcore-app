@@ -24,7 +24,8 @@ import { Brand, BrandFonts } from '@/constants/theme';
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
    actief" — nooit voor spinners of CTA-knoppen. CTA-regel v4.4 op een
    donkere achtergrond: witte knop-bg + donkere tekst. */
-import { clearSession, persistSession } from '@/services/auth';
+import { clearSession, persistSession, relinkAfterSessionChange } from '@/services/auth';
+import { refreshSubscription } from '@/hooks/useSubscription';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -161,6 +162,10 @@ export default function AuthCallback() {
            gebruikt. Zonder dit kon een snelle interactie na landing
            nog naar de oude bucket schrijven. */
         await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
+        /* Operator, 7 okt 2026 (account-audit): RevenueCat terug aan dit
+           account koppelen en de abonnementsstatus verversen. */
+        await relinkAfterSessionChange();
+        void refreshSubscription();
 
         /* Twee redenen om naar /reset-password te routen:
            1. needs_password_setup-flag (gezet door gumroad-webhook bij

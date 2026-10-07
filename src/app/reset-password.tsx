@@ -28,7 +28,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
    actief" — nooit voor spinners/links/CTA. AudioAccent is de
    link-kleur op donker; CTA-regel v4.4: witte knop-bg + donkere tekst. */
 import { refreshSubscription } from '@/hooks/useSubscription';
-import { clearSession, getToken, persistSession } from '@/services/auth';
+import { clearSession, getToken, persistSession, relinkAfterSessionChange } from '@/services/auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -342,6 +342,9 @@ export default function ResetPassword() {
          Iter 9dq v55 (2026-06-03, audit C5+C6): óók bucket-switch
          awaiten zodat per-user data (history, favorites, positions)
          vóór landing op de juiste bucket-key staan. */
+      /* Operator, 7 okt 2026 (account-audit): RevenueCat opnieuw aan dit
+         account koppelen — clearSession() hierboven logde hem uit. */
+      await relinkAfterSessionChange();
       await refreshSubscription();
       await Promise.all([refreshBraceletBucket(), refreshAudioBucket()]);
       setPhase('done');

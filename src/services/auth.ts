@@ -50,12 +50,68 @@ export const LAST_EMAIL_KEY = 'vz_last_login_email';
    volgende purchase/entitlement-event bij de juiste app_user_id aankomt
    (geen $RCAnonymousID-lek naar webhook). */
 export const PENDING_RC_LINK_KEY = 'vz_pending_rc_link';
+/* Operator, 7 okt 2026 (account-audit): een gast koopt Premium zonder
+   account (Apple 5.1.1v) — die aankoop leeft op de anonieme RevenueCat-ID
+   van DIT toestel. Hier bewaren we die anonieme ID op het moment van de
+   aankoop. Maakt de koper daarna een account, dan mag `linkRevenueCatUser`
+   die ene ID wél overzetten naar het nieuwe account; elke ándere anonieme
+   ID met een abonnement (geërfd van een vorige gebruiker) blijft
+   geblokkeerd (v237c). */
+export const GUEST_PURCHASE_RC_ID_KEY = 'vz_guest_purchase_rc_id';
+/* Hoe de huidige sessie is ingelogd — 'email' | 'google' | 'apple'.
+   Wachtwoord wijzigen heeft enkel zin bij 'email'. */
+export const AUTH_PROVIDER_KEY = 'vz_auth_provider';
+export type AuthProvider = 'email' | 'google' | 'apple';
 
 const REFRESH_MARGIN_SEC = 60;
 
+/** Markeer de anonieme RevenueCat-ID waarop deze gast net kocht. */
+export async function markGuestPurchase(anonRcId: string | null | undefined): Promise<void> {
+  if (!anonRcId || !anonRcId.startsWith('$RCAnonymousID')) return;
+  try {
+    await AsyncStorage.setItem(GUEST_PURCHASE_RC_ID_KEY, anonRcId);
+  } catch {
+    /* swallow */
+  }
+}
+
+export async function getAuthProvider(): Promise<AuthProvider | null> {
+  try {
+    const v = await AsyncStorage.getItem(AUTH_PROVIDER_KEY);
+    return v === 'email' || v === 'google' || v === 'apple' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setAuthProvider(p: AuthProvider): Promise<void> {
+  try {
+    await AsyncStorage.setItem(AUTH_PROVIDER_KEY, p);
+  } catch {
+    /* swallow */
+  }
+}
+
+/* Operator, 7 okt 2026 (account-audit): elke backend-call met een vaste
+   time-out, zodat een spinner nooit blijft hangen als de server niet
+   antwoordt. Zelfde 10 s als de auth-proxy hieronder. */
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  ms = 10_000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 export type AuthResult =
   | { ok: true; token: string; email?: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; needsConfirm?: boolean };
 
 type SessionPayload = {
   access_token?: string;
@@ -115,7 +171,16 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
       const isCurrentlyAnonymous =
         !currentId || currentId.startsWith('$RCAnonymousID');
       const isSameUser = currentId === userId;
-      if (hasActiveEntitlement && isCurrentlyAnonymous && !isSameUser) {
+      /* Operator, 7 okt 2026: de gast die op DIT toestel zelf kocht en nu
+         een account maakt of inlogt — die aankoop hoort bij hem. */
+      let isOwnGuestPurchase = false;
+      try {
+        const guestId = await AsyncStorage.getItem(GUEST_PURCHASE_RC_ID_KEY);
+        isOwnGuestPurchase = !!guestId && guestId === currentId;
+      } catch {
+        /* swallow */
+      }
+      if (hasActiveEntitlement && isCurrentlyAnonymous && !isSameUser && !isOwnGuestPurchase) {
         if (__DEV__) {
           console.warn(
             '[auth] v237c BLOCKED linkRevenueCatUser: anonymous RC customer has active entitlement — skip logIn to prevent TRANSFER leak. User can tap "Restore purchases" if this is their sub.',
@@ -132,9 +197,10 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
     }
 
     await Purchases.logIn(userId);
-    /* Iter v230 (2026-07-08): success → clear pending marker. */
+    /* Iter v230 (2026-07-08): success → clear pending marker. De gast-
+       aankoop is nu aan het account gekoppeld: marker ook weg. */
     try {
-      await AsyncStorage.removeItem(PENDING_RC_LINK_KEY);
+      await AsyncStorage.multiRemove([PENDING_RC_LINK_KEY, GUEST_PURCHASE_RC_ID_KEY]);
     } catch {
       /* swallow */
     }
@@ -154,6 +220,22 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
     } catch {
       /* swallow */
     }
+  }
+}
+
+/** Operator, 7 okt 2026 (account-audit): na een sessie die buiten login()
+ *  om ontstaat (e-mailbevestiging via deep link, wachtwoordreset) de
+ *  RevenueCat-koppeling opnieuw leggen. `clearSession()` daar logt
+ *  RevenueCat uit; zonder deze stap kwam een aankoop in die sessie op een
+ *  anonieme ID terecht. Zulke sessies zijn altijd e-mailaccounts. */
+export async function relinkAfterSessionChange(): Promise<void> {
+  try {
+    const token = await getToken();
+    if (!token) return;
+    await setAuthProvider('email');
+    await linkRevenueCatUser(getAuthUserIdFromToken(token));
+  } catch {
+    /* swallow — mag de flow nooit blokkeren */
   }
 }
 
@@ -335,6 +417,7 @@ export async function clearSession(): Promise<void> {
       REFRESH_KEY,
       EXPIRES_KEY,
       EMAIL_KEY,
+      AUTH_PROVIDER_KEY,
     ]);
   } catch {
     /* non-fatal */
@@ -533,6 +616,7 @@ export async function login(
     }
 
     await persistSession(data);
+    await setAuthProvider('email');
     /* Iter v166 (2026-06-27): linkRevenueCatUser AWAITED zodat de RC
        customer GELINKT IS vóór een eventuele directe purchase call. In
        v165 was dit fire-and-forget → race condition: subscribe.tsx
@@ -572,6 +656,7 @@ export async function signup(
 
     if (data.access_token) {
       await persistSession(data);
+      await setAuthProvider('email');
       /* Iter v227 (2026-07-07, audit A1): AWAIT linkRevenueCatUser
          (identiek aan login-flow v166). Voorheen fire-and-forget → race
          waar direct-na-signup subscribe.tsx Purchases.purchasePackage
@@ -591,7 +676,8 @@ export async function signup(
 
     return {
       ok: false,
-      error: 'Account created — please confirm your email, then sign in.',
+      needsConfirm: true,
+      error: 'Account created. Check your inbox to confirm your email, then sign in.',
     };
   } catch {
     return { ok: false, error: 'Network error — check your connection' };
@@ -628,6 +714,7 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
       return { ok: false, error: msg };
     }
     await persistSession(data);
+    await setAuthProvider('google');
     /* Iter v168 (2026-06-28): AWAIT zodat RC SDK gekoppeld is vóór
        useSubscription.fetchStatus() draait. Voorheen fire-and-forget
        (`void`) → race condition: fetchStatus liep met anonymous RC
@@ -668,7 +755,7 @@ export async function deleteAccount(): Promise<{ ok: true } | { ok: false; error
     if (!token) {
       return { ok: false, error: 'You are not signed in.' };
     }
-    const res = await fetch(VZ_BACKEND_URL + '/api/delete-account', {
+    const res = await fetchWithTimeout(VZ_BACKEND_URL + '/api/delete-account', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -719,6 +806,7 @@ export async function loginWithApple(
       return { ok: false, error: msg };
     }
     await persistSession(data);
+    await setAuthProvider('apple');
     /* Iter v168 (2026-06-28): AWAIT — zelfde fix als loginWithGoogle.
        Race-condition met fetchStatus voorkomen. */
     await linkRevenueCatUser(

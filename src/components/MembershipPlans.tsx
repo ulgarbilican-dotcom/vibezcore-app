@@ -105,20 +105,23 @@ export default function MembershipPlans({
   const monthly = getProduct('monthly');
   const yearly = getProduct('yearly');
 
-  const monthlyPrice = monthly?.localizedPrice ?? '€9,99';
-  const yearlyPrice = yearly?.localizedPrice ?? '€69,99';
+  /* Operator, 7 okt 2026 (account-audit, WYSIWYG): enkel de prijs die de
+     store voor DEZE klant geeft — geen vaste euro-bedragen of verzonnen
+     besparing/proefperiode zolang de store nog niet geantwoord heeft. */
+  const monthlyPrice = monthly?.localizedPrice ?? '—';
+  const yearlyPrice = yearly?.localizedPrice ?? '—';
   const yearlyPerMonth = yearly?.priceAmountMicros
     ? withSymbol(yearly.localizedPrice, yearly.currency, yearly.priceAmountMicros / 12 / 1_000_000)
-    : '€5,83';
+    : '—';
   const savePercent = (() => {
-    const m = monthly?.priceAmountMicros ? monthly.priceAmountMicros / 1_000_000 : 9.99;
-    const y = yearly?.priceAmountMicros ? yearly.priceAmountMicros / 12 / 1_000_000 : 69.99 / 12;
+    if (!monthly?.priceAmountMicros || !yearly?.priceAmountMicros) return null;
+    const m = monthly.priceAmountMicros / 1_000_000;
+    const y = yearly.priceAmountMicros / 12 / 1_000_000;
     const p = Math.round((1 - y / m) * 100);
     return m > 0 && p > 0 ? p : null;
   })();
-  /* Proefperiode enkel als de store hem voor DEZE klant meldt; vóór de
-     store geantwoord heeft geldt de geconfigureerde 7 dagen. */
-  const trialDays = yearly ? yearly.freeTrialDays ?? 0 : 7;
+  /* Proefperiode enkel als de store hem voor DEZE klant meldt. */
+  const trialDays = yearly?.freeTrialDays ?? 0;
   const hasTrial = trialDays > 0;
 
   /* Introprijs (eerste jaar): wat het daarna kost — Apple wil dat vóór de aankoop zien. */

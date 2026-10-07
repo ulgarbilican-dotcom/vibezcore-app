@@ -885,7 +885,44 @@ export default function PlayerScreen() {
       {playerState.errorMessage && !playerState.previewBlocked ? (
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
-            {playerState.errorMessage.includes('LOGIN_REQUIRED') ||
+            {/* Operator, 7 okt 2026 (account-audit): gekocht zonder account
+               (Apple 5.1.1v) → Premium is actief, maar de server streamt de
+               bibliotheek enkel naar een account. Geen verkooppraat: één
+               stap, en de aankoop gaat mee (auth.ts linkRevenueCatUser). */}
+            {playerState.errorMessage.includes('LOGIN_REQUIRED') && displayIsPro ? (
+              <>
+                <Text style={s.modalTitle}>One more step</Text>
+                <Text style={s.modalBody}>
+                  Create your free account to stream the Audio Library. Your Premium comes with you.
+                </Text>
+                <View style={s.modalBtns}>
+                  <AnimatedPressable
+                    style={[s.modalPrimary, pressStyleLoginPrimary]}
+                    onPress={() => {
+                      requestScrollTo('account-signup');
+                      router.back();
+                      router.navigate('/account');
+                    }}
+                    onPressIn={onPressInLoginPrimary}
+                    onPressOut={onPressOutLoginPrimary}
+                  >
+                    <Text style={s.modalPrimaryText}>Create account</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={[s.modalSecondary, pressStyleLoginSecondary]}
+                    onPress={() => {
+                      requestScrollTo('account-top');
+                      router.back();
+                      router.navigate('/account');
+                    }}
+                    onPressIn={onPressInLoginSecondary}
+                    onPressOut={onPressOutLoginSecondary}
+                  >
+                    <Text style={s.modalSecondaryText}>Sign in</Text>
+                  </AnimatedPressable>
+                </View>
+              </>
+            ) : playerState.errorMessage.includes('LOGIN_REQUIRED') ||
             playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED') ? (
               <>
                 <Text style={s.modalTitle}>Continue listening?</Text>

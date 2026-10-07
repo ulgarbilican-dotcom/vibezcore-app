@@ -290,8 +290,18 @@ async function fetchStatus(): Promise<void> {
     const token = await getToken();
     if (myGen !== fetchGeneration) return;
     if (!token) {
-      notifyAll({ active: false });
+      /* Operator, 7 okt 2026 (account-audit, blokkerend): een gast mag
+         zonder account kopen (Apple 5.1.1v) — die aankoop staat op de
+         anonieme RevenueCat-klant van dit toestel. Zonder deze tak zag de
+         koper "Welcome to Premium" en bleef alles op slot. Enkel
+         RevenueCat (store-gevalideerd), nooit de lokale cache: een
+         uitgelogde gebruiker krijgt na `Purchases.logOut()` een verse
+         anonieme klant zonder abonnement, dus het lek van 9aq komt niet
+         terug. */
+      const guestRc = await tryRevenueCatStatus();
+      if (myGen !== fetchGeneration) return;
       clearPersistedCache();
+      notifyAll(guestRc?.active ? guestRc : { active: false });
       return;
     }
 

@@ -86,6 +86,7 @@ import {
     ActivityIndicator,
     Image,
     Linking,
+    Platform,
     Pressable,
     Share,
     StyleSheet,
@@ -162,12 +163,15 @@ import Svg, { Path as SvgPath } from 'react-native-svg';
 import {
     clearSession,
     deleteAccount,
+    fetchWithTimeout,
+    getAuthProvider,
     getLastLoginEmail,
     getToken,
     getUserEmail,
     login,
     signup,
     VZ_BACKEND_URL,
+    type AuthProvider,
 } from '../../services/auth';
 import {
     isAppleSignInAvailable,
@@ -467,7 +471,7 @@ function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; rest
         <Row
           icon={Repeat}
           title="Switch to Yearly"
-          subtitle="Change your plan in the Play Store"
+          subtitle={`Change your plan in the ${Platform.OS === 'ios' ? 'App Store' : 'Play Store'}`}
           onPress={() => openExternal(storeSubscriptionsUrl('yearly'))}
         />
       ) : null}
@@ -716,16 +720,17 @@ export default function AccountScreen() {
       });
     };
     /* Cold-start: intent kan al gezet zijn voordat deze listener leeft. */
-    if (consumeScrollIntent() === 'account-top') {
+    /* Operator, 7 okt 2026 (account-audit): 'account-signup' opent het
+       formulier meteen in "Create account" — bv. een gast die Premium kocht
+       en nu de Audio Library wil streamen. */
+    const open = (target: string | null) => {
+      if (target !== 'account-top' && target !== 'account-signup') return;
+      if (target === 'account-signup') setMode('signup');
       setAuthOpen(true);
       scrollToTop();
-    }
-    const unsub = subscribeScrollIntent((target) => {
-      if (target === 'account-top') {
-        setAuthOpen(true);
-        scrollToTop();
-      }
-    });
+    };
+    open(consumeScrollIntent());
+    const unsub = subscribeScrollIntent(open);
     return unsub;
   }, []);
 
@@ -767,7 +772,7 @@ export default function AccountScreen() {
     try {
       const token = await getToken();
       if (token) {
-        const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+        const res = await fetchWithTimeout(`${VZ_BACKEND_URL}/api/subscription-status`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -794,7 +799,9 @@ export default function AccountScreen() {
   };
 
   const onGoogleSignIn = async () => {
+    if (busy) return;
     setMsg(null);
+    setMsgIsInfo(false);
     setBusy(true);
     try {
       const r = await signInWithGoogle();
@@ -804,6 +811,7 @@ export default function AccountScreen() {
         return;
       }
       setEmail(r.email || 'Signed in');
+      setProvider(await getAuthProvider());
       setPwInput('');
       /* Iter v229 (2026-07-08): expliciet cache-clear vóór refresh om
          free-environment flash te voorkomen bij login met bestaand PRO. */
@@ -836,7 +844,9 @@ export default function AccountScreen() {
   };
 
   const onAppleSignIn = async () => {
+    if (busy) return;
     setMsg(null);
+    setMsgIsInfo(false);
     setBusy(true);
     try {
       const r = await signInWithApple();
@@ -846,6 +856,7 @@ export default function AccountScreen() {
         return;
       }
       setEmail(r.email || 'Signed in');
+      setProvider(await getAuthProvider());
       setPwInput('');
       /* Iter v229 (2026-07-08): expliciet cache-clear vóór refresh om
          free-environment flash te voorkomen bij login met bestaand PRO. */
@@ -879,10 +890,15 @@ export default function AccountScreen() {
     const result = await restorePurchases();
     setRestoring(false);
     if (result.ok) {
+      if (result.restoredCount > 0) void refreshSubscription();
       if (result.restoredCount > 0) {
         void showVibezAlert({
           title: 'Subscription restored',
-          message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`,
+          /* Operator, 7 okt 2026 (account-audit): een gast heeft geen
+             account — de aankoop staat dan op dit toestel. */
+          message: email
+            ? `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`
+            : 'Premium is active on this device. Create a free account to stream the Audio Library and use Premium on all your devices.',
         });
       } else if (result.accountMismatch) {
         /* Iter v168 (2026-06-28): vermijd tegenstrijdige UI 'Audio PRO Monthly'
@@ -906,6 +922,12 @@ export default function AccountScreen() {
   };
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  /* Operator, 7 okt 2026: een melding die géén fout is ("Account created —
+     check your inbox") hoort niet in rood. */
+  const [msgIsInfo, setMsgIsInfo] = useState(false);
+  /* Wachtwoord wijzigen enkel voor e-mailaccounts; Google/Apple hebben er
+     geen. null = onbekend (oudere sessie) → rij blijft zichtbaar. */
+  const [provider, setProvider] = useState<AuthProvider | null>(null);
 
   /* Iter 9dq v150 (operator 2026-06-17): gumroadSubscriberId weg —
      IAP-only, geen cancel-button meer in-app (Apple/Google handelen
@@ -918,6 +940,7 @@ export default function AccountScreen() {
       const t = await getToken();
       if (t) {
         setEmail((await getUserEmail()) || 'Signed in');
+        setProvider(await getAuthProvider());
       } else {
         /* Niet ingelogd → pre-fill het email-veld met de laatst-gebruikte
            login-email als die bekend is. Overleeft explicit sign-out
@@ -952,12 +975,21 @@ export default function AccountScreen() {
       setMsg(`Did you mean ${v.suggestion}? Check spelling and try again.`);
       return;
     }
+    /* Operator, 7 okt 2026 (account-audit): zelfde regel als Subscribe. */
+    if (mode === 'signup' && pwInput.length < 8) {
+      setMsgIsInfo(false);
+      setMsg('Use at least 8 characters for your password.');
+      return;
+    }
+    if (busy) return;
     setBusy(true);
+    setMsgIsInfo(false);
     try {
       const fn = mode === 'login' ? login : signup;
       const r = await fn(emailInput.trim(), pwInput);
       if (r.ok) {
         setEmail(r.email || 'Signed in');
+        setProvider('email');
         setPwInput('');
         /* Iter v177 (2026-07-02): AWAIT refreshSubscription vóór verdere state.
            Vermijdt race conditie waarbij user snel doorklikt naar Subscribe of
@@ -1035,7 +1067,7 @@ export default function AccountScreen() {
         try {
           const token = await getToken();
           if (token) {
-            const res = await fetch(`${VZ_BACKEND_URL}/api/subscription-status`, {
+            const res = await fetchWithTimeout(`${VZ_BACKEND_URL}/api/subscription-status`, {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -1070,12 +1102,47 @@ export default function AccountScreen() {
              juist. */
           setTimeout(() => router.replace('/breath' as never), 50);
         }
+      } else if (r.needsConfirm) {
+        /* Account bestaat, e-mail nog te bevestigen: geen fout. Het
+           formulier gaat op "Sign in" zodat de volgende tik klopt. */
+        setMode('login');
+        setPwInput('');
+        setMsgIsInfo(true);
+        setMsg(r.error);
+      } else if (
+        mode === 'signup' &&
+        /already|registered|exists/i.test(r.error)
+      ) {
+        setMode('login');
+        setPwInput('');
+        setMsgIsInfo(true);
+        setMsg('You already have an account with this email. Sign in with your password.');
       } else {
         setMsg(r.error);
       }
     } finally {
       setBusy(false);
     }
+  };
+
+  /* Afmelden en account verwijderen ruimen exact hetzelfde op (operator,
+     7 okt 2026, account-audit): audio en bracelet stoppen, lokale data van
+     deze gebruiker loskoppelen, en naar het welkomstscherm. */
+  const stopPlaybackAndBracelet = async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { unload } = require('@/services/audio-player');
+      await unload({ skipSave: true }).catch(() => {});
+    } catch { /* non-fatal */ }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getBracelet } = require('@/services/bracelet');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { BleCommand } = require('@/services/ble-contract');
+      await getBracelet()
+        .sendCommand({ mode: 0, duration: 0, command: BleCommand.Stop })
+        .catch(() => {});
+    } catch { /* non-fatal */ }
   };
 
   /* Sign Out met confirmation-dialog. Voorkomt accidentele 1-tap sign-
@@ -1099,20 +1166,7 @@ export default function AccountScreen() {
                na sign-out met dode tokens; bracelet-mode bleef actief zodat
                een volgende user op dit toestel de vorige sessie zag. Beide
                calls swallow errors — mogen sign-out nooit blokkeren. */
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const { unload } = require('@/services/audio-player');
-              await unload({ skipSave: true }).catch(() => {});
-            } catch { /* non-fatal */ }
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const { getBracelet } = require('@/services/bracelet');
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const { BleCommand } = require('@/services/ble-contract');
-              await getBracelet()
-                .sendCommand({ mode: 0, duration: 0, command: BleCommand.Stop })
-                .catch(() => {});
-            } catch { /* non-fatal */ }
+            await stopPlaybackAndBracelet();
 
             await clearSession();
             /* Iter 9dq v99 (2026-06-04): bij sign-out óók dev-overrides
@@ -1222,6 +1276,7 @@ export default function AccountScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     setBusy(true);
+                    await stopPlaybackAndBracelet();
                     const r = await deleteAccount();
                     setBusy(false);
                     if (r.ok) {
@@ -1240,13 +1295,14 @@ export default function AccountScreen() {
                          sign-out flow — voorkomt UI dat PRO-rendering
                          vasthoudt na delete. */
                       setSignedOutStatus();
+                      await refreshUserBucket();
                       void showVibezAlert({
                         title: 'Account deleted',
                         message: 'Your account has been permanently deleted.',
                         buttons: [
                           {
                             text: 'OK',
-                            onPress: () => router.replace('/'),
+                            onPress: () => router.replace('/welcome' as never),
                           },
                         ],
                       });
@@ -1304,7 +1360,9 @@ export default function AccountScreen() {
           <RhythmGroup />
           <Group title="Account">
             <Row icon={Mail} title="Email" value={email} />
-            <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
+            {provider === 'google' || provider === 'apple' ? null : (
+              <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
+            )}
           </Group>
           <SupportGroup />
           <AboutLegalGroups />
@@ -1439,8 +1497,8 @@ export default function AccountScreen() {
               placeholderTextColor={C.textDim}
               secureTextEntry={!showPw}
               autoCapitalize="none"
-              autoComplete="current-password"
-              textContentType="password"
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              textContentType={mode === 'signup' ? 'newPassword' : 'password'}
               returnKeyType="go"
               onSubmitEditing={onSubmit}
             />
@@ -1458,7 +1516,7 @@ export default function AccountScreen() {
             </PressScale>
           </View>
 
-          {msg && <Text style={s.msg}>{msg}</Text>}
+          {msg && <Text style={[s.msg, msgIsInfo && { color: C.text }]}>{msg}</Text>}
 
           {/* Forgot password VOOR de Sign In-knop, niet erna (operator-
               mockup, 11 augustus 2026: "forgot password staat klein
@@ -1509,13 +1567,14 @@ export default function AccountScreen() {
                     buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
                     cornerRadius={12}
                     style={{ flex: 1, height: 48 }}
-                    onPress={() => void onAppleSignIn()}
+                    onPress={() => { if (!busy) void onAppleSignIn(); }}
                   />
                 )}
                 {googleAvailable && (
                   <PressScale
-                    style={s.googleBtn}
+                    style={[s.googleBtn, busy && s.btnDisabled]}
                     onPress={() => void onGoogleSignIn()}
+                    disabled={busy}
                   >
                     {/* Officieel Google "G"-logo, niet een platte letter
                         (operator, 11 augustus 2026: "moet een officiële
@@ -1540,6 +1599,7 @@ export default function AccountScreen() {
             onPress={() => {
               setMode((m) => (m === 'login' ? 'signup' : 'login'));
               setMsg(null);
+              setMsgIsInfo(false);
             }}
             hitSlop={8}
             style={{ alignSelf: 'center', marginTop: 14 }}

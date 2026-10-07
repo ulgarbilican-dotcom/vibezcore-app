@@ -15,11 +15,13 @@
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getEffectiveTier } from '@/utils/access-tier';
+import { useIAP } from '@/hooks/useIAP';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Animated,
   Easing,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -87,6 +89,13 @@ export function hideAccountWall(): void {
 export function AccountWallModal() {
   const [open, setOpen] = useState<boolean>(currentlyOpen);
   const [opacity] = useState(() => new Animated.Value(0));
+  /* Operator, 7 okt 2026 (account-audit): de proefperiode komt uit de
+     store (WYSIWYG) — geen vaste "7-day" meer die op iOS of na een
+     store-wijziging niet klopt. */
+  const { getProduct } = useIAP();
+  const trialDays = getProduct('yearly')?.freeTrialDays ?? 0;
+  const trialName = trialDays > 0 ? `${trialDays}-day trial` : 'trial';
+  const storeName = Platform.OS === 'ios' ? 'the App Store' : 'Google Play';
 
   const primaryPressScale = useSharedValue(1);
   const onPrimaryPressIn = () => {
@@ -162,14 +171,14 @@ export function AccountWallModal() {
           {lastSessionTitle ? (
             <Text style={s.subline}>
               <Text style={s.subQuote}>“{lastSessionTitle}”</Text> unlocks
-              with your 7-day trial, along with {TRIAL_SESSION_COUNT}{' '}
+              with your {trialName}, along with {TRIAL_SESSION_COUNT}{' '}
               sessions total. Stay subscribed after the trial to unlock the
               full {TOTAL_SESSION_COUNT}-session library.
             </Text>
           ) : (
             <Text style={s.subline}>
-              You've explored all {FREE_SESSION_COUNT} free sessions. Your
-              7-day trial unlocks {TRIAL_SESSION_COUNT} sessions + Breathwork
+              You've explored all {FREE_SESSION_COUNT} free sessions. Your{' '}
+              {trialName} unlocks {TRIAL_SESSION_COUNT} sessions + Breathwork
               — stay subscribed after the trial to unlock the full{' '}
               {TOTAL_SESSION_COUNT}-session library.
             </Text>
@@ -180,12 +189,12 @@ export function AccountWallModal() {
               144 als directe trial-beloning suggereert. */}
           <View style={s.bullets}>
             <Bullet
-              text={`7-day trial — ${TRIAL_SESSION_COUNT} sessions + Breathwork`}
+              text={`${trialDays > 0 ? `${trialDays}-day trial` : 'Trial'} — ${TRIAL_SESSION_COUNT} sessions + Breathwork`}
             />
             <Bullet
               text={`Then the full library — ${TOTAL_SESSION_COUNT} sessions`}
             />
-            <Bullet text="Cancel anytime in Play Store" />
+            <Bullet text={`Cancel anytime in ${storeName}`} />
           </View>
 
           <AnimatedPressable

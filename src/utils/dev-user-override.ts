@@ -67,7 +67,12 @@ async function loadOnce(): Promise<void> {
  *  useBraceletOwner() blijft false → Account tab toont "free environment"
  *  ondanks succesvolle activatie. Root cause van vC 49 foto 1+2 bugs. */
 export function getDevUserOverride(): DevUserOverride {
-  return cached;
+  /* Operator, 7 okt 2026 (account-audit): sinds v221 zet de echte
+     bracelet-activatie deze vlaggen enkel nog in testbuilds; de backend is
+     in productie leidend. Een store-build leest ze dus ook niet meer — een
+     achtergebleven waarde kan zo nooit iemand Premium of bracelet-eigenaar
+     maken. */
+  return __DEV__ ? cached : null;
 }
 
 /** Iter 9dn (2026-05-31): publieke subscribe-API voor non-hook modules
@@ -142,8 +147,8 @@ export function useDevUserOverride(): DevUserOverride {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* Iter v193 (2026-07-03): __DEV__ guard weg — zie getDevUserOverride. */
-  return value;
+  /* Operator, 7 okt 2026: alleen testbuilds — zie getDevUserOverride. */
+  return __DEV__ ? value : null;
 }
 
 /* ── Bracelet activation tracking (iter 9dq v89, 2026-06-03) ────────
@@ -273,6 +278,7 @@ export function useDevBraceletActivated(): boolean {
   }, []);
   const override = useDevUserOverride();
   const backendHasBracelet = useHasBraceletFromBackend();
+  if (!__DEV__) return backendHasBracelet;
   if (override === 'bracelet' || override === 'pro') return true;
   return value || backendHasBracelet;
 }
