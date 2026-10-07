@@ -379,7 +379,9 @@ const CLOSER_LOOK: CloserLookTopic[] = [
     key: 'how',
     pill: 'How it works',
     /* Operator (Apple-stijl-feedback): "Set it. Wear it. Forget it." */
-    title: 'Set it. Wear it. Forget it.',
+    /* Operator, 7 okt 2026: "Wear it. Set it. Feel it." — focus op het
+       resultaat, in de volgorde van gebruik. */
+    title: 'Wear it. Set it. Feel it.',
     /* Operator ("how it works moet gerelateerd zijn aan het dragen en
        instellen van de bracelet via de app — wear it, dan activeren,
        vooringesteld of op het moment zelf"): dit was het mechanisme
@@ -401,8 +403,14 @@ const CLOSER_LOOK: CloserLookTopic[] = [
        app", "veel tekst opgehoopt, Apple-stijl, alles moet ademen". Drie
        korte regels; klopt met het BLE-contract (app start, daarna draait
        de bracelet zelfstandig, ook zonder verbinding). */
-    body: 'Put it on.\n\nChoose a state in the VIBEZCORE app and start.\n\nThe bracelet takes it from there.',
-    tags: ['Put it on', 'Start in the app', 'Bluetooth'],
+    /* Vervolg (operator, zelfde dag, Apple-review): één vloeiende zin i.p.v.
+       losse stappen; geen labels eronder (ze zijn niet tikbaar en
+       herhaalden enkel de tekst). Bewust NIET overgenomen uit de review:
+       "calming rhythms" (5 states, Boost activeert), "directly to your
+       pulse" (meet-/medische klank) en "HapticCore™" (geen geregistreerd
+       merk). */
+    body: 'Just choose your state in the app. Your bracelet does the rest.',
+    tags: [],
     hotspots: [{ top: '26%', left: '65%' }], // kraal op de boog, naast "what"
   },
   {
@@ -1600,13 +1608,15 @@ export default function SmartBeadBraceletScreen() {
                 <Text style={s.breathChooserSub}>
                   {CLOSER_LOOK[closerLookIndex].body}
                 </Text>
-                <View style={s.tagRow}>
-                  {CLOSER_LOOK[closerLookIndex].tags.map((tag) => (
-                    <View key={tag} style={s.tag}>
-                      <Text style={s.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
+                {CLOSER_LOOK[closerLookIndex].tags.length > 0 ? (
+                  <View style={s.tagRow}>
+                    {CLOSER_LOOK[closerLookIndex].tags.map((tag) => (
+                      <View key={tag} style={s.tag}>
+                        <Text style={s.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
           </GlassSheet>
         )}
