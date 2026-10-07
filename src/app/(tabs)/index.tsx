@@ -3884,7 +3884,7 @@ const s = StyleSheet.create({
   /* Smart Bead Bracelet-kaart onder de pijlers (operator, 7 okt 2026). */
   braceletCard: {
     marginHorizontal: 16,
-    marginTop: 28,
+    marginTop: 48,
     marginBottom: 20,
     padding: 16,
     borderRadius: 22,
@@ -5969,7 +5969,9 @@ const s = StyleSheet.create({
   /* Operator, 14 september 2026 (Apple-stijl S04): "weg met het harde
      zwart" — puur wit vlak, radius 12, padding 14. */
   legalBlock: {
-    marginTop: 12,
+    /* Operator, 7 okt 2026: de disclaimer hoort duidelijk bij het audio-
+       blok erboven — dichter tegen Free Picks, ver van de bracelet. */
+    marginTop: -14,
     marginHorizontal: 16,
     borderRadius: 12,
     backgroundColor: C.surface,
