@@ -339,7 +339,7 @@ export default function PillarFocusScreen() {
                   index={i}
                   onPress={() => openGated(sess)}
                   isLast={i === group.sessions.length - 1}
-                  locked={resolveAccess(sess, signedIn, isPro, isTrialing) !== 'allowed'}
+                  locked={resolveAccess(sess, signedIn || isPro, isPro, isTrialing) !== 'allowed'}
                 />
               ))}
             </BlurView>

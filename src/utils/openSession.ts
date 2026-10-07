@@ -82,7 +82,11 @@ export function useGatedOpenSession() {
 
   return useCallback(
     (session: Session) => {
-      const access = resolveAccess(session, isSignedIn, isPro, isTrialing);
+      /* Operator, 7 okt 2026: "voor premium users is alles unlocked" — een
+         Premium-gebruiker krijgt nooit de account-muur. Heeft hij (gast-
+         aankoop) nog geen account, dan vraagt de speler daarna in één stap
+         om er een te maken; zijn Premium gaat mee (player.tsx). */
+      const access = resolveAccess(session, isSignedIn || isPro, isPro, isTrialing);
       if (access === 'allowed') {
         openSession(session);
       } else if (access === 'needs-account') {
