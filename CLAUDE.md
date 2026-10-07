@@ -20,6 +20,7 @@ Bij start van werk aan dit project, lees in deze volgorde:
 3. `docs/MERK_ANKER.md` — font, kleuren, logo, look-and-feel (bindend voor alles wat uiterlijk is).
 4. `docs/STRUCTUUR_en_BLE_contract_v2.md` — structuur + BLE-contract (spec v2.3).
 5. `docs/ONTWERP_toegangsmodel.md` — toegangsmodel, entitlements, provider-abstractie.
+6. `docs/VIBEZCORE_SCIENCE_A_TOT_Z.md` — ALLE wetenschap & logica van de app (breathwork, State Control-tempo's, rusthartslag, camerameting, woordkeuze, bronnen) met per punt onderzoek vs eigen keuze. Wijzigt een tempo/duur/regel in de code → dit document mee aanpassen.
 
 `Haptic_Bracelet_Spec_v2_3.docx` is het BINDENDE hardware/BLE-contract (zit in de
 projectkennis, niet in deze repo). Verzin nooit een eigen BLE-contract — een eerder
