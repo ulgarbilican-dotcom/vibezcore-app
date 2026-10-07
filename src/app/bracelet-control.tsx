@@ -1329,6 +1329,62 @@ function ModeDetailModal({
   );
 }
 
+/* ── TrialSheet — gratis voorproef: uitleg + Start preview / Unlock / Back
+   (operator, 7 okt 2026: "de tekst 'Feel it on your phone…' in een popup
+   bij aantikken van de CTA, nu staat alles opgepropt"). */
+function TrialSheet({
+  visible,
+  mode,
+  onClose,
+  onStartPreview,
+  onUnlock,
+}: {
+  visible: boolean;
+  mode: BraceletMode;
+  onClose: () => void;
+  onStartPreview: () => void;
+  onUnlock: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const meta = getModeMeta(mode);
+  const Icon = MODE_ICONS[mode];
+  return (
+    <GlassSheet visible={visible} onClose={onClose}>
+      <View style={[s.modeModalSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
+        <VibezGlass
+          radius={24}
+          level="sheet"
+          blurTarget={rootBlurRef}
+          style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+        />
+        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+          <View style={s.modeModalHandle} />
+        </Pressable>
+        <View style={s.quickSheetHead}>
+          <View style={s.quickSheetIcon}>
+            <Icon size={mode === BraceletMode.Theta ? 30 : 24} color={meta.color} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.trialSheetEyebrow}>FREE PREVIEW</Text>
+            <Text style={s.modeModalName}>{meta.name}</Text>
+          </View>
+        </View>
+        <Text style={s.quickSheetLine}>30 seconds of this rhythm on your phone and paired watch.</Text>
+        <Text style={s.quickSheetNote}>Starts at your resting heart rate, like a real session.</Text>
+        <PressScale style={s.quickSheetCta} haptic scaleTo={0.97} onPress={onStartPreview} accessibilityRole="button">
+          <Text style={s.quickSheetCtaTxt}>Start preview</Text>
+        </PressScale>
+        <PressScale onPress={onUnlock} style={s.quickSheetBack} accessibilityRole="button">
+          <Text style={s.quickSheetBackTxt}>Unlock all sessions</Text>
+        </PressScale>
+        <PressScale onPress={onClose} style={[s.quickSheetBack, { marginTop: -6 }]} accessibilityRole="button">
+          <Text style={[s.quickSheetBackTxt, { color: 'rgba(255,255,255,0.6)' }]}>Back</Text>
+        </PressScale>
+      </View>
+    </GlassSheet>
+  );
+}
+
 /* ── QuickSessionSheet — korte uitleg + Start/Back (operator, 7 okt 2026) ── */
 const QUICK_COPY: Record<'chill' | 'boost', { line: string; note: string }> = {
   chill: {
@@ -3424,6 +3480,7 @@ function IdleScreen({
   const [rhythmOpen, setRhythmOpen] = useState(false);
   const pendingAfterRhythm = useRef<(() => void) | null>(null);
   const [quickOpen, setQuickOpen] = useState<'chill' | 'boost' | null>(null);
+  const [trialSheetOpen, setTrialSheetOpen] = useState(false);
   const withRhythm = (action: () => void) => () => {
     if (pulse.decided) {
       action();
@@ -3751,7 +3808,7 @@ function IdleScreen({
           <PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, (busy || criticalBattery) && s.btnDisabled]}
             onPress={
-              startLocked ? (trialRunning ? () => stopTrial(false) : withRhythm(startTrial)) : withRhythm(onStart)
+              startLocked ? (trialRunning ? () => stopTrial(false) : () => setTrialSheetOpen(true)) : withRhythm(onStart)
             }
             disabled={busy || criticalBattery}
             accessibilityLabel={
@@ -3773,16 +3830,15 @@ function IdleScreen({
             )}
           </PrimaryCtaButton>
         )}
+        {/* Gratis (operator, 7 okt 2026: "alles opgepropt"): de uitleg en
+            "Unlock all sessions" staan nu in het paneel bij het aantikken.
+            Onder de knop enkel nog de melding tijdens een versnelde voor-
+            proef — in een vaste ruimte, zodat de knop nooit verspringt. */}
         {startLocked && !sessionRunning ? (
           <View style={s.trialInfo}>
-            <Text style={s.trialInfoTxt}>
-              {trialRunning && condensedMinutes !== null
-                ? 'Sped up for the preview.\nA full session slows down gradually.'
-                : 'Feel it on your phone and paired watch'}
-            </Text>
-            <Pressable onPress={onStart} hitSlop={10} accessibilityRole="button" accessibilityLabel="Unlock all sessions">
-              <Text style={s.trialUnlockTxt}>Unlock all sessions</Text>
-            </Pressable>
+            {trialRunning && condensedMinutes !== null ? (
+              <Text style={s.trialInfoTxt}>{'Sped up for the preview.\nA full session slows down gradually.'}</Text>
+            ) : null}
           </View>
         ) : null}
         <SwitchSessionConfirm
@@ -3850,6 +3906,20 @@ function IdleScreen({
           onDismiss={() => setCompletedModeForModal(null)}
         />
       )}
+
+      <TrialSheet
+        visible={trialSheetOpen}
+        mode={selectedMode}
+        onClose={() => setTrialSheetOpen(false)}
+        onStartPreview={() => {
+          setTrialSheetOpen(false);
+          withRhythm(startTrial)();
+        }}
+        onUnlock={() => {
+          setTrialSheetOpen(false);
+          onStart();
+        }}
+      />
 
       <QuickSessionSheet
         which={quickOpen}
@@ -5786,7 +5856,13 @@ const s = StyleSheet.create({
        uitleg tijdens de voorproef van één naar twee regels gaat. */
     minHeight: 40,
   },
-  trialUnlockTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
+  trialSheetEyebrow: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.6,
+    marginBottom: 2,
+  },
   /* Boven de cirkel, gecentreerd onder de titel. */
   ringPulsePill: {
     alignSelf: 'center',
