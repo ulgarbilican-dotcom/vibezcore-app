@@ -57,6 +57,17 @@
 | 22 | Centrering keuzescherm (gemeten op pixels, scherm 1080 breed) | A16 | ✅ cirkel, naam, 10:00, Recommended, bolletjes, duurwiel, snelknoppen, Start: allemaal binnen 0,5 px van het midden. Hartslaggroep stond 6 px (2 pt) links → optisch gecorrigeerd → −1,5 px |
 | 23 | Gratis: tekst onder "Try 30 seconds free" te druk | A16 | ⚠️ → paneel bij aantikken (Free preview · uitleg · Start preview · Unlock all sessions · Back); onder de knop enkel de 'sped up'-melding tijdens de voorproef. ⏳ hertest met een niet-Premium account |
 
+### Bracelet-promotie, welkomstschermen, glas (7 okt 2026, avond)
+| # | Test | Toestel | Resultaat |
+|---|------|---------|-----------|
+| 24 | Bracelet-pagina in de app vindbaar | A16 | ⚠️ account telt als eigenaar → Profile-rij ontbrak → rij voor iedereen; kaart onderaan Audio Library + links op afsluitschermen State Control/Breathwork (niet voor eigenaars) |
+| 25 | Bracelet-pagina: 1 CTA naar vibezcore.com/smart-bead-bracelet | A16 | ✅ "Discover the bracelet" zichtbaar (screenshot) |
+| 26 | Bracelet-welkomstintro: CTA te laag, kopbalk bovenaan | A16 | ⚠️ telefoon draaide oude bundel → app herstart; intro nu schermvullend zonder kopbalk, knop op hoogte zusterintro's. ⏳ operator-bevestiging |
+| 27 | Bracelet "A closer look"-kaart | A16 | ✅ operator: "beter zo" (groter, labels, geen nummer, "Wear it. Set it. Feel it.") |
+| 28 | Welkomstscherm naar operator-ontwerp | A16 | ✅ operator: glas "ik vind het goed"; "Control Your State"; tab-iconen. ⏳ nieuwe foto (smartwatch) nog aan te leveren |
+| 29 | Breath-intro eyebrow GUIDED BREATHWORK | A16 | ⏳ |
+| 30 | Paywall na vroegtijdig End session (voorproef) zonder glas | A16 | ❌ eerste fix toonde oud rust-scherm → teruggedraaid; ✅ pauzeren i.p.v. stoppen — operator: "goed" |
+
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |
 |---|---|---|
