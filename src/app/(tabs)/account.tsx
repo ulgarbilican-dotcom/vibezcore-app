@@ -108,6 +108,7 @@ import {
   Eye,
   EyeOff,
   Headphones,
+  MessageCircle,
   HelpCircle,
   Info,
   Lock,
@@ -532,7 +533,7 @@ function SupportGroup() {
       <Row icon={SettingsIcon} title="Settings" onPress={() => router.navigate('/settings' as never)} accessibilityLabel="Open settings" />
       <Row icon={UserPlus} title="Invite a friend" onPress={() => void shareInvite()} accessibilityLabel="Invite a friend to VIBEZCORE" />
       <Row icon={HelpCircle} title="FAQ" onPress={() => router.navigate('/faq' as never)} accessibilityLabel="Browse frequently asked questions" />
-      <Row icon={Headphones} title="Contact support" onPress={() => router.navigate('/support' as never)} accessibilityLabel="Contact VIBEZCORE support" />
+      <Row icon={MessageCircle} title="Contact support" onPress={() => router.navigate('/support' as never)} accessibilityLabel="Contact VIBEZCORE support" />
     </Group>
   );
 }

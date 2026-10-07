@@ -43,7 +43,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ChartNoAxesColumn,
   CircleUserRound,
-  Music,
+  BookAudio,
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -321,7 +321,7 @@ export default function TabLayout() {
               ? {
                   title: 'Audio Library',
                   tabBarIcon: ({ focused }: { focused: boolean }) => (
-                    <TabGlyph Icon={Music} focused={focused} />
+                    <TabGlyph Icon={BookAudio} focused={focused} />
                   ),
                   tabBarLabel: ({ focused }: { focused: boolean }) => (
                     <TabLabel label="Library" focused={focused} />
