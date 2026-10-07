@@ -529,6 +529,12 @@ function ProductsGroup() {
           valueTone="warn"
           onPress={() => router.navigate('/activate-bracelet' as never)}
         />
+        <Row
+          icon={BraceletIcon}
+          title="Smart Bead Bracelet"
+          subtitle="Launching Fall 2026"
+          onPress={() => router.navigate('/smart-bead-bracelet' as never)}
+        />
       </Group>
     );
   }
@@ -543,6 +549,15 @@ function ProductsGroup() {
           accessibilityLabel="Open Session Control"
         />
         <Row icon={Package} title="Order new beadband" onPress={() => openExternal(BRACELET_SHOP_URL)} />
+        {/* Operator, 7 okt 2026 ("ik zie niet hoe ik naar bracelet moet"):
+            de productpagina staat voor IEDEREEN in Profile, ook voor
+            eigenaars (bead sets, edelstenen). */}
+        <Row
+          icon={BraceletIcon}
+          title="Smart Bead Bracelet"
+          subtitle="Launching Fall 2026"
+          onPress={() => router.navigate('/smart-bead-bracelet' as never)}
+        />
       </Group>
     );
   }
