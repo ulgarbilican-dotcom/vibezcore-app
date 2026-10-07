@@ -16,50 +16,20 @@
    state + listener-set is de bestaande conventie in deze codebase.
    ─────────────────────────────────────────────────────────────────────── */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 /* ── Afsluit-link naar de bracelet-pagina (operator, 7 okt 2026) ──────────
    Strategie: app + horloge = kern, de bracelet = premium upgrade. Op het
    afsluitscherm van State Control en Breathwork staat één rustige tekst-
-   link naar de bestaande pagina /smart-bead-bracelet. Hoogstens één keer
-   per dag per plek, nooit voor wie al een bracelet heeft. */
+   link naar /smart-bead-bracelet, nooit voor wie al een bracelet heeft.
+   GEWIJZIGD zelfde dag (operator: "het is de bedoeling de bracelet al te
+   promoten, nu bijna nergens vindbaar"): geen limiet van 1×/dag meer —
+   de regel staat er bij elke afgeronde sessie. */
 export type BraceletNudgePlace = 'state-control' | 'breathwork';
 
-const NUDGE_KEY = 'vz_bracelet_nudge_day_';
-
-function today(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
-
-/** Mag de link vandaag op deze plek nog getoond worden? Markeert meteen
- *  als getoond, zodat hij die dag niet terugkomt. */
-export async function claimBraceletNudge(place: BraceletNudgePlace): Promise<boolean> {
-  try {
-    const key = NUDGE_KEY + place;
-    if ((await AsyncStorage.getItem(key)) === today()) return false;
-    await AsyncStorage.setItem(key, today());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Hook voor een afsluitscherm: true als de link hier vandaag mag staan. */
-export function useBraceletNudge(place: BraceletNudgePlace, enabled: boolean): boolean {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (!enabled) return;
-    let alive = true;
-    void claimBraceletNudge(place).then((ok) => {
-      if (alive) setShow(ok);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [place, enabled]);
-  return show;
+/** Hook voor een afsluitscherm: true als de link hier mag staan. */
+export function useBraceletNudge(_place: BraceletNudgePlace, enabled: boolean): boolean {
+  return enabled;
 }
 
 let visible = false;

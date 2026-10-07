@@ -3454,6 +3454,49 @@ function AudioScreen({
           )}
         </View>
 
+        {/* ── SMART BEAD BRACELET (operator, 7 okt 2026: "de bracelet moet
+            al gepromoot worden, nu bijna nergens vindbaar") ──
+            Strategie (CLAUDE.md §3): bracelet = premium upgrade van de app.
+            Zelfde kaartvorm als de serie-kaarten erboven (foto + "Explore ›"
+            + eyebrow/titel/regel), zodat hij thuishoort in de bibliotheek.
+            Voor iedereen behalve wie al een bracelet heeft; niet tijdens
+            zoeken of in een gefilterde pijler. Opent de productpagina. */}
+        {!searchActive && !activePillarFilter && !isBraceletOwner && (
+          <View style={[s.libCardUnit, { marginTop: 8 }]}>
+            <Pressable
+              style={[s.libCard, s.libCardStandalone]}
+              onPress={() => router.push('/smart-bead-bracelet' as never)}
+              android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+              accessibilityRole="button"
+              accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
+            >
+              <Image
+                source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20bracelet%20app.png' }}
+                style={s.libCardBg}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.92)']}
+                locations={[0, 0.4, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={s.pillCluster} pointerEvents="none">
+                <View style={s.viewAllPill}>
+                  <Text style={s.exploreText}>Explore</Text>
+                  <Text style={s.viewAllChev}>›</Text>
+                </View>
+              </View>
+              <View style={s.libCardBody}>
+                <Text style={s.comingEyebrow}>LAUNCHING FALL 2026</Text>
+                <Text style={s.libCardTitle}>Smart Bead Bracelet</Text>
+                <Text style={s.libCardSubline}>Nature meets tech. Your rhythm, on your wrist.</Text>
+              </View>
+            </Pressable>
+          </View>
+        )}
+
         {/* Operator, 7 okt 2026: het kopen-blok onderaan is weg — de
            Premium-knop bovenaan en het abonnementsscherm (/subscribe, zelfde
            kaart) zijn de plek om te kiezen. Wie hier vroeger naartoe
