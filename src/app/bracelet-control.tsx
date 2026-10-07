@@ -1527,7 +1527,11 @@ function CompletionModal({
   const checkColor = isLightColor(meta.color) ? '#ffffff' : meta.color;
 
   return (
-    <ReanimatedAnimated.View style={[s.completionOverlay, s.completionFull, fadeStyle]}>
+    /* Meteen volledig zwart (operator, 7 okt 2026: "bij eindigen heel even
+       het selectiescherm van Sharp Focus"): enkel de inhoud animeert in,
+       anders schemert het keuzescherm 300 ms door de fade heen. */
+    <ReanimatedAnimated.View style={[s.completionOverlay, s.completionFull]}>
+      <ReanimatedAnimated.View style={[{ alignItems: 'center' }, fadeStyle]}>
       <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' }}>
         <ReanimatedAnimated.View pointerEvents="none" style={[StyleSheet.absoluteFill, pulseStyle]}>
         <Svg width={RING_SIZE} height={RING_SIZE}>
@@ -1564,6 +1568,7 @@ function CompletionModal({
         {minutes !== null && minutes > 0 && (
           <Text style={s.completionDuration}>{minutes} min</Text>
         )}
+      </ReanimatedAnimated.View>
       </ReanimatedAnimated.View>
 
       {/* Op dezelfde hoogte en breedte als "Start session" (6 okt 2026: "knop
@@ -4432,6 +4437,10 @@ function BraceletControlScreen({
       setMinimized(false);
       setCompletedMinutes(c.minutes);
       setCompletedModeForModal(c.mode);
+      /* Na Done staat het keuzescherm op de toestand die je net deed
+         (ook na Quick Chill/Boost), niet op een eerdere keuze. */
+      setSelectedMode(c.mode);
+      setDuration(getModeMeta(c.mode).defaultMinutes);
       if (!hasNativeWaveform()) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
