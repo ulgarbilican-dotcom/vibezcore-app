@@ -807,7 +807,6 @@ export default function PlayerScreen() {
             />
           )}
           <ExtraBtn
-            align="end"
             icon={
               <Heart
                 size={22}
@@ -1142,7 +1141,7 @@ function SpeedBtn({
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={`Playback speed ${rate}x`}
-      style={[s.extraBtn, { alignItems: 'flex-start' }]}
+      style={[s.extraBtn, { alignItems: 'center' }]}
     >
       <Text style={s.speedText}>{`${Number.isInteger(rate) ? rate : rate.toFixed(rate * 10 % 1 === 0 ? 1 : 2)}×`}</Text>
     </Pressable>
@@ -1488,10 +1487,13 @@ const s = StyleSheet.create({
   playGlyph: { color: C.text, fontSize: 28, fontFamily: BrandFonts.bold },
 
   /* Extras row */
+  /* Operator, 7 okt 2026 ("te druk, alles zo verspreid"): één groepje
+     in het midden i.p.v. tegen de randen van de tijdbalk. */
   extrasRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 40,
     marginBottom: 24,
   },
   extraBtn: { minWidth: 44, height: 44, justifyContent: 'center' },
