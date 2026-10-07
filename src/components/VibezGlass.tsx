@@ -71,14 +71,25 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
      ze pas inschakelen zodra de target gekoppeld is — de wissel van
      blurMethod laat expo-blur alles opnieuw en goed instellen. */
   const [armed, setArmed] = useState(!blurTarget);
+  /* Operator, 7 okt 2026 ("geen glas" boven Box Breathing — niet elke
+     keer): 80 ms is soms te vroeg, vooral als het scherm erachter druk
+     tekent (ademsessie). Daarom nog één keer opnieuw opbouwen nadat de
+     sheet volledig is ingeschoven (320 ms) — dan is de target zeker
+     gekoppeld. Valt samen met het einde van de animatie, dus onzichtbaar. */
+  const [gen, setGen] = useState(0);
   useEffect(() => {
     if (!blurTarget) return;
     const t = setTimeout(() => setArmed(true), 80);
-    return () => clearTimeout(t);
+    const t2 = Platform.OS === 'android' ? setTimeout(() => setGen(1), 420) : undefined;
+    return () => {
+      clearTimeout(t);
+      if (t2) clearTimeout(t2);
+    };
   }, [blurTarget]);
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
       <BlurView
+        key={gen}
         intensity={L.blur}
         /* Echte vervaging (blurTarget): de dunste donkere tint — op Android
            legt "dark" zelf al ~62% grijs over het glas, samen met onze
