@@ -180,6 +180,7 @@ import {
   useBraceletOwner,
   useDevBraceletActivated,
 } from '@/utils/dev-user-override';
+import { useBraceletNudge } from '@/services/bracelet-upsell';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -1592,6 +1593,11 @@ function CompletionModal({
 }) {
   const meta = getModeMeta(mode);
   const insets = useSafeAreaInsets();
+  /* Bracelet als upgrade (operator, 7 okt 2026): je voelde net het ritme
+     dat de bracelet ook geeft — één rustige link, max. 1×/dag, niet voor
+     wie al een bracelet heeft. Opent enkel de bestaande bracelet-pagina. */
+  const ownsBracelet = useBraceletOwner();
+  const showBraceletLink = useBraceletNudge('state-control', !ownsBracelet);
   const fade = useSharedValue(0);
   const ring = useSharedValue(0);
   const check = useSharedValue(0);
@@ -1702,6 +1708,22 @@ function CompletionModal({
       <ReanimatedAnimated.View
         style={[s.completionDoneWrap, { bottom: Math.max(insets.bottom, 12) + 26 }, textStyle]}
       >
+        {showBraceletLink ? (
+          <PressScale
+            style={s.completionBraceletLink}
+            scaleTo={0.96}
+            onPress={() => {
+              onDismiss();
+              router.push('/smart-bead-bracelet' as never);
+            }}
+            accessibilityRole="link"
+            accessibilityLabel="Feel this without your phone. Smart Bead Bracelet"
+          >
+            <Text style={s.completionBraceletLinkTxt}>
+              Feel this without your phone · <Text style={s.completionBraceletLinkStrong}>Smart Bead Bracelet ›</Text>
+            </Text>
+          </PressScale>
+        ) : null}
         <PressScale
           style={[s.completionBtn, s.completionBtnWide]} haptic scaleTo={0.97}
           onPress={onDismiss}
@@ -6893,6 +6915,23 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 26,
     right: 26,
+  },
+  completionBraceletLink: {
+    alignSelf: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  completionBraceletLinkTxt: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    textAlign: 'center',
+  },
+  completionBraceletLinkStrong: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.semibold,
   },
   completionBtnWide: {
     backgroundColor: '#ffffff',

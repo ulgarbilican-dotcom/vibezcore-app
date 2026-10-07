@@ -137,6 +137,8 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useBraceletNudge } from '@/services/bracelet-upsell';
+import { useBraceletOwner } from '@/utils/dev-user-override';
 import { useBreathHost, useBreathParams } from '@/components/breath-host-context';
 import {
   closeBreathSession,
@@ -1006,6 +1008,12 @@ export function BreathSession() {
   /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te
      kopen valt. */
   const askPremium = isFreeOnboardingSession && !isPro;
+  /* Bracelet als upgrade (operator, 7 okt 2026): één rustige regel op het
+     "Well done"-scherm — niet waar de Premium-vraag staat (die gaat voor),
+     max. 1×/dag, niet voor wie al een bracelet heeft. Breathwork op de
+     bracelet volgt nog → "coming"-formulering, geen belofte van nu. */
+  const ownsBracelet = useBraceletOwner();
+  const showBraceletLink = useBraceletNudge('breathwork', done && !askPremium && !ownsBracelet);
   /* Operator, 2 okt 2026 ("Apple-level polish... niet hard-cutten"): sessies
      gestart via feel-now.tsx se "How do you feel?"-knop dragen `instant=1`.
      Twee dingen wisselen dan, enkel voor DIT pad: de preview duurt 60s i.p.v.
@@ -3889,6 +3897,24 @@ export function BreathSession() {
               <Text style={s.feedMindLink}>Go to the Audio Library ▸</Text>
             </AnimatedPressable>
 
+            {showBraceletLink && !askPremium ? (
+              <Pressable
+                onPress={() => {
+                  dismissDone();
+                  closeBreathSession();
+                  router.push('/smart-bead-bracelet' as never);
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [s.braceletLine, pressed && { opacity: 0.6 }]}
+                accessibilityRole="link"
+                accessibilityLabel="Coming to your wrist. Smart Bead Bracelet"
+              >
+                <Text style={s.braceletLineTxt}>
+                  Coming to your wrist · <Text style={s.feedMindLink}>Smart Bead Bracelet ›</Text>
+                </Text>
+              </Pressable>
+            ) : null}
+
             {/* Enkel bij instant-gestarte sessies, enkel ná een echte
                voltooiing (dit is het "Well done"-scherm, geen preview-
                afbreking) — geen modal, geen sluitknop nodig, het scherm
@@ -4783,6 +4809,19 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   /* Volle breedte: de kaart centreert zijn inhoud, anders krimpt de knop
      tot zijn tekst ("I'M DONE" viel tegen de rand). */
   doneBtn: { alignSelf: 'stretch' },
+  braceletLine: {
+    alignSelf: 'center',
+    minHeight: 32,
+    justifyContent: 'center',
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  braceletLineTxt: {
+    textAlign: 'center',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13,
+    color: C.dim58,
+  },
   feedMind: {
     alignItems: 'center',
     marginTop: 4,
