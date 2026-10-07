@@ -410,7 +410,8 @@ const CLOSER_LOOK: CloserLookTopic[] = [
        pulse" (meet-/medische klank) en "HapticCore™" (geen geregistreerd
        merk). */
     body: 'Just choose your state in the app. Your bracelet does the rest.',
-    tags: [],
+    /* Operator: "jawel labels onderaan" — terug, als korte feiten. */
+    tags: ['5 States', 'Start in the app', 'Bluetooth'],
     hotspots: [{ top: '26%', left: '65%' }], // kraal op de boog, naast "what"
   },
   {
@@ -1581,7 +1582,11 @@ export default function SmartBeadBraceletScreen() {
               <View
                 style={[
                   s.breathChooserSheet,
-                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' }]}
+                  { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }, { backgroundColor: 'transparent', overflow: 'hidden' },
+                  /* Operator, 7 okt 2026 ("te korte kaart, maak de kaart
+                     groter, moet ademen"): minimumhoogte + royalere marges,
+                     enkel voor deze "A closer look"-kaart. */
+                  s.closerSheet]}
               >
                 {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
                 <VibezGlass
@@ -1602,10 +1607,10 @@ export default function SmartBeadBraceletScreen() {
                 <Text style={s.storyRowNum}>
                   {String(closerLookIndex + 1).padStart(2, '0')}
                 </Text>
-                <Text style={s.breathChooserTitle}>
+                <Text style={[s.breathChooserTitle, s.closerTitle]}>
                   {CLOSER_LOOK[closerLookIndex].title}
                 </Text>
-                <Text style={s.breathChooserSub}>
+                <Text style={[s.breathChooserSub, s.closerBody]}>
                   {CLOSER_LOOK[closerLookIndex].body}
                 </Text>
                 {CLOSER_LOOK[closerLookIndex].tags.length > 0 ? (
@@ -3074,6 +3079,18 @@ const s = StyleSheet.create({
      on-blue verzadiging in mode-cards en geeft het systeem één
      consistent tag-taal door de hele pagina. */
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  closerSheet: {
+    minHeight: Math.round(Dimensions.get('window').height * 0.46),
+    paddingHorizontal: 26,
+    paddingTop: 14,
+  },
+  closerTitle: { marginTop: 10, marginBottom: 16 },
+  closerBody: {
+    fontSize: 17,
+    lineHeight: 25,
+    color: 'rgba(244,244,244,0.78)',
+    marginBottom: 32,
+  },
   tag: {
     backgroundColor: 'rgba(10,10,12,0.04)',
     borderWidth: 1,
