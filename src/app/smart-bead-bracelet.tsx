@@ -232,7 +232,7 @@ const STORY: Step[] = [
     n: '03',
     title: 'The intelligence inside',
     body:
-      'A precision haptic engine grounded in applied neuroscience. Calibrated pulses influence your internal state in real time. No screen. No notification. Just direct, physical regulation — body settles, mind follows.',
+      'A precision haptic engine, built on research. Bottom-up by design. Calibrated pulses influence your internal state in real time. No screen. No notification. Just direct, physical regulation — body settles, mind follows.',
     tags: ['Bluetooth 5.0', 'Pogo Pin Charging', 'VIBEZCORE App'],
   },
   {
@@ -341,8 +341,11 @@ const CLOSER_LOOK: CloserLookTopic[] = [
     /* Operator ("body first, mind follows principe in what is it"): de
        bottom-up-positionering (al gebruikt in STORY n03) hoort hier ook —
        dat IS het antwoord op "hoe kan dit effortless zijn". */
-    body: 'A neuroscience-based haptic bracelet. Shifts your state — stressed to calm, tired to alert, restless to asleep — within 15 to 30 minutes. Body first, mind follows: effortless, the bracelet does the work.',
-    tags: ['Neuroscience-based', '15–30 min', 'Effortless'],
+    /* Operator, 7 okt 2026: nooit "neuroscience-based/-backed" of "Backed by
+       science" → "Built on research · Bottom-up by design"
+       (docs/VIBEZCORE_SCIENCE_A_TOT_Z.md §6). */
+    body: 'A haptic bracelet, built on research. Shifts your state — stressed to calm, tired to alert, restless to asleep — within 15 to 30 minutes. Body first, mind follows: effortless, the bracelet does the work.',
+    tags: ['Built on research', '15–30 min', 'Effortless'],
     hotspots: [{ top: '23%', left: '50%' }], // top van de kralenboog
   },
   {
@@ -372,7 +375,7 @@ const CLOSER_LOOK: CloserLookTopic[] = [
        HapticCore bedient alle 5 states, niet enkel kalmte — zelfde fout
        als de eerder gecorrigeerde "calm or focus" in How it works. */
     body: 'A high-precision haptic engine delivers subtle, rhythmic pulses to your wrist — tuned to your active state. Your nervous system responds to the signal directly. No conscious effort needed.',
-    tags: ['Calibrated Pulses', 'Bottom-up Regulation', 'Neuroscience-backed'],
+    tags: ['Calibrated Pulses', 'Bottom-up by design', 'Built on research'],
     hotspots: [{ top: '54%', left: '32%' }], // exact op de blauwe LED
   },
   {
