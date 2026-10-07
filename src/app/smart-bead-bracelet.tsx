@@ -175,6 +175,11 @@ const WAITLIST_BRACELET_URL = 'https://www.vibezcore.com/subscribe-bracelet';
    2026-05-26 iter 3, standalone waitlist-sectie weggehaald. Constant
    blijft voor backwards-compat als operator 'm later wil terugroepen. */
 const WAITLIST_URL = 'https://www.vibezcore.com/';
+/* Operator, 7 okt 2026: "als er een link is moet die naar
+   vibezcore.com/smart-bead-bracelet gaan en maar 1 CTA nodig". De enige
+   knop op deze pagina opent de bracelet-pagina op de website; daar staan
+   wachtlijst, edelstenen en specs. */
+const BRACELET_WEBSITE_URL = 'https://www.vibezcore.com/smart-bead-bracelet';
 
 /* ── Layout constants ──────────────────────────────────────────────────────
    SIDE_INSET blijft gebruikt door legacy dode stijlen (moduleCard/
@@ -497,11 +502,10 @@ export const PRICING: PriceSet = {
 async function openExternal(url: string): Promise<void> {
   if (__DEV__) console.log('[VIBEZCORE] bracelet openExternal →', url);
   try {
-    const result = await WebBrowser.openBrowserAsync(url);
-    if (result.type === 'cancel' || result.type === 'dismiss') {
-      if (__DEV__) console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
-      await Linking.openURL(url);
-    }
+    /* 7 okt 2026: geen Linking-fallback meer bij 'cancel'/'dismiss' — dat
+       is gewoon de gebruiker die de browser sluit (iOS meldt 'cancel'), en
+       dan opende de pagina nóg eens in Safari. Enkel bij een echte fout. */
+    await WebBrowser.openBrowserAsync(url);
   } catch (e) {
     if (__DEV__) console.log('[VIBEZCORE] WebBrowser threw — fallback Linking:', e);
     await Linking.openURL(url);
@@ -1221,22 +1225,17 @@ export default function SmartBeadBraceletScreen() {
               Audio Library" link die de PRO-user direct terug brengt
               naar zijn primary tab (de audio library) zonder dat 'ie
               eerst tab-bar moet zoeken. */}
+          {/* Operator, 7 okt 2026: één CTA, naar de website-pagina (geen
+              tussenstap "Check it out" meer, geen tweede link eronder —
+              terug gaat via de terugknop bovenaan). */}
           <Pressable
             style={s.landingCtaTight}
-            onPress={() => setExploreUnlocked(true)}
+            onPress={() => void openExternal(BRACELET_WEBSITE_URL)}
             android_ripple={{ color: 'rgba(10,10,12,0.15)' }}
-            accessibilityLabel="Explore the full bracelet page"
+            accessibilityRole="link"
+            accessibilityLabel="Discover the bracelet on vibezcore.com"
           >
-            <Text style={s.landingCtaText}>Check it out</Text>
-            <Text style={s.landingCtaArrow}>→</Text>
-          </Pressable>
-          <Pressable
-            style={s.landingBackLink}
-            onPress={() => router.dismissTo('/')}
-            hitSlop={12}
-            accessibilityLabel="Back to Audio Library"
-          >
-            <Text style={s.landingBackLinkText}>← Back to Audio Library</Text>
+            <Text style={s.landingCtaText}>Discover the bracelet</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -1359,13 +1358,9 @@ export default function SmartBeadBraceletScreen() {
                Kickstarter-ingang (tikbaar → waitlist) i.p.v. een losse
                tekstlink onderaan naast de primaire CTA. Zie
                heroBottomGroup: nog maar 1 actie daar. */}
-            <Pressable
-              onPress={() => openExternal(WAITLIST_BRACELET_URL)}
-              hitSlop={8}
-              accessibilityLabel="Kickstarter — Fall 2026, reserve nu"
-            >
-              <Text style={s.heroEyebrowTop}>LAUNCHING · FALL 2026 →</Text>
-            </Pressable>
+            {/* Operator, 7 okt 2026 ("maar 1 CTA"): de eyebrow is weer
+               gewone tekst — de enige actie is de knop onderaan. */}
+            <Text style={s.heroEyebrowTop}>LAUNCHING · FALL 2026</Text>
             <Text style={s.heroTitleTop}>Smart Bead Bracelet</Text>
             <Text style={s.heroSubTop}>Instant State Control</Text>
           </ReAnimated.View>
@@ -1504,7 +1499,7 @@ export default function SmartBeadBraceletScreen() {
             <ReAnimated.View style={[{ width: '100%' }, heroCtaPressStyle]}>
               <Pressable
                 style={s.heroCta}
-                onPress={() => openStateControl()}
+                onPress={() => void openExternal(BRACELET_WEBSITE_URL)}
                 onPressIn={() => {
                   heroCtaScale.value = withTiming(0.97, { duration: 80 });
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1513,7 +1508,8 @@ export default function SmartBeadBraceletScreen() {
                   heroCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
                 }}
                 android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
-                accessibilityLabel="Open Session Control"
+                accessibilityRole="link"
+                accessibilityLabel="Discover the bracelet on vibezcore.com"
               >
                 {/* Operator ("geen pijl in cta, dat is een regel bij
                    ons"): huisstijl §2 — geen tekst-pijltjes als
@@ -1528,7 +1524,9 @@ export default function SmartBeadBraceletScreen() {
                    dat concept is weg nu Session Control al een echte,
                    los bereikbare feature binnen de app is (je bent al in
                    de echte app). CTA wijst nu naar de echte functie. */}
-                <Text style={s.heroCtaText}>Open Session Control</Text>
+                {/* Operator, 7 okt 2026: de knop gaat naar de bracelet-
+                   pagina op de website (was "Open Session Control"). */}
+                <Text style={s.heroCtaText}>Discover the bracelet</Text>
               </Pressable>
             </ReAnimated.View>
           </ReAnimated.View>
