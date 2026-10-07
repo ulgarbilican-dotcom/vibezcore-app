@@ -40,6 +40,7 @@ import {
 import {
   hideBraceletUpsell,
   showBraceletUpsell,
+  openBraceletWebsite,
 } from '@/services/bracelet-upsell';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -3550,7 +3551,7 @@ function AudioScreen({
              label + titel (Content-Card-regel: tekst onder de foto). */
           <Pressable
             style={({ pressed }) => [s.braceletCard, pressed && { opacity: 0.85 }]}
-            onPress={() => router.push('/smart-bead-bracelet' as never)}
+            onPress={() => void openBraceletWebsite()}
             accessibilityRole="button"
             accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
           >

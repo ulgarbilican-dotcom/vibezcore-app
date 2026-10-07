@@ -180,7 +180,7 @@ import {
   useBraceletOwner,
   useDevBraceletActivated,
 } from '@/utils/dev-user-override';
-import { useBraceletNudge } from '@/services/bracelet-upsell';
+import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -1714,7 +1714,7 @@ function CompletionModal({
             scaleTo={0.96}
             onPress={() => {
               onDismiss();
-              router.push('/smart-bead-bracelet' as never);
+              void openBraceletWebsite();
             }}
             accessibilityRole="link"
             accessibilityLabel="Feel this without your phone. Smart Bead Bracelet"

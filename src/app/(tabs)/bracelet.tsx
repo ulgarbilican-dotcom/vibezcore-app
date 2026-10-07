@@ -40,10 +40,11 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -199,7 +200,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
             bracelet hoort bij State Control — één rustige regel onder de
             knop, voor iedereen (er zijn nog geen eigenaars). */}
         <Pressable
-          onPress={() => router.push('/smart-bead-bracelet' as never)}
+          onPress={() => void openBraceletWebsite()}
           hitSlop={10}
           style={({ pressed }) => [s.braceletLink, pressed && { opacity: 0.6 }]}
           accessibilityRole="link"

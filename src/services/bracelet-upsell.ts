@@ -16,7 +16,23 @@
    state + listener-set is de bestaande conventie in deze codebase.
    ─────────────────────────────────────────────────────────────────────── */
 
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
+import { Linking } from 'react-native';
+
+/* Operator, 7 okt 2026: "de links van de bracelet moeten naar de website
+   gaan". Elke ingang (Library-kaart, State Control-intro, Profile,
+   afsluitschermen) opent de bracelet-pagina op vibezcore.com in de in-app
+   browser. Linking enkel als terugval bij een echte fout. */
+export const BRACELET_WEBSITE_URL = 'https://www.vibezcore.com/smart-bead-bracelet';
+
+export async function openBraceletWebsite(): Promise<void> {
+  try {
+    await WebBrowser.openBrowserAsync(BRACELET_WEBSITE_URL);
+  } catch {
+    await Linking.openURL(BRACELET_WEBSITE_URL);
+  }
+}
 
 /* ── Afsluit-link naar de bracelet-pagina (operator, 7 okt 2026) ──────────
    Strategie: app + horloge = kern, de bracelet = premium upgrade. Op het

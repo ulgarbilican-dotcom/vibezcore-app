@@ -137,7 +137,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useBraceletNudge } from '@/services/bracelet-upsell';
+import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
 import { useBreathHost, useBreathParams } from '@/components/breath-host-context';
 import {
   closeBreathSession,
@@ -3927,7 +3927,7 @@ export function BreathSession() {
                 onPress={() => {
                   dismissDone();
                   closeBreathSession();
-                  router.push('/smart-bead-bracelet' as never);
+                  void openBraceletWebsite();
                 }}
                 hitSlop={8}
                 style={({ pressed }) => [s.braceletLine, pressed && { opacity: 0.6 }]}

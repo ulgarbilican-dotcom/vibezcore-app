@@ -10,6 +10,7 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
@@ -533,7 +534,7 @@ function ProductsGroup() {
           icon={BraceletIcon}
           title="Smart Bead Bracelet"
           subtitle="Launching Fall 2026"
-          onPress={() => router.navigate('/smart-bead-bracelet' as never)}
+          onPress={() => void openBraceletWebsite()}
         />
       </Group>
     );
@@ -556,7 +557,7 @@ function ProductsGroup() {
           icon={BraceletIcon}
           title="Smart Bead Bracelet"
           subtitle="Launching Fall 2026"
-          onPress={() => router.navigate('/smart-bead-bracelet' as never)}
+          onPress={() => void openBraceletWebsite()}
         />
       </Group>
     );
@@ -574,7 +575,7 @@ function ProductsGroup() {
         icon={BraceletIcon}
         title="Smart Bead Bracelet"
         subtitle="Launching Fall 2026"
-        onPress={() => router.navigate('/smart-bead-bracelet' as never)}
+        onPress={() => void openBraceletWebsite()}
       />
     </Group>
   );
