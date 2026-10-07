@@ -61,7 +61,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { Heart, Share2 } from 'lucide-react-native';
+import { MoreHorizontal } from 'lucide-react-native';
+import { showVibezAlert } from '@/components/VibezAlert';
 import Animated, {
   Easing,
   useSharedValue,
@@ -318,6 +319,23 @@ export default function PlayerScreen() {
     await unload();
     if (router.canGoBack()) router.back();
     else router.navigate('/');
+  };
+
+  /* "•••"-menu: acties die de audio niet onderbreken (Apple-logica). */
+  const openMore = () => {
+    if (!session) return;
+    void showVibezAlert({
+      title: session.title,
+      buttons: [
+        {
+          text: isFav ? 'Remove from favorites' : 'Add to favorites',
+          onPress: () =>
+            toggleFav({ url: session.url, title: session.title, series: session.series }),
+        },
+        ...(session.free ? [{ text: 'Share', onPress: () => void onShare() }] : []),
+        { text: 'Cancel', style: 'cancel' as const },
+      ],
+    });
   };
 
   const onCycleSpeed = async () => {
@@ -679,7 +697,12 @@ export default function PlayerScreen() {
         </View>
 
         {/* ── Skip + Play controls ────────────────────────────────────── */}
+        {/* Operator, 7 okt 2026 (Apple Podcasts-logica): de snelheid stuurt
+            de audio die nu speelt → dicht bij de afspeelknop, links naast
+            terugspoelen. Hartje en delen veranderen niets aan de audio →
+            weg uit het zicht, in het "•••"-menu rechts. */}
         <View style={s.skipRow}>
+          <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
           <AnimatedPressable
             onPress={() => skipBy(-15)}
             onPressIn={onPressInSkipBack}
@@ -782,6 +805,15 @@ export default function PlayerScreen() {
               15
             </Text>
           </AnimatedPressable>
+          <Pressable
+            onPress={openMore}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="More options"
+            style={s.moreBtn}
+          >
+            <MoreHorizontal size={24} color={C.text} strokeWidth={2} />
+          </Pressable>
         </View>
 
         </Animated.View>
@@ -793,38 +825,7 @@ export default function PlayerScreen() {
             (marginTop:'auto' binnen de flex:1 content-kolom) — vlak boven
             de CTA. Iter v175 (2026-06-30): Sleep-knop weg, zie
             audio-player.ts voor rationale (expo-audio limitation). */}
-        {/* Operator, 7 okt 2026 ("hartje en speed staan rommelig — mooi in
-            lijn", Apple Podcasts): één rij, links de snelheid als tekst,
-            rechts het hartje, gelijk met de randen van de tijdbalk. Geen
-            labels en geen cirkel — alles even groot, één kleur. */}
-        <View style={[s.extrasRow, { marginTop: 'auto' }]}>
-          <SpeedBtn rate={playerState.rate} onPress={onCycleSpeed} />
-          {session.free && (
-            <ExtraBtn
-              icon={<Share2 size={22} color={C.text} strokeWidth={2} />}
-              label="Share"
-              onPress={onShare}
-            />
-          )}
-          <ExtraBtn
-            icon={
-              <Heart
-                size={22}
-                color={isFav ? C.heart : C.text}
-                fill={isFav ? C.heart : 'transparent'}
-                strokeWidth={2}
-              />
-            }
-            label={isFav ? 'Remove from favorites' : 'Add to favorites'}
-            onPress={() =>
-              toggleFav({
-                url: session.url,
-                title: session.title,
-                series: session.series,
-              })
-            }
-          />
-        </View>
+        <View style={{ marginTop: 'auto' }} />
 
         {/* ── Full library access CTA ───────────────────────────────────
             Alleen voor guests + free-tier zichtbaar. PRO-users zijn al
@@ -1418,11 +1419,11 @@ const s = StyleSheet.create({
   skipRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginTop: 10,
     marginBottom: 10,
-    gap: 48,
   },
+  moreBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   /* FIX 14 (5e poging — react-native-svg). Container 48×48,
      position:'relative' zodat de absoluut-gepositioneerde SVG en Text
      centreren op de container-bounds. */
