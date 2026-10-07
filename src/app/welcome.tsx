@@ -202,14 +202,15 @@ function PillarButton({
 /* Het V-teken van VIBEZCORE — exact opgemeten uit het app-logo
    (assets/vibezcore_icon.png, 7 okt 2026, operator: "dezelfde V als het
    logo"): links een schuine balk tot onderaan, rechts een kortere balk
-   met een knik aan de binnenkant — fijnere balken (operator: "de v moet
+   met een knik aan de binnenkant, rechterbeen 6 dichter bij het linker
+   (operator: "opening tussenin minder") — fijnere balken (operator: "de v moet
    fijner"), zelfde hoeken en knik. Als vector, zodat het op elk scherm
    scherp en wit blijft. */
 function VMark() {
   return (
-    <Svg width={36} height={34} viewBox="0 0 66 62">
+    <Svg width={33} height={34} viewBox="0 0 60 62">
       <Polygon points="0,0 13,0 33.5,62 21.5,62" fill="#ffffff" />
-      <Polygon points="53,0 66,0 47.5,53 44.5,26" fill="#ffffff" />
+      <Polygon points="47,0 60,0 41.5,53 38.5,26" fill="#ffffff" />
     </Svg>
   );
 }
