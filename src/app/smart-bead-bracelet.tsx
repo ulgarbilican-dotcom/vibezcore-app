@@ -1000,13 +1000,22 @@ export default function SmartBeadBraceletScreen() {
      hangen die vroeger de tab-bar compenseerde. */
   const TAB_BAR_HEIGHT = 0;
   const PREVIEW_PILL_HEIGHT = 36; // PreviewPill wrap+pill, approx
-  const heroFullHeight = Math.max(
-    440,
-    Dimensions.get('window').height -
-      safeInsets.top -
-      TAB_BAR_HEIGHT -
-      (isBraceletOwner ? 0 : PREVIEW_PILL_HEIGHT),
-  );
+  /* Operator, 7 okt 2026 ("de 5 states-pagina ook mooi zonder scroll"):
+     de schatting hierboven telde de kopbalk (terugknop) en de navigatie-
+     balk niet mee — de knop viel onder het scherm. Nu METEN we de echte
+     zichtbare hoogte van de ScrollView (onLayout) en vult de hero precies
+     die ruimte, min de onderste inset en de 8 px netto-marge van `scroll`/
+     `productHero`. De schatting blijft enkel als eerste-frame-waarde. */
+  const [mainViewportH, setMainViewportH] = useState(0);
+  const heroFullHeight = mainViewportH > 0
+    ? Math.max(440, mainViewportH - safeInsets.bottom - 8)
+    : Math.max(
+        440,
+        Dimensions.get('window').height -
+          safeInsets.top -
+          TAB_BAR_HEIGHT -
+          (isBraceletOwner ? 0 : PREVIEW_PILL_HEIGHT),
+      );
 
   /* Iter 9v: owners zien BraceletControl INLINE in deze tab. Voorheen
      deden we router.replace('/bracelet-control'), maar dat is een
@@ -1349,6 +1358,7 @@ export default function SmartBeadBraceletScreen() {
       {!isBraceletOwner && <PreviewPill />}
       <ScrollView
         ref={mainScrollRef}
+        onLayout={(e) => setMainViewportH(Math.round(e.nativeEvent.layout.height))}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
