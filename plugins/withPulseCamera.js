@@ -11,7 +11,7 @@
 const { withInfoPlist, withAndroidManifest, AndroidConfig } = require('@expo/config-plugins');
 
 const CAMERA_USAGE =
-  'VIBEZCORE uses the camera and flash to read your pulse from your fingertip, to set your rhythm. Nothing is recorded or saved.';
+  'VIBEZCORE uses the camera and flash to read your heart rate from your fingertip, to set your rhythm. Nothing is recorded or saved.';
 
 function withPulseCamera(config) {
   config = withInfoPlist(config, (c) => {

@@ -494,14 +494,14 @@ function RhythmGroup() {
           title="Your rhythm"
           subtitle={
             pulse.source === 'average'
-              ? 'Set for an average resting pulse'
+              ? 'Set for an average resting heart rate'
               : shouldSuggestRemeasure(pulse)
                 ? 'Time to measure again'
-                : 'Every session starts at your resting pulse'
+                : 'Every session starts at your resting heart rate'
           }
           value={pulse.source === 'average' ? 'Average' : `${pulse.bpm} bpm`}
           onPress={() => setOpen(true)}
-          accessibilityLabel="Your rhythm — set your resting pulse"
+          accessibilityLabel="Your rhythm — set your resting heart rate"
         />
       </Group>
       <RhythmSheet

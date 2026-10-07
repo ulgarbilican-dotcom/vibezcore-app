@@ -293,7 +293,7 @@ export default function ActivityScreen() {
 }
 
 function rhythmSub(p: RestingPulse): string {
-  if (p.source === 'average') return `Average resting pulse · ${p.bpm} bpm · Personalize`;
+  if (p.source === 'average') return `Average resting heart rate · ${p.bpm} bpm · Personalize`;
   if (shouldSuggestRemeasure(p)) return `${p.bpm} bpm · Time to measure again`;
   const when = p.at ? new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
   return p.source === 'measured' ? `${p.bpm} bpm · measured ${when}` : `${p.bpm} bpm · entered ${when}`;

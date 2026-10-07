@@ -1331,7 +1331,7 @@ function ModeDetailModal({
 /* ── QuickSessionSheet — korte uitleg + Start/Back (operator, 7 okt 2026) ── */
 const QUICK_COPY: Record<'chill' | 'boost', { line: string; note: string }> = {
   chill: {
-    line: 'Five minutes. Your rhythm starts at your pulse and settles gently below it.',
+    line: 'Five minutes. Your rhythm starts at your heart rate and settles gently below it.',
     note: 'A short version of Clarity & Relax.',
   },
   boost: {
@@ -3619,8 +3619,8 @@ function IdleScreen({
                 pulse.liveBpm !== null
                   ? `Your heart right now, ${pulse.liveBpm} beats per minute. This session starts there. Tap to change.`
                   : pulse.source === 'average'
-                    ? `Rhythm set for an average resting pulse of ${pulse.bpm}. Tap to personalize.`
-                    : `Your resting pulse, ${pulse.bpm} beats per minute. Tap to change.`
+                    ? `Rhythm set for an average resting heart rate of ${pulse.bpm}. Tap to personalize.`
+                    : `Your resting heart rate, ${pulse.bpm} beats per minute. Tap to change.`
               }
             >
               <HeartPulse size={13} color="rgba(255,255,255,0.8)" strokeWidth={2} />

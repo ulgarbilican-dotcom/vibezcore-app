@@ -6,9 +6,9 @@
      choose  — eerste keer (of via Profile): eigen rusthartslag of gemiddelde
      manual  — draaiwiel 40–100
      result  — "Calm Control starts at 64 and slows to 51"
-   Fase 2 voegt "Measure my pulse" (camera) toe als eerste keuze.
+   Fase 2 voegt "Measure my heart rate" (camera) toe als eerste keuze.
 
-   Woordkeuze (CLAUDE.md): pulse / rhythm, nooit stress, HRV, diagnose.
+   Woordkeuze (CLAUDE.md, operator 7 okt 2026): "heart rate" (niet "pulse") / rhythm, nooit stress, HRV, diagnose.
    "Not a medical device" staat bij elk getal. */
 
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -127,7 +127,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             </View>
             <Text style={s.title}>Start at your own pace</Text>
             <Text style={s.body}>
-              Every session begins at your resting pulse, then eases into the rhythm of your state.
+              Every session begins at your resting heart rate, then eases into the rhythm of your state.
             </Text>
             {PulseMeter ? (
               <>
@@ -139,7 +139,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
                   }}
                   accessibilityRole="button"
                 >
-                  <Text style={s.ctaTxt}>Measure my pulse</Text>
+                  <Text style={s.ctaTxt}>Measure my heart rate</Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [s.secondary, pressed && s.pressed]}
@@ -177,7 +177,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
 
         {step === 'measure' && PulseMeter ? (
           <>
-            <Text style={s.title}>Measure your pulse</Text>
+            <Text style={s.title}>Measure your heart rate</Text>
             <Text style={s.body}>
               Best after a few quiet minutes sitting — ideally in the morning. Rest your fingertip lightly over the main camera on the back (usually the top one) and the flash.
             </Text>
@@ -200,7 +200,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           <>
             <Text style={s.title}>Your resting heart rate</Text>
             <Text style={s.body}>
-              Your watch shows it. Or count your pulse for 30 seconds after waking, and double it.
+              Your watch shows it. Or count your heart rate for 30 seconds after waking, and double it.
             </Text>
             <BpmWheel value={manualBpm} onChange={setManualBpm} />
             <Pressable
@@ -224,7 +224,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               <Text style={s.bigUnit}> bpm</Text>
             </Text>
             <Text style={s.resultLbl}>
-              {aboveRest ? 'Your heart right now' : belowRest ? 'Right now' : 'Your resting pulse'}
+              {aboveRest ? 'Your heart right now' : belowRest ? 'Right now' : 'Your resting heart rate'}
             </Text>
             {belowRest ? (
               <Text style={s.keepNote}>
@@ -241,10 +241,10 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               <Text style={s.ctaTxt}>Continue</Text>
             </Pressable>
             {aboveRest ? (
-              <Text style={s.restNote}>Your resting pulse stays {pulse.bpm} — we keep your calmest reading.</Text>
+              <Text style={s.restNote}>Your resting heart rate stays {pulse.bpm} — we keep your calmest reading.</Text>
             ) : null}
             <Text style={s.note}>
-              We use your pulse only to set your rhythm. It stays on this device. Not a medical device.
+              We use your heart rate only to set your rhythm. It stays on this device. Not a medical device.
             </Text>
           </>
         )}

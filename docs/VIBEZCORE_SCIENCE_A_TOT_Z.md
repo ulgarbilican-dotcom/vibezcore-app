@@ -310,7 +310,8 @@ pace": meten / zelf invullen / gemiddelde).
 | Inspired by research on heartbeat-like touch | Brainwaves · syncs · entrainment |
 | "In a Stanford/Cornell study, …" + exact wat er gevonden werd | Reduces anxiety / improves focus — als VIBEZCORE-effect |
 | Designed to help you feel calmer / more alert / ready to rest | Fall asleep faster |
-| Tuned to your own heartbeat · Starts at your resting pulse | Measures your heart health / stress / HRV |
+| Tuned to your own heartbeat · Starts at your resting heart rate | Measures your heart health / stress / HRV |
+| **heart rate** / **resting heart rate** (zoals Apple Health) | "pulse" — verwarrend (operator, 7 okt 2026) |
 | Binaural beats (techniek) | Mindfulness · meditation · yoga nidra |
 | Not a medical device | Diagnose, behandelen, voorkomen |
 
@@ -321,7 +322,7 @@ pace": meten / zelf invullen / gemiddelde).
   in a 100-person trial."
 - "In a Cornell study, a slow heartbeat rhythm from a smartwatch helped
   people stay calmer and perform better under pressure."
-- "Every session starts at your own resting pulse — then settles just
+- "Every session starts at your own resting heart rate — then settles just
   below it, the way research found a slower heartbeat rhythm helps
   people stay calm."
 - "Quick Chill: five minutes, one tap — the length researchers used."

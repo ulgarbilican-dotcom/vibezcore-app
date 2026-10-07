@@ -411,12 +411,12 @@ export const PRIVACY: LegalDoc = {
         'Bracelet pairing info',
         'Session history (Breathwork & State Control)',
         'Reminder schedule',
-        'Resting pulse (optional, State Control)',
+        'Resting heart rate (optional, State Control)',
       ],
     },
     {
       kind: 'highlight',
-      text: 'We do not collect your IMEI, MAC address, biometric data, or any health information — not from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting pulse for State Control, it is used only to set the starting pace of your rhythm and never leaves your device. Session history, reminders, your resting pulse and smartwatch settings stay on your device. You can remove your resting pulse anytime in Profile → Your rhythm.',
+      text: 'We do not collect your IMEI, MAC address, biometric data, or any health information — not from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting heart rate for State Control, it is used only to set the starting pace of your rhythm and never leaves your device. Session history, reminders, your resting heart rate and smartwatch settings stay on your device. You can remove your resting heart rate anytime in Profile → Your rhythm.',
     },
 
     { kind: 'h3', text: 'Cookies & Local Storage' },
@@ -1327,7 +1327,7 @@ export const HEALTH: LegalDoc = {
         '**Stop and breathe normally** if you feel dizzy, tingling, or short of breath during a session — the effect passes within a minute. Resume gently or leave it for today',
         'Stop immediately if you feel nauseous or distressed',
         '**State Control and Breathwork use gentle vibration** on your phone, smartwatch or bracelet to guide the rhythm. Stop the session if the vibration feels uncomfortable',
-        '**Your resting pulse in State Control is not a medical measurement.** It only sets the starting pace of your rhythm. VIBEZCORE does not diagnose, monitor or treat any heart condition',
+        '**Your resting heart rate in State Control is not a medical measurement.** It only sets the starting pace of your rhythm. VIBEZCORE does not diagnose, monitor or treat any heart condition',
       ],
     },
     { kind: 'h2', text: '3. Possible Reactions' },

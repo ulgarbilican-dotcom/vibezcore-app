@@ -58,7 +58,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const [placingLong, setPlacingLong] = useState(false);
 
   /* Toestemming vragen zodra dit scherm verschijnt (de gebruiker koos net
-     "Measure my pulse"). */
+     "Measure my heart rate"). */
   useEffect(() => {
     if (permission.hasPermission) return;
     if (permission.canRequestPermission) {
@@ -157,14 +157,14 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         if (res) {
           finished.current = true;
           if (res.bpm > 100) {
-            setFailReason("That's higher than a resting pulse. Sit still for a minute, then try again.");
+            setFailReason("That's higher than a resting heart rate. Sit still for a minute, then try again.");
             setStatus('failed');
           } else {
             onResult(res.bpm);
           }
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
-          setFailReason("We couldn't read a steady pulse. Rest your fingertip lightly — pressing hard blocks the signal.");
+          setFailReason("We couldn't read a steady heart rate. Rest your fingertip lightly — pressing hard blocks the signal.");
           setStatus('failed');
         }
       }
@@ -255,7 +255,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         ? 'Got it — hold still'
         : status === 'measuring'
           ? progress < 1
-            ? 'Reading your pulse — breathe normally'
+            ? 'Reading your heart rate — breathe normally'
             : 'Almost there…'
           : status === 'denied'
             ? 'Camera access is off for VIBEZCORE.'
