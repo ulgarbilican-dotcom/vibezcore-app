@@ -421,7 +421,8 @@ const s = StyleSheet.create({
   },
   top: {
     alignItems: 'center',
-    paddingTop: 4,
+    /* Operator, 7 okt 2026 ("logo moet lager, boven meer ruimte"). */
+    paddingTop: 40,
   },
   topWordmark: {
     marginTop: 12,
