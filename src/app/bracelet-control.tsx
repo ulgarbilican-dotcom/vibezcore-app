@@ -1372,7 +1372,7 @@ function QuickSessionSheet({
         </Pressable>
         <View style={s.quickSheetHead}>
           <View style={s.quickSheetIcon}>
-            <QIcon size={24} color={meta.color} strokeWidth={2.2} />
+            <QIcon size={key === 'chill' ? 30 : 24} color={meta.color} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.modeModalName}>{q.label}</Text>
@@ -3710,7 +3710,9 @@ function IdleScreen({
                   accessibilityRole="button"
                   accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
                 >
-                  <QIcon size={20} color={getModeMeta(q.mode).color} strokeWidth={2} />
+                  {/* De rimpeling oogt kleiner dan de bliksem bij dezelfde maat
+                      (operator, 7 okt 2026: "icoon quick chill mag iets groter"). */}
+                  <QIcon size={q.key === 'chill' ? 25 : 20} color={getModeMeta(q.mode).color} strokeWidth={2} />
                 </Pressable>
               );
             })}
