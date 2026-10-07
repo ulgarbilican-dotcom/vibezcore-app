@@ -910,6 +910,9 @@ export default function BreathScreen() {
              de knop. De ECHTE onboarding-aanroep van `SlideIntro` elders in
              breath-welcome.tsx blijft volledig ongemoeid — dit component
              wordt daar nog steeds op precies dezelfde manier gebruikt. */}
+          {/* Operator, 7 okt 2026: eyebrow zoals de andere welkomstschermen
+             ("VIBEZCORE AUDIO LIBRARY", "KICKSTARTER · FALL 2026"). */}
+          <Text style={s.introEyebrow}>GUIDED BREATHWORK</Text>
           <View style={s.stackTitle}>
             <Animated.Text style={[s.stackWord1, wordStyle1]}>Breathe</Animated.Text>
             <Animated.Text style={[s.stackWord2, wordStyle2]}>Build</Animated.Text>
@@ -921,7 +924,8 @@ export default function BreathScreen() {
              dat scherm had 'm al, deze (losse, gedupliceerde) versie hier
              nog niet, wat onnodig kaler aanvoelde voor exact hetzelfde
              merkbeeld. */}
-          <Text style={s.introSub}>Control the input. Change the output</Text>
+          {/* "Control the input. Change the output" weg (operator, 7 okt
+             2026) — de eyebrow hierboven zegt nu wat dit is. */}
           {/* Operator, 24 september 2026 ("cta op welcome scherm van alle
              3 [Breath/Bracelet/Library] moet zelfde kleur, animatie en
              breedte hebben — vindt de witte mooier"): deze knop was op 19
@@ -1358,6 +1362,15 @@ const s = StyleSheet.create({
      midden of beter links?" — links geprobeerd, operator koos alsnog voor
      gecentreerd. Terug naar `center`. */
   stackTitle: { alignItems: 'center' },
+  /* Zelfde eyebrow als de Audio Library-intro ((tabs)/index.tsx). */
+  introEyebrow: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   /* Tagline onder "Breathe Build Become" — zelfde stijl als onboarding's
      `introSubLight` (breath-welcome.tsx). */
   introSub: {
