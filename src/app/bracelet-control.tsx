@@ -3540,14 +3540,18 @@ function IdleScreen({
               style={({ pressed }) => [s.ringPulsePill, pressed && { opacity: 0.6 }]}
               accessibilityRole="button"
               accessibilityLabel={
-                pulse.source === 'average'
-                  ? `Rhythm set for an average resting pulse of ${pulse.bpm}. Tap to personalize.`
-                  : `Your resting pulse, ${pulse.bpm} beats per minute. Tap to change.`
+                pulse.liveBpm !== null
+                  ? `Your heart right now, ${pulse.liveBpm} beats per minute. This session starts there. Tap to change.`
+                  : pulse.source === 'average'
+                    ? `Rhythm set for an average resting pulse of ${pulse.bpm}. Tap to personalize.`
+                    : `Your resting pulse, ${pulse.bpm} beats per minute. Tap to change.`
               }
             >
               <HeartPulse size={13} color="rgba(255,255,255,0.8)" strokeWidth={2} />
               <Text style={s.ringPulseTxt}>
-                {pulse.bpm} bpm{pulse.source === 'average' ? ' · avg' : ''}
+                {pulse.liveBpm !== null
+                  ? `${pulse.liveBpm} bpm · now`
+                  : `${pulse.bpm} bpm${pulse.source === 'average' ? ' · avg' : ''}`}
               </Text>
               {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
               {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}

@@ -79,7 +79,7 @@ import {
   stopStateSessionOnWatch as stopAppleState,
 } from '../../modules/watch-breath';
 
-import { getRestingPulse, getSessionStartBpm } from './resting-pulse';
+import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
 
 const SESSION_HOLD_SECONDS = 10;
 /** Versnelde glijding in de voorproef voor de trage modi (Sleep, Clarity). */
@@ -156,7 +156,12 @@ function resolveSpec(
   startBpm: number = getSessionStartBpm(),
 ): ResolvedSpec {
   const spec = SPECS[mode];
-  return { ...spec, startBpm, targetBpm: spec.targetFor(restingBpm) };
+  let targetBpm = spec.targetFor(restingBpm);
+  /* De rustgevende toestanden eindigen ALTIJD onder je rusthartslag —
+     ook bij een (zeer) lage rust, waar de ondergrenzen anders boven je
+     eigen hart uitkwamen (operator, 7 okt 2026: "wat als 55?"). */
+  if (mode !== BraceletMode.Gamma) targetBpm = Math.min(targetBpm, Math.max(40, restingBpm - 2));
+  return { ...spec, startBpm, targetBpm };
 }
 
 /** Start- en eindtempo voor de UI (resultaat van "Match your rhythm"). */
@@ -435,6 +440,9 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
       restingBpm: getRestingPulse().bpm,
       startBpm: getSessionStartBpm(),
     };
+    /* Het startpunt van een meting geldt voor DEZE sessie; de volgende
+       begint weer bij de rusthartslag (operator, 7 okt 2026). */
+    clearLiveStartPulse();
   } else if (session.pausedAt !== null && now - session.pausedAt > RESUME_WINDOW_SECONDS * 1000) {
     session.curveZeroSec = elapsedSec;
     session.restingBpm = getRestingPulse().bpm;
