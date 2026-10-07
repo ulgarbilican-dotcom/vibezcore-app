@@ -432,9 +432,9 @@ const s = StyleSheet.create({
   topWordmark: {
     marginTop: 12,
     /* vibezcore_wordmark_wide.png: zelfde letters als het woordmerk, iets
-       ruimer gespatieerd (operator, 7 okt 2026). 992×83 → zelfde lettergrootte
-       als voorheen bij 120 breed. */
-    width: 149,
+       ruimer gespatieerd (operator, 7 okt 2026: "nog verder uiteen").
+       1120×83 → zelfde lettergrootte als het origineel bij 120 breed. */
+    width: 168,
     height: 12.5,
   },
   topTagline: {
