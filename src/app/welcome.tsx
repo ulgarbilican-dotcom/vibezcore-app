@@ -312,7 +312,11 @@ export default function WelcomeScreen() {
     <View style={s.root}>
       <Animated.Image
         source={{ uri: BG_IMG }}
-        style={[StyleSheet.absoluteFill, bgStyle]}
+        /* Operator, 7 okt 2026 ("foto stukje omlaag"): het beeldvlak steekt
+           140 pt onder het scherm uit (bovenrand blijft op 0, geen zwarte
+           strook) — het midden zakt 70 pt, de personen staan lager en het
+           logo meer lucht heeft. */
+        style={[StyleSheet.absoluteFill, { bottom: -140 }, bgStyle]}
         resizeMode="cover"
       />
       {/* Operator, 19 september 2026 ("gradient bovenaan — VIBEZCORE en
@@ -356,7 +360,7 @@ export default function WelcomeScreen() {
                 (operator, 7 okt 2026: "de v in vibezcore moet ook die
                 speciale v krijgen"). */}
             <Animated.Image
-              source={require('../../assets/vibezcore_wordmark.png')}
+              source={require('../../assets/vibezcore_wordmark_wide.png')}
               style={[s.topWordmark, taglineStyle]}
               resizeMode="contain"
               tintColor="#ffffff"
@@ -426,8 +430,11 @@ const s = StyleSheet.create({
   },
   topWordmark: {
     marginTop: 12,
-    width: 120,
-    height: 12.5, // 800×83-bestand → zelfde verhouding
+    /* vibezcore_wordmark_wide.png: zelfde letters als het woordmerk, iets
+       ruimer gespatieerd (operator, 7 okt 2026). 992×83 → zelfde lettergrootte
+       als voorheen bij 120 breed. */
+    width: 149,
+    height: 12.5,
   },
   topTagline: {
     marginTop: 4,
