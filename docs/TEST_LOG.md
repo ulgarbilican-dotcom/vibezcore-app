@@ -87,6 +87,9 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 41 | E-mailbevestiging / wachtwoordreset via link → daarna kopen staat op account | A16 | ⏳ |
 | 42 | Paywall zonder storeverbinding: geen vaste €-prijzen of "7-day" | A16 | ⏳ |
 | 43 | iPhone: proefperiode/introprijs + "App Store"-teksten; Google-knop verborgen tot iOS-client er is | iPhone | ⏳ iOS-build nodig |
+| 44 | Pijlerscherm (Father/Mother Wound): geen "Pro"-slotjes voor Premium | A16 | ✅ operator: "slotjes zijn weg" (fix `14a440d`) |
+| 45 | Premium: ook geen "Free with account"-slot; sessie speelt af | A16 | ✅ operator: "audio speelt nu gewoon af" (fix `4710d0d`) |
+| 46 | Ingelogd → opent in laatste tabblad, geen welkomstscherm | A16 | ⏳ (commit `a4b7cfe`, volledige herstart nodig) |
 
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |
