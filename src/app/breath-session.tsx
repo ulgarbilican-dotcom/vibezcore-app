@@ -2347,22 +2347,30 @@ export function BreathSession() {
       return;
     }
     const wasLockedPreview = locked;
+    if (wasLockedPreview) {
+      /* Operator, 7 okt 2026 ("vroegtijdig end session: zelfde popup maar
+         zonder glaseffect"): eerst stoppen haalde het sessiebeeld weg, dus
+         stond er achter de paywall enkel zwart en oogde het glas vlak. Nu
+         PAUZEREN: het huidige sessiebeeld blijft achter het glas staan,
+         net als na de volle 30 s. Echt gestopt wordt bij het sluiten van
+         de paywall (zie onClose van PremiumPaywallModal). */
+      pauseSession();
+      stopScape(false);
+      setPaywall(true);
+      return;
+    }
     setSessionEnded(true);
     stop();
-    if (wasLockedPreview) {
-      setPaywall(true);
-    } else {
-      /* Operator, 11 september 2026: "de oude selectiepagina bestaat nog,
+    /* Operator, 11 september 2026: "de oude selectiepagina bestaat nog,
          wil dat nooit meer zien" — vroeg stoppen liet `finish()` gewoon
          `running` op `false` zetten, waarna dit scherm terugviel op zijn
          eigen, oude kies-UI (rhythm-chips/duur-chips/START-knop) — exact
          wat niet meer mag. Nu terug naar waar je vandaan kwam, zelfde
          navigatie als `handleTopbarBack` hierboven, i.p.v. hier te
-         blijven hangen. */
-      skipBreathIntroOnce();
-      leaveSession();
-    }
-  }, [isFreeOnboardingSession, locked, stop, leaveSession]);
+       blijven hangen. */
+    skipBreathIntroOnce();
+    leaveSession();
+  }, [isFreeOnboardingSession, locked, stop, leaveSession, pauseSession]);
 
   /* ── Knoppen op het horloge (Wear OS + Apple Watch, 6 okt 2026) ─────────
      Eén sessie, twee bedieningen: Pause / Resume / Stop op de pols bedienen
@@ -3206,6 +3214,12 @@ export function BreathSession() {
         visible={paywall}
         onClose={() => {
           setPaywall(false);
+          /* Vroeg gestopte voorproef staat nog gepauzeerd (zie requestStop):
+             nu echt stoppen, daarna terug zoals altijd. */
+          if (runningRef.current) {
+            setSessionEnded(true);
+            stop();
+          }
           /* Operator, 8 september 2026: "na 30 sec free als ik de popup
              wegklik krijg ik de oude start session pagina" — kwam via
              `autostart=1`, dus wegklikken liet dit scherm z'n EIGEN, oude
