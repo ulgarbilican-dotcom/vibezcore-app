@@ -971,6 +971,7 @@ function DurationWheelRow({
   trackColor,
   scrollY,
   viewportHeight,
+  dotColor,
 }: {
   index: number;
   label: string;
@@ -978,6 +979,8 @@ function DurationWheelRow({
   trackColor: string;
   scrollY: SharedValue<number>;
   viewportHeight: number;
+  /** Aanbevolen duur: stipje rechts NAAST de pil (operator, 7 okt 2026). */
+  dotColor?: string;
 }) {
   const rowStyle = useAnimatedStyle(() => {
     const itemOffsetTop = WHEEL_ITEM_H + index * WHEEL_ITEM_H;
@@ -1012,6 +1015,7 @@ function DurationWheelRow({
       >
         {label}
       </ReanimatedAnimated.Text>
+      {dotColor ? <View pointerEvents="none" style={[s.wheelRecDot, { backgroundColor: dotColor }]} /> : null}
     </View>
   );
 }
@@ -1024,6 +1028,7 @@ function DurationWheel({
   trackColor,
   visibleRows = WHEEL_VISIBLE,
   recommendedValue,
+  recommendedDot,
 }: {
   options: { value: number; label: string }[];
   value: number;
@@ -1032,6 +1037,8 @@ function DurationWheel({
   trackColor: string;
   visibleRows?: number;
   recommendedValue?: number;
+  /** Waarde die een stipje rechts naast de pil krijgt. */
+  recommendedDot?: number;
 }) {
   const viewportHeight = WHEEL_ITEM_H * visibleRows;
   const listRef = useRef<ReanimatedAnimated.ScrollView>(null);
@@ -1097,7 +1104,7 @@ function DurationWheel({
       )}
       <ReanimatedAnimated.ScrollView
         ref={listRef}
-        style={{ height: viewportHeight }}
+        style={{ height: viewportHeight, alignSelf: 'stretch' }}
         showsVerticalScrollIndicator={false}
         snapToInterval={WHEEL_ITEM_H}
         decelerationRate="fast"
@@ -1115,6 +1122,7 @@ function DurationWheel({
             trackColor={trackColor}
             scrollY={scrollY}
             viewportHeight={viewportHeight}
+            dotColor={o.value === recommendedDot ? accent : undefined}
           />
         ))}
       </ReanimatedAnimated.ScrollView>
@@ -2109,7 +2117,10 @@ function DurationRing({
          Recommended ONDER de tijd. De rij blijft staan als hij leeg is,
          zodat de tijd niet verspringt. */}
       <View pointerEvents="none" style={s.durationRingCenter}>
-        <View style={s.ringNameRow}>
+        {/* Tijdens de voorproef enkel de teller — rust (operator, 7 okt
+            2026: "de gebruiker weet al dat het een preview is en welke
+            sessie"). Rijen blijven staan (opacity), zodat niets verspringt. */}
+        <View style={[s.ringNameRow, clockOverride ? { opacity: 0 } : null]}>
           <Text style={[s.ringName, textShadow]} numberOfLines={1}>
             {label}
           </Text>
@@ -2118,7 +2129,7 @@ function DurationRing({
         <Text style={[s.ringClock, { color: numColor }, textShadow]}>
           {clockOverride ?? `${value}:00`}
         </Text>
-        <View style={[s.ringRecRow, { opacity: subOverride || recommended ? 1 : 0 }]}>
+        <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
           <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
         </View>
@@ -3482,7 +3493,6 @@ function IdleScreen({
             <DurationRing
               key={selectedMode}
               clockOverride={trialRunning ? `0:${String(trialLeft).padStart(2, '0')}` : undefined}
-              subOverride={trialRunning ? 'Preview' : undefined}
               fillOnMount={modeChangedRef.current}
               min={meta.minMinutes}
               max={meta.maxMinutes}
@@ -3543,6 +3553,7 @@ function IdleScreen({
             }))}
             value={duration}
             onChange={setDuration}
+            recommendedDot={DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value}
             accent={meta.color}
             trackColor={idleDark ? 'rgba(255,255,255,0.4)' : C.textDim}
           />
@@ -3601,8 +3612,8 @@ function IdleScreen({
           <View style={s.trialInfo}>
             <Text style={s.trialInfoTxt}>
               {trialRunning && condensedMinutes !== null
-                ? 'Sped up for the preview — a full session slows down gradually'
-                : "You'll feel it on your phone and paired watch"}
+                ? 'Sped up for the preview.\nA full session slows down gradually.'
+                : 'Feel it on your phone and paired watch'}
             </Text>
             <Pressable onPress={onStart} hitSlop={10} accessibilityRole="button" accessibilityLabel="Unlock all sessions">
               <Text style={s.trialUnlockTxt}>Unlock all sessions</Text>
@@ -5524,12 +5535,18 @@ const s = StyleSheet.create({
     borderRadius: 4,
   },
   trialInfo: { alignItems: 'center', gap: 10, marginTop: 14 },
+  /* Duidelijk leesbaar en gecentreerd (operator, 7 okt 2026). */
   trialInfoTxt: {
-    color: 'rgba(255,255,255,0.5)',
-    fontFamily: BrandFonts.regular,
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.88)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    paddingHorizontal: 24,
+    alignSelf: 'stretch',
+    paddingHorizontal: 28,
+    /* Altijd plaats voor twee regels: anders verspringt de knop als de
+       uitleg tijdens de voorproef van één naar twee regels gaat. */
+    minHeight: 40,
   },
   trialUnlockTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
   durationRingWrap: {
@@ -5590,6 +5607,9 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
   wheelRow: { alignItems: 'center', justifyContent: 'center' },
+  /* Stip voor de aanbevolen duur, rechts naast de pil (pil eindigt 56 van
+     de rand → stip 10 px daarbuiten). Scrolt mee met zijn rij. */
+  wheelRecDot: { position: 'absolute', right: 40, width: 7, height: 7, borderRadius: 3.5 },
   wheelTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 16,
