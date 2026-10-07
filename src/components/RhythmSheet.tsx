@@ -17,6 +17,7 @@ import { BrandFonts } from '@/constants/theme';
 import { BraceletMode, getModeMeta } from '@/services/ble-contract';
 import { rhythmFor } from '@/services/bracelet-haptics';
 import {
+  addRestingPulseReading,
   AVERAGE_RESTING_BPM,
   MAX_RESTING_BPM,
   MIN_RESTING_BPM,
@@ -41,6 +42,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/* De cameramodule zit pas in de build vanaf fase 2. In een oudere build
+   ontbreekt de native kant: dan geen meetknop i.p.v. een crash. */
+let PulseMeter: typeof import('./PulseMeter').default | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  PulseMeter = require('./PulseMeter').default;
+} catch {
+  PulseMeter = null;
+}
+
 /** Rusthartslag als React-state (volgt elke wijziging, ook uit Profile). */
 export function useRestingPulse(): RestingPulse {
   const [p, setP] = useState(getRestingPulse);
@@ -48,7 +59,7 @@ export function useRestingPulse(): RestingPulse {
   return p;
 }
 
-type Step = 'choose' | 'manual' | 'result';
+type Step = 'choose' | 'measure' | 'manual' | 'result';
 
 type Props = {
   visible: boolean;
@@ -109,16 +120,38 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             <Text style={s.body}>
               Every session begins at your resting pulse, then eases into the rhythm of your state.
             </Text>
-            <Pressable
-              style={({ pressed }) => [s.cta, pressed && s.pressed]}
-              onPress={() => {
-                void Haptics.selectionAsync();
-                setStep('manual');
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={s.ctaTxt}>Enter my resting heart rate</Text>
-            </Pressable>
+            {PulseMeter ? (
+              <>
+                <Pressable
+                  style={({ pressed }) => [s.cta, pressed && s.pressed]}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    setStep('measure');
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.ctaTxt}>Measure my pulse</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [s.secondary, pressed && s.pressed]}
+                  onPress={() => setStep('manual')}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.secondaryTxt}>Enter it myself</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [s.cta, pressed && s.pressed]}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  setStep('manual');
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={s.ctaTxt}>Enter my resting heart rate</Text>
+              </Pressable>
+            )}
             <Pressable
               style={({ pressed }) => [s.secondary, pressed && s.pressed]}
               onPress={() => {
@@ -132,6 +165,24 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             {!fromProfile ? <Text style={s.note}>You can change this anytime in Profile.</Text> : null}
           </>
         )}
+
+        {step === 'measure' && PulseMeter ? (
+          <>
+            <Text style={s.title}>Measure your pulse</Text>
+            <Text style={s.body}>
+              Sit still, then rest your fingertip lightly over the back camera and flash.
+            </Text>
+            <PulseMeter
+              onResult={(bpm) => {
+                if (addRestingPulseReading(bpm)) {
+                  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setStep('result');
+                }
+              }}
+              onManual={() => setStep('manual')}
+            />
+          </>
+        ) : null}
 
         {step === 'manual' && (
           <>

@@ -143,6 +143,7 @@
       "./plugins/withQuickShortcuts",
       "./modules/breath-background/plugin.js",
       "./plugins/withWearApp",
+      "./plugins/withPulseCamera",
       [
         "expo-notifications",
         {
