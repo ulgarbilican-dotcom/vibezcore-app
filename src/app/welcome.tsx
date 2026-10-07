@@ -35,12 +35,14 @@ import {
 } from '@/utils/dev-user-override';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Headphones, Wind, Zap } from 'lucide-react-native';
+import { BookAudio, ChevronRight, Wind, type LucideIcon } from 'lucide-react-native';
+import BraceletIcon from '@/components/BraceletIcon';
+import Svg, { Polygon } from 'react-native-svg';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { getSetting } from '@/utils/settings';
 import * as Haptics from 'expo-haptics';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 /* Operator, 19 september 2026 ("gestaffelde intro... logo, dan tekst,
    dan de knoppen één voor één van onderen omhoog met een zachte
@@ -72,7 +74,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    redesign stond. */
 type Pillar = {
   key: string;
-  Icon: typeof Wind;
+  /* Operator, 7 okt 2026: zelfde iconen als de tabbalk onderaan
+     (Breath = Wind, State Control = BraceletIcon, Library = BookAudio). */
+  Icon: LucideIcon | typeof BraceletIcon;
   product: string;
   title: string;
   onPress: () => void;
@@ -97,14 +101,14 @@ const PILLARS: Pillar[] = [
   },
   {
     key: 'bracelet',
-    Icon: Zap,
+    Icon: BraceletIcon,
     product: 'Feel',
     title: 'Instant State Control',
     onPress: () => router.navigate('/bracelet'),
   },
   {
     key: 'audio',
-    Icon: Headphones,
+    Icon: BookAudio,
     product: 'Listen',
     title: 'Train Your Mind',
     onPress: () => router.navigate('/'),
@@ -176,8 +180,10 @@ function PillarButton({
           blurMethod="dimezisBlurViewSdk31Plus"
           style={s.pillarBlur}
         >
+          {/* Operator, 7 okt 2026 (eigen ontwerp "start welcome zo doen"):
+             groter dun icoon, enkel de titel, pijltje rechts. */}
           <View style={s.pillarIconWrap}>
-            <p.Icon size={20} color={PILLAR_ACCENT} strokeWidth={1.5} />
+            <p.Icon size={28} color="#ffffff" strokeWidth={1.4} />
           </View>
           {/* Operator, 24 september 2026 ("Breathe - Reset Yourself / Feel
              - Instant State Control / Listen - Train Your Mind"): `product`
@@ -185,13 +191,23 @@ function PillarButton({
              Nu een klein label BOVEN de titel, zelfde eyebrow-patroon als
              elders in de app (bv. "VIBEZCORE AUDIO LIBRARY" op de Library-
              tab-intro). */}
-          <View style={{ flex: 1 }}>
-            <Text style={s.pillarProduct}>{p.product.toUpperCase()}</Text>
-            <Text style={s.pillarTitle}>{p.title}</Text>
-          </View>
+          <Text style={s.pillarTitle}>{p.title}</Text>
+          <ChevronRight size={22} color="rgba(255,255,255,0.85)" strokeWidth={1.6} />
         </BlurView>
       </AnimatedPressable>
     </Animated.View>
+  );
+}
+
+/* Het V-teken van VIBEZCORE (zelfde vorm als het app-icoon): links een
+   brede schuine streep tot onderaan, rechts een smallere die halverwege
+   stopt. Als vector, zodat het scherp en wit is op de foto. */
+function VMark() {
+  return (
+    <Svg width={46} height={42} viewBox="0 0 46 42">
+      <Polygon points="0,0 12,0 26,42 19,42" fill="#ffffff" />
+      <Polygon points="35,0 46,0 32,30 28,22" fill="#ffffff" />
+    </Svg>
   );
 }
 
@@ -302,8 +318,8 @@ export default function WelcomeScreen() {
          volledig doorzichtig tegen het midden, zodat het logo altijd
          hoog contrast heeft ongeacht hoe licht de lucht op de foto is. */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.75)', 'rgba(0,0,0,0.35)', 'transparent']}
-        locations={[0, 0.18, 0.38]}
+        colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.15)', 'transparent']}
+        locations={[0, 0.16, 0.32]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
@@ -319,26 +335,22 @@ export default function WelcomeScreen() {
       <LinearGradient
         colors={[
           'transparent',
+          'rgba(0,0,0,0.25)',
           'rgba(0,0,0,0.55)',
-          'rgba(0,0,0,0.88)',
-          'rgba(0,0,0,0.98)',
+          'rgba(0,0,0,0.75)',
         ]}
-        locations={[0.38, 0.62, 0.82, 1]}
+        locations={[0.45, 0.65, 0.85, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <View style={s.top}>
-          <Animated.Image
-            source={require('../../assets/vibezcore_wordmark.png')}
-            style={[s.wordmark, logoStyle]}
-            resizeMode="contain"
-            tintColor="#ffffff"
-            accessibilityLabel="VIBEZCORE"
-          />
-          <Animated.Text style={[s.topTagline, taglineStyle]}>
-            Change your vibe. Change your life
-          </Animated.Text>
+          {/* Operator, 7 okt 2026 (eigen ontwerp): het V-teken met daaronder
+             VIBEZCORE in ruim gespatieerde letters; geen tagline meer. */}
+          <Animated.View style={[{ alignItems: 'center' }, logoStyle]} accessible accessibilityLabel="VIBEZCORE">
+            <VMark />
+            <Animated.Text style={[s.topLetters, taglineStyle]}>VIBEZCORE</Animated.Text>
+          </Animated.View>
         </View>
 
         {/* Spacer duwt de knoppen + links naar de onderste helft, over de
@@ -351,6 +363,9 @@ export default function WelcomeScreen() {
           ))}
         </View>
 
+        {/* Dun streepje tussen de knoppen en de links (eigen ontwerp). */}
+        <View style={s.divider} />
+
         <View style={s.bottomLinks}>
           <AnimatedPressable
             accessibilityRole="link"
@@ -358,11 +373,12 @@ export default function WelcomeScreen() {
             onPressIn={onActivatePressIn}
             onPressOut={onActivatePressOut}
             hitSlop={10}
-            style={activateStyle}
+            style={[s.bottomLinkRow, activateStyle]}
           >
             <Text style={s.bottomLinkText}>
               Have a bracelet? <Text style={s.bottomLinkAction}>Activate now</Text>
             </Text>
+            <ChevronRight size={15} color="#ffffff" strokeWidth={2} />
           </AnimatedPressable>
           <AnimatedPressable
             accessibilityRole="link"
@@ -370,11 +386,12 @@ export default function WelcomeScreen() {
             onPressIn={onSignInPressIn}
             onPressOut={onSignInPressOut}
             hitSlop={10}
-            style={signInStyle}
+            style={[s.bottomLinkRow, signInStyle]}
           >
             <Text style={s.bottomLinkText}>
               Already a member? <Text style={s.bottomLinkAction}>Sign in</Text>
             </Text>
+            <ChevronRight size={15} color="#ffffff" strokeWidth={2} />
           </AnimatedPressable>
         </View>
       </SafeAreaView>
@@ -395,9 +412,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 4,
   },
-  wordmark: {
-    width: 270,
-    height: 44,
+  topLetters: {
+    marginTop: 14,
+    fontFamily: BrandFonts.regular,
+    fontSize: 15,
+    letterSpacing: 7,
+    paddingLeft: 7, // compenseert de spatiëring achter de laatste letter
+    color: '#ffffff',
   },
   topTagline: {
     marginTop: 4,
@@ -411,7 +432,7 @@ const s = StyleSheet.create({
      losse capsulevorm met witruimte ertussen"): gap 10→16 voor meer
      lucht tussen de drie knoppen — losse pillen i.p.v. een bijna-
      aaneengeplakt blok. */
-  pillars: { gap: 16, marginBottom: 18 },
+  pillars: { gap: 14 },
   /* Volledige pil-vorm (borderRadius 999) i.p.v. afgeronde rechthoek —
      "eigen losse capsulevorm". */
   pillarWrap: {
@@ -422,24 +443,26 @@ const s = StyleSheet.create({
   pillarBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    gap: 18,
+    height: 68,
+    paddingHorizontal: 24,
     /* Operator, 17 september 2026 ("matglas-effect, 40% doorzichtig"):
        0.22 → 0.55 dekking. Bij 0.22 verdween de knop-rand tegen drukke
        kleding — precies de onrust die opgelost moest worden. Op de nu
        veel donkerdere onderkant (zie de LinearGradient hierboven) geeft
        0.55 een duidelijke eigen vorm terwijl de foto er nog vaag
        doorheen schemert. */
-    backgroundColor: 'rgba(18,18,20,0.55)',
+    /* Operator, 7 okt 2026 (eigen ontwerp): helder glas — de foto blijft
+       zichtbaar, een lichte rand tekent de capsule. */
+    backgroundColor: 'rgba(30,30,32,0.28)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.32)',
   },
   /* Vaste breedte + gecentreerd: elk icoon (Wind/Zap/Headphones heeft
      een andere natuurlijke glyph-breedte) landt zo altijd op exact
      dezelfde verticale lijn. */
   pillarIconWrap: {
-    width: 24,
+    width: 32,
     alignItems: 'center',
   },
   /* Operator, 17 september 2026 ("letters te dik en groot"): cardHeadline
@@ -447,8 +470,9 @@ const s = StyleSheet.create({
      compacte pil — semibold + 17px oogt rustiger zonder de leesbaarheid
      op te offeren. */
   pillarTitle: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 17,
+    flex: 1,
+    fontFamily: BrandFonts.medium,
+    fontSize: 19,
     letterSpacing: -0.2,
     color: '#ffffff',
   },
@@ -460,10 +484,19 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
 
+  divider: {
+    alignSelf: 'center',
+    width: 44,
+    height: StyleSheet.hairlineWidth * 2,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+    marginTop: 26,
+    marginBottom: 22,
+  },
   bottomLinks: {
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
   },
+  bottomLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bottomLinkText: {
     fontFamily: BrandFonts.medium,
     fontSize: 14,
