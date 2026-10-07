@@ -39,12 +39,14 @@ import {
   type Session,
 } from '@/data/audio-library-data';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
-import { getEffectiveTier, tierBadgeLabel } from '@/utils/access-tier';
+import { getEffectiveTier, resolveAccess, tierBadgeLabel } from '@/utils/access-tier';
+import { useSubscription } from '@/hooks/useSubscription';
+import { getToken } from '@/services/auth';
 import { useGatedOpenSession } from '@/utils/openSession';
 import { BlurView } from 'expo-blur';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Lock, Play } from 'lucide-react-native';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -87,14 +89,18 @@ function TrackRow({
   index,
   onPress,
   isLast,
+  locked,
 }: {
   session: Session;
   index: number;
   onPress: () => void;
   isLast: boolean;
+  /* Operator, 7 okt 2026: slotje enkel als DEZE gebruiker de sessie niet
+     mag openen — voorheen hing het alleen af van het soort sessie, dus
+     zag ook een Premium-gebruiker overal "Pro"-slotjes. */
+  locked: boolean;
 }) {
   const tier = getEffectiveTier(session);
-  const locked = tier !== 'public';
   /* Operator, 26 september 2026 ("is dat duidelijk voor de gebruiker?"):
      een kaal slotje voor ELKE vergrendelde sessie verbergt een écht
      verschil — 'account' vraagt enkel een gratis account, 'pro' vraagt
@@ -161,6 +167,18 @@ export default function PillarFocusScreen() {
   const pillar = key as Pillar;
   const meta = PILLAR_META[pillar];
   const openGated = useGatedOpenSession();
+  /* Zelfde toegangsregel als het openen zelf (resolveAccess). */
+  const { isPro, isTrialing } = useSubscription();
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void getToken().then((t) => {
+      if (!cancelled) setSignedIn(!!t);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const playerState = usePlayerState();
 
   /* Series binnen deze pijler, elk met z'n sessies — zelfde bron als de
@@ -321,6 +339,7 @@ export default function PillarFocusScreen() {
                   index={i}
                   onPress={() => openGated(sess)}
                   isLast={i === group.sessions.length - 1}
+                  locked={resolveAccess(sess, signedIn, isPro, isTrialing) !== 'allowed'}
                 />
               ))}
             </BlurView>
