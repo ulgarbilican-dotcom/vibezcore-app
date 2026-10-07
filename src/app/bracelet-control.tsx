@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
@@ -905,13 +906,13 @@ function SwitchSessionConfirm({
           <Text style={s.switchBody}>
             Your {fromName} session will end and {toName} starts in its place.
           </Text>
-          <Pressable
-            style={({ pressed }) => [s.primaryBtn, s.switchBtn, pressed && { opacity: 0.85 }]}
+          <PressScale
+            style={[s.primaryBtn, s.switchBtn]} haptic scaleTo={0.97}
             onPress={onConfirm}
             accessibilityLabel={`Switch to ${toName}`}
           >
             <Text style={s.primaryBtnText}>Switch</Text>
-          </Pressable>
+          </PressScale>
           <Pressable onPress={onCancel} hitSlop={10} style={s.switchCancel} accessibilityLabel="Cancel">
             <Text style={s.switchCancelTxt}>Cancel</Text>
           </Pressable>
@@ -1381,17 +1382,17 @@ function QuickSessionSheet({
         </View>
         <Text style={s.quickSheetLine}>{QUICK_COPY[key].line}</Text>
         <Text style={s.quickSheetNote}>{QUICK_COPY[key].note}</Text>
-        <Pressable
-          style={({ pressed }) => [s.quickSheetCta, pressed && { opacity: 0.85 }]}
+        <PressScale
+          style={[s.quickSheetCta]} haptic scaleTo={0.97}
           onPress={() => onStart(q)}
           accessibilityRole="button"
           accessibilityLabel={`Start ${q.label}`}
         >
           <Text style={s.quickSheetCtaTxt}>Start</Text>
-        </Pressable>
-        <Pressable onPress={onClose} style={s.quickSheetBack} accessibilityRole="button">
+        </PressScale>
+        <PressScale onPress={onClose} style={s.quickSheetBack} accessibilityRole="button">
           <Text style={s.quickSheetBackTxt}>Back</Text>
-        </Pressable>
+        </PressScale>
       </View>
     </GlassSheet>
   );
@@ -1645,13 +1646,13 @@ function CompletionModal({
       <ReanimatedAnimated.View
         style={[s.completionDoneWrap, { bottom: Math.max(insets.bottom, 12) + 26 }, textStyle]}
       >
-        <Pressable
-          style={({ pressed }) => [s.completionBtn, s.completionBtnWide, pressed && { opacity: 0.85 }]}
+        <PressScale
+          style={[s.completionBtn, s.completionBtnWide]} haptic scaleTo={0.97}
           onPress={onDismiss}
           accessibilityLabel="Done"
         >
           <Text style={[s.completionBtnText, { color: '#0a0a0a' }]}>Done</Text>
-        </Pressable>
+        </PressScale>
       </ReanimatedAnimated.View>
     </ReanimatedAnimated.View>
   );
@@ -3554,6 +3555,42 @@ function IdleScreen({
            minuten"): ring toont enkel het resultaat (rand-kleur + golf-
            vulling + modus-naam/tijd), de DurationSlider eronder bedient
            de waarde. */}
+        {/* Je rusthartslag BOVEN de cirkel (operator, 7 okt 2026: "in de cirkel
+            opgekropt, en blijft staan bij het vegen") — een gegeven over jou,
+            niet over de toestand. Eerder: in de cirkel (operator, 7 okt
+            2026: "68 bpm met een icoon in de cirkel zelf … van daar
+            aanklikken om opnieuw in te stellen; bij play verdwijnt dat mee").
+            Los van de veeg-cirkel gelegd, zodat een tik hier niet ook het
+            i-paneel opent. */}
+        {!trialRunning ? (
+          <PressScale
+            onPress={() => {
+              void Haptics.selectionAsync();
+              pendingAfterRhythm.current = null;
+              setRhythmOpen(true);
+            }}
+            hitSlop={10}
+            style={[s.ringPulsePill]} scaleTo={0.94}
+            accessibilityRole="button"
+            accessibilityLabel={
+              pulse.liveBpm !== null
+                ? `Your heart right now, ${pulse.liveBpm} beats per minute. This session starts there. Tap to change.`
+                : pulse.source === 'average'
+                  ? `Rhythm set for an average resting heart rate of ${pulse.bpm}. Tap to personalize.`
+                  : `Your resting heart rate, ${pulse.bpm} beats per minute. Tap to change.`
+            }
+          >
+            <HeartPulse size={13} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+            <Text style={s.ringPulseTxt}>
+              {pulse.liveBpm !== null
+                ? `${pulse.liveBpm} bpm · now`
+                : `${pulse.bpm} bpm${pulse.source === 'average' ? ' · avg' : ''}`}
+            </Text>
+            {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+            {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}
+            <ChevronRight size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.4} style={{ marginLeft: -1 }} />
+          </PressScale>
+        ) : null}
         <View style={s.durationRingWrap}>
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
@@ -3600,40 +3637,6 @@ function IdleScreen({
               }
             />
           </ModeSwipeRing>
-          {/* Je rusthartslag, boven de naam van de toestand (operator, 7 okt
-              2026: "68 bpm met een icoon in de cirkel zelf … van daar
-              aanklikken om opnieuw in te stellen; bij play verdwijnt dat mee").
-              Los van de veeg-cirkel gelegd, zodat een tik hier niet ook het
-              i-paneel opent. */}
-          {!trialRunning ? (
-            <Pressable
-              onPress={() => {
-                void Haptics.selectionAsync();
-                pendingAfterRhythm.current = null;
-                setRhythmOpen(true);
-              }}
-              hitSlop={10}
-              style={({ pressed }) => [s.ringPulsePill, pressed && { opacity: 0.6 }]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                pulse.liveBpm !== null
-                  ? `Your heart right now, ${pulse.liveBpm} beats per minute. This session starts there. Tap to change.`
-                  : pulse.source === 'average'
-                    ? `Rhythm set for an average resting heart rate of ${pulse.bpm}. Tap to personalize.`
-                    : `Your resting heart rate, ${pulse.bpm} beats per minute. Tap to change.`
-              }
-            >
-              <HeartPulse size={13} color="rgba(255,255,255,0.8)" strokeWidth={2} />
-              <Text style={s.ringPulseTxt}>
-                {pulse.liveBpm !== null
-                  ? `${pulse.liveBpm} bpm · now`
-                  : `${pulse.bpm} bpm${pulse.source === 'average' ? ' · avg' : ''}`}
-              </Text>
-              {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
-              {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}
-              <ChevronRight size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.4} style={{ marginLeft: -1 }} />
-            </Pressable>
-          ) : null}
         </View>
 
         {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
@@ -3673,7 +3676,9 @@ function IdleScreen({
            groot/wit gecentreerd, "Recommended" ernaast wanneer van
            toepassing, geen los sterretje/legend-regel meer nodig. */}
         {/* Lager, met meer lucht onder de bolletjes (operator, 6 okt 2026). */}
-        <View style={[s.durationSliderWrap, { marginTop: 90 }]}>
+        {/* 90 → 38: de hartslag-pil boven de cirkel neemt die ruimte nu in
+            (7 okt 2026), anders zakt de Start-knop onder de systeembalk. */}
+        <View style={[s.durationSliderWrap, { marginTop: 38 }]}>
           <DurationWheel
             options={DURATION_PRESETS[selectedMode].map((p) => ({
               value: p.value,
@@ -3699,21 +3704,21 @@ function IdleScreen({
             {QUICK_SESSIONS.map((q) => {
               const QIcon = MODE_ICONS[q.mode];
               return (
-                <Pressable
+                <PressScale
                   key={q.key}
                   onPress={() => {
                     void Haptics.selectionAsync();
                     setQuickOpen(q.key);
                   }}
                   hitSlop={8}
-                  style={({ pressed }) => [s.quickIcon, pressed && { opacity: 0.6 }]}
+                  style={[s.quickIcon]} scaleTo={0.9}
                   accessibilityRole="button"
                   accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
                 >
                   {/* De rimpeling oogt kleiner dan de bliksem bij dezelfde maat
                       (operator, 7 okt 2026: "icoon quick chill mag iets groter"). */}
                   <QIcon size={q.key === 'chill' ? 25 : 20} color={getModeMeta(q.mode).color} strokeWidth={2} />
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>
@@ -5782,11 +5787,11 @@ const s = StyleSheet.create({
     minHeight: 40,
   },
   trialUnlockTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
-  /* Boven de naam in de cirkel (ring 230: midden 115, naam ~55 erboven). */
+  /* Boven de cirkel, gecentreerd onder de titel. */
   ringPulsePill: {
-    position: 'absolute',
-    top: 24,
     alignSelf: 'center',
+    marginTop: -6,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,

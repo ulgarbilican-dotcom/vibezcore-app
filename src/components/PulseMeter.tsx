@@ -12,6 +12,7 @@
    begint opnieuw. Lukt het na 25 s niet: eerlijk "opnieuw proberen".
    Tijdens het meten GEEN trillingen: die zouden de vinger doen bewegen. */
 
+import PressScale from '@/components/PressScale';
 import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, latestBeat, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
 import { Heart } from 'lucide-react-native';
@@ -305,26 +306,26 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       {status === 'failed' || status === 'camera-error' ? (
         <View style={s.actions}>
           {status === 'failed' ? (
-            <Pressable style={({ pressed }) => [s.cta, pressed && s.pressed]} onPress={retry} accessibilityRole="button">
+            <PressScale style={[s.cta]} haptic scaleTo={0.97} onPress={retry} accessibilityRole="button">
               <Text style={s.ctaTxt}>Try again</Text>
-            </Pressable>
+            </PressScale>
           ) : null}
-          <Pressable onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
+          <PressScale onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
             <Text style={s.linkTxt}>Enter it myself</Text>
-          </Pressable>
+          </PressScale>
         </View>
       ) : status === 'denied' ? (
         <View style={s.actions}>
-          <Pressable
-            style={({ pressed }) => [s.cta, pressed && s.pressed]}
+          <PressScale
+            style={[s.cta]} haptic scaleTo={0.97}
             onPress={() => void Linking.openSettings()}
             accessibilityRole="button"
           >
             <Text style={s.ctaTxt}>Open Settings</Text>
-          </Pressable>
-          <Pressable onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
+          </PressScale>
+          <PressScale onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
             <Text style={s.linkTxt}>Enter it myself</Text>
-          </Pressable>
+          </PressScale>
         </View>
       ) : (
         <Text style={s.sub}>Takes about 15 seconds. Rest your fingertip lightly — don&apos;t press.</Text>

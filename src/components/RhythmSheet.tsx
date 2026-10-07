@@ -11,6 +11,7 @@
    Woordkeuze (CLAUDE.md, operator 7 okt 2026): "heart rate" (niet "pulse") / rhythm, nooit stress, HRV, diagnose.
    "Not a medical device" staat bij elk getal. */
 
+import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
 import { BrandFonts } from '@/constants/theme';
@@ -114,9 +115,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
         <View style={s.head}>
           <Text style={s.eyebrow}>{step === 'result' ? 'YOUR RHYTHM' : 'MATCH YOUR RHYTHM'}</Text>
           {step !== 'result' ? (
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
+            <PressScale onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
-            </Pressable>
+            </PressScale>
           ) : null}
         </View>
 
@@ -131,8 +132,8 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             </Text>
             {PulseMeter ? (
               <>
-                <Pressable
-                  style={({ pressed }) => [s.cta, pressed && s.pressed]}
+                <PressScale
+                  style={[s.cta]} haptic scaleTo={0.97}
                   onPress={() => {
                     void Haptics.selectionAsync();
                     setStep('measure');
@@ -140,18 +141,18 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
                   accessibilityRole="button"
                 >
                   <Text style={s.ctaTxt}>Measure my heart rate</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [s.secondary, pressed && s.pressed]}
+                </PressScale>
+                <PressScale
+                  style={[s.secondary]}
                   onPress={() => setStep('manual')}
                   accessibilityRole="button"
                 >
                   <Text style={s.secondaryTxt}>Enter it myself</Text>
-                </Pressable>
+                </PressScale>
               </>
             ) : (
-              <Pressable
-                style={({ pressed }) => [s.cta, pressed && s.pressed]}
+              <PressScale
+                style={[s.cta]} haptic scaleTo={0.97}
                 onPress={() => {
                   void Haptics.selectionAsync();
                   setStep('manual');
@@ -159,10 +160,10 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
                 accessibilityRole="button"
               >
                 <Text style={s.ctaTxt}>Enter my resting heart rate</Text>
-              </Pressable>
+              </PressScale>
             )}
-            <Pressable
-              style={({ pressed }) => [s.secondary, pressed && s.pressed]}
+            <PressScale
+              style={[s.secondary]}
               onPress={() => {
                 chooseAverageRestingPulse();
                 onDone();
@@ -170,7 +171,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               accessibilityRole="button"
             >
               <Text style={s.secondaryTxt}>Use an average ({AVERAGE_RESTING_BPM} bpm)</Text>
-            </Pressable>
+            </PressScale>
             {!fromProfile ? <Text style={s.note}>You can change this anytime in Profile.</Text> : null}
           </>
         )}
@@ -203,8 +204,8 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               Your watch shows it. Or count your heart rate for 30 seconds after waking, and double it.
             </Text>
             <BpmWheel value={manualBpm} onChange={setManualBpm} />
-            <Pressable
-              style={({ pressed }) => [s.cta, pressed && s.pressed]}
+            <PressScale
+              style={[s.cta]} haptic scaleTo={0.97}
               onPress={() => {
                 setManualRestingPulse(manualBpm);
                 void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -213,7 +214,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               accessibilityRole="button"
             >
               <Text style={s.ctaTxt}>Save</Text>
-            </Pressable>
+            </PressScale>
           </>
         )}
 
@@ -237,9 +238,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
                 {meta.name} starts at {rhythm.startBpm} and {verb} {rhythm.targetBpm}
               </Text>
             </View>
-            <Pressable style={({ pressed }) => [s.cta, pressed && s.pressed]} onPress={onDone} accessibilityRole="button">
+            <PressScale style={[s.cta]} haptic scaleTo={0.97} onPress={onDone} accessibilityRole="button">
               <Text style={s.ctaTxt}>Continue</Text>
-            </Pressable>
+            </PressScale>
             {aboveRest ? (
               <Text style={s.restNote}>Your resting heart rate stays {pulse.bpm} — we keep your calmest reading.</Text>
             ) : null}
