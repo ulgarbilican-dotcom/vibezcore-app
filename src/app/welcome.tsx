@@ -183,7 +183,7 @@ function PillarButton({
           {/* Operator, 7 okt 2026 (eigen ontwerp "start welcome zo doen"):
              groter dun icoon, enkel de titel, pijltje rechts. */}
           <View style={s.pillarIconWrap}>
-            <p.Icon size={28} color="#ffffff" strokeWidth={1.4} />
+            <p.Icon size={24} color="#ffffff" strokeWidth={1.5} />
           </View>
           {/* Operator, 24 september 2026 ("Breathe - Reset Yourself / Feel
              - Instant State Control / Listen - Train Your Mind"): `product`
@@ -463,8 +463,9 @@ const s = StyleSheet.create({
   pillarBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 18,
-    height: 68,
+    gap: 16,
+    /* Operator, 7 okt 2026 ("knoppen minder hoog"): 68 → 56. */
+    height: 56,
     paddingHorizontal: 24,
     /* Operator, 17 september 2026 ("matglas-effect, 40% doorzichtig"):
        0.22 → 0.55 dekking. Bij 0.22 verdween de knop-rand tegen drukke
