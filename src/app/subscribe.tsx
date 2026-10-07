@@ -280,7 +280,12 @@ export default function SubscribeScreen() {
      linkingAccount-guard: anders flipt deze effect het scherm terug naar
      'done' zodra alreadyIsPro true is — precies de state tijdens de
      optionele post-purchase account-link. */
-  const { isPro: alreadyIsPro, tier: currentTier, isTrialing: alreadyTrialing } = useSubscription();
+  const {
+    isPro: alreadyIsPro,
+    tier: currentTier,
+    isTrialing: alreadyTrialing,
+    isLoading: subLoading,
+  } = useSubscription();
   useEffect(() => {
     if (alreadyIsPro && phase === 'form' && !linkingAccount) {
       /* Zelfde purchaseWasTrial-signaal als de echte aankoopflow, maar dan
@@ -321,15 +326,12 @@ export default function SubscribeScreen() {
   const saveSubPress = usePressScale(0.95);
   const tryAgainPress = usePressScale(0.96);
   const contactSupportPress = usePressScale(0.95);
-  const checkoutPress = usePressScale(0.96);
-  const cancelPress = usePressScale(0.95);
   const googlePress = usePressScale(0.95);
   const emailHintPress = usePressScale(0.94);
   const pwTogglePress = usePressScale(0.92);
   const forgotPress = usePressScale(0.94);
   const submitPress = usePressScale(0.96);
   const skipPress = usePressScale(0.95);
-  const guestPress = usePressScale(0.95);
 
   /* Auth-state detectie. Voor ingelogde users tonen we een review-step
      (order-summary + "Continue to checkout"-knop) ipv direct de IAP-popup
@@ -467,9 +469,18 @@ export default function SubscribeScreen() {
     const result = await purchase(tierForCompute);
     if (!result.ok) {
       if (result.error.code === 'user_cancelled') {
-        /* User wegtikte de popup → terug naar form-state, geen error
-           tonen (cancelled is expliciete actie, geen fout). */
-        setPhase('form');
+        /* User wegtikte de store-popup: geen error (bewuste keuze). Zoals
+           Apple's eigen apps: terug naar waar je de keuze maakte — de
+           plankeuze op dit scherm, of het scherm met de salescard. */
+        autoCheckoutRef.current = false;
+        if (initialTier === null) {
+          setTier(null);
+          setPhase('form');
+        } else if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/');
+        }
         return;
       }
       if (__DEV__) {
@@ -513,10 +524,32 @@ export default function SubscribeScreen() {
      puur client-side Purchases.getCustomerInfo(), dus dit werkt zonder
      VIBEZCORE-account. Account-creatie wordt NA succesvolle aankoop als
      optionele CTA aangeboden (zie phase 'done' + linkingAccount). */
-  const onContinueAsGuest = () => {
-    setGuestPurchase(true);
+  /* Operator, 7 okt 2026 ("optimaliseer zoals Apple het zou doen"): na
+     de plankeuze (salescard, plan-picker of Profile) opent meteen het
+     betaalvenster van App Store / Google Play — geen account-formulier
+     en geen extra review-scherm ertussen. De keuze-tap op de kaart is de
+     bevestiging; prijs, voorwaarden en Restore staan daar al
+     (MembershipPlans). Account blijft optioneel en wordt NA de aankoop
+     aangeboden ("Save your subscription", Apple 5.1.1v). */
+  const autoCheckoutRef = useRef(false);
+  const [subWaitOver, setSubWaitOver] = useState(false);
+  useEffect(() => {
+    /* Abonnementsstatus kort afwachten zodat een bestaande abonnee naar
+       'done' gaat i.p.v. een store-"al geabonneerd"-fout; nooit langer
+       dan 2 s blijven hangen. */
+    const t = setTimeout(() => setSubWaitOver(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (tier === null || linkingAccount || phase !== 'form') return;
+    if (signedIn === null || alreadyIsPro) return;
+    if (subLoading && !subWaitOver) return;
+    if (autoCheckoutRef.current) return;
+    autoCheckoutRef.current = true;
+    if (!signedIn) setGuestPurchase(true);
     void runIapFlow();
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier, linkingAccount, phase, signedIn, alreadyIsPro, subLoading, subWaitOver]);
 
   const verifyAndComplete = async (purchaseData: IapPurchase) => {
     setPhase('verifying');
@@ -1052,13 +1085,21 @@ export default function SubscribeScreen() {
      Iter v179 (2026-07-02): creating-account sub-text hangt af van mode.
      Voorheen altijd "Creating your account…" — fout bij signin flow
      want user heeft al een account. */
-  if (phase === 'creating-account' || phase === 'iap-popup' || phase === 'verifying') {
+  /* Plan gekozen en (nog) geen account-koppeling → de checkout opent
+     automatisch; toon nooit kort het formulier daartussen. */
+  const checkoutOpening = phase === 'form' && tier !== null && !linkingAccount;
+  if (
+    checkoutOpening ||
+    phase === 'creating-account' ||
+    phase === 'iap-popup' ||
+    phase === 'verifying'
+  ) {
     const sub =
       phase === 'creating-account'
         ? (mode === 'signin' ? 'Signing you in…' : 'Creating your account…')
-        : phase === 'iap-popup'
-          ? `Opening secure checkout…`
-          : 'Confirming your purchase…';
+        : phase === 'verifying'
+          ? 'Confirming your purchase…'
+          : 'Opening secure checkout…';
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen
@@ -1241,6 +1282,8 @@ export default function SubscribeScreen() {
             onPress={() => {
               setErrMsg(null);
               setErrDebug(null);
+              /* Opnieuw = meteen opnieuw naar de checkout. */
+              autoCheckoutRef.current = false;
               setPhase('form');
             }}
             onPressIn={tryAgainPress.onPressIn}
@@ -1310,74 +1353,6 @@ export default function SubscribeScreen() {
         <View style={s.center}>
           <ActivityIndicator size="large" color={Brand.textDim} />
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  /* ── Signed-in review-flow ─────────────────────────────────────────
-     User heeft al een account → geen form. Toon order-summary, hun
-     ingelogd-email als context, en een expliciete "Continue to
-     checkout"-knop die de IAP-popup pas firet na hun tap. */
-  if (signedIn === true) {
-    return (
-      <SafeAreaView style={s.root}>
-        <Stack.Screen
-          options={{
-            title: 'Subscribe',
-            headerTitleAlign: 'center',
-            headerBackVisible: false,
-            headerLeft: () => <HeaderBackButton />,
-          }}
-        />
-        <KeyboardAwareScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPadding }]}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid={true}
-          extraScrollHeight={20}
-        >
-          {OrderSummary}
-
-          <Text style={s.heading}>Review your purchase</Text>
-          <Text style={s.sub}>
-            You'll be asked to confirm payment with{' '}
-            {Platform.OS === 'ios' ? 'Touch ID / Face ID' : 'your Google account'}
-            {' '}in the next step.
-          </Text>
-
-          {/* Signed-in context — laat user zien aan welk account de
-              aankoop wordt gekoppeld. Voorkomt verwarring "wie ben ik
-              ook al weer ingelogd?". */}
-          <View style={s.accountContext}>
-            <Text style={s.accountLabel}>SIGNED IN AS</Text>
-            <Text style={s.accountEmail} numberOfLines={1}>
-              {signedInEmail ?? 'your VIBEZCORE account'}
-            </Text>
-          </View>
-
-          {infoMsg && <Text style={s.info}>{infoMsg}</Text>}
-        {errMsg && <Text style={s.err}>{errMsg}</Text>}
-
-          <AnimatedPressable
-            style={[s.btnPrimary, checkoutPress.pressStyle]}
-            onPress={() => void runIapFlow()}
-            onPressIn={checkoutPress.onPressIn}
-            onPressOut={checkoutPress.onPressOut}
-          >
-            <Text style={s.btnPrimaryText}>Continue to checkout</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            style={[s.linkBtn, cancelPress.pressStyle]}
-            onPress={() => router.back()}
-            onPressIn={cancelPress.onPressIn}
-            onPressOut={cancelPress.onPressOut}
-          >
-            <Text style={s.linkText}>Cancel</Text>
-          </AnimatedPressable>
-
-          {LegalLine}
-          {RestoreLink}
-        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
@@ -1605,7 +1580,7 @@ export default function SubscribeScreen() {
         {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase
             entry point / skip-link. Registratie is optioneel — koop direct
             zonder account, koppel later desgewenst voor cross-device sync. */}
-        {linkingAccount ? (
+        {linkingAccount && (
           <AnimatedPressable
             style={[s.linkBtn, skipPress.pressStyle]}
             onPress={() => router.replace('/')}
@@ -1614,16 +1589,6 @@ export default function SubscribeScreen() {
             accessibilityLabel="Skip creating an account for now"
           >
             <Text style={s.linkText}>Skip for now</Text>
-          </AnimatedPressable>
-        ) : (
-          <AnimatedPressable
-            style={[s.linkBtn, guestPress.pressStyle]}
-            onPress={() => void onContinueAsGuest()}
-            onPressIn={guestPress.onPressIn}
-            onPressOut={guestPress.onPressOut}
-            accessibilityLabel="Continue without creating an account"
-          >
-            <Text style={s.linkText}>Continue without an account</Text>
           </AnimatedPressable>
         )}
 
