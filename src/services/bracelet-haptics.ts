@@ -77,7 +77,7 @@ import {
 
 const ASSUMED_RESTING_BPM = 75;
 const SESSION_HOLD_SECONDS = 10;
-const PREVIEW_HOLD_SECONDS = 3;
+/** Versnelde glijding in de voorproef voor de trage modi (Sleep, Clarity). */
 const PREVIEW_RAMP_SECONDS = 12;
 /** "Feel it" is een VOORPROEF, geen gratis sessie (operator, 5 okt 2026:
  *  "als de cyclus blijft draaien mag niet, anders is de sessie gratis").
@@ -86,6 +86,17 @@ const PREVIEW_RAMP_SECONDS = 12;
  *  eindritme, gevolgd door het eind-signaal. Het glijden is korter dan in
  *  een sessie (Sleep: 2 min); een voorproef toont waar de sessie heen gaat. */
 export const PREVIEW_MAX_SECONDS = 30;
+
+/** Curve van de voorproef (operator, 7 okt 2026: "kloppen de tempo's met de
+ *  realiteit?"). Zelfde begin als een echte sessie (SESSION_HOLD_SECONDS op
+ *  het basisritme). Modi die in een echte sessie binnen PREVIEW_RAMP_SECONDS
+ *  hun eindtempo halen, glijden exact zoals in de sessie — de voorproef IS
+ *  dan de eerste 30 s. Enkel de trage modi (Sleep, Clarity: 2 min) glijden
+ *  versneld, en enkel daar zegt de UI dat (previewCondensedRampMinutes). */
+function previewTiming(mode: BraceletMode): Timing {
+  const ramp = SPECS[mode].rampSec;
+  return { holdSec: SESSION_HOLD_SECONDS, rampSec: ramp <= PREVIEW_RAMP_SECONDS ? ramp : PREVIEW_RAMP_SECONDS };
+}
 const RESUME_WINDOW_SECONDS = 120;
 const LUB_DUB_FRACTION = 0.3;
 const LUB_DUB_MAX_MS = 350;
@@ -479,12 +490,7 @@ export function previewCondensedRampMinutes(mode: BraceletMode): number | null {
 /** "Feel it"-preview: zelfde verloop, ingekort tot PREVIEW_MAX_SECONDS. */
 export function playModePreviewHaptic(mode: BraceletMode): void {
   session = null;
-  play(
-    mode,
-    { holdSec: PREVIEW_HOLD_SECONDS, rampSec: SPECS[mode].rampSec > 0 ? PREVIEW_RAMP_SECONDS : 0 },
-    0,
-    PREVIEW_MAX_SECONDS,
-  );
+  play(mode, previewTiming(mode), 0, PREVIEW_MAX_SECONDS);
   /* Eindig: na de voorproef stopt ook het beeld (en op toestellen zonder
      native module de JS-tikken). De native curve is zelf al eindig en
      speelt nog het eind-signaal uit. */
@@ -515,8 +521,8 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     title: meta.name,
     colorHex: meta.color,
     targetBpm: spec.targetBpm,
-    holdSec: PREVIEW_HOLD_SECONDS,
-    rampSec: spec.rampSec > 0 ? PREVIEW_RAMP_SECONDS : 0,
+    holdSec: previewTiming(mode).holdSec,
+    rampSec: previewTiming(mode).rampSec,
     curveOffsetSec: 0,
     remainingSec: PREVIEW_MAX_SECONDS,
     lubAmp: spec.lubAmp,
