@@ -1277,7 +1277,13 @@ export default function SmartBeadBraceletScreen() {
           <View
             style={[
               s.introTextWrap,
-              playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT + 12 },
+              /* Operator, 7 okt 2026 ("de cta staat te laag"): de vaste 34 px
+                 hield geen rekening met de navigatie-/gebarenbalk — nu er
+                 bovenop, zoals de knoppen elders in de app. */
+              { paddingBottom: Math.max(safeInsets.bottom, 12) + 34 },
+              playerState.session && {
+                paddingBottom: Math.max(safeInsets.bottom, 12) + 34 + MINI_PLAYER_HEIGHT + 12,
+              },
             ]}
           >
             <ReAnimated.Text style={[s.introEyebrow, introEyebrowStyle]}>
