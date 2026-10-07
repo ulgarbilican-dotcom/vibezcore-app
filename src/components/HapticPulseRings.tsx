@@ -35,7 +35,7 @@ import Animated, {
 const RING_COLOR = BrandDark.accent;
 const POOL_SIZE = 6;
 
-type RingLook = { peakOpacity: number; maxScale: number; durationMs: number; stroke: number };
+type RingLook = { peakOpacity: number; maxScale: number; durationMs: number };
 
 function lookFor(pulse: HapticPulse): RingLook {
   const calm =
@@ -46,9 +46,9 @@ function lookFor(pulse: HapticPulse): RingLook {
   /* Traag tempo = trage, brede ring; snel tempo = korte ring. */
   const durationMs = Math.min(2600, Math.max(500, pulse.cycleMs * 1.5));
   if (calm) {
-    return { peakOpacity: lub ? 0.32 : 0.18, maxScale: lub ? 1.32 : 1.2, durationMs, stroke: 1.5 };
+    return { peakOpacity: lub ? 0.32 : 0.18, maxScale: lub ? 1.32 : 1.2, durationMs };
   }
-  return { peakOpacity: lub ? 0.5 : 0.3, maxScale: lub ? 1.26 : 1.16, durationMs, stroke: 2 };
+  return { peakOpacity: lub ? 0.5 : 0.3, maxScale: lub ? 1.26 : 1.16, durationMs };
 }
 
 type RingHandle = { fire: (look: RingLook, reduced: boolean) => void };
@@ -56,11 +56,9 @@ type RingHandle = { fire: (look: RingLook, reduced: boolean) => void };
 const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ring({ size, color }, ref) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
-  const stroke = useSharedValue(1.5);
 
   useImperativeHandle(ref, () => ({
     fire(look, reduced) {
-      stroke.value = look.stroke;
       scale.value = 1;
       if (!reduced) {
         scale.value = withTiming(look.maxScale, {
@@ -76,9 +74,12 @@ const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ri
     },
   }));
 
+  /* Enkel schaal + doorzichtigheid (7 okt 2026, "Apple-niveau smooth"):
+     die speelt de GPU af zonder de lay-out opnieuw te berekenen. De
+     lijndikte stond hier eerst ook in, en die moest Android elk beeld
+     opnieuw opmeten — dat kon haperen. */
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    borderWidth: stroke.value,
     transform: [{ scale: scale.value }],
   }));
 
@@ -127,5 +128,6 @@ const s = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
+    borderWidth: 1.75,
   },
 });
