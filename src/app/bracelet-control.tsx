@@ -25,6 +25,8 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
@@ -1259,64 +1261,33 @@ function ModeDetailModal({
     onClose();
   };
 
+  /* Operator, 7 okt 2026 ("de i opent een volledige pagina, ook niet glas"):
+     zelfde glazen paneel dat van onderen opschuift als de info bij
+     Breathwork — grip, naam met kleurstip, "Done" rechtsboven. */
   return (
-    <Modal
-      visible
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-      statusBarTranslucent
-    >
-      <View style={s.modeModalRoot}>
-        {/* Backdrop — tap-anywhere-to-close */}
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={handleClose}
-          accessibilityLabel="Close mode details"
+    <GlassSheet visible onClose={handleClose}>
+      <View style={[s.modeModalSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
+        <VibezGlass
+          radius={24}
+          level="sheet"
+          blurTarget={rootBlurRef}
+          style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        {/* Bottom sheet card */}
-        <View
-          style={[
-            s.modeModalSheet,
-            /* Iter 9dq v77 (2026-06-03): geharmoniseerde formule met
-               floor 72 → consistent met alle andere bottom-CTAs.
-               Operator, 16 september 2026 ("x komt in de bovenste hoek
-               waar batterij/status staat"): de sheet is nu schermhoog
-               (was een bottom-sheet die vanzelf onder de status-bar
-               begon) — extra paddingTop op basis van insets.top zodat
-               alles (handle, X, header) onder het systeem-statusbalkje
-               uitkomt. */
-            {
-              paddingTop: insets.top + 16,
-              paddingBottom: Math.max(insets.bottom + 24, 72),
-            },
-          ]}
-        >
+        <Pressable onPress={handleClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.modeModalHandle} />
-
-          {/* Close ✕ top-right — iets groter (16→18) en top mee-
-             geschoven met insets.top. */}
-          <Pressable
-            style={[s.modeModalClose, { top: insets.top + 14 }]}
-            onPress={handleClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel="Close"
-          >
-            <Text style={s.modeModalCloseText}>✕</Text>
-          </Pressable>
-
-          {/* Header — dot + naam + intent-zin */}
-          <View style={s.modeModalHeader}>
-            <View
-              style={[s.modeModalDot, { backgroundColor: meta.color }]}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={s.modeModalName}>{meta.name}</Text>
-              <Text style={s.modeModalSub}>
-                {meta.minMinutes}–{meta.maxMinutes} min session
-              </Text>
-            </View>
+        </Pressable>
+        <View style={s.modeModalHeader}>
+          <View style={[s.modeModalDot, { backgroundColor: meta.color }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.modeModalName}>{meta.name}</Text>
+            <Text style={s.modeModalSub}>
+              {meta.minMinutes}–{meta.maxMinutes} min session
+            </Text>
           </View>
+          <Pressable onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+            <Text style={s.modeModalDone}>Done</Text>
+          </Pressable>
+        </View>
 
           {/* Intent — what state this mode is for */}
           <Text style={s.modeModalIntent}>{desc.intent}</Text>
@@ -1340,20 +1311,8 @@ function ModeDetailModal({
               </View>
             ))}
           </View>
-
-          {/* Operator, 5 okt 2026: "Optional breath layer" weg — State
-             Control belooft "je hoeft niets te doen"; een ademoefening met
-             tellen eronder verwatert die belofte, en is hier niet eens te
-             starten. Breathwork woont in de Breath-tab. (`desc.protocol` /
-             `protocolHow` blijven bestaan in MODE_DESCRIPTIONS.) */}
-
-          {/* Operator, 16 september 2026 ("in de popup choose cta moet
-             weg"): geen aparte Choose-knop meer — modus kiezen gebeurt
-             al via de pill-rij buiten deze popup, dubbele actie hier
-             was overbodig. */}
-        </View>
       </View>
-    </Modal>
+    </GlassSheet>
   );
 }
 
@@ -5932,23 +5891,20 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modeModalSheet: {
-    backgroundColor: '#141414',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingTop: 16,
-    /* Operator, 16 september 2026 ("meer ademruimte"): 22→26. */
-    paddingHorizontal: 26,
-    /* paddingBottom wordt dynamisch toegevoegd vanuit useSafeAreaInsets
-       in de component (iter 9m) — base 24 + insets.bottom. */
-    height: '100%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    paddingTop: 10,
+    paddingHorizontal: 22,
   },
+  modeModalDone: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15, marginLeft: 12 },
   modeModalHandle: {
     alignSelf: 'center',
     width: 38,
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.20)',
-    marginBottom: 22,
+    marginBottom: 14,
   },
   /* Operator, 16 september 2026 ("x mag misschien groter of iets
      lager"): 30→36 (top wordt dynamisch via insets.top op de call
