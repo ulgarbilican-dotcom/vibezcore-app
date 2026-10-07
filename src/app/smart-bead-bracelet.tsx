@@ -179,6 +179,12 @@ const WAITLIST_URL = 'https://www.vibezcore.com/';
    vibezcore.com/smart-bead-bracelet gaan en maar 1 CTA nodig". De enige
    knop op deze pagina opent de bracelet-pagina op de website; daar staan
    wachtlijst, edelstenen en specs. */
+/* Operator, 7 okt 2026 ("de cta staat te laag — moet eruitzien als de
+   andere welkomstpagina's"): de Audio- en Breath-intro staan in een tab en
+   hun knop staat 34 px boven de tabbalk (62 + onderste inset, zie
+   (tabs)/_layout.tsx). Deze route heeft geen tabbalk, dus rekenen we die
+   hoogte zelf mee — zelfde plek op het scherm als de zusterintro's. */
+const INTRO_CTA_BOTTOM = 34 + 62;
 const BRACELET_WEBSITE_URL = 'https://www.vibezcore.com/smart-bead-bracelet';
 
 /* ── Layout constants ──────────────────────────────────────────────────────
@@ -1111,7 +1117,7 @@ export default function SmartBeadBraceletScreen() {
      niet meteen marketing-flash voelt voor wie al PRO is. */
   if (showAudioProLanding && !exploreUnlocked) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
+      <SafeAreaView edges={braceletIntro ? [] : ['top', 'left', 'right']} style={s.root}>
         {/* GEWIJZIGD 4 oktober 2026: standalone route nu (was inline tab-
            content) — eigen Stack-header met terugknop, zelfde patroon als
            activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
@@ -1120,6 +1126,9 @@ export default function SmartBeadBraceletScreen() {
             title: '', // operator 7 okt 2026: naam staat al groot in de pagina zelf
             headerTitleAlign: 'center',
             headerBackVisible: false,
+          /* Operator, 7 okt 2026: de welkomstintro is schermvullend zonder
+             kopbalk, zoals de andere welkomstschermen (Audio, Breath). */
+          headerShown: !braceletIntro,
             headerLeft: () => <HeaderBackButton />,
           }}
         />
@@ -1141,7 +1150,10 @@ export default function SmartBeadBraceletScreen() {
             <View
               style={[
                 s.introTextWrap,
-                playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT + 12 },
+                { paddingBottom: INTRO_CTA_BOTTOM + safeInsets.bottom },
+                playerState.session && {
+                  paddingBottom: INTRO_CTA_BOTTOM + safeInsets.bottom + MINI_PLAYER_HEIGHT + 12,
+                },
               ]}
             >
               <ReAnimated.Text style={[s.introEyebrow, introEyebrowStyle]}>
@@ -1243,7 +1255,7 @@ export default function SmartBeadBraceletScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
+    <SafeAreaView edges={braceletIntro ? [] : ['top', 'left', 'right']} style={s.root}>
       {/* GEWIJZIGD 4 oktober 2026: standalone route nu (was inline tab-
          content) — eigen Stack-header met terugknop, zelfde patroon als
          activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
@@ -1252,6 +1264,9 @@ export default function SmartBeadBraceletScreen() {
           title: '', // operator 7 okt 2026: naam staat al groot in de pagina zelf
           headerTitleAlign: 'center',
           headerBackVisible: false,
+          /* Operator, 7 okt 2026: de welkomstintro is schermvullend zonder
+             kopbalk, zoals de andere welkomstschermen (Audio, Breath). */
+          headerShown: !braceletIntro,
           headerLeft: () => <HeaderBackButton />,
         }}
       />
@@ -1277,12 +1292,9 @@ export default function SmartBeadBraceletScreen() {
           <View
             style={[
               s.introTextWrap,
-              /* Operator, 7 okt 2026 ("de cta staat te laag"): de vaste 34 px
-                 hield geen rekening met de navigatie-/gebarenbalk — nu er
-                 bovenop, zoals de knoppen elders in de app. */
-              { paddingBottom: Math.max(safeInsets.bottom, 12) + 34 },
+              { paddingBottom: INTRO_CTA_BOTTOM + safeInsets.bottom },
               playerState.session && {
-                paddingBottom: Math.max(safeInsets.bottom, 12) + 34 + MINI_PLAYER_HEIGHT + 12,
+                paddingBottom: INTRO_CTA_BOTTOM + safeInsets.bottom + MINI_PLAYER_HEIGHT + 12,
               },
             ]}
           >
