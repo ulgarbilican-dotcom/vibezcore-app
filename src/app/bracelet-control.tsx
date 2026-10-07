@@ -1328,6 +1328,75 @@ function ModeDetailModal({
   );
 }
 
+/* ── QuickSessionSheet — korte uitleg + Start/Back (operator, 7 okt 2026) ── */
+const QUICK_COPY: Record<'chill' | 'boost', { line: string; note: string }> = {
+  chill: {
+    line: 'Five minutes. Your rhythm starts at your pulse and settles gently below it.',
+    note: 'A short version of Clarity & Relax.',
+  },
+  boost: {
+    line: 'Five minutes. A quick, lively heartbeat rhythm to lift your energy.',
+    note: 'Keep it short — a reset, not a long session.',
+  },
+};
+
+function QuickSessionSheet({
+  which,
+  onClose,
+  onStart,
+}: {
+  which: 'chill' | 'boost' | null;
+  onClose: () => void;
+  onStart: (q: (typeof QUICK_SESSIONS)[number]) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  /* Laatste inhoud vasthouden tijdens de uitschuif-animatie. */
+  const lastRef = useRef<'chill' | 'boost'>('chill');
+  if (which) lastRef.current = which;
+  const key = which ?? lastRef.current;
+  const q = QUICK_SESSIONS.find((x) => x.key === key)!;
+  const meta = getModeMeta(q.mode);
+  /* Zelfde teken als de toestand erachter (Chill = Clarity & Relax). */
+  const QIcon = MODE_ICONS[q.mode];
+  return (
+    <GlassSheet visible={which !== null} onClose={onClose}>
+      <View style={[s.modeModalSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
+        <VibezGlass
+          radius={24}
+          level="sheet"
+          blurTarget={rootBlurRef}
+          style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+        />
+        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+          <View style={s.modeModalHandle} />
+        </Pressable>
+        <View style={s.quickSheetHead}>
+          <View style={s.quickSheetIcon}>
+            <QIcon size={24} color={meta.color} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.modeModalName}>{q.label}</Text>
+            <Text style={s.modeModalSub}>{QUICK_SESSION_MINUTES} min · starts right away</Text>
+          </View>
+        </View>
+        <Text style={s.quickSheetLine}>{QUICK_COPY[key].line}</Text>
+        <Text style={s.quickSheetNote}>{QUICK_COPY[key].note}</Text>
+        <Pressable
+          style={({ pressed }) => [s.quickSheetCta, pressed && { opacity: 0.85 }]}
+          onPress={() => onStart(q)}
+          accessibilityRole="button"
+          accessibilityLabel={`Start ${q.label}`}
+        >
+          <Text style={s.quickSheetCtaTxt}>Start</Text>
+        </Pressable>
+        <Pressable onPress={onClose} style={s.quickSheetBack} accessibilityRole="button">
+          <Text style={s.quickSheetBackTxt}>Back</Text>
+        </Pressable>
+      </View>
+    </GlassSheet>
+  );
+}
+
 /* ── ModeSwipeRing — modus kiezen door over de cirkel te vegen ─────────
    Operator, 5 okt 2026 ("het idee van één cirkel die je kan
    doorswipen"): zoals wijzerplaten wisselen op een Apple Watch. Links/
@@ -3353,6 +3422,7 @@ function IdleScreen({
   const pulse = useRestingPulse();
   const [rhythmOpen, setRhythmOpen] = useState(false);
   const pendingAfterRhythm = useRef<(() => void) | null>(null);
+  const [quickOpen, setQuickOpen] = useState<'chill' | 'boost' | null>(null);
   const withRhythm = (action: () => void) => () => {
     if (pulse.decided) {
       action();
@@ -3602,42 +3672,8 @@ function IdleScreen({
            verticale DurationWheel als breath-setup.tsx — gekozen waarde
            groot/wit gecentreerd, "Recommended" ernaast wanneer van
            toepassing, geen los sterretje/legend-regel meer nodig. */}
-        {/* Quick Chill / Quick Boost (operator, 7 okt 2026): één tik, 5 min,
-            meteen bezig — afgestemd op je hart onder de motorkap. Niet
-            tijdens een lopende sessie (dan geldt "Switch to…"). */}
-        {!sessionRunning && !trialRunning ? (
-          <View style={s.quickRow}>
-            {QUICK_SESSIONS.map((q) => {
-              const QIcon = q.key === 'chill' ? MoonStar : Zap;
-              return (
-                <Pressable
-                  key={q.key}
-                  disabled={busy}
-                  onPress={() => {
-                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (startLocked) {
-                      onStart();
-                      return;
-                    }
-                    withRhythm(() => {
-                      void startStateControlNow(q.mode, QUICK_SESSION_MINUTES, { quick: true });
-                    })();
-                  }}
-                  style={({ pressed }) => [s.quickBtn, pressed && { opacity: 0.6 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes, starts right away`}
-                >
-                  <QIcon size={15} color={getModeMeta(q.mode).color} strokeWidth={2.2} />
-                  <Text style={s.quickTxt}>{q.label}</Text>
-                  <Text style={s.quickMin}>{QUICK_SESSION_MINUTES} min</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-
         {/* Lager, met meer lucht onder de bolletjes (operator, 6 okt 2026). */}
-        <View style={[s.durationSliderWrap, { marginTop: sessionRunning || trialRunning ? 90 : 26 }]}>
+        <View style={[s.durationSliderWrap, { marginTop: 90 }]}>
           <DurationWheel
             options={DURATION_PRESETS[selectedMode].map((p) => ({
               value: p.value,
@@ -3653,6 +3689,33 @@ function IdleScreen({
 
         {/* Spacer — pushes Start-CTA naar onderkant. */}
         <View style={{ flex: 1, minHeight: 2 }} />
+
+        {/* Quick Chill / Quick Boost: twee icoontjes naast elkaar boven de
+            Start-knop (operator, 7 okt 2026: "enkel iconen, bij aantikken
+            popup met korte info en start of back" + "boven de cta naast
+            elkaar"). Zelfde tekens als de toestand erachter. */}
+        {!sessionRunning && !trialRunning ? (
+          <View style={s.quickIconRow}>
+            {QUICK_SESSIONS.map((q) => {
+              const QIcon = MODE_ICONS[q.mode];
+              return (
+                <Pressable
+                  key={q.key}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    setQuickOpen(q.key);
+                  }}
+                  hitSlop={8}
+                  style={({ pressed }) => [s.quickIcon, pressed && { opacity: 0.6 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
+                >
+                  <QIcon size={20} color={getModeMeta(q.mode).color} strokeWidth={2} />
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
 
 
         {/* Operator ("dat moet meer in deze stijl, breathwork" — screenshot
@@ -3780,6 +3843,21 @@ function IdleScreen({
           onDismiss={() => setCompletedModeForModal(null)}
         />
       )}
+
+      <QuickSessionSheet
+        which={quickOpen}
+        onClose={() => setQuickOpen(null)}
+        onStart={(q) => {
+          setQuickOpen(null);
+          if (startLocked) {
+            onStart();
+            return;
+          }
+          withRhythm(() => {
+            void startStateControlNow(q.mode, QUICK_SESSION_MINUTES, { quick: true });
+          })();
+        }}
+      />
 
       <RhythmSheet
         visible={rhythmOpen}
@@ -5637,20 +5715,45 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 1,
   },
-  quickRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 26 },
-  quickBtn: {
-    flexDirection: 'row',
+  quickIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginBottom: 16 },
+  quickIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
-    gap: 7,
-    height: 38,
-    paddingHorizontal: 14,
-    borderRadius: 19,
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.07)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  quickTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
-  quickMin: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 13 },
+  quickSheetHead: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8, marginBottom: 18 },
+  quickSheetIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  quickSheetLine: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.semibold, lineHeight: 24 },
+  quickSheetNote: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    lineHeight: 20,
+    marginTop: 6,
+    marginBottom: 22,
+  },
+  quickSheetCta: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickSheetCtaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
+  quickSheetBack: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  quickSheetBackTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
   modeDots: {
     flexDirection: 'row',
     alignItems: 'center',

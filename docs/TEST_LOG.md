@@ -49,6 +49,8 @@
 | 13 | Quick Chill, 5 min | A16 | ✅ 10 s op 66 → 2 min glijden → 46,0 bpm (45,8–46,3) tot het einde; eindsignaal op 301 s |
 | 14 | Quick Boost, 5 min | A16 | ✅ 10 s op 66 → 10 s naar 110 → 110 (108,5–111) tot het einde; eindsignaal op 300,5 s; tikken 60/46 ms (steviger dan Chill 40/32) |
 | 15 | Einde sessie → afsluitscherm | A16 | ❌ 0,3 s keuzescherm (Sharp Focus) zichtbaar → fix (`2f46905`) ⏳ hertest |
+| 17 | Keuzescherm te druk (Quick-knoppen met tekst) | A16 | ⚠️ operator: "heel druk" → icoontjes naast elkaar boven de Start-knop, tik = glazen paneel met uitleg + Start/Back; icoon Chill = teken van Clarity & Relax (niet het maantje = Sleep) |
+| 18 | Quick Chill-paneel | A16 | ✅ screenshot: titel, "5 min · starts right away", uitleg, Start, Back, glas |
 
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |
