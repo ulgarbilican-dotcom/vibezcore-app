@@ -206,7 +206,7 @@ function PillarButton({
    scherp en wit blijft. */
 function VMark() {
   return (
-    <Svg width={48} height={45} viewBox="0 0 66 62">
+    <Svg width={36} height={34} viewBox="0 0 66 62">
       <Polygon points="0,0 21,0 39.5,62 21.5,62" fill="#ffffff" />
       <Polygon points="45.5,0 66,0 47.5,53 39,24" fill="#ffffff" />
     </Svg>
@@ -351,7 +351,15 @@ export default function WelcomeScreen() {
              VIBEZCORE in ruim gespatieerde letters; geen tagline meer. */}
           <Animated.View style={[{ alignItems: 'center' }, logoStyle]} accessible accessibilityLabel="VIBEZCORE">
             <VMark />
-            <Animated.Text style={[s.topLetters, taglineStyle]}>VIBEZCORE</Animated.Text>
+            {/* Het echte woordmerk (met de VIBEZCORE-V), niet getypt
+                (operator, 7 okt 2026: "de v in vibezcore moet ook die
+                speciale v krijgen"). */}
+            <Animated.Image
+              source={require('../../assets/vibezcore_wordmark.png')}
+              style={[s.topWordmark, taglineStyle]}
+              resizeMode="contain"
+              tintColor="#ffffff"
+            />
           </Animated.View>
         </View>
 
@@ -414,13 +422,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 4,
   },
-  topLetters: {
-    marginTop: 14,
-    fontFamily: BrandFonts.regular,
-    fontSize: 15,
-    letterSpacing: 7,
-    paddingLeft: 7, // compenseert de spatiëring achter de laatste letter
-    color: '#ffffff',
+  topWordmark: {
+    marginTop: 12,
+    width: 120,
+    height: 12.5, // 800×83-bestand → zelfde verhouding
   },
   topTagline: {
     marginTop: 4,
