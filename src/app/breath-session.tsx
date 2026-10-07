@@ -138,7 +138,6 @@ import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useBraceletNudge } from '@/services/bracelet-upsell';
-import { useBraceletOwner } from '@/utils/dev-user-override';
 import { useBreathHost, useBreathParams } from '@/components/breath-host-context';
 import {
   closeBreathSession,
@@ -1012,8 +1011,8 @@ export function BreathSession() {
      "Well done"-scherm — niet waar de Premium-vraag staat (die gaat voor),
      max. 1×/dag, niet voor wie al een bracelet heeft. Breathwork op de
      bracelet volgt nog → "coming"-formulering, geen belofte van nu. */
-  const ownsBracelet = useBraceletOwner();
-  const showBraceletLink = useBraceletNudge('breathwork', done && !askPremium && !ownsBracelet);
+  /* Geen uitzondering voor eigenaars: die bestaan nog niet (7 okt 2026). */
+  const showBraceletLink = useBraceletNudge('breathwork', done && !askPremium);
   /* Operator, 2 okt 2026 ("Apple-level polish... niet hard-cutten"): sessies
      gestart via feel-now.tsx se "How do you feel?"-knop dragen `instant=1`.
      Twee dingen wisselen dan, enkel voor DIT pad: de preview duurt 60s i.p.v.

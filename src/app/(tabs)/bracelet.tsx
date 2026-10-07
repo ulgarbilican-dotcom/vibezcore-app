@@ -43,7 +43,7 @@
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -195,6 +195,20 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
             </Animated.View>
           </Pressable>
         </Animated.View>
+        {/* Operator, 7 okt 2026 ("weinig ingangen naar de bracelet"): de
+            bracelet hoort bij State Control — één rustige regel onder de
+            knop, voor iedereen (er zijn nog geen eigenaars). */}
+        <Pressable
+          onPress={() => router.push('/smart-bead-bracelet' as never)}
+          hitSlop={10}
+          style={({ pressed }) => [s.braceletLink, pressed && { opacity: 0.6 }]}
+          accessibilityRole="link"
+          accessibilityLabel="Also on your wrist. Smart Bead Bracelet"
+        >
+          <Text style={s.braceletLinkTxt}>
+            Also on your wrist · <Text style={s.braceletLinkStrong}>Smart Bead Bracelet ›</Text>
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -263,6 +277,9 @@ export default function BraceletScreen() {
 }
 
 const s = StyleSheet.create({
+  braceletLink: { alignSelf: 'center', minHeight: 40, justifyContent: 'center', marginTop: 12 },
+  braceletLinkTxt: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontFamily: BrandFonts.medium },
+  braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   introWrap: {
     flex: 1,
     alignItems: 'center',

@@ -1594,10 +1594,10 @@ function CompletionModal({
   const meta = getModeMeta(mode);
   const insets = useSafeAreaInsets();
   /* Bracelet als upgrade (operator, 7 okt 2026): je voelde net het ritme
-     dat de bracelet ook geeft — één rustige link, max. 1×/dag, niet voor
-     wie al een bracelet heeft. Opent enkel de bestaande bracelet-pagina. */
-  const ownsBracelet = useBraceletOwner();
-  const showBraceletLink = useBraceletNudge('state-control', !ownsBracelet);
+     dat de bracelet ook geeft — één rustige link naar de bracelet-pagina. */
+  /* Er zijn nog geen bracelet-eigenaars (operator, 7 okt 2026): iedereen
+     ziet de link, ook Premium. */
+  const showBraceletLink = useBraceletNudge('state-control', true);
   const fade = useSharedValue(0);
   const ring = useSharedValue(0);
   const check = useSharedValue(0);

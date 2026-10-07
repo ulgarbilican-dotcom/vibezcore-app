@@ -2302,6 +2302,40 @@ function AudioScreen({
            mij" communiceert — geen tweede, apart omrand tekstblok nodig.
            Verwijderd, de tekst bovenaan de carrousel blijft de enige hint. */}
 
+        {/* ── SMART BEAD BRACELET (operator, 7 okt 2026: "de bracelet moet
+            al gepromoot worden, nu bijna nergens vindbaar") ──
+            Strategie (CLAUDE.md §3): bracelet = premium upgrade van de app.
+            Zelfde kaartvorm als de serie-kaarten erboven (foto + "Explore ›"
+            + eyebrow/titel/regel), zodat hij thuishoort in de bibliotheek.
+            Voor iedereen (er zijn nog geen eigenaars); niet tijdens zoeken of
+            in een gefilterde pijler. Opent de productpagina.
+            Vervolg zelfde dag ("weinig ingangen"): van helemaal onderaan naar
+            direct onder de vier pijlers, zodat je hem ziet zonder te zoeken. */}
+        {!searchActive && !activePillarFilter && (
+          /* Zelfde opbouw als de pijler-tegels erboven: foto, daaronder
+             label + titel (Content-Card-regel: tekst onder de foto). */
+          <Pressable
+            style={({ pressed }) => [s.braceletCard, pressed && { opacity: 0.85 }]}
+            onPress={() => router.push('/smart-bead-bracelet' as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
+          >
+            <Image
+              /* Productfoto (bracelet op zwart, zelfde als de bracelet-
+                 pagina): staat gecentreerd, dus past in elke uitsnede. */
+              source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20home%202.png' }}
+              style={s.braceletCardImg}
+              resizeMode="cover"
+            />
+            <Text style={s.braceletCardEyebrow}>LAUNCHING FALL 2026</Text>
+            <View style={s.braceletCardRow}>
+              <Text style={s.braceletCardTitle}>Smart Bead Bracelet</Text>
+              <Text style={s.braceletCardChev}>›</Text>
+            </View>
+            <Text style={s.braceletCardSub}>Nature meets tech. Your rhythm, on your wrist.</Text>
+          </Pressable>
+        )}
+
         {/* ── DE LIBRARY — serie-kaarten als bibliotheek (blauwdruk §3.5) ──
             Eén unit per serie: cinematic kaart (foto + eyebrow + titel + sub)
             met chevron rechtsboven; tap = expand inline, chevron roteert.
@@ -3454,49 +3488,6 @@ function AudioScreen({
           )}
         </View>
 
-        {/* ── SMART BEAD BRACELET (operator, 7 okt 2026: "de bracelet moet
-            al gepromoot worden, nu bijna nergens vindbaar") ──
-            Strategie (CLAUDE.md §3): bracelet = premium upgrade van de app.
-            Zelfde kaartvorm als de serie-kaarten erboven (foto + "Explore ›"
-            + eyebrow/titel/regel), zodat hij thuishoort in de bibliotheek.
-            Voor iedereen behalve wie al een bracelet heeft; niet tijdens
-            zoeken of in een gefilterde pijler. Opent de productpagina. */}
-        {!searchActive && !activePillarFilter && !isBraceletOwner && (
-          <View style={[s.libCardUnit, { marginTop: 8 }]}>
-            <Pressable
-              style={[s.libCard, s.libCardStandalone]}
-              onPress={() => router.push('/smart-bead-bracelet' as never)}
-              android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-              accessibilityRole="button"
-              accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
-            >
-              <Image
-                source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20bracelet%20app.png' }}
-                style={s.libCardBg}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.92)']}
-                locations={[0, 0.4, 0.55, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={s.pillCluster} pointerEvents="none">
-                <View style={s.viewAllPill}>
-                  <Text style={s.exploreText}>Explore</Text>
-                  <Text style={s.viewAllChev}>›</Text>
-                </View>
-              </View>
-              <View style={s.libCardBody}>
-                <Text style={s.comingEyebrow}>LAUNCHING FALL 2026</Text>
-                <Text style={s.libCardTitle}>Smart Bead Bracelet</Text>
-                <Text style={s.libCardSubline}>Nature meets tech. Your rhythm, on your wrist.</Text>
-              </View>
-            </Pressable>
-          </View>
-        )}
-
         {/* Operator, 7 okt 2026: het kopen-blok onderaan is weg — de
            Premium-knop bovenaan en het abonnementsscherm (/subscribe, zelfde
            kaart) zijn de plek om te kiezen. Wie hier vroeger naartoe
@@ -3886,6 +3877,25 @@ function AudioScreen({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+  /* Smart Bead Bracelet-kaart onder de pijlers (operator, 7 okt 2026). */
+  braceletCard: { marginHorizontal: 16, marginTop: 12, marginBottom: 20 },
+  braceletCardImg: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 18,
+    backgroundColor: C.surface,
+  },
+  braceletCardEyebrow: {
+    marginTop: 12,
+    color: C.dim,
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+  },
+  braceletCardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  braceletCardTitle: { flex: 1, color: C.text, fontSize: 20, fontFamily: BrandFonts.bold, letterSpacing: -0.3 },
+  braceletCardChev: { color: C.dim, fontSize: 24, fontFamily: BrandFonts.regular, marginLeft: 8 },
+  braceletCardSub: { marginTop: 4, color: C.dim, fontSize: 14, fontFamily: BrandFonts.regular },
   introOverlay: {
     zIndex: 50,
     elevation: 50,
