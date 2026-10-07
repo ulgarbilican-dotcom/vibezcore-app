@@ -1143,7 +1143,7 @@ export default function SmartBeadBraceletScreen() {
      niet meteen marketing-flash voelt voor wie al PRO is. */
   if (showAudioProLanding && !exploreUnlocked) {
     return (
-      <SafeAreaView edges={braceletIntro ? [] : ['left', 'right']} style={s.root}>
+      <SafeAreaView edges={braceletIntro ? [] : ['top', 'left', 'right']} style={s.root}>
         {/* GEWIJZIGD 4 oktober 2026: standalone route nu (was inline tab-
            content) — eigen Stack-header met terugknop, zelfde patroon als
            activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
@@ -1154,7 +1154,7 @@ export default function SmartBeadBraceletScreen() {
             headerBackVisible: false,
           /* Operator, 7 okt 2026: de welkomstintro is schermvullend zonder
              kopbalk, zoals de andere welkomstschermen (Audio, Breath). */
-          headerShown: !braceletIntro,
+          headerShown: false,
             headerLeft: () => <HeaderBackButton />,
           }}
         />
@@ -1227,7 +1227,13 @@ export default function SmartBeadBraceletScreen() {
             Operator, 17 september 2026: volle-breedte oranje
             PreviewBanner → neutrale PreviewPill, zelfde als
             bracelet-control.tsx. */}
-        <PreviewPill />
+        <View style={s.topRow}>
+          <View style={s.topRowSide}>
+            <HeaderBackButton />
+          </View>
+          <PreviewPill />
+          <View style={s.topRowSide} />
+        </View>
         <ScrollView
           ref={landingScrollRef}
           contentContainerStyle={s.landingScroll}
@@ -1281,7 +1287,7 @@ export default function SmartBeadBraceletScreen() {
   }
 
   return (
-    <SafeAreaView edges={braceletIntro ? [] : ['left', 'right']} style={s.root}>
+    <SafeAreaView edges={braceletIntro ? [] : ['top', 'left', 'right']} style={s.root}>
       {/* GEWIJZIGD 4 oktober 2026: standalone route nu (was inline tab-
          content) — eigen Stack-header met terugknop, zelfde patroon als
          activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
@@ -1292,7 +1298,7 @@ export default function SmartBeadBraceletScreen() {
           headerBackVisible: false,
           /* Operator, 7 okt 2026: de welkomstintro is schermvullend zonder
              kopbalk, zoals de andere welkomstschermen (Audio, Breath). */
-          headerShown: !braceletIntro,
+          headerShown: false,
           headerLeft: () => <HeaderBackButton />,
         }}
       />
@@ -1372,7 +1378,26 @@ export default function SmartBeadBraceletScreen() {
           Operator, 17 september 2026 ("bovenaan ook tekst preview zoals in
           bracelet control, niet in gele strip"): volle-breedte oranje
           PreviewBanner → neutrale PreviewPill. */}
-      {!isBraceletOwner && <PreviewPill />}
+      {/* Operator, 7 okt 2026 ("de back-pijl staat te hoog, moet gewoon
+         lager"): geen losse kopbalk meer boven deze schermvullende pagina —
+         terugpijl, Preview-pil en "i" staan samen in één rij, vlak boven de
+         inhoud. Zelfde HeaderBackButton als elders in de app. */}
+      <View style={s.topRow}>
+        <View style={s.topRowSide}>
+          <HeaderBackButton />
+        </View>
+        {!isBraceletOwner ? <PreviewPill /> : <View />}
+        <View style={[s.topRowSide, { alignItems: 'flex-end' }]}>
+          <Pressable
+            style={s.infoBtn}
+            onPress={() => setHowItWorksOpen(true)}
+            hitSlop={10}
+            accessibilityLabel="How the bracelet works"
+          >
+            <Text style={s.infoBtnText}>i</Text>
+          </Pressable>
+        </View>
+      </View>
       <ScrollView
         ref={mainScrollRef}
         onLayout={(e) => setMainViewportH(Math.round(e.nativeEvent.layout.height))}
@@ -1746,14 +1771,6 @@ export default function SmartBeadBraceletScreen() {
          van de ScrollView, niet erbinnen). Opent de "How it works"-sheet
          hieronder. Vervangt de losse tekst-sectie die eerder op het
          hoofdscherm stond. */}
-      <Pressable
-        style={[s.infoBtn, { top: 10 }]}
-        onPress={() => setHowItWorksOpen(true)}
-        hitSlop={10}
-        accessibilityLabel="How the bracelet works"
-      >
-        <Text style={s.infoBtnText}>i</Text>
-      </Pressable>
 
       {/* ── "How it works"-infoblad ────────────────────────────────────
          Zelfde bottom-sheet-patroon als de breathChooser-modal verderop
@@ -2805,9 +2822,17 @@ const s = StyleSheet.create({
   /* Vast "i"-knopje rechtsboven — sibling van de ScrollView, dus blijft
      staan tijdens scrollen. Subtiel glas-effect, geen zware fill, past
      op zowel de fotoheader (owner) als de lichte pagina (non-owner). */
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  topRowSide: { width: 56, justifyContent: 'center' },
   infoBtn: {
-    position: 'absolute',
-    right: 16,
+    marginRight: 4,
     width: 30,
     height: 30,
     borderRadius: 15,

@@ -199,14 +199,16 @@ function PillarButton({
   );
 }
 
-/* Het V-teken van VIBEZCORE (zelfde vorm als het app-icoon): links een
-   brede schuine streep tot onderaan, rechts een smallere die halverwege
-   stopt. Als vector, zodat het scherp en wit is op de foto. */
+/* Het V-teken van VIBEZCORE — exact opgemeten uit het app-logo
+   (assets/vibezcore_icon.png, 7 okt 2026, operator: "dezelfde V als het
+   logo"): links een schuine balk tot onderaan, rechts een kortere balk
+   met een knik aan de binnenkant. Als vector, zodat het op elk scherm
+   scherp en wit blijft. */
 function VMark() {
   return (
-    <Svg width={46} height={42} viewBox="0 0 46 42">
-      <Polygon points="0,0 12,0 26,42 19,42" fill="#ffffff" />
-      <Polygon points="35,0 46,0 32,30 28,22" fill="#ffffff" />
+    <Svg width={48} height={45} viewBox="0 0 66 62">
+      <Polygon points="0,0 21,0 39.5,62 21.5,62" fill="#ffffff" />
+      <Polygon points="45.5,0 66,0 47.5,53 39,24" fill="#ffffff" />
     </Svg>
   );
 }
@@ -438,6 +440,10 @@ const s = StyleSheet.create({
   pillarWrap: {
     borderRadius: 999,
     overflow: 'hidden',
+    /* Rand op de buitenste vorm, niet op de BlurView: op Android tekende
+       die enkel boven- en onderlijn, de ronde zijkanten vielen weg. */
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.32)',
   },
   pillarPressed: { opacity: 0.7 },
   pillarBlur: {
@@ -455,8 +461,6 @@ const s = StyleSheet.create({
     /* Operator, 7 okt 2026 (eigen ontwerp): helder glas — de foto blijft
        zichtbaar, een lichte rand tekent de capsule. */
     backgroundColor: 'rgba(30,30,32,0.28)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
   },
   /* Vaste breedte + gecentreerd: elk icoon (Wind/Zap/Headphones heeft
      een andere natuurlijke glyph-breedte) landt zo altijd op exact
