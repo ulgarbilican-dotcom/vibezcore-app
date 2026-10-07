@@ -1604,9 +1604,8 @@ export default function SmartBeadBraceletScreen() {
                 >
                   <Text style={s.breathChooserCloseText}>✕</Text>
                 </Pressable>
-                <Text style={s.storyRowNum}>
-                  {String(closerLookIndex + 1).padStart(2, '0')}
-                </Text>
+                {/* Geen nummer (operator, 7 okt 2026: "moet niet genummerd
+                    worden, is telkens alleenstaande info"). */}
                 <Text style={[s.breathChooserTitle, s.closerTitle]}>
                   {CLOSER_LOOK[closerLookIndex].title}
                 </Text>
