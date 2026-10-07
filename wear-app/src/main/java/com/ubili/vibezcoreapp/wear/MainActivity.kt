@@ -65,7 +65,7 @@ class MainActivity : Activity() {
           action = WearStateSessionService.ACTION_START
           putExtra(
             WearStateSessionService.EXTRA_START_JSON,
-            """{"title":"Sharp Focus","colorHex":"#3E9BFF","targetBpm":90,"holdSec":10,"rampSec":0,"curveOffsetSec":0,"remainingSec":900,"lubAmp":45,"dubAmp":32,"lubMsNoAmp":50,"dubMsNoAmp":40}""",
+            """{"title":"Sharp Focus","colorHex":"#3E9BFF","startBpm":70,"targetBpm":63,"holdSec":10,"rampSec":0,"curveOffsetSec":0,"remainingSec":900,"lubAmp":45,"dubAmp":32,"lubMsNoAmp":50,"dubMsNoAmp":40}""",
           )
         },
       )

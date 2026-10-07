@@ -11,7 +11,7 @@
    hartslag en arousal omhoog (Wang 2023, Valente 2024). De 5 modi zijn
    dus 5 eindtempo's op één arousal-as t.o.v. de hartslag.
 
-   VERLOOP: 10 s de aangenomen rust-hartslag (75 bpm) — iso-principe,
+   VERLOOP: 10 s de rust-hartslag van de gebruiker (R) — iso-principe,
    eerst aansluiten, dan leiden (Motokawa Study 2) — daarna glijden naar
    het eindtempo, en dat aanhouden. Hoe lang het glijden duurt volgt het
    bewijs per modus:
@@ -24,13 +24,17 @@
        tempo; een stijgend verloop is nergens getest.
      (Eerder 30 s — een eigen tussenkeuze zonder bron, vervangen.)
 
-   EINDTEMPO:
-     Calm Control    60 bpm  🟢 Doppel: −20% onder rust-HR (gem. 58,2)
-     Clarity & Relax 50 bpm  🟢 Motokawa Study 1-eindpunt
-     Sleep           40 bpm  🟠 Doppel's ondergrens ("onnatuurlijk traag"
-                                daaronder), dalen tot hier niet getest
-     Sharp Focus     90 bpm  🟡 boven rust-HR, onder Boost
-     Boost          110 bpm  🟢 Valente 2024: HR↑, HRV↓ (ook op de pols)
+   EINDTEMPO — "Match your rhythm" (operator, 7 okt 2026): een vast deel
+   van R, zodat het kalme ritme altijd trager is dan het eigen hart.
+   R komt uit services/resting-pulse.ts (meting / invoer / gemiddelde 70).
+     Calm Control    80% van R, min 50   Doppel -20%, BoostMeUp 0,8 x HR
+     Clarity & Relax 70% van R, min 45   Motokawa: dalen tot ~50 bpm
+     Sleep           55% van R, min 40   Doppel's ondergrens 40 bpm
+     Sharp Focus     90% van R, min 53   gelijkmatig, net onder rust -
+                                         BoostMeUp: sneller dan rust gaf
+                                         meer angst en slechtere scores
+     Boost          110 bpm (vast)       Valente 2024: HR omhoog (pols)
+   Bij R = 70: 56 / 49 / 40 / 63 / 110.
 
    PULSVORM: lub-dub (Doppel's "double heartbeat-like rhythm"), dub
    zachter. Lub→dub = 30% van de cyclus, max 350 ms (fysiologisch S1–S2).
@@ -75,7 +79,8 @@ import {
   stopStateSessionOnWatch as stopAppleState,
 } from '../../modules/watch-breath';
 
-const ASSUMED_RESTING_BPM = 75;
+import { getRestingPulse } from './resting-pulse';
+
 const SESSION_HOLD_SECONDS = 10;
 /** Versnelde glijding in de voorproef voor de trage modi (Sleep, Clarity). */
 const PREVIEW_RAMP_SECONDS = 12;
@@ -107,7 +112,8 @@ const DUB_MS = 35;
 const S = Haptics.ImpactFeedbackStyle;
 
 type ModeHapticSpec = {
-  targetBpm: number;
+  /** Eindtempo als functie van de rusthartslag R (zie kop). */
+  targetFor: (restingBpm: number) => number;
   rampSec: number;
   /** Native amplitude 0–255 (toestel MET amplitude-sturing). */
   lubAmp: number;
@@ -126,28 +132,42 @@ const SPECS: Record<BraceletMode, ModeHapticSpec> = {
   /* NoAmp-duren: 5 okt 2026 eerst 26–30 ms → op de Galaxy A16 "bijna niet
      voelbaar" (operator). 50 ms (expo Soft) was voelbaar maar mocht
      subtieler → nu ertussen. */
-  [BraceletMode.Delta]: { targetBpm: 40, rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Theta]: { targetBpm: 50, rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Delta]: { targetFor: (r) => Math.max(40, Math.round(r * 0.55)), rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Theta]: { targetFor: (r) => Math.max(45, Math.round(r * 0.7)), rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Soft, dubStyle: S.Soft },
   /* rampSec 10 = na de basislijn in 10 s naar het eindtempo (vol op 20 s).
      Doppel (−20%) en Valente/Wang (110 bpm) gingen meteen naar hun tempo;
      operator, 5 okt 2026: "geen abrupte overgang, er moet een flow zijn,
      op 20 s bij max". 10 s is vrijwel meteen — binnen het geteste gebied,
      enkel de schok eruit. */
-  [BraceletMode.Alpha]: { targetBpm: 60, rampSec: 10, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Beta]: { targetBpm: 90, rampSec: 10, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
-  [BraceletMode.Gamma]: { targetBpm: 110, rampSec: 10, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
+  [BraceletMode.Alpha]: { targetFor: (r) => Math.max(50, Math.round(r * 0.8)), rampSec: 10, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Beta]: { targetFor: (r) => Math.max(53, Math.round(r * 0.9)), rampSec: 10, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
+  [BraceletMode.Gamma]: { targetFor: () => 110, rampSec: 10, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
 };
+
+/** Spec met de tempo's voor één concrete rusthartslag. */
+type ResolvedSpec = ModeHapticSpec & { startBpm: number; targetBpm: number };
+
+function resolveSpec(mode: BraceletMode, restingBpm: number = getRestingPulse().bpm): ResolvedSpec {
+  const spec = SPECS[mode];
+  return { ...spec, startBpm: restingBpm, targetBpm: spec.targetFor(restingBpm) };
+}
+
+/** Start- en eindtempo voor de UI (resultaat van "Match your rhythm"). */
+export function rhythmFor(mode: BraceletMode, restingBpm: number): { startBpm: number; targetBpm: number } {
+  const r = resolveSpec(mode, restingBpm);
+  return { startBpm: r.startBpm, targetBpm: r.targetBpm };
+}
 
 type Timing = { holdSec: number; rampSec: number };
 
-function bpmAt(spec: ModeHapticSpec, elapsedSec: number, timing: Timing): number {
-  if (elapsedSec < timing.holdSec) return ASSUMED_RESTING_BPM;
+function bpmAt(spec: ResolvedSpec, elapsedSec: number, timing: Timing): number {
+  if (elapsedSec < timing.holdSec) return spec.startBpm;
   const rampElapsed = elapsedSec - timing.holdSec;
   const progress = timing.rampSec <= 0 ? 1 : Math.min(1, rampElapsed / timing.rampSec);
-  return ASSUMED_RESTING_BPM + (spec.targetBpm - ASSUMED_RESTING_BPM) * progress;
+  return spec.startBpm + (spec.targetBpm - spec.startBpm) * progress;
 }
 
-function beatAt(spec: ModeHapticSpec, elapsedSec: number, timing: Timing) {
+function beatAt(spec: ResolvedSpec, elapsedSec: number, timing: Timing) {
   const cycleMs = Math.round(60000 / bpmAt(spec, elapsedSec, timing));
   const dubAt = Math.round(Math.min(cycleMs * LUB_DUB_FRACTION, LUB_DUB_MAX_MS));
   return { cycleMs, dubAt };
@@ -157,7 +177,7 @@ function beatAt(spec: ModeHapticSpec, elapsedSec: number, timing: Timing) {
  *  `totalSec` eindig (sessie), zonder herhaalt de laatste tel eindeloos
  *  (preview, stopt bij het sluiten). */
 function buildWaveform(
-  spec: ModeHapticSpec,
+  spec: ResolvedSpec,
   timing: Timing,
   offsetSec: number,
   totalSec: number | undefined,
@@ -251,7 +271,7 @@ function clearPending(): void {
  *  Corrigeert zichzelf op de wandklok, zodat er geen drift opbouwt. */
 function scheduleVisual(
   mode: BraceletMode,
-  spec: ModeHapticSpec,
+  spec: ResolvedSpec,
   timing: Timing,
   anchorWallMs: number,
   offsetSec: number,
@@ -291,7 +311,7 @@ function fire(style: Haptics.ImpactFeedbackStyle): void {
 
 function scheduleBeat(
   mode: BraceletMode,
-  spec: ModeHapticSpec,
+  spec: ResolvedSpec,
   curveStartedAt: number,
   timing: Timing,
   myGeneration: number,
@@ -344,9 +364,10 @@ function play(
   /** Het horloge speelt het ritme (6 okt 2026): de telefoon houdt sessie,
    *  timer en melding aan, maar trilt niet mee. */
   silent = false,
+  restingBpm: number = getRestingPulse().bpm,
 ): void {
   silence(!!clock && hasNativeWaveform());
-  const spec = SPECS[mode];
+  const spec = resolveSpec(mode, restingBpm);
   if (hasNativeWaveform()) {
     const built = buildWaveform(spec, timing, offsetSec, totalSec, canPlayNativeWaveform());
     const { timings, repeat } = built;
@@ -375,7 +396,9 @@ function play(
    terugnavigeren begon de curve opnieuw bij 75 bpm ("volledig fout
    ritme"). `curveZero` = de verstreken sessietijd waarop de curve begon
    (0 bij de start; verschuift enkel na een lange pauze, zie hieronder). */
-type SessionState = { mode: BraceletMode; curveZeroSec: number; pausedAt: number | null };
+/** `restingBpm` ligt vast vanaf de start: een nieuwe meting tijdens een
+ *  lopende sessie verandert haar ritme niet halverwege. */
+type SessionState = { mode: BraceletMode; curveZeroSec: number; pausedAt: number | null; restingBpm: number };
 let session: SessionState | null = null;
 /** Wandklok-moment waarop de lopende sessie natuurlijk eindigt. */
 let sessionEndsAt: number | null = null;
@@ -387,9 +410,10 @@ let sessionEndsAt: number | null = null;
 export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, remainingSec: number): void {
   const now = Date.now();
   if (!session || session.mode !== mode || elapsedSec < session.curveZeroSec) {
-    session = { mode, curveZeroSec: elapsedSec, pausedAt: null };
+    session = { mode, curveZeroSec: elapsedSec, pausedAt: null, restingBpm: getRestingPulse().bpm };
   } else if (session.pausedAt !== null && now - session.pausedAt > RESUME_WINDOW_SECONDS * 1000) {
     session.curveZeroSec = elapsedSec;
+    session.restingBpm = getRestingPulse().bpm;
   }
   session.pausedAt = null;
   sessionEndsAt = now + remainingSec * 1000;
@@ -404,8 +428,10 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
     Math.max(0, elapsedSec - session.curveZeroSec),
     remainingSec > 0 ? remainingSec : undefined,
     { elapsedSec, totalSec: elapsedSec + remainingSec },
+    false,
+    session.restingBpm,
   );
-  relayToWatch(mode, Math.max(0, elapsedSec - session.curveZeroSec), remainingSec);
+  relayToWatch(mode, Math.max(0, elapsedSec - session.curveZeroSec), remainingSec, session.restingBpm);
 }
 
 /* ── Het ritme op de pols: smartwatch (6 okt 2026) ─────────────────────
@@ -420,13 +446,14 @@ export function isWatchPlayingRhythm(): boolean {
 }
 let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; at: number } | null = null;
 
-function relayToWatch(mode: BraceletMode, curveOffsetSec: number, remainingSec: number): void {
+function relayToWatch(mode: BraceletMode, curveOffsetSec: number, remainingSec: number, restingBpm: number): void {
   if (remainingSec <= 0) return;
-  const spec = SPECS[mode];
+  const spec = resolveSpec(mode, restingBpm);
   const meta = getModeMeta(mode);
   const start = {
     title: meta.name,
     colorHex: meta.color,
+    startBpm: spec.startBpm,
     targetBpm: spec.targetBpm,
     holdSec: SESSION_HOLD_SECONDS,
     rampSec: spec.rampSec,
@@ -456,6 +483,7 @@ function onWatchTookOver(): void {
     remainingSec,
     { elapsedSec, totalSec: elapsedSec + remainingSec },
     true,
+    session.restingBpm,
   );
 }
 onWearStateAck(onWatchTookOver);
@@ -515,11 +543,12 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
 let previewOnWatch = false;
 export function playModeTrialHaptic(mode: BraceletMode): void {
   playModePreviewHaptic(mode);
-  const spec = SPECS[mode];
+  const spec = resolveSpec(mode);
   const meta = getModeMeta(mode);
   const start = {
     title: meta.name,
     colorHex: meta.color,
+    startBpm: spec.startBpm,
     targetBpm: spec.targetBpm,
     holdSec: previewTiming(mode).holdSec,
     rampSec: previewTiming(mode).rampSec,

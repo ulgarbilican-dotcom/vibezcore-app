@@ -57,6 +57,8 @@ export type StateSessionStart = {
   title: string;
   /** kleur van de toestand */
   colorHex: string;
+  /** rusthartslag van de gebruiker = begintempo (oudere versies: 75) */
+  startBpm: number;
   targetBpm: number;
   holdSec: number;
   rampSec: number;

@@ -28,14 +28,15 @@ Bron van waarheid: `src/services/bracelet-haptics.ts` (`bpmAt`, `beatAt`,
 `buildWaveform`). Elke horloge-implementatie MOET deze formule volgen:
 
 ```
-RESTING_BPM      = 75
+startBpm         = uit het bericht (rusthartslag van de gebruiker, 7 okt 2026);
+                   ontbreekt of buiten 35–110 → 75
 LUB_DUB_FRACTION = 0.3
 LUB_DUB_MAX_MS   = 350
 LUB_MS (amplitude) = 45, DUB_MS (amplitude) = 35
 
-bpmAt(t):   t < holdSec              → 75
+bpmAt(t):   t < holdSec              → startBpm
             anders progress = min(1, (t - holdSec) / rampSec)   (rampSec 0 → 1)
-                     → 75 + (targetBpm - 75) * progress
+                     → startBpm + (targetBpm - startBpm) * progress
 beatAt(t):  cycleMs = round(60000 / bpmAt(t))
             dubAt   = round(min(cycleMs * 0.3, 350))
 één slag:   lub (lubMs) · stilte (dubAt - lubMs) · dub (dubMs) · stilte (cycleMs - dubAt - dubMs)
@@ -45,7 +46,7 @@ einde:      600 ms stilte, dan drie oplopende tikken: 70 ms, 120 ms stilte,
 ```
 
 `t` = curve-tijd in seconden. Bij start geeft de telefoon `curveOffsetSec`
-mee (na hervatten binnen 2 min loopt de curve door i.p.v. opnieuw bij 75).
+mee (na hervatten binnen 2 min loopt de curve door i.p.v. opnieuw bij het begintempo).
 
 ### Bericht `state-start` (telefoon → horloge)
 
@@ -53,7 +54,8 @@ mee (na hervatten binnen 2 min loopt de curve door i.p.v. opnieuw bij 75).
 {
   "title": "Sharp Focus",          // modusnaam zoals in de app
   "colorHex": "#3E9BFF",           // kleur van de toestand
-  "targetBpm": 90,
+  "startBpm": 70,                  // rusthartslag van de gebruiker = begintempo
+  "targetBpm": 63,                 // eindtempo, door de telefoon berekend
   "holdSec": 10,
   "rampSec": 10,
   "curveOffsetSec": 0,             // waar in de curve we beginnen

@@ -31,6 +31,7 @@ import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
+import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -557,7 +558,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Gamma]: {
     intent: 'Alert, energized — primed for high-output moments.',
     braceletDoes:
-      'Starts at a resting pace, then quickens to a brisk rhythm. Keep it short — a quick reset, not a long session.',
+      'Starts at your resting pace, then quickens to a brisk rhythm. Keep it short — a quick reset, not a long session.',
     protocol: 'Energizing breath 2-2 · 3 min',
     protocolHow:
       'Quick rhythmic in-out breathing. Inspired by Bhastrika pranayama — builds alertness through faster pace.',
@@ -565,7 +566,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Beta]: {
     intent: 'Locked-in focus — attention that holds the line.',
     braceletDoes:
-      'Settles just above a resting pace — steady and even.',
+      'Settles just below your resting pace — steady and even.',
     protocol: 'Coherent breath 5-5 · 5 min',
     protocolHow:
       'Inhale 5 seconds, exhale 5 seconds. Six breaths per minute — a resonance pace used in focus-research traditions.',
@@ -573,7 +574,7 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
   [BraceletMode.Alpha]: {
     intent: 'Steady and composed — alert but relaxed.',
     braceletDoes:
-      'Eases just below a resting pace — calm, yet present.',
+      'Eases below your resting pace — calm, yet present.',
     protocol: 'Box breath 4-4-4-4 · 5 min',
     protocolHow:
       'Inhale 4, hold 4, exhale 4, hold 4. Used by special forces for stress recovery — the symmetric holds slow the system down.',
@@ -594,6 +595,15 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
     protocolHow:
       'Inhale 4, hold 7, exhale 8 through the mouth. Popularized by Dr. Andrew Weil — the extended exhale signals the body to slow down.',
   },
+};
+
+/** Wat je voelt — één regel boven de Start-knop. */
+const RHYTHM_FEEL: Record<BraceletMode, string> = {
+  [BraceletMode.Gamma]: 'A quick, lively heartbeat rhythm',
+  [BraceletMode.Beta]: 'A steady heartbeat rhythm, just below rest',
+  [BraceletMode.Alpha]: 'A slow, calm heartbeat rhythm',
+  [BraceletMode.Theta]: 'A slow, soft heartbeat rhythm',
+  [BraceletMode.Delta]: 'The slowest, softest heartbeat rhythm',
 };
 
 const MODE_IDEALS: Record<BraceletMode, string[]> = {
@@ -3338,6 +3348,21 @@ function IdleScreen({
   useEffect(() => () => stopTrial(false), [selectedMode, stopTrial]);
   const trialRunning = trialLeft !== null;
   const condensedMinutes = previewCondensedRampMinutes(selectedMode);
+
+  /* "Match your rhythm" (operator, 7 okt 2026): de eerste keer Start of
+     de voorproef → eerst de rusthartslag (of bewust het gemiddelde). Daarna
+     loopt de gekozen actie meteen verder — één tik, geen tweede keer. */
+  const pulse = useRestingPulse();
+  const [rhythmOpen, setRhythmOpen] = useState(false);
+  const pendingAfterRhythm = useRef<(() => void) | null>(null);
+  const withRhythm = (action: () => void) => () => {
+    if (pulse.decided) {
+      action();
+      return;
+    }
+    pendingAfterRhythm.current = action;
+    setRhythmOpen(true);
+  };
   /* Modus én zijn standaardduur in één render zetten: anders tekende de
      cirkel eerst de nieuwe modus met de duur van de vorige, en sprong de
      vulling pas een frame later naar de juiste hoogte. */
@@ -3563,6 +3588,35 @@ function IdleScreen({
         {/* Spacer — pushes Start-CTA naar onderkant. */}
         <View style={{ flex: 1, minHeight: 2 }} />
 
+        {/* Wat je voelt + waarop het ritme gebaseerd is (operator, 7 okt
+           2026). De uitleg hoort bij de werking (Costa 2016/2019: mensen
+           wisten wat de tik voorstelde); "average" altijd eerlijk benoemd. */}
+        {!trialRunning && !(sessionRunning && runSnap.mode === selectedMode) ? (
+          <Pressable
+            onPress={() => {
+              pendingAfterRhythm.current = null;
+              setRhythmOpen(true);
+            }}
+            hitSlop={8}
+            style={s.rhythmCaption}
+            accessibilityRole="button"
+            accessibilityLabel="Your rhythm — change your resting pulse"
+          >
+            <Text style={s.rhythmFeel}>{RHYTHM_FEEL[selectedMode]}</Text>
+            <Text style={s.rhythmBasis}>
+              {pulse.source === 'average' ? (
+                <>
+                  Set for an average resting pulse · <Text style={s.rhythmLink}>Personalize</Text>
+                </>
+              ) : (
+                <>
+                  Matched to your resting pulse · {pulse.bpm} bpm
+                </>
+              )}
+            </Text>
+          </Pressable>
+        ) : null}
+
         {/* Operator ("dat moet meer in deze stijl, breathwork" — screenshot
            van breath-setup.tsx se footer-CTA): de losse gekleurde "GO"-
            cirkel vervangen door dezelfde volle-breedte, effen witte CTA-
@@ -3588,7 +3642,9 @@ function IdleScreen({
         ) : (
           <PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, (busy || criticalBattery) && s.btnDisabled]}
-            onPress={startLocked ? (trialRunning ? () => stopTrial(false) : startTrial) : onStart}
+            onPress={
+              startLocked ? (trialRunning ? () => stopTrial(false) : withRhythm(startTrial)) : withRhythm(onStart)
+            }
             disabled={busy || criticalBattery}
             accessibilityLabel={
               startLocked
@@ -3686,6 +3742,21 @@ function IdleScreen({
           onDismiss={() => setCompletedModeForModal(null)}
         />
       )}
+
+      <RhythmSheet
+        visible={rhythmOpen}
+        mode={selectedMode}
+        onClose={() => {
+          pendingAfterRhythm.current = null;
+          setRhythmOpen(false);
+        }}
+        onDone={() => {
+          setRhythmOpen(false);
+          const next = pendingAfterRhythm.current;
+          pendingAfterRhythm.current = null;
+          next?.();
+        }}
+      />
 
       {/* ModeDetailModal — bottom-sheet popup op tap mode-card (iter 9k).
           Operator, 16 september 2026 ("in de popup choose cta moet
@@ -5550,6 +5621,16 @@ const s = StyleSheet.create({
     minHeight: 40,
   },
   trialUnlockTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
+  rhythmCaption: { alignItems: 'center', gap: 3, marginBottom: 14, paddingHorizontal: 24 },
+  rhythmFeel: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14.5, textAlign: 'center' },
+  rhythmBasis: {
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  rhythmLink: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   durationRingWrap: {
     alignItems: 'center',
     alignSelf: 'stretch',

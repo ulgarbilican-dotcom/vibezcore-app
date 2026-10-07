@@ -10,7 +10,8 @@ import WatchKit
    vertaling van bpmAt/beatAt/buildWaveform in src/services/bracelet-
    haptics.ts:
 
-     bpmAt(t)  = t < hold ? 75 : 75 + (target − 75) · min(1, (t − hold)/ramp)
+     bpmAt(t)  = t < hold ? start : start + (target − start) · min(1, (t − hold)/ramp)
+                 start = rusthartslag van de gebruiker (startBpm, anders 75)
                  (ramp 0 → meteen het eindtempo)
      cycleMs   = round(60000 / bpmAt(t))
      dubAt     = round(min(cycleMs · 0.3, 350))
@@ -38,7 +39,8 @@ import WatchKit
    horloge na te voelen; de drempel is één constante. */
 
 private enum Rhythm {
-  static let restingBpm = 75.0
+  /** Begintempo als de telefoon geen startBpm meestuurt (oudere versies). */
+  static let defaultStartBpm = 75.0
   static let lubDubFraction = 0.3
   static let lubDubMaxMs = 350.0
   /** Onder deze afstand speelt de sessie enkel de lub (zie boven). */
@@ -57,14 +59,16 @@ private enum Rhythm {
 private struct StateParams {
   let title: String
   let colorHex: String
+  /** Rusthartslag van de gebruiker = begintempo ("Match your rhythm"). */
+  let startBpm: Double
   let targetBpm: Double
   let holdSec: Double
   let rampSec: Double
 
   func bpmAt(_ t: Double) -> Double {
-    if t < holdSec { return Rhythm.restingBpm }
+    if t < holdSec { return startBpm }
     let progress = rampSec <= 0 ? 1 : min(1, (t - holdSec) / rampSec)
-    return Rhythm.restingBpm + (targetBpm - Rhythm.restingBpm) * progress
+    return startBpm + (targetBpm - startBpm) * progress
   }
 
   /** (cycleMs, dubAtMs) — afgerond zoals Math.round in JS (positieve
@@ -76,9 +80,9 @@ private struct StateParams {
   }
 
   /** Kleinste dubAt over de hele curve: het snelste tempo (het hoogste van
-   *  75 en het eindtempo) geeft de kortste cyclus. */
+   *  begin- en eindtempo) geeft de kortste cyclus. */
   var minDubAtMs: Double {
-    let fastest = max(Rhythm.restingBpm, targetBpm)
+    let fastest = max(startBpm, targetBpm)
     let cycleMs = (60000 / fastest).rounded()
     return min(cycleMs * Rhythm.lubDubFraction, Rhythm.lubDubMaxMs).rounded()
   }
@@ -158,6 +162,8 @@ final class StateSessionController: ObservableObject {
     else { return }
     let holdSec = max(0, number(message["holdSec"]) ?? 10)
     let rampSec = max(0, number(message["rampSec"]) ?? 0)
+    var startBpm = number(message["startBpm"]) ?? Rhythm.defaultStartBpm
+    if startBpm < 35 || startBpm > 110 { startBpm = Rhythm.defaultStartBpm }
     var curveOffset = max(0, number(message["curveOffsetSec"]) ?? 0)
     var remainingSec = remaining
 
@@ -177,6 +183,7 @@ final class StateSessionController: ObservableObject {
     let p = StateParams(
       title: message["title"] as? String ?? "State Control",
       colorHex: message["colorHex"] as? String ?? "#00A3A3",
+      startBpm: startBpm,
       targetBpm: targetBpm,
       holdSec: holdSec,
       rampSec: rampSec

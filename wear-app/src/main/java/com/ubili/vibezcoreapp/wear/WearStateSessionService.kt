@@ -46,7 +46,8 @@ private const val CHANNEL_ID = "vibezcore_state"
 private const val NOTIFICATION_ID = 1002
 
 /* ── Het ritme — 1:1 uit bracelet-haptics.ts, niet afwijken ─────────────── */
-private const val ASSUMED_RESTING_BPM = 75.0
+/** Begintempo als de telefoon geen startBpm meestuurt (oudere versies). */
+private const val DEFAULT_START_BPM = 75.0
 private const val LUB_DUB_FRACTION = 0.3
 private const val LUB_DUB_MAX_MS = 350.0
 private const val LUB_MS = 45L
@@ -58,6 +59,8 @@ private fun jsRound(x: Double): Long = Math.floor(x + 0.5).toLong()
 private data class StateStart(
   val title: String,
   val colorHex: String,
+  /** Rusthartslag van de gebruiker = begintempo ("Match your rhythm"). */
+  val startBpm: Double,
   val targetBpm: Double,
   val holdSec: Double,
   val rampSec: Double,
@@ -70,10 +73,10 @@ private data class StateStart(
 )
 
 private fun bpmAt(s: StateStart, t: Double): Double {
-  if (t < s.holdSec) return ASSUMED_RESTING_BPM
+  if (t < s.holdSec) return s.startBpm
   val rampElapsed = t - s.holdSec
   val progress = if (s.rampSec <= 0) 1.0 else min(1.0, rampElapsed / s.rampSec)
-  return ASSUMED_RESTING_BPM + (s.targetBpm - ASSUMED_RESTING_BPM) * progress
+  return s.startBpm + (s.targetBpm - s.startBpm) * progress
 }
 
 /** (cycleMs, dubAt) */
@@ -216,6 +219,7 @@ class WearStateSessionService : Service() {
     StateStart(
       title = j.optString("title", "State Control"),
       colorHex = j.optString("colorHex", "#00A3A3"),
+      startBpm = j.optDouble("startBpm", DEFAULT_START_BPM).takeIf { it in 35.0..110.0 } ?: DEFAULT_START_BPM,
       targetBpm = j.getDouble("targetBpm"),
       holdSec = j.optDouble("holdSec", 10.0),
       rampSec = j.optDouble("rampSec", 0.0),

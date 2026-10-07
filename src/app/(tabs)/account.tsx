@@ -13,6 +13,8 @@
 import { AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
+import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
+import { BraceletMode } from '@/services/ble-contract';
 
 /* Operator, 15 september 2026: zelfde light/C-token-toggle als
    index.tsx/bracelet.tsx/activity.tsx — hele pagina naar light mode, één
@@ -108,6 +110,7 @@ import {
   Eye,
   EyeOff,
   Headphones,
+  HeartPulse,
   MessageCircle,
   HelpCircle,
   Info,
@@ -474,6 +477,38 @@ function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; rest
         accessibilityLabel="Restore previous purchases"
       />
     </Group>
+  );
+}
+
+/** "Your rhythm" (operator, 7 okt 2026): de rusthartslag waarop elke State
+ *  Control-sessie start — bekijken en wijzigen. */
+function RhythmGroup() {
+  const pulse = useRestingPulse();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Group title="State Control" footer="Stays on this device. Not a medical device.">
+        <Row
+          icon={HeartPulse}
+          title="Your rhythm"
+          subtitle={
+            pulse.source === 'average'
+              ? 'Set for an average resting pulse'
+              : 'Every session starts at your resting pulse'
+          }
+          value={pulse.source === 'average' ? 'Average' : `${pulse.bpm} bpm`}
+          onPress={() => setOpen(true)}
+          accessibilityLabel="Your rhythm — set your resting pulse"
+        />
+      </Group>
+      <RhythmSheet
+        visible={open}
+        mode={BraceletMode.Alpha}
+        fromProfile
+        onClose={() => setOpen(false)}
+        onDone={() => setOpen(false)}
+      />
+    </>
   );
 }
 
@@ -1247,6 +1282,7 @@ export default function AccountScreen() {
           <ProfileHeader email={email} />
           <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
           <ProductsGroup />
+          <RhythmGroup />
           <Group title="Account">
             <Row icon={Mail} title="Email" value={email} />
             <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
@@ -1512,6 +1548,7 @@ export default function AccountScreen() {
         ) : null}
         <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
         <ProductsGroup />
+        <RhythmGroup />
         <SupportGroup />
         <AboutLegalGroups />
 

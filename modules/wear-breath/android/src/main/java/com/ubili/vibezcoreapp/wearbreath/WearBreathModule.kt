@@ -66,6 +66,8 @@ class WearBraceletStatus(
 class WearStateSessionStart(
   @Field val title: String = "",
   @Field val colorHex: String = "#00A3A3",
+  /** Rusthartslag van de gebruiker = begintempo ("Match your rhythm"). */
+  @Field val startBpm: Double = 75.0,
   @Field val targetBpm: Double = 75.0,
   @Field val holdSec: Double = 10.0,
   @Field val rampSec: Double = 0.0,
@@ -163,6 +165,7 @@ class WearBreathModule : Module() {
       val payload = JSONObject().apply {
         put("title", start.title)
         put("colorHex", start.colorHex)
+        put("startBpm", start.startBpm)
         put("targetBpm", start.targetBpm)
         put("holdSec", start.holdSec)
         put("rampSec", start.rampSec)

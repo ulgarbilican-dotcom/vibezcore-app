@@ -53,6 +53,9 @@ export type WatchAction = {
 export type StateSessionStart = {
   title: string;
   colorHex: string;
+  /** Rusthartslag van de gebruiker = begintempo (ontbreekt bij oudere
+   *  telefoon-versies → het horloge neemt 75). */
+  startBpm: number;
   targetBpm: number;
   holdSec: number;
   rampSec: number;
