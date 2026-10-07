@@ -23,6 +23,7 @@ import {
   MIN_RESTING_BPM,
   chooseAverageRestingPulse,
   getRestingPulse,
+  setLiveStartPulse,
   setManualRestingPulse,
   subscribeRestingPulse,
   type RestingPulse,
@@ -92,7 +93,10 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
 
   const meta = getModeMeta(mode);
   const pulse = getRestingPulse();
-  const rhythm = rhythmFor(mode, pulse.bpm);
+  /* Hoger dan de rusthartslag = "je hart nu": de sessie start daar. */
+  const aboveRest = justMeasured !== null && justMeasured > pulse.bpm;
+  const belowRest = justMeasured !== null && justMeasured < pulse.bpm;
+  const rhythm = rhythmFor(mode, pulse.bpm, aboveRest && justMeasured !== null ? justMeasured : pulse.bpm);
   const verb = rhythm.targetBpm > rhythm.startBpm ? 'quickens to' : 'slows to';
 
   return (
@@ -181,6 +185,8 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
                   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  /* De sessie die nu volgt, begint bij het hart van nu. */
+                  setLiveStartPulse(bpm);
                   setJustMeasured(bpm);
                   setStep('result');
                 }
@@ -218,13 +224,11 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               <Text style={s.bigUnit}> bpm</Text>
             </Text>
             <Text style={s.resultLbl}>
-              {justMeasured !== null && justMeasured !== pulse.bpm ? 'Right now' : 'Your resting pulse'}
+              {aboveRest ? 'Your heart right now' : belowRest ? 'Right now' : 'Your resting pulse'}
             </Text>
-            {justMeasured !== null && justMeasured !== pulse.bpm ? (
+            {belowRest ? (
               <Text style={s.keepNote}>
-                {justMeasured > pulse.bpm
-                  ? `Your resting pulse stays at ${pulse.bpm} — we keep your lowest calm reading.`
-                  : `Much lower than before. Measure once more to confirm — until then your rhythm stays at ${pulse.bpm}.`}
+                Much lower than before. Measure once more to confirm — until then your rhythm stays at {pulse.bpm}.
               </Text>
             ) : null}
             <View style={s.resultRow}>
@@ -236,6 +240,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             <Pressable style={({ pressed }) => [s.cta, pressed && s.pressed]} onPress={onDone} accessibilityRole="button">
               <Text style={s.ctaTxt}>Continue</Text>
             </Pressable>
+            {aboveRest ? (
+              <Text style={s.restNote}>Your resting pulse stays {pulse.bpm} — we keep your calmest reading.</Text>
+            ) : null}
             <Text style={s.note}>
               We use your pulse only to set your rhythm. It stays on this device. Not a medical device.
             </Text>
@@ -397,6 +404,13 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  restNote: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontFamily: BrandFonts.medium,
+    textAlign: 'center',
+    marginTop: 12,
+  },
   keepNote: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 14,

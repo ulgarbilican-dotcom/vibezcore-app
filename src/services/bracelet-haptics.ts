@@ -79,7 +79,7 @@ import {
   stopStateSessionOnWatch as stopAppleState,
 } from '../../modules/watch-breath';
 
-import { getRestingPulse } from './resting-pulse';
+import { getRestingPulse, getSessionStartBpm } from './resting-pulse';
 
 const SESSION_HOLD_SECONDS = 10;
 /** Versnelde glijding in de voorproef voor de trage modi (Sleep, Clarity). */
@@ -147,14 +147,25 @@ const SPECS: Record<BraceletMode, ModeHapticSpec> = {
 /** Spec met de tempo's voor één concrete rusthartslag. */
 type ResolvedSpec = ModeHapticSpec & { startBpm: number; targetBpm: number };
 
-function resolveSpec(mode: BraceletMode, restingBpm: number = getRestingPulse().bpm): ResolvedSpec {
+/** Begin: de hartslag van nu als die net gemeten is, anders de rust-
+ *  hartslag (resting-pulse.ts). Eind: altijd een deel van de RUST-
+ *  hartslag — zo komt het kalme ritme altijd onder je rust uit. */
+function resolveSpec(
+  mode: BraceletMode,
+  restingBpm: number = getRestingPulse().bpm,
+  startBpm: number = getSessionStartBpm(),
+): ResolvedSpec {
   const spec = SPECS[mode];
-  return { ...spec, startBpm: restingBpm, targetBpm: spec.targetFor(restingBpm) };
+  return { ...spec, startBpm, targetBpm: spec.targetFor(restingBpm) };
 }
 
 /** Start- en eindtempo voor de UI (resultaat van "Match your rhythm"). */
-export function rhythmFor(mode: BraceletMode, restingBpm: number): { startBpm: number; targetBpm: number } {
-  const r = resolveSpec(mode, restingBpm);
+export function rhythmFor(
+  mode: BraceletMode,
+  restingBpm: number,
+  startBpm: number = restingBpm,
+): { startBpm: number; targetBpm: number } {
+  const r = resolveSpec(mode, restingBpm, startBpm);
   return { startBpm: r.startBpm, targetBpm: r.targetBpm };
 }
 
@@ -365,9 +376,10 @@ function play(
    *  timer en melding aan, maar trilt niet mee. */
   silent = false,
   restingBpm: number = getRestingPulse().bpm,
+  startBpm: number = getSessionStartBpm(),
 ): void {
   silence(!!clock && hasNativeWaveform());
-  const spec = resolveSpec(mode, restingBpm);
+  const spec = resolveSpec(mode, restingBpm, startBpm);
   if (hasNativeWaveform()) {
     const built = buildWaveform(spec, timing, offsetSec, totalSec, canPlayNativeWaveform());
     const { timings, repeat } = built;
@@ -398,7 +410,13 @@ function play(
    (0 bij de start; verschuift enkel na een lange pauze, zie hieronder). */
 /** `restingBpm` ligt vast vanaf de start: een nieuwe meting tijdens een
  *  lopende sessie verandert haar ritme niet halverwege. */
-type SessionState = { mode: BraceletMode; curveZeroSec: number; pausedAt: number | null; restingBpm: number };
+type SessionState = {
+  mode: BraceletMode;
+  curveZeroSec: number;
+  pausedAt: number | null;
+  restingBpm: number;
+  startBpm: number;
+};
 let session: SessionState | null = null;
 /** Wandklok-moment waarop de lopende sessie natuurlijk eindigt. */
 let sessionEndsAt: number | null = null;
@@ -410,10 +428,17 @@ let sessionEndsAt: number | null = null;
 export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, remainingSec: number): void {
   const now = Date.now();
   if (!session || session.mode !== mode || elapsedSec < session.curveZeroSec) {
-    session = { mode, curveZeroSec: elapsedSec, pausedAt: null, restingBpm: getRestingPulse().bpm };
+    session = {
+      mode,
+      curveZeroSec: elapsedSec,
+      pausedAt: null,
+      restingBpm: getRestingPulse().bpm,
+      startBpm: getSessionStartBpm(),
+    };
   } else if (session.pausedAt !== null && now - session.pausedAt > RESUME_WINDOW_SECONDS * 1000) {
     session.curveZeroSec = elapsedSec;
     session.restingBpm = getRestingPulse().bpm;
+    session.startBpm = getSessionStartBpm();
   }
   session.pausedAt = null;
   sessionEndsAt = now + remainingSec * 1000;
@@ -430,8 +455,15 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
     { elapsedSec, totalSec: elapsedSec + remainingSec },
     false,
     session.restingBpm,
+    session.startBpm,
   );
-  relayToWatch(mode, Math.max(0, elapsedSec - session.curveZeroSec), remainingSec, session.restingBpm);
+  relayToWatch(
+    mode,
+    Math.max(0, elapsedSec - session.curveZeroSec),
+    remainingSec,
+    session.restingBpm,
+    session.startBpm,
+  );
 }
 
 /* ── Het ritme op de pols: smartwatch (6 okt 2026) ─────────────────────
@@ -446,9 +478,15 @@ export function isWatchPlayingRhythm(): boolean {
 }
 let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; at: number } | null = null;
 
-function relayToWatch(mode: BraceletMode, curveOffsetSec: number, remainingSec: number, restingBpm: number): void {
+function relayToWatch(
+  mode: BraceletMode,
+  curveOffsetSec: number,
+  remainingSec: number,
+  restingBpm: number,
+  startBpm: number,
+): void {
   if (remainingSec <= 0) return;
-  const spec = resolveSpec(mode, restingBpm);
+  const spec = resolveSpec(mode, restingBpm, startBpm);
   const meta = getModeMeta(mode);
   const start = {
     title: meta.name,
@@ -484,6 +522,7 @@ function onWatchTookOver(): void {
     { elapsedSec, totalSec: elapsedSec + remainingSec },
     true,
     session.restingBpm,
+    session.startBpm,
   );
 }
 onWearStateAck(onWatchTookOver);

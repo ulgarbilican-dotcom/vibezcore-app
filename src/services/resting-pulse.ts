@@ -154,7 +154,32 @@ export function addRestingPulseReading(bpm: number): boolean {
  *  alle eigen waarden — wie terug naar het gemiddelde wil, wil ook dat de
  *  app zijn hartslag niet meer bewaart. */
 export function chooseAverageRestingPulse(): void {
+  liveStart = null;
   commit({ ...EMPTY, decided: true });
+}
+
+/* ── Startpunt van NU (operator, 7 okt 2026) ──────────────────────────
+   Wie net meet, wil dat zijn sessie daar begint: eerst aansluiten bij het
+   hart van dit moment, dan vertragen (iso-principe, Motokawa). Het
+   eindtempo blijft op de rusthartslag gebaseerd. Geldt 15 minuten en
+   alleen als de meting op of boven de rusthartslag ligt (lager = nieuwe
+   rust of een onbevestigde uitschieter). Niet bewaard: na herstart weg. */
+const LIVE_START_VALID_MS = 15 * 60_000;
+let liveStart: { bpm: number; at: number } | null = null;
+
+/** Net gemeten hartslag als startpunt voor de volgende sessie(s). */
+export function setLiveStartPulse(bpm: number): void {
+  if (!(bpm >= MIN_RESTING_BPM) || bpm > MAX_RESTING_BPM) return;
+  liveStart = { bpm: Math.round(bpm), at: Date.now() };
+}
+
+/** Begintempo van een sessie die NU start. */
+export function getSessionStartBpm(): number {
+  const resting = resolve(stored).bpm;
+  if (liveStart && Date.now() - liveStart.at <= LIVE_START_VALID_MS && liveStart.bpm >= resting) {
+    return liveStart.bpm;
+  }
+  return resting;
 }
 
 /** Mag de app voorstellen opnieuw te meten? */
