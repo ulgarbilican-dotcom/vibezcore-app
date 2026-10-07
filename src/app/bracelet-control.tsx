@@ -32,6 +32,7 @@ import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
+import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -61,7 +62,7 @@ import {
   startStateControlNow,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -595,15 +596,6 @@ const MODE_DESCRIPTIONS: Record<BraceletMode, ModeDescription> = {
     protocolHow:
       'Inhale 4, hold 7, exhale 8 through the mouth. Popularized by Dr. Andrew Weil — the extended exhale signals the body to slow down.',
   },
-};
-
-/** Wat je voelt — één regel boven de Start-knop. */
-const RHYTHM_FEEL: Record<BraceletMode, string> = {
-  [BraceletMode.Gamma]: 'A quick, lively heartbeat rhythm',
-  [BraceletMode.Beta]: 'A steady heartbeat rhythm, just below rest',
-  [BraceletMode.Alpha]: 'A slow, calm heartbeat rhythm',
-  [BraceletMode.Theta]: 'A slow, soft heartbeat rhythm',
-  [BraceletMode.Delta]: 'The slowest, softest heartbeat rhythm',
 };
 
 const MODE_IDEALS: Record<BraceletMode, string[]> = {
@@ -3532,6 +3524,34 @@ function IdleScreen({
               }
             />
           </ModeSwipeRing>
+          {/* Je rusthartslag, boven de naam van de toestand (operator, 7 okt
+              2026: "68 bpm met een icoon in de cirkel zelf … van daar
+              aanklikken om opnieuw in te stellen; bij play verdwijnt dat mee").
+              Los van de veeg-cirkel gelegd, zodat een tik hier niet ook het
+              i-paneel opent. */}
+          {!trialRunning ? (
+            <Pressable
+              onPress={() => {
+                void Haptics.selectionAsync();
+                pendingAfterRhythm.current = null;
+                setRhythmOpen(true);
+              }}
+              hitSlop={10}
+              style={({ pressed }) => [s.ringPulsePill, pressed && { opacity: 0.6 }]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                pulse.source === 'average'
+                  ? `Rhythm set for an average resting pulse of ${pulse.bpm}. Tap to personalize.`
+                  : `Your resting pulse, ${pulse.bpm} beats per minute. Tap to change.`
+              }
+            >
+              <HeartPulse size={13} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+              <Text style={s.ringPulseTxt}>
+                {pulse.bpm} bpm{pulse.source === 'average' ? ' · avg' : ''}
+              </Text>
+              {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+            </Pressable>
+          ) : null}
         </View>
 
         {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
@@ -3588,34 +3608,6 @@ function IdleScreen({
         {/* Spacer — pushes Start-CTA naar onderkant. */}
         <View style={{ flex: 1, minHeight: 2 }} />
 
-        {/* Wat je voelt + waarop het ritme gebaseerd is (operator, 7 okt
-           2026). De uitleg hoort bij de werking (Costa 2016/2019: mensen
-           wisten wat de tik voorstelde); "average" altijd eerlijk benoemd. */}
-        {!trialRunning && !(sessionRunning && runSnap.mode === selectedMode) ? (
-          <Pressable
-            onPress={() => {
-              pendingAfterRhythm.current = null;
-              setRhythmOpen(true);
-            }}
-            hitSlop={8}
-            style={s.rhythmCaption}
-            accessibilityRole="button"
-            accessibilityLabel="Your rhythm — change your resting pulse"
-          >
-            <Text style={s.rhythmFeel}>{RHYTHM_FEEL[selectedMode]}</Text>
-            <Text style={s.rhythmBasis}>
-              {pulse.source === 'average' ? (
-                <>
-                  Set for an average resting pulse · <Text style={s.rhythmLink}>Personalize</Text>
-                </>
-              ) : (
-                <>
-                  Matched to your resting pulse · {pulse.bpm} bpm
-                </>
-              )}
-            </Text>
-          </Pressable>
-        ) : null}
 
         {/* Operator ("dat moet meer in deze stijl, breathwork" — screenshot
            van breath-setup.tsx se footer-CTA): de losse gekleurde "GO"-
@@ -5621,16 +5613,27 @@ const s = StyleSheet.create({
     minHeight: 40,
   },
   trialUnlockTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
-  rhythmCaption: { alignItems: 'center', gap: 3, marginBottom: 14, paddingHorizontal: 24 },
-  rhythmFeel: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14.5, textAlign: 'center' },
-  rhythmBasis: {
-    color: 'rgba(255,255,255,0.55)',
+  /* Boven de naam in de cirkel (ring 230: midden 115, naam ~55 erboven). */
+  ringPulsePill: {
+    position: 'absolute',
+    top: 24,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 24,
+    paddingHorizontal: 9,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  ringPulseTxt: {
+    color: 'rgba(255,255,255,0.8)',
     fontFamily: BrandFonts.medium,
-    fontSize: 13,
-    textAlign: 'center',
+    fontSize: 12.5,
     fontVariant: ['tabular-nums'],
   },
-  rhythmLink: { color: '#ffffff', fontFamily: BrandFonts.semibold },
+  /* Na 30 dagen: zacht voorstellen opnieuw te meten. */
+  ringPulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4AF0D4', marginLeft: 1 },
   durationRingWrap: {
     alignItems: 'center',
     alignSelf: 'stretch',

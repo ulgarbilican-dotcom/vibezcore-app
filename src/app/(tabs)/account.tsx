@@ -15,6 +15,7 @@ import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { BraceletMode } from '@/services/ble-contract';
+import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 
 /* Operator, 15 september 2026: zelfde light/C-token-toggle als
    index.tsx/bracelet.tsx/activity.tsx — hele pagina naar light mode, één
@@ -494,7 +495,9 @@ function RhythmGroup() {
           subtitle={
             pulse.source === 'average'
               ? 'Set for an average resting pulse'
-              : 'Every session starts at your resting pulse'
+              : shouldSuggestRemeasure(pulse)
+                ? 'Time to measure again'
+                : 'Every session starts at your resting pulse'
           }
           value={pulse.source === 'average' ? 'Average' : `${pulse.bpm} bpm`}
           onPress={() => setOpen(true)}

@@ -27,10 +27,14 @@ import { router, useFocusEffect } from 'expo-router';
 import { useActivePlan } from '@/utils/plan-store';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { useProtocolLocked } from '@/utils/protocol-gate';
+import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
+import { BraceletMode } from '@/services/ble-contract';
+import { shouldSuggestRemeasure, type RestingPulse } from '@/services/resting-pulse';
 import {
   Activity as ActivityIcon,
   CalendarDays,
   ChevronRight,
+  HeartPulse,
   Lock,
   Target,
   Watch,
@@ -123,6 +127,8 @@ export default function ActivityScreen() {
     }, []),
   );
   const flashFor = (id: string) => (flash?.id === id ? flash.n : undefined);
+  const pulse = useRestingPulse();
+  const [rhythmOpen, setRhythmOpen] = useState(false);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -263,10 +269,34 @@ export default function ActivityScreen() {
             flashKey={flashFor('scHistory')}
             onPress={() => open('scHistory', '/bracelet-history')}
           />
+          {/* Operator, 7 okt 2026: je rusthartslag ook hier — één getal en
+              de datum, bewust geen grafiek (we volgen geen gezondheid op;
+              het getal zet enkel het begintempo van je ritme). */}
+          <Row
+            large
+            Icon={HeartPulse}
+            title="Your rhythm"
+            sub={rhythmSub(pulse)}
+            onPress={() => setRhythmOpen(true)}
+          />
         </View>
       </ScrollView>
+      <RhythmSheet
+        visible={rhythmOpen}
+        mode={BraceletMode.Alpha}
+        fromProfile
+        onClose={() => setRhythmOpen(false)}
+        onDone={() => setRhythmOpen(false)}
+      />
     </SafeAreaView>
   );
+}
+
+function rhythmSub(p: RestingPulse): string {
+  if (p.source === 'average') return `Average resting pulse · ${p.bpm} bpm · Personalize`;
+  if (shouldSuggestRemeasure(p)) return `${p.bpm} bpm · Time to measure again`;
+  const when = p.at ? new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  return p.source === 'measured' ? `${p.bpm} bpm · measured ${when}` : `${p.bpm} bpm · entered ${when}`;
 }
 
 /* Operator, 30 september 2026 ("bij activity lange rechthoekige kaarten
