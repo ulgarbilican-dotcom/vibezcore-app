@@ -77,14 +77,14 @@ export const TERMS: LegalDoc = {
   title: 'Terms and Conditions',
   subtitle:
     'Please read these terms carefully before using the VIBEZCORE platform, services, or products.',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Terms',
   blocks: [
     /* ── 01. Use of the Platform ── */
     { kind: 'h2', text: 'Use of the Platform' },
     {
       kind: 'p',
-      text: 'The VIBEZCORE platform provides guided breathwork sessions, educational content, structured audio sessions, and physical tools designed to support personal reflection, awareness, and intentional living.',
+      text: 'The VIBEZCORE platform provides Breathwork (guided breathing sessions), State Control (guided haptic rhythm sessions on your phone, your smartwatch or the Smart Bead Bracelet) and the Audio Library (structured audio sessions), educational content, and physical tools designed to support personal reflection, awareness, and intentional living.',
     },
     {
       kind: 'p',
@@ -146,11 +146,11 @@ export const TERMS: LegalDoc = {
     { kind: 'h2', text: 'Educational & Wellness Framework' },
     {
       kind: 'p',
-      text: 'VIBEZCORE is built on the science of awareness and the understanding that meaningful personal change can emerge through both cognitive insight and bottom-up processes.',
+      text: 'VIBEZCORE is built on the understanding that meaningful personal change can emerge through both cognitive insight and bottom-up processes such as breathing and touch.',
     },
     {
       kind: 'p',
-      text: 'The platform provides guided breathwork sessions, structured audio sessions, educational materials, and supportive physical tools designed to help individuals cultivate awareness, recognize behavioral patterns, and develop intentional responses in daily life.',
+      text: 'The platform provides Breathwork, State Control, the Audio Library, educational materials, and supportive physical tools designed to help individuals cultivate awareness, recognize behavioral patterns, and develop intentional responses in daily life.',
     },
     {
       kind: 'p',
@@ -176,7 +176,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'The platform — including breathwork sessions, audio sessions, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition.',
+      text: 'The platform — including Breathwork, State Control, the Audio Library, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition, and it does not measure or monitor any body function.',
     },
     {
       kind: 'p',
@@ -212,6 +212,22 @@ export const TERMS: LegalDoc = {
     {
       kind: 'p',
       text: 'Additional refund conditions are described in the [Shipping & Refund Policy](https://www.vibezcore.com/shipping-policy).',
+    },
+    { kind: 'h3', text: 'VIBEZCORE Premium (subscription)' },
+    {
+      kind: 'p',
+      text: 'VIBEZCORE Premium unlocks Breathwork, State Control and the Audio Library in the app. It is an auto-renewing subscription, offered monthly or yearly, purchased through the Apple App Store or Google Play.',
+    },
+    {
+      kind: 'ul',
+      items: [
+        'The price and billing period are shown before you confirm the purchase. Payment is charged to your Apple ID or Google Play account',
+        'The subscription renews automatically at the end of each period unless you cancel at least 24 hours before it ends',
+        'Where a free trial is offered, its length and the price that applies afterwards are shown before you start it. You are only charged if you do not cancel before the trial ends',
+        'Where an introductory price is offered, the regular price that applies after the introductory period is shown before purchase',
+        'You can manage or cancel your subscription at any time in your Apple ID or Google Play account settings. Deleting the app or your VIBEZCORE account does not cancel it',
+        'Purchases can be restored on a new device with Restore Purchases in the app',
+      ],
     },
 
     /* ── 09. Right of Withdrawal (EU Consumers) ── */
@@ -338,7 +354,7 @@ export const PRIVACY: LegalDoc = {
   title: 'Privacy Policy',
   subtitle:
     "We believe privacy is a fundamental human right. Here's exactly how we handle your data.",
-  lastUpdated: 'June 2026',
+  lastUpdated: 'October 2026',
   short: 'Privacy',
   blocks: [
     /* ── 01. Information We Collect ── */
@@ -393,11 +409,13 @@ export const PRIVACY: LegalDoc = {
         'Listening progress',
         'Favourites & follows',
         'Bracelet pairing info',
+        'Session history (Breathwork & State Control)',
+        'Reminder schedule',
       ],
     },
     {
       kind: 'highlight',
-      text: 'We do not collect your IMEI, MAC address, biometric data, or any health information from the Smart Bead Bracelet. Bracelet session history stays entirely on your device.',
+      text: 'We do not collect your IMEI, MAC address, biometric data, or any health information — not from the Smart Bead Bracelet, your phone or your smartwatch. Session history, reminders and smartwatch settings stay on your device.',
     },
 
     { kind: 'h3', text: 'Cookies & Local Storage' },
@@ -491,6 +509,8 @@ export const PRIVACY: LegalDoc = {
         { title: 'Google Play',      text: 'Merchant of Record for Android in-app purchases — handles billing, taxes, and refunds' },
         { title: 'Supabase (EU)',    text: 'Authentication, account data, and subscription state — hosted in the European Union' },
         { title: 'Bunny CDN (EU)',   text: 'Audio content delivery — based in the European Union' },
+        { title: 'RevenueCat',       text: 'Verifies App Store and Google Play receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details' },
+        { title: 'Google / Apple sign-in', text: 'Optional — only if you choose to sign in with Google or Apple. We receive your email address and a sign-in token' },
       ],
     },
     {
@@ -510,6 +530,8 @@ export const PRIVACY: LegalDoc = {
         { title: 'Bluetooth',      text: 'Required to connect and control your Smart Bead Bracelet. Not used for tracking or location.' },
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
         { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
+        { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
+        { title: 'Smartwatch',     text: 'Optional — if you pair a Wear OS watch or Apple Watch, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
       ],
     },
@@ -938,7 +960,7 @@ export const REFUND: LegalDoc = {
   slug: 'refund',
   eyebrow: 'VIBEZCORE',
   title: 'Refund & Returns Policy',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Refunds',
   blocks: [
     /* Overview — intro vóór sectie 01 (op de site "Overview" met
@@ -955,7 +977,7 @@ export const REFUND: LegalDoc = {
       kind: 'ul',
       items: [
         '**Physical Products** — such as the VIBEZCORE Smart Bead Bracelet',
-        '**Digital Content or Services** — such as the Premium subscription (guided breathwork), Audio Sessions, Digital Materials, or memberships',
+        '**Digital Content or Services** — such as the VIBEZCORE Premium subscription (Breathwork, State Control and the Audio Library), Digital Materials, or memberships',
       ],
     },
 
@@ -1034,7 +1056,7 @@ export const REFUND: LegalDoc = {
     { kind: 'h2', text: 'Digital Products and Services' },
     {
       kind: 'p',
-      text: 'Digital products and services — including the Premium subscription (guided breathwork), Audio Sessions, Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions purchased through Google Play or the App Store follow the refund rules of that store.',
+      text: 'Digital products and services — including the VIBEZCORE Premium subscription (Breathwork, State Control and the Audio Library), Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions purchased through Google Play or the App Store follow the refund rules of that store.',
     },
     {
       kind: 'p',
@@ -1107,13 +1129,13 @@ export const COOKIES: LegalDoc = {
   title: 'Cookie Policy',
   subtitle:
     'How VIBEZCORE uses cookies and similar storage technologies — and what choices you have.',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Cookies',
   blocks: [
     /* Intro vóór sectie 01. */
     {
       kind: 'p',
-      text: 'This Cookie Policy explains how **VIBEZCORE** uses cookies and similar storage technologies across both the website and the mobile app. It applies to all VIBEZCORE products — the app (guided breathwork and audio) and the Smart Bead Bracelet — and complements our Privacy Policy.',
+      text: 'This Cookie Policy explains how **VIBEZCORE** uses cookies and similar storage technologies across both the website and the mobile app. It applies to all VIBEZCORE products — the app (Breathwork, State Control and the Audio Library) and the Smart Bead Bracelet — and complements our Privacy Policy.',
     },
     {
       kind: 'highlight',
@@ -1240,7 +1262,7 @@ export const HEALTH: LegalDoc = {
   title: 'Consumer Health Notice',
   subtitle:
     'VIBEZCORE is a personal development platform — not a medical service. Please read this notice carefully before using our products or services.',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Health',
   blocks: [
     /* Crisis-block (app-only, niet op website maar te waardevol om te
@@ -1256,7 +1278,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: 'Purpose of Our Platform' },
     {
       kind: 'p',
-      text: 'VIBEZCORE is designed exclusively for personal development, self-improvement, and educational purposes. Our breathwork sessions, audio content, and tools are created to help individuals gain insights and apply them in daily life — in the areas of mindset, resilience, social mastery, and personal growth.',
+      text: 'VIBEZCORE is designed exclusively for personal development, self-improvement, and educational purposes. Breathwork, State Control, the Audio Library and our tools are created to help individuals gain insights and apply them in daily life — in the areas of mindset, resilience, social mastery, and personal growth.',
     },
     {
       kind: 'tags',
@@ -1277,7 +1299,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: '1. Important Disclaimer' },
     {
       kind: 'p',
-      text: '**VIBEZCORE is a personal development tool, not medical care.** The breathwork sessions, audio sessions, and the Smart Bead Bracelet are designed to support self-reflection, focus, and resilience — they are **not** therapy, counselling, diagnosis, or treatment for any mental or physical health condition. The bracelet delivers haptic stimulation through the wrist; it is not a medical device.',
+      text: '**VIBEZCORE is a personal development tool, not medical care.** Breathwork, State Control, the Audio Library and the Smart Bead Bracelet are designed to support self-reflection, focus, and resilience — they are **not** therapy, counselling, diagnosis, or treatment for any mental or physical health condition. The bracelet delivers haptic stimulation through the wrist; it is not a medical device.',
     },
     {
       kind: 'p',
@@ -1303,6 +1325,7 @@ export const HEALTH: LegalDoc = {
         '**Pause when you need full attention.** Heavy traffic, busy intersections, complex tasks — stop the session and resume later',
         '**Stop and breathe normally** if you feel dizzy, tingling, or short of breath during a session — the effect passes within a minute. Resume gently or leave it for today',
         'Stop immediately if you feel nauseous or distressed',
+        '**State Control and Breathwork use gentle vibration** on your phone, smartwatch or bracelet to guide the rhythm. Stop the session if the vibration feels uncomfortable',
       ],
     },
     { kind: 'h2', text: '3. Possible Reactions' },
