@@ -1117,7 +1117,7 @@ export default function SmartBeadBraceletScreen() {
            activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
         <Stack.Screen
           options={{
-            title: 'Smart Bead Bracelet',
+            title: '', // operator 7 okt 2026: naam staat al groot in de pagina zelf
             headerTitleAlign: 'center',
             headerBackVisible: false,
             headerLeft: () => <HeaderBackButton />,
@@ -1249,7 +1249,7 @@ export default function SmartBeadBraceletScreen() {
          activate-bracelet.tsx/bracelet-control.tsx (HeaderBackButton). */}
       <Stack.Screen
         options={{
-          title: 'Smart Bead Bracelet',
+          title: '', // operator 7 okt 2026: naam staat al groot in de pagina zelf
           headerTitleAlign: 'center',
           headerBackVisible: false,
           headerLeft: () => <HeaderBackButton />,
