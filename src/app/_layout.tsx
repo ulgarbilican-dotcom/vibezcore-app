@@ -24,6 +24,7 @@ import { rootBlurRef } from '@/utils/root-blur';
 import { GlassSheetHost } from '@/components/GlassSheetHost';
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
+import { getLastTabRoute } from '@/utils/last-tab';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { goToTab } from '@/utils/state-control-ui';
 import { BreathSessionHost } from '@/components/BreathSessionHost';
@@ -223,6 +224,8 @@ export default function RootLayout() {
   });
 
   const [auth, setAuth] = useState<AuthState>(undefined);
+  /* Laatst gebruikte tabblad — waar een ingelogde gebruiker opent. */
+  const [lastTabRoute, setLastTabRoute] = useState<string>('/breath');
   /* Was de app geopend via een auth-deep-link (magic link, password
      recovery, invite)? Dan slaan we de welcome-redirect over zodat de
      deep-link-handler ongestoord naar /auth-callback of /reset-password
@@ -287,12 +290,14 @@ export default function RootLayout() {
       /* Iter 9as (2026-05-31): wacht óók op dev-override cache zodat
          de welcome-redirect-check daar rekening mee kan houden. In prod
          is awaitDevUserOverrideLoaded() een no-op. */
-      const [t, pending] = await Promise.all([
+      const [t, pending, lastTab] = await Promise.all([
         getToken(),
         hasPendingAuthDeepLink(),
+        getLastTabRoute(),
         awaitDevUserOverrideLoaded(),
       ]);
       if (cancelled) return;
+      setLastTabRoute(lastTab);
       setAuth(t ?? null);
       setPendingAuthLink(pending);
     })();
@@ -548,7 +553,14 @@ export default function RootLayout() {
     /* Een tik op een herinnering gaat vóór het welkomstscherm. Wie om negen
        uur 's avonds op "Time to wind down" tikt, wil ademen — niet eerst het
        merkbeeld en dan zelf de weg zoeken. */
-    const showWelcome = !pendingAuthLink && !tapped;
+    /* GEWIJZIGD 7 oktober 2026 (operator: "ik volg apple niveau"): zoals
+       Apple's eigen apps opent de app voor een INGELOGDE gebruiker waar hij
+       was — het laatst gebruikte tabblad — zonder welkomstscherm. Het
+       welkomstscherm blijft voor de eerste keer en voor wie uitgelogd is.
+       Vervangt de regel van 7 augustus hierboven (CLAUDE.md §3 bijgewerkt).
+       In testbuilds simuleert de override 'guest' een uitgelogde gebruiker. */
+    const signedIn = !!auth && !treatAsGuest;
+    const showWelcome = !pendingAuthLink && !tapped && !signedIn;
     void treatAsGuest;
     void treatAsSignedIn;
     if (tapped) {
@@ -558,6 +570,8 @@ export default function RootLayout() {
       } as never);
     } else if (showWelcome) {
       router.replace('/welcome');
+    } else if (!pendingAuthLink && signedIn) {
+      router.replace(lastTabRoute as never);
     } else if (
       !pendingAuthLink &&
       (override === 'bracelet' || override === 'pro')
@@ -578,7 +592,7 @@ export default function RootLayout() {
     /* Vanaf hier mag `/` zijn eigen gang gaan. Zie utils/boot.ts. */
     markBootDecided();
     SplashScreen.hideAsync().catch(() => {});
-  }, [ready, auth, pendingAuthLink, tapped]);
+  }, [ready, auth, pendingAuthLink, tapped, lastTabRoute]);
 
   /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
      Webapp wordt uitgefaseerd — alle email-flows (magic link na

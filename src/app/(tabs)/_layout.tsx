@@ -22,6 +22,7 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { saveLastTab } from '@/utils/last-tab';
 import BraceletIcon from '@/components/BraceletIcon';
 import { BraceletMiniIndicator } from '@/components/BraceletMiniIndicator';
 import { MiniPlayer } from '@/components/MiniPlayer';
@@ -237,6 +238,12 @@ export default function TabLayout() {
            terugknop op het verborgen audioscherm — dat is nog steeds het
            eerste scherm van de groep, ook al staat het niet in de balk. */
         backBehavior="initialRoute"
+        /* Operator, 7 okt 2026 ("ik volg apple niveau"): onthoud het laatst
+           gebruikte tabblad — een ingelogde gebruiker opent daar de volgende
+           keer meteen in (zie utils/last-tab.ts). */
+        screenListeners={({ route }) => ({
+          focus: () => saveLastTab(route.name),
+        })}
         screenOptions={{
           headerShown: false,
           /* Operator, 25 september 2026: eerst een echte `BlurView`-Material
