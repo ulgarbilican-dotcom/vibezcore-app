@@ -120,14 +120,14 @@ export const INSTANT_SITUATIONS: InstantSituation[] = [
      fade into the background") — de eigen top-tier van Box. */
   {
     id: 'feel_stressed', label: 'I feel stressed', state: 'calm', isCoreBasis: true, severity: 1, technique: 'box',
-    why: 'The two holds interrupt the stress response directly — research on this exact rhythm shows a measurable heart-rate drop and blocks the usual anxiety spike from a stressful moment, not just a mental distraction.',
+    why: 'Two steady pauses give a stressed mind something solid to hold on to — a simple structure that helps you feel more composed, not just distracted.',
   },
   /* Faster Equal Breathing: de meest intense/snelst-werkende Boost-
      techniek (Advanced) — "niet-beginner", iemand wil hier een reëel,
      snel effect, geen voorzichtige opbouw. "Quick Charge" (2 min). */
   {
     id: 'feel_tired', label: 'I feel tired / low energy', state: 'boost', isCoreBasis: true, severity: 0, technique: 'faster-equal',
-    why: 'Faster, even breathing raises heart rate and activates the alert (sympathetic) side of your nervous system — a real physiological lift, not a mental trick.',
+    why: 'A quicker, even rhythm is energizing by design — a fast way to feel more awake and switched on, without reaching for caffeine.',
   },
   /* Operator, 2 okt 2026 ("1 min is dat voldoende?" → "in bed hebben
      mensen meer tijd" → "20 min klopt ook niet"): was '478' (4-7-8). De
@@ -147,13 +147,13 @@ export const INSTANT_SITUATIONS: InstantSituation[] = [
      beide een verschillende duur geven. */
   {
     id: 'cant_sleep', label: "I can't sleep", state: 'rest', isCoreBasis: true, severity: 0, technique: 'slow',
-    why: 'An exhale twice as long as the inhale shifts your body toward its "rest" state — the same mechanism behind every slow-breathing sleep protocol, with no breath-holds to get in the way.',
+    why: 'An exhale twice as long as the inhale is the classic wind-down rhythm — slow, simple and free of breath-holds, so you can ease toward rest.',
   },
   /* Coherent Breathing: de staat se eigen "Mind Declutter"-duurnaam is
      vrijwel letterlijk "I can't focus" se probleem. */
   {
     id: 'cant_focus', label: "I can't focus", state: 'focus', isCoreBasis: true, severity: 0, technique: 'coherent',
-    why: 'Breathing at a steady, even pace maximizes heart-rate variability — the "resonance frequency" research links to calmer, clearer attention, not caffeine-style alertness.',
+    why: 'A steady, even pace — about six breaths a minute — helps you settle into calm, clear attention instead of jittery alertness.',
   },
 
   // ── Mind & emotion (nuance) ──────────────────────────────────────────
@@ -202,7 +202,7 @@ export const INSTANT_SITUATIONS: InstantSituation[] = [
      hieronder, dus geen duplicaat binnen dezelfde techniek. */
   {
     id: 'frustrated_angry', label: 'Frustrated / angry', state: 'calm', isCoreBasis: false, severity: 0, technique: 'extended-exhale',
-    why: 'No breath-holds at all — deliberately, since holding your breath while angry raises arousal instead of lowering it. Just a long, steady exhale to bring the heat down.',
+    why: 'No breath-holds — deliberately, because holding your breath can let tension build. Just a long, steady exhale to help bring the heat down.',
   },
   /* Box Breathing: gestructureerd ademritme is een bekende, effectieve
      angst-regulatietechniek.
@@ -213,7 +213,7 @@ export const INSTANT_SITUATIONS: InstantSituation[] = [
      korter dan `feel_stressed`, dus geen duplicaat. */
   {
     id: 'anxious_nervous', label: 'Anxious / nervous', state: 'calm', isCoreBasis: false, severity: 0, technique: 'box',
-    why: 'An anxious mind does better with something steady to follow — the structured, four-part rhythm reliably blocks the usual anxiety spike in the moment.',
+    why: 'An anxious mind does better with something steady to follow — four equal parts give your attention a clear, calming structure in the moment.',
   },
 
   // ── Focus & energy (nuance) ──────────────────────────────────────────
@@ -223,7 +223,7 @@ export const INSTANT_SITUATIONS: InstantSituation[] = [
      beide Sharp-Focus-situaties niet dezelfde techniek delen. */
   {
     id: 'brain_fog', label: 'Brain fog / stuck', state: 'focus', isCoreBasis: false, severity: 0, technique: 'alternate-nostril',
-    why: 'Alternating the breath between nostrils is specifically linked to clearing a foggy, stuck mind — a different kind of mental reset than simply trying to concentrate harder.',
+    why: 'Alternating the breath between nostrils is a traditional way to reset a foggy, stuck mind — a different kind of reset than trying to concentrate harder.',
   },
   /* Operator, 2 okt 2026 ("restless zelfde verhaal, 2 min is te kort"):
      was severity-1 (2 min, "Quick Reset") — zelfde redenering als bij
