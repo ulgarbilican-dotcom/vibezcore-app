@@ -72,7 +72,11 @@ function resolve(s: Stored): RestingPulse {
     return { bpm: s.manual.bpm, source: 'manual', at: s.manual.at, decided: s.decided };
   }
   if (recent.length && !s.average) {
-    const lowest = recent.reduce((a, r) => (r.bpm < a.bpm ? r : a));
+    /* De laagste, tenzij die een uitschieter is: meer dan 8 bpm onder de
+       op één na laagste → die tweede telt (één foute meting mag het ritme
+       niet twee maanden te laag zetten). */
+    const sorted = [...recent].sort((a, b) => a.bpm - b.bpm);
+    const lowest = sorted.length > 1 && sorted[1].bpm - sorted[0].bpm > 8 ? sorted[1] : sorted[0];
     return { bpm: lowest.bpm, source: 'measured', at: latestReading?.at ?? lowest.at, decided: s.decided };
   }
   return { bpm: AVERAGE_RESTING_BPM, source: 'average', at: null, decided: s.decided };

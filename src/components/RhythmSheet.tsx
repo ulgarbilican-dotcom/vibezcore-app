@@ -77,12 +77,17 @@ type Props = {
 export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 'choose', fromProfile = false }: Props) {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>(startAt);
+  /* Wat er net gemeten werd (kan hoger zijn dan de rusthartslag die blijft). */
+  const [justMeasured, setJustMeasured] = useState<number | null>(null);
   const [manualBpm, setManualBpm] = useState(() => {
     const p = getRestingPulse();
     return p.source === 'average' ? AVERAGE_RESTING_BPM : p.bpm;
   });
   useEffect(() => {
-    if (visible) setStep(startAt);
+    if (visible) {
+      setStep(startAt);
+      setJustMeasured(null);
+    }
   }, [visible, startAt]);
 
   const meta = getModeMeta(mode);
@@ -176,6 +181,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
                   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setJustMeasured(bpm);
                   setStep('result');
                 }
               }}
@@ -208,10 +214,19 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
         {step === 'result' && (
           <>
             <Text style={s.bigNum}>
-              {pulse.bpm}
+              {justMeasured ?? pulse.bpm}
               <Text style={s.bigUnit}> bpm</Text>
             </Text>
-            <Text style={s.resultLbl}>Your resting pulse</Text>
+            <Text style={s.resultLbl}>
+              {justMeasured !== null && justMeasured !== pulse.bpm ? 'Right now' : 'Your resting pulse'}
+            </Text>
+            {justMeasured !== null && justMeasured !== pulse.bpm ? (
+              <Text style={s.keepNote}>
+                {justMeasured > pulse.bpm
+                  ? `Your resting pulse stays at ${pulse.bpm} — we keep your lowest calm reading.`
+                  : `Much lower than before. Measure once more to confirm — until then your rhythm stays at ${pulse.bpm}.`}
+              </Text>
+            ) : null}
             <View style={s.resultRow}>
               <View style={[s.dot, { backgroundColor: meta.color }]} />
               <Text style={s.resultTxt}>
@@ -382,6 +397,16 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  keepNote: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 14,
+    fontFamily: BrandFonts.medium,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginTop: -12,
+    marginBottom: 18,
+    paddingHorizontal: 12,
+  },
   resultTxt: { color: '#ffffff', fontSize: 15, fontFamily: BrandFonts.semibold, flexShrink: 1 },
 });
 
