@@ -3256,6 +3256,9 @@ export function BreathSession() {
       >
         <Pressable style={s.modalBackdrop} onPress={cancelAskDefault}>
           <Pressable style={s.modalCard} onPress={() => {}}>
+            {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
+                7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
+            <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
             {/* Operator, 25 september 2026 ("wat als gebruiker van gedachte
                verandert bij deze popup... gewoon een X, wat zegt onze
                procedure?"): zelfde kruisje-protocol als de andere
@@ -3351,6 +3354,9 @@ export function BreathSession() {
       >
         <Pressable style={s.modalBackdrop} onPress={() => setUjjayiIntroOpen(false)}>
           <Pressable style={s.modalCard} onPress={() => {}}>
+            {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
+                7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
+            <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
             <Text style={s.modalEyebrow}>UJJAYI BREATHING</Text>
             <Text style={s.modalTitle}>The sound is the technique</Text>
             <Text style={s.modalBody}>
@@ -3402,6 +3408,9 @@ export function BreathSession() {
           onPress={() => setEndTrialConfirm(false)}
         >
           <Pressable style={s.modalCard} onPress={() => {}}>
+            {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
+                7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
+            <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
             <Text style={s.modalEyebrow}>{st.eyebrow}</Text>
             <Text style={s.modalTitle}>End trial?</Text>
             <Text style={s.modalBody}>
@@ -3813,6 +3822,9 @@ export function BreathSession() {
       >
         <Pressable style={s.modalBackdrop} onPress={() => setInfoIdx(null)}>
           <Pressable style={s.modalCard} onPress={() => {}}>
+            {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
+                7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
+            <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
             {infoIdx !== null && (
               <>
                 <Text style={s.modalEyebrow}>
@@ -4724,9 +4736,9 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   modalCard: {
     width: '100%',
     borderRadius: 22,
-    borderWidth: 1,
-    borderColor: accentSoft,
-    backgroundColor: C.cardBg,
+    /* Glas i.p.v. vlakke kaart (7 okt 2026): de VibezGlass-laag binnenin
+       draagt kleur en glans — geen eigen vulling of rand meer. */
+    overflow: 'hidden',
     paddingVertical: 22,
     paddingHorizontal: 22,
     gap: 9,
