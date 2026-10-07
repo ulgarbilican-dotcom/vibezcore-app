@@ -53,6 +53,7 @@
 | 18 | Quick Chill-paneel | A16 | ✅ screenshot: titel, "5 min · starts right away", uitleg, Start, Back, glas |
 | 19 | Tik-gevoel knoppen | A16 | ⚠️ nieuwe knoppen sprongen abrupt naar half doorzichtig of reageerden niet (Back/Cancel) → gedeelde `PressScale` (curve van de Start-knop: 80 ms krimpen, veer terug; lichte tik bij hoofdknoppen). ⏳ door operator te voelen |
 | 20 | Hartslag-pil in de cirkel | A16 | ⚠️ "opgekropt" en blijft staan bij vegen → boven de cirkel geplaatst; Start-knop viel daardoor onder de systeembalk → ruimte boven duurwiel 90→38 → ✅ screenshot: alles past |
+| 21 | Hartslag boven de cirkel: pill of niet | A16 | ⚠️ te klein → Apple-stijl zonder capsule (zoals Health/Workout): "♥ 66 bpm ›", tekst 15 semibold, raakvlak ≥ 44 → ✅ screenshot |
 
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |

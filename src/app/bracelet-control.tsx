@@ -3580,7 +3580,7 @@ function IdleScreen({
                   : `Your resting heart rate, ${pulse.bpm} beats per minute. Tap to change.`
             }
           >
-            <HeartPulse size={13} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+            <HeartPulse size={18} color="rgba(255,255,255,0.9)" strokeWidth={2} />
             <Text style={s.ringPulseTxt}>
               {pulse.liveBpm !== null
                 ? `${pulse.liveBpm} bpm · now`
@@ -3588,7 +3588,7 @@ function IdleScreen({
             </Text>
             {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
             {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}
-            <ChevronRight size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.4} style={{ marginLeft: -1 }} />
+            <ChevronRight size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.4} style={{ marginLeft: -2 }} />
           </PressScale>
         ) : null}
         <View style={s.durationRingWrap}>
@@ -5794,20 +5794,17 @@ const s = StyleSheet.create({
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    height: 24,
-    paddingLeft: 9,
-    paddingRight: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    /* Dunne rand: leest als knop, niet als label. */
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.22)',
+    /* Apple-stijl (operator, 7 okt 2026: "in een pill of zonder?"): zoals
+       Health/Workout een aantikbare waarde tonen — tekst + icoon + pijltje,
+       geen capsule. Raakvlak ≥ 44 via hoogte + hitSlop. */
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 10,
   },
   ringPulseTxt: {
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: BrandFonts.medium,
-    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.9)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
     fontVariant: ['tabular-nums'],
   },
   /* Na 30 dagen: zacht voorstellen opnieuw te meten. */
