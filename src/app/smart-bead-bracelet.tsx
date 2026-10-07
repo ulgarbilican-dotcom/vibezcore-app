@@ -396,8 +396,13 @@ const CLOSER_LOOK: CloserLookTopic[] = [
        dock" bewust NIET overgenomen uit de suggestie, niet geverifieerd
        (zie [[feedback-bracelet-material-stainless-steel]]-achtige les:
        geen ongeverifieerde specs). */
-    body: 'Slip it on, then connect to the VIBEZCORE app. Routines launch on their own, throughout the day — or switch states instantly, whenever you choose. Pairs over Bluetooth, charges on a pogo dock.',
-    tags: ['Wear it', 'Starts on its own', 'Bluetooth'],
+    /* Operator, 7 okt 2026: "niet slip it on — is niet rekbaar, gewoon put
+       it on", "starts on its own klopt niet, user moet zelf starten in de
+       app", "veel tekst opgehoopt, Apple-stijl, alles moet ademen". Drie
+       korte regels; klopt met het BLE-contract (app start, daarna draait
+       de bracelet zelfstandig, ook zonder verbinding). */
+    body: 'Put it on.\n\nChoose a state in the VIBEZCORE app and start.\n\nThe bracelet takes it from there.',
+    tags: ['Put it on', 'Start in the app', 'Bluetooth'],
     hotspots: [{ top: '26%', left: '65%' }], // kraal op de boog, naast "what"
   },
   {
