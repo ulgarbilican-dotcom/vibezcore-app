@@ -276,8 +276,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.semibold },
-  disclosure: { color: FAINT, fontFamily: BrandFonts.regular, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 14 },
+  /* Wit (operator, 7 okt 2026): de voorwaarden moeten duidelijk leesbaar zijn. */
+  disclosure: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center', marginTop: 14 },
   links: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 12 },
-  link: { color: DIM, fontSize: 11, fontFamily: BrandFonts.regular },
-  sep: { color: FAINT, fontSize: 11 },
+  link: { color: '#ffffff', fontSize: 12, fontFamily: BrandFonts.medium },
+  sep: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
 });
