@@ -70,7 +70,43 @@ gemeten, actieve conditie significant beter dan controle.
 
 ---
 
-## 5. Finale tempo-mapping (HERZIEN 4 okt 2026, ronde 3)
+## 5. Finale tempo-mapping (HERZIEN 7 okt 2026, ronde 4 — "Match your rhythm")
+
+> **Ronde 4 vervangt de vaste eindtempo's hieronder.** Het ritme start
+> nu op de rusthartslag R van de gebruiker (meting met de camera, zelf
+> ingevuld, of het gemiddelde 70) in plaats van op een aangenomen 75, en
+> elk eindtempo is een vast deel van R. Code: `src/services/resting-pulse.ts`
+> + `src/services/bracelet-haptics.ts` (`targetFor`, `resolveSpec`).
+>
+> | Staat | Eindtempo | Bij R = 66 | Bij R = 70 | Feit of keuze |
+> |---|---|---:|---:|---|
+> | Sharp Focus | 90% van R (min 53) | 59 | 63 | **Keuze.** Richting is feit: sneller dan rust gaf meer angst en slechtere scores (BoostMeUp, Costa 2019); trager hielp. De 10% zelf is niet getest. |
+> | Calm Control | 80% van R (min 50) | 53 | 56 | **Feit (benadering).** ~20% onder de hartslag (Azevedo/doppel 2017); 0,8 × eigen hartslag (BoostMeUp). |
+> | Clarity & Relax | 70% van R (min 45) | 46 | 49 | **Keuze binnen getest bereik.** Motokawa daalde tot ~50 bpm / de helft van de hartslag. |
+> | Sleep | 55% van R (min 40) | 40 | 40 | **Keuze.** 40 = doppel's ondergrens ("daaronder onnatuurlijk"); dalen tot hier niet getest. |
+> | Boost | 110 bpm vast | 110 | 110 | **Feit.** 110 bpm verhoogt de hartslag (Valente 2024). Activerend ≠ betere prestatie. |
+>
+> **Extra regels (allemaal ontwerpkeuzes, geen studie):**
+> - **Nooit sneller dan rust:** de kalme toestanden eindigen altijd
+>   minstens 2 bpm onder R. Een veiligheidsgrens, geen werkzame dosis:
+>   of 2 bpm voelbaar is, is niet onderzocht. Relevant enkel bij R onder
+>   ~55 (getrainde sporters); daar liggen de toestanden noodzakelijk dicht
+>   bij elkaar door de ondergrens van 40.
+> - **Startpunt van nu:** een verse meting boven R is 15 minuten lang het
+>   begintempo van de volgende sessie (iso-principe: eerst aansluiten,
+>   dan leiden — Motokawa startte op de hartslag van dat moment). Het
+>   eindtempo blijft op R gebaseerd.
+> - **R = de laagste meting van 60 dagen**; één meting meer dan 8 bpm
+>   onder de op één na laagste telt pas na bevestiging.
+> - **Gemiddelde R = 70** voor wie niet meet (gemiddelde rusthartslag
+>   van een volwassene); de vaste waarden van vóór ronde 4 waren in feite
+>   dezelfde formule voor R ≈ 75.
+>
+> Doelgroep: drukke, gestreste mensen (hartslag vaak 70–90+) — daar heeft
+> de schaal de meeste ruimte en is "trager dan je hart" het best
+> onderbouwd. De tabel hieronder is historisch (ronde 3).
+
+### Historisch: ronde 3 (4 okt 2026)
 
 > Vervangt de vaste 0,60 / 0,80 / 0,97 / 1,50 / 2,75 Hz-tabel uit commit
 > `022edda`. Reden: (1) Motokawa & Kato 2025 vond dat enkel een
@@ -128,7 +164,7 @@ rust-hartslag worden.
 activiteit en ervaren ontspanning, maar GEEN effect op inslaap-maten.
 Sleep = "tot rust komen voor het slapen", nooit "sneller inslapen".
 
-**Beperking:** zonder hartslagsensor is 75 bpm een populatie-aanname.
+**Beperking (ronde 3, opgelost in ronde 4):** zonder hartslagsensor is 75 bpm een populatie-aanname.
 De gouden standaard is closed-loop op de echte hartslag (Doppel-app,
 ambienBeat) — mogelijk zodra de smartwatch-hartslag gekoppeld is.
 
@@ -267,8 +303,14 @@ claims, enkel toestand-taal).
 
 ## 10. Beslissingsgeschiedenis
 
+**Ronde 4, 7 oktober 2026 (operator: "Match your rhythm" + externe
+review van de wetenschapsbundel) — HUIDIGE BASELINE.** Ritme start op de
+eigen rusthartslag; eindtempo = deel van R (zie §5). Sharp Focus van
+90 bpm (boven rust) naar 90% van R (net onder rust): BoostMeUp liet zien
+dat sneller dan rust angst verhoogde en prestaties verslechterde.
+
 **Ronde 3, 4 oktober 2026 (operator: "baseer ons op de meest logische
-en bewezen wetenschap") — HUIDIGE BASELINE.** Twee onderbouwde families
+en bewezen wetenschap").** Twee onderbouwde families
 van passieve kalmerende pols-haptiek vergeleken:
 - **A. Hartslag-tikken** trager/sneller dan de eigen hartslag (Doppel,
   Zhou, Motokawa, Valente, Wang) — meerdere onafhankelijke studies,
