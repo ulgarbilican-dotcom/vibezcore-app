@@ -170,7 +170,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           <>
             <Text style={s.title}>Measure your pulse</Text>
             <Text style={s.body}>
-              Sit still, then rest your fingertip lightly over the back camera and flash.
+              Sit still, then rest your fingertip lightly over the main camera on the back — usually the top one — and the flash.
             </Text>
             <PulseMeter
               onResult={(bpm) => {

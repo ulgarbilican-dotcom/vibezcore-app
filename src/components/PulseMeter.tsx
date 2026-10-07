@@ -16,7 +16,7 @@ import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, latestBeat, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
 import { Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, AppState, Easing, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useCamera, useCameraPermission, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -32,6 +32,10 @@ const ACCENT = '#4AF0D4';
 /* Vaste objecten: de camera-hooks herconfigureren bij elke nieuwe referentie. */
 const FRAME_SIZE = { width: 320, height: 240 };
 const CONSTRAINTS = [{ fps: 30 }];
+/* Android: Frame.getPixelBuffer() kiest daar de HardwareBuffer-weg, die
+   Nitro pas vanaf minSdk 26 ondersteunt (wij: 24) → "requires NDK API 26".
+   Het (enige) RGBA-vlak lezen gaat via een gewone ByteBuffer en werkt wel. */
+const READ_VIA_PLANE = Platform.OS === 'android';
 
 type Status = 'placing' | 'settling' | 'measuring' | 'failed' | 'denied' | 'camera-error';
 
@@ -48,6 +52,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const [failReason, setFailReason] = useState('');
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [attempt, setAttempt] = useState(0);
+  /* Meerdere lenzen (operator, 7 okt 2026: "ik heb 3 camera's"): wie na 6 s
+     nog niet op de juiste lens zit, krijgt een tweede hint. */
+  const placingSince = useRef(Date.now());
+  const [placingLong, setPlacingLong] = useState(false);
 
   /* Toestemming vragen zodra dit scherm verschijnt (de gebruiker koos net
      "Measure my pulse"). */
@@ -119,8 +127,11 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       if (fingerSince.current === null) {
         setStatus('placing');
         setProgress(0);
+        setPlacingLong(Date.now() - placingSince.current > 6000);
         return;
       }
+      placingSince.current = Date.now();
+      setPlacingLong(false);
       if (start === null || !last) {
         setStatus('settling');
         setProgress(0);
@@ -164,11 +175,12 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const onFrame = useCallback(
     (frame: Frame) => {
       'worklet';
-      if (frame.hasPixelBuffer) {
-        const px = new Uint8Array(frame.getPixelBuffer());
-        const w = frame.width;
-        const h = frame.height;
-        const row = frame.bytesPerRow;
+      const plane = READ_VIA_PLANE ? frame.getPlanes()[0] : null;
+      if (plane || frame.hasPixelBuffer) {
+        const px = new Uint8Array(plane ? plane.getPixelBuffer() : frame.getPixelBuffer());
+        const w = plane ? plane.width : frame.width;
+        const h = plane ? plane.height : frame.height;
+        const row = plane ? plane.bytesPerRow : frame.bytesPerRow;
         const fmt = frame.pixelFormat;
         const bpp = fmt === 'rgb-rgb-8-bit' ? 3 : 4;
         const ri = fmt === 'rgb-bgra-8-bit' ? 2 : 0;
@@ -195,15 +207,28 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
   const cameraOn =
     permission.hasPermission && appActive && (status === 'placing' || status === 'settling' || status === 'measuring');
+  /* Zaklamp pas aan als de camera echt draait: eerder vraagt Android hem
+     aan een sessie die nog niet bestaat (7 okt 2026, A16: "camera kon niet
+     starten" terwijl de camera zelf prima opende). */
+  const [started, setStarted] = useState(false);
+  const failures = useRef(0);
   useCamera({
     isActive: cameraOn,
     device: 'back',
     outputs,
-    torchMode: cameraOn ? 'on' : 'off',
+    torchMode: cameraOn && started ? 'on' : 'off',
     constraints: CONSTRAINTS,
-    onError: () => {
-      finished.current = true;
-      setStatus('camera-error');
+    onStarted: () => setStarted(true),
+    onStopped: () => setStarted(false),
+    onError: (e) => {
+      console.warn('[PulseMeter] camera error:', String(e), e?.name, e?.message);
+      /* Eén losse fout (bv. de zaklamp) is geen reden om op te geven;
+         pas bij herhaling eerlijk melden dat de camera niet wil. */
+      failures.current += 1;
+      if (failures.current >= 3) {
+        finished.current = true;
+        setStatus('camera-error');
+      }
     },
   });
 
@@ -214,6 +239,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     measureStart.current = null;
     lastShownBeat.current = 0;
     setProgress(0);
+    placingSince.current = Date.now();
+    setPlacingLong(false);
     setStatus('placing');
     setAttempt((a) => a + 1);
   };
@@ -221,9 +248,11 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const circ = Math.PI * (RING - STROKE);
   const message =
     status === 'placing'
-      ? 'Cover the back camera and flash with your fingertip'
+      ? placingLong
+        ? 'Not quite — try the camera closest to the flash'
+        : 'Cover the top camera and the flash with your fingertip'
       : status === 'settling'
-        ? 'Hold still…'
+        ? 'Got it — hold still'
         : status === 'measuring'
           ? progress < 1
             ? 'Reading your pulse — breathe normally'
