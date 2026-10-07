@@ -32,7 +32,6 @@ import { HapticPulseRings } from '@/components/HapticPulseRings';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
-  playModePreviewHaptic,
   playModeTrialHaptic,
   stopModePreviewHaptic,
   subscribeHapticPulse,
@@ -876,104 +875,6 @@ function PrimaryCtaButton({
   );
 }
 
-/* ── FeelItCircle — voelbare preview van een modus ──
-   Operator, 5 okt 2026: "ronde volle cirkel in de juiste kleur met witte
-   tekst". Klopt zichtbaar mee met elke tik (subscribeHapticPulse — zelfde
-   bron als de motor). Witte modus (Clarity) → donkere tekst, anders
-   onleesbaar. Uitgeschakeld tijdens een lopende sessie. */
-const FEEL_SIZE = 108;
-
-function FeelItCircle({
-  color,
-  feeling,
-  disabled,
-  onPress,
-  condensedRampMinutes,
-}: {
-  /** Gezet wanneer de voorproef het glijden inkort t.o.v. een sessie. */
-  condensedRampMinutes: number | null;
-  color: string;
-  feeling: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const beat = useSharedValue(1);
-  useEffect(() => {
-    if (!feeling) return;
-    return subscribeHapticPulse((p) => {
-      beat.value = withSequence(
-        withTiming(p.kind === 'lub' ? 1.08 : 1.04, { duration: 70 }),
-        withTiming(1, { duration: 260 }),
-      );
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feeling]);
-  const beatStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
-  const fg = isLightColor(color) ? '#0a0a0a' : '#ffffff';
-
-  /* Operator, 5 okt 2026: "laat ook aftellen met een progressiebar en een
-     timer onder die bar" — de voorproef is eindig (PREVIEW_MAX_SECONDS). */
-  const progress = useSharedValue(1);
-  const [secondsLeft, setSecondsLeft] = useState(PREVIEW_MAX_SECONDS);
-  useEffect(() => {
-    if (!feeling) {
-      cancelAnimation(progress);
-      progress.value = 1;
-      setSecondsLeft(PREVIEW_MAX_SECONDS);
-      return;
-    }
-    const started = Date.now();
-    progress.value = 1;
-    progress.value = withTiming(0, {
-      duration: PREVIEW_MAX_SECONDS * 1000,
-      easing: ReanimatedEasing.linear,
-    });
-    const id = setInterval(() => {
-      const left = Math.max(0, PREVIEW_MAX_SECONDS - Math.floor((Date.now() - started) / 1000));
-      setSecondsLeft(left);
-    }, 250);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feeling]);
-  const barStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
-
-  return (
-    <View style={s.feelWrap}>
-      <Pressable
-        onPress={onPress}
-        disabled={disabled}
-        accessibilityRole="button"
-        accessibilityLabel={feeling ? 'Stop the preview' : 'Feel this mode'}
-      >
-        <ReanimatedAnimated.View
-          style={[
-            s.feelCircle,
-            { backgroundColor: color, opacity: disabled ? 0.3 : 1 },
-            beatStyle,
-          ]}
-        >
-          <Text style={[s.feelCircleTxt, { color: fg }]}>{feeling ? 'Stop' : 'Feel it'}</Text>
-        </ReanimatedAnimated.View>
-      </Pressable>
-      {disabled && <Text style={s.feelHint}>Not available during a session</Text>}
-      {/* Altijd ruimte gereserveerd (opacity i.p.v. weglaten), zodat de
-          lay-out niet verspringt bij starten/stoppen. */}
-      <View style={[s.feelProgressWrap, { opacity: feeling ? 1 : 0 }]}>
-        <View style={s.feelTrack}>
-          <ReanimatedAnimated.View style={[s.feelBar, { backgroundColor: color }, barStyle]} />
-        </View>
-        <Text style={s.feelTimer}>0:{String(secondsLeft).padStart(2, '0')}</Text>
-        {condensedRampMinutes !== null && (
-          <Text style={s.feelCondensed}>
-            This preview is sped up. In a full session, the rhythm slows down
-            gradually.
-          </Text>
-        )}
-      </View>
-    </View>
-  );
-}
-
 /* ── SwitchSessionConfirm — bevestiging bij wisselen van modus ──
    VIBEZCORE-stijl (geen systeem-Alert): donker paneel, witte hoofdknop,
    Cancel als tekst. */
@@ -1351,54 +1252,10 @@ function ModeDetailModal({
      Android) zodat de CTA niet onder system-UI valt. */
   const insets = useSafeAreaInsets();
 
-  /* "Feel it" — operator-testknop (4 okt 2026): laat de omschreven textuur
-     ("Sharp, brisk"/"Steady rhythmic"/...) voelen op de telefoon zelf, zie
-     services/bracelet-haptics.ts voor de toelichting waarom dit GEEN kopie
-     van de echte firmware-puls is. Stopt altijd bij het sluiten van deze
-     modal — nooit laten doorlopen nadat de popup weg is. */
-  const [feeling, setFeeling] = useState(false);
-  /* Tijdens een lopende sessie (5 okt 2026): geen preview — die zou door
-     het sessie-ritme heen trillen — en bij sluiten NIETS stoppen, anders
-     legt het openen van deze uitleg de sessie-haptiek stil. Enkel een
-     preview die hier zelf gestart werd, wordt hier ook gestopt. */
-  const sessionRunning = getBraceletSessionSnapshot().active;
-  const feelingRef = useRef(false);
-  useEffect(
-    () => () => {
-      if (feelingRef.current) stopModePreviewHaptic();
-    },
-    [],
-  );
-  /* Voorproef is eindig (PREVIEW_MAX_SECONDS) — knop springt daarna zelf
-     terug naar "Feel it". */
-  const feelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (feelTimer.current) clearTimeout(feelTimer.current);
-    },
-    [],
-  );
-  const toggleFeel = () => {
-    if (sessionRunning) return;
-    Haptics.selectionAsync();
-    if (feelTimer.current) clearTimeout(feelTimer.current);
-    if (feeling) {
-      stopModePreviewHaptic();
-      feelingRef.current = false;
-      setFeeling(false);
-    } else {
-      playModePreviewHaptic(mode);
-      feelingRef.current = true;
-      setFeeling(true);
-      feelTimer.current = setTimeout(() => {
-        feelingRef.current = false;
-        setFeeling(false);
-      }, PREVIEW_MAX_SECONDS * 1000 + 1200);
-    }
-  };
+  /* "Feel it" is weg uit dit paneel (operator, 7 okt 2026): de voorproef
+     zit nu op de grote knop van het keuzescherm ("Try 30 seconds free"),
+     dit paneel is enkel uitleg — zoals bij Breathwork. */
   const handleClose = () => {
-    if (feelingRef.current) stopModePreviewHaptic();
-    feelingRef.current = false;
     onClose();
   };
 
@@ -1468,17 +1325,6 @@ function ModeDetailModal({
              'How the bracelet helps' klopt niet meer — is geen bracelet"):
              geen sectiekop meer, enkel één korte regel over het ritme. */}
           <Text style={s.modeModalRhythm}>{desc.braceletDoes}</Text>
-
-          {/* "Feel it" — operator, 5 okt 2026: "moet beter en
-             professioneler — een ronde volle cirkel in de juiste kleur met
-             witte tekst". Klopt mee met elke tik die je voelt. */}
-          <FeelItCircle
-            color={meta.color}
-            feeling={feeling}
-            disabled={sessionRunning}
-            onPress={toggleFeel}
-            condensedRampMinutes={previewCondensedRampMinutes(mode)}
-          />
 
           {/* Use this for — ideals checklist */}
           <Text style={s.modeModalSectionLbl}>Use this for</Text>
@@ -6204,13 +6050,6 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     lineHeight: 20,
     marginTop: -4,
-  },
-  feelCircle: {
-    width: FEEL_SIZE,
-    height: FEEL_SIZE,
-    borderRadius: FEEL_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   feelCircleTxt: {
     fontSize: 17,
