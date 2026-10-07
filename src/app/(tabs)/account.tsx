@@ -10,7 +10,9 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
-import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+import { AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+import Constants from 'expo-constants';
+import BraceletIcon from '@/components/BraceletIcon';
 
 /* Operator, 15 september 2026: zelfde light/C-token-toggle als
    index.tsx/bracelet.tsx/activity.tsx — hele pagina naar light mode, één
@@ -75,7 +77,7 @@ import {
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
+import { Children, useEffect, useRef, useState, type ComponentProps, type ComponentType, type ReactNode } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -96,6 +98,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   ChevronRight,
+  CircleUserRound,
+  Crown,
+  KeyRound,
+  LogOut,
+  Repeat,
+  RotateCcw,
+  Trash2,
   Eye,
   EyeOff,
   Headphones,
@@ -246,460 +255,6 @@ async function openExternal(url: string): Promise<void> {
   }
 }
 
-/* Iter v158 (2026-06-26, operator-spec): FreeEnvironmentCard voor
-   ingelogd-zonder-entitlement state. Vervangt de oude 'Activate access'
-   single-card met een explicit 3-paden view zodat de user direct ziet
-   wat de drie acquisitie-paden zijn én welke (nog) niet beschikbaar zijn.
-
-   Operator-quote: 'duidelijk dat het free envoirement is en de upgrade
-   naar audio pro of full: bracelet + audio of bracelet moet dan wel
-   werken'. Plus 'professioneel communiceren dat user weet wat de
-   bedoeling van die knoppen zijn. misschien onder knop available
-   summer 2026'.
-
-   Kickstarter launch: Fall 2026 — bracelet-paden disabled tot dan. */
-function FreeEnvironmentCard() {
-  return (
-    <View style={s.card}>
-      <Text style={s.label}>Status</Text>
-      <Text style={[s.subBig, { color: C.text }]}>
-        You&apos;re in the free environment
-      </Text>
-      {/* Geen sessietelling meer — dat waren audiocijfers. Wat hier staat
-          is wat een vrije gebruiker werkelijk heeft en mist. */}
-      <Text style={s.subSmall}>
-        Your first guided session is free. Unlock every state below:
-      </Text>
-
-      {/* Iter v237e (2026-07-09, operator-feedback): Activate CTA BOVENAAN.
-          Bundle-koper landt hier na aankoop met code in email — Activate
-          moet als eerste zichtbaar zijn, niet onder Audio subscribe.
-          Subscribe zakt naar Pad 2. */}
-      <PressScale
-        style={s.cardCta}
-        onPress={() => router.push('/activate-bracelet' as never)}
-        accessibilityLabel="Activate your Bracelet or Full Bundle"
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Activate Bracelet or Full Bundle</Text>
-          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            Enter your activation code
-          </Text>
-        </View>
-        <Text style={s.cardCtaArrow}>→</Text>
-      </PressScale>
-
-      {/* Pad 2 — Premium. Geen prijs hier: die stond hardgecodeerd
-          (€9,99) en dat breekt de WYSIWYG-regel zodra de store iets anders
-          zegt — het subscribe-scherm toont de echte prijzen. */}
-      <PressScale
-        style={s.cardCta}
-        onPress={() => router.navigate('/subscribe' as never)}
-        accessibilityLabel="Go Premium — unlock Breathwork, State Control and the Audio Library"
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Go Premium</Text>
-          {/* Operator, 6 okt 2026: het abonnement noemt altijd alle drie —
-             Breathwork, State Control, Audio Library. */}
-          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            Breathwork, State Control and the full Audio Library
-          </Text>
-        </View>
-        <Text style={s.cardCtaArrow}>→</Text>
-      </PressScale>
-
-      {/* Pad 3 — Bundle info (ACTIVE, external)
-          Iter v193 (2026-07-03): links naar vibezcore.com voor Bundle
-          pre-order/KS-info (fysiek product = mag externe link per
-          store policy §3.1.1). */}
-      <PressScale
-        style={s.cardCta}
-        onPress={() => Linking.openURL('https://www.vibezcore.com/')}
-        accessibilityLabel="Get the Full Bundle — Bracelet plus Premium, opens vibezcore.com"
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.cardCtaText}>Full Bundle — Bracelet + Premium</Text>
-          <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-            Learn more at vibezcore.com
-          </Text>
-        </View>
-        <Text style={s.cardCtaArrow}>→</Text>
-      </PressScale>
-    </View>
-  );
-}
-
-/* Subscription-card. Toont live PRO-status uit useSubscription()
-   (= /api/subscription-status van backend). Drie render-paden:
-     - isLoading      → "Checking…"
-     - isPro=false    → delegated to FreeEnvironmentCard (Iter v158)
-     - isPro=true     → "PRO — Monthly/Yearly" + datum-regel
-   Datum-formatting via toLocaleDateString('en-GB') → "16 June 2026". */
-function SubscriptionCard() {
-  const {
-    isPro,
-    tier,
-    validUntil,
-    willRenew,
-    isLoading,
-    braceletModel,
-  } = useSubscription();
-  /* Iter 9r: bracelet-ownership óók in account-card. Full PRO = audio
-     PRO + bracelet owner → speciale "Full PRO" label. */
-  const isBraceletOwner = useBraceletOwner();
-
-  /* Iter v158 (2026-06-26, operator-spec): voor ingelogd-zonder-entitlement
-     toon NIET de standaard subscription-card maar een aparte "free
-     environment" view met 3 paden (Audio/Bracelet/Bundle). Bracelet en
-     Bundle disabled tot Fall 2026 (KS launch). */
-  if (!isLoading && !isPro && !isBraceletOwner) {
-    return <FreeEnvironmentCard />;
-  }
-
-  let bigText: string;
-  let bigColor: string;
-  let subText: string;
-
-  if (isLoading) {
-    bigText = 'Checking…';
-    bigColor = C.textDim;
-    subText = '';
-  } else if (isPro && isBraceletOwner) {
-    /* Full PRO — beide producten actief.
-       Iter v228 (2026-07-08): tier-specifiek label. Voorheen was elke Full
-       PRO user "Full PRO — Audio + Bracelet" onafhankelijk van hoe de audio
-       binnenkwam. Nu: Bundle-users → "Full Bundle" (product-naam),
-       Monthly/Yearly audio + bracelet → "Full PRO — Monthly/Yearly + Bracelet"
-       zodat user in één blik ziet welk audio-tier hij heeft. Fallback naar
-       oude copy als tier én braceletModel beide onbekend zijn. */
-    if (braceletModel === 'bundle') {
-      bigText = 'Full Bundle';
-    } else if (tier === 'monthly') {
-      bigText = 'Full PRO — Monthly + Bracelet';
-    } else if (tier === 'yearly') {
-      bigText = 'Full PRO — Yearly + Bracelet';
-    } else {
-      bigText = 'Full PRO — Premium + Bracelet';
-    }
-    bigColor = C.accent;
-    if (validUntil) {
-      const d = new Date(validUntil);
-      if (!isNaN(d.getTime())) {
-        const formatted = d.toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-        subText = willRenew
-          ? `Premium renews on ${formatted}`
-          : `Premium active until ${formatted}`;
-      } else {
-        subText = '';
-      }
-    } else {
-      subText = '';
-    }
-  } else if (isBraceletOwner) {
-    /* Bracelet-only owner — geen audio sub. Operator-update 2026-05-30:
-       wijst nu expliciet op wat er nog WEL kan: Audio Library toevoegen
-       om het systeem compleet te maken. Niet "missing" framing maar
-       "complete the system" — past bij VIBEZCORE's holistic-tone.
-       Iter 9dq v94 (2026-06-03): label "Bracelet active" → "Bracelet PRO".
-       Reden: "active" was verwarrend met de device-activation-state
-       (geactiveerd vs niet-geactiveerd via code). "PRO" is symmetrisch
-       met "Audio PRO" en duidelijk een entitlement-label, niet een
-       link-status. Subscription-card praat over WAT JE BEZIT;
-       BraceletCard praat over WAT GEKOPPELD IS. Verandering alleen
-       in deze branche — andere staten (Free / Audio PRO / Full PRO)
-       blijven ongewijzigd. */
-    bigText = 'Bracelet PRO';
-    bigColor = C.accent;
-    /* Terugbedraaid (operator, 9 augustus 2026: "breathwork zal niet
-       gratis zijn bij aankoop bracelet"). De vorige regel beloofde iets
-       wat niet klopt — een bracelet-eigenaar zonder Premium heeft nog
-       precies dezelfde vrije proefsessies als ieder ander, geen volledige
-       bibliotheek. De regel zegt dat nu eerlijk, in dezelfde "compleet
-       maken"-toon als de rest van deze branche. */
-    subText = 'Add Premium to unlock Breathwork, State Control and the Audio Library';
-  } else {
-    /* tier kan undefined zijn (defensief — backend zou dat niet
-       moeten doen voor een active=true sub, maar we crashen er niet
-       op). */
-    const tierLabel =
-      tier === 'yearly'
-        ? 'Yearly'
-        : tier === 'monthly'
-          ? 'Monthly'
-          : null;
-    /* "Audio PRO" ipv "PRO" — disambigueert van Bracelet-bezit. Een user
-       met alleen audio-sub moet zien dat dit hun AUDIO-product is, niet
-       een algemene "PRO"-status (operator-keuze 2026-05-29). */
-    bigText = tierLabel ? `Premium — ${tierLabel}` : 'Premium';
-    bigColor = C.accent;
-
-    /* Datum-regel — alleen als we een geldige validUntil hebben. */
-    if (validUntil) {
-      const d = new Date(validUntil);
-      if (!isNaN(d.getTime())) {
-        const formatted = d.toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-        subText = willRenew
-          ? `Renews on ${formatted}`
-          : `Active until ${formatted}`;
-      } else {
-        subText = 'Active';
-      }
-    } else {
-      subText = 'Active';
-    }
-  }
-
-  /* CTA-paden afhankelijk van state — iter 9dq v150 (operator 2026-06-17):
-       - Loading                  → geen CTA (anders flicker)
-       - Free (geen products)     → "Upgrade to full library" → /subscribe
-       - Bracelet-only            → "Add Audio Library" → /subscribe
-       - PRO                      → "Manage subscription" → Apple/Google
-                                    store-subscription-page (IAP-policy
-                                    verplicht in-app manage-link).
-
-     Voorheen was er een dubbel pad (Gumroad customer portal vs store-link),
-     maar Gumroad is verwijderd uit de app — geen branching meer nodig.
-     Apple eist altijd toegang tot manage-subscription voor PRO users. */
-  /* OOK voor bracelet-eigenaren (operator, 9 augustus 2026): de bracelet
-     ontgrendelt de sessies niet, dus er valt voor hen wel degelijk iets
-     bij te kopen. Stond hier eerst `&& !isBraceletOwner` — dat verstopte
-     precies de knop die een bracelet-only eigenaar nodig heeft. */
-  const showUpgrade = !isLoading && !isPro;
-  const showManageStore = !isLoading && isPro;
-  /* De bracelet dekt de sessies al — een eigenaar heeft niets bij te
-     kopen, dus voor hem verdwijnt de knop hieronder via showUpgrade. */
-  const upgradeCtaText = 'Go Premium';
-  const upgradeAccessibilityLabel =
-    'Go Premium — unlock Breathwork, State Control and the Audio Library';
-
-  return (
-    <View style={s.card}>
-      <Text style={s.label}>Subscription</Text>
-      <Text style={[s.subBig, { color: bigColor }]}>{bigText}</Text>
-      {subText ? <Text style={s.subSmall}>{subText}</Text> : null}
-      {showUpgrade && (
-        <PressScale
-          style={s.cardCta}
-          /* Iter v197 (2026-07-04): direct naar /subscribe (tier picker
-             Monthly/Yearly) ipv Audio-tab landing. Operator-feedback:
-             bracelet-owner die "Add Audio Library" tikt, wilde direct
-             naar sales-card, niet eerst nog een landing doorlopen. */
-          onPress={() => router.navigate('/subscribe' as never)}
-          accessibilityLabel={upgradeAccessibilityLabel}
-        >
-          <Text style={s.cardCtaText}>{upgradeCtaText}</Text>
-          <Text style={s.cardCtaArrow}>→</Text>
-        </PressScale>
-      )}
-      {showManageStore && (
-        <PressScale
-          style={s.cardCta}
-          /* Iter v168 (2026-06-28): SKU-specifieke deeplink (gebaseerd op
-             huidige tier) → Play Store landt direct op VIBEZCORE als de
-             subscription op het actieve Google account staat. */
-          onPress={() => openExternal(storeSubscriptionsUrl(tier))}
-          accessibilityLabel="Manage your subscription in the App Store or Google Play"
-        >
-          <Text style={s.cardCtaText}>Manage subscription</Text>
-          <Text style={s.cardCtaArrow}>→</Text>
-        </PressScale>
-      )}
-      {/* Iter v233 (2026-07-09): upgrade-CTA voor Monthly-subscribers →
-          Yearly. Deep-linkt naar Play Store subscription page waar
-          Google's native change-plan flow zit. Zonder deze CTA had een
-          Monthly-user geen ingang naar Yearly (v230 tier-switch guard
-          was defensief maar onbereikbaar via UI). Bundle-users hebben
-          full access, Yearly-users hebben geen upgrade-pad. */}
-      {!isLoading && isPro && tier === 'monthly' && braceletModel !== 'bundle' && (
-        <PressScale
-          style={s.cardCta}
-          onPress={() => openExternal(storeSubscriptionsUrl('yearly'))}
-          accessibilityLabel="Switch to the Yearly plan via the Play Store"
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={s.cardCtaText}>Switch to Yearly</Text>
-            <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-              Manage the change in the Play Store
-            </Text>
-          </View>
-          <Text style={s.cardCtaArrow}>→</Text>
-        </PressScale>
-      )}
-      {/* Iter v193 (2026-07-03): cross-sell naar bracelet voor audio-only
-          users — actief gemaakt. Audio-PRO die z'n bracelet ontvangt kan
-          nu meteen activeren zonder te wachten op Fall 2026. */}
-      {!isLoading && isPro && !isBraceletOwner && (
-        <PressScale
-          style={s.cardCta}
-          onPress={() => router.push('/activate-bracelet' as never)}
-          accessibilityLabel="Activate your Smart Bead Bracelet"
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={s.cardCtaText}>Got a bracelet? Activate your bracelet or Full Bundle</Text>
-            <Text style={[s.subSmall, { marginTop: 2, opacity: 0.7 }]}>
-              Enter your activation code
-            </Text>
-          </View>
-          <Text style={s.cardCtaArrow}>→</Text>
-        </PressScale>
-      )}
-    </View>
-  );
-}
-
-/* BraceletCard (iter 9r) — bracelet-status block in Account.
-   Operator-update 2026-05-30: non-owner state verwijderd. Reden:
-   Account-tab is voor "wat heb ik / wat beheer ik", niet voor
-   product-discovery. De Bracelet-tab handelt reservatie/info al af
-   — duplicate "Reserve your bracelet" CTA in Account voelt als
-   marketing-prik op de verkeerde plek.
-
-   Iter 9dq v91 (2026-06-03): activation is een SUB-STAP binnen deze
-   card, geen gate vóór deze card. Bracelet-owner ziet altijd:
-     - Niet-geactiveerd : "Activate your bracelet" als primary CTA +
-                          dim sub-text dat 't nog wacht op de code
-     - Geactiveerd      : "Open Bracelet Control" + beadband-upsell
-   Operator-rationale: "na aankoop en account aanmaken moet elke user
-   altijd in PRO omgeving zitten" — Bracelet-card hoort bij PRO, alleen
-   z'n binnenkant verschilt. */
-function BraceletCard() {
-  const isBraceletOwner = useBraceletOwner();
-  const isActivated = useDevBraceletActivated();
-  if (!isBraceletOwner) return null;
-
-  /* Niet-geactiveerde owner — toon activate-prompt als primary action.
-     User is wel PRO (heeft betaald) maar de bracelet is nog NIET aan
-     dit account gekoppeld. Iter 9dq v93 (2026-06-03): label aangepast
-     van "Bracelet ready" → "Activation required" + amber-kleur. Reden:
-     "ready" suggereerde dat 't klaar voor gebruik was, terwijl er nog
-     niets gelinkt is. Amber matched de PREVIEW-banner-tint en signaleert
-     "wacht op actie van de user". */
-  if (!isActivated) {
-    return (
-      <View style={s.card}>
-        <Text style={s.label}>Bracelet</Text>
-        <Text style={[s.subBig, { color: '#f59e0b' }]}>
-          Activation required
-        </Text>
-        <Text style={s.subSmall}>
-          Your bracelet is not yet linked to this account. Enter your
-          12-character activation code to pair it.
-        </Text>
-        <PressScale
-          style={s.cardCta}
-          onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Activate your bracelet with a code"
-        >
-          <Text style={s.cardCtaText}>Activate your bracelet</Text>
-          <Text style={s.cardCtaArrow}>→</Text>
-        </PressScale>
-      </View>
-    );
-  }
-
-  /* Geactiveerde owner — volledige bracelet-card met control + beadband-
-     upsell. */
-  return (
-    <View style={s.card}>
-      <Text style={s.label}>Bracelet</Text>
-      <Text style={[s.subBig, { color: C.accent }]}>
-        Bracelet activated
-      </Text>
-      {/* Iter 9dq v79 (2026-06-03): copy was "paired and ready to use"
-          maar voor pre-launch activatie-code users (Kickstarter sept 2026)
-          is de hardware nog niet verzonden — "paired" misleidt. Bracelet-
-          pagina's tonen nu een aparte PREVIEW-banner, dus hier alleen
-          state-neutrale tekst over wat de user kan doen. */}
-      <Text style={s.subSmall}>
-        Open Bracelet to preview your modes and review your activation.
-      </Text>
-      <PressScale
-        style={s.cardCta}
-        /* Operator 2026-05-30: navigate naar /bracelet tab ipv push naar
-           /bracelet-control stack-screen. Reden: navigatie was inconsistent
-           — vanaf Account kreeg user een back-arrow naar Account, maar
-           vanuit de tab geen exit-pad. Nu uniforme tab-flow: user gaat naar
-           Bracelet tab waar BraceletControl inline rendert + tab-bar
-           zichtbaar blijft voor uitstappen via andere tabs. */
-        onPress={() => router.navigate('/bracelet' as never)}
-        accessibilityLabel="Open Session Control"
-      >
-        <Text style={s.cardCtaText}>Open Session Control</Text>
-        <Text style={s.cardCtaArrow}>→</Text>
-      </PressScale>
-      {/* Iter 9gg (operator-correctie): bracelet heeft VERVANGBARE bead-
-          bands, geen "rechargeable edition". Klanten kunnen nieuwe
-          beadbands bestellen (andere stones, vervanging). URL volgt
-          van operator.
-          Iter 9dq v85 (2026-06-03): styling fix — opacity:0.6 maakte de
-          knop disabled-looking terwijl 't een actieve secondary-action
-          is. Nu eigen subtieler outlined style (transparent bg, dim
-          border) ipv de gevulde primary cardCta met fade. Tekst en
-          arrow op accent-kleur zodat de tap-affordance duidelijk is. */}
-      <PressScale
-        style={s.cardCtaSecondary}
-        onPress={() =>
-          /* /shop/beadbands bestond niet en gaf een 404 in de browser — dat
-             was de "foutmelding" die de operator zag. De app deed het goed en
-             opende netjes de website; de pagina was er alleen niet.
-             Nu naar /shop, dat wél bestaat. Komt er ooit een eigen
-             beadband-pagina, dan kan dit terug. */
-          openExternal(BRACELET_SHOP_URL)
-        }
-        accessibilityLabel="Order new beadband"
-      >
-        <Text style={s.cardCtaSecondaryText}>Order new beadband</Text>
-        <Text style={s.cardCtaSecondaryArrow}>→</Text>
-      </PressScale>
-    </View>
-  );
-}
-
-/* Iter 9dq v91 (2026-06-03): losse ActivateBraceletCta verwijderd. Reden:
-   operator-feedback "na aankoop+account moet user altijd in PRO omgeving
-   zitten". Een aparte CTA naast de BraceletCard wekte de indruk dat
-   bracelet-ownership pas na activation echt was. De activate-prompt zit
-   nu IN BraceletCard zelf (als de niet-geactiveerde variant) zodat de
-   user direct in z'n eigen PRO-card landt met de juiste sub-stap. */
-
-/* Library-settings link. Vervangt de oude PlaybackSettingsCard die de
-   auto-play-toggle inline had — die toggle is verhuisd naar Audio
-   Library zelf (audio-ervaring-instelling, hoort visueel daar). Account
-   houdt alleen deze "→"-link die de gebruiker direct op de toggle laat
-   landen via scroll-intent + tab-switch. Werkt voor zowel guest als
-   ingelogde users. */
-function LibrarySettingsLink() {
-  return (
-    <PressScale
-      style={s.linkCard}
-      onPress={() => {
-        /* requestScrollTo() fired het signal eerst (de listener in
-           (tabs)/index.tsx subscribed al — bij live tab-switch zal die
-           direct triggeren; bij cold start consumeert hij via
-           consumeScrollIntent()). Dan router.navigate('/') switcht naar
-           Library-tab. */
-        requestScrollTo('library-settings');
-        router.navigate('/');
-      }}
-      android_ripple={{ color: 'rgba(10,10,12,0.06)' }}
-    >
-      <View style={s.linkTextWrap}>
-        <Text style={s.linkTitle}>Library settings</Text>
-        <Text style={s.linkSub}>Auto-play and playback preferences</Text>
-      </View>
-      <Text style={s.linkArrow}>›</Text>
-    </PressScale>
-  );
-}
-
 /* Het officiële Google "G"-logo (Google Identity brand-asset, 18×18
    viewBox, de vier merkkleuren) — geen platte letter (operator, 11
    augustus 2026: "moet een officiële google logo zijn de cta continue
@@ -727,6 +282,361 @@ function GoogleGlyph({ size = 18 }: { size?: number }) {
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Profile — opbouw zoals Apple (operator, 7 okt 2026: "profile tab volledig
+   updaten, hoe zou Apple het doen").
+
+   Eén grote titel, daaronder gegroepeerde lijsten (zoals Instellingen /
+   het App Store-account): donkere afgeronde blokken, dunne scheidingslijnen,
+   een pijltje rechts. Iconen wit, kleur enkel voor status (Bio-Teal), geen
+   Signal Blue (enkel haptics), geen verkoopkaarten of stickers — wat je
+   hebt, en één regel naar wat je nog kan krijgen.
+   ───────────────────────────────────────────────────────────────────────── */
+
+const STATUS = AudioAccentLight;
+const ROW_ICON = 'rgba(255,255,255,0.82)';
+const DESTRUCTIVE = '#ff6b6b';
+
+type RowIcon = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+
+function Group({ title, children, footer }: { title?: string; children: ReactNode; footer?: string }) {
+  const items = Children.toArray(children).filter(Boolean);
+  if (!items.length) return null;
+  return (
+    <View style={g.group}>
+      {title ? <Text style={g.groupTitle}>{title}</Text> : null}
+      <View style={g.groupBox}>
+        {items.map((child, i) => (
+          <View key={i}>
+            {i > 0 ? <View style={g.sep} /> : null}
+            {child}
+          </View>
+        ))}
+      </View>
+      {footer ? <Text style={g.groupFooter}>{footer}</Text> : null}
+    </View>
+  );
+}
+
+function Row({
+  icon: Icon,
+  title,
+  subtitle,
+  value,
+  valueTone,
+  onPress,
+  destructive,
+  busy,
+  open,
+  accessibilityLabel,
+}: {
+  open?: boolean;
+  icon?: RowIcon;
+  title: string;
+  subtitle?: string;
+  value?: string;
+  valueTone?: 'status' | 'warn';
+  onPress?: () => void;
+  destructive?: boolean;
+  busy?: boolean;
+  accessibilityLabel?: string;
+}) {
+  const content = (
+    <>
+      {Icon ? (
+        <View style={g.rowIcon}>
+          <Icon size={19} color={destructive ? DESTRUCTIVE : ROW_ICON} strokeWidth={2} />
+        </View>
+      ) : null}
+      <View style={g.rowText}>
+        <Text style={[g.rowTitle, destructive && { color: DESTRUCTIVE }]} numberOfLines={2}>
+          {title}
+        </Text>
+        {subtitle ? <Text style={g.rowSub}>{subtitle}</Text> : null}
+      </View>
+      {value ? (
+        <Text
+          style={[
+            g.rowValue,
+            valueTone === 'status' && { color: STATUS },
+            valueTone === 'warn' && { color: '#f5b54a' },
+          ]}
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+      ) : null}
+      {busy ? (
+        <ActivityIndicator color="rgba(255,255,255,0.5)" size="small" />
+      ) : onPress && !destructive ? (
+        <View style={open ? { transform: [{ rotate: '90deg' }] } : undefined}>
+          <ChevronRight size={17} color="rgba(255,255,255,0.3)" strokeWidth={2.2} />
+        </View>
+      ) : null}
+    </>
+  );
+  if (!onPress) return <View style={g.row}>{content}</View>;
+  return (
+    <PressScale
+      style={g.row}
+      onPress={onPress}
+      scaleTo={0.98}
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+    >
+      {content}
+    </PressScale>
+  );
+}
+
+function fmtDate(iso?: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** Korte status voor de kop en de Membership-rij. */
+function useMembershipStatus() {
+  const { isPro, tier, validUntil, willRenew, isLoading, braceletModel } = useSubscription();
+  const isBraceletOwner = useBraceletOwner();
+  const tierLabel = braceletModel === 'bundle' ? 'Full Bundle' : tier === 'yearly' ? 'Yearly' : tier === 'monthly' ? 'Monthly' : null;
+  const date = fmtDate(validUntil);
+  const renewLine = date ? (willRenew ? `Renews on ${date}` : `Active until ${date}`) : null;
+  let label: string;
+  if (isLoading) label = 'Checking…';
+  else if (isPro) label = tierLabel ? `Premium · ${tierLabel}` : 'Premium';
+  else if (isBraceletOwner) label = 'Bracelet';
+  else label = 'Free';
+  return { isPro, tier, isLoading, braceletModel, isBraceletOwner, label, renewLine };
+}
+
+/** Kop voor ingelogde gebruikers: initialen, e-mail, status. */
+function ProfileHeader({ email }: { email: string }) {
+  const { label, isPro } = useMembershipStatus();
+  const initial = (email.trim()[0] || 'V').toUpperCase();
+  return (
+    <View style={g.header}>
+      <View style={g.avatar}>
+        <Text style={g.avatarTxt}>{initial}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={g.headerEmail} numberOfLines={1}>
+          {email}
+        </Text>
+        <Text style={[g.headerStatus, isPro && { color: STATUS }]}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; restoring: boolean }) {
+  const { isPro, tier, isLoading, braceletModel, isBraceletOwner, renewLine } = useMembershipStatus();
+  return (
+    <Group title="Membership">
+      {isPro ? (
+        <Row
+          icon={Crown}
+          title="VIBEZCORE Premium"
+          subtitle={renewLine ?? 'Breathwork, State Control and the Audio Library'}
+          value="Manage"
+          onPress={() => openExternal(storeSubscriptionsUrl(tier))}
+          accessibilityLabel="Manage your subscription in the App Store or Google Play"
+        />
+      ) : (
+        <Row
+          icon={Crown}
+          title="VIBEZCORE Premium"
+          subtitle={
+            isBraceletOwner
+              ? 'Add Breathwork, State Control and the Audio Library'
+              : 'Breathwork, State Control and the Audio Library'
+          }
+          onPress={() => router.navigate('/subscribe' as never)}
+          accessibilityLabel="Go Premium — unlock Breathwork, State Control and the Audio Library"
+        />
+      )}
+      {!isLoading && isPro && tier === 'monthly' && braceletModel !== 'bundle' ? (
+        <Row
+          icon={Repeat}
+          title="Switch to Yearly"
+          subtitle="Change your plan in the Play Store"
+          onPress={() => openExternal(storeSubscriptionsUrl('yearly'))}
+        />
+      ) : null}
+      <Row
+        icon={RotateCcw}
+        title={restoring ? 'Restoring…' : 'Restore Purchases'}
+        onPress={onRestore}
+        busy={restoring}
+        accessibilityLabel="Restore previous purchases"
+      />
+    </Group>
+  );
+}
+
+function ProductsGroup() {
+  const isBraceletOwner = useBraceletOwner();
+  const isActivated = useDevBraceletActivated();
+  if (isBraceletOwner && !isActivated) {
+    return (
+      <Group title="Products">
+        <Row
+          icon={Package}
+          title="Activate your bracelet"
+          subtitle="Enter your 12-character activation code"
+          value="Required"
+          valueTone="warn"
+          onPress={() => router.navigate('/activate-bracelet' as never)}
+        />
+      </Group>
+    );
+  }
+  if (isBraceletOwner) {
+    return (
+      <Group title="Products">
+        <Row
+          icon={BraceletIcon}
+          title="Session Control"
+          subtitle="Your bracelet is activated"
+          onPress={() => router.navigate('/bracelet' as never)}
+          accessibilityLabel="Open Session Control"
+        />
+        <Row icon={Package} title="Order new beadband" onPress={() => openExternal(BRACELET_SHOP_URL)} />
+      </Group>
+    );
+  }
+  return (
+    <Group title="Products">
+      <Row
+        icon={Package}
+        title="Activate your product"
+        subtitle="Bracelet or Full Bundle code"
+        onPress={() => router.navigate('/activate-bracelet' as never)}
+        accessibilityLabel="Activate your Bracelet or Full Bundle code"
+      />
+      <Row
+        icon={BraceletIcon}
+        title="Smart Bead Bracelet"
+        subtitle="Launching Fall 2026"
+        onPress={() => router.navigate('/smart-bead-bracelet' as never)}
+      />
+    </Group>
+  );
+}
+
+function SupportGroup() {
+  return (
+    <Group title="Settings & support">
+      <Row icon={SettingsIcon} title="Settings" onPress={() => router.navigate('/settings' as never)} accessibilityLabel="Open settings" />
+      <Row icon={UserPlus} title="Invite a friend" onPress={() => void shareInvite()} accessibilityLabel="Invite a friend to VIBEZCORE" />
+      <Row icon={HelpCircle} title="FAQ" onPress={() => router.navigate('/faq' as never)} accessibilityLabel="Browse frequently asked questions" />
+      <Row icon={Headphones} title="Contact support" onPress={() => router.navigate('/support' as never)} accessibilityLabel="Contact VIBEZCORE support" />
+    </Group>
+  );
+}
+
+const LEGAL_DOCS: { doc: string; title: string }[] = [
+  { doc: 'terms', title: 'Terms of Use' },
+  { doc: 'privacy', title: 'Privacy Policy' },
+  { doc: 'shipping', title: 'Shipping Policy' },
+  { doc: 'refund', title: 'Refund & Returns' },
+  { doc: 'health', title: 'Consumer Health Notice' },
+  { doc: 'audio-sessions', title: 'Audio Sessions' },
+  { doc: 'cookies', title: 'Cookie Policy' },
+  { doc: 'accessibility', title: 'Accessibility Statement' },
+];
+
+function AboutLegalGroups() {
+  return (
+    <>
+      <Group title="About">
+        <Row icon={Info} title="About VIBEZCORE" onPress={() => router.navigate('/about' as never)} accessibilityLabel="Learn about VIBEZCORE" />
+      </Group>
+      <Group title="Legal">
+        {LEGAL_DOCS.map((d) => (
+          <Row
+            key={d.doc}
+            title={d.title}
+            onPress={() =>
+              router.navigate({ pathname: '/legal/[doc]' as never, params: { doc: d.doc } as never })
+            }
+          />
+        ))}
+      </Group>
+      <Text style={g.version}>
+        {`VIBEZCORE ${Constants.expoConfig?.version ?? ''}`.trim()}
+      </Text>
+    </>
+  );
+}
+
+const g = StyleSheet.create({
+  title: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 34,
+    letterSpacing: -0.6,
+    marginTop: 12,
+    marginBottom: 18,
+  },
+  group: { marginBottom: 26 },
+  groupTitle: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginLeft: 16,
+    marginBottom: 8,
+  },
+  groupBox: { backgroundColor: '#1C1C1E', borderRadius: 14, overflow: 'hidden' },
+  groupFooter: {
+    color: 'rgba(255,255,255,0.45)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
+    marginHorizontal: 16,
+  },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 52 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingVertical: 11, paddingHorizontal: 16 },
+  rowIcon: { width: 24, alignItems: 'center' },
+  rowText: { flex: 1 },
+  rowTitle: { color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16 },
+  rowSub: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.regular, fontSize: 13, lineHeight: 17, marginTop: 2 },
+  rowValue: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 15, maxWidth: 140 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 26,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(0,163,163,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 22 },
+  headerEmail: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
+  headerStatus: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.medium, fontSize: 14, marginTop: 3 },
+  version: {
+    color: 'rgba(255,255,255,0.35)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+});
+
 export default function AccountScreen() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
@@ -752,15 +662,21 @@ export default function AccountScreen() {
     };
     /* Cold-start: intent kan al gezet zijn voordat deze listener leeft. */
     if (consumeScrollIntent() === 'account-top') {
+      setAuthOpen(true);
       scrollToTop();
     }
     const unsub = subscribeScrollIntent((target) => {
-      if (target === 'account-top') scrollToTop();
+      if (target === 'account-top') {
+        setAuthOpen(true);
+        scrollToTop();
+      }
     });
     return unsub;
   }, []);
 
   const [mode, setMode] = useState<Mode>('login');
+  /* Uitgelogd: het inlogformulier klapt open onder de "Sign in"-rij (7 okt 2026). */
+  const [authOpen, setAuthOpen] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [pwInput, setPwInput] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -1326,302 +1242,21 @@ export default function AccountScreen() {
               is doorgevoerd. `screenTitle` blijft ongewijzigd: die haalt
               al `TypeScale.tabHeader` op, de ene bron voor de pagina-
               titel-rol op alle 4 tabs (operator, 11 september 2026). */}
-          <Text style={s.screenTitle}>Account</Text>
-
-          {/* ── My account ──
-              Persoonlijke account-info op één plek: email (read-only —
-              kan alleen via support gewijzigd worden, GDPR/verifiable
-              workflow) + password (interactief, opent in-app change
-              flow). Voorheen waren deze gespreid (email in subscription
-              card, password in Account Actions). Consolidatie maakt
-              "waar staat mijn info?" voor de hand liggend.
-              Operator-feedback 2026-05-30. */}
-          <View style={s.card}>
-            <Text style={s.label}>My account</Text>
-
-            {/* Email row — niet interactief, label boven value gestackt */}
-            <View style={s.accountField}>
-              <Text style={s.accountFieldLabel}>Email</Text>
-              <Text style={s.accountFieldValue} numberOfLines={1}>
-                {email}
-              </Text>
-            </View>
-
-            <View style={s.cardRowDivider} />
-
-            {/* Password row — interactief: label/value gestackt links,
-                "Change" + chevron rechts. Dot-string als "value" voor
-                visuele bevestiging dat er een password is ingesteld. */}
-            <PressScale
-              style={s.accountFieldInteractive}
-              onPress={onChangePassword}
-              accessibilityLabel="Change your password"
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={s.accountFieldLabel}>Password</Text>
-                <Text style={s.accountFieldValue}>••••••••••</Text>
-              </View>
-              <Text style={s.accountFieldCta}>Change</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-          </View>
-
-          <SubscriptionCard />
-          <BraceletCard />
-          {/* Iter 9r: LibrarySettingsLink weggehaald — operator-feedback
-              "Library settings mag overal uit settings weg". Auto-play
-              en track-history toggles leven al in Settings sub-screen. */}
-
-          {/* ── Account Actions (Settings, Change Password, Support) ──
-              Structuur matched account.html van de webapp. Sign Out blijft
-              z'n eigen prominente rode knop onderaan, niet in deze
-              "actions"-card — operator-besluit 2026-05-25: Sign Out moet
-              visueel onmiskenbaar zijn. */}
-          {/* ── Settings & Help ──
-              Hernoemd van "Account" → "Settings & Help" (Change password
-              is verhuisd naar My account card bovenaan). Dit card bevat
-              alleen secundaire actions: app-settings, about, FAQ, contact. */}
-          <View style={s.card}>
-            <Text style={s.label}>Settings & help</Text>
-            {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-
-                glyph (Android-native share-symbool) ipv ↗ Unicode-arrow.
-                Operator: "sharing moet duidelijk en altijd zichtbaar". */}
-            <PressScale
-              style={s.cardRow}
-              onPress={shareInvite}
-              accessibilityLabel="Invite a friend to VIBEZCORE"
-            >
-              <View style={s.cardRowIconText}>
-                <Share2 size={17} color="#4ade80" strokeWidth={2.2} />
-                <Text style={[s.cardRowText, { color: '#4ade80', marginLeft: 10 }]}>Invite a friend</Text>
-              </View>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            {/* Iter 9dq v86 (2026-06-03): Restore Purchases. Apple App
-                Review Guideline 3.1.1 vereist deze knop voor IAP-apps.
-                Bovenaan de lijst zodat 'ie vindbaar is na een reinstall
-                of new-device sign-in. */}
-            <PressScale
-              style={s.cardRow}
-              onPress={onRestorePurchases}
-              disabled={restoring}
-              accessibilityLabel="Restore previous purchases"
-            >
-              <Text style={s.cardRowText}>
-                {restoring ? 'Restoring…' : 'Restore purchases'}
-              </Text>
-              {restoring ? (
-                <ActivityIndicator color={C.textDim} size="small" />
-              ) : (
-                <Text style={s.cardRowArrow}>›</Text>
-              )}
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            {/* Operator, 13 september 2026: "settings knop is weg, wil hem
-               terug met inhoud zoals het was" — herroept de verwijdering
-               van 11 september. */}
-            <PressScale
-              style={s.cardRow}
-              onPress={() => router.navigate('/settings')}
-              accessibilityLabel="Open settings"
-            >
-              <Text style={s.cardRowText}>Settings</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            {/* About VIBEZCORE — brand-story screen voor users die
-                meer willen weten over wat VIBEZCORE is. Custom screen
-                src/app/about.tsx, gesynced met vibezcore.com/about-
-                vibezcore. */}
-            <PressScale
-              style={s.cardRow}
-              onPress={() => router.navigate('/about' as never)}
-              accessibilityLabel="Learn about VIBEZCORE"
-            >
-              <Text style={s.cardRowText}>About VIBEZCORE</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            {/* FAQ — voor "Contact support" zodat user eerst self-serve
-                kan proberen. Mirror van vibezcore.com/faq, content in
-                src/data/faq-content.ts. */}
-            <PressScale
-              style={s.cardRow}
-              onPress={() => router.navigate('/faq' as never)}
-              accessibilityLabel="Browse frequently asked questions"
-            >
-              <Text style={s.cardRowText}>Frequently asked questions</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() => router.navigate('/support')}
-              accessibilityLabel="Contact VIBEZCORE support"
-            >
-              <Text style={s.cardRowText}>Contact support</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-          </View>
-
-          {/* Cancel Subscription verwijderd — iter 9dq v150 (operator
-              2026-06-17): app is IAP-only. Apple/Google verbieden in-app
-              cancellation; user gebruikt de "Manage subscription"-knop
-              bovenaan deze tab (opent Settings → Apple ID → Subscriptions
-              of Play Store → Subscriptions). */}
-
-          <PressScale style={s.signOut} onPress={onSignOut}>
-            <Text style={s.signOutText}>Sign out</Text>
-          </PressScale>
-
-          {/* ── Danger Zone — Delete Account ──
-              Visueel duidelijk gescheiden van Sign Out (welke reversible is)
-              en gemarkeerd met rode border zodat onbedoelde tap visueel
-              gestopt wordt. Opent support-form voor manual deletion. */}
-          <View style={s.dangerZone}>
-            <Text style={s.dangerLabel}>Danger Zone</Text>
-            <Text style={s.dangerText}>
-              Deleting your account is permanent. Your listening history,
-              favorites, and subscription data will be removed.
-            </Text>
-            <PressScale
-              style={s.dangerBtn}
-              onPress={onDeleteAccount}
-              accessibilityLabel="Request account deletion"
-            >
-              <Text style={s.dangerBtnText}>Delete my account</Text>
-            </PressScale>
-          </View>
-
-          {/* ── Legal section ──
-              Vervangt de oude [OPERATOR]-placeholder. 5 sub-screens
-              gepushed via `legal/[doc]`. Inhoud van de webapp HTMLs
-              (operator-bevestigd 2026-05-27) en wordt onafhankelijk
-              van die webapp in de app onderhouden — als de webapp
-              uitgefaseerd wordt blijven deze docs gewoon staan. */}
-          <View style={s.card}>
-            <Text style={s.label}>Legal & Safety</Text>
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'terms' } as never,
-                })
-              }
-              accessibilityLabel="Read Terms and Conditions"
-            >
-              <Text style={s.cardRowText}>Terms and Conditions</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'privacy' } as never,
-                })
-              }
-              accessibilityLabel="Read Privacy Policy"
-            >
-              <Text style={s.cardRowText}>Privacy Policy</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'accessibility' } as never,
-                })
-              }
-              accessibilityLabel="Read Accessibility Statement"
-            >
-              <Text style={s.cardRowText}>Accessibility Statement</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'shipping' } as never,
-                })
-              }
-              accessibilityLabel="Read Shipping Policy"
-            >
-              <Text style={s.cardRowText}>Shipping Policy</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'refund' } as never,
-                })
-              }
-              accessibilityLabel="Read Refund and Returns Policy"
-            >
-              <Text style={s.cardRowText}>Refund & Returns Policy</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'cookies' } as never,
-                })
-              }
-              accessibilityLabel="Read Cookie Policy"
-            >
-              <Text style={s.cardRowText}>Cookie Policy</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'health' } as never,
-                })
-              }
-              accessibilityLabel="Read Consumer Health Notice"
-            >
-              <Text style={s.cardRowText}>Consumer Health Notice</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-            <View style={s.cardRowDivider} />
-            {/* Audio Sessions — legal-disclaimer specifiek voor de
-                audio content (no affiliation, IP, etc). Op de website
-                staat 'ie onder PLATFORM-footer, in de app bij Legal
-                & Safety omdat de inhoud legal van aard is. */}
-            <PressScale
-              style={s.cardRow}
-              onPress={() =>
-                router.navigate({
-                  pathname: '/legal/[doc]' as never,
-                  params: { doc: 'audio-sessions' } as never,
-                })
-              }
-              accessibilityLabel="Read Audio Sessions disclaimer"
-            >
-              <Text style={s.cardRowText}>Audio Sessions</Text>
-              <Text style={s.cardRowArrow}>›</Text>
-            </PressScale>
-          </View>
-
-          <Text style={s.legal}>
-            © VIBEZCORE · All rights reserved
-          </Text>
+          <Text style={g.title}>Profile</Text>
+          <ProfileHeader email={email} />
+          <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
+          <ProductsGroup />
+          <Group title="Account">
+            <Row icon={Mail} title="Email" value={email} />
+            <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
+          </Group>
+          <SupportGroup />
+          <AboutLegalGroups />
+          {/* Afmelden en verwijderen onderaan, apart — zoals in Instellingen. */}
+          <Group footer="Deleting your account is permanent. It does not cancel an active subscription — do that in your Google Play or Apple ID settings.">
+            <Row icon={LogOut} title="Sign out" onPress={onSignOut} />
+            <Row icon={Trash2} title="Delete account" destructive onPress={onDeleteAccount} accessibilityLabel="Delete your account" />
+          </Group>
         </KeyboardAwareScrollView>
       </SafeAreaView>
     );
@@ -1643,67 +1278,20 @@ export default function AccountScreen() {
         extraScrollHeight={20}
         enableAutomaticScroll={true}
       >
-        {/* Iter 9iii: complete redesign signed-out view.
-            - Hero greeting (warm, professional)
-            - Sign-in card (één frame met form + forgot + stay-signed)
-            - "or get started" divider
-            - Product card (één frame, 3 knoppen, 1 disclaimer)
-            - Legal footer met 5 doc-links (compliance + altijd accessibel)
-            - Apple SSO weggehaald uit guest-flow (komt terug als 't werkt) */}
-
-        {/* Hero greeting — operator-mockup, 11 augustus 2026 ("header/hero
-            sectie correct opbouwen", exclusief de productfoto uit de
-            mockup — die hoort al bij de welkomstpagina, niet hier
-            nogmaals). Klein wordmark boven een echte kop i.p.v. de oude
-            opbouw (kleine "WELCOME TO"-label + wordmark + accentstreepje +
-            een ondergeschikte instructiezin) — dat las als drie losse
-            regeltjes, geen kop. */}
-        {/* Wordmark BLIJFT, gecentreerd, met de kop + subtekst eronder ook
-            gecentreerd (operator, 11 augustus 2026, verduidelijking:
-            "centreren logo boven en eronder enkel welcome en dan
-            access...") — het wordmark zelf hoeft dus niet weg, alleen de
-            eerdere links-uitlijning van de tekst eronder wordt centered. */}
-        <View style={s.heroBlock}>
-          <Image
-            source={require('../../../assets/vibezcore_wordmark.png')}
-            style={s.heroWordmark}
-            resizeMode="contain"
-            accessibilityLabel="VIBEZCORE"
+        <Text style={g.title}>Profile</Text>
+        <Group>
+          <Row
+            icon={CircleUserRound}
+            title={mode === 'login' ? 'Sign in' : 'Create account'}
+            subtitle="Sync your progress and unlock what you own"
+            onPress={() => setAuthOpen((o) => !o)}
+            open={authOpen}
+            accessibilityLabel="Sign in to VIBEZCORE"
           />
-          {/* "Welcome" alleen (operator, 11 augustus 2026: "enkel welcome
-              niet welcome to vibezcore") — het wordmark erboven zegt de
-              merknaam al. */}
-          <Text style={s.heroGreeting}>Welcome</Text>
-          <Text style={s.heroSub}>
-            Access your account or explore everything VIBEZCORE has to
-            offer.
-          </Text>
-        </View>
-
-        {/* ── SIGN-IN CARD ── operator-mockup, 11 augustus 2026: intro-blok
-            (icoon + "WELCOME BACK" + titel + subtekst) toegevoegd, en
-            email/wachtwoord/knop staan nu VOOR de social-knoppen — de
-            vorige volgorde (social eerst, velden erna) was het omgekeerde
-            van de mockup. */}
+        </Group>
+        {authOpen ? (
         <View style={s.authCard}>
-          <View style={s.authCardHeader}>
-            <View style={s.authCardIconBadge}>
-              <Lock size={18} color={C.accent} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.authCardLabel}>
-                {mode === 'login' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}
-              </Text>
-              <Text style={s.authCardTitle}>
-                {mode === 'login'
-                  ? 'Sign in to your account'
-                  : 'Create your account'}
-              </Text>
-            </View>
-          </View>
-          <Text style={s.authCardIntro}>
-            Access your premium content and manage your products.
-          </Text>
+          {/* Geen eigen kop meer: de "Sign in"-rij erboven zegt het al (7 okt 2026). */}
 
           {/* Icoon in het veld, geen los "Email"-label erboven (operator-
               mockup, 11 augustus 2026: "exact wat je ziet" — de mockup
@@ -1833,7 +1421,7 @@ export default function AccountScreen() {
             disabled={busy}
           >
             {busy ? (
-              <ActivityIndicator color={C.text} />
+              <ActivityIndicator color="#1D1D1F" />
             ) : (
               <>
                 {/* Operator, 9 september 2026: "endowment effect (...) niet
@@ -1904,14 +1492,14 @@ export default function AccountScreen() {
               {mode === 'login' ? (
                 <>
                   Don't have an account?{' '}
-                  <Text style={{ color: C.accent, fontFamily: BrandFonts.semibold }}>
+                  <Text style={{ color: '#ffffff', fontFamily: BrandFonts.semibold }}>
                     Sign Up
                   </Text>
                 </>
               ) : (
                 <>
                   Already have an account?{' '}
-                  <Text style={{ color: C.accent, fontFamily: BrandFonts.semibold }}>
+                  <Text style={{ color: '#ffffff', fontFamily: BrandFonts.semibold }}>
                     Sign In
                   </Text>
                 </>
@@ -1920,357 +1508,12 @@ export default function AccountScreen() {
           </PressScale>
 
         </View>
+        ) : null}
+        <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
+        <ProductsGroup />
+        <SupportGroup />
+        <AboutLegalGroups />
 
-        {/* Iter v238h (2026-07-10, operator-feedback): "activate moet
-            prominenter, dat is geen bijproduct en op gelijke voet met
-            library". Herschreven van subtiele text-link naar volwaardige
-            product-card met eigen eyebrow, titel, one-liner en primary
-            CTA — visueel gelijkwaardig aan Audio Library en Bracelet
-            cards hieronder. Boven de "NEW TO VIBEZCORE" divider want
-            deze card is voor OWNERS (al gekocht), niet voor discovery. */}
-        {/* Hele kaart tikbaar, geen losse knop meer (operator-mockup, 11
-            augustus 2026: enkel een chevron rechts, icoon+tekst links). */}
-        <PressScale
-          style={s.productCardRow}
-          onPress={() => router.navigate('/activate-bracelet' as never)}
-          accessibilityLabel="Activate your Bracelet or Full Bundle code"
-        >
-          <View style={s.productCardIconBadge}>
-            <Package size={18} color={C.accent} strokeWidth={2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.productStatusLabel}>ALREADY OWN A PRODUCT?</Text>
-            <Text style={s.productTitle}>Activate your product</Text>
-            <Text style={s.productOneLiner}>
-              Activate your bracelet or full bundle code.
-            </Text>
-          </View>
-          <ChevronRight size={18} color={C.accent} strokeWidth={2.2} />
-        </PressScale>
-
-        {/* Iter v238g (2026-07-10, operator-feedback): "in account is blok
-            got a bracelet en new to vibezcore redelijk rommelig".
-            Gesaneerd: eyebrow-title-subline stack verkort tot 1 subtiele
-            divider-header. Activate CTA (hierboven) en product-cards
-            (hieronder) hebben nu een duidelijke visuele scheiding zonder
-            concurrerende eyebrows. */}
-        {/* "EXPLORE VIBEZCORE", niet "NEW TO VIBEZCORE" (operator-mockup,
-            11 augustus 2026) — deze sectie toont ook aan bestaande leden
-            wat er nog te ontdekken valt, niet alleen aan nieuwkomers. */}
-        <View style={s.newHereDivider}>
-          <View style={s.newHereDividerLine} />
-          <Text style={s.newHereDividerText}>EXPLORE VIBEZCORE</Text>
-          <View style={s.newHereDividerLine} />
-        </View>
-
-        {/* ── PRODUCT CARDS — restructured iter 9dq v10 (2026-06-02) ──
-            Was: 2 cards × 16 tekstlagen + 3 CTAs + 3 badges = visueel
-            druk voor een gast. Operator-feedback: rustiger maar boeiend,
-            upsell behouden.
-            Nu: 2 cards, elk met eyebrow-status + titel + 1-line + CTA.
-            Bundle leeft INSIDE de bracelet-card als inline BEST VALUE-
-            rij ipv eigen CTA. Reassurance gereduceerd tot 1 dim regel. */}
-
-        {/* Card 1: Guided Breathwork — het product dat er NÚ is. Verving
-            de Audio Library-kaart (operator, 9 augustus 2026); die wees
-            bovendien naar de verborgen audiotab. */}
-        <View style={s.productCard}>
-          <View style={s.productStatusRow}>
-            <View
-              style={[
-                s.productStatusDot,
-                { backgroundColor: C.success },
-              ]}
-            />
-            <Text style={s.productStatusLabel}>AVAILABLE NOW</Text>
-          </View>
-          {/* Operator, 6 okt 2026: deze kaart verkoopt het abonnement, en dat
-             bevat sinds 5 okt alle drie — titel en tekst zeggen dat nu ook
-             (was "Guided Breathwork", uit de mockup van 11 augustus). */}
-          <Text style={s.productTitle}>VIBEZCORE Premium</Text>
-          <Text style={s.productOneLiner}>
-            Breathwork, State Control and the full Audio Library.
-          </Text>
-          {/* Tekstlink met pijltje, geen volle knop (operator-mockup). */}
-          <PressScale
-            style={s.productCtaLink}
-            onPress={() => router.navigate('/subscribe' as never)}
-            accessibilityLabel="Go Premium — unlock Breathwork, State Control and the Audio Library"
-          >
-            <Text style={[s.productCtaLinkText, { color: C.accent }]}>
-              Go Premium
-            </Text>
-            <ChevronRight size={15} color={C.accent} strokeWidth={2.2} />
-          </PressScale>
-        </View>
-
-        {/* Card 2: Smart Bead Bracelet — preorder, met 2 duidelijke
-            reserveringsopties (Bracelet alone vs Bundle). Iter 9dq v11
-            (2026-06-02): operator-feedback — verschil tussen opties was
-            niet duidelijk + CTA moest "Reserve your spot" zijn ipv los
-            "Reserve". Beide opties tonen nu titel + sub-line die exact
-            zegt wat je reserveert.
-            Iter 9dq v12 (2026-06-02): Early Bird-framing + product-namen.
-            Eyebrow combineert "EARLY BIRD" met launch-datum. Onder titel
-            staan de oorspronkelijke scarcity-zinnen ("lowest Kickstarter
-            price" + "first reserved, first served") in 2 dim regels.
-            Opties tonen nu de pakketnamen: VIBEZCORE Smart Bead Bracelet
-            en VIBEZCORE Full Bundle (laatste met sub "Bracelet + 12-mo
-            Audio Library" voor inhoud-duidelijkheid). */}
-        <View style={s.productCard}>
-          <View style={s.productStatusRow}>
-            <View
-              style={[
-                s.productStatusDot,
-                { backgroundColor: '#E0B341' },
-              ]}
-            />
-            {/* Geen datum meer (operator, 2026-07-14): sep-datum gedropt,
-                communicatie is “Launching Fall 2026”. Goud, niet gedimd
-                (operator, 11 augustus 2026: "knop bracelet fall 2026 moet
-                heel duidelijk opvallen") — zelfde tint als de
-                "COMING FALL 2026"-badge in de onboarding en de
-                Activity-tab (#E0B341, "geen defect maar een
-                aankondiging"). */}
-            <Text style={[s.productStatusLabel, { color: '#E0B341' }]}>
-              EARLY BIRD · LAUNCHING FALL 2026
-            </Text>
-          </View>
-          <Text style={s.productTitle}>Smart Bead Bracelet</Text>
-          <Text style={s.productOneLiner}>
-            Secure the lowest Kickstarter price
-          </Text>
-          <Text style={s.productSubOneLiner}>
-            Limited units — first reserved, first served
-          </Text>
-
-          {/* Option A: Bracelet alone — outlined, lower-key */}
-          <PressScale
-            style={s.reserveOption}
-            onPress={() =>
-              openExternal('https://www.vibezcore.com/subscribe-bracelet')
-            }
-            accessibilityLabel="Reserve your spot for VIBEZCORE Smart Bead Bracelet"
-          >
-            <View style={s.reserveOptionLeft}>
-              <Text style={s.reserveOptionTitle}>Reserve your spot</Text>
-              <Text style={s.reserveOptionSub}>
-                VIBEZCORE Smart Bead Bracelet
-              </Text>
-            </View>
-            <Text style={s.reserveOptionArrow}>→</Text>
-          </PressScale>
-
-          {/* Option B: Bundle — BEST VALUE highlighted, order-bump styling.
-              Pakketnaam (VIBEZCORE Full Bundle) prominent + extra dim
-              regel onder met wat de bundle inhoudt. */}
-          <PressScale
-            style={s.reserveOptionBundle}
-            onPress={() =>
-              openExternal('https://www.vibezcore.com/subscribe-bundle')
-            }
-            accessibilityLabel="Reserve your spot for VIBEZCORE Full Bundle, bracelet plus 12 months Premium"
-          >
-            <View style={s.reserveOptionLeft}>
-              <View style={s.bundleInlineBadge}>
-                <Text style={s.bundleInlineBadgeText}>BEST VALUE</Text>
-              </View>
-              <Text style={s.reserveOptionTitle}>Reserve your spot</Text>
-              <Text style={s.reserveOptionSub}>VIBEZCORE Full Bundle</Text>
-              <Text style={s.reserveOptionSubFine}>
-                Bracelet + 12 months Premium
-              </Text>
-            </View>
-            <Text style={s.reserveOptionArrow}>→</Text>
-          </PressScale>
-
-          {/* Disclaimer — 2-regel volledig zoals voorheen, omdat dit
-              juridisch + emotioneel relevant is voor preorders. */}
-          <Text style={s.productCardDisclaimer}>
-            No credit card · No financial data · No purchase obligation
-          </Text>
-          <Text style={s.productCardDisclaimerSub}>
-            We only use your email to notify you before launch
-          </Text>
-        </View>
-
-        {/* Iter v186: Activate card verplaatst naar direct onder Sign in
-            form (hoger op de pagina, boven Get Started). Voorheen stond deze
-            hier onder. */}
-
-        {/* Iter v174 (2026-06-30): Invite-a-friend met officieel Share2-glyph
-            voor guests. Operator: "sharing moet duidelijk en altijd zichtbaar".
-            Gasten zien dit direct na Get Started — primaire growth-loop voor
-            pre-KS-launch awareness. */}
-        {/* SUPPORT — herbouwd naar de mockup (operator, 11 augustus 2026):
-            rijen met icoon + titel + onderschrift + chevron, i.p.v. de
-            oude losse "Invite a friend"-knop + een enkele dot-separated
-            tekstregel (Settings/About/FAQ/Contact support) die totaal niet
-            op de mockup leek. "About" is teruggezet (operator, zelfde dag,
-            later bericht: "ik zie die about tab nergens staan" — de
-            guest-view had 'm nergens, alleen ingelogde users zagen 'm via
-            Settings & Help).
-
-            "Settings" bleef toen bewust weg (niet in de mockup, enkel
-            bereikbaar via de __DEV__-link onderaan) — teruggedraaid
-            operator, 7 september 2026: "voor user de functies voor echte
-            users" — settings.tsx bevat inmiddels functies die precies
-            GASTEN nodig hebben (breath-onboarding opnieuw bekijken, welcome
-            opnieuw bekijken, gratis-sessie-status), en die zaten zo enkel
-            achter een verborgen dev-knop. Bovenaan de lijst: dit is
-            inmiddels een eersteklas ingang, geen bijzaak meer. */}
-        <Text style={s.supportSectionLabel}>SUPPORT</Text>
-        <View style={s.supportList}>
-          {/* Operator, 13 september 2026: "settings knop is weg, wil hem
-             terug met inhoud zoals het was" — herroept de 24e ronde. */}
-          <PressScale
-            style={s.supportRow}
-            onPress={() => router.navigate('/settings' as never)}
-            accessibilityLabel="Open settings"
-          >
-            <SettingsIcon size={18} color={C.accent} strokeWidth={2.2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.supportRowTitle}>Settings</Text>
-              <Text style={s.supportRowSub}>Playback, privacy, and more</Text>
-            </View>
-            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
-          </PressScale>
-          <View style={s.supportRowSep} />
-          <PressScale
-            style={s.supportRow}
-            onPress={shareInvite}
-            accessibilityLabel="Invite a friend to VIBEZCORE"
-          >
-            <UserPlus size={18} color={C.accent} strokeWidth={2.2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.supportRowTitle}>Invite a Friend</Text>
-              <Text style={s.supportRowSub}>
-                Share VIBEZCORE and get rewards
-              </Text>
-            </View>
-            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
-          </PressScale>
-          <View style={s.supportRowSep} />
-          <PressScale
-            style={s.supportRow}
-            onPress={() => router.navigate('/faq' as never)}
-            hitSlop={8}
-          >
-            <HelpCircle size={18} color={C.accent} strokeWidth={2.2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.supportRowTitle}>FAQ</Text>
-              <Text style={s.supportRowSub}>Common questions</Text>
-            </View>
-            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
-          </PressScale>
-          <View style={s.supportRowSep} />
-          <PressScale
-            style={s.supportRow}
-            onPress={() => router.navigate('/support' as never)}
-            hitSlop={8}
-          >
-            <Headphones size={18} color={C.accent} strokeWidth={2.2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.supportRowTitle}>Contact Support</Text>
-              <Text style={s.supportRowSub}>We're here to help</Text>
-            </View>
-            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
-          </PressScale>
-          <View style={s.supportRowSep} />
-          <PressScale
-            style={s.supportRow}
-            onPress={() => router.navigate('/legal/shipping' as never)}
-            hitSlop={8}
-          >
-            <Package size={18} color={C.accent} strokeWidth={2.2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.supportRowTitle}>Shipping & Returns</Text>
-              <Text style={s.supportRowSub}>
-                Info about delivery and returns
-              </Text>
-            </View>
-            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
-          </PressScale>
-          <View style={s.supportRowSep} />
-          <PressScale
-            style={s.supportRow}
-            onPress={() => router.navigate('/about' as never)}
-            accessibilityLabel="Learn about VIBEZCORE"
-            hitSlop={8}
-          >
-            <Info size={18} color={C.accent} strokeWidth={2.2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.supportRowTitle}>About VIBEZCORE</Text>
-              <Text style={s.supportRowSub}>
-                What we're building, and why
-              </Text>
-            </View>
-            <ChevronRight size={16} color="rgba(10,10,12,0.3)" strokeWidth={2.2} />
-          </PressScale>
-        </View>
-
-        {/* ── LEGAL FOOTER ── teruggebracht naar exact de 5 links uit de
-            mockup (operator, 11 augustus 2026) — Access/Shipping/Refund
-            zijn weg uit deze regel (Shipping leeft nu in de Support-rij
-            hierboven; Access en Refund waren geen onderdeel van de mockup
-            en blijven bereikbaar via hun eigen /legal/-route voor wie de
-            link kent, gewoon niet meer hier opgesomd). */}
-        <View style={s.legalFooter}>
-          <View style={s.legalLinkRow}>
-            <PressScale
-              onPress={() => router.navigate('/legal/terms' as never)}
-              hitSlop={8}
-              scaleTo={0.92}
-            >
-              <Text style={s.legalLink}>Terms</Text>
-            </PressScale>
-            <Text style={s.legalLinkSep}>·</Text>
-            <PressScale
-              onPress={() => router.navigate('/legal/privacy' as never)}
-              hitSlop={8}
-              scaleTo={0.92}
-            >
-              <Text style={s.legalLink}>Privacy</Text>
-            </PressScale>
-            <Text style={s.legalLinkSep}>·</Text>
-            <PressScale
-              onPress={() => router.navigate('/legal/cookies' as never)}
-              hitSlop={8}
-              scaleTo={0.92}
-            >
-              <Text style={s.legalLink}>Cookies</Text>
-            </PressScale>
-            <Text style={s.legalLinkSep}>·</Text>
-            <PressScale
-              onPress={() => router.navigate('/legal/health' as never)}
-              hitSlop={8}
-              scaleTo={0.92}
-            >
-              <Text style={s.legalLink}>Health Disclaimer</Text>
-            </PressScale>
-            <Text style={s.legalLinkSep}>·</Text>
-            <PressScale
-              onPress={() =>
-                router.navigate('/legal/audio-sessions' as never)
-              }
-              hitSlop={8}
-              scaleTo={0.92}
-            >
-              <Text style={s.legalLink}>Audio Disclaimer</Text>
-            </PressScale>
-          </View>
-          <Text style={s.legalCopy}>© VIBEZCORE 2026</Text>
-        </View>
-
-        {/* Iter 9dq (2026-06-02): dev-only Settings-link in signed-out
-            view. De normale Settings-link zit alleen in de ingelogde
-            Account-view, dus voor het wisselen van de Dev user-override
-            in test (bv. 'Free / Guest' vs 'Audio PRO') moest je eerst
-            inloggen. Met deze link kan een tester de override aanpassen
-            zonder eerst een account-roundtrip te doen. Verschijnt enkel
-            in __DEV__ builds — productie ziet 'm niet.
-            Operator, 13 september 2026: teruggezet, zie de toelichting
-            bij de andere twee Settings-links hierboven. */}
         {__DEV__ && (
           <PressScale
             onPress={() => router.navigate('/settings' as never)}
@@ -2340,14 +1583,14 @@ const s = StyleSheet.create({
   /* Blauw getint i.p.v. neutraal grijs (operator-mockup, 11 augustus
      2026, close-up: "kijk hier" — de kaart draagt duidelijk een blauwe
      achtergrond + rand, niet C.panel-grijs). */
+  /* Zelfde vlak als de lijsten (7 okt 2026), sluit aan onder de Sign in-rij. */
   authCard: {
-    backgroundColor: `rgba(${ROYAL_INDIGO_RGB},0.08)`,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: `rgba(${ROYAL_INDIGO_RGB},0.35)`,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 18,
-    marginBottom: 18,
+    paddingVertical: 16,
+    marginTop: -14,
+    marginBottom: 26,
   },
   /* Iter v149 v2 (2026-06-25): bracelet-code activate als eigen prominent
      card — gelijkwaardig aan SIGN IN card. Accent border + glow zodat
@@ -3176,7 +2419,7 @@ const s = StyleSheet.create({
      eronder"). */
   primaryBtn: {
     flexDirection: 'row',
-    backgroundColor: C.accent,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
@@ -3185,7 +2428,7 @@ const s = StyleSheet.create({
     marginTop: 22,
   },
   primaryBtnText: {
-    color: C.text,
+    color: '#1D1D1F',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
   },
@@ -3421,7 +2664,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   forgotLinkText: {
-    color: C.accent,
+    color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
     fontFamily: BrandFonts.semibold,
     letterSpacing: -0.1,
