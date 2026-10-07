@@ -3554,6 +3554,9 @@ function AudioScreen({
             accessibilityRole="button"
             accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
           >
+            {/* Operator, 7 okt 2026: duidelijk apart blok — label boven de
+                foto, links; alles in een eigen kader met afgeronde hoeken. */}
+            <Text style={s.braceletCardEyebrow}>LAUNCHING FALL 2026</Text>
             <Image
               /* Productfoto (bracelet op zwart, zelfde als de bracelet-
                  pagina): staat gecentreerd, dus past in elke uitsnede. */
@@ -3561,7 +3564,6 @@ function AudioScreen({
               style={s.braceletCardImg}
               resizeMode="cover"
             />
-            <Text style={s.braceletCardEyebrow}>LAUNCHING FALL 2026</Text>
             <View style={s.braceletCardRow}>
               <Text style={s.braceletCardTitle}>Smart Bead Bracelet</Text>
               <Text style={s.braceletCardChev}>›</Text>
@@ -3880,15 +3882,25 @@ function AudioScreen({
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   /* Smart Bead Bracelet-kaart onder de pijlers (operator, 7 okt 2026). */
-  braceletCard: { marginHorizontal: 16, marginTop: 12, marginBottom: 20 },
+  braceletCard: {
+    marginHorizontal: 16,
+    marginTop: 28,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 22,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
   braceletCardImg: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: 18,
-    backgroundColor: C.surface,
+    marginTop: 12,
+    marginBottom: 14,
+    borderRadius: 14,
+    backgroundColor: '#000000',
   },
   braceletCardEyebrow: {
-    marginTop: 12,
     color: C.dim,
     fontSize: 11,
     fontFamily: BrandFonts.bold,
