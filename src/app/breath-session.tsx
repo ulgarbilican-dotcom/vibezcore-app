@@ -2751,7 +2751,12 @@ export function BreathSession() {
               rings={false}
               glowBoost
             />
-          ) : awaitingAutostart || sessionEnded ? null : st.key === 'calm' ? (
+          ) : awaitingAutostart ? null : st.key === 'calm' ? (
+            /* Operator, 7 okt 2026 ("vroegtijdig end session: zelfde popup maar
+               zonder glaseffect"): `sessionEnded` verborg hier ook de figuur,
+               dus achter de paywall stond enkel zwart en het glas oogde vlak.
+               Na een volle 30 s bleef de figuur wél staan — nu bij vroeg
+               stoppen ook. `sessionEnded` blijft de START-knop verbergen. */
             <LotusPacer
               size={ART_IDLE * (st.artScale ?? 1)}
               accent={accent}
