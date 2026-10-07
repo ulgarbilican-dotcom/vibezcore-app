@@ -88,6 +88,23 @@ build — geen Expo Go). Twee gelijkwaardige productkernen:
 "Audio first" = audio is *eerder verkoopbaar* (backend + content bestaan al),
 NIET belangrijker. Beide zijn kern.
 
+**GEWIJZIGD 7 oktober 2026 (operator: "doordat we de smartwatch erbij kunnen
+betrekken is mijn plan helemaal veranderd"):**
+- **Kern nu = de Premium-app:** Breathwork + State Control op **telefoon en
+  smartwatch** (Apple Watch / Wear OS) + Audio Library. Focus van het werk
+  ligt hier (o.a. hartslag van het horloge, iOS-build).
+- **Smart Bead Bracelet = premium upgrade (upsell), "nature meets tech":**
+  - tech: eigen trilmotor, ritme afgestemd op je hartslag, los van de telefoon;
+  - fashion: een sieraad met **verwisselbare kralensets** (= terugkerend
+    verdienmodel naast Premium) in stainless steel met **echte edelstenen**;
+  - wellness: dezelfde State Control-sessies, discreet, de hele dag.
+  - Doelgroep: tech-, fashion- en health/wellness-community.
+- **Edelstenen = natuur, vakmanschap, schoonheid, persoonlijke betekenis —
+  NOOIT helende, kalmerende of energetische krachten** (operator: "wij koppelen
+  dat niet aan genezende krachten"). Het effect komt van het ritme.
+- Bracelet nog niet gelanceerd ("Launching Fall 2026"); in de app bereikbaar als
+  upgrade, geen eigen tab.
+
 ### Gast-first principe (welkomstscherm, GEEN poort)
 [GEWIJZIGD 19 mei 2026 — operator-beslissing. Vervangt de oude regel
 "geen welkomstscherm".]

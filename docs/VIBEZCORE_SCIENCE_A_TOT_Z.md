@@ -294,6 +294,14 @@ pace": meten / zelf invullen / gemiddelde).
 
 ## 5. Smart Bead Bracelet
 
+- **Rol (operator, 7 okt 2026):** premium upgrade naast de Premium-app,
+  "nature meets tech" — tech (eigen trilmotor, ritme op je hartslag),
+  fashion (verwisselbare kralensets in stainless steel, echte edelstenen),
+  wellness (State Control, discreet). Edelstenen staan voor natuur en
+  vakmanschap, nooit voor een werking.
+- **Wetenschap:** de werking zit in het ritme (§3). Dat de bracelet beter
+  werkt dan een horloge is NIET getest en wordt niet beweerd.
+
 - Hardware: nRF52832 + DRV2605L + LRA. BLE-contract spec v2.3 (bindend):
   modus + duur + start/stop; de bracelet draait autonoom.
 - **Nog niet persoonlijk:** het contract heeft geen veld voor een
@@ -312,6 +320,7 @@ pace": meten / zelf invullen / gemiddelde).
 | Designed to help you feel calmer / more alert / ready to rest | Fall asleep faster |
 | Tuned to your own heartbeat · Starts at your resting heart rate | Measures your heart health / stress / HRV |
 | **heart rate** / **resting heart rate** (zoals Apple Health) | "pulse" — verwarrend (operator, 7 okt 2026) |
+| Edelstenen: natural, genuine, crafted, meaningful to you · "nature meets tech" | Edelstenen met helende, kalmerende of energetische kracht ("rose quartz calms") |
 | Binaural beats (techniek) | Mindfulness · meditation · yoga nidra |
 | Not a medical device | Diagnose, behandelen, voorkomen |
 
