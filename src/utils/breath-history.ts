@@ -164,6 +164,12 @@ async function persist(): Promise<void> {
   } catch {}
 }
 
+/** Wacht tot de historiek ingelezen is (Breath-tab: onboarding-beslissing
+ *  zonder vaste wachttijd, 8 okt 2026). */
+export function ensureBreathHistoryLoaded(): Promise<void> {
+  return load();
+}
+
 /** Opnieuw inlezen na in- of uitloggen. De emmer verandert dan, en zonder
  *  dit blijft de vorige gebruiker in beeld tot de app herstart. */
 export async function reloadBreathHistory(): Promise<void> {

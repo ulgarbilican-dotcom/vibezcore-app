@@ -47,8 +47,8 @@ import {
   type BreathState,
   type BreathStateKey,
 } from '@/data/breath-states';
-import { useBreathHistory } from '@/utils/breath-history';
-import { useSetting } from '@/utils/settings';
+import { ensureBreathHistoryLoaded, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
+import { ensureSettingsLoaded, getSetting, useSetting } from '@/utils/settings';
 import {
   consumeBreathIntroSkip,
   consumeBreathOnboardingRedirectSkip,
@@ -680,6 +680,19 @@ export default function BreathScreen() {
      laden — beslissen op nog lege data stuurt een bestaande gebruiker
      onterecht naar de intro. */
   const [onboardingDoneAt] = useSetting('breathOnboardingCompletedAt');
+  const [onbGate, setOnbGate] = useState<'pending' | 'show'>('pending');
+  /* Vangnet: blijft dit tabblad gemonteerd terwijl de onboarding of
+     "Maybe later" loopt, dan mag het nooit donker blijven bij terugkeer. */
+  useFocusEffect(
+    useCallback(() => {
+      setOnbGate((g) => {
+        if (g === 'show') return g;
+        if (getSetting('breathOnboardingCompletedAt') !== null) return 'show';
+        if (getBreathHistory().length > 0) return 'show';
+        return g;
+      });
+    }, []),
+  );
   const flagRef = useRef(onboardingDoneAt);
   flagRef.current = onboardingDoneAt;
   const historyLenRef = useRef(history.length);
@@ -691,13 +704,26 @@ export default function BreathScreen() {
        welcome breathwork"). Synchroon, geen AsyncStorage, dus geen race
        met de vlag hieronder mogelijk — wie hier met deze vlag aankomt mag
        nooit terug de intro in, punt uit. */
-    if (consumeBreathOnboardingRedirectSkip()) return;
-    const id = setTimeout(() => {
-      if (flagRef.current !== null) return;
-      if (historyLenRef.current > 0) return;
-      router.replace('/breath-welcome');
-    }, 700);
-    return () => clearTimeout(id);
+    if (consumeBreathOnboardingRedirectSkip()) {
+      setOnbGate('show');
+      return;
+    }
+    /* Operator, 8 okt 2026 ("eerst gewoon breathwork, daarna onboarding"):
+       was een vaste wachttijd van 700 ms terwijl dit scherm al zichtbaar
+       stond. Nu: scherm blijft donker tot instellingen + historiek echt
+       ingelezen zijn, dan meteen beslissen — geen flits meer. */
+    let alive = true;
+    Promise.all([ensureSettingsLoaded(), ensureBreathHistoryLoaded()]).then(() => {
+      if (!alive) return;
+      if (getSetting('breathOnboardingCompletedAt') === null && getBreathHistory().length === 0) {
+        router.replace('/breath-welcome');
+      } else {
+        setOnbGate('show');
+      }
+    });
+    return () => {
+      alive = false;
+    };
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
@@ -1283,6 +1309,13 @@ export default function BreathScreen() {
 
       </View>
         </>
+      )}
+      {/* Donker tot de onboarding-beslissing gevallen is (zie hierboven). */}
+      {onbGate === 'pending' && (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: Brand.bg, zIndex: 999, elevation: 999 }]}
+        />
       )}
     </SafeAreaView>
   );
