@@ -18,7 +18,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -81,7 +81,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
       void showVibezAlert({
         title: 'Active on your account, not on this device',
         message:
-          "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore Purchases again.",
+          `Your VIBEZCORE subscription is active, but the ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play account'} on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore Purchases again.`,
       });
     } else if (result.ok) {
       void showVibezAlert({

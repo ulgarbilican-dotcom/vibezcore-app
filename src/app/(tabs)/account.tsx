@@ -921,7 +921,7 @@ export default function AccountScreen() {
         void showVibezAlert({
           title: 'Active on your account, not on this device',
           message:
-            "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.",
+            `Your VIBEZCORE subscription is active, but the ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play account'} on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.`,
         });
       } else {
         void showVibezAlert({
@@ -1282,7 +1282,7 @@ export default function AccountScreen() {
     void showVibezAlert({
       title: 'Delete account?',
       message:
-        "This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — you must cancel via Google Play (or App Store) Subscriptions separately.\n\nThis cannot be undone.",
+        "This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — cancel it separately in your App Store or Google Play subscriptions.\n\nThis cannot be undone.",
       buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1391,7 +1391,7 @@ export default function AccountScreen() {
           <SupportGroup />
           <AboutLegalGroups />
           {/* Afmelden en verwijderen onderaan, apart — zoals in Instellingen. */}
-          <Group footer="Deleting your account is permanent. It does not cancel an active subscription — do that in your Google Play or Apple ID settings.">
+          <Group footer={`Deleting your account is permanent. It does not cancel an active subscription — do that in your ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play'} settings.`}>
             <Row icon={LogOut} title="Sign out" onPress={onSignOut} />
             <Row
               icon={Trash2}

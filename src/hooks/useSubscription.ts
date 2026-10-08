@@ -118,6 +118,14 @@ function notifyAll(status: SubscriptionStatus | null): void {
   }, 0);
 }
 
+/* Audit 8 okt 2026: een bewaarde status waarvan de einddatum voorbij is,
+   telt niet meer als actief — anders bleef je offline eeuwig Premium. */
+function withoutExpired(st: SubscriptionStatus): SubscriptionStatus {
+  if (!st.active || !st.validUntil) return st;
+  const end = Date.parse(st.validUntil);
+  return Number.isFinite(end) && end < Date.now() ? { ...st, active: false } : st;
+}
+
 async function persistCache(status: SubscriptionStatus): Promise<void> {
   try {
     const payload: CachedShape = { ...status, cachedAt: Date.now() };
@@ -180,7 +188,7 @@ async function loadCacheOnce(): Promise<void> {
             braceletModel: obj.braceletModel,
             isTrialing: obj.isTrialing,
           };
-          notifyAll(status);
+          notifyAll(withoutExpired(status));
         }
       }
     } catch {
@@ -344,7 +352,7 @@ async function fetchStatus(): Promise<void> {
       ? rcStatus
       : backendStatus
         ? backendStatus
-        : (cachedStatus ?? { active: false });
+        : withoutExpired(cachedStatus ?? { active: false });
 
     /* Bracelet-info uit backend WANNEER backend antwoordde. Backend fail →
        behoud vorige waarde uit cachedStatus. */

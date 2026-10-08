@@ -25,6 +25,7 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { requestScrollTo } from '@/utils/scroll-intent';
 import MembershipPlans from '@/components/MembershipPlans';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -275,6 +276,12 @@ export default function SubscribeScreen() {
      async-ververste useSubscription-cache, die deze waarde nog niet
      synchroon kent), of DEZE aankoop een trial was. */
   const [purchaseWasTrial, setPurchaseWasTrial] = useState(false);
+  /* Audit 8 okt 2026: wie al lid is en hier belandt (bv. vanuit een
+     upsell), krijgt geen "Thank you for subscribing" / "trial has started". */
+  const [alreadyMember, setAlreadyMember] = useState(false);
+  /* "Al geabonneerd op dit store-account": de foutmelding vraagt om te
+     herstellen of in te loggen — dan ook die knoppen tonen (audit 8 okt 2026). */
+  const [ownedError, setOwnedError] = useState(false);
   /* Iter v194 (2026-07-04): pre-emptive check — als user al een actieve
      audio-subscription heeft, skip de aankoop-flow direct naar success.
      Voorkomt Google Play native "Fout — Je bent al geabonneerd" popup
@@ -295,6 +302,7 @@ export default function SubscribeScreen() {
          useSubscription-cache al ververst, dus isTrialing is hier wél
          betrouwbaar. */
       setPurchaseWasTrial(alreadyTrialing);
+      setAlreadyMember(true);
       setPhase('done');
     }
   }, [alreadyIsPro, alreadyTrialing, phase, linkingAccount]);
@@ -509,6 +517,7 @@ export default function SubscribeScreen() {
           "A VIBEZCORE subscription is already active on this Google/Apple account. Sign in to the VIBEZCORE account you used for that purchase, or contact support if you're not sure which account it belongs to."
         );
         setErrDebug(`already_owned · no auto-restore (v236 security)`);
+        setOwnedError(true);
         setPhase('error');
         return;
       }
@@ -1058,7 +1067,7 @@ export default function SubscribeScreen() {
         void showVibezAlert({
           title: 'Active on your account, not on this device',
           message:
-            "Your VIBEZCORE subscription is active, but the Google Play (or Apple ID) account on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.",
+            `Your VIBEZCORE subscription is active, but the ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play account'} on this device doesn't show the purchase. Switch to the account you used to subscribe, then tap Restore purchases again.`,
         });
       } else {
         void showVibezAlert({
@@ -1162,11 +1171,17 @@ export default function SubscribeScreen() {
           <View style={s.checkCircle}>
             <Text style={s.checkText}>✓</Text>
           </View>
-          <Text style={s.doneTitle}>Welcome to VIBEZCORE Premium</Text>
+          <Text style={s.doneTitle}>
+            {alreadyMember ? "You're a VIBEZCORE Premium member" : 'Welcome to VIBEZCORE Premium'}
+          </Text>
           <Text style={s.doneThanks}>
-            {purchaseWasTrial
-              ? 'Your 7-day free trial has started.'
-              : 'Thank you for subscribing.'}
+            {alreadyMember
+              ? purchaseWasTrial
+                ? 'Your free trial is active.'
+                : 'Your membership is active.'
+              : purchaseWasTrial
+                ? 'Your free trial has started.'
+                : 'Thank you for subscribing.'}
           </Text>
 
           <View style={s.donePerks}>
@@ -1283,6 +1298,27 @@ export default function SubscribeScreen() {
             </Text>
           )}
 
+          {ownedError ? (
+            <>
+              <AnimatedPressable
+                style={[s.btnPrimary, tryAgainPress.pressStyle]}
+                onPress={() => void handleRestore()}
+                onPressIn={tryAgainPress.onPressIn}
+                onPressOut={tryAgainPress.onPressOut}
+              >
+                <Text style={s.btnPrimaryText}>Restore purchases</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={[s.linkBtn, contactSupportPress.pressStyle]}
+                onPress={() => {
+                  requestScrollTo('account-top');
+                  router.replace('/account' as never);
+                }}
+              >
+                <Text style={s.linkText}>Sign in</Text>
+              </AnimatedPressable>
+            </>
+          ) : (
           <AnimatedPressable
             style={[s.btnPrimary, tryAgainPress.pressStyle]}
             onPress={() => {
@@ -1297,6 +1333,7 @@ export default function SubscribeScreen() {
           >
             <Text style={s.btnPrimaryText}>Try again</Text>
           </AnimatedPressable>
+          )}
 
           <AnimatedPressable
             style={[s.linkBtn, contactSupportPress.pressStyle]}
