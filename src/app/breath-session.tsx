@@ -1892,6 +1892,11 @@ export function BreathSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstantSession]);
   const [paywall, setPaywall] = useState(false);
+  /* Operator, 8 okt 2026 ("ik wil die foute lotus in een vierkante kaart
+     nooit meer zien"): tussen stoppen en het verdwijnen van de sessielaag
+     tekende dit scherm één moment zijn rusttoestand. Zodra we vertrekken,
+     ligt er een effen vlak over — wat eronder verandert, is niet te zien. */
+  const [leaving, setLeaving] = useState(false);
   useEffect(() => {
     if (params.paywall === '1') setPaywall(true);
   }, [params.paywall]);
@@ -2327,6 +2332,9 @@ export function BreathSession() {
      de CHOOSE YOUR MODE-pagina (`/breath`), hoe je de sessie ook binnenkwam
      (setup, agenda, onboarding, protocol, kortere link). */
   const leaveSession = useCallback(() => {
+    /* Elke uitgang: eerst het effen vlak erover (8 okt 2026), zodat een
+       rusttoestand van dit scherm nooit kort in beeld komt. */
+    setLeaving(true);
     /* Operator, 14 september 2026: "ik kom altijd uit op de Breathe/Build/
        Become-hero met Explore modes-knop" — dat is (tabs)/breath.tsx's
        eigen inline "welkomstbeeld" (mandala/gezichten-drempel), gestuurd
@@ -2389,6 +2397,7 @@ export function BreathSession() {
       setPaywall(true);
       return;
     }
+    setLeaving(true);
     setSessionEnded(true);
     stop();
     /* Operator, 11 september 2026: "de oude selectiepagina bestaat nog,
@@ -3243,9 +3252,16 @@ export function BreathSession() {
           welcome.tsx had dezelfde popup nodig; nu één bron in
           `PremiumPaywallModal.tsx` i.p.v. twee kopieën die uit elkaar
           konden gaan lopen). */}
+      {leaving ? (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#050507', zIndex: 999 }]}
+        />
+      ) : null}
       <PremiumPaywallModal
         visible={paywall}
         onClose={() => {
+          setLeaving(true);
           setPaywall(false);
           /* Vroeg gestopte voorproef staat nog gepauzeerd (zie requestStop):
              nu echt stoppen, daarna terug zoals altijd. */
