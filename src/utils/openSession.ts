@@ -21,7 +21,7 @@ import {
 import { showAccountWall } from '@/components/AccountWallModal';
 import type { Session } from '@/data/audio-library-data';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 /* Operator, 26 september 2026 ("weer zwart scherm, nu bij een andere
    gratis sessie — kijk alle open-sessie-paden na"): de crash zat NIET in
@@ -37,7 +37,13 @@ import { useCallback, useEffect, useState } from 'react';
    zelfde bekende, al elders in deze codebase gedocumenteerde oplossing:
    de navigatie één tick uitstellen (`setTimeout(...,0)`) zodat React
    eerst het huidige scherm afrondt vóór `/player` begint te mounten. */
+/* Dubbeltik-bescherming (audit 8 okt 2026): twee snelle tikken zetten
+   anders twee spelers op de stapel. */
+let lastOpenAt = 0;
 export function openSession(sess: Session) {
+  const now = Date.now();
+  if (now - lastOpenAt < 600) return;
+  lastOpenAt = now;
   setTimeout(() => {
     router.push({
       pathname: '/player',
@@ -67,21 +73,13 @@ export function openSession(sess: Session) {
  *  re-rendert. */
 export function useGatedOpenSession() {
   const { isPro, isTrialing } = useSubscription();
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const t = await getToken();
-      if (!cancelled) setIsSignedIn(!!t);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   return useCallback(
-    (session: Session) => {
+    async (session: Session) => {
+      /* Audit 8 okt 2026: inlogstatus op het moment van de tik — het
+         Library-tabblad blijft gemonteerd, dus een eenmalige check bij het
+         openen ervan raakte achterhaald na in- of uitloggen. */
+      const isSignedIn = !!(await getToken());
       /* Operator, 7 okt 2026: "voor premium users is alles unlocked" — een
          Premium-gebruiker krijgt nooit de account-muur. Heeft hij (gast-
          aankoop) nog geen account, dan vraagt de speler daarna in één stap
@@ -105,7 +103,7 @@ export function useGatedOpenSession() {
         openSession(session);
       }
     },
-    [isSignedIn, isPro, isTrialing],
+    [isPro, isTrialing],
   );
 }
 

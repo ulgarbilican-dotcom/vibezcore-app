@@ -25,6 +25,7 @@ import { BlurView } from 'expo-blur';
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
 import {
   getEffectiveTier,
+  resolveAccess,
   tierBadgeColor,
   tierBadgeLabel,
 } from '@/utils/access-tier';
@@ -710,16 +711,20 @@ function AudioScreen({
      inloggen, niet alleen via Account-tab). `null` = nog aan 't
      checken — banner verbergen om flicker te voorkomen. */
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const t = await getToken();
-      if (!cancelled) setIsSignedIn(!!t);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  /* Audit 8 okt 2026: bij elke focus opnieuw — het tabblad blijft
+     gemonteerd, dus in- of uitloggen op Profile kwam hier anders niet aan. */
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const t = await getToken();
+        if (!cancelled) setIsSignedIn(!!t);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   /* ── Bracelet-only PRO landing-flow (operator 2026-05-31, v3) ──
      Voor BRACELET-ONLY PRO users (ingelogd, bracelet maar GEEN audio
@@ -2857,7 +2862,7 @@ function AudioScreen({
                                     'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
                                   Share.share({
                                     title: 'VIBEZCORE',
-                                    message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to more than 27 free full sessions: ${url}`,
+                                    message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to free full sessions: ${url}`,
                                     url,
                                   }).catch(() => {});
                                 }}
@@ -3231,7 +3236,7 @@ function AudioScreen({
                           key={sess.url}
                           session={sess}
                           photo={photo}
-                          canPlay={sess.free || hasSub}
+                          canPlay={resolveAccess(sess, !!isSignedIn || sub.isPro, sub.isPro, sub.isTrialing) === 'allowed'}
                           onPress={() => handleSessionPress(sess)}
                           isFavorite={favorites.has(sess.url)}
                           onToggleFav={() => toggleFavorite(sess)}
@@ -3296,7 +3301,7 @@ function AudioScreen({
                                   key={sess.url}
                                   session={sess}
                                   photo={info.photo}
-                                  canPlay={sess.free || hasSub}
+                                  canPlay={resolveAccess(sess, !!isSignedIn || sub.isPro, sub.isPro, sub.isTrialing) === 'allowed'}
                                   onPress={() => handleSessionPress(sess)}
                                   isFavorite={favorites.has(sess.url)}
                                   onToggleFav={() => toggleFavorite(sess)}

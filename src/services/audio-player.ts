@@ -398,9 +398,20 @@ function onStatus(st: AudioStatus): void {
      Threshold check ipv simpele tick-counter: na een seek (skip forward
      5min) willen we ook direct opnieuw schrijven, niet "wachten op 10s
      normale playback". */
+  /* Audit 8 okt 2026: na de voorproef-grens mag niets de audio laten
+     doorspelen — ook de knoppen op het vergrendelscherm of een koptelefoon
+     roepen de native play() rechtstreeks aan. */
+  if (state.previewBlocked && isPlayingNow) {
+    try {
+      player?.pause();
+    } catch {}
+  }
   if (
     isPlayingNow &&
     state.session &&
+    /* Voorproef-sessies horen niet in "Last listened" (audit 8 okt 2026):
+       anders hervatte "Continue" op 0:50 en kwam de betaalmuur 10 s later. */
+    !state.preview &&
     /* Iter 9dq v119 (2026-06-04): skip periodic-save voor auto-played
        sessies tot user interacteert. */
     !loadedWithAutoStart &&
@@ -631,6 +642,12 @@ export async function loadSession(
   // Iter 9dq v160: urlEq i.p.v. === voor de zekerheid (encoded vs decoded
   // mismatch zou anders een onnodige re-load veroorzaken).
   if (state.session?.url && player && urlEq(state.session.url, session.url)) {
+    /* Audit 8 okt 2026: dezelfde sessie, maar de gebruiker is intussen
+       Premium (aankoop, inloggen, of de status kwam pas na de start binnen)
+       → de voorproef-grens weg, zonder herladen. */
+    if (state.preview && !opts.preview) {
+      setState({ preview: false, previewBlocked: false });
+    }
     return;
   }
 
@@ -786,6 +803,9 @@ export async function resumeAudio(): Promise<void> {
   /* Iter 9dq v119 (2026-06-04): expliciete user-resume/play =
      engagement-signaal → auto-start flag clearen. */
   loadedWithAutoStart = false;
+  /* Opnieuw afspelen na "Session complete" (bv. vanuit de mini-player):
+     het afsluitpaneel hoort dan weg (audit 8 okt 2026). */
+  if (state.endedPanel) setState({ endedPanel: null });
   try {
     player.play();
   } catch {}

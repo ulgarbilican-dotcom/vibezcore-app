@@ -363,7 +363,7 @@ export default function PlayerScreen() {
     try {
       await Share.share({
         title: 'VIBEZCORE',
-        message: `I'm listening to "${session.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to more than 27 free full sessions: ${url}`,
+        message: `I'm listening to "${session.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to free full sessions: ${url}`,
         url,
       });
     } catch {}
@@ -682,7 +682,8 @@ export default function PlayerScreen() {
               {/* Iter v189 (2026-07-02): "PREVIEW · X sec left" tijdens
                   preview-mode. Communiceert de 60-sec cap visueel zodat user
                   niet verrast wordt door de auto-pause. */}
-              {usePreview && (
+              {/* playerState.preview: ook juist na "Play next" in een Pro-sessie (audit 8 okt 2026). */}
+              {playerState.preview && (
                 <Text style={s.previewCountdown}>
                   PREVIEW · {Math.max(0, 60 - Math.floor(playerState.positionSec))}s left
                 </Text>
@@ -1004,9 +1005,13 @@ export default function PlayerScreen() {
                 deze copy-fix voorkomt in elk geval dat de PAYWALL zelf een
                 belofte doet die niet klopt met het bedoelde model. */}
             <Text style={s.modalBody}>
-              {isBraceletOwner && !realIsPro && !isBundleUser
-                ? 'Add the Audio Library to complete your VIBEZCORE system.'
-                : 'Start your 7-day free trial to unlock more sessions.'}
+              {/* Audit 8 okt 2026: wie al in de proefperiode zit, krijgt geen
+                 "start your trial" — de volledige bibliotheek komt na de trial. */}
+              {isTrialing
+                ? 'The full Audio Library unlocks when your trial ends and your membership starts.'
+                : isBraceletOwner && !realIsPro && !isBundleUser
+                  ? 'Add the Audio Library to complete your VIBEZCORE system.'
+                  : 'Start your free trial to unlock more sessions.'}
               {'\n\n'}
               Not ready? Browse Free Picks to keep listening for free.
             </Text>
@@ -1142,9 +1147,9 @@ function SpeedBtn({
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={`Playback speed ${rate}x`}
-      style={[s.extraBtn, { alignItems: 'center' }]}
+      style={[s.extraBtn, { alignItems: 'center', width: 52 }]}
     >
-      <Text style={s.speedText}>{`${Number.isInteger(rate) ? rate : rate.toFixed(rate * 10 % 1 === 0 ? 1 : 2)}×`}</Text>
+      <Text style={s.speedText} allowFontScaling={false}>{`${Number.isInteger(rate) ? rate : rate.toFixed(rate * 10 % 1 === 0 ? 1 : 2)}×`}</Text>
     </Pressable>
   );
 }
