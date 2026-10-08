@@ -50,7 +50,9 @@ export const TAB_BAR_HEIGHT = 64;
    `contentContainerStyle.paddingBottom` erop kunnen afstemmen.
    Operator, 15 september 2026: "mag iets hoger, nu slecht zichtbaar" (64
    → 76), direct daarna: "doe dubbel zo hoog" — × 2 op die 76. */
-export const MINI_PLAYER_HEIGHT = 152;
+/* Operator, 8 okt 2026 ("die player blijft overal in de weg staan"):
+   152 → 88 — duidelijk zichtbaar, maar geen kwart van het scherm meer. */
+export const MINI_PLAYER_HEIGHT = 88;
 
 /* Operator, 26 september 2026 (accentkleur-wissel, audio): Signal Blue
    (SIGNAL_BLUE) was hier de "nu actief"-voortgangslijn — exact de
@@ -219,7 +221,7 @@ export function MiniPlayer({
          de balk (net onder de voortgangslijn) — de klassieke "sleep/tik
          omhoog"-positie, meteen het eerste wat opvalt. */}
       <Pressable style={s.expandHint} onPress={onExpand} hitSlop={8} accessibilityLabel="Open player">
-        <ChevronUp size={20} color={C.dim} strokeWidth={3} />
+        <ChevronUp size={16} color={C.dim} strokeWidth={3} />
       </Pressable>
 
       <AnimatedPressable
@@ -278,7 +280,7 @@ const s = StyleSheet.create({
   },
   expandHint: {
     alignItems: 'center',
-    paddingTop: 4,
+    paddingTop: 2,
   },
   row: {
     flex: 1,
@@ -291,8 +293,8 @@ const s = StyleSheet.create({
      balkhoogte (art/knop groter, tekst groter) i.p.v. een hoge balk met
      dezelfde kleine iconen er verloren in te laten staan. */
   art: {
-    width: 76,
-    height: 76,
+    width: 52,
+    height: 52,
     borderRadius: 10,
     overflow: 'hidden',
   },
@@ -300,21 +302,21 @@ const s = StyleSheet.create({
   body: { flex: 1 },
   /* Prominent Body-rol, opgeschaald. */
   title: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '500',
   },
   series: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '400',
-    marginTop: 3,
+    marginTop: 2,
   },
   /* Operator, 26 september 2026 ("kleine player moet ook nieuwe
      accentkleur"): was nog ROYAL_INDIGO (navy), gemist in de eerdere
      Bio-Teal-sweep omdat dit een lokale const was, geen theme-import. */
   playBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: AudioAccent,
     alignItems: 'center',
     justifyContent: 'center',

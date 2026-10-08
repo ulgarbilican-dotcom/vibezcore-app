@@ -50,6 +50,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
+import { usePlayerState } from '@/services/audio-player';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -129,11 +131,13 @@ export default function ActivityScreen() {
   const flashFor = (id: string) => (flash?.id === id ? flash.n : undefined);
   const pulse = useRestingPulse();
   const [rhythmOpen, setRhythmOpen] = useState(false);
+  /* Ruimte onder de laatste kaart zolang de mini-speler zichtbaar is. */
+  const playerState = usePlayerState();
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, playerState.session && { paddingBottom: 24 + MINI_PLAYER_HEIGHT + 12 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Operator, 29 september 2026 ("i.p.v. de foto moet een apple
