@@ -121,8 +121,11 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 64 | "Already owned"-fout → knoppen Restore purchases + Sign in | A16 | ⏳ |
 | 65 | Speler op kleine telefoon (≤ 700 dp hoog) → knoppen volledig zichtbaar | A16 | ⏳ |
 | 66 | Grote speler: hoes groter (164 → 210), voortgangsbalk + knoppen lager | A16 | ✅ operator: "perfect zo is het ok" (`2449b73`, `899357f`) |
+| 67 | Toegang: free account/gast = 10 sessies; de 17 andere eerste sessies tonen FREE WITH TRIAL en openen het trial-blad (27 sessies, Breathwork, State Control; geen "No credit card") | A16 | ✅ operator: "goed" (`c06cc02`, `3d0a914`) |
+| 67b | Trial-blad → See plans → plankeuze (niet meteen de kassa) | A16 | ❌ startte jaarkassa (`?tier=yearly` = auto-checkout; in dev nep-kassa → foutmelding) → fix `88c8374` → ✅ |
+| 67c | Planscherm: bij Yearly regel "Trial includes 27 audio sessions. Full library after."; kleine lettertjes per store (Android Google Play, iOS Apple-tekst), aanrekenmoment volgt trial | A16 | ✅ operator: "ok" (`dec187c`, `44ace38`); iOS-tekst ⏳ iPhone |
 
-**Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), toegangsmodel account-tier vs trial + State Control in trial, account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
+**Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |
