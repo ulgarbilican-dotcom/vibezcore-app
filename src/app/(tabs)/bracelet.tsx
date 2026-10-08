@@ -58,8 +58,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import BraceletControl from '../bracelet-control';
-import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
-import { usePlayerState } from '@/services/audio-player';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
@@ -122,8 +120,6 @@ function photoFrame(w: number, h: number, textTop: number | null) {
 function StateControlIntro({ onDone }: { onDone: () => void }) {
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const [textTop, setTextTop] = useState<number | null>(null);
-  /* Knop en tekst boven de mini-speler houden (8 okt 2026). */
-  const playerState = usePlayerState();
   const ctaScale = useSharedValue(1);
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],
@@ -196,7 +192,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       {/* Zelfde plaatsing als het Audio Library-intro ((tabs)/index.tsx
           `introTextWrap`): 34 boven de tabbalk, géén extra onderste
           veilige zone — die zit al in de tabbalk (operator, 5 okt 2026). */}
-      <View style={[s.introWrap, playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT }]}>
+      <View style={s.introWrap}>
         <View
           style={s.stackTitle}
           onLayout={(e) => {

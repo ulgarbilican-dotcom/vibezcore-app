@@ -14,8 +14,6 @@ import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
-import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
-import { usePlayerState } from '@/services/audio-player';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { BraceletMode } from '@/services/ble-contract';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
@@ -718,11 +716,6 @@ export default function AccountScreen() {
      (64px) eronder was 't praktisch ok, maar 't was niet future-proof.
      Nu dynamisch zodat content altijd boven safe-zone blijft. */
   const safeInsets = useSafeAreaInsets();
-  /* Operator, 8 okt 2026: met een geminimaliseerde sessie stond de mini-
-     speler vóór "Delete account" onderaan — extra ruimte, zelfde recept
-     als breath.tsx. */
-  const playerState = usePlayerState();
-  const miniPad = playerState.session ? MINI_PLAYER_HEIGHT + 12 : 0;
 
   /* Iter 9dq v110 (2026-06-04): scroll-ref voor signed-out KeyboardAware-
      ScrollView. Listent op scroll-intent 'account-top' (gefired vanuit
@@ -1366,7 +1359,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
         <KeyboardAwareScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) + miniPad }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}
@@ -1420,7 +1413,7 @@ export default function AccountScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <KeyboardAwareScrollView
         ref={signedOutScrollRef}
-        contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom + miniPad }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}

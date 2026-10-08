@@ -40,6 +40,7 @@ import {
   subscribeChooseScreenVisible,
   subscribeStateControlIntroVisible,
 } from '@/utils/state-control-ui';
+import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { router, Tabs, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -239,6 +240,23 @@ export default function TabLayout() {
            terugknop op het verborgen audioscherm — dat is nog steeds het
            eerste scherm van de groep, ook al staat het niet in de balk. */
         backBehavior="initialRoute"
+        /* Operator, 8 okt 2026 ("die player blijft overal in de weg staan
+           voor CTA's — hoe zou Apple dat doen"): de mini-speler hoort bij
+           de tab-bar, als één blok onderaan (Apple Music). Het scherm erboven
+           wordt korter i.p.v. een zwevende laag erover. Verborgen tab-bar
+           (lopende State Control-sessie) = ook geen mini-speler. */
+        tabBar={(props) => {
+          const focused = props.state.routes[props.state.index];
+          const opts = props.descriptors[focused.key]?.options;
+          const style = opts?.tabBarStyle as { display?: string } | undefined;
+          const hidden = style?.display === 'none';
+          return (
+            <View>
+              {!hidden && <MiniPlayer docked />}
+              <BottomTabBar {...props} />
+            </View>
+          );
+        }}
         /* Operator, 7 okt 2026 ("ik volg apple niveau"): onthoud het laatst
            gebruikte tabblad — een ingelogde gebruiker opent daar de volgende
            keer meteen in (zie utils/last-tab.ts). */
@@ -395,7 +413,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-      <MiniPlayer />
       {/* Operator, 16 september 2026 ("iemand kan andere sites bekijken
          en dan onmiddellijk terugvinden waar de sessie loopt"):
          teruggehaald uit `master` (iter v238b) — ontbrak op deze

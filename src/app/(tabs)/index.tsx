@@ -1477,8 +1477,7 @@ function AudioScreen({
               paddingBottom:
                 TAB_BAR_HEIGHT +
                 safeInsets.bottom +
-                64 +
-                (playerState.session ? MINI_PLAYER_HEIGHT + 12 : 0),
+                64,
             },
           ]}
         >
@@ -1677,7 +1676,7 @@ function AudioScreen({
                sinds 25 september een gewone balk die zijn eigen plek inneemt
                — hier nog eens 64 + inset reserveren was dubbel. Enkel de
                mini-speler (zweeft boven de balk) krijgt nog ruimte. */
-            paddingBottom: playerState.session ? MINI_PLAYER_HEIGHT + 16 : 28,
+            paddingBottom: 28,
           },
         ]}
         showsVerticalScrollIndicator={false}

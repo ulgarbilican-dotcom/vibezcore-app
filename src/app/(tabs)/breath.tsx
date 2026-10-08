@@ -899,7 +899,6 @@ export default function BreathScreen() {
         <View
           style={[
             s.introWrap,
-            playerState.session && { paddingBottom: 34 + MINI_PLAYER_HEIGHT + 12 },
           ]}
         >
           {/* Operator, 8 september 2026: "verwijder mandala... tekst breathe

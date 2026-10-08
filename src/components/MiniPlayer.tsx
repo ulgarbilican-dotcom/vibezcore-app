@@ -78,6 +78,7 @@ const LIGHT = {
 
 export function MiniPlayer({
   standalone = false,
+  docked = false,
 }: {
   /** Operator, 15 september 2026: "moet de player ook al in Free Sessions
    *  verschijnen?" — /library/free (en de andere /library/*-pagina's)
@@ -89,6 +90,11 @@ export function MiniPlayer({
    *  vergrendelen, dus enkel `insets.bottom` i.p.v.
    *  `TAB_BAR_HEIGHT + insets.bottom`. */
   standalone?: boolean;
+  /** Operator, 8 okt 2026 ("blijft in de weg staan voor CTA's"): Apple-
+   *  patroon — de balk zit IN de tab-bar-zone (custom `tabBar` in
+   *  (tabs)/_layout.tsx), dus het scherm erboven wordt korter en geen enkele
+   *  knop of lijst kan er nog achter vallen. Niet absoluut gepositioneerd. */
+  docked?: boolean;
 }) {
   const state = usePlayerState();
   const pathname = usePathname();
@@ -198,9 +204,9 @@ export function MiniPlayer({
   return (
     <View
       style={[
-        s.wrap,
+        docked ? s.wrapDocked : s.wrap,
         {
-          bottom: standalone ? insets.bottom : TAB_BAR_HEIGHT + insets.bottom,
+          bottom: docked ? undefined : standalone ? insets.bottom : TAB_BAR_HEIGHT + insets.bottom,
           backgroundColor: C.bg,
           borderTopColor: C.border,
         },
@@ -269,6 +275,10 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     zIndex: 50,
     elevation: 8,
+  },
+  wrapDocked: {
+    height: MINI_PLAYER_HEIGHT,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   progressTrack: {
     height: 2,
