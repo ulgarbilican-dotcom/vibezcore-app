@@ -2639,63 +2639,30 @@ export function BreathSession() {
   const pressBrowseLibrary = usePressScale(0.95);
   const pressContinuePremium = usePressScale(0.95);
   const pressNotYet = usePressScale(0.94);
-  /* Operator, 8 okt 2026 ("de buddha bewoog origineel, nu niet meer"): de
-     beweging kwam van het oude fade-venster. Nu een eigen, rustige adem
-     op de Buddha — ~4 s groter, ~4 s kleiner — zolang het afsluitblad
-     openstaat. */
-  const buddhaBreath = useSharedValue(1);
+  /* Operator, 8 okt 2026 ("alles hapert — buddha gewoon stil, beetje
+     kleiner, en cirkel errond met ronddraaiende lijn"): adem/zwaai van de
+     Buddha weg; enkel een dunne lijn die traag rond hem draait (lineair,
+     één ronde per 6 s). Een draaiende lijn is veel lichter dan een
+     schalende afbeelding boven het live glas. */
+  const buddhaSpin = useSharedValue(0);
   useEffect(() => {
     if (!done) {
-      cancelAnimation(buddhaBreath);
-      buddhaBreath.value = 1;
+      cancelAnimation(buddhaSpin);
+      buddhaSpin.value = 0;
       return;
     }
-    /* Ook de ademende figuur achter het glas stilzetten (zelfde reden als de
-       sterren hierboven) — de sessie is voorbij. */
+    /* De ademende figuur achter het glas stilzetten — sessie voorbij. */
     cancelAnimation(breath);
-    buddhaBreath.value = withRepeat(
-      withSequence(
-        withTiming(1.05, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-      ),
+    buddhaSpin.value = 0;
+    buddhaSpin.value = withRepeat(
+      withTiming(1, { duration: 6000, easing: Easing.linear }),
       -1,
       false,
     );
-    return () => cancelAnimation(buddhaBreath);
-  }, [done, buddhaBreath]);
-  const buddhaSway = useSharedValue(0);
-  useEffect(() => {
-    if (!done) {
-      cancelAnimation(buddhaSway);
-      buddhaSway.value = 0;
-      return;
-    }
-    buddhaSway.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(-1, { duration: 8000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-    return () => cancelAnimation(buddhaSway);
-  }, [done, buddhaSway]);
-  const buddhaBreathStyle = useAnimatedStyle(() => ({
-    /* Vervolg ("iets duidelijker"): groter, niet sneller — 12% i.p.v. 6%,
-       en bij het inademen 6 pt omhoog, als een echte ademteug. */
-    /* Vervolg 3 ("wordt te groot, lijkt fake"): subtieler — 5%, ±3 pt
-       omhoog, ±6°.
-       Vervolg ("kan de buddha rond eigen as draaien?"): geen volle draai
-       (platte afbeelding wordt dan een streep en gespiegeld) — wel een
-       rustig heen-en-weer rond de verticale as, ±12°, mee op de adem
-       (één volle zwaai per twee ademhalingen). */
-    transform: [
-      { perspective: 600 },
-      { translateY: -(buddhaBreath.value - 1) * 60 },
-      { rotateY: `${buddhaSway.value * 6}deg` },
-      { scale: buddhaBreath.value },
-    ],
+    return () => cancelAnimation(buddhaSpin);
+  }, [done, buddhaSpin]);
+  const buddhaSpinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${buddhaSpin.value * 360}deg` }],
   }));
   const pressImDone = usePressScale(0.95);
 
@@ -4115,20 +4082,18 @@ export function BreathSession() {
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.sheetGrip} />
-            {/* Vervolg ("de beweging hapert"): de afbeelding als één
-               hardware-textuur laten schalen — anders tekent Android hem elke
-               frame opnieuw boven het live glas. */}
-            <Animated.View
-              renderToHardwareTextureAndroid
-              shouldRasterizeIOS
-              style={buddhaBreathStyle}
-            >
+            <View style={s.buddhaRingWrap}>
+              <View style={s.buddhaRing} />
+              <Animated.View
+                renderToHardwareTextureAndroid
+                style={[s.buddhaRing, s.buddhaRingArc, { borderTopColor: accent }, buddhaSpinStyle]}
+              />
               <Image
                 source={{ uri: BUDDHA_IMG }}
                 resizeMode="contain"
                 style={s.doneBuddha}
               />
-            </Animated.View>
+            </View>
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={[s.modalTitle, s.doneCenter]}>Well done</Text>
             <Text style={[s.modalBody, s.doneCenter]}>
@@ -5139,7 +5104,25 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     height: 4,
     backgroundColor: accent,
   },
-  doneBuddha: { width: 132, height: 132, marginBottom: 2 },
+  doneBuddha: { width: 104, height: 104 },
+  buddhaRingWrap: {
+    width: 140,
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  buddhaRing: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  buddhaRingArc: {
+    borderColor: 'transparent',
+  },
   sheetBackdrop: {
     flex: 1,
     backgroundColor: C.sheetBackdrop,
