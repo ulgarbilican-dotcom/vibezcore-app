@@ -85,7 +85,7 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 38b | "End trial?" bij vroegtijdig stoppen van de gratis volledige sessie: stond in het midden, geen glas | A16 | ❌→✅ `e2f1bbd`: glazen onderblad (GlassSheet) zoals het betaalscherm. Operator: "in orde" |
 | 38c | Na inloggen (Free): naar het laatst gebruikte tabblad buiten Profile (State Control), niet altijd Breathwork | A16 | ❌ altijd /breath → fix `412da01` + vangnet `d91a182` (eerste hertest faalde door live-herladen zonder herstart; opslag nagekeken via adb: `vz_last_content_tab_v1 = bracelet`) → ✅ operator: "nu ok" |
 | 39 | Google-account: geen "Change password"-rij | A16 | ⏳ |
-| 40 | Delete account → welkomstscherm, audio + bracelet gestopt | A16 | ⏳ |
+| 40 | Delete account → welkomstscherm, audio + bracelet gestopt | A16 | ✅ 8 okt: account verwijderd, opnieuw inloggen → "wrong email or password". Onderweg gevonden + gefixt: mini-speler stond vóór Delete account en liet tikken door naar "Sign out" (`8638c56`); mini-speler 152 → 88 en vast op de tabbalk (Apple Music-patroon, `26ae27b`, `f4867ff`); Breath-keuzescherm knop viel weg (`5e83e00`); pijler-pagina's/Free Sessions laatste kaarten achter speler (navigatiebalk niet meegerekend) → fix ⏳ hertest |
 | 41 | E-mailbevestiging / wachtwoordreset via link → daarna kopen staat op account | A16 | ⏳ |
 | 42 | Paywall zonder storeverbinding: geen vaste €-prijzen of "7-day" | A16 | ⏳ niet testbaar op de dev build (laadt code via wifi; prijzen al bij opstart opgehaald) → testen op de volgende echte build, koude start in vliegtuigmodus |
 | 43 | iPhone: proefperiode/introprijs + "App Store"-teksten; Google-knop verborgen tot iOS-client er is | iPhone | ⏳ iOS-build nodig |

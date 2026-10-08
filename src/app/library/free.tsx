@@ -39,7 +39,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /* Zelfde light/C-token-toggle als elders. */
 /* Operator, 26 september 2026: dark is de nieuwe app-brede default (was
@@ -156,6 +156,7 @@ export default function LibraryFreeScreen() {
      hier niet vanzelf. Eigen `standalone`-instantie + scroll-padding
      die ervoor reserveert zodra er een sessie actief is. */
   const playerState = usePlayerState();
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -173,7 +174,9 @@ export default function LibraryFreeScreen() {
       <ScrollView
         contentContainerStyle={[
           s.scroll,
-          playerState.session && { paddingBottom: MINI_PLAYER_HEIGHT + 24 },
+          /* + insets.bottom: de standalone mini-speler staat BOVEN de Android-
+             navigatiebalk (8 okt 2026: laatste kaarten vielen erachter). */
+          { paddingBottom: (playerState.session ? MINI_PLAYER_HEIGHT : 0) + insets.bottom + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >
