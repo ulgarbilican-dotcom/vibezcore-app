@@ -635,6 +635,10 @@ export default function PlayerScreen() {
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
         </Animated.View>
 
+        {/* Operator, 8 okt 2026: "zet vanaf voortgangsbalk lager" — de vrije
+           ruimte staat nu boven de voortgangsbalk i.p.v. eronder, zodat
+           balk + knoppen onderaan staan en hoes + titel op hun plek blijven. */}
+        <View style={{ marginTop: 'auto' }} />
         <Animated.View style={entranceControlsStyle}>
         {/* Operator ("continue-popup verschijnt telkens overal, heel
            storend — hoe kunnen we dat anders doen?"): het blokkerende
@@ -828,7 +832,6 @@ export default function PlayerScreen() {
             (marginTop:'auto' binnen de flex:1 content-kolom) — vlak boven
             de CTA. Iter v175 (2026-06-30): Sleep-knop weg, zie
             audio-player.ts voor rationale (expo-audio limitation). */}
-        <View style={{ marginTop: 'auto' }} />
 
         {/* ── Full library access CTA ───────────────────────────────────
             Alleen voor guests + free-tier zichtbaar. PRO-users zijn al
