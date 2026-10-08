@@ -861,6 +861,33 @@ export default function BreathWelcomeScreen() {
      onderblad (wat je mist + twee duidelijke knoppen, geen schuldgevoel /
      confirmshaming). Pas "Skip for now" daarin sluit de onboarding af. */
   const [skipAsk, setSkipAsk] = useState(false);
+  /* Operator, 8 okt 2026 ("bij stap 4 is dat geen 60 sec meer maar nog 1
+     stap — kan dat per stap?"): de tekst zegt telkens eerlijk hoeveel er
+     nog rest. Stap 1 = welkom, 2-4 = keuzes, 5 = de sessie zelf. */
+  const skipCopy =
+    slide === 0
+      ? {
+          title: 'Skip your personalized session?',
+          body: 'It takes 60 seconds. Your goal and your level decide which session we build for you, so it fits from the first breath.',
+          cta: 'Continue Setup',
+        }
+      : slide === TOTAL - 1
+        ? {
+            title: 'Skip your first session?',
+            body: "It's ready, built from your choices. One tap and you're in.",
+            cta: 'Back to My Session',
+          }
+        : slide === TOTAL - 2
+          ? {
+              title: 'Skip your personalized session?',
+              body: 'Just one step left. Your level completes the session we build for you.',
+              cta: 'Finish Setup',
+            }
+          : {
+              title: 'Skip your personalized session?',
+              body: `Just ${TOTAL - 1 - slide} quick choices left. Your goal and your level decide which session we build for you.`,
+              cta: 'Continue Setup',
+            };
   const skipInsets = useSafeAreaInsets();
   const askSkip = () => {
     /* Via Settings opnieuw geopend: gewoon terug, geen blad. */
@@ -1425,16 +1452,13 @@ export default function BreathWelcomeScreen() {
             <View style={s.skipSheetGrip} />
           </Pressable>
           <Text style={s.skipSheetEyebrow}>YOUR FIRST SESSION</Text>
-          <Text style={s.skipSheetTitle}>Skip your personalized session?</Text>
-          <Text style={s.skipSheetBody}>
-            It takes 60 seconds. Your goal and your level decide which session
-            we build for you, so it fits from the first breath.
-          </Text>
+          <Text style={s.skipSheetTitle}>{skipCopy.title}</Text>
+          <Text style={s.skipSheetBody}>{skipCopy.body}</Text>
           <Pressable
             style={({ pressed }) => [s.skipSheetBtn, pressed && { opacity: 0.85 }]}
             onPress={() => setSkipAsk(false)}
           >
-            <Text style={s.skipSheetBtnTxt}>Continue Setup</Text>
+            <Text style={s.skipSheetBtnTxt}>{skipCopy.cta}</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [s.skipSheetSecondary, pressed && { opacity: 0.6 }]}
