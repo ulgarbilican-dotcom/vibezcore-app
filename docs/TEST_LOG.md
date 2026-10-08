@@ -111,7 +111,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 57 | Library: inloggen op Profile → terug naar Library → account-sessies open zonder muur | A16 | ⏳ |
 | 58 | Alle bracelet-links (upsell na audio, breath-sessie "View Preview", About) → website | A16 | ⏳ |
 | 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
-| 59 | Settings: "Track listening history" uit → sessie verschijnt niet in historiek; "Save listening progress" uit → geen hervatpunt | A16 | ⏳ |
+| 59 | Settings: "Save listening progress" uit → gratis sessie 20 s, X, opnieuw openen → begint op 0:00, geen Continue/Start over | A16 | ✅ operator: "klopt" |
 | 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit en geen meldingen meer | A16 | ⏳ |
 | 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ |
 | 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ⏳ |
