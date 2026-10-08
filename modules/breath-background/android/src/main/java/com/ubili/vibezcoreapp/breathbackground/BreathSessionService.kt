@@ -403,21 +403,35 @@ class BreathSessionService : Service() {
       /* stil */
     }
     mediaSession = null
+    lastMetaKey = null
   }
 
+  /* Operator, 8 okt 2026 ("de tekst op het vergrendelscherm blijft
+     haperen"): de ARTIST-regel was fase + "m:ss left" en werd elke seconde
+     opnieuw gezet — OneUI's Now Bar laat lange tekst als lichtkrant lopen
+     en herstart die bij elke nieuwe tekst → continu haperen. Nu vaste tekst
+     (Apple Music/Spotify-patroon: titel + ondertitel, tijd via de balk), en
+     enkel opnieuw zetten als er echt iets wijzigt. */
+  private var lastMetaKey: String? = null
+
+  @Suppress("UNUSED_PARAMETER")
   private fun updateMediaSession(phaseText: String) {
     val session = ensureMediaSession()
-    val metadata = MediaMetadataCompat.Builder()
-      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, modeName)
-      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, phaseText)
-      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
-      .apply {
-        if (totalDurationMs > 0) {
-          putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
+    val metaKey = "$modeName|$totalDurationMs"
+    if (metaKey != lastMetaKey) {
+      val metadata = MediaMetadataCompat.Builder()
+        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, modeName)
+        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Guided breathwork")
+        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
+        .apply {
+          if (totalDurationMs > 0) {
+            putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
+          }
         }
-      }
-      .build()
-    session.setMetadata(metadata)
+        .build()
+      session.setMetadata(metadata)
+      lastMetaKey = metaKey
+    }
 
     /* Geen ACTION_PLAY_PAUSE/ACTION_SEEK_TO: er zit geen echte speler
        achter, dus geen knoppen die iets zouden doen — alleen ACTION_STOP,
