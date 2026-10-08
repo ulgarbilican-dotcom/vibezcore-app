@@ -39,7 +39,9 @@ export function saveLastTab(name: string): void {
  *  nog niets bewaard is. */
 export async function getLastContentTabRoute(): Promise<string> {
   try {
-    const v = await AsyncStorage.getItem(CONTENT_KEY);
+    const [c, l] = await Promise.all([AsyncStorage.getItem(CONTENT_KEY), AsyncStorage.getItem(KEY)]);
+    /* Valt terug op het gewone laatste tabblad (van vóór deze sleutel bestond). */
+    const v = c || (l !== 'account' ? l : null);
     return (v && v !== 'account' && ROUTE[v]) || '/breath';
   } catch {
     return '/breath';
