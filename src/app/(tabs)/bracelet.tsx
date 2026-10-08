@@ -95,16 +95,31 @@ const PHOTO_TOP = 0;
 const PHOTO_HEIGHT = 0.72;
 const PHOTO_FOCUS_LEFT = 0.125;
 
-function photoFrame(w: number, h: number) {
+/* Operator, 8 okt 2026 ("koppen hoger, de pols moet net boven de tekst
+   komen"): onderkant van het horloge in de foto (84,6% van de hoogte) ligt
+   12 pt boven de eyebrow — gemeten via onLayout, dus op elk toestel juist.
+   Nooit een zwarte band bovenaan: valt de foto te laag, dan groter. */
+const WATCH_Y = 0.846;
+function photoFrame(w: number, h: number, textTop: number | null) {
   /* Altijd minstens schermbreed (geen zwarte zijranden bij de 2:3-foto). */
-  const height = Math.max(h * PHOTO_HEIGHT, w / BG_ASPECT);
+  let height = Math.max(h * PHOTO_HEIGHT, w / BG_ASPECT);
+  let top = h * PHOTO_TOP;
+  if (textTop != null) {
+    const anchor = textTop - 12;
+    top = anchor - WATCH_Y * height;
+    if (top > 0) {
+      height = anchor / WATCH_Y;
+      top = 0;
+    }
+  }
   const width = height * BG_ASPECT;
   const left = Math.min(0, Math.max(w - width, -width * PHOTO_FOCUS_LEFT));
-  return { position: 'absolute' as const, top: h * PHOTO_TOP, left, height, width };
+  return { position: 'absolute' as const, top, left, height, width };
 }
 
 function StateControlIntro({ onDone }: { onDone: () => void }) {
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  const [textTop, setTextTop] = useState<number | null>(null);
   const ctaScale = useSharedValue(1);
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],
@@ -157,14 +172,20 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
           {box && (
             <Image
               source={{ uri: BG_IMG }}
-              style={photoFrame(box.w, box.h)}
+              style={photoFrame(box.w, box.h, textTop)}
               resizeMode="cover"
             />
           )}
         </Animated.View>
+        {/* Het donker begint pas ONDER het horloge, zodat de pols zichtbaar
+            blijft net boven de tekst. */}
         <LinearGradient
           colors={['rgba(10,10,10,0.35)', 'rgba(10,10,10,0)', 'rgba(10,10,10,0)', 'rgba(10,10,10,0.85)', '#0a0a0a']}
-          locations={[0, 0.1, 0.5, 0.66, 0.72]}
+          locations={
+            box && textTop != null
+              ? [0, 0.1, Math.max(0.2, (textTop - 24) / box.h), Math.min(0.95, (textTop + 16) / box.h), Math.min(1, (textTop + 48) / box.h)]
+              : [0, 0.1, 0.5, 0.66, 0.72]
+          }
           style={StyleSheet.absoluteFill}
         />
       </View>
@@ -172,7 +193,13 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
           `introTextWrap`): 34 boven de tabbalk, géén extra onderste
           veilige zone — die zit al in de tabbalk (operator, 5 okt 2026). */}
       <View style={s.introWrap}>
-        <View style={s.stackTitle}>
+        <View
+          style={s.stackTitle}
+          onLayout={(e) => {
+            const y = e.nativeEvent.layout.y;
+            setTextTop((prev) => (prev != null && Math.abs(prev - y) < 1 ? prev : y));
+          }}
+        >
           <Animated.Text style={[s.introEyebrow, eyebrowStyle]}>STATE CONTROL</Animated.Text>
           <Animated.Text style={[s.introTitle, titleStyle]}>Guided by touch,{'\n'}on your wrist.</Animated.Text>
         </View>
