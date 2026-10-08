@@ -81,7 +81,7 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 35 | App-update logt niet meer uit | A16 | ⏳ (versie-check enkel nog in testbuilds) |
 | 36 | Geen stille "restore" bij app-start | A16 | ⏳ |
 | 37 | Account aanmaken in Profile: < 8 tekens geweigerd; "check your inbox" niet in rood; bestaand e-mailadres → "Sign in" | A16 | ⏳ |
-| 38 | Welcome "Already a member? Sign in" opent formulier meteen | A16 | ⏳ |
+| 38 | Welcome "Already a member? Sign in" opent formulier meteen | A16 | ⚠️ inloggen lukt, maar daarna breathwork-intro opnieuw (uitloggen zette die terug op "niet gezien") → fix: per e-mailadres onthouden wie de intro al zag ⏳ hertest |
 | 39 | Google-account: geen "Change password"-rij | A16 | ⏳ |
 | 40 | Delete account → welkomstscherm, audio + bracelet gestopt | A16 | ⏳ |
 | 41 | E-mailbevestiging / wachtwoordreset via link → daarna kopen staat op account | A16 | ⏳ |
