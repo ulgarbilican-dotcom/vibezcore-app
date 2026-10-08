@@ -4043,7 +4043,7 @@ export function BreathSession() {
           {/* Glas (operator, 6 okt 2026): zelfde materiaal als de rest van de
               sessie. De toestandskleur zit enkel IN de kaart — de streep
               bovenaan en een vleugje tint in het glas — nooit in de tekst. */}
-          <View style={[s.doneCard, s.doneSheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
+          <View style={[s.doneCard, s.doneSheet, { paddingBottom: Math.max(insets.bottom, 12) + 30 }]}>
             <VibezGlass
               radius={24}
               level="sheet"
