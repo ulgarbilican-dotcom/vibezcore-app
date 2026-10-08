@@ -559,9 +559,14 @@ export default function RootLayout() {
   useEffect(() => {
     if (!ready) return;
     if (welcomeRedirectFiredRef.current) {
-      /* Splash zou onderhand allang weg moeten zijn; defensief nogmaals
-         aanroepen schaadt niet als 'ie al hidden is. */
-      SplashScreen.hideAsync().catch(() => {});
+      /* Niet meteen verbergen (8 okt 2026): deze tak liep vlak na de eerste
+         beslissing opnieuw (er veranderde nog een waarde) en haalde het
+         opstartscherm weg vóór de sprong naar het laatste tabblad getekend
+         was — vandaar de flits van de Library-intro. De vertraagde hide
+         hieronder doet het werk; dit is enkel nog een vangnet. */
+      setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => {});
+      }, 600);
       return;
     }
     welcomeRedirectFiredRef.current = true;
