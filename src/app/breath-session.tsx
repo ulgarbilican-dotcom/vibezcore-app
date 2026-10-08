@@ -3248,14 +3248,25 @@ export function BreathSession() {
               style={[s.pauseMain, pressPauseMain.style]}
               accessibilityLabel={paused ? 'Resume' : 'Pause'}
             >
-              <BlurView
-                intensity={40}
-                tint="dark"
-                blurMethod="dimezisBlurViewSdk31Plus"
-                style={StyleSheet.absoluteFill}
+              {/* Operator, 8 okt 2026: echt glas kan hier niet (knop zit IN de
+                 vervaagde app → crash, zie memory real-glass-only-in-sheets),
+                 en de kale BlurView zonder target was vlak donker ("lelijk").
+                 Nu Apple's glas-recept zonder vervaging: doorschijnende witte
+                 vulling, zachte lichtreflectie van boven, dunne lichte rand
+                 (pauseMain), en een vleugje toestandskleur. */}
+              <View
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
               />
               <View
+                pointerEvents="none"
                 style={[StyleSheet.absoluteFill, s.pauseMainTint, { backgroundColor: accent }]}
+              />
+              <ExpoGradient
+                pointerEvents="none"
+                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.04)', 'rgba(255,255,255,0)']}
+                locations={[0, 0.45, 1]}
+                style={StyleSheet.absoluteFill}
               />
               {paused ? (
                 <Play size={24} color={activeIconColor} strokeWidth={2.2} />
@@ -4914,14 +4925,14 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
     overflow: 'hidden',
   },
   /* Operator, 21 september 2026 ("misschien heel licht de kleur van de
      sessie, transparant?" → "mag iets duidelijker maar moet transparant
      blijven"): 0.12 → 0.2 — nog steeds een tint, geen vol vlak. */
-  pauseMainTint: { opacity: 0.2 },
+  pauseMainTint: { opacity: 0.14 },
   endTxtWrap: {
     marginTop: 22,
   },
