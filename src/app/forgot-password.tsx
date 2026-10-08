@@ -63,7 +63,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
      - Mobile user zónder app → form in browser, kan daarna app
        installeren en inloggen met nieuw password
    Operator-keuze 2026-05-29. */
-const REDIRECT_TO = 'https://app.vibezcore.com/reset-password.html';
+/* Operator, 8 okt 2026: de webapp mag nooit meer getoond worden — de eigen
+   auth-pagina op Bunny (assets/bunny-upload/auth.html) vervangt hem. */
+const REDIRECT_TO = 'https://vibezcore-audio.b-cdn.net/auth.html';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');

@@ -239,11 +239,6 @@ const BRACELET_SHOP_URL = 'https://www.vibezcore.com/shop';
 /* Support-form op de webapp (Wix). Geen native endpoint nodig — link out. */
 const SUPPORT_URL = 'https://www.vibezcore.com/support';
 
-/* Forgot-password-flow draait volledig op de webapp (auth-flow met
-   email-link → reset-password.html → webapp login). De native app
-   linkt door zodat user 'm daar afhandelt en daarna terugkomt naar
-   de Account-tab om in te loggen. */
-const FORGOT_PASSWORD_URL = 'https://app.vibezcore.com/forgot-password.html';
 
 /* Audio-library scrolt naar pricing-block via scroll-intent (`pricing`).
    Bestaand patroon — gebruikt al voor "library-settings"-link. */
