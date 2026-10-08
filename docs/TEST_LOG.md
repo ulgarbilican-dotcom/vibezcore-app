@@ -91,7 +91,7 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 43 | iPhone: proefperiode/introprijs + "App Store"-teksten; Google-knop verborgen tot iOS-client er is | iPhone | ⏳ iOS-build nodig |
 | 44 | Pijlerscherm (Father/Mother Wound): geen "Pro"-slotjes voor Premium | A16 | ✅ operator: "slotjes zijn weg" (fix `14a440d`) |
 | 45 | Premium: ook geen "Free with account"-slot; sessie speelt af | A16 | ✅ operator: "audio speelt nu gewoon af" (fix `4710d0d`) |
-| 46 | Ingelogd → opent in laatste tabblad, geen welkomstscherm | A16 | ⏳ (commit `a4b7cfe`, volledige herstart nodig) |
+| 46 | Ingelogd → opent in laatste tabblad, geen welkomstscherm | A16 | ✅ zie 46/50 hieronder |
 
 ### Volledige app-audit (8 okt 2026, 7 parallelle code-audits) — fixes, nog op toestel te testen
 Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
