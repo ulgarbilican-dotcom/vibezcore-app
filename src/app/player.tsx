@@ -281,7 +281,10 @@ export default function PlayerScreen() {
   const subtitle = session ? SERIES_SUBTITLE[session.series] ?? '' : '';
 
   /* Hoesmaat uit de vrije ruimte (zie `artArea`). Staande foto's hooguit
-     1,25× zo hoog als breed. Tot de eerste meting: de oude vaste maat. */
+     1,25× zo hoog als breed. Tot de eerste meting: de oude vaste maat.
+     Operator, 8 okt 2026 (2e ronde: "foto mag kleiner, overal ademruimte,
+     nu te opgekropt onderaan"): hooguit 78 % van de breedte en 40 pt lucht
+     binnen het vlak, zodat er boven en onder de hoes ruimte blijft. */
   const [artBox, setArtBox] = useState<{ w: number; h: number } | null>(null);
   const onArtAreaLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -294,7 +297,7 @@ export default function PlayerScreen() {
   const artAspect = Math.max(photoAspect ?? 1, 0.8);
   const artSize = artBox
     ? (() => {
-        const w = Math.max(120, Math.min(artBox.w, artBox.h * artAspect));
+        const w = Math.max(120, Math.min(artBox.w * 0.78, (artBox.h - 40) * artAspect));
         return { width: w, height: w / artAspect };
       })()
     : { width: ARTWORK_SIZE, height: ARTWORK_SIZE / artAspect };
@@ -614,7 +617,7 @@ export default function PlayerScreen() {
           /* Operator, 8 okt 2026 ("player en voortgangsbalk lager voor meer
              ademruimte"): Premium heeft geen CTA onderaan, dus ook geen
              136 pt gereserveerde ruimte — die duwde alles omhoog. */
-          { marginTop: safeInsets.top + 56, paddingBottom: displayIsPro ? 0 : 112 },
+          { marginTop: safeInsets.top + 56, paddingBottom: displayIsPro ? 36 : 120 },
         ]}
       >
         {/* Operator, 8 okt 2026 ("foto's groter, hoe zou Apple dat doen"):
@@ -1352,8 +1355,8 @@ const s = StyleSheet.create({
 
   /* Title block — operator, 26 september 2026 ("alles staat heel dicht bij
      elkaar"): marginTop geeft ademruimte tussen de albumhoes en de tekst. */
-  artArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 8 },
-  titleBlock: { marginTop: 20 },
+  artArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  titleBlock: { marginTop: 8 },
   /* Operator (Apple-HIG-brief, "titel altijd bovenaan, groot en vet —
      categorie/auteur eronder in een veel kleiner, rustiger grijs font"):
      rollen omgewisseld t.o.v. de vorige versie. `series`/`subtitle` zijn
