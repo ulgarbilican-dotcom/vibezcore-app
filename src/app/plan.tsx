@@ -31,6 +31,7 @@ import {
 } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
 import { DurationWheel } from '@/components/DurationWheel';
+import { durationOptionsFor } from '@/utils/duration-options';
 import { useBreathHistory } from '@/utils/breath-history';
 import { personalOrderForSlot } from '@/utils/behavior-patterns';
 import { pickStatesForDay } from '@/utils/day-plan';
@@ -996,11 +997,11 @@ export default function PlanScreen() {
                     </Pressable>
                   </View>
                   <DurationWheel
-                    options={item.state.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
+                    options={durationOptionsFor(item.state.key, item.techKey).options}
                     value={item.minutes}
                     accent={item.state.accent}
                     trackColor="rgba(255,255,255,0.4)"
-                    recommendedValue={item.state.defaultDuration}
+                    recommendedValue={durationOptionsFor(item.state.key, item.techKey).recommended ?? undefined}
                     onChange={(v) => void setMinutesForPlanIndex(planIndex, v)}
                   />
                 </>

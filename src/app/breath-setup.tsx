@@ -382,14 +382,8 @@ const LIGHT = {
 };
 const C = light ? LIGHT : DARK;
 
-const CUSTOM_CEILING_MIN = 30;
-const NO_EXTEND_TECHNIQUE_KEYS = new Set([
-  'faster-equal', // Boost — hyperventilatie-risico, "longer is not better"
-  'ujjayi', // Focus — amber-tier, bronnen noemen nergens langer dan 20 min
-  'triangle', // Calm — hold-techniek, specialist-review vereist (zie bestand)
-  'box', // Calm — CO2-opbouw bij twee holds, Navy SEALs bouwen dit op over weken
-  'physiological-sigh', // Clarity — dit IS al de exacte Stanford-studiedosering
-]);
+/* Gedeeld met de plannen (utils/duration-options.ts, 8 okt 2026). */
+import { CUSTOM_CEILING_MIN, NO_EXTEND_TECHNIQUE_KEYS } from '@/utils/duration-options';
 
 /* Operator, 11 september 2026: "hoe weet gebruiker wat er in de knop staat
    als dat is afgekort met 3 puntjes" — de pil-knop toonde tot nu toe

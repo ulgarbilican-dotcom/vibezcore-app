@@ -21,6 +21,7 @@ import { syncPlanReminders } from '@/services/reminders';
 import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
 import { DurationWheel } from '@/components/DurationWheel';
+import { durationOptionsFor } from '@/utils/duration-options';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
@@ -954,11 +955,11 @@ export default function AgendaScreen() {
                     </Pressable>
                   </View>
                   <DurationWheel
-                    options={st.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
+                    options={durationOptionsFor(it.state, it.techniqueKey).options}
                     value={it.minutes}
                     accent={st.accent}
                     trackColor="rgba(255,255,255,0.4)"
-                    recommendedValue={st.defaultDuration}
+                    recommendedValue={durationOptionsFor(it.state, it.techniqueKey).recommended ?? undefined}
                     onChange={(v) => {
                       void setMinutesForIndex(durationPicking, v);
                     }}
