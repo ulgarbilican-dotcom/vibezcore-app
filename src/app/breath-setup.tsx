@@ -2525,9 +2525,7 @@ export default function BreathSetupScreen() {
               key={tech.key}
               entering={FadeIn.duration(240)}
               style={s.heroTech}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
+              numberOfLines={2}
             >
               {tech.name}
             </Animated.Text>
@@ -3913,7 +3911,12 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
      netjes binnen de cirkel blijft i.p.v. de kromming te raken. */
   /* Operator, 11 september 2026: exacte specificatie — 14px Regular,
      geen letterSpacing. Was medium/11.5px/0.2. */
+  /* Operator, 8 okt 2026 ("extended exhale breathing mag op 2 lijnen, nu te
+     dicht tegen de cirkel"): smaller vak zodat lange namen netjes breken,
+     ruim binnen de rand. */
   heroTech: {
+    maxWidth: 140,
+    alignSelf: 'center',
     marginTop: 8,
     fontFamily: BrandFonts.regular,
     fontSize: 14,
