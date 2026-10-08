@@ -26,6 +26,7 @@ import { Brand, BrandFonts } from '@/constants/theme';
    donkere achtergrond: witte knop-bg + donkere tekst. */
 import { clearSession, persistSession, relinkAfterSessionChange, fetchWithTimeout } from '@/services/auth';
 import { refreshSubscription } from '@/hooks/useSubscription';
+import { getLastContentTabRoute } from '@/utils/last-tab';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -190,7 +191,11 @@ export default function AuthCallback() {
           if (forcePasswordScreen) {
             router.replace('/reset-password' as never);
           } else {
-            router.replace('/');
+            /* Operator, 8 okt 2026: zelfde landing als na inloggen — het
+               laatst gebruikte tabblad buiten Profile, anders Breath. */
+            void getLastContentTabRoute().then((target) => {
+              if (!cancelled) router.replace(target as never);
+            });
           }
         }, 1200);
       } catch (e) {
@@ -229,11 +234,11 @@ export default function AuthCallback() {
             <View style={s.checkCircle}>
               <Text style={s.checkText}>✓</Text>
             </View>
-            <Text style={s.title}>You're in.</Text>
+            <Text style={s.title}>You're in</Text>
             <Text style={s.sub}>
               {state.needsPasswordSetup
                 ? 'Setting up your account…'
-                : 'Opening your library…'}
+                : 'Opening VIBEZCORE…'}
             </Text>
           </>
         )}
