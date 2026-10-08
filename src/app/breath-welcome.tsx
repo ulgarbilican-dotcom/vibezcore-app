@@ -1079,7 +1079,7 @@ export default function BreathWelcomeScreen() {
       ? 'Enter Breath'
       : 'Start your first session'
     : slide === 0
-      ? 'Start Your Journey'
+      ? 'Personalize My First Session'
       : 'Next';
 
   /* Operator, 22 september 2026 ("next cta moet hier pas actief en wit
@@ -1721,7 +1721,7 @@ export function SlideIntro({
            ongeveer dezelfde plek landt als voorheen i.p.v. omhoog te
            springen naar waar de tagline stond. */
         <Text style={[s.introOrientLight, { marginTop: 34 }]}>
-          A few quick steps, then your first session
+          Set your goal. Get a personalized session in 60 seconds
         </Text>
       ) : (
         <View style={s.traits}>
