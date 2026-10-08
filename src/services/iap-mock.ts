@@ -63,6 +63,9 @@ const MOCK_PRODUCTS: IapProduct[] = [
     currency: 'EUR',
     priceAmountMicros: 69_990_000,
     subscriptionPeriod: 'P1Y',
+    /* Zelfde 7-dagen-trial als het echte jaarplan, zodat het planscherm
+       in de dev-app de trial-weergave toont (8 okt 2026). */
+    freeTrialDays: 7,
   },
 ];
 
