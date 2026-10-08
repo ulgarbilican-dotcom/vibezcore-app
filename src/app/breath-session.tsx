@@ -2655,7 +2655,7 @@ export function BreathSession() {
     cancelAnimation(breath);
     buddhaSpin.value = 0;
     buddhaSpin.value = withRepeat(
-      withTiming(1, { duration: 6000, easing: Easing.linear }),
+      withTiming(1, { duration: 10000, easing: Easing.linear }),
       -1,
       false,
     );
