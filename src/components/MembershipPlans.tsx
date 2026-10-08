@@ -136,12 +136,18 @@ export default function MembershipPlans({
   const monthlyAfter = monthly?.regularPriceLabel;
   const yearlyAfter = yearly?.regularPriceLabel;
 
+  /* Operator, 8 okt 2026: "Cancel anytime" altijd samen op een eigen
+     regel (
+ + harde spatie), niet middenin afgebroken. */
   const summary =
     plan === 'yearly'
       ? hasTrial
-        ? `Free for ${trialDays} days, then ${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}. Cancel anytime.`
-        : `${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}. Cancel anytime.`
-      : `${monthlyPrice} per month${monthlyAfter ? ` for the first year, ${monthlyAfter} per month after` : ''}. Cancel anytime.`;
+        ? `Free for ${trialDays} days, then ${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}.
+Cancel anytime.`
+        : `${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}.
+Cancel anytime.`
+      : `${monthlyPrice} per month${monthlyAfter ? ` for the first year, ${monthlyAfter} per month after` : ''}.
+Cancel anytime.`;
   /* Operator, 8 okt 2026: de kop belooft "Audio Library" — maak vóór de
      knop duidelijk dat de trial 27 sessies opent, niet alle (kort, Apple-
      stijl; Breathwork/State Control staan al in de kop). */
