@@ -150,7 +150,15 @@ export default function MembershipPlans({
       ? `Trial includes ${TRIAL_SESSION_COUNT} audio sessions. Full library after.`
       : null;
   const cta = plan === 'yearly' && hasTrial ? 'Start free trial' : 'Subscribe';
-  const store = Platform.OS === 'ios' ? 'Apple ID' : 'Google Play account';
+  /* Operator, 8 okt 2026: kleine lettertjes per store, actief geformuleerd.
+     iOS = Apple's vaste tekst (24-uursregel, App Store-accountinstellingen);
+     Android = Google Play (geen 24-uursregel, opzeggen via Play › Subscriptions).
+     Met trial wordt pas aangerekend wanneer de trial eindigt. */
+  const chargeMoment = plan === 'yearly' && hasTrial ? 'when your free trial ends' : 'when you confirm your purchase';
+  const disclosure =
+    Platform.OS === 'ios'
+      ? `Your Apple ID is charged ${chargeMoment}. Your subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.`
+      : `Your Google Play account is charged ${chargeMoment}. Your subscription renews automatically until you cancel. Manage or cancel anytime in Google Play › Subscriptions.`;
 
   return (
     <View>
@@ -226,7 +234,7 @@ export default function MembershipPlans({
 
       {/* Schedule 2: verlenging + opzeggen vóór de aankoop. */}
       <Text style={s.disclosure}>
-        {`Payment is charged to your ${store}. The subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your ${store} settings.`}
+        {disclosure}
       </Text>
 
       <View style={s.links}>
