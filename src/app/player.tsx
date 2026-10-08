@@ -82,7 +82,8 @@ const SPEEDS = [1.0, 1.25, 1.5, 1.75, 2.0];
    (BACKDROP_HEIGHT) verviel — de backdrop is nu fullscreen (zie JSX
    hieronder). ARTWORK_SIZE is de nieuwe zwevende squircle-albumhoes, ruim
    binnen de meeste schermbreedtes met een vaste zij-marge. */
-const ARTWORK_SIZE = Math.min(164, Dimensions.get('window').width - 180);
+// Operator, 8 okt 2026: "foto beetje groter" — 164 → 210.
+const ARTWORK_SIZE = Math.min(210, Dimensions.get('window').width - 140);
 
 /* MERK_ANKER §2 (bindend palet): near-black #0a0a0a i.p.v. zuiver #000,
    tekst #f4f4f4 i.p.v. zuiver #fff, dim/faint als opacity daarop (zelfde
