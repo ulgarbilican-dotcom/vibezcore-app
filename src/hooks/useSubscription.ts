@@ -351,7 +351,9 @@ async function fetchStatus(): Promise<void> {
     const base: SubscriptionStatus = rcStatus?.active
       ? rcStatus
       : backendStatus
-        ? backendStatus
+        ? /* Ook de server kan achterlopen (8 okt 2026: "active" met einddatum
+             juli) — een verlopen einddatum telt nooit als actief. */
+          withoutExpired(backendStatus)
         : withoutExpired(cachedStatus ?? { active: false });
 
     /* Bracelet-info uit backend WANNEER backend antwoordde. Backend fail →
