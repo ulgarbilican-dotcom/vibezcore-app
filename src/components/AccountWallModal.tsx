@@ -145,7 +145,10 @@ export function AccountWallModal() {
        prompt → klik = direct naar plan-keuze (yearly default = best
        deal). Account-creatie gebeurt PAS na verified purchase op de
        subscribe-flow. */
-    router.navigate('/subscribe?tier=yearly' as never);
+    /* Operator, 8 okt 2026 ("moet see plans niet naar subscribe gaan?"):
+       met ?tier=yearly start /subscribe meteen de kassa (auto-checkout) en
+       sloeg de plankeuze over. "See plans" = eerst de plannen tonen. */
+    router.navigate('/subscribe?returnTo=audio' as never);
   };
 
   return (
