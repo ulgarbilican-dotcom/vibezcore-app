@@ -4027,21 +4027,39 @@ export function BreathSession() {
           Herkend aan `from=onboarding` in de route, niet aan de toestand:
           welke toestand de onboarding gebruikt kan veranderen, waar de
           gebruiker vandaan komt niet. */}
-      <Modal visible={done} transparent animationType="fade">
-        <View style={s.modalBackdrop}>
+      {/* Operator, 8 okt 2026 ("lelijk met rand boven, kan dat ook glass,
+          deel tekst links ander midden — hoe zou Apple dat doen"): was een
+          Modal (apart venster → geen echt glas) met een gekleurde streep
+          bovenaan. Nu hetzelfde echte-glas-onderblad als "End trial?",
+          alles gecentreerd, geen streep. Naast het blad tikken = I'M DONE. */}
+      <GlassSheet
+        visible={done}
+        onClose={() => {
+          dismissDone();
+          skipBreathIntroOnce();
+          leaveSession();
+        }}
+      >
           {/* Glas (operator, 6 okt 2026): zelfde materiaal als de rest van de
               sessie. De toestandskleur zit enkel IN de kaart — de streep
               bovenaan en een vleugje tint in het glas — nooit in de tekst. */}
-          <VibezGlass radius={22} level="sheet" tint={accent} style={s.doneCard}>
-            <View style={s.doneStrip} />
+          <View style={[s.doneCard, s.doneSheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              tint={accent}
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
+            <View style={s.sheetGrip} />
             <Image
               source={{ uri: BUDDHA_IMG }}
               resizeMode="contain"
               style={s.doneBuddha}
             />
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
-            <Text style={s.modalTitle}>Well done.</Text>
-            <Text style={s.modalBody}>
+            <Text style={[s.modalTitle, s.doneCenter]}>Well done</Text>
+            <Text style={[s.modalBody, s.doneCenter]}>
               You completed {rounds} rounds of {tech.name}. Carry the
               breath with you.
             </Text>
@@ -4173,9 +4191,8 @@ export function BreathSession() {
                 <Text style={s.modalBtnTxt}>I'M DONE</Text>
               </AnimatedPressable>
             )}
-          </VibezGlass>
-        </View>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       </SafeAreaView>
     </View>
@@ -5036,6 +5053,12 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     fontSize: 11.5,
     color: C.dim40,
   },
+  doneSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 10,
+  },
+  doneCenter: { textAlign: 'center' },
   doneStrip: {
     position: 'absolute',
     top: 0,
