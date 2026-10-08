@@ -1526,6 +1526,11 @@ const s = StyleSheet.create({
        laten zakken" — nog eens ~1cm erbij (63dp, zelfde maat als de 2e
        ronde hierboven). */
     height: BOX_H + 196,
+    /* Operator, 8 okt 2026: met de mini-speler is het scherm korter — deze
+       onzichtbare veeglaag krimpt dan mee (niet de cirkels/knoppen), anders
+       viel "Instant Sessions" onderaan van het scherm. */
+    flexShrink: 1,
+    minHeight: 120,
     alignItems: 'center',
     justifyContent: 'center',
   },
