@@ -97,7 +97,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 |---|------|---------|-----------|
 | 46/50 | Ingelogd → opent in laatste tabblad (Activity), geen welkomstscherm | A16 | ✅ na 3 fixes: Supabase-project was gepauzeerd ("Upstream fetch failed", operator heeft hersteld); Library-intro flitste bij koude start → `7bb4b68` (Library toont niets tot de opstartbeslissing). Operator: "nu kom ik wel direct in activity" |
 | 46b | Profile Premium vs Free tegenstrijdig | A16 | ❌→fix `68e192e`: backend zegt `active:true` met `valid_until` 8 juli 2026 (verlopen, webhook nooit verwerkt); app telt een verlopen einddatum nu nooit als actief. Operator-account is in werkelijkheid Free (Play: verlopen) |
-| 47 | Settings → "Watch the intro again" → geen gratis volledige sessie meer (enkel als de gratis sessie nog niet gebruikt is) | A16 | ⏳ |
+| 47 | Settings → "Watch the intro again" → geen gratis volledige sessie meer (enkel als de gratis sessie nog niet gebruikt is) | A16 | ✅ operator: "stopt na 30 sec + saleskaart Unlock" |
 | 48 | Gast koopt Premium → app volledig afsluiten → nog steeds Premium | A16 | ⏳ (licentietester) |
 | 49 | Gast → Restore purchases → account maken → aankoop op account | A16 | ⏳ |
 | 50 | Bracelet-eigenaar: na openen GEEN sprong naar State Control; opent in laatste tabblad | A16 | ⏳ |
