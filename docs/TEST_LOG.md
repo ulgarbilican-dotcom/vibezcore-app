@@ -85,7 +85,7 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 39 | Google-account: geen "Change password"-rij | A16 | ⏳ |
 | 40 | Delete account → welkomstscherm, audio + bracelet gestopt | A16 | ⏳ |
 | 41 | E-mailbevestiging / wachtwoordreset via link → daarna kopen staat op account | A16 | ⏳ |
-| 42 | Paywall zonder storeverbinding: geen vaste €-prijzen of "7-day" | A16 | ⏳ |
+| 42 | Paywall zonder storeverbinding: geen vaste €-prijzen of "7-day" | A16 | ⏳ niet testbaar op de dev build (laadt code via wifi; prijzen al bij opstart opgehaald) → testen op de volgende echte build, koude start in vliegtuigmodus |
 | 43 | iPhone: proefperiode/introprijs + "App Store"-teksten; Google-knop verborgen tot iOS-client er is | iPhone | ⏳ iOS-build nodig |
 | 44 | Pijlerscherm (Father/Mother Wound): geen "Pro"-slotjes voor Premium | A16 | ✅ operator: "slotjes zijn weg" (fix `14a440d`) |
 | 45 | Premium: ook geen "Free with account"-slot; sessie speelt af | A16 | ✅ operator: "audio speelt nu gewoon af" (fix `4710d0d`) |
@@ -113,7 +113,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
 | 59 | Settings: "Save listening progress" uit → gratis sessie 20 s, X, opnieuw openen → begint op 0:00, geen Continue/Start over | A16 | ✅ operator: "klopt" |
 | 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit; Your Journey leeg | A16 | ✅ operator: "klopt" |
-| 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ |
+| 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ eigen tijden worden in het dagplan gezet → Premium-account nodig |
 | 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ✅ operator: "klopt"; daarna terug ingelogd (Free) |
 | 63 | Proefperiode: Pro-sessie voorproef → geen "start your trial"; /subscribe → "You're a VIBEZCORE Premium member" | A16 | ⏳ |
 | 64 | "Already owned"-fout → knoppen Restore purchases + Sign in | A16 | ⏳ |
