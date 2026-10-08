@@ -139,7 +139,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 ---
 
 ## Nog niet getest (gebouwd)
-- ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen
+- ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); V-logo i.p.v. muzieknoot (`6be14fc`, native); haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen
 - ⏳ Quick Chill/Boost-knoppen: paywall-pad zonder abonnement; eerste keer zonder rusthartslag (paneel eerst)
 - ⏳ Activity → Your rhythm; Profile → Your rhythm (in- en uitgelogd)
 - ⏳ "Use an average" wist eigen waarden
