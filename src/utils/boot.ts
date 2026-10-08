@@ -21,11 +21,38 @@
    renderen, vóór welke hook dan ook draait.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { useEffect, useState } from 'react';
+
 let decided = false;
+const listeners = new Set<() => void>();
 
 /** Door de root aangeroepen zodra vaststaat waar de app opent. */
 export function markBootDecided(): void {
+  if (decided) return;
   decided = true;
+  /* Eén tik later: de root heeft dan al naar het juiste scherm genavigeerd. */
+  setTimeout(() => listeners.forEach((l) => l()), 0);
+}
+
+/** Hook-variant: rendert opnieuw zodra de opstartbeslissing gevallen is.
+ *  Operator, 8 okt 2026: de Library (route `/`) monteert bij elke koude
+ *  start als eerste — en toonde zo even zijn intro (man met koptelefoon)
+ *  vóór de sprong naar het laatste tabblad. Met deze hook toont hij niets
+ *  tot de beslissing er is. */
+export function useBootDecided(): boolean {
+  const [d, setD] = useState(decided);
+  useEffect(() => {
+    if (decided) {
+      setD(true);
+      return;
+    }
+    const l = () => setD(true);
+    listeners.add(l);
+    return () => {
+      listeners.delete(l);
+    };
+  }, []);
+  return d;
 }
 
 /** True zodra de root zijn keuze gemaakt heeft. Daarna mag `/` weer gewoon

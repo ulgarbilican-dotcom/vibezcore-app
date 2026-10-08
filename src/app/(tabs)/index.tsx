@@ -5,7 +5,7 @@ import { rootBlurRef } from '@/utils/root-blur';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale } from '@/constants/theme';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
-import { bootDecided } from '@/utils/boot';
+import { bootDecided, useBootDecided } from '@/utils/boot';
 import { BlurView } from 'expo-blur';
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Audio Library (route /)
@@ -657,6 +657,10 @@ export default function AudioRoute() {
      op het laatste onboarding-scherm) — die laatste krijgt bovendien een
      eigen terugknop, zie AudioScreen. */
   const fromOnboarding = params.from === 'onboarding';
+  /* Niets tonen tot de root beslist heeft waar de app opent (8 okt 2026):
+     anders flitste de Library-intro voorbij vóór het laatste tabblad. */
+  const booted = useBootDecided();
+  if (!booted) return <View style={{ flex: 1, backgroundColor: '#0a0a0a' }} />;
   if (AUDIO_ENABLED || params.from === 'breath' || fromOnboarding) {
     return <AudioScreen fromOnboarding={fromOnboarding} />;
   }

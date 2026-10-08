@@ -608,6 +608,9 @@ export default function RootLayout() {
        gebruiker gewoon ingelogd, niet "uitgelogd". */
     const signedIn = (!!auth || hasStoredSession) && !treatAsGuest;
     const showWelcome = !pendingAuthLink && !tapped && !signedIn;
+    if (__DEV__) {
+      console.log('[boot] decide', JSON.stringify({ auth: !!auth, hasStoredSession, signedIn, pendingAuthLink, tapped: !!tapped, lastTabRoute, showWelcome }));
+    }
     void treatAsGuest;
     void treatAsSignedIn;
     if (tapped) {
@@ -619,6 +622,7 @@ export default function RootLayout() {
       router.replace('/welcome');
     } else if (!pendingAuthLink && signedIn) {
       router.replace(lastTabRoute as never);
+      if (__DEV__) setTimeout(() => console.log('[boot] after replace, pathname =', pathnameRef.current), 500);
     } else if (
       !pendingAuthLink &&
       (override === 'bracelet' || override === 'pro')
