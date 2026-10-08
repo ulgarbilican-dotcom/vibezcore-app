@@ -114,7 +114,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 59 | Settings: "Save listening progress" uit → gratis sessie 20 s, X, opnieuw openen → begint op 0:00, geen Continue/Start over | A16 | ✅ operator: "klopt" |
 | 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit en geen meldingen meer | A16 | ⏳ |
 | 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ |
-| 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ⏳ |
+| 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ✅ operator: "klopt"; daarna terug ingelogd (Free) |
 | 63 | Proefperiode: Pro-sessie voorproef → geen "start your trial"; /subscribe → "You're a VIBEZCORE Premium member" | A16 | ⏳ |
 | 64 | "Already owned"-fout → knoppen Restore purchases + Sign in | A16 | ⏳ |
 | 65 | Speler op kleine telefoon (≤ 700 dp hoog) → knoppen volledig zichtbaar | A16 | ⏳ |
