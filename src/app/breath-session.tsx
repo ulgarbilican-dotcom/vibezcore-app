@@ -3264,8 +3264,8 @@ export function BreathSession() {
               />
               <ExpoGradient
                 pointerEvents="none"
-                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.04)', 'rgba(255,255,255,0)']}
-                locations={[0, 0.45, 1]}
+                colors={['rgba(255,255,255,0.38)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
+                locations={[0, 0.5, 1]}
                 style={StyleSheet.absoluteFill}
               />
               {paused ? (
@@ -4926,7 +4926,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(255,255,255,0.30)',
     overflow: 'hidden',
   },
   /* Operator, 21 september 2026 ("misschien heel licht de kleur van de
