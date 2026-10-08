@@ -70,6 +70,7 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  InteractionManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -683,6 +684,22 @@ export default function BreathScreen() {
   const [onbGate, setOnbGate] = useState<'pending' | 'show'>('pending');
   /* Vangnet: blijft dit tabblad gemonteerd terwijl de onboarding of
      "Maybe later" loopt, dan mag het nooit donker blijven bij terugkeer. */
+  /* Operator, 8 okt 2026 ("laadprobleem, reload of go home — hiervoor ook
+     al"): een replace naar de onboarding TERWIJL een overgang nog liep
+     (account aangemaakt → Breath) liet Android's view-boom crashen
+     ("addViewAt: child already has a parent"). Pas springen als elke
+     lopende overgang/animatie klaar is, en dan nog één frame later. */
+  const onbJumpRef = useRef(false);
+  const goToOnboarding = () => {
+    if (onbJumpRef.current) return;
+    onbJumpRef.current = true;
+    InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        onbJumpRef.current = false;
+        router.replace('/breath-welcome');
+      });
+    });
+  };
   const onbFirstFocusRef = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -695,7 +712,7 @@ export default function BreathScreen() {
         getSetting('breathOnboardingCompletedAt') === null &&
         getBreathHistory().length === 0
       ) {
-        router.replace('/breath-welcome');
+        goToOnboarding();
         return;
       }
       setOnbGate((g) => {
@@ -729,7 +746,7 @@ export default function BreathScreen() {
     Promise.all([ensureSettingsLoaded(), ensureBreathHistoryLoaded()]).then(() => {
       if (!alive) return;
       if (getSetting('breathOnboardingCompletedAt') === null && getBreathHistory().length === 0) {
-        router.replace('/breath-welcome');
+        goToOnboarding();
       } else {
         setOnbGate('show');
       }
