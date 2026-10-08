@@ -4081,11 +4081,20 @@ export function BreathSession() {
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.sheetGrip} />
-            <Animated.Image
-              source={{ uri: BUDDHA_IMG }}
-              resizeMode="contain"
-              style={[s.doneBuddha, buddhaBreathStyle]}
-            />
+            {/* Vervolg ("de beweging hapert"): de afbeelding als één
+               hardware-textuur laten schalen — anders tekent Android hem elke
+               frame opnieuw boven het live glas. */}
+            <Animated.View
+              renderToHardwareTextureAndroid
+              shouldRasterizeIOS
+              style={buddhaBreathStyle}
+            >
+              <Image
+                source={{ uri: BUDDHA_IMG }}
+                resizeMode="contain"
+                style={s.doneBuddha}
+              />
+            </Animated.View>
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={[s.modalTitle, s.doneCenter]}>Well done</Text>
             <Text style={[s.modalBody, s.doneCenter]}>
