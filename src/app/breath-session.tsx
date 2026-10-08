@@ -2655,7 +2655,7 @@ export function BreathSession() {
     cancelAnimation(breath);
     buddhaBreath.value = withRepeat(
       withSequence(
-        withTiming(1.12, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1.05, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
         withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
@@ -2684,14 +2684,16 @@ export function BreathSession() {
   const buddhaBreathStyle = useAnimatedStyle(() => ({
     /* Vervolg ("iets duidelijker"): groter, niet sneller — 12% i.p.v. 6%,
        en bij het inademen 6 pt omhoog, als een echte ademteug. */
-    /* Vervolg ("kan de buddha rond eigen as draaien?"): geen volle draai
+    /* Vervolg 3 ("wordt te groot, lijkt fake"): subtieler — 5%, ±3 pt
+       omhoog, ±6°.
+       Vervolg ("kan de buddha rond eigen as draaien?"): geen volle draai
        (platte afbeelding wordt dan een streep en gespiegeld) — wel een
        rustig heen-en-weer rond de verticale as, ±12°, mee op de adem
        (één volle zwaai per twee ademhalingen). */
     transform: [
       { perspective: 600 },
-      { translateY: -(buddhaBreath.value - 1) * 50 },
-      { rotateY: `${buddhaSway.value * 12}deg` },
+      { translateY: -(buddhaBreath.value - 1) * 60 },
+      { rotateY: `${buddhaSway.value * 6}deg` },
       { scale: buddhaBreath.value },
     ],
   }));
