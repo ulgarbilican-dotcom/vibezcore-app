@@ -822,14 +822,11 @@ export default function BreathWelcomeScreen() {
              selectiepagina mag nooit meer verschijnen" — mode+duur staan
              hier al vast (aanbevolen door de onboarding zelf). */
           autostart: '1',
-          /* Operator, 11 september 2026: "in onboarding krijg ik geen
-             vraag popup, heb jij dat weggedaan?" — niet weggehaald, nooit
-             gezet: `isFreeOnboardingSession` in breath-session.tsx checkt
-             `params.from === 'onboarding'`, en deze aanroep zette `from`
-             nooit. Zonder dit dacht breath-session.tsx dat het een gewone
-             sessie was, dus geen "weet je zeker dat je je gratis sessie
-             wil stoppen"-bevestiging bij vroegtijdig stoppen. */
-          from: 'onboarding',
+          /* `from: 'onboarding'` komt UITSLUITEND uit claimFreeSessionParam()
+             hierboven (operator, 8 okt 2026, audit): hier hard zetten gaf via
+             Settings → "Watch the intro again" onbeperkt gratis Premium-
+             sessies. Wie zijn gratis sessie al gebruikte, krijgt nu de
+             gewone sessie met voorproef. */
         }).toString()}` as never,
       );
     }

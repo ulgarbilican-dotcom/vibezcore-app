@@ -72,7 +72,7 @@ import {
 import { phaseHapticPattern, playPhaseHaptic } from '@/services/breath-haptics';
 import { ensurePermission as ensureNotificationPermission } from '@/services/reminders';
 import { addBreathSession, useBreathHistory } from '@/utils/breath-history';
-import { useSetting } from '@/utils/settings';
+import { getSetting, useSetting } from '@/utils/settings';
 import {
   skipBreathIntroOnce,
   skipBreathOnboardingRedirectOnce,
@@ -1003,7 +1003,16 @@ export function BreathSession() {
      vertrouwt nu simpelweg de URL: `from=onboarding` staat er ALLEEN nog
      in als breath-welcome.tsx net vastgesteld heeft dat de gratis sessie
      nog niet gebruikt was. */
-  const isFreeOnboardingSession = params.from === 'onboarding';
+  /* Operator, 8 okt 2026 (audit): de URL alleen is niet genoeg — een deep
+     link of een oud scherm kon `from=onboarding` meegeven en zo onbeperkt
+     gratis Premium-sessies openen. Enkel geldig als de gratis sessie
+     zonet (≤ 15 min) is geclaimd; één keer bepaald bij het openen, zodat
+     een lange sessie niet halverwege op slot gaat. */
+  const [isFreeOnboardingSession] = useState(() => {
+    if (params.from !== 'onboarding') return false;
+    const claimedAt = getSetting('breathFreeSessionUsedAt');
+    return typeof claimedAt === 'number' && Date.now() - claimedAt < 15 * 60 * 1000;
+  });
   /* Alleen na de gratis kennismakingssessie, en alleen als er nog iets te
      kopen valt. */
   const askPremium = isFreeOnboardingSession && !isPro;

@@ -639,7 +639,7 @@ export default function SubscribeScreen() {
            welkomstscherm tonen. refreshSubscription() daarna is een backend-
            sync die de UI niet blokkeert — voorkomt de race waarbij de user
            na "Start listening" tap kort de FREE Audio Library ziet. */
-        setProSubscribedStatus();
+        setProSubscribedStatus(activeEntitlement?.periodType === 'TRIAL');
         refreshSubscription();
 
         /* Operator, 10 september 2026: goals+intensity liggen al vast

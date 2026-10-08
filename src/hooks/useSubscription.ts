@@ -20,7 +20,7 @@
    (auto-refresh). Geen handmatige refresh-logica in deze hook nodig.
    ─────────────────────────────────────────────────────────────────────── */
 
-import { getToken } from '@/services/auth';
+import { GUEST_PURCHASE_RC_ID_KEY, getToken } from '@/services/auth';
 import { apiCall } from '@/utils/api';
 import { useDevUserOverride } from '@/utils/dev-user-override';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -151,6 +151,10 @@ async function loadCacheOnce(): Promise<void> {
         await clearPersistedCache();
         notifyAll({ active: false });
         cacheLoaded = true;
+        /* Audit 8 okt 2026 (blokkerend): een gast die kocht, moest na een
+           koude start ook Premium zijn. fetchStatus kiest zelf: zonder
+           gast-aankoop op dit toestel blijft het Free. */
+        void fetchStatus();
         return;
       }
       const raw = await AsyncStorage.getItem(SUB_CACHE_KEY);
@@ -202,13 +206,16 @@ async function loadCacheOnce(): Promise<void> {
    verlopen). Maar als RevenueCat zegt PRO → user IS PRO, ongeacht wat
    backend nog van eerdere weet. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function tryRevenueCatStatus(): Promise<SubscriptionStatus | null> {
+async function tryRevenueCatStatus(
+  requireAppUserId?: string,
+): Promise<SubscriptionStatus | null> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { ENTITLEMENT_AUDIO_PRO } = require('@/services/iap-real');
     const customerInfo = await Purchases.getCustomerInfo();
+    if (requireAppUserId && customerInfo?.originalAppUserId !== requireAppUserId) return null;
     const audioPro = customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
     if (!audioPro) return null; /* geen actieve entitlement — fall through */
     const productId: string | undefined = audioPro.productIdentifier;
@@ -298,7 +305,27 @@ async function fetchStatus(): Promise<void> {
          uitgelogde gebruiker krijgt na `Purchases.logOut()` een verse
          anonieme klant zonder abonnement, dus het lek van 9aq komt niet
          terug. */
-      const guestRc = await tryRevenueCatStatus();
+      /* Audit 8 okt 2026: enkel de anonieme RevenueCat-ID waarop op DIT
+         toestel gekocht of hersteld werd (marker) — nooit een abonnement
+         dat via een mislukte logOut of geërfde entitlement op het toestel
+         achterbleef. Zonder marker: meteen Free, zonder SDK-call. */
+      let guestId: string | null = null;
+      try {
+        guestId = await AsyncStorage.getItem(GUEST_PURCHASE_RC_ID_KEY);
+      } catch {
+        guestId = null;
+      }
+      let guestRc: SubscriptionStatus | null = null;
+      if (guestId) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getIAP } = require('@/services/iap');
+          await getIAP().init();
+        } catch {
+          /* SDK niet klaar → tryRevenueCatStatus geeft null */
+        }
+        guestRc = await tryRevenueCatStatus(guestId);
+      }
       if (myGen !== fetchGeneration) return;
       clearPersistedCache();
       notifyAll(guestRc?.active ? guestRc : { active: false });
@@ -443,7 +470,7 @@ export function setSigningInStatus(): void {
  *  consumers (Audio Library tile, player, About/FAQ, etc.) synchroon zien
  *  dat de user PRO is. Backend-sync loopt daarna alsnog via refreshSubscription
  *  maar de UI wacht daar niet meer op. */
-export function setProSubscribedStatus(): void {
+export function setProSubscribedStatus(isTrialing = false): void {
   fetchGeneration++;
   /* Iter v227 (2026-07-07, audit B6): merge in bestaande cache ipv
      vervangen. Voorheen: {active:true} zonder andere velden → wist
@@ -453,6 +480,9 @@ export function setProSubscribedStatus(): void {
   const proStatus: SubscriptionStatus = {
     ...(cachedStatus ?? {}),
     active: true,
+    /* Audit 8 okt 2026: een trial-aankoop is meteen een trial — anders
+       speelde de Pro-audio even zonder voorproef-grens tot de refresh. */
+    isTrialing,
   };
   cachedStatus = proStatus;
   notifyAll(proStatus);

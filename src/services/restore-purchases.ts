@@ -30,7 +30,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { getCachedSubscription, refreshSubscription } from '@/hooks/useSubscription';
-import { getAuthUserIdFromToken, getToken, linkRevenueCatUser } from './auth';
+import { getAuthUserIdFromToken, getToken, linkRevenueCatUser, markGuestPurchase } from './auth';
 import { getIAP } from './iap';
 import type { IapPurchase } from './iap-contract';
 
@@ -118,6 +118,21 @@ export async function restorePurchases(): Promise<RestoreResult> {
     }
 
     const purchases = await iap.restorePurchases();
+
+    /* Audit 8 okt 2026: een gast die herstelt (nieuw toestel, herinstallatie)
+       krijgt dezelfde gast-aankoop-marker als bij een aankoop. Zo blijft hij
+       Premium na een herstart, en gaat de aankoop mee naar het account dat
+       hij daarna maakt. */
+    if (!token && purchases.length > 0) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Purchases = require('react-native-purchases').default;
+        const info = await Purchases.getCustomerInfo();
+        await markGuestPurchase(info?.originalAppUserId);
+      } catch {
+        /* swallow */
+      }
+    }
 
     /* Iter v230 (2026-07-08, audit BUG 5): AWAIT refreshSubscription zodat
        accountMismatch-detectie hieronder op VERSE state werkt, niet op

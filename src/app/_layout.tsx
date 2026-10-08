@@ -19,6 +19,7 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurTargetView } from 'expo-blur';
 import { rootBlurRef } from '@/utils/root-blur';
 import { GlassSheetHost } from '@/components/GlassSheetHost';
@@ -411,9 +412,11 @@ export default function RootLayout() {
         const handler = async (_info: any) => {
           try {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const { getToken } = require('@/services/auth');
+            const { getToken, GUEST_PURCHASE_RC_ID_KEY } = require('@/services/auth');
             const token = await getToken();
-            if (!token) return;
+            /* Gast zonder aankoop op dit toestel: niets te verversen. Een
+               gast-koper wel (audit 8 okt 2026). */
+            if (!token && !(await AsyncStorage.getItem(GUEST_PURCHASE_RC_ID_KEY))) return;
           } catch {
             return;
           }

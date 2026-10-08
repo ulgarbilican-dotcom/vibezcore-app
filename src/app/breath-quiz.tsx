@@ -47,6 +47,7 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import { SLOTS } from '@/services/reminders';
 import { useSetting, type ExperienceLevel } from '@/utils/settings';
+import { claimFreeSessionParam } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { openBreathSession } from '@/services/breath-session-host';
@@ -172,7 +173,8 @@ export default function BreathQuizScreen() {
          `autostart=1` erbij (operator, 11 september 2026: "check alles
          overal, de oude selectiepagina mag nooit meer verschijnen") —
          mode staat hier al vast, er valt niets te kiezen. */
-      openBreathSession({ from: 'onboarding', mode: first, autostart: '1' });
+      /* Enkel als de gratis sessie nog niet gebruikt is (audit 8 okt 2026). */
+      openBreathSession({ ...claimFreeSessionParam(), mode: first, autostart: '1' });
     }
   };
 
