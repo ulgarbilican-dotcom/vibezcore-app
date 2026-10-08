@@ -23,6 +23,7 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { saveLastTab } from '@/utils/last-tab';
+import { bootDecided } from '@/utils/boot';
 import BraceletIcon from '@/components/BraceletIcon';
 import { BraceletMiniIndicator } from '@/components/BraceletMiniIndicator';
 import { MiniPlayer } from '@/components/MiniPlayer';
@@ -242,7 +243,11 @@ export default function TabLayout() {
            gebruikte tabblad — een ingelogde gebruiker opent daar de volgende
            keer meteen in (zie utils/last-tab.ts). */
         screenListeners={({ route }) => ({
-          focus: () => saveLastTab(route.name),
+          /* Pas na de opstartbeslissing: bij een koude start monteert eerst
+             `/` (Library) en zou dat het echte laatste tabblad overschrijven. */
+          focus: () => {
+            if (bootDecided()) saveLastTab(route.name);
+          },
         })}
         screenOptions={{
           headerShown: false,

@@ -769,16 +769,10 @@ function AudioScreen({
 
   /* Cold-start redirect: bracelet-owners landen op /bracelet bij eerste
      app-start. Eenmalig per sessie via module-level flag. */
-  useEffect(() => {
-    if (
-      !braceletOwnerColdStartRedirected &&
-      isSignedIn === true &&
-      isBraceletOwner
-    ) {
-      braceletOwnerColdStartRedirected = true;
-      router.replace('/bracelet' as never);
-    }
-  }, [isSignedIn, isBraceletOwner]);
+  /* VERWIJDERD 8 okt 2026 (audit): de cold-start-sprong naar /bracelet voor
+     bracelet-eigenaars. Die vuurde 1–2 s na het openen en maakte "open in je
+     laatste tabblad" (app/_layout.tsx) ongedaan. De root beslist waar de app
+     opent. */
   /* Audio-service-snapshot voor de "now-playing" highlight op de
      FREE-balk(en) onder elke serie. Re-rendert ~elke 250ms tijdens
      playback (expo-audio playbackStatusUpdate, updateInterval 250 in

@@ -955,6 +955,7 @@ export default function AccountScreen() {
 
   const onSubmit = async () => {
     setMsg(null);
+    setMsgIsInfo(false);
     if (!emailInput.trim() || !pwInput) {
       setMsg('Enter your email and password.');
       return;
@@ -1129,6 +1130,17 @@ export default function AccountScreen() {
      7 okt 2026, account-audit): audio en bracelet stoppen, lokale data van
      deze gebruiker loskoppelen, en naar het welkomstscherm. */
   const stopPlaybackAndBracelet = async () => {
+    /* Audit 8 okt 2026: ook een (geminimaliseerde) ademsessie stoppen —
+       anders liepen stem, trillingen en achtergrondgeluid door over het
+       welkomstscherm. */
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/services/breath-session-host').closeBreathSession();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/services/soundscape').stopScape(true);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/services/session-keepalive').stopSessionKeepAlive();
+    } catch { /* non-fatal */ }
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { unload } = require('@/services/audio-player');

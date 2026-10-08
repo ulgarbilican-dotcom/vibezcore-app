@@ -601,7 +601,14 @@ const HANDLED_TAP_KEY = 'vz.reminders.lastHandledTap';
 export function onReminderTap(cb: (t: TappedReminder) => void): () => void {
   const sub = Notifications.addNotificationResponseReceivedListener((r) => {
     const t = fromResponse(r);
-    if (t) cb(t);
+    if (!t) return;
+    /* Audit 8 okt 2026: ook deze tik als afgehandeld markeren — anders gaf
+       getLastNotificationResponseAsync() hem na een herstart van de root
+       opnieuw, en startte de sessie vanzelf een tweede keer. */
+    const raw = r.notification.date;
+    const when = typeof raw === 'number' && raw < 1e12 ? raw * 1000 : raw;
+    AsyncStorage.setItem(HANDLED_TAP_KEY, `${r.notification.request.identifier}:${when}`).catch(() => {});
+    cb(t);
   });
   return () => sub.remove();
 }

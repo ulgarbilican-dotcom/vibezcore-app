@@ -25,6 +25,7 @@
    Identiek pattern aan BraceletUpsellModal.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { goToTab } from '@/utils/state-control-ui';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import {
   PILLAR_META,
@@ -203,7 +204,8 @@ async function onContinue(lp: LastPlayed): Promise<void> {
        calls nu in dezelfde macrotask-defer zodat de huidige commit
        (incl. de nog actieve spring-animatie op de knop) eerst afrondt. */
     setTimeout(() => {
-      router.navigate('/' as never);
+      /* goToTab: geen tweede set tabbladen als er een scherm bovenop staat (audit 8 okt 2026). */
+      goToTab('/');
       openSession(sess);
     }, 0);
   } else {

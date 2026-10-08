@@ -39,6 +39,7 @@ import {
   getAuthUserIdFromToken,
   getToken,
   linkRevenueCatUser,
+  REFRESH_KEY,
 } from '@/services/auth';
 import { refreshSubscription } from '@/hooks/useSubscription';
 import { recoverOnStartup as iapRecoverOnStartup } from '@/services/iap-recovery';
@@ -62,7 +63,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import * as Linking from 'expo-linking';
-import { router, Stack } from 'expo-router';
+import { router, Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -76,7 +77,7 @@ import {
   type TappedReminder,
 } from '@/services/reminders';
 import * as Notifications from 'expo-notifications';
-import { markBootDecided } from '@/utils/boot';
+import { bootDecided, markBootDecided } from '@/utils/boot';
 import { AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -214,8 +215,20 @@ Notifications.setNotificationHandler({
   },
 });
 
+/* Initiële deeplink die al verwerkt is (zie de deeplink-handler). */
+let handledInitialUrl: string | null = null;
+
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  /* Huidig pad, voor de deeplink-ontdubbeling hieronder (audit 8 okt 2026). */
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+  /* Er staat een sessie op dit toestel (refresh-token) — ook als de app
+     offline opent en het access-token niet ververst kan worden. */
+  const [hasStoredSession, setHasStoredSession] = useState(false);
+  /* Audit 8 okt 2026: mislukt het laden van de lettertypes, dan toch
+     openen (met systeemlettertype) i.p.v. eeuwig op het opstartscherm. */
+  const [fontsReady, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -224,6 +237,7 @@ export default function RootLayout() {
     Inter_900Black,
   });
 
+  const fontsLoaded = fontsReady || !!fontError;
   const [auth, setAuth] = useState<AuthState>(undefined);
   /* Laatst gebruikte tabblad — waar een ingelogde gebruiker opent. */
   const [lastTabRoute, setLastTabRoute] = useState<string>('/breath');
@@ -256,6 +270,10 @@ export default function RootLayout() {
     /* En zolang de app draait: een tik terwijl hij op de achtergrond staat.
        `navigate` en niet `replace`, want dan blijft de weg terug bestaan. */
     const off = onReminderTap((t) => {
+      /* Audit 8 okt 2026: bij een koude start levert expo-notifications de
+         tik soms ook hier af, nog vóór de navigator bestaat (crash) — en
+         het `tapped`-pad hieronder handelt diezelfde tik al af. */
+      if (!bootDecided()) return;
       /* Ademsessie: rechtstreeks de sessie-laag (loopt er al een, dan die
          terughalen — een melding vervangt nooit een lopende sessie). */
       if (reminderRoute(t) === '/breath-session') {
@@ -291,14 +309,16 @@ export default function RootLayout() {
       /* Iter 9as (2026-05-31): wacht óók op dev-override cache zodat
          de welcome-redirect-check daar rekening mee kan houden. In prod
          is awaitDevUserOverrideLoaded() een no-op. */
-      const [t, pending, lastTab] = await Promise.all([
+      const [t, pending, lastTab, refresh] = await Promise.all([
         getToken(),
         hasPendingAuthDeepLink(),
         getLastTabRoute(),
+        AsyncStorage.getItem(REFRESH_KEY).catch(() => null),
         awaitDevUserOverrideLoaded(),
       ]);
       if (cancelled) return;
       setLastTabRoute(lastTab);
+      setHasStoredSession(!!refresh);
       setAuth(t ?? null);
       setPendingAuthLink(pending);
     })();
@@ -308,7 +328,7 @@ export default function RootLayout() {
   }, []);
 
   const ready =
-    fontsLoaded &&
+    (fontsLoaded) &&
     auth !== undefined &&
     pendingAuthLink !== undefined &&
     tapped !== undefined;
@@ -338,13 +358,19 @@ export default function RootLayout() {
     if (!ready) return;
     void (async () => {
       await ensureSettingsLoaded();
-      const on = getSetting('reminders');
-      if (Object.values(on).some(Boolean)) {
-        await syncReminders(on, getSetting('reminderAt'), getSetting('goals'));
+      /* try/catch (audit 8 okt 2026): een ingetrokken meldingsrecht mag
+         geen onafgehandelde fout geven bij het opstarten. */
+      try {
+        const on = getSetting('reminders');
+        if (Object.values(on).some(Boolean)) {
+          await syncReminders(on, getSetting('reminderAt'), getSetting('goals'));
+        }
+        /* Planmeldingen gelijkzetten met plan + instelling; ruimt ook de oude
+           tweede "Still time"-meldingen op (5 okt 2026). */
+        await resyncAllPlanReminders();
+      } catch {
+        /* swallow */
       }
-      /* Planmeldingen gelijkzetten met plan + instelling; ruimt ook de oude
-         tweede "Still time"-meldingen op (5 okt 2026). */
-      await resyncAllPlanReminders();
       /* Het oude kanaal opruimen, anders staat er in de instellingen van het
          toestel een tweede regel die nergens meer bij hoort. */
       if (Platform.OS === 'android') {
@@ -562,7 +588,10 @@ export default function RootLayout() {
        welkomstscherm blijft voor de eerste keer en voor wie uitgelogd is.
        Vervangt de regel van 7 augustus hierboven (CLAUDE.md §3 bijgewerkt).
        In testbuilds simuleert de override 'guest' een uitgelogde gebruiker. */
-    const signedIn = !!auth && !treatAsGuest;
+    /* Offline of trage verbinding: het access-token kon niet ververst
+       worden, maar de sessie bestaat nog (audit 8 okt 2026) — dan is de
+       gebruiker gewoon ingelogd, niet "uitgelogd". */
+    const signedIn = (!!auth || hasStoredSession) && !treatAsGuest;
     const showWelcome = !pendingAuthLink && !tapped && !signedIn;
     void treatAsGuest;
     void treatAsSignedIn;
@@ -595,7 +624,7 @@ export default function RootLayout() {
     /* Vanaf hier mag `/` zijn eigen gang gaan. Zie utils/boot.ts. */
     markBootDecided();
     SplashScreen.hideAsync().catch(() => {});
-  }, [ready, auth, pendingAuthLink, tapped, lastTabRoute]);
+  }, [ready, auth, pendingAuthLink, tapped, lastTabRoute, hasStoredSession]);
 
   /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
      Webapp wordt uitgefaseerd — alle email-flows (magic link na
@@ -620,18 +649,22 @@ export default function RootLayout() {
         /* Route per deep-link-pad. Onbekende paden negeren we
            bewust — voorkomt dat een rogue link de app naar een
            verkeerde route kan dwingen. */
+        /* Audit 8 okt 2026: Expo Router opent deze routes meestal zelf al.
+           Nog eens pushen gaf twee schermen die hetzelfde eenmalige token
+           verifieerden ("Link expired" terwijl het inloggen wél lukte).
+           Even wachten en enkel pushen als we er nog niet staan. */
+        const pushOnce = (target: string, p?: Record<string, string>) => {
+          setTimeout(() => {
+            if (pathnameRef.current === target) return;
+            router.push(p ? ({ pathname: target, params: p } as never) : (target as never));
+          }, 350);
+        };
         if (path === 'auth-callback') {
-          router.push({
-            pathname: '/auth-callback' as never,
-            params: params as Record<string, string>,
-          });
+          pushOnce('/auth-callback', params as Record<string, string>);
         } else if (path === 'reset-password') {
-          router.push({
-            pathname: '/reset-password' as never,
-            params: params as Record<string, string>,
-          });
+          pushOnce('/reset-password', params as Record<string, string>);
         } else if (path === 'forgot-password') {
-          router.push('/forgot-password' as never);
+          pushOnce('/forgot-password');
         } else if (SHORTCUT_PATHS.has(path)) {
           /* `replace` en niet `push`: wie via een snelkoppeling binnenkomt
              heeft geen scherm achter zich waar hij naar terug wil. De
@@ -647,7 +680,13 @@ export default function RootLayout() {
     };
 
     /* Cold-start: app werd geopend via deep-link */
-    Linking.getInitialURL().then(handle);
+    /* Eén keer per proces (audit 8 okt 2026): bij een herstart van de root
+       gaf getInitialURL() dezelfde, al gebruikte link opnieuw. */
+    Linking.getInitialURL().then((u) => {
+      if (!u || u === handledInitialUrl) return;
+      handledInitialUrl = u;
+      handle(u);
+    });
 
     /* Warm: app draait en deep-link wordt afgevuurd */
     const sub = Linking.addEventListener('url', (e) => handle(e.url));

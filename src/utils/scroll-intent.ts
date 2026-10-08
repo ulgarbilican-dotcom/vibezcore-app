@@ -25,6 +25,12 @@ const listeners = new Set<(target: string) => void>();
 
 export function requestScrollTo(target: string): void {
   pending = target;
+  /* Audit 8 okt 2026: een intent is enkel bedoeld voor de navigatie die er
+     meteen op volgt. Bleef hij hangen, dan voerde een scherm dat veel later
+     monteerde hem alsnog uit (bv. vanzelf /subscribe openen na uitloggen). */
+  setTimeout(() => {
+    if (pending === target) pending = null;
+  }, 3000);
   setTimeout(() => {
     listeners.forEach((l) => {
       try {
