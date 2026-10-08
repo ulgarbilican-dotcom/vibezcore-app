@@ -65,7 +65,7 @@
 | 26 | Bracelet-welkomstintro: CTA te laag, kopbalk bovenaan | A16 | ⚠️ telefoon draaide oude bundel → app herstart; intro nu schermvullend zonder kopbalk, knop op hoogte zusterintro's. ⏳ operator-bevestiging |
 | 27 | Bracelet "A closer look"-kaart | A16 | ✅ operator: "beter zo" (groter, labels, geen nummer, "Wear it. Set it. Feel it.") |
 | 28 | Welkomstscherm naar operator-ontwerp | A16 | ✅ operator: glas "ik vind het goed"; "Control Your State"; tab-iconen. ⏳ nieuwe foto (smartwatch) nog aan te leveren |
-| 29 | Breath-intro eyebrow GUIDED BREATHWORK | A16 | ⏳ |
+| 29 | Breath-intro eyebrow GUIDED BREATHWORK | A16 | ✅ 8 okt: zichtbaar op schermafbeelding van het toestel |
 | 30 | Paywall na vroegtijdig End session (voorproef) zonder glas | A16 | ❌ eerste fix toonde oud rust-scherm → teruggedraaid; ✅ pauzeren i.p.v. stoppen — operator: "goed" |
 
 ### Account-flow, inloggen, Premium (7 okt 2026, nacht — code-audit + fixes)
@@ -126,7 +126,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 67c | Planscherm: Yearly "During your trial, the Audio Library is limited to 27 sessions."; Monthly "Full access from day one: Breathwork, State Control and all 144 audio sessions."; trial-blad bullets "Full Breathwork and State Control from day one" / "27 audio sessions during your trial, all 144 after" (`4827f14`, `64ffc9d`); kleine lettertjes per store (Android Google Play, iOS Apple-tekst), aanrekenmoment volgt trial | A16 | ✅ operator: "ok" (`dec187c`, `44ace38`); iOS-tekst ⏳ iPhone |
 | 68 | Free account openen: geen flits van Breath vóór de onboarding (`1e4d499`); onboarding maar één keer, ook na Skip (`f3196ec`, vervangt regel 31 juli) | A16 | ✅ operator: nieuw account (Confirm email UIT → meteen ingelogd) krijgt onboarding; na wegklikken en terugkomen weg. Uitloggen/inloggen ⏳ |
 | 68b | Onboarding: terugvegen = "nu even niet" (komt terug op Breath-tab), Skip = gezien (`94077e2`); Skip leesbaar (`ed73423`); Skip landt op Breath-welkomstbeeld i.p.v. select state (`b0c0ad7`) | A16 | ✅ operator: "skip werkt" — landing-fix ⏳ hertest |
-| 68c | Crash "Reload / Go home" na account aanmaken → Breath (addViewAt: child already has a parent) → sprong naar onboarding pas na lopende overgangen (`55d898b`); nieuwe onboarding-teksten stap 1/2/4/5 (`972d123`, `714d57a`); Skip + terugknop stap 1 → glazen blad "Skip your personalized session?" (`d10501d`) | A16 | ⏳ |
+| 68c | Crash "Reload / Go home" na account aanmaken → Breath (addViewAt: child already has a parent) → sprong naar onboarding pas na lopende overgangen (`55d898b`); nieuwe onboarding-teksten stap 1/2/4/5 (`972d123`, `714d57a`); Skip + terugknop stap 1 → glazen blad "Skip your personalized session?" (`d10501d`) | A16 | ✅ operator: "in orde" (+ `b35fbc9` replay-param, `43c48f7`/`e495e11` blad-tekst per stap) |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
