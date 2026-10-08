@@ -28,7 +28,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
    actief" — nooit voor spinners/links/CTA. AudioAccent is de
    link-kleur op donker; CTA-regel v4.4: witte knop-bg + donkere tekst. */
 import { refreshSubscription } from '@/hooks/useSubscription';
-import { clearSession, getToken, persistSession, relinkAfterSessionChange } from '@/services/auth';
+import { clearSession, getToken, persistSession, relinkAfterSessionChange, fetchWithTimeout } from '@/services/auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -161,7 +161,7 @@ export default function ResetPassword() {
 
       if (tokenHash) {
         try {
-          const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+          const res = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/verify`, {
             method: 'POST',
             headers: {
               apikey: SUPABASE_KEY,
@@ -243,7 +243,7 @@ export default function ResetPassword() {
                       password-update — recovery mode mag 't ook clearen
                       (de flag hoort sowieso na een ingestelde password
                       false te zijn). */
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
         method: 'PUT',
         headers: {
           apikey: SUPABASE_KEY,
@@ -294,7 +294,7 @@ export default function ResetPassword() {
       let persistedFresh = false;
       if (emailForLogin) {
         try {
-          const freshRes = await fetch(
+          const freshRes = await fetchWithTimeout(
             `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
             {
               method: 'POST',

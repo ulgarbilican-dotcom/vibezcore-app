@@ -196,9 +196,20 @@ export default function SettingsScreen() {
                  doen het stuksgewijs via getAllKeys + multiRemove en
                  exclude die ene key. */
               const allKeys = await AsyncStorage.getAllKeys();
-              const toRemove = allKeys.filter(
-                (k) => k !== 'vz_last_login_email',
-              );
+              /* Audit 8 okt 2026: wat de dialoog belooft ("account en
+                 abonnement blijven") ook doen — de inlogsessie en de
+                 koppeling van een gast-aankoop blijven staan. */
+              const KEEP = new Set([
+                'vz_last_login_email',
+                'vz_session_token',
+                'vz_refresh_token',
+                'vz_token_expires_at',
+                'vz_user_email',
+                'vz_auth_provider',
+                'vz_guest_purchase_rc_id',
+                'vz_pending_rc_link',
+              ]);
+              const toRemove = allKeys.filter((k) => !KEEP.has(k));
               if (toRemove.length > 0) {
                 await AsyncStorage.multiRemove(toRemove);
               }
@@ -225,6 +236,14 @@ export default function SettingsScreen() {
                    verschijnen voor owners die voorheen geactiveerd waren. */
                 setDevBraceletActivated(false),
               ]);
+              /* Herinneringen staan nu allemaal uit in de instellingen —
+                 dan ook de geplande meldingen weg (audit 8 okt 2026). */
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-require-imports
+                await require('expo-notifications').cancelAllScheduledNotificationsAsync();
+              } catch {
+                /* swallow */
+              }
               void showVibezAlert({
                 title: 'Cleared',
                 message:
@@ -314,49 +333,8 @@ export default function SettingsScreen() {
               ios_backgroundColor="#3a3a3a"
             />
           </View>
-          <View style={s.divider} />
-          <View style={s.row}>
-            <View style={s.rowText}>
-              <Text style={s.rowTitle}>Audio quality</Text>
-              <Text style={s.rowSub}>
-                Higher quality uses more data.
-              </Text>
-            </View>
-            <View style={s.qualityToggle}>
-              <PressFeedback
-                style={[
-                  s.qualityBtn,
-                  audioQuality === 'low' && s.qualityBtnOn,
-                ]}
-                onPress={() => setAudioQuality('low')}
-              >
-                <Text
-                  style={[
-                    s.qualityBtnText,
-                    audioQuality === 'low' && s.qualityBtnTextOn,
-                  ]}
-                >
-                  Low
-                </Text>
-              </PressFeedback>
-              <PressFeedback
-                style={[
-                  s.qualityBtn,
-                  audioQuality === 'high' && s.qualityBtnOn,
-                ]}
-                onPress={() => setAudioQuality('high')}
-              >
-                <Text
-                  style={[
-                    s.qualityBtnText,
-                    audioQuality === 'high' && s.qualityBtnTextOn,
-                  ]}
-                >
-                  High
-                </Text>
-              </PressFeedback>
-            </View>
-          </View>
+          {/* "Audio quality" verwijderd (audit 8 okt 2026): de keuze werd nergens
+              gelezen — er bestaat geen lagere kwaliteit om naar te schakelen. */}
         </View>
 
         {/* ── PRIVACY ─────────────────────────────────────────────── */}
@@ -409,16 +387,20 @@ export default function SettingsScreen() {
                 <Switch
                   value={reminders[reminderKey('breath', slot.slot)] === true}
                   onValueChange={async (v) => {
-                    const next = {
-                      ...reminders,
-                      [reminderKey('breath', slot.slot)]: v,
-                    };
                     if (v && !(await ensurePermission())) {
                       void explainNotificationsBlocked();
                       return;
                     }
+                    /* Audit 8 okt 2026: na de toestemmingsvraag de ACTUELE lijst lezen
+                       (twee snelle tikken overschreven elkaar), en de eigen tijden +
+                       doelen meegeven — anders sprong elke herinnering naar zijn
+                       standaarduur met de algemene tekst. */
+                    const next = {
+                      ...getSetting('reminders'),
+                      [reminderKey('breath', slot.slot)]: v,
+                    };
                     await setReminders(next);
-                    void syncReminders(next);
+                    void syncReminders(next, getSetting('reminderAt'), getSetting('goals'));
                   }}
                   trackColor={{ false: '#3a3a3a', true: AudioAccent }}
                   thumbColor="#ffffff"
@@ -548,16 +530,20 @@ export default function SettingsScreen() {
                         reminders[reminderKey('bracelet', slot.slot)] === true
                       }
                       onValueChange={async (v) => {
-                        const next = {
-                          ...reminders,
-                          [reminderKey('bracelet', slot.slot)]: v,
-                        };
                         if (v && !(await ensurePermission())) {
                           void explainNotificationsBlocked();
                           return;
                         }
+                        /* Audit 8 okt 2026: na de toestemmingsvraag de ACTUELE lijst lezen
+                           (twee snelle tikken overschreven elkaar), en de eigen tijden +
+                           doelen meegeven — anders sprong elke herinnering naar zijn
+                           standaarduur met de algemene tekst. */
+                        const next = {
+                          ...getSetting('reminders'),
+                          [reminderKey('bracelet', slot.slot)]: v,
+                        };
                         await setReminders(next);
-                        void syncReminders(next);
+                        void syncReminders(next, getSetting('reminderAt'), getSetting('goals'));
                       }}
                       trackColor={{ false: '#3a3a3a', true: AudioAccent }}
                       thumbColor="#ffffff"

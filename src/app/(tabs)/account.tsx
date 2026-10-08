@@ -253,9 +253,17 @@ const FORGOT_PASSWORD_URL = 'https://app.vibezcore.com/forgot-password.html';
    log-paden subtiel anders zijn per call-site. */
 async function openExternal(url: string): Promise<void> {
   if (__DEV__) console.log('[VIBEZCORE] account openExternal →', url);
+  /* Store-pagina's in de echte store-app, niet in een webview (audit 8 okt
+     2026): de Play-abonnementspagina in een Custom Tab is soms uitgelogd. */
+  if (/^(https:\/\/play\.google\.com|itms-apps:)/.test(url)) {
+    await Linking.openURL(url).catch(() => {});
+    return;
+  }
   try {
     const result = await WebBrowser.openBrowserAsync(url);
-    if (result.type === 'cancel' || result.type === 'dismiss') {
+    /* Audit 8 okt 2026: op iOS betekent 'cancel' gewoon "Done" — dan NIET
+       nog eens in Safari openen (elke link opende er twee keer). */
+    if (Platform.OS === 'android' && (result.type === 'cancel' || result.type === 'dismiss')) {
       if (__DEV__) console.log('[VIBEZCORE] WebBrowser cancelled — fallback Linking');
       await Linking.openURL(url);
     }
@@ -449,9 +457,15 @@ function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; rest
         <Row
           icon={Crown}
           title="VIBEZCORE Premium"
-          subtitle={renewLine ?? 'Breathwork, State Control and the Audio Library'}
-          value="Manage"
-          onPress={() => openExternal(storeSubscriptionsUrl(tier))}
+          subtitle={
+            braceletModel === 'bundle'
+              ? 'Included with your bracelet'
+              : renewLine ?? 'Breathwork, State Control and the Audio Library'
+          }
+          /* Bundle (activatiecode) heeft geen store-abonnement — "Manage"
+             opende een lege store-lijst (audit 8 okt 2026). */
+          value={braceletModel === 'bundle' ? undefined : 'Manage'}
+          onPress={braceletModel === 'bundle' ? undefined : () => openExternal(storeSubscriptionsUrl(tier))}
           accessibilityLabel="Manage your subscription in the App Store or Google Play"
         />
       ) : (
@@ -1308,16 +1322,14 @@ export default function AccountScreen() {
                          vasthoudt na delete. */
                       setSignedOutStatus();
                       await refreshUserBucket();
-                      void showVibezAlert({
+                      /* Hoe de melding ook sluit (OK of Android-terug): naar
+                         het welkomstscherm (audit 8 okt 2026). */
+                      await showVibezAlert({
                         title: 'Account deleted',
                         message: 'Your account has been permanently deleted.',
-                        buttons: [
-                          {
-                            text: 'OK',
-                            onPress: () => router.replace('/welcome' as never),
-                          },
-                        ],
+                        buttons: [{ text: 'OK' }],
                       });
+                      router.replace('/welcome' as never);
                     } else {
                       void showVibezAlert({
                         title: 'Could not delete account',
@@ -1381,7 +1393,14 @@ export default function AccountScreen() {
           {/* Afmelden en verwijderen onderaan, apart — zoals in Instellingen. */}
           <Group footer="Deleting your account is permanent. It does not cancel an active subscription — do that in your Google Play or Apple ID settings.">
             <Row icon={LogOut} title="Sign out" onPress={onSignOut} />
-            <Row icon={Trash2} title="Delete account" destructive onPress={onDeleteAccount} accessibilityLabel="Delete your account" />
+            <Row
+              icon={Trash2}
+              title={busy ? 'Deleting…' : 'Delete account'}
+              destructive
+              busy={busy}
+              onPress={busy ? undefined : onDeleteAccount}
+              accessibilityLabel="Delete your account"
+            />
           </Group>
         </KeyboardAwareScrollView>
       </SafeAreaView>

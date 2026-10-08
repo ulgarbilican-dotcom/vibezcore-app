@@ -15,6 +15,7 @@
    2026-05-27.
    ─────────────────────────────────────────────────────────────────── */
 
+import { fetchWithTimeout } from '@/services/auth';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -119,7 +120,7 @@ export default function ForgotPassword() {
       });
     }
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/recover`, {
         method: 'POST',
         headers: {
           apikey: SUPABASE_KEY,

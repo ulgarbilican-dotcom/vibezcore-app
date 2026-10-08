@@ -142,6 +142,14 @@ subscribeUserBucket(() => {
 
 export function startListen(url: string, title: string, series: string): void {
   if (!url) return;
+  /* Settings → Privacy → "Track listening history" (audit 8 okt 2026: de
+     schakelaar deed niets). Uit = niets bijhouden. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    if (require('@/utils/settings').getSetting('trackHistory') === false) return;
+  } catch {
+    /* swallow */
+  }
   curUrl = url;
   curTitle = title;
   curSeries = series;

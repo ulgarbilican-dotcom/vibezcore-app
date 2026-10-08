@@ -24,7 +24,7 @@ import { Brand, BrandFonts } from '@/constants/theme';
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
    actief" — nooit voor spinners of CTA-knoppen. CTA-regel v4.4 op een
    donkere achtergrond: witte knop-bg + donkere tekst. */
-import { clearSession, persistSession, relinkAfterSessionChange } from '@/services/auth';
+import { clearSession, persistSession, relinkAfterSessionChange, fetchWithTimeout } from '@/services/auth';
 import { refreshSubscription } from '@/hooks/useSubscription';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
@@ -102,7 +102,7 @@ export default function AuthCallback() {
 
       try {
         /* Token uitwisselen tegen access_token + refresh_token. */
-        const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+        const verifyRes = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/verify`, {
           method: 'POST',
           headers: {
             apikey: SUPABASE_KEY,

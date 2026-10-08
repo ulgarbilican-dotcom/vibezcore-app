@@ -28,7 +28,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
    actief" — nooit voor links/CTA. AudioAccent is de link-kleur op
    donker; CTA-regel v4.4: witte knop-bg + donkere tekst. */
 import { refreshSubscription } from '@/hooks/useSubscription';
-import { getUserEmail, persistSession } from '@/services/auth';
+import { getUserEmail, persistSession, fetchWithTimeout } from '@/services/auth';
 import { Stack, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -175,7 +175,7 @@ export default function ChangePassword() {
          /auth/v1/token met grant_type=password retourneert een nieuwe
          session als email+password correct zijn. Als 't fout is,
          krijgen we 400 met error_description="Invalid login credentials". */
-      const verifyRes = await fetch(
+      const verifyRes = await fetchWithTimeout(
         `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
         {
           method: 'POST',
@@ -210,7 +210,7 @@ export default function ChangePassword() {
       }
 
       /* ── Stap 2: update password met nieuw token ── */
-      const updateRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      const updateRes = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
         method: 'PUT',
         headers: {
           apikey: SUPABASE_KEY,
@@ -261,7 +261,7 @@ export default function ChangePassword() {
          broken state, niet erger). */
       const updated = await updateRes.json();
       try {
-        const freshRes = await fetch(
+        const freshRes = await fetchWithTimeout(
           `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
           {
             method: 'POST',

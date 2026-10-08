@@ -42,6 +42,7 @@ import { Fragment } from 'react';
 import {
   Image,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -70,7 +71,8 @@ const WORDMARK = require('../../../assets/vibezcore_wordmark.png');
 async function openExternal(url: string): Promise<void> {
   try {
     const r = await WebBrowser.openBrowserAsync(url);
-    if (r.type === 'cancel' || r.type === 'dismiss') {
+    /* Op iOS = "Done" getikt; niet nog eens openen (audit 8 okt 2026). */
+    if (Platform.OS === 'android' && (r.type === 'cancel' || r.type === 'dismiss')) {
       await Linking.openURL(url);
     }
   } catch {

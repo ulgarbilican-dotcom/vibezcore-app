@@ -126,6 +126,14 @@ export async function setSavedPosition(
   positionSec: number
 ): Promise<void> {
   await loadOnce();
+  /* Settings → "Save listening progress" (audit 8 okt 2026: de schakelaar
+     deed niets). Uit = geen positie bewaren. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    if (require('@/utils/settings').getSetting('saveProgress') === false) return;
+  } catch {
+    /* swallow */
+  }
   if (!url || !Number.isFinite(positionSec) || positionSec < RESUME_MIN_SEC) {
     /* Te kort om bij te houden — laat eventuele oude waarde staan, of clear
        als we al een waarde hadden. Conservatief: niet auto-wissen, voorkomt

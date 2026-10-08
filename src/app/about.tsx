@@ -24,6 +24,7 @@
 
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
+import { openBraceletWebsite } from '@/services/bracelet-upsell';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
    actief" — nooit voor badges/eyebrows/labels/CTA-links/tints. Dit
@@ -134,7 +135,8 @@ export default function AboutScreen() {
           title="Smart Bead Bracelet"
           desc="One HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. Calm, focus or recovery on demand. And for breathwork, a selling point on its own: a pre-set, structured session carried entirely through haptic pulses on your wrist, no screen needed."
           ctaLabel="Explore Bracelet"
-          onPress={() => router.dismissTo('/bracelet' as never)}
+          /* Bracelet-links → de website (operator 7 okt; audit 8 okt 2026). */
+          onPress={() => void openBraceletWebsite()}
         />
 
         {/* ── 01. Why ── */}
