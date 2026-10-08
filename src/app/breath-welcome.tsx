@@ -126,7 +126,10 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import VibezGlass from '@/components/VibezGlass';
+import { rootBlurRef } from '@/utils/root-blur';
 import Svg, { Path } from 'react-native-svg';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -849,6 +852,20 @@ export default function BreathWelcomeScreen() {
      `skipBreathOnboardingRedirectOnce()` voorkomt dat de Breath-tab meteen
      weer terugstuurt naar de intro — dezelfde vlag die `onMaybeLater`
      hieronder gebruikt. */
+  /* Operator, 8 okt 2026 ("popup bij skip om te overtuigen wat ze missen —
+     wat zegt UX"): Skip en de terugknop op stap 1 openen eerst één eerlijk
+     onderblad (wat je mist + twee duidelijke knoppen, geen schuldgevoel /
+     confirmshaming). Pas "Skip for now" daarin sluit de onboarding af. */
+  const [skipAsk, setSkipAsk] = useState(false);
+  const skipInsets = useSafeAreaInsets();
+  const askSkip = () => {
+    /* Via Settings opnieuw geopend: gewoon terug, geen blad. */
+    if (router.canGoBack()) {
+      onSkip(false);
+      return;
+    }
+    setSkipAsk(true);
+  };
   const onSkip = (markSeen = true) => {
     /* Operator, 8 okt 2026 (vervangt de regel van 31 juli): Skip telt als
        gezien, Apple-stijl — de onboarding komt maar één keer. Terugzien kan
@@ -893,16 +910,18 @@ export default function BreathWelcomeScreen() {
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (slide > 0) {
+        if (skipAsk) {
+          setSkipAsk(false);
+        } else if (slide > 0) {
           goBack();
         } else {
-          onSkip(false);
+          askSkip();
         }
         return true;
       });
       return () => sub.remove();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slide]),
+    }, [slide, skipAsk]),
   );
 
   /* "Maybe later" is geen vroegtijdig wegklikken zoals Skip — dit staat
@@ -1213,7 +1232,7 @@ export default function BreathWelcomeScreen() {
           </View>
         </View>
         <View style={s.backWrap}>
-          <Pressable onPress={() => onSkip()} hitSlop={14} style={s.skipWrap}>
+          <Pressable onPress={askSkip} hitSlop={14} style={s.skipWrap}>
             <Text style={s.skipTxtSecondary}>Skip</Text>
           </Pressable>
         </View>
@@ -1383,6 +1402,46 @@ export default function BreathWelcomeScreen() {
         </Animated.View>
       </View>
       </SafeAreaView>
+
+      <GlassSheet visible={skipAsk} onClose={() => setSkipAsk(false)}>
+        <View style={[s.skipSheet, { paddingBottom: Math.max(skipInsets.bottom, 12) + 12 }]}>
+          <VibezGlass
+            radius={24}
+            level="sheet"
+            blurTarget={rootBlurRef}
+            style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+          />
+          <Pressable
+            onPress={() => setSkipAsk(false)}
+            hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
+            accessibilityLabel="Close"
+          >
+            <View style={s.skipSheetGrip} />
+          </Pressable>
+          <Text style={s.skipSheetEyebrow}>YOUR FIRST SESSION</Text>
+          <Text style={s.skipSheetTitle}>Skip your personalized session?</Text>
+          <Text style={s.skipSheetBody}>
+            It takes 60 seconds. Your goal and your level decide which session
+            we build for you, so it fits from the first breath.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [s.skipSheetBtn, pressed && { opacity: 0.85 }]}
+            onPress={() => setSkipAsk(false)}
+          >
+            <Text style={s.skipSheetBtnTxt}>Continue Setup</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [s.skipSheetSecondary, pressed && { opacity: 0.6 }]}
+            onPress={() => {
+              setSkipAsk(false);
+              onSkip();
+            }}
+            hitSlop={8}
+          >
+            <Text style={s.skipSheetSecondaryTxt}>Skip for now</Text>
+          </Pressable>
+        </View>
+      </GlassSheet>
     </View>
   );
 }
@@ -3058,6 +3117,61 @@ function StartCard({
 /* ── Styles ───────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
+  /* Skip-onderblad (8 okt 2026) — zelfde opbouw als "End trial?" in
+     breath-session.tsx. */
+  skipSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    gap: 9,
+  },
+  skipSheetGrip: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: 12,
+  },
+  skipSheetEyebrow: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 9.5,
+    letterSpacing: 1.8,
+    color: '#4AF0D4',
+  },
+  skipSheetTitle: {
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 24,
+    letterSpacing: -0.4,
+    color: '#f4f4f4',
+  },
+  skipSheetBody: {
+    fontFamily: BrandFonts.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(244,244,244,0.78)',
+  },
+  skipSheetBtn: {
+    marginTop: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  skipSheetBtnTxt: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 13.5,
+    letterSpacing: 1.4,
+    color: '#1D1D1F',
+  },
+  skipSheetSecondary: { paddingVertical: 12, alignItems: 'center' },
+  skipSheetSecondaryTxt: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(244,244,244,0.5)',
+  },
   root: { flex: 1, backgroundColor: Brand.bg },
   /* Operator, 6 september 2026: stap 1 licht i.p.v. donker — de
      achtergrondfoto dekt bijna alles af, maar de rand erboven (status-
