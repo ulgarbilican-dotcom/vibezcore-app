@@ -2650,6 +2650,9 @@ export function BreathSession() {
       buddhaBreath.value = 1;
       return;
     }
+    /* Ook de ademende figuur achter het glas stilzetten (zelfde reden als de
+       sterren hierboven) — de sessie is voorbij. */
+    cancelAnimation(breath);
     buddhaBreath.value = withRepeat(
       withSequence(
         withTiming(1.12, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
@@ -2708,14 +2711,19 @@ export function BreathSession() {
       {/* Ruimte achter alles. Eén kleur, lage dichtheid, traag fonkelen —
           het geeft diepte zodat de figuur ergens IN hangt in plaats van
           op een zwart vlak te liggen. Ligt onder alle content. */}
-      <View style={s.stars} pointerEvents="none">
-        <Starfield
-          width={SCREEN_W}
-          height={SCREEN_H}
-          count={70}
-          color={C.starColor}
-        />
-      </View>
+      {/* Operator, 8 okt 2026 ("de buddha schokt"): achter het glazen
+          afsluitblad moest het glas de fonkelende sterren elk frame opnieuw
+          vervagen. Sessie voorbij → sterren weg zolang het blad open is. */}
+      {!done && (
+        <View style={s.stars} pointerEvents="none">
+          <Starfield
+            width={SCREEN_W}
+            height={SCREEN_H}
+            count={70}
+            color={C.starColor}
+          />
+        </View>
+      )}
 
       {/* Operator, 2 okt 2026 ("zwarte band snijdt de glow af"): de echte
          oorzaak was dat deze gloed voorheen ALS KIND van de `ScrollView`
