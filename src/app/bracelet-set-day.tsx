@@ -77,6 +77,8 @@ import {
 } from 'lucide-react-native';
 import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import VibezGlass from '@/components/VibezGlass';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -559,7 +561,7 @@ export default function BraceletSetDayScreen() {
         {/* Operator, 5 okt 2026 ("choose your states then how often is
             raar"): zegt meteen wat je doet — een tik voegt een sessie toe.
             Hoeveel per dag staat al in de regel onder de kaarten. */}
-        <Text style={s.lead}>Tap a state to add a session to your day.</Text>
+        <Text style={s.lead}>Tap a state to add a session to your day</Text>
 
         {/* Operator, 30 september 2026 ("5 verikante kaarten transparant
            blur tekst en iconen links"): echte `BlurView`-matglas-tegels
@@ -692,38 +694,42 @@ export default function BraceletSetDayScreen() {
          hier zonder de RHYTHMS-lijst (die bestaat niet voor de bracelet),
          met een kleurcode-rij erbij i.p.v. Voor de dit bestand nog geen
          voluit-uitgeklapte modus-uitleg had. */}
-      {infoModeMeta && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => setInfoMode(null)}
-        >
-          <Pressable style={s.infoBackdrop} onPress={() => setInfoMode(null)}>
-            <Pressable style={s.infoCard} onPress={() => {}}>
-              <View style={s.infoIconBadge}>
-                <VibezGlass radius={22} tint={infoModeMeta.color} level="raised" style={StyleSheet.absoluteFill} />
-                {(() => {
-                  const InfoIcon = MODE_ICONS[infoModeMeta.mode];
-                  return <InfoIcon size={22} color="#ffffff" strokeWidth={2} />;
-                })()}
-              </View>
-              <Text style={s.infoTitle}>{infoModeMeta.name}</Text>
-              <Text style={s.infoBody}>{infoModeMeta.blurb}</Text>
-
-              {/* Operator, 5 okt 2026: geen hexcode-rij meer (zegt een
-                  gebruiker niets — de kleur staat al in het icoon), en de
-                  knop in onze eigen CTA-stijl: wit, hoek 14, geen ovaal. */}
-              <Pressable
-                style={({ pressed }) => [s.infoBtn, pressed && { opacity: 0.85 }]}
-                onPress={() => setInfoMode(null)}
-              >
-                <Text style={s.infoBtnTxt}>Got it</Text>
-              </Pressable>
+      {/* Operator, 8 okt 2026: zelfde echte-glas-onderblad als overal
+          (GlassSheet) i.p.v. een los venster in het midden. */}
+      <GlassSheet visible={!!infoModeMeta} onClose={() => setInfoMode(null)}>
+        {infoModeMeta ? (
+          <View style={[s.infoSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
+            <Pressable
+              onPress={() => setInfoMode(null)}
+              hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
+              accessibilityLabel="Close"
+            >
+              <View style={s.infoGrip} />
             </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+            <View style={s.infoIconBadge}>
+              <VibezGlass radius={22} tint={infoModeMeta.color} level="raised" style={StyleSheet.absoluteFill} />
+              {(() => {
+                const InfoIcon = MODE_ICONS[infoModeMeta.mode];
+                return <InfoIcon size={22} color="#ffffff" strokeWidth={2} />;
+              })()}
+            </View>
+            <Text style={s.infoTitle}>{infoModeMeta.name}</Text>
+            <Text style={s.infoBody}>{infoModeMeta.blurb}</Text>
+            <Pressable
+              style={({ pressed }) => [s.infoBtn, pressed && { opacity: 0.85 }]}
+              onPress={() => setInfoMode(null)}
+            >
+              <Text style={s.infoBtnTxt}>Got it</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </GlassSheet>
     </SafeAreaView>
   );
 }
@@ -989,6 +995,21 @@ const s = StyleSheet.create({
      radius 22, padding 22, accentkleur-rand op "Got it"). Zonder de
      RHYTHMS-lijst (bestaat niet voor de bracelet); met een kleurcode-rij
      i.p.v. — operator: "volledige uitleg inclusief de kleurencode". */
+  infoSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    paddingHorizontal: 22,
+    paddingTop: 10,
+  },
+  infoGrip: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginBottom: 16,
+  },
   infoBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.8)',

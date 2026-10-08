@@ -272,15 +272,6 @@ const GoalTile = memo(function GoalTile({
           <Text style={[s.tileRankTxt, { color: g.gradient[0] }]}>{rank}</Text>
         </View>
       )}
-      {/* Vaste plek op ELKE tegel, los van `big`/`on` — linksboven, zodat
-         hij nooit met de rangnummer-badge (rechtsboven) botst. */}
-      <Pressable
-        hitSlop={10}
-        onPress={() => setShowInfo((v) => !v)}
-        style={s.tileInfoBtn}
-      >
-        <Info size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-      </Pressable>
 
       {big ? (
         /* Top 2: icoon groot en gecentreerd, titel eronder — geen
@@ -308,6 +299,18 @@ const GoalTile = memo(function GoalTile({
           )}
         </View>
       )}
+      {/* Vaste plek op ELKE tegel, los van `big`/`on` — linksboven, zodat
+         hij nooit met de rangnummer-badge (rechtsboven) botst.
+         Operator, 8 okt 2026 ("i-knoppen werken niet"): stond VÓÓR de
+         inhoud in de boom → de inhoud lag erover en ving de tik. Nu als
+         laatste, bovenop. */}
+      <Pressable
+        hitSlop={10}
+        onPress={() => setShowInfo((v) => !v)}
+        style={s.tileInfoBtn}
+      >
+        <Info size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+      </Pressable>
     </AnimatedPressable>
   );
 });
@@ -418,7 +421,7 @@ export default function GoalScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.header}>Set your state</Text>
-        <Text style={s.lead}>Choose what you want to shift.</Text>
+        <Text style={s.lead}>Choose what you want to shift</Text>
 
         {/* Operator, 21 september 2026: TOP 2 = grote, vierkantere tegels
            (icoon gecentreerd), de overige (compact) = kleinere tegels.

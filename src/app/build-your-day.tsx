@@ -251,7 +251,7 @@ export default function BuildYourDayScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.header}>Build once . Use daily</Text>
+        <Text style={s.header}>Build once. Use daily</Text>
         <Text style={s.lead} numberOfLines={1}>
           Design your personal rhythm
         </Text>
