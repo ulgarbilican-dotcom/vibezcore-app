@@ -103,8 +103,8 @@ function TrackRow({
   const tier = getEffectiveTier(session);
   /* Operator, 26 september 2026 ("is dat duidelijk voor de gebruiker?"):
      een kaal slotje voor ELKE vergrendelde sessie verbergt een écht
-     verschil — 'account' vraagt enkel een gratis account, 'pro' vraagt
-     een abonnement. Zonder onderscheid lijkt alles betaald, en dat
+     verschil — 'account' opent met de trial (FREE WITH TRIAL, 8 okt
+     2026), 'pro' vraagt een betaald abonnement. Zonder onderscheid lijkt alles betaald, en dat
      ontmoedigt onnodig. Terug een label, maar dan de rustige variant:
      klein, grijs, geen gekleurde pil/rand — zelfde taal als de "PILLAR
      01"-eyebrow elders op dit scherm, niet de vorige luide gekleurde

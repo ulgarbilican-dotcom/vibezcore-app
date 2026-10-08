@@ -178,7 +178,7 @@ export function AccountWallModal() {
           ) : (
             <Text style={s.subline}>
               You've explored all {FREE_SESSION_COUNT} free sessions. Your{' '}
-              {trialName} unlocks {TRIAL_SESSION_COUNT} sessions + Breathwork
+              {trialName} unlocks {TRIAL_SESSION_COUNT} sessions, Breathwork and State Control
               — stay subscribed after the trial to unlock the full{' '}
               {TOTAL_SESSION_COUNT}-session library.
             </Text>
@@ -189,7 +189,7 @@ export function AccountWallModal() {
               144 als directe trial-beloning suggereert. */}
           <View style={s.bullets}>
             <Bullet
-              text={`${trialDays > 0 ? `${trialDays}-day trial` : 'Trial'} — ${TRIAL_SESSION_COUNT} sessions + Breathwork`}
+              text={`${trialDays > 0 ? `${trialDays}-day trial` : 'Trial'} — ${TRIAL_SESSION_COUNT} sessions, Breathwork and State Control`}
             />
             <Bullet
               text={`Then the full library — ${TOTAL_SESSION_COUNT} sessions`}

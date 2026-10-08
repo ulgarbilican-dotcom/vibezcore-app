@@ -6,8 +6,9 @@
      'public'  → iedereen, zonder account
                  (alle Soundscapes + 5 series-openers — operator kiest welke 5)
 
-     'account' → ingelogd account vereist, geen sub
-                 (9 overige series-openers — email-capture funnel)
+     'account' → 7-dagen-trial of abonnement vereist (8 okt 2026; was
+                 "ingelogd account"). 17 series-openers, samen met de 10
+                 'public' = de 27 trial-sessies. Label: FREE WITH TRIAL.
 
      'pro'     → audio-PRO subscription vereist
                  (sessies 2-5 van elk van de 14 series — ~56 sessies)
@@ -93,8 +94,14 @@ export function resolveAccess(
   switch (tier) {
     case 'public':
       return 'allowed';
+    /* Operator, 8 okt 2026 ("27 is enkel voor trial, 10 voor free user"):
+       'account' is voortaan de TRIAL-laag — een gratis account op zich
+       ontgrendelt niets extra. Enkel trial of abonnement (isPro is ook
+       true tijdens de trial). Gast en free account zien dus hetzelfde:
+       de 10 'public'-sessies. 'needs-account' toont de trial-sheet
+       (AccountWallModal → /subscribe). */
     case 'account':
-      return isSignedIn ? 'allowed' : 'needs-account';
+      return isPro ? 'allowed' : 'needs-account';
     case 'pro':
       return isPro && !isTrialing ? 'allowed' : 'needs-pro';
   }
@@ -106,7 +113,7 @@ export function tierBadgeLabel(tier: AccessTier): string | null {
     case 'public':
       return 'FREE';
     case 'account':
-      return 'FREE WITH ACCOUNT';
+      return 'FREE WITH TRIAL';
     case 'pro':
       return 'PRO';
   }
