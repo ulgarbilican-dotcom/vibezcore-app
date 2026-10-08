@@ -1077,10 +1077,12 @@ export default function BreathWelcomeScreen() {
   const ctaLabel = isLast
     ? isPro
       ? 'Enter Breath'
-      : 'Start your first session'
+      : 'Start My First Session'
     : slide === 0
       ? 'Personalize My First Session'
-      : 'Next';
+      : slide === TOTAL - 2
+        ? 'Build My Session'
+        : 'Next';
 
   /* Operator, 22 september 2026 ("next cta moet hier pas actief en wit
      worden bij keuze gemaakt"): stap 3 ("What's the end game") is de
@@ -1824,8 +1826,10 @@ function SlideGuidance({
            kop ("Your rhythm\nYour choice") — deze ene regel geeft dezelfde
            boodschap terug en maakt de verticale ruimte vrij die de
            bracelet-teaserkaart eronder nodig heeft. */}
-        <Text style={s.header}>Choose your rhythm</Text>
-        <Text style={s.lead}>Tap. See. Hear. Feel</Text>
+        {/* Operator, 8 okt 2026 (onboarding aanscherpen): zeggen wat je
+           hier kiest — begeleiding — en dat het niet vastligt. */}
+        <Text style={s.header}>How do you want to be guided</Text>
+        <Text style={s.lead}>You can change this anytime</Text>
       </Animated.View>
 
       {/* Operator, 22 september 2026 ("ik vind het niet goed, ik wil
@@ -2784,8 +2788,10 @@ function SlideStart({
            door één gecentreerde titel — geen aparte subkop meer.
            Operator, vervolg ("Header Choose one session"): tekst
            aangepast. */}
+        {/* Operator, 8 okt 2026: sluit de belofte van stap 1 ("personalized
+           session") — de kaarten hieronder zijn op jouw keuzes gebouwd. */}
         <Text style={[s.startTitleDark, s.startTitleCentered]}>
-          Choose one session
+          Built for you
         </Text>
         {/* Operator, 22 september 2026 ("we laten ook zijn selectie zien:
            rhythm/voice, gekozen state, experience"): korte recap-chips van
