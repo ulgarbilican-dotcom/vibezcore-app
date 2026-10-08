@@ -2639,6 +2639,30 @@ export function BreathSession() {
   const pressBrowseLibrary = usePressScale(0.95);
   const pressContinuePremium = usePressScale(0.95);
   const pressNotYet = usePressScale(0.94);
+  /* Operator, 8 okt 2026 ("de buddha bewoog origineel, nu niet meer"): de
+     beweging kwam van het oude fade-venster. Nu een eigen, rustige adem
+     op de Buddha — ~4 s groter, ~4 s kleiner — zolang het afsluitblad
+     openstaat. */
+  const buddhaBreath = useSharedValue(1);
+  useEffect(() => {
+    if (!done) {
+      cancelAnimation(buddhaBreath);
+      buddhaBreath.value = 1;
+      return;
+    }
+    buddhaBreath.value = withRepeat(
+      withSequence(
+        withTiming(1.06, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(buddhaBreath);
+  }, [done, buddhaBreath]);
+  const buddhaBreathStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buddhaBreath.value }],
+  }));
   const pressImDone = usePressScale(0.95);
 
   return (
@@ -4052,10 +4076,10 @@ export function BreathSession() {
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.sheetGrip} />
-            <Image
+            <Animated.Image
               source={{ uri: BUDDHA_IMG }}
               resizeMode="contain"
-              style={s.doneBuddha}
+              style={[s.doneBuddha, buddhaBreathStyle]}
             />
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={[s.modalTitle, s.doneCenter]}>Well done</Text>
