@@ -174,6 +174,7 @@ import {
     VZ_BACKEND_URL,
     type AuthProvider,
 } from '../../services/auth';
+import { getLastContentTabRoute } from '@/utils/last-tab';
 import {
     isAppleSignInAvailable,
     isGoogleSignInAvailable,
@@ -806,10 +807,9 @@ export default function AccountScreen() {
     if (isBraceletPro && !isAudioPro) {
       setTimeout(() => router.replace('/bracelet' as never), 50);
     } else {
-      /* Zelfde correctie als bij het inloggen: `/` is de verborgen
-         audiotab, de Breath-tab is waar iemand zonder bracelet hoort te
-         landen. */
-      setTimeout(() => router.replace('/breath' as never), 50);
+      /* Zelfde als bij inloggen met e-mail: laatste tabblad buiten Profile. */
+      const target = await getLastContentTabRoute();
+      setTimeout(() => router.replace(target as never), 50);
     }
   };
 
@@ -1113,11 +1113,10 @@ export default function AccountScreen() {
           /* Bracelet-only owner → direct naar Bracelet tab. */
           setTimeout(() => router.replace('/bracelet' as never), 50);
         } else {
-          /* Iedereen zonder bracelet → de Breath-tab. Route `/` is de
-             VERBORGEN audiobibliotheek; die stuurt zelf wel door, maar dan
-             flitst er eerst een leeg scherm — rechtstreeks is gewoon
-             juist. */
-          setTimeout(() => router.replace('/breath' as never), 50);
+          /* Operator, 8 okt 2026 (Apple: verder waar je was): naar het
+             laatst gebruikte tabblad buiten Profile, anders Breath. */
+          const target = await getLastContentTabRoute();
+          setTimeout(() => router.replace(target as never), 50);
         }
       } else if (r.needsConfirm) {
         /* Account bestaat, e-mail nog te bevestigen: geen fout. Het
