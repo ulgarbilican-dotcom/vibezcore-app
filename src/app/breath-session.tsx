@@ -3479,20 +3479,25 @@ export function BreathSession() {
            de Breath-tab (niet welcome.tsx — de tabbalk daar geeft al
            toegang tot Audio Library/Bracelet/Activity/Account, dus "verder
            rondkijken" kan meteen). */}
-      <Modal
-        visible={endTrialConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEndTrialConfirm(false)}
-      >
-        <Pressable
-          style={s.modalBackdrop}
-          onPress={() => setEndTrialConfirm(false)}
-        >
-          <Pressable style={s.modalCard} onPress={() => {}}>
-            {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
-                7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
-            <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
+      {/* Operator, 8 okt 2026 ("end trial popup staat in het midden en is
+          geen glas"): een Modal tekent op Android in een apart venster, dus
+          het glas zag de sessie erachter nooit. Nu hetzelfde onderblad met
+          echt glas als het betaalscherm (GlassSheetHost). */}
+      <GlassSheet visible={endTrialConfirm} onClose={() => setEndTrialConfirm(false)}>
+          <View style={[s.trialSheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
+            <Pressable
+              onPress={() => setEndTrialConfirm(false)}
+              hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
+              accessibilityLabel="Close"
+            >
+              <View style={s.sheetGrip} />
+            </Pressable>
             <Text style={s.modalEyebrow}>{st.eyebrow}</Text>
             <Text style={s.modalTitle}>End trial?</Text>
             <Text style={s.modalBody}>
@@ -3528,9 +3533,8 @@ export function BreathSession() {
             >
               <Text style={s.modalSecondaryTxt}>Continue session</Text>
             </AnimatedPressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* ── Welk geluid eronder ──────────────────────────────────────────
            Dertien opties passen niet in een rij, dus een vel met de vier
@@ -4983,6 +4987,14 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     borderColor: accentSoft,
     paddingHorizontal: 18,
     paddingTop: 10,
+  },
+  trialSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    gap: 9,
   },
   sheetGrip: {
     alignSelf: 'center',
