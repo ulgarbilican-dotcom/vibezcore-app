@@ -21,7 +21,9 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
+import { SESSIONS } from '@/data/audio-library-data';
 import { useIAP } from '@/hooks/useIAP';
+import { getEffectiveTier } from '@/utils/access-tier';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
@@ -32,6 +34,12 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+
+/* 10 gratis + 17 trial-sessies — afgeleid uit de data, blijft kloppen. */
+const TRIAL_SESSION_COUNT = SESSIONS.filter((x) => {
+  const t = getEffectiveTier(x);
+  return t === 'public' || t === 'account';
+}).length;
 
 export type MembershipPlan = 'monthly' | 'yearly';
 
@@ -134,6 +142,13 @@ export default function MembershipPlans({
         ? `Free for ${trialDays} days, then ${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}. Cancel anytime.`
         : `${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}. Cancel anytime.`
       : `${monthlyPrice} per month${monthlyAfter ? ` for the first year, ${monthlyAfter} per month after` : ''}. Cancel anytime.`;
+  /* Operator, 8 okt 2026: de kop belooft "Audio Library" — maak vóór de
+     knop duidelijk dat de trial 27 sessies opent, niet alle (kort, Apple-
+     stijl; Breathwork/State Control staan al in de kop). */
+  const trialScope =
+    plan === 'yearly' && hasTrial
+      ? `Trial includes ${TRIAL_SESSION_COUNT} audio sessions. Full library after.`
+      : null;
   const cta = plan === 'yearly' && hasTrial ? 'Start free trial' : 'Subscribe';
   const store = Platform.OS === 'ios' ? 'Apple ID' : 'Google Play account';
 
@@ -201,6 +216,7 @@ export default function MembershipPlans({
       </View>
 
       <Text style={s.summary}>{summary}</Text>
+      {trialScope && <Text style={s.trialScope}>{trialScope}</Text>}
 
       <Bounce style={s.cta} onPress={() => onContinue(plan)} accessibilityLabel={cta}>
         <View style={s.ctaInner}>
@@ -270,6 +286,7 @@ const s = StyleSheet.create({
   selOn: { borderColor: AudioAccent, backgroundColor: AudioAccent },
   selCheck: { color: '#ffffff', fontSize: 11, fontWeight: '800', lineHeight: 13 },
   summary: { color: DIM, fontFamily: BrandFonts.medium, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 18 },
+  trialScope: { color: DIM, fontFamily: BrandFonts.medium, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
   cta: { marginTop: 12 },
   ctaInner: {
     backgroundColor: '#ffffff',
