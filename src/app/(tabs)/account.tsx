@@ -11,7 +11,7 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
-import { AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
@@ -31,7 +31,9 @@ const C = light ? BrandLight : BrandDark;
    haptic-pulsen en "nu actief"-status — nooit voor kaart-tints/borders/
    links/eyebrows. Deze schermen zijn light-mode, dus de vervanging is
    Royal Indigo (#1E2A4A, rgb 30,42,74), gelijk aan BrandLight.accent. */
-const ROYAL_INDIGO_RGB = '30,42,74';
+/* 8 okt 2026 (kleurregel: Bio-Teal is DE accentkleur): was Royal Indigo
+   (30,42,74) — bestaat niet meer. Naam blijft (scheelt een rename). */
+const ROYAL_INDIGO_RGB = '0,163,163';
 import {
   refreshSubscription,
   setSignedOutStatus,
@@ -1746,7 +1748,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: `rgba(${ROYAL_INDIGO_RGB},0.55)`,
     marginBottom: 18,
-    shadowColor: '#1E2A4A',
+    shadowColor: '#00A3A3',
     shadowOpacity: 0.20,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 0 },
@@ -2085,7 +2087,7 @@ const s = StyleSheet.create({
   /* BEST VALUE pill — gedeeld door bundle inline. */
   bundleInlineBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: C.success,
+    backgroundColor: AudioAccent,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 4,
@@ -2136,7 +2138,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: C.success,
+    backgroundColor: AudioAccent,
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 999,

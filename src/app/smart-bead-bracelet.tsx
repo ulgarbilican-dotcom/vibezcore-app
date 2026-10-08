@@ -2222,7 +2222,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   ownerArrow: {
-    color: C.success,
+    color: '#4AF0D4',
     fontSize: 24,
     fontFamily: BrandFonts.medium,
   },

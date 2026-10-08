@@ -136,7 +136,7 @@ export function tierBadgeColor(tier: AccessTier): string {
     case 'public':
       return 'rgba(255,255,255,0.72)'; /* wit — direct beschikbaar */
     case 'account':
-      return '#6E85C4'; /* Royal Indigo Light — actie nodig om te unlocken */
+      return '#00A3A3'; /* Bio-Teal (8 okt 2026; was Royal Indigo Light) */
     case 'pro':
       return 'rgba(255,255,255,0.55)'; /* dim wit — premium gating */
   }

@@ -46,7 +46,7 @@ const C = {
      was #3a8fff (Signal Blue) — die is strikt gereserveerd voor
      haptic-pulsen/"nu actief", niet voor deze decoratieve sectie-kleur
      (eyebrow, pulse-dot, chevron). AudioAccent-waarde op donker. */
-  accent: '#6E85C4',  // sectie 1 — bestaande series
+  accent: '#4AF0D4', // 8 okt 2026: was Royal Indigo Light — Bio-Teal  // sectie 1 — bestaande series
   amber: '#f59e0b',   // sectie 2 — nieuwe series ("Coming")
 };
 

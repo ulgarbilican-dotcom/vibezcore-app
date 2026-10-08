@@ -163,7 +163,7 @@ const DARK = {
   text: '#ffffff',
   dim: 'rgba(255,255,255,0.5)',
   faint: 'rgba(255,255,255,0.32)',
-  accent: '#3a8fff',
+  accent: AudioAccent, // 8 okt 2026: was Signal Blue — "bezig" = Bio-Teal
   arrow: 'rgba(58,143,255,0.7)',
   border: '#1a1a1a',
   /* Iter 2026-06-05: kleur-hiërarchie cleanup (operator-feedback).
@@ -4209,7 +4209,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   signInBannerIconText: {
-    color: '#3a8fff',
+    color: AudioAccent,
     fontSize: 18,
     lineHeight: 22,
   },
@@ -4228,7 +4228,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   signInBannerArrow: {
-    color: '#3a8fff',
+    color: AudioAccent,
     fontSize: 22,
     fontFamily: 'Inter_700Bold',
   },

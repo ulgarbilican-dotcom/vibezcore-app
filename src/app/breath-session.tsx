@@ -3802,7 +3802,7 @@ export function BreathSession() {
                     });
                   }
                 }}
-                trackColor={{ false: '#3a3a3a', true: accent }}
+                trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
                 ios_backgroundColor="#3a3a3a"
               />
@@ -3931,7 +3931,7 @@ export function BreathSession() {
                     });
                   }
                 }}
-                trackColor={{ false: '#3a3a3a', true: accent }}
+                trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
                 ios_backgroundColor="#3a3a3a"
               />
@@ -3946,7 +3946,7 @@ export function BreathSession() {
                 <Switch
                   value={braceletOn}
                   onValueChange={(v) => setBraceletOn(v)}
-                  trackColor={{ false: '#3a3a3a', true: accent }}
+                  trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                   thumbColor="#ffffff"
                   ios_backgroundColor="#3a3a3a"
                 />

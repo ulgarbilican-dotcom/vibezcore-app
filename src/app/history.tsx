@@ -86,8 +86,8 @@ const DARK = {
   cardStrong: 'rgba(255,255,255,0.06)',
   border: 'rgba(255,255,255,0.08)',
   searchBg: 'rgba(255,255,255,0.05)',
-  accent: '#3a8fff',
-  partial: '#3a8fff',
+  accent: AudioAccent, // 8 okt 2026: was Signal Blue
+  partial: AudioAccent,
   full: '#4ade80',
   inputDim: 'rgba(255,255,255,0.4)',
 };
