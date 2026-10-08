@@ -48,7 +48,7 @@
 | 12 | Voorproef Sharp Focus | A16 | ✅ 10 s op 66,0 bpm → glijden (15,6 s = 62,1, formule 62,1); lub-dub 273 ms (30%); stop na ~32 s. Laatste 14 s niet uitleesbaar (log afgekapt) |
 | 13 | Quick Chill, 5 min | A16 | ✅ 10 s op 66 → 2 min glijden → 46,0 bpm (45,8–46,3) tot het einde; eindsignaal op 301 s |
 | 14 | Quick Boost, 5 min | A16 | ✅ 10 s op 66 → 10 s naar 110 → 110 (108,5–111) tot het einde; eindsignaal op 300,5 s; tikken 60/46 ms (steviger dan Chill 40/32) |
-| 15 | Einde sessie → afsluitscherm | A16 | ❌ 0,3 s keuzescherm (Sharp Focus) zichtbaar → fix (`2f46905`) ⏳ hertest |
+| 15 | Einde sessie → afsluitscherm | A16 | ❌ 0,3 s keuzescherm (Sharp Focus) zichtbaar → fix (`2f46905`). 8 okt: einde preview → keuzescherm ✅; einde volledige sessie ⏳ |
 | 17 | Keuzescherm te druk (Quick-knoppen met tekst) | A16 | ⚠️ operator: "heel druk" → icoontjes naast elkaar boven de Start-knop, tik = glazen paneel met uitleg + Start/Back; icoon Chill = teken van Clarity & Relax (niet het maantje = Sleep) |
 | 18 | Quick Chill-paneel | A16 | ✅ screenshot: titel, "5 min · starts right away", uitleg, Start, Back, glas |
 | 19 | Tik-gevoel knoppen | A16 | ⚠️ nieuwe knoppen sprongen abrupt naar half doorzichtig of reageerden niet (Back/Cancel) → gedeelde `PressScale` (curve van de Start-knop: 80 ms krimpen, veer terug; lichte tik bij hoofdknoppen). ⏳ door operator te voelen |
@@ -127,6 +127,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 68 | Free account openen: geen flits van Breath vóór de onboarding (`1e4d499`); onboarding maar één keer, ook na Skip (`f3196ec`, vervangt regel 31 juli) | A16 | ✅ operator: nieuw account (Confirm email UIT → meteen ingelogd) krijgt onboarding; na wegklikken en terugkomen weg. Uitloggen/inloggen ⏳ |
 | 68b | Onboarding: terugvegen = "nu even niet" (komt terug op Breath-tab), Skip = gezien (`94077e2`); Skip leesbaar (`ed73423`); Skip landt op Breath-welkomstbeeld i.p.v. select state (`b0c0ad7`) | A16 | ✅ operator: "skip werkt" — landing-fix ⏳ hertest |
 | 68c | Crash "Reload / Go home" na account aanmaken → Breath (addViewAt: child already has a parent) → sprong naar onboarding pas na lopende overgangen (`55d898b`); nieuwe onboarding-teksten stap 1/2/4/5 (`972d123`, `714d57a`); Skip + terugknop stap 1 → glazen blad "Skip your personalized session?" (`d10501d`) | A16 | ✅ operator: "in orde" (+ `b35fbc9` replay-param, `43c48f7`/`e495e11` blad-tekst per stap) |
+| 69 | Soundscapes: rij was onzichtbaar in Audio & Haptics (kromp tot 0 in glas-vel) → fix; Rain + Canopy gratis vooraan, rest kroontje → Premium-blad (sessie loopt door); "Cancel anytime" op eigen regel (`552d229`, `be7982a`, `7584f08`) | A16 | ✅ operator: "ok" |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
