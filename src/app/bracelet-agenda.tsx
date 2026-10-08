@@ -103,6 +103,8 @@ import {
 } from 'lucide-react-native';
 import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import VibezGlass from '@/components/VibezGlass';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -590,12 +592,14 @@ export default function BraceletAgendaScreen() {
         const item = day.items[actionItemIndex];
         const meta = getModeMeta(item.mode as BraceletMode);
         return (
-          <Modal visible transparent animationType="fade" onRequestClose={() => setActionItemIndex(null)}>
-            <Pressable style={s.pickBackdrop} onPress={() => setActionItemIndex(null)}>
-              <Pressable
-                style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-                onPress={() => {}}
-              >
+          <GlassSheet visible onClose={() => setActionItemIndex(null)}>
+              <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}>
+                <VibezGlass
+                  radius={24}
+                  level="sheet"
+                  blurTarget={rootBlurRef}
+                  style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+                />
                 <View style={s.pickHandle} />
                 <View style={s.actionHead}>
                   <View style={[s.actionDot, { backgroundColor: meta.color }]} />
@@ -630,9 +634,8 @@ export default function BraceletAgendaScreen() {
                 >
                   <Text style={s.actionRemoveTxt}>Remove from plan</Text>
                 </Pressable>
-              </Pressable>
-            </Pressable>
-          </Modal>
+              </View>
+          </GlassSheet>
         );
       })()}
     </SafeAreaView>
@@ -819,6 +822,7 @@ const s = StyleSheet.create({
   /* Actie-schermpje (Try it/Remove) — 1-op-1 het `pickBackdrop`/
      `pickSheet`/`pickHandle`-protocol dat bracelet-set-day.tsx al
      gebruikt voor zijn "Your plan"-popup. */
+  pickSheetGlass: { backgroundColor: 'transparent', overflow: 'hidden', borderWidth: 0 },
   pickBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
   pickSheet: {
     backgroundColor: '#141414',

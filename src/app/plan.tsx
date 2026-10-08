@@ -830,9 +830,6 @@ export default function PlanScreen() {
               if (!item) return null;
               return (
                 <>
-                  <View
-                    style={[s.pickAccent, { backgroundColor: item.state.accent }]}
-                  />
                   <Text style={s.pickTitle}>
                     {item.moment.label.charAt(0) +
                       item.moment.label.slice(1).toLowerCase() +
@@ -992,7 +989,6 @@ export default function PlanScreen() {
                  duur-editor. */
               return (
                 <>
-                  <View style={[s.pickAccent, { backgroundColor: item.state.accent }]} />
                   <Text style={s.pickTitle}>{item.state.eyebrow} duration</Text>
                   <DurationWheel
                     options={item.state.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
@@ -1002,6 +998,13 @@ export default function PlanScreen() {
                     recommendedValue={item.state.defaultDuration}
                     onChange={(v) => void setMinutesForPlanIndex(planIndex, v)}
                   />
+                  <Pressable
+                    style={({ pressed }) => [s.pickDone, pressed && { opacity: 0.85 }]}
+                    onPress={() => setDurationPicking(null)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={s.pickDoneTxt}>Done</Text>
+                  </Pressable>
                 </>
               );
             })()}
@@ -1174,6 +1177,17 @@ const s = StyleSheet.create({
     paddingTop: 10,
     alignItems: 'center',
   },
+  /* Operator, 8 okt 2026 ("ik zie geen done"): witte Done onder het wiel. */
+  pickDone: {
+    alignSelf: 'stretch',
+    marginTop: 18,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
   pickHandle: {
     width: 36,
     height: 4,

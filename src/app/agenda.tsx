@@ -21,6 +21,8 @@ import { syncPlanReminders } from '@/services/reminders';
 import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
 import { DurationWheel } from '@/components/DurationWheel';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import { rootBlurRef } from '@/utils/root-blur';
 import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -920,17 +922,15 @@ export default function AgendaScreen() {
       </ScrollView>
 
       {/* ── Duur-kiezer ── zelfde patroon als plan.tsx/plan-review.tsx. */}
-      <Modal
-        visible={durationPicking !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDurationPicking(null)}
-      >
-        <Pressable style={s.pickBackdrop} onPress={() => setDurationPicking(null)}>
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-            onPress={() => {}}
-          >
+      {/* Operator, 8 okt 2026 ("popup is niet glaslook"): echt glas-onderblad. */}
+      <GlassSheet visible={durationPicking !== null} onClose={() => setDurationPicking(null)}>
+          <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {durationPicking !== null && selectedDay && (() => {
               const it = selectedDay.items[durationPicking];
@@ -947,7 +947,6 @@ export default function AgendaScreen() {
                  bepaalde stops op het wiel. */
               return (
                 <>
-                  <View style={[s.pickAccent, { backgroundColor: st.accent }]} />
                   <Text style={s.pickTitle}>{titleCase(st.eyebrow)} duration</Text>
                   <DurationWheel
                     options={st.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
@@ -959,12 +958,18 @@ export default function AgendaScreen() {
                       void setMinutesForIndex(durationPicking, v);
                     }}
                   />
+                  <Pressable
+                    style={({ pressed }) => [s.pickDone, pressed && { opacity: 0.85 }]}
+                    onPress={() => setDurationPicking(null)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={s.pickDoneTxt}>Done</Text>
+                  </Pressable>
                 </>
               );
             })()}
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* Operator, 1 okt 2026 ("eerst popup met vraag om naar deze sessie
          te gaan, hoe zou apple dat doen"): een actiesheet i.p.v. een
@@ -972,12 +977,14 @@ export default function AgendaScreen() {
          exacte actie laten zeggen ("Start session"), niet "OK". Zelfde
          `pickBackdrop`/`pickSheet`/`pickHandle`-opzet als de duur-kiezer
          hierboven en 1-op-1 bracelet-agenda.tsx's identieke popup. */}
-      <Modal visible={actionItemIndex !== null} transparent animationType="fade" onRequestClose={() => setActionItemIndex(null)}>
-        <Pressable style={s.pickBackdrop} onPress={() => setActionItemIndex(null)}>
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14, alignItems: 'stretch' }]}
-            onPress={() => {}}
-          >
+      <GlassSheet visible={actionItemIndex !== null} onClose={() => setActionItemIndex(null)}>
+          <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14, alignItems: 'stretch' }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {actionItemIndex !== null && selectedDay && (() => {
               const it = selectedDay.items[actionItemIndex];
@@ -1034,9 +1041,8 @@ export default function AgendaScreen() {
                 </>
               );
             })()}
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
     </SafeAreaView>
   );
@@ -1235,6 +1241,7 @@ const s = StyleSheet.create({
   cardTxt: { fontFamily: BrandFonts.medium, fontSize: 12.5, lineHeight: 15, color: 'rgba(255,255,255,0.65)' },
   cardTxtOn: { color: '#ffffff', fontFamily: BrandFonts.semibold },
 
+  pickSheetGlass: { backgroundColor: 'transparent', overflow: 'hidden', borderWidth: 0 },
   pickBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
   pickSheet: {
     backgroundColor: '#141414',
@@ -1246,6 +1253,17 @@ const s = StyleSheet.create({
     paddingTop: 10,
     alignItems: 'center',
   },
+  /* Operator, 8 okt 2026 ("ik zie geen done"): witte Done onder het wiel. */
+  pickDone: {
+    alignSelf: 'stretch',
+    marginTop: 18,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
   pickHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', marginBottom: 14 },
   pickAccent: { width: 30, height: 3, borderRadius: 2, marginBottom: 8 },
   pickTitle: { alignSelf: 'flex-start', marginBottom: 14, fontFamily: BrandFonts.bold, fontSize: 17, color: '#ffffff' },
