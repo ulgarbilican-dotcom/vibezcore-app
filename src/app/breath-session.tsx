@@ -3248,14 +3248,15 @@ export function BreathSession() {
               style={[s.pauseMain, pressPauseMain.style]}
               accessibilityLabel={paused ? 'Resume' : 'Pause'}
             >
-              <BlurView
-                intensity={40}
-                tint="dark"
-                blurMethod="dimezisBlurViewSdk31Plus"
+              {/* Operator, 8 okt 2026 ("ja glas"): de BlurView hier had geen
+                 blurTarget → op Android vervaagde hij niets (vlak donker).
+                 Nu echt glas (VibezGlass + rootBlurRef), met de lichte
+                 toestandstint die er al was. */}
+              <VibezGlass
+                radius={36}
+                tint={accent}
+                blurTarget={rootBlurRef}
                 style={StyleSheet.absoluteFill}
-              />
-              <View
-                style={[StyleSheet.absoluteFill, s.pauseMainTint, { backgroundColor: accent }]}
               />
               {paused ? (
                 <Play size={24} color={activeIconColor} strokeWidth={2.2} />
