@@ -221,6 +221,11 @@ export const GROUP_ORDER: SoundscapeGroup[] = [
   'TONE',
 ];
 
+/** Operator, 8 okt 2026 ("rain en forest gratis"): enkel deze twee zijn
+ *  gratis; de rest vraagt Premium (ook open tijdens de trial). Canopy =
+ *  het bos-geluid (vogels in het bladerdak). */
+export const FREE_SOUNDSCAPES = new Set<string>(['rain', 'canopy']);
+
 export const soundscapeByKey = (k: string | null) =>
   k ? (SOUNDSCAPES.find((s) => s.key === k) ?? null) : null;
 

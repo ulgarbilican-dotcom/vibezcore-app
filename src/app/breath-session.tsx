@@ -79,6 +79,7 @@ import {
 } from '@/utils/breath-entry';
 import { recordInstantFeedback, type InstantFeedback } from '@/utils/instant-feel';
 import {
+  FREE_SOUNDSCAPES,
   GROUP_ORDER,
   GROUP_TINT,
   SOUNDSCAPES,
@@ -150,6 +151,7 @@ import {
   ChevronDown,
   BatteryWarning,
   ChevronRight,
+  Crown,
   Gem,
   Pause,
   Play,
@@ -1899,6 +1901,20 @@ export function BreathSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstantSession, pauseSession]);
   const [paywall, setPaywall] = useState(false);
+  /* Soundscapes: Rain + Canopy gratis, rest Premium (8 okt 2026). Eigen
+     paywall-staat: sluiten laat de sessie gewoon doorlopen (de sessie-
+     paywall hierboven beëindigt de sessie bij sluiten). */
+  const [scapePaywall, setScapePaywall] = useState(false);
+  const scapeLocked = (k: string) => !isPro && !FREE_SOUNDSCAPES.has(k);
+  const pickScapeGated = (k: string | null) => {
+    if (k && scapeLocked(k)) {
+      Haptics.selectionAsync();
+      setAvSheetOpen(false);
+      setScapePaywall(true);
+      return;
+    }
+    pickScape(k);
+  };
   /* Operator, 8 okt 2026 ("ik wil die foute lotus in een vierkante kaart
      nooit meer zien"): tussen stoppen en het verdwijnen van de sessielaag
      tekende dit scherm één moment zijn rusttoestand. Zodra we vertrekken,
@@ -3266,6 +3282,8 @@ export function BreathSession() {
           style={[StyleSheet.absoluteFill, { backgroundColor: '#050507', zIndex: 999, elevation: 999 }]}
         />
       ) : null}
+      <PremiumPaywallModal visible={scapePaywall} onClose={() => setScapePaywall(false)} />
+
       <PremiumPaywallModal
         visible={paywall}
         onClose={() => {
@@ -3629,7 +3647,7 @@ export function BreathSession() {
                         style={[s.scapeRow, on && s.scapeRowOn, pressScapeRowChip.style]}
                         onPressIn={pressScapeRowChip.onPressIn}
                         onPressOut={pressScapeRowChip.onPressOut}
-                        onPress={() => pickScape(x.key)}
+                        onPress={() => pickScapeGated(x.key)}
                       >
                         <x.Icon
                           size={19}
@@ -3797,7 +3815,7 @@ export function BreathSession() {
                 return (
                   <AnimatedPressable
                     key={x.key}
-                    onPress={() => pickScape(x.key)}
+                    onPress={() => pickScapeGated(x.key)}
                     onPressIn={pressAvScapeChip.onPressIn}
                     onPressOut={pressAvScapeChip.onPressOut}
                     style={[
@@ -3808,6 +3826,9 @@ export function BreathSession() {
                   >
                     <x.Icon size={16} color={on ? '#ffffff' : C.dim55} strokeWidth={2.2} />
                     <Text style={[s.avScapeChipTxt, on && { color: '#ffffff' }]}>{x.name}</Text>
+                    {scapeLocked(x.key) && (
+                      <Crown size={12} color={C.dim55} strokeWidth={2.2} />
+                    )}
                   </AnimatedPressable>
                 );
               })}
