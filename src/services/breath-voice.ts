@@ -420,6 +420,24 @@ export function playCompletionCue(key: BreathKey): void {
   playUrl(url);
 }
 
+/** Operator, 8 okt 2026 ("op einde sessie werd de tekst niet uitgesproken"
+ *  — scherm vergrendeld): de afsluitzin is een remote mp3 die pas op het
+ *  einde geladen werd, precies wanneer de app ook zijn achtergrond-anker
+ *  losliet → Android legde de app stil vóór hij klonk. Bij de start van de
+ *  sessie al stil laten bufferen (zelfde recept als preloadBreathCues). */
+export function preloadCompletionCue(key: BreathKey): void {
+  if (!voiceEnabled) return;
+  const url = COMPLETION_URLS[key];
+  if (!url) return;
+  try {
+    const player = getOrCreatePlayer(url);
+    player.volume = 0;
+    player.play();
+  } catch {
+    /* swallow — mag de sessie nooit breken */
+  }
+}
+
 /** Maak de spelers alvast aan zonder te spelen.
  *
  *  Nodig op schermen waar één losse cue wordt afgespeeld i.p.v. een reeks.

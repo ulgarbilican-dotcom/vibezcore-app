@@ -95,6 +95,7 @@ import {
   claimVoiceSource,
   playBreathCue,
   playCompletionCue,
+  preloadCompletionCue,
   playUjjayiStartCue,
   preloadBreathCues,
   releaseVoiceSource,
@@ -1216,6 +1217,19 @@ export function BreathSession() {
      uit refs. Anders leest een lopende sessie de waarden van de render
      waarin hij begon. */
   const voiceRef = useRef(voiceOn);
+  /* Uitgestelde stop van het achtergrond-anker na een afgemaakte sessie
+     (zie finish). Bij verlaten van dit scherm meteen opruimen. */
+  const keepAliveStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (keepAliveStopRef.current) {
+        clearTimeout(keepAliveStopRef.current);
+        keepAliveStopRef.current = null;
+        stopSessionKeepAlive();
+      }
+    },
+    [],
+  );
   const hapticRef = useRef(hapticsOn);
   const roundsRef = useRef(rounds);
   /* Het WERKELIJKE aantal rondes voor DEZE run — normaal gelijk aan
@@ -1434,7 +1448,19 @@ export function BreathSession() {
        niet meetellen maakt de cijfers een beloning voor doorzetten in plaats
        van een verslag van wat er gebeurd is. Onder de tien seconden slaan we
        niets op: dat is een vergissing, geen sessie. */
-    stopSessionKeepAlive();
+    /* Operator, 8 okt 2026: bij een afgemaakte sessie met stem het
+       achtergrond-anker nog even vasthouden, anders legt Android de app
+       (scherm vergrendeld) stil vóór de afsluitzin klinkt. Wegtikken van
+       het afsluitscherm (dismissDone) stopt het meteen. */
+    if (completed && voiceRef.current) {
+      if (keepAliveStopRef.current) clearTimeout(keepAliveStopRef.current);
+      keepAliveStopRef.current = setTimeout(() => {
+        keepAliveStopRef.current = null;
+        stopSessionKeepAlive();
+      }, 75_000);
+    } else {
+      stopSessionKeepAlive();
+    }
     endLiveSession();
     /* De EERLIJKE duur: de wandklok, niet de getikte seconden. Wordt de app
        ooit toch even bevroren (agressieve batterijstand), dan lopen de tikken
@@ -2077,7 +2103,13 @@ export function BreathSession() {
         paused: startPaused,
       });
       try {
+        /* Uitgestelde stop van een vorige sessie mag deze niet raken. */
+        if (keepAliveStopRef.current) {
+          clearTimeout(keepAliveStopRef.current);
+          keepAliveStopRef.current = null;
+        }
         startSessionKeepAlive({ title: st.eyebrow, subtitle: tech.name });
+        if (voiceRef.current) preloadCompletionCue(st.key as BreathKey);
       } catch {
         /* Zelfde reden als de try/catch verderop in deze functie: het
            achtergrond-anker mag START nooit blokkeren. */
@@ -2551,6 +2583,11 @@ export function BreathSession() {
   const dismissDone = useCallback(() => {
     setSessionEnded(true);
     stopVoice();
+    if (keepAliveStopRef.current) {
+      clearTimeout(keepAliveStopRef.current);
+      keepAliveStopRef.current = null;
+      stopSessionKeepAlive();
+    }
     setDone(false);
   }, []);
 
