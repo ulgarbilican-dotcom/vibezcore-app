@@ -83,6 +83,7 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 37 | Account aanmaken in Profile: < 8 tekens geweigerd; "check your inbox" niet in rood; bestaand e-mailadres → "Sign in" | A16 | ⏳ |
 | 38 | Welcome "Already a member? Sign in" opent formulier meteen; na inloggen geen breathwork-intro meer | A16 | ✅ na fix `4d03b65` (intro per e-mailadres onthouden). Operator: "in orde" |
 | 38b | "End trial?" bij vroegtijdig stoppen van de gratis volledige sessie: stond in het midden, geen glas | A16 | ❌→✅ `e2f1bbd`: glazen onderblad (GlassSheet) zoals het betaalscherm. Operator: "in orde" |
+| 38c | Na inloggen (Free): naar het laatst gebruikte tabblad buiten Profile (State Control), niet altijd Breathwork | A16 | ❌ altijd /breath → fix `412da01` + vangnet `d91a182` (eerste hertest faalde door live-herladen zonder herstart; opslag nagekeken via adb: `vz_last_content_tab_v1 = bracelet`) → ✅ operator: "nu ok" |
 | 39 | Google-account: geen "Change password"-rij | A16 | ⏳ |
 | 40 | Delete account → welkomstscherm, audio + bracelet gestopt | A16 | ⏳ |
 | 41 | E-mailbevestiging / wachtwoordreset via link → daarna kopen staat op account | A16 | ⏳ |
