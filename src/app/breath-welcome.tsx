@@ -833,7 +833,8 @@ export default function BreathWelcomeScreen() {
     }
   };
 
-  /* Skip zet de vlag BEWUST NIET (operator 2026-07-31: "iedereen die skipt
+  /* [VERVANGEN 8 okt 2026 — Skip zet de vlag nu WEL, zie onSkip.]
+     Skip zet de vlag BEWUST NIET (operator 2026-07-31: "iedereen die skipt
      of uitlogt en later terugkomt moet altijd terug naar intro"). Alleen wie
      de drie schermen uitloopt is klaar; wegklikken is uitstel, geen keuze.
      Anders raakt iemand die per ongeluk op Skip tikt de intro voorgoed
@@ -850,6 +851,10 @@ export default function BreathWelcomeScreen() {
      weer terugstuurt naar de intro — dezelfde vlag die `onMaybeLater`
      hieronder gebruikt. */
   const onSkip = () => {
+    /* Operator, 8 okt 2026 (vervangt de regel van 31 juli): Skip telt als
+       gezien, Apple-stijl — de onboarding komt maar één keer. Terugzien kan
+       via Settings. */
+    void finish();
     if (router.canGoBack()) {
       router.back();
       return;
