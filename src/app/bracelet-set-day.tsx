@@ -817,6 +817,10 @@ const s = StyleSheet.create({
     ...TypeScale.cardHeadline,
     fontSize: 15.5,
     lineHeight: 18,
+    /* Operator, 8 okt 2026 ("teksten in de kaarten lager, iconen blijven"):
+       naam onderaan de tegel, icoon blijft bovenaan. */
+    marginTop: 'auto',
+    paddingTop: 10,
     color: '#ffffff',
     alignSelf: 'stretch',
     textAlign: 'left',
