@@ -597,7 +597,9 @@ export default function PlayerScreen() {
         <Animated.View
           style={[
             s.artworkWrap,
-            photoAspect ? { height: ARTWORK_SIZE / photoAspect } : null,
+            /* Audit 8 okt 2026: staande foto's niet hoger dan 1,25× de breedte
+               — anders schoven de knoppen op kleine telefoons onder de rand. */
+            photoAspect ? { height: Math.min(ARTWORK_SIZE / photoAspect, ARTWORK_SIZE * 1.25) } : null,
             artworkAnimStyle,
             entranceArtStyle,
           ]}
