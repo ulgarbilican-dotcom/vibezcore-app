@@ -4830,7 +4830,10 @@ function BraceletControlScreen({
   useEffect(() => {
     const token = typeof params.open === 'string' ? params.open : null;
     if (!token || lastLinkTokenRef.current === token) return;
-    const modeNum = typeof params.mode === 'string' ? Number(params.mode) : NaN;
+    const rawMode = typeof params.mode === 'string' ? Number(params.mode) : NaN;
+    /* Audit 8 okt 2026: enkel een geldige toestand 0–4 — mode=7 in een link
+       liet het scherm crashen (getModeMeta(7) bestaat niet). */
+    const modeNum = Number.isInteger(rawMode) && rawMode >= 0 && rawMode <= 4 ? rawMode : NaN;
     if (params.plan === '1' && Number.isFinite(modeNum)) {
       if (subscription.isLoading) return; // wachten, de effect loopt opnieuw
       lastLinkTokenRef.current = token;
@@ -5444,6 +5447,12 @@ function BraceletControlScreen({
         onSwitchMode={async () => {
           setEndedLocally(true);
           await onStop();
+          /* Audit 8 okt 2026: een nieuwe sessie starten valt onder dezelfde
+             Premium-regel als de gewone Start-knop. */
+          if (sessionsLocked) {
+            setPaywallOpen(true);
+            return;
+          }
           await onStart();
         }}
         fromContext={fromContext}

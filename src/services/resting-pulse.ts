@@ -79,7 +79,16 @@ function resolve(s: Stored): RestingPulse {
   const recent = recentReadings(s);
   const latestReading = recent.reduce<Reading | null>((a, r) => (!a || r.at > a.at ? r : a), null);
   /* Zelf ingevuld wint, tenzij er daarna gemeten werd. */
-  if (s.manual && (!latestReading || s.manual.at >= latestReading.at) && !s.average) {
+  /* Audit 8 okt 2026: zelf ingevuld wint als het het nieuwste is, ÓF als
+     het lager ligt dan elke latere meting — één camerameting na het
+     wandelen mag een lagere, zelf ingevulde rusthartslag niet overschrijven
+     ("we keep your calmest reading"). */
+  const lowestRecent = recent.length ? Math.min(...recent.map((r) => r.bpm)) : Infinity;
+  if (
+    s.manual &&
+    !s.average &&
+    (!latestReading || s.manual.at >= latestReading.at || s.manual.bpm <= lowestRecent)
+  ) {
     return withLive({ bpm: s.manual.bpm, source: 'manual', at: s.manual.at, decided: s.decided });
   }
   if (recent.length && !s.average) {

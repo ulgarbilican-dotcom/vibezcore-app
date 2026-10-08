@@ -42,6 +42,7 @@ import { dismissEndedPanel } from '@/services/audio-player';
 import {
   hideBraceletUpsell,
   useBraceletUpsellVisible,
+  openBraceletWebsite,
 } from '@/services/bracelet-upsell';
 
 /* Color-token-set — bewust witte card-stijl (operator-besluit 2026-05-24
@@ -251,7 +252,8 @@ export function BraceletUpsellModal() {
        klaar. */
     dismissEndedPanel();
     hideBraceletUpsell();
-    setTimeout(() => goToTab('/bracelet'), 150);
+    /* Bracelet-links → de website (operator 7 okt; audit 8 okt 2026). */
+    setTimeout(() => void openBraceletWebsite(), 150);
   };
 
   return (

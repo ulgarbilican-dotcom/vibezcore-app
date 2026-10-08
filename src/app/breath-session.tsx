@@ -3835,10 +3835,10 @@ export function BreathSession() {
                         {
                           text: 'View Preview',
                           style: 'primary',
+                          /* Bracelet-links → de website (operator 7 okt;
+                             audit 8 okt 2026). De sessie loopt gewoon door. */
                           onPress: () => {
-                            if (running) minimizeBreathSession();
-                            else closeBreathSession();
-                            goToTab('/bracelet');
+                            void openBraceletWebsite();
                           },
                         },
                       ],

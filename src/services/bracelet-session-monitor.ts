@@ -480,6 +480,12 @@ async function restoreFromStorage(): Promise<void> {
     if (state.paused && !saved.paused) {
       state = { ...state, elapsedBeforeRunSec: Math.min(saved.totalSec, elapsedNow), runStartedAt: null };
     }
+    /* Audit 8 okt 2026: stond de sessie op pauze maar hervatte de service
+       zelf (bv. "Resume" op het vergrendelscherm terwijl de app dicht was),
+       dan bleef de klok stilstaan — de tijd loopt weer vanaf nu. */
+    if (!state.paused && state.runStartedAt === null) {
+      state = { ...state, runStartedAt: Date.now() };
+    }
     startTimers();
     void publish(true);
     persist();

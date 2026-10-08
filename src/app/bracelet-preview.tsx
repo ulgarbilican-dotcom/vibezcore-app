@@ -23,6 +23,7 @@
    Route: gepushed vanaf Bracelet-tab 'See how it works' CTA.
    ─────────────────────────────────────────────────────────────────── */
 
+import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
 import { MODES } from '@/services/ble-contract';
 import { Stack, router } from 'expo-router';
@@ -134,7 +135,7 @@ export default function BraceletPreviewScreen(): React.ReactElement {
 
         <AnimatedPressable
           style={[s.btn, s.btnPrimary, primaryScale.pressStyle]}
-          onPress={() => router.dismissTo('/bracelet')}
+          onPress={() => void openBraceletWebsite()}
           onPressIn={primaryScale.onPressIn}
           onPressOut={primaryScale.onPressOut}
           accessibilityLabel="Reserve your bracelet"
