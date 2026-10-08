@@ -801,7 +801,9 @@ function TechniqueSegmentButton({
          andere naar de achtergrond"): groter verschil in grootte en
          helderheid, plus de andere twee zakken een fractie weg. */
       color: interpolateColor(dist, [0, 1], ['#ffffff', 'rgba(255,255,255,0.24)']),
-      fontSize: interpolate(dist, [0, 1], [20, 13.5], Extrapolation.CLAMP),
+      /* 8 okt 2026 ("de D van Diaphragm wordt afgesneden"): 20 + info-
+         icoon paste niet in een derde van de rij → 17. */
+      fontSize: interpolate(dist, [0, 1], [17, 13.5], Extrapolation.CLAMP),
       transform: [{ translateY: interpolate(dist, [0, 1], [0, 1.5], Extrapolation.CLAMP) }],
     };
   });
