@@ -457,7 +457,11 @@ export default function BreathWelcomeScreen() {
      die keten geeft nu `?resumeStep=4` mee, en een verse (of hergebruikte)
      instantie start dan altijd meteen op die stap — geen giswerk meer over
      wat React Navigation intern wel/niet hergebruikt. */
-  const { resumeStep } = useLocalSearchParams<{ resumeStep?: string }>();
+  const { resumeStep, replay } = useLocalSearchParams<{ resumeStep?: string; replay?: string }>();
+  /* Opnieuw bekijken via Settings (8 okt 2026): expliciete vlag i.p.v.
+     router.canGoBack() — na account aanmaken ligt er ook een scherm onder
+     de onboarding, en dat werd ten onrechte als "via Settings" gelezen. */
+  const isReplay = replay === '1';
   const [slide, setSlide] = useState(() => {
     const n = Number(resumeStep);
     return Number.isInteger(n) && n >= 0 && n < TOTAL ? n : 0;
@@ -860,7 +864,7 @@ export default function BreathWelcomeScreen() {
   const skipInsets = useSafeAreaInsets();
   const askSkip = () => {
     /* Via Settings opnieuw geopend: gewoon terug, geen blad. */
-    if (router.canGoBack()) {
+    if (isReplay) {
       onSkip(false);
       return;
     }
@@ -876,8 +880,10 @@ export default function BreathWelcomeScreen() {
     /* Geopend vanuit een ander scherm (Settings → intro herbekijken) = al
        eerder gezien: terugvegen telt dan wel als gezien, anders kwam hij op
        de Breath-tab meteen terug. */
-    if (markSeen || router.canGoBack()) void finish();
-    if (router.canGoBack()) {
+    if (markSeen || isReplay) void finish();
+    /* Enkel bij opnieuw bekijken terug naar Settings; anders altijd naar de
+       Breath-tab (na account aanmaken lag er een ander scherm onder). */
+    if (isReplay && router.canGoBack()) {
       router.back();
       return;
     }

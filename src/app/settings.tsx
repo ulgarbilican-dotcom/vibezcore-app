@@ -452,7 +452,7 @@ export default function SettingsScreen() {
                `onTap`). */
             onPress={() => {
               void setSetting('breathOnboardingCompletedAt', null);
-              router.push('/breath-welcome' as never);
+              router.push('/breath-welcome?replay=1' as never);
             }}
             accessibilityLabel="Watch the breathwork intro again"
           >
@@ -683,7 +683,7 @@ export default function SettingsScreen() {
                 style={s.row}
                 onPress={() => {
                   void setSetting('breathOnboardingCompletedAt', null);
-                  router.push('/breath-welcome' as never);
+                  router.push('/breath-welcome?replay=1' as never);
                 }}
                 accessibilityLabel="Replay breath onboarding"
               >
