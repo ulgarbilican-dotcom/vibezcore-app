@@ -633,7 +633,13 @@ export default function RootLayout() {
     }
     /* Vanaf hier mag `/` zijn eigen gang gaan. Zie utils/boot.ts. */
     markBootDecided();
-    SplashScreen.hideAsync().catch(() => {});
+    /* Operator, 8 okt 2026 ("zie even het welkomstscherm van de audio
+       library"): de app monteert technisch eerst `/` (Library). Het
+       opstartscherm pas weghalen als de sprong naar het juiste scherm
+       getekend is — anders flitst de Library-intro even voorbij. */
+    setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 350);
   }, [ready, auth, pendingAuthLink, tapped, lastTabRoute, hasStoredSession]);
 
   /* ── Deep link handler (operator-keuze 2026-05-27) ───────────
