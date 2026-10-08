@@ -86,8 +86,11 @@ const BG_ASPECT = 1122 / 1402;
    bovenaan 66% van de hoogte (vanaf 5%; operator: "meer uitzoomen"), de uitsnede begint op 12,5%
    van de breedte — beide gezichten volledig in beeld, de onderkant
    loopt uit in het donker achter titel en knop. */
-const PHOTO_TOP = 0.05;
-const PHOTO_HEIGHT = 0.66;
+/* Operator, 8 okt 2026 ("foto loopt niet tot boven"): vanaf 5% liet een
+   zwarte band achter de statusbalk. Nu vanaf de bovenrand (randloos, zoals
+   de Library-intro), iets hoger zodat de onderkant op dezelfde plek blijft. */
+const PHOTO_TOP = 0;
+const PHOTO_HEIGHT = 0.69;
 const PHOTO_FOCUS_LEFT = 0.125;
 
 function photoFrame(w: number, h: number) {
