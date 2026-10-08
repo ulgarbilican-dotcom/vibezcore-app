@@ -91,6 +91,32 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 45 | Premium: ook geen "Free with account"-slot; sessie speelt af | A16 | ✅ operator: "audio speelt nu gewoon af" (fix `4710d0d`) |
 | 46 | Ingelogd → opent in laatste tabblad, geen welkomstscherm | A16 | ⏳ (commit `a4b7cfe`, volledige herstart nodig) |
 
+### Volledige app-audit (8 okt 2026, 7 parallelle code-audits) — fixes, nog op toestel te testen
+Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
+| # | Test | Toestel | Resultaat |
+|---|------|---------|-----------|
+| 47 | Settings → "Watch the intro again" → geen gratis volledige sessie meer (enkel als de gratis sessie nog niet gebruikt is) | A16 | ⏳ |
+| 48 | Gast koopt Premium → app volledig afsluiten → nog steeds Premium | A16 | ⏳ (licentietester) |
+| 49 | Gast → Restore purchases → account maken → aankoop op account | A16 | ⏳ |
+| 50 | Bracelet-eigenaar: na openen GEEN sprong naar State Control; opent in laatste tabblad | A16 | ⏳ |
+| 51 | E-maillink (bevestigen/reset) opent één scherm, geen "Link expired" | A16 | ⏳ |
+| 52 | Offline openen (> 1 u na gebruik) → ingelogd, laatste tabblad | A16 | ⏳ |
+| 53 | Ademsessie: 2 min wachten vóór Play, scherm vergrendelen → sessie loopt correct, historiek juiste duur | A16 | ⏳ |
+| 54 | Plan met Sleep 4-7-8 (beginner) → 4 cycli | A16 | ⏳ |
+| 55 | Ujjayi-popup wegtikken → sessie start (geen leeg scherm) | A16 | ⏳ |
+| 56 | Pro-sessie voorproef tot 60 s → Play op vergrendelscherm speelt NIET verder | A16 | ⏳ |
+| 57 | Library: inloggen op Profile → terug naar Library → account-sessies open zonder muur | A16 | ⏳ |
+| 58 | Alle bracelet-links (upsell na audio, breath-sessie "View Preview", About) → website | A16 | ⏳ |
+| 59 | Settings: "Track listening history" uit → sessie verschijnt niet in historiek; "Save listening progress" uit → geen hervatpunt | A16 | ⏳ |
+| 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit en geen meldingen meer | A16 | ⏳ |
+| 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ |
+| 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ⏳ |
+| 63 | Proefperiode: Pro-sessie voorproef → geen "start your trial"; /subscribe → "You're a VIBEZCORE Premium member" | A16 | ⏳ |
+| 64 | "Already owned"-fout → knoppen Restore purchases + Sign in | A16 | ⏳ |
+| 65 | Speler op kleine telefoon (≤ 700 dp hoog) → knoppen volledig zichtbaar | A16 | ⏳ |
+
+**Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), toegangsmodel account-tier vs trial + State Control in trial, account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
+
 ### Ontwikkelomgeving
 | # | Wat | Resultaat |
 |---|---|---|
