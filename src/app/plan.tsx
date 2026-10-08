@@ -1188,6 +1188,7 @@ const s = StyleSheet.create({
   pickTitleInRow: { marginBottom: 0, alignSelf: 'auto' },
   pickDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   pickHandle: {
+    alignSelf: 'center',
     width: 36,
     height: 4,
     borderRadius: 2,

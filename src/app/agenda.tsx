@@ -1263,7 +1263,7 @@ const s = StyleSheet.create({
   },
   pickTitleInRow: { marginBottom: 0, alignSelf: 'auto' },
   pickDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
-  pickHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', marginBottom: 14 },
+  pickHandle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', marginBottom: 14 },
   pickAccent: { width: 30, height: 3, borderRadius: 2, marginBottom: 8 },
   pickTitle: { alignSelf: 'flex-start', marginBottom: 14, fontFamily: BrandFonts.bold, fontSize: 17, color: '#ffffff' },
   /* Actie-schermpje (tik op een ring-stip) — zie de toelichting erbij
