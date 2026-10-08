@@ -868,7 +868,7 @@ export default function BreathWelcomeScreen() {
     slide === 0
       ? {
           title: 'Skip your personalized session?',
-          body: 'It takes 60 seconds. Your goal and your level decide which session we build for you, so it fits from the first breath.',
+          body: 'It takes just 60 seconds. Your goal and your level decide which session we build for you, so it fits from the first breath.',
           cta: 'Continue Setup',
         }
       : slide === TOTAL - 1
