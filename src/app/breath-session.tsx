@@ -2652,7 +2652,7 @@ export function BreathSession() {
     }
     buddhaBreath.value = withRepeat(
       withSequence(
-        withTiming(1.06, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1.12, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
         withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
@@ -2661,7 +2661,12 @@ export function BreathSession() {
     return () => cancelAnimation(buddhaBreath);
   }, [done, buddhaBreath]);
   const buddhaBreathStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buddhaBreath.value }],
+    /* Vervolg ("iets duidelijker"): groter, niet sneller — 12% i.p.v. 6%,
+       en bij het inademen 6 pt omhoog, als een echte ademteug. */
+    transform: [
+      { translateY: -(buddhaBreath.value - 1) * 50 },
+      { scale: buddhaBreath.value },
+    ],
   }));
   const pressImDone = usePressScale(0.95);
 
