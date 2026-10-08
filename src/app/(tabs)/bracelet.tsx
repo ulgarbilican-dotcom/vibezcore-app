@@ -62,7 +62,9 @@ import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
 /* Operator, 5 okt 2026: terug naar de eerste foto. */
-const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20state%20control.png';
+/* Operator, 8 okt 2026: nieuwe versie met ruimte boven de hoofden, zodat de
+   foto tot de bovenrand kan lopen zonder het hoofd onder de statusbalk. */
+const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20welcome%20state%20control%20app.png';
 
 /* Ken Burns-"ademing" + gefaseerde reveal — exact dezelfde recept als de
    oude bracelet-intro (smart-bead-bracelet.tsx se `introKenBurnsStyle`/
@@ -75,7 +77,7 @@ const INTRO_ZOOM = 1;
    (1122×1402); schermvullend (cover) sneed de zijkanten weg. Nu over de
    volle breedte bovenaan, onderaan zacht uitlopend in de achtergrond —
    titel en knop staan daaronder op het donker, niet over de foto. */
-const BG_ASPECT = 1122 / 1402;
+const BG_ASPECT = 1024 / 1536;
 
 /* Operator, 5 okt 2026 ("de foto moet groter, full screen"): schermvullend
    op volle hoogte. De 2:3-foto is dan breder dan het scherm; de uitsnede
@@ -90,11 +92,12 @@ const BG_ASPECT = 1122 / 1402;
    zwarte band achter de statusbalk. Nu vanaf de bovenrand (randloos, zoals
    de Library-intro), iets hoger zodat de onderkant op dezelfde plek blijft. */
 const PHOTO_TOP = 0;
-const PHOTO_HEIGHT = 0.69;
+const PHOTO_HEIGHT = 0.72;
 const PHOTO_FOCUS_LEFT = 0.125;
 
 function photoFrame(w: number, h: number) {
-  const height = h * PHOTO_HEIGHT;
+  /* Altijd minstens schermbreed (geen zwarte zijranden bij de 2:3-foto). */
+  const height = Math.max(h * PHOTO_HEIGHT, w / BG_ASPECT);
   const width = height * BG_ASPECT;
   const left = Math.min(0, Math.max(w - width, -width * PHOTO_FOCUS_LEFT));
   return { position: 'absolute' as const, top: h * PHOTO_TOP, left, height, width };
