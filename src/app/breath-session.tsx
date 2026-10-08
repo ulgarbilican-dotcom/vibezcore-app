@@ -1878,19 +1878,26 @@ export function BreathSession() {
      laat de achtergrondscape uitvervagen (bestaande 1,5s-fade) vóór de
      paywall verschijnt, in plaats van `finish()`'s eigen `stopScape(true)`
      (instant stil). Niet-instant preview-sessies blijven ongewijzigd. */
+  /* Operator, 8 okt 2026 ("die foute lotus in een vierkante kaart"): na de
+     30 s NIET meer stoppen maar PAUZEREN, net als bij vroegtijdig stoppen
+     (requestStop). Gestopt tekende dit scherm meteen zijn oude startweergave
+     (lotus in een kaart, "ENJOY YOUR SESSION") achter het betaalscherm, en
+     die bleef na Done even staan. Gepauzeerd blijft het echte sessiebeeld
+     achter het glas; echt gestopt wordt bij het sluiten (onClose). */
   const endPreview = useCallback(() => {
     if (isInstantSession) {
       stopScape(false);
       setTimeout(() => {
-        finish(false);
+        pauseSession();
         setPaywall(true);
       }, 1500);
       return;
     }
-    finish(false);
+    pauseSession();
+    stopScape(false);
     setPaywall(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInstantSession]);
+  }, [isInstantSession, pauseSession]);
   const [paywall, setPaywall] = useState(false);
   /* Operator, 8 okt 2026 ("ik wil die foute lotus in een vierkante kaart
      nooit meer zien"): tussen stoppen en het verdwijnen van de sessielaag
@@ -2306,6 +2313,7 @@ export function BreathSession() {
      bij de herstelde auto-start hierboven). Nu weer terug op de
      oorspronkelijke betekenis: enkel waar tijdens het korte venster
      vóórdat de herstelde auto-start daadwerkelijk vuurt. */
+  /* Oude startscherm (figuur-kaart, START/ENJOY YOUR SESSION, unlock-link, batterijbanner) bestaat niet meer — operator, 8 okt 2026: "waarom bestaat dat oude startscherm nog?". Was enkel nog bereikbaar als een gestarte sessie stopte zonder einde (o.a. na de 30 s preview) en flitste dan achter het betaalscherm. */ 
   const awaitingAutostart = !running && !hasStartedOnceRef.current;
 
   const stop = useCallback(() => {
@@ -2801,7 +2809,7 @@ export function BreathSession() {
               rings={false}
               glowBoost
             />
-          ) : awaitingAutostart || sessionEnded ? null : st.key === 'calm' ? (
+          ) : true ? null : st.key === 'calm' ? (
             <LotusPacer
               size={ART_IDLE * (st.artScale ?? 1)}
               accent={accent}
@@ -3031,7 +3039,7 @@ export function BreathSession() {
            het startscherm (niet tijdens running), zodat hij niet ook nog
            over de actieve sessie heen ligt. Verdwijnt vanzelf zodra de
            uitzondering verleend is — geen apart "OK, snap ik"-tikje nodig. */}
-        {!running && !awaitingAutostart && !sessionEnded && batteryRestricted && (
+        {false && batteryRestricted && (
           <AnimatedPressable
             style={[s.batteryBanner, pressBatteryBanner.style]}
             onPress={() => {
@@ -3182,7 +3190,7 @@ export function BreathSession() {
               <Text style={[s.endTxt, { color: light ? '#0a0a0c' : C.dim72 }]}>END SESSION</Text>
             </AnimatedPressable>
           </View>
-        ) : awaitingAutostart || sessionEnded ? null : (
+        ) : true ? null : (
           /* VOL in de kleur van de toestand (operator, 7 augustus 2026).
              Vervangt de keuze van 4 augustus om hem te omlijnen. Dit is de
              enige handeling op het scherm en hoort ook de enige te zijn die
@@ -3232,7 +3240,7 @@ export function BreathSession() {
             nergens terecht"). Alleen zichtbaar als er iets te unlocken valt
             en er geen sessie loopt — tijdens het proeven zelf zou hij
             afleiden van precies de ervaring die moet overtuigen. */}
-        {locked && !running && !awaitingAutostart && !sessionEnded && (
+        {false && locked && (
           <AnimatedPressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -3255,7 +3263,7 @@ export function BreathSession() {
       {leaving ? (
         <View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: '#050507', zIndex: 999 }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#050507', zIndex: 999, elevation: 999 }]}
         />
       ) : null}
       <PremiumPaywallModal
