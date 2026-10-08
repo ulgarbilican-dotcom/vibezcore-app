@@ -294,10 +294,11 @@ export default function PlayerScreen() {
         : { w: width, h: height }
     );
   }, []);
+  const [titleH, setTitleH] = useState(110);
   const artAspect = Math.max(photoAspect ?? 1, 0.8);
   const artSize = artBox
     ? (() => {
-        const w = Math.max(120, Math.min(artBox.w * 0.78, (artBox.h - 40) * artAspect));
+        const w = Math.max(120, Math.min(artBox.w * 0.78, (artBox.h - titleH - 64) * artAspect));
         return { width: w, height: w / artAspect };
       })()
     : { width: ARTWORK_SIZE, height: ARTWORK_SIZE / artAspect };
@@ -650,9 +651,14 @@ export default function PlayerScreen() {
             <View style={[s.artworkImage, s.backdropFallback]} />
           )}
         </Animated.View>
-        </View>
 
-        <Animated.View style={[s.titleBlock, entranceTitleStyle]}>
+        <Animated.View
+          style={[s.titleBlock, entranceTitleStyle]}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            setTitleH((prev) => (Math.abs(prev - h) < 1 ? prev : h));
+          }}
+        >
           {/* Operator (Apple-HIG-brief, "de titel van de sessie hoort
              altijd bovenaan, groot en vet — categorie/auteur eronder in
              een veel kleiner, rustiger grijs font"): hiërarchie omgedraaid
@@ -670,6 +676,7 @@ export default function PlayerScreen() {
           <Text style={s.series}>{session.series.toUpperCase()}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
         </Animated.View>
+        </View>
 
         <Animated.View style={entranceControlsStyle}>
         {/* Operator ("continue-popup verschijnt telkens overal, heel
@@ -1355,8 +1362,11 @@ const s = StyleSheet.create({
 
   /* Title block — operator, 26 september 2026 ("alles staat heel dicht bij
      elkaar"): marginTop geeft ademruimte tussen de albumhoes en de tekst. */
-  artArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  titleBlock: { marginTop: 8 },
+  /* Operator, 8 okt 2026 (3e ronde): "foto en tekst hoger, voortgangsbalk en
+     knoppen eronder een beetje vrij" — hoes + titel samen bovenaan, de vrije
+     ruimte valt tussen de titel en de voortgangsbalk. */
+  artArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 4 },
+  titleBlock: { marginTop: 24, alignSelf: 'stretch' },
   /* Operator (Apple-HIG-brief, "titel altijd bovenaan, groot en vet —
      categorie/auteur eronder in een veel kleiner, rustiger grijs font"):
      rollen omgewisseld t.o.v. de vorige versie. `series`/`subtitle` zijn
