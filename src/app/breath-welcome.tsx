@@ -3095,7 +3095,17 @@ const s = StyleSheet.create({
      "Skip" blijft de secundaire actie (Apple-onboarding-tip, 11 sep):
      lichter/gedimder dan "Back", nu in de witte familie i.p.v. het
      `#8a8a8e` dat voor een lichte achtergrond gekalibreerd was. */
-  skipTxtSecondary: { color: 'rgba(255,255,255,0.45)' },
+  /* Operator, 8 okt 2026 ("bij breath step staat geen skip of wel?"): 45%
+     wit verdween op de lichte betonmuur van stap 1. Ondergeschikt maar
+     altijd leesbaar: helderder + zachte schaduw, werkt op elke foto. */
+  skipTxtSecondary: {
+    color: 'rgba(255,255,255,0.92)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   /* Even breed als skipWrap (bij benadering), zodat de gecentreerde
      STEP-tekst ook echt in het midden van het SCHERM blijft staan, niet
      scheeftrekt doordat links nu ook iets staat. */
