@@ -110,6 +110,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 56 | Pro-sessie voorproef tot 60 s → Play op vergrendelscherm speelt NIET verder | A16 | ⏳ |
 | 57 | Library: inloggen op Profile → terug naar Library → account-sessies open zonder muur | A16 | ⏳ |
 | 58 | Alle bracelet-links (upsell na audio, breath-sessie "View Preview", About) → website | A16 | ⏳ |
+| 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
 | 59 | Settings: "Track listening history" uit → sessie verschijnt niet in historiek; "Save listening progress" uit → geen hervatpunt | A16 | ⏳ |
 | 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit en geen meldingen meer | A16 | ⏳ |
 | 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ |
