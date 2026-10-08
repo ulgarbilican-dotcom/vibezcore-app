@@ -683,8 +683,21 @@ export default function BreathScreen() {
   const [onbGate, setOnbGate] = useState<'pending' | 'show'>('pending');
   /* Vangnet: blijft dit tabblad gemonteerd terwijl de onboarding of
      "Maybe later" loopt, dan mag het nooit donker blijven bij terugkeer. */
+  const onbFirstFocusRef = useRef(true);
   useFocusEffect(
     useCallback(() => {
+      /* Terug op dit tabblad na rondkijken (onboarding weggeveegd, niet
+         geskipt): onboarding opnieuw tonen. De eerste focus = mount, die
+         beslist de effect hieronder al. */
+      if (onbFirstFocusRef.current) {
+        onbFirstFocusRef.current = false;
+      } else if (
+        getSetting('breathOnboardingCompletedAt') === null &&
+        getBreathHistory().length === 0
+      ) {
+        router.replace('/breath-welcome');
+        return;
+      }
       setOnbGate((g) => {
         if (g === 'show') return g;
         if (getSetting('breathOnboardingCompletedAt') !== null) return 'show';

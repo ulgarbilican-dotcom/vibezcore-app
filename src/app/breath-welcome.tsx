@@ -850,11 +850,17 @@ export default function BreathWelcomeScreen() {
      `skipBreathOnboardingRedirectOnce()` voorkomt dat de Breath-tab meteen
      weer terugstuurt naar de intro — dezelfde vlag die `onMaybeLater`
      hieronder gebruikt. */
-  const onSkip = () => {
+  const onSkip = (markSeen = true) => {
     /* Operator, 8 okt 2026 (vervangt de regel van 31 juli): Skip telt als
        gezien, Apple-stijl — de onboarding komt maar één keer. Terugzien kan
-       via Settings. */
-    void finish();
+       via Settings. Terugvegen op stap 1 (markSeen=false) is "nu even niet":
+       rondkijken mag, terug op de Breath-tab staat de onboarding er weer
+       ("bezoeker zal benieuwd zijn om andere tabs te bekijken en dan
+       terugkomen"). */
+    /* Geopend vanuit een ander scherm (Settings → intro herbekijken) = al
+       eerder gezien: terugvegen telt dan wel als gezien, anders kwam hij op
+       de Breath-tab meteen terug. */
+    if (markSeen || router.canGoBack()) void finish();
     if (router.canGoBack()) {
       router.back();
       return;
@@ -888,7 +894,7 @@ export default function BreathWelcomeScreen() {
         if (slide > 0) {
           goBack();
         } else {
-          onSkip();
+          onSkip(false);
         }
         return true;
       });
@@ -1203,7 +1209,7 @@ export default function BreathWelcomeScreen() {
           </View>
         </View>
         <View style={s.backWrap}>
-          <Pressable onPress={onSkip} hitSlop={14} style={s.skipWrap}>
+          <Pressable onPress={() => onSkip()} hitSlop={14} style={s.skipWrap}>
             <Text style={s.skipTxtSecondary}>Skip</Text>
           </Pressable>
         </View>
