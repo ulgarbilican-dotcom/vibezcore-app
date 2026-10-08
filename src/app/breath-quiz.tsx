@@ -88,7 +88,8 @@ const MOMENTS = [
 export default function BreathQuizScreen() {
   const insets = useSafeAreaInsets();
   const sub = useSubscription();
-  const isPro = sub.isPro || sub.hasBracelet;
+  /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
+  const isPro = sub.isPro;
 
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useSetting('profile');

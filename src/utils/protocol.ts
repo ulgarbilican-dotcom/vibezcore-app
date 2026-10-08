@@ -151,6 +151,13 @@ function durationForIntensity(
   const st = BREATH_STATES[state];
   const tech = st.techniques.find((t) => t.key === techniqueKey);
   const durations = tech?.durations ?? st.durations;
+  /* Audit 8 okt 2026: ritmes in CYCLI (4-7-8) kies je niet op minuten —
+     "dichtst bij 3 min" werd daar altijd 8 cycli, ook voor een beginner
+     (Weil: eerst een maand 4 cycli). Neem de aanbevolen keuze; de sessie
+     past die verder aan op het niveau (breath-level.ts). */
+  if (durations.some((d) => d.cycles != null)) {
+    return (durations.find((d) => d.recommended) ?? durations[0]).minutes;
+  }
   const target = INTENSITY_TARGET_MINUTES[intensity];
   return durations.reduce((best, d) =>
     Math.abs(d.minutes - target) < Math.abs(best.minutes - target) ? d : best,

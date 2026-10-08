@@ -428,7 +428,8 @@ const TRAITS = [
 
 export default function BreathWelcomeScreen() {
   const sub = useSubscription();
-  const isPro = sub.isPro || sub.hasBracelet;
+  /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
+  const isPro = sub.isPro;
 
   /* Zeven stappen, niet acht (operator, 7 september 2026): Bracelet-intro
      en "How it works" zijn samengevoegd tot ÉÉN lichte pagina (mockup) —

@@ -89,7 +89,9 @@ export function levelForTechnique(
   let start = idx(base ?? 'beginner');
   /* Ervaren met ademwerk, maar deze techniek nog nooit gedaan: één stap
      lager beginnen — vertrouwdheid met een techniek telt (ANB-onderzoek). */
-  if (done.length === 0 && start === 2) start = 1;
+  /* Audit 8 okt 2026: die stap lager geldt tot de gebruiker deze techniek
+     een volle stap (12 sessies) gedaan heeft — niet maar één sessie. */
+  if (start === 2 && done.length < SESSIONS_PER_STEP) start = 1;
   let level = Math.min(2, start + Math.floor(done.length / SESSIONS_PER_STEP));
   if (techKey === '478' && level === 2) {
     const first = Math.min(...done.map((e) => e.ts));

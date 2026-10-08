@@ -159,7 +159,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { levelForTechnique, techniqueForLevel, type UserLevel } from '@/utils/breath-level';
+import { levelForTechnique, recommendedForLevel, techniqueForLevel, type UserLevel } from '@/utils/breath-level';
 import {
   AppState,
   BackHandler,
@@ -939,13 +939,27 @@ export function BreathSession() {
     if (wanted && !Number.isNaN(wanted)) {
       /* Dichtst-bij-match, niet exact — een ritme kan zijn eigen duren
          dragen die niet 1-op-1 overeenkomen met wat het protocol koos. */
-      return DURATIONS.reduce(
+      let idx = DURATIONS.reduce(
         (bestIdx, d, i) =>
           Math.abs(d.minutes - wanted) < Math.abs(DURATIONS[bestIdx].minutes - wanted)
             ? i
             : bestIdx,
         0,
       );
+      /* Audit 8 okt 2026: ritmes in cycli (4-7-8) nooit boven wat dit niveau
+         toelaat (Weil: eerst een maand 4 cycli) — ook niet als een plan of
+         link meer minuten vraagt. */
+      const cyc = DURATIONS[idx]?.cycles;
+      if (cyc != null) {
+        const cap = recommendedForLevel(st.key, tech.key, levelForTechnique(st.key, tech.key));
+        if (cap != null && cyc > cap) {
+          const allowed = DURATIONS.map((d, i) => ({ d, i })).filter(
+            ({ d }) => d.cycles != null && d.cycles <= cap,
+          );
+          if (allowed.length) idx = allowed[allowed.length - 1].i;
+        }
+      }
+      return idx;
     }
     return st.defaultDuration;
   });
@@ -1427,9 +1441,12 @@ export function BreathSession() {
     /* Operator, 8 september 2026 (pauzeren): gepauzeerde tijd telt niet mee
        als "geademd" — anders zou een sessie die je 5 minuten gepauzeerd
        liet staan 5 minuten te lang in de historiek belanden. */
+    /* Een lopende pauze telt ook niet mee (audit 8 okt 2026). */
+    const openPauseMs =
+      pausedAtWallRef.current > 0 ? Date.now() - pausedAtWallRef.current : 0;
     const wallSec =
       startWallRef.current > 0
-        ? (Date.now() - startWallRef.current - pausedMsRef.current) / 1000
+        ? (Date.now() - startWallRef.current - pausedMsRef.current - openPauseMs) / 1000
         : elapsedRef.current;
     const doneSec = Math.round(
       Math.min(Math.max(elapsedRef.current, wallSec), chosen.minutes * 60),
@@ -2125,6 +2142,11 @@ export function BreathSession() {
          resumet nooit klinken (operator, 24 september 2026, 10de melding,
          de echte oorzaak — zie `firstSpeakPendingRef` hierboven). */
       firstSpeakPendingRef.current = true;
+      /* Audit 8 okt 2026: het wachten vóór de eerste tik op Play is een
+         pauze, geen ademtijd. Stond dit op 0, dan telde die wachttijd mee:
+         na het vergrendelen sprong de sessie vooruit of eindigde ze meteen
+         als "voltooid", en de historiek kreeg te veel minuten. */
+      pausedAtWallRef.current = Date.now();
       setPaused(true);
       return;
     }
@@ -2447,7 +2469,10 @@ export function BreathSession() {
          doortikken nadat de JS-sessie al is afgesloten. Onschadelijk als hij
          nooit succesvol begon. */
       stopBackgroundBreathSession();
-      setVoiceEnabled(voiceGlobal);
+      /* Actuele waarde, niet die van bij het openen (audit 8 okt 2026):
+         zette de gebruiker de stem "voor alles" uit, dan sprong hij anders
+         weer aan. */
+      setVoiceEnabled(getSetting('voiceCues'));
       releaseVoiceSource('breath');
     },
     [stopAll],
@@ -3372,9 +3397,20 @@ export function BreathSession() {
         visible={ujjayiIntroOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setUjjayiIntroOpen(false)}
+        /* Audit 8 okt 2026: wegtikken liet een leeg scherm achter (de sessie
+           wachtte nog op de start) — wegtikken = "Got it, start". */
+        onRequestClose={() => {
+          setUjjayiIntroOpen(false);
+          proceedToStart(ujjayiPreviewRef.current);
+        }}
       >
-        <Pressable style={s.modalBackdrop} onPress={() => setUjjayiIntroOpen(false)}>
+        <Pressable
+          style={s.modalBackdrop}
+          onPress={() => {
+            setUjjayiIntroOpen(false);
+            proceedToStart(ujjayiPreviewRef.current);
+          }}
+        >
           <Pressable style={s.modalCard} onPress={() => {}}>
             {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
                 7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}

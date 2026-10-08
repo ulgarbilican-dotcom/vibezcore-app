@@ -118,7 +118,8 @@ const MODES = GUIDANCE_MODES;
 
 export default function BreathSampleScreen() {
   const sub = useSubscription();
-  const isPro = sub.isPro || sub.hasBracelet;
+  /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
+  const isPro = sub.isPro;
 
   const [mode, setMode] = useState<ModeKey>('both');
   const [lockNote, setLockNote] = useState(false);
