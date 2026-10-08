@@ -35,6 +35,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import { subscribeUserBucket } from '@/utils/user-bucket';
 import { resolveActiveBucket } from '@/utils/bracelet-history';
 
 const LEGACY_KEY = 'vbh_v1';
@@ -288,3 +289,12 @@ export function useBreathHistory(): BreathHistoryEntry[] {
 
   return entries;
 }
+
+/* Operator, 8 okt 2026 ("na opnieuw opstarten in premium maar geschiedenis
+   is leeg"): `reloadBreathHistory` werd nergens aangeroepen — na in-/uitloggen (of een
+   dev-gebruikerswissel) bleef deze module in de VORIGE emmer lezen én
+   schrijven, en na een herstart stond alles in een andere emmer. Nu volgt
+   hij elke emmerwissel, net als history.ts/vzp.ts/useFavorites. */
+subscribeUserBucket(() => {
+  reloadBreathHistory().catch(() => {});
+});

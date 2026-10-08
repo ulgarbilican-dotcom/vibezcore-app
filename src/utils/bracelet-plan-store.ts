@@ -27,6 +27,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import { subscribeUserBucket } from '@/utils/user-bucket';
 import { resolveActiveBucket, dayKey } from '@/utils/bracelet-history';
 
 const KEY_PREFIX = 'vzbpc_';
@@ -243,3 +244,12 @@ export function useActiveBraceletPlan(): {
 
 /* Auto-load zodra dit bestand geïmporteerd wordt. */
 load();
+
+/* Operator, 8 okt 2026 ("na opnieuw opstarten in premium maar geschiedenis
+   is leeg"): `reloadActiveBraceletPlan` werd nergens aangeroepen — na in-/uitloggen (of een
+   dev-gebruikerswissel) bleef deze module in de VORIGE emmer lezen én
+   schrijven, en na een herstart stond alles in een andere emmer. Nu volgt
+   hij elke emmerwissel, net als history.ts/vzp.ts/useFavorites. */
+subscribeUserBucket(() => {
+  reloadActiveBraceletPlan().catch(() => {});
+});
