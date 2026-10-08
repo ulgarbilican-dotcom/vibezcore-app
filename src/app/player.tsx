@@ -47,7 +47,7 @@ import { useHistory } from '@/utils/history';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -279,6 +279,25 @@ export default function PlayerScreen() {
     ? PILLAR_META[SERIES_PILLAR[session.series]]?.imgAspect
     : undefined;
   const subtitle = session ? SERIES_SUBTITLE[session.series] ?? '' : '';
+
+  /* Hoesmaat uit de vrije ruimte (zie `artArea`). Staande foto's hooguit
+     1,25× zo hoog als breed. Tot de eerste meting: de oude vaste maat. */
+  const [artBox, setArtBox] = useState<{ w: number; h: number } | null>(null);
+  const onArtAreaLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setArtBox((prev) =>
+      prev && Math.abs(prev.w - width) < 1 && Math.abs(prev.h - height) < 1
+        ? prev
+        : { w: width, h: height }
+    );
+  }, []);
+  const artAspect = Math.max(photoAspect ?? 1, 0.8);
+  const artSize = artBox
+    ? (() => {
+        const w = Math.max(120, Math.min(artBox.w, artBox.h * artAspect));
+        return { width: w, height: w / artAspect };
+      })()
+    : { width: ARTWORK_SIZE, height: ARTWORK_SIZE / artAspect };
 
   /* ── Actions ──────────────────────────────────────────────────────────── */
 
@@ -589,7 +608,22 @@ export default function PlayerScreen() {
       {/* ── Content — start ONDER de topbar, geen overlap meer met een
          fotobanner (die bestaat niet meer als apart element — de foto zit
          nu in de fullscreen backdrop hierboven). ──────────────────────── */}
-      <View style={s.content}>
+      <View
+        style={[
+          s.content,
+          /* Operator, 8 okt 2026 ("player en voortgangsbalk lager voor meer
+             ademruimte"): Premium heeft geen CTA onderaan, dus ook geen
+             136 pt gereserveerde ruimte — die duwde alles omhoog. */
+          { marginTop: safeInsets.top + 56, paddingBottom: displayIsPro ? 0 : 112 },
+        ]}
+      >
+        {/* Operator, 8 okt 2026 ("foto's groter, hoe zou Apple dat doen"):
+           Apple Music/Podcasts — de hoes vult alle ruimte boven de titel,
+           de bediening staat onderaan. `artArea` neemt de vrije hoogte; de
+           hoes past zich daarin aan (breedte − marges, of de beschikbare
+           hoogte op een kleine telefoon), zodat de knoppen nooit onder de
+           rand vallen. */}
+        <View style={s.artArea} onLayout={onArtAreaLayout}>
         {/* Zwevende vierkante albumhoes (squircle) — Apple Music-patroon.
            Krimpt licht bij pauze via artworkAnimStyle (zie useEffect
            hierboven), niet gekoppeld aan een Pressable dus geen
@@ -597,9 +631,7 @@ export default function PlayerScreen() {
         <Animated.View
           style={[
             s.artworkWrap,
-            /* Audit 8 okt 2026: staande foto's niet hoger dan 1,25× de breedte
-               — anders schoven de knoppen op kleine telefoons onder de rand. */
-            photoAspect ? { height: Math.min(ARTWORK_SIZE / photoAspect, ARTWORK_SIZE * 1.25) } : null,
+            artSize,
             artworkAnimStyle,
             entranceArtStyle,
           ]}
@@ -615,6 +647,7 @@ export default function PlayerScreen() {
             <View style={[s.artworkImage, s.backdropFallback]} />
           )}
         </Animated.View>
+        </View>
 
         <Animated.View style={[s.titleBlock, entranceTitleStyle]}>
           {/* Operator (Apple-HIG-brief, "de titel van de sessie hoort
@@ -1319,7 +1352,8 @@ const s = StyleSheet.create({
 
   /* Title block — operator, 26 september 2026 ("alles staat heel dicht bij
      elkaar"): marginTop geeft ademruimte tussen de albumhoes en de tekst. */
-  titleBlock: { marginTop: 14 },
+  artArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 8 },
+  titleBlock: { marginTop: 20 },
   /* Operator (Apple-HIG-brief, "titel altijd bovenaan, groot en vet —
      categorie/auteur eronder in een veel kleiner, rustiger grijs font"):
      rollen omgewisseld t.o.v. de vorige versie. `series`/`subtitle` zijn
