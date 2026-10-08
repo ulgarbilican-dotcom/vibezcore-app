@@ -989,7 +989,12 @@ export default function PlanScreen() {
                  duur-editor. */
               return (
                 <>
-                  <Text style={s.pickTitle}>{item.state.eyebrow} duration</Text>
+                  <View style={s.pickHeader}>
+                    <Text style={[s.pickTitle, s.pickTitleInRow]}>{item.state.eyebrow} duration</Text>
+                    <Pressable onPress={() => setDurationPicking(null)} hitSlop={10} accessibilityRole="button">
+                      <Text style={s.pickDoneTxt}>Done</Text>
+                    </Pressable>
+                  </View>
                   <DurationWheel
                     options={item.state.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
                     value={item.minutes}
@@ -998,13 +1003,6 @@ export default function PlanScreen() {
                     recommendedValue={item.state.defaultDuration}
                     onChange={(v) => void setMinutesForPlanIndex(planIndex, v)}
                   />
-                  <Pressable
-                    style={({ pressed }) => [s.pickDone, pressed && { opacity: 0.85 }]}
-                    onPress={() => setDurationPicking(null)}
-                    accessibilityRole="button"
-                  >
-                    <Text style={s.pickDoneTxt}>Done</Text>
-                  </Pressable>
                 </>
               );
             })()}
@@ -1177,17 +1175,17 @@ const s = StyleSheet.create({
     paddingTop: 10,
     alignItems: 'center',
   },
-  /* Operator, 8 okt 2026 ("ik zie geen done"): witte Done onder het wiel. */
-  pickDone: {
+  /* Operator, 8 okt 2026 ("done rechtsboven volgens ons protocol"):
+     zelfde kiezer-kop als breath-setup.tsx — titel links, Done rechts. */
+  pickHeader: {
     alignSelf: 'stretch',
-    marginTop: 18,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  pickDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
+  pickTitleInRow: { marginBottom: 0, alignSelf: 'auto' },
+  pickDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   pickHandle: {
     width: 36,
     height: 4,
