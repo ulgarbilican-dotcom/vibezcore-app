@@ -65,7 +65,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    Operator-keuze 2026-05-29. */
 /* Operator, 8 okt 2026: de webapp mag nooit meer getoond worden — de eigen
    auth-pagina op Bunny (assets/bunny-upload/auth.html) vervangt hem. */
-const REDIRECT_TO = 'https://vibezcore-audio.b-cdn.net/auth.html';
+const REDIRECT_TO = 'https://account.vibezcore.com/auth.html';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
