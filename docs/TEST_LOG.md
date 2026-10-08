@@ -79,7 +79,7 @@ Fixes gebouwd, typecheck ✅ — **nog niet op toestel getest**.
 | 33 | Gast koopt → maakt account → Premium op account (+ 2e toestel) | A16 | ⏳ was ❌ (geblokkeerd door v237c); nu gast-aankoop-marker |
 | 34 | Gast-Premium opent Audio Library-sessie | A16 | ⏳ verwacht "One more step — Create account" |
 | 35 | App-update logt niet meer uit | A16 | ⏳ (versie-check enkel nog in testbuilds) |
-| 36 | Geen stille "restore" bij app-start | A16 | ⏳ |
+| 36 | Geen stille "restore" bij app-start | A16 | ✅ 8 okt operator: "ok werkt" |
 | 37 | Account aanmaken in Profile: < 8 tekens geweigerd; bestaand e-mailadres → naar "Sign in", geen 2e account | A16 | ✅ operator: "klopt allemaal". Android biedt daarna aan de inloggegevens op te slaan (systeem-autofill, zo bedoeld) |
 | 38 | Welcome "Already a member? Sign in" opent formulier meteen; na inloggen geen breathwork-intro meer | A16 | ✅ na fix `4d03b65` (intro per e-mailadres onthouden). Operator: "in orde" |
 | 38b | "End trial?" bij vroegtijdig stoppen van de gratis volledige sessie: stond in het midden, geen glas | A16 | ❌→✅ `e2f1bbd`: glazen onderblad (GlassSheet) zoals het betaalscherm. Operator: "in orde" |
