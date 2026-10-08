@@ -215,6 +215,8 @@ Notifications.setNotificationHandler({
   },
 });
 
+/* Dag waarop de planherinneringen laatst gelijkgezet zijn (AppState). */
+let lastPlanResyncDay = new Date().toDateString();
 /* Initiële deeplink die al verwerkt is (zie de deeplink-handler). */
 let handledInitialUrl: string | null = null;
 
@@ -485,6 +487,14 @@ export default function RootLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        /* Audit 8 okt 2026: planherinneringen worden voor VANDAAG gezet —
+           blijft de app dagen op de achtergrond, dan bij de eerste keer
+           openen op een nieuwe dag opnieuw gelijkzetten. */
+        const today = new Date().toDateString();
+        if (lastPlanResyncDay !== today) {
+          lastPlanResyncDay = today;
+          void resyncAllPlanReminders().catch(() => {});
+        }
         /* Zelfde macrotask-defer als de RevenueCat-listener hierboven —
            AppState's 'change'-event is ook een echte native-bridge-callback
            die op elk moment, midden in een React-commit, kan vallen. */

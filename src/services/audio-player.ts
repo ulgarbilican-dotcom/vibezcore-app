@@ -548,10 +548,10 @@ function onStatus(st: AudioStatus): void {
          - Echte PRO met token → full playback
        Voorkomt dat de player onverwacht naar een totaal andere serie
        springt na een sessie. */
-    console.log('[audio-player] finished session url:', finishedSession.url);
-    console.log('[audio-player] autoPlayNext setting:', getSetting('autoPlayNext'));
+    if (__DEV__) console.log('[audio-player] finished session url:', finishedSession.url);
+    if (__DEV__) console.log('[audio-player] autoPlayNext setting:', getSetting('autoPlayNext'));
     const nextSess = getNextSession(finishedSession.url);
-    console.log('[audio-player] nextSess result:', nextSess?.title ?? 'NULL → Series complete');
+    if (__DEV__) console.log('[audio-player] nextSess result:', nextSess?.title ?? 'NULL → Series complete');
     const nextInfo: SessionInfo | null = nextSess
       ? {
           url: nextSess.url,

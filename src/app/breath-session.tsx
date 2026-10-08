@@ -1919,7 +1919,7 @@ export function BreathSession() {
      from=onboarding-deeplink, maar dan zonder telkens een URL te moeten
      intikken. Puur lokaal/dev-gebruik, geen echte entitlement. */
   const [testFullSessions] = useSetting('testFullSessions');
-  const locked = !isPro && !isFreeOnboardingSession && !testFullSessions;
+  const locked = !isPro && !isFreeOnboardingSession && !(__DEV__ && testFullSessions);
   /* Eenmalige, proactieve uitleg over scherm-op-slot (operator, 14
      augustus 2026: "iemand die gewoon breathwork begint gaat nooit weten
      dat het hierdoor komt... iedereen gaat denken het werkt niet") — dit

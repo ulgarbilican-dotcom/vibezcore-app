@@ -4750,7 +4750,7 @@ function BraceletControlScreen({
     !subscription.isLoading &&
     !subscription.isPro &&
     !ownsBracelet &&
-    !testFullSessions;
+    !(__DEV__ && testFullSessions);
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const autoStartFiredRef = useRef(false);

@@ -125,17 +125,19 @@ export function WelcomeBackWarrior() {
   }, [visible, opacity]);
 
   /* Android hardware-back sluit popup */
+  /* Beperken tot (tabs)-area — niet over welcome/auth screens */
+  const inTabs = segments[0] === '(tabs)';
+  /* Enkel de terugknop vangen als de popup echt zichtbaar is (audit 8 okt
+     2026): onzichtbaar buiten de tabbladen slokte hij anders de eerste
+     terug-tik op. */
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !inTabs) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setVisible(false);
       return true;
     });
     return () => sub.remove();
-  }, [visible]);
-
-  /* Beperken tot (tabs)-area — niet over welcome/auth screens */
-  const inTabs = segments[0] === '(tabs)';
+  }, [visible, inTabs]);
   if (!visible || !inTabs) return null;
 
   const dismiss = () => setVisible(false);

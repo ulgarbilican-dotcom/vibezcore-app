@@ -1349,7 +1349,7 @@ export default function BreathSetupScreen() {
   const sub = useSubscription();
   const [freeSessionUsedAt] = useSetting('breathFreeSessionUsedAt');
   const [testFullSessions] = useSetting('testFullSessions');
-  const locked = !sub.isPro && !!freeSessionUsedAt && !testFullSessions;
+  const locked = !sub.isPro && !!freeSessionUsedAt && !(__DEV__ && testFullSessions);
 
   const [techIdx, setTechIdx] = useState(() => {
     if (params.technique) {

@@ -26,7 +26,7 @@ export function useStartStateControl() {
   const start = (mode: BraceletMode, minutes: number) => {
     Haptics.selectionAsync();
     if (subscription.isLoading) return;
-    const locked = !subscription.isPro && !ownsBracelet && !testFullSessions;
+    const locked = !subscription.isPro && !ownsBracelet && !(__DEV__ && testFullSessions);
     if (locked) {
       setPaywallOpen(true);
       return;
