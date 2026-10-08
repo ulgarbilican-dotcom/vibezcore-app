@@ -217,7 +217,7 @@ export function AccountWallModal() {
 
           <Text style={s.legal}>
             By creating an account you agree to our Terms and Privacy
-            Policy. No credit card. Cancel anytime.
+            Policy. Cancel anytime.
           </Text>
         </View>
       </View>
