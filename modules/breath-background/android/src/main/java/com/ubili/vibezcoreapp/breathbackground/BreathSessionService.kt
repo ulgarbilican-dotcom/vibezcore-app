@@ -54,6 +54,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -414,6 +416,28 @@ class BreathSessionService : Service() {
      enkel opnieuw zetten als er echt iets wijzigt. */
   private var lastMetaKey: String? = null
 
+  /* Operator, 8 okt 2026 ("muzieknoot op het vergrendelscherm, moet het
+     VIBEZCORE-logo V zijn"): OneUI toont de albumhoes van de mediasessie;
+     zonder hoes valt het terug op een muzieknoot. Het app-icoon (de V)
+     als hoes — geen extra asset nodig, één keer omgezet en bewaard. */
+  private var appIconBitmap: Bitmap? = null
+
+  private fun appIcon(): Bitmap? {
+    appIconBitmap?.let { return it }
+    return try {
+      val d = packageManager.getApplicationIcon(packageName)
+      val size = 256
+      val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+      val c = Canvas(bmp)
+      d.setBounds(0, 0, size, size)
+      d.draw(c)
+      appIconBitmap = bmp
+      bmp
+    } catch (_: Exception) {
+      null
+    }
+  }
+
   @Suppress("UNUSED_PARAMETER")
   private fun updateMediaSession(phaseText: String) {
     val session = ensureMediaSession()
@@ -424,6 +448,10 @@ class BreathSessionService : Service() {
         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Guided breathwork")
         .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
         .apply {
+          appIcon()?.let {
+            putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
+            putBitmap(MediaMetadataCompat.METADATA_KEY_ART, it)
+          }
           if (totalDurationMs > 0) {
             putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
           }
