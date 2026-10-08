@@ -306,6 +306,52 @@ type ErrorPayload = {
 
 /* ── Persistence ────────────────────────────────────────────────────────── */
 
+/* Operator, 8 okt 2026 ("na inloggen kom ik op onboarding breathwork — is
+   dat juist?"): uitloggen zet de breath-intro terug op "niet gezien", zodat
+   een VOLGENDE persoon op dit toestel hem krijgt. Maar wie zelf terug
+   inlogt, kreeg hem dan ook opnieuw. Nu onthouden we per e-mailadres wie
+   hem al zag, en zetten dat bij inloggen terug. Enkel op dit toestel. */
+const BREATH_ONB_BY_EMAIL_KEY = 'vz_breath_onb_by_email_v1';
+
+async function readOnbMap(): Promise<Record<string, number>> {
+  try {
+    const raw = await AsyncStorage.getItem(BREATH_ONB_BY_EMAIL_KEY);
+    const m = raw ? JSON.parse(raw) : {};
+    return m && typeof m === 'object' ? m : {};
+  } catch {
+    return {};
+  }
+}
+
+async function rememberBreathOnboardingForEmail(): Promise<void> {
+  try {
+    const email = await AsyncStorage.getItem(EMAIL_KEY);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getSetting } = require('@/utils/settings');
+    const done = getSetting('breathOnboardingCompletedAt');
+    if (!email || !done) return;
+    const m = await readOnbMap();
+    m[email.toLowerCase()] = done;
+    await AsyncStorage.setItem(BREATH_ONB_BY_EMAIL_KEY, JSON.stringify(m));
+  } catch {
+    /* swallow */
+  }
+}
+
+async function restoreBreathOnboardingForEmail(email: string): Promise<void> {
+  try {
+    const done = (await readOnbMap())[email.toLowerCase()];
+    if (!done) return;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getSetting, setSetting } = require('@/utils/settings');
+    if (!getSetting('breathOnboardingCompletedAt')) {
+      await setSetting('breathOnboardingCompletedAt', done);
+    }
+  } catch {
+    /* swallow */
+  }
+}
+
 export async function persistSession(s: SessionPayload): Promise<void> {
   if (!s.access_token) return;
   /* Iter v194 (2026-07-04): dev-mock override flags wissen wanneer
@@ -361,6 +407,7 @@ export async function persistSession(s: SessionPayload): Promise<void> {
        EMAIL_KEY wordt door clearSession gewist; LAST_EMAIL_KEY niet. */
     pairs.push([LAST_EMAIL_KEY, s.user.email]);
   }
+  if (s.user?.email) await restoreBreathOnboardingForEmail(s.user.email);
   try {
     await AsyncStorage.multiSet(pairs);
   } catch (e) {
@@ -404,6 +451,7 @@ export async function clearSession(): Promise<void> {
      AsyncStorage en dit bestand wordt vroeg in de opstart geladen. Zelfde
      patroon als de dev-override hierboven, en het mag nooit blokkeren op
      auth-clearance. */
+  await rememberBreathOnboardingForEmail();
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { setSetting } = require('@/utils/settings');
