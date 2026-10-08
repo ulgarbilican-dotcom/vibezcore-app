@@ -203,7 +203,9 @@ export function MiniPlayer({
           borderTopColor: C.border,
         },
       ]}
-      pointerEvents="box-none"
+      /* Operator, 8 okt 2026: was "box-none" — een tik op het pijltje of de
+         rand ging DOOR de balk naar wat erachter lag (Profile → "Sign out").
+         Een dichte balk vangt elke tik zelf op. */
     >
       {/* Flinterdunne voortgangslijn over de bovenrand — Signal Blue, de
          functionele "actieve afspeelstatus"-kleur, ongeacht thema. */}
@@ -216,9 +218,9 @@ export function MiniPlayer({
          en de knop viel niet op. Groter, vetter en gecentreerd BOVENAAN
          de balk (net onder de voortgangslijn) — de klassieke "sleep/tik
          omhoog"-positie, meteen het eerste wat opvalt. */}
-      <View style={s.expandHint} pointerEvents="none">
+      <Pressable style={s.expandHint} onPress={onExpand} hitSlop={8} accessibilityLabel="Open player">
         <ChevronUp size={20} color={C.dim} strokeWidth={3} />
-      </View>
+      </Pressable>
 
       <AnimatedPressable
         onPress={onExpand}
