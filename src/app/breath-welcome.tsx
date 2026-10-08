@@ -37,7 +37,6 @@ import GradientText, {
 } from '@/components/GradientText';
 import {
   claimFreeSessionParam,
-  skipBreathIntroOnce,
   skipBreathOnboardingRedirectOnce,
 } from '@/utils/breath-entry';
 import {
@@ -873,7 +872,10 @@ export default function BreathWelcomeScreen() {
        heeft gezien hoeft 'm geen tweede keer, meteen achter elkaar, te
        zien — dat las als "gaat niet naar select mode" terwijl de
        navigatie zelf al goed stond. */
-    skipBreathIntroOnce();
+    /* Operator, 8 okt 2026 ("moet gebruiker dan niet op welcome pagina
+       breathwork komen ipv select state?"): wie Skip tikt heeft de uitleg
+       NIET gezien → landt op het Breath-welkomstbeeld (de drempel), niet
+       meteen op select state. skipBreathIntroOnce() hier dus weg. */
     router.replace('/breath' as never);
   };
 
