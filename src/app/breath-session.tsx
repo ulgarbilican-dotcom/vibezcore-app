@@ -4100,7 +4100,7 @@ export function BreathSession() {
           {/* Glas (operator, 6 okt 2026): zelfde materiaal als de rest van de
               sessie. De toestandskleur zit enkel IN de kaart — de streep
               bovenaan en een vleugje tint in het glas — nooit in de tekst. */}
-          <View style={[s.doneCard, s.doneSheet, { paddingBottom: Math.max(insets.bottom, 12) + 30 }]}>
+          <View style={[s.doneCard, s.doneSheet, { paddingBottom: Math.max(insets.bottom, 12) + 36 }]}>
             <VibezGlass
               radius={24}
               level="sheet"
@@ -4123,7 +4123,7 @@ export function BreathSession() {
             </View>
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={[s.modalTitle, s.doneCenter]}>Well done</Text>
-            <Text style={[s.modalBody, s.doneCenter]}>
+            <Text style={[s.modalBody, s.doneCenter, s.doneBodySpace]}>
               You completed {rounds} rounds of {tech.name}.
               {'\n'}Carry the breath with you.
             </Text>
@@ -5082,11 +5082,16 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     fontSize: 11.5,
     color: C.dim40,
   },
+  /* Operator, 8 okt 2026 ("meer ademruimte, kaart groter, meer ruimte
+     tussen alles"). */
   doneSheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 10,
+    paddingTop: 12,
+    paddingHorizontal: 30,
+    gap: 16,
   },
+  doneBodySpace: { marginBottom: 14 },
   doneCenter: { textAlign: 'center' },
   doneStrip: {
     position: 'absolute',
@@ -5102,7 +5107,8 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     height: 140,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginTop: 14,
+    marginBottom: 10,
   },
   buddhaRing: {
     position: 'absolute',
