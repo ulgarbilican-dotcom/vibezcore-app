@@ -3263,10 +3263,6 @@ export function BreathSession() {
                  Nu Apple's glas-recept zonder vervaging: doorschijnende witte
                  vulling, zachte lichtreflectie van boven, dunne lichte rand
                  (pauseMain), en een vleugje toestandskleur. */}
-              <View
-                pointerEvents="none"
-                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
-              />
               {/* Operator, 8 okt 2026 ("knop in sleep zelfde kleur als in de
                  boog, nu te veel verschillende groenen"): de tint komt nu uit
                  dezelfde kleur als het heldere uiteinde van de boog. */}
@@ -3275,7 +3271,7 @@ export function BreathSession() {
                 style={[
                   StyleSheet.absoluteFill,
                   s.pauseMainTint,
-                  { backgroundColor: st.gradient?.[2] ?? accent },
+                  { backgroundColor: st.gradient?.[1] ?? accent },
                 ]}
               />
               <ExpoGradient
@@ -4913,7 +4909,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   /* Operator, 21 september 2026 ("misschien heel licht de kleur van de
      sessie, transparant?" → "mag iets duidelijker maar moet transparant
      blijven"): 0.12 → 0.2 — nog steeds een tint, geen vol vlak. */
-  pauseMainTint: { opacity: 0.24 },
+  pauseMainTint: { opacity: 0.55 },
   endTxtWrap: {
     marginTop: 22,
   },
