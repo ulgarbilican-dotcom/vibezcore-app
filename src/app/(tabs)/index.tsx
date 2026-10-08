@@ -32,7 +32,7 @@ import {
 import { useFavorites } from '@/hooks/useFavorites';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBraceletOwner } from '@/utils/dev-user-override';
-import { getToken } from '@/services/auth';
+import { getToken, hasStoredSession } from '@/services/auth';
 import {
   getSnapshot,
   onSessionFinish,
@@ -721,7 +721,8 @@ function AudioScreen({
     useCallback(() => {
       let cancelled = false;
       (async () => {
-        const t = await getToken();
+        /* Offline met een verlopen sleutel blijf je ingelogd (8 okt 2026). */
+        const t = (await getToken()) || (await hasStoredSession());
         if (!cancelled) setIsSignedIn(!!t);
       })();
       return () => {

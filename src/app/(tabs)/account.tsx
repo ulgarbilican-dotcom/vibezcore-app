@@ -167,6 +167,7 @@ import {
     getAuthProvider,
     getLastLoginEmail,
     getToken,
+    hasStoredSession,
     getUserEmail,
     login,
     signup,
@@ -951,7 +952,8 @@ export default function AccountScreen() {
 
   useEffect(() => {
     (async () => {
-      const t = await getToken();
+      /* Offline met een verlopen sleutel blijf je ingelogd (zie hasStoredSession). */
+      const t = (await getToken()) || ((await hasStoredSession()) ? 'stored' : null);
       if (t) {
         setEmail((await getUserEmail()) || 'Signed in');
         setProvider(await getAuthProvider());

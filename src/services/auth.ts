@@ -424,6 +424,23 @@ export async function clearSession(): Promise<void> {
   }
 }
 
+/** Is er op dit toestel een bewaarde login? Los van of de toegangssleutel
+ *  nog geldig is (die verloopt na een uur en kan offline niet vernieuwd
+ *  worden). Operator, 8 okt 2026: in vliegtuigmodus toonde Profile je als
+ *  uitgelogd, terwijl de login gewoon bewaard bleef. Gebruik dit voor wat
+ *  het scherm TOONT; gebruik `getToken()` voor wat naar de server gaat. */
+export async function hasStoredSession(): Promise<boolean> {
+  try {
+    const [token, refresh] = await Promise.all([
+      AsyncStorage.getItem(TOKEN_KEY),
+      AsyncStorage.getItem(REFRESH_KEY),
+    ]);
+    return !!(token || refresh);
+  } catch {
+    return false;
+  }
+}
+
 export async function getUserEmail(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(EMAIL_KEY);
