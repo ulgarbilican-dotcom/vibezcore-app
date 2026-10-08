@@ -403,6 +403,7 @@ function onStatus(st: AudioStatus): void {
      roepen de native play() rechtstreeks aan. */
   if (state.previewBlocked && isPlayingNow) {
     try {
+      if (player) player.muted = true;
       player?.pause();
     } catch {}
   }
@@ -449,6 +450,17 @@ function onStatus(st: AudioStatus): void {
     !overridePretendsPro
   ) {
     player?.pause();
+    /* Operator, 8 okt 2026 (test 56): Play op het vergrendelscherm liet nog
+       een fractie van een seconde horen vóór de pauze hierboven greep. Nu:
+       de bediening op het vergrendelscherm verdwijnt (niets meer om op te
+       tikken), en de speler staat stil (muted) zolang de grens geldt — ook
+       een koptelefoonknop laat dan niets meer horen. */
+    try {
+      if (player) {
+        player.muted = true;
+        player.setActiveForLockScreen(false);
+      }
+    } catch {}
     setState({ previewBlocked: true });
   }
 
@@ -646,7 +658,14 @@ export async function loadSession(
        Premium (aankoop, inloggen, of de status kwam pas na de start binnen)
        → de voorproef-grens weg, zonder herladen. */
     if (state.preview && !opts.preview) {
+      const wasBlocked = state.previewBlocked;
       setState({ preview: false, previewBlocked: false });
+      if (wasBlocked) {
+        try {
+          player.muted = false;
+        } catch {}
+        activateLockScreen(session);
+      }
     }
     return;
   }
