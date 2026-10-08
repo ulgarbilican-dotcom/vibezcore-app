@@ -3267,9 +3267,16 @@ export function BreathSession() {
                 pointerEvents="none"
                 style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
               />
+              {/* Operator, 8 okt 2026 ("knop in sleep zelfde kleur als in de
+                 boog, nu te veel verschillende groenen"): de tint komt nu uit
+                 dezelfde kleur als het heldere uiteinde van de boog. */}
               <View
                 pointerEvents="none"
-                style={[StyleSheet.absoluteFill, s.pauseMainTint, { backgroundColor: accent }]}
+                style={[
+                  StyleSheet.absoluteFill,
+                  s.pauseMainTint,
+                  { backgroundColor: st.gradient?.[2] ?? accent },
+                ]}
               />
               <ExpoGradient
                 pointerEvents="none"
@@ -4117,48 +4124,13 @@ export function BreathSession() {
             <Text style={[s.modalEyebrow, s.doneEyebrow]}>✦ CONGRATULATIONS ✦</Text>
             <Text style={[s.modalTitle, s.doneCenter]}>Well done</Text>
             <Text style={[s.modalBody, s.doneCenter]}>
-              You completed {rounds} rounds of {tech.name}. Carry the
-              breath with you.
+              You completed {rounds} rounds of {tech.name}.
+              {'\n'}Carry the breath with you.
             </Text>
 
-            {/* Feed the mind (operator, 6 okt 2026): geen voorgestelde
-                sessie meer, enkel de uitnodiging om na het ademen ook de
-                mind te voeden — één regel, één deur naar de bibliotheek.
-                Neutraal van kleur: het accent blijft bij de kaart zelf. */}
-            <AnimatedPressable
-              onPressIn={pressBrowseLibrary.onPressIn}
-              onPressOut={pressBrowseLibrary.onPressOut}
-              onPress={() => {
-                dismissDone();
-                closeBreathSession();
-                /* dismissTo i.p.v. push: geen tweede tab-navigator op de
-                   stapel (audit 5 okt 2026). */
-                goToTab({ pathname: '/', params: { from: 'breath' } });
-              }}
-              hitSlop={8}
-              style={[s.feedMind, pressBrowseLibrary.style]}
-            >
-              <Text style={s.feedMindLead}>Your breath is settled. Now feed the mind.</Text>
-              <Text style={s.feedMindLink}>Go to the Audio Library ▸</Text>
-            </AnimatedPressable>
-
-            {showBraceletLink && !askPremium ? (
-              <Pressable
-                onPress={() => {
-                  dismissDone();
-                  closeBreathSession();
-                  void openBraceletWebsite();
-                }}
-                hitSlop={8}
-                style={({ pressed }) => [s.braceletLine, pressed && { opacity: 0.6 }]}
-                accessibilityRole="link"
-                accessibilityLabel="Coming to your wrist. Smart Bead Bracelet"
-              >
-                <Text style={s.braceletLineTxt}>
-                  Coming to your wrist · <Text style={s.feedMindLink}>Smart Bead Bracelet ›</Text>
-                </Text>
-              </Pressable>
-            ) : null}
+            {/* Operator, 8 okt 2026 ("coming to your wrist en go to the audio
+                library mag ook weg in de popups"): afsluitblad enkel nog de
+                felicitatie + knop — rustiger, één taak. */}
 
             {/* Enkel bij instant-gestarte sessies, enkel ná een echte
                voltooiing (dit is het "Well done"-scherm, geen preview-
@@ -4941,7 +4913,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   /* Operator, 21 september 2026 ("misschien heel licht de kleur van de
      sessie, transparant?" → "mag iets duidelijker maar moet transparant
      blijven"): 0.12 → 0.2 — nog steeds een tint, geen vol vlak. */
-  pauseMainTint: { opacity: 0.14 },
+  pauseMainTint: { opacity: 0.24 },
   endTxtWrap: {
     marginTop: 22,
   },
