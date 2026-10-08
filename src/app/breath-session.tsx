@@ -138,7 +138,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
 import { useBreathHost, useBreathParams } from '@/components/breath-host-context';
 import {
@@ -2387,6 +2387,13 @@ export function BreathSession() {
      proberen te raden waar je vandaan kwam, gewoon ALTIJD expliciet naar
      de CHOOSE YOUR MODE-pagina (`/breath`), hoe je de sessie ook binnenkwam
      (setup, agenda, onboarding, protocol, kortere link). */
+  /* Operator, 8 okt 2026 ("bij afsluiten heel even het welcome-scherm"):
+     dismissTo('/breath') vond de tab niet als eigen stack-item wanneer
+     welcome.tsx onderaan de stapel lag → pop tot de bodem (welcome = flits)
+     en dan pas naar Breath. Nu rechtstreeks volgens waar je staat. */
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   const leaveSession = useCallback(() => {
     /* Elke uitgang: eerst het effen vlak erover (8 okt 2026), zodat een
        rusttoestand van dit scherm nooit kort in beeld komt. */
@@ -2428,11 +2435,13 @@ export function BreathSession() {
        (dismissTo pop't eventuele tussenschermen zoals breath-setup weg). */
     closeBreathSession();
     if (params.fromPlan === '1') return;
-    if (router.canDismiss()) {
-      router.dismissTo('/breath');
-    } else {
-      router.navigate('/breath');
+    const here = pathnameRef.current;
+    if (here === '/breath') return;
+    if ((here === '/breath-setup' || here === '/feel-now') && router.canGoBack()) {
+      router.back();
+      return;
     }
+    router.navigate('/breath');
   }, [params.fromPlan]);
 
   const requestStop = useCallback(() => {
