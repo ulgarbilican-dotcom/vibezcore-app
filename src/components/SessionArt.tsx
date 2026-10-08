@@ -54,7 +54,13 @@ export const SESSION_ART = {
     'https://vibezcore-audio.b-cdn.net/images/buddha-removebg-preview%20(1).png',
   /* REST, operator 2 augustus 2026 — vervangt de buddha. Ook dit is geen
      bol, dus de naam "Soft Orb" past er nog steeds niet bij. */
-  tree: 'https://vibezcore-audio.b-cdn.net/images/tree_of_life-removebg-preview%20(1).png',
+  /* Operator, 8 okt 2026 ("in sleep ... moet ook onze bio teal zijn"): de
+     boom was nog limoengroen (van vóór Sleep Bio-Teal werd). Zelfde PNG,
+     enkel de tint verschoven naar Bio-Teal (helderheid/detail behouden),
+     lokaal meegebundeld — geen netwerk nodig. Origineel:
+     https://vibezcore-audio.b-cdn.net/images/tree_of_life-removebg-preview%20(1).png */
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  tree: Image.resolveAssetSource(require('../../assets/images/tree_teal.png')).uri,
   clarity:
     'https://vibezcore-audio.b-cdn.net/images/cristal-removebg-preview.png',
   /* FOCUS. Het bestand heet "bol", maar het IS de Flower of Life — niet
