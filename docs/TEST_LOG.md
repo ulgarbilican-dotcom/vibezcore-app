@@ -98,6 +98,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 46/50 | Ingelogd → opent in laatste tabblad (Activity), geen welkomstscherm | A16 | ✅ na 3 fixes: Supabase-project was gepauzeerd ("Upstream fetch failed", operator heeft hersteld); Library-intro flitste bij koude start → `7bb4b68` (Library toont niets tot de opstartbeslissing). Operator: "nu kom ik wel direct in activity" |
 | 46b | Profile Premium vs Free tegenstrijdig | A16 | ❌→fix `68e192e`: backend zegt `active:true` met `valid_until` 8 juli 2026 (verlopen, webhook nooit verwerkt); app telt een verlopen einddatum nu nooit als actief. Operator-account is in werkelijkheid Free (Play: verlopen) |
 | 47 | Settings → "Watch the intro again" → geen gratis volledige sessie meer (enkel als de gratis sessie nog niet gebruikt is) | A16 | ✅ operator: "stopt na 30 sec + saleskaart Unlock" |
+| 47b | Na 30 s voorproef → betaalscherm → Done: nooit de oude lotus-in-kaart / "ENJOY YOUR SESSION" | A16 | ✅ na 2 fixes: afdekscherm `f9a5ef9` hielp niet; `a484e8d` haalt het oude startscherm volledig weg en pauzeert de voorproef achter het betaalscherm. Operator: "nu zie ik wel het juiste breathscherm na done" |
 | 48 | Gast koopt Premium → app volledig afsluiten → nog steeds Premium | A16 | ⏳ (licentietester) |
 | 49 | Gast → Restore purchases → account maken → aankoop op account | A16 | ⏳ |
 | 50 | Bracelet-eigenaar: na openen GEEN sprong naar State Control; opent in laatste tabblad | A16 | ⏳ |
