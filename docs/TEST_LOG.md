@@ -112,7 +112,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 58 | Alle bracelet-links (Profile-rij, About-kaart, Library-kaart, breath-sessie Voice & Haptics → "Fall 2026" → View Preview) → website | A16 | ✅ operator: "alles ok" (View Preview zit achter het "Fall 2026"-label, niet achter de rijnaam) |
 | 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
 | 59 | Settings: "Save listening progress" uit → gratis sessie 20 s, X, opnieuw openen → begint op 0:00, geen Continue/Start over | A16 | ✅ operator: "klopt" |
-| 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit en geen meldingen meer | A16 | ⏳ |
+| 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit; Your Journey leeg | A16 | ✅ operator: "klopt" |
 | 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ |
 | 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ✅ operator: "klopt"; daarna terug ingelogd (Free) |
 | 63 | Proefperiode: Pro-sessie voorproef → geen "start your trial"; /subscribe → "You're a VIBEZCORE Premium member" | A16 | ⏳ |
