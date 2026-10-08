@@ -103,7 +103,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 49 | Gast → Restore purchases → account maken → aankoop op account | A16 | ⏳ |
 | 50 | Bracelet-eigenaar: na openen GEEN sprong naar State Control; opent in laatste tabblad | A16 | ⏳ |
 | 51 | E-maillink (bevestigen/reset) opent één scherm, geen "Link expired" | A16 | ⏳ |
-| 52 | Offline openen (> 1 u na gebruik) → ingelogd, laatste tabblad | A16 | ⏳ |
+| 52 | Offline openen (> 1 u na gebruik) → ingelogd, laatste tabblad | A16 | ❌ operator zette vliegtuigmodus aan → Profile toonde "uitgelogd" (sleutel van 1 u verlopen, offline niet te vernieuwen; login zelf bleef bewaard) → fix `hasStoredSession` (Profile + Library) ⏳ hertest |
 | 53 | Ademsessie: 2 min wachten vóór Play, scherm vergrendelen → sessie loopt correct, historiek juiste duur | A16 | ⏳ |
 | 54 | Plan met Sleep 4-7-8 (beginner) → 4 cycli | A16 | ⏳ |
 | 55 | Ujjayi-popup wegtikken (achtergrond + Android-terug) → sessie start (geen leeg scherm) | A16 | ✅ operator: "klopt" — sessie staat klaar op pauze met Play-knop, zoals bedoeld |
