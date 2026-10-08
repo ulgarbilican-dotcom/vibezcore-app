@@ -107,7 +107,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 53 | Ademsessie: 2 min wachten vóór Play, scherm vergrendelen → sessie loopt correct, historiek juiste duur | A16 | ⏳ |
 | 54 | Plan met Sleep 4-7-8 (beginner) → 4 cycli | A16 | ⏳ |
 | 55 | Ujjayi-popup wegtikken (achtergrond + Android-terug) → sessie start (geen leeg scherm) | A16 | ✅ operator: "klopt" — sessie staat klaar op pauze met Play-knop, zoals bedoeld |
-| 56 | Pro-sessie voorproef tot 60 s → Play op vergrendelscherm speelt NIET verder | A16 | ⏳ |
+| 56 | Pro-sessie voorproef tot 60 s → Play op vergrendelscherm speelt NIET verder | A16 | ❌ eerst nog een fractie van een seconde geluid → fix `e30310d`: bij de grens verdwijnt de mediaspeler van het vergrendelscherm + speler gedempt → ✅ operator: "na een tijdje staat er geen mediaspeler meer" (Android haalt de melding met een korte vertraging weg; tikken in die tussentijd hoort stil te blijven door het dempen — niet apart getest) |
 | 57 | Library: inloggen op Profile → terug naar Library → account-sessies open zonder muur | A16 | ⏳ |
 | 58 | Alle bracelet-links (upsell na audio, breath-sessie "View Preview", About) → website | A16 | ⏳ |
 | 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
