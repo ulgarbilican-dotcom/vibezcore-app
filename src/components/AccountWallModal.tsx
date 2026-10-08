@@ -171,31 +171,26 @@ export function AccountWallModal() {
               account toegankelijk. */}
           <Text style={s.eyebrow}>UNLOCK MORE SESSIONS</Text>
           <Text style={s.title}>Subscribe to keep going</Text>
-          {lastSessionTitle ? (
-            <Text style={s.subline}>
-              <Text style={s.subQuote}>“{lastSessionTitle}”</Text> unlocks
-              with your {trialName}, along with {TRIAL_SESSION_COUNT}{' '}
-              sessions total. Stay subscribed after the trial to unlock the
-              full {TOTAL_SESSION_COUNT}-session library.
-            </Text>
-          ) : (
-            <Text style={s.subline}>
-              You've explored all {FREE_SESSION_COUNT} free sessions. Your{' '}
-              {trialName} unlocks {TRIAL_SESSION_COUNT} sessions, Breathwork and State Control
-              — stay subscribed after the trial to unlock the full{' '}
-              {TOTAL_SESSION_COUNT}-session library.
-            </Text>
-          )}
+          {/* Operator, 8 okt 2026 ("weer zelfde verhaal"): één korte zin
+              bovenaan, de bullets dragen het detail — tijdens vs. na de
+              trial, zonder herhaling. */}
+          <Text style={s.subline}>
+            {lastSessionTitle ? (
+              <>
+                <Text style={s.subQuote}>“{lastSessionTitle}”</Text> unlocks
+                with your {trialName}.
+              </>
+            ) : (
+              `You've explored all ${FREE_SESSION_COUNT} free sessions.`
+            )}
+          </Text>
 
-          {/* Bullet-list — waarde-propositie. Twee losse bullets voor
-              trial-scope vs. na-trial-scope, i.p.v. één bullet die de volle
-              144 als directe trial-beloning suggereert. */}
           <View style={s.bullets}>
             <Bullet
-              text={`${trialDays > 0 ? `${trialDays}-day trial` : 'Trial'} — ${TRIAL_SESSION_COUNT} sessions, Breathwork and State Control`}
+              text={`During your trial: Breathwork, State Control and ${TRIAL_SESSION_COUNT} audio sessions`}
             />
             <Bullet
-              text={`Then the full library — ${TOTAL_SESSION_COUNT} sessions`}
+              text={`After your trial: the full Audio Library, all ${TOTAL_SESSION_COUNT} sessions`}
             />
             <Bullet text={`Cancel anytime in ${storeName}`} />
           </View>

@@ -147,7 +147,7 @@ export default function MembershipPlans({
      stijl; Breathwork/State Control staan al in de kop). */
   const trialScope =
     plan === 'yearly' && hasTrial
-      ? `Trial includes Breathwork, State Control and ${TRIAL_SESSION_COUNT} audio sessions. Full Audio Library after.`
+      ? `${TRIAL_SESSION_COUNT} audio sessions during your trial, all ${SESSIONS.length} after.`
       : null;
   const cta = plan === 'yearly' && hasTrial ? 'Start free trial' : 'Subscribe';
   /* Operator, 8 okt 2026: kleine lettertjes per store, actief geformuleerd.
