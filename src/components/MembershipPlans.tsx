@@ -145,10 +145,12 @@ export default function MembershipPlans({
   /* Operator, 8 okt 2026: de kop belooft "Audio Library" — maak vóór de
      knop duidelijk dat de trial 27 sessies opent, niet alle (kort, Apple-
      stijl; Breathwork/State Control staan al in de kop). */
+  /* Operator, 8 okt 2026: ook bij Monthly zeggen wat je krijgt — alle drie,
+     meteen volledig (geen trial = geen audio-beperking). */
   const trialScope =
     plan === 'yearly' && hasTrial
       ? `During your trial, the Audio Library is limited to ${TRIAL_SESSION_COUNT} sessions.`
-      : null;
+      : `Full access from day one: Breathwork, State Control and all ${SESSIONS.length} audio sessions.`;
   const cta = plan === 'yearly' && hasTrial ? 'Start free trial' : 'Subscribe';
   /* Operator, 8 okt 2026: kleine lettertjes per store, actief geformuleerd.
      iOS = Apple's vaste tekst (24-uursregel, App Store-accountinstellingen);
