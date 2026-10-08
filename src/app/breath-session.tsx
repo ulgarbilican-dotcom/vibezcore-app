@@ -2660,11 +2660,35 @@ export function BreathSession() {
     );
     return () => cancelAnimation(buddhaBreath);
   }, [done, buddhaBreath]);
+  const buddhaSway = useSharedValue(0);
+  useEffect(() => {
+    if (!done) {
+      cancelAnimation(buddhaSway);
+      buddhaSway.value = 0;
+      return;
+    }
+    buddhaSway.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-1, { duration: 8000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(buddhaSway);
+  }, [done, buddhaSway]);
   const buddhaBreathStyle = useAnimatedStyle(() => ({
     /* Vervolg ("iets duidelijker"): groter, niet sneller — 12% i.p.v. 6%,
        en bij het inademen 6 pt omhoog, als een echte ademteug. */
+    /* Vervolg ("kan de buddha rond eigen as draaien?"): geen volle draai
+       (platte afbeelding wordt dan een streep en gespiegeld) — wel een
+       rustig heen-en-weer rond de verticale as, ±12°, mee op de adem
+       (één volle zwaai per twee ademhalingen). */
     transform: [
+      { perspective: 600 },
       { translateY: -(buddhaBreath.value - 1) * 50 },
+      { rotateY: `${buddhaSway.value * 12}deg` },
       { scale: buddhaBreath.value },
     ],
   }));
