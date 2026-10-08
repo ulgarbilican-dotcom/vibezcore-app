@@ -5091,7 +5091,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     paddingHorizontal: 30,
     gap: 16,
   },
-  doneBodySpace: { marginBottom: 14 },
+  doneBodySpace: { marginBottom: 40 },
   doneCenter: { textAlign: 'center' },
   doneStrip: {
     position: 'absolute',
