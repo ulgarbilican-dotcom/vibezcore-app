@@ -821,6 +821,9 @@ const s = StyleSheet.create({
        naam onderaan de tegel, icoon blijft bovenaan. */
     marginTop: 'auto',
     paddingTop: 10,
+    /* Altijd 2 regels hoog: namen van één regel beginnen op dezelfde
+       hoogte als die van twee regels. */
+    minHeight: 10 + 18 * 2,
     color: '#ffffff',
     alignSelf: 'stretch',
     textAlign: 'left',
