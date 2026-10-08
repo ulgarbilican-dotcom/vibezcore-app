@@ -190,7 +190,7 @@ export function AccountWallModal() {
               text={`During your trial: Breathwork, State Control and ${TRIAL_SESSION_COUNT} audio sessions`}
             />
             <Bullet
-              text={`After your trial: the full Audio Library, all ${TOTAL_SESSION_COUNT} sessions`}
+              text={`After your trial: you keep all of it, plus every audio session (${TOTAL_SESSION_COUNT})`}
             />
             <Bullet text={`Cancel anytime in ${storeName}`} />
           </View>
