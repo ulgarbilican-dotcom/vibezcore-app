@@ -109,7 +109,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 55 | Ujjayi-popup wegtikken (achtergrond + Android-terug) → sessie start (geen leeg scherm) | A16 | ✅ operator: "klopt" — sessie staat klaar op pauze met Play-knop, zoals bedoeld |
 | 56 | Pro-sessie voorproef tot 60 s → Play op vergrendelscherm speelt NIET verder | A16 | ❌ eerst nog een fractie van een seconde geluid → fix `e30310d`: bij de grens verdwijnt de mediaspeler van het vergrendelscherm + speler gedempt → ✅ operator: "na een tijdje staat er geen mediaspeler meer" (Android haalt de melding met een korte vertraging weg; tikken in die tussentijd hoort stil te blijven door het dempen — niet apart getest) |
 | 57 | Library: ingelogd (Free) → account-sessie "What Is In Your Control" speelt voorbij 1:00 zonder muur | A16 | ✅ operator: "heel goed, werkt". Label FREE WITH ACCOUNT enkel voor gasten (ingelogd = ontgrendeld getoond) |
-| 58 | Alle bracelet-links (upsell na audio, breath-sessie "View Preview", About) → website | A16 | ⏳ |
+| 58 | Alle bracelet-links (Profile-rij, About-kaart, Library-kaart, breath-sessie Voice & Haptics → "Fall 2026" → View Preview) → website | A16 | ✅ operator: "alles ok" (View Preview zit achter het "Fall 2026"-label, niet achter de rijnaam) |
 | 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
 | 59 | Settings: "Save listening progress" uit → gratis sessie 20 s, X, opnieuw openen → begint op 0:00, geen Continue/Start over | A16 | ✅ operator: "klopt" |
 | 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit en geen meldingen meer | A16 | ⏳ |
@@ -118,6 +118,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 63 | Proefperiode: Pro-sessie voorproef → geen "start your trial"; /subscribe → "You're a VIBEZCORE Premium member" | A16 | ⏳ |
 | 64 | "Already owned"-fout → knoppen Restore purchases + Sign in | A16 | ⏳ |
 | 65 | Speler op kleine telefoon (≤ 700 dp hoog) → knoppen volledig zichtbaar | A16 | ⏳ |
+| 66 | Grote speler: hoes groter (164 → 210), voortgangsbalk + knoppen lager | A16 | ✅ operator: "perfect zo is het ok" (`2449b73`, `899357f`) |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), toegangsmodel account-tier vs trial + State Control in trial, account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
