@@ -3790,6 +3790,12 @@ export function BreathSession() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              /* Operator, 8 okt 2026 ("soundscapes is niet aanklikbaar"):
+                 in het glas-onderblad (GlassSheetHost) mat Android deze
+                 horizontale rij als 0 hoog — knoppen onzichtbaar. Vaste
+                 hoogte = chip 38 + paddingBottom 20, en flexShrink 0: het vel heeft
+                 een maxHeight en liet net deze rij tot 0 krimpen. */
+              style={{ flexGrow: 0, flexShrink: 0, height: 58 }}
               contentContainerStyle={s.avScapeScroll}
             >
               {/* Operator, 25 september 2026 ("bij aantikken binnenkant wit
@@ -3810,7 +3816,15 @@ export function BreathSession() {
                 <VolumeX size={16} color={!scape ? '#ffffff' : C.dim55} strokeWidth={2.2} />
                 <Text style={[s.avScapeChipTxt, !scape && { color: '#ffffff' }]}>None</Text>
               </AnimatedPressable>
-              {SOUNDSCAPES.map((x) => {
+              {/* Gratis gebruiker: de twee gratis geluiden vooraan, niet eerst
+                 een rij kroontjes (8 okt 2026). */}
+              {(isPro
+                ? SOUNDSCAPES
+                : [
+                    ...SOUNDSCAPES.filter((x) => FREE_SOUNDSCAPES.has(x.key)),
+                    ...SOUNDSCAPES.filter((x) => !FREE_SOUNDSCAPES.has(x.key)),
+                  ]
+              ).map((x) => {
                 const on = scape?.key === x.key;
                 return (
                   <AnimatedPressable
