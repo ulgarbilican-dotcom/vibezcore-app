@@ -102,11 +102,18 @@ export function heartbeatTick(): void {
     /* Eerst echt terug naar het begin, dán spelen: anders staat de speler
        nog aan het einde van de vorige slag en speelt hij niets (gezien op
        de A16: enkel de eerste slag klonk). */
+    /* Vervolg (operator: "hij slaat in het begin één slag over"): een
+       verse speler staat nog aan het begin en is mogelijk nog aan het laden
+       — terugspoelen faalt dan. Gewoon spelen; hij start zodra hij klaar is. */
+    if (p.currentTime <= 0.01) {
+      p.play();
+      return;
+    }
     p.pause();
     void p
       .seekTo(0)
       .then(() => p.play())
-      .catch(() => {});
+      .catch(() => p.play());
   } catch {
     /* geluid is een extraatje — nooit de pagina laten haperen */
   }
