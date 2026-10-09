@@ -205,6 +205,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const [pressingHard, setPressingHard] = useState(false);
   const [justLost, setJustLost] = useState(false);
   const [batteryLow, setBatteryLow] = useState(false);
+  /* Laatste beeldwaarde (ook zonder vinger), om te zien of de flits brandt. */
+  const lastRaw = useRef<PulseSample | null>(null);
+  const [looksDark, setLooksDark] = useState(false);
   useEffect(() => {
     if (!Battery) return;
     const check = () =>
@@ -304,6 +307,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     }
     const t = (rawTs - raw0.current) * scale.current;
     const s = { t, r, g };
+    lastRaw.current = s;
     if (fingerOnLens(s)) {
       lastFingerAt.current = t;
       if (fingerSince.current === null) fingerSince.current = t;
@@ -335,6 +339,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
+        /* Donker beeld = geen flitslicht (vinger op een lens zonder licht,
+           of de flits staat uit). Met de flits aan is het beeld helder. */
+        const raw = lastRaw.current;
+        setLooksDark(!!raw && raw.r < 60 && raw.g < 45);
         setJustLost(Date.now() - lostAt.current < 3000);
         return;
       }
@@ -541,11 +549,15 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     return { strokeDasharray: [Math.max(0.001, v), gap + 0.001, v, 0.001] };
   });
   const lowBatteryFail = status === 'failed' && batteryLow && failReason.startsWith("We couldn't read");
+  /* Operator, 9 okt 2026 ("en als de flits op 12% wél aangaat?"): enkel
+     "Flash unavailable" als de batterij laag is ÉN het beeld donker blijft —
+     anders gewoon de normale plaats-hint. */
+  const flashOff = batteryLow && looksDark;
   const message =
     status === 'placing'
       ? justLost
         ? 'Finger moved — starting over'
-        : placingLong && batteryLow
+        : placingLong && flashOff
         ? 'Flash unavailable'
         : placingLong
         ? 'Not quite — try the camera closest to the flash'
@@ -569,7 +581,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
                 : failReason;
   /* Operator, 9 okt 2026: batterijmeldingen als titel + korte uitleg. */
   const messageSub =
-    batteryLow && ((status === 'placing' && placingLong && !justLost) || status === 'camera-error')
+    (flashOff && status === 'placing' && placingLong && !justLost) || (batteryLow && status === 'camera-error')
       ? 'Low battery. Charge your phone and try again.'
       : lowBatteryFail
         ? 'Low battery may affect the flash. Charge your phone and try again.'
