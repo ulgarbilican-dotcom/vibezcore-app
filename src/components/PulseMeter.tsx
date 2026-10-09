@@ -300,6 +300,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   /* Live getal tijdens het meten + het eindgetal vlak voor het resultaat. */
   const [liveBpm, setLiveBpm] = useState<number | null>(null);
   const liveEma = useRef<number | null>(null);
+  const liveHist = useRef<number[]>([]);
+  const liveTarget = useRef<number | null>(null);
   const numPulse = useRef(new Animated.Value(1)).current;
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -382,6 +384,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         setBeatLog((prev) => (prev.length ? [] : prev));
         lastRealAt.current = 0;
         liveEma.current = null;
+        liveHist.current = [];
+        liveTarget.current = null;
         setLiveBpm(null);
         setStatus('placing');
         setProgress(0);
@@ -417,11 +421,23 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
          schatting. */
       /* Vervolg (operator: "bpm onmiddellijk mee tonen"): vanaf de eerste
          bruikbare schatting (~4 s signaal), niet pas na de omtrek. */
+      /* Vervolg (operator: "van 81 naar 53 en terug, niet accuraat"): zoals
+         een horloge — mediaan van de laatste 5 schattingen (uitschieters
+         vallen weg), pas tonen als twee opeenvolgende schattingen binnen
+         12% liggen, en daarna per slag hooguit 3 bpm bijsturen. */
       if (est && est.bpm >= 40 && est.bpm <= 140) {
-        const first = liveEma.current === null;
-        liveEma.current = first ? est.bpm : liveEma.current! * 0.7 + est.bpm * 0.3;
-        /* Eerste schatting meteen tonen; daarna ververst het getal op elke slag. */
-        if (first) setLiveBpm(Math.round(est.bpm));
+        const hist = [...liveHist.current, est.bpm].slice(-5);
+        liveHist.current = hist;
+        const sorted = [...hist].sort((x, y) => x - y);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        if (liveEma.current === null) {
+          const prev = hist[hist.length - 2];
+          if (prev !== undefined && Math.abs(prev - est.bpm) / est.bpm <= 0.12) {
+            liveEma.current = Math.round((prev + est.bpm) / 2);
+            setLiveBpm(liveEma.current);
+          }
+        }
+        liveTarget.current = median;
       }
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;
@@ -446,7 +462,11 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           lastRealAt.current = Date.now();
           /* Vervolg ("het getal moet volgens het hartritme tellen"): het
              getal ververst op elke slag en klopt even mee. */
-          if (liveEma.current !== null) setLiveBpm(Math.round(liveEma.current));
+          if (liveEma.current !== null && liveTarget.current !== null) {
+            const step = Math.max(-3, Math.min(3, liveTarget.current - liveEma.current));
+            liveEma.current = Math.round(liveEma.current + step);
+            setLiveBpm(liveEma.current);
+          }
           numPulse.setValue(1.08);
           Animated.timing(numPulse, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
           Animated.sequence([
@@ -618,6 +638,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     setBeatLog([]);
     lastRealAt.current = 0;
     liveEma.current = null;
+    liveHist.current = [];
+    liveTarget.current = null;
     setLiveBpm(null);
     setFinalBpm(null);
     setProgress(0);
