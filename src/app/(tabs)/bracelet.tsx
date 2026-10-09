@@ -58,6 +58,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import BraceletControl from '../bracelet-control';
+import RestingHeartRatePage from '@/components/RestingHeartRatePage';
+import { useRestingPulse } from '@/components/RhythmSheet';
+import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
@@ -285,10 +288,21 @@ export default function BraceletScreen() {
       return () => setFocused(false);
     }, []),
   );
+  /* Operator, 9 okt 2026: na de intro, zolang er nog geen keuze is voor de
+     rusthartslag, eerst de pagina "Your Resting Heart Rate" (eigen volledig
+     scherm). Pas tonen als de opgeslagen keuze geladen is — anders flitst
+     hij bij wie al koos. */
+  const pulse = useRestingPulse();
+  const [pulseLoaded, setPulseLoaded] = useState(false);
   useEffect(() => {
-    setStateControlIntroVisible(focused && showIntro);
+    void loadRestingPulse().then(() => setPulseLoaded(true));
+  }, []);
+  const showHrPage = !showIntro && pulseLoaded && !pulse.decided;
+
+  useEffect(() => {
+    setStateControlIntroVisible(focused && (showIntro || showHrPage));
     return () => setStateControlIntroVisible(false);
-  }, [focused, showIntro]);
+  }, [focused, showIntro, showHrPage]);
 
   /* Stabiele referentie: het sessiescherm koppelt er de terugknop aan in een
      focus-effect — een nieuwe functie per render zou dat steeds opnieuw
@@ -297,6 +311,11 @@ export default function BraceletScreen() {
 
   if (showIntro) {
     return <StateControlIntro onDone={() => setShowIntro(false)} />;
+  }
+  if (showHrPage) {
+    /* onDone: de keuze is opgeslagen → `pulse.decided` wordt true en dit
+       scherm verdwijnt vanzelf. */
+    return <RestingHeartRatePage onDone={() => {}} />;
   }
 
   /* Operator, 4 okt 2026 ("looking for your device-scherm overbodig"):

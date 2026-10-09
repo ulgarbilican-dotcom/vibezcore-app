@@ -166,26 +166,27 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       if (elapsed >= MEASURE_MS) {
         const window = samples.current.filter((p) => p.t >= last.t - MEASURE_MS);
         const res = analyzePulse(window);
-        if (res) {
+        /* Operator, 9 okt 2026 ("40 kan niet" + "try again moet ook niet
+           zomaar gebeuren, efficiënt, niet bij elke vermoedelijke fout"):
+           een twijfelachtige uitkomst na 15 s → stil doormeten tot 25 s op
+           een schuivend venster van de laatste 15 s (een beweging in het
+           begin valt er dan vanzelf uit). Pas als het dan nog niet lukt:
+           één eerlijke melding met de meest waarschijnlijke reden. */
+        const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
+        if (ok && res) {
           finished.current = true;
-          /* Operator, 9 okt 2026 ("40 kan niet — melden als er niet juist
-             gemeten is"): een rusthartslag buiten 45–100 of een twijfelachtig
-             signaal geeft GEEN getal, maar een eerlijke melding. */
-          if (res.bpm > 100) {
-            setFailReason("That's higher than a resting heart rate. Sit still for a minute, then try again.");
-            setStatus('failed');
-          } else if (res.bpm < 45) {
-            setFailReason('That reading looks too low. Rest your fingertip lightly over the camera and flash, keep still, and try again.');
-            setStatus('failed');
-          } else if (res.confidence < 0.45) {
-            setFailReason("The signal wasn't clear enough. Keep your hand still and your fingertip relaxed, then try again.");
-            setStatus('failed');
-          } else {
-            onResult(res.bpm);
-          }
+          onResult(res.bpm);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
-          setFailReason("We couldn't read a steady heart rate. Rest your fingertip lightly — pressing hard blocks the signal.");
+          setFailReason(
+            !res
+              ? "We couldn't read a steady heart rate. Rest your fingertip lightly — pressing hard blocks the signal."
+              : res.bpm > 100
+                ? "That's higher than a resting heart rate. Sit still for a minute, then try again."
+                : res.bpm < 45
+                  ? 'That reading looks too low. Rest your fingertip lightly over the camera and flash, keep still, and try again.'
+                  : "The signal wasn't clear enough. Keep your hand still and your fingertip relaxed, then try again.",
+          );
           setStatus('failed');
         }
       }
