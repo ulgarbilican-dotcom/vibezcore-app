@@ -201,18 +201,18 @@ function PillarButton({
   );
 }
 
-/* Het V-teken van VIBEZCORE — exact opgemeten uit het app-logo
-   (assets/vibezcore_icon.png, 7 okt 2026, operator: "dezelfde V als het
-   logo"): links een schuine balk tot onderaan, rechts een kortere balk
-   met een knik aan de binnenkant, rechterbeen 6 dichter bij het linker
-   (operator: "opening tussenin minder") — fijnere balken (operator: "de v moet
-   fijner"), zelfde hoeken en knik. Als vector, zodat het op elk scherm
-   scherp en wit blijft. */
+/* Het V-teken van VIBEZCORE — het handelsmerk. Operator, 10 okt 2026: "de V
+   wordt het handelsmerk; nu is de V als logo smaller dan de V in het woord
+   zelf → dezelfde V als in het woord". Exact opgemeten uit het woordmerk
+   (assets/vibezcore_wordmark.png, eerste letter, 87×81): links een schuine
+   balk, rechts een kortere balk met een knik aan de binnenkant. Dezelfde
+   vorm staat in de vergrendelscherm-kaart (breath-background). Vervangt de
+   smallere, fijnere V van 7 okt. */
 function VMark() {
   return (
-    <Svg width={33} height={34} viewBox="0 0 60 62">
-      <Polygon points="0,0 13,0 33.5,62 21.5,62" fill="#ffffff" />
-      <Polygon points="47,0 60,0 41.5,53 38.5,26" fill="#ffffff" />
+    <Svg width={36.5} height={34} viewBox="0 0 87 81">
+      <Polygon points="0,0 28,0 52,81 28,81" fill="#ffffff" />
+      <Polygon points="60,0 87,0 63,67 50.5,33" fill="#ffffff" />
     </Svg>
   );
 }
