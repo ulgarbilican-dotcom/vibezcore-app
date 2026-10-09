@@ -23,7 +23,6 @@ import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
-import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -172,25 +171,19 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               style={StyleSheet.absoluteFill}
             />
             <Animated.View style={heartStyle}>
-              {/* Operator, 9 okt 2026: hart in Bio-Teal, als glas — vloeiend
-                  verloop (licht → diep teal), zachte glans bovenaan, dunne
-                  heldere rand. Zelfde vorm als het lucide-hart. */}
+              {/* Operator, 9 okt 2026: hart in Bio-Teal als glas — één kleur
+                  (doorschijnend teal), geen harde omlijning, enkel een zachte
+                  glans bovenaan die wegvloeit. Zelfde vorm als het lucide-hart. */}
               <Svg width={Math.round(core * 0.46)} height={Math.round(core * 0.46)} viewBox="0 0 24 24">
                 <Defs>
-                  <SvgLinearGradient id="hgFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0.62} />
-                    <Stop offset="1" stopColor="#00A3A3" stopOpacity={0.32} />
-                  </SvgLinearGradient>
                   <SvgLinearGradient id="hgShine" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#ffffff" stopOpacity={0.42} />
-                    <Stop offset="0.55" stopColor="#ffffff" stopOpacity={0} />
+                    <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
+                    <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
                   </SvgLinearGradient>
                 </Defs>
-                <Path d={HEART_D} fill="url(#hgFill)" />
+                <Path d={HEART_D} fill="#00A3A3" fillOpacity={0.5} />
                 <Path d={HEART_D} fill="url(#hgShine)" />
-                <Path d={HEART_D} fill="none" stroke="#4AF0D4" strokeWidth={0.9} strokeLinejoin="round" />
               </Svg>
-              </View>
             </Animated.View>
           </Animated.View>
         </View>
