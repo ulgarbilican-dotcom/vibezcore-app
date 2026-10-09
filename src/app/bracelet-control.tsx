@@ -1553,7 +1553,9 @@ function ModeSwipeRing({
     /* Operator, 9 okt 2026 ("de tikjes voel ik hard"): op Android de
        lichte klok-tik van de systeem-tijdkiezer i.p.v. de selectietrilling
        (die Samsung stevig afspeelt). iOS: Apple's eigen selectietik. */
-    if (Platform.OS === 'android') void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Clock_Tick);
+    /* Vervolg ("ik voel nu niets"): Samsung speelt CLOCK_TICK niet af —
+       TEXT_HANDLE_MOVE (cursor door tekst slepen) wel, en even licht. */
+    if (Platform.OS === 'android') void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Text_Handle_Move);
     else void Haptics.selectionAsync();
     onDialRef.current?.(minutes);
   };
