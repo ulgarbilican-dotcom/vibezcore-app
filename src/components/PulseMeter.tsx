@@ -81,23 +81,27 @@ const ECG_DELAY_MS = 700;
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 
 /** Eén slag op de lijn: tijdstip (Date.now-klok) + hoogte (1 = echte slag). */
-type EcgBeat = { t: number; a: number };
+type EcgBeat = { t: number; a: number; soft?: boolean };
 /* Voorlopige, rustige slag zodra de vinger ligt (klein op de lijn). */
 const SOFT_BEAT_MS = 1090; // ≈55 bpm
-const SOFT_BEAT_AMP = 0.35;
+const SOFT_BEAT_AMP = 0.22;
+/* Operator, 9 okt 2026 ("zodra de outline rond is, moeten de pieken hoger
+   en groter worden — zoals iemand die gereanimeerd wordt: eerst een beetje
+   hartslag, dan meer"): elke piek krijgt de hoogte van het moment waarop
+   hij komt en houdt die. Tijdens het tekenen van de omtrek klein; daarna
+   groeien ze in ~5 s naar volle hoogte. */
+function ecgAmpAt(p: number) {
+  if (p < OUTLINE_SHARE) return 0.3;
+  return Math.min(1, 0.55 + ((p - OUTLINE_SHARE) / 0.35) * 0.45);
+}
 
 function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boolean; progress: number }) {
   const beatsSv = useSharedValue<EcgBeat[]>([]);
-  const ampSv = useSharedValue(0.55);
   const now = useSharedValue(0);
   const runningSv = useSharedValue(false);
   useEffect(() => {
     beatsSv.value = beats;
   }, [beats, beatsSv]);
-  useEffect(() => {
-    /* De pieken groeien mee met de meting: het signaal "komt binnen". */
-    ampSv.value = 0.55 + 0.45 * progress;
-  }, [progress, ampSv]);
   useEffect(() => {
     runningSv.value = running;
   }, [running, runningSv]);
@@ -107,7 +111,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
 
   const animatedProps = useAnimatedProps(() => {
     const mid = ECG_H / 2;
-    const amp = (ECG_H / 2 - 4) * ampSv.value;
+    const amp = ECG_H / 2 - 4;
     const t0 = now.value - ECG_DELAY_MS;
     let d = `M0 ${mid}`;
     if (runningSv.value) {
@@ -304,9 +308,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         setBeatLog((prev) =>
           [
             ...prev.filter(
-              (x) => wall - x.t < ECG_WINDOW_MS + ECG_DELAY_MS + 1000 && (x.a === 1 || x.t < wall - 500),
+              (x) => wall - x.t < ECG_WINDOW_MS + ECG_DELAY_MS + 1000 && (!x.soft || x.t < wall - 500),
             ),
-            { t: wall, a: 1 },
+            { t: wall, a: ecgAmpAt(Math.min(1, elapsed / MEASURE_MS)) },
           ].sort((m, n) => m.t - n.t),
         );
         /* Het hart klopt op het echte ritme, tegelijk met de piek die op
@@ -377,7 +381,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         ]).start();
         const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
-        setBeatLog((prev) => [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a: SOFT_BEAT_AMP }]);
+        setBeatLog((prev) => [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a: SOFT_BEAT_AMP, soft: true }]);
       };
       softBeat();
       const id = setInterval(softBeat, SOFT_BEAT_MS);
