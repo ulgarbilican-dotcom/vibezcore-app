@@ -12,6 +12,7 @@
    begint opnieuw. Lukt het na 25 s niet: eerlijk "opnieuw proberen".
    Tijdens het meten GEEN trillingen: die zouden de vinger doen bewegen. */
 
+import { ECG_SHAPE } from '@/utils/ecg-shape';
 import FingerPlacementAnim from '@/components/FingerPlacementAnim';
 import PressScale from '@/components/PressScale';
 import * as Haptics from 'expo-haptics';
@@ -84,12 +85,10 @@ type Props = {
 
 const ECG_W = 240;
 const ECG_H = 56;
-const ECG_WINDOW_MS = 4000;
+const ECG_WINDOW_MS = 5500; // 9 okt 2026: "trager van rechts naar links"
 /* Eén hartslag (P-golf, QRS-piek, T-golf): [ms t.o.v. de piek, hoogte −1…1]. */
-const PQRST: [number, number][] = [
-  [-200, 0], [-170, 0.07], [-140, 0], [-45, 0], [-28, -0.12], [0, 1], [24, -0.32],
-  [44, 0], [150, 0], [200, 0.16], [250, 0],
-];
+/* Vorm van één slag: gedeeld met het andere scherm (utils/ecg-shape). */
+const PQRST = ECG_SHAPE;
 
 /* Vervolg (operator: "maak de animatie vloeiend"): de lijn wordt op de
    UI-thread getekend (Reanimated), los van de camera-verwerking op de

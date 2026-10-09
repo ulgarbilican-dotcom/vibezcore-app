@@ -23,6 +23,7 @@ import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
+import { ECG_SHAPE } from '@/utils/ecg-shape';
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -42,12 +43,8 @@ const BEAT_MS = 1500; // ≈40 bpm — operator 9 okt 2026: "hartslag mag rustig
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 /* Eén hartslag op de lijn (P, QRS, T): [ms t.o.v. de R-piek, hoogte −1…1]. */
-const PQRST: [number, number][] = [
-  /* Vervolg (operator, 9 okt 2026): duidelijkere piek en een diepe
-     S-uitschieter, zoals op een echte monitor. */
-  [-200, 0], [-170, 0.1], [-140, 0], [-45, 0], [-30, -0.16], [0, 1], [26, -0.62],
-  [48, 0.04], [62, 0], [150, 0], [205, 0.22], [260, 0],
-];
+/* Vorm van één slag: gedeeld met het andere scherm (utils/ecg-shape). */
+const PQRST = ECG_SHAPE;
 /* De R-piek valt midden in de "lub" van het hart. */
 const R_AT = 60;
 
@@ -115,11 +112,12 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     const mid = lineH / 2;
     const amp = (lineH / 2 - 3) * 0.95;
     const cx = lineW / 2;
-    const v = cx / BEAT_MS; // één slag per halve breedte
+    /* Vervolg (operator: "moet trager bewegen"): 1,5× trager. */
+    const v = cx / (BEAT_MS * 1.5);
     const now = clock.value;
     const base = now - (now % BEAT_MS) + R_AT;
     const pts: number[][] = [];
-    for (let k = -2; k <= 2; k++) {
+    for (let k = -3; k <= 3; k++) {
       const tk = base + k * BEAT_MS;
       for (let j = 0; j < PQRST.length; j++) {
         const x = cx + (tk + PQRST[j][0] - now) * v;
