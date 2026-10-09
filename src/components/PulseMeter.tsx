@@ -128,6 +128,28 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
     now.value = Date.now();
   });
 
+  /* Hoogte van de lijn op het schrijfpunt (tijd t0). Moet vóór de
+     animatedProps staan: de worklet-omzetting hoist geen functies. */
+  function headY(t0: number) {
+    'worklet';
+    const mid = ECG_H / 2;
+    const amp = ECG_H / 2 - 4;
+    if (runningSv.value) {
+      const list = beatsSv.value;
+      for (let i = 0; i < list.length; i++) {
+        const dt = t0 - list[i].t;
+        if (dt < PQRST[0][0] || dt > PQRST[PQRST.length - 1][0]) continue;
+        for (let j = 1; j < PQRST.length; j++) {
+          if (dt <= PQRST[j][0]) {
+            const [ta, a0] = PQRST[j - 1];
+            const [tb, a1] = PQRST[j];
+            return mid - (a0 + ((a1 - a0) * (dt - ta)) / (tb - ta)) * amp * list[i].a;
+          }
+        }
+      }
+    }
+    return mid - (0.6 * Math.sin(t0 / 150) + 0.35 * Math.sin(t0 / 63 + 1.3));
+  }
   const animatedProps = useAnimatedProps(() => {
     const mid = ECG_H / 2;
     const amp = ECG_H / 2 - 4;
@@ -174,27 +196,6 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
     d += ` L${HX} ${headY(t0).toFixed(1)}`;
     return { d };
   });
-  /* Hoogte van de lijn op het schrijfpunt (tijd t0). */
-  function headY(t0: number) {
-    'worklet';
-    const mid = ECG_H / 2;
-    const amp = ECG_H / 2 - 4;
-    if (runningSv.value) {
-      const list = beatsSv.value;
-      for (let i = 0; i < list.length; i++) {
-        const dt = t0 - list[i].t;
-        if (dt < PQRST[0][0] || dt > PQRST[PQRST.length - 1][0]) continue;
-        for (let j = 1; j < PQRST.length; j++) {
-          if (dt <= PQRST[j][0]) {
-            const [ta, a0] = PQRST[j - 1];
-            const [tb, a1] = PQRST[j];
-            return mid - (a0 + ((a1 - a0) * (dt - ta)) / (tb - ta)) * amp * list[i].a;
-          }
-        }
-      }
-    }
-    return mid - (0.6 * Math.sin(t0 / 150) + 0.35 * Math.sin(t0 / 63 + 1.3));
-  }
   const dotProps = useAnimatedProps(() => ({ cy: headY(now.value - ECG_DELAY_MS) }));
   const dotGlowProps = useAnimatedProps(() => ({ cy: headY(now.value - ECG_DELAY_MS) }));
 
