@@ -223,6 +223,14 @@ const MODE_ICONS = MODE_GLYPH_ICONS;
    contract.ts voor de onderbouwing per modus. "4 tijdlijnen per state"
    (operator): elke modus heeft nu exact 4 preset-chips, min/default/
    tussenwaarde(s)/max. "Recommended" = de officiële default. */
+/** Kort · aanbevolen · lang (operator, 9 okt 2026: "max 3 vooringestelde tijden"). */
+function threePresets(mode: BraceletMode): { value: number; recommended?: boolean }[] {
+  const all = DURATION_PRESETS[mode];
+  const rec = all.find((p) => p.recommended) ?? all[0];
+  const picks = [all[0], rec, all[all.length - 1]];
+  return picks.filter((p, i) => picks.findIndex((q) => q.value === p.value) === i);
+}
+
 const DURATION_PRESETS: Record<BraceletMode, { value: number; recommended?: boolean }[]> = {
   [BraceletMode.Gamma]: [
     { value: 8 },
@@ -1472,22 +1480,17 @@ function ModeSwipeRing({
   mode,
   onChange,
   onTap,
-  durations,
-  duration,
-  onDuration,
-  onDurationDrag,
+  dial,
   children,
 }: {
   mode: BraceletMode;
   onChange: (next: BraceletMode) => void;
   onTap: () => void;
-  /** Operator, 9 okt 2026: verticaal vegen over de cirkel = duur kiezen
-      (vervangt de scroll-lijst eronder). Links/rechts blijft de toestand. */
-  durations?: number[];
-  duration?: number;
-  onDuration?: (minutes: number) => void;
-  /** Vegen aan/uit — de ring toont dan de buurwaarden. */
-  onDurationDrag?: (active: boolean) => void;
+  /** Operator, 9 okt 2026 ("met je vinger over de rand van de cirkel
+      slepen om de tijd te veranderen", zoals de iOS-wekker): een aanraking
+      op de rand bedient de duur per minuut; in het midden blijft links/
+      rechts vegen de toestand wisselen. */
+  dial?: { size: number; min: number; max: number; value: number; onChange: (minutes: number) => void };
   children: ReactNode;
 }) {
   const last = MODES.length - 1;
@@ -1519,46 +1522,54 @@ function ModeSwipeRing({
   };
   const tapJS = () => onTapRef.current();
 
-  const durList = durations ?? [];
-  const durationsSV = useSharedValue<number[]>(durList);
-  const durIdx = Math.max(0, durList.indexOf(duration ?? -1));
-  const durIdxSV = useSharedValue(durIdx);
-  const durStartSV = useSharedValue(durIdx);
+  const dialOn = !!dial;
+  const dialSize = dial?.size ?? 0;
+  const dialMinSV = useSharedValue(dial?.min ?? 0);
+  const dialMaxSV = useSharedValue(dial?.max ?? 1);
+  const dialFracSV = useSharedValue(dial && dial.max > 0 ? dial.value / dial.max : 0);
+  const dialValSV = useSharedValue(dial?.value ?? 0);
   useEffect(() => {
-    durationsSV.value = durList;
-    durIdxSV.value = durIdx;
+    if (!dial) return;
+    dialMinSV.value = dial.min;
+    dialMaxSV.value = dial.max;
+    dialValSV.value = dial.value;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [durList.join(','), durIdx]);
-  const onDurationRef = useRef(onDuration);
-  onDurationRef.current = onDuration;
-  const onDragRef = useRef(onDurationDrag);
-  onDragRef.current = onDurationDrag;
-  const setDragJS = (active: boolean) => onDragRef.current?.(active);
-  const setDurationJS = (minutes: number) => {
+  }, [dial?.min, dial?.max, dial?.value]);
+  const onDialRef = useRef(dial?.onChange);
+  onDialRef.current = dial?.onChange;
+  const setDialJS = (minutes: number) => {
     void Haptics.selectionAsync();
-    onDurationRef.current?.(minutes);
+    onDialRef.current?.(minutes);
   };
-  /* Omhoog vegen = langer (zoals een iOS-kiezer naar boven draaien). */
-  const DUR_STEP_PX = 20;
-  const vpan = Gesture.Pan()
-    .enabled(durList.length > 1 && !!onDuration)
-    .activeOffsetY([-8, 8])
-    .failOffsetX([-14, 14])
-    .onBegin(() => {
-      durStartSV.value = durIdxSV.value;
+  /* Enkel een aanraking op de rand (buitenste ~30%) pakt de greep. */
+  const edge = Gesture.Pan()
+    .enabled(dialOn)
+    .manualActivation(true)
+    .onTouchesDown((e, manager) => {
+      const t = e.allTouches[0];
+      const c = dialSize / 2;
+      const d = Math.hypot(t.x - c, t.y - c);
+      if (d > c * 0.7 && d < c * 1.25) manager.activate();
+      else manager.fail();
     })
     .onStart(() => {
-      runOnJS(setDragJS)(true);
-    })
-    .onFinalize(() => {
-      runOnJS(setDragJS)(false);
+      dialFracSV.value = dialMaxSV.value > 0 ? dialValSV.value / dialMaxSV.value : 0;
     })
     .onUpdate((e) => {
-      const list = durationsSV.value;
-      const next = Math.min(list.length - 1, Math.max(0, durStartSV.value + Math.round(-e.translationY / DUR_STEP_PX)));
-      if (next !== durIdxSV.value) {
-        durIdxSV.value = next;
-        runOnJS(setDurationJS)(list[next]);
+      const c = dialSize / 2;
+      /* Hoek vanaf 12 uur, met de klok mee, 0…1. */
+      let f = Math.atan2(e.x - c, -(e.y - c)) / (2 * Math.PI);
+      if (f < 0) f += 1;
+      /* Over 12 uur heen geen sprong van vol naar leeg: vasthouden. */
+      let delta = f - dialFracSV.value;
+      if (delta > 0.5) delta -= 1;
+      if (delta < -0.5) delta += 1;
+      const nf = Math.min(1, Math.max(0, dialFracSV.value + delta));
+      dialFracSV.value = nf;
+      const v = Math.min(dialMaxSV.value, Math.max(dialMinSV.value, Math.round(nf * dialMaxSV.value)));
+      if (v !== dialValSV.value) {
+        dialValSV.value = v;
+        runOnJS(setDialJS)(v);
       }
     });
 
@@ -1588,7 +1599,7 @@ function ModeSwipeRing({
     .onEnd((_e, success) => {
       if (success) runOnJS(tapJS)();
     });
-  const gesture = Gesture.Exclusive(Gesture.Race(pan, vpan), tap);
+  const gesture = Gesture.Exclusive(edge, pan, tap);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }],
@@ -2167,12 +2178,11 @@ function DurationRing({
   recommended,
   clockOverride,
   subOverride,
-  scrollHint,
+  dialHandle,
 }: {
-  /** Operator, 9 okt 2026: de duur kies je door verticaal over de cirkel
-      te vegen. Vervolg ("niet duidelijk dat er gescrold kan worden"): de
-      buren staan vaag boven en onder de tijd, zoals een iOS-draaiwiel. */
-  scrollHint?: { prev?: number; next?: number; active?: boolean };
+  /** Operator, 9 okt 2026: boog + witte greep op de rand — sleep de greep
+      om de tijd per minuut te kiezen (zie ModeSwipeRing `dial`). */
+  dialHandle?: boolean;
   /** Voorproef (7 okt 2026): de teller i.p.v. de gekozen duur. */
   clockOverride?: string;
   /** Voorproef: "Preview" i.p.v. "Recommended". */
@@ -2196,16 +2206,6 @@ function DurationRing({
      ambient RingGlow in, onafhankelijk van de module-brede `light`. */
   dark?: boolean;
 }) {
-  const hintAnim = useRef(new Animated.Value(0)).current;
-  const hintActive = !!scrollHint?.active;
-  useEffect(() => {
-    Animated.timing(hintAnim, {
-      toValue: hintActive ? 1 : 0,
-      duration: hintActive ? 140 : 320,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [hintActive, hintAnim]);
   /* Operator, 27 september 2026 ("als 30 min max is en 15 min minimum,
      moet de cirkel dan niet al halfvol staan?"): was (value-min)/(max-min)
      — dat toont hoever je binnen de EIGEN regelrange zit, dus staat de
@@ -2304,6 +2304,35 @@ function DurationRing({
          wissel (key={color} forceert een remount + nieuwe reveal-
          animatie per kleur-wissel). */}
       <ModeColorRing key={color} color={color} size={size} />
+      {dialHandle && !clockOverride ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <Svg width={size} height={size} style={{ overflow: 'visible' }}>
+            {(() => {
+              const r = size / 2 - 1;
+              const c = size / 2;
+              const f = Math.min(0.9999, Math.max(0, fillFraction));
+              const ang = f * 2 * Math.PI;
+              const ex = c + r * Math.sin(ang);
+              const ey = c - r * Math.cos(ang);
+              const large = f > 0.5 ? 1 : 0;
+              return (
+                <>
+                  {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
+                  <Path
+                    d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
+                    stroke={color}
+                    strokeWidth={5}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  {/* Greep: wit bolletje met een rand in de toestandskleur. */}
+                  <Circle cx={ex} cy={ey} r={12} fill="#ffffff" stroke={color} strokeWidth={2.5} />
+                </>
+              );
+            })()}
+          </Svg>
+        </View>
+      ) : null}
       {/* Shine-sweep over de buitenring — zie de operator-comment hierboven
          bij `shimmer`. MOET vóór de golf-vulling komen: anders tekent de
          effen punch-cirkel bovenop de golven en verdwijnen die. */}
@@ -2351,38 +2380,9 @@ function DurationRing({
           </Text>
           <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
         </View>
-        {/* Vervolg (operator, 9 okt 2026: "te druk, minuten te ver uit
-            elkaar — hoe zou Apple dit doen?"): zoals een iOS-kiezer — in rust
-            enkel de tijd op een zachte selectieband; tijdens het vegen
-            schuiven de buren er vlak boven/onder bij en verdwijnen weer. */}
-        <View style={s.ringClockWrap}>
-          {scrollHint && !clockOverride ? (
-            <Animated.View pointerEvents="none" style={[s.ringBand, { opacity: hintAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] }) }]} />
-          ) : null}
-          {scrollHint && !clockOverride ? (
-            <Animated.Text
-              style={[
-                s.ringNeighbour,
-                { top: -22, opacity: Animated.multiply(hintAnim, scrollHint.prev ? 0.38 : 0) },
-              ]}
-            >
-              {scrollHint.prev ? `${scrollHint.prev}:00` : ''}
-            </Animated.Text>
-          ) : null}
-          <Text style={[s.ringClock, { color: numColor }, textShadow, scrollHint ? { marginTop: 0 } : null]}>
-            {clockOverride ?? `${value}:00`}
-          </Text>
-          {scrollHint && !clockOverride ? (
-            <Animated.Text
-              style={[
-                s.ringNeighbour,
-                { bottom: -22, opacity: Animated.multiply(hintAnim, scrollHint.next ? 0.38 : 0) },
-              ]}
-            >
-              {scrollHint.next ? `${scrollHint.next}:00` : ''}
-            </Animated.Text>
-          ) : null}
-        </View>
+        <Text style={[s.ringClock, { color: numColor }, textShadow]}>
+          {clockOverride ?? `${value}:00`}
+        </Text>
         <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
           <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
@@ -3760,6 +3760,11 @@ function IdleScreen({
               pickMode(next);
             }}
             onTap={() => setDetailModeForModal(selectedMode)}
+            dial={
+              trialRunning
+                ? undefined
+                : { size: RING_DIAL, min: meta.minMinutes, max: meta.maxMinutes, value: duration, onChange: setDuration }
+            }
           >
             {/* key = modus: elke modus is een eigen "wijzerplaat" die meteen
                 met zijn eigen vulling binnenkomt, niet klotsend vanaf het
@@ -3780,6 +3785,7 @@ function IdleScreen({
               color={meta.color}
               label={meta.name}
               size={RING_DIAL}
+              dialHandle={!trialRunning}
               dark={idleDark}
               recommended={
                 duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
@@ -3834,7 +3840,9 @@ function IdleScreen({
             toestandskleur, de rest dezelfde kleur transparant. */}
         {!trialRunning ? (
           <View style={s.durSeg} accessibilityRole="radiogroup">
-            {DURATION_PRESETS[selectedMode].map((p) => {
+            {/* Operator, 9 okt 2026: max. drie — kort, aanbevolen, lang.
+                Alles daartussen kies je op de rand van de cirkel. */}
+            {threePresets(selectedMode).map((p) => {
               const on = p.value === duration;
               return (
                 <Pressable
@@ -3879,19 +3887,13 @@ function IdleScreen({
             accessibilityRole="button"
             accessibilityLabel={
               pulse.liveBpm !== null
-                ? `Starting heart rate, ${pulse.liveBpm} beats per minute, measured now. Tap to change.`
-                : pulse.source === 'average'
-                  ? `Starting heart rate, ${pulse.bpm} beats per minute, average. Tap to measure your heart right now.`
-                  : `Starting heart rate, ${pulse.bpm} beats per minute, your resting heart rate. Tap to measure your heart right now.`
+                ? `Your heart rate, ${pulse.liveBpm} beats per minute, measured now. Tap to change.`
+                : `Your heart rate, ${pulse.bpm} beats per minute. Tap to measure your heart right now.`
             }
           >
             <HeartPulse size={20} color="#ffffff" strokeWidth={2} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.hrCardTitle}>Starting heart rate</Text>
-              <Text style={s.hrCardSub}>
-                {pulse.liveBpm !== null ? 'Measured now' : pulse.source === 'average' ? 'Average' : 'Resting'}
-              </Text>
-            </View>
+            {/* Operator, 9 okt 2026: "your heart rate en 70 bpm, dat is alles". */}
+            <Text style={[s.hrCardTitle, { flex: 1 }]}>Your heart rate</Text>
             {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
             <Text style={s.hrCardValue}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
             <ChevronRight size={18} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
@@ -6036,7 +6038,6 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   hrCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15.5 },
-  hrCardSub: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 12.5, marginTop: 2 },
   hrCardValue: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.semibold, fontSize: 15.5 },
   ringPulsePill: {
     alignSelf: 'center',
@@ -6138,24 +6139,6 @@ const s = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: 'rgba(255,255,255,0.75)',
-  },
-  /* Vage buurwaarden boven/onder de tijd (draaiwiel-hint). */
-  ringClockWrap: { alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  /* iOS-selectieband: zacht, afgerond, achter de tijd. */
-  ringBand: {
-    position: 'absolute',
-    left: -18,
-    right: -18,
-    top: 2,
-    bottom: 2,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  ringNeighbour: {
-    position: 'absolute',
-    color: '#ffffff',
-    fontFamily: BrandFonts.semibold,
-    fontSize: 17,
   },
   ringClock: {
     fontFamily: BrandFonts.bold,
