@@ -73,8 +73,14 @@ const ECG_DELAY_MS = 700;
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
-function EcgTrace({ beats, running, progress }: { beats: number[]; running: boolean; progress: number }) {
-  const beatsSv = useSharedValue<number[]>([]);
+/** Eén slag op de lijn: tijdstip (Date.now-klok) + hoogte (1 = echte slag). */
+type EcgBeat = { t: number; a: number };
+/* Voorlopige, rustige slag zodra de vinger ligt (klein op de lijn). */
+const SOFT_BEAT_MS = 1090; // ≈55 bpm
+const SOFT_BEAT_AMP = 0.35;
+
+function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boolean; progress: number }) {
+  const beatsSv = useSharedValue<EcgBeat[]>([]);
   const ampSv = useSharedValue(0.55);
   const now = useSharedValue(0);
   const runningSv = useSharedValue(false);
@@ -101,9 +107,9 @@ function EcgTrace({ beats, running, progress }: { beats: number[]; running: bool
       const list = beatsSv.value;
       for (let i = 0; i < list.length; i++) {
         for (let j = 0; j < PQRST.length; j++) {
-          const px = ECG_W - ((t0 - (list[i] + PQRST[j][0])) / ECG_WINDOW_MS) * ECG_W;
+          const px = ECG_W - ((t0 - (list[i].t + PQRST[j][0])) / ECG_WINDOW_MS) * ECG_W;
           if (px < 0 || px > ECG_W) continue;
-          d += ` L${px.toFixed(1)} ${(mid - PQRST[j][1] * amp).toFixed(1)}`;
+          d += ` L${px.toFixed(1)} ${(mid - PQRST[j][1] * amp * list[i].a).toFixed(1)}`;
         }
       }
     }
@@ -183,7 +189,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const lostAt = useRef(0);
   const finished = useRef(false);
   /* Tijdstippen (Date.now) van de getoonde slagen, voor de hartlijn. */
-  const [beatLog, setBeatLog] = useState<number[]>([]);
+  const [beatLog, setBeatLog] = useState<EcgBeat[]>([]);
   const [hasRealBeat, setHasRealBeat] = useState(false);
   const beat = useRef(new Animated.Value(1)).current;
   /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
@@ -296,7 +302,16 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         lastShownBeat.current = b;
         /* Echt tijdstip van de slag (niet het moment van opmerken). */
         const wall = Date.now() - (last.t - b);
-        setBeatLog((prev) => [...prev.filter((x) => wall - x < ECG_WINDOW_MS + ECG_DELAY_MS + 1000), wall]);
+        /* Voorlopige zachte slagen die met deze echte slag overlappen,
+           wijken (anders kruist de lijn zichzelf). */
+        setBeatLog((prev) =>
+          [
+            ...prev.filter(
+              (x) => wall - x.t < ECG_WINDOW_MS + ECG_DELAY_MS + 1000 && (x.a === 1 || x.t < wall - 500),
+            ),
+            { t: wall, a: 1 },
+          ].sort((m, n) => m.t - n.t),
+        );
         /* Het hart klopt op het echte ritme, tegelijk met de piek die op
            de lijn binnenschuift (zelfde vaste vertraging) — niet op het
            toevallige moment dat de controle hem opmerkt. */
@@ -350,28 +365,38 @@ export default function PulseMeter({ onResult, onManual }: Props) {
      "hartslag mag beginnen bij vinger op de camera, maar rustig"): een
      zachte, trage hartslag (≈55 bpm) tot de eerste echte slag gevonden is;
      vanaf dan klopt het hart op het echte ritme. */
+  const fingerOn = status === 'settling' || status === 'measuring';
+  const placing = status === 'placing';
   useEffect(() => {
-    const fingerOn = status === 'settling' || status === 'measuring';
-    if (status !== 'placing' && !(fingerOn && !hasRealBeat)) {
+    if (!placing && !(fingerOn && !hasRealBeat)) {
       idle.stopAnimation();
       Animated.timing(idle, { toValue: 1, duration: 300, easing: Easing.out(Easing.sin), useNativeDriver: true }).start();
       return;
     }
+    if (fingerOn) {
+      /* Vervolg ("zodra er een hartslag is, moet op de lijn ook een kleine
+         rustige hartslag beginnen"): hart en lijn uit dezelfde tik. */
+      const softBeat = () => {
+        Animated.sequence([
+          Animated.timing(idle, { toValue: 1.045, duration: 240, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+          Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ]).start();
+        const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
+        setBeatLog((prev) => [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a: SOFT_BEAT_AMP }]);
+      };
+      softBeat();
+      const id = setInterval(softBeat, SOFT_BEAT_MS);
+      return () => clearInterval(id);
+    }
     const loop = Animated.loop(
-      fingerOn
-        ? Animated.sequence([
-            Animated.timing(idle, { toValue: 1.045, duration: 240, easing: Easing.out(Easing.sin), useNativeDriver: true }),
-            Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-            Animated.delay(290),
-          ])
-        : Animated.sequence([
-            Animated.timing(idle, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-            Animated.timing(idle, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          ]),
+      Animated.sequence([
+        Animated.timing(idle, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(idle, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [status, idle, hasRealBeat]);
+  }, [fingerOn, placing, idle, hasRealBeat]);
 
   const onFrame = useCallback(
     (frame: Frame) => {
@@ -548,7 +573,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
       {/* Operator, 9 okt 2026: hartlijn — begint vlak, elke gevonden slag
           tekent een piek die naar links wegschuift. */}
-      <EcgTrace beats={beatLog} running={status === 'measuring'} progress={progress} />
+      <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
 
       <Text style={s.msg} accessibilityLiveRegion="polite">
         {message}
