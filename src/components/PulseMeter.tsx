@@ -18,7 +18,7 @@ import { analyzePulse, fingerOnLens, latestBeat, timestampScaleToMs, type PulseS
 import { Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useCamera, useCameraPermission, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -47,6 +47,65 @@ type Props = {
   /** "Enter it myself" vanuit een fout- of weigerstatus. */
   onManual: () => void;
 };
+
+const ECG_W = 240;
+const ECG_H = 56;
+const ECG_WINDOW_MS = 4000;
+/* Eén hartslag (P-golf, QRS-piek, T-golf): [ms t.o.v. de piek, hoogte −1…1]. */
+const PQRST: [number, number][] = [
+  [-200, 0], [-170, 0.07], [-140, 0], [-45, 0], [-28, -0.12], [0, 1], [24, -0.32],
+  [44, 0], [150, 0], [200, 0.16], [250, 0],
+];
+
+function EcgTrace({
+  beatsRef,
+  running,
+  progress,
+}: {
+  beatsRef: { current: number[] };
+  running: boolean;
+  progress: number;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    let raf = 0;
+    const loop = () => {
+      setNow(Date.now());
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [running]);
+
+  const mid = ECG_H / 2;
+  /* De pieken groeien mee met de meting: het signaal "komt binnen". */
+  const amp = (ECG_H / 2 - 4) * (0.55 + 0.45 * progress);
+  const x = (t: number) => ECG_W - ((now - t) / ECG_WINDOW_MS) * ECG_W;
+  let d = `M0 ${mid}`;
+  if (running) {
+    for (const b of beatsRef.current) {
+      for (const [dt, a] of PQRST) {
+        const px = x(b + dt);
+        if (px < 0 || px > ECG_W) continue;
+        d += ` L${px.toFixed(1)} ${(mid - a * amp).toFixed(1)}`;
+      }
+    }
+  }
+  d += ` L${ECG_W} ${mid}`;
+  return (
+    <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 18 }}>
+      <Defs>
+        <LinearGradient id="ecgFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={ECG_W} y2="0">
+          <Stop offset="0" stopColor={ACCENT} stopOpacity={0} />
+          <Stop offset="0.35" stopColor={ACCENT} stopOpacity={0.55} />
+          <Stop offset="1" stopColor={ACCENT} stopOpacity={1} />
+        </LinearGradient>
+      </Defs>
+      <Path d={d} stroke="url(#ecgFade)" strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 export default function PulseMeter({ onResult, onManual }: Props) {
   const permission = useCameraPermission();
@@ -95,6 +154,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const lastShownBeat = useRef(0);
   const lostAt = useRef(0);
   const finished = useRef(false);
+  /* Tijdstippen (Date.now) van de getoonde slagen, voor de hartlijn. */
+  const beatLog = useRef<number[]>([]);
   const beat = useRef(new Animated.Value(1)).current;
   /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
      niet ligt (9 okt 2026: "de animatie moet beter"). */
@@ -148,6 +209,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       const last = samples.current[samples.current.length - 1];
       const start = measureStart.current;
       if (fingerSince.current === null) {
+        beatLog.current = [];
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
@@ -173,6 +235,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       const b = recent.length > 120 ? latestBeat(recent) : null;
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;
+        beatLog.current = [...beatLog.current.filter((x) => Date.now() - x < ECG_WINDOW_MS + 500), Date.now()];
         Animated.sequence([
           Animated.timing(beat, { toValue: 1.16, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
           Animated.timing(beat, { toValue: 1, duration: 300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
@@ -295,6 +358,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     fingerSince.current = null;
     measureStart.current = null;
     lastShownBeat.current = 0;
+    beatLog.current = [];
     setProgress(0);
     placingSince.current = Date.now();
     setPlacingLong(false);
@@ -365,8 +429,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
               meting vordert, en groter"): witte omtrek + Bio-Teal vulling die
               van onder naar boven stijgt met de voortgang. */}
           <View style={{ width: HEART, height: HEART }}>
-            {/* Operator, 9 okt 2026: leeg hart = subtiele Bio-Teal omlijning. */}
-            <Heart size={HEART} color="rgba(74,240,212,0.45)" fill="transparent" strokeWidth={1.2} />
+            {/* Operator, 9 okt 2026: omlijning in exact dezelfde kleur als de vulling. */}
+            <Heart size={HEART} color={ACCENT} fill="transparent" strokeWidth={1.3} />
             <Animated.View
               pointerEvents="none"
               style={[
@@ -381,6 +445,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           </View>
         </Animated.View>
       </View>
+
+      {/* Operator, 9 okt 2026: hartlijn — begint vlak, elke gevonden slag
+          tekent een piek die naar links wegschuift. */}
+      <EcgTrace beatsRef={beatLog} running={status === 'measuring'} progress={progress} />
 
       <Text style={s.msg} accessibilityLiveRegion="polite">
         {message}
@@ -419,7 +487,7 @@ const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
   heartFill: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   ripple: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5, borderColor: ACCENT },
-  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
+  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   msg: {
     color: '#ffffff',
     fontSize: 17,
