@@ -87,6 +87,8 @@ type Props = {
 
 /* Operator, 9 okt 2026 ("pieken onderaan zoals op de vorige pagina"):
    bijna schermbreed en hoger, zelfde dikte/verloop als de rustpagina. */
+const PROG_W = 4;
+const PROG_CIRC = Math.PI * (RING - PROG_W);
 const ECG_W = Math.round(Math.min(Dimensions.get('window').width - 48, 380));
 const ECG_H = 78;
 const ECG_WINDOW_MS = 5500; // 9 okt 2026: "trager van rechts naar links"
@@ -719,6 +721,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
      beide kanten vertrekken samen bovenaan in het midden, lopen langs de
      zijkanten omlaag en raken elkaar in de onderste punt — daar begint
      de vulling. Streep v aan het begin + streep v aan het einde van het pad. */
+  const progressRingProps = useAnimatedProps(() => ({ strokeDashoffset: PROG_CIRC * (1 - ringP.value) }));
   const outlineProps = useAnimatedProps(() => {
     const v = (HEART_LEN / 2) * Math.min(1, ringP.value / OUTLINE_SHARE);
     const gap = Math.max(0, HEART_LEN - 2 * v);
@@ -820,24 +823,31 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         <Text style={s.liveUnit}>bpm</Text>
       </View>
       <View style={s.ringWrap}>
-        {/* Operator, 9 okt 2026: buitencirkel = vaste omlijning in dezelfde
-            kleurstijl als de hartlijn (teal dat zacht uitvloeit). De
-            voortgang zit nu in het hart zelf. */}
+        {/* Operator, 9 okt 2026 ("de cirkel is redelijk dun — hoe doet Apple
+            dat?"): een echte voortgangsring zoals de Activity-ringen — zacht
+            spoor + felle teal boog met ronde uiteinden die in de meettijd
+            rondloopt. De ring toont de tijd, het hart de hartslag. */}
         <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
-          <Defs>
-            <LinearGradient id="ringFade" gradientUnits="userSpaceOnUse" x1="0" y1={RING} x2={RING} y2="0">
-              <Stop offset="0" stopColor={ACCENT} stopOpacity={0.08} />
-              <Stop offset="0.5" stopColor={ACCENT} stopOpacity={0.45} />
-              <Stop offset="1" stopColor={ACCENT} stopOpacity={0.9} />
-            </LinearGradient>
-          </Defs>
           <Circle
             cx={RING / 2}
             cy={RING / 2}
-            r={(RING - STROKE) / 2}
-            stroke="url(#ringFade)"
-            strokeWidth={1.5}
+            r={(RING - PROG_W) / 2}
+            stroke={ACCENT}
+            strokeOpacity={0.16}
+            strokeWidth={PROG_W}
             fill="none"
+          />
+          <AnimatedCircle
+            cx={RING / 2}
+            cy={RING / 2}
+            r={(RING - PROG_W) / 2}
+            stroke={ACCENT}
+            strokeWidth={PROG_W}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={`${PROG_CIRC} ${PROG_CIRC}`}
+            animatedProps={progressRingProps}
+            transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />
         </Svg>
         {calculating ? <CalcArc /> : null}
@@ -848,49 +858,19 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           <FingerPlacementAnim />
         ) : (
           <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
-            {/* Operator, 9 okt 2026 ("hart begint leeg en vult naarmate de
-                meting vordert, en groter"): witte omtrek + Bio-Teal vulling die
-                van onder naar boven stijgt met de voortgang. */}
-            <View style={{ width: HEART, height: HEART }}>
-              {/* Operator, 9 okt 2026: omlijning in exact dezelfde kleur als de vulling. */}
-              {/* Vervolg ("begint grijs, eerst de buitenlijn groen, dan van
-                  onder naar boven vullen"): grijze omtrek tot de meting start,
-                  dan vloeit de teal omtrek erin en begint de vulling. */}
-              <Heart size={HEART} color={IDLE_GREY} fill="transparent" strokeWidth={0.7} />
-  <Svg width={HEART} height={HEART} viewBox="0 0 24 24" style={StyleSheet.absoluteFill} pointerEvents="none">
-                <AnimatedPath
-                  d={LUCIDE_HEART_D}
-                  stroke={ACCENT}
-                  strokeWidth={0.7}
-                  strokeLinecap="butt"
-                  strokeLinejoin="round"
-                  fill="none"
-                  animatedProps={outlineProps}
-                />
-              </Svg>
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  s.heartFill,
-                  /* Clip schuift omhoog, het hart erin tegengesteld omlaag:
-                     enkel transforms → vloeiend op de UI-thread. */
-                  { transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [HEART, HEART, 0] }) }] },
-                ]}
-              >
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: HEART,
-                    height: HEART,
-                    transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [-HEART, -HEART, 0] }) }],
-                  }}
-                >
-                  <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={0.7} />
-                </Animated.View>
-              </Animated.View>
-            </View>
+            {/* Vervolg: het hart klopt gewoon mee in vol teal glas (zelfde
+                stijl als de Resting Heart Rate-pagina); de voortgang zit in
+                de ring. */}
+            <Svg width={HEART} height={HEART} viewBox="0 0 24 24">
+              <Defs>
+                <LinearGradient id="pmHeartShine" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
+                  <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
+                </LinearGradient>
+              </Defs>
+              <Path d={LUCIDE_HEART_D} fill="#3FDCC2" />
+              <Path d={LUCIDE_HEART_D} fill="url(#pmHeartShine)" />
+            </Svg>
           </Animated.View>
         )}
       </View>
