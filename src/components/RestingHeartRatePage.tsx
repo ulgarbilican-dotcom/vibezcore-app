@@ -21,7 +21,7 @@ import RhythmSheet from '@/components/RhythmSheet';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
-import { Canvas, Circle as SkCircle, RadialGradient, vec } from '@shopify/react-native-skia';
+import Svg, { Circle as SvgCircle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -53,7 +53,7 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
       withRepeat(withTiming(1, { duration: BEAT_MS * 2, easing: Easing.out(Easing.cubic) }), -1, false),
     );
     return () => cancelAnimation(p);
-  }, [delay, p]);
+  }, [delay, p, from]);
   /* Vervolg ("geheel moet mooi samenwerken"): start exact op de rand van
      de gevulde cirkel (`from`), deint uit tot de buitenrand, vervaagt. */
   const style = useAnimatedStyle(() => ({
@@ -131,27 +131,25 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
-          <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
-          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.6, height: stage * 1.6 }, glowStyle]}>
-            <Canvas style={{ width: stage * 1.6, height: stage * 1.6 }}>
-              <SkCircle cx={stage * 0.8} cy={stage * 0.8} r={stage * 0.8}>
-                <RadialGradient
-                  c={vec(stage * 0.8, stage * 0.8)}
-                  r={stage * 0.8}
-                  colors={['rgba(255,255,255,0.30)', 'rgba(255,255,255,0.16)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)', 'rgba(255,255,255,0)']}
-                  positions={[0, 0.25, 0.5, 0.75, 1]}
-                />
-              </SkCircle>
-            </Canvas>
+          <Ring key={`r0-${stage}`} delay={0} size={stage} from={0.42} />
+          <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={0.42} />
+          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.6, height: stage * 1.6, zIndex: 0 }, glowStyle]}>
+            {/* react-native-svg i.p.v. Skia: Skia's canvas kwam op Android
+                BOVEN het hart te liggen (hart oogde grijs, ringen weg). */}
+            <Svg width={stage * 1.6} height={stage * 1.6}>
+              <Defs>
+                <RadialGradient id="hrGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor="#ffffff" stopOpacity={0.42} />
+                  <Stop offset="0.18" stopColor="#ffffff" stopOpacity={0.18} />
+                  <Stop offset="0.4" stopColor="#ffffff" stopOpacity={0.06} />
+                  <Stop offset="0.68" stopColor="#ffffff" stopOpacity={0.015} />
+                  <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <SvgCircle cx={stage * 0.8} cy={stage * 0.8} r={stage * 0.8} fill="url(#hrGlow)" />
+            </Svg>
           </Animated.View>
-          <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2 }, coreStyle]}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.05)']}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 0.8, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
+          <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2, elevation: 2 }, coreStyle]}>
             <Animated.View style={heartStyle}>
               <Heart size={Math.round(core * 0.42)} color="#ffffff" fill="#ffffff" strokeWidth={1.4} />
             </Animated.View>
@@ -220,12 +218,11 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#ffffff', // 9 okt 2026: ringen wit (geheel in wit)
   },
+  /* Operator, 9 okt 2026: geen gevulde cirkel meer — enkel het hart met de
+     lichtbron erachter. (Container blijft voor de maat.) */
   core: {
-    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
   },
   title: {
     marginTop: 8,
