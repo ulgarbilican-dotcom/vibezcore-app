@@ -438,20 +438,49 @@ class BreathSessionService : Service() {
     }
   }
 
+  private var lockscreenArtBitmap: Bitmap? = null
+
+  private fun lockscreenArt(): Bitmap? {
+    lockscreenArtBitmap?.let { return it }
+    return try {
+      val bmp = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.vibezcore_lockscreen_art)
+      lockscreenArtBitmap = bmp
+      bmp
+    } catch (_: Exception) {
+      appIcon()
+    }
+  }
+
   @Suppress("UNUSED_PARAMETER")
   private fun updateMediaSession(phaseText: String) {
     val session = ensureMediaSession()
-    val metaKey = "$modeName|$totalDurationMs"
+    /* Operator, 10 okt 2026 ("we hadden gezegd: sessienaam + timer die
+       aftelt, maar vast — niet bewegend"): titel = sessienaam, tweede regel =
+       enkel de resterende tijd (M:SS). Kort genoeg om in het Now Bar-balkje
+       te passen, dus geen lichtkrant; per seconde verandert alleen het getal.
+       (Eerder stond hier vast "Guided breathwork".) */
+    val remainingSec = if (totalDurationMs > 0) {
+      ((totalDurationMs - liveElapsedMs()).coerceAtLeast(0L) / 1000).toInt()
+    } else {
+      -1
+    }
+    val timeLabel = if (remainingSec >= 0) "%d:%02d".format(remainingSec / 60, remainingSec % 60) else ""
+    val metaKey = "$modeName|$totalDurationMs|$timeLabel"
     if (metaKey != lastMetaKey) {
       val metadata = MediaMetadataCompat.Builder()
         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, modeName)
-        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Guided breathwork")
+        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, timeLabel)
         .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
         .apply {
-          appIcon()?.let {
+          /* Operator, 10 okt 2026 ("uitvergroot op het lockscreen is de V
+             veel te groot — toon de V en VIBEZCORE zoals op het
+             welkomstscherm"): eigen beeld i.p.v. het app-icoon; het kleine
+             icoon blijft het app-icoon. */
+          lockscreenArt()?.let {
             putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
             putBitmap(MediaMetadataCompat.METADATA_KEY_ART, it)
           }
+          appIcon()?.let { putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, it) }
           if (totalDurationMs > 0) {
             putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
           }
