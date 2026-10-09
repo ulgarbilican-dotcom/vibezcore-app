@@ -5,7 +5,8 @@
 #   1. Commits die nog niet op GitHub staan → git push (enkel pushen, nooit
 #      zelf committen: half werk wordt niet ongevraagd vastgelegd).
 #   2. Wat niet in git hoort → kopie naar OneDrive\Documenten\VIBEZCORE-archief:
-#      Claude-geheugen, privé-docs (OPERATOR_HANDOVER e.a.), .env-bestanden.
+#      Claude-geheugen, privé-docs (OPERATOR_HANDOVER e.a.), .env-bestanden,
+#      secrets/ (Google Play service-account voor eas submit).
 # Stil en foutbestendig: een mislukte stap blokkeert Claude nooit.
 
 set -u
@@ -36,4 +37,5 @@ cp -f docs/handover-word/*.docx "$ARCHIEF/prive-docs/" 2>/dev/null
 for f in .env.bunny .env.test; do
   [ -f "$f" ] && cp -f "$f" "$ARCHIEF/env/" 2>/dev/null
 done
+[ -d secrets ] && mkdir -p "$ARCHIEF/env/secrets" && cp -f secrets/* "$ARCHIEF/env/secrets/" 2>/dev/null
 exit 0
