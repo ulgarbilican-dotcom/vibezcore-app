@@ -21,6 +21,7 @@ import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, T
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useCamera, useCameraPermission, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { scheduleOnRN } from 'react-native-worklets';
+import Reanimated, { useAnimatedProps, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 
 const MEASURE_MS = 15_000;
 const MAX_MS = 25_000;
@@ -32,6 +33,7 @@ const HEART = 84;
 /* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
 const STROKE = 3;
 const ACCENT = '#4AF0D4';
+const IDLE_GREY = 'rgba(255,255,255,0.32)';
 /* Vaste objecten: de camera-hooks herconfigureren bij elke nieuwe referentie. */
 const FRAME_SIZE = { width: 320, height: 240 };
 const CONSTRAINTS = [{ fps: 30 }];
@@ -57,52 +59,71 @@ const PQRST: [number, number][] = [
   [44, 0], [150, 0], [200, 0.16], [250, 0],
 ];
 
-function EcgTrace({
-  beatsRef,
-  running,
-  progress,
-}: {
-  beatsRef: { current: number[] };
-  running: boolean;
-  progress: number;
-}) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!running) return;
-    let raf = 0;
-    const loop = () => {
-      setNow(Date.now());
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [running]);
+/* Vervolg (operator: "maak de animatie vloeiend"): de lijn wordt op de
+   UI-thread getekend (Reanimated), los van de camera-verwerking op de
+   JS-thread. Slagen krijgen hun echte tijdstip en verschijnen met een
+   vaste vertraging, zodat elke piek netjes rechts binnenschuift. */
+const ECG_DELAY_MS = 700;
+const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 
-  const mid = ECG_H / 2;
-  /* De pieken groeien mee met de meting: het signaal "komt binnen". */
-  const amp = (ECG_H / 2 - 4) * (0.55 + 0.45 * progress);
-  const x = (t: number) => ECG_W - ((now - t) / ECG_WINDOW_MS) * ECG_W;
-  let d = `M0 ${mid}`;
-  if (running) {
-    for (const b of beatsRef.current) {
-      for (const [dt, a] of PQRST) {
-        const px = x(b + dt);
-        if (px < 0 || px > ECG_W) continue;
-        d += ` L${px.toFixed(1)} ${(mid - a * amp).toFixed(1)}`;
+function EcgTrace({ beats, running, progress }: { beats: number[]; running: boolean; progress: number }) {
+  const beatsSv = useSharedValue<number[]>([]);
+  const ampSv = useSharedValue(0.55);
+  const now = useSharedValue(0);
+  const runningSv = useSharedValue(false);
+  useEffect(() => {
+    beatsSv.value = beats;
+  }, [beats, beatsSv]);
+  useEffect(() => {
+    /* De pieken groeien mee met de meting: het signaal "komt binnen". */
+    ampSv.value = 0.55 + 0.45 * progress;
+  }, [progress, ampSv]);
+  useEffect(() => {
+    runningSv.value = running;
+  }, [running, runningSv]);
+  useFrameCallback(() => {
+    now.value = Date.now();
+  });
+
+  const animatedProps = useAnimatedProps(() => {
+    const mid = ECG_H / 2;
+    const amp = (ECG_H / 2 - 4) * ampSv.value;
+    const t0 = now.value - ECG_DELAY_MS;
+    let d = `M0 ${mid}`;
+    if (runningSv.value) {
+      const list = beatsSv.value;
+      for (let i = 0; i < list.length; i++) {
+        for (let j = 0; j < PQRST.length; j++) {
+          const px = ECG_W - ((t0 - (list[i] + PQRST[j][0])) / ECG_WINDOW_MS) * ECG_W;
+          if (px < 0 || px > ECG_W) continue;
+          d += ` L${px.toFixed(1)} ${(mid - PQRST[j][1] * amp).toFixed(1)}`;
+        }
       }
     }
-  }
-  d += ` L${ECG_W} ${mid}`;
+    d += ` L${ECG_W} ${mid}`;
+    return { d };
+  });
+
+  const lineColor = running ? ACCENT : '#ffffff';
+  const lineAlpha = running ? 1 : 0.32;
   return (
     <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 18 }}>
       <Defs>
         <LinearGradient id="ecgFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={ECG_W} y2="0">
-          <Stop offset="0" stopColor={ACCENT} stopOpacity={0} />
-          <Stop offset="0.35" stopColor={ACCENT} stopOpacity={0.55} />
-          <Stop offset="1" stopColor={ACCENT} stopOpacity={1} />
+          {/* Grijs zolang er nog niet gemeten wordt, teal tijdens het meten. */}
+          <Stop offset="0" stopColor={lineColor} stopOpacity={0} />
+          <Stop offset="0.35" stopColor={lineColor} stopOpacity={0.55 * lineAlpha} />
+          <Stop offset="1" stopColor={lineColor} stopOpacity={lineAlpha} />
         </LinearGradient>
       </Defs>
-      <Path d={d} stroke="url(#ecgFade)" strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <AnimatedPath
+        animatedProps={animatedProps}
+        stroke="url(#ecgFade)"
+        strokeWidth={2}
+        fill="none"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </Svg>
   );
 }
@@ -155,7 +176,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const lostAt = useRef(0);
   const finished = useRef(false);
   /* Tijdstippen (Date.now) van de getoonde slagen, voor de hartlijn. */
-  const beatLog = useRef<number[]>([]);
+  const [beatLog, setBeatLog] = useState<number[]>([]);
   const beat = useRef(new Animated.Value(1)).current;
   /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
      niet ligt (9 okt 2026: "de animatie moet beter"). */
@@ -171,6 +192,17 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       useNativeDriver: false,
     }).start();
   }, [progress, status, fill]);
+
+  /* Omtrek: grijs → teal zodra er echt gemeten wordt. */
+  const lit = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(lit, {
+      toValue: status === 'measuring' ? 1 : 0,
+      duration: 450,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [status, lit]);
 
   /* Stabiel (enkel refs): de camera-worklet krijgt deze functie één keer mee. */
   const onSample = useCallback((rawTs: number, r: number, g: number) => {
@@ -209,7 +241,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       const last = samples.current[samples.current.length - 1];
       const start = measureStart.current;
       if (fingerSince.current === null) {
-        beatLog.current = [];
+        setBeatLog((prev) => (prev.length ? [] : prev));
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
@@ -235,7 +267,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       const b = recent.length > 120 ? latestBeat(recent) : null;
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;
-        beatLog.current = [...beatLog.current.filter((x) => Date.now() - x < ECG_WINDOW_MS + 500), Date.now()];
+        /* Echt tijdstip van de slag (niet het moment van opmerken). */
+        const wall = Date.now() - (last.t - b);
+        setBeatLog((prev) => [...prev.filter((x) => wall - x < ECG_WINDOW_MS + ECG_DELAY_MS + 1000), wall]);
         Animated.sequence([
           Animated.timing(beat, { toValue: 1.16, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
           Animated.timing(beat, { toValue: 1, duration: 300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
@@ -358,7 +392,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     fingerSince.current = null;
     measureStart.current = null;
     lastShownBeat.current = 0;
-    beatLog.current = [];
+    setBeatLog([]);
     setProgress(0);
     placingSince.current = Date.now();
     setPlacingLong(false);
@@ -430,7 +464,13 @@ export default function PulseMeter({ onResult, onManual }: Props) {
               van onder naar boven stijgt met de voortgang. */}
           <View style={{ width: HEART, height: HEART }}>
             {/* Operator, 9 okt 2026: omlijning in exact dezelfde kleur als de vulling. */}
-            <Heart size={HEART} color={ACCENT} fill="transparent" strokeWidth={1.3} />
+            {/* Vervolg ("begint grijs, eerst de buitenlijn groen, dan van
+                onder naar boven vullen"): grijze omtrek tot de meting start,
+                dan vloeit de teal omtrek erin en begint de vulling. */}
+            <Heart size={HEART} color={IDLE_GREY} fill="transparent" strokeWidth={0.7} />
+            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: lit }]}>
+              <Heart size={HEART} color={ACCENT} fill="transparent" strokeWidth={0.7} />
+            </Animated.View>
             <Animated.View
               pointerEvents="none"
               style={[
@@ -439,7 +479,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
               ]}
             >
               <View style={{ position: 'absolute', bottom: 0, left: 0, width: HEART, height: HEART }}>
-                <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={1.3} />
+                <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={0.7} />
               </View>
             </Animated.View>
           </View>
@@ -448,7 +488,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
       {/* Operator, 9 okt 2026: hartlijn — begint vlak, elke gevonden slag
           tekent een piek die naar links wegschuift. */}
-      <EcgTrace beatsRef={beatLog} running={status === 'measuring'} progress={progress} />
+      <EcgTrace beats={beatLog} running={status === 'measuring'} progress={progress} />
 
       <Text style={s.msg} accessibilityLiveRegion="polite">
         {message}
