@@ -41,10 +41,10 @@ const STROKE = 2; // vervolg 9 okt 2026: "groene vullende lijn mag dunner"
 const ACCENT = '#4AF0D4';
 const IDLE_GREY = 'rgba(255,255,255,0.32)';
 /* Het lucide-hart (zelfde vorm als de <Heart>-iconen), herschreven zodat
-   het pad ONDERAAN in de punt begint en daar ook eindigt — omtrek ≈ 59 in
-   24-eenheden. Operator, 9 okt 2026: "de outline moet onderaan beginnen". */
+   het pad BOVENAAN in het midden (de inkeping) begint en daar eindigt —
+   omtrek ≈ 59 in 24-eenheden. */
 const LUCIDE_HEART_D =
-  'M12 21A2 2 0 0 1 10.508 20.332L5 15C3.5 13.5 2 11.8 2 9.5A5.5 5.5 0 0 1 11.591 5.824A.56 .56 0 0 0 12.409 5.824A5.49 5.49 0 0 1 22 9.5C22 11.79 20.5 13.5 19 15L13.508 20.313A2 2 0 0 1 12 21';
+  'M12 6.0015A.56 .56 0 0 0 12.409 5.824A5.49 5.49 0 0 1 22 9.5C22 11.79 20.5 13.5 19 15L13.508 20.313A2 2 0 0 1 10.508 20.332L5 15C3.5 13.5 2 11.8 2 9.5A5.5 5.5 0 0 1 11.591 5.824A.56 .56 0 0 0 12 6.0015';
 const HEART_LEN = 59.1;
 /** Deel van de meting waarin de omtrek zich tekent; daarna de vulling. */
 const OUTLINE_SHARE = 0.25;
@@ -471,11 +471,15 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   /* Vervolg ("de outline van het hart moet rondom groeien en dan het hart
      zelf"): eerste kwart van de meting tekent de omtrek zich rond, daarna
      vult het hart van onder naar boven. */
-  /* Operator, 9 okt 2026: begint in de onderste punt, gaat in één richting
-     helemaal rond en komt terug in diezelfde punt — pas dan de vulling. */
-  const outlineProps = useAnimatedProps(() => ({
-    strokeDashoffset: HEART_LEN * (1 - Math.min(1, ringP.value / OUTLINE_SHARE)),
-  }));
+  /* Operator, 9 okt 2026 ("zelfde animatie maar van boven naar beneden"):
+     beide kanten vertrekken samen bovenaan in het midden, lopen langs de
+     zijkanten omlaag en raken elkaar in de onderste punt — daar begint
+     de vulling. Streep v aan het begin + streep v aan het einde van het pad. */
+  const outlineProps = useAnimatedProps(() => {
+    const v = (HEART_LEN / 2) * Math.min(1, ringP.value / OUTLINE_SHARE);
+    const gap = Math.max(0, HEART_LEN - 2 * v);
+    return { strokeDasharray: [Math.max(0.001, v), gap + 0.001, v, 0.001] };
+  });
   const message =
     status === 'placing'
       ? justLost
@@ -538,7 +542,6 @@ export default function PulseMeter({ onResult, onManual }: Props) {
                 strokeLinecap="butt"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={`${HEART_LEN} ${HEART_LEN}`}
                 animatedProps={outlineProps}
               />
             </Svg>
