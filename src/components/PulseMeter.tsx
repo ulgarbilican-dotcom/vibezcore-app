@@ -28,7 +28,8 @@ const SETTLE_MS = 1_000;
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
 const RING = 210;
-const STROKE = 6;
+/* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
+const STROKE = 3;
 const ACCENT = '#4AF0D4';
 /* Vaste objecten: de camera-hooks herconfigureren bij elke nieuwe referentie. */
 const FRAME_SIZE = { width: 320, height: 240 };
@@ -94,6 +95,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const lostAt = useRef(0);
   const finished = useRef(false);
   const beat = useRef(new Animated.Value(1)).current;
+  /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
+     niet ligt (9 okt 2026: "de animatie moet beter"). */
+  const ripple = useRef(new Animated.Value(1)).current;
+  const idle = useRef(new Animated.Value(1)).current;
 
   /* Stabiel (enkel refs): de camera-worklet krijgt deze functie één keer mee. */
   const onSample = useCallback((rawTs: number, r: number, g: number) => {
@@ -158,9 +163,11 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;
         Animated.sequence([
-          Animated.timing(beat, { toValue: 1.18, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-          Animated.timing(beat, { toValue: 1, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(beat, { toValue: 1.16, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(beat, { toValue: 1, duration: 300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         ]).start();
+        ripple.setValue(0);
+        Animated.timing(ripple, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
       }
 
       if (elapsed >= MEASURE_MS) {
@@ -193,6 +200,23 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     }, 250);
     return () => clearInterval(id);
   }, [status, beat, onResult, attempt]);
+
+  /* Rustig ademen van het hart zolang er nog niet gemeten wordt. */
+  useEffect(() => {
+    if (status !== 'placing' && status !== 'settling') {
+      idle.stopAnimation();
+      idle.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(idle, { toValue: 1.06, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(idle, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [status, idle]);
 
   const onFrame = useCallback(
     (frame: Frame) => {
@@ -297,8 +321,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             cx={RING / 2}
             cy={RING / 2}
             r={(RING - STROKE) / 2}
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth={STROKE}
+            stroke="rgba(255,255,255,0.10)"
+            strokeWidth={1.5}
             fill="none"
           />
           <Circle
@@ -314,12 +338,23 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />
         </Svg>
-        <Animated.View style={{ transform: [{ scale: beat }] }}>
+        {/* Zachte golf bij elke slag. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            s.ripple,
+            {
+              opacity: ripple.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] }),
+              transform: [{ scale: ripple.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.95] }) }],
+            },
+          ]}
+        />
+        <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
           <Heart
-            size={58}
+            size={54}
             color={status === 'measuring' ? ACCENT : 'rgba(255,255,255,0.8)'}
             fill={status === 'measuring' ? ACCENT : 'transparent'}
-            strokeWidth={1.6}
+            strokeWidth={1.4}
           />
         </Animated.View>
       </View>
@@ -359,6 +394,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
 const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
+  ripple: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5, borderColor: ACCENT },
   ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
   msg: {
     color: '#ffffff',
