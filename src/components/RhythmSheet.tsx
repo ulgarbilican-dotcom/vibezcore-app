@@ -34,6 +34,7 @@ import * as Haptics from 'expo-haptics';
 import { HeartPulse } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
+  useWindowDimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -78,6 +79,7 @@ type Props = {
 
 export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 'choose', fromProfile = false }: Props) {
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const [step, setStep] = useState<Step>(startAt);
   /* Wat er net gemeten werd (kan hoger zijn dan de rusthartslag die blijft). */
   const [justMeasured, setJustMeasured] = useState<number | null>(null);
@@ -102,7 +104,16 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
 
   return (
     <GlassSheet visible={visible} onClose={onClose}>
-      <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 18 }]}>
+      <View
+        style={[
+          s.sheet,
+          { paddingBottom: Math.max(insets.bottom, 12) + 18 },
+          /* Operator, 9 okt 2026 ("nog hoger, tot onder Heart Rate"): het
+             meetblad vult ~78% van het scherm, de ring staat midden in de
+             vrije ruimte. */
+          step === 'measure' ? { height: Math.round(winH * 0.78) } : null,
+        ]}
+      >
         <VibezGlass
           radius={24}
           level="sheet"
@@ -190,6 +201,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               <View style={s.factDot} />
               <Text style={s.fact}>No images saved</Text>
             </View>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
@@ -202,6 +214,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               }}
               onManual={() => setStep('manual')}
             />
+            </View>
           </>
         ) : null}
 
