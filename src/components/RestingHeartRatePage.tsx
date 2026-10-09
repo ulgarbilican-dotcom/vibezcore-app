@@ -93,7 +93,6 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
       />
 
       <View style={[s.content, { paddingTop: insets.top + 28 }]}>
-        <Text style={s.eyebrow}>STATE CONTROL · MATCH YOUR RHYTHM</Text>
 
         <View style={[s.stage, { width: stage, height: stage }]}>
           <Ring delay={0} progress={wave} size={stage} />
