@@ -1378,9 +1378,8 @@ function TrialSheet({
         <PressScale onPress={onUnlock} style={s.quickSheetBack} accessibilityRole="button">
           <Text style={s.quickSheetBackTxt}>Unlock all sessions</Text>
         </PressScale>
-        <PressScale onPress={onClose} style={[s.quickSheetBack, { marginTop: -6 }]} accessibilityRole="button">
-          <Text style={[s.quickSheetBackTxt, { color: 'rgba(255,255,255,0.6)' }]}>Back</Text>
-        </PressScale>
+        {/* Operator, 9 okt 2026 (onderblad-protocol): actieblad → geen
+            "Back"; sluiten = naast tikken / grijpstreepje / terugknop. */}
       </View>
     </GlassSheet>
   );
@@ -1447,9 +1446,7 @@ function QuickSessionSheet({
         >
           <Text style={s.quickSheetCtaTxt}>Start</Text>
         </PressScale>
-        <PressScale onPress={onClose} style={s.quickSheetBack} accessibilityRole="button">
-          <Text style={s.quickSheetBackTxt}>Back</Text>
-        </PressScale>
+        {/* Actieblad → geen "Back" (protocol, 9 okt 2026). */}
       </View>
     </GlassSheet>
   );
