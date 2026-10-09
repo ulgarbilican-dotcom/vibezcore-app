@@ -71,8 +71,11 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
        einde. */
     /* Vervolg ("deint te ver uit, moet beter"): blijft binnen de eigen
        ruimte (tot 1×), zachter vervagen. */
-    opacity: 0.55 * (1 - p.value),
-    transform: [{ scale: from + p.value * (1 - from) }],
+    /* Vervolg ("vaste outline rond de cirkel"): de ring vertrekt
+       onzichtbaar en licht pas op terwijl hij al uitdeint — nooit een
+       strakke lijn tegen de cirkel aan. */
+    opacity: 0.55 * Math.min(1, p.value * 6) * (1 - p.value),
+    transform: [{ scale: from * 1.03 + p.value * (1 - from * 1.03) }],
   }));
   return (
     <Animated.View
@@ -127,10 +130,12 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   /* Vervolg ("de grote volle cirkel moet ook meebewegen"): klopt mee,
      half zo sterk als het hart — één kloppend geheel. */
   const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
-  /* Extra ring rond de cirkel: deint en licht op met elke lub-dub. */
+  /* Extra ring rond de cirkel: licht op en deint uit met elke lub-dub. */
   const beatRingStyle = useAnimatedStyle(() => ({
-    opacity: 0.25 + (beat.value - 1) * 6,
-    transform: [{ scale: 1 + (beat.value - 1) * 1.1 }],
+    /* Vervolg ("vaste outline rond de cirkel mag niet"): in rust
+       onzichtbaar, enkel zichtbaar op de slag zelf. */
+    opacity: Math.min(1, (beat.value - 1) * 11),
+    transform: [{ scale: 1 + (beat.value - 1) * 1.6 }],
   }));
   /* Vervolg ("achter de volle cirkel een lichtbron"): zachte gloed die
      meeklopt. */
