@@ -540,12 +540,13 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     const gap = Math.max(0, HEART_LEN - 2 * v);
     return { strokeDasharray: [Math.max(0.001, v), gap + 0.001, v, 0.001] };
   });
+  const lowBatteryFail = status === 'failed' && batteryLow && failReason.startsWith("We couldn't read");
   const message =
     status === 'placing'
       ? justLost
         ? 'Finger moved — starting over'
         : placingLong && batteryLow
-        ? 'Your battery is low, so your phone has turned off the flash. Charge it a little and try again.'
+        ? 'Flash unavailable'
         : placingLong
         ? 'Not quite — try the camera closest to the flash'
         : 'Cover the top camera and the flash with your fingertip'
@@ -561,11 +562,18 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             ? 'Camera access is off for VIBEZCORE.'
             : status === 'camera-error'
               ? batteryLow
-                ? 'Your battery is low, so your phone has turned off the flash. Charge it a little and try again.'
+                ? 'Flash unavailable'
                 : "Your camera couldn't start on this device."
-              : batteryLow && failReason.startsWith("We couldn't read")
-                ? 'Your battery is low, so the flash may be off. Charge your phone a little and try again.'
+              : lowBatteryFail
+                ? 'Measurement failed'
                 : failReason;
+  /* Operator, 9 okt 2026: batterijmeldingen als titel + korte uitleg. */
+  const messageSub =
+    batteryLow && ((status === 'placing' && placingLong && !justLost) || status === 'camera-error')
+      ? 'Low battery. Charge your phone and try again.'
+      : lowBatteryFail
+        ? 'Low battery may affect the flash. Charge your phone and try again.'
+        : null;
 
   return (
     <View style={s.wrap}>
@@ -645,9 +653,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
       )}
 
-      <Text style={s.msg} accessibilityLiveRegion="polite">
+      <Text style={[s.msg, messageSub ? { minHeight: 0, marginBottom: 0 } : null]} accessibilityLiveRegion="polite">
         {message}
       </Text>
+      {messageSub ? <Text style={[s.sub, { marginBottom: 18 }]}>{messageSub}</Text> : null}
 
       {status === 'failed' || status === 'camera-error' ? (
         <View style={s.actions}>
