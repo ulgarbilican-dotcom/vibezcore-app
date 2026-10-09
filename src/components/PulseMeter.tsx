@@ -113,18 +113,42 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
     const mid = ECG_H / 2;
     const amp = ECG_H / 2 - 4;
     const t0 = now.value - ECG_DELAY_MS;
-    let d = `M0 ${mid}`;
+    const toX = (t: number) => ECG_W - ((t0 - t) / ECG_WINDOW_MS) * ECG_W;
+    /* Operator, 9 okt 2026 ("de lijn mag al lopen van rechts naar links,
+       zonder pieken, zolang er geen vinger is"): een heel lichte rimpeling
+       in de basislijn, vast aan de tijd — zo zie je de lijn schuiven. */
+    const noise = (t: number) => 0.6 * Math.sin(t / 150) + 0.35 * Math.sin(t / 63 + 1.3);
+    const pts: number[][] = [];
+    const windows: number[][] = [];
     if (runningSv.value) {
       const list = beatsSv.value;
       for (let i = 0; i < list.length; i++) {
+        const from = toX(list[i].t + PQRST[0][0]);
+        const to = toX(list[i].t + PQRST[PQRST.length - 1][0]);
+        if (to < 0 || from > ECG_W) continue;
+        windows.push([from, to]);
         for (let j = 0; j < PQRST.length; j++) {
-          const px = ECG_W - ((t0 - (list[i].t + PQRST[j][0])) / ECG_WINDOW_MS) * ECG_W;
+          const px = toX(list[i].t + PQRST[j][0]);
           if (px < 0 || px > ECG_W) continue;
-          d += ` L${px.toFixed(1)} ${(mid - PQRST[j][1] * amp * list[i].a).toFixed(1)}`;
+          pts.push([px, mid - PQRST[j][1] * amp * list[i].a]);
         }
       }
     }
-    d += ` L${ECG_W} ${mid}`;
+    for (let x = 0; x <= ECG_W; x += 3) {
+      let inBeat = false;
+      for (let k = 0; k < windows.length; k++) {
+        if (x >= windows[k][0] && x <= windows[k][1]) {
+          inBeat = true;
+          break;
+        }
+      }
+      if (!inBeat) pts.push([x, mid - noise(t0 - ((ECG_W - x) / ECG_W) * ECG_WINDOW_MS)]);
+    }
+    pts.sort((m, n) => m[0] - n[0]);
+    let d = '';
+    for (let i = 0; i < pts.length; i++) {
+      d += `${i === 0 ? 'M' : ' L'}${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+    }
     return { d };
   });
 
