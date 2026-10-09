@@ -49,7 +49,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 - Soundscapes: Rain en Canopy gratis, rest met kroon.
 - Resting Heart Rate-pagina (eerste State Control-scherm) + meetscherm: hart dat zich vult, live bpm, hartlijn (ECG), foutschermen, batterijcontrole via `expo-battery` (**nieuwe native module → vereist nieuwe build**).
 - State Control-scherm herontworpen: cirkel 270, tijd kiezen door over de rand te slepen (boog + greep), drie vaste tijden (kort/aanbevolen/lang, zie `threePresets` in `src/app/bracelet-control.tsx`), hartslag-pil bovenaan in de cirkel, Quick Chill/Boost-kaartjes, ronde paginapuntjes.
-- "Your Resting Heart Rate"-pagina: groen glazen hart met een hartlijn die erdoorheen loopt (één klok voor hart en lijn); geen ringen meer.
+- "Your Resting Heart Rate"-pagina — **goedgekeurd door operator 9 okt ("heel mooi, professioneel")**: stilstaande groene glascirkel, groot dekkend glazen hart, hartlijn met echte monitorvorm (`src/utils/ecg-shape.ts`, afleiding II) die door een schrijfpuntje rechts wordt getekend en achter het hart doorloopt; hart klopt wanneer de piek erdoor gaat.
 - Meetscherm: Touch ID-achtige vinger-animatie zolang de vinger niet ligt; live bpm-getal dat op elke slag ververst en meeklopt (soepele live-analyse `analyzePulse(…, lenient)`, eindresultaat blijft streng) — **door operator te testen met vinger op de camera**.
 - Hartslag-blad in State Control: "Resting heart rate / Heart rate now", Measure Now + Not Now.
 - Centrale tikjes-helper `src/utils/haptics.ts` (Android-systeemtikken i.p.v. trilmotor) — **door operator nog te voelen op de A16**.
