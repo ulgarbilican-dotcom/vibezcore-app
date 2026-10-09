@@ -8,8 +8,8 @@
      - speaker (assets/heartbeat-speaker.wav): Pixabay "freesound_community
        heartbeat 6396", tweede slag op 1,04 s, klank onaangeroerd;
      - koptelefoon/oortjes (assets/heartbeat-headphones.wav): kandidaat in
-       test — Pixabay "placidplace heartbeat 21649", slag op 1,82 s uit een
-       traag hart van ~46 bpm, zuivere studio-opname, klank onaangeroerd.
+       test (ronde 2, met stille lus) — Pixabay "kauasilbershlachparodes
+       heartbeat 493999", slag op 7,58 s, lub-dub 0,3 s, klank onaangeroerd.
    Pixabay-licentie: vrij in apps, geen naamsvermelding. De uitgang wordt
    bij elke slag bekeken (modules/audio-route), dus oortjes in- of uitdoen
    tijdens het luisteren werkt meteen. Op elke
