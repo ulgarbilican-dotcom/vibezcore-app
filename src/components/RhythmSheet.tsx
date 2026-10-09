@@ -96,6 +96,8 @@ export default function RhythmSheet({
   const [step, setStep] = useState<Step>(startAt);
   /* Wat er net gemeten werd (kan hoger zijn dan de rusthartslag die blijft). */
   const [justMeasured, setJustMeasured] = useState<number | null>(null);
+  /* Foutscherm van de meter: dan geen meetuitleg erboven/eronder. */
+  const [meterError, setMeterError] = useState(false);
   const [manualBpm, setManualBpm] = useState(() => {
     const p = getRestingPulse();
     return p.source === 'average' ? AVERAGE_RESTING_BPM : p.bpm;
@@ -104,6 +106,7 @@ export default function RhythmSheet({
     if (visible) {
       setStep(startAt);
       setJustMeasured(null);
+      setMeterError(false);
     }
   }, [visible, startAt]);
 
@@ -247,7 +250,9 @@ export default function RhythmSheet({
           <>
             {/* Operator, 9 okt 2026 ("te druk, korter, measure your heart
                 rate moet er niet staan, dat weten we al"). */}
-            <Text style={s.body}>Rest your fingertip lightly on{'\n'}the back camera and flash.</Text>
+            {!meterError ? (
+              <Text style={s.body}>Rest your fingertip lightly on{'\n'}the back camera and flash.</Text>
+            ) : null}
             {/* Operator, 9 okt 2026: ring hoger, de "15 seconds · …"-regel
                 helemaal onderaan. */}
             <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 72 }}>
@@ -262,9 +267,10 @@ export default function RhythmSheet({
                 }
               }}
               onManual={() => setStep('manual')}
+              onErrorChange={setMeterError}
             />
             </View>
-            <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }]}>
+            <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }, meterError ? { opacity: 0 } : null]}>
               <Text style={s.fact}>15 seconds</Text>
               <View style={s.factDot} />
               <Text style={s.fact}>Camera & flash</Text>

@@ -15,7 +15,7 @@
 import PressScale from '@/components/PressScale';
 import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, latestBeat, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
-import { Heart } from 'lucide-react-native';
+import { CircleAlert, Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -76,6 +76,8 @@ type Props = {
   onResult: (bpm: number) => void;
   /** "Enter it myself" vanuit een fout- of weigerstatus. */
   onManual: () => void;
+  /** Foutscherm aan/uit — het blad verbergt dan zijn meetuitleg. */
+  onErrorChange?: (isError: boolean) => void;
 };
 
 const ECG_W = 240;
@@ -191,7 +193,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
   );
 }
 
-export default function PulseMeter({ onResult, onManual }: Props) {
+export default function PulseMeter({ onResult, onManual, onErrorChange }: Props) {
   const permission = useCameraPermission();
   const [status, setStatus] = useState<Status>('placing');
   const [progress, setProgress] = useState(0);
@@ -541,6 +543,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
   const retry = () => {
     setFlashWasOff(false);
+    failures.current = 0;
     finished.current = false;
     samples.current = [];
     fingerSince.current = null;
@@ -578,8 +581,6 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     status === 'placing'
       ? justLost
         ? 'Finger moved — starting over'
-        : placingLong && flashOff
-        ? 'Flash unavailable'
         : placingLong
         ? 'Not quite — try the camera closest to the flash'
         : 'Cover the top camera and the flash with your fingertip'
@@ -591,22 +592,57 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             : progress < 1
             ? 'Reading your heart rate — breathe normally'
             : 'Almost there…'
+          : '';
+
+  /* Operator, 9 okt 2026 (ontwerp "Error State"): elke fout als één rustig
+     scherm — teal uitroepteken, titel, korte uitleg, witte knop en een
+     onderlijnde "Enter Manually". */
+  const errorView: { title: string; body: string; cta: string; onCta: () => void } | null =
+    status === 'placing' && placingLong && flashOff && !justLost
+      ? { title: 'Flash unavailable', body: 'Low battery. Charge your phone and try again.', cta: 'Try Again', onCta: retry }
+      : status === 'camera-error'
+        ? batteryLow
+          ? { title: 'Flash unavailable', body: 'Low battery. Charge your phone and try again.', cta: 'Try Again', onCta: retry }
+          : { title: 'Camera unavailable', body: "Your camera couldn't start on this device.", cta: 'Try Again', onCta: retry }
+        : status === 'failed'
+          ? {
+              title: 'Measurement failed',
+              body: lowBatteryFail ? 'Low battery may affect the flash. Charge your phone and try again.' : failReason,
+              cta: 'Try Again',
+              onCta: retry,
+            }
           : status === 'denied'
-            ? 'Camera access is off for VIBEZCORE.'
-            : status === 'camera-error'
-              ? batteryLow
-                ? 'Flash unavailable'
-                : "Your camera couldn't start on this device."
-              : lowBatteryFail
-                ? 'Measurement failed'
-                : failReason;
-  /* Operator, 9 okt 2026: batterijmeldingen als titel + korte uitleg. */
-  const messageSub =
-    (flashOff && status === 'placing' && placingLong && !justLost) || (batteryLow && status === 'camera-error')
-      ? 'Low battery. Charge your phone and try again.'
-      : lowBatteryFail
-        ? 'Low battery may affect the flash. Charge your phone and try again.'
-        : null;
+            ? {
+                title: 'Camera access is off',
+                body: 'Allow camera access for VIBEZCORE in Settings to measure your heart rate.',
+                cta: 'Open Settings',
+                onCta: () => void Linking.openSettings(),
+              }
+            : null;
+  const isError = errorView !== null;
+  useEffect(() => {
+    onErrorChange?.(isError);
+  }, [isError, onErrorChange]);
+
+  if (errorView) {
+    return (
+      <View style={s.errWrap}>
+        <CircleAlert size={76} color={ACCENT} strokeWidth={1.4} />
+        <Text style={s.errTitle} accessibilityRole="header">
+          {errorView.title}
+        </Text>
+        <Text style={s.errBody} accessibilityLiveRegion="polite">
+          {errorView.body}
+        </Text>
+        <PressScale style={[s.cta, s.errCta]} haptic scaleTo={0.97} onPress={errorView.onCta} accessibilityRole="button">
+          <Text style={s.ctaTxt}>{errorView.cta}</Text>
+        </PressScale>
+        <PressScale onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
+          <Text style={s.errLinkTxt}>Enter Manually</Text>
+        </PressScale>
+      </View>
+    );
+  }
 
   return (
     <View style={s.wrap}>
@@ -682,45 +718,42 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           tekent een piek die naar links wegschuift. */}
       {/* Bij een fout of geweigerde camera geen lijn: er wordt niet gemeten,
           en de knoppen hebben die ruimte nodig. */}
-      {status === 'failed' || status === 'camera-error' || status === 'denied' ? null : (
-        <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
-      )}
+      <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
 
-      <Text style={[s.msg, messageSub ? { minHeight: 0, marginBottom: 0 } : null]} accessibilityLiveRegion="polite">
+      <Text style={s.msg} accessibilityLiveRegion="polite">
         {message}
       </Text>
-      {messageSub ? <Text style={[s.sub, { marginBottom: 18 }]}>{messageSub}</Text> : null}
-
-      {status === 'failed' || status === 'camera-error' ? (
-        <View style={s.actions}>
-          {status === 'failed' ? (
-            <PressScale style={[s.cta]} haptic scaleTo={0.97} onPress={retry} accessibilityRole="button">
-              <Text style={s.ctaTxt}>Try again</Text>
-            </PressScale>
-          ) : null}
-          <PressScale onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
-            <Text style={s.linkTxt}>Enter it myself</Text>
-          </PressScale>
-        </View>
-      ) : status === 'denied' ? (
-        <View style={s.actions}>
-          <PressScale
-            style={[s.cta]} haptic scaleTo={0.97}
-            onPress={() => void Linking.openSettings()}
-            accessibilityRole="button"
-          >
-            <Text style={s.ctaTxt}>Open Settings</Text>
-          </PressScale>
-          <PressScale onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
-            <Text style={s.linkTxt}>Enter it myself</Text>
-          </PressScale>
-        </View>
-      ) : null}
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  errWrap: { alignItems: 'center', paddingTop: 8, paddingHorizontal: 8 },
+  errTitle: {
+    color: '#ffffff',
+    fontSize: 26,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginTop: 28,
+    marginBottom: 14,
+  },
+  errBody: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16.5,
+    fontFamily: BrandFonts.medium,
+    lineHeight: 25,
+    textAlign: 'center',
+    maxWidth: 280,
+    marginBottom: 40,
+  },
+  errCta: { alignSelf: 'stretch' },
+  errLinkTxt: {
+    color: ACCENT,
+    fontSize: 16,
+    fontFamily: BrandFonts.semibold,
+    textDecorationLine: 'underline',
+  },
   wrap: { alignItems: 'center', paddingTop: 4 },
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
   ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 36 },
