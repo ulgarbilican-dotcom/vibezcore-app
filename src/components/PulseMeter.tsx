@@ -184,6 +184,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const finished = useRef(false);
   /* Tijdstippen (Date.now) van de getoonde slagen, voor de hartlijn. */
   const [beatLog, setBeatLog] = useState<number[]>([]);
+  const [hasRealBeat, setHasRealBeat] = useState(false);
   const beat = useRef(new Animated.Value(1)).current;
   /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
      niet ligt (9 okt 2026: "de animatie moet beter"). */
@@ -267,6 +268,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       const start = measureStart.current;
       if (fingerSince.current === null) {
         setBeatLog((prev) => (prev.length ? [] : prev));
+        setHasRealBeat(false);
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
@@ -301,6 +303,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         const at = Math.max(0, wall + ECG_DELAY_MS - Date.now());
         const tid = setTimeout(() => {
           beatTimers.current.delete(tid);
+          setHasRealBeat(true);
           Animated.sequence([
             /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
             Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
@@ -343,22 +346,32 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     return () => clearInterval(id);
   }, [status, beat, onResult, attempt]);
 
-  /* Rustig ademen van het hart zolang er nog niet gemeten wordt. */
+  /* Zonder vinger: rustig ademen. Vinger erop (operator, 9 okt 2026:
+     "hartslag mag beginnen bij vinger op de camera, maar rustig"): een
+     zachte, trage hartslag (≈55 bpm) tot de eerste echte slag gevonden is;
+     vanaf dan klopt het hart op het echte ritme. */
   useEffect(() => {
-    if (status !== 'placing' && status !== 'settling') {
+    const fingerOn = status === 'settling' || status === 'measuring';
+    if (status !== 'placing' && !(fingerOn && !hasRealBeat)) {
       idle.stopAnimation();
-      idle.setValue(1);
+      Animated.timing(idle, { toValue: 1, duration: 300, easing: Easing.out(Easing.sin), useNativeDriver: true }).start();
       return;
     }
     const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(idle, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(idle, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
+      fingerOn
+        ? Animated.sequence([
+            Animated.timing(idle, { toValue: 1.045, duration: 240, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+            Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.delay(290),
+          ])
+        : Animated.sequence([
+            Animated.timing(idle, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(idle, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [status, idle]);
+  }, [status, idle, hasRealBeat]);
 
   const onFrame = useCallback(
     (frame: Frame) => {
@@ -427,6 +440,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     measureStart.current = null;
     lastShownBeat.current = 0;
     setBeatLog([]);
+    setHasRealBeat(false);
     setProgress(0);
     placingSince.current = Date.now();
     setPlacingLong(false);
