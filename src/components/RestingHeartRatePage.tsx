@@ -113,7 +113,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
           <Ring key={`r2-${stage}`} delay={BEAT_MS * 2} size={stage} from={core / stage} />
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2 }, coreStyle]}>
             <LinearGradient
-              colors={['rgba(74,240,212,0.22)', 'rgba(0,163,163,0.10)']}
+              colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.05)']}
               start={{ x: 0.2, y: 0 }}
               end={{ x: 0.8, y: 1 }}
               style={StyleSheet.absoluteFill}
@@ -191,7 +191,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(74,240,212,0.35)',
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   title: {
     marginTop: 8,
