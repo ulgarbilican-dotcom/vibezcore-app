@@ -153,6 +153,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 - ⏳ Nauwkeurigheid camerameting: 10 personen naast horloge/borstband, 9/10 binnen ±5 bpm
 - ⏳ Release-build: vloeiendheid ademsessie-overgangen (zie memory)
 - ⏳ State Control-label "Starts at X bpm · Resting/Average/Now" + blad "Start from your heart right now": meten → label "· Now", resultaat "For this session only…"; "Use Resting Heart Rate" zet terug naar rust; na sessiestart/15 min terug "· Resting" (9 okt 2026, blad + label op A16 gezien)
+- ⏳ State Control nieuwe opzet (9 okt 2026): cirkel 270 met enkel tijd, duur-segmenten eronder (gekozen = toestandskleur, rest transparant), kaart "Starting heart rate" onderaan → tik opent blad; alles past boven Start op de A16 + klein toestel (test 65)
 - ⏳ **Nieuwe build (expo-battery):** hartslag meten onder 15% batterij → melding "Flash unavailable" / "Measurement failed" + korte uitleg i.p.v. vaag "camera couldn't start" (9 okt 2026: A16 op 7–8%, zaklamp bleef uit)
 
 ---

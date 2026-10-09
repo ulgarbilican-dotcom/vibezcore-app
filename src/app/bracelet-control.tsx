@@ -1631,7 +1631,7 @@ const RING_R = 84;
 const RING_STROKE = 4;
 const RING_SIZE = (RING_R + RING_STROKE) * 2;
 /* Operator, 9 okt 2026 ("cirkel groter"): 230 → 270. */
-const RING_DIAL = 300; // vervolg: "groter"
+const RING_DIAL = 270; // past met de duurkeuze + hartslagkaart eronder
 const RING_CIRC = 2 * Math.PI * RING_R;
 const AnimatedRingCircle = ReanimatedAnimated.createAnimatedComponent(Circle);
 
@@ -3534,8 +3534,6 @@ function IdleScreen({
   setDetailModeForModal,
   sim,
 }: IdleScreenProps) {
-  /* Duur aan het vegen in de cirkel → buurwaarden tonen. */
-  const [durDragging, setDurDragging] = useState(false);
   /* Operator, 16 september 2026 ("Optie 1 Hybride: de app blijft Light,
      maar dit specifieke bedieningsscherm maken we Dark — de felle
      modus-kleur knalt dan maximaal, 2026-luxe-vibe"): alleen déze ene
@@ -3740,43 +3738,8 @@ function IdleScreen({
             aanklikken om opnieuw in te stellen; bij play verdwijnt dat mee").
             Los van de veeg-cirkel gelegd, zodat een tik hier niet ook het
             i-paneel opent. */}
-        {!trialRunning ? (
-          <PressScale
-            onPress={() => {
-              void Haptics.selectionAsync();
-              pendingAfterRhythm.current = null;
-              setRhythmOpen(true);
-            }}
-            hitSlop={10}
-            style={[s.ringPulsePill]} scaleTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel={
-              pulse.liveBpm !== null
-                ? `This session starts at your heart rate right now, ${pulse.liveBpm} beats per minute. Tap to change.`
-                : pulse.source === 'average'
-                  ? `This session starts at an average heart rate of ${pulse.bpm}. Tap to measure your heart right now.`
-                  : `This session starts at your resting heart rate, ${pulse.bpm} beats per minute. Tap to measure your heart right now.`
-            }
-          >
-            <HeartPulse size={18} color="rgba(255,255,255,0.9)" strokeWidth={2} />
-            <Text style={s.ringPulseTxt}>
-              {/* Operator, 9 okt 2026 ("your rhythm onduidelijk — your
-                  heart rate moet echt duidelijk zijn"): gewone woorden. */}
-              {/* Vervolg (operator, 9 okt 2026: "tijdelijk voor nu? niet
-                  duidelijk"): het label zegt waar de sessie start en waarom. */}
-              {pulse.liveBpm !== null
-                ? `Starts at ${pulse.liveBpm} bpm · Now`
-                : pulse.source === 'average'
-                  ? `Starts at ${pulse.bpm} bpm · Average`
-                  : `Starts at ${pulse.bpm} bpm · Resting`}
-            </Text>
-            {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
-            {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}
-            <ChevronRight size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.4} style={{ marginLeft: -2 }} />
-          </PressScale>
-        ) : null}
         {/* Operator, 9 okt 2026: cirkel lager — net boven het midden. */}
-        <View style={{ flex: 0.6, minHeight: 4 }} />
+        <View style={{ flex: 0.35, minHeight: 4 }} />
         <View style={s.durationRingWrap}>
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
@@ -3797,10 +3760,6 @@ function IdleScreen({
               pickMode(next);
             }}
             onTap={() => setDetailModeForModal(selectedMode)}
-            durations={trialRunning ? undefined : DURATION_PRESETS[selectedMode].map((p) => p.value)}
-            duration={duration}
-            onDuration={setDuration}
-            onDurationDrag={setDurDragging}
           >
             {/* key = modus: elke modus is een eigen "wijzerplaat" die meteen
                 met zijn eigen vulling binnenkomt, niet klotsend vanaf het
@@ -3822,17 +3781,6 @@ function IdleScreen({
               label={meta.name}
               size={RING_DIAL}
               dark={idleDark}
-              scrollHint={(() => {
-                /* Boven = korter, onder = langer: omhoog vegen trekt de
-                   langere waarde naar het midden, zoals een iOS-wiel. */
-                const list = DURATION_PRESETS[selectedMode].map((p) => p.value);
-                const i = list.indexOf(duration);
-                return {
-                  prev: i > 0 ? list[i - 1] : undefined,
-                  next: i < list.length - 1 ? list[i + 1] : undefined,
-                  active: durDragging,
-                };
-              })()}
               recommended={
                 duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
               }
@@ -3881,11 +3829,74 @@ function IdleScreen({
         {/* Lager, met meer lucht onder de bolletjes (operator, 6 okt 2026). */}
         {/* 90 → 38: de hartslag-pil boven de cirkel neemt die ruimte nu in
             (7 okt 2026), anders zakt de Start-knop onder de systeembalk. */}
-        {/* Operator, 9 okt 2026: de scroll-lijst onder de cirkel is weg —
-            de duur kies je nu in de cirkel zelf (verticaal vegen). */}
+        {/* Operator, 9 okt 2026 (Apple-stijl): de duur als segmented control
+            onder de cirkel — alle keuzes in één oogopslag. Gekozen = volle
+            toestandskleur, de rest dezelfde kleur transparant. */}
+        {!trialRunning ? (
+          <View style={s.durSeg} accessibilityRole="radiogroup">
+            {DURATION_PRESETS[selectedMode].map((p) => {
+              const on = p.value === duration;
+              return (
+                <Pressable
+                  key={p.value}
+                  onPress={() => {
+                    if (on) return;
+                    void Haptics.selectionAsync();
+                    setDuration(p.value);
+                  }}
+                  style={[
+                    s.durSegItem,
+                    { backgroundColor: on ? meta.color : `${meta.color}26` },
+                  ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={`${p.value} minutes${p.recommended ? ', recommended' : ''}`}
+                >
+                  <Text style={[s.durSegTxt, { color: on ? '#0a0a0a' : 'rgba(255,255,255,0.85)' }]}>
+                    {p.value} min
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
 
         {/* Spacer — pushes Start-CTA naar onderkant. */}
         <View style={{ flex: 1, minHeight: 2 }} />
+
+        {/* Operator, 9 okt 2026 (Apple-stijl): de start-hartslag als
+            instellingenkaart onderaan — links wat het is, rechts de waarde
+            en een subtiel pijltje (tik = aanpassen). Vervangt het losse
+            label boven de cirkel. */}
+        {!trialRunning && !sessionRunning ? (
+          <PressScale
+            onPress={() => {
+              void Haptics.selectionAsync();
+              pendingAfterRhythm.current = null;
+              setRhythmOpen(true);
+            }}
+            style={[s.hrCard]} scaleTo={0.98}
+            accessibilityRole="button"
+            accessibilityLabel={
+              pulse.liveBpm !== null
+                ? `Starting heart rate, ${pulse.liveBpm} beats per minute, measured now. Tap to change.`
+                : pulse.source === 'average'
+                  ? `Starting heart rate, ${pulse.bpm} beats per minute, average. Tap to measure your heart right now.`
+                  : `Starting heart rate, ${pulse.bpm} beats per minute, your resting heart rate. Tap to measure your heart right now.`
+            }
+          >
+            <HeartPulse size={20} color="#ffffff" strokeWidth={2} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.hrCardTitle}>Starting heart rate</Text>
+              <Text style={s.hrCardSub}>
+                {pulse.liveBpm !== null ? 'Measured now' : pulse.source === 'average' ? 'Average' : 'Resting'}
+              </Text>
+            </View>
+            {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+            <Text style={s.hrCardValue}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
+            <ChevronRight size={18} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
+          </PressScale>
+        ) : null}
 
         {/* Quick Chill / Quick Boost: twee icoontjes naast elkaar boven de
             Start-knop (operator, 7 okt 2026: "enkel iconen, bij aantikken
@@ -6010,6 +6021,23 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   /* Boven de cirkel, gecentreerd onder de titel. */
+  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 22 },
+  durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
+  hrCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 12,
+    backgroundColor: '#1c1c1e',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 60,
+    marginBottom: 16,
+  },
+  hrCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15.5 },
+  hrCardSub: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 12.5, marginTop: 2 },
+  hrCardValue: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.semibold, fontSize: 15.5 },
   ringPulsePill: {
     alignSelf: 'center',
     marginTop: -6,
