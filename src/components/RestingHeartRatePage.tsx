@@ -22,6 +22,7 @@ import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ChevronRight } from 'lucide-react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
 import { ECG_SHAPE } from '@/utils/ecg-shape';
 import { useEffect, useState } from 'react';
@@ -247,7 +248,11 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         {/* Operator, 9 okt 2026 ("zweven een beetje"): tweede keuze als
             omlijnde knop, direct onder de hoofdknop — één blok. */}
         <PressScale style={s.linkFirst} onPress={() => setSheet('manual')} accessibilityRole="button">
-          <Text style={s.linkTxt}>Enter Manually</Text>
+          {/* Operator, 9 okt 2026: geen onderlijning, wel een subtiel pijltje. */}
+          <View style={s.linkRow}>
+            <Text style={s.linkTxt}>Enter Manually</Text>
+            <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+          </View>
         </PressScale>
         <PressScale
           style={s.link}
@@ -257,7 +262,10 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
           }}
           accessibilityRole="button"
         >
-          <Text style={s.linkDim}>Use an Average for Now</Text>
+          <View style={s.linkRow}>
+            <Text style={s.linkDim}>Use an Average for Now</Text>
+            <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.4} />
+          </View>
         </PressScale>
         <Text style={s.legal}>For wellness only, not a medical measurement.</Text>
       </View>
@@ -362,8 +370,9 @@ const s = StyleSheet.create({
   link: { height: 40, alignItems: 'center', justifyContent: 'center' },
   /* Operator, 9 okt 2026: onderstreept, zodat meteen duidelijk is dat het
      tikbaar is. */
-  linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff', textDecorationLine: 'underline' },
-  linkDim: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.7)', textDecorationLine: 'underline' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  linkDim: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.7)' },
   /* Voetnoot zoals Apple's kleine lettertjes: ~12–13 pt, grijs, helemaal
      onderaan met wat afstand tot de knoppen. */
   legal: {
