@@ -205,7 +205,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   /* Accent enkel in het beeld (hart/ringen) — tekst wit/grijs, Apple-stijl. */
-  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 26, marginBottom: 'auto' },
+  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 26, marginBottom: 12 },
   fact: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)' },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.3)' },
   actions: { paddingHorizontal: 24, paddingTop: 24, gap: 2 },
