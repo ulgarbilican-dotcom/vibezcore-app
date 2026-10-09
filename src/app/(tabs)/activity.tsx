@@ -269,25 +269,10 @@ export default function ActivityScreen() {
             flashKey={flashFor('scHistory')}
             onPress={() => open('scHistory', '/bracelet-history')}
           />
-          {/* Operator, 7 okt 2026: je rusthartslag ook hier — één getal en
-              de datum, bewust geen grafiek (we volgen geen gezondheid op;
-              het getal zet enkel het begintempo van je ritme). */}
-          <Row
-            large
-            Icon={HeartPulse}
-            title="Your rhythm"
-            sub={rhythmSub(pulse)}
-            onPress={() => setRhythmOpen(true)}
-          />
+          {/* Rusthartslag staat sinds 9 okt 2026 enkel nog op State Control
+              (label bovenaan) en Profile → Resting Heart Rate. */}
         </View>
       </ScrollView>
-      <RhythmSheet
-        visible={rhythmOpen}
-        mode={BraceletMode.Alpha}
-        fromProfile
-        onClose={() => setRhythmOpen(false)}
-        onDone={() => setRhythmOpen(false)}
-      />
     </SafeAreaView>
   );
 }

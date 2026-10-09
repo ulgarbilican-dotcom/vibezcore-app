@@ -3658,9 +3658,13 @@ function IdleScreen({
           >
             <HeartPulse size={18} color="rgba(255,255,255,0.9)" strokeWidth={2} />
             <Text style={s.ringPulseTxt}>
+              {/* Operator, 9 okt 2026 ("your rhythm onduidelijk — your
+                  heart rate moet echt duidelijk zijn"): gewone woorden. */}
               {pulse.liveBpm !== null
-                ? `${pulse.liveBpm} bpm · now`
-                : `${pulse.bpm} bpm${pulse.source === 'average' ? ' · avg' : ''}`}
+                ? `Heart rate now · ${pulse.liveBpm} bpm`
+                : pulse.source === 'average'
+                  ? `Average ${pulse.bpm} bpm · Measure`
+                  : `Resting heart rate · ${pulse.bpm} bpm`}
             </Text>
             {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
             {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}

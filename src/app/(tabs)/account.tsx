@@ -509,17 +509,19 @@ function RhythmGroup() {
       <Group title="State Control" footer="Stays on this device. Not a medical device.">
         <Row
           icon={HeartPulse}
-          title="Your rhythm"
+          title="Resting Heart Rate"
           subtitle={
             pulse.source === 'average'
-              ? 'Set for an average resting heart rate'
+              ? 'Average — not measured yet'
               : shouldSuggestRemeasure(pulse)
                 ? 'Time to measure again'
-                : 'Every session starts at your resting heart rate'
+                : `${pulse.source === 'measured' ? 'Measured' : 'Entered'} ${
+                    pulse.at ? new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''
+                  }`
           }
-          value={pulse.source === 'average' ? 'Average' : `${pulse.bpm} bpm`}
+          value={`${pulse.bpm} bpm`}
           onPress={() => setOpen(true)}
-          accessibilityLabel="Your rhythm — set your resting heart rate"
+          accessibilityLabel="Resting heart rate — measure or change"
         />
       </Group>
       <RhythmSheet

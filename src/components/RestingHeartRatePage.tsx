@@ -126,7 +126,9 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <PressScale style={s.cta} haptic scaleTo={0.97} onPress={() => setSheet('measure')} accessibilityRole="button">
           <Text style={s.ctaTxt}>Measure Now</Text>
         </PressScale>
-        <PressScale style={s.link} onPress={() => setSheet('manual')} accessibilityRole="button">
+        {/* Operator, 9 okt 2026 ("zweven een beetje"): tweede keuze als
+            omlijnde knop, direct onder de hoofdknop — één blok. */}
+        <PressScale style={s.secondaryBtn} scaleTo={0.97} onPress={() => setSheet('manual')} accessibilityRole="button">
           <Text style={s.linkTxt}>Enter Manually</Text>
         </PressScale>
         <PressScale
@@ -206,7 +208,7 @@ const s = StyleSheet.create({
   facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 26, marginBottom: 12 },
   fact: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)' },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.3)' },
-  actions: { paddingHorizontal: 24, paddingTop: 24, gap: 2 },
+  actions: { paddingHorizontal: 24, paddingTop: 24 },
   cta: {
     height: 54,
     borderRadius: 14,
@@ -215,13 +217,22 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
-  link: { height: 46, alignItems: 'center', justifyContent: 'center' },
+  secondaryBtn: {
+    marginTop: 10,
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  link: { height: 46, marginTop: 6, alignItems: 'center', justifyContent: 'center' },
   linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
-  linkDim: { fontFamily: BrandFonts.regular, fontSize: 15, color: 'rgba(255,255,255,0.5)' },
+  linkDim: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.85)' },
   /* Voetnoot zoals Apple's kleine lettertjes: ~12–13 pt, grijs, helemaal
      onderaan met wat afstand tot de knoppen. */
   legal: {
-    marginTop: 18,
+    marginTop: 10,
     textAlign: 'center',
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,
