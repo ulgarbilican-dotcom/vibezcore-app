@@ -21,7 +21,6 @@ import RhythmSheet from '@/components/RhythmSheet';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
-import Svg, { Circle as SvgCircle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -50,7 +49,8 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
       delay,
       /* Vervolg ("animatie buitenste ringen klopt niet"): een rimpeling per
          slag — leeft 2 slagen, dus max 2 ringen tegelijk. */
-      withRepeat(withTiming(1, { duration: BEAT_MS * 2, easing: Easing.out(Easing.cubic) }), -1, false),
+      /* Drukgolf: vertrekt vlot op de "lub", vertraagt dan zacht. */
+      withRepeat(withTiming(1, { duration: BEAT_MS * 2, easing: Easing.bezier(0.16, 1, 0.3, 1) }), -1, false),
     );
     return () => cancelAnimation(p);
   }, [delay, p, from]);
@@ -59,8 +59,10 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
   const style = useAnimatedStyle(() => ({
     /* Vervolg ("buitenste ringen niet zichtbaar"): vervaagt pas op het
        einde. */
-    opacity: 0.75 * (1 - p.value * p.value),
-    transform: [{ scale: from + p.value * (1.25 - from) }],
+    /* Vervolg ("deint te ver uit, moet beter"): blijft binnen de eigen
+       ruimte (tot 1×), zachter vervagen. */
+    opacity: 0.55 * (1 - p.value),
+    transform: [{ scale: from + p.value * (1 - from) }],
   }));
   return (
     <Animated.View
@@ -87,10 +89,15 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
   useEffect(() => {
     beat.value = withRepeat(
       withSequence(
-        withTiming(1.09, { duration: 160, easing: Easing.out(Easing.quad) }),
-        withTiming(1, { duration: 200, easing: Easing.inOut(Easing.quad) }),
-        withDelay(60, withTiming(1.045, { duration: 140, easing: Easing.out(Easing.quad) })),
-        withTiming(1, { duration: 640, easing: Easing.inOut(Easing.sin) }),
+        /* Operator, 9 okt 2026 ("kan je echte hartslag nabootsen"): de
+           hartcyclus — "lub" (S1, kamers trekken krachtig en snel samen),
+           ~300 ms later een kleinere "dub" (S2, kleppen sluiten), dan de
+           lange, rustige vulfase. 1200 ms ≈ 50 bpm. */
+        withTiming(1.1, { duration: 90, easing: Easing.bezier(0.2, 0.9, 0.3, 1) }),
+        withTiming(1.0, { duration: 140, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
+        withDelay(70, withTiming(1.05, { duration: 80, easing: Easing.bezier(0.2, 0.9, 0.3, 1) })),
+        withTiming(1, { duration: 180, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
+        withDelay(640, withTiming(1, { duration: 0 })),
       ),
       -1,
       false,
@@ -131,25 +138,17 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Ring key={`r0-${stage}`} delay={0} size={stage} from={0.42} />
-          <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={0.42} />
-          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.6, height: stage * 1.6, zIndex: 0 }, glowStyle]}>
-            {/* react-native-svg i.p.v. Skia: Skia's canvas kwam op Android
-                BOVEN het hart te liggen (hart oogde grijs, ringen weg). */}
-            <Svg width={stage * 1.6} height={stage * 1.6}>
-              <Defs>
-                <RadialGradient id="hrGlow" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor="#ffffff" stopOpacity={0.42} />
-                  <Stop offset="0.18" stopColor="#ffffff" stopOpacity={0.18} />
-                  <Stop offset="0.4" stopColor="#ffffff" stopOpacity={0.06} />
-                  <Stop offset="0.68" stopColor="#ffffff" stopOpacity={0.015} />
-                  <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
-                </RadialGradient>
-              </Defs>
-              <SvgCircle cx={stage * 0.8} cy={stage * 0.8} r={stage * 0.8} fill="url(#hrGlow)" />
-            </Svg>
-          </Animated.View>
+          <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
+          <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2, elevation: 2 }, coreStyle]}>
+            {/* Operator, 9 okt 2026: doorschijnend witte, gevulde cirkel rond
+                het hart (geen losse lichtbron). */}
+            <LinearGradient
+              colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.05)']}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
             <Animated.View style={heartStyle}>
               <Heart size={Math.round(core * 0.42)} color="#ffffff" fill="#ffffff" strokeWidth={1.4} />
             </Animated.View>
@@ -215,14 +214,17 @@ const s = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderColor: '#ffffff', // 9 okt 2026: ringen wit (geheel in wit)
   },
   /* Operator, 9 okt 2026: geen gevulde cirkel meer — enkel het hart met de
      lichtbron erachter. (Container blijft voor de maat.) */
   core: {
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   title: {
     marginTop: 8,
