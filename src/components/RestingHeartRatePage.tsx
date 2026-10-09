@@ -126,13 +126,21 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     heartbeatTick();
     hapticTap();
   }, []);
-  const lastBeatK = useSharedValue(-1);
+  /* Eerste beeldje: enkel de huidige slag onthouden. Daarna klinkt elke
+     nieuwe slag — ook de allereerste "lub" (k gaat van −1 naar 0 na
+     ~1 s); die werd eerst overgeslagen (operator: "duurt 3 à 4 s"). */
+  const lastBeatK = useSharedValue(0);
+  const beatInit = useSharedValue(false);
   useFrameCallback(() => {
     const k = Math.floor((clock.value - travelMs + SOUND_LEAD_MS) / BEAT_MS);
-    if (k !== lastBeatK.value) {
-      const first = lastBeatK.value < 0;
+    if (!beatInit.value) {
+      beatInit.value = true;
       lastBeatK.value = k;
-      if (!first) scheduleOnRN(onBeat);
+      return;
+    }
+    if (k !== lastBeatK.value) {
+      lastBeatK.value = k;
+      scheduleOnRN(onBeat);
     }
   });
   const [focused, setFocused] = useState(false);
