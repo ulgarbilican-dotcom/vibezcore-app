@@ -42,7 +42,7 @@ const BEAT_MS = 1200; // ≈50 bpm — operator 9 okt 2026: "hartslag mag rustig
 /* Operator, 9 okt 2026 ("de ringen doen niets"): elke ring een eigen,
    onafhankelijke animatie (gedeelde teller bleef op 0 staan). Vertraging
    0 / 1 / 2 s → bij elke hartslag vertrekt een nieuwe ring. */
-function Ring({ delay, size }: { delay: number; size: number }) {
+function Ring({ delay, size, from }: { delay: number; size: number; from: number }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.value = withDelay(
@@ -51,9 +51,11 @@ function Ring({ delay, size }: { delay: number; size: number }) {
     );
     return () => cancelAnimation(p);
   }, [delay, p]);
+  /* Vervolg ("geheel moet mooi samenwerken"): start exact op de rand van
+     de gevulde cirkel (`from`), deint uit tot de buitenrand, vervaagt. */
   const style = useAnimatedStyle(() => ({
-    opacity: 0.5 * (1 - p.value),
-    transform: [{ scale: 0.5 + p.value * 0.6 }],
+    opacity: 0.6 * (1 - p.value),
+    transform: [{ scale: from + p.value * (1.15 - from) }],
   }));
   return (
     <Animated.View
@@ -90,6 +92,9 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
     );
   }, [beat]);
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
+  /* Vervolg ("de grote volle cirkel moet ook meebewegen"): klopt mee,
+     half zo sterk als het hart — één kloppend geheel. */
+  const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
 
   return (
     <View style={s.root}>
@@ -103,10 +108,10 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Ring delay={0} size={stage} />
-          <Ring delay={BEAT_MS} size={stage} />
-          <Ring delay={BEAT_MS * 2} size={stage} />
-          <View style={[s.core, { width: core, height: core, borderRadius: core / 2 }]}>
+          <Ring delay={0} size={stage} from={core / stage} />
+          <Ring delay={BEAT_MS} size={stage} from={core / stage} />
+          <Ring delay={BEAT_MS * 2} size={stage} from={core / stage} />
+          <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2 }, coreStyle]}>
             <LinearGradient
               colors={['rgba(74,240,212,0.22)', 'rgba(0,163,163,0.10)']}
               start={{ x: 0.2, y: 0 }}
@@ -116,7 +121,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
             <Animated.View style={heartStyle}>
               <Heart size={Math.round(core * 0.42)} color={AudioAccentLight} fill={AudioAccentLight} strokeWidth={1.4} />
             </Animated.View>
-          </View>
+          </Animated.View>
         </View>
         </View>
 
@@ -178,7 +183,7 @@ const s = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderColor: AudioAccentLight,
   },
   core: {
