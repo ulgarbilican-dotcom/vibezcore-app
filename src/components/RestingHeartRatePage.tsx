@@ -114,8 +114,6 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     return beatScale(ph);
   });
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
-  /* De glazen cirkel klopt half zo sterk mee — één kloppend geheel. */
-  const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
 
   /* Hoogte van de lijn op het schrijfpunt, nu. */
   const headY = useDerivedValue(() => {
@@ -171,7 +169,8 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }, coreStyle]}>
+          {/* Operator, 9 okt 2026: de cirkel staat stil — enkel het hart klopt. */}
+          <View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }]}>
             {/* Vervolg (operator, 9 okt 2026: "de volle cirkel toch groen glas"):
                 Bio-Teal tint, lichte glans bovenaan, dunne heldere rand
                 (s.core). Geen echte vervaging buiten een sheet — dat crasht
@@ -188,7 +187,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               end={{ x: 0.5, y: 0.55 }}
               style={StyleSheet.absoluteFill}
             />
-          </Animated.View>
+          </View>
           {/* Hartlijn tussen het glas en het hart. */}
           <Svg
             pointerEvents="none"
