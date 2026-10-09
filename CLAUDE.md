@@ -15,6 +15,11 @@
 ## 0. EERST LEZEN — verplichte context
 
 Bij start van werk aan dit project, lees in deze volgorde:
+0. **`docs/WERKSTATUS.md` — waar het werk NU staat** (werkbranch, lopende
+   bouwronde, volgende stappen, wat op de operator wacht). Daarna `git log -20`,
+   `docs/TEST_LOG.md` en het geheugen (MEMORY.md). Zo ga je zonder vragen verder.
+   WERKSTATUS.md bijwerken na elke afgeronde wijziging, in dezelfde commit,
+   en meteen pushen (operator, 9 okt 2026).
 1. Dit bestand (CLAUDE.md) — de harde regels.
 2. `docs/VIBEZCORE_APP_VOLLEDIGE_SPEC.md` — volledige app-specificatie (architectuur, elk scherm, huidige staat).
 3. `docs/MERK_ANKER.md` — font, kleuren, logo, look-and-feel (bindend voor alles wat uiterlijk is).
@@ -326,6 +331,7 @@ open (sectie 7 van het ontwerpdoc) — niet zelf invullen.
 
 - Omgeving: Windows, projectpad `C:\Users\ulgar\vibezcore-app`, VS Code.
 - Native module toevoegen → rebuild nodig (`npx expo run:android`).
-- Git staat op (branch `master`); er is een snapshot-commit als vangnet.
+- Git: werkbranch **`rollback-vc76-take2`** op https://github.com/ulgarbilican-dotcom/vibezcore-app
+  (niet `master`/`main`). Na elke afgeronde wijziging committen én pushen; zie `docs/WERKSTATUS.md`.
 - Bij elke twijfel over scope, teksten, of een onomkeerbare actie: STOP en vraag
   de operator. Liever een vraag te veel dan een verkeerde aanname.
