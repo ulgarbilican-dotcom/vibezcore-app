@@ -315,7 +315,7 @@ export default function BraceletScreen() {
   if (showHrPage) {
     /* onDone: de keuze is opgeslagen → `pulse.decided` wordt true en dit
        scherm verdwijnt vanzelf. */
-    return <RestingHeartRatePage onDone={() => {}} />;
+    return <RestingHeartRatePage onDone={() => {}} onBack={() => setShowIntro(true)} />;
   }
 
   /* Operator, 4 okt 2026 ("looking for your device-scherm overbodig"):

@@ -24,7 +24,7 @@ import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -79,7 +79,17 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
   );
 }
 
-export default function RestingHeartRatePage({ onDone }: { onDone: () => void }) {
+export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () => void; onBack?: () => void }) {
+  /* Operator, 9 okt 2026: Android-terugknop → terug naar de State Control-
+     welkomstpagina. (Een open meetblad vangt de terugknop zelf eerst.) */
+  useEffect(() => {
+    if (!onBack) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
   const insets = useSafeAreaInsets();
   /* Operator, 9 okt 2026 ("alle tekst op elkaar"): het beeld schaalt mee
      met de schermhoogte i.p.v. vaste 260 pt. */
