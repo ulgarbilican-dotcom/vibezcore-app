@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["AudioRouteModule"]
+  },
+  "android": {
+    "modules": ["com.ubili.vibezcoreapp.audioroute.AudioRouteModule"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "audio-route",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — zegt of het geluid nu naar een koptelefoon/oortjes gaat (bedraad, USB of Bluetooth) of naar de telefoonspeaker.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}
