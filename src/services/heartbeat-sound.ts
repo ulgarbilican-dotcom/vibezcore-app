@@ -8,10 +8,11 @@
      - speaker (assets/heartbeat-speaker.wav): Pixabay "freesound_community
        heartbeat 6396", tweede slag op 1,04 s, klank onaangeroerd;
      - koptelefoon/oortjes (assets/heartbeat-headphones.wav): Pixabay
-       "liecio heartbeat 297400" (operator: "de beste"; 6396 ook getest in
-       de koptelefoon → "niet goed"), slag op 1,50 s, lub-dub 0,26 s, klank
-       onaangeroerd; dub sterft zacht uit en 0,35 s stilte erachter (tegen
-       een kraakje op het einde).
+       "liecio heartbeat 297400" (operator: "de beste"; 6396, 549797,
+       21649, 493995, 493999, 584627 en 5857 ook getest → "niet goed"),
+       slag op 1,50 s, lub-dub 0,26 s. Lub verzacht ("te intens, scherp"):
+       < 700 Hz, 60% sterkte, rondere inzet; dub onaangeroerd; zachte
+       uitsterving + 0,35 s stilte tegen een kraakje op het einde.
    Pixabay-licentie: vrij in apps, geen naamsvermelding. De uitgang wordt
    bij elke slag bekeken (modules/audio-route), dus oortjes in- of uitdoen
    tijdens het luisteren werkt meteen. Op elke
