@@ -3817,6 +3817,28 @@ function IdleScreen({
               }
             />
           </ModeSwipeRing>
+          {/* Operator, 9 okt 2026: je hartslag als klein pilletje onder de
+              vaste tijden — enkel hart, bpm en pijltje (in de ring was het
+              verwarrend onder "Recommended"). Tik = hartslag-blad. */}
+          {!trialRunning && !sessionRunning ? (
+            <PressScale
+              onPress={() => {
+                void Haptics.selectionAsync();
+                pendingAfterRhythm.current = null;
+                setRhythmOpen(true);
+              }}
+              hitSlop={12}
+              scaleTo={0.94}
+              style={[s.ringHr, s.ringHrTop]}
+              accessibilityRole="button"
+              accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
+            >
+              <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
+              <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
+              {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+              <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+            </PressScale>
+          ) : null}
         </View>
 
         {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
@@ -3897,28 +3919,6 @@ function IdleScreen({
               );
             })}
           </View>
-        ) : null}
-        {/* Operator, 9 okt 2026: je hartslag als klein pilletje onder de
-            vaste tijden — enkel hart, bpm en pijltje (in de ring was het
-            verwarrend onder "Recommended"). Tik = hartslag-blad. */}
-        {!trialRunning && !sessionRunning ? (
-          <PressScale
-            onPress={() => {
-              void Haptics.selectionAsync();
-              pendingAfterRhythm.current = null;
-              setRhythmOpen(true);
-            }}
-            hitSlop={12}
-            scaleTo={0.94}
-            style={[s.ringHr]}
-            accessibilityRole="button"
-            accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
-          >
-            <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
-            <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
-            {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
-            <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
-          </PressScale>
         ) : null}
 
         {/* Spacer — pushes Start-CTA naar onderkant. */}
@@ -6082,9 +6082,9 @@ const s = StyleSheet.create({
   durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 40 },
   durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
+  ringHrTop: { position: 'absolute', top: 26 },
   ringHr: {
     alignSelf: 'center',
-    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
