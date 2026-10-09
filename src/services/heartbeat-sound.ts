@@ -4,10 +4,9 @@
    geven?").
 
    Eén echte lub-dub (assets/heartbeat.wav: geknipt uit de Pixabay-opname
-   "heartbeat sound 493999" — Pixabay-licentie, vrij in apps, geen
-   naamsvermelding; slag op 7,58 s, lub-dub 0,3 s = hart in rust). Afstelling
-   na operator-feedback ("te hard en dof" → "te vol en diep" → "te ver weg"):
-   geen compressie, < 70 Hz en > 4 kHz eruit. Op elke
+   "soundreality heartbeat 549797" — Pixabay-licentie, vrij in apps, geen
+   naamsvermelding; slag op 3,65 s uit een rustig hart van ~70 bpm, lub-dub
+   0,3 s; natuurlijke klank, enkel < 25 Hz eruit). Op elke
    slag van het kloppende hart. Regels:
      - mengt met muziek van de gebruiker (nooit iemands muziek stoppen);
      - iOS: stil als de telefoon op stil staat (Android: mediavolume);
