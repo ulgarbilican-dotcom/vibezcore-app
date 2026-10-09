@@ -43,8 +43,10 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 /* Eén hartslag op de lijn (P, QRS, T): [ms t.o.v. de R-piek, hoogte −1…1]. */
 const PQRST: [number, number][] = [
-  [-200, 0], [-170, 0.08], [-140, 0], [-45, 0], [-28, -0.14], [0, 1], [24, -0.34],
-  [44, 0], [150, 0], [200, 0.18], [250, 0],
+  /* Vervolg (operator, 9 okt 2026): duidelijkere piek en een diepe
+     S-uitschieter, zoals op een echte monitor. */
+  [-200, 0], [-170, 0.1], [-140, 0], [-45, 0], [-30, -0.16], [0, 1], [26, -0.62],
+  [48, 0.04], [62, 0], [150, 0], [205, 0.22], [260, 0],
 ];
 /* De R-piek valt midden in de "lub" van het hart. */
 const R_AT = 60;
@@ -108,10 +110,10 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   /* Hartlijn: horizontaal door de cirkel, schuift van rechts naar links,
      twee slagen zichtbaar, vervaagt naar de randen. */
   const lineW = Math.round(Math.min(width - 32, stage * 1.7));
-  const lineH = Math.round(core * 0.62);
+  const lineH = Math.round(core * 0.8);
   const lineProps = useAnimatedProps(() => {
     const mid = lineH / 2;
-    const amp = lineH / 2 - 3;
+    const amp = (lineH / 2 - 3) * 0.95;
     const cx = lineW / 2;
     const v = cx / BEAT_MS; // één slag per halve breedte
     const now = clock.value;
@@ -180,7 +182,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
             <AnimatedPath
               animatedProps={lineProps}
               stroke="url(#ecgPage)"
-              strokeWidth={1.8}
+              strokeWidth={2.4}
               fill="none"
               strokeLinejoin="round"
               strokeLinecap="round"
