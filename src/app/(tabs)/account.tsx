@@ -529,6 +529,7 @@ function RhythmGroup() {
         visible={open}
         mode={BraceletMode.Alpha}
         fromProfile
+        nextLabel="Back to Profile"
         onClose={() => setOpen(false)}
         onDone={() => setOpen(false)}
       />

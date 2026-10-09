@@ -81,6 +81,9 @@ type Props = {
       hartslag van NU — tijdelijk startpunt voor deze sessie. De
       rusthartslag wijzig je in Profile. */
   now?: boolean;
+  /** Knop na een geslaagde meting: zegt wat er nu gebeurt (operator, 9 okt
+      2026: "Continue, maar wat gaat de gebruiker juist doen?"). */
+  nextLabel?: string;
 };
 
 export default function RhythmSheet({
@@ -91,6 +94,7 @@ export default function RhythmSheet({
   startAt = 'choose',
   fromProfile = false,
   now = false,
+  nextLabel = 'Continue',
 }: Props) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
@@ -99,6 +103,7 @@ export default function RhythmSheet({
   const [justMeasured, setJustMeasured] = useState<number | null>(null);
   /* Foutscherm van de meter: dan geen meetuitleg erboven/eronder. */
   const [meterError, setMeterError] = useState(false);
+  const [measuredOk, setMeasuredOk] = useState(false);
   const [manualBpm, setManualBpm] = useState(() => {
     const p = getRestingPulse();
     return p.source === 'average' ? AVERAGE_RESTING_BPM : p.bpm;
@@ -108,6 +113,7 @@ export default function RhythmSheet({
       setStep(startAt);
       setJustMeasured(null);
       setMeterError(false);
+      setMeasuredOk(false);
     }
   }, [visible, startAt]);
 
@@ -283,29 +289,41 @@ export default function RhythmSheet({
             {/* Operator, 9 okt 2026 ("dubbele tekst"): geen instructie meer
                 bovenaan — de statusregel onder de lijn is de enige tekst en
                 beweegt mee met wat er gebeurt. Ring blijft op dezelfde hoogte. */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 34 }}>
+            {/* Vervolg (operator: "laat de cirkel zakken"). */}
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 84 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
                   /* De sessie die nu volgt, begint bij het hart van nu. */
                   setLiveStartPulse(bpm);
                   setJustMeasured(bpm);
-                  /* Operator, 9 okt 2026 ("de Done staat onderaan — kan dat in
-                     de cirkel zelf?"): "Done" in de ring sluit meteen af. Enkel
-                     bij een veel lagere meting dan je rusthartslag nog het
-                     uitlegscherm (die waarde wordt nog niet overgenomen). */
-                  if (bpm < getRestingPulse().bpm) setStep('result');
-                  else onDone();
+                  /* Operator, 9 okt 2026: vinkje in de ring + onderaan één
+                     duidelijke volgende stap ("Continue"). */
+                  setMeasuredOk(true);
                 }
               }}
               onManual={() => setStep('manual')}
               onErrorChange={setMeterError}
             />
             </View>
-            <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }, meterError ? { opacity: 0 } : null]}>
-              {/* Enkel de privacy-geruststelling, op het moment dat de camera aangaat. */}
-              <Text style={s.fact}>No images saved</Text>
-            </View>
+            {measuredOk ? (
+              /* Enkel bij een veel lagere meting dan je rusthartslag eerst het
+                 uitlegscherm (die waarde wordt nog niet overgenomen). */
+              <PressScale
+                style={[s.cta, { marginTop: 'auto', marginBottom: 10, alignSelf: 'stretch' }]}
+                haptic
+                scaleTo={0.97}
+                onPress={() => (justMeasured !== null && justMeasured < getRestingPulse().bpm ? setStep('result') : onDone())}
+                accessibilityRole="button"
+              >
+                <Text style={s.ctaTxt}>{nextLabel}</Text>
+              </PressScale>
+            ) : (
+              <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }, meterError ? { opacity: 0 } : null]}>
+                {/* Enkel de privacy-geruststelling, op het moment dat de camera aangaat. */}
+                <Text style={s.fact}>No images saved</Text>
+              </View>
+            )}
           </>
         ) : null}
 
@@ -351,7 +369,7 @@ export default function RhythmSheet({
               </Text>
             </View>
             <PressScale style={[s.cta]} haptic scaleTo={0.97} onPress={onDone} accessibilityRole="button">
-              <Text style={s.ctaTxt}>Continue</Text>
+              <Text style={s.ctaTxt}>{nextLabel}</Text>
             </PressScale>
             {now && !belowRest ? (
               <Text style={s.restNote}>For this session only. Your resting heart rate stays {pulse.bpm} bpm.</Text>

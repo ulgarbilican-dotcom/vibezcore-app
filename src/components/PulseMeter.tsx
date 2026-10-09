@@ -20,7 +20,7 @@ import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, robustPulse, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
 import { Check, ChevronRight, CircleAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, AppState, Dimensions, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, Dimensions, Easing, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useCamera, useCameraPermission, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -571,6 +571,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             setFinalBpm(res.bpm);
             setLiveBpm(res.bpm);
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onResult(res.bpm);
           }, 1200);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
@@ -879,20 +880,12 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             <FingerPlacementAnim />
           ) : (
             finalBpm !== null ? (
-              /* Operator, 9 okt 2026 ("de Done staat onderaan — kan dat in de
-                 cirkel zelf, een vinkje met Done?"): het hart wordt een vinkje,
-                 de hele cirkel is de knop. */
-              <Pressable
-                onPress={() => onResult(finalBpm)}
-                accessibilityRole="button"
-                accessibilityLabel={`Done, ${finalBpm} beats per minute`}
-                style={s.doneHit}
-              >
-                <Animated.View style={{ alignItems: 'center', opacity: doneIn, transform: [{ scale: doneIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }}>
-                  <Check size={64} color={ACCENT} strokeWidth={2.6} />
-                  <Text style={s.doneTxt}>Done</Text>
-                </Animated.View>
-              </Pressable>
+              /* Operator, 9 okt 2026: na de meting wordt het hart een vinkje
+               (vervolg: "Done" in de cirkel was niet goed — de volgende stap
+               is een knop onderaan, in het blad). */
+            <Animated.View style={{ opacity: doneIn, transform: [{ scale: doneIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }}>
+              <Check size={72} color={ACCENT} strokeWidth={2.6} />
+            </Animated.View>
             ) : (
               <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
                 {/* Vervolg: het hart klopt gewoon mee in vol teal glas (zelfde
@@ -963,8 +956,6 @@ const s = StyleSheet.create({
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
   stage: { width: ECG_W, height: RING_LINE, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   ringWrap: { width: RING_LINE, height: RING_LINE, alignItems: 'center', justifyContent: 'center' },
-  doneHit: { width: RING_LINE, height: RING_LINE, borderRadius: RING_LINE / 2, alignItems: 'center', justifyContent: 'center' },
-  doneTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17, marginTop: 6 },
   msg: {
     color: '#ffffff',
     fontSize: 17,

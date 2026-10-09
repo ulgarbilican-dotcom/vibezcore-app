@@ -4120,6 +4120,8 @@ function IdleScreen({
         /* Nog geen rusthartslag gekozen → eerst die (gewone blad); daarna
            gaat dit blad enkel over je hartslag van nu. */
         now={pulse.decided}
+        /* Geopend vanuit Start → de sessie begint meteen na de meting. */
+        nextLabel={pendingAfterRhythm.current ? 'Start Session' : 'Back to State Control'}
         onClose={() => {
           pendingAfterRhythm.current = null;
           setRhythmOpen(false);
