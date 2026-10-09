@@ -17,7 +17,7 @@ import FingerPlacementAnim from '@/components/FingerPlacementAnim';
 import PressScale from '@/components/PressScale';
 import * as Haptics from 'expo-haptics';
 import { BrandFonts } from '@/constants/theme';
-import { analyzePulse, fingerOnLens, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
+import { analyzePulse, fingerOnLens, robustPulse, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
 import { ChevronRight, CircleAlert, Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Dimensions, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -48,8 +48,10 @@ const LOW_BATTERY = 0.15;
 
 /* Operator, 9 okt 2026: "desnoods mag de meting langer duren, als ze maar
    correct is" — 20 s meten, tot 35 s als de controle niet klopt. */
-const MEASURE_MS = 20_000;
-const MAX_MS = 35_000;
+/* Vervolg (operator, 9 okt 2026: "de meting moet exact 30 seconden in
+   totaal duren, elke keer"): vaste 30 s, geen verlenging. */
+const MEASURE_MS = 30_000;
+const MAX_MS = 30_000;
 const SETTLE_MS = 500; // 9 okt 2026: "bpm begint te laat" (was 1 s)
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
@@ -365,7 +367,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const liveEma = useRef<number | null>(null);
   const liveHist = useRef<number[]>([]);
   const liveTarget = useRef<number | null>(null);
-  const numPulse = useRef(new Animated.Value(1)).current;
+  const liveStepAt = useRef(0);
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
   const [calculating, setCalculating] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -482,17 +484,12 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
          akkoord van 4 opeenvolgende schattingen (operator: "telling begint
          laat" én "moet correct zijn"). Eindresultaat blijft streng. */
       const est = recent.length > 72 ? analyzePulse(recent, 2, true) : null;
-      const b = est ? est.beats[est.beats.length - 1] : null;
-      /* Operator, 9 okt 2026 ("boven de meting in grote cijfers live te zien"):
-         een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
-         is (eerste seconden zijn onrustig) en enkel bij een geloofwaardige
-         schatting. */
-      /* Vervolg (operator: "bpm onmiddellijk mee tonen"): vanaf de eerste
-         bruikbare schatting (~4 s signaal), niet pas na de omtrek. */
-      /* Vervolg (operator: "van 81 naar 53 en terug, niet accuraat"): zoals
-         een horloge — mediaan van de laatste 5 schattingen (uitschieters
-         vallen weg), pas tonen als twee opeenvolgende schattingen binnen
-         12% liggen, en daarna per slag hooguit 3 bpm bijsturen. */
+      /* Operator, 9 okt 2026 ("van 81 naar 53 en terug, niet accuraat" en
+         later "het getal moet gewoon stabiel staan, niet haperen"): zoals een
+         horloge — mediaan van de laatste 5 schattingen, pas tonen als 4
+         opeenvolgende schattingen binnen 8% liggen, en daarna enkel nog
+         bijsturen bij een blijvend verschil van ≥ 2 bpm, met 1 bpm per
+         1,5 s. Valt het signaal even weg, dan blijft het getal gewoon staan. */
       if (est && est.bpm >= 40 && est.bpm <= 140) {
         const hist = [...liveHist.current, est.bpm].slice(-5);
         liveHist.current = hist;
@@ -503,64 +500,37 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           const agree = last4.every((x) => Math.abs(x - median) / median <= 0.08);
           if (agree) {
             liveEma.current = Math.round(median);
+            liveStepAt.current = Date.now();
             setLiveBpm(liveEma.current);
           }
         }
         liveTarget.current = median;
       }
-      if (b !== null && b > lastShownBeat.current + 250) {
-        lastShownBeat.current = b;
-        /* Echt tijdstip van de slag (niet het moment van opmerken). */
-        const wall = Date.now() - (last.t - b);
-        /* Voorlopige zachte slagen die met deze echte slag overlappen,
-           wijken (anders kruist de lijn zichzelf). */
-        setBeatLog((prev) =>
-          [
-            ...prev.filter(
-              (x) => wall - x.t < ECG_WINDOW_MS + ECG_DELAY_MS + 1000 && (!x.soft || x.t < wall - 500),
-            ),
-            { t: wall, a: ecgAmpAt(Math.min(1, elapsed / MEASURE_MS)) },
-          ].sort((m, n) => m.t - n.t),
-        );
-        /* Het hart klopt op het echte ritme, tegelijk met de piek die op
-           de lijn binnenschuift (zelfde vaste vertraging) — niet op het
-           toevallige moment dat de controle hem opmerkt. */
-        const at = Math.max(0, wall + ECG_DELAY_MS - Date.now());
-        const tid = setTimeout(() => {
-          beatTimers.current.delete(tid);
-          lastRealAt.current = Date.now();
-          /* Vervolg ("het getal moet volgens het hartritme tellen"): het
-             getal ververst op elke slag en klopt even mee. */
-          if (liveEma.current !== null && liveTarget.current !== null) {
-            const step = Math.max(-3, Math.min(3, liveTarget.current - liveEma.current));
-            liveEma.current = Math.round(liveEma.current + step);
-            setLiveBpm(liveEma.current);
-          }
-          numPulse.setValue(1.08);
-          Animated.timing(numPulse, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-          /* Vervolg (operator: "het hartritme moet mooi, smooth en kloppen"):
-             dezelfde lub-dub als op de Resting Heart Rate-pagina. */
-          lubDub(beat, 0.07, liveEma.current).start();
-        }, at);
-        beatTimers.current.add(tid);
+      if (
+        liveEma.current !== null &&
+        liveTarget.current !== null &&
+        Math.abs(liveTarget.current - liveEma.current) >= 2 &&
+        Date.now() - liveStepAt.current >= 1500
+      ) {
+        liveEma.current += Math.sign(liveTarget.current - liveEma.current);
+        liveStepAt.current = Date.now();
+        setLiveBpm(liveEma.current);
       }
 
       if (elapsed >= MEASURE_MS) {
         /* Meettijd om: rekenen (en zo nodig stil doormeten voor de controle). */
         setCalculating(true);
         const window = samples.current.filter((p) => p.t >= last.t - MEASURE_MS);
-        const res = analyzePulse(window);
+        const res = robustPulse(window);
         /* Operator, 9 okt 2026 ("40 kan niet" + "try again moet ook niet
            zomaar gebeuren, efficiënt, niet bij elke vermoedelijke fout"):
            een twijfelachtige uitkomst na 15 s → stil doormeten tot 25 s op
            een schuivend venster van de laatste 15 s (een beweging in het
            begin valt er dan vanzelf uit). Pas als het dan nog niet lukt:
            één eerlijke melding met de meest waarschijnlijke reden. */
-        /* Controle: het volledige venster en de laatste 10 s apart moeten
-           hetzelfde zeggen (≤7% verschil), anders stil doormeten. */
-        const tail = analyzePulse(samples.current.filter((p) => p.t >= last.t - 10_000), 6);
-        const consistent = !!res && !!tail && Math.abs(tail.bpm - res.bpm) / res.bpm <= 0.07;
-        const ok = !!res && consistent && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
+        /* Controle zit in robustPulse: enkel schone stukken tellen, en die
+           moeten samen ~12 s dekken en het eens zijn. */
+        const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
         if (ok && res) {
           finished.current = true;
           /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst
@@ -614,21 +584,25 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
          op zolang er geen echte slag is (ook als het signaal even wegvalt),
          en zijn hoogte volgt de voortgang — dus groot zodra het hart vult,
          los van wanneer de echte slagen gevonden worden. */
+      /* Vervolg (operator, 9 okt 2026: "de hartslag hapert"): het hart en
+         de lijn kloppen op een regelmatige maat, niet op het onregelmatige
+         moment dat de analyse een slag opmerkt. Eerst de zachte ≈55 bpm;
+         zodra het getal staat, op precies dat getal. */
+      let tid: ReturnType<typeof setTimeout>;
       const softBeat = () => {
-        if (Date.now() - lastRealAt.current < 1600) return; // echte slagen lopen
-        lubDub(idle, 0.045, null).start();
+        const bpm = liveEma.current;
+        if (bpm !== null) lubDub(beat, 0.07, bpm).start();
+        else lubDub(idle, 0.045, null).start();
         const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
         const p = progressRef.current;
         const a = p > 0 ? ecgAmpAt(p) : SOFT_BEAT_AMP;
-        setBeatLog((prev) => {
-          /* Niet over een echte slag heen tekenen (lijn mag zichzelf niet kruisen). */
-          if (prev.some((x) => !x.soft && Math.abs(x.t - t) < 500)) return prev;
-          return [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a, soft: true }].sort((m, n) => m.t - n.t);
-        });
+        setBeatLog((prev) =>
+          [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a, soft: bpm === null }].sort((m, n) => m.t - n.t),
+        );
+        tid = setTimeout(softBeat, bpm !== null ? 60000 / bpm : SOFT_BEAT_MS);
       };
       softBeat();
-      const id = setInterval(softBeat, SOFT_BEAT_MS);
-      return () => clearInterval(id);
+      return () => clearTimeout(tid);
     }
     if (!placing) {
       idle.stopAnimation();
@@ -643,7 +617,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     );
     loop.start();
     return () => loop.stop();
-  }, [fingerOn, placing, idle]);
+  }, [fingerOn, placing, idle, beat]);
 
   const onFrame = useCallback(
     (frame: Frame) => {
@@ -834,7 +808,6 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             liveBpm === null ? s.liveNumIdle : null,
             calculating ? { opacity: 0.45 } : null,
             finalBpm !== null ? { color: ACCENT } : null,
-            { transform: [{ scale: numPulse }] },
           ]}
         >
           {liveBpm ?? '--'}

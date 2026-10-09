@@ -203,3 +203,28 @@ export function latestBeat(samples: PulseSample[]): number | null {
   const res = analyzePulse(samples, 3);
   return res ? res.beats[res.beats.length - 1] : null;
 }
+
+/** Eindresultaat over de volle meting (operator, 9 okt 2026: "faalt terwijl
+ *  de vinger correct lag"). Eén verstoring (beweging, de camera die zijn
+ *  belichting bijregelt) mag niet de hele meting kelderen: we schuiven een
+ *  venster van 8 s per seconde over de meting, houden enkel de schone
+ *  vensters over en vragen dat die samen minstens ~12 s dekken (≥ 5
+ *  vensters) en het eens zijn (≥ 80% binnen 7% van de mediaan). */
+export function robustPulse(samples: PulseSample[]): PulseResult | null {
+  if (samples.length < 2) return null;
+  const tStart = samples[0].t;
+  const tEnd = samples[samples.length - 1].t;
+  const WIN = 8000;
+  const found: PulseResult[] = [];
+  for (let w = tStart; w + WIN <= tEnd + 1; w += 1000) {
+    const res = analyzePulse(samples.filter((p) => p.t >= w && p.t < w + WIN), 5);
+    if (res) found.push(res);
+  }
+  if (found.length < 5) return null;
+  const med = median(found.map((r) => r.bpm));
+  const agree = found.filter((r) => Math.abs(r.bpm - med) / med <= 0.07);
+  if (agree.length / found.length < 0.8) return null;
+  const bpm = Math.round(agree.reduce((a, r) => a + r.bpm, 0) / agree.length);
+  const confidence = agree.reduce((a, r) => a + r.confidence, 0) / agree.length;
+  return { bpm, confidence, beats: agree[agree.length - 1].beats };
+}
