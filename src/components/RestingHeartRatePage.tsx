@@ -218,12 +218,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
+  /* Vervolg ("omlijning niet mooi"): iOS' grijze knop — zachte vulling,
+     geen rand. */
   secondaryBtn: {
     marginTop: 10,
     height: 54,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
