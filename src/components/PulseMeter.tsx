@@ -104,13 +104,13 @@ function EcgTrace({ beats, running, progress }: { beats: number[]; running: bool
     return { d };
   });
 
-  const lineColor = running ? ACCENT : '#ffffff';
-  const lineAlpha = running ? 1 : 0.32;
+  /* Operator, 9 okt 2026: de lijn blijft altijd groen. */
+  const lineColor = ACCENT;
+  const lineAlpha = 1;
   return (
     <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 18 }}>
       <Defs>
         <LinearGradient id="ecgFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={ECG_W} y2="0">
-          {/* Grijs zolang er nog niet gemeten wordt, teal tijdens het meten. */}
           <Stop offset="0" stopColor={lineColor} stopOpacity={0} />
           <Stop offset="0.35" stopColor={lineColor} stopOpacity={0.55 * lineAlpha} />
           <Stop offset="1" stopColor={lineColor} stopOpacity={lineAlpha} />
