@@ -29,6 +29,20 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 
+/* Batterij: zit pas in de build vanaf deze ronde — in een oudere build
+   ontbreekt de native kant, dan gewoon geen batterijhint. */
+let Battery: typeof import('expo-battery') | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Battery = require('expo-battery');
+} catch {
+  Battery = null;
+}
+/* Operator, 9 okt 2026 ("bij 7% gaat de zaklamp niet aan en weet ik als
+   gebruiker niet waarom"): veel toestellen (o.a. Samsung) blokkeren de
+   flitser bij een bijna lege batterij. Onder deze grens zeggen we dat. */
+const LOW_BATTERY = 0.15;
+
 const MEASURE_MS = 15_000;
 const MAX_MS = 25_000;
 const SETTLE_MS = 1_000;
@@ -190,6 +204,23 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const [placingLong, setPlacingLong] = useState(false);
   const [pressingHard, setPressingHard] = useState(false);
   const [justLost, setJustLost] = useState(false);
+  const [batteryLow, setBatteryLow] = useState(false);
+  useEffect(() => {
+    if (!Battery) return;
+    const check = () =>
+      void Battery!.getBatteryLevelAsync()
+        .then((l) => setBatteryLow(l >= 0 && l < LOW_BATTERY))
+        .catch(() => {});
+    try {
+      check();
+      const sub = Battery.addBatteryLevelListener(({ batteryLevel }) =>
+        setBatteryLow(batteryLevel >= 0 && batteryLevel < LOW_BATTERY),
+      );
+      return () => sub.remove();
+    } catch {
+      return undefined;
+    }
+  }, []);
 
   /* Toestemming vragen zodra dit scherm verschijnt (de gebruiker koos net
      "Measure my heart rate"). */
@@ -513,6 +544,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     status === 'placing'
       ? justLost
         ? 'Finger moved — starting over'
+        : placingLong && batteryLow
+        ? 'Your battery is low, so your phone has turned off the flash. Charge it a little and try again.'
         : placingLong
         ? 'Not quite — try the camera closest to the flash'
         : 'Cover the top camera and the flash with your fingertip'
@@ -527,8 +560,12 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           : status === 'denied'
             ? 'Camera access is off for VIBEZCORE.'
             : status === 'camera-error'
-              ? "Your camera couldn't start on this device."
-              : failReason;
+              ? batteryLow
+                ? 'Your battery is low, so your phone has turned off the flash. Charge it a little and try again.'
+                : "Your camera couldn't start on this device."
+              : batteryLow && failReason.startsWith("We couldn't read")
+                ? 'Your battery is low, so the flash may be off. Charge your phone a little and try again.'
+                : failReason;
 
   return (
     <View style={s.wrap}>

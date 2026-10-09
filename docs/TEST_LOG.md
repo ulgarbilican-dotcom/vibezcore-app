@@ -152,6 +152,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 - ⏳ **iPhone:** camerameting, glas, betaalflow — iOS-build nodig
 - ⏳ Nauwkeurigheid camerameting: 10 personen naast horloge/borstband, 9/10 binnen ±5 bpm
 - ⏳ Release-build: vloeiendheid ademsessie-overgangen (zie memory)
+- ⏳ **Nieuwe build (expo-battery):** hartslag meten onder 15% batterij → melding "Your battery is low, so your phone has turned off the flash…" i.p.v. vaag "camera couldn't start" (9 okt 2026: A16 op 7–8%, zaklamp bleef uit)
 
 ---
 
