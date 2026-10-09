@@ -195,7 +195,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           <>
             {/* Operator, 9 okt 2026 ("te druk, korter, measure your heart
                 rate moet er niet staan, dat weten we al"). */}
-            <Text style={s.body}>Rest your fingertip lightly on the back camera and flash.</Text>
+            <Text style={s.body}>Rest your fingertip lightly on{'\n'}the back camera and flash.</Text>
             {/* Operator, 9 okt 2026: ring hoger, de "15 seconds · …"-regel
                 helemaal onderaan. */}
             <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 72 }}>
