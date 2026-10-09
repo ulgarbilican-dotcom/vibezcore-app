@@ -120,7 +120,7 @@ export default function RhythmSheet({
       <View
         style={[
           s.sheet,
-          { paddingBottom: Math.max(insets.bottom, 12) + 18 },
+          { paddingBottom: Math.max(insets.bottom, 12) + 30 },
           /* Operator, 9 okt 2026 ("nog hoger, tot onder Heart Rate"): het
              meetblad vult ~78% van het scherm, de ring staat midden in de
              vrije ruimte. */
@@ -154,7 +154,7 @@ export default function RhythmSheet({
             <View style={s.iconWrap}>
               <HeartPulse size={30} color="#ffffff" strokeWidth={1.8} />
             </View>
-            <Text style={s.title}>Start from your heart right now</Text>
+            <Text style={s.title}>Start from your{'\n'}heart right now</Text>
             <Text style={s.body}>
               Measure now and this session starts at your current heart rate. Your resting heart rate stays saved.
             </Text>
@@ -426,7 +426,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.20)',
     marginBottom: 14,
   },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30 },
   eyebrow: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: BrandFonts.bold, letterSpacing: 1.6 },
   done: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
   iconWrap: {
@@ -436,15 +436,15 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 26,
   },
-  title: { color: '#ffffff', fontSize: 26, fontFamily: BrandFonts.extrabold, letterSpacing: -0.5, marginBottom: 8 },
+  title: { color: '#ffffff', fontSize: 26, fontFamily: BrandFonts.extrabold, letterSpacing: -0.5, lineHeight: 32, marginBottom: 14 },
   body: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 16,
     fontFamily: BrandFonts.medium,
-    lineHeight: 23,
-    marginBottom: 22,
+    lineHeight: 24,
+    marginBottom: 40,
   },
   cta: {
     backgroundColor: '#ffffff',
@@ -455,7 +455,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
-  secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   secondaryTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
   pressed: { opacity: 0.7 },
   note: {
