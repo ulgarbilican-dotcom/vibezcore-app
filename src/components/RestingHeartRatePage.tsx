@@ -72,7 +72,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
      krijgt enkel de ruimte die echt overblijft (gemeten), max 280. */
   const [area, setArea] = useState(0);
   const stage = Math.round(Math.max(140, Math.min(280, height * 0.32, area > 0 ? area - 24 : 280)));
-  const core = Math.round(stage * 0.48);
+  const core = Math.round(stage * 0.6); // 9 okt 2026: volle cirkel groter
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
   /* Lub-dub op het hart, ringen deinen continu uit. */
