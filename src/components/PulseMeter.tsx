@@ -261,7 +261,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const finished = useRef(false);
   /* Tijdstippen (Date.now) van de getoonde slagen, voor de hartlijn. */
   const [beatLog, setBeatLog] = useState<EcgBeat[]>([]);
-  const [hasRealBeat, setHasRealBeat] = useState(false);
+  /** Moment (Date.now) van de laatst getoonde ECHTE slag. */
+  const lastRealAt = useRef(0);
   const beat = useRef(new Animated.Value(1)).current;
   /* Rustig "ademen" zolang de vinger nog niet ligt. Operator, 9 okt 2026:
      de golfringen rond het hart zijn weggehaald (hart, ring en lijn tonen
@@ -336,7 +337,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       const start = measureStart.current;
       if (fingerSince.current === null) {
         setBeatLog((prev) => (prev.length ? [] : prev));
-        setHasRealBeat(false);
+        lastRealAt.current = 0;
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
@@ -384,7 +385,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         const at = Math.max(0, wall + ECG_DELAY_MS - Date.now());
         const tid = setTimeout(() => {
           beatTimers.current.delete(tid);
-          setHasRealBeat(true);
+          lastRealAt.current = Date.now();
           Animated.sequence([
             /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
             Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
@@ -436,25 +437,37 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const fingerOn = status === 'settling' || status === 'measuring';
   const placing = status === 'placing';
   useEffect(() => {
-    if (!placing && !(fingerOn && !hasRealBeat)) {
-      idle.stopAnimation();
-      Animated.timing(idle, { toValue: 1, duration: 300, easing: Easing.out(Easing.sin), useNativeDriver: true }).start();
-      return;
-    }
     if (fingerOn) {
       /* Vervolg ("zodra er een hartslag is, moet op de lijn ook een kleine
-         rustige hartslag beginnen"): hart en lijn uit dezelfde tik. */
+         rustige hartslag beginnen"): hart en lijn uit dezelfde tik.
+         Vervolg ("de hoge pieken moeten altijd beginnen bij het vullen van
+         het hart — ook na een onderbroken meting"): deze slag vult elk gat
+         op zolang er geen echte slag is (ook als het signaal even wegvalt),
+         en zijn hoogte volgt de voortgang — dus groot zodra het hart vult,
+         los van wanneer de echte slagen gevonden worden. */
       const softBeat = () => {
+        if (Date.now() - lastRealAt.current < 1600) return; // echte slagen lopen
         Animated.sequence([
           Animated.timing(idle, { toValue: 1.045, duration: 240, easing: Easing.out(Easing.sin), useNativeDriver: true }),
           Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         ]).start();
         const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
-        setBeatLog((prev) => [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a: SOFT_BEAT_AMP, soft: true }]);
+        const p = progressRef.current;
+        const a = p > 0 ? ecgAmpAt(p) : SOFT_BEAT_AMP;
+        setBeatLog((prev) => {
+          /* Niet over een echte slag heen tekenen (lijn mag zichzelf niet kruisen). */
+          if (prev.some((x) => !x.soft && Math.abs(x.t - t) < 500)) return prev;
+          return [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a, soft: true }].sort((m, n) => m.t - n.t);
+        });
       };
       softBeat();
       const id = setInterval(softBeat, SOFT_BEAT_MS);
       return () => clearInterval(id);
+    }
+    if (!placing) {
+      idle.stopAnimation();
+      Animated.timing(idle, { toValue: 1, duration: 300, easing: Easing.out(Easing.sin), useNativeDriver: true }).start();
+      return;
     }
     const loop = Animated.loop(
       Animated.sequence([
@@ -464,7 +477,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     );
     loop.start();
     return () => loop.stop();
-  }, [fingerOn, placing, idle, hasRealBeat]);
+  }, [fingerOn, placing, idle]);
 
   const onFrame = useCallback(
     (frame: Frame) => {
@@ -534,7 +547,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     measureStart.current = null;
     lastShownBeat.current = 0;
     setBeatLog([]);
-    setHasRealBeat(false);
+    lastRealAt.current = 0;
     setProgress(0);
     placingSince.current = Date.now();
     setPlacingLong(false);
