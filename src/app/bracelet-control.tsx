@@ -6049,7 +6049,7 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   /* Boven de cirkel, gecentreerd onder de titel. */
-  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 30 },
+  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 40 },
   durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
   ringHr: {
