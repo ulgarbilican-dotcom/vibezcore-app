@@ -352,9 +352,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             <Text style={s.linkTxt}>Enter it myself</Text>
           </PressScale>
         </View>
-      ) : (
-        <Text style={s.sub}>Takes about 15 seconds. Rest your fingertip lightly — don&apos;t press.</Text>
-      )}
+      ) : null}
     </View>
   );
 }

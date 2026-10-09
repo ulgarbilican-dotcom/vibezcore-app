@@ -113,7 +113,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           <View style={s.grip} />
         </Pressable>
         <View style={s.head}>
-          <Text style={s.eyebrow}>{step === 'result' ? 'YOUR RHYTHM' : 'MATCH YOUR RHYTHM'}</Text>
+          <Text style={s.eyebrow}>RESTING HEART RATE</Text>
           {step !== 'result' ? (
             <PressScale onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
@@ -178,10 +178,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
 
         {step === 'measure' && PulseMeter ? (
           <>
-            <Text style={s.title}>Measure your heart rate</Text>
-            <Text style={s.body}>
-              Best after a few quiet minutes sitting — ideally in the morning. Rest your fingertip lightly over the main camera on the back (usually the top one) and the flash.
-            </Text>
+            {/* Operator, 9 okt 2026 ("te druk, korter, measure your heart
+                rate moet er niet staan, dat weten we al"). */}
+            <Text style={s.body}>Rest your fingertip lightly on the back camera and flash.</Text>
             {/* Operator, 9 okt 2026: de "15 seconds · …"-regel hoort bij het
                 meten zelf, niet op de introductiepagina. */}
             <View style={s.facts}>
