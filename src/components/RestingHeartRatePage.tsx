@@ -24,7 +24,7 @@ import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -38,9 +38,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BEAT_MS = 1000; // ≈60 bpm, rustig
-const STAGE = 260;
 
-function Ring({ delay, progress }: { delay: number; progress: SharedValue<number> }) {
+function Ring({ delay, progress, size }: { delay: number; progress: SharedValue<number>; size: number }) {
   const style = useAnimatedStyle(() => {
     const p = (progress.value + delay) % 1;
     return {
@@ -48,11 +47,21 @@ function Ring({ delay, progress }: { delay: number; progress: SharedValue<number
       transform: [{ scale: 0.55 + p * 0.75 }],
     };
   });
-  return <Animated.View pointerEvents="none" style={[s.ring, style]} />;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[s.ring, { width: size, height: size, borderRadius: size / 2 }, style]}
+    />
+  );
 }
 
 export default function RestingHeartRatePage({ onDone }: { onDone: () => void }) {
   const insets = useSafeAreaInsets();
+  /* Operator, 9 okt 2026 ("alle tekst op elkaar"): het beeld schaalt mee
+     met de schermhoogte i.p.v. vaste 260 pt. */
+  const { height } = useWindowDimensions();
+  const stage = Math.round(Math.min(240, Math.max(170, height * 0.24)));
+  const core = Math.round(stage * 0.48);
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
   /* Lub-dub op het hart, ringen deinen continu uit. */
@@ -83,14 +92,14 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         style={s.glow}
       />
 
-      <View style={[s.content, { paddingTop: insets.top + 36 }]}>
+      <View style={[s.content, { paddingTop: insets.top + 28 }]}>
         <Text style={s.eyebrow}>STATE CONTROL · MATCH YOUR RHYTHM</Text>
 
-        <View style={s.stage}>
-          <Ring delay={0} progress={wave} />
-          <Ring delay={1 / 3} progress={wave} />
-          <Ring delay={2 / 3} progress={wave} />
-          <View style={s.core}>
+        <View style={[s.stage, { width: stage, height: stage }]}>
+          <Ring delay={0} progress={wave} size={stage} />
+          <Ring delay={1 / 3} progress={wave} size={stage} />
+          <Ring delay={2 / 3} progress={wave} size={stage} />
+          <View style={[s.core, { width: core, height: core, borderRadius: core / 2 }]}>
             <LinearGradient
               colors={['rgba(74,240,212,0.22)', 'rgba(0,163,163,0.10)']}
               start={{ x: 0.2, y: 0 }}
@@ -162,25 +171,17 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
   stage: {
-    width: STAGE,
-    height: STAGE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 26,
-    marginBottom: 18,
+    marginTop: 'auto',
+    marginBottom: 32,
   },
   ring: {
     position: 'absolute',
-    width: STAGE,
-    height: STAGE,
-    borderRadius: STAGE / 2,
     borderWidth: 1.5,
     borderColor: AudioAccentLight,
   },
   core: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -196,7 +197,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   body: {
-    marginTop: 14,
+    marginTop: 18,
     maxWidth: 320,
     fontFamily: BrandFonts.regular,
     fontSize: 16,
@@ -204,10 +205,11 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.72)',
     textAlign: 'center',
   },
-  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 22 },
-  fact: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: AudioAccentLight },
-  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: AudioAccent },
-  actions: { paddingHorizontal: 24 },
+  /* Accent enkel in het beeld (hart/ringen) — tekst wit/grijs, Apple-stijl. */
+  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 26, marginBottom: 'auto' },
+  fact: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)' },
+  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.3)' },
+  actions: { paddingHorizontal: 24, paddingTop: 24, gap: 2 },
   cta: {
     height: 54,
     borderRadius: 14,
