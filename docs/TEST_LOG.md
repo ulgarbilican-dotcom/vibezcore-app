@@ -141,7 +141,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 ---
 
 ## Nog niet getest (gebouwd)
-- ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); V-logo i.p.v. muzieknoot (`6be14fc`, native); haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen
+- ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); V-logo i.p.v. muzieknoot (`6be14fc`, native); let ook op: 9 okt stonden er 12 open expo-audio-mediasessies (ExpoAudioBasicMediaSession) — mogen de ademsessie niet van het vergrendelscherm verdringen, anders opruimen; haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen
 - ⏳ Quick Chill/Boost-knoppen: paywall-pad zonder abonnement; eerste keer zonder rusthartslag (paneel eerst)
 - ⏳ Activity → Your rhythm; Profile → Your rhythm (in- en uitgelogd)
 - ⏳ "Use an average" wist eigen waarden
@@ -154,6 +154,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 - ⏳ Release-build: vloeiendheid ademsessie-overgangen (zie memory)
 - ⏳ State Control-label "Starts at X bpm · Resting/Average/Now" + blad "Start from your heart right now": meten → label "· Now", resultaat "For this session only…"; "Use Resting Heart Rate" zet terug naar rust; na sessiestart/15 min terug "· Resting" (9 okt 2026, blad + label op A16 gezien)
 - ⏳ State Control nieuwe opzet (9 okt 2026): cirkel 270 met enkel tijd, duur-segmenten eronder (gekozen = toestandskleur, rest transparant), kaart "Starting heart rate" onderaan → tik opent blad; alles past boven Start op de A16 + klein toestel (test 65)
+- ✅ 9 okt 2026: ademsessie vergrendeld terwijl GEPAUZEERD → niets op het vergrendelscherm = bedoeld (pauze = er gebeurt niets); weergave enkel bij een lopende sessie (test 53)
 - ⏳ Tikjes (9 okt 2026, utils/haptics.ts): knoppen = fijne systeemtik (Android KEYBOARD_TAP), slepen cirkel/draaiwiel = schuif-tik (SEGMENT_FREQUENT_TICK / TEXT_HANDLE_MOVE), gedempt <40 ms; iOS Apple-generators. Op A16 én iPhone voelen: subtiel, niet hard/stroef
 - ⏳ Hartslag meten: live bpm groot boven de ring (eerst "--", na de omtrek een afgevlakt getal), na afloop 1,6 s het eindgetal in teal + "Done" + succes-tik, dan pas het resultaat
 - ⏳ **Nieuwe build (expo-battery):** hartslag meten onder 15% batterij → melding "Flash unavailable" / "Measurement failed" + korte uitleg i.p.v. vaag "camera couldn't start" (9 okt 2026: A16 op 7–8%, zaklamp bleef uit)
