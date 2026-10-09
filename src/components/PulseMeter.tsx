@@ -271,8 +271,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         const wall = Date.now() - (last.t - b);
         setBeatLog((prev) => [...prev.filter((x) => wall - x < ECG_WINDOW_MS + ECG_DELAY_MS + 1000), wall]);
         Animated.sequence([
-          Animated.timing(beat, { toValue: 1.16, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-          Animated.timing(beat, { toValue: 1, duration: 300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
+          Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+          Animated.timing(beat, { toValue: 1, duration: 520, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         ]).start();
         ripple.setValue(0);
         Animated.timing(ripple, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
@@ -318,8 +319,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     }
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(idle, { toValue: 1.06, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(idle, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(idle, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(idle, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     loop.start();
