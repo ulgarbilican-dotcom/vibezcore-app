@@ -36,7 +36,7 @@
 |---|---|---|---|
 | 5 | Pulsdetectie-algoritme op nagebootste signalen | PC | ✅ 55/64/72/88/110 bpm binnen ±1; ruis, drift, 24 fps, verzadigd rood ok; enkel ruis → geen uitkomst |
 | 6 | Camerameting start | A16 | ❌ "camera couldn't start" → oorzaak: zaklamp vóór camerastart + `getPixelBuffer` vereist minSdk 26 → fix: plane-buffer + zaklamp na start (`2756d12`) → ✅ |
-| 7 | Camerameting resultaat | A16 | ✅ 68 bpm, later 66 bpm (verschil 2) — ⏳ **nog niet vergeleken met referentie** (pols tellen / horloge) |
+| 7 | Camerameting resultaat | A16 | ✅ 🔒 9 okt: pols 74 (37 × 2), telefoon 76 → binnen ±5 bpm, "zeer accuraat". Meetduur nu vast 30 s |
 | 8 | Hogere meting (75) → "Your heart right now", rust blijft 66 | A16 | ✅ (screenshot operator); tekst daarna verduidelijkt (`f819a6c`, `d95655c`) |
 | 9 | Hartslag van nu als startpunt (69) → "starts at 69 and slows to 59" | A16 | ✅ melding gezien door operator |
 | 10 | Pil "♥ 66 bpm ›" in de cirkel, aanklikbaar | A16 | ✅ screenshot (`3ca7d6e`) |
