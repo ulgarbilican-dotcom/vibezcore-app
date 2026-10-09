@@ -60,7 +60,10 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
   /* Operator, 9 okt 2026 ("alle tekst op elkaar"): het beeld schaalt mee
      met de schermhoogte i.p.v. vaste 260 pt. */
   const { height } = useWindowDimensions();
-  const stage = Math.round(Math.min(280, Math.max(220, height * 0.32)));
+  /* Vervolg (operator: "tekst wordt door de knop afgesneden"): het hart
+     krijgt enkel de ruimte die echt overblijft (gemeten), max 280. */
+  const [area, setArea] = useState(0);
+  const stage = Math.round(Math.max(140, Math.min(280, height * 0.32, area > 0 ? area - 24 : 280)));
   const core = Math.round(stage * 0.48);
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
@@ -94,6 +97,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
       <View style={[s.content, { paddingTop: insets.top + 28 }]}>
 
+        <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
           <Ring delay={0} progress={wave} size={stage} />
           <Ring delay={1 / 3} progress={wave} size={stage} />
@@ -109,6 +113,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
               <Heart size={54} color={AudioAccentLight} fill={AudioAccentLight} strokeWidth={1.4} />
             </Animated.View>
           </View>
+        </View>
         </View>
 
         <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
@@ -162,11 +167,10 @@ const s = StyleSheet.create({
     letterSpacing: 2.2,
     color: 'rgba(255,255,255,0.6)',
   },
+  stageArea: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', minHeight: 160 },
   stage: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 'auto',
-    marginBottom: 32,
   },
   ring: {
     position: 'absolute',
@@ -181,10 +185,11 @@ const s = StyleSheet.create({
     borderColor: 'rgba(74,240,212,0.35)',
   },
   title: {
-    fontFamily: BrandFonts.extrabold,
-    fontSize: 38,
-    lineHeight: 42,
-    letterSpacing: -1,
+    marginTop: 8,
+    fontFamily: BrandFonts.bold,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.6,
     color: '#ffffff',
     textAlign: 'center',
   },
@@ -212,8 +217,8 @@ const s = StyleSheet.create({
   },
   ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
   link: { height: 46, alignItems: 'center', justifyContent: 'center' },
-  linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 15.5, color: '#ffffff' },
-  linkDim: { fontFamily: BrandFonts.medium, fontSize: 14.5, color: 'rgba(255,255,255,0.55)' },
+  linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  linkDim: { fontFamily: BrandFonts.regular, fontSize: 15, color: 'rgba(255,255,255,0.5)' },
   /* Voetnoot zoals Apple's kleine lettertjes: ~12–13 pt, grijs, helemaal
      onderaan met wat afstand tot de knoppen. */
   legal: {
