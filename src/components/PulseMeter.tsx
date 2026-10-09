@@ -7,7 +7,7 @@
    en groenwaarde van het midden naar JS — geen beelden, niets bewaard.
    De berekening zelf staat in utils/pulse-detect.ts.
 
-   Verloop: vinger erop → 1 s stil → 15 s meten (ring loopt vol, het hart
+   Verloop: vinger erop → 0,5 s stil → 20 s meten (ring loopt vol, het hart
    klopt mee op de gevonden slagen) → uitkomst. Vinger weg = de ring
    begint opnieuw. Lukt het na 25 s niet: eerlijk "opnieuw proberen".
    Tijdens het meten GEEN trillingen: die zouden de vinger doen bewegen. */
@@ -46,8 +46,10 @@ try {
    flitser bij een bijna lege batterij. Onder deze grens zeggen we dat. */
 const LOW_BATTERY = 0.15;
 
-const MEASURE_MS = 15_000;
-const MAX_MS = 25_000;
+/* Operator, 9 okt 2026: "desnoods mag de meting langer duren, als ze maar
+   correct is" — 20 s meten, tot 35 s als de controle niet klopt. */
+const MEASURE_MS = 20_000;
+const MAX_MS = 35_000;
 const SETTLE_MS = 500; // 9 okt 2026: "bpm begint te laat" (was 1 s)
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
@@ -321,7 +323,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   /* Vulling van het hart + ring = voortgang van de meting.
      Vervolg (operator, 9 okt 2026: "de animatie lijkt bibberig"): niet
      meer elke 250 ms een stapje vanaf de drukke JS-thread, maar één
-     doorlopende beweging op de UI-thread zodra het meten start (15 s),
+     doorlopende beweging op de UI-thread zodra het meten start (20 s),
      terug naar 0 als de vinger wegglijdt. */
   const fill = useRef(new Animated.Value(0)).current;
   const ringP = useSharedValue(0);
@@ -413,7 +415,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       setProgress(Math.min(1, elapsed / MEASURE_MS));
 
       const recent = samples.current.filter((p) => p.t >= last.t - 6000);
-      const est = recent.length > 72 ? analyzePulse(recent, 2, true) : null;
+      /* Live getal met de strenge analyse (operator: correct boven snel). */
+      const est = recent.length > 120 ? analyzePulse(recent, 3) : null;
       const b = est ? est.beats[est.beats.length - 1] : null;
       /* Operator, 9 okt 2026 ("boven de meting in grote cijfers live te zien"):
          een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
@@ -487,7 +490,11 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
            een schuivend venster van de laatste 15 s (een beweging in het
            begin valt er dan vanzelf uit). Pas als het dan nog niet lukt:
            één eerlijke melding met de meest waarschijnlijke reden. */
-        const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
+        /* Controle: het volledige venster en de laatste 10 s apart moeten
+           hetzelfde zeggen (≤7% verschil), anders stil doormeten. */
+        const tail = analyzePulse(samples.current.filter((p) => p.t >= last.t - 10_000), 6);
+        const consistent = !!res && !!tail && Math.abs(tail.bpm - res.bpm) / res.bpm <= 0.07;
+        const ok = !!res && consistent && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
         if (ok && res) {
           finished.current = true;
           /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst

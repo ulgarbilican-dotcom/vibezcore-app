@@ -185,7 +185,7 @@ hart" het best onderbouwd. De sporter-grens is een randgeval.
 
 | Bron | Hoe | Status |
 |---|---|---|
-| Meting met de camera | vinger op de achtercamera + flits, 15 s | ✔ gebouwd (Android getest, iOS nog niet) |
+| Meting met de camera | vinger op de achtercamera + flits, 20 s (tot 35 s) | ✔ gebouwd (Android getest, iOS nog niet) |
 | Zelf invullen | draaiwiel 40–100 | ✔ gebouwd |
 | Gemiddelde | 70 bpm (gemiddelde volwassene) | ✔ standaard voor wie overslaat |
 | Horloge | Apple Health / Health Connect rusthartslag | ⏳ fase 3 |
@@ -227,7 +227,7 @@ pace": meten / zelf invullen / gemiddelde).
   4. alleen een uitkomst als beide het eens zijn (binnen 10%), het
      signaal duidelijk periodiek is en de slagen regelmatig zijn
      (≥ 70% binnen 15%); rood of groen kanaal, het duidelijkste wint.
-- **Verloop:** vinger erop → 1 s stil → 15 s meten (max 25 s) → uitkomst
+- **Verloop:** vinger erop → 0,5 s stil → 20 s meten (max 35 s) → uitkomst. Operator 9 okt 2026: "liever langer, als het maar correct is". Eindcontrole: het volledige venster en de laatste 10 s apart moeten binnen 7% overeenkomen, anders stil doormeten. Het live getal tijdens het meten gebruikt dezelfde strenge analyse, mediaan van de laatste 5 schattingen, max. 3 bpm verandering per slag (eigen keuze, horloge-gedrag).
   of "try again". Geen trillingen tijdens het meten.
 - **Getest:** op nagebootste signalen binnen ±1 bpm (55–110 bpm, met
   ruis, drift, haperende beelden, verzadigd rood); geen uitkomst bij
