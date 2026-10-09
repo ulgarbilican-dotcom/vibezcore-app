@@ -192,16 +192,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             {/* Operator, 9 okt 2026 ("te druk, korter, measure your heart
                 rate moet er niet staan, dat weten we al"). */}
             <Text style={s.body}>Rest your fingertip lightly on the back camera and flash.</Text>
-            {/* Operator, 9 okt 2026: de "15 seconds · …"-regel hoort bij het
-                meten zelf, niet op de introductiepagina. */}
-            <View style={s.facts}>
-              <Text style={s.fact}>15 seconds</Text>
-              <View style={s.factDot} />
-              <Text style={s.fact}>Camera & flash</Text>
-              <View style={s.factDot} />
-              <Text style={s.fact}>No images saved</Text>
-            </View>
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 28 }}>
+            {/* Operator, 9 okt 2026: ring hoger, de "15 seconds · …"-regel
+                helemaal onderaan. */}
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 8 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
@@ -214,6 +207,13 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               }}
               onManual={() => setStep('manual')}
             />
+            </View>
+            <View style={[s.facts, { marginTop: 'auto', marginBottom: 0, alignSelf: 'center' }]}>
+              <Text style={s.fact}>15 seconds</Text>
+              <View style={s.factDot} />
+              <Text style={s.fact}>Camera & flash</Text>
+              <View style={s.factDot} />
+              <Text style={s.fact}>No images saved</Text>
             </View>
           </>
         ) : null}

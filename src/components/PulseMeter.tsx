@@ -365,7 +365,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
               meting vordert, en groter"): witte omtrek + Bio-Teal vulling die
               van onder naar boven stijgt met de voortgang. */}
           <View style={{ width: HEART, height: HEART }}>
-            <Heart size={HEART} color="rgba(255,255,255,0.85)" fill="transparent" strokeWidth={1.3} />
+            {/* Operator, 9 okt 2026: leeg hart = subtiele Bio-Teal omlijning. */}
+            <Heart size={HEART} color="rgba(74,240,212,0.45)" fill="transparent" strokeWidth={1.2} />
             <Animated.View
               pointerEvents="none"
               style={[
