@@ -1472,11 +1472,19 @@ function ModeSwipeRing({
   mode,
   onChange,
   onTap,
+  durations,
+  duration,
+  onDuration,
   children,
 }: {
   mode: BraceletMode;
   onChange: (next: BraceletMode) => void;
   onTap: () => void;
+  /** Operator, 9 okt 2026: verticaal vegen over de cirkel = duur kiezen
+      (vervangt de scroll-lijst eronder). Links/rechts blijft de toestand. */
+  durations?: number[];
+  duration?: number;
+  onDuration?: (minutes: number) => void;
   children: ReactNode;
 }) {
   const last = MODES.length - 1;
@@ -1508,6 +1516,40 @@ function ModeSwipeRing({
   };
   const tapJS = () => onTapRef.current();
 
+  const durList = durations ?? [];
+  const durationsSV = useSharedValue<number[]>(durList);
+  const durIdx = Math.max(0, durList.indexOf(duration ?? -1));
+  const durIdxSV = useSharedValue(durIdx);
+  const durStartSV = useSharedValue(durIdx);
+  useEffect(() => {
+    durationsSV.value = durList;
+    durIdxSV.value = durIdx;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [durList.join(','), durIdx]);
+  const onDurationRef = useRef(onDuration);
+  onDurationRef.current = onDuration;
+  const setDurationJS = (minutes: number) => {
+    void Haptics.selectionAsync();
+    onDurationRef.current?.(minutes);
+  };
+  /* Omhoog vegen = langer (zoals een iOS-kiezer naar boven draaien). */
+  const DUR_STEP_PX = 20;
+  const vpan = Gesture.Pan()
+    .enabled(durList.length > 1 && !!onDuration)
+    .activeOffsetY([-8, 8])
+    .failOffsetX([-14, 14])
+    .onBegin(() => {
+      durStartSV.value = durIdxSV.value;
+    })
+    .onUpdate((e) => {
+      const list = durationsSV.value;
+      const next = Math.min(list.length - 1, Math.max(0, durStartSV.value + Math.round(-e.translationY / DUR_STEP_PX)));
+      if (next !== durIdxSV.value) {
+        durIdxSV.value = next;
+        runOnJS(setDurationJS)(list[next]);
+      }
+    });
+
   const pan = Gesture.Pan()
     .activeOffsetX([-10, 10])
     .failOffsetY([-16, 16])
@@ -1534,7 +1576,7 @@ function ModeSwipeRing({
     .onEnd((_e, success) => {
       if (success) runOnJS(tapJS)();
     });
-  const gesture = Gesture.Exclusive(pan, tap);
+  const gesture = Gesture.Exclusive(Gesture.Race(pan, vpan), tap);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }],
@@ -1576,6 +1618,8 @@ function ModeSwipeRing({
 const RING_R = 84;
 const RING_STROKE = 4;
 const RING_SIZE = (RING_R + RING_STROKE) * 2;
+/* Operator, 9 okt 2026 ("cirkel groter"): 230 → 270. */
+const RING_DIAL = 270;
 const RING_CIRC = 2 * Math.PI * RING_R;
 const AnimatedRingCircle = ReanimatedAnimated.createAnimatedComponent(Circle);
 
@@ -2111,7 +2155,11 @@ function DurationRing({
   recommended,
   clockOverride,
   subOverride,
+  scrollHint,
 }: {
+  /** Operator, 9 okt 2026: de duur kies je door verticaal over de cirkel
+      te vegen — twee zachte pijltjes naast de tijd tonen dat. */
+  scrollHint?: { up: boolean; down: boolean };
   /** Voorproef (7 okt 2026): de teller i.p.v. de gekozen duur. */
   clockOverride?: string;
   /** Voorproef: "Preview" i.p.v. "Recommended". */
@@ -2280,9 +2328,17 @@ function DurationRing({
           </Text>
           <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
         </View>
-        <Text style={[s.ringClock, { color: numColor }, textShadow]}>
-          {clockOverride ?? `${value}:00`}
-        </Text>
+        <View style={s.ringClockRow}>
+          <Text style={[s.ringClock, { color: numColor }, textShadow]}>
+            {clockOverride ?? `${value}:00`}
+          </Text>
+          {scrollHint && !clockOverride ? (
+            <View style={s.ringScrollHint}>
+              <ChevronUp size={16} color="#ffffff" strokeWidth={2.2} style={{ opacity: scrollHint.up ? 0.4 : 0.1 }} />
+              <ChevronDown size={16} color="#ffffff" strokeWidth={2.2} style={{ opacity: scrollHint.down ? 0.4 : 0.1 }} />
+            </View>
+          ) : null}
+        </View>
         <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
           <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
@@ -3693,6 +3749,9 @@ function IdleScreen({
               pickMode(next);
             }}
             onTap={() => setDetailModeForModal(selectedMode)}
+            durations={trialRunning ? undefined : DURATION_PRESETS[selectedMode].map((p) => p.value)}
+            duration={duration}
+            onDuration={setDuration}
           >
             {/* key = modus: elke modus is een eigen "wijzerplaat" die meteen
                 met zijn eigen vulling binnenkomt, niet klotsend vanaf het
@@ -3700,7 +3759,7 @@ function IdleScreen({
                 verandert telkens"). */}
             {trialRunning ? (
               <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-                <HapticPulseRings size={230} color={breathWaveLook(meta.color).color} />
+                <HapticPulseRings size={RING_DIAL} color={breathWaveLook(meta.color).color} />
               </View>
             ) : null}
             <DurationRing
@@ -3712,8 +3771,13 @@ function IdleScreen({
               value={duration}
               color={meta.color}
               label={meta.name}
-              size={230}
+              size={RING_DIAL}
               dark={idleDark}
+              scrollHint={(() => {
+                const list = DURATION_PRESETS[selectedMode].map((p) => p.value);
+                const i = list.indexOf(duration);
+                return { up: i < list.length - 1, down: i > 0 };
+              })()}
               recommended={
                 duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
               }
@@ -3742,7 +3806,9 @@ function IdleScreen({
                   style={[
                     s.modeDot,
                     /* Wit, zoals iOS-paginabolletjes (operator, 5 okt 2026). */
-                    { backgroundColor: '#ffffff', opacity: active ? 1 : 0.3, width: active ? 22 : 8 },
+                    /* Operator, 9 okt 2026 ("zoals Apple, subtiel"): rond,
+                       de actieve iets groter en feller — geen balkje. */
+                    { backgroundColor: '#ffffff', opacity: active ? 0.9 : 0.25, width: active ? 7 : 6, height: active ? 7 : 6 },
                   ]}
                 />
               </Pressable>
@@ -3760,19 +3826,8 @@ function IdleScreen({
         {/* Lager, met meer lucht onder de bolletjes (operator, 6 okt 2026). */}
         {/* 90 → 38: de hartslag-pil boven de cirkel neemt die ruimte nu in
             (7 okt 2026), anders zakt de Start-knop onder de systeembalk. */}
-        <View style={[s.durationSliderWrap, { marginTop: 38 }]}>
-          <DurationWheel
-            options={DURATION_PRESETS[selectedMode].map((p) => ({
-              value: p.value,
-              label: `${p.value} min`,
-            }))}
-            value={duration}
-            onChange={setDuration}
-            recommendedDot={DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value}
-            accent={meta.color}
-            trackColor={idleDark ? 'rgba(255,255,255,0.4)' : C.textDim}
-          />
-        </View>
+        {/* Operator, 9 okt 2026: de scroll-lijst onder de cirkel is weg —
+            de duur kies je nu in de cirkel zelf (verticaal vegen). */}
 
         {/* Spacer — pushes Start-CTA naar onderkant. */}
         <View style={{ flex: 1, minHeight: 2 }} />
@@ -5876,7 +5931,6 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
   modeDot: {
-    height: 8,
     borderRadius: 4,
   },
   trialInfo: { alignItems: 'center', gap: 10, marginTop: 14 },
@@ -6002,8 +6056,10 @@ const s = StyleSheet.create({
     lineHeight: 18,
     color: 'rgba(255,255,255,0.75)',
   },
+  ringClockRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  /* Absoluut naast de tijd, zodat de tijd zelf exact gecentreerd blijft. */
+  ringScrollHint: { position: 'absolute', right: -24, top: 0, bottom: 0, justifyContent: 'center', gap: 2 },
   ringClock: {
-    marginTop: 4,
     fontFamily: BrandFonts.bold,
     fontSize: 54,
     letterSpacing: -1,
