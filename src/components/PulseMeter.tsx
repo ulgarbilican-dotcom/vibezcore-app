@@ -471,13 +471,11 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   /* Vervolg ("de outline van het hart moet rondom groeien en dan het hart
      zelf"): eerste kwart van de meting tekent de omtrek zich rond, daarna
      vult het hart van onder naar boven. */
-  /* Beide kanten groeien tegelijk vanuit de punt omhoog en raken elkaar
-     bovenaan: streep v aan het begin + streep v aan het einde van het pad. */
-  const outlineProps = useAnimatedProps(() => {
-    const v = (HEART_LEN / 2) * Math.min(1, ringP.value / OUTLINE_SHARE);
-    const gap = Math.max(0, HEART_LEN - 2 * v);
-    return { strokeDasharray: [Math.max(0.001, v), gap + 0.001, v, 0.001] };
-  });
+  /* Operator, 9 okt 2026: begint in de onderste punt, gaat in één richting
+     helemaal rond en komt terug in diezelfde punt — pas dan de vulling. */
+  const outlineProps = useAnimatedProps(() => ({
+    strokeDashoffset: HEART_LEN * (1 - Math.min(1, ringP.value / OUTLINE_SHARE)),
+  }));
   const message =
     status === 'placing'
       ? justLost
@@ -540,6 +538,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
                 strokeLinecap="butt"
                 strokeLinejoin="round"
                 fill="none"
+                strokeDasharray={`${HEART_LEN} ${HEART_LEN}`}
                 animatedProps={outlineProps}
               />
             </Svg>
