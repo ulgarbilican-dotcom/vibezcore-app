@@ -2304,37 +2304,6 @@ function DurationRing({
          wissel (key={color} forceert een remount + nieuwe reveal-
          animatie per kleur-wissel). */}
       <ModeColorRing key={color} color={color} size={size} />
-      {dialHandle && !clockOverride ? (
-        <View pointerEvents="none" style={{ position: 'absolute', left: -16, top: -16 }}>
-          {/* 16 pt marge rondom: de greep steekt buiten de ring en mag op
-              Android niet afgeknipt worden. */}
-          <Svg width={size + 32} height={size + 32}>
-            {(() => {
-              const r = size / 2 - 1;
-              const c = size / 2 + 16;
-              const f = Math.min(0.9999, Math.max(0, fillFraction));
-              const ang = f * 2 * Math.PI;
-              const ex = c + r * Math.sin(ang);
-              const ey = c - r * Math.cos(ang);
-              const large = f > 0.5 ? 1 : 0;
-              return (
-                <>
-                  {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
-                  <Path
-                    d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
-                    stroke={color}
-                    strokeWidth={5}
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  {/* Greep: wit bolletje met een rand in de toestandskleur. */}
-                  <Circle cx={ex} cy={ey} r={12} fill="#ffffff" stroke={color} strokeWidth={2.5} />
-                </>
-              );
-            })()}
-          </Svg>
-        </View>
-      ) : null}
       {/* Shine-sweep over de buitenring — zie de operator-comment hierboven
          bij `shimmer`. MOET vóór de golf-vulling komen: anders tekent de
          effen punch-cirkel bovenop de golven en verdwijnen die. */}
@@ -2390,6 +2359,39 @@ function DurationRing({
           <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
         </View>
       </View>
+      {/* Boog + greep BOVENOP alles (de zwarte binnenkant en de golf
+         bedekten de greep anders half). */}
+      {dialHandle && !clockOverride ? (
+        <View pointerEvents="none" style={{ position: 'absolute', left: -16, top: -16 }}>
+          {/* 16 pt marge rondom: de greep steekt buiten de ring en mag op
+              Android niet afgeknipt worden. */}
+          <Svg width={size + 32} height={size + 32}>
+            {(() => {
+              const r = size / 2 - 1;
+              const c = size / 2 + 16;
+              const f = Math.min(0.9999, Math.max(0, fillFraction));
+              const ang = f * 2 * Math.PI;
+              const ex = c + r * Math.sin(ang);
+              const ey = c - r * Math.cos(ang);
+              const large = f > 0.5 ? 1 : 0;
+              return (
+                <>
+                  {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
+                  <Path
+                    d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
+                    stroke={color}
+                    strokeWidth={5}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  {/* Greep: wit bolletje met een rand in de toestandskleur. */}
+                  <Circle cx={ex} cy={ey} r={12} fill="#ffffff" stroke={color} strokeWidth={2.5} />
+                </>
+              );
+            })()}
+          </Svg>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -5998,7 +6000,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
+    /* 9 okt 2026: ruimte voor de greep op de rand van de cirkel. */
+    marginTop: 26,
   },
   modeDot: {
     borderRadius: 4,
