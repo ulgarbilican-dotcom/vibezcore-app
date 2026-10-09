@@ -2305,11 +2305,13 @@ function DurationRing({
          animatie per kleur-wissel). */}
       <ModeColorRing key={color} color={color} size={size} />
       {dialHandle && !clockOverride ? (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <Svg width={size} height={size} style={{ overflow: 'visible' }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: -16, top: -16 }}>
+          {/* 16 pt marge rondom: de greep steekt buiten de ring en mag op
+              Android niet afgeknipt worden. */}
+          <Svg width={size + 32} height={size + 32}>
             {(() => {
               const r = size / 2 - 1;
-              const c = size / 2;
+              const c = size / 2 + 16;
               const f = Math.min(0.9999, Math.max(0, fillFraction));
               const ang = f * 2 * Math.PI;
               const ex = c + r * Math.sin(ang);
