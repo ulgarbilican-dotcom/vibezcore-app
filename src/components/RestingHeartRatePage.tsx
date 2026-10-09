@@ -114,7 +114,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
               style={StyleSheet.absoluteFill}
             />
             <Animated.View style={heartStyle}>
-              <Heart size={54} color={AudioAccentLight} fill={AudioAccentLight} strokeWidth={1.4} />
+              <Heart size={Math.round(core * 0.42)} color={AudioAccentLight} fill={AudioAccentLight} strokeWidth={1.4} />
             </Animated.View>
           </View>
         </View>
