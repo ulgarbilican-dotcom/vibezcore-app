@@ -40,6 +40,14 @@ const HEART = 84;
 const STROKE = 2; // vervolg 9 okt 2026: "groene vullende lijn mag dunner"
 const ACCENT = '#4AF0D4';
 const IDLE_GREY = 'rgba(255,255,255,0.32)';
+/* Het lucide-hart (zelfde vorm als de <Heart>-iconen), herschreven zodat
+   het pad ONDERAAN in de punt begint en daar ook eindigt — omtrek ≈ 59 in
+   24-eenheden. Operator, 9 okt 2026: "de outline moet onderaan beginnen". */
+const LUCIDE_HEART_D =
+  'M12 21A2 2 0 0 1 10.508 20.332L5 15C3.5 13.5 2 11.8 2 9.5A5.5 5.5 0 0 1 11.591 5.824A.56 .56 0 0 0 12.409 5.824A5.49 5.49 0 0 1 22 9.5C22 11.79 20.5 13.5 19 15L13.508 20.313A2 2 0 0 1 12 21';
+const HEART_LEN = 59.1;
+/** Deel van de meting waarin de omtrek zich tekent; daarna de vulling. */
+const OUTLINE_SHARE = 0.25;
 /* Vaste objecten: de camera-hooks herconfigureren bij elke nieuwe referentie. */
 const FRAME_SIZE = { width: 320, height: 240 };
 const CONSTRAINTS = [{ fps: 30 }];
@@ -71,7 +79,6 @@ const PQRST: [number, number][] = [
    vaste vertraging, zodat elke piek netjes rechts binnenschuift. */
 const ECG_DELAY_MS = 700;
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
-const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 /** Eén slag op de lijn: tijdstip (Date.now-klok) + hoogte (1 = echte slag). */
 type EcgBeat = { t: number; a: number };
@@ -225,16 +232,6 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     });
   }, [status, fill, ringP]);
 
-  /* Omtrek: grijs → teal zodra er echt gemeten wordt. */
-  const lit = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(lit, {
-      toValue: status === 'measuring' ? 1 : 0,
-      duration: 450,
-      easing: Easing.inOut(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [status, lit]);
 
   /* Stabiel (enkel refs): de camera-worklet krijgt deze functie één keer mee. */
   const onSample = useCallback((rawTs: number, r: number, g: number) => {
@@ -471,8 +468,16 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     setAttempt((a) => a + 1);
   };
 
-  const circ = Math.PI * (RING - STROKE);
-  const ringProps = useAnimatedProps(() => ({ strokeDashoffset: circ * (1 - ringP.value) }));
+  /* Vervolg ("de outline van het hart moet rondom groeien en dan het hart
+     zelf"): eerste kwart van de meting tekent de omtrek zich rond, daarna
+     vult het hart van onder naar boven. */
+  /* Beide kanten groeien tegelijk vanuit de punt omhoog en raken elkaar
+     bovenaan: streep v aan het begin + streep v aan het einde van het pad. */
+  const outlineProps = useAnimatedProps(() => {
+    const v = (HEART_LEN / 2) * Math.min(1, ringP.value / OUTLINE_SHARE);
+    const gap = Math.max(0, HEART_LEN - 2 * v);
+    return { strokeDasharray: [Math.max(0.001, v), gap + 0.001, v, 0.001] };
+  });
   const message =
     status === 'placing'
       ? justLost
@@ -497,26 +502,24 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   return (
     <View style={s.wrap}>
       <View style={s.ringWrap}>
+        {/* Operator, 9 okt 2026: buitencirkel = vaste omlijning in dezelfde
+            kleurstijl als de hartlijn (teal dat zacht uitvloeit). De
+            voortgang zit nu in het hart zelf. */}
         <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="ringFade" gradientUnits="userSpaceOnUse" x1="0" y1={RING} x2={RING} y2="0">
+              <Stop offset="0" stopColor={ACCENT} stopOpacity={0.08} />
+              <Stop offset="0.5" stopColor={ACCENT} stopOpacity={0.45} />
+              <Stop offset="1" stopColor={ACCENT} stopOpacity={0.9} />
+            </LinearGradient>
+          </Defs>
           <Circle
             cx={RING / 2}
             cy={RING / 2}
             r={(RING - STROKE) / 2}
-            stroke="rgba(255,255,255,0.10)"
+            stroke="url(#ringFade)"
             strokeWidth={1.5}
             fill="none"
-          />
-          <AnimatedCircle
-            cx={RING / 2}
-            cy={RING / 2}
-            r={(RING - STROKE) / 2}
-            stroke={ACCENT}
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={`${circ} ${circ}`}
-            animatedProps={ringProps}
-            transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />
         </Svg>
         <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
@@ -529,16 +532,24 @@ export default function PulseMeter({ onResult, onManual }: Props) {
                 onder naar boven vullen"): grijze omtrek tot de meting start,
                 dan vloeit de teal omtrek erin en begint de vulling. */}
             <Heart size={HEART} color={IDLE_GREY} fill="transparent" strokeWidth={0.7} />
-            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: lit }]}>
-              <Heart size={HEART} color={ACCENT} fill="transparent" strokeWidth={0.7} />
-            </Animated.View>
+<Svg width={HEART} height={HEART} viewBox="0 0 24 24" style={StyleSheet.absoluteFill} pointerEvents="none">
+              <AnimatedPath
+                d={LUCIDE_HEART_D}
+                stroke={ACCENT}
+                strokeWidth={0.7}
+                strokeLinecap="butt"
+                strokeLinejoin="round"
+                fill="none"
+                animatedProps={outlineProps}
+              />
+            </Svg>
             <Animated.View
               pointerEvents="none"
               style={[
                 s.heartFill,
                 /* Clip schuift omhoog, het hart erin tegengesteld omlaag:
                    enkel transforms → vloeiend op de UI-thread. */
-                { transform: [{ translateY: fill.interpolate({ inputRange: [0, 1], outputRange: [HEART, 0] }) }] },
+                { transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [HEART, HEART, 0] }) }] },
               ]}
             >
               <Animated.View
@@ -548,7 +559,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
                   left: 0,
                   width: HEART,
                   height: HEART,
-                  transform: [{ translateY: fill.interpolate({ inputRange: [0, 1], outputRange: [-HEART, 0] }) }],
+                  transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [-HEART, -HEART, 0] }) }],
                 }}
               >
                 <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={0.7} />
