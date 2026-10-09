@@ -248,14 +248,10 @@ export default function RhythmSheet({
 
         {step === 'measure' && PulseMeter ? (
           <>
-            {/* Operator, 9 okt 2026 ("te druk, korter, measure your heart
-                rate moet er niet staan, dat weten we al"). */}
-            {!meterError ? (
-              <Text style={s.body}>Rest your fingertip lightly on{'\n'}the back camera and flash.</Text>
-            ) : null}
-            {/* Operator, 9 okt 2026: ring hoger, de "15 seconds · …"-regel
-                helemaal onderaan. */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 72 }}>
+            {/* Operator, 9 okt 2026 ("dubbele tekst"): geen instructie meer
+                bovenaan — de statusregel onder de lijn is de enige tekst en
+                beweegt mee met wat er gebeurt. Ring blijft op dezelfde hoogte. */}
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 150 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
@@ -271,10 +267,7 @@ export default function RhythmSheet({
             />
             </View>
             <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }, meterError ? { opacity: 0 } : null]}>
-              <Text style={s.fact}>15 seconds</Text>
-              <View style={s.factDot} />
-              <Text style={s.fact}>Camera & flash</Text>
-              <View style={s.factDot} />
+              {/* Enkel de privacy-geruststelling, op het moment dat de camera aangaat. */}
               <Text style={s.fact}>No images saved</Text>
             </View>
           </>
