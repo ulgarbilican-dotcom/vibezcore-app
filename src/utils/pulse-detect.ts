@@ -193,7 +193,7 @@ export function analyzePulse(samples: PulseSample[], minBeats = 8, lenient = fal
   ].filter((c): c is ChannelEstimate => !!c && c.periodicity > 0);
   if (!channels.length) return null;
   const c = channels.reduce((a, b) => (b.periodicity * b.regularity > a.periodicity * a.regularity ? b : a));
-  if (c.periodicity < (lenient ? 0.2 : 0.35) || c.regularity < (lenient ? 0.5 : 0.7) || c.beats.length < minBeats) return null;
+  if (c.periodicity < (lenient ? 0.28 : 0.35) || c.regularity < (lenient ? 0.6 : 0.7) || c.beats.length < minBeats) return null;
   if (c.bpm < MIN_BPM || c.bpm > MAX_BPM) return null;
   return { bpm: Math.round(c.bpm), confidence: Math.min(1, c.periodicity * c.regularity), beats: c.beats };
 }

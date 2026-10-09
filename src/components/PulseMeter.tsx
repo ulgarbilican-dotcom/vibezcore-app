@@ -462,8 +462,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       setProgress(Math.min(1, elapsed / MEASURE_MS));
 
       const recent = samples.current.filter((p) => p.t >= last.t - 6000);
-      /* Live getal met de strenge analyse (operator: correct boven snel). */
-      const est = recent.length > 120 ? analyzePulse(recent, 3) : null;
+      /* Live: snelle schatting (strenger afgesteld), maar pas getoond na
+         akkoord van 4 opeenvolgende schattingen (operator: "telling begint
+         laat" én "moet correct zijn"). Eindresultaat blijft streng. */
+      const est = recent.length > 72 ? analyzePulse(recent, 2, true) : null;
       const b = est ? est.beats[est.beats.length - 1] : null;
       /* Operator, 9 okt 2026 ("boven de meting in grote cijfers live te zien"):
          een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
@@ -480,10 +482,11 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         liveHist.current = hist;
         const sorted = [...hist].sort((x, y) => x - y);
         const median = sorted[Math.floor(sorted.length / 2)];
-        if (liveEma.current === null) {
-          const prev = hist[hist.length - 2];
-          if (prev !== undefined && Math.abs(prev - est.bpm) / est.bpm <= 0.12) {
-            liveEma.current = Math.round((prev + est.bpm) / 2);
+        if (liveEma.current === null && hist.length >= 4) {
+          const last4 = hist.slice(-4);
+          const agree = last4.every((x) => Math.abs(x - median) / median <= 0.08);
+          if (agree) {
+            liveEma.current = Math.round(median);
             setLiveBpm(liveEma.current);
           }
         }
