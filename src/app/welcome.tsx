@@ -210,13 +210,15 @@ function PillarButton({
      op 67/81;
    - onder de knik loopt de binnenkant evenwijdig aan het linkerbeen → een
      gelijkmatige smalle spleet.
+   Vervolg ("de V is te hoog"): 15% korter, zelfde breedte (benen iets
+   schuiner, dichter bij de woordmerk-V).
    Dezelfde vorm staat in de vergrendelscherm-kaart (breath-background). In
    het woordmerk zelf en op het app-icoon blijft de volle V. */
 function VMark() {
   return (
-    <Svg width={30} height={34} viewBox="0 0 71.4 81">
-      <Polygon points="0,0 16.8,0 42.8,81 26,81" fill="#ffffff" />
-      <Polygon points="54.6,0 71.4,0 49.89,67 41.49,40.83" fill="#ffffff" />
+    <Svg width={30} height={29} viewBox="0 0 71.4 68.85">
+      <Polygon points="0,0 16.8,0 42.8,68.85 26,68.85" fill="#ffffff" />
+      <Polygon points="54.6,0 71.4,0 49.89,56.95 41.49,34.71" fill="#ffffff" />
     </Svg>
   );
 }
@@ -367,7 +369,7 @@ export default function WelcomeScreen() {
                 (operator, 7 okt 2026: "de v in vibezcore moet ook die
                 speciale v krijgen"). */}
             <Animated.Image
-              source={require('../../assets/vibezcore_wordmark_wide.png')}
+              source={require('../../assets/vibezcore_wordmark_spaced.png')}
               style={[s.topWordmark, taglineStyle]}
               resizeMode="contain"
               tintColor="#ffffff"
@@ -441,10 +443,11 @@ const s = StyleSheet.create({
   },
   topWordmark: {
     marginTop: 12,
-    /* vibezcore_wordmark_wide.png: zelfde letters als het woordmerk, iets
-       ruimer gespatieerd (operator, 7 okt 2026: "nog verder uiteen").
-       1120×83 → zelfde lettergrootte als het origineel bij 120 breed. */
-    width: 168,
+    /* vibezcore_wordmark_spaced.png: zelfde letters als het woordmerk,
+       tussenruimte ×1,5 t.o.v. vibezcore_wordmark_wide (operator, 10 okt
+       2026: "letters verder uiteen", keuze B). 1380×83 → zelfde
+       lettergrootte als voorheen (168 breed bij 1120). */
+    width: 207,
     height: 12.5,
   },
   topTagline: {
