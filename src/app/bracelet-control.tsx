@@ -3934,7 +3934,6 @@ function IdleScreen({
             {/* Operator, 9 okt 2026 (Apple-stijl "Quick Start Cards"): twee
                 liggende kaartjes met tekst i.p.v. losse icoontjes — je ziet
                 meteen wat ze doen. Tik = kort infoblad met Start. */}
-            <Text style={s.quickHead}>QUICK START</Text>
             <View style={s.quickCardRow}>
               {QUICK_SESSIONS.map((q) => {
                 const QIcon = MODE_ICONS[q.mode];
