@@ -154,22 +154,20 @@ export default function RhythmSheet({
 
         {step === 'choose' && now && (
           <>
-            <View style={s.iconWrap}>
-              <HeartPulse size={30} color="#ffffff" strokeWidth={1.8} />
-            </View>
-            <Text style={s.title}>Start from your{'\n'}heart right now</Text>
-            <Text style={s.body}>
-              Measure now and this session starts at your current heart rate. Your resting heart rate stays saved.
-            </Text>
+            {/* Operator, 9 okt 2026 ("te veel lezen — de knoppen leggen de
+                keuze zelf uit"): korte titel, geen uitleg, geen los icoon;
+                het hart zit in de meetknop. */}
+            <Text style={[s.title, { marginBottom: 32 }]}>Heart rate for this session</Text>
             {PulseMeter ? (
               <PressScale
-                style={[s.cta]} haptic scaleTo={0.97}
+                style={[s.cta, s.ctaRow]} haptic scaleTo={0.97}
                 onPress={() => {
                   void Haptics.selectionAsync();
                   setStep('measure');
                 }}
                 accessibilityRole="button"
               >
+                <HeartPulse size={20} color="#1D1D1F" strokeWidth={2.2} />
                 <Text style={s.ctaTxt}>Measure Now</Text>
               </PressScale>
             ) : null}
@@ -184,8 +182,8 @@ export default function RhythmSheet({
             >
               <Text style={s.secondaryTxt}>
                 {pulse.source === 'average'
-                  ? `Use Average (${pulse.bpm} bpm)`
-                  : `Use Resting Heart Rate (${pulse.bpm} bpm)`}
+                  ? `Use Average · ${pulse.bpm} bpm`
+                  : `Use Resting · ${pulse.bpm} bpm`}
               </Text>
             </PressScale>
           </>
@@ -453,6 +451,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
   },
+  ctaRow: { flexDirection: 'row', gap: 10 },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
   secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   secondaryTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
