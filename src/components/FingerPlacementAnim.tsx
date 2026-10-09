@@ -36,7 +36,9 @@ const LINE_SOFT = 'rgba(255,255,255,0.22)';
 const ACCENT = '#4AF0D4';
 
 /* Wijsvinger van achteren gezien, top op (15,2), lengte ~150. */
-const FINGER = 'M1 152 C2 104 3.5 64 3.5 26 C3.5 11 8.5 2 15 2 C21.5 2 26.5 11 26.5 26 C26.5 64 28 104 29 152';
+/* Vervolg (operator: "vinger veel te lang"): enkel top + middelste kootje,
+   vervaagt naar onder. */
+const FINGER = 'M2 84 C2.6 62 3.5 44 3.5 26 C3.5 11 8.5 2 15 2 C21.5 2 26.5 11 26.5 26 C26.5 44 27.4 62 28 84';
 const NAIL = 'M8.6 22 C8.6 13.5 11.2 8.5 15 8.5 C18.8 8.5 21.4 13.5 21.4 22 L21 33 C17.6 35 12.4 35 9 33 Z';
 
 export default function FingerPlacementAnim() {
@@ -103,17 +105,21 @@ export default function FingerPlacementAnim() {
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, fingerStyle]}>
         <Svg width={W} height={H}>
           <Defs>
-            <LinearGradient id="fpFill" x1="0" y1="0" x2="0" y2="1">
+            <LinearGradient id="fpFill" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="84">
               <Stop offset="0" stopColor="#ffffff" stopOpacity={0.2} />
-              <Stop offset="1" stopColor="#ffffff" stopOpacity={0.03} />
+              <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
+            </LinearGradient>
+            <LinearGradient id="fpStroke" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="84">
+              <Stop offset="0" stopColor="#ffffff" stopOpacity={0.62} />
+              <Stop offset="0.7" stopColor="#ffffff" stopOpacity={0.4} />
+              <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
             </LinearGradient>
           </Defs>
-          <G transform={`translate(${TIP.x - 15} ${TIP.y - 2}) rotate(${TILT} 15 2)`}>
-            <Path d={FINGER} fill="url(#fpFill)" stroke="rgba(255,255,255,0.62)" strokeWidth={1.2} strokeLinejoin="round" />
+          <G transform={`translate(${TIP.x - 15 * 0.78} ${TIP.y - 2 * 0.78}) rotate(${TILT} ${15 * 0.78} ${2 * 0.78}) scale(0.78)`}>
+            <Path d={FINGER} fill="url(#fpFill)" stroke="url(#fpStroke)" strokeWidth={1.4} strokeLinejoin="round" />
             <Path d={NAIL} fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.38)" strokeWidth={0.9} />
             <Path d="M7 60 Q15 63 23 60" stroke={LINE_SOFT} strokeWidth={0.9} fill="none" strokeLinecap="round" />
             <Path d="M9 65 Q15 67 21 65" stroke="rgba(255,255,255,0.14)" strokeWidth={0.9} fill="none" strokeLinecap="round" />
-            <Path d="M6 104 Q15 107 24 104" stroke="rgba(255,255,255,0.14)" strokeWidth={0.9} fill="none" strokeLinecap="round" />
           </G>
         </Svg>
       </Animated.View>

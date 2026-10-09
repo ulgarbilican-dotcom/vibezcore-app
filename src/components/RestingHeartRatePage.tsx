@@ -26,14 +26,11 @@ import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'reac
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
-  cancelAnimation,
-  Easing,
+  useAnimatedProps,
   useAnimatedStyle,
+  useDerivedValue,
+  useFrameCallback,
   useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,47 +39,34 @@ const HEART_D =
   'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z';
 const BEAT_MS = 1500; // ≈40 bpm — operator 9 okt 2026: "hartslag mag rustiger" (2x)
 
-/* Operator, 9 okt 2026 ("de ringen doen niets"): elke ring een eigen,
-   onafhankelijke animatie (gedeelde teller bleef op 0 staan). Vertraging
-   0 / 1 / 2 s → bij elke hartslag vertrekt een nieuwe ring. */
-function Ring({ delay, size, from }: { delay: number; size: number; from: number }) {
-  /* Start op 1 (= onzichtbaar): een ring die nog moet vertrekken, mag niet
-     als witte lijn op de cirkel blijven hangen (operator, 9 okt 2026). */
-  const p = useSharedValue(1);
-  useEffect(() => {
-    p.value = withDelay(
-      delay,
-      withSequence(
-        withTiming(0, { duration: 0 }),
-      /* Vervolg ("animatie buitenste ringen klopt niet"): een rimpeling per
-         slag — leeft 2 slagen, dus max 2 ringen tegelijk. */
-      /* Drukgolf: vertrekt vlot op de "lub", vertraagt dan zacht. */
-      /* Vervolg ("meer ringen aan de buitenkant"): elke ring leeft 4
-         slagen → 4 ringen tegelijk onderweg, één nieuwe per slag. */
-      withRepeat(withTiming(1, { duration: BEAT_MS * 4, easing: Easing.bezier(0.16, 1, 0.3, 1) }), -1, false),
-      ),
-    );
-    return () => cancelAnimation(p);
-  }, [delay, p, from]);
-  /* Vervolg ("geheel moet mooi samenwerken"): start exact op de rand van
-     de gevulde cirkel (`from`), deint uit tot de buitenrand, vervaagt. */
-  const style = useAnimatedStyle(() => ({
-    /* Vervolg ("buitenste ringen niet zichtbaar"): vervaagt pas op het
-       einde. */
-    /* Vervolg ("deint te ver uit, moet beter"): blijft binnen de eigen
-       ruimte (tot 1×), zachter vervagen. */
-    /* Vervolg ("vaste outline rond de cirkel"): de ring vertrekt
-       onzichtbaar en licht pas op terwijl hij al uitdeint — nooit een
-       strakke lijn tegen de cirkel aan. */
-    opacity: 0.55 * Math.min(1, p.value * 6) * (1 - p.value),
-    transform: [{ scale: from * 1.03 + p.value * (1 - from * 1.03) }],
-  }));
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[s.ring, { width: size, height: size, borderRadius: size / 2 }, style]}
-    />
-  );
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+/* Eén hartslag op de lijn (P, QRS, T): [ms t.o.v. de R-piek, hoogte −1…1]. */
+const PQRST: [number, number][] = [
+  [-200, 0], [-170, 0.08], [-140, 0], [-45, 0], [-28, -0.14], [0, 1], [24, -0.34],
+  [44, 0], [150, 0], [200, 0.18], [250, 0],
+];
+/* De R-piek valt midden in de "lub" van het hart. */
+const R_AT = 60;
+
+function easeOut(x: number) {
+  'worklet';
+  return 1 - (1 - x) * (1 - x);
+}
+function easeInOut(x: number) {
+  'worklet';
+  return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+}
+/* Lub-dub als functie van de fase (0…BEAT_MS): S1 krachtig, ~300 ms later
+   een kleinere S2, dan de lange rustige vulfase. */
+function beatScale(ph: number) {
+  'worklet';
+  if (ph < 120) return 1 + 0.07 * easeOut(ph / 120);
+  if (ph < 320) return 1.07 - 0.07 * easeInOut((ph - 120) / 200);
+  if (ph < 410) return 1;
+  if (ph < 520) return 1 + 0.035 * easeOut((ph - 410) / 110);
+  if (ph < 760) return 1.035 - 0.035 * easeInOut((ph - 520) / 240);
+  return 1;
 }
 
 export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () => void; onBack?: () => void }) {
@@ -99,7 +83,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   const insets = useSafeAreaInsets();
   /* Operator, 9 okt 2026 ("alle tekst op elkaar"): het beeld schaalt mee
      met de schermhoogte i.p.v. vaste 260 pt. */
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   /* Vervolg (operator: "tekst wordt door de knop afgesneden"): het hart
      krijgt enkel de ruimte die echt overblijft (gemeten), max 280. */
   const [area, setArea] = useState(0);
@@ -107,54 +91,46 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   const core = Math.round(stage * 0.6); // 9 okt 2026: volle cirkel (operator: "kleiner nu")
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
-  /* Lub-dub op het hart, ringen deinen continu uit. */
-  const beat = useSharedValue(1);
-  useEffect(() => {
-    beat.value = withRepeat(
-      withSequence(
-        /* Operator, 9 okt 2026 ("kan je echte hartslag nabootsen"): de
-           hartcyclus — "lub" (S1, kamers trekken krachtig en snel samen),
-           ~300 ms later een kleinere "dub" (S2, kleppen sluiten), dan de
-           lange, rustige vulfase. 1200 ms ≈ 50 bpm. */
-        withTiming(1.07, { duration: 120, easing: Easing.bezier(0.2, 0.9, 0.3, 1) }),
-        withTiming(1.0, { duration: 200, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-        withDelay(90, withTiming(1.035, { duration: 110, easing: Easing.bezier(0.2, 0.9, 0.3, 1) })),
-        withTiming(1, { duration: 240, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-        withDelay(740, withTiming(1, { duration: 0 })),
-      ),
-      -1,
-      false,
-    );
-  }, [beat]);
+  /* Operator, 9 okt 2026 ("een kloppend hart waardoor de hartgrafiek
+     loopt"): één klok voor hart én lijn — de piek gaat precies op de "lub"
+     door het hart. De witte ringen en de extra ring zijn weg (te druk). */
+  const clock = useSharedValue(0);
+  const t0 = useSharedValue(-1);
+  useFrameCallback((f) => {
+    if (t0.value < 0) t0.value = f.timestamp;
+    clock.value = f.timestamp - t0.value;
+  });
+  const beat = useDerivedValue(() => beatScale(clock.value % BEAT_MS));
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
-  /* Vervolg ("de grote volle cirkel moet ook meebewegen"): klopt mee,
-     half zo sterk als het hart — één kloppend geheel. */
+  /* De glazen cirkel klopt half zo sterk mee — één kloppend geheel. */
   const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
-  /* Extra ring rond de cirkel: licht op en deint uit met elke lub-dub. */
-  const beatRingStyle = useAnimatedStyle(() => ({
-    /* Vervolg ("vaste outline rond de cirkel mag niet"): in rust
-       onzichtbaar, enkel zichtbaar op de slag zelf. */
-    opacity: Math.min(1, (beat.value - 1) * 11),
-    transform: [{ scale: 1 + (beat.value - 1) * 1.6 }],
-  }));
-  /* Vervolg ("achter de volle cirkel een lichtbron"): zachte gloed die
-     meeklopt. */
-  /* Vervolg ("lichtbron mag gloeien en verzachten"): groter, zachter
-     verloop, en een trage eigen gloei (≈2 hartslagen in, 2 uit) bovenop
-     een lichte reactie op elke slag. */
-  const glowBreath = useSharedValue(0);
-  useEffect(() => {
-    glowBreath.value = withRepeat(
-      withTiming(1, { duration: BEAT_MS * 2, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    return () => cancelAnimation(glowBreath);
-  }, [glowBreath]);
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.6 + glowBreath.value * 0.4 + (beat.value - 1) * 1.5,
-    transform: [{ scale: 0.96 + glowBreath.value * 0.06 + (beat.value - 1) * 0.4 }],
-  }));
+
+  /* Hartlijn: horizontaal door de cirkel, schuift van rechts naar links,
+     twee slagen zichtbaar, vervaagt naar de randen. */
+  const lineW = Math.round(Math.min(width - 32, stage * 1.7));
+  const lineH = Math.round(core * 0.62);
+  const lineProps = useAnimatedProps(() => {
+    const mid = lineH / 2;
+    const amp = lineH / 2 - 3;
+    const cx = lineW / 2;
+    const v = cx / BEAT_MS; // één slag per halve breedte
+    const now = clock.value;
+    const base = now - (now % BEAT_MS) + R_AT;
+    const pts: number[][] = [];
+    for (let k = -2; k <= 2; k++) {
+      const tk = base + k * BEAT_MS;
+      for (let j = 0; j < PQRST.length; j++) {
+        const x = cx + (tk + PQRST[j][0] - now) * v;
+        if (x < 0 || x > lineW) continue;
+        pts.push([x, mid - PQRST[j][1] * amp]);
+      }
+    }
+    pts.sort((m, n) => m[0] - n[0]);
+    let d = `M0 ${mid}`;
+    for (let i = 0; i < pts.length; i++) d += ` L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+    d += ` L${lineW} ${mid}`;
+    return { d };
+  });
 
   return (
     <View style={s.root}>
@@ -168,17 +144,6 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          {[0, 1, 2, 3].map((k) => (
-            <Ring key={`r${k}-${stage}`} delay={BEAT_MS * k} size={stage} from={core / stage} />
-          ))}
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              s.beatRing,
-              { width: core * 1.16, height: core * 1.16, borderRadius: (core * 1.16) / 2, zIndex: 1 },
-              beatRingStyle,
-            ]}
-          />
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }, coreStyle]}>
             {/* Vervolg (operator, 9 okt 2026: "de volle cirkel toch groen glas"):
                 Bio-Teal tint, lichte glans bovenaan, dunne heldere rand
@@ -196,7 +161,32 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               end={{ x: 0.5, y: 0.55 }}
               style={StyleSheet.absoluteFill}
             />
-            <Animated.View style={heartStyle}>
+          </Animated.View>
+          {/* Hartlijn tussen het glas en het hart. */}
+          <Svg
+            pointerEvents="none"
+            width={lineW}
+            height={lineH}
+            style={{ position: 'absolute', left: (stage - lineW) / 2, top: (stage - lineH) / 2, zIndex: 3 }}
+          >
+            <Defs>
+              <SvgLinearGradient id="ecgPage" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={lineW} y2="0">
+                <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0} />
+                <Stop offset="0.28" stopColor="#4AF0D4" stopOpacity={0.85} />
+                <Stop offset="0.72" stopColor="#4AF0D4" stopOpacity={0.85} />
+                <Stop offset="1" stopColor="#4AF0D4" stopOpacity={0} />
+              </SvgLinearGradient>
+            </Defs>
+            <AnimatedPath
+              animatedProps={lineProps}
+              stroke="url(#ecgPage)"
+              strokeWidth={1.8}
+              fill="none"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </Svg>
+          <Animated.View pointerEvents="none" style={[{ position: 'absolute', zIndex: 4 }, heartStyle]}>
               {/* Operator, 9 okt 2026: hart in Bio-Teal als glas — één kleur
                   (doorschijnend teal), geen harde omlijning, enkel een zachte
                   glans bovenaan die wegvloeit. Zelfde vorm als het lucide-hart. */}
@@ -210,7 +200,6 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
                 <Path d={HEART_D} fill="#4AF0D4" fillOpacity={0.75} />
                 <Path d={HEART_D} fill="url(#hgShine)" />
               </Svg>
-            </Animated.View>
           </Animated.View>
         </View>
         </View>
