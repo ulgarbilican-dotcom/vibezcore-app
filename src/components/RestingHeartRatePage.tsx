@@ -26,6 +26,7 @@ import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -33,20 +34,27 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BEAT_MS = 1000; // ≈60 bpm, rustig
+const BEAT_MS = 1200; // ≈50 bpm — operator 9 okt 2026: "hartslag mag rustiger"
 
-function Ring({ delay, progress, size }: { delay: number; progress: SharedValue<number>; size: number }) {
-  const style = useAnimatedStyle(() => {
-    const p = (progress.value + delay) % 1;
-    return {
-      opacity: 0.45 * (1 - p),
-      transform: [{ scale: 0.55 + p * 0.75 }],
-    };
-  });
+/* Operator, 9 okt 2026 ("de ringen doen niets"): elke ring een eigen,
+   onafhankelijke animatie (gedeelde teller bleef op 0 staan). Vertraging
+   0 / 1 / 2 s → bij elke hartslag vertrekt een nieuwe ring. */
+function Ring({ delay, size }: { delay: number; size: number }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withDelay(
+      delay,
+      withRepeat(withTiming(1, { duration: BEAT_MS * 3, easing: Easing.out(Easing.quad) }), -1, false),
+    );
+    return () => cancelAnimation(p);
+  }, [delay, p]);
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.5 * (1 - p.value),
+    transform: [{ scale: 0.5 + p.value * 0.6 }],
+  }));
   return (
     <Animated.View
       pointerEvents="none"
@@ -69,20 +77,18 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
   /* Lub-dub op het hart, ringen deinen continu uit. */
   const beat = useSharedValue(1);
-  const wave = useSharedValue(0);
   useEffect(() => {
     beat.value = withRepeat(
       withSequence(
-        withTiming(1.14, { duration: 110, easing: Easing.out(Easing.quad) }),
-        withTiming(1, { duration: 150, easing: Easing.in(Easing.quad) }),
-        withDelay(60, withTiming(1.08, { duration: 100, easing: Easing.out(Easing.quad) })),
-        withTiming(1, { duration: 580, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.09, { duration: 160, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 200, easing: Easing.inOut(Easing.quad) }),
+        withDelay(60, withTiming(1.045, { duration: 140, easing: Easing.out(Easing.quad) })),
+        withTiming(1, { duration: 640, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
       false,
     );
-    wave.value = withRepeat(withTiming(1, { duration: BEAT_MS * 3, easing: Easing.linear }), -1, false);
-  }, [beat, wave]);
+  }, [beat]);
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
 
   return (
@@ -103,9 +109,9 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Ring delay={0} progress={wave} size={stage} />
-          <Ring delay={1 / 3} progress={wave} size={stage} />
-          <Ring delay={2 / 3} progress={wave} size={stage} />
+          <Ring delay={0} size={stage} />
+          <Ring delay={BEAT_MS} size={stage} />
+          <Ring delay={BEAT_MS * 2} size={stage} />
           <View style={[s.core, { width: core, height: core, borderRadius: core / 2 }]}>
             <LinearGradient
               colors={['rgba(74,240,212,0.22)', 'rgba(0,163,163,0.10)']}
