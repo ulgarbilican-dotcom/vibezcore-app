@@ -31,6 +31,9 @@ import {
 } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
 import { DurationWheel } from '@/components/DurationWheel';
+import { GlassSheet } from '@/components/GlassSheetHost';
+import VibezGlass from '@/components/VibezGlass';
+import { rootBlurRef } from '@/utils/root-blur';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { useBreathHistory } from '@/utils/breath-history';
 import { personalOrderForSlot } from '@/utils/behavior-patterns';
@@ -802,25 +805,21 @@ export default function PlanScreen() {
           moment, minuten per kwartier. Kwartieren zijn een keuze, geen
           beperking — een herinnering op 7:38 bestaat alleen in apps die de
           keuze niet durfden te maken. */}
-      <Modal
-        visible={picking !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPicking(null)}
-      >
-        <AnimatedPressable
-          style={[s.pickBackdrop, pickBackdropStyle]}
-          onPress={() => setPicking(null)}
-          onPressIn={onPickBackdropPressIn}
-          onPressOut={onPickBackdropPressOut}
-        >
-          <Pressable
+      {/* Operator, 8 okt 2026: echt glas-onderblad i.p.v. los venster. */}
+      <GlassSheet visible={picking !== null} onClose={() => setPicking(null)}>
+          <View
             style={[
               s.pickSheet,
+              s.pickSheetGlass,
               { paddingBottom: Math.max(insets.bottom, 14) + 14 },
             ]}
-            onPress={() => {}}
           >
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             {/* Handvat, zoals elk ander onderpaneel op het toestel — dat is
                 het verschil tussen "hier is een lijst geplakt" en "dit
                 schuift open" (operator, 10 augustus 2026: "zo onderaan
@@ -954,29 +953,20 @@ export default function PlanScreen() {
                 })()}
             </View>
             </ScrollView>
-          </Pressable>
-        </AnimatedPressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* ── Duur-kiezer ── zelfde als op plan-review.tsx, nu ook bereikbaar
           NA het opzetten: een protocol is geen contract (operator, 13
           augustus 2026). */}
-      <Modal
-        visible={durationPicking !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDurationPicking(null)}
-      >
-        <AnimatedPressable
-          style={[s.pickBackdrop, durationBackdropStyle]}
-          onPress={() => setDurationPicking(null)}
-          onPressIn={onDurationBackdropPressIn}
-          onPressOut={onDurationBackdropPressOut}
-        >
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-            onPress={() => {}}
-          >
+      <GlassSheet visible={durationPicking !== null} onClose={() => setDurationPicking(null)}>
+          <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {durationPicking !== null && (() => {
               const item = durationPicking !== null ? items[durationPicking] : null;
@@ -1007,9 +997,8 @@ export default function PlanScreen() {
                 </>
               );
             })()}
-          </Pressable>
-        </AnimatedPressable>
-      </Modal>
+          </View>
+      </GlassSheet>
     </SafeAreaView>
   );
 }
@@ -1161,6 +1150,7 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
 
   /* ── Tijdkiezer ── */
+  pickSheetGlass: { backgroundColor: 'transparent', overflow: 'hidden', borderWidth: 0 },
   pickBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.72)',
