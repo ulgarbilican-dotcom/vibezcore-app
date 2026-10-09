@@ -108,9 +108,9 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Ring delay={0} size={stage} from={core / stage} />
-          <Ring delay={BEAT_MS} size={stage} from={core / stage} />
-          <Ring delay={BEAT_MS * 2} size={stage} from={core / stage} />
+          <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
+          <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
+          <Ring key={`r2-${stage}`} delay={BEAT_MS * 2} size={stage} from={core / stage} />
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2 }, coreStyle]}>
             <LinearGradient
               colors={['rgba(74,240,212,0.22)', 'rgba(0,163,163,0.10)']}
@@ -119,7 +119,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
               style={StyleSheet.absoluteFill}
             />
             <Animated.View style={heartStyle}>
-              <Heart size={Math.round(core * 0.42)} color={AudioAccentLight} fill={AudioAccentLight} strokeWidth={1.4} />
+              <Heart size={Math.round(core * 0.42)} color="#ffffff" fill="#ffffff" strokeWidth={1.4} />
             </Animated.View>
           </Animated.View>
         </View>
