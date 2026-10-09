@@ -748,9 +748,8 @@ export default function PlanScreen() {
             }
           >
             <Text style={s.primaryCtaTxt}>
-              {onboarding ? 'Review & confirm' : 'Open your agenda'}
+              {onboarding ? 'Review & Confirm' : 'Open Your Agenda'}
             </Text>
-            <ChevronRight size={18} color="#0a0a0a" strokeWidth={2.4} />
           </AnimatedPressable>
         ) : (
           <AnimatedPressable
@@ -774,10 +773,10 @@ export default function PlanScreen() {
             />
             <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
               {planned
-                ? `Reminders on · ${visible
+                ? `Reminders On · ${visible
                     .map((m) => fmtTime(minsFor(m.key)))
                     .join(' · ')}`
-                : 'Remind me at these times'}
+                : 'Remind Me at These Times'}
             </Text>
           </AnimatedPressable>
         )}
@@ -789,7 +788,7 @@ export default function PlanScreen() {
             onPressIn={onGoalCtaPressIn}
             onPressOut={onGoalCtaPressOut}
           >
-            <Text style={s.goalCtaTxt}>Choose a goal</Text>
+            <Text style={s.goalCtaTxt}>Choose a Goal</Text>
           </AnimatedPressable>
         )}
 
