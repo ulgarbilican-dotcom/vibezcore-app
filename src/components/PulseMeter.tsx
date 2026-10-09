@@ -31,7 +31,7 @@ const LOST_GRACE_MS = 700;
 const RING = 210;
 const HEART = 84;
 /* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
-const STROKE = 3;
+const STROKE = 2; // vervolg 9 okt 2026: "groene vullende lijn mag dunner"
 const ACCENT = '#4AF0D4';
 const IDLE_GREY = 'rgba(255,255,255,0.32)';
 /* Vaste objecten: de camera-hooks herconfigureren bij elke nieuwe referentie. */
