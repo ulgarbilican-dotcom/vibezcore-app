@@ -118,7 +118,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
       </View>
 
-      <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 16) + 18 }]}>
+      <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
         <PressScale style={s.cta} haptic scaleTo={0.97} onPress={() => setSheet('measure')} accessibilityRole="button">
           <Text style={s.ctaTxt}>Measure Now</Text>
         </PressScale>
@@ -214,11 +214,13 @@ const s = StyleSheet.create({
   link: { height: 46, alignItems: 'center', justifyContent: 'center' },
   linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 15.5, color: '#ffffff' },
   linkDim: { fontFamily: BrandFonts.medium, fontSize: 14.5, color: 'rgba(255,255,255,0.55)' },
+  /* Voetnoot zoals Apple's kleine lettertjes: ~12–13 pt, grijs, helemaal
+     onderaan met wat afstand tot de knoppen. */
   legal: {
-    marginTop: 4,
+    marginTop: 18,
     textAlign: 'center',
     fontFamily: BrandFonts.regular,
-    fontSize: 11.5,
-    color: 'rgba(255,255,255,0.38)',
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.42)',
   },
 });
