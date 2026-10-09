@@ -3650,21 +3650,23 @@ function IdleScreen({
             accessibilityRole="button"
             accessibilityLabel={
               pulse.liveBpm !== null
-                ? `Your heart right now, ${pulse.liveBpm} beats per minute. This session starts there. Tap to change.`
+                ? `This session starts at your heart rate right now, ${pulse.liveBpm} beats per minute. Tap to change.`
                 : pulse.source === 'average'
-                  ? `Rhythm set for an average resting heart rate of ${pulse.bpm}. Tap to personalize.`
-                  : `Your resting heart rate, ${pulse.bpm} beats per minute. Tap to change.`
+                  ? `This session starts at an average heart rate of ${pulse.bpm}. Tap to measure your heart right now.`
+                  : `This session starts at your resting heart rate, ${pulse.bpm} beats per minute. Tap to measure your heart right now.`
             }
           >
             <HeartPulse size={18} color="rgba(255,255,255,0.9)" strokeWidth={2} />
             <Text style={s.ringPulseTxt}>
               {/* Operator, 9 okt 2026 ("your rhythm onduidelijk — your
                   heart rate moet echt duidelijk zijn"): gewone woorden. */}
+              {/* Vervolg (operator, 9 okt 2026: "tijdelijk voor nu? niet
+                  duidelijk"): het label zegt waar de sessie start en waarom. */}
               {pulse.liveBpm !== null
-                ? `Heart rate now · ${pulse.liveBpm} bpm`
+                ? `Starts at ${pulse.liveBpm} bpm · Now`
                 : pulse.source === 'average'
-                  ? `Average ${pulse.bpm} bpm · Measure`
-                  : `Resting heart rate · ${pulse.bpm} bpm`}
+                  ? `Starts at ${pulse.bpm} bpm · Average`
+                  : `Starts at ${pulse.bpm} bpm · Resting`}
             </Text>
             {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
             {/* Pijltje zoals in iOS-instellingen: "tik om te wijzigen". */}
@@ -3962,6 +3964,9 @@ function IdleScreen({
       <RhythmSheet
         visible={rhythmOpen}
         mode={selectedMode}
+        /* Nog geen rusthartslag gekozen → eerst die (gewone blad); daarna
+           gaat dit blad enkel over je hartslag van nu. */
+        now={pulse.decided}
         onClose={() => {
           pendingAfterRhythm.current = null;
           setRhythmOpen(false);

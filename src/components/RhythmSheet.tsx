@@ -23,6 +23,7 @@ import {
   MAX_RESTING_BPM,
   MIN_RESTING_BPM,
   chooseAverageRestingPulse,
+  clearLiveStartPulse,
   getRestingPulse,
   setLiveStartPulse,
   setManualRestingPulse,
@@ -75,9 +76,21 @@ type Props = {
   startAt?: Step;
   /** Geopend vanuit Profile — de verwijzing naar Profile vervalt dan. */
   fromProfile?: boolean;
+  /** State Control (operator, 9 okt 2026): het blad gaat enkel over je
+      hartslag van NU — tijdelijk startpunt voor deze sessie. De
+      rusthartslag wijzig je in Profile. */
+  now?: boolean;
 };
 
-export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 'choose', fromProfile = false }: Props) {
+export default function RhythmSheet({
+  visible,
+  mode,
+  onDone,
+  onClose,
+  startAt = 'choose',
+  fromProfile = false,
+  now = false,
+}: Props) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [step, setStep] = useState<Step>(startAt);
@@ -128,7 +141,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           <View style={s.grip} />
         </Pressable>
         <View style={s.head}>
-          <Text style={s.eyebrow}>RESTING HEART RATE</Text>
+          <Text style={s.eyebrow}>{now ? 'HEART RATE NOW' : 'RESTING HEART RATE'}</Text>
           {step !== 'result' ? (
             <PressScale onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
@@ -136,7 +149,46 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           ) : null}
         </View>
 
-        {step === 'choose' && (
+        {step === 'choose' && now && (
+          <>
+            <View style={s.iconWrap}>
+              <HeartPulse size={30} color="#ffffff" strokeWidth={1.8} />
+            </View>
+            <Text style={s.title}>Start from your heart right now</Text>
+            <Text style={s.body}>
+              Measure now and this session starts at your current heart rate. Your resting heart rate stays saved.
+            </Text>
+            {PulseMeter ? (
+              <PressScale
+                style={[s.cta]} haptic scaleTo={0.97}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  setStep('measure');
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={s.ctaTxt}>Measure Now</Text>
+              </PressScale>
+            ) : null}
+            <PressScale
+              style={[s.secondary]}
+              onPress={() => {
+                /* Terug naar de vaste rusthartslag als startpunt. */
+                clearLiveStartPulse();
+                onDone();
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={s.secondaryTxt}>
+                {pulse.source === 'average'
+                  ? `Use Average (${pulse.bpm} bpm)`
+                  : `Use Resting Heart Rate (${pulse.bpm} bpm)`}
+              </Text>
+            </PressScale>
+          </>
+        )}
+
+        {step === 'choose' && !now && (
           <>
             <View style={s.iconWrap}>
               <HeartPulse size={30} color="#ffffff" strokeWidth={1.8} />
@@ -250,7 +302,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               <Text style={s.bigUnit}> bpm</Text>
             </Text>
             <Text style={s.resultLbl}>
-              {aboveRest ? 'Your heart right now' : belowRest ? 'Right now' : 'Your resting heart rate'}
+              {now || aboveRest ? 'Your heart right now' : belowRest ? 'Right now' : 'Your resting heart rate'}
             </Text>
             {belowRest ? (
               <Text style={s.keepNote}>
@@ -266,7 +318,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             <PressScale style={[s.cta]} haptic scaleTo={0.97} onPress={onDone} accessibilityRole="button">
               <Text style={s.ctaTxt}>Continue</Text>
             </PressScale>
-            {aboveRest ? (
+            {now && !belowRest ? (
+              <Text style={s.restNote}>For this session only. Your resting heart rate stays {pulse.bpm} bpm.</Text>
+            ) : aboveRest ? (
               <Text style={s.restNote}>Your resting heart rate stays {pulse.bpm} — we keep your calmest reading.</Text>
             ) : null}
             <Text style={s.note}>
