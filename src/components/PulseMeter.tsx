@@ -18,7 +18,7 @@ import PressScale from '@/components/PressScale';
 import * as Haptics from 'expo-haptics';
 import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
-import { CircleAlert, Heart } from 'lucide-react-native';
+import { ChevronRight, CircleAlert, Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Dimensions, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -230,6 +230,22 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
       <AnimatedCircle cx={ECG_W - 7} r={2.6} fill="#CFFFF6" animatedProps={dotProps} />
     </Svg>
   );
+}
+
+/* Eén hartslag als "lub-dub": stevige S1, ~300 ms later een kleinere S2,
+   dan rust — vloeiend, op de native driver. Bij een snelle hartslag wordt
+   de beweging evenredig korter zodat ze nooit over de volgende slag loopt. */
+function lubDub(v: Animated.Value, big: number, bpm: number | null) {
+  const k = bpm ? Math.min(1, 60000 / bpm / 900) : 1;
+  const ease = Easing.bezier(0.2, 0.9, 0.3, 1);
+  const back = Easing.bezier(0.4, 0, 0.6, 1);
+  return Animated.sequence([
+    Animated.timing(v, { toValue: 1 + big, duration: 120 * k, easing: ease, useNativeDriver: true }),
+    Animated.timing(v, { toValue: 1, duration: 200 * k, easing: back, useNativeDriver: true }),
+    Animated.delay(90 * k),
+    Animated.timing(v, { toValue: 1 + big * 0.5, duration: 110 * k, easing: ease, useNativeDriver: true }),
+    Animated.timing(v, { toValue: 1, duration: 240 * k, easing: back, useNativeDriver: true }),
+  ]);
 }
 
 /* Rekenboog: dunne teal boog die rond het hart draait terwijl het resultaat
@@ -522,11 +538,9 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           }
           numPulse.setValue(1.08);
           Animated.timing(numPulse, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-          Animated.sequence([
-            /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
-            Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
-            Animated.timing(beat, { toValue: 1, duration: 520, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          ]).start();
+          /* Vervolg (operator: "het hartritme moet mooi, smooth en kloppen"):
+             dezelfde lub-dub als op de Resting Heart Rate-pagina. */
+          lubDub(beat, 0.07, liveEma.current).start();
         }, at);
         beatTimers.current.add(tid);
       }
@@ -602,10 +616,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
          los van wanneer de echte slagen gevonden worden. */
       const softBeat = () => {
         if (Date.now() - lastRealAt.current < 1600) return; // echte slagen lopen
-        Animated.sequence([
-          Animated.timing(idle, { toValue: 1.045, duration: 240, easing: Easing.out(Easing.sin), useNativeDriver: true }),
-          Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        ]).start();
+        lubDub(idle, 0.045, null).start();
         const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
         const p = progressRef.current;
         const a = p > 0 ? ecgAmpAt(p) : SOFT_BEAT_AMP;
@@ -802,7 +813,12 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           <Text style={s.ctaTxt}>{errorView.cta}</Text>
         </PressScale>
         <PressScale onPress={onManual} hitSlop={8} style={s.link} accessibilityRole="button">
-          <Text style={s.errLinkTxt}>Enter Manually</Text>
+          {/* Operator, 9 okt 2026: wit, geen onderlijning, subtiel pijltje
+              — zelfde als op de Resting Heart Rate-pagina. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={s.errLinkTxt}>Enter Manually</Text>
+            <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+          </View>
         </PressScale>
       </View>
     );
@@ -925,10 +941,9 @@ const s = StyleSheet.create({
   },
   errCta: { alignSelf: 'stretch' },
   errLinkTxt: {
-    color: ACCENT,
+    color: '#ffffff',
     fontSize: 16,
     fontFamily: BrandFonts.semibold,
-    textDecorationLine: 'underline',
   },
   wrap: { alignItems: 'center', paddingTop: 4 },
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },

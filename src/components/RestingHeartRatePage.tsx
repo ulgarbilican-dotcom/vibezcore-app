@@ -168,7 +168,9 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
         {/* Operator, 9 okt 2026: korter — slogan i.p.v. uitlegzin. */}
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
-        <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
+        {/* Verborgen zolang het meetblad open is: anders schemert het groene
+            hart door het glas achter de telefoon-animatie (operator, 9 okt 2026). */}
+        <View style={[s.stageArea, { opacity: sheet ? 0 : 1 }]} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
           {/* Operator, 9 okt 2026: de cirkel staat stil — enkel het hart klopt. */}
           <View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }]}>
