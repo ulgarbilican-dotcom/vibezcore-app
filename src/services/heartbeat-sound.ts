@@ -22,7 +22,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 1; // echte opname (Pixabay), luidheid in het bestand afgestemd op wat de operator goed vond (vorig geluid op 0,7)
+const VOLUME = 0.7; // operator, 9 okt 2026: echte opname "klinkt heel hard en dof" → geen compressie meer, diepe dreun (< 45 Hz) eruit, volume 0,7
 
 let player: AudioPlayer | null = null;
 let active = false;
