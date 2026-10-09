@@ -3930,27 +3930,37 @@ function IdleScreen({
             popup met korte info en start of back" + "boven de cta naast
             elkaar"). Zelfde tekens als de toestand erachter. */}
         {!sessionRunning && !trialRunning ? (
-          <View style={s.quickIconRow}>
-            {QUICK_SESSIONS.map((q) => {
-              const QIcon = MODE_ICONS[q.mode];
-              return (
-                <PressScale
-                  key={q.key}
-                  onPress={() => {
-                    void Haptics.selectionAsync();
-                    setQuickOpen(q.key);
-                  }}
-                  hitSlop={8}
-                  style={[s.quickIcon]} scaleTo={0.9}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
-                >
-                  {/* De rimpeling oogt kleiner dan de bliksem bij dezelfde maat
-                      (operator, 7 okt 2026: "icoon quick chill mag iets groter"). */}
-                  <QIcon size={q.key === 'chill' ? 25 : 20} color={getModeMeta(q.mode).color} strokeWidth={2} />
-                </PressScale>
-              );
-            })}
+          <View style={s.quickBlock}>
+            {/* Operator, 9 okt 2026 (Apple-stijl "Quick Start Cards"): twee
+                liggende kaartjes met tekst i.p.v. losse icoontjes — je ziet
+                meteen wat ze doen. Tik = kort infoblad met Start. */}
+            <Text style={s.quickHead}>QUICK START</Text>
+            <View style={s.quickCardRow}>
+              {QUICK_SESSIONS.map((q) => {
+                const QIcon = MODE_ICONS[q.mode];
+                return (
+                  <PressScale
+                    key={q.key}
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      setQuickOpen(q.key);
+                    }}
+                    style={[s.quickCard]} scaleTo={0.97}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
+                  >
+                    <QIcon size={q.key === 'chill' ? 22 : 18} color={getModeMeta(q.mode).color} strokeWidth={2} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.quickCardTitle} numberOfLines={1}>
+                        {q.label}
+                      </Text>
+                      <Text style={s.quickCardSub}>{QUICK_SESSION_MINUTES} min</Text>
+                    </View>
+                    <ChevronRight size={16} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
+                  </PressScale>
+                );
+              })}
+            </View>
           </View>
         ) : null}
 
@@ -5978,6 +5988,28 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   quickIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginBottom: 16 },
+  quickBlock: { alignSelf: 'stretch', marginBottom: 16 },
+  quickHead: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: BrandFonts.bold,
+    fontSize: 11.5,
+    letterSpacing: 1.4,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  quickCardRow: { flexDirection: 'row', gap: 10 },
+  quickCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 58,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#1c1c1e',
+  },
+  quickCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14.5 },
+  quickCardSub: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 12.5, marginTop: 1 },
   quickIcon: {
     width: 42,
     height: 42,
