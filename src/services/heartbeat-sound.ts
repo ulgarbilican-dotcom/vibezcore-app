@@ -26,7 +26,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 0.7; // operator, 9 okt 2026: boventonen bijgemengd (hoorbaar op de speaker); "100% te luid, doe 70%"
+const VOLUME = 0.6; // operator, 9 okt 2026: "doe 70%" — na het wegfilteren van < 70 Hz is het bestand iets luider, 0,6 klinkt nu als die 70%
 
 let player: AudioPlayer | null = null;
 let active = false;
