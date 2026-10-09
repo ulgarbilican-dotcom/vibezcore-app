@@ -28,6 +28,7 @@ const SETTLE_MS = 1_000;
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
 const RING = 210;
+const HEART = 84;
 /* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
 const STROKE = 3;
 const ACCENT = '#4AF0D4';
@@ -99,6 +100,16 @@ export default function PulseMeter({ onResult, onManual }: Props) {
      niet ligt (9 okt 2026: "de animatie moet beter"). */
   const ripple = useRef(new Animated.Value(1)).current;
   const idle = useRef(new Animated.Value(1)).current;
+  /* Vulling van het hart = voortgang van de meting, vloeiend. */
+  const fill = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fill, {
+      toValue: status === 'measuring' ? progress : 0,
+      duration: status === 'measuring' ? 260 : 200,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, status, fill]);
 
   /* Stabiel (enkel refs): de camera-worklet krijgt deze functie één keer mee. */
   const onSample = useCallback((rawTs: number, r: number, g: number) => {
@@ -350,12 +361,23 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           ]}
         />
         <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
-          <Heart
-            size={54}
-            color={status === 'measuring' ? ACCENT : 'rgba(255,255,255,0.8)'}
-            fill={status === 'measuring' ? ACCENT : 'transparent'}
-            strokeWidth={1.4}
-          />
+          {/* Operator, 9 okt 2026 ("hart begint leeg en vult naarmate de
+              meting vordert, en groter"): witte omtrek + Bio-Teal vulling die
+              van onder naar boven stijgt met de voortgang. */}
+          <View style={{ width: HEART, height: HEART }}>
+            <Heart size={HEART} color="rgba(255,255,255,0.85)" fill="transparent" strokeWidth={1.3} />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                s.heartFill,
+                { height: fill.interpolate({ inputRange: [0, 1], outputRange: [0, HEART] }) },
+              ]}
+            >
+              <View style={{ position: 'absolute', bottom: 0, left: 0, width: HEART, height: HEART }}>
+                <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={1.3} />
+              </View>
+            </Animated.View>
+          </View>
         </Animated.View>
       </View>
 
@@ -394,6 +416,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
 const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
+  heartFill: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   ripple: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5, borderColor: ACCENT },
   ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
   msg: {
