@@ -118,7 +118,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
         <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
         {/* Operator, 9 okt 2026: korter — slogan i.p.v. uitlegzin. */}
-        <Text style={s.body}>Your rhythm. Your baseline.</Text>
+        <Text style={s.body}>Your rhythm  •  Your baseline</Text>
 
       </View>
 
