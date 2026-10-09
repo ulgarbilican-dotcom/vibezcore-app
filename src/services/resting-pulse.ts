@@ -127,6 +127,12 @@ function commit(next: Stored): void {
   });
 }
 
+/** Dev/test: alles wissen, alsof er nooit een keuze was (8–9 okt 2026,
+ *  om de pagina "Your Resting Heart Rate" opnieuw te kunnen zien). */
+export function resetRestingPulse(): void {
+  commit(EMPTY);
+}
+
 /** Eén keer bij het opstarten (en veilig om vaker aan te roepen). */
 export async function loadRestingPulse(): Promise<RestingPulse> {
   if (loaded) return resolve(stored);

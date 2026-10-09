@@ -23,6 +23,7 @@
      beschikbaar is.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { resetRestingPulse } from '@/services/resting-pulse';
 import { AUDIO_ENABLED } from '@/constants/features';
 import * as Haptics from 'expo-haptics';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
@@ -852,6 +853,17 @@ function DevUserOverrideSection() {
         for testing without actually signing out. Dev-only · resets when
         clearing local data.
       </Text>
+      {/* Dev: rusthartslag-keuze wissen → "Your Resting Heart Rate"-pagina
+          verschijnt opnieuw na de State Control-intro. */}
+      <Pressable
+        style={[devS.row, { marginTop: 10 }]}
+        onPress={() => {
+          resetRestingPulse();
+          void showVibezAlert({ title: 'Resting heart rate reset', message: 'Open State Control to see the setup page again.' });
+        }}
+      >
+        <Text style={devS.label}>Reset resting heart rate</Text>
+      </Pressable>
     </>
   );
 }
