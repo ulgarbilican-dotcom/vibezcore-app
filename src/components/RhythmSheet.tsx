@@ -198,7 +198,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             <Text style={s.body}>Rest your fingertip lightly on the back camera and flash.</Text>
             {/* Operator, 9 okt 2026: ring hoger, de "15 seconds · …"-regel
                 helemaal onderaan. */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 72 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 104 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {

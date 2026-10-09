@@ -34,7 +34,7 @@ const MAX_MS = 25_000;
 const SETTLE_MS = 1_000;
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
-const RING = 210;
+const RING = 240; // 9 okt 2026: "cirkel iets groter"
 const HEART = 84;
 /* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
 const STROKE = 2; // vervolg 9 okt 2026: "groene vullende lijn mag dunner"
