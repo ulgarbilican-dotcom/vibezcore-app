@@ -33,7 +33,7 @@ import { invalidateAudioModeSet } from './session-keepalive';
 import { isHeadphonesOutput } from '../../modules/audio-route';
 
 const VOLUME_SPEAKER = 1; // operator, 9 okt 2026: "op de telefoon mag het luider"
-const VOLUME_HEADPHONES = 0.5; // operator, 9 okt 2026: 100% te luid, 70% → "maximum in de koptelefoon is te hoog" → 50%
+const VOLUME_HEADPHONES = 0.3; // operator, 9 okt 2026: 100% → 70% → 50% bleef "veel te luid en onzuiver" bij vol telefoonvolume → 30%
 
 let speaker: AudioPlayer | null = null;
 let headphones: AudioPlayer | null = null;
