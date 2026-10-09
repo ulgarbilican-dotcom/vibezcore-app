@@ -33,7 +33,7 @@ import { invalidateAudioModeSet } from './session-keepalive';
 import { isHeadphonesOutput } from '../../modules/audio-route';
 
 const VOLUME_SPEAKER = 0.7;
-const VOLUME_HEADPHONES = 0.7;
+const VOLUME_HEADPHONES = 1; // operator, 9 okt 2026: "iets luider, de max"
 
 let speaker: AudioPlayer | null = null;
 let headphones: AudioPlayer | null = null;
