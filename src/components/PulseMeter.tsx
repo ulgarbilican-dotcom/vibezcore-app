@@ -396,6 +396,25 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     }
     Animated.spring(doneIn, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start();
   }, [finalBpm, doneIn]);
+  /* Operator, 10 okt 2026 ("na afloop moet de cirkel beginnen ademen, nu
+     is alles te statisch"): na een geslaagde meting zwelt de ring traag aan
+     en af (~5 s per adem). */
+  const breathe = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (finalBpm === null) {
+      breathe.stopAnimation();
+      breathe.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [finalBpm, breathe]);
   const [calculating, setCalculating] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -834,7 +853,6 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             s.liveNum,
             liveBpm === null ? s.liveNumIdle : null,
             calculating ? { opacity: 0.45 } : null,
-            finalBpm !== null ? { color: ACCENT } : null,
           ]}
         >
           {liveBpm ?? '--'}
@@ -844,7 +862,15 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       <View style={s.stage}>
         {/* Hartlijn over de volle breedte, achter de ring door. */}
         <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
-        <View style={s.ringWrap}>
+        <Animated.View
+          style={[
+            s.ringWrap,
+            {
+              transform: [{ scale: breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.045] }) }],
+              opacity: finalBpm === null ? 1 : breathe.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }),
+            },
+          ]}
+        >
           {/* Operator, 9 okt 2026 ("de cirkel is redelijk dun — hoe doet Apple
               dat?"): een echte voortgangsring zoals de Activity-ringen — zacht
               spoor + felle teal boog met ronde uiteinden die in de meettijd
@@ -884,27 +910,39 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
                (vervolg: "Done" in de cirkel was niet goed — de volgende stap
                is een knop onderaan, in het blad). */
             <Animated.View style={{ opacity: doneIn, transform: [{ scale: doneIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }}>
-              <Check size={72} color={ACCENT} strokeWidth={2.6} />
+              <Check size={72} color="#ffffff" strokeWidth={2.4} />
             </Animated.View>
             ) : (
               <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
                 {/* Vervolg: het hart klopt gewoon mee in vol teal glas (zelfde
                     stijl als de Resting Heart Rate-pagina); de voortgang zit in
                     de ring. */}
+                {/* Operator, 10 okt 2026 ("het hartje in glas"): doorschijnend
+                    teal (licht boven, dieper onder), een glans bovenaan en een
+                    zachte lichtrand die naar onder uitdooft — geen harde lijn. */}
                 <Svg width={HEART} height={HEART} viewBox="0 0 24 24">
                   <Defs>
+                    <LinearGradient id="pmHeartGlass" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor="#7FF5E0" stopOpacity={0.62} />
+                      <Stop offset="1" stopColor="#00A3A3" stopOpacity={0.34} />
+                    </LinearGradient>
                     <LinearGradient id="pmHeartShine" x1="0" y1="0" x2="0" y2="1">
-                      <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
-                      <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
+                      <Stop offset="0" stopColor="#ffffff" stopOpacity={0.45} />
+                      <Stop offset="0.45" stopColor="#ffffff" stopOpacity={0} />
+                    </LinearGradient>
+                    <LinearGradient id="pmHeartEdge" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor="#ffffff" stopOpacity={0.55} />
+                      <Stop offset="0.7" stopColor="#ffffff" stopOpacity={0} />
                     </LinearGradient>
                   </Defs>
-                  <Path d={LUCIDE_HEART_D} fill="#3FDCC2" />
+                  <Path d={LUCIDE_HEART_D} fill="url(#pmHeartGlass)" />
                   <Path d={LUCIDE_HEART_D} fill="url(#pmHeartShine)" />
+                  <Path d={LUCIDE_HEART_D} fill="none" stroke="url(#pmHeartEdge)" strokeWidth={0.35} />
                 </Svg>
               </Animated.View>
             )
           )}
-        </View>
+        </Animated.View>
       </View>
 
       <Text style={s.msg} accessibilityLiveRegion="polite">
