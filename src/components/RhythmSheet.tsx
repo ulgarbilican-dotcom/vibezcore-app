@@ -290,7 +290,12 @@ export default function RhythmSheet({
                   /* De sessie die nu volgt, begint bij het hart van nu. */
                   setLiveStartPulse(bpm);
                   setJustMeasured(bpm);
-                  setStep('result');
+                  /* Operator, 9 okt 2026 ("de Done staat onderaan — kan dat in
+                     de cirkel zelf?"): "Done" in de ring sluit meteen af. Enkel
+                     bij een veel lagere meting dan je rusthartslag nog het
+                     uitlegscherm (die waarde wordt nog niet overgenomen). */
+                  if (bpm < getRestingPulse().bpm) setStep('result');
+                  else onDone();
                 }
               }}
               onManual={() => setStep('manual')}

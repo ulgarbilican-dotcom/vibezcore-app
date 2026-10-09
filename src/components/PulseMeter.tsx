@@ -18,7 +18,7 @@ import PressScale from '@/components/PressScale';
 import * as Haptics from 'expo-haptics';
 import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, robustPulse, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
-import { ChevronRight, CircleAlert, Heart } from 'lucide-react-native';
+import { Check, ChevronRight, CircleAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Dimensions, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -55,8 +55,13 @@ const MAX_MS = 30_000;
 const SETTLE_MS = 500; // 9 okt 2026: "bpm begint te laat" (was 1 s)
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
-const RING = 240; // 9 okt 2026: "cirkel iets groter"
-const HEART = 84;
+// Was 240 (9 okt 2026: "cirkel iets groter").
+/* Vervolg (operator, 9 okt 2026: "de layout van de Resting Heart Rate-pagina
+   is beter, de pieken zijn groter"): de hartlijn loopt nu over de volle
+   breedte achter de ring door, met grote pieken links en rechts ervan —
+   daarvoor is de ring iets kleiner. */
+const RING_LINE = 196;
+const HEART = 74;
 /* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
 const STROKE = 2; // vervolg 9 okt 2026: "groene vullende lijn mag dunner"
 const ACCENT = '#4AF0D4';
@@ -90,10 +95,16 @@ type Props = {
 /* Operator, 9 okt 2026 ("pieken onderaan zoals op de vorige pagina"):
    bijna schermbreed en hoger, zelfde dikte/verloop als de rustpagina. */
 const PROG_W = 4;
-const PROG_CIRC = Math.PI * (RING - PROG_W);
-const ECG_W = Math.round(Math.min(Dimensions.get('window').width - 48, 380));
-const ECG_H = 78;
-const ECG_WINDOW_MS = 3500; // 9 okt 2026: "trager van rechts naar links"; vervolg: "pieken zo kort opeen" → 3,5 s in beeld (≈ 4–5 slagen bij 76 bpm)
+const PROG_CIRC = Math.PI * (RING_LINE - PROG_W);
+const ECG_W = Math.round(Dimensions.get('window').width);
+const ECG_H = 132;
+/* Schrijfpunt rechts van de ring, zoals op de Resting Heart Rate-pagina. */
+const ECG_HX = Math.round(ECG_W * 0.86);
+/* De lijn verdwijnt achter de ring (niets tekenen binnen deze straal). */
+const ECG_GAP_R = RING_LINE / 2 + 6;
+/* 9 okt 2026: "trager van rechts naar links"; vervolg: "pieken zo kort
+   opeen" → ~90 pt per seconde (bij 76 bpm ≈ 70 pt tussen twee slagen). */
+const ECG_WINDOW_MS = Math.round(ECG_HX / 0.09);
 /* Eén hartslag (P-golf, QRS-piek, T-golf): [ms t.o.v. de piek, hoogte −1…1]. */
 /* Vorm van één slag: gedeeld met het andere scherm (utils/ecg-shape). */
 const PQRST = ECG_SHAPE;
@@ -164,7 +175,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
     const t0 = now.value - ECG_DELAY_MS;
     /* Schrijfpunt net binnen de rechterrand (operator: "je moet zien hoe de
        pieken vormen") — niets rechts ervan. */
-    const HX = ECG_W - 7;
+    const HX = ECG_HX;
     const toX = (t: number) => HX - ((t0 - t) / ECG_WINDOW_MS) * HX;
     /* Operator, 9 okt 2026 ("de lijn mag al lopen van rechts naar links,
        zonder pieken, zolang er geen vinger is"): een heel lichte rimpeling
@@ -197,9 +208,17 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
       if (!inBeat) pts.push([x, mid - noise(t0 - ((HX - x) / HX) * ECG_WINDOW_MS)]);
     }
     pts.sort((m, n) => m[0] - n[0]);
+    /* Achter de ring: niets tekenen, de lijn gaat er "onderdoor". */
+    const cx = ECG_W / 2;
     let d = '';
+    let pen = false;
     for (let i = 0; i < pts.length; i++) {
-      d += `${i === 0 ? 'M' : ' L'}${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+      if (Math.abs(pts[i][0] - cx) < ECG_GAP_R) {
+        pen = false;
+        continue;
+      }
+      d += `${pen ? ' L' : ' M'}${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+      pen = true;
     }
     d += ` L${HX} ${headY(t0).toFixed(1)}`;
     return { d };
@@ -211,7 +230,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
   const lineColor = ACCENT;
   const lineAlpha = 1;
   return (
-    <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 22 }}>
+    <Svg width={ECG_W} height={ECG_H} style={{ position: 'absolute', top: (RING_LINE - ECG_H) / 2 }} pointerEvents="none">
       <Defs>
         <LinearGradient id="ecgFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={ECG_W} y2="0">
           <Stop offset="0" stopColor={lineColor} stopOpacity={0} />
@@ -223,13 +242,13 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
       <AnimatedPath
         animatedProps={animatedProps}
         stroke="url(#ecgFade)"
-        strokeWidth={2.4}
+        strokeWidth={2.2}
         fill="none"
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <AnimatedCircle cx={ECG_W - 7} r={6} fill={ACCENT} fillOpacity={0.2} animatedProps={dotGlowProps} />
-      <AnimatedCircle cx={ECG_W - 7} r={2.6} fill="#CFFFF6" animatedProps={dotProps} />
+      <AnimatedCircle cx={ECG_HX} r={6} fill={ACCENT} fillOpacity={0.2} animatedProps={dotGlowProps} />
+      <AnimatedCircle cx={ECG_HX} r={2.6} fill="#CFFFF6" animatedProps={dotProps} />
     </Svg>
   );
 }
@@ -261,7 +280,7 @@ function CalcArc() {
     loop.start();
     return () => loop.stop();
   }, [spin]);
-  const size = RING - 34;
+  const size = RING_LINE - 30;
   const r = size / 2 - 2;
   const c = size / 2;
   const a1 = -Math.PI / 2;
@@ -369,6 +388,14 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const liveTarget = useRef<number | null>(null);
   const liveStepAt = useRef(0);
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
+  const doneIn = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (finalBpm === null) {
+      doneIn.setValue(0);
+      return;
+    }
+    Animated.spring(doneIn, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start();
+  }, [finalBpm, doneIn]);
   const [calculating, setCalculating] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -544,7 +571,6 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             setFinalBpm(res.bpm);
             setLiveBpm(res.bpm);
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            resultTimer.current = setTimeout(() => onResult(res.bpm), 1600);
           }, 1200);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
@@ -735,7 +761,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           ? pressingHard
             ? 'Lift a little — pressing blocks the signal'
             : finalBpm !== null
-            ? 'Done'
+            ? ''
             : calculating
             ? 'Calculating your heart rate…'
             : progress < 1
@@ -814,64 +840,79 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         </Animated.Text>
         <Text style={s.liveUnit}>bpm</Text>
       </View>
-      <View style={s.ringWrap}>
-        {/* Operator, 9 okt 2026 ("de cirkel is redelijk dun — hoe doet Apple
-            dat?"): een echte voortgangsring zoals de Activity-ringen — zacht
-            spoor + felle teal boog met ronde uiteinden die in de meettijd
-            rondloopt. De ring toont de tijd, het hart de hartslag. */}
-        <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
-          <Circle
-            cx={RING / 2}
-            cy={RING / 2}
-            r={(RING - PROG_W) / 2}
-            stroke={ACCENT}
-            strokeOpacity={0.16}
-            strokeWidth={PROG_W}
-            fill="none"
-          />
-          <AnimatedCircle
-            cx={RING / 2}
-            cy={RING / 2}
-            r={(RING - PROG_W) / 2}
-            stroke={ACCENT}
-            strokeWidth={PROG_W}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={`${PROG_CIRC} ${PROG_CIRC}`}
-            animatedProps={progressRingProps}
-            transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-          />
-        </Svg>
-        {calculating ? <CalcArc /> : null}
-        {/* Operator, 9 okt 2026: zolang de vinger nog niet ligt, toont een
-            Touch ID-achtige lijnanimatie hoe je je vinger legt; daarna het
-            hart dat zich vult. */}
-        {status === 'placing' ? (
-          <FingerPlacementAnim />
-        ) : (
-          <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
-            {/* Vervolg: het hart klopt gewoon mee in vol teal glas (zelfde
-                stijl als de Resting Heart Rate-pagina); de voortgang zit in
-                de ring. */}
-            <Svg width={HEART} height={HEART} viewBox="0 0 24 24">
-              <Defs>
-                <LinearGradient id="pmHeartShine" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
-                  <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
-                </LinearGradient>
-              </Defs>
-              <Path d={LUCIDE_HEART_D} fill="#3FDCC2" />
-              <Path d={LUCIDE_HEART_D} fill="url(#pmHeartShine)" />
-            </Svg>
-          </Animated.View>
-        )}
+      <View style={s.stage}>
+        {/* Hartlijn over de volle breedte, achter de ring door. */}
+        <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
+        <View style={s.ringWrap}>
+          {/* Operator, 9 okt 2026 ("de cirkel is redelijk dun — hoe doet Apple
+              dat?"): een echte voortgangsring zoals de Activity-ringen — zacht
+              spoor + felle teal boog met ronde uiteinden die in de meettijd
+              rondloopt. De ring toont de tijd, het hart de hartslag. */}
+          <Svg width={RING_LINE} height={RING_LINE} style={StyleSheet.absoluteFill}>
+            <Circle
+              cx={RING_LINE / 2}
+              cy={RING_LINE / 2}
+              r={(RING_LINE - PROG_W) / 2}
+              stroke={ACCENT}
+              strokeOpacity={0.16}
+              strokeWidth={PROG_W}
+              fill="none"
+            />
+            <AnimatedCircle
+              cx={RING_LINE / 2}
+              cy={RING_LINE / 2}
+              r={(RING_LINE - PROG_W) / 2}
+              stroke={ACCENT}
+              strokeWidth={PROG_W}
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray={`${PROG_CIRC} ${PROG_CIRC}`}
+              animatedProps={progressRingProps}
+              transform={`rotate(-90 ${RING_LINE / 2} ${RING_LINE / 2})`}
+            />
+          </Svg>
+          {calculating ? <CalcArc /> : null}
+          {/* Operator, 9 okt 2026: zolang de vinger nog niet ligt, toont een
+              Touch ID-achtige lijnanimatie hoe je je vinger legt; daarna het
+              hart dat zich vult. */}
+          {status === 'placing' ? (
+            <FingerPlacementAnim />
+          ) : (
+            finalBpm !== null ? (
+              /* Operator, 9 okt 2026 ("de Done staat onderaan — kan dat in de
+                 cirkel zelf, een vinkje met Done?"): het hart wordt een vinkje,
+                 de hele cirkel is de knop. */
+              <Pressable
+                onPress={() => onResult(finalBpm)}
+                accessibilityRole="button"
+                accessibilityLabel={`Done, ${finalBpm} beats per minute`}
+                style={s.doneHit}
+              >
+                <Animated.View style={{ alignItems: 'center', opacity: doneIn, transform: [{ scale: doneIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }}>
+                  <Check size={64} color={ACCENT} strokeWidth={2.6} />
+                  <Text style={s.doneTxt}>Done</Text>
+                </Animated.View>
+              </Pressable>
+            ) : (
+              <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
+                {/* Vervolg: het hart klopt gewoon mee in vol teal glas (zelfde
+                    stijl als de Resting Heart Rate-pagina); de voortgang zit in
+                    de ring. */}
+                <Svg width={HEART} height={HEART} viewBox="0 0 24 24">
+                  <Defs>
+                    <LinearGradient id="pmHeartShine" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
+                      <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
+                    </LinearGradient>
+                  </Defs>
+                  <Path d={LUCIDE_HEART_D} fill="#3FDCC2" />
+                  <Path d={LUCIDE_HEART_D} fill="url(#pmHeartShine)" />
+                </Svg>
+              </Animated.View>
+            )
+          )}
+        </View>
       </View>
-
-      {/* Operator, 9 okt 2026: hartlijn — begint vlak, elke gevonden slag
-          tekent een piek die naar links wegschuift. */}
-      {/* Bij een fout of geweigerde camera geen lijn: er wordt niet gemeten,
-          en de knoppen hebben die ruimte nodig. */}
-      <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
 
       <Text style={s.msg} accessibilityLiveRegion="polite">
         {message}
@@ -920,7 +961,10 @@ const s = StyleSheet.create({
   },
   wrap: { alignItems: 'center', paddingTop: 4 },
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
-  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 36 },
+  stage: { width: ECG_W, height: RING_LINE, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
+  ringWrap: { width: RING_LINE, height: RING_LINE, alignItems: 'center', justifyContent: 'center' },
+  doneHit: { width: RING_LINE, height: RING_LINE, borderRadius: RING_LINE / 2, alignItems: 'center', justifyContent: 'center' },
+  doneTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17, marginTop: 6 },
   msg: {
     color: '#ffffff',
     fontSize: 17,

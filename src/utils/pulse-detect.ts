@@ -34,6 +34,8 @@ export type PulseResult = {
 const FS = 30;
 const MIN_BPM = 40;
 const MAX_BPM = 180;
+/** Grootste uitslag / mediane uitslag waarboven een venster verstoord is. */
+const ARTIFACT_RATIO = 5;
 
 /** Ligt er een vinger op de lens (met de zaklamp aan)? Dan is het beeld
  *  egaal en sterk rood. */
@@ -111,6 +113,15 @@ function estimate(x: number[], t0: number, lenient = false): ChannelEstimate | n
   const zc = z.map((v) => v - mean);
   const energy = zc.reduce((a, b) => a + b * b, 0);
   if (energy <= 0) return null;
+  /* Operator, 9 okt 2026 ("vinger lag correct, toch mislukt" en "het getal
+     verschijnt soms wel, soms niet"): een beweging of de camera die zijn
+     belichting bijregelt, geeft een sprong die vele malen groter is dan de
+     polsgolf. Gemeten op echte metingen: schoon ≈ 2–3× de mediane uitslag,
+     verstoord 5–50× (een fout getal 63 i.p.v. 78 kwam uit een venster van
+     5,5×). Zo'n venster zegt niets over je hartslag → overslaan. */
+  const peak = zc.reduce((a, b) => Math.max(a, Math.abs(b)), 0);
+  const typical = median(zc.map((v) => Math.abs(v)));
+  if (typical <= 0 || peak / typical > ARTIFACT_RATIO) return null;
 
   /* Autocorrelatie over 40–180 bpm. */
   const minLag = Math.floor((60 / MAX_BPM) * FS);
