@@ -220,14 +220,16 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               {/* Operator, 9 okt 2026: hart in Bio-Teal als glas — één kleur
                   (doorschijnend teal), geen harde omlijning, enkel een zachte
                   glans bovenaan die wegvloeit. Zelfde vorm als het lucide-hart. */}
-              <Svg width={Math.round(core * 0.46)} height={Math.round(core * 0.46)} viewBox="0 0 24 24">
+              <Svg width={Math.round(core * 0.6)} height={Math.round(core * 0.6)} viewBox="0 0 24 24">
                 <Defs>
                   <SvgLinearGradient id="hgShine" x1="0" y1="0" x2="0" y2="1">
                     <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
                     <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
                   </SvgLinearGradient>
                 </Defs>
-                <Path d={HEART_D} fill="#4AF0D4" fillOpacity={0.75} />
+                {/* Vervolg (operator, 9 okt 2026): groter, en steviger glas zodat de
+                    hartlijn er duidelijk achter verdwijnt. */}
+                <Path d={HEART_D} fill="#3FDCC2" fillOpacity={1} />
                 <Path d={HEART_D} fill="url(#hgShine)" />
               </Svg>
           </Animated.View>
