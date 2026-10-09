@@ -168,7 +168,27 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               style={StyleSheet.absoluteFill}
             />
             <Animated.View style={heartStyle}>
-              <Heart size={Math.round(core * 0.42)} color="#ffffff" fill="#ffffff" strokeWidth={1.4} />
+              {/* Operator, 9 okt 2026: hart in Bio-Teal, als glas — doorschijnende
+                  vulling, heldere rand, zachte reflectie bovenaan. */}
+              <View style={{ width: Math.round(core * 0.42), height: Math.round(core * 0.42) }}>
+                <Heart
+                  size={Math.round(core * 0.42)}
+                  color="#4AF0D4"
+                  fill="rgba(74,240,212,0.38)"
+                  strokeWidth={1.5}
+                />
+                <View
+                  pointerEvents="none"
+                  style={{ position: 'absolute', left: 0, right: 0, top: 0, height: Math.round(core * 0.21), overflow: 'hidden' }}
+                >
+                  <Heart
+                    size={Math.round(core * 0.42)}
+                    color="transparent"
+                    fill="rgba(255,255,255,0.22)"
+                    strokeWidth={0}
+                  />
+                </View>
+              </View>
             </Animated.View>
           </Animated.View>
         </View>
