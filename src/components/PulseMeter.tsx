@@ -157,7 +157,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
   const lineColor = ACCENT;
   const lineAlpha = 1;
   return (
-    <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 18 }}>
+    <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 34 }}>
       <Defs>
         <LinearGradient id="ecgFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={ECG_W} y2="0">
           <Stop offset="0" stopColor={lineColor} stopOpacity={0} />
@@ -602,7 +602,11 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
       {/* Operator, 9 okt 2026: hartlijn — begint vlak, elke gevonden slag
           tekent een piek die naar links wegschuift. */}
-      <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
+      {/* Bij een fout of geweigerde camera geen lijn: er wordt niet gemeten,
+          en de knoppen hebben die ruimte nodig. */}
+      {status === 'failed' || status === 'camera-error' || status === 'denied' ? null : (
+        <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
+      )}
 
       <Text style={s.msg} accessibilityLiveRegion="polite">
         {message}
@@ -640,7 +644,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
-  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 36 },
   msg: {
     color: '#ffffff',
     fontSize: 17,
