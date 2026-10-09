@@ -3794,6 +3794,14 @@ export function BreathSession() {
           (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
       <GlassSheet visible={avSheetOpen} onClose={() => setAvSheetOpen(false)}>
           <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
+            {/* Operator, 9 okt 2026 ("volgens mij is de popup niet glass"):
+                echt glas zoals de andere bladen (sheet-protocol). */}
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             {/* Operator, 25 september 2026 ("streep bovenaan doet niets,
                kan daarmee niet sluiten"): het streepje was puur decoratief.
                Nu tikbaar — sluit hetzelfde als een backdrop-tap. */}
@@ -5166,11 +5174,10 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   },
   sheet: {
     maxHeight: '84%',
-    backgroundColor: C.cardBg,
+    /* Glas (VibezGlass) i.p.v. een effen kaart + accentrand. */
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: accentSoft,
+    overflow: 'hidden',
     paddingHorizontal: 18,
     paddingTop: 10,
   },
