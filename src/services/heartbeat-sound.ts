@@ -70,8 +70,14 @@ export function heartbeatTick(): void {
   const p = isHeadphonesOutput() ? headphones : speaker;
   if (!p) return;
   try {
-    void p.seekTo(0);
-    p.play();
+    /* Eerst echt terug naar het begin, dán spelen: anders staat de speler
+       nog aan het einde van de vorige slag en speelt hij niets (gezien op
+       de A16: enkel de eerste slag klonk). */
+    p.pause();
+    void p
+      .seekTo(0)
+      .then(() => p.play())
+      .catch(() => {});
   } catch {
     /* geluid is een extraatje — nooit de pagina laten haperen */
   }
