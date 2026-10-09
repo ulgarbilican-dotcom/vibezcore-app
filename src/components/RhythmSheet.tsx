@@ -144,7 +144,7 @@ export default function RhythmSheet({
           <View style={s.grip} />
         </Pressable>
         <View style={s.head}>
-          <Text style={s.eyebrow}>{now ? 'HEART RATE NOW' : 'RESTING HEART RATE'}</Text>
+          <Text style={s.eyebrow}>{now ? 'HEART RATE' : 'RESTING HEART RATE'}</Text>
           {step !== 'result' ? (
             <PressScale onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
@@ -154,14 +154,35 @@ export default function RhythmSheet({
 
         {step === 'choose' && now && (
           <>
-            {/* Operator, 9 okt 2026 ("te veel lezen — de knoppen leggen de
-                keuze zelf uit"): korte titel, geen uitleg, geen los icoon;
-                het hart zit in de meetknop. */}
-            {/* Vervolg (operator): hart gecentreerd boven, groter, titel eronder. */}
+            {/* Operator, 9 okt 2026 ("heart rate for this session is niet
+                duidelijk — zet je hartslag en het getal erbij"): eerst WAT
+                (je hartslag + getal + waar het vandaan komt), dan één zin
+                waarvoor het dient, dan de keuzes. */}
             <View style={[s.iconWrap, s.iconWrapLg]}>
               <HeartPulse size={40} color="#ffffff" strokeWidth={1.7} />
             </View>
-            <Text style={[s.title, { marginBottom: 36, textAlign: 'center' }]}>Heart rate for this session</Text>
+            {/* Vervolg ("moet duidelijk zijn dat het zijn eigen gemeten
+                hartslag is, niet de huidige live hartslag"): de titel zegt
+                welk getal het is. */}
+            <Text style={[s.title, { textAlign: 'center', marginBottom: 6 }]}>
+              {pulse.liveBpm !== null ? 'Your heart rate now' : 'Your resting heart rate'}
+            </Text>
+            <Text style={s.bigNum}>
+              {pulse.liveBpm ?? pulse.bpm}
+              <Text style={s.bigUnit}> bpm</Text>
+            </Text>
+            <Text style={[s.resultLbl, { textAlign: 'center' }]}>
+              {pulse.liveBpm !== null
+                ? 'Measured just now'
+                : pulse.source === 'average'
+                  ? 'Average — not measured yet'
+                  : pulse.source === 'manual'
+                    ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`
+                    : `Your last measurement${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`}
+            </Text>
+            <Text style={[s.body, { textAlign: 'center', marginTop: 18 }]}>
+              Your session starts here, then moves to the rhythm of {meta.name}.
+            </Text>
             {PulseMeter ? (
               <PressScale
                 style={[s.cta]} haptic scaleTo={0.97}
@@ -177,16 +198,22 @@ export default function RhythmSheet({
             <PressScale
               style={[s.secondary]}
               onPress={() => {
-                /* Terug naar de vaste rusthartslag als startpunt. */
-                clearLiveStartPulse();
-                onDone();
+                if (pulse.liveBpm !== null) {
+                  /* Terug naar de vaste rusthartslag als startpunt. */
+                  clearLiveStartPulse();
+                  onDone();
+                } else {
+                  onClose();
+                }
               }}
               accessibilityRole="button"
             >
               <Text style={s.secondaryTxt}>
-                {pulse.source === 'average'
-                  ? `Use Average · ${pulse.bpm} bpm`
-                  : `Use Resting · ${pulse.bpm} bpm`}
+                {pulse.liveBpm === null
+                  ? 'Not Now'
+                  : pulse.source === 'average'
+                    ? `Use Average · ${pulse.bpm} bpm`
+                    : `Use Resting · ${pulse.bpm} bpm`}
               </Text>
             </PressScale>
           </>
