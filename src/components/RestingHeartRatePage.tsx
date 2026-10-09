@@ -43,16 +43,21 @@ const BEAT_MS = 1200; // ≈50 bpm — operator 9 okt 2026: "hartslag mag rustig
    onafhankelijke animatie (gedeelde teller bleef op 0 staan). Vertraging
    0 / 1 / 2 s → bij elke hartslag vertrekt een nieuwe ring. */
 function Ring({ delay, size, from }: { delay: number; size: number; from: number }) {
-  const p = useSharedValue(0);
+  /* Start op 1 (= onzichtbaar): een ring die nog moet vertrekken, mag niet
+     als witte lijn op de cirkel blijven hangen (operator, 9 okt 2026). */
+  const p = useSharedValue(1);
   useEffect(() => {
     p.value = withDelay(
       delay,
+      withSequence(
+        withTiming(0, { duration: 0 }),
       /* Vervolg ("animatie buitenste ringen klopt niet"): een rimpeling per
          slag — leeft 2 slagen, dus max 2 ringen tegelijk. */
       /* Drukgolf: vertrekt vlot op de "lub", vertraagt dan zacht. */
       /* Vervolg ("meer ringen aan de buitenkant"): elke ring leeft 4
          slagen → 4 ringen tegelijk onderweg, één nieuwe per slag. */
       withRepeat(withTiming(1, { duration: BEAT_MS * 4, easing: Easing.bezier(0.16, 1, 0.3, 1) }), -1, false),
+      ),
     );
     return () => cancelAnimation(p);
   }, [delay, p, from]);
