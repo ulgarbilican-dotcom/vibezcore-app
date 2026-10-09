@@ -35,6 +35,12 @@ const VOLUME_HEADPHONES = 0.7;
 
 let speaker: AudioPlayer | null = null;
 let headphones: AudioPlayer | null = null;
+/* Stille lus zolang de pagina openstaat: houdt de geluidsweg wakker. Zonder
+   valt een Bluetooth-koptelefoon tussen twee slagen in spaarstand en mist
+   hij het begin (de "lub") van elke volgende slag (operator, 9 okt 2026:
+   drie opnames die op Pixabay goed klonken, klonken in de app allemaal
+   "niet goed" met koptelefoon). */
+let keepAwake: AudioPlayer | null = null;
 let active = false;
 
 export function startHeartbeatSound(): void {
@@ -56,8 +62,12 @@ export function startHeartbeatSound(): void {
         sp.volume = VOLUME_SPEAKER;
         const hp = createAudioPlayer(require('../../assets/heartbeat-headphones.wav'));
         hp.volume = VOLUME_HEADPHONES;
+        const ka = createAudioPlayer(require('../../assets/silence.wav'));
+        ka.loop = true;
+        ka.play();
         speaker = sp;
         headphones = hp;
+        keepAwake = ka;
       } catch {
         speaker = null;
         headphones = null;
@@ -85,7 +95,7 @@ export function heartbeatTick(): void {
 
 export function stopHeartbeatSound(): void {
   active = false;
-  for (const p of [speaker, headphones]) {
+  for (const p of [speaker, headphones, keepAwake]) {
     if (!p) continue;
     try {
       p.pause();
@@ -96,4 +106,5 @@ export function stopHeartbeatSound(): void {
   }
   speaker = null;
   headphones = null;
+  keepAwake = null;
 }
