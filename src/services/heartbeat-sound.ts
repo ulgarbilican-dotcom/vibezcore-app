@@ -3,9 +3,10 @@
    9 okt 2026: "kunnen wij Your Resting Heart Rate een hartslaggeluid
    geven?").
 
-   Eén echte lub-dub (assets/heartbeat.wav: geknipt uit een Pixabay-opname,
-   "heartbeat sound 493999" — Pixabay-licentie, vrij in apps, geen
-   naamsvermelding; slag op 7,58 s, lub-dub 0,3 s = hart in rust), op elke
+   Eén echte lub-dub (assets/heartbeat.wav: geknipt uit de Pixabay-opname
+   "intense cinematic heartbeat sound effect 584627" — Pixabay-licentie, vrij
+   in apps, geen naamsvermelding; derde slag op 3,38 s, lub-dub 0,34 s =
+   rustig hart; enkel < 30 Hz weggefilterd), op elke
    slag van het kloppende hart. Regels:
      - mengt met muziek van de gebruiker (nooit iemands muziek stoppen);
      - iOS: stil als de telefoon op stil staat (Android: mediavolume);
@@ -22,7 +23,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 0.7; // operator, 9 okt 2026: echte opname "klinkt heel hard en dof" → geen compressie meer, diepe dreun (< 45 Hz) eruit, volume 0,7
+const VOLUME = 0.7; // operator, 9 okt 2026 — na drie bijstellingen van de eerste opname nu een properdere opname
 
 let player: AudioPlayer | null = null;
 let active = false;
