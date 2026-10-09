@@ -21,6 +21,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { CTA } from '@/constants/theme';
 import {
   BREATH_STATES,
   cycleSeconds,
@@ -747,7 +748,7 @@ export default function PlanScreen() {
             }
           >
             <Text style={s.primaryCtaTxt}>
-              {onboarding ? 'REVIEW & CONFIRM' : 'OPEN YOUR AGENDA'}
+              {onboarding ? 'Review & confirm' : 'Open your agenda'}
             </Text>
             <ChevronRight size={18} color="#0a0a0a" strokeWidth={2.4} />
           </AnimatedPressable>
@@ -773,10 +774,10 @@ export default function PlanScreen() {
             />
             <Text style={[s.remindTxt, planned && { color: '#0a0a0a' }]}>
               {planned
-                ? `REMINDERS ON · ${visible
+                ? `Reminders on · ${visible
                     .map((m) => fmtTime(minsFor(m.key)))
                     .join(' · ')}`
-                : 'REMIND ME AT THESE TIMES'}
+                : 'Remind me at these times'}
             </Text>
           </AnimatedPressable>
         )}
@@ -788,7 +789,7 @@ export default function PlanScreen() {
             onPressIn={onGoalCtaPressIn}
             onPressOut={onGoalCtaPressOut}
           >
-            <Text style={s.goalCtaTxt}>CHOOSE A GOAL</Text>
+            <Text style={s.goalCtaTxt}>Choose a goal</Text>
           </AnimatedPressable>
         )}
 
@@ -1416,23 +1417,15 @@ const s = StyleSheet.create({
     fontSize: 13.5,
     color: 'rgba(255,255,255,0.85)',
   },
+  /* Operator, 9 okt 2026 ("andere vorm dan de andere"): de app-brede
+     CTA-vorm (theme.ts `CTA`: hoek 14, gewone tekst) i.p.v. een pil met
+     hoofdletters — ook voor de herinner- en doel-knop hieronder. */
   primaryCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    ...CTA.container,
     marginTop: 4,
     marginBottom: 10,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#ffffff',
   },
-  primaryCtaTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 13,
-    letterSpacing: 1.2,
-    color: '#0a0a0a',
-  },
+  primaryCtaTxt: CTA.label,
   timeLbl: {
     flex: 1,
     fontFamily: BrandFonts.regular,
@@ -1473,7 +1466,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
     marginTop: 4,
@@ -1481,9 +1474,9 @@ const s = StyleSheet.create({
   },
   remindOn: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
   remindTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    letterSpacing: 1.6,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    letterSpacing: 0.1,
     color: '#ffffff',
   },
 
@@ -1492,16 +1485,16 @@ const s = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 26,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   goalCtaTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 11.5,
-    letterSpacing: 2,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    letterSpacing: 0.1,
     color: '#ffffff',
   },
 
