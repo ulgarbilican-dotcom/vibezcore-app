@@ -3199,7 +3199,7 @@ export function BreathSession() {
               hitSlop={8}
             >
               <SlidersHorizontal size={16} color="rgba(255,255,255,0.75)" strokeWidth={2} />
-              <Text style={s.avBarTxt}>Voice & Haptics</Text>
+              <Text style={s.avBarTxt}>Audio & Haptics</Text>
             </AnimatedPressable>
           </BlurView>
         </Animated.View>
