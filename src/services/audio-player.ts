@@ -311,6 +311,13 @@ function saveCurrentPositionIfWorthwhile() {
 
 /* ── Audio-mode (eenmalig) ─────────────────────────────────────────────── */
 
+/** Een ander deel van de app (het hartslaggeluid op de Resting Heart Rate-
+ *  pagina) zette tijdelijk een zachtere modus → bij de volgende sessie de
+ *  modus opnieuw zetten. */
+export function invalidateAudioMode(): void {
+  audioModeConfigured = false;
+}
+
 async function ensureAudioMode(): Promise<void> {
   if (audioModeConfigured) return;
   try {

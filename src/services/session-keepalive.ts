@@ -62,6 +62,13 @@ let modeSetPromise: Promise<void> | null = null;
  *  het moment dat de allereerste twee spelers om audiofocus streden. De
  *  aanroeper moet nu expliciet op deze promise wachten vóór hij zelf audio
  *  start. */
+/** Zie audio-player `invalidateAudioMode`: het hartslaggeluid zette
+ *  tijdelijk een zachtere modus → de volgende sessie zet hem opnieuw. */
+export function invalidateAudioModeSet(): void {
+  modeSet = false;
+  modeSetPromise = null;
+}
+
 export function ensureAudioModeSet(): Promise<void> {
   if (modeSet) return Promise.resolve();
   if (modeSetPromise) return modeSetPromise;

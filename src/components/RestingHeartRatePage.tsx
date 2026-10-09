@@ -21,12 +21,16 @@ import RhythmSheet from '@/components/RhythmSheet';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
+import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from '@/services/heartbeat-sound';
+import { hapticTap } from '@/utils/haptics';
+import { useFocusEffect } from 'expo-router';
+import { scheduleOnRN } from 'react-native-worklets';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
 import { ECG_SHAPE } from '@/utils/ecg-shape';
-import { useEffect, useState } from 'react';
-import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
@@ -39,6 +43,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 /* Lucide-hart (24×24), zelfde vorm als de iconen elders in de app. */
 const HEART_D =
   'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z';
+/* Geluid en tik iets vóór de "lub" starten: afspelen heeft een korte
+   vertraging, zo vallen geluid, tik en beeld samen. */
+const SOUND_LEAD_MS = 60;
 const BEAT_MS = 1500; // ≈40 bpm — operator 9 okt 2026: "hartslag mag rustiger" (2x)
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -110,6 +117,43 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   const headX = Math.round(lineW * 0.82);
   const speed = lineW / 2 / (BEAT_MS * 1.5); // px per ms (1,5× trager)
   const travelMs = (headX - lineW / 2) / speed; // van schrijfpunt tot hart
+  /* Operator, 9 okt 2026 ("hartslaggeluid op deze pagina"): op elke slag
+     een zachte lub-dub + een fijne tik — enkel zolang de pagina in beeld is
+     (andere tab, meetblad open of app op de achtergrond → stil). */
+  const live = useRef(false);
+  const onBeat = useCallback(() => {
+    if (!live.current) return;
+    heartbeatTick();
+    hapticTap();
+  }, []);
+  const lastBeatK = useSharedValue(-1);
+  useFrameCallback(() => {
+    const k = Math.floor((clock.value - travelMs + SOUND_LEAD_MS) / BEAT_MS);
+    if (k !== lastBeatK.value) {
+      const first = lastBeatK.value < 0;
+      lastBeatK.value = k;
+      if (!first) scheduleOnRN(onBeat);
+    }
+  });
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => setAppActive(st === 'active'));
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    const on = focused && appActive && sheet === null;
+    live.current = on;
+    if (on) startHeartbeatSound();
+    else stopHeartbeatSound();
+  }, [focused, appActive, sheet]);
+  useEffect(() => () => stopHeartbeatSound(), []);
   const beat = useDerivedValue(() => {
     const ph = (((clock.value - travelMs) % BEAT_MS) + BEAT_MS) % BEAT_MS;
     return beatScale(ph);
