@@ -12,6 +12,7 @@
    begint opnieuw. Lukt het na 25 s niet: eerlijk "opnieuw proberen".
    Tijdens het meten GEEN trillingen: die zouden de vinger doen bewegen. */
 
+import FingerPlacementAnim from '@/components/FingerPlacementAnim';
 import PressScale from '@/components/PressScale';
 import * as Haptics from 'expo-haptics';
 import { BrandFonts } from '@/constants/theme';
@@ -706,51 +707,58 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             fill="none"
           />
         </Svg>
-        <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
-          {/* Operator, 9 okt 2026 ("hart begint leeg en vult naarmate de
-              meting vordert, en groter"): witte omtrek + Bio-Teal vulling die
-              van onder naar boven stijgt met de voortgang. */}
-          <View style={{ width: HEART, height: HEART }}>
-            {/* Operator, 9 okt 2026: omlijning in exact dezelfde kleur als de vulling. */}
-            {/* Vervolg ("begint grijs, eerst de buitenlijn groen, dan van
-                onder naar boven vullen"): grijze omtrek tot de meting start,
-                dan vloeit de teal omtrek erin en begint de vulling. */}
-            <Heart size={HEART} color={IDLE_GREY} fill="transparent" strokeWidth={0.7} />
-<Svg width={HEART} height={HEART} viewBox="0 0 24 24" style={StyleSheet.absoluteFill} pointerEvents="none">
-              <AnimatedPath
-                d={LUCIDE_HEART_D}
-                stroke={ACCENT}
-                strokeWidth={0.7}
-                strokeLinecap="butt"
-                strokeLinejoin="round"
-                fill="none"
-                animatedProps={outlineProps}
-              />
-            </Svg>
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                s.heartFill,
-                /* Clip schuift omhoog, het hart erin tegengesteld omlaag:
-                   enkel transforms → vloeiend op de UI-thread. */
-                { transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [HEART, HEART, 0] }) }] },
-              ]}
-            >
+        {/* Operator, 9 okt 2026: zolang de vinger nog niet ligt, toont een
+            Touch ID-achtige lijnanimatie hoe je je vinger legt; daarna het
+            hart dat zich vult. */}
+        {status === 'placing' ? (
+          <FingerPlacementAnim />
+        ) : (
+          <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
+            {/* Operator, 9 okt 2026 ("hart begint leeg en vult naarmate de
+                meting vordert, en groter"): witte omtrek + Bio-Teal vulling die
+                van onder naar boven stijgt met de voortgang. */}
+            <View style={{ width: HEART, height: HEART }}>
+              {/* Operator, 9 okt 2026: omlijning in exact dezelfde kleur als de vulling. */}
+              {/* Vervolg ("begint grijs, eerst de buitenlijn groen, dan van
+                  onder naar boven vullen"): grijze omtrek tot de meting start,
+                  dan vloeit de teal omtrek erin en begint de vulling. */}
+              <Heart size={HEART} color={IDLE_GREY} fill="transparent" strokeWidth={0.7} />
+  <Svg width={HEART} height={HEART} viewBox="0 0 24 24" style={StyleSheet.absoluteFill} pointerEvents="none">
+                <AnimatedPath
+                  d={LUCIDE_HEART_D}
+                  stroke={ACCENT}
+                  strokeWidth={0.7}
+                  strokeLinecap="butt"
+                  strokeLinejoin="round"
+                  fill="none"
+                  animatedProps={outlineProps}
+                />
+              </Svg>
               <Animated.View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: HEART,
-                  height: HEART,
-                  transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [-HEART, -HEART, 0] }) }],
-                }}
+                pointerEvents="none"
+                style={[
+                  s.heartFill,
+                  /* Clip schuift omhoog, het hart erin tegengesteld omlaag:
+                     enkel transforms → vloeiend op de UI-thread. */
+                  { transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [HEART, HEART, 0] }) }] },
+                ]}
               >
-                <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={0.7} />
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: HEART,
+                    height: HEART,
+                    transform: [{ translateY: fill.interpolate({ inputRange: [0, OUTLINE_SHARE, 1], outputRange: [-HEART, -HEART, 0] }) }],
+                  }}
+                >
+                  <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={0.7} />
+                </Animated.View>
               </Animated.View>
-            </Animated.View>
-          </View>
-        </Animated.View>
+            </View>
+          </Animated.View>
+        )}
       </View>
 
       {/* Operator, 9 okt 2026: hartlijn — begint vlak, elke gevonden slag
