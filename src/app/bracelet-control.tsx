@@ -1550,7 +1550,11 @@ function ModeSwipeRing({
   const onDialRef = useRef(dial?.onChange);
   onDialRef.current = dial?.onChange;
   const setDialJS = (minutes: number) => {
-    void Haptics.selectionAsync();
+    /* Operator, 9 okt 2026 ("de tikjes voel ik hard"): op Android de
+       lichte klok-tik van de systeem-tijdkiezer i.p.v. de selectietrilling
+       (die Samsung stevig afspeelt). iOS: Apple's eigen selectietik. */
+    if (Platform.OS === 'android') void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Clock_Tick);
+    else void Haptics.selectionAsync();
     onDialRef.current?.(minutes);
   };
   /* Enkel een aanraking op de rand (buitenste ~30%) pakt de greep. */
