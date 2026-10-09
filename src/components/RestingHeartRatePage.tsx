@@ -21,6 +21,7 @@ import RhythmSheet from '@/components/RhythmSheet';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
+import { Canvas, Circle as SkCircle, RadialGradient, vec } from '@shopify/react-native-skia';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -54,7 +55,9 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
   /* Vervolg ("geheel moet mooi samenwerken"): start exact op de rand van
      de gevulde cirkel (`from`), deint uit tot de buitenrand, vervaagt. */
   const style = useAnimatedStyle(() => ({
-    opacity: 0.6 * (1 - p.value),
+    /* Vervolg ("buitenste ringen niet zichtbaar"): vervaagt pas op het
+       einde. */
+    opacity: 0.75 * (1 - p.value * p.value),
     transform: [{ scale: from + p.value * (1.15 - from) }],
   }));
   return (
@@ -95,6 +98,12 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
   /* Vervolg ("de grote volle cirkel moet ook meebewegen"): klopt mee,
      half zo sterk als het hart — één kloppend geheel. */
   const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
+  /* Vervolg ("achter de volle cirkel een lichtbron"): zachte gloed die
+     meeklopt. */
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.75 + (beat.value - 1) * 3,
+    transform: [{ scale: 1 + (beat.value - 1) * 0.8 }],
+  }));
 
   return (
     <View style={s.root}>
@@ -111,6 +120,18 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
           <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
           <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
           <Ring key={`r2-${stage}`} delay={BEAT_MS * 2} size={stage} from={core / stage} />
+          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.2, height: stage * 1.2 }, glowStyle]}>
+            <Canvas style={{ width: stage * 1.2, height: stage * 1.2 }}>
+              <SkCircle cx={stage * 0.6} cy={stage * 0.6} r={stage * 0.6}>
+                <RadialGradient
+                  c={vec(stage * 0.6, stage * 0.6)}
+                  r={stage * 0.6}
+                  colors={['rgba(255,255,255,0.42)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0)']}
+                  positions={[0, 0.45, 1]}
+                />
+              </SkCircle>
+            </Canvas>
+          </Animated.View>
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2 }, coreStyle]}>
             <LinearGradient
               colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.05)']}
@@ -183,7 +204,7 @@ const s = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
-    borderWidth: 1.2,
+    borderWidth: 1.5,
     borderColor: AudioAccentLight,
   },
   core: {
