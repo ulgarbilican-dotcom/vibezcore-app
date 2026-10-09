@@ -7,11 +7,9 @@
    "zonder koptelefoon goed, met niet goed"):
      - speaker (assets/heartbeat-speaker.wav): Pixabay "freesound_community
        heartbeat 6396", tweede slag op 1,04 s, klank onaangeroerd;
-     - koptelefoon/oortjes (assets/heartbeat-headphones.wav): Pixabay
-       "liecio heartbeat 297400" (operator: "de beste"), slag op 1,50 s,
-       lub-dub 0,26 s, klank onaangeroerd; dub sterft zacht uit en 0,35 s
-       stilte erachter (soms een kraakje op het einde: de speler stopte
-       vlak na het geluid).
+     - koptelefoon/oortjes (assets/heartbeat-headphones.wav): in test —
+       dezelfde opname als de speaker (6396), op vraag van de operator.
+       Vorige keuze: 297400 (clip bewaard in de git-geschiedenis, ca7e561).
    Pixabay-licentie: vrij in apps, geen naamsvermelding. De uitgang wordt
    bij elke slag bekeken (modules/audio-route), dus oortjes in- of uitdoen
    tijdens het luisteren werkt meteen. Op elke
