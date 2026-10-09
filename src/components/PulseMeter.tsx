@@ -93,7 +93,7 @@ const PROG_W = 4;
 const PROG_CIRC = Math.PI * (RING - PROG_W);
 const ECG_W = Math.round(Math.min(Dimensions.get('window').width - 48, 380));
 const ECG_H = 78;
-const ECG_WINDOW_MS = 5500; // 9 okt 2026: "trager van rechts naar links"
+const ECG_WINDOW_MS = 3500; // 9 okt 2026: "trager van rechts naar links"; vervolg: "pieken zo kort opeen" → 3,5 s in beeld (≈ 4–5 slagen bij 76 bpm)
 /* Eén hartslag (P-golf, QRS-piek, T-golf): [ms t.o.v. de piek, hoogte −1…1]. */
 /* Vorm van één slag: gedeeld met het andere scherm (utils/ecg-shape). */
 const PQRST = ECG_SHAPE;
