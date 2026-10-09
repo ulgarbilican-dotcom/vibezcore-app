@@ -290,17 +290,16 @@ export default function RhythmSheet({
                 bovenaan — de statusregel onder de lijn is de enige tekst en
                 beweegt mee met wat er gebeurt. Ring blijft op dezelfde hoogte. */}
             {/* Vervolg (operator: "laat de cirkel zakken"). */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 84 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 40 }}>
             <PulseMeter
               onResult={(bpm) => {
-                if (addRestingPulseReading(bpm)) {
-                  /* De sessie die nu volgt, begint bij het hart van nu. */
-                  setLiveStartPulse(bpm);
-                  setJustMeasured(bpm);
-                  /* Operator, 9 okt 2026: vinkje in de ring + onderaan één
-                     duidelijke volgende stap ("Continue"). */
-                  setMeasuredOk(true);
-                }
+                /* Operator, 9 okt 2026: vinkje in de ring + onderaan één
+                   duidelijke volgende stap. Vervolg ("na de meting mag het
+                   niet direct naar de volgende pagina"): pas bewaren bij een
+                   tik op de knop — de eerste keer schakelt het bewaren de
+                   State Control-tab meteen door. */
+                setJustMeasured(bpm);
+                setMeasuredOk(true);
               }}
               onManual={() => setStep('manual')}
               onErrorChange={setMeterError}
@@ -313,7 +312,15 @@ export default function RhythmSheet({
                 style={[s.cta, { marginTop: 'auto', marginBottom: 10, alignSelf: 'stretch' }]}
                 haptic
                 scaleTo={0.97}
-                onPress={() => (justMeasured !== null && justMeasured < getRestingPulse().bpm ? setStep('result') : onDone())}
+                onPress={() => {
+                  if (justMeasured === null) return;
+                  const below = justMeasured < getRestingPulse().bpm;
+                  if (!addRestingPulseReading(justMeasured)) return;
+                  /* De sessie die nu volgt, begint bij het hart van nu. */
+                  setLiveStartPulse(justMeasured);
+                  if (below) setStep('result');
+                  else onDone();
+                }}
                 accessibilityRole="button"
               >
                 <Text style={s.ctaTxt}>{nextLabel}</Text>

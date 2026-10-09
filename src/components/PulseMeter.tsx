@@ -915,7 +915,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
 }
 
 const s = StyleSheet.create({
-  liveRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginBottom: 22 },
+  /* Operator, 9 okt 2026: "het bpm-getal mag hoger" — de ring blijft staan. */
+  liveRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginBottom: 66 },
   liveNum: {
     color: '#ffffff',
     fontFamily: BrandFonts.bold,

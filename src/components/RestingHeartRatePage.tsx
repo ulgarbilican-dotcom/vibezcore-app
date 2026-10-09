@@ -276,7 +276,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         visible={sheet !== null}
         mode={BraceletMode.Alpha}
         startAt={sheet ?? 'measure'}
-        nextLabel="Continue to State Control"
+        nextLabel="Let's Go"
         onClose={() => setSheet(null)}
         onDone={() => {
           setSheet(null);
