@@ -6,7 +6,8 @@
    Eén echte lub-dub (assets/heartbeat.wav: geknipt uit de Pixabay-opname
    "soundreality heartbeat 549797" — Pixabay-licentie, vrij in apps, geen
    naamsvermelding; slag op 3,65 s uit een rustig hart van ~70 bpm, lub-dub
-   0,3 s; natuurlijke klank, enkel < 25 Hz eruit). Op elke
+   0,3 s; natuurlijke klank, enkel < 25 Hz eruit; zachte boventonen 180–1500 Hz
+   bijgemengd zodat de bons ook op een telefoonspeaker hoorbaar is). Op elke
    slag van het kloppende hart. Regels:
      - mengt met muziek van de gebruiker (nooit iemands muziek stoppen);
      - iOS: stil als de telefoon op stil staat (Android: mediavolume);
@@ -23,7 +24,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 0.7;
+const VOLUME = 1; // operator, 9 okt 2026: "heel zacht — hoorbaar zonder oortjes?" → boventonen bijgemengd (hoorbaar op de speaker) + volle sterkte
 
 let player: AudioPlayer | null = null;
 let active = false;
