@@ -2392,17 +2392,17 @@ function DurationRing({
                       eindigen"): de volle dunne ring eronder verbergen en als
                       gedimd spoor tekenen — enkel de boog tot de greep is fel. */}
                   <Circle cx={c} cy={c} r={r + 1} stroke="#000000" strokeWidth={4} fill="none" />
-                  <Circle cx={c} cy={c} r={r} stroke={color} strokeOpacity={0.22} strokeWidth={3} fill="none" />
+                  <Circle cx={c} cy={c} r={r} stroke={color} strokeOpacity={0.22} strokeWidth={1.5} fill="none" />
                   {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
                   <Path
                     d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
                     stroke={color}
-                    strokeWidth={5}
+                    strokeWidth={2}
                     strokeLinecap="round"
                     fill="none"
                   />
                   {/* Greep: wit bolletje met een rand in de toestandskleur. */}
-                  <Circle cx={ex} cy={ey} r={12} fill="#ffffff" stroke={color} strokeWidth={2.5} />
+                  <Circle cx={ex} cy={ey} r={9} fill="#ffffff" stroke={color} strokeWidth={2} />
                 </>
               );
             })()}
@@ -3760,7 +3760,7 @@ function IdleScreen({
             Los van de veeg-cirkel gelegd, zodat een tik hier niet ook het
             i-paneel opent. */}
         {/* Operator, 9 okt 2026: cirkel lager — net boven het midden. */}
-        <View style={{ flex: 0.35, minHeight: 4 }} />
+        <View style={{ height: 0 }} />
         <View style={s.durationRingWrap}>
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
