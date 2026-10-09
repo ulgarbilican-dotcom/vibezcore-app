@@ -37,7 +37,9 @@ import { soundscapeByKey } from '@/data/soundscapes';
    dat is te luid — dan concurreert de achtergrond met de instructie. */
 /* Operator, 9 okt 2026 ("loud mag nog luider"): 0,55 → 0,8 (±2 dB onder de
    stem). Bewuste keuze van de gebruiker; de standaard blijft medium. */
-export const SCAPE_LEVELS = { soft: 0.2, medium: 0.35, loud: 0.8 } as const;
+/* Vervolg (operator: "medium en soft mogen iets zachter"): soft ±17 dB,
+   medium ±12 dB onder de stem (gangbaar 10–18 dB). */
+export const SCAPE_LEVELS = { soft: 0.14, medium: 0.25, loud: 0.8 } as const;
 export type ScapeLevel = keyof typeof SCAPE_LEVELS;
 let level: number = SCAPE_LEVELS.medium;
 
@@ -143,6 +145,7 @@ export async function playScape(key: string | null): Promise<void> {
   }
 
   playingKey = scape.key;
+  scapePaused = false;
   currentGain = scape.gain ?? 1;
   const src = await localOrRemote(scape.key, scape.url);
 
@@ -166,6 +169,31 @@ export async function playScape(key: string | null): Promise<void> {
   }
 }
 
+/** Pauze van de sessie (operator, 9 okt 2026: "bij pauze moet de soundscape
+ *  ook pauzeren"): zacht naar stil en dan echt pauzeren; `resumeScape`
+ *  speelt verder op dezelfde plek en vaagt terug op. */
+let scapePaused = false;
+export function pauseScape(): void {
+  const p = player;
+  if (!p || scapePaused) return;
+  scapePaused = true;
+  rampTo(p, 0, 500, () => {
+    if (!scapePaused || player !== p) return;
+    try {
+      p.pause();
+    } catch {}
+  });
+}
+export function resumeScape(): void {
+  const p = player;
+  if (!p || !scapePaused) return;
+  scapePaused = false;
+  try {
+    p.play();
+  } catch {}
+  rampTo(p, Math.min(1, level * (currentGain || 1)), 900);
+}
+
 /** Wegvagen en opruimen. Veilig om vaker aan te roepen dan nodig.
  *
  *  `immediate` (operator, 20 september 2026: "soundscape speelt door
@@ -179,6 +207,7 @@ export async function playScape(key: string | null): Promise<void> {
  *  gewoon meteen stil. */
 export function stopScape(immediate = false): void {
   playingKey = null;
+  scapePaused = false;
   stopFade();
   const p = player;
   player = null;

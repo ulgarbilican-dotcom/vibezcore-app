@@ -86,7 +86,9 @@ import {
   soundscapeByKey,
 } from '@/data/soundscapes';
 import {
+  pauseScape,
   playScape,
+  resumeScape,
   setScapeLevel,
   stopScape,
   type ScapeLevel,
@@ -1668,6 +1670,7 @@ export function BreathSession() {
     cancelAnimation(arc);
     pausedAtWallRef.current = Date.now();
     setPaused(true);
+    pauseScape();
     pauseLiveSession();
     /* Eén sessie, twee bedieningen (6 okt 2026): de pols pauzeert mee. */
     pauseBreathSessionOnWear();
@@ -1682,6 +1685,7 @@ export function BreathSession() {
       pausedAtWallRef.current = 0;
     }
     setPaused(false);
+    resumeScape();
     resumeLiveSession();
     /* De pols gaat verder op exact dezelfde plek: zelfde ronde, zelfde fase,
        met wat er van die fase nog over is (6 okt 2026). */
