@@ -205,7 +205,7 @@ const s = StyleSheet.create({
   ring: {
     position: 'absolute',
     borderWidth: 1.5,
-    borderColor: AudioAccentLight,
+    borderColor: '#ffffff', // 9 okt 2026: ringen wit (geheel in wit)
   },
   core: {
     overflow: 'hidden',
