@@ -20,7 +20,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 0.8; // operator, 9 okt 2026: "kan dat luider?" → voller geluid, daarna "iets zachter"
+const VOLUME = 0.7; // operator, 9 okt 2026: "kan dat luider?" → voller geluid, daarna "iets zachter"
 
 let player: AudioPlayer | null = null;
 let active = false;
