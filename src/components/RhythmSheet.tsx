@@ -336,7 +336,8 @@ function BpmWheel({ value, onChange }: { value: number; onChange: (v: number) =>
 }
 
 const s = StyleSheet.create({
-  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 6 },
+  /* Operator, 9 okt 2026 ("kaart hoger, de ring moet vrij staan"). */
+  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 34 },
   fact: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)' },
   factDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.3)' },
   sheet: {

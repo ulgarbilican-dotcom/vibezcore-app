@@ -359,7 +359,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
 const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
-  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
+  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
   msg: {
     color: '#ffffff',
     fontSize: 17,
@@ -368,6 +368,7 @@ const s = StyleSheet.create({
     lineHeight: 24,
     minHeight: 48,
     paddingHorizontal: 8,
+    marginBottom: 18,
   },
   sub: {
     color: 'rgba(255,255,255,0.55)',

@@ -123,7 +123,9 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
       </View>
 
-      <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
+      {/* Verborgen zolang het meetblad open is: anders schemert de witte
+          knop als grijze band door het glas achter de meetring. */}
+      <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 12) + 4, opacity: sheet ? 0 : 1 }]}>
         <PressScale style={s.cta} haptic scaleTo={0.97} onPress={() => setSheet('measure')} accessibilityRole="button">
           <Text style={s.ctaTxt}>Measure Now</Text>
         </PressScale>
