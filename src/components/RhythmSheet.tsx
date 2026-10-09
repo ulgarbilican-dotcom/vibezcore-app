@@ -210,7 +210,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               onManual={() => setStep('manual')}
             />
             </View>
-            <View style={[s.facts, { marginTop: 'auto', marginBottom: 0, alignSelf: 'center' }]}>
+            <View style={[s.facts, { marginTop: 'auto', marginBottom: 10, alignSelf: 'center' }]}>
               <Text style={s.fact}>15 seconds</Text>
               <View style={s.factDot} />
               <Text style={s.fact}>Camera & flash</Text>
