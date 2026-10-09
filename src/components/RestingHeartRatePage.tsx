@@ -22,6 +22,7 @@ import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -37,6 +38,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/* Lucide-hart (24×24), zelfde vorm als de iconen elders in de app. */
+const HEART_D =
+  'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z';
 const BEAT_MS = 1200; // ≈50 bpm — operator 9 okt 2026: "hartslag mag rustiger"
 
 /* Operator, 9 okt 2026 ("de ringen doen niets"): elke ring een eigen,
@@ -168,26 +172,24 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               style={StyleSheet.absoluteFill}
             />
             <Animated.View style={heartStyle}>
-              {/* Operator, 9 okt 2026: hart in Bio-Teal, als glas — doorschijnende
-                  vulling, heldere rand, zachte reflectie bovenaan. */}
-              <View style={{ width: Math.round(core * 0.42), height: Math.round(core * 0.42) }}>
-                <Heart
-                  size={Math.round(core * 0.42)}
-                  color="#4AF0D4"
-                  fill="rgba(74,240,212,0.38)"
-                  strokeWidth={1.5}
-                />
-                <View
-                  pointerEvents="none"
-                  style={{ position: 'absolute', left: 0, right: 0, top: 0, height: Math.round(core * 0.21), overflow: 'hidden' }}
-                >
-                  <Heart
-                    size={Math.round(core * 0.42)}
-                    color="transparent"
-                    fill="rgba(255,255,255,0.22)"
-                    strokeWidth={0}
-                  />
-                </View>
+              {/* Operator, 9 okt 2026: hart in Bio-Teal, als glas — vloeiend
+                  verloop (licht → diep teal), zachte glans bovenaan, dunne
+                  heldere rand. Zelfde vorm als het lucide-hart. */}
+              <Svg width={Math.round(core * 0.46)} height={Math.round(core * 0.46)} viewBox="0 0 24 24">
+                <Defs>
+                  <SvgLinearGradient id="hgFill" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0.62} />
+                    <Stop offset="1" stopColor="#00A3A3" stopOpacity={0.32} />
+                  </SvgLinearGradient>
+                  <SvgLinearGradient id="hgShine" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor="#ffffff" stopOpacity={0.42} />
+                    <Stop offset="0.55" stopColor="#ffffff" stopOpacity={0} />
+                  </SvgLinearGradient>
+                </Defs>
+                <Path d={HEART_D} fill="url(#hgFill)" />
+                <Path d={HEART_D} fill="url(#hgShine)" />
+                <Path d={HEART_D} fill="none" stroke="#4AF0D4" strokeWidth={0.9} strokeLinejoin="round" />
+              </Svg>
               </View>
             </Animated.View>
           </Animated.View>
