@@ -7,9 +7,9 @@
    "zonder koptelefoon goed, met niet goed"):
      - speaker (assets/heartbeat-speaker.wav): Pixabay "freesound_community
        heartbeat 6396", tweede slag op 1,04 s, klank onaangeroerd;
-     - koptelefoon/oortjes (assets/heartbeat-headphones.wav): Pixabay
-       "placidplace heartbeat 21649", tweede slag op 1,82 s uit een traag
-       hart van ~46 bpm, zuivere studio-opname, klank onaangeroerd.
+     - koptelefoon/oortjes (assets/heartbeat-headphones.wav): kandidaat in
+       test — Pixabay "kauasilbershlachparodes heart-beat 493995", slag op
+       1,17 s, lub-dub 0,33 s, klank onaangeroerd.
    Pixabay-licentie: vrij in apps, geen naamsvermelding. De uitgang wordt
    bij elke slag bekeken (modules/audio-route), dus oortjes in- of uitdoen
    tijdens het luisteren werkt meteen. Op elke
