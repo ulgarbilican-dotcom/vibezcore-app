@@ -48,7 +48,9 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
   useEffect(() => {
     p.value = withDelay(
       delay,
-      withRepeat(withTiming(1, { duration: BEAT_MS * 3, easing: Easing.out(Easing.quad) }), -1, false),
+      /* Vervolg ("animatie buitenste ringen klopt niet"): een rimpeling per
+         slag — leeft 2 slagen, dus max 2 ringen tegelijk. */
+      withRepeat(withTiming(1, { duration: BEAT_MS * 2, easing: Easing.out(Easing.cubic) }), -1, false),
     );
     return () => cancelAnimation(p);
   }, [delay, p]);
@@ -58,7 +60,7 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
     /* Vervolg ("buitenste ringen niet zichtbaar"): vervaagt pas op het
        einde. */
     opacity: 0.75 * (1 - p.value * p.value),
-    transform: [{ scale: from + p.value * (1.15 - from) }],
+    transform: [{ scale: from + p.value * (1.25 - from) }],
   }));
   return (
     <Animated.View
@@ -77,7 +79,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
      krijgt enkel de ruimte die echt overblijft (gemeten), max 280. */
   const [area, setArea] = useState(0);
   const stage = Math.round(Math.max(140, Math.min(280, height * 0.32, area > 0 ? area - 24 : 280)));
-  const core = Math.round(stage * 0.72); // 9 okt 2026: volle cirkel groter
+  const core = Math.round(stage * 0.6); // 9 okt 2026: volle cirkel (operator: "kleiner nu")
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
   /* Lub-dub op het hart, ringen deinen continu uit. */
@@ -131,7 +133,6 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <View style={[s.stage, { width: stage, height: stage }]}>
           <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
           <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
-          <Ring key={`r2-${stage}`} delay={BEAT_MS * 2} size={stage} from={core / stage} />
           <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.6, height: stage * 1.6 }, glowStyle]}>
             <Canvas style={{ width: stage * 1.6, height: stage * 1.6 }}>
               <SkCircle cx={stage * 0.8} cy={stage * 0.8} r={stage * 0.8}>
