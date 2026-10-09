@@ -60,7 +60,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
   /* Operator, 9 okt 2026 ("alle tekst op elkaar"): het beeld schaalt mee
      met de schermhoogte i.p.v. vaste 260 pt. */
   const { height } = useWindowDimensions();
-  const stage = Math.round(Math.min(240, Math.max(170, height * 0.24)));
+  const stage = Math.round(Math.min(280, Math.max(220, height * 0.32)));
   const core = Math.round(stage * 0.48);
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
