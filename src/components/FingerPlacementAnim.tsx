@@ -12,18 +12,32 @@
 
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-const W = 150;
-const H = 160;
-/* Middelpunt van de cameramodule (waar de vingertop landt). */
-const CX = 62;
-const CY = 44;
-const FINGER_W = 40;
-const FINGER_H = 86;
+const W = 160;
+const H = 176;
+/* Telefoon in echte iPhone-verhouding (~1 : 2,05). */
+const PX = 44;
+const PY = 10;
+const PW = 74;
+const PH = 152;
+/* Cameramodule linksboven, lenzen diagonaal + flits. */
+const MX = PX + 7;
+const MY = PY + 7;
+const MS = 31;
+const L1 = { x: MX + 9, y: MY + 9 };
+const L2 = { x: MX + 22, y: MY + 22 };
+const FL = { x: MX + 22.5, y: MY + 8.5 };
+/* Waar de vingertop landt: midden van de module. */
+const TIP = { x: MX + MS / 2, y: MY + MS / 2 - 3 };
+const TILT = -24; // vinger komt schuin van rechtsonder
 const LINE = 'rgba(255,255,255,0.42)';
 const LINE_SOFT = 'rgba(255,255,255,0.22)';
 const ACCENT = '#4AF0D4';
+
+/* Wijsvinger van achteren gezien, top op (15,2), lengte ~150. */
+const FINGER = 'M1 152 C2 104 3.5 64 3.5 26 C3.5 11 8.5 2 15 2 C21.5 2 26.5 11 26.5 26 C26.5 64 28 104 29 152';
+const NAIL = 'M8.6 22 C8.6 13.5 11.2 8.5 15 8.5 C18.8 8.5 21.4 13.5 21.4 22 L21 33 C17.6 35 12.4 35 9 33 Z';
 
 export default function FingerPlacementAnim() {
   const t = useRef(new Animated.Value(0)).current; // 0 = weg, 1 = op de lens
@@ -33,14 +47,14 @@ export default function FingerPlacementAnim() {
     const ease = Easing.bezier(0.4, 0, 0.2, 1);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.delay(500),
-        Animated.timing(t, { toValue: 1, duration: 1100, easing: ease, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 1, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.delay(450),
+        Animated.timing(t, { toValue: 1, duration: 1150, easing: ease, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
         Animated.timing(glow, { toValue: 0.55, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(glow, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.parallel([
-          Animated.timing(glow, { toValue: 0, duration: 350, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-          Animated.timing(t, { toValue: 0, duration: 900, easing: ease, useNativeDriver: true }),
+          Animated.timing(glow, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          Animated.timing(t, { toValue: 0, duration: 950, easing: ease, useNativeDriver: true }),
         ]),
       ]),
     );
@@ -48,13 +62,14 @@ export default function FingerPlacementAnim() {
     return () => loop.stop();
   }, [t, glow]);
 
-  /* Vinger komt van rechtsonder en landt met de top op de lenzen. */
+  /* Vinger schuift langs zijn eigen as (schuin van rechtsonder) naar de lens. */
+  const rad = (TILT * Math.PI) / 180;
+  const slide = 64;
   const fingerStyle = {
-    opacity: t.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 1, 1] }),
+    opacity: t.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 1] }),
     transform: [
-      { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) },
-      { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [70, 0] }) },
-      { rotate: t.interpolate({ inputRange: [0, 1], outputRange: ['14deg', '0deg'] }) },
+      { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [-Math.sin(rad) * slide, 0] }) },
+      { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [Math.cos(rad) * slide, 0] }) },
     ],
   };
 
@@ -62,52 +77,44 @@ export default function FingerPlacementAnim() {
     <View style={{ width: W, height: H }} accessible={false}>
       {/* Achterkant telefoon + cameramodule */}
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-        <Rect x={30} y={8} width={90} height={146} rx={18} stroke={LINE} strokeWidth={1.4} fill="rgba(255,255,255,0.025)" />
-        <Rect x={41} y={20} width={42} height={50} rx={12} stroke={LINE_SOFT} strokeWidth={1.2} fill="none" />
-        <Circle cx={54} cy={34} r={7} stroke={LINE} strokeWidth={1.2} fill="none" />
-        <Circle cx={54} cy={56} r={7} stroke={LINE} strokeWidth={1.2} fill="none" />
-        <Circle cx={72} cy={34} r={3} fill="rgba(255,255,255,0.55)" />
+        <Rect x={PX} y={PY} width={PW} height={PH} rx={15} stroke={LINE} strokeWidth={1.3} fill="rgba(255,255,255,0.025)" />
+        <Rect x={MX} y={MY} width={MS} height={MS} rx={9} stroke={LINE_SOFT} strokeWidth={1.1} fill="rgba(255,255,255,0.03)" />
+        <Circle cx={L1.x} cy={L1.y} r={5.2} stroke={LINE} strokeWidth={1.1} fill="none" />
+        <Circle cx={L1.x} cy={L1.y} r={2.2} stroke={LINE_SOFT} strokeWidth={0.8} fill="none" />
+        <Circle cx={L2.x} cy={L2.y} r={5.2} stroke={LINE} strokeWidth={1.1} fill="none" />
+        <Circle cx={L2.x} cy={L2.y} r={2.2} stroke={LINE_SOFT} strokeWidth={0.8} fill="none" />
+        <Circle cx={FL.x} cy={FL.y} r={2.3} fill="rgba(255,255,255,0.5)" />
       </Svg>
 
       {/* Flits die teal door de vinger gloeit */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: glow }]}>
         <Svg width={W} height={H}>
           <Defs>
-            <RadialGradient id="fpGlow" cx={CX} cy={CY} r={40} gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor={ACCENT} stopOpacity={0.55} />
+            <RadialGradient id="fpGlow" cx={TIP.x} cy={TIP.y + 4} r={34} gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor={ACCENT} stopOpacity={0.6} />
               <Stop offset="1" stopColor={ACCENT} stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Circle cx={CX} cy={CY} r={40} fill="url(#fpGlow)" />
+          <Circle cx={TIP.x} cy={TIP.y + 4} r={34} fill="url(#fpGlow)" />
         </Svg>
       </Animated.View>
 
-      {/* Vingertop: glas-wit, dunne omlijning, fijne afdruklijnen */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          { position: 'absolute', left: CX - FINGER_W / 2, top: CY - 16, width: FINGER_W, height: FINGER_H },
-          fingerStyle,
-        ]}
-      >
-        <Svg width={FINGER_W} height={FINGER_H}>
+      {/* Wijsvinger: glas-wit, nagel, fijne kreukels bij het gewricht */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, fingerStyle]}>
+        <Svg width={W} height={H}>
           <Defs>
             <LinearGradient id="fpFill" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor="#ffffff" stopOpacity={0.2} />
-              <Stop offset="1" stopColor="#ffffff" stopOpacity={0.02} />
+              <Stop offset="1" stopColor="#ffffff" stopOpacity={0.03} />
             </LinearGradient>
           </Defs>
-          <Path
-            d={`M1 ${FINGER_H} V20 A19 19 0 0 1 39 20 V${FINGER_H}`}
-            fill="url(#fpFill)"
-            stroke="rgba(255,255,255,0.6)"
-            strokeWidth={1.3}
-          />
-          {/* Vingerafdruk: concentrische bogen, zoals het Touch ID-symbool */}
-          <Path d="M12 26 A8 8 0 0 1 28 26" stroke={LINE} strokeWidth={1} fill="none" strokeLinecap="round" />
-          <Path d="M8 30 A12 12 0 0 1 32 30" stroke={LINE_SOFT} strokeWidth={1} fill="none" strokeLinecap="round" />
-          <Path d="M16 25 A4 4 0 0 1 24 25 V31" stroke={LINE_SOFT} strokeWidth={1} fill="none" strokeLinecap="round" />
-          <Path d="M5 36 A15 15 0 0 1 35 36" stroke="rgba(255,255,255,0.14)" strokeWidth={1} fill="none" strokeLinecap="round" />
+          <G transform={`translate(${TIP.x - 15} ${TIP.y - 2}) rotate(${TILT} 15 2)`}>
+            <Path d={FINGER} fill="url(#fpFill)" stroke="rgba(255,255,255,0.62)" strokeWidth={1.2} strokeLinejoin="round" />
+            <Path d={NAIL} fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.38)" strokeWidth={0.9} />
+            <Path d="M7 60 Q15 63 23 60" stroke={LINE_SOFT} strokeWidth={0.9} fill="none" strokeLinecap="round" />
+            <Path d="M9 65 Q15 67 21 65" stroke="rgba(255,255,255,0.14)" strokeWidth={0.9} fill="none" strokeLinecap="round" />
+            <Path d="M6 104 Q15 107 24 104" stroke="rgba(255,255,255,0.14)" strokeWidth={0.9} fill="none" strokeLinecap="round" />
+          </G>
         </Svg>
       </Animated.View>
     </View>
