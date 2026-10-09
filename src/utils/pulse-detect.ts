@@ -179,9 +179,12 @@ function estimate(x: number[], t0: number): ChannelEstimate | null {
 }
 
 /** Analyseer een venster samples (ms-tijdstempels). `minBeats`: hoeveel
- *  slagen er minstens moeten zijn voor een eindresultaat. */
-export function analyzePulse(samples: PulseSample[], minBeats = 8): PulseResult | null {
-  if (samples.length < FS * 4) return null;
+ *  slagen er minstens moeten zijn voor een eindresultaat. `lenient`: enkel
+ *  voor het live getal en de live slagen tijdens het meten (operator, 9 okt
+ *  2026: "het bpm-getal moet tijdens de meting verschijnen") — soepelere
+ *  drempels; het eindresultaat gebruikt altijd de strenge. */
+export function analyzePulse(samples: PulseSample[], minBeats = 8, lenient = false): PulseResult | null {
+  if (samples.length < FS * (lenient ? 3 : 4)) return null;
   const t0 = samples[0].t;
   const channels = [
     estimate(resample(samples, (s) => s.r), t0),
@@ -189,7 +192,7 @@ export function analyzePulse(samples: PulseSample[], minBeats = 8): PulseResult 
   ].filter((c): c is ChannelEstimate => !!c && c.periodicity > 0);
   if (!channels.length) return null;
   const c = channels.reduce((a, b) => (b.periodicity * b.regularity > a.periodicity * a.regularity ? b : a));
-  if (c.periodicity < 0.35 || c.regularity < 0.7 || c.beats.length < minBeats) return null;
+  if (c.periodicity < (lenient ? 0.2 : 0.35) || c.regularity < (lenient ? 0.5 : 0.7) || c.beats.length < minBeats) return null;
   if (c.bpm < MIN_BPM || c.bpm > MAX_BPM) return null;
   return { bpm: Math.round(c.bpm), confidence: Math.min(1, c.periodicity * c.regularity), beats: c.beats };
 }

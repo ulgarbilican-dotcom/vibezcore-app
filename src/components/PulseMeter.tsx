@@ -270,6 +270,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   /* Live getal tijdens het meten + het eindgetal vlak voor het resultaat. */
   const [liveBpm, setLiveBpm] = useState<number | null>(null);
   const liveEma = useRef<number | null>(null);
+  const numPulse = useRef(new Animated.Value(1)).current;
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -378,7 +379,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       setProgress(Math.min(1, elapsed / MEASURE_MS));
 
       const recent = samples.current.filter((p) => p.t >= last.t - 6000);
-      const est = recent.length > 120 ? analyzePulse(recent, 3) : null;
+      const est = recent.length > 90 ? analyzePulse(recent, 3, true) : null;
       const b = est ? est.beats[est.beats.length - 1] : null;
       /* Operator, 9 okt 2026 ("boven de meting in grote cijfers live te zien"):
          een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
@@ -386,9 +387,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
          schatting. */
       /* Vervolg (operator: "bpm onmiddellijk mee tonen"): vanaf de eerste
          bruikbare schatting (~4 s signaal), niet pas na de omtrek. */
-      if (est && est.bpm >= 40 && est.bpm <= 140 && est.confidence >= 0.2) {
+      if (est && est.bpm >= 40 && est.bpm <= 140) {
         liveEma.current = liveEma.current === null ? est.bpm : liveEma.current * 0.7 + est.bpm * 0.3;
-        setLiveBpm(Math.round(liveEma.current));
       }
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;
@@ -411,6 +411,11 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         const tid = setTimeout(() => {
           beatTimers.current.delete(tid);
           lastRealAt.current = Date.now();
+          /* Vervolg ("het getal moet volgens het hartritme tellen"): het
+             getal ververst op elke slag en klopt even mee. */
+          if (liveEma.current !== null) setLiveBpm(Math.round(liveEma.current));
+          numPulse.setValue(1.08);
+          Animated.timing(numPulse, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
           Animated.sequence([
             /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
             Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
@@ -681,9 +686,16 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     <View style={s.wrap}>
       {/* Live hartslag in grote cijfers boven de meting (zoals Apple). */}
       <View style={s.liveRow} accessibilityLiveRegion="polite">
-        <Text style={[s.liveNum, liveBpm === null ? s.liveNumIdle : null, finalBpm !== null ? { color: ACCENT } : null]}>
+        <Animated.Text
+          style={[
+            s.liveNum,
+            liveBpm === null ? s.liveNumIdle : null,
+            finalBpm !== null ? { color: ACCENT } : null,
+            { transform: [{ scale: numPulse }] },
+          ]}
+        >
           {liveBpm ?? '--'}
-        </Text>
+        </Animated.Text>
         <Text style={s.liveUnit}>bpm</Text>
       </View>
       <View style={s.ringWrap}>
