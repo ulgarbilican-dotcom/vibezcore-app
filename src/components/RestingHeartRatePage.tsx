@@ -22,7 +22,7 @@ import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
 import { ECG_SHAPE } from '@/utils/ecg-shape';
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -41,6 +41,7 @@ const HEART_D =
 const BEAT_MS = 1500; // ≈40 bpm — operator 9 okt 2026: "hartslag mag rustiger" (2x)
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /* Eén hartslag op de lijn (P, QRS, T): [ms t.o.v. de R-piek, hoogte −1…1]. */
 /* Vorm van één slag: gedeeld met het andere scherm (utils/ecg-shape). */
@@ -99,38 +100,64 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     if (t0.value < 0) t0.value = f.timestamp;
     clock.value = f.timestamp - t0.value;
   });
-  const beat = useDerivedValue(() => beatScale(clock.value % BEAT_MS));
+  /* Vervolg (operator, 9 okt 2026: "je moet zien hoe de pieken vormen —
+     de echte beweging"): zoals een monitor schrijft een lichtpuntje rechts
+     van het hart de lijn; de piek ontstaat daar en het spoor schuift naar
+     links door het hart. Het hart klopt wanneer de piek erdoor gaat. */
+  const lineW = Math.round(Math.min(width - 32, stage * 1.7));
+  const lineH = Math.round(core * 0.8);
+  const headX = Math.round(lineW * 0.82);
+  const speed = lineW / 2 / (BEAT_MS * 1.5); // px per ms (1,5× trager)
+  const travelMs = (headX - lineW / 2) / speed; // van schrijfpunt tot hart
+  const beat = useDerivedValue(() => {
+    const ph = (((clock.value - travelMs) % BEAT_MS) + BEAT_MS) % BEAT_MS;
+    return beatScale(ph);
+  });
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
   /* De glazen cirkel klopt half zo sterk mee — één kloppend geheel. */
   const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
 
-  /* Hartlijn: horizontaal door de cirkel, schuift van rechts naar links,
-     twee slagen zichtbaar, vervaagt naar de randen. */
-  const lineW = Math.round(Math.min(width - 32, stage * 1.7));
-  const lineH = Math.round(core * 0.8);
+  /* Hoogte van de lijn op het schrijfpunt, nu. */
+  const headY = useDerivedValue(() => {
+    const now = clock.value;
+    const tk = now - ((((now - R_AT) % BEAT_MS) + BEAT_MS) % BEAT_MS);
+    let dt = now - tk;
+    if (dt > PQRST[PQRST.length - 1][0]) dt -= BEAT_MS;
+    if (dt < PQRST[0][0] || dt > PQRST[PQRST.length - 1][0]) return 0;
+    for (let j = 1; j < PQRST.length; j++) {
+      if (dt <= PQRST[j][0]) {
+        const [t0, a0] = PQRST[j - 1];
+        const [t1, a1] = PQRST[j];
+        return a0 + ((a1 - a0) * (dt - t0)) / (t1 - t0);
+      }
+    }
+    return 0;
+  });
   const lineProps = useAnimatedProps(() => {
     const mid = lineH / 2;
     const amp = (lineH / 2 - 3) * 0.95;
-    const cx = lineW / 2;
-    /* Vervolg (operator: "moet trager bewegen"): 1,5× trager. */
-    const v = cx / (BEAT_MS * 1.5);
     const now = clock.value;
-    const base = now - (now % BEAT_MS) + R_AT;
     const pts: number[][] = [];
-    for (let k = -3; k <= 3; k++) {
-      const tk = base + k * BEAT_MS;
+    const kMax = Math.floor((now - R_AT) / BEAT_MS) + 1;
+    const kMin = Math.floor((now - headX / speed - R_AT) / BEAT_MS) - 1;
+    for (let k = kMin; k <= kMax; k++) {
+      const tk = k * BEAT_MS + R_AT;
       for (let j = 0; j < PQRST.length; j++) {
-        const x = cx + (tk + PQRST[j][0] - now) * v;
-        if (x < 0 || x > lineW) continue;
+        const t = tk + PQRST[j][0];
+        if (t > now) break; // nog niet geschreven
+        const x = headX + (t - now) * speed;
+        if (x < 0) continue;
         pts.push([x, mid - PQRST[j][1] * amp]);
       }
     }
     pts.sort((m, n) => m[0] - n[0]);
     let d = `M0 ${mid}`;
     for (let i = 0; i < pts.length; i++) d += ` L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
-    d += ` L${lineW} ${mid}`;
+    d += ` L${headX} ${(mid - headY.value * amp).toFixed(1)}`;
     return { d };
   });
+  const dotProps = useAnimatedProps(() => ({ cy: lineH / 2 - headY.value * (lineH / 2 - 3) * 0.95 }));
+  const dotGlowProps = useAnimatedProps(() => ({ cy: lineH / 2 - headY.value * (lineH / 2 - 3) * 0.95 }));
 
   return (
     <View style={s.root}>
@@ -172,9 +199,9 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
             <Defs>
               <SvgLinearGradient id="ecgPage" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={lineW} y2="0">
                 <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0} />
-                <Stop offset="0.28" stopColor="#4AF0D4" stopOpacity={0.85} />
-                <Stop offset="0.72" stopColor="#4AF0D4" stopOpacity={0.85} />
-                <Stop offset="1" stopColor="#4AF0D4" stopOpacity={0} />
+                <Stop offset="0.3" stopColor="#4AF0D4" stopOpacity={0.8} />
+                <Stop offset="0.82" stopColor="#4AF0D4" stopOpacity={1} />
+                <Stop offset="1" stopColor="#4AF0D4" stopOpacity={1} />
               </SvgLinearGradient>
             </Defs>
             <AnimatedPath
@@ -185,6 +212,9 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               strokeLinejoin="round"
               strokeLinecap="round"
             />
+            {/* Schrijfpunt: zachte gloed + helder puntje */}
+            <AnimatedCircle cx={headX} r={7} fill="#4AF0D4" fillOpacity={0.18} animatedProps={dotGlowProps} />
+            <AnimatedCircle cx={headX} r={2.8} fill="#CFFFF6" animatedProps={dotProps} />
           </Svg>
           <Animated.View pointerEvents="none" style={[{ position: 'absolute', zIndex: 4 }, heartStyle]}>
               {/* Operator, 9 okt 2026: hart in Bio-Teal als glas — één kleur
