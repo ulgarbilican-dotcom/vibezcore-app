@@ -57,6 +57,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
      nog niet op de juiste lens zit, krijgt een tweede hint. */
   const placingSince = useRef(Date.now());
   const [placingLong, setPlacingLong] = useState(false);
+  const [pressingHard, setPressingHard] = useState(false);
+  const [justLost, setJustLost] = useState(false);
 
   /* Toestemming vragen zodra dit scherm verschijnt (de gebruiker koos net
      "Measure my heart rate"). */
@@ -89,6 +91,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const lastFingerAt = useRef(0);
   const measureStart = useRef<number | null>(null);
   const lastShownBeat = useRef(0);
+  const lostAt = useRef(0);
   const finished = useRef(false);
   const beat = useRef(new Animated.Value(1)).current;
 
@@ -112,6 +115,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
       }
       if (measureStart.current !== null) samples.current.push(s);
     } else if (t - lastFingerAt.current > LOST_GRACE_MS) {
+      /* Operator, 9 okt 2026: vinger weg tijdens het meten → zeggen WAAROM
+         de ring opnieuw begint (nooit een getal uit een halve meting). */
+      if (measureStart.current !== null) lostAt.current = Date.now();
       fingerSince.current = null;
       measureStart.current = null;
       samples.current = [];
@@ -129,8 +135,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
+        setJustLost(Date.now() - lostAt.current < 3000);
         return;
       }
+      setJustLost(false);
       placingSince.current = Date.now();
       setPlacingLong(false);
       if (start === null || !last) {
@@ -139,6 +147,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         return;
       }
       setStatus('measuring');
+      /* Te hard drukken: het beeld wordt egaal fel rood (verzadigd) en de
+         polsgolf verdwijnt. */
+      setPressingHard(last.r > 250 && last.g > 180);
       const elapsed = last.t - start;
       setProgress(Math.min(1, elapsed / MEASURE_MS));
 
@@ -157,8 +168,17 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         const res = analyzePulse(window);
         if (res) {
           finished.current = true;
+          /* Operator, 9 okt 2026 ("40 kan niet — melden als er niet juist
+             gemeten is"): een rusthartslag buiten 45–100 of een twijfelachtig
+             signaal geeft GEEN getal, maar een eerlijke melding. */
           if (res.bpm > 100) {
             setFailReason("That's higher than a resting heart rate. Sit still for a minute, then try again.");
+            setStatus('failed');
+          } else if (res.bpm < 45) {
+            setFailReason('That reading looks too low. Rest your fingertip lightly over the camera and flash, keep still, and try again.');
+            setStatus('failed');
+          } else if (res.confidence < 0.45) {
+            setFailReason("The signal wasn't clear enough. Keep your hand still and your fingertip relaxed, then try again.");
             setStatus('failed');
           } else {
             onResult(res.bpm);
@@ -249,13 +269,17 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   const circ = Math.PI * (RING - STROKE);
   const message =
     status === 'placing'
-      ? placingLong
+      ? justLost
+        ? 'Finger moved — starting over'
+        : placingLong
         ? 'Not quite — try the camera closest to the flash'
         : 'Cover the top camera and the flash with your fingertip'
       : status === 'settling'
         ? 'Got it — hold still'
         : status === 'measuring'
-          ? progress < 1
+          ? pressingHard
+            ? 'Lift a little — pressing blocks the signal'
+            : progress < 1
             ? 'Reading your heart rate — breathe normally'
             : 'Almost there…'
           : status === 'denied'

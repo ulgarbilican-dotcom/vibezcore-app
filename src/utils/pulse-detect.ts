@@ -128,6 +128,16 @@ function estimate(x: number[], t0: number): ChannelEstimate | null {
     }
   }
   if (bestLag < 0) return null;
+  /* Operator, 9 okt 2026 ("ik mat 40, dat kan niet"): de klassieke
+     octaaffout — bij een zwakke tussenpiek "past" het signaal ook op twee
+     slagen tegelijk, en dan wint de dubbele periode (= halve hartslag).
+     Toont de halve periode zelf ook duidelijk herhaling, dan is DAT het
+     echte ritme. */
+  const halfLag = Math.round(bestLag / 2);
+  if (halfLag >= minLag && ac[halfLag] !== undefined && ac[halfLag] > 0.5 * best) {
+    bestLag = halfLag;
+    best = ac[halfLag];
+  }
   /* Paraboolfit rond de top voor een nauwkeuriger periode. */
   let lag = bestLag;
   const l = ac[bestLag - 1];
