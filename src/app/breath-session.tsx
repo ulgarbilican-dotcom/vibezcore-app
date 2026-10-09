@@ -3952,6 +3952,42 @@ export function BreathSession() {
               })}
             </ScrollView>
 
+            {/* Operator, 9 okt 2026 ("ik zie die drie standen niet"): de
+               sterkte van de soundscape stond in het oude, niet meer
+               bereikbare blad — nu hier, enkel als er een geluid speelt.
+               Zelfde wit-protocol als de narrator-chips. */}
+            {scape ? (
+              <>
+                <Text style={s.avRowLabel}>Soundscape volume</Text>
+                <View style={[s.levelRow, { marginBottom: 14 }]}>
+                  {(['soft', 'medium', 'loud'] as const).map((l) => {
+                    const on = l === scapeLevel;
+                    return (
+                      <AnimatedPressable
+                        key={l}
+                        onPressIn={pressScapeLevelChip.onPressIn}
+                        onPressOut={pressScapeLevelChip.onPressOut}
+                        onPress={() => {
+                          hapticTap();
+                          setScapeLevelLocal(l);
+                          setScapeLevel(l);
+                        }}
+                        style={[
+                          s.levelChip,
+                          on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
+                          pressScapeLevelChip.style,
+                        ]}
+                      >
+                        <Text style={[s.levelTxt, on && { color: '#ffffff' }]}>
+                          {l.toUpperCase()}
+                        </Text>
+                      </AnimatedPressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+
             {/* Rij 3 — Phone haptics. */}
             <View style={s.voiceSheetRow}>
               <Text style={s.voiceSheetRowLabel}>Phone haptics</Text>
