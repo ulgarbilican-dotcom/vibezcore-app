@@ -3,7 +3,9 @@
    9 okt 2026: "kunnen wij Your Resting Heart Rate een hartslaggeluid
    geven?").
 
-   Een zachte, lage lub-dub (assets/heartbeat.wav, zelf gemaakt), op elke
+   Eén echte lub-dub (assets/heartbeat.wav: geknipt uit een Pixabay-opname,
+   "heartbeat sound 493999" — Pixabay-licentie, vrij in apps, geen
+   naamsvermelding; slag op 7,58 s, lub-dub 0,3 s = hart in rust), op elke
    slag van het kloppende hart. Regels:
      - mengt met muziek van de gebruiker (nooit iemands muziek stoppen);
      - iOS: stil als de telefoon op stil staat (Android: mediavolume);
@@ -20,7 +22,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 0.7; // operator, 9 okt 2026: "kan dat luider?" → voller geluid, daarna "iets zachter"
+const VOLUME = 1; // echte opname (Pixabay), luidheid in het bestand afgestemd op wat de operator goed vond (vorig geluid op 0,7)
 
 let player: AudioPlayer | null = null;
 let active = false;
