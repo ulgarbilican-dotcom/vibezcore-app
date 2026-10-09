@@ -103,7 +103,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
   const verb = rhythm.targetBpm > rhythm.startBpm ? 'quickens to' : 'slows to';
 
   return (
-    <GlassSheet visible={visible} onClose={onClose}>
+    <GlassSheet visible={visible} onClose={onClose} fullHeight={step === 'measure'}>
       <View
         style={[
           s.sheet,
@@ -113,7 +113,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
              vrije ruimte. */
           /* Vervolg ("kan die kaart volledig tot boven komen?"): tot net
              onder de statusbalk. */
-          step === 'measure' ? { height: Math.round(winH - insets.top - 8) } : null,
+          /* Vervolg ("echt tegen de bovenkant, tekst iets lager"): volle
+             hoogte; de inhoud begint onder de statusbalk. */
+          step === 'measure' ? { flex: 1, paddingTop: insets.top + 6 } : null,
         ]}
       >
         <VibezGlass
@@ -196,7 +198,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             <Text style={s.body}>Rest your fingertip lightly on the back camera and flash.</Text>
             {/* Operator, 9 okt 2026: ring hoger, de "15 seconds · …"-regel
                 helemaal onderaan. */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 8 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 72 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
@@ -210,7 +212,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               onManual={() => setStep('manual')}
             />
             </View>
-            <View style={[s.facts, { marginTop: 'auto', marginBottom: 10, alignSelf: 'center' }]}>
+            <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }]}>
               <Text style={s.fact}>15 seconds</Text>
               <View style={s.factDot} />
               <Text style={s.fact}>Camera & flash</Text>

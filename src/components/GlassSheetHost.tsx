@@ -22,7 +22,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, Pressable, StyleSheet, View } from 'react-native';
 
-type Entry = { id: number; node: ReactNode; onClose: () => void };
+type Entry = { id: number; node: ReactNode; onClose: () => void; fullHeight?: boolean };
 let current: Entry | null = null;
 const listeners = new Set<(e: Entry | null) => void>();
 function emit() {
@@ -34,15 +34,18 @@ export function GlassSheet({
   visible,
   onClose,
   children,
+  fullHeight = false,
 }: {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
+  /** Tot helemaal bovenaan het scherm (i.p.v. max 92%). */
+  fullHeight?: boolean;
 }) {
   const [id] = useState(() => Math.random());
   useEffect(() => {
     if (visible) {
-      current = { id, node: children, onClose };
+      current = { id, node: children, onClose, fullHeight };
       emit();
     } else if (current?.id === id) {
       current = null;
@@ -126,6 +129,7 @@ export function GlassSheetHost() {
           <Animated.View
             style={[
               s.sheetWrap,
+              shown.fullHeight ? s.sheetWrapFull : null,
               { transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [H, 0] }) }] },
             ]}
             pointerEvents="box-none"
@@ -142,4 +146,5 @@ const s = StyleSheet.create({
   /* Operator, 7 okt 2026: de pagina erachter dieper dimmen. */
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.74)' },
   sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '92%' },
+  sheetWrapFull: { top: 0, maxHeight: '100%' },
 });
