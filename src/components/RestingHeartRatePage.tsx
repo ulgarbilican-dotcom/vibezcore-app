@@ -93,13 +93,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
   return (
     <View style={s.root}>
-      {/* Zachte Bio-Teal gloed achter het hart — kleur, geen vervaging. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(0,163,163,0.20)', 'rgba(0,163,163,0.05)', 'rgba(10,10,10,0)']}
-        locations={[0, 0.45, 1]}
-        style={s.glow}
-      />
+      {/* Operator, 9 okt 2026: achtergrond helemaal zwart (geen gloed). */}
 
       <View style={[s.content, { paddingTop: insets.top + 28 }]}>
 
