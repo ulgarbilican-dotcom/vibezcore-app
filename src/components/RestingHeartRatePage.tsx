@@ -51,7 +51,9 @@ function Ring({ delay, size, from }: { delay: number; size: number; from: number
       /* Vervolg ("animatie buitenste ringen klopt niet"): een rimpeling per
          slag — leeft 2 slagen, dus max 2 ringen tegelijk. */
       /* Drukgolf: vertrekt vlot op de "lub", vertraagt dan zacht. */
-      withRepeat(withTiming(1, { duration: BEAT_MS * 2, easing: Easing.bezier(0.16, 1, 0.3, 1) }), -1, false),
+      /* Vervolg ("meer ringen aan de buitenkant"): elke ring leeft 4
+         slagen → 4 ringen tegelijk onderweg, één nieuwe per slag. */
+      withRepeat(withTiming(1, { duration: BEAT_MS * 4, easing: Easing.bezier(0.16, 1, 0.3, 1) }), -1, false),
     );
     return () => cancelAnimation(p);
   }, [delay, p, from]);
@@ -139,8 +141,9 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
-          <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
-          <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
+          {[0, 1, 2, 3].map((k) => (
+            <Ring key={`r${k}-${stage}`} delay={BEAT_MS * k} size={stage} from={core / stage} />
+          ))}
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2, elevation: 2 }, coreStyle]}>
             {/* Operator, 9 okt 2026: doorschijnend witte, gevulde cirkel rond
                 het hart (geen losse lichtbron). */}
