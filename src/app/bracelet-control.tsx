@@ -1619,7 +1619,7 @@ const RING_R = 84;
 const RING_STROKE = 4;
 const RING_SIZE = (RING_R + RING_STROKE) * 2;
 /* Operator, 9 okt 2026 ("cirkel groter"): 230 → 270. */
-const RING_DIAL = 270;
+const RING_DIAL = 300; // vervolg: "groter"
 const RING_CIRC = 2 * Math.PI * RING_R;
 const AnimatedRingCircle = ReanimatedAnimated.createAnimatedComponent(Circle);
 
@@ -2158,8 +2158,9 @@ function DurationRing({
   scrollHint,
 }: {
   /** Operator, 9 okt 2026: de duur kies je door verticaal over de cirkel
-      te vegen — twee zachte pijltjes naast de tijd tonen dat. */
-  scrollHint?: { up: boolean; down: boolean };
+      te vegen. Vervolg ("niet duidelijk dat er gescrold kan worden"): de
+      buren staan vaag boven en onder de tijd, zoals een iOS-draaiwiel. */
+  scrollHint?: { prev?: number; next?: number };
   /** Voorproef (7 okt 2026): de teller i.p.v. de gekozen duur. */
   clockOverride?: string;
   /** Voorproef: "Preview" i.p.v. "Recommended". */
@@ -2328,17 +2329,19 @@ function DurationRing({
           </Text>
           <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
         </View>
-        <View style={s.ringClockRow}>
-          <Text style={[s.ringClock, { color: numColor }, textShadow]}>
-            {clockOverride ?? `${value}:00`}
+        {scrollHint ? (
+          <Text style={[s.ringNeighbour, { opacity: !clockOverride && scrollHint.prev ? 0.3 : 0 }]}>
+            {scrollHint.prev ? `${scrollHint.prev}:00` : ' '}
           </Text>
-          {scrollHint && !clockOverride ? (
-            <View style={s.ringScrollHint}>
-              <ChevronUp size={16} color="#ffffff" strokeWidth={2.2} style={{ opacity: scrollHint.up ? 0.4 : 0.1 }} />
-              <ChevronDown size={16} color="#ffffff" strokeWidth={2.2} style={{ opacity: scrollHint.down ? 0.4 : 0.1 }} />
-            </View>
-          ) : null}
-        </View>
+        ) : null}
+        <Text style={[s.ringClock, { color: numColor }, textShadow, scrollHint ? { marginTop: 0 } : null]}>
+          {clockOverride ?? `${value}:00`}
+        </Text>
+        {scrollHint ? (
+          <Text style={[s.ringNeighbour, { opacity: !clockOverride && scrollHint.next ? 0.3 : 0 }]}>
+            {scrollHint.next ? `${scrollHint.next}:00` : ' '}
+          </Text>
+        ) : null}
         <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
           <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
@@ -3729,6 +3732,8 @@ function IdleScreen({
             <ChevronRight size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.4} style={{ marginLeft: -2 }} />
           </PressScale>
         ) : null}
+        {/* Operator, 9 okt 2026: cirkel lager — net boven het midden. */}
+        <View style={{ flex: 0.6, minHeight: 4 }} />
         <View style={s.durationRingWrap}>
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
@@ -3774,9 +3779,11 @@ function IdleScreen({
               size={RING_DIAL}
               dark={idleDark}
               scrollHint={(() => {
+                /* Boven = korter, onder = langer: omhoog vegen trekt de
+                   langere waarde naar het midden, zoals een iOS-wiel. */
                 const list = DURATION_PRESETS[selectedMode].map((p) => p.value);
                 const i = list.indexOf(duration);
-                return { up: i < list.length - 1, down: i > 0 };
+                return { prev: i > 0 ? list[i - 1] : undefined, next: i < list.length - 1 ? list[i + 1] : undefined };
               })()}
               recommended={
                 duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
@@ -6056,9 +6063,8 @@ const s = StyleSheet.create({
     lineHeight: 18,
     color: 'rgba(255,255,255,0.75)',
   },
-  ringClockRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  /* Absoluut naast de tijd, zodat de tijd zelf exact gecentreerd blijft. */
-  ringScrollHint: { position: 'absolute', right: -24, top: 0, bottom: 0, justifyContent: 'center', gap: 2 },
+  /* Vage buurwaarden boven/onder de tijd (draaiwiel-hint). */
+  ringNeighbour: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 19, lineHeight: 24, marginVertical: 2 },
   ringClock: {
     fontFamily: BrandFonts.bold,
     fontSize: 54,
