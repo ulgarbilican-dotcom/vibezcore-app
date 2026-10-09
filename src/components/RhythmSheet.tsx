@@ -181,7 +181,8 @@ export default function RhythmSheet({
                     : `Your last measurement${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`}
             </Text>
             <Text style={[s.body, { textAlign: 'center', marginTop: 18 }]}>
-              Your session starts here, then moves to the rhythm of {meta.name}.
+              {/* Operator, 9 okt 2026: enkel waarvoor het getal dient. */}
+              Used to match the session to your heartbeat.
             </Text>
             {PulseMeter ? (
               <PressScale
