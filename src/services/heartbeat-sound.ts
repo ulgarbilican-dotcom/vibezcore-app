@@ -45,40 +45,57 @@ let headphones: AudioPlayer | null = null;
 let keepAwake: AudioPlayer | null = null;
 let active = false;
 
+/* Operator, 9 okt 2026 ("de hartslag speelt niet meteen, duurt ~4 s"): de
+   spelers worden vooraf aangemaakt (zodra de pagina er is, nog vóór ze in
+   beeld komt) en blijven daarna bestaan — enkel pauzeren bij het weggaan.
+   Zo klinkt ook de allereerste slag. */
+function ensurePlayers(): void {
+  if (speaker) return;
+  try {
+    const sp = createAudioPlayer(require('../../assets/heartbeat-speaker.wav'));
+    sp.volume = VOLUME_SPEAKER;
+    const hp = createAudioPlayer(require('../../assets/heartbeat-headphones.wav'));
+    hp.volume = VOLUME_HEADPHONES;
+    const ka = createAudioPlayer(require('../../assets/silence.wav'));
+    ka.loop = true;
+    speaker = sp;
+    headphones = hp;
+    keepAwake = ka;
+  } catch {
+    speaker = null;
+    headphones = null;
+    keepAwake = null;
+  }
+}
+
+/** Laden zonder te spelen (de pagina roept dit aan bij het openen). */
+export function preloadHeartbeatSound(): void {
+  ensurePlayers();
+}
+
 export function startHeartbeatSound(): void {
   if (active) return;
   if (getBreathSession().isRunning || getSnapshot().session !== null) return;
   active = true;
   invalidateAudioMode();
   invalidateAudioModeSet();
+  /* Niet wachten: de modus wordt gezet terwijl de eerste slag al kan klinken. */
   void setAudioModeAsync({
     playsInSilentMode: false,
     shouldPlayInBackground: false,
     interruptionMode: 'mixWithOthers',
-  })
-    .catch(() => {})
-    .then(() => {
-      if (!active || speaker) return;
-      try {
-        const sp = createAudioPlayer(require('../../assets/heartbeat-speaker.wav'));
-        sp.volume = VOLUME_SPEAKER;
-        const hp = createAudioPlayer(require('../../assets/heartbeat-headphones.wav'));
-        hp.volume = VOLUME_HEADPHONES;
-        const ka = createAudioPlayer(require('../../assets/silence.wav'));
-        ka.loop = true;
-        ka.play();
-        speaker = sp;
-        headphones = hp;
-        keepAwake = ka;
-      } catch {
-        speaker = null;
-        headphones = null;
-      }
-    });
+  }).catch(() => {});
+  ensurePlayers();
+  try {
+    keepAwake?.play();
+  } catch {
+    /* geen ramp */
+  }
 }
 
 /** Eén slag (de "lub"; de "dub" zit in hetzelfde geluid). */
 export function heartbeatTick(): void {
+  if (!active) return;
   const p = isHeadphonesOutput() ? headphones : speaker;
   if (!p) return;
   try {
@@ -101,12 +118,8 @@ export function stopHeartbeatSound(): void {
     if (!p) continue;
     try {
       p.pause();
-      p.remove();
     } catch {
       /* al weg */
     }
   }
-  speaker = null;
-  headphones = null;
-  keepAwake = null;
 }

@@ -21,7 +21,7 @@ import RhythmSheet from '@/components/RhythmSheet';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
-import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from '@/services/heartbeat-sound';
+import { heartbeatTick, preloadHeartbeatSound, startHeartbeatSound, stopHeartbeatSound } from '@/services/heartbeat-sound';
 import { hapticTap } from '@/utils/haptics';
 import { useFocusEffect } from 'expo-router';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -153,7 +153,10 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     if (on) startHeartbeatSound();
     else stopHeartbeatSound();
   }, [focused, appActive, sheet]);
-  useEffect(() => () => stopHeartbeatSound(), []);
+  useEffect(() => {
+    preloadHeartbeatSound();
+    return () => stopHeartbeatSound();
+  }, []);
   const beat = useDerivedValue(() => {
     const ph = (((clock.value - travelMs) % BEAT_MS) + BEAT_MS) % BEAT_MS;
     return beatScale(ph);
