@@ -201,18 +201,22 @@ function PillarButton({
   );
 }
 
-/* Het V-teken van VIBEZCORE — het handelsmerk. Operator, 10 okt 2026: "de V
-   wordt het handelsmerk; nu is de V als logo smaller dan de V in het woord
-   zelf → dezelfde V als in het woord". Exact opgemeten uit het woordmerk
-   (assets/vibezcore_wordmark.png, eerste letter, 87×81): links een schuine
-   balk, rechts een kortere balk met een knik aan de binnenkant. Dezelfde
-   vorm staat in de vergrendelscherm-kaart (breath-background). Vervangt de
-   smallere, fijnere V van 7 okt. */
+/* Het V-teken van VIBEZCORE — het handelsmerk (operator, 10 okt 2026, stap
+   voor stap gekozen op het scherm, eindkeuze "B"). Familie van de V uit het
+   woordmerk (zelfde schuinte, zelfde knik), als los teken verfijnd:
+   - beide benen even breed (16,8 op 81 hoog) en in exact dezelfde,
+     gespiegelde hoek (helling 26/81);
+   - rechterbeen bovenaan op de woordmerk-plaats, knik op ~50% hoogte, punt
+     op 67/81;
+   - onder de knik loopt de binnenkant evenwijdig aan het linkerbeen → een
+     gelijkmatige smalle spleet.
+   Dezelfde vorm staat in de vergrendelscherm-kaart (breath-background). In
+   het woordmerk zelf en op het app-icoon blijft de volle V. */
 function VMark() {
   return (
-    <Svg width={36.5} height={34} viewBox="0 0 87 81">
-      <Polygon points="0,0 28,0 52,81 28,81" fill="#ffffff" />
-      <Polygon points="60,0 87,0 63,67 50.5,33" fill="#ffffff" />
+    <Svg width={30} height={34} viewBox="0 0 71.4 81">
+      <Polygon points="0,0 16.8,0 42.8,81 26,81" fill="#ffffff" />
+      <Polygon points="54.6,0 71.4,0 49.89,67 41.49,40.83" fill="#ffffff" />
     </Svg>
   );
 }
