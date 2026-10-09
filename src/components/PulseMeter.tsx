@@ -208,6 +208,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   /* Laatste beeldwaarde (ook zonder vinger), om te zien of de flits brandt. */
   const lastRaw = useRef<PulseSample | null>(null);
   const [looksDark, setLooksDark] = useState(false);
+  const [flashWasOff, setFlashWasOff] = useState(false);
   useEffect(() => {
     if (!Battery) return;
     const check = () =>
@@ -408,6 +409,10 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           onResult(res.bpm);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
+          /* Brandde de flits? Met flits is het beeld door de vinger fel rood
+             (r ≈ 200+); zonder flits, op omgevingslicht, veel zwakker. */
+          const meanR = window.reduce((sum, p) => sum + p.r, 0) / Math.max(1, window.length);
+          setFlashWasOff(meanR < 140);
           setFailReason(
             !res
               ? "We couldn't read a steady heart rate. Rest your fingertip lightly — pressing hard blocks the signal."
@@ -522,6 +527,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   });
 
   const retry = () => {
+    setFlashWasOff(false);
     finished.current = false;
     samples.current = [];
     fingerSince.current = null;
@@ -548,7 +554,9 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     const gap = Math.max(0, HEART_LEN - 2 * v);
     return { strokeDasharray: [Math.max(0.001, v), gap + 0.001, v, 0.001] };
   });
-  const lowBatteryFail = status === 'failed' && batteryLow && failReason.startsWith("We couldn't read");
+  /* Operator, 9 okt 2026: "als de flits aanstaat nooit die meldingen" —
+     de batterij krijgt enkel de schuld als de flits er echt niet was. */
+  const lowBatteryFail = status === 'failed' && batteryLow && flashWasOff;
   /* Operator, 9 okt 2026 ("en als de flits op 12% wél aangaat?"): enkel
      "Flash unavailable" als de batterij laag is ÉN het beeld donker blijft —
      anders gewoon de normale plaats-hint. */
