@@ -201,7 +201,7 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
               <View style={s.factDot} />
               <Text style={s.fact}>No images saved</Text>
             </View>
-            <View style={{ flex: 1, justifyContent: 'center' }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 28 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
