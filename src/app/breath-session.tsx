@@ -3807,7 +3807,20 @@ export function BreathSession() {
                in de hoek oogt als een uitgang, niet als een bevestiging —
                een "Done"-knop onderaan (zelfde vorm als het Voice-vel)
                leest wél als "instellingen staan vast, ga verder". */}
-            <Text style={s.sheetTitle}>Audio & Haptics</Text>
+            {/* Operator, 8 okt 2026 (protocol, vervangt 19 sept): Done
+               rechtsboven naast de titel, zoals elk kiezer-/instelblad. */}
+            <View style={s.avHeaderRow}>
+              <Text style={[s.sheetTitle, { marginBottom: 0 }]}>Audio & Haptics</Text>
+              <AnimatedPressable
+                style={pressAvDone.style}
+                onPressIn={pressAvDone.onPressIn}
+                onPressOut={pressAvDone.onPressOut}
+                onPress={() => setAvSheetOpen(false)}
+                hitSlop={10}
+              >
+                <Text style={s.avDoneTxt}>Done</Text>
+              </AnimatedPressable>
+            </View>
 
             {/* Rij 1 — Voice Guidance. */}
             <View style={s.voiceSheetRow}>
@@ -4013,14 +4026,6 @@ export function BreathSession() {
             <Text style={s.avSheetHint}>
               Pause your session anytime to reopen these settings.
             </Text>
-            <AnimatedPressable
-              style={[s.modalBtn, pressAvDone.style]}
-              onPressIn={pressAvDone.onPressIn}
-              onPressOut={pressAvDone.onPressOut}
-              onPress={() => setAvSheetOpen(false)}
-            >
-              <Text style={s.modalBtnTxt}>Done</Text>
-            </AnimatedPressable>
           </View>
       </GlassSheet>
 
@@ -5159,6 +5164,13 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      waarom de Audio & Haptics-knop tijdens het ademen zelf verdwijnt (focus
      mode) — zonder deze regel oogt dat als "instellingen niet meer
      bereikbaar", terwijl pauzeren ze terugbrengt. */
+  avHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  avDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   avSheetHint: {
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,
