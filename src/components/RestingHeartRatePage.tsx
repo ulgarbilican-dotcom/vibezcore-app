@@ -40,7 +40,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 /* Lucide-hart (24×24), zelfde vorm als de iconen elders in de app. */
 const HEART_D =
   'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z';
-const BEAT_MS = 1200; // ≈50 bpm — operator 9 okt 2026: "hartslag mag rustiger"
+const BEAT_MS = 1500; // ≈40 bpm — operator 9 okt 2026: "hartslag mag rustiger" (2x)
 
 /* Operator, 9 okt 2026 ("de ringen doen niets"): elke ring een eigen,
    onafhankelijke animatie (gedeelde teller bleef op 0 staan). Vertraging
@@ -113,11 +113,11 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
            hartcyclus — "lub" (S1, kamers trekken krachtig en snel samen),
            ~300 ms later een kleinere "dub" (S2, kleppen sluiten), dan de
            lange, rustige vulfase. 1200 ms ≈ 50 bpm. */
-        withTiming(1.1, { duration: 90, easing: Easing.bezier(0.2, 0.9, 0.3, 1) }),
-        withTiming(1.0, { duration: 140, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-        withDelay(70, withTiming(1.05, { duration: 80, easing: Easing.bezier(0.2, 0.9, 0.3, 1) })),
-        withTiming(1, { duration: 180, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-        withDelay(640, withTiming(1, { duration: 0 })),
+        withTiming(1.07, { duration: 120, easing: Easing.bezier(0.2, 0.9, 0.3, 1) }),
+        withTiming(1.0, { duration: 200, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
+        withDelay(90, withTiming(1.035, { duration: 110, easing: Easing.bezier(0.2, 0.9, 0.3, 1) })),
+        withTiming(1, { duration: 240, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
+        withDelay(740, withTiming(1, { duration: 0 })),
       ),
       -1,
       false,

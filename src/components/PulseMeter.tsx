@@ -383,7 +383,9 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
          een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
          is (eerste seconden zijn onrustig) en enkel bij een geloofwaardige
          schatting. */
-      if (est && elapsed >= MEASURE_MS * OUTLINE_SHARE && est.bpm >= 40 && est.bpm <= 140 && est.confidence >= 0.25) {
+      /* Vervolg (operator: "bpm onmiddellijk mee tonen"): vanaf de eerste
+         bruikbare schatting (~4 s signaal), niet pas na de omtrek. */
+      if (est && est.bpm >= 40 && est.bpm <= 140 && est.confidence >= 0.2) {
         liveEma.current = liveEma.current === null ? est.bpm : liveEma.current * 0.7 + est.bpm * 0.3;
         setLiveBpm(Math.round(liveEma.current));
       }
