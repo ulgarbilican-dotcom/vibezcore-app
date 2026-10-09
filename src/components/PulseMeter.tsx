@@ -36,6 +36,9 @@ const SETTLE_MS = 1_000;
 const LOST_GRACE_MS = 700;
 const RING = 240; // 9 okt 2026: "cirkel iets groter"
 const HEART = 84;
+/* Golf: van net buiten het hart tot net binnen de voortgangsring. */
+const RIPPLE = RING - 20;
+const RIPPLE_FROM = (HEART * 1.2) / RIPPLE;
 /* Operator, 9 okt 2026 ("ring dunner, eleganter"). */
 const STROKE = 2; // vervolg 9 okt 2026: "groene vullende lijn mag dunner"
 const ACCENT = '#4AF0D4';
@@ -195,6 +198,20 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
      niet ligt (9 okt 2026: "de animatie moet beter"). */
   const ripple = useRef(new Animated.Value(1)).current;
+  /* Operator, 9 okt 2026 ("die ringen rond het hart zijn helemaal niet
+     goed"): één dunne, rustige golf per slag — vertrekt net buiten het
+     hart, stopt binnen de voortgangsring, zelfde zachte uitdeining als de
+     ringen op de Resting Heart Rate-pagina. */
+  const sendRipple = useCallback(() => {
+    ripple.stopAnimation();
+    ripple.setValue(0);
+    Animated.timing(ripple, {
+      toValue: 1,
+      duration: 1500,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [ripple]);
   const beatTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   useEffect(() => {
     const timers = beatTimers.current;
@@ -324,8 +341,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
             Animated.timing(beat, { toValue: 1, duration: 520, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
           ]).start();
-          ripple.setValue(0);
-          Animated.timing(ripple, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+          sendRipple();
         }, at);
         beatTimers.current.add(tid);
       }
@@ -381,6 +397,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           Animated.timing(idle, { toValue: 1.045, duration: 240, easing: Easing.out(Easing.sin), useNativeDriver: true }),
           Animated.timing(idle, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         ]).start();
+        sendRipple();
         const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
         setBeatLog((prev) => [...prev.filter((x) => t - x.t < ECG_WINDOW_MS + 1000), { t, a: SOFT_BEAT_AMP }]);
       };
@@ -396,7 +413,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
     );
     loop.start();
     return () => loop.stop();
-  }, [fingerOn, placing, idle, hasRealBeat]);
+  }, [fingerOn, placing, idle, hasRealBeat, sendRipple]);
 
   const onFrame = useCallback(
     (frame: Frame) => {
@@ -527,8 +544,8 @@ export default function PulseMeter({ onResult, onManual }: Props) {
           style={[
             s.ripple,
             {
-              opacity: ripple.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] }),
-              transform: [{ scale: ripple.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.95] }) }],
+              opacity: ripple.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 0.4, 0] }),
+              transform: [{ scale: ripple.interpolate({ inputRange: [0, 1], outputRange: [RIPPLE_FROM, 1] }) }],
             },
           ]}
         />
@@ -611,7 +628,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
-  ripple: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5, borderColor: ACCENT },
+  ripple: { position: 'absolute', width: RIPPLE, height: RIPPLE, borderRadius: RIPPLE / 2, borderWidth: 1, borderColor: ACCENT },
   ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   msg: {
     color: '#ffffff',
