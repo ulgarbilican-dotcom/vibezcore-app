@@ -19,10 +19,14 @@ function build(): [number, number][] {
   const pts: [number, number][] = [];
   /* P-golf (rond) */
   for (let t = -240; t <= -70; t += 10) pts.push([t, 0.11 * gauss(t, -165, 22)]);
-  /* QRS (scherp): Q-dipje, R-piek, diepe S, terug naar de basislijn */
-  pts.push([-40, 0], [-28, -0.16], [0, 1], [26, -0.62], [46, 0.03], [60, 0]);
+  /* QRS (scherp): Q-dipje, R-piek, S-uitschieter, terug naar de basislijn */
+  /* Vervolg (operator: "is dat de realistische piekvorm? kijk echte
+     monitors na"): afleiding II, de standaard op een monitor — klein Q
+     (<25% R), S ±10–30% van R (was 62%: te diep), QRS ±90 ms. */
+  pts.push([-38, 0], [-26, -0.12], [0, 1], [22, -0.28], [40, 0.02], [52, 0]);
   /* ST-segment + T-golf (breed en rond) */
-  for (let t = 80; t <= 330; t += 10) pts.push([t, 0.24 * gauss(t, 215, 42)]);
+  /* T ±25–35% van R, breed en rond; QT ±370 ms. */
+  for (let t = 80; t <= 330; t += 10) pts.push([t, 0.3 * gauss(t, 215, 42)]);
   return pts;
 }
 
