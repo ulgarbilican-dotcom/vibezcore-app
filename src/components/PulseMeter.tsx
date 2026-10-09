@@ -227,6 +227,46 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
   );
 }
 
+/* Rekenboog: dunne teal boog die rond het hart draait terwijl het resultaat
+   wordt uitgerekend (operator, 9 okt 2026). */
+function CalcArc() {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: true }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [spin]);
+  const size = RING - 34;
+  const r = size / 2 - 2;
+  const c = size / 2;
+  const a1 = -Math.PI / 2;
+  const a2 = a1 + (Math.PI * 2) / 3.2;
+  const d = `M ${c + r * Math.cos(a1)} ${c + r * Math.sin(a1)} A ${r} ${r} 0 0 1 ${c + r * Math.cos(a2)} ${c + r * Math.sin(a2)}`;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
+      }}
+    >
+      <Svg width={size} height={size}>
+        <Defs>
+          <LinearGradient id="calcArc" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor={ACCENT} stopOpacity={0} />
+            <Stop offset="1" stopColor={ACCENT} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Path d={d} stroke="url(#calcArc)" strokeWidth={2} strokeLinecap="round" fill="none" />
+      </Svg>
+    </Animated.View>
+  );
+}
+
 export default function PulseMeter({ onResult, onManual, onErrorChange }: Props) {
   const permission = useCameraPermission();
   const [status, setStatus] = useState<Status>('placing');
@@ -306,6 +346,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const liveTarget = useRef<number | null>(null);
   const numPulse = useRef(new Animated.Value(1)).current;
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
+  const [calculating, setCalculating] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (resultTimer.current) clearTimeout(resultTimer.current);
@@ -388,6 +429,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         liveEma.current = null;
         liveHist.current = [];
         liveTarget.current = null;
+        setCalculating(false);
         setLiveBpm(null);
         setStatus('placing');
         setProgress(0);
@@ -482,6 +524,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       }
 
       if (elapsed >= MEASURE_MS) {
+        /* Meettijd om: rekenen (en zo nodig stil doormeten voor de controle). */
+        setCalculating(true);
         const window = samples.current.filter((p) => p.t >= last.t - MEASURE_MS);
         const res = analyzePulse(window);
         /* Operator, 9 okt 2026 ("40 kan niet" + "try again moet ook niet
@@ -499,12 +543,20 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           finished.current = true;
           /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst
              even het eindgetal tonen, met een tik, dan pas door. */
-          setFinalBpm(res.bpm);
-          setLiveBpm(res.bpm);
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          resultTimer.current = setTimeout(() => onResult(res.bpm), 1600);
+          /* Vervolg (operator: "op het einde een wachtsymbool terwijl het
+             effectief wordt uitgerekend"): eerst ~1,2 s de rekenboog, dan
+             het eindgetal in teal + tik, dan het resultaat. */
+          setCalculating(true);
+          resultTimer.current = setTimeout(() => {
+            setCalculating(false);
+            setFinalBpm(res.bpm);
+            setLiveBpm(res.bpm);
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            resultTimer.current = setTimeout(() => onResult(res.bpm), 1600);
+          }, 1200);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
+          setCalculating(false);
           /* Brandde de flits? Met flits is het beeld door de vinger fel rood
              (r ≈ 200+); zonder flits, op omgevingslicht, veel zwakker. */
           const meanR = window.reduce((sum, p) => sum + p.r, 0) / Math.max(1, window.length);
@@ -647,6 +699,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     liveEma.current = null;
     liveHist.current = [];
     liveTarget.current = null;
+    setCalculating(false);
     setLiveBpm(null);
     setFinalBpm(null);
     setProgress(0);
@@ -689,6 +742,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             ? 'Lift a little — pressing blocks the signal'
             : finalBpm !== null
             ? 'Done'
+            : calculating
+            ? 'Calculating your heart rate…'
             : progress < 1
             ? 'Reading your heart rate — breathe normally'
             : 'Almost there…'
@@ -752,6 +807,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           style={[
             s.liveNum,
             liveBpm === null ? s.liveNumIdle : null,
+            calculating ? { opacity: 0.45 } : null,
             finalBpm !== null ? { color: ACCENT } : null,
             { transform: [{ scale: numPulse }] },
           ]}
@@ -781,6 +837,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             fill="none"
           />
         </Svg>
+        {calculating ? <CalcArc /> : null}
         {/* Operator, 9 okt 2026: zolang de vinger nog niet ligt, toont een
             Touch ID-achtige lijnanimatie hoe je je vinger legt; daarna het
             hart dat zich vult. */}
