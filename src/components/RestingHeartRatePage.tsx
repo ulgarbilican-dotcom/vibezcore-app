@@ -116,13 +116,6 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
           Every session starts at your own heartbeat, then guides it toward your state.
         </Text>
 
-        <View style={s.facts}>
-          <Text style={s.fact}>15 seconds</Text>
-          <View style={s.dot} />
-          <Text style={s.fact}>Camera & flash</Text>
-          <View style={s.dot} />
-          <Text style={s.fact}>No images saved</Text>
-        </View>
       </View>
 
       <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 16) + 18 }]}>
@@ -197,6 +190,7 @@ const s = StyleSheet.create({
   },
   body: {
     marginTop: 18,
+    marginBottom: 14,
     maxWidth: 320,
     fontFamily: BrandFonts.regular,
     fontSize: 16,

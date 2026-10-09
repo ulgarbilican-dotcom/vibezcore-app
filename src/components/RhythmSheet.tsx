@@ -182,6 +182,15 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
             <Text style={s.body}>
               Best after a few quiet minutes sitting — ideally in the morning. Rest your fingertip lightly over the main camera on the back (usually the top one) and the flash.
             </Text>
+            {/* Operator, 9 okt 2026: de "15 seconds · …"-regel hoort bij het
+                meten zelf, niet op de introductiepagina. */}
+            <View style={s.facts}>
+              <Text style={s.fact}>15 seconds</Text>
+              <View style={s.factDot} />
+              <Text style={s.fact}>Camera & flash</Text>
+              <View style={s.factDot} />
+              <Text style={s.fact}>No images saved</Text>
+            </View>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
@@ -328,6 +337,9 @@ function BpmWheel({ value, onChange }: { value: number; onChange: (v: number) =>
 }
 
 const s = StyleSheet.create({
+  facts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 6 },
+  fact: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)' },
+  factDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.3)' },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
