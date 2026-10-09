@@ -444,10 +444,10 @@ const s = StyleSheet.create({
   topWordmark: {
     marginTop: 12,
     /* vibezcore_wordmark_spaced.png: zelfde letters als het woordmerk,
-       tussenruimte ×1,25 t.o.v. vibezcore_wordmark_wide (operator, 10 okt
-       2026: "letters verder uiteen" → ×1,5, daarna "beetje dichter terug").
-       1247×83 → zelfde lettergrootte als voorheen (168 breed bij 1120). */
-    width: 187,
+       tussenruimte ×1,1 t.o.v. vibezcore_wordmark_wide (operator, 10 okt
+       2026: "letters verder uiteen" → ×1,5 → ×1,25 → "nog wat dichter").
+       1175×83 → zelfde lettergrootte als voorheen (168 breed bij 1120). */
+    width: 176,
     height: 12.5,
   },
   topTagline: {
