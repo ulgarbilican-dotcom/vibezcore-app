@@ -127,6 +127,11 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   /* Vervolg ("de grote volle cirkel moet ook meebewegen"): klopt mee,
      half zo sterk als het hart — één kloppend geheel. */
   const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
+  /* Extra ring rond de cirkel: deint en licht op met elke lub-dub. */
+  const beatRingStyle = useAnimatedStyle(() => ({
+    opacity: 0.25 + (beat.value - 1) * 6,
+    transform: [{ scale: 1 + (beat.value - 1) * 1.1 }],
+  }));
   /* Vervolg ("achter de volle cirkel een lichtbron"): zachte gloed die
      meeklopt. */
   /* Vervolg ("lichtbron mag gloeien en verzachten"): groter, zachter
@@ -161,13 +166,29 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
           {[0, 1, 2, 3].map((k) => (
             <Ring key={`r${k}-${stage}`} delay={BEAT_MS * k} size={stage} from={core / stage} />
           ))}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              s.beatRing,
+              { width: core * 1.16, height: core * 1.16, borderRadius: (core * 1.16) / 2, zIndex: 1 },
+              beatRingStyle,
+            ]}
+          />
           <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2, elevation: 2 }, coreStyle]}>
-            {/* Operator, 9 okt 2026: doorschijnend witte, gevulde cirkel rond
-                het hart (geen losse lichtbron). */}
+            {/* Vervolg (operator, 9 okt 2026: "de volle cirkel toch groen glas"):
+                Bio-Teal tint, lichte glans bovenaan, dunne heldere rand
+                (s.core). Geen echte vervaging buiten een sheet — dat crasht
+                op Android (memory real-glass-only-in-sheets). */}
             <LinearGradient
-              colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.05)']}
+              colors={['rgba(74,240,212,0.30)', 'rgba(0,163,163,0.12)']}
               start={{ x: 0.2, y: 0 }}
               end={{ x: 0.8, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 0.55 }}
               style={StyleSheet.absoluteFill}
             />
             <Animated.View style={heartStyle}>
@@ -181,7 +202,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
                     <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
                   </SvgLinearGradient>
                 </Defs>
-                <Path d={HEART_D} fill="#00A3A3" fillOpacity={0.5} />
+                <Path d={HEART_D} fill="#4AF0D4" fillOpacity={0.75} />
                 <Path d={HEART_D} fill="url(#hgShine)" />
               </Svg>
             </Animated.View>
@@ -257,7 +278,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(74,240,212,0.55)',
+  },
+  /* Extra ring die meeklopt op elke slag (operator, 9 okt 2026). */
+  beatRing: {
+    position: 'absolute',
+    borderWidth: 1.5,
+    borderColor: 'rgba(74,240,212,0.7)',
   },
   title: {
     marginTop: 8,
