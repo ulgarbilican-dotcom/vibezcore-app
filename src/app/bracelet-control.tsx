@@ -1475,6 +1475,7 @@ function ModeSwipeRing({
   durations,
   duration,
   onDuration,
+  onDurationDrag,
   children,
 }: {
   mode: BraceletMode;
@@ -1485,6 +1486,8 @@ function ModeSwipeRing({
   durations?: number[];
   duration?: number;
   onDuration?: (minutes: number) => void;
+  /** Vegen aan/uit — de ring toont dan de buurwaarden. */
+  onDurationDrag?: (active: boolean) => void;
   children: ReactNode;
 }) {
   const last = MODES.length - 1;
@@ -1528,6 +1531,9 @@ function ModeSwipeRing({
   }, [durList.join(','), durIdx]);
   const onDurationRef = useRef(onDuration);
   onDurationRef.current = onDuration;
+  const onDragRef = useRef(onDurationDrag);
+  onDragRef.current = onDurationDrag;
+  const setDragJS = (active: boolean) => onDragRef.current?.(active);
   const setDurationJS = (minutes: number) => {
     void Haptics.selectionAsync();
     onDurationRef.current?.(minutes);
@@ -1540,6 +1546,12 @@ function ModeSwipeRing({
     .failOffsetX([-14, 14])
     .onBegin(() => {
       durStartSV.value = durIdxSV.value;
+    })
+    .onStart(() => {
+      runOnJS(setDragJS)(true);
+    })
+    .onFinalize(() => {
+      runOnJS(setDragJS)(false);
     })
     .onUpdate((e) => {
       const list = durationsSV.value;
@@ -2160,7 +2172,7 @@ function DurationRing({
   /** Operator, 9 okt 2026: de duur kies je door verticaal over de cirkel
       te vegen. Vervolg ("niet duidelijk dat er gescrold kan worden"): de
       buren staan vaag boven en onder de tijd, zoals een iOS-draaiwiel. */
-  scrollHint?: { prev?: number; next?: number };
+  scrollHint?: { prev?: number; next?: number; active?: boolean };
   /** Voorproef (7 okt 2026): de teller i.p.v. de gekozen duur. */
   clockOverride?: string;
   /** Voorproef: "Preview" i.p.v. "Recommended". */
@@ -2184,6 +2196,16 @@ function DurationRing({
      ambient RingGlow in, onafhankelijk van de module-brede `light`. */
   dark?: boolean;
 }) {
+  const hintAnim = useRef(new Animated.Value(0)).current;
+  const hintActive = !!scrollHint?.active;
+  useEffect(() => {
+    Animated.timing(hintAnim, {
+      toValue: hintActive ? 1 : 0,
+      duration: hintActive ? 140 : 320,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [hintActive, hintAnim]);
   /* Operator, 27 september 2026 ("als 30 min max is en 15 min minimum,
      moet de cirkel dan niet al halfvol staan?"): was (value-min)/(max-min)
      — dat toont hoever je binnen de EIGEN regelrange zit, dus staat de
@@ -2329,19 +2351,38 @@ function DurationRing({
           </Text>
           <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
         </View>
-        {scrollHint ? (
-          <Text style={[s.ringNeighbour, { opacity: !clockOverride && scrollHint.prev ? 0.3 : 0 }]}>
-            {scrollHint.prev ? `${scrollHint.prev}:00` : ' '}
+        {/* Vervolg (operator, 9 okt 2026: "te druk, minuten te ver uit
+            elkaar — hoe zou Apple dit doen?"): zoals een iOS-kiezer — in rust
+            enkel de tijd op een zachte selectieband; tijdens het vegen
+            schuiven de buren er vlak boven/onder bij en verdwijnen weer. */}
+        <View style={s.ringClockWrap}>
+          {scrollHint && !clockOverride ? (
+            <Animated.View pointerEvents="none" style={[s.ringBand, { opacity: hintAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] }) }]} />
+          ) : null}
+          {scrollHint && !clockOverride ? (
+            <Animated.Text
+              style={[
+                s.ringNeighbour,
+                { top: -22, opacity: Animated.multiply(hintAnim, scrollHint.prev ? 0.38 : 0) },
+              ]}
+            >
+              {scrollHint.prev ? `${scrollHint.prev}:00` : ''}
+            </Animated.Text>
+          ) : null}
+          <Text style={[s.ringClock, { color: numColor }, textShadow, scrollHint ? { marginTop: 0 } : null]}>
+            {clockOverride ?? `${value}:00`}
           </Text>
-        ) : null}
-        <Text style={[s.ringClock, { color: numColor }, textShadow, scrollHint ? { marginTop: 0 } : null]}>
-          {clockOverride ?? `${value}:00`}
-        </Text>
-        {scrollHint ? (
-          <Text style={[s.ringNeighbour, { opacity: !clockOverride && scrollHint.next ? 0.3 : 0 }]}>
-            {scrollHint.next ? `${scrollHint.next}:00` : ' '}
-          </Text>
-        ) : null}
+          {scrollHint && !clockOverride ? (
+            <Animated.Text
+              style={[
+                s.ringNeighbour,
+                { bottom: -22, opacity: Animated.multiply(hintAnim, scrollHint.next ? 0.38 : 0) },
+              ]}
+            >
+              {scrollHint.next ? `${scrollHint.next}:00` : ''}
+            </Animated.Text>
+          ) : null}
+        </View>
         <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
           <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
@@ -3493,6 +3534,8 @@ function IdleScreen({
   setDetailModeForModal,
   sim,
 }: IdleScreenProps) {
+  /* Duur aan het vegen in de cirkel → buurwaarden tonen. */
+  const [durDragging, setDurDragging] = useState(false);
   /* Operator, 16 september 2026 ("Optie 1 Hybride: de app blijft Light,
      maar dit specifieke bedieningsscherm maken we Dark — de felle
      modus-kleur knalt dan maximaal, 2026-luxe-vibe"): alleen déze ene
@@ -3757,6 +3800,7 @@ function IdleScreen({
             durations={trialRunning ? undefined : DURATION_PRESETS[selectedMode].map((p) => p.value)}
             duration={duration}
             onDuration={setDuration}
+            onDurationDrag={setDurDragging}
           >
             {/* key = modus: elke modus is een eigen "wijzerplaat" die meteen
                 met zijn eigen vulling binnenkomt, niet klotsend vanaf het
@@ -3783,7 +3827,11 @@ function IdleScreen({
                    langere waarde naar het midden, zoals een iOS-wiel. */
                 const list = DURATION_PRESETS[selectedMode].map((p) => p.value);
                 const i = list.indexOf(duration);
-                return { prev: i > 0 ? list[i - 1] : undefined, next: i < list.length - 1 ? list[i + 1] : undefined };
+                return {
+                  prev: i > 0 ? list[i - 1] : undefined,
+                  next: i < list.length - 1 ? list[i + 1] : undefined,
+                  active: durDragging,
+                };
               })()}
               recommended={
                 duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
@@ -6064,7 +6112,23 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
   },
   /* Vage buurwaarden boven/onder de tijd (draaiwiel-hint). */
-  ringNeighbour: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 19, lineHeight: 24, marginVertical: 2 },
+  ringClockWrap: { alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  /* iOS-selectieband: zacht, afgerond, achter de tijd. */
+  ringBand: {
+    position: 'absolute',
+    left: -18,
+    right: -18,
+    top: 2,
+    bottom: 2,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  ringNeighbour: {
+    position: 'absolute',
+    color: '#ffffff',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 17,
+  },
   ringClock: {
     fontFamily: BrandFonts.bold,
     fontSize: 54,
