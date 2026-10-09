@@ -115,7 +115,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 59a | Settings: "Track listening history" uit → gratis sessie 15 s afspelen → niet in Your Journey | A16 | ✅ operator: "klopt, niets in Your Journey" |
 | 59 | Settings: "Save listening progress" uit → gratis sessie 20 s, X, opnieuw openen → begint op 0:00, geen Continue/Start over | A16 | ✅ operator: "klopt" |
 | 60 | Settings → Clear all local data → blijft ingelogd; herinneringen uit; Your Journey leeg | A16 | ✅ operator: "klopt" |
-| 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ⏳ eigen tijden worden in het dagplan gezet → Premium-account nodig |
+| 61 | Herinnering aan/uit in Settings → eigen tijd blijft | A16 | ✅ 9 okt (Full PRO gesimuleerd) operator: "is ok" |
 | 62 | Afmelden tijdens geminimaliseerde ademsessie → alles stil | A16 | ✅ operator: "klopt"; daarna terug ingelogd (Free) |
 | 63 | Proefperiode: Pro-sessie voorproef → geen "start your trial"; /subscribe → "You're a VIBEZCORE Premium member" | A16 | ⏳ |
 | 64 | "Already owned"-fout → knoppen Restore purchases + Sign in | A16 | ⏳ |
@@ -128,6 +128,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 68b | Onboarding: terugvegen = "nu even niet" (komt terug op Breath-tab), Skip = gezien (`94077e2`); Skip leesbaar (`ed73423`); Skip landt op Breath-welkomstbeeld i.p.v. select state (`b0c0ad7`) | A16 | ✅ operator: "skip werkt" — landing-fix ⏳ hertest |
 | 68c | Crash "Reload / Go home" na account aanmaken → Breath (addViewAt: child already has a parent) → sprong naar onboarding pas na lopende overgangen (`55d898b`); nieuwe onboarding-teksten stap 1/2/4/5 (`972d123`, `714d57a`); Skip + terugknop stap 1 → glazen blad "Skip your personalized session?" (`d10501d`) | A16 | ✅ operator: "in orde" (+ `b35fbc9` replay-param, `43c48f7`/`e495e11` blad-tekst per stap) |
 | 69 | Soundscapes: rij was onzichtbaar in Audio & Haptics (kromp tot 0 in glas-vel) → fix; Rain + Canopy gratis vooraan, rest kroontje → Premium-blad (sessie loopt door); "Cancel anytime" op eigen regel (`552d229`, `be7982a`, `7584f08`) | A16 | ✅ operator: "ok" |
+| 70 | UI-ronde 8–9 okt: afsluitblad glas + Buddha met draaiende ring, Play-knop in boogkleur (zonder echte blur — echte blur in scherm = crash, teruggedraaid), kleurregel Bio-Teal, onderblad-protocol (actie: geen X; kiezer/uitleg: Done rechtsboven), duurlijst per techniek gedeeld, geen welcome-flits bij sessie verlaten, onboarding Skip-blad per stap | A16 | ✅ operator stap voor stap bekeken |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
