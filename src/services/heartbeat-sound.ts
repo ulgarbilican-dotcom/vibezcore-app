@@ -50,8 +50,31 @@ let active = false;
    spelers worden vooraf aangemaakt (zodra de pagina er is, nog vóór ze in
    beeld komt) en blijven daarna bestaan — enkel pauzeren bij het weggaan.
    Zo klinkt ook de allereerste slag. */
-function ensurePlayers(): void {
-  if (speaker) return;
+/* Vervolg (operator, 10 okt 2026: "waar is het geluid naartoe?"): een
+   speler die faalde (bv. bestand niet bereikbaar op het moment van laden)
+   bleef voor altijd stil. Daarom bij elk bezoek verse spelers — behalve
+   vlak na het vooraf laden bij het openen van de pagina. */
+let createdAt = 0;
+
+function releasePlayers(): void {
+  for (const p of [speaker, headphones, keepAwake]) {
+    if (!p) continue;
+    try {
+      p.pause();
+      p.remove();
+    } catch {
+      /* al weg */
+    }
+  }
+  speaker = null;
+  headphones = null;
+  keepAwake = null;
+}
+
+function ensurePlayers(fresh = false): void {
+  if (speaker && !(fresh && Date.now() - createdAt > 3000)) return;
+  releasePlayers();
+  createdAt = Date.now();
   try {
     const sp = createAudioPlayer(require('../../assets/heartbeat-speaker.wav'));
     sp.volume = VOLUME_SPEAKER;
@@ -86,7 +109,7 @@ export function startHeartbeatSound(): void {
     shouldPlayInBackground: false,
     interruptionMode: 'mixWithOthers',
   }).catch(() => {});
-  ensurePlayers();
+  ensurePlayers(true);
   try {
     keepAwake?.play();
   } catch {
