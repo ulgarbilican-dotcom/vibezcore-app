@@ -282,8 +282,8 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(74,240,212,0.55)',
+    /* Operator, 9 okt 2026: "geen rand" — het glas leest enkel uit
+       tint en glans. */
   },
   /* Extra ring die meeklopt op elke slag (operator, 9 okt 2026). */
   beatRing: {
