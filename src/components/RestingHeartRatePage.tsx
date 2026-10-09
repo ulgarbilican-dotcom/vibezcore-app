@@ -179,7 +179,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
               beatRingStyle,
             ]}
           />
-          <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2, elevation: 2 }, coreStyle]}>
+          <Animated.View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }, coreStyle]}>
             {/* Vervolg (operator, 9 okt 2026: "de volle cirkel toch groen glas"):
                 Bio-Teal tint, lichte glans bovenaan, dunne heldere rand
                 (s.core). Geen echte vervaging buiten een sheet — dat crasht
@@ -283,7 +283,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     /* Operator, 9 okt 2026: "geen rand" — het glas leest enkel uit
-       tint en glans. */
+       tint en glans. De rand blijft technisch bestaan maar transparant:
+       zonder rand tekent Android deze afgeronde, geclipte laag niet. */
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   /* Extra ring die meeklopt op elke slag (operator, 9 okt 2026). */
   beatRing: {
