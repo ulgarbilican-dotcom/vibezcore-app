@@ -117,9 +117,8 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         </View>
 
         <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
-        <Text style={s.body}>
-          Every session starts at your own heartbeat, then guides it toward your state.
-        </Text>
+        {/* Operator, 9 okt 2026: korter — slogan i.p.v. uitlegzin. */}
+        <Text style={s.body}>Your heart rate, your starting point</Text>
 
       </View>
 
