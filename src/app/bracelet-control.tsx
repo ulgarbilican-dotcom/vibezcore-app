@@ -3951,10 +3951,9 @@ function IdleScreen({
                   >
                     <QIcon size={q.key === 'chill' ? 22 : 18} color={getModeMeta(q.mode).color} strokeWidth={2} />
                     {/* Operator: geen "5 min" — dat staat in het infoblad. */}
-                    <Text style={[s.quickCardTitle, { flex: 1 }]} numberOfLines={1}>
+                    <Text style={s.quickCardTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                       {q.label}
                     </Text>
-                    <ChevronRight size={16} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
                   </PressScale>
                 );
               })}
@@ -5986,7 +5985,7 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   quickIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginBottom: 16 },
-  quickBlock: { alignSelf: 'stretch', marginBottom: 16 },
+  quickBlock: { alignSelf: 'stretch', marginBottom: 16, marginHorizontal: 10 },
   quickHead: {
     color: 'rgba(255,255,255,0.5)',
     fontFamily: BrandFonts.bold,
@@ -6002,11 +6001,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     height: 52,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
     borderRadius: 14,
     backgroundColor: '#1c1c1e',
   },
-  quickCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14.5 },
+  quickCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
 
   quickIcon: {
     width: 42,
@@ -6079,7 +6079,8 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   /* Boven de cirkel, gecentreerd onder de titel. */
-  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 40 },
+  /* Zelfde breedte als de Start-knop (marginHorizontal 10). */
+  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 40, marginHorizontal: 10 },
   durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
   ringHrTop: { position: 'absolute', top: 26 },
