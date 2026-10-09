@@ -22,7 +22,6 @@ import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle as SvgCircle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -153,18 +152,6 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
               end={{ x: 0.8, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            {/* Operator, 9 okt 2026: kleine Bio-Teal lichtbron net achter het
-                hart — enkel accent, de rest blijft wit. */}
-            <Svg width={core} height={core} style={StyleSheet.absoluteFill}>
-              <Defs>
-                <RadialGradient id="hrCore" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0.55} />
-                  <Stop offset="0.35" stopColor="#00A3A3" stopOpacity={0.22} />
-                  <Stop offset="0.7" stopColor="#00A3A3" stopOpacity={0} />
-                </RadialGradient>
-              </Defs>
-              <SvgCircle cx={core / 2} cy={core / 2} r={core / 2} fill="url(#hrCore)" />
-            </Svg>
             <Animated.View style={heartStyle}>
               <Heart size={Math.round(core * 0.42)} color="#ffffff" fill="#ffffff" strokeWidth={1.4} />
             </Animated.View>
