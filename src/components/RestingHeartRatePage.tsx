@@ -97,6 +97,10 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
 
       <View style={[s.content, { paddingTop: insets.top + 28 }]}>
 
+        {/* Operator, 9 okt 2026: titel bovenaan, hart eronder. */}
+        <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
+        {/* Operator, 9 okt 2026: korter — slogan i.p.v. uitlegzin. */}
+        <Text style={s.body}>Your rhythm  •  Your baseline</Text>
         <View style={s.stageArea} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
         <View style={[s.stage, { width: stage, height: stage }]}>
           <Ring delay={0} progress={wave} size={stage} />
@@ -116,9 +120,6 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         </View>
         </View>
 
-        <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
-        {/* Operator, 9 okt 2026: korter — slogan i.p.v. uitlegzin. */}
-        <Text style={s.body}>Your rhythm  •  Your baseline</Text>
 
       </View>
 
