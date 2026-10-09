@@ -2402,7 +2402,7 @@ function DurationRing({
                     fill="none"
                   />
                   {/* Greep: wit bolletje met een rand in de toestandskleur. */}
-                  <Circle cx={ex} cy={ey} r={9} fill="#ffffff" stroke={color} strokeWidth={2} />
+                  <Circle cx={ex} cy={ey} r={7} fill="#ffffff" stroke={color} strokeWidth={1.5} />
                 </>
               );
             })()}
