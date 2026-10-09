@@ -3950,12 +3950,10 @@ function IdleScreen({
                     accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
                   >
                     <QIcon size={q.key === 'chill' ? 22 : 18} color={getModeMeta(q.mode).color} strokeWidth={2} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.quickCardTitle} numberOfLines={1}>
-                        {q.label}
-                      </Text>
-                      <Text style={s.quickCardSub}>{QUICK_SESSION_MINUTES} min</Text>
-                    </View>
+                    {/* Operator: geen "5 min" — dat staat in het infoblad. */}
+                    <Text style={[s.quickCardTitle, { flex: 1 }]} numberOfLines={1}>
+                      {q.label}
+                    </Text>
                     <ChevronRight size={16} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
                   </PressScale>
                 );
@@ -6003,13 +6001,13 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    height: 58,
+    height: 52,
     paddingHorizontal: 14,
     borderRadius: 14,
     backgroundColor: '#1c1c1e',
   },
   quickCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14.5 },
-  quickCardSub: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: 12.5, marginTop: 1 },
+
   quickIcon: {
     width: 42,
     height: 42,
