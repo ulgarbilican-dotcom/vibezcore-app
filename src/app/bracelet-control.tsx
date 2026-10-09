@@ -2388,6 +2388,11 @@ function DurationRing({
               const large = f > 0.5 ? 1 : 0;
               return (
                 <>
+                  {/* Vervolg ("de lijn en de stip moeten op hetzelfde punt
+                      eindigen"): de volle dunne ring eronder verbergen en als
+                      gedimd spoor tekenen — enkel de boog tot de greep is fel. */}
+                  <Circle cx={c} cy={c} r={r + 1} stroke="#000000" strokeWidth={4} fill="none" />
+                  <Circle cx={c} cy={c} r={r} stroke={color} strokeOpacity={0.22} strokeWidth={3} fill="none" />
                   {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
                   <Path
                     d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
@@ -3832,8 +3837,13 @@ function IdleScreen({
                     s.modeDot,
                     /* Wit, zoals iOS-paginabolletjes (operator, 5 okt 2026). */
                     /* Operator, 9 okt 2026 ("zoals Apple, subtiel"): rond,
-                       de actieve iets groter en feller — geen balkje. */
-                    { backgroundColor: '#ffffff', opacity: active ? 0.9 : 0.25, width: active ? 7 : 6, height: active ? 7 : 6 },
+                       de actieve iets groter en in de toestandskleur. */
+                    {
+                      backgroundColor: active ? m.color : '#ffffff',
+                      opacity: active ? 1 : 0.25,
+                      width: active ? 8 : 6,
+                      height: active ? 8 : 6,
+                    },
                   ]}
                 />
               </Pressable>
@@ -6040,7 +6050,7 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   /* Boven de cirkel, gecentreerd onder de titel. */
-  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 22 },
+  durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 30 },
   durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
   hrCard: {
