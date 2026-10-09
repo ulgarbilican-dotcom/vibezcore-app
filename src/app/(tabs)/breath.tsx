@@ -55,7 +55,7 @@ import {
 } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, Info } from 'lucide-react-native';
+import { CalendarDays, ChevronRight, Info } from 'lucide-react-native';
 import { useActivePlan } from '@/utils/plan-store';
 import { techniqueIcon } from '@/utils/technique-copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -1039,9 +1039,10 @@ export default function BreathScreen() {
             hitSlop={8}
             style={({ pressed }) => [s.feelNowLink, pressed && { opacity: 0.85 }]}
           >
-            {/* VIBEZCORE-glas i.p.v. de witte omlijning (5 okt 2026). */}
-            <VibezGlass radius={14} style={StyleSheet.absoluteFill} />
+            {/* Operator, 9 okt 2026 ("2 grote knoppen niet mooi"): secundaire
+            tekstlink — wit, geen onderlijning, subtiel pijltje. */}
             <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
+            <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
           </Pressable>
         </View>
       ) : (
@@ -1325,9 +1326,10 @@ export default function BreathScreen() {
         hitSlop={8}
         style={({ pressed }) => [s.feelNowLink, pressed && { opacity: 0.85 }]}
       >
-        {/* VIBEZCORE-glas i.p.v. de witte omlijning (5 okt 2026). */}
-        <VibezGlass radius={14} style={StyleSheet.absoluteFill} />
+        {/* Operator, 9 okt 2026 ("2 grote knoppen niet mooi"): secundaire
+        tekstlink — wit, geen onderlijning, subtiel pijltje. */}
         <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
+        <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
       </Pressable>
 
       {/* Operator, 8 september 2026 (2e ronde): "verwijder more than
@@ -1535,15 +1537,13 @@ const s = StyleSheet.create({
      AFMETING matcht, niet de vulling, zodat het duidelijk de secundaire
      actie blijft. */
   feelNowLink: {
-    marginTop: 14,
-    height: 50,
-    marginHorizontal: 26,
-    alignSelf: 'stretch',
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
+    marginTop: 10,
+    height: 44,
+    alignSelf: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
   },
   feelNowLinkTxt: {
     fontFamily: BrandFonts.semibold,

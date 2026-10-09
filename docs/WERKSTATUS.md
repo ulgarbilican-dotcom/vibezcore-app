@@ -65,7 +65,6 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
-- Instant Sessions als tekstlink op de Breath-welkomstpagina.
 - Welkomstschermen enkel de eerste keer (replay via Settings).
 - Bunny pull zone `vibezcore-account` + Wix-CNAME `account` → `vibezcore-account.b-cdn.net` (nodig voor wachtwoord-reset-mails vanuit Gmail/Outlook). Operator-actie.
 - Wachtwoordbeheerder + 2FA op telefoon (noodplan).
