@@ -145,7 +145,9 @@ export default function RhythmSheet({
         </Pressable>
         <View style={s.head}>
           <Text style={s.eyebrow}>{now ? 'HEART RATE' : 'RESTING HEART RATE'}</Text>
-          {step !== 'result' ? (
+          {/* Actieblad (protocol): de keuze in State Control heeft onderaan
+              al "Not Now" — geen tweede Cancel bovenaan. */}
+          {step !== 'result' && !(now && step === 'choose') ? (
             <PressScale onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
             </PressScale>
@@ -165,7 +167,7 @@ export default function RhythmSheet({
                 hartslag is, niet de huidige live hartslag"): de titel zegt
                 welk getal het is. */}
             <Text style={[s.title, { textAlign: 'center', marginBottom: 6 }]}>
-              {pulse.liveBpm !== null ? 'Your heart rate now' : 'Your resting heart rate'}
+              {pulse.liveBpm !== null ? 'Heart rate now' : 'Resting heart rate'}
             </Text>
             <Text style={s.bigNum}>
               {pulse.liveBpm ?? pulse.bpm}
@@ -182,7 +184,7 @@ export default function RhythmSheet({
             </Text>
             <Text style={[s.body, { textAlign: 'center', marginTop: 18 }]}>
               {/* Operator, 9 okt 2026: enkel waarvoor het getal dient. */}
-              Used to match the session to your heartbeat.
+              The session adapts to your heart rate.
             </Text>
             {PulseMeter ? (
               <PressScale
