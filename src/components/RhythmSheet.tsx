@@ -157,17 +157,20 @@ export default function RhythmSheet({
             {/* Operator, 9 okt 2026 ("te veel lezen — de knoppen leggen de
                 keuze zelf uit"): korte titel, geen uitleg, geen los icoon;
                 het hart zit in de meetknop. */}
-            <Text style={[s.title, { marginBottom: 32 }]}>Heart rate for this session</Text>
+            {/* Vervolg (operator): hart gecentreerd boven, groter, titel eronder. */}
+            <View style={[s.iconWrap, s.iconWrapLg]}>
+              <HeartPulse size={40} color="#ffffff" strokeWidth={1.7} />
+            </View>
+            <Text style={[s.title, { marginBottom: 36, textAlign: 'center' }]}>Heart rate for this session</Text>
             {PulseMeter ? (
               <PressScale
-                style={[s.cta, s.ctaRow]} haptic scaleTo={0.97}
+                style={[s.cta]} haptic scaleTo={0.97}
                 onPress={() => {
                   void Haptics.selectionAsync();
                   setStep('measure');
                 }}
                 accessibilityRole="button"
               >
-                <HeartPulse size={20} color="#1D1D1F" strokeWidth={2.2} />
                 <Text style={s.ctaTxt}>Measure Now</Text>
               </PressScale>
             ) : null}
@@ -451,7 +454,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
   },
-  ctaRow: { flexDirection: 'row', gap: 10 },
+  iconWrapLg: { width: 76, height: 76, borderRadius: 38, alignSelf: 'center' },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
   secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   secondaryTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
