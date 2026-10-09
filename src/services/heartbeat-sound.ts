@@ -24,7 +24,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 1; // operator, 9 okt 2026: "heel zacht — hoorbaar zonder oortjes?" → boventonen bijgemengd (hoorbaar op de speaker) + volle sterkte
+const VOLUME = 0.7; // operator, 9 okt 2026: boventonen bijgemengd (hoorbaar op de speaker); "100% te luid, doe 70%"
 
 let player: AudioPlayer | null = null;
 let active = false;
