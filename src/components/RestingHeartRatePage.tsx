@@ -100,9 +100,21 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
   const coreStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (beat.value - 1) * 0.5 }] }));
   /* Vervolg ("achter de volle cirkel een lichtbron"): zachte gloed die
      meeklopt. */
+  /* Vervolg ("lichtbron mag gloeien en verzachten"): groter, zachter
+     verloop, en een trage eigen gloei (≈2 hartslagen in, 2 uit) bovenop
+     een lichte reactie op elke slag. */
+  const glowBreath = useSharedValue(0);
+  useEffect(() => {
+    glowBreath.value = withRepeat(
+      withTiming(1, { duration: BEAT_MS * 2, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(glowBreath);
+  }, [glowBreath]);
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.75 + (beat.value - 1) * 3,
-    transform: [{ scale: 1 + (beat.value - 1) * 0.8 }],
+    opacity: 0.6 + glowBreath.value * 0.4 + (beat.value - 1) * 1.5,
+    transform: [{ scale: 0.96 + glowBreath.value * 0.06 + (beat.value - 1) * 0.4 }],
   }));
 
   return (
@@ -120,14 +132,14 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
           <Ring key={`r0-${stage}`} delay={0} size={stage} from={core / stage} />
           <Ring key={`r1-${stage}`} delay={BEAT_MS} size={stage} from={core / stage} />
           <Ring key={`r2-${stage}`} delay={BEAT_MS * 2} size={stage} from={core / stage} />
-          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.2, height: stage * 1.2 }, glowStyle]}>
-            <Canvas style={{ width: stage * 1.2, height: stage * 1.2 }}>
-              <SkCircle cx={stage * 0.6} cy={stage * 0.6} r={stage * 0.6}>
+          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: stage * 1.6, height: stage * 1.6 }, glowStyle]}>
+            <Canvas style={{ width: stage * 1.6, height: stage * 1.6 }}>
+              <SkCircle cx={stage * 0.8} cy={stage * 0.8} r={stage * 0.8}>
                 <RadialGradient
-                  c={vec(stage * 0.6, stage * 0.6)}
-                  r={stage * 0.6}
-                  colors={['rgba(255,255,255,0.42)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0)']}
-                  positions={[0, 0.45, 1]}
+                  c={vec(stage * 0.8, stage * 0.8)}
+                  r={stage * 0.8}
+                  colors={['rgba(255,255,255,0.30)', 'rgba(255,255,255,0.16)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)', 'rgba(255,255,255,0)']}
+                  positions={[0, 0.25, 0.5, 0.75, 1]}
                 />
               </SkCircle>
             </Canvas>
