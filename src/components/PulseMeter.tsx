@@ -14,11 +14,13 @@
 
 import { ECG_SHAPE } from '@/utils/ecg-shape';
 import FingerPlacementAnim from '@/components/FingerPlacementAnim';
+import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from '@/services/heartbeat-sound';
+import { hapticTap } from '@/utils/haptics';
 import PressScale from '@/components/PressScale';
 import * as Haptics from 'expo-haptics';
 import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, robustPulse, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
-import { Check, ChevronRight, CircleAlert } from 'lucide-react-native';
+import { ChevronRight, CircleAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Dimensions, Easing, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -388,14 +390,6 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const liveTarget = useRef<number | null>(null);
   const liveStepAt = useRef(0);
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
-  const doneIn = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (finalBpm === null) {
-      doneIn.setValue(0);
-      return;
-    }
-    Animated.spring(doneIn, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start();
-  }, [finalBpm, doneIn]);
   /* Operator, 10 okt 2026 ("na afloop moet de cirkel beginnen ademen, nu
      is alles te statisch"): na een geslaagde meting zwelt de ring traag aan
      en af (~5 s per adem). */
@@ -415,6 +409,14 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     loop.start();
     return () => loop.stop();
   }, [finalBpm, breathe]);
+  const finalRef = useRef(false);
+  useEffect(() => {
+    if (finalBpm === null) {
+      if (finalRef.current) stopHeartbeatSound();
+      finalRef.current = false;
+    }
+  }, [finalBpm]);
+  useEffect(() => () => stopHeartbeatSound(), []);
   const [calculating, setCalculating] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -589,6 +591,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             setCalculating(false);
             setFinalBpm(res.bpm);
             setLiveBpm(res.bpm);
+            /* Het hart klopt verder op precies dit getal, met geluid. */
+            liveEma.current = res.bpm;
+            finalRef.current = true;
+            startHeartbeatSound();
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onResult(res.bpm);
           }, 1200);
@@ -637,6 +643,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       let tid: ReturnType<typeof setTimeout>;
       const softBeat = () => {
         const bpm = liveEma.current;
+        if (finalRef.current) {
+          heartbeatTick();
+          hapticTap();
+        }
         if (bpm !== null) lubDub(beat, 0.07, bpm).start();
         else lubDub(idle, 0.045, null).start();
         const t = Date.now() - ECG_DELAY_MS; // piek verschijnt nu rechts op de lijn
@@ -905,14 +915,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           {status === 'placing' ? (
             <FingerPlacementAnim />
           ) : (
-            finalBpm !== null ? (
-              /* Operator, 9 okt 2026: na de meting wordt het hart een vinkje
-               (vervolg: "Done" in de cirkel was niet goed — de volgende stap
-               is een knop onderaan, in het blad). */
-            <Animated.View style={{ opacity: doneIn, transform: [{ scale: doneIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }}>
-              <Check size={72} color="#ffffff" strokeWidth={2.4} />
-            </Animated.View>
-            ) : (
+            /* Operator, 10 okt 2026: geen vinkje meer — het hart blijft en
+               klopt na de meting door op je gemeten hartslag, met zacht
+               hartslaggeluid; de hele cirkel ademt mee ("nu is het kaal"). */
+            (
               <Animated.View style={{ transform: [{ scale: Animated.multiply(beat, idle) }] }}>
                 {/* Vervolg: het hart klopt gewoon mee in vol teal glas (zelfde
                     stijl als de Resting Heart Rate-pagina); de voortgang zit in
