@@ -4,9 +4,10 @@
    geven?").
 
    Eén echte lub-dub (assets/heartbeat.wav: geknipt uit de Pixabay-opname
-   "intense cinematic heartbeat sound effect 584627" — Pixabay-licentie, vrij
-   in apps, geen naamsvermelding; derde slag op 3,38 s, lub-dub 0,34 s =
-   rustig hart; enkel < 30 Hz weggefilterd), op elke
+   "heartbeat sound 493999" — Pixabay-licentie, vrij in apps, geen
+   naamsvermelding; slag op 7,58 s, lub-dub 0,3 s = hart in rust). Afstelling
+   na operator-feedback ("te hard en dof" → "te vol en diep" → "te ver weg"):
+   geen compressie, < 70 Hz en > 4 kHz eruit. Op elke
    slag van het kloppende hart. Regels:
      - mengt met muziek van de gebruiker (nooit iemands muziek stoppen);
      - iOS: stil als de telefoon op stil staat (Android: mediavolume);
@@ -23,7 +24,7 @@ import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 
-const VOLUME = 0.7; // operator, 9 okt 2026 — na drie bijstellingen van de eerste opname nu een properdere opname
+const VOLUME = 0.7;
 
 let player: AudioPlayer | null = null;
 let active = false;
