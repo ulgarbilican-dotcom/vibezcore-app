@@ -60,6 +60,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { hapticPress } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -283,7 +284,7 @@ export default function WelcomeScreen() {
   const activateScale = useSharedValue(1);
   const onActivatePressIn = () => {
     activateScale.value = withTiming(0.94, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onActivatePressOut = () => {
     activateScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -296,7 +297,7 @@ export default function WelcomeScreen() {
   const signInScale = useSharedValue(1);
   const onSignInPressIn = () => {
     signInScale.value = withTiming(0.94, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onSignInPressOut = () => {
     signInScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });

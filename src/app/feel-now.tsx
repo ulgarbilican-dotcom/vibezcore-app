@@ -75,6 +75,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -122,7 +123,7 @@ export default function FeelNowScreen() {
   const closeStyle = useAnimatedStyle(() => ({ transform: [{ scale: closeScale.value }] }));
 
   const choose = (situation: InstantSituation) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setPhase('personalizing');
 
     /* Zelfde "even pauzeren, dan pas doorgaan"-beat als de vorige versie —

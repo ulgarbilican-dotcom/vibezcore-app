@@ -85,6 +85,7 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
+import { hapticPress } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -99,7 +100,7 @@ function usePressScale(scaleTo: number) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(scaleTo, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onPressOut = () => {
     pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });

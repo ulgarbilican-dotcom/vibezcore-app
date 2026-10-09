@@ -28,6 +28,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { hapticTap } from '@/utils/haptics';
 
 export const DURATION_WHEEL_ITEM_H = 44;
 export const DURATION_WHEEL_VISIBLE = 3;
@@ -156,7 +157,7 @@ export function DurationWheel({
     listRef.current?.scrollTo({ y: idx * DURATION_WHEEL_ITEM_H, animated: true });
     const picked = options[idx];
     if (picked && picked.value !== value) {
-      Haptics.selectionAsync();
+      hapticTap();
       internalChange.current = true;
       onChange(picked.value);
     }

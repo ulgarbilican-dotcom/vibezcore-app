@@ -31,6 +31,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { hapticPress } from '@/utils/haptics';
 
 /* Huisstijl §5: scale(.97)+opacity(.85) op indrukken + lichte haptic-tik,
    ontbrak hier volledig (was een kale Pressable). */
@@ -45,7 +46,7 @@ function PlanSuccessCta({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       onPressIn={() => {
         scale.value = withTiming(0.97, { duration: 80 });
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticPress();
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });

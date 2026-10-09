@@ -64,6 +64,7 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -144,7 +145,7 @@ function GroupRow({
         <AnimatedPressable
           style={[s.groupTimeRow, timeStyle]}
           onPress={() => {
-            Haptics.selectionAsync();
+            hapticTap();
             onPickTime(i);
           }}
           onPressIn={onTimePressIn}
@@ -162,7 +163,7 @@ function GroupRow({
       </View>
       <AnimatedPressable
         onPress={() => {
-          Haptics.selectionAsync();
+          hapticTap();
           onPickState(i);
         }}
         onPressIn={onRefreshPressIn}
@@ -320,16 +321,16 @@ export default function PlanReviewScreen() {
   const [whyOpen, setWhyOpen] = useState(false);
 
   const pickState = (i: number, state: BreathStateKey) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setStatePicking(null);
     setItems((cur) => setTemplateItemState(cur, i, state, goals, level));
   };
   const remove = (i: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     setItems((cur) => removeTemplateItem(cur, i));
   };
   const setMinutes = (i: number, minutes: number) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setPicking(null);
     setItems((cur) => cur.map((it, idx) => (idx === i ? { ...it, minutes } : it)));
   };
@@ -400,7 +401,7 @@ export default function PlanReviewScreen() {
        (op onPress) i.p.v. hier op onPressIn — huisstijl §5 wil de tik
        op het moment van INdrukken, los van de save-logica. Verwijderd
        daar, toegevoegd hier. */
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onCtaPressOut = () => {
     ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -564,7 +565,7 @@ export default function PlanReviewScreen() {
           <AnimatedPressable
             style={[s.whyTrigger, whyTriggerStyle]}
             onPress={() => {
-              Haptics.selectionAsync();
+              hapticTap();
               setWhyOpen(true);
             }}
             onPressIn={onWhyTriggerPressIn}

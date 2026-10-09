@@ -114,6 +114,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -287,7 +288,7 @@ export default function BraceletAgendaScreen() {
 
   const removeItem = async (index: number) => {
     if (!day || !plan) return;
-    Haptics.selectionAsync();
+    hapticTap();
     const updated: BraceletPlanDay = {
       dayKey: day.dayKey,
       items: day.items.filter((_, i) => i !== index),
@@ -390,7 +391,7 @@ export default function BraceletAgendaScreen() {
                rond de ring en de datum in het midden. */}
             <Pressable
               onPress={() => {
-                Haptics.selectionAsync();
+                hapticTap();
                 setCalendarOpen((o) => !o);
               }}
               style={s.dateRow}
@@ -457,7 +458,7 @@ export default function BraceletAgendaScreen() {
                         isSelected={dk === selectedKey}
                         hasPlan={hasPlan}
                         onPress={() => {
-                          Haptics.selectionAsync();
+                          hapticTap();
                           setSelected(d);
                           setCalendarOpen(false);
                         }}
@@ -481,7 +482,7 @@ export default function BraceletAgendaScreen() {
                     isToday={selectedKey === todayKey}
                     now={new Date()}
                     onTapItem={(key) => {
-                      Haptics.selectionAsync();
+                      hapticTap();
                       setActionItemIndex(Number(key));
                     }}
                     onDragEnd={(key, newReminderAt) => void onDragEnd(key, newReminderAt)}
@@ -541,7 +542,7 @@ export default function BraceletAgendaScreen() {
                   Icon={MODE_GLYPH_ICONS[m.mode]}
                   on={filterMode === m.mode}
                   onPress={() => {
-                    Haptics.selectionAsync();
+                    hapticTap();
                     setFilterMode((prev) => (prev === m.mode ? null : m.mode));
                   }}
                 />
@@ -552,7 +553,7 @@ export default function BraceletAgendaScreen() {
                 label="Your next session"
                 on={filterMode === null}
                 onPress={() => {
-                  Haptics.selectionAsync();
+                  hapticTap();
                   setFilterMode(null);
                 }}
               />

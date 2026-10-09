@@ -90,6 +90,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { ModeMeta } from '@/services/ble-contract';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -261,7 +262,7 @@ function PrimaryCta({
       onPress={onPress}
       onPressIn={() => {
         pressScale.value = withTiming(0.96, { duration: 80 });
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticPress();
       }}
       onPressOut={() => {
         pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -317,7 +318,7 @@ export default function BraceletSetDayScreen() {
   const [infoMode, setInfoMode] = useState<BraceletMode | null>(null);
 
   const openAdd = (mode: BraceletMode) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setAddingMode(mode);
     setDraftTime(9 * 60);
     setDraftDuration(getModeMeta(mode).defaultMinutes);
@@ -359,7 +360,7 @@ export default function BraceletSetDayScreen() {
   };
 
   const removeSession = (index: number) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setSessions((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -597,7 +598,7 @@ export default function BraceletSetDayScreen() {
               label={h.label}
               on={h.key === horizon}
               onPress={() => {
-                Haptics.selectionAsync();
+                hapticTap();
                 setHorizon(h.key);
               }}
             />

@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { hapticPress } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -41,7 +42,7 @@ export default function PressScale({ style, children, scaleTo = 0.96, haptic = f
       onPressIn={(e) => {
         scale.value = withTiming(scaleTo, { duration: 80 });
         dim.value = withTiming(0.85, { duration: 90 });
-        if (haptic) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (haptic) hapticPress();
         onPressIn?.(e);
       }}
       onPressOut={(e) => {

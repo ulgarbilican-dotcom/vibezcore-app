@@ -96,6 +96,7 @@ import { ALL_SLOTS, bestSlotsForCount, SLOT_WINDOW } from '@/utils/day-plan';
 import { SLOTS } from '@/services/reminders';
 import { generateTemplate, RECOMMENDED_INTENSITY } from '@/utils/protocol';
 import { GOALS } from '@/data/goals';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const C = BrandDark;
@@ -613,7 +614,7 @@ export default function IntensityScreen() {
      doel erbij (max 2), of vervang het 2e doel. Schrijft naar dezelfde
      `goals`-setting, dus blijft overal consistent. */
   const tapGoal = (key: string) => {
-    Haptics.selectionAsync();
+    hapticTap();
     if (key === primaryGoalKey) {
       void setGoals([]);
       return;
@@ -642,7 +643,7 @@ export default function IntensityScreen() {
 
   const pick = (key: Intensity) => {
     if (key === 'essential' && needsTwoSessions) return;
-    Haptics.selectionAsync();
+    hapticTap();
     setIntensityLocal(key);
     void setIntensity(key);
   };
@@ -1000,7 +1001,7 @@ export default function IntensityScreen() {
           onPressIn={() => {
             if (!canContinue) return;
             ctaPressScale.value = withTiming(0.96, { duration: 80 });
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            hapticPress();
           }}
           onPressOut={() => {
             ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -1145,7 +1146,7 @@ export default function IntensityScreen() {
                     <Pressable
                       style={[s.sheetRow, on && s.sheetRowOn]}
                       onPress={() => {
-                        Haptics.selectionAsync();
+                        hapticTap();
                         setLevelLocal(l.key);
                         void setLevel(l.key);
                       }}
@@ -1206,7 +1207,7 @@ export default function IntensityScreen() {
                     <Pressable
                       style={[s.sheetRow, on && s.sheetRowOn]}
                       onPress={() => {
-                        Haptics.selectionAsync();
+                        hapticTap();
                         setHorizon(o.key);
                         setActivePicker(null);
                       }}

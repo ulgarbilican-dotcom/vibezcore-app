@@ -131,6 +131,7 @@ import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
 import { rootBlurRef } from '@/utils/root-blur';
 import Svg, { Path } from 'react-native-svg';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -496,7 +497,7 @@ export default function BreathWelcomeScreen() {
     getSetting('goals'),
   );
   const toggleChangeGoal = (goalKey: string) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setChangeGoals((cur) => {
       const next = cur.includes(goalKey)
         ? cur.filter((g) => g !== goalKey)
@@ -517,7 +518,7 @@ export default function BreathWelcomeScreen() {
     () => getSetting('experienceLevel'),
   );
   const pickExperience = (key: ExperienceLevel) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setExperience(key);
     setSetting('experienceLevel', key);
   };
@@ -569,12 +570,12 @@ export default function BreathWelcomeScreen() {
      scheelt een extra wrapper. */
   const ctaPressScale = useSharedValue(1);
   /* Operator ("kijk alle CTA's na"): de Start-CTA zelf had geen haptic-tik
-     — het `Haptics.selectionAsync()` verderop in dit bestand hoort bij
+     — het `hapticTap()` verderop in dit bestand hoort bij
      plan-KEUZE (een ander element), niet bij deze knop. Huisstijl §5
      wil hier de standaard lichte tik op onPressIn + opacity(.85). */
   const onCtaPressIn = () => {
     ctaPressScale.value = withTiming(0.96, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onCtaPressOut = () => {
     ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -731,7 +732,7 @@ export default function BreathWelcomeScreen() {
     setPlanTapped(true);
     setSelectedPlanIdx((prev) => {
       if (prev === idx) return prev;
-      Haptics.selectionAsync();
+      hapticTap();
       return idx;
     });
   }, []);
@@ -1026,7 +1027,7 @@ export default function BreathWelcomeScreen() {
   /* Elke modus demonstreert zichzelf bij het aantikken: je hoort en voelt
      wat je kiest, in plaats van het alleen te lezen. */
   const onPickMode = (m: GuidanceMode) => {
-    Haptics.selectionAsync();
+    hapticTap();
     setDemoMode(m);
     setChosenMode(m);
     const wantsHaptic = m === 'haptic' || m === 'both';

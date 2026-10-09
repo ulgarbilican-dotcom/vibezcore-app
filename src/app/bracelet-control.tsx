@@ -181,6 +181,7 @@ import {
   useDevBraceletActivated,
 } from '@/utils/dev-user-override';
 import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
+import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -892,7 +893,7 @@ function PrimaryCtaButton({
       accessibilityLabel={accessibilityLabel}
       onPressIn={() => {
         scale.value = withTiming(0.97, { duration: 80 });
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticPress();
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -1099,7 +1100,7 @@ function DurationWheel({
     listRef.current?.scrollTo({ y: idx * WHEEL_ITEM_H, animated: true });
     const picked = options[idx];
     if (picked && picked.value !== value) {
-      Haptics.selectionAsync();
+      hapticTap();
       internalChange.current = true;
       onChange(picked.value);
     }
@@ -1550,13 +1551,9 @@ function ModeSwipeRing({
   const onDialRef = useRef(dial?.onChange);
   onDialRef.current = dial?.onChange;
   const setDialJS = (minutes: number) => {
-    /* Operator, 9 okt 2026 ("de tikjes voel ik hard"): op Android de
-       lichte klok-tik van de systeem-tijdkiezer i.p.v. de selectietrilling
-       (die Samsung stevig afspeelt). iOS: Apple's eigen selectietik. */
-    /* Vervolg ("ik voel nu niets"): Samsung speelt CLOCK_TICK niet af —
-       TEXT_HANDLE_MOVE (cursor door tekst slepen) wel, en even licht. */
-    if (Platform.OS === 'android') void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Text_Handle_Move);
-    else void Haptics.selectionAsync();
+    /* Operator, 9 okt 2026 ("de tikjes voelen hard/stroef"): de fijne
+       schuifregelaar-tik uit utils/haptics, gedempt bij snel slepen. */
+    hapticTick();
     onDialRef.current?.(minutes);
   };
   /* Enkel een aanraking op de rand (buitenste ~30%) pakt de greep. */
@@ -3601,7 +3598,7 @@ function IdleScreen({
     if (!ended) stopModePreviewHaptic();
   }, []);
   const startTrial = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     playModeTrialHaptic(selectedMode);
     const started = Date.now();
     setTrialLeft(PREVIEW_MAX_SECONDS);
@@ -3783,7 +3780,7 @@ function IdleScreen({
           <ModeSwipeRing
             mode={selectedMode}
             onChange={(next) => {
-              Haptics.selectionAsync();
+              hapticTap();
               pickMode(next);
             }}
             onTap={() => setDetailModeForModal(selectedMode)}
@@ -3825,7 +3822,7 @@ function IdleScreen({
           {!trialRunning && !sessionRunning ? (
             <PressScale
               onPress={() => {
-                void Haptics.selectionAsync();
+                hapticTap();
                 pendingAfterRhythm.current = null;
                 setRhythmOpen(true);
               }}
@@ -3854,7 +3851,7 @@ function IdleScreen({
                 key={m.mode}
                 hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                 onPress={() => {
-                  Haptics.selectionAsync();
+                  hapticTap();
                   pickMode(m.mode);
                 }}
                 accessibilityLabel={`Select ${m.name} mode`}
@@ -3903,7 +3900,7 @@ function IdleScreen({
                   key={p.value}
                   onPress={() => {
                     if (on) return;
-                    void Haptics.selectionAsync();
+                    hapticTap();
                     setDuration(p.value);
                   }}
                   style={[
@@ -3943,7 +3940,7 @@ function IdleScreen({
                   <PressScale
                     key={q.key}
                     onPress={() => {
-                      void Haptics.selectionAsync();
+                      hapticTap();
                       setQuickOpen(q.key);
                     }}
                     style={[s.quickCard]} scaleTo={0.97}

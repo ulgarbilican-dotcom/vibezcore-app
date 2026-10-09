@@ -112,6 +112,7 @@ import ReAnimated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticPress } from '@/utils/haptics';
 
 /* LayoutAnimation moet op Android expliciet aangezet worden voor soepele
    accordion-uitklap. No-op op iOS. Module-level side effect — idempotent. */
@@ -752,7 +753,7 @@ function PillPress({
       onPress={onPress}
       onPressIn={() => {
         scale.value = withTiming(0.97, { duration: 80 });
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticPress();
       }}
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 120 });
@@ -1572,7 +1573,7 @@ export default function SmartBeadBraceletScreen() {
                 onPress={() => void openExternal(BRACELET_WEBSITE_URL)}
                 onPressIn={() => {
                   heroCtaScale.value = withTiming(0.97, { duration: 80 });
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  hapticPress();
                 }}
                 onPressOut={() => {
                   heroCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });

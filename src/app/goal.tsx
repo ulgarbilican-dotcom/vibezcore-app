@@ -71,6 +71,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticPress } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -97,7 +98,7 @@ function CtaButton({ active, onPress }: { active: boolean; onPress: () => void }
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.96, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onPressOut = () => {
     pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
@@ -364,7 +365,7 @@ export default function GoalScreen() {
   }, [primary, secondary]);
 
   const tap = useCallback((key: string) => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     const p = primaryRef.current;
     const sec = secondaryRef.current;
     if (key === p) {

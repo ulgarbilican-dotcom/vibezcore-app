@@ -45,6 +45,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticTap, hapticTick } from '@/utils/haptics';
 
 /* De cameramodule zit pas in de build vanaf fase 2. In een oudere build
    ontbreekt de native kant: dan geen meetknop i.p.v. een crash. */
@@ -190,7 +191,7 @@ export default function RhythmSheet({
               <PressScale
                 style={[s.cta]} haptic scaleTo={0.97}
                 onPress={() => {
-                  void Haptics.selectionAsync();
+                  hapticTap();
                   setStep('measure');
                 }}
                 accessibilityRole="button"
@@ -236,7 +237,7 @@ export default function RhythmSheet({
                 <PressScale
                   style={[s.cta]} haptic scaleTo={0.97}
                   onPress={() => {
-                    void Haptics.selectionAsync();
+                    hapticTap();
                     setStep('measure');
                   }}
                   accessibilityRole="button"
@@ -255,7 +256,7 @@ export default function RhythmSheet({
               <PressScale
                 style={[s.cta]} haptic scaleTo={0.97}
                 onPress={() => {
-                  void Haptics.selectionAsync();
+                  hapticTap();
                   setStep('manual');
                 }}
                 accessibilityRole="button"
@@ -282,11 +283,10 @@ export default function RhythmSheet({
             {/* Operator, 9 okt 2026 ("dubbele tekst"): geen instructie meer
                 bovenaan — de statusregel onder de lijn is de enige tekst en
                 beweegt mee met wat er gebeurt. Ring blijft op dezelfde hoogte. */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 150 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 56 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
-                  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                   /* De sessie die nu volgt, begint bij het hart van nu. */
                   setLiveStartPulse(bpm);
                   setJustMeasured(bpm);
@@ -386,7 +386,7 @@ function BpmWheel({ value, onChange }: { value: number; onChange: (v: number) =>
     if (i !== lastIndex.current) {
       lastIndex.current = i;
       setCentered(VALUES[i]);
-      void Haptics.selectionAsync();
+      hapticTick();
     }
   };
   const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => {

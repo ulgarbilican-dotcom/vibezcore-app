@@ -194,6 +194,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 /* Gedeelde druk-schaal-animatie voor ELK tikbaar element op dit scherm
    (kaarten, CTA's, icoon-only knoppen) — zelfde recept als `StartCard` in
@@ -919,7 +920,7 @@ export function BreathSession() {
 
   const pickScape = useCallback(
     (k: string | null) => {
-      Haptics.selectionAsync();
+      hapticTap();
       setScapeKey(k);
       /* Meteen laten horen wat je kiest — ook vóór de sessie. Anders kies je
          blind en merk je pas halverwege dat het niet is wat je wilde. */
@@ -1656,7 +1657,7 @@ export function BreathSession() {
      exact kan verdergaan via `runPhase`'s nieuwe `resumeAt`-parameter. */
   const pauseSession = useCallback(() => {
     if (!runningRef.current || pausedRef.current) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     clearTimers();
     Vibration.cancel();
     stopVoice();
@@ -1675,7 +1676,7 @@ export function BreathSession() {
 
   const resumeSession = useCallback(() => {
     if (!runningRef.current || !pausedRef.current) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     if (pausedAtWallRef.current > 0) {
       pausedMsRef.current += Date.now() - pausedAtWallRef.current;
       pausedAtWallRef.current = 0;
@@ -1934,7 +1935,7 @@ export function BreathSession() {
   const scapeLocked = (k: string) => !isPro && !FREE_SOUNDSCAPES.has(k);
   const pickScapeGated = (k: string | null) => {
     if (k && scapeLocked(k)) {
-      Haptics.selectionAsync();
+      hapticTap();
       setAvSheetOpen(false);
       setScapePaywall(true);
       return;
@@ -2365,7 +2366,7 @@ export function BreathSession() {
   const awaitingAutostart = !running && !hasStartedOnceRef.current;
 
   const stop = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     finish();
   }, [finish]);
 
@@ -2604,7 +2605,7 @@ export function BreathSession() {
      info-knopje naast te staan. */
   const pickDuration = (i: number) => {
     if (running) return;
-    Haptics.selectionAsync();
+    hapticTap();
     if (i === durationIdx) setInfoIdx(i);
     else setDurationIdx(i);
   };
@@ -2944,7 +2945,7 @@ export function BreathSession() {
                       <Pressable
                         key={t.key}
                         onPress={() => {
-                          Haptics.selectionAsync();
+                          hapticTap();
                           setTechIdx(i);
                         }}
                         style={[s.techChip, on && s.chipActive]}
@@ -3312,7 +3313,7 @@ export function BreathSession() {
           <AnimatedPressable
             onPress={() => {
               if (locked) {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                hapticPress();
                 startWithBatteryCheck(true);
                 return;
               }
@@ -3349,7 +3350,7 @@ export function BreathSession() {
         {false && locked && (
           <AnimatedPressable
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              hapticPress();
               setPaywall(true);
             }}
             onPressIn={pressUnlockLink.onPressIn}
@@ -3683,7 +3684,7 @@ export function BreathSession() {
                     onPressIn={pressScapeLevelChip.onPressIn}
                     onPressOut={pressScapeLevelChip.onPressOut}
                     onPress={() => {
-                      Haptics.selectionAsync();
+                      hapticTap();
                       setScapeLevelLocal(l);
                       setScapeLevel(l);
                     }}
@@ -3863,7 +3864,7 @@ export function BreathSession() {
                     onPressOut={pressNarratorChip.onPressOut}
                     onPress={() => {
                       const prev = voiceGenderLocal;
-                      Haptics.selectionAsync();
+                      hapticTap();
                       setVoiceGenderLocal(g);
                       if (g !== voiceGenderDefault) {
                         setAskDefault({

@@ -62,6 +62,7 @@ import RestingHeartRatePage from '@/components/RestingHeartRatePage';
 import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
+import { hapticPress } from '@/utils/haptics';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
 /* Operator, 5 okt 2026: terug naar de eerste foto. */
@@ -209,7 +210,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
         <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
           <Pressable
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              hapticPress();
               onDone();
             }}
             onPressIn={() => {

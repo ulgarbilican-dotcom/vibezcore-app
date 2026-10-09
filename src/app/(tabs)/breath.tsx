@@ -86,6 +86,7 @@ import Animated, {
   type AnimatedStyle,
 } from 'react-native-reanimated';
 import { type ViewStyle } from 'react-native';
+import { hapticTap } from '@/utils/haptics';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -799,7 +800,7 @@ export default function BreathScreen() {
       const clamped = Math.max(0, Math.min(ORDER.length - 1, next));
       setIndex((prev) => {
         if (prev === clamped) return prev;
-        Haptics.selectionAsync();
+        hapticTap();
         fade.value = 0;
         fade.value = withTiming(1, {
           duration: 320,

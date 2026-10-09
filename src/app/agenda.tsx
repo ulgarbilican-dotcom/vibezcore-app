@@ -53,6 +53,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticTap } from '@/utils/haptics';
 
 /* Standaard press-scale animatie op elke tikbare knop/rij/kaart in dit
    scherm (operator-patroon, zie StartCard in breath-welcome.tsx). */
@@ -791,7 +792,7 @@ export default function AgendaScreen() {
                 isToday={selectedKey === todayKey}
                 now={new Date()}
                 onTapItem={(key) => {
-                  Haptics.selectionAsync();
+                  hapticTap();
                   setActionItemIndex(Number(key));
                 }}
                 onDragEnd={(key, newReminderAt) => {
@@ -866,7 +867,7 @@ export default function AgendaScreen() {
                 Icon={STATE_GLYPH_ICONS[key]}
                 on={filterMode === key}
                 onPress={() => {
-                  Haptics.selectionAsync();
+                  hapticTap();
                   setFilterMode((prev) => (prev === key ? null : key));
                 }}
               />
@@ -875,7 +876,7 @@ export default function AgendaScreen() {
               label="Your next session"
               on={filterMode === null}
               onPress={() => {
-                Haptics.selectionAsync();
+                hapticTap();
                 setFilterMode(null);
               }}
             />

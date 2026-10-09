@@ -74,6 +74,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
+import { hapticTap } from '@/utils/haptics';
 
 /* Operator, 28 september 2026 ("bij lockscreen zie ik geen scherm voor
    breathwork, dit is wel belangrijk... moet gecommuniceerd worden... als
@@ -120,7 +121,7 @@ function PressFeedback({
      Centraal hier gezet zodat élke rij die `PressFeedback` gebruikt dit
      in één keer meekrijgt, i.p.v. per rij te patchen. */
   const onPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     pressScale.value = withTiming(0.95, { duration: 80 });
   };
   const onPressOut = () => {

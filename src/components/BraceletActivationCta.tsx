@@ -30,6 +30,7 @@ import ReanimatedAnimated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
+import { hapticPress } from '@/utils/haptics';
 
 /* Standaardiseerde press-scale (2026-09-23) — zelfde curve als StartCard
    in breath-welcome.tsx. */
@@ -39,7 +40,7 @@ export function BraceletActivationCta() {
   const scale = useSharedValue(1);
   const onPressIn = () => {
     scale.value = withTiming(0.97, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const onPressOut = () => {
     scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });

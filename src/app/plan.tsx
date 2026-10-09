@@ -85,6 +85,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -217,14 +218,14 @@ export default function PlanScreen() {
      `PlanItemCard` hierboven/`StartCard` in breath-welcome.tsx). */
   /* Operator, 4 okt 2026 (smoothness-audit: "geen enkele haptic in dit
      bestand"): alle 5 hoofdknoppen hieronder hadden wel de schaal-
-     animatie maar geen haptic — `Haptics.selectionAsync()` toegevoegd aan
+     animatie maar geen haptic — `hapticTap()` toegevoegd aan
      elke `onPressIn` (zo vroeg mogelijk voelbaar, zelfde moment als de
      animatie al start). De twee backdrop-sluit-handlers (tik ernaast om
      een vel te sluiten) blijven bewust zonder haptic — geen primaire
      actie, enkel "annuleren". */
   const allModesScale = useSharedValue(1);
   const onAllModesPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     allModesScale.value = withTiming(0.95, { duration: 80 });
   };
   const onAllModesPressOut = () => {
@@ -236,7 +237,7 @@ export default function PlanScreen() {
 
   const primaryCtaScale = useSharedValue(1);
   const onPrimaryCtaPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     primaryCtaScale.value = withTiming(0.95, { duration: 80 });
   };
   const onPrimaryCtaPressOut = () => {
@@ -248,7 +249,7 @@ export default function PlanScreen() {
 
   const remindScale = useSharedValue(1);
   const onRemindPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     remindScale.value = withTiming(0.95, { duration: 80 });
   };
   const onRemindPressOut = () => {
@@ -260,7 +261,7 @@ export default function PlanScreen() {
 
   const goalCtaScale = useSharedValue(1);
   const onGoalCtaPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     goalCtaScale.value = withTiming(0.95, { duration: 80 });
   };
   const onGoalCtaPressOut = () => {
@@ -274,7 +275,7 @@ export default function PlanScreen() {
      kaarten/rijen (zelfde schaalregel als de rest van dit bestand). */
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     backScale.value = withTiming(0.93, { duration: 80 });
   };
   const onBackPressOut = () => {
@@ -1040,7 +1041,7 @@ function PlanItemCard({
      `onPress`, zelfde "zo vroeg mogelijk voelbaar"-redenering als
      settings.tsx se `PressFeedback`-fix. */
   const onPressIn = () => {
-    Haptics.selectionAsync();
+    hapticTap();
     pressScale.value = withTiming(0.95, { duration: 80 });
   };
   const onPressOut = () => {
@@ -1092,7 +1093,7 @@ function PlanItemCard({
         <Pressable
           style={s.detailBtn}
           onPress={() => {
-            Haptics.selectionAsync();
+            hapticTap();
             onOpenDuration();
           }}
           hitSlop={8}
@@ -1121,7 +1122,7 @@ function PlanItemCard({
       <Pressable
         style={s.timeRow}
         onPress={() => {
-          Haptics.selectionAsync();
+          hapticTap();
           onOpenTime();
         }}
       >

@@ -34,6 +34,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticPress } from '@/utils/haptics';
 
 /* 10 gratis + 17 trial-sessies — afgeleid uit de data, blijft kloppen. */
 const TRIAL_SESSION_COUNT = SESSIONS.filter((x) => {
@@ -81,7 +82,7 @@ function Bounce({
       onPress={onPress}
       onPressIn={() => {
         scale.value = withTiming(0.96, { duration: 90 });
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticPress();
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { duration: 260, dampingRatio: 0.78 });

@@ -16,6 +16,7 @@ import { startStateControlNow } from '@/services/bracelet-session-monitor';
 import { useBraceletOwner } from '@/utils/dev-user-override';
 import { useSetting } from '@/utils/settings';
 import { openStateControl } from '@/utils/state-control-ui';
+import { hapticTap } from '@/utils/haptics';
 
 export function useStartStateControl() {
   const subscription = useSubscription();
@@ -24,7 +25,7 @@ export function useStartStateControl() {
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const start = (mode: BraceletMode, minutes: number) => {
-    Haptics.selectionAsync();
+    hapticTap();
     if (subscription.isLoading) return;
     const locked = !subscription.isPro && !ownsBracelet && !(__DEV__ && testFullSessions);
     if (locked) {

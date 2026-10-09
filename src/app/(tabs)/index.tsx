@@ -148,6 +148,7 @@ import {
   SUBCAT_ORDER,
   type Session,
 } from '../../data/audio-library-data';
+import { hapticPress } from '@/utils/haptics';
 
 /* Operator, 14 september 2026: "we zijn nu alles light mode aan het maken"
    — zelfde `DARK`/`LIGHT`/`light`-patroon als breath-setup.tsx/breath-
@@ -442,7 +443,7 @@ function CardBounce({
         /* Operator ("kaarten hebben geen haptische trilling, pas het
            protocol overal toe"): §5 "CTA-tik → haptiek" — zelfde lichte
            tik als de primaire CTA's, nu ook op kaart-selectie. */
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticPress();
       }}
       onPressOut={() => {
         /* Operator ("die bounce is volgens mij niet apple-proof"):

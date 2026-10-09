@@ -64,6 +64,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -150,7 +151,7 @@ export default function BreathQuizScreen() {
   const isResult = step === STEPS - 1;
 
   const next = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     if (!isResult) {
       setStep((n) => n + 1);
       return;
@@ -327,7 +328,7 @@ export default function BreathQuizScreen() {
                   hint={m.hint}
                   on={on}
                   onPress={() => {
-                    Haptics.selectionAsync();
+                    hapticTap();
                     setSelMoments((cur) =>
                       on ? cur.filter((k) => k !== m.key) : [...cur, m.key],
                     );

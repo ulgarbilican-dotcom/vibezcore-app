@@ -13,8 +13,9 @@
    Tijdens het meten GEEN trillingen: die zouden de vinger doen bewegen. */
 
 import PressScale from '@/components/PressScale';
+import * as Haptics from 'expo-haptics';
 import { BrandFonts } from '@/constants/theme';
-import { analyzePulse, fingerOnLens, latestBeat, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
+import { analyzePulse, fingerOnLens, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
 import { CircleAlert, Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -265,6 +266,14 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const [beatLog, setBeatLog] = useState<EcgBeat[]>([]);
   /** Moment (Date.now) van de laatst getoonde ECHTE slag. */
   const lastRealAt = useRef(0);
+  /* Live getal tijdens het meten + het eindgetal vlak voor het resultaat. */
+  const [liveBpm, setLiveBpm] = useState<number | null>(null);
+  const liveEma = useRef<number | null>(null);
+  const [finalBpm, setFinalBpm] = useState<number | null>(null);
+  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (resultTimer.current) clearTimeout(resultTimer.current);
+  }, []);
   const beat = useRef(new Animated.Value(1)).current;
   /* Rustig "ademen" zolang de vinger nog niet ligt. Operator, 9 okt 2026:
      de golfringen rond het hart zijn weggehaald (hart, ring en lijn tonen
@@ -340,6 +349,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       if (fingerSince.current === null) {
         setBeatLog((prev) => (prev.length ? [] : prev));
         lastRealAt.current = 0;
+        liveEma.current = null;
+        setLiveBpm(null);
         setStatus('placing');
         setProgress(0);
         setPlacingLong(Date.now() - placingSince.current > 6000);
@@ -366,7 +377,16 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       setProgress(Math.min(1, elapsed / MEASURE_MS));
 
       const recent = samples.current.filter((p) => p.t >= last.t - 6000);
-      const b = recent.length > 120 ? latestBeat(recent) : null;
+      const est = recent.length > 120 ? analyzePulse(recent, 3) : null;
+      const b = est ? est.beats[est.beats.length - 1] : null;
+      /* Operator, 9 okt 2026 ("boven de meting in grote cijfers live te zien"):
+         een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
+         is (eerste seconden zijn onrustig) en enkel bij een geloofwaardige
+         schatting. */
+      if (est && elapsed >= MEASURE_MS * OUTLINE_SHARE && est.bpm >= 40 && est.bpm <= 140 && est.confidence >= 0.25) {
+        liveEma.current = liveEma.current === null ? est.bpm : liveEma.current * 0.7 + est.bpm * 0.3;
+        setLiveBpm(Math.round(liveEma.current));
+      }
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;
         /* Echt tijdstip van de slag (niet het moment van opmerken). */
@@ -409,7 +429,12 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
         if (ok && res) {
           finished.current = true;
-          onResult(res.bpm);
+          /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst
+             even het eindgetal tonen, met een tik, dan pas door. */
+          setFinalBpm(res.bpm);
+          setLiveBpm(res.bpm);
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          resultTimer.current = setTimeout(() => onResult(res.bpm), 1600);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
           /* Brandde de flits? Met flits is het beeld door de vinger fel rood
@@ -551,6 +576,9 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     lastShownBeat.current = 0;
     setBeatLog([]);
     lastRealAt.current = 0;
+    liveEma.current = null;
+    setLiveBpm(null);
+    setFinalBpm(null);
     setProgress(0);
     placingSince.current = Date.now();
     setPlacingLong(false);
@@ -589,6 +617,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         : status === 'measuring'
           ? pressingHard
             ? 'Lift a little — pressing blocks the signal'
+            : finalBpm !== null
+            ? 'Done'
             : progress < 1
             ? 'Reading your heart rate — breathe normally'
             : 'Almost there…'
@@ -646,6 +676,13 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
 
   return (
     <View style={s.wrap}>
+      {/* Live hartslag in grote cijfers boven de meting (zoals Apple). */}
+      <View style={s.liveRow} accessibilityLiveRegion="polite">
+        <Text style={[s.liveNum, liveBpm === null ? s.liveNumIdle : null, finalBpm !== null ? { color: ACCENT } : null]}>
+          {liveBpm ?? '--'}
+        </Text>
+        <Text style={s.liveUnit}>bpm</Text>
+      </View>
       <View style={s.ringWrap}>
         {/* Operator, 9 okt 2026: buitencirkel = vaste omlijning in dezelfde
             kleurstijl als de hartlijn (teal dat zacht uitvloeit). De
@@ -728,6 +765,18 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
 }
 
 const s = StyleSheet.create({
+  liveRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginBottom: 22 },
+  liveNum: {
+    color: '#ffffff',
+    fontFamily: BrandFonts.bold,
+    fontSize: 56,
+    letterSpacing: -1.5,
+    fontVariant: ['tabular-nums'],
+    minWidth: 76,
+    textAlign: 'center',
+  },
+  liveNumIdle: { color: 'rgba(255,255,255,0.25)' },
+  liveUnit: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.semibold, fontSize: 18 },
   errWrap: { alignItems: 'center', paddingTop: 8, paddingHorizontal: 8 },
   errTitle: {
     color: '#ffffff',

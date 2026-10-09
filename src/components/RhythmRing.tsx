@@ -69,6 +69,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 export type RhythmRingItem = {
   /** Stabiele sleutel (bv. `${slot}-${index}`) — niet de tijd zelf, want
@@ -716,14 +717,14 @@ export default function RhythmRing({
               const now = Date.now();
               if (now - lastHapticAtRef.current >= MIN_HAPTIC_INTERVAL_MS) {
                 lastHapticAtRef.current = now;
-                Haptics.selectionAsync();
+                hapticTap();
               }
             }
             setPreviewMinutes(mins);
           },
           onPanResponderRelease: () => {
             const finalMinutes = previewMinutes ?? it.reminderAt;
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            hapticPress();
             setDraggingKey(null);
             setPreviewMinutes(null);
             if (finalMinutes !== it.reminderAt) onDragEnd(it.key, finalMinutes);

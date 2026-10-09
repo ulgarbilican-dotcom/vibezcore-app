@@ -183,6 +183,7 @@ import {
     signInWithApple,
     signInWithGoogle,
 } from '@/services/social-auth';
+import { hapticPress } from '@/utils/haptics';
 
 type Mode = 'login' | 'signup';
 
@@ -210,7 +211,7 @@ function PressScale({
   const pressScale = useSharedValue(1);
   const onPressIn: NonNullable<ComponentProps<typeof Pressable>['onPressIn']> = (e) => {
     pressScale.value = withTiming(scaleTo, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     rest.onPressIn?.(e);
   };
   const onPressOut: NonNullable<ComponentProps<typeof Pressable>['onPressOut']> = (e) => {

@@ -384,6 +384,7 @@ const C = light ? LIGHT : DARK;
 
 /* Gedeeld met de plannen (utils/duration-options.ts, 8 okt 2026). */
 import { CUSTOM_CEILING_MIN, NO_EXTEND_TECHNIQUE_KEYS } from '@/utils/duration-options';
+import { hapticPress, hapticTap } from '@/utils/haptics';
 
 /* Operator, 11 september 2026: "hoe weet gebruiker wat er in de knop staat
    als dat is afgekort met 3 puntjes" — de pil-knop toonde tot nu toe
@@ -654,7 +655,7 @@ function TimeWheel({
     const idx = Math.min(options.length - 1, Math.max(0, Math.round(offsetY / WHEEL_ITEM_H)));
     listRef.current?.scrollTo({ y: idx * WHEEL_ITEM_H, animated: true });
     if (options[idx] !== value) {
-      Haptics.selectionAsync();
+      hapticTap();
       internalChange.current = true;
       onChange(options[idx]);
     }
@@ -1932,7 +1933,7 @@ export default function BreathSetupScreen() {
        geklemd i.p.v. genegeerd, zodat een net-buiten-bereik tik toch het
        dichtstbijzijnde geldige moment oplevert i.p.v. niets te doen. */
     const clamped = Math.max(timeWindowMin, Math.min(timeWindowMax, h24 * 60 + mFinal));
-    Haptics.selectionAsync();
+    hapticTap();
     setTime(clamped);
     /* Operator, 18 september 2026 ("pas na aanklikken Done is handeling
        klaar"): `timeTouched` gaat pas aan bij "Done" (zie de sheet-header
@@ -2011,7 +2012,7 @@ export default function BreathSetupScreen() {
      zomaar cijfers op 0. Werkt ook tijdens het bewerken van een bestaande
      sessie (`isEditingSession`) — "opnieuw beginnen" mag daar ook. */
   const resetAll = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
     setSelState(smartDefaultState);
     setTechIdx(defaultTechIdxFromExperience(BREATH_STATES[smartDefaultState].techniques.length - 1));
     setTechniquePicked(false);
@@ -2208,7 +2209,7 @@ export default function BreathSetupScreen() {
      §5, op onPressIn) ontbrak hier volledig. */
   const ctaPressIn = () => {
     ctaPressScale.value = withTiming(0.96, { duration: 80 });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticPress();
   };
   const ctaPressOut = () => { ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
   const ctaPressStyle = useAnimatedStyle(() => ({
@@ -2881,7 +2882,7 @@ export default function BreathSetupScreen() {
             onInfo={(t) => setInfoModal({ title: t.name, techniqueKey: t.key })}
             onPick={(i) => {
               if (i === techIdx) return;
-              Haptics.selectionAsync();
+              hapticTap();
               pickTechnique(i);
             }}
           />
@@ -3401,7 +3402,7 @@ export default function BreathSetupScreen() {
                              "Done"-tekstlink hierboven sluit 'm pas echt EN
                              zet pas dan `stateTouched`. */
                           onPress={() => {
-                            Haptics.selectionAsync();
+                            hapticTap();
                             setSelState(key);
                           }}
                         >
@@ -3472,7 +3473,7 @@ export default function BreathSetupScreen() {
                         <Pressable
                           style={s.sheetRow}
                           onPress={() => {
-                            Haptics.selectionAsync();
+                            hapticTap();
                             setTechIdx(i);
                             /* Zelfde "spring naar aanbevolen duur"-logica als
                                de oude techniek-pillen hierboven (normale
@@ -3578,7 +3579,7 @@ export default function BreathSetupScreen() {
                              Done is handeling klaar"): kiest enkel, "Done"
                              hierboven sluit + zet `durationTouched`. */
                           onPress={() => {
-                            Haptics.selectionAsync();
+                            hapticTap();
                             setCustomSelected(false);
                             setDurationIdx(i);
                           }}
@@ -3713,7 +3714,7 @@ export default function BreathSetupScreen() {
                                 });
                                 if (!ok) return;
                               }
-                              Haptics.selectionAsync();
+                              hapticTap();
                               setHorizon(o.key);
                             }}
                           >
