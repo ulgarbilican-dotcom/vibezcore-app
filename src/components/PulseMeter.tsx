@@ -47,7 +47,7 @@ const LOW_BATTERY = 0.15;
 
 const MEASURE_MS = 15_000;
 const MAX_MS = 25_000;
-const SETTLE_MS = 1_000;
+const SETTLE_MS = 500; // 9 okt 2026: "bpm begint te laat" (was 1 s)
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;
 const RING = 240; // 9 okt 2026: "cirkel iets groter"
@@ -379,7 +379,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       setProgress(Math.min(1, elapsed / MEASURE_MS));
 
       const recent = samples.current.filter((p) => p.t >= last.t - 6000);
-      const est = recent.length > 90 ? analyzePulse(recent, 3, true) : null;
+      const est = recent.length > 72 ? analyzePulse(recent, 2, true) : null;
       const b = est ? est.beats[est.beats.length - 1] : null;
       /* Operator, 9 okt 2026 ("boven de meting in grote cijfers live te zien"):
          een rustig, afgevlakt getal — pas zodra de omtrek van het hart rond
@@ -388,7 +388,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       /* Vervolg (operator: "bpm onmiddellijk mee tonen"): vanaf de eerste
          bruikbare schatting (~4 s signaal), niet pas na de omtrek. */
       if (est && est.bpm >= 40 && est.bpm <= 140) {
-        liveEma.current = liveEma.current === null ? est.bpm : liveEma.current * 0.7 + est.bpm * 0.3;
+        const first = liveEma.current === null;
+        liveEma.current = first ? est.bpm : liveEma.current! * 0.7 + est.bpm * 0.3;
+        /* Eerste schatting meteen tonen; daarna ververst het getal op elke slag. */
+        if (first) setLiveBpm(Math.round(est.bpm));
       }
       if (b !== null && b > lastShownBeat.current + 250) {
         lastShownBeat.current = b;

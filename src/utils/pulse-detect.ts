@@ -97,8 +97,9 @@ function resample(samples: PulseSample[], pick: (s: PulseSample) => number): num
 
 type ChannelEstimate = { bpm: number; periodicity: number; regularity: number; beats: number[] };
 
-function estimate(x: number[], t0: number): ChannelEstimate | null {
-  if (x.length < FS * 4) return null;
+function estimate(x: number[], t0: number, lenient = false): ChannelEstimate | null {
+  /* Live (lenient): al vanaf ~2,4 s signaal en 2 slagafstanden. */
+  if (x.length < FS * (lenient ? 2.4 : 4)) return null;
   /* Minder licht = meer bloed = slag → omkeren, zodat een slag een piek is. */
   const inv = x.map((v) => -v);
   const trend = movingAvg(inv, FS);
@@ -163,7 +164,7 @@ function estimate(x: number[], t0: number): ChannelEstimate | null {
   }
   const ibis: number[] = [];
   for (let i = 1; i < peaks.length; i++) ibis.push(peaks[i] - peaks[i - 1]);
-  if (ibis.length < 3) return null;
+  if (ibis.length < (lenient ? 2 : 3)) return null;
   const medIbi = median(ibis);
   const bpmPeaks = (60 * FS) / medIbi;
   const regular = ibis.filter((d) => Math.abs(d - medIbi) / medIbi <= 0.15).length / ibis.length;
@@ -184,11 +185,11 @@ function estimate(x: number[], t0: number): ChannelEstimate | null {
  *  2026: "het bpm-getal moet tijdens de meting verschijnen") — soepelere
  *  drempels; het eindresultaat gebruikt altijd de strenge. */
 export function analyzePulse(samples: PulseSample[], minBeats = 8, lenient = false): PulseResult | null {
-  if (samples.length < FS * (lenient ? 3 : 4)) return null;
+  if (samples.length < FS * (lenient ? 2.4 : 4)) return null;
   const t0 = samples[0].t;
   const channels = [
-    estimate(resample(samples, (s) => s.r), t0),
-    estimate(resample(samples, (s) => s.g), t0),
+    estimate(resample(samples, (s) => s.r), t0, lenient),
+    estimate(resample(samples, (s) => s.g), t0, lenient),
   ].filter((c): c is ChannelEstimate => !!c && c.periodicity > 0);
   if (!channels.length) return null;
   const c = channels.reduce((a, b) => (b.periodicity * b.regularity > a.periodicity * a.regularity ? b : a));
