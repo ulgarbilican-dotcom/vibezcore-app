@@ -32,8 +32,8 @@ import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
 import { isHeadphonesOutput } from '../../modules/audio-route';
 
-const VOLUME_SPEAKER = 0.7;
-const VOLUME_HEADPHONES = 1; // operator, 9 okt 2026: "iets luider, de max"
+const VOLUME_SPEAKER = 1; // operator, 9 okt 2026: "op de telefoon mag het luider"
+const VOLUME_HEADPHONES = 0.7; // operator, 9 okt 2026: max was te luid, terug naar 70%
 
 let speaker: AudioPlayer | null = null;
 let headphones: AudioPlayer | null = null;
