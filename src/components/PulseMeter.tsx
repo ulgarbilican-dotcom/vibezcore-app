@@ -92,7 +92,8 @@ const SOFT_BEAT_AMP = 0.22;
    groeien ze in ~5 s naar volle hoogte. */
 function ecgAmpAt(p: number) {
   if (p < OUTLINE_SHARE) return 0.3;
-  return Math.min(1, 0.55 + ((p - OUTLINE_SHARE) / 0.35) * 0.45);
+  /* Vervolg ("de hoge pieken mogen sneller verschijnen"): ~2 s i.p.v. ~5 s. */
+  return Math.min(1, 0.7 + ((p - OUTLINE_SHARE) / 0.13) * 0.3);
 }
 
 function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boolean; progress: number }) {
