@@ -35,7 +35,9 @@ import { soundscapeByKey } from '@/data/soundscapes';
    negen decibel onder de stem, midden in wat in deze categorie gebruikelijk
    is (twaalf tot achttien onder). Op 0,55 stond hij vijf decibel eronder en
    dat is te luid — dan concurreert de achtergrond met de instructie. */
-export const SCAPE_LEVELS = { soft: 0.2, medium: 0.35, loud: 0.55 } as const;
+/* Operator, 9 okt 2026 ("loud mag nog luider"): 0,55 → 0,8 (±2 dB onder de
+   stem). Bewuste keuze van de gebruiker; de standaard blijft medium. */
+export const SCAPE_LEVELS = { soft: 0.2, medium: 0.35, loud: 0.8 } as const;
 export type ScapeLevel = keyof typeof SCAPE_LEVELS;
 let level: number = SCAPE_LEVELS.medium;
 
