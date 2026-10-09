@@ -20,7 +20,7 @@ import { BrandFonts } from '@/constants/theme';
 import { analyzePulse, fingerOnLens, timestampScaleToMs, type PulseSample } from '@/utils/pulse-detect';
 import { CircleAlert, Heart } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, Dimensions, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useCamera, useCameraPermission, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -85,8 +85,10 @@ type Props = {
   onErrorChange?: (isError: boolean) => void;
 };
 
-const ECG_W = 240;
-const ECG_H = 56;
+/* Operator, 9 okt 2026 ("pieken onderaan zoals op de vorige pagina"):
+   bijna schermbreed en hoger, zelfde dikte/verloop als de rustpagina. */
+const ECG_W = Math.round(Math.min(Dimensions.get('window').width - 48, 380));
+const ECG_H = 78;
 const ECG_WINDOW_MS = 5500; // 9 okt 2026: "trager van rechts naar links"
 /* Eén hartslag (P-golf, QRS-piek, T-golf): [ms t.o.v. de piek, hoogte −1…1]. */
 /* Vorm van één slag: gedeeld met het andere scherm (utils/ecg-shape). */
@@ -205,18 +207,19 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
   const lineColor = ACCENT;
   const lineAlpha = 1;
   return (
-    <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 34 }}>
+    <Svg width={ECG_W} height={ECG_H} style={{ marginBottom: 22 }}>
       <Defs>
         <LinearGradient id="ecgFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={ECG_W} y2="0">
           <Stop offset="0" stopColor={lineColor} stopOpacity={0} />
-          <Stop offset="0.35" stopColor={lineColor} stopOpacity={0.55 * lineAlpha} />
+          <Stop offset="0.3" stopColor={lineColor} stopOpacity={0.8 * lineAlpha} />
+          <Stop offset="0.85" stopColor={lineColor} stopOpacity={lineAlpha} />
           <Stop offset="1" stopColor={lineColor} stopOpacity={lineAlpha} />
         </LinearGradient>
       </Defs>
       <AnimatedPath
         animatedProps={animatedProps}
         stroke="url(#ecgFade)"
-        strokeWidth={2}
+        strokeWidth={2.4}
         fill="none"
         strokeLinejoin="round"
         strokeLinecap="round"

@@ -283,7 +283,7 @@ export default function RhythmSheet({
             {/* Operator, 9 okt 2026 ("dubbele tekst"): geen instructie meer
                 bovenaan — de statusregel onder de lijn is de enige tekst en
                 beweegt mee met wat er gebeurt. Ring blijft op dezelfde hoogte. */}
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 56 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 34 }}>
             <PulseMeter
               onResult={(bpm) => {
                 if (addRestingPulseReading(bpm)) {
