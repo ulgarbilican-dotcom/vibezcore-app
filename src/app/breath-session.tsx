@@ -3797,7 +3797,9 @@ export function BreathSession() {
       {/* Echt glas, ook op Android: in hetzelfde venster als de app
           (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
       <GlassSheet visible={avSheetOpen} onClose={() => setAvSheetOpen(false)}>
-          <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
+          {/* Operator, 10 okt 2026 ("popup groter, alles moet mooi kunnen
+              ademen"): hoger blad, ruimere tussenruimtes, inhoud scrollt. */}
+          <View style={[s.sheet, s.avSheetTall, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
             {/* Operator, 9 okt 2026 ("volgens mij is de popup niet glass"):
                 echt glas zoals de andere bladen (sheet-protocol). */}
             <VibezGlass
@@ -3835,8 +3837,13 @@ export function BreathSession() {
               </AnimatedPressable>
             </View>
 
+            <ScrollView
+              style={{ flexGrow: 0, flexShrink: 1 }}
+              contentContainerStyle={{ paddingBottom: 8 }}
+              showsVerticalScrollIndicator={false}
+            >
             {/* Rij 1 — Voice Guidance. */}
-            <View style={s.voiceSheetRow}>
+            <View style={[s.voiceSheetRow, s.avSection]}>
               <Text style={s.voiceSheetRowLabel}>Voice guidance</Text>
               <Switch
                 value={voiceOn}
@@ -3864,7 +3871,7 @@ export function BreathSession() {
                scherm — dat is hier voorbehouden aan langere lijsten
                (Soundscapes hieronder). Narrator nu als inline chip-rij,
                zelfde patroon als de bestaande soft/medium/loud-chips. */}
-            <Text style={s.avRowLabel}>Narrator</Text>
+            <Text style={[s.avRowLabel, { marginTop: 4 }]}>Narrator</Text>
             <View style={s.levelRow}>
               {(['female', 'male'] as const).map((g) => {
                 const on = g === voiceGenderLocal;
@@ -3900,25 +3907,13 @@ export function BreathSession() {
               })}
             </View>
 
-            {/* Rij 2 — Soundscapes, horizontale scroll i.p.v. een aparte
-               kiezer-modal. */}
-            <Text style={s.avRowLabel}>Soundscapes</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              /* Operator, 8 okt 2026 ("soundscapes is niet aanklikbaar"):
-                 in het glas-onderblad (GlassSheetHost) mat Android deze
-                 horizontale rij als 0 hoog — knoppen onzichtbaar. Vaste
-                 hoogte = chip 38 + paddingBottom 20, en flexShrink 0: het vel heeft
-                 een maxHeight en liet net deze rij tot 0 krimpen. */
-              style={{ flexGrow: 0, flexShrink: 0, height: 58 }}
-              contentContainerStyle={s.avScapeScroll}
-            >
-              {/* Operator, 25 september 2026 ("bij aantikken binnenkant wit
-                 highlighten, rand ook wit"): was accent-gekleurd — nu wit,
-                 zelfde protocol als de narrator-chips. Ook de al-gedeclareerde
-                 maar nooit gekoppelde `pressAvScapeNone`/`pressAvScapeChip`
-                 hooks nu echt aangesloten. */}
+            {/* Rij 2 — Soundscapes. Operator, 10 okt 2026 ("de soundscapes
+               moeten gegroepeerd worden … alles moet kunnen ademen"): per
+               groep (Noise · Water · Earth · Tone) een eigen rij die
+               doorloopt naar een volgende regel — geen verborgen horizontale
+               scroll meer. Gratis geluiden binnen hun groep vooraan. */}
+            <Text style={[s.avRowLabel, s.avSection]}>Soundscapes</Text>
+            <View style={s.avScapeWrap}>
               <AnimatedPressable
                 onPress={() => pickScape(null)}
                 onPressIn={pressAvScapeNone.onPressIn}
@@ -3932,37 +3927,41 @@ export function BreathSession() {
                 <VolumeX size={16} color={!scape ? '#ffffff' : C.dim55} strokeWidth={2.2} />
                 <Text style={[s.avScapeChipTxt, !scape && { color: '#ffffff' }]}>None</Text>
               </AnimatedPressable>
-              {/* Gratis gebruiker: de twee gratis geluiden vooraan, niet eerst
-                 een rij kroontjes (8 okt 2026). */}
-              {(isPro
-                ? SOUNDSCAPES
-                : [
-                    ...SOUNDSCAPES.filter((x) => FREE_SOUNDSCAPES.has(x.key)),
-                    ...SOUNDSCAPES.filter((x) => !FREE_SOUNDSCAPES.has(x.key)),
-                  ]
-              ).map((x) => {
-                const on = scape?.key === x.key;
-                return (
-                  <AnimatedPressable
-                    key={x.key}
-                    onPress={() => pickScapeGated(x.key)}
-                    onPressIn={pressAvScapeChip.onPressIn}
-                    onPressOut={pressAvScapeChip.onPressOut}
-                    style={[
-                      s.avScapeChip,
-                      on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
-                      pressAvScapeChip.style,
-                    ]}
-                  >
-                    <x.Icon size={16} color={on ? '#ffffff' : C.dim55} strokeWidth={2.2} />
-                    <Text style={[s.avScapeChipTxt, on && { color: '#ffffff' }]}>{x.name}</Text>
-                    {scapeLocked(x.key) && (
-                      <Crown size={12} color={C.dim55} strokeWidth={2.2} />
-                    )}
-                  </AnimatedPressable>
-                );
-              })}
-            </ScrollView>
+            </View>
+            {GROUP_ORDER.map((g) => {
+              const inGroup = SOUNDSCAPES.filter((x) => x.group === g);
+              const list = isPro
+                ? inGroup
+                : [...inGroup.filter((x) => FREE_SOUNDSCAPES.has(x.key)), ...inGroup.filter((x) => !FREE_SOUNDSCAPES.has(x.key))];
+              if (!list.length) return null;
+              return (
+                <View key={g} style={s.avScapeGroup}>
+                  <Text style={s.avScapeGroupLbl}>{g}</Text>
+                  <View style={s.avScapeWrap}>
+                    {list.map((x) => {
+                      const on = scape?.key === x.key;
+                      return (
+                        <AnimatedPressable
+                          key={x.key}
+                          onPress={() => pickScapeGated(x.key)}
+                          onPressIn={pressAvScapeChip.onPressIn}
+                          onPressOut={pressAvScapeChip.onPressOut}
+                          style={[
+                            s.avScapeChip,
+                            on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
+                            pressAvScapeChip.style,
+                          ]}
+                        >
+                          <x.Icon size={16} color={on ? '#ffffff' : C.dim55} strokeWidth={2.2} />
+                          <Text style={[s.avScapeChipTxt, on && { color: '#ffffff' }]}>{x.name}</Text>
+                          {scapeLocked(x.key) && <Crown size={12} color={C.dim55} strokeWidth={2.2} />}
+                        </AnimatedPressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })}
 
             {/* Operator, 9 okt 2026 ("ik zie die drie standen niet"): de
                sterkte van de soundscape stond in het oude, niet meer
@@ -3970,7 +3969,7 @@ export function BreathSession() {
                Zelfde wit-protocol als de narrator-chips. */}
             {scape ? (
               <>
-                <Text style={s.avRowLabel}>Soundscape volume</Text>
+                <Text style={[s.avRowLabel, s.avSection]}>Soundscape volume</Text>
                 <View style={[s.levelRow, { marginBottom: 14 }]}>
                   {(['soft', 'medium', 'loud'] as const).map((l) => {
                     const on = l === scapeLevel;
@@ -4001,7 +4000,7 @@ export function BreathSession() {
             ) : null}
 
             {/* Rij 3 — Phone haptics. */}
-            <View style={s.voiceSheetRow}>
+            <View style={[s.voiceSheetRow, s.avSection]}>
               <Text style={s.voiceSheetRowLabel}>Phone haptics</Text>
               <Switch
                 value={hapticsOn}
@@ -4075,6 +4074,7 @@ export function BreathSession() {
             <Text style={s.avSheetHint}>
               Pause your session anytime to reopen these settings.
             </Text>
+            </ScrollView>
           </View>
       </GlassSheet>
 
@@ -5250,13 +5250,26 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     gap: 8,
     paddingBottom: 20,
   },
+  /* Audio & Haptics-blad (operator, 10 okt 2026: "groter, alles moet
+     kunnen ademen"). */
+  avSheetTall: { maxHeight: '90%', paddingHorizontal: 22 },
+  avSection: { marginTop: 22 },
+  avScapeGroup: { marginTop: 16 },
+  avScapeGroupLbl: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: C.dim55,
+    marginBottom: 10,
+  },
+  avScapeWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   avScapeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    height: 38,
-    borderRadius: 19,
+    paddingHorizontal: 16,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
   },
