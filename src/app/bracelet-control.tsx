@@ -227,7 +227,19 @@ const MODE_ICONS = MODE_GLYPH_ICONS;
 function threePresets(mode: BraceletMode): { value: number; recommended?: boolean }[] {
   const all = DURATION_PRESETS[mode];
   const rec = all.find((p) => p.recommended) ?? all[0];
-  const picks = [all[0], rec, all[all.length - 1]];
+  const longest = all[all.length - 1];
+  /* Vervolg (operator, 9 okt 2026: "15 en 18 recommended liggen zo dicht
+     bij elkaar"): ligt het minimum minder dan 5 min onder de aanbeveling,
+     dan aanbevolen · midden · lang (korter kan nog via de rand). */
+  if (rec.value - all[0].value < 5) {
+    const target = (rec.value + longest.value) / 2;
+    const middle = all
+      .filter((p) => p.value > rec.value && p.value < longest.value)
+      .sort((x, y) => Math.abs(x.value - target) - Math.abs(y.value - target) || x.value - y.value)[0];
+    const picks = middle ? [rec, middle, longest] : [rec, longest];
+    return picks.filter((p, i) => picks.findIndex((q) => q.value === p.value) === i);
+  }
+  const picks = [all[0], rec, longest];
   return picks.filter((p, i) => picks.findIndex((q) => q.value === p.value) === i);
 }
 
