@@ -129,7 +129,7 @@ export default function RestingHeartRatePage({ onDone }: { onDone: () => void })
         </PressScale>
         {/* Operator, 9 okt 2026 ("zweven een beetje"): tweede keuze als
             omlijnde knop, direct onder de hoofdknop — één blok. */}
-        <PressScale style={s.secondaryBtn} scaleTo={0.97} onPress={() => setSheet('manual')} accessibilityRole="button">
+        <PressScale style={s.linkFirst} onPress={() => setSheet('manual')} accessibilityRole="button">
           <Text style={s.linkTxt}>Enter Manually</Text>
         </PressScale>
         <PressScale
@@ -228,9 +228,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  link: { height: 46, marginTop: 6, alignItems: 'center', justifyContent: 'center' },
-  linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
-  linkDim: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.85)' },
+  /* Vervolg ("kan dat zonder knop?"): twee tekstlinks, dicht onder de
+     hoofdknop zodat het één groep blijft. */
+  linkFirst: { height: 44, marginTop: 8, alignItems: 'center', justifyContent: 'center' },
+  link: { height: 40, alignItems: 'center', justifyContent: 'center' },
+  /* Operator, 9 okt 2026: onderstreept, zodat meteen duidelijk is dat het
+     tikbaar is. */
+  linkTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff', textDecorationLine: 'underline' },
+  linkDim: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.7)', textDecorationLine: 'underline' },
   /* Voetnoot zoals Apple's kleine lettertjes: ~12–13 pt, grijs, helemaal
      onderaan met wat afstand tot de knoppen. */
   legal: {
