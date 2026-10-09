@@ -825,6 +825,10 @@ export default function PlanScreen() {
                 schuift open" (operator, 10 augustus 2026: "zo onderaan
                 gepropt en saai"). */}
             <View style={s.pickHandle} />
+            {/* Kiezerblad → Done rechtsboven (protocol, 8 okt 2026). */}
+            <Pressable style={s.sheetDoneTopRight} onPress={() => setPicking(null)} hitSlop={10}>
+              <Text style={s.pickDoneTxt}>Done</Text>
+            </Pressable>
             {(() => {
               const item = picking !== null ? items[picking] : null;
               if (!item) return null;
@@ -1168,6 +1172,7 @@ const s = StyleSheet.create({
   },
   /* Operator, 8 okt 2026 ("done rechtsboven volgens ons protocol"):
      zelfde kiezer-kop als breath-setup.tsx — titel links, Done rechts. */
+  sheetDoneTopRight: { position: 'absolute', top: 16, right: 20, zIndex: 2 },
   pickHeader: {
     alignSelf: 'stretch',
     flexDirection: 'row',

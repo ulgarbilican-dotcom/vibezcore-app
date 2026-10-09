@@ -3773,13 +3773,15 @@ function AudioScreen({
                 style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
               />
               <View style={s.pillarModalHandle} />
+              {/* Operator, 8 okt 2026 ("overal consistent"): uitlegbladen
+                  sluiten met Done rechtsboven — was ✕ + "Got it" onderaan. */}
               <Pressable
-                style={s.pillarModalClose}
+                style={s.sheetDoneTopRight}
                 onPress={() => setAutoPlayInfoOpen(false)}
                 hitSlop={10}
-                accessibilityLabel="Close"
+                accessibilityLabel="Done"
               >
-                <Text style={s.pillarModalCloseText}>✕</Text>
+                <Text style={s.sheetDoneTopRightTxt}>Done</Text>
               </Pressable>
               <Text style={s.pillarModalEyebrow}>AUTO-PLAY</Text>
               <Text style={s.pillarModalTitle}>Continuous flow</Text>
@@ -3853,29 +3855,6 @@ function AudioScreen({
                 manually.
               </Text>
 
-              <Pressable
-                onPress={() => setAutoPlayInfoOpen(false)}
-                style={{
-                  height: 50,
-                  borderRadius: 14,
-                  backgroundColor: C.accent,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
-                accessibilityLabel="Close auto-play info"
-              >
-                <Text
-                  style={{
-                    color: '#ffffff',
-                    fontFamily: 'Inter_700Bold',
-                    fontSize: 14.5,
-                    letterSpacing: 0.2,
-                  }}
-                >
-                  Got it
-                </Text>
-              </Pressable>
             </View>
         </GlassSheet>
       )}
@@ -4656,6 +4635,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.20)',
     marginBottom: 18,
   },
+  sheetDoneTopRight: { position: 'absolute', top: 18, right: 20, zIndex: 2 },
+  sheetDoneTopRightTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   pillarModalClose: {
     position: 'absolute',
     top: 14,

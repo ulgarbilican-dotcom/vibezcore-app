@@ -712,6 +712,10 @@ export default function BraceletSetDayScreen() {
             >
               <View style={s.infoGrip} />
             </Pressable>
+            {/* Uitlegblad → Done rechtsboven (protocol, 8 okt 2026). */}
+            <Pressable style={s.sheetDoneTopRight} onPress={() => setInfoMode(null)} hitSlop={10}>
+              <Text style={s.sheetDoneTopRightTxt}>Done</Text>
+            </Pressable>
             <View style={s.infoIconBadge}>
               <VibezGlass radius={22} tint={infoModeMeta.color} level="raised" style={StyleSheet.absoluteFill} />
               {(() => {
@@ -721,12 +725,6 @@ export default function BraceletSetDayScreen() {
             </View>
             <Text style={s.infoTitle}>{infoModeMeta.name}</Text>
             <Text style={s.infoBody}>{infoModeMeta.blurb}</Text>
-            <Pressable
-              style={({ pressed }) => [s.infoBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => setInfoMode(null)}
-            >
-              <Text style={s.infoBtnTxt}>Got it</Text>
-            </Pressable>
           </View>
         ) : null}
       </GlassSheet>
@@ -1002,6 +1000,8 @@ const s = StyleSheet.create({
      radius 22, padding 22, accentkleur-rand op "Got it"). Zonder de
      RHYTHMS-lijst (bestaat niet voor de bracelet); met een kleurcode-rij
      i.p.v. — operator: "volledige uitleg inclusief de kleurencode". */
+  sheetDoneTopRight: { position: 'absolute', top: 18, right: 22, zIndex: 2 },
+  sheetDoneTopRightTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   infoSheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
