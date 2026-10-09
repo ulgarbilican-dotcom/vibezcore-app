@@ -111,7 +111,9 @@ export default function RhythmSheet({ visible, mode, onDone, onClose, startAt = 
           /* Operator, 9 okt 2026 ("nog hoger, tot onder Heart Rate"): het
              meetblad vult ~78% van het scherm, de ring staat midden in de
              vrije ruimte. */
-          step === 'measure' ? { height: Math.round(winH * 0.78) } : null,
+          /* Vervolg ("kan die kaart volledig tot boven komen?"): tot net
+             onder de statusbalk. */
+          step === 'measure' ? { height: Math.round(winH - insets.top - 8) } : null,
         ]}
       >
         <VibezGlass

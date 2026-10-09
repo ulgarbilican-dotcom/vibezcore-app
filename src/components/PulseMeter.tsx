@@ -21,7 +21,13 @@ import { Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, T
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useCamera, useCameraPermission, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { scheduleOnRN } from 'react-native-worklets';
-import Reanimated, { useAnimatedProps, useFrameCallback, useSharedValue } from 'react-native-reanimated';
+import Reanimated, {
+  Easing as ReEasing,
+  useAnimatedProps,
+  useFrameCallback,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 const MEASURE_MS = 15_000;
 const MAX_MS = 25_000;
@@ -65,6 +71,7 @@ const PQRST: [number, number][] = [
    vaste vertraging, zodat elke piek netjes rechts binnenschuift. */
 const ECG_DELAY_MS = 700;
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 function EcgTrace({ beats, running, progress }: { beats: number[]; running: boolean; progress: number }) {
   const beatsSv = useSharedValue<number[]>([]);
@@ -181,17 +188,35 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   /* Golf bij elke gevonden slag + rustig "ademen" zolang de vinger nog
      niet ligt (9 okt 2026: "de animatie moet beter"). */
   const ripple = useRef(new Animated.Value(1)).current;
-  const idle = useRef(new Animated.Value(1)).current;
-  /* Vulling van het hart = voortgang van de meting, vloeiend. */
-  const fill = useRef(new Animated.Value(0)).current;
+  const beatTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   useEffect(() => {
+    const timers = beatTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  const idle = useRef(new Animated.Value(1)).current;
+  /* Vulling van het hart + ring = voortgang van de meting.
+     Vervolg (operator, 9 okt 2026: "de animatie lijkt bibberig"): niet
+     meer elke 250 ms een stapje vanaf de drukke JS-thread, maar één
+     doorlopende beweging op de UI-thread zodra het meten start (15 s),
+     terug naar 0 als de vinger wegglijdt. */
+  const fill = useRef(new Animated.Value(0)).current;
+  const ringP = useSharedValue(0);
+  const progressRef = useRef(0);
+  progressRef.current = progress;
+  useEffect(() => {
+    const measuring = status === 'measuring';
+    const remaining = Math.max(200, MEASURE_MS * (1 - progressRef.current));
     Animated.timing(fill, {
-      toValue: status === 'measuring' ? progress : 0,
-      duration: status === 'measuring' ? 260 : 200,
+      toValue: measuring ? 1 : 0,
+      duration: measuring ? remaining : 250,
       easing: Easing.linear,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
-  }, [progress, status, fill]);
+    ringP.value = withTiming(measuring ? 1 : 0, {
+      duration: measuring ? remaining : 250,
+      easing: measuring ? ReEasing.linear : ReEasing.out(ReEasing.quad),
+    });
+  }, [status, fill, ringP]);
 
   /* Omtrek: grijs → teal zodra er echt gemeten wordt. */
   const lit = useRef(new Animated.Value(0)).current;
@@ -270,13 +295,21 @@ export default function PulseMeter({ onResult, onManual }: Props) {
         /* Echt tijdstip van de slag (niet het moment van opmerken). */
         const wall = Date.now() - (last.t - b);
         setBeatLog((prev) => [...prev.filter((x) => wall - x < ECG_WINDOW_MS + ECG_DELAY_MS + 1000), wall]);
-        Animated.sequence([
-          /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
-          Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
-          Animated.timing(beat, { toValue: 1, duration: 520, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        ]).start();
-        ripple.setValue(0);
-        Animated.timing(ripple, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+        /* Het hart klopt op het echte ritme, tegelijk met de piek die op
+           de lijn binnenschuift (zelfde vaste vertraging) — niet op het
+           toevallige moment dat de controle hem opmerkt. */
+        const at = Math.max(0, wall + ECG_DELAY_MS - Date.now());
+        const tid = setTimeout(() => {
+          beatTimers.current.delete(tid);
+          Animated.sequence([
+            /* Operator, 9 okt 2026: "rustiger en smoother" — kleinere, zachtere slag. */
+            Animated.timing(beat, { toValue: 1.07, duration: 220, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+            Animated.timing(beat, { toValue: 1, duration: 520, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          ]).start();
+          ripple.setValue(0);
+          Animated.timing(ripple, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+        }, at);
+        beatTimers.current.add(tid);
       }
 
       if (elapsed >= MEASURE_MS) {
@@ -402,6 +435,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
   };
 
   const circ = Math.PI * (RING - STROKE);
+  const ringProps = useAnimatedProps(() => ({ strokeDashoffset: circ * (1 - ringP.value) }));
   const message =
     status === 'placing'
       ? justLost
@@ -435,7 +469,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             strokeWidth={1.5}
             fill="none"
           />
-          <Circle
+          <AnimatedCircle
             cx={RING / 2}
             cy={RING / 2}
             r={(RING - STROKE) / 2}
@@ -444,7 +478,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
             strokeLinecap="round"
             fill="none"
             strokeDasharray={`${circ} ${circ}`}
-            strokeDashoffset={circ * (1 - progress)}
+            animatedProps={ringProps}
             transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />
         </Svg>
@@ -476,12 +510,23 @@ export default function PulseMeter({ onResult, onManual }: Props) {
               pointerEvents="none"
               style={[
                 s.heartFill,
-                { height: fill.interpolate({ inputRange: [0, 1], outputRange: [0, HEART] }) },
+                /* Clip schuift omhoog, het hart erin tegengesteld omlaag:
+                   enkel transforms → vloeiend op de UI-thread. */
+                { transform: [{ translateY: fill.interpolate({ inputRange: [0, 1], outputRange: [HEART, 0] }) }] },
               ]}
             >
-              <View style={{ position: 'absolute', bottom: 0, left: 0, width: HEART, height: HEART }}>
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: HEART,
+                  height: HEART,
+                  transform: [{ translateY: fill.interpolate({ inputRange: [0, 1], outputRange: [-HEART, 0] }) }],
+                }}
+              >
                 <Heart size={HEART} color={ACCENT} fill={ACCENT} strokeWidth={0.7} />
-              </View>
+              </Animated.View>
             </Animated.View>
           </View>
         </Animated.View>
@@ -526,7 +571,7 @@ export default function PulseMeter({ onResult, onManual }: Props) {
 
 const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 4 },
-  heartFill: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
   ripple: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5, borderColor: ACCENT },
   ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   msg: {
