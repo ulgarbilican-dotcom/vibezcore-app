@@ -951,9 +951,19 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         </Animated.View>
       </View>
 
-      <Text style={s.msg} accessibilityLiveRegion="polite">
-        {message}
-      </Text>
+      {finalBpm !== null ? (
+        /* Operator, 10 okt 2026 ("op het einde moet er een melding komen
+           dat de meting ok is — nu stopt het gewoon"): wat er gebeurd is +
+           wat je nu doet. */
+        <View style={s.doneMsg} accessibilityLiveRegion="polite">
+          <Text style={s.doneTitle}>Measurement complete</Text>
+          <Text style={s.doneSub}>You can lift your finger</Text>
+        </View>
+      ) : (
+        <Text style={s.msg} accessibilityLiveRegion="polite">
+          {message}
+        </Text>
+      )}
     </View>
   );
 }
@@ -1001,6 +1011,9 @@ const s = StyleSheet.create({
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
   stage: { width: ECG_W, height: RING_LINE, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   ringWrap: { width: RING_LINE, height: RING_LINE, alignItems: 'center', justifyContent: 'center' },
+  doneMsg: { alignItems: 'center', minHeight: 48, marginBottom: 18, gap: 4 },
+  doneTitle: { color: '#ffffff', fontSize: 19, fontFamily: BrandFonts.bold, textAlign: 'center' },
+  doneSub: { color: 'rgba(255,255,255,0.6)', fontSize: 15, fontFamily: BrandFonts.medium, textAlign: 'center' },
   msg: {
     color: '#ffffff',
     fontSize: 17,
