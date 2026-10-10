@@ -200,7 +200,7 @@ export default function RhythmSheet({
         <Pressable onPress={guardedClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.grip} />
         </Pressable>
-        <View style={s.head}>
+        <View style={[s.head, step === 'choose' && { marginBottom: 4 }]}>
           {/* Operator, 10 okt 2026: gecentreerd in hoofdletters, zelfde kop
               als SESSION CONTROL / BREATHWORK (dit blad voelt als een pagina).
               Absoluut gecentreerd, zodat "Cancel" het niet opzij duwt. */}
