@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurTargetView } from 'expo-blur';
 import { rootBlurRef } from '@/utils/root-blur';
 import { GlassSheetHost } from '@/components/GlassSheetHost';
+import LaunchReveal, { revealApp } from '@/components/LaunchReveal';
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { getLastTabRoute } from '@/utils/last-tab';
@@ -565,7 +566,7 @@ export default function RootLayout() {
          was — vandaar de flits van de Library-intro. De vertraagde hide
          hieronder doet het werk; dit is enkel nog een vangnet. */
       setTimeout(() => {
-        SplashScreen.hideAsync().catch(() => {});
+        revealApp();
       }, 600);
       return;
     }
@@ -647,7 +648,7 @@ export default function RootLayout() {
        opstartscherm pas weghalen als de sprong naar het juiste scherm
        getekend is — anders flitst de Library-intro even voorbij. */
     setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
+      revealApp();
     }, 350);
   }, [ready, auth, pendingAuthLink, tapped, lastTabRoute, hasStoredSession]);
 
@@ -905,6 +906,7 @@ export default function RootLayout() {
       </BlurTargetView>
       <GlassSheetHost />
       <VibezAlertHost />
+      <LaunchReveal />
       </View>
     </ErrorBoundary>
   );
