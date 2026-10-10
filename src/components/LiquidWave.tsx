@@ -141,7 +141,11 @@ export default function LiquidWave({
  *  laag"): 10/15%, zodat beide lagen apart te zien zijn. Sleep (Bio-Teal)
  *  gebruikt daar de lichte #4AF0D4 op 20/30%, anders verdwijnt hij op zwart. */
 export function breathWaveLook(color: string): { color: string; backOpacity: number; frontOpacity: number } {
-  if (color.toUpperCase() === '#00A3A3') return { color: '#4AF0D4', backOpacity: 0.2, frontOpacity: 0.3 };
+  /* Operator, 10 okt 2026 ("de State Control-cirkel is fout groen"): het
+     lichte #4AF0D4 op 20/30% werd op zwart dof grijsgroen. Nu het echte
+     Bio-Teal #00A3A3 met meer dekking — leest als de huisstijl, zoals de
+     ring en de pillen. Geldt ook voor de Sleep-cirkel van breathwork. */
+  if (color.toUpperCase() === '#00A3A3') return { color: '#00A3A3', backOpacity: 0.4, frontOpacity: 0.55 };
   return { color, backOpacity: 0.1, frontOpacity: 0.15 };
 }
 
