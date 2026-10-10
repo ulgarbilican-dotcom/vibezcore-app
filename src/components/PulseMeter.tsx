@@ -431,6 +431,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const [pressingHard, setPressingHard] = useState(false);
   const [justLost, setJustLost] = useState(false);
   const [batteryLow, setBatteryLow] = useState(false);
+  const batteryLowRef = useRef(false);
+  batteryLowRef.current = batteryLow;
   /* Laatste beeldwaarde (ook zonder vinger), om te zien of de flits brandt. */
   const lastRaw = useRef<PulseSample | null>(null);
   const [flashWasOff, setFlashWasOff] = useState(false);
@@ -563,6 +565,9 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     lastRaw.current = s;
     if (s.r > FLASH_LIGHT_R && s.r > s.g * 1.6) flashSeen.current = true;
     if (fingerOnLens(s)) {
+      /* Operator, 10 okt 2026 ("Flash unavailable terwijl ik meet"): een
+         herkende vinger = er komt licht door = de flits werkt. */
+      flashSeen.current = true;
       lastFingerAt.current = t;
       if (fingerSince.current === null) fingerSince.current = t;
       if (measureStart.current === null && t - fingerSince.current >= SETTLE_MS) {
@@ -583,8 +588,16 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   /* Eén keer per ~250 ms: status, ring, levend hart, eindcontrole. */
   useEffect(() => {
     if (status === 'failed' || status === 'denied' || status === 'camera-error') return;
+    let logTick = 0;
     const id = setInterval(() => {
       if (finished.current) return;
+      /* Diagnose (10 okt 2026): elke seconde de beeldwaarden in de log. */
+      if (__DEV__ && ++logTick % 4 === 0) {
+        const r0 = lastRaw.current;
+        console.log(
+          `[PulseMeter] r=${r0 ? Math.round(r0.r) : '-'} g=${r0 ? Math.round(r0.g) : '-'} finger=${fingerSince.current !== null} flashSeen=${flashSeen.current} darkMs=${darkSince.current ? Date.now() - darkSince.current : 0} batteryLow=${batteryLowRef.current} torchErr=${torchErrors.current}`,
+        );
+      }
       const last = samples.current[samples.current.length - 1];
       const start = measureStart.current;
       if (fingerSince.current === null) {
