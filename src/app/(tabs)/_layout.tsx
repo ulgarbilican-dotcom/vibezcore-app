@@ -42,7 +42,7 @@ import {
 } from '@/utils/state-control-ui';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { router, Tabs, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AudioLines,
   ChartNoAxesColumnIncreasing,
@@ -51,7 +51,7 @@ import {
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated as RNAnimated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabPath = '/' | '/breath' | '/bracelet' | '/activity' | '/account';
@@ -155,10 +155,25 @@ const TAB_INACTIVE_COLOR = '#8E8E93';
    cirkels"): dezelfde symbolen als de website, zonder de ring. Het
    geselecteerde tabblad krijgt een Bio-Teal icoon. */
 function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) {
+  /* Vervolg (operator, 10 okt 2026: "het gekozen icoon moet groter, met een
+     animatie zoals Apple"): zoals de SF Symbols-"bounce" van iOS 17 — bij
+     het kiezen veert het icoon kort op en zakt naar een iets grotere stand
+     (1,15); niet-gekozen terug naar 1. Op de native driver. */
+  const scale = useRef(new RNAnimated.Value(focused ? 1.15 : 1)).current;
+  useEffect(() => {
+    if (focused) {
+      RNAnimated.sequence([
+        RNAnimated.timing(scale, { toValue: 1.32, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        RNAnimated.spring(scale, { toValue: 1.15, friction: 4, tension: 160, useNativeDriver: true }),
+      ]).start();
+    } else {
+      RNAnimated.timing(scale, { toValue: 1, duration: 160, useNativeDriver: true }).start();
+    }
+  }, [focused, scale]);
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <RNAnimated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }] }}>
       <Icon size={21} color={focused ? AudioAccent : TAB_INACTIVE_COLOR} strokeWidth={2} />
-    </View>
+    </RNAnimated.View>
   );
 }
 
