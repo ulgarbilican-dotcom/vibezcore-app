@@ -40,6 +40,7 @@ import {
   Target,
   Watch,
   Wind,
+  Radio,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -181,7 +182,20 @@ export default function ActivityScreen() {
            sectie en kaart heten zoals de tab. */}
         {/* Operator, 10 okt 2026: zelfde volgorde als de tabbalk — State
             Control eerst, dan Breathwork. */}
-        <Text style={s.groupLabel}>STATE CONTROL</Text>
+        {/* Operator, 10 okt 2026: eigen ingang bovenaan — je ritme, wanneer
+            gemeten, aanpassingen en een nieuwe meting (pagina Heart Rate). */}
+        <Text style={s.groupLabel}>HEART RATE</Text>
+        <View>
+          <Row
+            large
+            Icon={HeartPulse}
+            title="Resting Heart Rate"
+            sub={rhythmSub(pulse)}
+            flashKey={flashFor('rhythm')}
+            onPress={() => open('rhythm', '/heart-rate')}
+          />
+        </View>
+        <Text style={[s.groupLabel, { marginTop: 16 }]}>STATE CONTROL</Text>
         <View>
           {/* Operator, 29 september 2026 ("uw set your goal (bracelet) is
              eigenlijk niets momenteel, had evengoed go to bracelet kunnen
@@ -219,7 +233,7 @@ export default function ActivityScreen() {
           />
           <Row
             large
-            Icon={Watch}
+            Icon={Radio}
             title="State Control activity"
             sub={
               bStats.weekSessions > 0

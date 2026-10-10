@@ -27,6 +27,12 @@ const READING_WINDOW_DAYS = 60;
 export const REMEASURE_AFTER_DAYS = 30;
 
 const KEY = 'vz_resting_pulse_v1';
+/* Operator, 10 okt 2026 ("Heart Rate-pagina: huidig ritme, aanpassingen,
+   wanneer hoe laat gemeten"): metingen enkel voor een sessie (bpm-pil)
+   worden apart bijgehouden — ze tellen nooit mee voor de rusthartslag. */
+const SESSION_LOG_KEY = 'vz_session_pulse_log_v1';
+const SESSION_LOG_MAX = 50;
+let sessionLog: { bpm: number; at: number }[] = [];
 
 export type PulseSource = 'measured' | 'manual' | 'average';
 
@@ -103,8 +109,11 @@ function resolve(s: Stored): RestingPulse {
 }
 
 function withLive(p: Omit<RestingPulse, 'liveBpm'>): RestingPulse {
+  /* Operator, 10 okt 2026: een meting "for this session" geldt altijd —
+     ook als ze lager ligt dan de rusthartslag (bewuste keuze van de
+     gebruiker, niet langer stil genegeerd). */
   const live =
-    liveStart && Date.now() - liveStart.at <= LIVE_START_VALID_MS && liveStart.bpm > p.bpm ? liveStart.bpm : null;
+    liveStart && Date.now() - liveStart.at <= LIVE_START_VALID_MS ? liveStart.bpm : null;
   return { ...p, liveBpm: live };
 }
 
@@ -136,6 +145,15 @@ export function resetRestingPulse(): void {
 /** Eén keer bij het opstarten (en veilig om vaker aan te roepen). */
 export async function loadRestingPulse(): Promise<RestingPulse> {
   if (loaded) return resolve(stored);
+  try {
+    const rawLog = await AsyncStorage.getItem(SESSION_LOG_KEY);
+    if (rawLog) {
+      const arr = JSON.parse(rawLog);
+      if (Array.isArray(arr)) sessionLog = arr.filter((r) => r && r.bpm > 0 && r.at > 0);
+    }
+  } catch {
+    sessionLog = [];
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (raw) {
@@ -234,3 +252,41 @@ export function shouldSuggestRemeasure(p: RestingPulse): boolean {
 }
 
 void loadRestingPulse();
+
+/** Een meting enkel voor de volgende sessie (bpm-pil) — in het logboek,
+ *  nooit in de rusthartslag. */
+export function recordSessionPulse(bpm: number): void {
+  sessionLog = [...sessionLog, { bpm: Math.round(bpm), at: Date.now() }].slice(-SESSION_LOG_MAX);
+  notify();
+  AsyncStorage.setItem(SESSION_LOG_KEY, JSON.stringify(sessionLog)).catch(() => {});
+}
+
+export type PulseHistoryEntry = {
+  kind: 'measured' | 'entered' | 'session';
+  bpm: number;
+  at: number;
+  /** Deze waarde is nu je rusthartslag. */
+  inUse: boolean;
+};
+
+/** Alles wat gemeten of ingevuld werd, nieuwste eerst (Heart Rate-pagina). */
+export function getPulseHistory(): PulseHistoryEntry[] {
+  const p = resolve(stored);
+  const out: PulseHistoryEntry[] = [];
+  for (const r of stored.readings) {
+    out.push({ kind: 'measured', bpm: r.bpm, at: r.at, inUse: p.source === 'measured' && r.bpm === p.bpm });
+  }
+  if (stored.manual) {
+    out.push({ kind: 'entered', bpm: stored.manual.bpm, at: stored.manual.at, inUse: p.source === 'manual' });
+  }
+  for (const r of sessionLog) out.push({ kind: 'session', bpm: r.bpm, at: r.at, inUse: false });
+  out.sort((a, b) => b.at - a.at);
+  /* Enkel de meest recente rij met de gebruikte waarde krijgt het label. */
+  let marked = false;
+  return out.map((e) => {
+    if (!e.inUse) return e;
+    if (marked) return { ...e, inUse: false };
+    marked = true;
+    return e;
+  });
+}

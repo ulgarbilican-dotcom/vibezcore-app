@@ -27,6 +27,7 @@ import {
   clearLiveStartPulse,
   getRestingPulse,
   setLiveStartPulse,
+  recordSessionPulse,
   setManualRestingPulse,
   subscribeRestingPulse,
   type RestingPulse,
@@ -140,6 +141,7 @@ export default function RhythmSheet({
        je rusthartslag blijft ongewijzigd (operator, 10 okt 2026). */
     if (now) {
       setLiveStartPulse(justMeasured);
+      recordSessionPulse(justMeasured);
       onDone();
       return;
     }
@@ -394,7 +396,10 @@ export default function RhythmSheet({
                   haptic
                   scaleTo={0.97}
                   onPress={() => {
-                    if (justMeasured !== null) setLiveStartPulse(justMeasured);
+                    if (justMeasured !== null) {
+                      setLiveStartPulse(justMeasured);
+                      recordSessionPulse(justMeasured);
+                    }
                     onDone();
                   }}
                   accessibilityRole="button"

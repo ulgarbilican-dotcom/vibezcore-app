@@ -84,6 +84,7 @@ export function HistoryGroup({ children }: { children: ReactNode }) {
 
 export function HistoryRow({
   stateKey,
+  icon,
   title,
   sub,
   value,
@@ -91,6 +92,8 @@ export function HistoryRow({
   first,
 }: {
   stateKey?: BreathStateKey;
+  /** Eigen icoon i.p.v. een toestand (bv. hart op de Heart Rate-pagina). */
+  icon?: ReactNode;
   title: string;
   sub?: string;
   value: string;
@@ -102,7 +105,7 @@ export function HistoryRow({
   return (
     <View style={s.row}>
       {!first && <View style={s.sep} />}
-      <StateBadge stateKey={stateKey} />
+      {icon ? <View style={s.badge}>{icon}</View> : <StateBadge stateKey={stateKey} />}
       <View style={s.rowMain}>
         <Text style={s.rowTitle} numberOfLines={1}>
           {title}
