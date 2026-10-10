@@ -90,6 +90,44 @@ Code: `src/data/breath-states.ts`, `src/app/breath-session.tsx`,
 - ⚪ De kortere en langere opties per techniek (1–20 min) zijn eigen
   keuzes rond die ankers, met per optie een concrete reden in de app.
 
+### 2.2b Duur en ritme groeien met ervaring (`src/utils/breath-level.ts`, sinds 6 okt 2026)
+
+Twee aparte assen: het label Beginner / Intermediate / Advanced bij een
+techniek = moeilijkheid van de TECHNIEK (vast). Daarnaast de ervaring van de
+GEBRUIKER met die techniek: start uit de onboarding (`experienceLevel`),
+daarna per techniek één stap per 12 afgewerkte sessies van díe techniek.
+
+- 🟢 Geen dosis-respons boven 5 min (Bentley 2023 review; Laborde 2021) →
+  langere sessies voor gevorderden zijn een KEUZE, nooit "beter" of "meer
+  effect" — die claim maakt de app niet.
+- 🟢 Opbouw zit vooral in het RITME: box-fasen per persoon 3–4 → 5–6 → 8–10 s
+  (Balban 2023); beginners vertragen over weken (Ma 2017).
+- ⚪ 4-7-8: eerst 4 cycli, pas na een maand 8 (Weil) — de app wacht 28 dagen.
+- 🟢 Protocollen met ervaren deelnemers gebruiken 15–20 min.
+- ⚪ 12 sessies per stap = eigen keuze, afgeleid van "≥ 6×/week, 2 weken"
+  (Bentley 2023), geen onderzoeksgetal.
+- ⚪ Een ervaren gebruiker die een techniek nog nooit deed, begint één stap
+  lager tot hij er 12 sessies van gedaan heeft (vertrouwdheid telt).
+- In de app: gaat de aanbeveling een stap omhoog, dan één keer
+  "Recommended · built up" in de cirkel; nooit stil.
+
+| Techniek | Beginner | Gemiddeld | Gevorderd | Ritme |
+|---|---|---|---|---|
+| Coherent | 5 | 10 | 20 | — |
+| Alternate Nostril | 5 | 10 | 15 | 4 → 4 → 5 s |
+| Ujjayi | 5 | 10 | 15 | — |
+| Extended Exhale | 5 | 10 | 15 | — |
+| Triangle | 5 | 5 | 10 | 3 → 4 → 5 s |
+| Box | 5 | 5 | 5 | 4 → 5 → 6 s |
+| Equal (Clarity) | 5 | 5 | 10 | — |
+| Deep Extended Exhale | 5 | 5 | 10 | 4/6 → 4/8 |
+| Physiological Sigh | 5 | 5 | 5 | — |
+| Slow (Sleep) | 10 | 15 | 20 | 4/8 → 5/10 |
+| Slow Extended Exhale | 10 | 10 | 15 | — |
+| 4-7-8 | 4 cycli | 4 cycli | 8 cycli | — |
+| Diaphragmatic / Equal (Boost) | 3 | 3 | 5 | — |
+| Faster Equal | 2 | 2 | 2 | — |
+
 ### 2.3 Veiligheid (in de app)
 
 - Technieken met adem vasthouden (Box, 4-7-8) dragen een waarschuwing;
