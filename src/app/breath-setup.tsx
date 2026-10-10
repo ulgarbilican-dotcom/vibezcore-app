@@ -230,7 +230,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    helemaal zodra beide gekozen zijn — een Oura/Whoop-achtige "voortgangs-
    ring", herkenbaar premium taal voor een wellness-app in plaats van een
    platte lijst in een rechthoek. */
-const HERO_SIZE = Math.min(Math.round(SCREEN_W * 0.58), 230);
+/* Operator, 10 okt 2026 (consistentie met State Control: "cirkel groter"):
+   zo groot als dit scherm toelaat (was 0,58 × breedte, max 230). */
+const HERO_SIZE = Math.min(Math.round(SCREEN_W * 0.68), 260);
 /* Operator, 9 september 2026: "de glow is niet goed te aanwezig... ik had
    de glow niet gevraagd" — de radiale gloed-cirkel achter de ring is
    weer weg. "Meer subtiele ring, nog dunner, moet elegant": 6 → 4 → 3.
@@ -2501,6 +2503,24 @@ export default function BreathSetupScreen() {
             {/* Operator, 5 okt 2026 ("recommended in de cirkel boven de
                minuten, met een dotje ervoor"): enkel zichtbaar op de
                aanbevolen duur; de ruimte blijft, zodat de tijd niet springt. */}
+            {/* Operator, 10 okt 2026 (Apple-consistentie met State Control):
+               zelfde volgorde in de cirkel — bovenaan WAT (de techniek), in
+               het midden de tijd, onderaan "● Recommended" (was omgekeerd). */}
+            <Animated.Text
+              key={tech.key}
+              entering={FadeIn.duration(240)}
+              style={s.heroTech}
+              numberOfLines={1}
+            >
+              {tech.name}
+            </Animated.Text>
+            <Animated.Text
+              key={`clock-${tech.key}`}
+              entering={FadeIn.duration(240)}
+              style={s.heroClock}
+            >
+              {fmtClock(chosen.minutes)}
+            </Animated.Text>
             <View
               style={[s.heroRecRow, { opacity: isRecommendedChoice ? 1 : 0 }]}
               accessibilityElementsHidden={!isRecommendedChoice}
@@ -2511,21 +2531,6 @@ export default function BreathSetupScreen() {
                 {steppedUp ? 'Recommended · built up' : 'Recommended'}
               </Text>
             </View>
-            <Animated.Text
-              key={`clock-${tech.key}`}
-              entering={FadeIn.duration(240)}
-              style={s.heroClock}
-            >
-              {fmtClock(chosen.minutes)}
-            </Animated.Text>
-            <Animated.Text
-              key={tech.key}
-              entering={FadeIn.duration(240)}
-              style={s.heroTech}
-              numberOfLines={2}
-            >
-              {tech.name}
-            </Animated.Text>
           </View>
         </View>
         )}
@@ -3895,7 +3900,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   /* Operator, 11 september 2026: exacte specificatie — 54px Bold,
      letterSpacing -1.0. Was 42px, geen letterSpacing. */
   heroClock: {
-    marginTop: 4,
+    marginTop: 0,
     fontFamily: BrandFonts.bold,
     fontSize: 54,
     letterSpacing: -1,
@@ -3912,9 +3917,9 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
      dicht tegen de cirkel"): smaller vak zodat lange namen netjes breken,
      ruim binnen de rand. */
   heroTech: {
-    maxWidth: 140,
+    maxWidth: 180,
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 0,
     fontFamily: BrandFonts.regular,
     fontSize: 14,
     lineHeight: 18,
@@ -4154,7 +4159,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   /* Operator, 5 okt 2026 ("ruimte tussen alles, minuten ver naar
      beneden"). */
   segWrap: { alignSelf: 'stretch', marginHorizontal: 26, marginTop: 44 },
-  heroRecRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: -2 },
+  heroRecRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   heroRecDot: { width: 6, height: 6, borderRadius: 3 },
   heroRecTxt: {
     fontFamily: BrandFonts.medium,
