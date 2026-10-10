@@ -302,7 +302,10 @@ export default function RhythmSheet({
             <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 40 }}>
             <PulseMeter
               key={meterKey}
-              onElevated={() => setElevatedReading(true)}
+              onElevated={(bpm) => {
+                setJustMeasured(bpm);
+                setElevatedReading(true);
+              }}
               onResult={(bpm) => {
                 /* Operator, 9 okt 2026: vinkje in de ring + onderaan één
                    duidelijke volgende stap. Vervolg ("na de meting mag het
@@ -317,19 +320,35 @@ export default function RhythmSheet({
             />
             </View>
             {elevatedReading ? (
-              /* Boven het rustbereik: niet bewaren, opnieuw meten na rust. */
-              <PressScale
-                style={[s.cta, { marginTop: 'auto', marginBottom: 10, alignSelf: 'stretch' }]}
-                haptic
-                scaleTo={0.97}
-                onPress={() => {
-                  setElevatedReading(false);
-                  setMeterKey((k) => k + 1);
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={s.ctaTxt}>Measure Again</Text>
-              </PressScale>
+              /* Operator, 10 okt 2026 ("measure again is geen verplichting"):
+                 boven het rustbereik mag je gewoon verder — de sessie start
+                 op dit ritme; je rusthartslag blijft ongewijzigd. Opnieuw
+                 meten is een keuze, geen verplichting. */
+              <View style={{ marginTop: 'auto', alignSelf: 'stretch' }}>
+                <PressScale
+                  style={[s.cta, { alignSelf: 'stretch' }]}
+                  haptic
+                  scaleTo={0.97}
+                  onPress={() => {
+                    if (justMeasured !== null) setLiveStartPulse(justMeasured);
+                    onDone();
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.ctaTxt}>{nextLabel}</Text>
+                </PressScale>
+                <PressScale
+                  style={s.secondary}
+                  onPress={() => {
+                    setElevatedReading(false);
+                    setJustMeasured(null);
+                    setMeterKey((k) => k + 1);
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.secondaryTxt}>Measure Again</Text>
+                </PressScale>
+              </View>
             ) : measuredOk ? (
               /* Enkel bij een veel lagere meting dan je rusthartslag eerst het
                  uitlegscherm (die waarde wordt nog niet overgenomen). */

@@ -317,7 +317,7 @@ function DoneMessage({ elevated = false }: { elevated?: boolean }) {
       accessibilityLiveRegion="polite"
       accessibilityLabel={
         elevated
-          ? 'Not a resting heart rate. Sit still for a few minutes, then measure again.'
+          ? 'Not a resting heart rate. Your session starts here. Measure at rest for your baseline.'
           : 'Measurement complete. This is your baseline for all sessions.'
       }
     >
@@ -349,7 +349,7 @@ function DoneMessage({ elevated = false }: { elevated?: boolean }) {
         <Text style={s.doneTitle}>{elevated ? 'Not a resting heart rate' : 'Measurement complete'}</Text>
       </Reanimated.View>
       <Reanimated.Text style={[s.doneSub, subStyle]}>
-        {elevated ? 'Sit still for a few minutes, then measure again' : 'This is your baseline for all sessions'}
+        {elevated ? 'Your session starts here. Measure at rest for your baseline' : 'This is your baseline for all sessions'}
       </Reanimated.Text>
     </View>
   );

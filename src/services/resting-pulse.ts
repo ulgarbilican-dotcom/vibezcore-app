@@ -199,9 +199,14 @@ export function chooseAverageRestingPulse(): void {
 
 /** Net gemeten hartslag als startpunt voor de volgende sessie(s). */
 let liveTimer: ReturnType<typeof setTimeout> | null = null;
+/* Operator, 10 okt 2026 ("elk ritme moet meetbaar zijn, ook boven 100 —
+   bewust maken, niet verplichten"): een meting boven het rustbereik mag het
+   STARTpunt van de volgende sessie zijn (het ritme glijdt van daar naar de
+   toestand), maar wordt nooit je rusthartslag. Bovengrens 140. */
+const MAX_LIVE_START_BPM = 140;
 export function setLiveStartPulse(bpm: number): void {
-  if (!(bpm >= MIN_RESTING_BPM) || bpm > MAX_RESTING_BPM) return;
-  liveStart = { bpm: Math.round(bpm), at: Date.now() };
+  if (!(bpm >= MIN_RESTING_BPM)) return;
+  liveStart = { bpm: Math.round(Math.min(bpm, MAX_LIVE_START_BPM)), at: Date.now() };
   if (liveTimer) clearTimeout(liveTimer);
   /* Na 15 min terug naar de rusthartslag — ook zichtbaar in de cirkel. */
   liveTimer = setTimeout(clearLiveStartPulse, LIVE_START_VALID_MS + 500);
