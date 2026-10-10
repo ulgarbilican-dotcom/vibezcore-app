@@ -645,7 +645,8 @@ export default function BraceletAgendaScreen() {
            Done / Partial / Missed als in de breathwork-agenda, met dezelfde
            regel (utils/plan-status). */
         const dayEntries = getAllSessions()
-          .filter((r) => dayKey(new Date(r.startedAt)) === day.dayKey)
+          /* Enkel sessies sinds dit plan bestaat (zelfde regel als breathwork). */
+          .filter((r) => dayKey(new Date(r.startedAt)) === day.dayKey && new Date(r.startedAt).getTime() >= (plan?.createdAt ?? 0))
           .map((r) => ({ key: String(r.mode), ts: new Date(r.startedAt).getTime(), completed: r.status === 'completed' }));
         const status =
           planItemStatuses(

@@ -777,10 +777,16 @@ export async function startStateControlNow(
   const min = opts.quick ? 3 : meta.minMinutes;
   const dur = Math.max(min, Math.min(meta.maxMinutes, Math.round(minutes)));
   startBraceletSessionMonitor({ mode, totalSec: dur * 60 });
+  /* Operator, 10 okt 2026 ("vanuit plan ook zelf op play"): zoals "Start" op
+     Session Control (27 sept) landt een sessie uit het plan of een
+     herinnering GEPAUZEERD op het sessiescherm — de gebruiker drukt zelf op
+     play. Enkel Quick Chill/Boost ("starts right away") lopen meteen. */
+  const startPaused = !opts.quick;
+  if (startPaused) pauseBraceletSessionMonitor();
   try {
     const b = getBracelet();
     if (b.getConnectionState() !== 'connected') await b.connect();
-    await b.sendCommand({ mode, duration: dur, command: BleCommand.Start });
+    if (!startPaused) await b.sendCommand({ mode, duration: dur, command: BleCommand.Start });
   } catch {
     /* Geen bracelet bereikbaar — de haptiek op de telefoon loopt al. */
   }
