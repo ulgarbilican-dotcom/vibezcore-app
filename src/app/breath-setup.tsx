@@ -2591,12 +2591,29 @@ export default function BreathSetupScreen() {
                zelfde volgorde in de cirkel — bovenaan WAT (de techniek), in
                het midden de tijd, onderaan "● Recommended" (was omgekeerd). */}
             <View style={s.heroTechRow}>
-              <View style={s.heroTechLine}>
-                <Text style={s.heroTech} numberOfLines={2}>
-                  {tech.name}
-                </Text>
-                <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
-              </View>
+              {/* Operator, 10 okt 2026: lange namen over twee regels, de i
+                  direct achter het laatste woord ("naast Breathing"). */}
+              {(() => {
+                const words = tech.name.split(' ');
+                const split = tech.name.length > 20 && words.length > 1;
+                const first = split ? words.slice(0, -1).join(' ') : null;
+                const last = split ? words[words.length - 1] : tech.name;
+                return (
+                  <>
+                    {first ? (
+                      <Text style={s.heroTech} numberOfLines={1}>
+                        {first}
+                      </Text>
+                    ) : null}
+                    <View style={s.heroTechLine}>
+                      <Text style={s.heroTech} numberOfLines={1}>
+                        {last}
+                      </Text>
+                      <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+                    </View>
+                  </>
+                );
+              })()}
             </View>
             <Animated.Text
               key={`clock-${tech.key}`}
@@ -3997,7 +4014,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
      hoogte van twee regels, de naam onderaan uitgelijnd. */
   heroTechRow: { alignItems: 'center', justifyContent: 'flex-end', height: 38, marginBottom: 14 },
   /* Operator: "Extended Exhale Breathing mag op 2 lijnen" — smaller blok. */
-  heroTechLine: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 176 },
+  heroTechLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroTech: {
     flexShrink: 1,
     alignSelf: 'center',
