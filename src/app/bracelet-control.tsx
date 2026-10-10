@@ -34,6 +34,7 @@ import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services
 import { HapticPulseRings } from '@/components/HapticPulseRings';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
+import { setStateHear, useStateHear } from '@/services/state-sound-pref';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import {
   PREVIEW_MAX_SECONDS,
@@ -64,7 +65,7 @@ import {
   startStateControlNow,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, Settings, Sparkles, Target, Waves, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, Settings, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -3084,6 +3085,7 @@ function ActiveSessionScreen({
   onStop,
   onMinimize,
 }: ActiveSessionScreenProps) {
+  const [avOpen, setAvOpen] = useState(false);
   const isPushedRoute = usePathname() === '/bracelet-control';
   /* Volledig scherm, geen tabbalk (operator, 5 okt 2026) — de tab-indeling
      leest dit via utils/state-control-ui.ts. */
@@ -3411,6 +3413,24 @@ function ActiveSessionScreen({
            SESSION als rustige tekst eronder (een stop is onomkeerbaar, dus
            niet de knop die opvalt). Wat de knoppen doen is ongewijzigd. */}
         <View style={s.sessionControlColumn}>
+          {/* Operator, 10 okt 2026: zelfde protocol als de ademsessie — één
+              pil boven de play-knop, opent een glazen blad met de keuze
+              Haptic / Haptic + Audio. */}
+          <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={s.avBar}>
+            <Pressable
+              onPress={() => {
+                hapticTap();
+                setAvOpen(true);
+              }}
+              style={({ pressed }) => [s.avBarInner, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Audio and haptics"
+            >
+              <SlidersHorizontal size={16} color="rgba(255,255,255,0.75)" strokeWidth={2} />
+              <Text style={s.avBarTxt}>Audio & Haptics</Text>
+            </Pressable>
+          </BlurView>
           <Pressable
             style={({ pressed }) => [
               s.pauseMain,
@@ -3476,7 +3496,79 @@ function ActiveSessionScreen({
 
       {/* Action bar — ronde Play/Pause-knop (primaire actie) + End als
           tekst-link ernaast, zie sessionControlRow hierboven in JSX. */}
+      <AudioHapticsSheet visible={avOpen} onClose={() => setAvOpen(false)} />
     </SafeAreaView>
+  );
+}
+
+/* ── Audio & Haptics voor State Control (operator, 10 okt 2026) ──────────
+   Zelfde protocol als de ademsessie: één pil boven de play-knop, een echt
+   glazen blad, Done rechtsboven (kiezer). Twee kaarten: Haptic en
+   Haptic + Audio, telkens met één zin uitleg. Geen claims — enkel wat je
+   voelt of hoort. Wisselen kan tijdens de sessie (de trilmotor-service leest
+   de keuze bij elke tik). */
+function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const hear = useStateHear();
+  if (!visible) return null;
+  const options = [
+    {
+      v: false,
+      title: 'Haptic',
+      body: 'Feel the rhythm. Hold your phone in your hand, or follow it on your smartwatch.',
+    },
+    {
+      v: true,
+      title: 'Haptic + Audio',
+      body: 'Feel and hear the rhythm. A soft heartbeat plays with every pulse, with headphones or with your phone nearby.',
+    },
+  ] as const;
+  return (
+    <GlassSheet visible={visible} onClose={onClose}>
+      <View style={[s.avSheet, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
+        <VibezGlass
+          radius={24}
+          level="sheet"
+          blurTarget={rootBlurRef}
+          style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+        />
+        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+          <View style={s.avGrip} />
+        </Pressable>
+        <View style={s.avHead}>
+          <Text style={s.avTitle}>Audio & Haptics</Text>
+          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button">
+            <Text style={s.avDone}>Done</Text>
+          </Pressable>
+        </View>
+        {options.map((o) => {
+          const on = o.v === hear;
+          return (
+            <Pressable
+              key={o.title}
+              onPress={() => {
+                if (on) return;
+                hapticTap();
+                setStateHear(o.v);
+              }}
+              style={({ pressed }) => [s.avCard, on && s.avCardOn, pressed && { opacity: 0.85 }]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+            >
+              <View style={s.avCardIcons}>
+                <Vibrate size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} strokeWidth={2} />
+                {o.v ? <Volume2 size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} strokeWidth={2} /> : null}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.avCardTitle, on && { color: '#ffffff' }]}>{o.title}</Text>
+                <Text style={s.avCardBody}>{o.body}</Text>
+              </View>
+              <View style={[s.avRadio, on && s.avRadioOn]}>{on ? <Check size={13} color="#0a0a0a" strokeWidth={3} /> : null}</View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </GlassSheet>
   );
 }
 
@@ -6080,6 +6172,73 @@ const s = StyleSheet.create({
   },
   /* Boven de cirkel, gecentreerd onder de titel. */
   /* Zelfde breedte als de Start-knop (marginHorizontal 10). */
+  avBar: {
+    alignSelf: 'center',
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    marginBottom: 22,
+  },
+  avBarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  avBarTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: 'rgba(255,255,255,0.75)' },
+  avSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    paddingTop: 10,
+    paddingHorizontal: 22,
+  },
+  avGrip: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', marginBottom: 14 },
+  avHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  avTitle: { fontFamily: BrandFonts.bold, fontSize: 20, color: '#ffffff' },
+  avDone: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  avCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
+  },
+  avCardOn: { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.08)' },
+  avCardIcons: { width: 44, flexDirection: 'row', gap: 4, justifyContent: 'center' },
+  avCardTitle: { fontFamily: BrandFonts.bold, fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 4 },
+  avCardBody: { fontFamily: BrandFonts.medium, fontSize: 13.5, lineHeight: 19, color: 'rgba(255,255,255,0.6)' },
+  avRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avRadioOn: { borderColor: '#ffffff', backgroundColor: '#ffffff' },
+  hearSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 12, marginHorizontal: 10 },
+  hearSegItem: {
+    flex: 1,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  hearSegItemOn: { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
+  hearSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, color: 'rgba(255,255,255,0.55)' },
   durSeg: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 40, marginHorizontal: 10 },
   durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
