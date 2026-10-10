@@ -72,10 +72,10 @@ import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { GOALS, MAX_GOALS, type Goal } from '@/data/goals';
 import { bestSlotsForCount, pickStatesForDay, reasonForPick, slotForHour } from '@/utils/day-plan';
 import { getSetting, setSetting, type ExperienceLevel } from '@/utils/settings';
-import { personalRecommendedMinutes } from '@/utils/breath-level';
+import { levelForTechnique, personalRecommendedMinutes } from '@/utils/breath-level';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
 import { SLOTS } from '@/services/reminders';
-import { INTENSITY_SESSION_COUNT, RECOMMENDED_INTENSITY } from '@/utils/protocol';
+import { INTENSITY_SESSION_COUNT, RECOMMENDED_INTENSITY, techniqueKeyForLevel } from '@/utils/protocol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -678,14 +678,19 @@ export default function BreathWelcomeScreen() {
   const dayPlanPicks = pickStatesForDay(momentSlots, changeGoals);
   const dayPlan = momentSlots.map((slot) => {
     const state = dayPlanPicks[slot];
-    const durations = BREATH_STATES[state].durations;
+    /* Audit 10 okt 2026: dezelfde techniek als het plan (per ervaring) en
+       haar eigen duren, zodat kaart, plan en sessie hetzelfde zeggen. */
+    const lvl = experience ?? 'beginner';
+    const technique = techniqueKeyForLevel(state, lvl);
+    const techDef = BREATH_STATES[state].techniques.find((t) => t.key === technique);
+    const durations = techDef?.durations ?? BREATH_STATES[state].durations;
     /* Zelfde ervaring-naar-duur-logica als voorheen (operator: "wat heeft
        het voor zin om ervaring in te vullen als de duur toch altijd
        hetzelfde is") — nu per kaart, niet enkel voor één toestand. */
     /* Operator, 10 okt 2026: dezelfde persoonlijke aanbeveling als overal
        (breath-level PLANS per ervaring), niet meer kortste/langste preset. */
     const minutes =
-      personalRecommendedMinutes(state, BREATH_STATES[state].techniques[0].key, durations, experience ?? 'beginner') ??
+      personalRecommendedMinutes(state, technique, durations, levelForTechnique(state, technique, undefined, lvl)) ??
       durations[0].minutes;
     /* Operator, 22 september 2026 ("bouw super logisch": Recover & relax
        naast een avond-Sleep-sessie zonder context leek verwarrend — enkel
@@ -697,7 +702,7 @@ export default function BreathWelcomeScreen() {
       changeGoals.length > 0
         ? reasonForPick(state, changeGoals, slot).toUpperCase()
         : 'RECOMMENDED FOR YOU';
-    return { slot, label, state, minutes };
+    return { slot, label, state, technique, minutes };
   });
   /* Standaard alvast het moment van NU geselecteerd — de rest kies je zelf.
      Blijft nodig zodat "Start your first session" altijd een concreet
@@ -823,6 +828,7 @@ export default function BreathWelcomeScreen() {
         `/breath-session?${new URLSearchParams({
           ...freeParam,
           mode: recommendedState,
+          technique: selectedPlan.technique,
           minutes: String(recommendedMinutes),
           /* Operator, 11 september 2026: "check alles overal, de oude
              selectiepagina mag nooit meer verschijnen" — mode+duur staan

@@ -67,7 +67,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 ---
 
-- 10 okt 2026: aanbevolen duur één bron (`personalRecommendedMinutes` in utils/breath-level.ts) op alle plekken; techniek-infoblad herbouwd als gegroepeerde kaarten (tests 88–89). Volledige flow-audit Set goal (breathwork) + Set plan (State Control) loopt.
+- 10 okt 2026: aanbevolen duur één bron (`personalRecommendedMinutes` in utils/breath-level.ts) op alle plekken; techniek-infoblad herbouwd als gegroepeerde kaarten (tests 88–89). Flow-audit Set goal + Set plan gedaan: vrije minuten niet meer afgerond, onboarding/protocol zelfde techniek+niveauregel, setup-labels op persoonlijke aanbeveling, bracelet-set-day elke minuut (tests 90–92). Open (operator): plannen rollen niet door na 30 d ('Ongoing'), geen verwijderknop breath-plan, geen plan-ingang op State Control-tab, bewerk-model breath vs bracelet verschilt.
 
 ## 4. Wacht op de operator (niet zelf beslissen)
 

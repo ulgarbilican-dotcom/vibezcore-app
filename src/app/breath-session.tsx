@@ -1190,9 +1190,18 @@ export function BreathSession() {
      deze tak zou `durationIdx` hierboven `minutes` naar de DICHTSTBIJZIJNDE
      preset afronden (zijn normale gedrag) en de custom-waarde stilletjes
      negeren — de hele Custom-stepper zou dan niets doen. */
+  /* Audit 10 okt 2026: plan, agenda en herinnering sturen ook vrije minuten
+     (bv. 15) zonder `customDuration` — die werden afgerond naar een preset
+     (15 → 10). Elke minuutwaarde die geen preset is, telt nu als eigen duur
+     (niet bij ritmes in cycli: daar blijven de vaste stappen + Weil-plafond). */
+  const minutesNum = params.minutes ? Number(params.minutes) : NaN;
   const customMinutesParam =
-    params.customDuration === '1' && params.minutes
-      ? Number(params.minutes)
+    params.quick !== '1' &&
+    Number.isFinite(minutesNum) &&
+    minutesNum > 0 &&
+    (params.customDuration === '1' ||
+      (!DURATIONS.some((d) => d.cycles != null) && !DURATIONS.some((d) => d.minutes === minutesNum)))
+      ? minutesNum
       : null;
 
   /* Binnen de grenzen blijven. 4-7-8 heeft twee duren, de andere ritmes drie

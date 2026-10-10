@@ -17,7 +17,7 @@
    zelf aanpast. */
 
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
-import { personalRecommendedMinutes } from '@/utils/breath-level';
+import { levelForTechnique, personalRecommendedMinutes } from '@/utils/breath-level';
 import {
   ALL_SLOTS,
   bestSlotsForCount,
@@ -125,7 +125,7 @@ const LEVEL_LABEL: Record<ExperienceLevel, string> = {
   advanced: 'Advanced',
 };
 
-function techniqueKeyForLevel(state: BreathStateKey, level: ExperienceLevel): string {
+export function techniqueKeyForLevel(state: BreathStateKey, level: ExperienceLevel): string {
   const st = BREATH_STATES[state];
   const wanted = LEVEL_LABEL[level];
   return (st.techniques.find((t) => t.level === wanted) ?? st.techniques[0]).key;
@@ -148,6 +148,7 @@ function durationForIntensity(
   state: BreathStateKey,
   intensity: Intensity,
   techniqueKey: string,
+  level: ExperienceLevel = 'beginner',
 ): number {
   const st = BREATH_STATES[state];
   const tech = st.techniques.find((t) => t.key === techniqueKey);
@@ -157,7 +158,12 @@ function durationForIntensity(
      (Weil: eerst een maand 4 cycli). Neem de aanbevolen keuze; de sessie
      past die verder aan op het niveau (breath-level.ts). */
   if (durations.some((d) => d.cycles != null)) {
-    return (durations.find((d) => d.recommended) ?? durations[0]).minutes;
+    /* Audit 10 okt 2026: dezelfde persoonlijke aanbeveling als overal
+       (incl. het Weil-plafond), niet de vaste vlag. */
+    return (
+      personalRecommendedMinutes(state, techniqueKey, durations, levelForTechnique(state, techniqueKey, undefined, level)) ??
+      durations[0].minutes
+    );
   }
   const target = INTENSITY_TARGET_MINUTES[intensity];
   return durations.reduce((best, d) =>
@@ -181,8 +187,11 @@ function itemFor(
      eigen aanbevolen duur van de gekozen techniek. */
   /* Operator, 10 okt 2026: startduur = dezelfde persoonlijke aanbeveling als
      overal (ervaring `level`), niet de vaste vlag. */
-  const recMin = personalRecommendedMinutes(state, techniqueKey, durations, level);
-  const recommended = durations.find((d) => d.minutes === recMin) ?? durations.find((d) => d.recommended) ?? durations[0];
+  /* Audit 10 okt 2026: niveau via `levelForTechnique` (zelfde regel als
+     setup/sessie: ervaren maar nieuw met deze techniek = één stap lager);
+     een vrije minuutwaarde blijft staan (de sessie speelt die nu exact). */
+  const recMin = personalRecommendedMinutes(state, techniqueKey, durations, levelForTechnique(state, techniqueKey, undefined, level));
+  const recommended = { minutes: recMin ?? (durations.find((d) => d.recommended) ?? durations[0]).minutes };
   return {
     slot,
     state,
@@ -241,7 +250,7 @@ export function generateTemplate(
       slot,
       state,
       techniqueKey,
-      minutes: durationForIntensity(state, intensity, techniqueKey),
+      minutes: durationForIntensity(state, intensity, techniqueKey, level),
       reason: reasonForPick(state, goals, slotLabel(slot)),
       reminderAt: slotDefaultReminderAt(slot),
     };
@@ -284,7 +293,7 @@ export function generateCustomTemplate(
       slot,
       state,
       techniqueKey,
-      minutes: durationForIntensity(state, 'custom', techniqueKey),
+      minutes: durationForIntensity(state, 'custom', techniqueKey, level),
       reason: reasonForPick(state, goals, slotLabel(slot)),
       reminderAt: slotDefaultReminderAt(slot),
     };

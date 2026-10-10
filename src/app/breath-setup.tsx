@@ -1573,8 +1573,17 @@ export default function BreathSetupScreen() {
     ? presetMaxMinutes
     : CUSTOM_CEILING_MIN;
 
-  const [customSelected, setCustomSelected] = useState(false);
-  const [customMinutes, setCustomMinutes] = useState(presetMinMinutes);
+  /* Audit 10 okt 2026: een vrije minuutwaarde uit een plan (bv. 15) niet
+     afronden naar een preset — anders overschrijft opslaan de eigen duur. */
+  const paramMinutes = params.minutes ? Number(params.minutes) : NaN;
+  const paramIsCustom =
+    params.quick !== '1' &&
+    Number.isFinite(paramMinutes) &&
+    paramMinutes > 0 &&
+    !isCyclesBased &&
+    !DURATIONS.some((d) => d.minutes === paramMinutes);
+  const [customSelected, setCustomSelected] = useState(paramIsCustom);
+  const [customMinutes, setCustomMinutes] = useState(paramIsCustom ? paramMinutes : presetMinMinutes);
 
   /* Operator, 24 september 2026 ("cijferweergave + losse knoppen + slider
      vervangen door één wheel picker"): voedt `DurationWheel` hieronder —
@@ -2233,7 +2242,9 @@ export default function BreathSetupScreen() {
      aanbevolen duur van dit niveau. Pas na de eerste render, want de
      geschiedenis en het niveau moeten er zijn. */
   useEffect(() => {
-    if (params.quick === '1' || params.minutes || isAddToDay) return;
+    /* Audit 10 okt 2026: ook een NIEUWE sessie in "add to day" start op de
+       persoonlijke aanbeveling; enkel een meegegeven duur gaat voor. */
+    if (params.quick === '1' || params.minutes) return;
     applyRecommended(DURATIONS, recValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLevel]);
@@ -3309,7 +3320,7 @@ export default function BreathSetupScreen() {
                  gebruiksgemak + onderzoek, doet niet alsof de wetenschap
                  één exact getal voorschrijft): enkel getoond op de
                  aanbevolen duur zelf. */}
-              {zoneFor(chosen.minutes)?.recommended && (
+              {zoneFor(chosen.minutes) === personalRecZone && (
                 <Text style={s.sheetRecommendedNote}>
                   {zoneFor(chosen.minutes)?.researchProtocol
                     ? 'VIBEZCORE recommended · research protocol — the exact dose used in the cited study.'
@@ -3589,11 +3600,12 @@ export default function BreathSetupScreen() {
                                zonder dat de gebruiker Duration ooit zelf
                                bevestigde. */
                             const durs = t.durations ?? st.durations;
-                            const recIdx = durs.findIndex((d) => d.recommended);
-                            setDurationIdx(
-                              recIdx !== -1 ? recIdx : Math.min(durationIdx, durs.length - 1),
+                            /* Audit 10 okt 2026: zelfde persoonlijke
+                               aanbeveling als bij swipen, niet de vlag. */
+                            applyRecommended(
+                              durs,
+                              recommendedForLevel(st.key, t.key, levelForTechnique(st.key, t.key)),
                             );
-                            setCustomSelected(false);
                             /* Operator, 18 september 2026 ("pas na
                                aanklikken Done is handeling klaar"): niet
                                meer meteen sluiten — de "Done"-tekstlink
@@ -3693,7 +3705,7 @@ export default function BreathSetupScreen() {
                           {/* Operator, 18 september 2026 ("sterretje weet
                              gebruiker niet wat dat betekent"): woord i.p.v.
                              symbool. */}
-                          {d.recommended && (
+                          {(d.cycles ?? d.minutes) === recValue && (
                             <Text style={[s.sheetLevelTxt, { marginRight: isSel ? 8 : 0 }]}>
                               Recommended
                             </Text>

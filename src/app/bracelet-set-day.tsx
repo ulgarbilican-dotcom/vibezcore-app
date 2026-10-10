@@ -329,10 +329,12 @@ export default function BraceletSetDayScreen() {
   const durationOptions = useMemo(() => {
     if (addingMode === null) return [];
     const meta = getModeMeta(addingMode);
+    /* Audit 10 okt 2026: elke minuut van min tot max, net als de cirkel op
+       het State Control-scherm (stappen van 5 vanaf 8 maakten bij Boost het
+       maximum van 20 onbereikbaar). */
     const values: number[] = [];
-    for (let m = meta.minMinutes; m <= meta.maxMinutes; m += 5) values.push(m);
-    if (!values.includes(meta.defaultMinutes)) values.push(meta.defaultMinutes);
-    return values.sort((a, b) => a - b).map((v) => ({ value: v, label: `${v} min` }));
+    for (let m = meta.minMinutes; m <= meta.maxMinutes; m += 1) values.push(m);
+    return values.map((v) => ({ value: v, label: `${v} min` }));
   }, [addingMode]);
 
   /* Operator, 30 september 2026 ("mag nooit... 2 zelfde momenten kunnen

@@ -150,6 +150,9 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 87 | State Control-scherm 10 okt: duurpillen weg, cirkel groter (304) en lager, bpm-pil boven de cirkel, zone (Short/Recommended/Extended/Long) in de cirkel, i-blad met "Session length"; titel welkomstscherm "Feel different. Perform differently." | A16 | ✅🔒 operator: "heel goed gedaan, dit perfect" |
 | 88 | Aanbevolen duur overal gelijk (personalRecommendedMinutes): cirkel, i-blad, sessie "· recommended", agenda-/planwielen, onboarding-dagplan, protocol | A16 | ⏳ |
 | 89 | Techniek-infoblad in kaarten (iOS-stijl): feiten-kaart (Level/Rhythm/Best for), veiligheid, Use this when, Session length met vinkje + "Recommended · X min" | A16 | ⏳ |
+| 90 | Plan/agenda/herinnering met vrije minuten (bv. 15) → sessie loopt exact 15 (niet afgerond naar 10); add-to-day bewerken houdt eigen duur | A16 | ⏳ |
+| 91 | Onboarding-dagplan: kaart, gratis eerste sessie en plan gebruiken dezelfde techniek (per ervaring) en dezelfde aanbevolen minuten | A16 | ⏳ |
+| 92 | State Control Set your day: duurwiel elke minuut min–max (Boost tot 20), zelfde bereik als de cirkel | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
