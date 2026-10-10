@@ -900,21 +900,21 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const message =
     status === 'placing'
       ? justLost
-        ? 'Finger moved — starting over'
+        ? 'Finger moved\nStarting over'
         : placingLong
-        ? 'Not quite — try the camera closest to the flash'
+        ? 'Not quite\nTry the camera closest to the flash'
         : 'Cover the top camera and the flash with your fingertip'
       : status === 'settling'
-        ? 'Got it — hold still'
+        ? 'Got it\nHold still'
         : status === 'measuring'
           ? pressingHard
-            ? 'Lift a little — pressing blocks the signal'
+            ? 'Lift a little\nPressing blocks the signal'
             : finalBpm !== null
             ? ''
             : calculating
             ? 'Calculating your heart rate…'
             : progress < 1
-            ? 'Reading your heart rate — breathe normally'
+            ? 'Reading your heart rate\nBreathe normally'
             : 'Almost there…'
           : '';
 
@@ -1090,6 +1090,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
            wat je nu doet. */
         <DoneMessage />
       ) : (
+        /* Operator, 10 okt 2026: wat er gebeurt op de eerste regel, wat je
+           doet op de tweede (i.p.v. één regel met een gedachtestreep). */
         <Text style={s.msg} accessibilityLiveRegion="polite">
           {message}
         </Text>

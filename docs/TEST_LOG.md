@@ -166,6 +166,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 102 | Hartslaggeluid op Resting Heart Rate-pagina klinkt weer, ook na een meting openen en sluiten (eigen sleutel per gebruiker: pagina / meting / State Control) | A16 | ⏳ (operator 10 okt: "hoor het niet meer") |
 | 103 | Hartslag-blad: titel "RESTING HEART RATE" gecentreerd in hoofdletters zoals SESSION CONTROL / BREATHWORK (operator 10 okt), Cancel rechts | A16 | ⏳ |
 | 104 | Hartslagmeting: getal 72 groot, exact gecentreerd boven de cirkel ("bpm" telt niet mee, staat rechts ernaast op de basislijn) | A16 | ⏳ (1e versie: bpm onzichtbaar → hersteld) |
+| 105 | Hartslagmeting: statusregels op twee regels ("Reading your heart rate" / "Breathe normally", ook Got it / Hold still, enz.), geen gedachtestreep; tekst springt niet (2 regels passen in de vaste hoogte) | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
