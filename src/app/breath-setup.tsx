@@ -3140,30 +3140,29 @@ export default function BreathSetupScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
                   >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                    {/* Operator, 24 september 2026 (pasted analyse, "Best
-                       for: Downshifting" i.p.v. de gebruiker op techniek-
-                       naam laten kiezen): `bestFor` bovenaan, naast het
-                       icoon — de FUNCTIE van dit protocol, vóór alles. */}
-                    <Text style={[s.modalPattern, s.sheetEyebrow]}>
-                      BEST FOR · {modalTech.bestFor.toUpperCase()}
-                    </Text>
+                  {/* Operator, 10 okt 2026 ("de popup moet overzichtelijker, ik
+                      raak overweldigd"): eerst het belangrijkste — één zin,
+                      één rij labels, de momenten, dan compact de duren.
+                      "What it changes" is weg (technisch; het ritme staat in
+                      de labels). Veiligheid blijft altijd staan. */}
+                  <Text style={s.infoLead}>{modalTech.effect}</Text>
+                  <View style={s.infoChips}>
+                    <View style={[s.infoChip, { backgroundColor: `${st.accent}38`, borderColor: 'transparent' }]}>
+                      <Text style={s.infoChipTxt}>{modalTech.level}</Text>
+                    </View>
+                    <View style={s.infoChip}>
+                      <Text style={s.infoChipTxt}>{techniquePattern(modalTech.phases)}</Text>
+                    </View>
+                    <View style={s.infoChip}>
+                      <Text style={s.infoChipTxt}>{modalTech.bestFor}</Text>
+                    </View>
                   </View>
-                  {/* Operator, 24 september 2026 ("is dit de meest optimale
-                     weergave? — zelfcontrole"): 2 fouten gecorrigeerd.
-                     1) Volgorde: "What it changes" stond hier VOOR "Use
-                     this when" — precies tegen het eigen principe in dat
-                     herkenning eerst moet komen, techniek-detail laatst.
-                     Nu: Use this when → Why this technique → What it
-                     changes (technisch, minst urgent, dus onderaan).
-                     2) `techniqueHook(explain)` werd hergebruikt voor "What
-                     it changes", maar die helper geeft soms de reputatie-/
-                     herkomstzin terug i.p.v. het mechanisme (Box zonder
-                     streepje in `explain` toonde zo de HELE zin incl.
-                     "Popularized as tactical breathing in military
-                     training"). Vervangen door een eigen, kort veld
-                     (`changes`, zie TechniqueDef) — precies het mechanisme,
-                     niets anders. */}
+                  {modalTech.safetyNote ? (
+                    <View style={s.modalCautionBox}>
+                      <AlertTriangle size={14} color="#F0B86E" strokeWidth={2.2} style={{ marginTop: 1 }} />
+                      <Text style={s.modalCaution}>{modalTech.safetyNote}</Text>
+                    </View>
+                  ) : null}
                   {modalTech.moments && modalTech.moments.length > 0 && (
                     <>
                       <Text style={s.sheetSectionLabel}>USE THIS WHEN</Text>
@@ -3177,36 +3176,6 @@ export default function BreathSetupScreen() {
                       </View>
                     </>
                   )}
-                  <Text style={s.sheetSectionLabel}>WHY THIS TECHNIQUE</Text>
-                  <Text style={s.sheetInfoBody}>{modalTech.effect}</Text>
-                  <Text style={s.sheetSectionLabel}>WHAT IT CHANGES</Text>
-                  <Text style={s.sheetInfoBody}>{modalTech.changes}</Text>
-                  {/* Operator, 10 september 2026: "info die er nu staat
-                     staat al op vorige pagina" — niveau-badge + patroon
-                     blijven als korte technische bijlage onderaan, niet
-                     meer als hoofdinhoud. */}
-                  <View style={s.modalMetaRow}>
-                    <View style={[s.modalLevelBadge, { borderWidth: 0, backgroundColor: `${st.accent}38` }]}>
-                      <Text style={[s.modalLevelTxt, { color: '#ffffff' }]}>
-                        {modalTech.level}
-                      </Text>
-                    </View>
-                    <Text style={s.modalPattern}>{techniquePattern(modalTech.phases)}</Text>
-                  </View>
-                  {modalTech.safetyNote ? (
-                    <View style={s.modalCautionBox}>
-                      <AlertTriangle
-                        size={14}
-                        color="#F0B86E"
-                        strokeWidth={2.2}
-                        style={{ marginTop: 1 }}
-                      />
-                      <Text style={s.modalCaution}>{modalTech.safetyNote}</Text>
-                    </View>
-                  ) : null}
-                  {/* Operator, 10 okt 2026: alle duren met hun naam, tijd en
-                      uitleg (zoals "Session length" in State Control); de
-                      gekozen duur licht op. */}
                   {modalTech.key === tech.key && durationZones.length > 0 ? (
                     <>
                       <Text style={s.sheetSectionLabel}>SESSION LENGTH</Text>
@@ -3217,13 +3186,16 @@ export default function BreathSetupScreen() {
                           return (
                             <View key={z.name + z.minutes} style={s.zoneRow}>
                               <View style={s.zoneHead}>
-                                <Text style={[s.zoneName, !on && { color: 'rgba(255,255,255,0.75)' }]}>
-                                  {z.name}
-                                  {z.recommended ? '  ·  Recommended' : ''}
-                                </Text>
+                                <View style={s.zoneNameRow}>
+                                  <View style={[s.zoneDot, { backgroundColor: on ? waveAccent : 'transparent' }]} />
+                                  <Text style={[s.zoneName, !on && { color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.medium }]}>
+                                    {z.name}
+                                    {z.recommended ? '  ·  Recommended' : ''}
+                                  </Text>
+                                </View>
                                 <Text style={s.zoneRange}>{range}</Text>
                               </View>
-                              {z.why ? <Text style={s.zoneText}>{z.why}</Text> : null}
+                              {on && z.why ? <Text style={[s.zoneText, { marginLeft: 16 }]}>{z.why}</Text> : null}
                             </View>
                           );
                         })}
@@ -3934,7 +3906,20 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   },
   /* Operator, 9 september 2026: de rechthoekige kaart is nu een grote
      voortgangsring, hoger op het scherm. */
-  zoneList: { gap: 14, marginTop: 4, marginBottom: 8 },
+  zoneList: { gap: 12, marginTop: 4, marginBottom: 8 },
+  zoneNameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
+  zoneDot: { width: 6, height: 6, borderRadius: 3 },
+  infoLead: { fontFamily: BrandFonts.medium, fontSize: 17, lineHeight: 24, color: '#ffffff', marginTop: 8 },
+  infoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+  infoChip: {
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    justifyContent: 'center',
+  },
+  infoChipTxt: { fontFamily: BrandFonts.semibold, fontSize: 12.5, color: '#ffffff' },
   zoneRow: { gap: 3 },
   zoneHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
   zoneName: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', flexShrink: 1 },
