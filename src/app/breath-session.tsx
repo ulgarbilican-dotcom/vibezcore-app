@@ -4326,11 +4326,14 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      ademen zelf, dus ruimte geven kan hier vrij. `marginTop` duwt het
      geheel iets omlaag in de topbar-rij. */
   eyebrowCol: { alignItems: 'center', marginTop: 6 },
+  /* Operator, 10 okt 2026 (huisstijl: tekst wit, kleur enkel in beeld en
+     iconen): de toestandsnaam bovenaan de sessie niet meer in de
+     toestandskleur. */
   eyebrow: {
     fontFamily: BrandFonts.bold,
     fontSize: 15,
     letterSpacing: 1.5,
-    color: accent,
+    color: '#ffffff',
   },
   eyebrowTechnique: {
     marginTop: 3,

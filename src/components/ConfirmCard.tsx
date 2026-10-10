@@ -18,6 +18,7 @@ export default function ConfirmCard({
   title,
   body,
   confirmLabel,
+  cancelLabel = 'Cancel',
   destructive = false,
   onCancel,
   onConfirm,
@@ -26,6 +27,7 @@ export default function ConfirmCard({
   title: string;
   body: string;
   confirmLabel: string;
+  cancelLabel?: string;
   destructive?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -40,8 +42,8 @@ export default function ConfirmCard({
           <PressScale style={s.btn} haptic scaleTo={0.97} onPress={onConfirm} accessibilityLabel={confirmLabel}>
             <Text style={[s.btnTxt, destructive && { color: Brand.error }]}>{confirmLabel}</Text>
           </PressScale>
-          <Pressable onPress={onCancel} hitSlop={10} style={s.cancel} accessibilityLabel="Cancel">
-            <Text style={s.cancelTxt}>Cancel</Text>
+          <Pressable onPress={onCancel} hitSlop={10} style={s.cancel} accessibilityLabel={cancelLabel}>
+            <Text style={s.cancelTxt}>{cancelLabel}</Text>
           </Pressable>
         </Pressable>
       </Pressable>

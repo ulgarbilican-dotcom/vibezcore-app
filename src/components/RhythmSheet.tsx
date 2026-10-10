@@ -11,6 +11,7 @@
    Woordkeuze (CLAUDE.md, operator 7 okt 2026): "heart rate" (niet "pulse") / rhythm, nooit stress, HRV, diagnose.
    "Not a medical device" staat bij elk getal. */
 
+import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
@@ -49,8 +50,6 @@ import { hapticTap, hapticTick } from '@/utils/haptics';
 
 /* De cameramodule zit pas in de build vanaf fase 2. In een oudere build
    ontbreekt de native kant: dan geen meetknop i.p.v. een crash. */
-/* Gelijk aan PulseMeter's HIGH_REST_BPM (geen import: PulseMeter laadt optioneel). */
-const HIGH_REST_BPM = 90;
 let PulseMeter: typeof import('./PulseMeter').default | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -122,6 +121,25 @@ export default function RhythmSheet({
     }
   }, [visible, startAt]);
 
+  /* Bewaren van een geslaagde meting (knop Save of de vraag bij sluiten). */
+  const saveMeasured = () => {
+    setConfirmUnsaved(false);
+    if (justMeasured === null) return;
+    const below = justMeasured < getRestingPulse().bpm;
+    if (!addRestingPulseReading(justMeasured)) return;
+    /* De sessie die nu volgt, begint bij het hart van nu. */
+    setLiveStartPulse(justMeasured);
+    if (below) setStep('result');
+    else onDone();
+  };
+  /* Sluiten met een meting die nog niet bewaard is: eerst vragen, anders
+     ging ze stil verloren (test 10 okt 2026: 97 bpm nooit opgeslagen). */
+  const [confirmUnsaved, setConfirmUnsaved] = useState(false);
+  const guardedClose = () => {
+    if (step === 'measure' && measuredOk && justMeasured !== null) setConfirmUnsaved(true);
+    else onClose();
+  };
+
   const meta = getModeMeta(mode);
   const pulse = getRestingPulse();
   /* Hoger dan de rusthartslag = "je hart nu": de sessie start daar. */
@@ -131,7 +149,7 @@ export default function RhythmSheet({
   const verb = rhythm.targetBpm > rhythm.startBpm ? 'quickens to' : 'slows to';
 
   return (
-    <GlassSheet visible={visible} onClose={onClose} fullHeight={step === 'measure'}>
+    <GlassSheet visible={visible} onClose={guardedClose} fullHeight={step === 'measure'}>
       <View
         style={[
           s.sheet,
@@ -152,7 +170,7 @@ export default function RhythmSheet({
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Pressable onPress={guardedClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.grip} />
         </Pressable>
         <View style={s.head}>
@@ -166,7 +184,7 @@ export default function RhythmSheet({
           {/* Actieblad (protocol): de keuze in State Control heeft onderaan
               al "Not Now" — geen tweede Cancel bovenaan. */}
           {step !== 'result' && !(now && step === 'choose') ? (
-            <PressScale onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
+            <PressScale onPress={guardedClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
             </PressScale>
           ) : null}
@@ -356,24 +374,18 @@ export default function RhythmSheet({
                  uitlegscherm (die waarde wordt nog niet overgenomen). */
               <View style={{ marginTop: 'auto', alignSelf: 'stretch' }}>
               <PressScale
-                style={[s.cta, { alignSelf: 'stretch' }, justMeasured !== null && justMeasured > HIGH_REST_BPM ? null : { marginBottom: 10 }]}
+                style={[s.cta, { alignSelf: 'stretch' }]}
                 haptic
                 scaleTo={0.97}
-                onPress={() => {
-                  if (justMeasured === null) return;
-                  const below = justMeasured < getRestingPulse().bpm;
-                  if (!addRestingPulseReading(justMeasured)) return;
-                  /* De sessie die nu volgt, begint bij het hart van nu. */
-                  setLiveStartPulse(justMeasured);
-                  if (below) setStep('result');
-                  else onDone();
-                }}
+                onPress={saveMeasured}
                 accessibilityRole="button"
               >
-                <Text style={s.ctaTxt}>{nextLabel}</Text>
+                {/* Operator, 10 okt 2026 ("wat als iemand opnieuw wil meten?
+                    op het einde save of opnieuw"): bewaren is een bewuste
+                    keuze, opnieuw meten staat er altijd onder. */}
+                <Text style={s.ctaTxt}>Save</Text>
               </PressScale>
-              {/* 91–100: hoog voor rust — opnieuw meten mag, hoeft niet. */}
-              {justMeasured !== null && justMeasured > HIGH_REST_BPM ? (
+              {justMeasured !== null ? (
                 <PressScale
                   style={s.secondary}
                   onPress={() => {
@@ -451,6 +463,18 @@ export default function RhythmSheet({
           </>
         )}
       </View>
+      <ConfirmCard
+        visible={confirmUnsaved}
+        title="Save this measurement?"
+        body={justMeasured !== null ? `${justMeasured} bpm becomes your resting heart rate for your sessions.` : ''}
+        confirmLabel="Save"
+        cancelLabel="Discard"
+        onCancel={() => {
+          setConfirmUnsaved(false);
+          onClose();
+        }}
+        onConfirm={saveMeasured}
+      />
     </GlassSheet>
   );
 }

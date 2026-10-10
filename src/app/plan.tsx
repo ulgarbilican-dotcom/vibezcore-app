@@ -1075,7 +1075,7 @@ function PlanItemCard({
       android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
     >
       <View style={s.cardTop}>
-        <Text style={[s.moment, { color: it.state.accent }]}>
+        <Text style={[s.moment, { color: 'rgba(255,255,255,0.6)' }]}>
           {it.moment.label}
         </Text>
         {it.done ? (
@@ -1144,7 +1144,7 @@ function PlanItemCard({
            suggereert dat dit enkel een notificatie-tijdstip is en niet
            letterlijk WANNEER de sessie begint. */}
         <Text style={s.timeLbl}>Start</Text>
-        <Text style={[s.timeVal, { color: it.state.accent }]}>
+        <Text style={[s.timeVal, { color: '#ffffff' }]}>
           {fmtTime(it.reminderAt)}
         </Text>
         {/* Zichtbaar bewerkbaar (operator, 8 augustus 2026): zonder
