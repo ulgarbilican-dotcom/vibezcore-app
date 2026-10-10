@@ -110,6 +110,10 @@ type Status = 'placing' | 'settling' | 'measuring' | 'failed' | 'denied' | 'came
 
 type Props = {
   onResult: (bpm: number) => void;
+  /** Operator, 10 okt 2026 ("elk ritme moet meetbaar zijn, ook boven 100 —
+      dan een melding dat dit geen rusthartslag is"): een geldige meting
+      boven het rustbereik. Getoond, maar niet als rusthartslag bewaard. */
+  onElevated?: (bpm: number) => void;
   /** "Enter it myself" vanuit een fout- of weigerstatus. */
   onManual: () => void;
   /** Foutscherm aan/uit — het blad verbergt dan zijn meetuitleg. */
@@ -288,7 +292,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
    zichzelf tekent in een rondje, de titel schuift zacht omhoog in beeld, de
    tweede regel volgt. ±1 s, daarna stil. */
 const CHECK_C = 2 * Math.PI * 10;
-function DoneMessage() {
+function DoneMessage({ elevated = false }: { elevated?: boolean }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.value = withTiming(1, { duration: 1000, easing: ReEasing.out(ReEasing.cubic) });
@@ -308,7 +312,15 @@ function DoneMessage() {
     return { opacity: t, transform: [{ translateY: 6 * (1 - t) }] };
   });
   return (
-    <View style={s.doneMsg} accessibilityLiveRegion="polite" accessibilityLabel="Measurement complete. This is your baseline for all sessions.">
+    <View
+      style={s.doneMsg}
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={
+        elevated
+          ? 'Not a resting heart rate. Sit still for a few minutes, then measure again.'
+          : 'Measurement complete. This is your baseline for all sessions.'
+      }
+    >
       <Reanimated.View style={[s.doneRow, titleStyle]}>
         <Svg width={24} height={24} viewBox="0 0 24 24">
           <AnimatedCircle
@@ -324,7 +336,7 @@ function DoneMessage() {
             transform="rotate(-90 12 12)"
           />
           <AnimatedPath
-            d="M7.5 12.4 L10.6 15.3 L16.6 9.2"
+            d={elevated ? 'M12 16.2 L12 8.2 M8.8 11.2 L12 8 L15.2 11.2' : 'M7.5 12.4 L10.6 15.3 L16.6 9.2'}
             stroke="#ffffff"
             strokeWidth={2}
             fill="none"
@@ -334,9 +346,11 @@ function DoneMessage() {
             animatedProps={tickProps}
           />
         </Svg>
-        <Text style={s.doneTitle}>Measurement complete</Text>
+        <Text style={s.doneTitle}>{elevated ? 'Not a resting heart rate' : 'Measurement complete'}</Text>
       </Reanimated.View>
-      <Reanimated.Text style={[s.doneSub, subStyle]}>This is your baseline for all sessions</Reanimated.Text>
+      <Reanimated.Text style={[s.doneSub, subStyle]}>
+        {elevated ? 'Sit still for a few minutes, then measure again' : 'This is your baseline for all sessions'}
+      </Reanimated.Text>
     </View>
   );
 }
@@ -417,7 +431,7 @@ function CalcArc() {
   );
 }
 
-export default function PulseMeter({ onResult, onManual, onErrorChange }: Props) {
+export default function PulseMeter({ onResult, onElevated, onManual, onErrorChange }: Props) {
   const permission = useCameraPermission();
   const [status, setStatus] = useState<Status>('placing');
   const [progress, setProgress] = useState(0);
@@ -441,6 +455,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const darkSince = useRef<number | null>(null);
   const torchErrors = useRef(0);
   const [darkLong, setDarkLong] = useState(false);
+  const [elevated, setElevated] = useState(false);
   const frameCount = useRef(0);
   const fpsRef = useRef(0);
   const deadSince = useRef<number | null>(null);
@@ -719,7 +734,24 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         /* Controle zit in robustPulse: enkel schone stukken tellen, en die
            moeten samen ~12 s dekken en het eens zijn. */
         const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
-        if (ok && res) {
+        /* Geldig maar boven het rustbereik (101–180): meteen tonen, niet
+           eerst doormeten tot de foutmelding. */
+        const high = !!res && res.bpm > 100 && res.confidence >= 0.35;
+        if (high && res) {
+          finished.current = true;
+          setCalculating(true);
+          resultTimer.current = setTimeout(() => {
+            setCalculating(false);
+            setElevated(true);
+            setFinalBpm(res.bpm);
+            setLiveBpm(res.bpm);
+            liveEma.current = res.bpm;
+            finalRef.current = true;
+            startHeartbeatSound('measure');
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            onElevated?.(res.bpm);
+          }, 1200);
+        } else if (ok && res) {
           finished.current = true;
           /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst
              even het eindgetal tonen, met een tik, dan pas door. */
@@ -884,6 +916,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
 
   const retry = () => {
     setFlashWasOff(false);
+    setElevated(false);
     setTorchFailed(false);
     setDarkLong(false);
     flashSeen.current = false;
@@ -1132,7 +1165,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         /* Operator, 10 okt 2026 ("op het einde moet er een melding komen
            dat de meting ok is — nu stopt het gewoon"): wat er gebeurd is +
            wat je nu doet. */
-        <DoneMessage />
+        <DoneMessage elevated={elevated} />
       ) : (
         /* Operator, 10 okt 2026: wat er gebeurt op de eerste regel, wat je
            doet op de tweede (i.p.v. één regel met een gedachtestreep). */

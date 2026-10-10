@@ -104,6 +104,8 @@ export default function RhythmSheet({
   /* Foutscherm van de meter: dan geen meetuitleg erboven/eronder. */
   const [meterError, setMeterError] = useState(false);
   const [measuredOk, setMeasuredOk] = useState(false);
+  const [elevatedReading, setElevatedReading] = useState(false);
+  const [meterKey, setMeterKey] = useState(0);
   const [manualBpm, setManualBpm] = useState(() => {
     const p = getRestingPulse();
     return p.source === 'average' ? AVERAGE_RESTING_BPM : p.bpm;
@@ -114,6 +116,7 @@ export default function RhythmSheet({
       setJustMeasured(null);
       setMeterError(false);
       setMeasuredOk(false);
+      setElevatedReading(false);
     }
   }, [visible, startAt]);
 
@@ -298,6 +301,8 @@ export default function RhythmSheet({
             {/* Vervolg (operator: "laat de cirkel zakken"). */}
             <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 40 }}>
             <PulseMeter
+              key={meterKey}
+              onElevated={() => setElevatedReading(true)}
               onResult={(bpm) => {
                 /* Operator, 9 okt 2026: vinkje in de ring + onderaan één
                    duidelijke volgende stap. Vervolg ("na de meting mag het
@@ -311,7 +316,21 @@ export default function RhythmSheet({
               onErrorChange={setMeterError}
             />
             </View>
-            {measuredOk ? (
+            {elevatedReading ? (
+              /* Boven het rustbereik: niet bewaren, opnieuw meten na rust. */
+              <PressScale
+                style={[s.cta, { marginTop: 'auto', marginBottom: 10, alignSelf: 'stretch' }]}
+                haptic
+                scaleTo={0.97}
+                onPress={() => {
+                  setElevatedReading(false);
+                  setMeterKey((k) => k + 1);
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={s.ctaTxt}>Measure Again</Text>
+              </PressScale>
+            ) : measuredOk ? (
               /* Enkel bij een veel lagere meting dan je rusthartslag eerst het
                  uitlegscherm (die waarde wordt nog niet overgenomen). */
               <PressScale
