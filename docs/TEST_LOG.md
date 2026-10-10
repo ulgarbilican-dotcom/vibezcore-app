@@ -153,6 +153,10 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 90 | Plan/agenda/herinnering met vrije minuten (bv. 15) → sessie loopt exact 15 (niet afgerond naar 10); add-to-day bewerken houdt eigen duur | A16 | ⏳ |
 | 91 | Onboarding-dagplan: kaart, gratis eerste sessie en plan gebruiken dezelfde techniek (per ervaring) en dezelfde aanbevolen minuten | A16 | ⏳ |
 | 92 | State Control Set your day: duurwiel elke minuut min–max (Boost tot 20), zelfde bereik als de cirkel | A16 | ⏳ |
+| 93 | Plan 'Ongoing' (breath + State Control): agenda toont altijd 30 dagen vooruit, ook na dag 30; plan met vaste duur: laatste ≤7 dagen herinneringen per datum, na de laatste dag geen melding meer | A16 | ⏳ |
+| 94 | Remove plan onderaan breath-agenda én State Control-agenda: glas-bevestiging, plan + herinneringen weg, geschiedenis blijft | A16 | ⏳ |
+| 95 | State Control-scherm: kalender-icoon rechtsboven (naast tandwiel) → agenda als er een plan is, anders Set your day | A16 | ⏳ |
+| 96 | State Control-agenda: sessie verslepen/verwijderen geldt voor elke dag vanaf vandaag; Change protocol start van vandaag's planning en houdt voorbije dagen | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

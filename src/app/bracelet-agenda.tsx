@@ -77,6 +77,7 @@
 
 import { openStateControl } from '@/utils/state-control-ui';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import ConfirmCard from '@/components/ConfirmCard';
 import { useStartStateControl } from '@/hooks/useStartStateControl';
 import { AudioAccent, Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
@@ -84,7 +85,7 @@ import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
 import { syncBraceletPlanReminder } from '@/services/reminders';
 import {
   useActiveBraceletPlan,
-  updateBraceletPlanDay,
+  saveActiveBraceletPlan,
   dayKey,
   rangesOverlap,
   type BraceletPlanDay,
@@ -258,6 +259,7 @@ export default function BraceletAgendaScreen() {
      Try it/Remove-schermpje open staat, na een tik op een bolletje. */
   const [filterMode, setFilterMode] = useState<BraceletMode | 'all' | null>(null);
   const [actionItemIndex, setActionItemIndex] = useState<number | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const selectedKey = dayKey(selected);
   const todayKey = dayKey(new Date());
   const day: BraceletPlanDay | null = plan?.days[selectedKey] ?? null;
@@ -286,21 +288,37 @@ export default function BraceletAgendaScreen() {
     return cells;
   }, [selected]);
 
+  /* Audit 10 okt 2026 (operator: "akkoord" — overal zoals breathwork):
+     een aanpassing geldt voor ELKE dag vanaf vandaag (en de gekozen dag),
+     niet enkel voor die ene dag. Per dag wordt hetzelfde item gezocht
+     (zelfde modus, tijd en duur); verleden dagen blijven zoals ze waren. */
+  const applyToComingDays = async (
+    original: BraceletPlanDay['items'][number],
+    change: (it: BraceletPlanDay['items'][number]) => BraceletPlanDay['items'][number] | null,
+  ) => {
+    if (!plan) return;
+    const same = (it: BraceletPlanDay['items'][number]) =>
+      it.mode === original.mode && it.reminderAt === original.reminderAt && it.durationMinutes === original.durationMinutes;
+    const days = Object.fromEntries(
+      Object.entries(plan.days).map(([dk, d]) => {
+        if (dk < todayKey && dk !== selectedKey) return [dk, d];
+        const items = d.items
+          .map((it) => (same(it) ? change(it) : it))
+          .filter((it): it is BraceletPlanDay['items'][number] => it != null);
+        return [dk, { ...d, items }];
+      }),
+    );
+    const updated = { ...plan, days };
+    await saveActiveBraceletPlan(updated);
+    await syncBraceletPlanReminder(updated);
+  };
+
   const removeItem = async (index: number) => {
     if (!day || !plan) return;
+    const original = day.items[index];
+    if (!original) return;
     hapticTap();
-    const updated: BraceletPlanDay = {
-      dayKey: day.dayKey,
-      items: day.items.filter((_, i) => i !== index),
-    };
-    await updateBraceletPlanDay(updated);
-    /* Enkel VANDAAG's dag bepaalt de geplande meldingen — zie de
-       toelichting bij `syncBraceletPlanReminder`. `plan` uit deze
-       render-closure is nog de OUDE staat, dus de bijgewerkte dag zelf
-       meegeven i.p.v. daarop te vertrouwen. */
-    if (selectedKey === todayKey) {
-      await syncBraceletPlanReminder({ ...plan, days: { ...plan.days, [selectedKey]: updated } });
-    }
+    await applyToComingDays(original, () => null);
   };
 
   /* Operator, 30 september 2026 ("mag nooit aparte states en 2 zelfde
@@ -322,14 +340,7 @@ export default function BraceletAgendaScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
-    const updated: BraceletPlanDay = {
-      dayKey: day.dayKey,
-      items: day.items.map((it, i) => (i === index ? { ...it, reminderAt: newReminderAt } : it)),
-    };
-    await updateBraceletPlanDay(updated);
-    if (selectedKey === todayKey) {
-      await syncBraceletPlanReminder({ ...plan, days: { ...plan.days, [selectedKey]: updated } });
-    }
+    await applyToComingDays(moved, (it) => ({ ...it, reminderAt: newReminderAt }));
   };
 
   /* Operator, 30 september 2026 ("kies welke sessie 30 seconden proberen,
@@ -582,7 +593,36 @@ export default function BraceletAgendaScreen() {
             <Text style={s.editLinkTxt}>Set your plan</Text>
           </Pressable>
         )}
+        {/* Audit 10 okt 2026: zelfde "Remove plan" als in de breathwork-agenda. */}
+        {plan && (
+          <Pressable
+            onPress={() => {
+              hapticTap();
+              setConfirmRemove(true);
+            }}
+            hitSlop={10}
+            style={s.removePlanBtn}
+            accessibilityRole="button"
+          >
+            <Text style={s.removePlanTxt}>Remove plan</Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      <ConfirmCard
+        visible={confirmRemove}
+        title="Remove your plan?"
+        body="Your daily sessions and their reminders stop. Your history stays."
+        confirmLabel="Remove plan"
+        destructive
+        onCancel={() => setConfirmRemove(false)}
+        onConfirm={async () => {
+          setConfirmRemove(false);
+          await saveActiveBraceletPlan(null);
+          await syncBraceletPlanReminder(null);
+          if (router.canGoBack()) router.back();
+        }}
+      />
 
       <PremiumPaywallModal visible={paywallOpen} onClose={closePaywall} context="state-control" />
 
@@ -867,5 +907,7 @@ const s = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 18,
   },
+  removePlanBtn: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },
+  removePlanTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: Brand.error },
   editLinkTxt: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.55)' },
 });

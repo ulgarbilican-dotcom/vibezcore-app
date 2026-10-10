@@ -36,6 +36,7 @@ import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 import { setStateHear, useStateHear } from '@/services/state-sound-pref';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
+import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -65,7 +66,7 @@ import {
   startStateControlNow,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, Settings, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, Settings, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -3679,6 +3680,7 @@ function IdleScreen({
   setDetailModeForModal,
   sim,
 }: IdleScreenProps) {
+  const { plan: braceletPlan } = useActiveBraceletPlan();
   /* Operator, 16 september 2026 ("Optie 1 Hybride: de app blijft Light,
      maar dit specifieke bedieningsscherm maken we Dark — de felle
      modus-kleur knalt dan maximaal, 2026-luxe-vibe"): alleen déze ene
@@ -3814,6 +3816,23 @@ function IdleScreen({
              (banner is daar al de primary action). */
           !showActivationPrompt ? (
             <View style={s.headerRightGroup}>
+              {/* Audit 10 okt 2026 (operator: "akkoord"): dezelfde
+                 kalenderknop als rechtsboven in Breathwork — met een plan
+                 rechtstreeks naar de agenda, anders eerst je dag bouwen. */}
+              <Pressable
+                onPress={() =>
+                  router.push((braceletPlan ? '/bracelet-agenda' : '/bracelet-set-day') as never)
+                }
+                hitSlop={12}
+                style={{ marginRight: 14 }}
+                accessibilityLabel="Your daily plan"
+              >
+                <CalendarDays
+                  size={20}
+                  color={idleDark ? 'rgba(255,255,255,0.85)' : C.text}
+                  strokeWidth={2}
+                />
+              </Pressable>
               {/* Operator, 27 september 2026 ("verwijder ook de
                  batterij icoon"): de statusDot (kleur naar batterij-
                  gezondheid) is weg.

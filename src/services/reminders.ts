@@ -285,6 +285,33 @@ export async function syncReminders(
 export const MAX_PLAN_ITEMS = 8;
 const planIdFor = (index: number, n: 1 | 2) => `vzc-plan-${index}-${n}`;
 
+/* Audit 10 okt 2026 (operator: "akkoord"): een plan met een vaste duur
+   stopte niet met herinneren — de DAGELIJKSE trigger liep na de laatste dag
+   gewoon door tot de app weer eens opende. Zodra er nog maar
+   `DATED_WINDOW` dagen of minder over zijn, krijgt elke resterende dag een
+   eigen melding op DATUM; na de laatste dag komt er dus niets meer.
+   'Ongoing' rolt door (plan-stores) en blijft dagelijks. */
+const DATED_WINDOW = 7;
+const datedPlanIdFor = (day: number, index: number) => `vzc-plan-d${day}-${index}`;
+const datedBraceletIdFor = (day: number, index: number) => `vzc-bracelet-plan-d${day}-${index}`;
+
+type PlanDaysLike<T> = Record<string, { dayKey: string; items: T[] }>;
+
+/** `null` = dagelijks herhalen (vandaag als bron); anders de resterende
+ *  dagen (vandaag inbegrepen) die elk een eigen melding op datum krijgen. */
+function datedPlanDays<T>(days: PlanDaysLike<T>, ongoing: boolean): { key: string; items: T[] }[] | null {
+  if (ongoing) return null;
+  const tk = dayKey(new Date());
+  const keys = Object.keys(days).filter((k) => k >= tk).sort();
+  if (keys.length > DATED_WINDOW) return null;
+  return keys.map((k) => ({ key: k, items: days[k].items }));
+}
+
+function dateFor(key: string, minsOfDay: number): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d, Math.floor(minsOfDay / 60) % 24, minsOfDay % 60, 0, 0);
+}
+
 /** Herinneringen voor een ACTIEF protocol (operator, 13 augustus 2026,
  *  protocol-systeem) — schedult per moment van VANDAAG's dag uit het plan
  *  (de template herhaalt zich toch identiek elke dag, zie protocol.ts, dus
@@ -298,26 +325,56 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
     try {
       await Notifications.cancelScheduledNotificationAsync(planIdFor(i, 1));
       await Notifications.cancelScheduledNotificationAsync(planIdFor(i, 2));
+      for (let d = 0; d < DATED_WINDOW; d += 1) {
+        await Notifications.cancelScheduledNotificationAsync(datedPlanIdFor(d, i));
+      }
     } catch {}
   }
   if (!plan) return;
   /* Uit in Settings → Breathwork → Plan reminders. */
   if (!getSetting('planReminders')) return;
 
+  const dated = datedPlanDays(plan.days, plan.horizon === 'ongoing');
   const today = plan.days[dayKey(new Date())];
-  if (!today || today.items.length === 0) return;
+  const jobs: { identifier: string; it: ActivePlan['days'][string]['items'][number]; trigger: Notifications.NotificationTriggerInput }[] = [];
+  if (dated) {
+    const now = Date.now();
+    dated.forEach((day, d) =>
+      day.items.forEach((it, index) => {
+        if (index >= MAX_PLAN_ITEMS) return;
+        const date = dateFor(day.key, it.reminderAt);
+        if (date.getTime() <= now) return;
+        jobs.push({
+          identifier: datedPlanIdFor(d, index),
+          it,
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
+        });
+      }),
+    );
+  } else if (today) {
+    today.items.forEach((it, index) => {
+      /* Bovengrens deelt de cancel-loop hierboven — een item erbuiten zou bij
+         de volgende sync nooit meer geannuleerd kunnen worden. */
+      if (index >= MAX_PLAN_ITEMS) return;
+      jobs.push({
+        identifier: planIdFor(index, 1),
+        it,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: Math.floor(it.reminderAt / 60) % 24,
+          minute: it.reminderAt % 60,
+        },
+      });
+    });
+  }
+  if (jobs.length === 0) return;
   if (!(await ensurePermission())) return;
   await ensureAndroidChannel();
 
-  for (const [index, it] of today.items.entries()) {
-    /* Bovengrens deelt de cancel-loop hierboven — een item erbuiten zou bij
-       de volgende sync nooit meer geannuleerd kunnen worden. */
-    if (index >= MAX_PLAN_ITEMS) break;
+  for (const { identifier, it, trigger } of jobs) {
     const st = BREATH_STATES[it.state];
     const slotDef = SLOTS.find((s) => s.slot === it.slot);
     const why = reasonForPick(it.state, plan.goals, slotDef?.label ?? it.slot);
-    const hour = Math.floor(it.reminderAt / 60) % 24;
-    const minute = it.reminderAt % 60;
 
     /* Operator, 5 okt 2026 ("regelmatig herinnering 'still time'... dat is
        storend"): EEN melding per geplande sessie. De tweede ("Still time
@@ -326,7 +383,7 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
        loop hierboven ruimt de nog ingeplande tweede meldingen op. */
     try {
       await Notifications.scheduleNotificationAsync({
-        identifier: planIdFor(index, 1),
+        identifier,
         content: {
           /* Kort, zodat hij niet wordt afgekapt (6 okt 2026). */
           title: `${titleCase(st.eyebrow)} · ${it.minutes} min`,
@@ -345,7 +402,7 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
           },
           ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+        trigger,
       });
     } catch {
       /* Eén moment dat niet lukt mag de andere niet meeslepen. */
@@ -372,31 +429,66 @@ const braceletPlanIdFor = (index: number, n: 1 | 2) => `vzc-bracelet-plan-${inde
  *  geen streak-dreiging (zie de toon-regel bovenaan dit bestand). `null`
  *  = alles opruimen. */
 export async function syncBraceletPlanReminder(
-  plan: { days: Record<string, { dayKey: string; items: { mode: number; durationMinutes: number; reminderAt: number }[] }> } | null,
+  plan: {
+    horizon?: string;
+    days: Record<string, { dayKey: string; items: { mode: number; durationMinutes: number; reminderAt: number }[] }>;
+  } | null,
 ): Promise<void> {
   for (let i = 0; i < MAX_BRACELET_SESSIONS; i += 1) {
     try {
       await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 1));
       await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 2));
+      for (let d = 0; d < DATED_WINDOW; d += 1) {
+        await Notifications.cancelScheduledNotificationAsync(datedBraceletIdFor(d, i));
+      }
     } catch {}
   }
   /* Uit in Settings → Smart Bead Bracelet → Plan reminders. */
   if (!getSetting('braceletPlanReminders')) return;
-  const today = plan?.days[dayKey(new Date())];
-  if (!today || today.items.length === 0) return;
+  if (!plan) return;
+  type BItem = { mode: number; durationMinutes: number; reminderAt: number };
+  const dated = datedPlanDays<BItem>(plan.days, plan.horizon === 'ongoing' || plan.horizon == null);
+  const today = plan.days[dayKey(new Date())];
+  const jobs: { identifier: string; item: BItem; trigger: Notifications.NotificationTriggerInput }[] = [];
+  if (dated) {
+    const now = Date.now();
+    dated.forEach((day, d) =>
+      day.items.forEach((item, index) => {
+        if (index >= MAX_BRACELET_SESSIONS) return;
+        const date = dateFor(day.key, item.reminderAt);
+        if (date.getTime() <= now) return;
+        jobs.push({
+          identifier: datedBraceletIdFor(d, index),
+          item,
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
+        });
+      }),
+    );
+  } else if (today) {
+    today.items.forEach((item, index) => {
+      if (index >= MAX_BRACELET_SESSIONS) return;
+      jobs.push({
+        identifier: braceletPlanIdFor(index, 1),
+        item,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: Math.floor(item.reminderAt / 60) % 24,
+          minute: item.reminderAt % 60,
+        },
+      });
+    });
+  }
+  if (jobs.length === 0) return;
   if (!(await ensurePermission())) return;
   await ensureAndroidChannel();
 
-  for (const [index, item] of today.items.entries()) {
-    if (index >= MAX_BRACELET_SESSIONS) break;
+  for (const { identifier, item, trigger } of jobs) {
     const meta = getModeMeta(item.mode as BraceletMode);
-    const hour = Math.floor(item.reminderAt / 60) % 24;
-    const minute = item.reminderAt % 60;
 
     /* Eén melding per sessie — zie syncPlanReminders (5 okt 2026). */
     try {
       await Notifications.scheduleNotificationAsync({
-        identifier: braceletPlanIdFor(index, 1),
+        identifier,
         content: {
           /* De melding ÍS de vraag: tikken opent meteen State Control met
              modus+duur al ingevuld. Zie `reminderRoute`/`reminderParams`. */
@@ -410,7 +502,7 @@ export async function syncBraceletPlanReminder(
           },
           ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+        trigger,
       });
     } catch {
       /* Eén sessie die niet lukt mag de andere niet meeslepen. */

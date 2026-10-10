@@ -16,7 +16,9 @@ import { claimFreeSessionParam } from '@/utils/breath-entry';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { calculateStreak, useBreathHistory, useBreathTotals } from '@/utils/breath-history';
 import { dayKey } from '@/utils/bracelet-history';
-import { saveActivePlan, useActivePlan, type PlanDay } from '@/utils/plan-store';
+import { clearActivePlan, saveActivePlan, useActivePlan, type PlanDay } from '@/utils/plan-store';
+import ConfirmCard from '@/components/ConfirmCard';
+import { goToTab } from '@/utils/state-control-ui';
 import { syncPlanReminders } from '@/services/reminders';
 import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
@@ -548,6 +550,7 @@ export default function AgendaScreen() {
      bestaat er al een `plan`, dan is onboarding sowieso voorbij — de
      `onboarding`-tak (die WEL zinvol is tijdens de allereerste, nog-geen-
      protocol onboarding) komt dus na de `plan`-check, niet ervoor. */
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const goHome = () =>
     fromBreathWelcome && !plan
       ? router.navigate({
@@ -921,7 +924,38 @@ export default function AgendaScreen() {
             </AnimatedPressable>
           )}
         </Animated.View>
+        {/* Audit 10 okt 2026 (operator: "akkoord"): een plan kon je enkel
+            vervangen, nooit stoppen. Klein en onderaan — geen hoofdactie. */}
+        {plan && (
+          <Pressable
+            onPress={() => {
+              hapticTap();
+              setConfirmRemove(true);
+            }}
+            hitSlop={10}
+            style={s.removePlanBtn}
+            accessibilityRole="button"
+          >
+            <Text style={s.removePlanTxt}>Remove plan</Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      <ConfirmCard
+        visible={confirmRemove}
+        title="Remove your plan?"
+        body="Your daily sessions and their reminders stop. Your history stays."
+        confirmLabel="Remove plan"
+        destructive
+        onCancel={() => setConfirmRemove(false)}
+        onConfirm={async () => {
+          setConfirmRemove(false);
+          await clearActivePlan();
+          await syncPlanReminders(null);
+          if (router.canGoBack()) router.back();
+          else goToTab('/breath');
+        }}
+      />
 
       {/* ── Duur-kiezer ── zelfde patroon als plan.tsx/plan-review.tsx. */}
       {/* Operator, 8 okt 2026 ("popup is niet glaslook"): echt glas-onderblad. */}
@@ -1066,6 +1100,8 @@ const s = StyleSheet.create({
   },
   scroll: { paddingHorizontal: 16 },
 
+  removePlanBtn: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },
+  removePlanTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: Brand.error },
   bottomActions: {
     flexDirection: 'row',
     justifyContent: 'center',

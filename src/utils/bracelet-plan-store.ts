@@ -27,6 +27,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
+import { rollDaysForward } from '@/utils/plan-roll';
 import { subscribeUserBucket } from '@/utils/user-bucket';
 import { resolveActiveBucket, dayKey } from '@/utils/bracelet-history';
 
@@ -155,6 +157,7 @@ async function load(): Promise<void> {
       /* corrupt → geen actief plan */
     }
     initialized = true;
+    await rollForwardIfOngoing(false);
     notify();
   })();
   return loadPromise;
@@ -242,8 +245,23 @@ export function useActiveBraceletPlan(): {
   return { plan, loaded };
 }
 
+/** Audit 10 okt 2026: een 'ongoing'-plan altijd 30 dagen vooruit gevuld
+ *  houden (bij laden en telkens de app weer naar voren komt). */
+async function rollForwardIfOngoing(withNotify = true): Promise<void> {
+  if (!state || state.horizon !== 'ongoing') return;
+  const days = rollDaysForward(state.days);
+  if (!days) return;
+  state = { ...state, days } as BraceletActivePlan;
+  if (withNotify) notify();
+  await persist();
+}
+
 /* Auto-load zodra dit bestand geïmporteerd wordt. */
 load();
+
+AppState.addEventListener('change', (s) => {
+  if (s === 'active' && initialized) rollForwardIfOngoing().catch(() => {});
+});
 
 /* Operator, 8 okt 2026 ("na opnieuw opstarten in premium maar geschiedenis
    is leeg"): `reloadActiveBraceletPlan` werd nergens aangeroepen — na in-/uitloggen (of een

@@ -54,6 +54,7 @@ import { syncBraceletPlanReminder, MAX_BRACELET_SESSIONS } from '@/services/remi
 import { DurationRing, DurationWheel } from '@/components/DurationRingPicker';
 import {
   buildBraceletPlanFromTemplate,
+  dayKey,
   saveActiveBraceletPlan,
   useActiveBraceletPlan,
   rangesOverlap,
@@ -292,7 +293,10 @@ export default function BraceletSetDayScreen() {
   const fromOnboarding = onboarding === '1';
   const { plan: existingPlan } = useActiveBraceletPlan();
   const [sessions, setSessions] = useState<DraftSession[]>(() => {
-    const today = existingPlan?.days[existingPlan.startDayKey];
+    /* Audit 10 okt 2026: de planning van VANDAAG (daar staan de laatste
+       aanpassingen), niet de eerste dag van het plan. */
+    const today =
+      existingPlan?.days[dayKey(new Date())] ?? existingPlan?.days[existingPlan.startDayKey];
     return (
       today?.items.map((it) => ({
         mode: it.mode as BraceletMode,
@@ -423,7 +427,16 @@ export default function BraceletSetDayScreen() {
       durationMinutes: s.durationMinutes,
       reminderAt: s.timeAt,
     }));
-    const plan = buildBraceletPlanFromTemplate(horizon, new Date(), template);
+    const built = buildBraceletPlanFromTemplate(horizon, new Date(), template);
+    /* Audit 10 okt 2026: voorbije dagen van het vorige plan blijven staan
+       (de agenda toont wat je toen deed); vanaf vandaag de nieuwe planning. */
+    const tk = dayKey(new Date());
+    const past = existingPlan
+      ? Object.fromEntries(Object.entries(existingPlan.days).filter(([k]) => k < tk))
+      : {};
+    const plan = existingPlan
+      ? { ...built, startDayKey: existingPlan.startDayKey < tk ? existingPlan.startDayKey : built.startDayKey, days: { ...past, ...built.days } }
+      : built;
     await saveActiveBraceletPlan(plan);
     await syncBraceletPlanReminder(plan);
     /* Operator, 29 september 2026 ("na connect, soort onboarding"): pas
