@@ -360,7 +360,7 @@ export default function PlayerScreen() {
     const url = 'https://www.vibezcore.com/app';
     const pitch =
       "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
-      'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
+      'Launching Early 2027 — Smart Bead Bracelet for instant state control.';
     try {
       await Share.share({
         title: 'VIBEZCORE',

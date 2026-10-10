@@ -2864,7 +2864,7 @@ function AudioScreen({
                                   const url = 'https://www.vibezcore.com/app';
                                   const pitch =
                                     "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
-                                    'Launching Fall 2026 — Smart Bead Bracelet for instant state control.';
+                                    'Launching Early 2027 — Smart Bead Bracelet for instant state control.';
                                   Share.share({
                                     title: 'VIBEZCORE',
                                     message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to free full sessions: ${url}`,
@@ -3557,11 +3557,11 @@ function AudioScreen({
             style={({ pressed }) => [s.braceletCard, pressed && { opacity: 0.85 }]}
             onPress={() => void openBraceletWebsite()}
             accessibilityRole="button"
-            accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
+            accessibilityLabel="Smart Bead Bracelet, launching early 2027"
           >
             {/* Operator, 7 okt 2026: duidelijk apart blok — label boven de
                 foto, links; alles in een eigen kader met afgeronde hoeken. */}
-            <Text style={s.braceletCardEyebrow}>LAUNCHING FALL 2026</Text>
+            <Text style={s.braceletCardEyebrow}>LAUNCHING EARLY 2027</Text>
             <Image
               /* Productfoto (bracelet op zwart, zelfde als de bracelet-
                  pagina): staat gecentreerd, dus past in elke uitsnede. */

@@ -87,8 +87,9 @@ Cross-platform (iOS + Android), React Native + Expo (SDK 55, Expo Router, dev
 build — geen Expo Go). Twee gelijkwaardige productkernen:
 - **Audio-bibliotheek** — gestructureerde psychologische audiosessies.
 - **Smart Bead Bracelet** — haptisch hardware-product (nRF52832 + DRV2605L),
-  Kickstarter Fall 2026 (operator-update 2026-07-14: sep-datum gedropt,
-  geen concrete datum meer — communicatie: "Launching Fall 2026").
+  Kickstarter Early 2027 (GEWIJZIGD 10 okt 2026, operator: "de bracelet
+  zal niet Fall zijn maar Early 2027" — communicatie: "Launching Early 2027";
+  vervangt "Launching Fall 2026" van 2026-07-14).
 
 "Audio first" = audio is *eerder verkoopbaar* (backend + content bestaan al),
 NIET belangrijker. Beide zijn kern.
@@ -107,7 +108,7 @@ betrekken is mijn plan helemaal veranderd"):**
 - **Edelstenen = natuur, vakmanschap, schoonheid, persoonlijke betekenis —
   NOOIT helende, kalmerende of energetische krachten** (operator: "wij koppelen
   dat niet aan genezende krachten"). Het effect komt van het ritme.
-- Bracelet nog niet gelanceerd ("Launching Fall 2026"); in de app bereikbaar als
+- Bracelet nog niet gelanceerd ("Launching Early 2027"); in de app bereikbaar als
   upgrade, geen eigen tab.
 
 ### Gast-first principe (welkomstscherm, GEEN poort)

@@ -75,7 +75,7 @@ export const FAQ_ITEMS: FaqItem[] = [
        Growth. */
     answer:
       "VIBEZCORE is a platform for state control and personal growth. It combines three instruments:\n\n" +
-      "**Smart Bead Bracelet — Instant State Control.** Precision haptics at the wrist change your physiological state within minutes — calm, focus, energy or sleep, on demand. Coming Fall 2026 on Kickstarter.\n\n" +
+      "**Smart Bead Bracelet — Instant State Control.** Precision haptics at the wrist change your physiological state within minutes — calm, focus, energy or sleep, on demand. Coming early 2027 on Kickstarter.\n\n" +
       "**Guided Breathwork — Active State Training.** Learn to consciously steer your state through your breath — regulating stress, raising focus, activating energy, or creating relaxation. Available now.\n\n" +
       "**Audio Library — Long-Term Growth.** Develop new mental models, habits and behavioural patterns that compound over time. Included with Breathwork.\n\n" +
       "VIBEZCORE helps people not only feel better, but also perform better and continue developing over time.",
@@ -104,7 +104,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'What components are part of the VIBEZCORE system?',
     answer:
       "VIBEZCORE consists of three distinct instruments — each addressing a different dimension of how you operate.\n\n" +
-      "**1. Instant State Control — Smart Bead Bracelet** (Kickstarter, launching Fall 2026)\nOne HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. A standalone instrument for passive, bottom-up state regulation: precision pulses at the wrist shift you into calm, focus, energy or sleep on demand, no screen or effort needed. For breathwork, that's a selling point on its own: a pre-set, structured session is carried entirely through the HapticCore's haptic pulses on your wrist, private and undetectable, anywhere you are.\n\n" +
+      "**1. Instant State Control — Smart Bead Bracelet** (Kickstarter, launching early 2027)\nOne HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. A standalone instrument for passive, bottom-up state regulation: precision pulses at the wrist shift you into calm, focus, energy or sleep on demand, no screen or effort needed. For breathwork, that's a selling point on its own: a pre-set, structured session is carried entirely through the HapticCore's haptic pulses on your wrist, private and undetectable, anywhere you are.\n\n" +
       "**2. Active State Training — Guided Breathwork**\nFive guided breathing states meet you in the moment — energy, focus, calm, clarity, rest — with voice, visuals and haptics carrying every breath. Available now, with the full Audio Library included.\n\n" +
       "**3. Long-Term Growth — Audio Library**\nA structured library built on neuroscience, psychology and philosophy: not motivation, understanding. Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound — improving emotional regulation, sharpening decisions, and giving you the clarity to guide your own evolution.\n\n" +
       "The body influences the mind: signals from your nervous system shape attention, emotion and decisions before cognition engages. The bracelet works with that biology — a direct route to inner state, bottom-up by design.\n\n" +
@@ -118,9 +118,9 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Can I purchase the bracelet and breathwork/audio separately?',
     answer:
       "Yes. The bracelet and the Breathwork + Audio Library subscription are independent instruments — each with its own purpose. Neither requires the other to work.\n\n" +
-      "**Bracelet only** — a standalone instant state control instrument for daily use. Calm, focus, energy or sleep on demand, without needing breathwork or audio. Reserve it now on Kickstarter, launching Fall 2026.\n\n" +
+      "**Bracelet only** — a standalone instant state control instrument for daily use. Calm, focus, energy or sleep on demand, without needing breathwork or audio. Reserve it now on Kickstarter, launching early 2027.\n\n" +
       "**Breathwork + Audio Library only** — active state training through guided breathing sessions, plus the full session library for long-term growth, through a single membership available today. No bracelet needed.\n\n" +
-      "**Both** — they were designed as separate tools, but they complement each other naturally, and Fall 2026 they'll pair directly: on top of its own standalone regulation, the bracelet will also carry your breathwork guidance onto your wrist. Use them however fits you.",
+      "**Both** — they were designed as separate tools, but they complement each other naturally, and from early 2027 they'll pair directly: on top of its own standalone regulation, the bracelet will also carry your breathwork guidance onto your wrist. Use them however fits you.",
   },
   {
     /* Herschreven (operator, finale Engelse essentie-tekst, letterlijk
@@ -139,7 +139,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'What makes VIBEZCORE different from other self-improvement platforms?',
     answer:
       "Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on three levels at once — instant, active, and long-term.\n\n" +
-      "**Instant State Control** — the Smart Bead Bracelet (Kickstarter, launching Fall 2026), the first of its kind: one HapticCore built into a bracelet of premium natural gemstone beads, jewelry first, technology second. A standalone instrument that regulates your state in real time through bottom-up neural pathways — under pressure, in high-stakes situations, when clarity drops, your body is guided back to control automatically, no meditation or conscious effort required. For breathwork, it's a selling point on its own: a pre-set session carried through the HapticCore's haptic pulses on your wrist, private and unnoticed, wherever you are.\n\n" +
+      "**Instant State Control** — the Smart Bead Bracelet (Kickstarter, launching early 2027), the first of its kind: one HapticCore built into a bracelet of premium natural gemstone beads, jewelry first, technology second. A standalone instrument that regulates your state in real time through bottom-up neural pathways — under pressure, in high-stakes situations, when clarity drops, your body is guided back to control automatically, no meditation or conscious effort required. For breathwork, it's a selling point on its own: a pre-set session carried through the HapticCore's haptic pulses on your wrist, private and unnoticed, wherever you are.\n\n" +
       "**Active State Training** — guided breathwork meets you in the moment, all 35 sessions across five states for whatever you're facing, right now, with voice, visuals and haptics carrying every breath.\n\n" +
       "**Long-Term Growth** — the Audio Library reshapes how you think, feel, and respond over time through ideas drawn from psychology, philosophy and behavioural science. Building cognitive frameworks, self-awareness, and reflective thinking that compounds — session after session.\n\n" +
       "Three instruments. One direction: growth, success, and freedom.",
@@ -173,7 +173,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'breathwork',
     question: 'Can I practice breathwork without sound?',
     answer:
-      "Yes. During a session you can switch between Voice (spoken guidance), Haptics (phone vibration cues), and Silent (visuals only) — whatever fits where you are. Coming Fall 2026: the Smart Bead Bracelet will let you keep the haptic guidance going with your phone away entirely, no screen or sound needed.",
+      "Yes. During a session you can switch between Voice (spoken guidance), Haptics (phone vibration cues), and Silent (visuals only) — whatever fits where you are. Coming early 2027: the Smart Bead Bracelet will let you keep the haptic guidance going with your phone away entirely, no screen or sound needed.",
   },
   {
     /* Nieuw (operator, 15 augustus 2026: "extra info als aparte support
@@ -195,7 +195,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'breathwork',
     question: 'Do I need the Smart Bead Bracelet to practice breathwork?',
     answer:
-      "No. Every guided breathwork session runs fully on your phone today, with voice, visuals and phone haptics — the bracelet isn't required. Coming Fall 2026, the bracelet adds an exclusive way to stay with your breath: a pre-set, structured session — the same guided states from the app — carried entirely through haptic pulses on your wrist, worn like jewelry, no screen needed.",
+      "No. Every guided breathwork session runs fully on your phone today, with voice, visuals and phone haptics — the bracelet isn't required. Coming early 2027, the bracelet adds an exclusive way to stay with your breath: a pre-set, structured session — the same guided states from the app — carried entirely through haptic pulses on your wrist, worn like jewelry, no screen needed.",
   },
   {
     /* Herschreven (operator, 11 augustus 2026, derde correctie: "de bead

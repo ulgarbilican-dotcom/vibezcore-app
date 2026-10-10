@@ -146,7 +146,7 @@ const APP_LINK_URL = 'https://www.vibezcore.com/app';
    wat een genodigde werkelijk krijgt. */
 const BRAND_PITCH =
   'Control Your Body. Direct Your Mind. Become The Architect Of Your Life.\n\n' +
-  'VIBEZCORE combines guided breathwork, premium audio sessions, and the upcoming Smart Bead Bracelet (Fall 2026) to help you feel calmer, think clearer, perform better, and grow with intention.';
+  'VIBEZCORE combines guided breathwork, premium audio sessions, and the upcoming Smart Bead Bracelet (early 2027) to help you feel calmer, think clearer, perform better, and grow with intention.';
 const INVITE_MESSAGE = `${BRAND_PITCH}\n\nStart your 7-day free trial:\n${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
@@ -554,7 +554,7 @@ function ProductsGroup() {
         <Row
           icon={BraceletIcon}
           title="Smart Bead Bracelet"
-          subtitle="Launching Fall 2026"
+          subtitle="Launching Early 2027"
           onPress={() => void openBraceletWebsite()}
         />
       </Group>
@@ -577,7 +577,7 @@ function ProductsGroup() {
         <Row
           icon={BraceletIcon}
           title="Smart Bead Bracelet"
-          subtitle="Launching Fall 2026"
+          subtitle="Launching Early 2027"
           onPress={() => void openBraceletWebsite()}
         />
       </Group>
@@ -595,7 +595,7 @@ function ProductsGroup() {
       <Row
         icon={BraceletIcon}
         title="Smart Bead Bracelet"
-        subtitle="Launching Fall 2026"
+        subtitle="Launching Early 2027"
         onPress={() => void openBraceletWebsite()}
       />
     </Group>

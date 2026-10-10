@@ -241,10 +241,10 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
           hitSlop={10}
           style={({ pressed }) => [s.braceletLink, pressed && { opacity: 0.6 }]}
           accessibilityRole="link"
-          accessibilityLabel="Smart Bead Bracelet, launching Fall 2026"
+          accessibilityLabel="Smart Bead Bracelet, launching early 2027"
         >
           <Text style={s.braceletLinkTxt}>
-            Fall 2026 · <Text style={s.braceletLinkStrong}>Smart Bead Bracelet ›</Text>
+            Early 2027 · <Text style={s.braceletLinkStrong}>Smart Bead Bracelet ›</Text>
           </Text>
         </Pressable>
       </View>

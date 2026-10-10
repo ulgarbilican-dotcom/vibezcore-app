@@ -4042,7 +4042,7 @@ export function BreathSession() {
                     void showVibezAlert({
                       title: 'Smart Bead Bracelet',
                       message:
-                        'Feel your session through your wrist. This channel activates once your bracelet arrives (Fall 2026) — preview how it works, or stay focused here.',
+                        'Feel your session through your wrist. This channel activates once your bracelet arrives (early 2027) — preview how it works, or stay focused here.',
                       light,
                       buttons: [
                         { text: 'Stay here', style: 'cancel' },
@@ -4061,7 +4061,7 @@ export function BreathSession() {
                   style={[s.avBraceletBadge, pressBraceletBadge.style]}
                 >
                   <Gem size={13} color={light ? '#9C7A1C' : '#E0B341'} strokeWidth={2.2} />
-                  <Text style={s.avBraceletBadgeTxt}>Fall 2026</Text>
+                  <Text style={s.avBraceletBadgeTxt}>Early 2027</Text>
                 </AnimatedPressable>
               )}
             </View>

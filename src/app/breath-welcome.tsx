@@ -2012,7 +2012,7 @@ function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
         />
       )}
       <View style={s.braceletTeaserBadge}>
-        <Text style={s.braceletTeaserBadgeTxt}>Launching Fall 2026</Text>
+        <Text style={s.braceletTeaserBadgeTxt}>Launching Early 2027</Text>
       </View>
     </Pressable>
   );

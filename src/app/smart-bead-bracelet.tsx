@@ -1184,7 +1184,7 @@ export default function SmartBeadBraceletScreen() {
               ]}
             >
               <ReAnimated.Text style={[s.introEyebrow, introEyebrowStyle]}>
-                KICKSTARTER · FALL 2026
+                KICKSTARTER · EARLY 2027
               </ReAnimated.Text>
               <ReAnimated.Text style={[s.introTitle, introTitleStyle]}>
                 Smart Bead Bracelet
@@ -1332,7 +1332,7 @@ export default function SmartBeadBraceletScreen() {
             ]}
           >
             <ReAnimated.Text style={[s.introEyebrow, introEyebrowStyle]}>
-              KICKSTARTER · FALL 2026
+              KICKSTARTER · EARLY 2027
             </ReAnimated.Text>
             <ReAnimated.Text style={[s.introTitle, introTitleStyle]}>
               Smart Bead Bracelet
@@ -1431,7 +1431,7 @@ export default function SmartBeadBraceletScreen() {
                heroBottomGroup: nog maar 1 actie daar. */}
             {/* Operator, 7 okt 2026 ("maar 1 CTA"): de eyebrow is weer
                gewone tekst — de enige actie is de knop onderaan. */}
-            <Text style={s.heroEyebrowTop}>LAUNCHING · FALL 2026</Text>
+            <Text style={s.heroEyebrowTop}>LAUNCHING · EARLY 2027</Text>
             <Text style={s.heroTitleTop}>Smart Bead Bracelet</Text>
             <Text style={s.heroSubTop}>Instant State Control</Text>
           </ReAnimated.View>

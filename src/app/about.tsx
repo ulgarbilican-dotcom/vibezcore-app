@@ -130,7 +130,7 @@ export default function AboutScreen() {
             hieronder, één keer, niet twee blokken na elkaar. */}
         <ProductCard
           status="upcoming"
-          badge="KICKSTARTER · FALL 2026"
+          badge="KICKSTARTER · EARLY 2027"
           tag="Standalone bottom-up state regulation"
           title="Smart Bead Bracelet"
           desc="One HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. Calm, focus or recovery on demand. And for breathwork, a selling point on its own: a pre-set, structured session carried entirely through haptic pulses on your wrist, no screen needed."
