@@ -177,51 +177,11 @@ export default function ActivityScreen() {
            (zie de component hieronder). Alle maten (rowLarge/groupLabel/
            scroll-padding) zijn tegelijk verkleind zodat 2 groepslabels +
            6 kaarten + header zonder scrollen passen. */}
-        <Text style={s.groupLabel}>BREATHWORK</Text>
-        <View>
-          {/* Operator, 3 okt 2026 ("your daily plan breathwork en bracelet
-             als eerste telkens"): "Your daily plan" verhuisd naar de
-             eerste plek in deze groep (stond voorheen na "Set your
-             goal") — zelfde herschikking hieronder bij BRACELET. */}
-          <Row
-            large
-            Icon={CalendarDays}
-            title="Your daily plan"
-            flashKey={flashFor('breathPlan')}
-            onPress={() => open('breathPlan', '/agenda')}
-          />
-          <Row
-            large
-            Icon={protocolLocked ? Lock : Target}
-            title="Set your goal"
-            flashKey={flashFor('breathGoal')}
-            onPress={() => open('breathGoal', '/build-choice')}
-          />
-          {/* Operator, 29 september 2026 ("hoe kan gebruiker in 1 oogopslag
-             checken wat hij wil, nu onduidelijk wat breathwork en bracelet
-             is"): de eerdere samengevoegde "Activity"-kaart (breathwork +
-             bracelet in 1 regel) ging in tegen het uitgangspunt bovenaan
-             dit bestand — "ze staan onder elkaar, niet door elkaar... zet
-             je die twee samen, dan suggereer je groei waar alleen
-             consumptie is." Terug naar 2 losse kaarten, elk met eigen
-             icoon en bestemming — dat IS het "in 1 oogopslag"-onderscheid. */}
-          <Row
-            large
-            Icon={Wind}
-            title="Breathwork activity"
-            sub={
-              weekBreathSessions > 0
-                ? `${weekBreathSessions} session${weekBreathSessions === 1 ? '' : 's'} this week`
-                : 'View your session history'
-            }
-            flashKey={flashFor('breathHistory')}
-            onPress={() => open('breathHistory', '/breath-history')}
-          />
-        </View>
-
         {/* Operator, 5 okt 2026: State Control werkt ook zonder armband —
            sectie en kaart heten zoals de tab. */}
-        <Text style={[s.groupLabel, { marginTop: 16 }]}>STATE CONTROL</Text>
+        {/* Operator, 10 okt 2026: zelfde volgorde als de tabbalk — State
+            Control eerst, dan Breathwork. */}
+        <Text style={s.groupLabel}>STATE CONTROL</Text>
         <View>
           {/* Operator, 29 september 2026 ("uw set your goal (bracelet) is
              eigenlijk niets momenteel, had evengoed go to bracelet kunnen
@@ -271,6 +231,48 @@ export default function ActivityScreen() {
           />
           {/* Rusthartslag staat sinds 9 okt 2026 enkel nog op State Control
               (label bovenaan) en Profile → Resting Heart Rate. */}
+        </View>
+
+        <Text style={[s.groupLabel, { marginTop: 16 }]}>BREATHWORK</Text>
+        <View>
+          {/* Operator, 3 okt 2026 ("your daily plan breathwork en bracelet
+             als eerste telkens"): "Your daily plan" verhuisd naar de
+             eerste plek in deze groep (stond voorheen na "Set your
+             goal") — zelfde herschikking hieronder bij BRACELET. */}
+          <Row
+            large
+            Icon={CalendarDays}
+            title="Your daily plan"
+            flashKey={flashFor('breathPlan')}
+            onPress={() => open('breathPlan', '/agenda')}
+          />
+          <Row
+            large
+            Icon={protocolLocked ? Lock : Target}
+            title="Set your goal"
+            flashKey={flashFor('breathGoal')}
+            onPress={() => open('breathGoal', '/build-choice')}
+          />
+          {/* Operator, 29 september 2026 ("hoe kan gebruiker in 1 oogopslag
+             checken wat hij wil, nu onduidelijk wat breathwork en bracelet
+             is"): de eerdere samengevoegde "Activity"-kaart (breathwork +
+             bracelet in 1 regel) ging in tegen het uitgangspunt bovenaan
+             dit bestand — "ze staan onder elkaar, niet door elkaar... zet
+             je die twee samen, dan suggereer je groei waar alleen
+             consumptie is." Terug naar 2 losse kaarten, elk met eigen
+             icoon en bestemming — dat IS het "in 1 oogopslag"-onderscheid. */}
+          <Row
+            large
+            Icon={Wind}
+            title="Breathwork activity"
+            sub={
+              weekBreathSessions > 0
+                ? `${weekBreathSessions} session${weekBreathSessions === 1 ? '' : 's'} this week`
+                : 'View your session history'
+            }
+            flashKey={flashFor('breathHistory')}
+            onPress={() => open('breathHistory', '/breath-history')}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -73,6 +73,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 10 okt 2026: PulseMeter in drie lagen — ring, hartlijn, hart (donkere onderlaag onder het glazen hart) (test 98).
 
+- 10 okt 2026 avond: volledige flowtest breathwork + State Control op de A16 (test 109). Gefixt: done/partial-regel (utils/plan-status.ts), Engelse datums, intro reset enkel bij tabwissel, opslaan plan → agenda, geminimaliseerde sessie toont eigen modus, 'No more sessions today', Activity State Control eerst. Open voor operator: mini-pill over paginatitel, gekleurde tekst in Your protocol/sessietitel, rusthartslag pas bewaard na witte knop, add-session-ring oude stijl, bracelet-actieblad zonder Missed/Edit duration, weekgrafiek start zondag.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
