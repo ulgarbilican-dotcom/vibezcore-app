@@ -81,29 +81,20 @@ function recentReadings(s: Stored): Reading[] {
   return s.readings.filter((r) => r.at >= since);
 }
 
+/* Operator, 10 okt 2026 ("in Resting Heart Rate moet staan wat ingesteld
+   is, niet de laagste gemeten — altijd de laatste meting die de gebruiker
+   deed, en die geldt voor alle sessies"): de NIEUWSTE bewaarde waarde wint,
+   gemeten of zelf ingevuld. Vervangt de regel "we houden je rustigste
+   meting" (8 okt 2026). */
 function resolve(s: Stored): RestingPulse {
-  const recent = recentReadings(s);
-  const latestReading = recent.reduce<Reading | null>((a, r) => (!a || r.at > a.at ? r : a), null);
-  /* Zelf ingevuld wint, tenzij er daarna gemeten werd. */
-  /* Audit 8 okt 2026: zelf ingevuld wint als het het nieuwste is, ÓF als
-     het lager ligt dan elke latere meting — één camerameting na het
-     wandelen mag een lagere, zelf ingevulde rusthartslag niet overschrijven
-     ("we keep your calmest reading"). */
-  const lowestRecent = recent.length ? Math.min(...recent.map((r) => r.bpm)) : Infinity;
-  if (
-    s.manual &&
-    !s.average &&
-    (!latestReading || s.manual.at >= latestReading.at || s.manual.bpm <= lowestRecent)
-  ) {
-    return withLive({ bpm: s.manual.bpm, source: 'manual', at: s.manual.at, decided: s.decided });
-  }
-  if (recent.length && !s.average) {
-    /* De laagste, tenzij die een uitschieter is: meer dan 8 bpm onder de
-       op één na laagste → die tweede telt (één foute meting mag het ritme
-       niet twee maanden te laag zetten). */
-    const sorted = [...recent].sort((a, b) => a.bpm - b.bpm);
-    const lowest = sorted.length > 1 && sorted[1].bpm - sorted[0].bpm > 8 ? sorted[1] : sorted[0];
-    return withLive({ bpm: lowest.bpm, source: 'measured', at: latestReading?.at ?? lowest.at, decided: s.decided });
+  if (!s.average) {
+    const latestReading = s.readings.reduce<Reading | null>((a, r) => (!a || r.at > a.at ? r : a), null);
+    if (s.manual && (!latestReading || s.manual.at >= latestReading.at)) {
+      return withLive({ bpm: s.manual.bpm, source: 'manual', at: s.manual.at, decided: s.decided });
+    }
+    if (latestReading) {
+      return withLive({ bpm: latestReading.bpm, source: 'measured', at: latestReading.at, decided: s.decided });
+    }
   }
   return withLive({ bpm: AVERAGE_RESTING_BPM, source: 'average', at: null, decided: s.decided });
 }

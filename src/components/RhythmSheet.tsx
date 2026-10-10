@@ -157,10 +157,9 @@ export default function RhythmSheet({
     setSavedBelow(below);
     setSavedBpm(justMeasured);
   };
-  const continueAfterSave = () => {
-    if (savedBelow) setStep('result');
-    else onDone();
-  };
+  /* De nieuwste meting is je rusthartslag (10 okt 2026) — geen tussenstap
+     "lager dan voorheen" meer. */
+  const continueAfterSave = () => onDone();
   /* Sluiten met een meting die nog niet bewaard is: eerst vragen, anders
      ging ze stil verloren (test 10 okt 2026: 97 bpm nooit opgeslagen). */
   const [confirmUnsaved, setConfirmUnsaved] = useState(false);

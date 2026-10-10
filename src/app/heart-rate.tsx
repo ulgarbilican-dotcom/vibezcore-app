@@ -49,8 +49,6 @@ export default function HeartRateScreen() {
       : pulse.source === 'manual'
         ? `Entered by you${inUse ? ` · ${fmtWhen(inUse.at)}` : ''}`
         : `Measured${inUse ? ` · ${fmtWhen(inUse.at)}` : ''}`;
-  /* Meerdere metingen: zeggen waarom niet de laatste telt. */
-  const measuredCount = history.filter((e) => e.kind === 'measured').length;
 
   return (
     <SafeAreaView style={s.root} edges={['bottom']}>
@@ -75,9 +73,6 @@ export default function HeartRateScreen() {
             <Text style={s.unit}> bpm</Text>
           </Text>
           <Text style={s.source}>{source}</Text>
-          {pulse.source === 'measured' && measuredCount > 1 ? (
-            <Text style={s.why}>Your calmest recent measurement</Text>
-          ) : null}
           {pulse.liveBpm !== null ? (
             <Text style={s.live}>Next session starts at {pulse.liveBpm} bpm</Text>
           ) : null}

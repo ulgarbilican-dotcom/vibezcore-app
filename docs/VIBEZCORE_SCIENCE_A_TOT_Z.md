@@ -229,10 +229,12 @@ hart" het best onderbouwd. De sporter-grens is een randgeval.
 | Horloge | Apple Health / Health Connect rusthartslag | ⏳ fase 3 |
 
 **Regels (⚪):**
-- **R = de laagste meting van de laatste 60 dagen.** Rust is per
-  definitie je laagste waarde; een meting na de trap verpest niets.
-- **Uitschieter:** één meting > 8 bpm onder de op één na laagste telt
-  pas na een tweede, bevestigende meting.
+- **R = de laatst bewaarde waarde** (gemeten of zelf ingevuld) — GEWIJZIGD
+  10 okt 2026, operator: "altijd de laatste meting die de gebruiker deed,
+  en die geldt voor alle sessies". Vervangt "de laagste meting van de
+  laatste 60 dagen" en de uitschieterregel: wat de gebruiker bewaart, is
+  wat hij ziet en wat de sessies gebruiken. Een meting na de trap
+  bewaar je dus best niet (91–100: zachte hint, > 100: niet als rust).
 - **> 100 bpm** = geen rustwaarde: niet bewaard, "Sit still for a
   minute, then try again".
 - **Zelf ingevuld** geldt tot er opnieuw gemeten wordt.
