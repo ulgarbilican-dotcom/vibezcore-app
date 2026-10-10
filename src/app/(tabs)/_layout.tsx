@@ -29,7 +29,7 @@ import { BraceletMiniIndicator } from '@/components/BraceletMiniIndicator';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { PremiumPill } from '@/components/PremiumPill';
 import { AUDIO_ENABLED } from '@/constants/features';
-import { BrandFonts } from '@/constants/theme';
+import { BrandFonts, AudioAccent } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
 import {
   isActiveSessionVisible,
@@ -44,12 +44,14 @@ import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { router, Tabs, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ChartNoAxesColumn,
-  CircleUserRound,
-  BookAudio,
+  AudioLines,
+  ChartNoAxesColumnIncreasing,
+  Radio,
+  User,
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -149,15 +151,19 @@ function TabButton({
 const TAB_ACTIVE_COLOR = '#1D1D1F';
 const TAB_INACTIVE_COLOR = '#8E8E93';
 
+/* Operator, 10 okt 2026 ("gebruik deze iconen voor de tabbladen" —
+   website-sectie "Three tools. One system."): elk icoon in een dunne
+   cirkel, zelfde familie als de website. Het geselecteerde tabblad krijgt
+   een Bio-Teal icoon ("aangeduide tab mag in Bio-Teal"). */
+const TAB_GLYPH = 23;
 function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) {
+  const color = focused ? AudioAccent : TAB_INACTIVE_COLOR;
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      {/* Operator ("iconen mogen kleiner"): 22 → 19. */}
-      <Icon
-        size={19}
-        color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR}
-        strokeWidth={2}
-      />
+    <View style={{ width: TAB_GLYPH, height: TAB_GLYPH, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={TAB_GLYPH} height={TAB_GLYPH} style={StyleSheet.absoluteFill}>
+        <Circle cx={TAB_GLYPH / 2} cy={TAB_GLYPH / 2} r={TAB_GLYPH / 2 - 0.9} stroke={color} strokeWidth={1.6} fill="none" />
+      </Svg>
+      <Icon size={12.5} color={color} strokeWidth={2.2} />
     </View>
   );
 }
@@ -351,7 +357,7 @@ export default function TabLayout() {
               ? {
                   title: 'Audio Library',
                   tabBarIcon: ({ focused }: { focused: boolean }) => (
-                    <TabGlyph Icon={BookAudio} focused={focused} />
+                    <TabGlyph Icon={AudioLines} focused={focused} />
                   ),
                   tabBarLabel: ({ focused }: { focused: boolean }) => (
                     <TabLabel label="Library" focused={focused} />
@@ -369,7 +375,7 @@ export default function TabLayout() {
                — "State Control" beschrijft die functie beter dan "Bracelet". */
             title: 'State Control',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph Icon={BraceletIcon} focused={focused} />
+              <TabGlyph Icon={Radio} focused={focused} />
             ),
             tabBarLabel: ({ focused }: { focused: boolean }) => (
               <TabLabel label="State Control" focused={focused} />
@@ -391,7 +397,7 @@ export default function TabLayout() {
           options={{
             title: 'Activity',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph Icon={ChartNoAxesColumn} focused={focused} />
+              <TabGlyph Icon={ChartNoAxesColumnIncreasing} focused={focused} />
             ),
             tabBarLabel: ({ focused }: { focused: boolean }) => (
               <TabLabel label="Activity" focused={focused} />
@@ -404,7 +410,7 @@ export default function TabLayout() {
           options={{
             title: 'Account',
             tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph Icon={CircleUserRound} focused={focused} />
+              <TabGlyph Icon={User} focused={focused} />
             ),
             tabBarLabel: ({ focused }: { focused: boolean }) => (
               <TabLabel label="Profile" focused={focused} />
