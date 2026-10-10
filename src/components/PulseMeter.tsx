@@ -976,7 +976,15 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   return (
     <View style={s.wrap}>
       {/* Live hartslag in grote cijfers boven de meting (zoals Apple). */}
+      {/* Operator, 10 okt 2026: het getal exact gecentreerd boven de cirkel
+          ("bpm niet meetellen bij centreren") en groter; "bpm" hangt er los
+          rechts naast, op dezelfde basislijn. */}
       <View style={s.liveRow} accessibilityLiveRegion="polite">
+        {/* Onzichtbare tegenhanger links, even breed als "bpm" rechts: zo
+            staat het getal exact in het midden en blijft "bpm" zichtbaar. */}
+        <Text style={[s.liveUnit, { opacity: 0 }]} accessible={false}>
+          bpm
+        </Text>
         <Animated.Text
           style={[
             s.liveNum,
@@ -1092,14 +1100,14 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
 
 const s = StyleSheet.create({
   /* Operator, 9 okt 2026: "het bpm-getal mag hoger" — de ring blijft staan. */
-  liveRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginBottom: 66 },
+  liveRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginBottom: 56 },
   liveNum: {
     color: '#ffffff',
     fontFamily: BrandFonts.bold,
-    fontSize: 56,
-    letterSpacing: -1.5,
+    fontSize: 72,
+    lineHeight: 80,
+    letterSpacing: -2,
     fontVariant: ['tabular-nums'],
-    minWidth: 76,
     textAlign: 'center',
   },
   liveNumIdle: { color: 'rgba(255,255,255,0.25)' },
