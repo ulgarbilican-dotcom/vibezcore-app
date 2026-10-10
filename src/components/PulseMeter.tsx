@@ -106,10 +106,10 @@ const ECG_W = Math.round(Dimensions.get('window').width);
 const ECG_H = 132;
 /* Schrijfpunt rechts van de ring, zoals op de Resting Heart Rate-pagina. */
 const ECG_HX = Math.round(ECG_W * 0.86);
-/* Operator, 10 okt 2026 ("de pieken vóór de cirkel maar achter het hart"):
-   de lijn loopt door de ring heen en stopt pas net binnen de rand van het
-   hart, dat hem afdekt. */
-const ECG_GAP_R = HEART * 0.38;
+/* De lijn verdwijnt achter de ring (niets tekenen binnen deze straal).
+   Operator, 10 okt 2026: kort door de ring heen geprobeerd ("nu te druk") —
+   terug achter de cirkel. */
+const ECG_GAP_R = RING_LINE / 2 + 6;
 /* 9 okt 2026: "trager van rechts naar links"; vervolg: "pieken zo kort
    opeen" → ~90 pt per seconde (bij 76 bpm ≈ 70 pt tussen twee slagen). */
 const ECG_WINDOW_MS = Math.round(ECG_HX / 0.09);
@@ -216,7 +216,7 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
       if (!inBeat) pts.push([x, mid - noise(t0 - ((HX - x) / HX) * ECG_WINDOW_MS)]);
     }
     pts.sort((m, n) => m[0] - n[0]);
-    /* Achter het hart: niets tekenen, de lijn gaat er "onderdoor". */
+    /* Achter de ring: niets tekenen, de lijn gaat er "onderdoor". */
     const cx = ECG_W / 2;
     let d = '';
     let pen = false;
