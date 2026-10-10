@@ -17,6 +17,7 @@
    zelf aanpast. */
 
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
+import { personalRecommendedMinutes } from '@/utils/breath-level';
 import {
   ALL_SLOTS,
   bestSlotsForCount,
@@ -178,7 +179,10 @@ function itemFor(
      (`replaceTemplateItem`) overschrijft 'm meteen met de duur van het
      item dat vervangen wordt, dus geen streefwaarde nodig: gewoon de
      eigen aanbevolen duur van de gekozen techniek. */
-  const recommended = durations.find((d) => d.recommended) ?? durations[0];
+  /* Operator, 10 okt 2026: startduur = dezelfde persoonlijke aanbeveling als
+     overal (ervaring `level`), niet de vaste vlag. */
+  const recMin = personalRecommendedMinutes(state, techniqueKey, durations, level);
+  const recommended = durations.find((d) => d.minutes === recMin) ?? durations.find((d) => d.recommended) ?? durations[0];
   return {
     slot,
     state,

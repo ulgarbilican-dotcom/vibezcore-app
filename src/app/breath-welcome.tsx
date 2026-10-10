@@ -72,6 +72,7 @@ import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { GOALS, MAX_GOALS, type Goal } from '@/data/goals';
 import { bestSlotsForCount, pickStatesForDay, reasonForPick, slotForHour } from '@/utils/day-plan';
 import { getSetting, setSetting, type ExperienceLevel } from '@/utils/settings';
+import { personalRecommendedMinutes } from '@/utils/breath-level';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
 import { SLOTS } from '@/services/reminders';
 import { INTENSITY_SESSION_COUNT, RECOMMENDED_INTENSITY } from '@/utils/protocol';
@@ -681,14 +682,11 @@ export default function BreathWelcomeScreen() {
     /* Zelfde ervaring-naar-duur-logica als voorheen (operator: "wat heeft
        het voor zin om ervaring in te vullen als de duur toch altijd
        hetzelfde is") — nu per kaart, niet enkel voor één toestand. */
+    /* Operator, 10 okt 2026: dezelfde persoonlijke aanbeveling als overal
+       (breath-level PLANS per ervaring), niet meer kortste/langste preset. */
     const minutes =
-      experience === 'beginner'
-        ? durations[0].minutes
-        : experience === 'advanced'
-          ? durations[durations.length - 1].minutes
-          : (durations.find((d) => d.recommended) ??
-            durations[BREATH_STATES[state].defaultDuration] ??
-            durations[0]).minutes;
+      personalRecommendedMinutes(state, BREATH_STATES[state].techniques[0].key, durations, experience ?? 'beginner') ??
+      durations[0].minutes;
     /* Operator, 22 september 2026 ("bouw super logisch": Recover & relax
        naast een avond-Sleep-sessie zonder context leek verwarrend — enkel
        met een gekozen doel is er iets om naar te verwijzen; zonder doel

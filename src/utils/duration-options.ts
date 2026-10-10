@@ -12,6 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
+import { personalRecommendedMinutes } from '@/utils/breath-level';
 
 export const CUSTOM_CEILING_MIN = 30;
 
@@ -42,8 +43,9 @@ export function durationOptionsFor(
     ? presets.map((d) => ({ value: d.minutes, label: label(d.minutes) }))
     : Array.from({ length: max - min + 1 }, (_, i) => ({ value: min + i, label: label(min + i) }));
   /* `defaultDuration` is een INDEX in st.durations, geen minutenwaarde. */
+  /* Operator, 10 okt 2026: overal dezelfde (persoonlijke) aanbeveling. */
   const rec =
-    presets.find((d) => d.recommended)?.minutes ??
+    personalRecommendedMinutes(stateKey, tech.key, presets) ??
     st.durations[st.defaultDuration]?.minutes ??
     null;
   return { options, recommended: rec };

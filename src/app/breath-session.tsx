@@ -164,7 +164,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { levelForTechnique, recommendedForLevel, techniqueForLevel, type UserLevel } from '@/utils/breath-level';
+import { levelForTechnique, personalRecommendedMinutes, recommendedForLevel, techniqueForLevel, type UserLevel } from '@/utils/breath-level';
 import {
   AppState,
   BackHandler,
@@ -3017,7 +3017,7 @@ export function BreathSession() {
             </View>
             <Text style={s.exact}>
               {fmt(totalSec)} · {rounds} rounds
-              {chosen.recommended ? ' · recommended' : ''}
+              {chosen.minutes === personalRecommendedMinutes(st.key, tech.key, DURATIONS) ? ' · recommended' : ''}
             </Text>
             {/* Operator, 7 september 2026 (productkritiek): "te veel
                informatie vóór iemand begint" — de hint-tekst weg, de

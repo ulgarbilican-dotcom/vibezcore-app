@@ -67,6 +67,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 ---
 
+- 10 okt 2026: aanbevolen duur één bron (`personalRecommendedMinutes` in utils/breath-level.ts) op alle plekken; techniek-infoblad herbouwd als gegroepeerde kaarten (tests 88–89). Volledige flow-audit Set goal (breathwork) + Set plan (State Control) loopt.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

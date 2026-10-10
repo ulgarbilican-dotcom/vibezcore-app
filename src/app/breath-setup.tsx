@@ -1629,6 +1629,14 @@ export default function BreathSetupScreen() {
     : Math.max(presetMaxMinutes, customMaxMinutes);
   const chosenVal = chosen.cycles ?? chosen.minutes;
   const isRecommendedChoice = recValue != null && chosenVal === recValue;
+  /* De duur-zone van de PERSOONLIJKE aanbeveling (recValue = minuten, of
+     cycli bij 4-7-8) — één bron voor cirkel én uitlegblad. */
+  const personalRecZone =
+    recValue == null
+      ? recommendedZone
+      : isCyclesBased
+        ? durationZones.find((z) => (z.cycles ?? z.minutes) === recValue)
+        : zoneFor(recValue);
   const [levelSeen] = useSetting('breathLevelSeen');
   const prevSeen = levelSeen[levelSeenKey(st.key, baseTech.key)];
   const steppedUp =
@@ -2628,7 +2636,13 @@ export default function BreathSetupScreen() {
                 in State Control. */}
             {(() => {
               const z = zoneFor(chosen.minutes);
-              const label = isRecommendedChoice || z?.recommended
+              /* Eén bron voor "Recommended" (operator, 10 okt 2026: cirkel en
+                 blad zeiden iets anders): de persoonlijke aanbeveling
+                 (ervaring), niet de vaste vlag in de data. */
+              /* Vervolg ("Recommended geeft heel het tijdblok — moet dat
+                 niet één tijd zijn?"): enkel op de exacte aanbevolen tijd;
+                 elders in hetzelfde blok de naam van het blok. */
+              const label = isRecommendedChoice
                 ? steppedUp
                   ? 'Recommended · built up'
                   : 'Recommended'
@@ -3140,22 +3154,22 @@ export default function BreathSetupScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
                   >
-                  {/* Operator, 10 okt 2026 ("de popup moet overzichtelijker, ik
-                      raak overweldigd"): eerst het belangrijkste — één zin,
-                      één rij labels, de momenten, dan compact de duren.
-                      "What it changes" is weg (technisch; het ritme staat in
-                      de labels). Veiligheid blijft altijd staan. */}
+                  {/* Operator, 10 okt 2026 ("maak de popup duidelijk, in kaarten —
+                      hoe zou Apple dat doen"): iOS-instellingenstijl. Eén zin
+                      bovenaan, daaronder gegroepeerde kaarten met rijen en
+                      haarlijnen: feiten, veiligheid, momenten, sessieduur. */}
                   <Text style={s.infoLead}>{modalTech.effect}</Text>
-                  <View style={s.infoChips}>
-                    <View style={[s.infoChip, { backgroundColor: `${st.accent}38`, borderColor: 'transparent' }]}>
-                      <Text style={s.infoChipTxt}>{modalTech.level}</Text>
-                    </View>
-                    <View style={s.infoChip}>
-                      <Text style={s.infoChipTxt}>{techniquePattern(modalTech.phases)}</Text>
-                    </View>
-                    <View style={s.infoChip}>
-                      <Text style={s.infoChipTxt}>{modalTech.bestFor}</Text>
-                    </View>
+                  <View style={s.infoCard}>
+                    {[
+                      ['Level', modalTech.level],
+                      ['Rhythm', techniquePattern(modalTech.phases)],
+                      ['Best for', modalTech.bestFor],
+                    ].map(([k, v], i) => (
+                      <View key={k} style={[s.infoRow, i > 0 && s.infoRowSep]}>
+                        <Text style={s.infoRowKey}>{k}</Text>
+                        <Text style={s.infoRowVal} numberOfLines={2}>{v}</Text>
+                      </View>
+                    ))}
                   </View>
                   {modalTech.safetyNote ? (
                     <View style={s.modalCautionBox}>
@@ -3165,12 +3179,11 @@ export default function BreathSetupScreen() {
                   ) : null}
                   {modalTech.moments && modalTech.moments.length > 0 && (
                     <>
-                      <Text style={s.sheetSectionLabel}>USE THIS WHEN</Text>
-                      <View style={s.momentsList}>
-                        {modalTech.moments.map((m) => (
-                          <View key={m} style={s.momentRow}>
-                            <View style={[s.momentDot, { backgroundColor: 'rgba(255,255,255,0.55)' }]} />
-                            <Text style={s.momentTxt}>{m}</Text>
+                      <Text style={s.infoCardLabel}>USE THIS WHEN</Text>
+                      <View style={s.infoCard}>
+                        {modalTech.moments.map((m, i) => (
+                          <View key={m} style={[s.infoRow, i > 0 && s.infoRowSep]}>
+                            <Text style={s.infoMoment}>{m}</Text>
                           </View>
                         ))}
                       </View>
@@ -3178,24 +3191,31 @@ export default function BreathSetupScreen() {
                   )}
                   {modalTech.key === tech.key && durationZones.length > 0 ? (
                     <>
-                      <Text style={s.sheetSectionLabel}>SESSION LENGTH</Text>
-                      <View style={s.zoneList}>
-                        {durationZones.map((z) => {
+                      <Text style={s.infoCardLabel}>SESSION LENGTH</Text>
+                      <View style={s.infoCard}>
+                        {durationZones.map((z, i) => {
                           const on = zoneFor(chosen.minutes) === z;
+                          const isRec = z === personalRecZone && recValue != null;
                           const range = z.start === z.end ? `${z.minutes} min` : `${z.start}–${z.end} min`;
                           return (
-                            <View key={z.name + z.minutes} style={s.zoneRow}>
-                              <View style={s.zoneHead}>
-                                <View style={s.zoneNameRow}>
-                                  <View style={[s.zoneDot, { backgroundColor: on ? waveAccent : 'transparent' }]} />
-                                  <Text style={[s.zoneName, !on && { color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.medium }]}>
-                                    {z.name}
-                                    {z.recommended ? '  ·  Recommended' : ''}
-                                  </Text>
+                            <View key={z.name + z.minutes} style={[s.infoZone, i > 0 && s.infoRowSep]}>
+                              <View style={s.infoZoneHead}>
+                                <View style={s.infoZoneCheck}>
+                                  {on ? <Check size={16} color={waveAccent} strokeWidth={2.8} /> : null}
                                 </View>
+                                <Text style={[s.infoZoneName, !on && { color: 'rgba(255,255,255,0.7)', fontFamily: BrandFonts.medium }]} numberOfLines={1}>
+                                  {z.name}
+                                </Text>
                                 <Text style={s.zoneRange}>{range}</Text>
                               </View>
-                              {on && z.why ? <Text style={[s.zoneText, { marginLeft: 16 }]}>{z.why}</Text> : null}
+                              {isRec ? (
+                                <View style={s.infoRecTag}>
+                                  <Text style={s.infoRecTagTxt}>
+                                    Recommended · {isCyclesBased ? `${recValue} cycles` : `${recValue} min`}
+                                  </Text>
+                                </View>
+                              ) : null}
+                              {on && z.why ? <Text style={s.infoZoneWhy}>{z.why}</Text> : null}
                             </View>
                           );
                         })}
@@ -3921,6 +3941,41 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   },
   infoChipTxt: { fontFamily: BrandFonts.semibold, fontSize: 12.5, color: '#ffffff' },
   zoneRow: { gap: 3 },
+  /* Gegroepeerde kaarten (iOS inset grouped) in het techniek-infoblad. */
+  infoCard: {
+    marginTop: 10,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 16,
+  },
+  infoCardLabel: {
+    marginTop: 22,
+    marginLeft: 4,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11.5,
+    letterSpacing: 0.6,
+    color: 'rgba(255,255,255,0.45)',
+  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingVertical: 13 },
+  infoRowSep: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)' },
+  infoRowKey: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.6)' },
+  infoRowVal: { flexShrink: 1, textAlign: 'right', fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  infoMoment: { flex: 1, fontFamily: BrandFonts.medium, fontSize: 15, lineHeight: 20, color: '#ffffff' },
+  infoZone: { paddingVertical: 13, gap: 6 },
+  infoZoneHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoZoneCheck: { width: 18, alignItems: 'center' },
+  infoZoneName: { flex: 1, fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  infoZoneWhy: { marginLeft: 26, fontFamily: BrandFonts.medium, fontSize: 13.5, lineHeight: 19, color: 'rgba(255,255,255,0.6)' },
+  infoRecTag: {
+    marginLeft: 26,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,163,163,0.22)',
+  },
+  infoRecTagTxt: { fontFamily: BrandFonts.semibold, fontSize: 12, color: '#4AF0D4' },
   zoneHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
   zoneName: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', flexShrink: 1 },
   zoneRange: { fontFamily: BrandFonts.medium, fontSize: 13.5, color: 'rgba(255,255,255,0.6)', fontVariant: ['tabular-nums'] },

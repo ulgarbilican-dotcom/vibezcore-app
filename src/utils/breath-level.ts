@@ -125,3 +125,26 @@ export function techniqueForLevel<T extends TechniqueDef>(
 
 /** Sleutel voor `breathLevelSeen`. */
 export const levelSeenKey = (stateKey: BreathStateKey, techKey: string) => `${stateKey}:${techKey}`;
+
+/** DE aanbevolen duur in MINUTEN voor deze gebruiker en deze techniek —
+ *  één bron voor elke plek in de app (operator, 10 okt 2026: "de recommended
+ *  tijd die wij aanbevelen moet overal kloppen"). Volgt de ervaring (PLANS);
+ *  zonder plan de `recommended`-vlag uit de data. Bij ritmes in cycli (4-7-8)
+ *  de minuten van de preset met dat aantal cycli. */
+export function personalRecommendedMinutes(
+  stateKey: BreathStateKey,
+  techKey: string,
+  durations: { minutes: number; cycles?: number; recommended?: boolean }[],
+  level: UserLevel = levelForTechnique(stateKey, techKey),
+): number | null {
+  const rec = recommendedForLevel(stateKey, techKey, level);
+  if (rec != null) {
+    if (durations.some((d) => d.cycles != null)) {
+      const d = durations.find((x) => (x.cycles ?? x.minutes) === rec);
+      if (d) return d.minutes;
+    } else {
+      return rec;
+    }
+  }
+  return (durations.find((d) => d.recommended) ?? durations[0])?.minutes ?? null;
+}
