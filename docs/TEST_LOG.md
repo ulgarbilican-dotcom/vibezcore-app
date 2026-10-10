@@ -169,6 +169,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 105 | Hartslagmeting: statusregels op twee regels ("Reading your heart rate" / "Breathe normally", ook Got it / Hold still, enz.), geen gedachtestreep; tekst springt niet (2 regels passen in de vaste hoogte) | A16 | ⏳ |
 | 106 | Meting boven 100 bpm: getal getoond, "Not a resting heart rate" / "Your session starts here. Measure at rest for your baseline"; witte knop = gewoon verder (sessie start op dat ritme, bpm-pil toont het 15 min), tekstknop Measure Again = optioneel; rusthartslag NIET gewijzigd | A16 | ⏳ |
 | 107 | Meting 91–100 bpm: "Measurement complete" + "A little high for rest. Sit still a few minutes and measure again for a truer baseline"; witte knop bewaart, tekstknop Measure Again optioneel | A16 | ⏳ (operator: 97 zonder melding) |
+| 108 | Einde State Control-sessie: ring sluit en vult zich met glas in de toestandskleur, vinkje altijd wit; modusnaam grijs-wit (geen gekleurde tekst); bracelet-link op twee nette regels | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

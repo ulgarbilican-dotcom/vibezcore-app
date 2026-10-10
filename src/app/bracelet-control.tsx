@@ -1735,6 +1735,7 @@ function CompletionModal({
   const check = useSharedValue(0);
   const textIn = useSharedValue(0);
   const pulse = useSharedValue(0);
+  const glass = useSharedValue(0);
 
   /* Operator, 5 okt 2026 ("het einde is statisch, hoe zou Apple dat
      doen?"): de animatie speelde bij het AANMAKEN van dit scherm — kwam
@@ -1752,6 +1753,10 @@ function CompletionModal({
         250,
         withTiming(1, { duration: 1000, easing: ReanimatedEasing.out(ReanimatedEasing.cubic) }),
       );
+      /* Operator, 10 okt 2026 ("op het einde een volle cirkel in glas met
+         een wit vinkje, telkens"): zodra de ring rond is, vult hij zich
+         met glas in de kleur van de toestand; het vinkje is altijd wit. */
+      glass.value = withDelay(1050, withTiming(1, { duration: 450, easing: ReanimatedEasing.out(ReanimatedEasing.quad) }));
       check.value = withDelay(1150, withSpring(1, { damping: 12, stiffness: 160 }));
       /* Operator, 6 okt 2026 ("zachte puls" — en daarna: "de ring zelf moet
          pulseren, geen extra pulsring"): na het vinkje ademt de ring zelf
@@ -1788,7 +1793,7 @@ function CompletionModal({
     opacity: textIn.value,
     transform: [{ translateY: 8 * (1 - textIn.value) }],
   }));
-  const checkColor = isLightColor(meta.color) ? '#ffffff' : meta.color;
+  const glassStyle = useAnimatedStyle(() => ({ opacity: glass.value }));
 
   return (
     /* Meteen volledig zwart (operator, 7 okt 2026: "bij eindigen heel even
@@ -1798,6 +1803,24 @@ function CompletionModal({
       <ReanimatedAnimated.View style={[{ alignItems: 'center' }, fadeStyle]}>
       <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' }}>
         <ReanimatedAnimated.View pointerEvents="none" style={[StyleSheet.absoluteFill, pulseStyle]}>
+        {/* Glazen vulling (zelfde opbouw als het glazen hart: licht boven,
+            dieper onder, glans bovenaan, zachte lichtrand). */}
+        <ReanimatedAnimated.View style={[StyleSheet.absoluteFill, glassStyle]}>
+          <Svg width={RING_SIZE} height={RING_SIZE}>
+            <Defs>
+              <SvgLinearGradient id="scDoneGlass" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={meta.color} stopOpacity={0.55} />
+                <Stop offset="1" stopColor={meta.color} stopOpacity={0.22} />
+              </SvgLinearGradient>
+              <SvgLinearGradient id="scDoneShine" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#ffffff" stopOpacity={0.32} />
+                <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
+              </SvgLinearGradient>
+            </Defs>
+            <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R} fill="url(#scDoneGlass)" />
+            <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R} fill="url(#scDoneShine)" />
+          </Svg>
+        </ReanimatedAnimated.View>
         <Svg width={RING_SIZE} height={RING_SIZE}>
           <Circle
             cx={RING_SIZE / 2}
@@ -1822,12 +1845,13 @@ function CompletionModal({
         </Svg>
         </ReanimatedAnimated.View>
         <ReanimatedAnimated.View style={checkStyle}>
-          <Check size={64} color={checkColor} strokeWidth={2.4} />
+          <Check size={64} color="#ffffff" strokeWidth={2.6} />
         </ReanimatedAnimated.View>
       </View>
 
       <ReanimatedAnimated.View style={[{ alignItems: 'center', marginTop: 32 }, textStyle]}>
-        <Text style={[s.completionEyebrow, { color: meta.color }]}>{meta.name}</Text>
+        {/* Huisstijl: tekst wit, kleur enkel in de cirkel. */}
+        <Text style={[s.completionEyebrow, { color: 'rgba(255,255,255,0.6)' }]}>{meta.name}</Text>
         <Text style={s.completionTitleLarge}>Session complete</Text>
         {minutes !== null && minutes > 0 && (
           <Text style={s.completionDuration}>{minutes} min</Text>
@@ -1851,9 +1875,9 @@ function CompletionModal({
             accessibilityRole="link"
             accessibilityLabel="Feel this without your phone. Smart Bead Bracelet"
           >
-            <Text style={s.completionBraceletLinkTxt}>
-              Feel this without your phone · <Text style={s.completionBraceletLinkStrong}>Smart Bead Bracelet ›</Text>
-            </Text>
+            {/* Twee bewuste regels i.p.v. één die midden in de naam afbreekt. */}
+            <Text style={s.completionBraceletLinkTxt}>Feel this without your phone</Text>
+            <Text style={[s.completionBraceletLinkTxt, s.completionBraceletLinkStrong]}>Smart Bead Bracelet ›</Text>
           </PressScale>
         ) : null}
         <PressScale
