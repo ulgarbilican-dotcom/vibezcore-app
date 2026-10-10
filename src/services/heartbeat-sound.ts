@@ -79,8 +79,24 @@ function releasePlayers(): void {
   keepAwake = null;
 }
 
+const log = (msg: string) => {
+  if (__DEV__) console.log(`[heartbeat] ${msg}`);
+};
+
+/* Operator, 10 okt 2026 ("opnieuw geen geluid"): niet meer bij elk bezoek
+   verse spelers (een verse speler is nog aan het laden en slikt de eerste
+   slagen), enkel opnieuw aanmaken als een speler na 3 s nog altijd niet
+   geladen is — dan is hij echt stuk. */
+function playersBroken(): boolean {
+  if (!speaker || !headphones) return true;
+  if (Date.now() - createdAt < 3000) return false;
+  return !speaker.isLoaded || !headphones.isLoaded;
+}
+
 function ensurePlayers(fresh = false): void {
-  if (speaker && !(fresh && Date.now() - createdAt > 3000)) return;
+  if (!fresh && speaker) return;
+  if (!playersBroken()) return;
+  log(`creating players (had=${!!speaker})`);
   releasePlayers();
   createdAt = Date.now();
   try {
@@ -107,7 +123,11 @@ export function preloadHeartbeatSound(): void {
 
 export function startHeartbeatSound(owner: HeartbeatOwner): void {
   if (owners.has(owner)) return;
-  if (getBreathSession().isRunning || getSnapshot().session !== null) return;
+  if (getBreathSession().isRunning || getSnapshot().session !== null) {
+    log(`start(${owner}) skipped: breath=${getBreathSession().isRunning} audio=${getSnapshot().session !== null}`);
+    return;
+  }
+  log(`start(${owner}) owners=${[...owners].join(',')}`);
   const wasActive = owners.size > 0;
   owners.add(owner);
   if (wasActive) return;
@@ -130,8 +150,14 @@ export function startHeartbeatSound(owner: HeartbeatOwner): void {
 /** Eén slag (de "lub"; de "dub" zit in hetzelfde geluid). */
 export function heartbeatTick(): void {
   if (owners.size === 0) return;
+  /* Een stuk geraakte speler meteen vervangen (zie playersBroken). */
+  if (playersBroken()) ensurePlayers(true);
   const p = isHeadphonesOutput() ? headphones : speaker;
   if (!p) return;
+  if (!p.isLoaded) {
+    log('tick: player not loaded yet');
+    return;
+  }
   try {
     /* Eerst echt terug naar het begin, dán spelen: anders staat de speler
        nog aan het einde van de vorige slag en speelt hij niets (gezien op
@@ -154,6 +180,7 @@ export function heartbeatTick(): void {
 }
 
 export function stopHeartbeatSound(owner: HeartbeatOwner): void {
+  if (owners.has(owner)) log(`stop(${owner})`);
   owners.delete(owner);
   if (owners.size > 0) return;
   for (const p of [speaker, headphones, keepAwake]) {
