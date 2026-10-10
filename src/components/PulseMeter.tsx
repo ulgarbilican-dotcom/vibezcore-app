@@ -29,6 +29,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Reanimated, {
   Easing as ReEasing,
   useAnimatedProps,
+  useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
   withTiming,
@@ -255,6 +256,85 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
   );
 }
 
+/* Afronding van een geslaagde meting (operator, 10 okt 2026: "de tekst na
+   afloop is zo simpel, niet professioneel — iets geanimeerd, een teken"):
+   zoals Apple Pay / Face ID één kort, zorgvuldig moment — een vinkje dat
+   zichzelf tekent in een rondje, de titel schuift zacht omhoog in beeld, de
+   tweede regel volgt. ±1 s, daarna stil. */
+const CHECK_C = 2 * Math.PI * 10;
+function DoneMessage() {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withTiming(1, { duration: 1000, easing: ReEasing.out(ReEasing.cubic) });
+  }, [p]);
+  const ringProps = useAnimatedProps(() => ({
+    strokeDashoffset: CHECK_C * (1 - Math.min(1, p.value / 0.45)),
+  }));
+  const tickProps = useAnimatedProps(() => ({
+    strokeDashoffset: 16 * (1 - Math.max(0, Math.min(1, (p.value - 0.35) / 0.35))),
+  }));
+  const titleStyle = useAnimatedStyle(() => {
+    const t = Math.max(0, Math.min(1, (p.value - 0.15) / 0.45));
+    return { opacity: t, transform: [{ translateY: 8 * (1 - t) }] };
+  });
+  const subStyle = useAnimatedStyle(() => {
+    const t = Math.max(0, Math.min(1, (p.value - 0.5) / 0.45));
+    return { opacity: t, transform: [{ translateY: 6 * (1 - t) }] };
+  });
+  return (
+    <View style={s.doneMsg} accessibilityLiveRegion="polite" accessibilityLabel="Measurement complete. You can lift your finger.">
+      <Reanimated.View style={[s.doneRow, titleStyle]}>
+        <Svg width={24} height={24} viewBox="0 0 24 24">
+          <AnimatedCircle
+            cx={12}
+            cy={12}
+            r={10}
+            stroke={ACCENT}
+            strokeWidth={1.8}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${CHECK_C} ${CHECK_C}`}
+            animatedProps={ringProps}
+            transform="rotate(-90 12 12)"
+          />
+          <AnimatedPath
+            d="M7.5 12.4 L10.6 15.3 L16.6 9.2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="16 16"
+            animatedProps={tickProps}
+          />
+        </Svg>
+        <Text style={s.doneTitle}>Measurement complete</Text>
+      </Reanimated.View>
+      <Reanimated.Text style={[s.doneSub, subStyle]}>You can lift your finger</Reanimated.Text>
+    </View>
+  );
+}
+
+/* Eén lichtgolf rond de ring op het moment van succes. */
+function SuccessGlow() {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: 1, duration: 1100, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  }, [v]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        s.glow,
+        {
+          opacity: v.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.7, 0] }),
+          transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
+        },
+      ]}
+    />
+  );
+}
+
 /* Eén hartslag als "lub-dub": stevige S1, ~300 ms later een kleinere S2,
    dan rust — vloeiend, op de native driver. Bij een snelle hartslag wordt
    de beweging evenredig korter zodat ze nooit over de volgende slag loopt. */
@@ -390,25 +470,6 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const liveTarget = useRef<number | null>(null);
   const liveStepAt = useRef(0);
   const [finalBpm, setFinalBpm] = useState<number | null>(null);
-  /* Operator, 10 okt 2026 ("na afloop moet de cirkel beginnen ademen, nu
-     is alles te statisch"): na een geslaagde meting zwelt de ring traag aan
-     en af (~5 s per adem). */
-  const breathe = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (finalBpm === null) {
-      breathe.stopAnimation();
-      breathe.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breathe, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(breathe, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [finalBpm, breathe]);
   const finalRef = useRef(false);
   useEffect(() => {
     if (finalBpm === null) {
@@ -875,10 +936,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         <Animated.View
           style={[
             s.ringWrap,
-            {
-              transform: [{ scale: breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.045] }) }],
-              opacity: finalBpm === null ? 1 : breathe.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }),
-            },
+            /* Operator, 10 okt 2026: "we laten enkel het hart kloppen, de
+               cirkel blijft stil" — het ademen van de ring is weg. */
           ]}
         >
           {/* Operator, 9 okt 2026 ("de cirkel is redelijk dun — hoe doet Apple
@@ -909,6 +968,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             />
           </Svg>
           {calculating ? <CalcArc /> : null}
+          {finalBpm !== null ? <SuccessGlow /> : null}
           {/* Operator, 9 okt 2026: zolang de vinger nog niet ligt, toont een
               Touch ID-achtige lijnanimatie hoe je je vinger legt; daarna het
               hart dat zich vult. */}
@@ -955,10 +1015,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         /* Operator, 10 okt 2026 ("op het einde moet er een melding komen
            dat de meting ok is — nu stopt het gewoon"): wat er gebeurd is +
            wat je nu doet. */
-        <View style={s.doneMsg} accessibilityLiveRegion="polite">
-          <Text style={s.doneTitle}>Measurement complete</Text>
-          <Text style={s.doneSub}>You can lift your finger</Text>
-        </View>
+        <DoneMessage />
       ) : (
         <Text style={s.msg} accessibilityLiveRegion="polite">
           {message}
@@ -1011,8 +1068,17 @@ const s = StyleSheet.create({
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
   stage: { width: ECG_W, height: RING_LINE, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   ringWrap: { width: RING_LINE, height: RING_LINE, alignItems: 'center', justifyContent: 'center' },
-  doneMsg: { alignItems: 'center', minHeight: 48, marginBottom: 18, gap: 4 },
+  doneMsg: { alignItems: 'center', minHeight: 48, marginBottom: 18, gap: 6 },
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   doneTitle: { color: '#ffffff', fontSize: 19, fontFamily: BrandFonts.bold, textAlign: 'center' },
+  glow: {
+    position: 'absolute',
+    width: RING_LINE,
+    height: RING_LINE,
+    borderRadius: RING_LINE / 2,
+    borderWidth: 3,
+    borderColor: ACCENT,
+  },
   doneSub: { color: 'rgba(255,255,255,0.6)', fontSize: 15, fontFamily: BrandFonts.medium, textAlign: 'center' },
   msg: {
     color: '#ffffff',
