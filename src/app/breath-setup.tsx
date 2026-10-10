@@ -1188,6 +1188,10 @@ function HorizonSheetRow({
   );
 }
 
+/** Veer bij het loslaten van de duur-greep: kort, zonder overschot (zoals
+ *  een iOS-knop die op zijn plek valt). */
+const DIAL_SPRING = { duration: 380, dampingRatio: 1 } as const;
+
 export default function BreathSetupScreen() {
   if (__DEV__) console.log('[breath-setup] render start at', Date.now());
   const insets = useSafeAreaInsets();
@@ -1725,6 +1729,7 @@ export default function BreathSetupScreen() {
      ring blijft wel iets "opbouwen": ze vult zichzelf één keer van leeg
      naar vol bij het openen van het scherm, als rustige entree-animatie. */
   const heroProgress = useSharedValue(0);
+  const dialDragging = useSharedValue(false);
   useEffect(() => {
     /* Operator, 18 september 2026 ("de cirkel dient om de gekozen
        informatie weer te geven, is geen actieve cirkel"): in addToDay is
@@ -1755,7 +1760,10 @@ export default function BreathSetupScreen() {
       skipFirstFillSync.current = false;
       return;
     }
-    heroProgress.value = withTiming(fillRatio, { duration: 400 });
+    /* Tijdens het slepen volgt de greep de vinger zelf (UI-thread); dan hier
+       niet tussenkomen, anders trekt elke stap hem terug. */
+    if (dialDragging.value) return;
+    heroProgress.value = withSpring(fillRatio, DIAL_SPRING);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [fillRatio]);
 
@@ -1779,6 +1787,16 @@ export default function BreathSetupScreen() {
   dialStopsRef.current = dialStops;
   const lastDialValue = useRef(chosen.minutes);
   lastDialValue.current = chosen.minutes;
+  /* Operator, 10 okt 2026 ("perfect smooth, Apple-niveau"): de greep volgt
+     de vinger op de UI-thread; JS krijgt enkel een seintje als er een
+     ANDERE stap gekozen is (getal + tik). Bij loslaten veert hij naar de
+     gekozen stap. Zo hapert hij nooit meer achter een React-render aan. */
+  const dialRatiosSV = useSharedValue<number[]>([]);
+  const dialLastIdx = useSharedValue(-1);
+  useEffect(() => {
+    dialRatiosSV.value = dialStops.map((d) => d.ratio);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [dialStops.map((d) => d.ratio).join(',')]);
   const onDialFrac = (f: number) => {
     const stops = dialStopsRef.current;
     if (!stops.length) return;
@@ -1813,7 +1831,10 @@ export default function BreathSetupScreen() {
       else manager.fail();
     })
     .onStart(() => {
+      cancelAnimation(heroProgress);
+      dialDragging.value = true;
       dialFracSV.value = heroProgress.value;
+      dialLastIdx.value = -1;
     })
     .onUpdate((e) => {
       const c = HERO_SIZE / 2;
@@ -1822,9 +1843,27 @@ export default function BreathSetupScreen() {
       let delta = f - dialFracSV.value;
       if (delta > 0.5) delta -= 1;
       if (delta < -0.5) delta += 1;
-      const nf = Math.min(1, Math.max(0, dialFracSV.value + delta));
+      const ratios = dialRatiosSV.value;
+      const lo = ratios.length ? ratios[0] : 0;
+      const hi = ratios.length ? ratios[ratios.length - 1] : 1;
+      const nf = Math.min(hi, Math.max(lo, dialFracSV.value + delta));
       dialFracSV.value = nf;
-      scheduleOnRN(onDialFrac, nf);
+      heroProgress.value = nf;
+      let bi = 0;
+      for (let i = 1; i < ratios.length; i += 1) {
+        if (Math.abs(ratios[i] - nf) < Math.abs(ratios[bi] - nf)) bi = i;
+      }
+      if (bi !== dialLastIdx.value) {
+        dialLastIdx.value = bi;
+        scheduleOnRN(onDialFrac, nf);
+      }
+    })
+    .onFinalize(() => {
+      if (!dialDragging.value) return;
+      dialDragging.value = false;
+      const ratios = dialRatiosSV.value;
+      const i = dialLastIdx.value;
+      if (i >= 0 && i < ratios.length) heroProgress.value = withSpring(ratios[i], DIAL_SPRING);
     });
   const heroDial = Gesture.Exclusive(heroDialPan, heroTap);
 

@@ -92,7 +92,9 @@ import Svg, { Circle, ClipPath, Defs, G, LinearGradient as SvgLinearGradient, Pa
 import { BlurView } from 'expo-blur';
 import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -1515,6 +1517,17 @@ const SWIPE_DISTANCE = 320;
    moest daartussen wachten. Nu Gesture Handler + Reanimated: volgen,
    loslaten en terugveren gebeuren volledig op de UI-thread, los van JS.
    Enkel de modus-wissel zelf gaat naar JS. */
+/* Operator, 10 okt 2026 ("scrollen op de cirkels moet perfect smooth,
+   Apple-niveau"): boog en greep liepen via een React-render per minuut —
+   bij Boost (max 20) een sprong van 18° per stap. Nu deelt ModeSwipeRing
+   één gedeelde waarde met DurationRing: tijdens het slepen volgt de greep
+   de vinger op de UI-thread, bij loslaten veert hij naar de gekozen minuut. */
+const DIAL_SPRING = { duration: 380, dampingRatio: 1 } as const;
+const DialProgressContext = createContext<{
+  progress: SharedValue<number>;
+  dragging: SharedValue<boolean>;
+} | null>(null);
+
 function ModeSwipeRing({
   mode,
   onChange,
@@ -1567,6 +1580,9 @@ function ModeSwipeRing({
   const dialMaxSV = useSharedValue(dial?.max ?? 1);
   const dialFracSV = useSharedValue(dial && dial.max > 0 ? dial.value / dial.max : 0);
   const dialValSV = useSharedValue(dial?.value ?? 0);
+  const dialProgress = useSharedValue(dial && dial.max > 0 ? dial.value / dial.max : 0);
+  const dialDragging = useSharedValue(false);
+  const dialCtx = useMemo(() => ({ progress: dialProgress, dragging: dialDragging }), [dialProgress, dialDragging]);
   useEffect(() => {
     if (!dial) return;
     dialMinSV.value = dial.min;
@@ -1594,7 +1610,9 @@ function ModeSwipeRing({
       else manager.fail();
     })
     .onStart(() => {
-      dialFracSV.value = dialMaxSV.value > 0 ? dialValSV.value / dialMaxSV.value : 0;
+      cancelAnimation(dialProgress);
+      dialDragging.value = true;
+      dialFracSV.value = dialProgress.value;
     })
     .onUpdate((e) => {
       const c = dialSize / 2;
@@ -1605,13 +1623,20 @@ function ModeSwipeRing({
       let delta = f - dialFracSV.value;
       if (delta > 0.5) delta -= 1;
       if (delta < -0.5) delta += 1;
-      const nf = Math.min(1, Math.max(0, dialFracSV.value + delta));
+      const lo = dialMaxSV.value > 0 ? dialMinSV.value / dialMaxSV.value : 0;
+      const nf = Math.min(1, Math.max(lo, dialFracSV.value + delta));
       dialFracSV.value = nf;
+      dialProgress.value = nf;
       const v = Math.min(dialMaxSV.value, Math.max(dialMinSV.value, Math.round(nf * dialMaxSV.value)));
       if (v !== dialValSV.value) {
         dialValSV.value = v;
         runOnJS(setDialJS)(v);
       }
+    })
+    .onFinalize(() => {
+      if (!dialDragging.value) return;
+      dialDragging.value = false;
+      if (dialMaxSV.value > 0) dialProgress.value = withSpring(dialValSV.value / dialMaxSV.value, DIAL_SPRING);
     });
 
   const pan = Gesture.Pan()
@@ -1651,6 +1676,7 @@ function ModeSwipeRing({
     /* flex: 0 — standaard rekt de root zich uit (flex: 1) en lag de
        cirkel over de stipjes en de duurkiezer. */
     <GestureHandlerRootView style={{ flex: 0 }}>
+      <DialProgressContext.Provider value={dialOn ? dialCtx : null}>
       <GestureDetector gesture={gesture}>
         <ReanimatedAnimated.View
           style={style}
@@ -1666,6 +1692,7 @@ function ModeSwipeRing({
           {children}
         </ReanimatedAnimated.View>
       </GestureDetector>
+      </DialProgressContext.Provider>
     </GestureHandlerRootView>
   );
 }
@@ -2259,6 +2286,27 @@ function DurationRing({
      is ingesteld" te tonen als absoluut aandeel van het max — dus
      value/max, niet (value-min)/(max-min). */
   const fillFraction = max > 0 ? value / max : 0;
+  /* Boog + greep: gedeelde waarde van ModeSwipeRing (volgt de vinger), of
+     een eigen waarde als de ring los staat. Buiten het slepen veert hij
+     naar de gekozen duur. */
+  const dialCtx = useContext(DialProgressContext);
+  const ownProgress = useSharedValue(fillFraction);
+  const progress = dialCtx?.progress ?? ownProgress;
+  useEffect(() => {
+    if (dialCtx?.dragging.value) return;
+    progress.value = withSpring(fillFraction, DIAL_SPRING);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fillFraction]);
+  const dialR = size / 2 - 1;
+  const dialC = size / 2 + 16;
+  const dialCirc = 2 * Math.PI * dialR;
+  const dialArcProps = useAnimatedProps(() => ({
+    strokeDashoffset: dialCirc * (1 - Math.min(0.9999, Math.max(0, progress.value))),
+  }));
+  const dialKnobProps = useAnimatedProps(() => {
+    const ang = Math.min(0.9999, Math.max(0, progress.value)) * 2 * Math.PI;
+    return { cx: dialC + dialR * Math.sin(ang), cy: dialC - dialR * Math.cos(ang) };
+  });
   /* Operator, 16 september 2026 ("binnenkant cirkel zwart ipv wit... tekst
      in de cirkel wit", daarna "Calm Control etc ook wit"): alle tekst in
      de ring — label, getal, unit — is standaard wit, geen mode-kleur meer
@@ -2411,34 +2459,27 @@ function DurationRing({
           {/* 16 pt marge rondom: de greep steekt buiten de ring en mag op
               Android niet afgeknipt worden. */}
           <Svg width={size + 32} height={size + 32}>
-            {(() => {
-              const r = size / 2 - 1;
-              const c = size / 2 + 16;
-              const f = Math.min(0.9999, Math.max(0, fillFraction));
-              const ang = f * 2 * Math.PI;
-              const ex = c + r * Math.sin(ang);
-              const ey = c - r * Math.cos(ang);
-              const large = f > 0.5 ? 1 : 0;
-              return (
-                <>
-                  {/* Vervolg ("de lijn en de stip moeten op hetzelfde punt
-                      eindigen"): de volle dunne ring eronder verbergen en als
-                      gedimd spoor tekenen — enkel de boog tot de greep is fel. */}
-                  <Circle cx={c} cy={c} r={r + 1} stroke="#000000" strokeWidth={4} fill="none" />
-                  <Circle cx={c} cy={c} r={r} stroke={color} strokeOpacity={0.22} strokeWidth={1.5} fill="none" />
-                  {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
-                  <Path
-                    d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
-                    stroke={color}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  {/* Greep: wit bolletje met een rand in de toestandskleur. */}
-                  <Circle cx={ex} cy={ey} r={7} fill="#ffffff" stroke={color} strokeWidth={1.5} />
-                </>
-              );
-            })()}
+            {/* Vervolg ("de lijn en de stip moeten op hetzelfde punt
+                eindigen"): de volle dunne ring eronder verbergen en als
+                gedimd spoor tekenen — enkel de boog tot de greep is fel. */}
+            <Circle cx={dialC} cy={dialC} r={dialR + 1} stroke="#000000" strokeWidth={4} fill="none" />
+            <Circle cx={dialC} cy={dialC} r={dialR} stroke={color} strokeOpacity={0.22} strokeWidth={1.5} fill="none" />
+            {/* Boog = gekozen duur, van 12 uur met de klok mee. */}
+            <AnimatedRingCircle
+              cx={dialC}
+              cy={dialC}
+              r={dialR}
+              stroke={color}
+              strokeWidth={2}
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray={`${dialCirc} ${dialCirc}`}
+              rotation={-90}
+              origin={`${dialC}, ${dialC}`}
+              animatedProps={dialArcProps}
+            />
+            {/* Greep: wit bolletje met een rand in de toestandskleur. */}
+            <AnimatedRingCircle r={7} fill="#ffffff" stroke={color} strokeWidth={1.5} animatedProps={dialKnobProps} />
           </Svg>
         </View>
       ) : null}

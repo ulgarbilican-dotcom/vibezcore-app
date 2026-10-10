@@ -69,6 +69,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 10 okt 2026: aanbevolen duur één bron (`personalRecommendedMinutes` in utils/breath-level.ts) op alle plekken; techniek-infoblad herbouwd als gegroepeerde kaarten (tests 88–89). Flow-audit Set goal + Set plan gedaan: vrije minuten niet meer afgerond, onboarding/protocol zelfde techniek+niveauregel, setup-labels op persoonlijke aanbeveling, bracelet-set-day elke minuut (tests 90–92). Vervolg (operator akkoord): Ongoing rolt door (utils/plan-roll.ts), herinneringen op datum in de laatste 7 dagen, Remove plan in beide agenda's (components/ConfirmCard.tsx), kalenderknop op State Control, bracelet-aanpassingen gelden voor elke dag vanaf vandaag (tests 93–96).
 
+- 10 okt 2026: duur-greep op beide cirkels vloeiend — greep op de UI-thread, veer bij loslaten (DIAL_SPRING 380 ms, geen overschot); State Control deelt de waarde via DialProgressContext (test 97).
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

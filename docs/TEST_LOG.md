@@ -157,6 +157,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 94 | Remove plan onderaan breath-agenda én State Control-agenda: glas-bevestiging, plan + herinneringen weg, geschiedenis blijft | A16 | ⏳ |
 | 95 | State Control-scherm: kalender-icoon rechtsboven (naast tandwiel) → agenda als er een plan is, anders Set your day | A16 | ⏳ |
 | 96 | State Control-agenda: sessie verslepen/verwijderen geldt voor elke dag vanaf vandaag; Change protocol start van vandaag's planning en houdt voorbije dagen | A16 | ⏳ |
+| 97 | Slepen op de rand van de cirkel (Breathwork-setup én State Control): greep volgt de vinger vloeiend (UI-thread), getal + tik per stap, bij loslaten veert hij zacht naar de gekozen tijd (geen schokken, geen naijlen) | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
