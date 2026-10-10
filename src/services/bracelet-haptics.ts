@@ -154,6 +154,9 @@ const SPECS: Record<BraceletMode, ModeHapticSpec> = {
 /** Spec met de tempo's voor één concrete rusthartslag. */
 type ResolvedSpec = ModeHapticSpec & { startBpm: number; targetBpm: number };
 
+/** Bovenkant van de gangbare rusthartslag (volwassenen 60–80 bpm). */
+const TARGET_BASE_CAP_BPM = 80;
+
 /** Begin: de hartslag van nu als die net gemeten is, anders de rust-
  *  hartslag (resting-pulse.ts). Eind: altijd een deel van de RUST-
  *  hartslag — zo komt het kalme ritme altijd onder je rust uit. */
@@ -163,7 +166,12 @@ function resolveSpec(
   startBpm: number = getSessionStartBpm(),
 ): ResolvedSpec {
   const spec = SPECS[mode];
-  let targetBpm = spec.targetFor(restingBpm);
+  /* Operator, 10 okt 2026 ("als iemand niet in rust zijn basis op 97 zet
+     terwijl zijn echte rust 70 is, klopt het einde dan?"): het doel volgt
+     je basis, maar nooit hoger dan bij een basis van 80 (bovenkant van de
+     gangbare rust 60–80). Een te hoge basis start de sessie nog op je eigen
+     ritme, maar eindigt toch rustgevend. Boost heeft een vast doel. */
+  let targetBpm = Math.min(spec.targetFor(restingBpm), spec.targetFor(TARGET_BASE_CAP_BPM));
   /* De rustgevende toestanden eindigen ALTIJD onder je rusthartslag —
      ook bij een (zeer) lage rust, waar de ondergrenzen anders boven je
      eigen hart uitkwamen (operator, 7 okt 2026: "wat als 55?"). */

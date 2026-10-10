@@ -229,6 +229,7 @@ hart" het best onderbouwd. De sporter-grens is een randgeval.
 | Horloge | Apple Health / Health Connect rusthartslag | ⏳ fase 3 |
 
 **Regels (⚪):**
+- **Plafond op het doel** (⚪ eigen keuze, 10 okt 2026): het eindtempo wordt op R berekend, maar nooit hoger dan bij R = 80 (bovenkant van de gangbare rust 60–80 bpm). Plafonds: Calm Control 64, Clarity & Relax 56, Sleep 44, Sharp Focus 72; Boost vast 110. Reden: een basis gemeten na inspanning (bv. 97 i.p.v. 70) zou anders elk doel te hoog zetten (Sleep 53 i.p.v. 40) en nooit onder je echte rust brengen. Het BEGIN blijft R of de meting van nu.
 - **R = de laatst bewaarde waarde** (gemeten of zelf ingevuld) — GEWIJZIGD
   10 okt 2026, operator: "altijd de laatste meting die de gebruiker deed,
   en die geldt voor alle sessies". Vervangt "de laagste meting van de
