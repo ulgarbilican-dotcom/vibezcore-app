@@ -62,7 +62,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
       : level === 'sheet' && blurTarget
         ? /* Echte vervaging (GlassSheetHost, 7 okt 2026): dunnere tint, zodat
              het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
-          { ...LEVEL.sheet, base: 'rgba(20,20,24,0.16)', blur: 70 }
+          { ...LEVEL.sheet, base: 'rgba(10,10,12,0.74)', blur: 70 } /* operator, 10 okt 2026: "achtergrond van de popup donkerder" (was 0.16) */
         : LEVEL[level];
   /* expo-blur (Android) stelt het glas in bij de EERSTE weergave, nog vóór
      het weet wat zijn blurTarget is; het valt dan terug op een egale grijze
