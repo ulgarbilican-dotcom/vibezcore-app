@@ -347,6 +347,27 @@ export default function TabLayout() {
             tabBarButton: (props) => <TabButton path="/breath" {...props} />,
           }}
         />
+        {/* Operator, 10 okt 2026: State Control als 2de tabblad, Audio
+            Library als 3de (gewisseld). */}
+        <Tabs.Screen
+          name="bracelet"
+          options={{
+            /* GEWIJZIGD 4 oktober 2026: deze tab toont nu altijd Session
+               Control (geen marketing-etalage meer, zie (tabs)/bracelet.tsx)
+               — "State Control" beschrijft die functie beter dan "Bracelet". */
+            title: 'State Control',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph Icon={Radio} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }: { focused: boolean }) => (
+              <TabLabel label="State Control" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
+            /* Sleutel enkel meegeven als de balk weg moet — een `undefined`
+               zou de stijl uit screenOptions overschrijven. */
+            ...(hideStateControlBar ? { tabBarStyle: { display: 'none' as const } } : {}),
+          }}
+        />
         {/* De audiobibliotheek is VERBORGEN, niet verwijderd (operator,
             5 augustus 2026). `href: null` haalt het tabblad uit de balk maar
             laat het scherm bestaan: bestaande abonnementen, voortgang en de
@@ -375,25 +396,6 @@ export default function TabLayout() {
                 }
               : { href: null }
           }
-        />
-        <Tabs.Screen
-          name="bracelet"
-          options={{
-            /* GEWIJZIGD 4 oktober 2026: deze tab toont nu altijd Session
-               Control (geen marketing-etalage meer, zie (tabs)/bracelet.tsx)
-               — "State Control" beschrijft die functie beter dan "Bracelet". */
-            title: 'State Control',
-            tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph Icon={Radio} focused={focused} />
-            ),
-            tabBarLabel: ({ focused }: { focused: boolean }) => (
-              <TabLabel label="State Control" focused={focused} />
-            ),
-            tabBarButton: (props) => <TabButton path="/bracelet" {...props} />,
-            /* Sleutel enkel meegeven als de balk weg moet — een `undefined`
-               zou de stijl uit screenOptions overschrijven. */
-            ...(hideStateControlBar ? { tabBarStyle: { display: 'none' as const } } : {}),
-          }}
         />
         {/* Wat je gedaan hebt verdient een eigen plek in de balk (operator,
             6 augustus 2026), niet een icoontje op een ander scherm.
