@@ -931,15 +931,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         <Text style={s.liveUnit}>bpm</Text>
       </View>
       <View style={s.stage}>
-        {/* Hartlijn over de volle breedte, achter de ring door. */}
-        <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
-        <Animated.View
-          style={[
-            s.ringWrap,
-            /* Operator, 10 okt 2026: "we laten enkel het hart kloppen, de
-               cirkel blijft stil" — het ademen van de ring is weg. */
-          ]}
-        >
+        {/* Operator, 10 okt 2026 ("de pieken vóór de cirkel maar achter het
+            hart doorlopen"): drie lagen — ring onderaan, dan de hartlijn over
+            de volle breedte, het hart bovenaan. */}
+        <View pointerEvents="none" style={[s.ringWrap, s.ringLayer]}>
           {/* Operator, 9 okt 2026 ("de cirkel is redelijk dun — hoe doet Apple
               dat?"): een echte voortgangsring zoals de Activity-ringen — zacht
               spoor + felle teal boog met ronde uiteinden die in de meettijd
@@ -969,6 +964,15 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
           </Svg>
           {calculating ? <CalcArc /> : null}
           {finalBpm !== null ? <SuccessGlow /> : null}
+        </View>
+        <EcgTrace beats={beatLog} running={fingerOn} progress={progress} />
+        <Animated.View
+          style={[
+            s.ringWrap,
+            /* Operator, 10 okt 2026: "we laten enkel het hart kloppen, de
+               cirkel blijft stil" — het ademen van de ring is weg. */
+          ]}
+        >
           {/* Operator, 9 okt 2026: zolang de vinger nog niet ligt, toont een
               Touch ID-achtige lijnanimatie hoe je je vinger legt; daarna het
               hart dat zich vult. */}
@@ -1001,6 +1005,9 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
                       <Stop offset="0.7" stopColor="#ffffff" stopOpacity={0} />
                     </LinearGradient>
                   </Defs>
+                  {/* Donkere onderlaag: de hartlijn loopt achter het hart door
+                      en schijnt niet door het glas heen. */}
+                  <Path d={LUCIDE_HEART_D} fill="#0b0b0d" />
                   <Path d={LUCIDE_HEART_D} fill="url(#pmHeartGlass)" />
                   <Path d={LUCIDE_HEART_D} fill="url(#pmHeartShine)" />
                   <Path d={LUCIDE_HEART_D} fill="none" stroke="url(#pmHeartEdge)" strokeWidth={0.35} />
@@ -1068,6 +1075,7 @@ const s = StyleSheet.create({
   heartFill: { position: 'absolute', left: 0, top: 0, width: HEART, height: HEART, overflow: 'hidden' },
   stage: { width: ECG_W, height: RING_LINE, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   ringWrap: { width: RING_LINE, height: RING_LINE, alignItems: 'center', justifyContent: 'center' },
+  ringLayer: { position: 'absolute', top: 0, left: (ECG_W - RING_LINE) / 2 },
   doneMsg: { alignItems: 'center', minHeight: 48, marginBottom: 18, gap: 6 },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   doneTitle: { color: '#ffffff', fontSize: 19, fontFamily: BrandFonts.bold, textAlign: 'center' },

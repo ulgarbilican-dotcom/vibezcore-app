@@ -71,6 +71,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 10 okt 2026: duur-greep op beide cirkels vloeiend — greep op de UI-thread, veer bij loslaten (DIAL_SPRING 380 ms, geen overschot); State Control deelt de waarde via DialProgressContext (test 97).
 
+- 10 okt 2026: PulseMeter in drie lagen — ring, hartlijn, hart (donkere onderlaag onder het glazen hart) (test 98).
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
