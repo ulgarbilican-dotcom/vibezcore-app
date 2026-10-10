@@ -409,6 +409,15 @@ function play(
     const built = buildWaveform(spec, timing, offsetSec, totalSec, canPlayNativeWaveform());
     const { timings, repeat } = built;
     const amplitudes = silent ? built.amplitudes.map(() => 0) : built.amplitudes;
+    /* Diagnose (flowtest 10 okt 2026): wat de trilmotor krijgt. */
+    if (__DEV__) {
+      const cyc = (i: number) => timings[i] + timings[i + 1] + timings[i + 2] + timings[i + 3];
+      const beats = Math.floor((timings.length - (totalSec !== undefined ? 6 : 0)) / 4);
+      const totalMs = timings.reduce((a, b) => a + b, 0);
+      console.log(
+        `[haptic-test] mode=${mode} resting=${restingBpm} start=${spec.startBpm} target=${spec.targetBpm} hold=${timing.holdSec}s ramp=${timing.rampSec}s offset=${offsetSec.toFixed(1)}s session=${totalSec ?? '-'}s beats=${beats} firstBpm=${(60000 / cyc(0)).toFixed(1)} lastBpm=${(60000 / cyc((beats - 1) * 4)).toFixed(1)} waveform=${(totalMs / 1000).toFixed(1)}s clock=${!!clock} silent=${silent}`,
+      );
+    }
     const anchorWallMs = Date.now();
     if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. Feel &
