@@ -207,11 +207,7 @@ export default function RhythmSheet({
           <Text style={s.eyebrow} pointerEvents="none">
             {/* Operator, 10 okt 2026: de kop zegt welk getal het is; geen tweede
                 titel meer onder het icoon. */}
-            {now && step === 'choose' && pulse.liveBpm !== null
-              ? 'Heart Rate Now'
-              : now && step !== 'choose'
-                ? 'Heart Rate'
-                : 'Resting Heart Rate'}
+            {step === 'choose' ? '' : now ? 'Heart Rate' : 'Resting Heart Rate'}
           </Text>
           <View />
           {/* Actieblad (protocol): de keuze in State Control heeft onderaan
@@ -233,6 +229,9 @@ export default function RhythmSheet({
             <View style={[s.iconWrap, s.iconWrapLg]}>
               <HeartPulse size={40} color="#ffffff" strokeWidth={1.7} />
             </View>
+            {/* Operator, 10 okt 2026: hart bovenaan, het label recht boven
+                het getal (zoals Apple Gezondheid een waarde toont). */}
+            <Text style={s.valueLbl}>{pulse.liveBpm !== null ? 'HEART RATE NOW' : 'RESTING HEART RATE'}</Text>
             <Text style={s.bigNum}>
               {pulse.liveBpm ?? pulse.bpm}
               <Text style={s.bigUnit}> bpm</Text>
@@ -299,6 +298,7 @@ export default function RhythmSheet({
             <View style={[s.iconWrap, s.iconWrapLg]}>
               <HeartPulse size={40} color="#ffffff" strokeWidth={1.7} />
             </View>
+            <Text style={s.valueLbl}>RESTING HEART RATE</Text>
             <Text style={s.bigNum}>
               {pulse.bpm}
               <Text style={s.bigUnit}> bpm</Text>
@@ -660,6 +660,15 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   iconWrapLg: { width: 76, height: 76, borderRadius: 38, alignSelf: 'center' },
+  valueLbl: {
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.2,
+    marginTop: 6,
+    marginBottom: 2,
+  },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
   secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   secondaryTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
