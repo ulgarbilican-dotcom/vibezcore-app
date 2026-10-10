@@ -9,6 +9,7 @@
    Kleur zit enkel nog in de toestand-icoontjes.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { daysOfThisWeek } from '@/utils/locale';
 import { Brand } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
@@ -60,10 +61,9 @@ function buildWeek(history: BreathHistoryEntry[]) {
     segments: { key: string; color: string; sec: number }[];
     today: boolean;
   }[] = [];
-  const now = new Date();
-  for (let i = 6; i >= 0; i -= 1) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
+  /* Maandag → zondag van deze week (operator, 10 okt 2026). */
+  const todayKey = new Date().toDateString();
+  for (const d of daysOfThisWeek()) {
     const key = d.toDateString();
     const mine = history.filter((e) => new Date(e.ts).toDateString() === key);
     const sec = mine.reduce((a, e) => a + e.durSec, 0);
@@ -89,7 +89,7 @@ function buildWeek(history: BreathHistoryEntry[]) {
       sec,
       frac: 0,
       segments,
-      today: i === 0,
+      today: key === todayKey,
     });
   }
   /* De schaal begint bij tien minuten en niet bij je hoogste dag.
@@ -296,7 +296,7 @@ export default function BreathHistoryScreen() {
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <WeekSummaryCard
-          days={week7.map((d) => ({ key: d.dateKey, letter: d.label, minutes: d.sec / 60 }))}
+          days={week7.map((d) => ({ key: d.dateKey, letter: d.label, minutes: d.sec / 60, today: d.today }))}
           sessions={weekSessions}
           streak={stats.streakDays}
           allTimeMinutes={stats.totalSec / 60}

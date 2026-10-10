@@ -17,6 +17,7 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { startOfWeekMonday } from '@/utils/locale';
 import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import {
   useBraceletStats,
@@ -100,10 +101,9 @@ export default function ActivityScreen() {
      nodig, dus geen zware `stats`/`bracelet`-berekening meer — rechtstreeks
      uit de bestaande hooks. */
   const weekBreathSessions = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekAgo = today.getTime() - 6 * DAY;
-    return history.filter((e) => e.ts >= weekAgo).length;
+    /* Zelfde "deze week" als de historiek: vanaf maandag. */
+    const weekStart = startOfWeekMonday().getTime();
+    return history.filter((e) => e.ts >= weekStart).length;
   }, [history]);
   const bStats = useBraceletStats();
   const { plan: braceletPlan } = useActiveBraceletPlan();

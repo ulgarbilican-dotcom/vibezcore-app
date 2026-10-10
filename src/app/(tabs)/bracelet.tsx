@@ -207,7 +207,8 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
         >
           <Animated.Text style={[s.introEyebrow, eyebrowStyle]}>STATE CONTROL</Animated.Text>
           {/* Operator, 10 okt 2026: nieuwe titel (was "Guided by touch, on your wrist."). */}
-          <Animated.Text style={[s.introTitle, titleStyle]}>Feel different.{'\n'}Perform differently.</Animated.Text>
+          {/* Operator, 10 okt 2026: nieuwe kop (was "Feel different. Perform differently."). */}
+          <Animated.Text style={[s.introTitle, titleStyle]}>The Power to Shift.{'\n'}From Your Wrist.</Animated.Text>
         </View>
         <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
           <Pressable

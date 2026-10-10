@@ -165,7 +165,7 @@ export default function BraceletHistory() {
       />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <WeekSummaryCard
-          days={weekDays.map((d) => ({ key: d.dayKey, letter: d.dayLabel.slice(0, 1), minutes: d.minutes }))}
+          days={weekDays.map((d) => ({ key: d.dayKey, letter: d.dayLabel.slice(0, 1), minutes: d.minutes, today: d.dayLabel === 'Today' }))}
           sessions={weekSessions}
           streak={stats.streak}
           allTimeMinutes={stats.totalMinutes}

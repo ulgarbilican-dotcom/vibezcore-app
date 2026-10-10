@@ -78,6 +78,9 @@
 import { openStateControl } from '@/utils/state-control-ui';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import ConfirmCard from '@/components/ConfirmCard';
+import { DurationWheel } from '@/components/DurationWheel';
+import { planItemStatuses } from '@/utils/plan-status';
+import { getAllSessions } from '@/utils/bracelet-history';
 import { useStartStateControl } from '@/hooks/useStartStateControl';
 import { AudioAccent, Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
@@ -260,6 +263,7 @@ export default function BraceletAgendaScreen() {
   const [filterMode, setFilterMode] = useState<BraceletMode | 'all' | null>(null);
   const [actionItemIndex, setActionItemIndex] = useState<number | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [durationEditIndex, setDurationEditIndex] = useState<number | null>(null);
   const selectedKey = dayKey(selected);
   const todayKey = dayKey(new Date());
   const day: BraceletPlanDay | null = plan?.days[selectedKey] ?? null;
@@ -637,6 +641,20 @@ export default function BraceletAgendaScreen() {
       {actionItemIndex !== null && day?.items[actionItemIndex] && (() => {
         const item = day.items[actionItemIndex];
         const meta = getModeMeta(item.mode as BraceletMode);
+        /* Operator, 10 okt 2026 ("gelijktrekken met breathwork"): zelfde
+           Done / Partial / Missed als in de breathwork-agenda, met dezelfde
+           regel (utils/plan-status). */
+        const dayEntries = getAllSessions()
+          .filter((r) => dayKey(new Date(r.startedAt)) === day.dayKey)
+          .map((r) => ({ key: String(r.mode), ts: new Date(r.startedAt).getTime(), completed: r.status === 'completed' }));
+        const status =
+          planItemStatuses(
+            day.items.map((it) => ({ state: String(it.mode), reminderAt: it.reminderAt })),
+            dayEntries,
+          )[actionItemIndex] ?? 'none';
+        const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+        const missed =
+          status === 'none' && (day.dayKey < todayKey || (day.dayKey === todayKey && item.reminderAt < nowMins));
         return (
           <GlassSheet visible onClose={() => setActionItemIndex(null)}>
               <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}>
@@ -653,6 +671,7 @@ export default function BraceletAgendaScreen() {
                     <Text style={s.actionTitle}>{meta.name}</Text>
                     <Text style={s.actionSub}>
                       {fmtTime(item.reminderAt)} · {item.durationMinutes} min
+                      {status === 'done' ? ' · Done' : status === 'partial' ? ' · Partial' : missed ? ' · Missed' : ''}
                     </Text>
                   </View>
                 </View>
@@ -663,7 +682,6 @@ export default function BraceletAgendaScreen() {
                     setActionItemIndex(null);
                   }}
                 >
-                  <Play size={14} color="#1D1D1F" strokeWidth={2.4} fill="#1D1D1F" />
                   {/* Operator, 1 okt 2026 ("try it now misschien anders,
                      wat is ux regel"): consistentie — elders (breathwork)
                      heet dit overal "Start session", nooit "Try". Dit
@@ -672,7 +690,17 @@ export default function BraceletAgendaScreen() {
                   <Text style={s.actionPlayTxt}>Start session</Text>
                 </Pressable>
                 <Pressable
-                  style={s.actionRemoveBtn}
+                  style={s.actionEditBtn}
+                  onPress={() => {
+                    const idx = actionItemIndex;
+                    setActionItemIndex(null);
+                    setDurationEditIndex(idx);
+                  }}
+                >
+                  <Text style={s.actionEditTxt}>Edit duration</Text>
+                </Pressable>
+                <Pressable
+                  style={[s.actionRemoveBtn, { paddingTop: 4 }]}
                   onPress={() => {
                     void removeItem(actionItemIndex);
                     setActionItemIndex(null);
@@ -684,6 +712,48 @@ export default function BraceletAgendaScreen() {
           </GlassSheet>
         );
       })()}
+
+      {/* Duur aanpassen — zelfde blad als in de breathwork-agenda; geldt
+          voor elke dag vanaf vandaag (zie applyToComingDays). */}
+      <GlassSheet visible={durationEditIndex !== null} onClose={() => setDurationEditIndex(null)}>
+        <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}>
+          <VibezGlass
+            radius={24}
+            level="sheet"
+            blurTarget={rootBlurRef}
+            style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+          />
+          <View style={s.pickHandle} />
+          {durationEditIndex !== null && day?.items[durationEditIndex] && (() => {
+            const it = day.items[durationEditIndex];
+            const meta = getModeMeta(it.mode as BraceletMode);
+            const options: { value: number; label: string }[] = [];
+            for (let m = meta.minMinutes; m <= meta.maxMinutes; m += 1) options.push({ value: m, label: `${m} min` });
+            return (
+              <>
+                <View style={s.pickHeaderRow}>
+                  <Text style={s.pickHeaderTitle}>{meta.name} duration</Text>
+                  <Pressable onPress={() => setDurationEditIndex(null)} hitSlop={10} accessibilityRole="button">
+                    <Text style={s.pickHeaderDone}>Done</Text>
+                  </Pressable>
+                </View>
+                <View style={{ width: 266, alignSelf: 'center' }}>
+                  <DurationWheel
+                    options={options}
+                    value={it.durationMinutes}
+                    accent={meta.color}
+                    trackColor="rgba(255,255,255,0.4)"
+                    recommendedValue={meta.defaultMinutes}
+                    onChange={(v) => {
+                      void applyToComingDays(it, (x) => ({ ...x, durationMinutes: v }));
+                    }}
+                  />
+                </View>
+              </>
+            );
+          })()}
+        </View>
+      </GlassSheet>
     </SafeAreaView>
   );
 }
@@ -903,6 +973,11 @@ const s = StyleSheet.create({
   },
   actionPlayTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
   actionRemoveBtn: { alignItems: 'center', paddingVertical: 16 },
+  actionEditBtn: { alignItems: 'center', paddingVertical: 16 },
+  actionEditTxt: { fontFamily: BrandFonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.55)' },
+  pickHeaderRow: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  pickHeaderTitle: { fontFamily: BrandFonts.bold, fontSize: 17, color: '#ffffff' },
+  pickHeaderDone: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   actionRemoveTxt: { fontFamily: BrandFonts.medium, fontSize: 14, color: Brand.error },
 
   editLink: {

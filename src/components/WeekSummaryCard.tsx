@@ -18,6 +18,9 @@ export type WeekDay = {
   /** Eén letter (M, T, …); de laatste dag toont "Today". */
   letter: string;
   minutes: number;
+  /** Vandaag (week loopt sinds 10 okt 2026 van maandag tot zondag, dus
+   *  vandaag is niet altijd de laatste balk). */
+  today?: boolean;
 };
 
 /* Ronde schaal met een rond middengetal (0 · 30 · 60 …). */
@@ -73,7 +76,7 @@ export function WeekSummaryCard({
         ))}
         <View style={s.bars}>
           {days.map((d, i) => {
-            const isToday = i === days.length - 1;
+            const isToday = d.today ?? i === days.length - 1;
             const pct = d.minutes > 0 ? Math.max(3, (d.minutes / axisMax) * 100) : 0;
             return (
               <View key={d.key} style={s.barCol}>
@@ -99,10 +102,10 @@ export function WeekSummaryCard({
         {days.map((d, i) => (
           <Text
             key={d.key}
-            style={[s.dayLabel, i === days.length - 1 && s.dayLabelToday]}
+            style={[s.dayLabel, (d.today ?? i === days.length - 1) && s.dayLabelToday]}
             numberOfLines={1}
           >
-            {i === days.length - 1 ? 'Today' : d.letter}
+            {(d.today ?? i === days.length - 1) ? 'Today' : d.letter}
           </Text>
         ))}
       </View>

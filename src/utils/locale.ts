@@ -41,3 +41,22 @@ export function weekdayLabels(firstWeekday: number): string[] {
 export function leadingBlanks(firstOfMonth: Date, firstWeekday: number): number {
   return (firstOfMonth.getDay() - firstWeekday + 7) % 7;
 }
+
+/** Operator, 10 okt 2026 ("maandag"): "deze week" = de kalenderweek van
+ *  maandag 00:00 t.e.m. zondag, niet de laatste zeven dagen. */
+export function startOfWeekMonday(now: Date = new Date()): Date {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+/** De zeven dagen van deze week, maandag eerst. */
+export function daysOfThisWeek(now: Date = new Date()): Date[] {
+  const start = startOfWeekMonday(now);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}

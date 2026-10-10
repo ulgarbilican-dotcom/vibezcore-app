@@ -41,6 +41,7 @@
    CAP op 500 records (~1 jaar bij 1-2/dag).
    ─────────────────────────────────────────────────────────────────── */
 
+import { daysOfThisWeek, startOfWeekMonday } from '@/utils/locale';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { getToken } from '@/services/auth';
@@ -486,7 +487,8 @@ export function computeStats(forMode?: number): BraceletStats {
     };
   }
 
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  /* "Deze week" = vanaf maandag (operator, 10 okt 2026). */
+  const weekAgo = startOfWeekMonday(now);
 
   let todaySessions = 0;
   let todayMinutes = 0;
@@ -611,13 +613,14 @@ function buildLast7Days(
   records: SessionRecord[],
 ): { dayKey: string; dayLabel: string; minutes: number }[] {
   const days: { dayKey: string; dayLabel: string; minutes: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+  /* Maandag → zondag van deze week (operator, 10 okt 2026). */
+  const todayK = dayKey(now);
+  for (const d of daysOfThisWeek(now)) {
     const k = dayKey(d);
     const label =
-      i === 0
+      k === todayK
         ? 'Today'
-        : d.toLocaleDateString('en-US', { weekday: 'short' });
+        : d.toLocaleDateString('en-GB', { weekday: 'short' });
     days.push({ dayKey: k, dayLabel: label, minutes: 0 });
   }
   for (const r of records) {

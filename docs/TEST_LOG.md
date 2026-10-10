@@ -171,6 +171,13 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 107 | Meting 91–100 bpm: "Measurement complete" + "A little high for rest. Sit still a few minutes and measure again for a truer baseline"; witte knop bewaart, tekstknop Measure Again optioneel | A16 | ⏳ (operator: 97 zonder melding) |
 | 108 | Einde State Control-sessie: ring sluit en vult zich met glas in de toestandskleur, vinkje altijd wit; modusnaam grijs-wit (geen gekleurde tekst); bracelet-link op twee nette regels | A16 | ⏳ |
 | 109 | Flowtest 10 okt (A16, door Claude): breath-agenda (datum Engels, stip → actieblad → Start session → plan-techniek + minuten, start gepauzeerd = bedoeld; minimaliseren/terug; vroeg stoppen = Partial), Your protocol (zelfde done-regel als agenda, per gepland moment), Breath → setup (info-kaarten, cirkel slepen 9:00 → sessie 9:00), State Control (Average 70, Set your plan → Boost 10 min Today only → opslaan → agenda; No more sessions today; stip → Start → sessie; minimaliseren toont Boost-balk; Remove plan met glaskaart), Activity (tellers +1, State Control eerst) | A16 | ✅ na fixes (e08788e, 8ab20f3) |
+| 110 | Sessie-pillen: op tabbladen net boven de tabbalk, elders zwevend boven de knopzone — nooit over een titel of CTA | A16 | ✅ screenshots 10 okt |
+| 111 | Witte tekst: sessietitel (bv. CALM CONTROL) en dagdelen/tijden in Your protocol | A16 | ⏳ |
+| 112 | Hartslagmeting klaar: Save + Measure Again altijd; sluiten zonder bewaren → "Save this measurement?" (Save / Discard) | A16 | ⏳ |
+| 113 | Add session (State Control-plan): dunne ring zoals Session Control, tijd als 10:00 | A16 | ✅ screenshot 10 okt |
+| 114 | State Control-agenda actieblad: Done/Partial/Missed + Edit duration (geldt voor elke dag vanaf vandaag) + Remove from plan; geen play-icoon meer | A16 | ⏳ (geen plan op toestel tijdens test) |
+| 115 | "This week" = maandag t.e.m. zondag (historiek State Control + Breathwork, Activity-tellers), "Today" op de juiste dag | A16 | ✅ screenshot 10 okt |
+| 116 | State Control-intro: "The Power to Shift. From Your Wrist." | A16 | ✅ screenshot 10 okt |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
