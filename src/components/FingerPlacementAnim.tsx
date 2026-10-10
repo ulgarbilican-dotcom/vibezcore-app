@@ -28,8 +28,10 @@ const MS = 31;
 const L1 = { x: MX + 9, y: MY + 9 };
 const L2 = { x: MX + 22, y: MY + 22 };
 const FL = { x: MX + 22.5, y: MY + 8.5 };
-/* Waar de vingertop landt: midden van de module. */
-const TIP = { x: MX + MS / 2, y: MY + MS / 2 - 3 };
+/* Waar de vingertop landt. Operator, 10 okt 2026 ("de lichtbron moet op de
+   camera maar ONDER de vinger liggen"): de top ligt nu bovenaan de module,
+   zodat het vingerkussen flits én lenzen bedekt. */
+const TIP = { x: MX + 17, y: MY + 3 };
 const TILT = -24; // vinger komt schuin van rechtsonder
 const LINE = 'rgba(255,255,255,0.42)';
 const LINE_SOFT = 'rgba(255,255,255,0.22)';
@@ -88,16 +90,18 @@ export default function FingerPlacementAnim() {
         <Circle cx={FL.x} cy={FL.y} r={2.3} fill="rgba(255,255,255,0.5)" />
       </Svg>
 
-      {/* Flits die teal door de vinger gloeit */}
+      {/* Flits ONDER de vinger: de bron zit op de flits, het licht lekt
+          zacht rond de vingertop naar buiten. */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: glow }]}>
         <Svg width={W} height={H}>
           <Defs>
-            <RadialGradient id="fpGlow" cx={TIP.x} cy={TIP.y + 4} r={34} gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor={ACCENT} stopOpacity={0.6} />
+            <RadialGradient id="fpGlow" cx={FL.x} cy={FL.y} r={24} gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor={ACCENT} stopOpacity={0.9} />
+              <Stop offset="0.45" stopColor={ACCENT} stopOpacity={0.35} />
               <Stop offset="1" stopColor={ACCENT} stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Circle cx={TIP.x} cy={TIP.y + 4} r={34} fill="url(#fpGlow)" />
+          <Circle cx={FL.x} cy={FL.y} r={24} fill="url(#fpGlow)" />
         </Svg>
       </Animated.View>
 
@@ -105,6 +109,13 @@ export default function FingerPlacementAnim() {
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, fingerStyle]}>
         <Svg width={W} height={H}>
           <Defs>
+            {/* Donkere onderlaag: wat onder de vinger ligt (lenzen, flits)
+                verdwijnt, het licht komt enkel langs de randen. */}
+            <LinearGradient id="fpBack" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="84">
+              <Stop offset="0" stopColor="#0b0b0d" stopOpacity={0.94} />
+              <Stop offset="0.55" stopColor="#0b0b0d" stopOpacity={0.8} />
+              <Stop offset="1" stopColor="#0b0b0d" stopOpacity={0} />
+            </LinearGradient>
             <LinearGradient id="fpFill" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="84">
               <Stop offset="0" stopColor="#ffffff" stopOpacity={0.2} />
               <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
@@ -116,6 +127,7 @@ export default function FingerPlacementAnim() {
             </LinearGradient>
           </Defs>
           <G transform={`translate(${TIP.x - 15 * 0.78} ${TIP.y - 2 * 0.78}) rotate(${TILT} ${15 * 0.78} ${2 * 0.78}) scale(0.78)`}>
+            <Path d={FINGER} fill="url(#fpBack)" />
             <Path d={FINGER} fill="url(#fpFill)" stroke="url(#fpStroke)" strokeWidth={1.4} strokeLinejoin="round" />
             <Path d={NAIL} fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.38)" strokeWidth={0.9} />
             <Path d="M7 60 Q15 63 23 60" stroke={LINE_SOFT} strokeWidth={0.9} fill="none" strokeLinecap="round" />
