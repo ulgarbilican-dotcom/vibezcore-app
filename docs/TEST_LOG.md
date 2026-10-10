@@ -140,6 +140,13 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 79 | Rusthartslag-pagina: hartslaggeluid op elke slag + fijne tik; speaker = 6396 (100%), koptelefoon = 297400 met zachte lub (30%), uitgang via nieuwe module audio-route; stille lus tegen Bluetooth-afkappen; eerste slag klinkt meteen | A16 | ✅ operator: "dit is beter" (10 okt 2026) |
 | 53b | Vergrendelscherm ademsessie NA bezoek aan de rusthartslag-pagina (hartslaggeluid zet tijdelijk een andere audiomodus) — force-stop → pagina → Calm Control starten → slot | A16 | ✅🔒 zelf getest 10 okt: VibezcoreBreathSession PLAYING, melding CALM CONTROL (vis=PUBLIC), op het slotscherm V-icoon + "CALM CONTROL • Guided breathwork" (ook A1: statische tekst + V-icoon op de nieuwe build ✅) |
 | 53c | Vergrendelscherm (operator 10 okt: "sessienaam + timer die aftelt, vast" en "V te groot uitvergroot — zoals welkomstscherm"): balkje "CALM CONTROL • 4:45" (past, schuift niet, telt af); uitvergroot = eigen beeld (V-teken + VIBEZCORE-woordmerk op #0a0a0a), titel + aftellende tijd + voortgangsbalk | A16 | ✅🔒 zelf getest na force-stop (screenshots 12:25): balkje vast + aftellend, uitvergroot beeld correct. Operator-oordeel over het beeld ⏳ |
+| 80 | State Control Audio & Haptics: pil boven play → glazen blad, kaarten Haptic / Haptic + Audio (vaste iconen), geluid synchroon met de tik, ook op slot (Android); wisselen tijdens sessie | A16 | ⏳ operator — blad zelf gezien (screenshot 10 okt) |
+| 81 | State Control-vergrendelscherm: merk-kaart + aftellende M:SS + naam in hoofdletters | A16 | ⏳ |
+| 82 | Meteinde: hart klopt door + geluid/tik, lichtgolf, zelftekenend vinkje + "Measurement complete / You can lift your finger"; cirkel ademt niet | A16 | ⏳ |
+| 83 | Tabbalk: website-iconen zonder cirkel, gekozen icoon Bio-Teal + groter met bounce | A16 | ✅ screenshot; operator-oordeel bounce ⏳ |
+| 84 | Opstart: zwart systeemscherm, V bouwt zich op + lichtstreep + onthulling (enkel zichtbaar in release-build) | A16 | ⏳ release-APK |
+| 85 | Kleuren: Sleep-golf echt Bio-Teal (State Control + breath), harten Bio-Teal-overgang, alle pop-ups glas | A16 | ✅ cirkel operator "fout groen" → opgelost (screenshot); pop-ups ⏳ |
+| 86 | "Early 2027" i.p.v. Fall 2026 overal in de app | A16 | ⏳ visuele controle |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
