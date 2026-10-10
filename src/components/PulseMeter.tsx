@@ -989,7 +989,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
                 <Svg width={HEART} height={HEART} viewBox="0 0 24 24">
                   <Defs>
                     <LinearGradient id="pmHeartGlass" x1="0" y1="0" x2="0" y2="1">
-                      <Stop offset="0" stopColor="#7FF5E0" stopOpacity={0.62} />
+                      <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0.62} />
                       <Stop offset="1" stopColor="#00A3A3" stopOpacity={0.34} />
                     </LinearGradient>
                     <LinearGradient id="pmHeartShine" x1="0" y1="0" x2="0" y2="1">

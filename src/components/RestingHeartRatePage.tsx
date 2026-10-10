@@ -279,6 +279,13 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
                   glans bovenaan die wegvloeit. Zelfde vorm als het lucide-hart. */}
               <Svg width={Math.round(core * 0.6)} height={Math.round(core * 0.6)} viewBox="0 0 24 24">
                 <Defs>
+                  {/* Operator, 10 okt 2026 ("consistentie over heel de app"):
+                      enkel de huisstijl-overgang Bio-Teal #4AF0D4 → #00A3A3
+                      (theme.ts AudioAccentLight → AudioAccent), geen eigen tint. */}
+                  <SvgLinearGradient id="hgFill" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor={AudioAccentLight} />
+                    <Stop offset="1" stopColor={AudioAccent} />
+                  </SvgLinearGradient>
                   <SvgLinearGradient id="hgShine" x1="0" y1="0" x2="0" y2="1">
                     <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
                     <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
@@ -286,7 +293,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
                 </Defs>
                 {/* Vervolg (operator, 9 okt 2026): groter, en steviger glas zodat de
                     hartlijn er duidelijk achter verdwijnt. */}
-                <Path d={HEART_D} fill="#3FDCC2" fillOpacity={1} />
+                <Path d={HEART_D} fill="url(#hgFill)" />
                 <Path d={HEART_D} fill="url(#hgShine)" />
               </Svg>
           </Animated.View>
