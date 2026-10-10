@@ -33,7 +33,7 @@ import {
 } from '@/services/resting-pulse';
 import { rootBlurRef } from '@/utils/root-blur';
 import * as Haptics from 'expo-haptics';
-import { HeartPulse } from 'lucide-react-native';
+import { ChevronRight, HeartPulse } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   useWindowDimensions,
@@ -94,9 +94,12 @@ export default function RhythmSheet({
   onClose,
   startAt = 'choose',
   fromProfile = false,
-  now = false,
+  now: nowProp = false,
   nextLabel = 'Continue',
 }: Props) {
+  /* Operator, 10 okt 2026: vanuit de bpm-pil (sessie) kan je doorgaan naar
+     "Update Resting Heart Rate" — dan wordt dit blad het rusthartslag-blad. */
+  const [now, setNow] = useState(nowProp);
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [step, setStep] = useState<Step>(startAt);
@@ -113,6 +116,7 @@ export default function RhythmSheet({
   });
   useEffect(() => {
     if (visible) {
+      setNow(nowProp);
       setStep(startAt);
       setJustMeasured(null);
       setMeterError(false);
@@ -120,7 +124,7 @@ export default function RhythmSheet({
       setElevatedReading(false);
       setSavedBpm(null);
     }
-  }, [visible, startAt]);
+  }, [visible, startAt, nowProp]);
 
   /* Bewaren van een geslaagde meting (knop Save of de vraag bij sluiten). */
   /* Operator, 10 okt 2026 ("na Save sluiten en dan een CTA Let's Go, pas
@@ -132,6 +136,13 @@ export default function RhythmSheet({
   const saveMeasured = (andClose = false) => {
     setConfirmUnsaved(false);
     if (justMeasured === null) return;
+    /* Via de bpm-pil (`now`): enkel het startpunt van de volgende sessie,
+       je rusthartslag blijft ongewijzigd (operator, 10 okt 2026). */
+    if (now) {
+      setLiveStartPulse(justMeasured);
+      onDone();
+      return;
+    }
     const below = justMeasured < getRestingPulse().bpm;
     if (!addRestingPulseReading(justMeasured)) return;
     /* De sessie die nu volgt, begint bij het hart van nu. */
@@ -152,7 +163,7 @@ export default function RhythmSheet({
      ging ze stil verloren (test 10 okt 2026: 97 bpm nooit opgeslagen). */
   const [confirmUnsaved, setConfirmUnsaved] = useState(false);
   const guardedClose = () => {
-    if (step === 'measure' && measuredOk && justMeasured !== null && savedBpm === null) setConfirmUnsaved(true);
+    if (!now && step === 'measure' && measuredOk && justMeasured !== null && savedBpm === null) setConfirmUnsaved(true);
     else onClose();
   };
 
@@ -194,7 +205,13 @@ export default function RhythmSheet({
               als SESSION CONTROL / BREATHWORK (dit blad voelt als een pagina).
               Absoluut gecentreerd, zodat "Cancel" het niet opzij duwt. */}
           <Text style={s.eyebrow} pointerEvents="none">
-            {now ? 'Heart Rate' : 'Resting Heart Rate'}
+            {/* Operator, 10 okt 2026: de kop zegt welk getal het is; geen tweede
+                titel meer onder het icoon. */}
+            {now && step === 'choose' && pulse.liveBpm !== null
+              ? 'Heart Rate Now'
+              : now && step !== 'choose'
+                ? 'Heart Rate'
+                : 'Resting Heart Rate'}
           </Text>
           <View />
           {/* Actieblad (protocol): de keuze in State Control heeft onderaan
@@ -208,36 +225,32 @@ export default function RhythmSheet({
 
         {step === 'choose' && now && (
           <>
-            {/* Operator, 9 okt 2026 ("heart rate for this session is niet
-                duidelijk — zet je hartslag en het getal erbij"): eerst WAT
-                (je hartslag + getal + waar het vandaan komt), dan één zin
-                waarvoor het dient, dan de keuzes. */}
+            {/* Operator, 10 okt 2026 ("moet echt duidelijk zijn, hoe zou Apple
+                dat doen"): eerst wat er NU geldt (getal + waar het vandaan
+                komt), dan één hoofdactie (meten voor deze sessie) en de
+                zeldzamere actie (je rusthartslag zelf aanpassen) als
+                tekstknop. Een meting hier verandert je rusthartslag niet. */}
             <View style={[s.iconWrap, s.iconWrapLg]}>
               <HeartPulse size={40} color="#ffffff" strokeWidth={1.7} />
             </View>
-            {/* Vervolg ("moet duidelijk zijn dat het zijn eigen gemeten
-                hartslag is, niet de huidige live hartslag"): de titel zegt
-                welk getal het is. */}
-            <Text style={[s.title, { textAlign: 'center', marginBottom: 6 }]}>
-              {pulse.liveBpm !== null ? 'Heart rate now' : 'Resting heart rate'}
-            </Text>
             <Text style={s.bigNum}>
               {pulse.liveBpm ?? pulse.bpm}
               <Text style={s.bigUnit}> bpm</Text>
             </Text>
             <Text style={[s.resultLbl, { textAlign: 'center' }]}>
               {pulse.liveBpm !== null
-                ? 'Measured just now'
+                ? `For your next session · Resting ${pulse.bpm} bpm`
                 : pulse.source === 'average'
                   ? 'Average — not measured yet'
                   : pulse.source === 'manual'
                     ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`
-                    : `Your last measurement${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`}
+                    : `Measured${pulse.at ? ` ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`}
             </Text>
-            <Text style={[s.body, { textAlign: 'center', marginTop: 18 }]}>
-              {/* Operator, 9 okt 2026: enkel waarvoor het getal dient. */}
-              The session adapts to your heart rate.
-            </Text>
+            {/* Operator, 10 okt 2026 ("is die uitleg hier nodig? kan op de
+                website"): geen uitleg in dit blad — wie hier komt, kent het
+                getal al; de uitleg staat één keer op de eerste
+                rusthartslag-pagina en op de website. */}
+            <View style={{ height: 18 }} />
             {PulseMeter ? (
               <PressScale
                 style={[s.cta]} haptic scaleTo={0.97}
@@ -247,41 +260,55 @@ export default function RhythmSheet({
                 }}
                 accessibilityRole="button"
               >
-                <Text style={s.ctaTxt}>Measure Now</Text>
+                <Text style={s.ctaTxt}>{pulse.liveBpm !== null ? 'Measure Again' : 'Measure for This Session'}</Text>
+              </PressScale>
+            ) : null}
+            {pulse.liveBpm !== null ? (
+              <PressScale
+                style={[s.secondary]}
+                onPress={() => {
+                  /* Terug naar de rusthartslag als startpunt. */
+                  clearLiveStartPulse();
+                  onDone();
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={s.secondaryTxt}>Use Resting Heart Rate · {pulse.bpm} bpm</Text>
               </PressScale>
             ) : null}
             <PressScale
-              style={[s.secondary]}
+              style={[s.secondary, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }]}
               onPress={() => {
-                if (pulse.liveBpm !== null) {
-                  /* Terug naar de vaste rusthartslag als startpunt. */
-                  clearLiveStartPulse();
-                  onDone();
-                } else {
-                  onClose();
-                }
+                hapticTap();
+                setNow(false);
+                setStep('choose');
               }}
               accessibilityRole="button"
             >
-              <Text style={s.secondaryTxt}>
-                {pulse.liveBpm === null
-                  ? 'Not Now'
-                  : pulse.source === 'average'
-                    ? `Use Average · ${pulse.bpm} bpm`
-                    : `Use Resting · ${pulse.bpm} bpm`}
-              </Text>
+              <Text style={[s.secondaryTxt, { color: 'rgba(255,255,255,0.7)' }]}>Update Resting Heart Rate</Text>
+              <ChevronRight size={16} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
             </PressScale>
           </>
         )}
 
         {step === 'choose' && !now && (
           <>
-            <View style={s.iconWrap}>
-              <HeartPulse size={30} color="#ffffff" strokeWidth={1.8} />
+            {/* Operator, 10 okt 2026: zelfde opbouw als het hartslagblad ervoor
+                (gecentreerd), en geen uitleg — die staat op de eerste
+                rusthartslag-pagina en op de website. */}
+            <View style={[s.iconWrap, s.iconWrapLg]}>
+              <HeartPulse size={40} color="#ffffff" strokeWidth={1.7} />
             </View>
-            <Text style={s.title}>Start at your own pace</Text>
-            <Text style={s.body}>
-              Every session begins at your resting heart rate, then eases into the rhythm of your state.
+            <Text style={s.bigNum}>
+              {pulse.bpm}
+              <Text style={s.bigUnit}> bpm</Text>
+            </Text>
+            <Text style={[s.resultLbl, { textAlign: 'center', marginBottom: 18 }]}>
+              {pulse.source === 'average'
+                ? 'Average — not measured yet'
+                : pulse.source === 'manual'
+                  ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`
+                  : `Measured${pulse.at ? ` ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`}
             </Text>
             {PulseMeter ? (
               <>
@@ -325,7 +352,7 @@ export default function RhythmSheet({
             >
               <Text style={s.secondaryTxt}>Use an average ({AVERAGE_RESTING_BPM} bpm)</Text>
             </PressScale>
-            {!fromProfile ? <Text style={s.note}>You can change this anytime in Profile.</Text> : null}
+            {!fromProfile && !nowProp ? <Text style={s.note}>You can change this anytime in Profile.</Text> : null}
           </>
         )}
 
@@ -338,6 +365,7 @@ export default function RhythmSheet({
             <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 40 }}>
             <PulseMeter
               key={meterKey}
+              purpose={now ? 'session' : 'baseline'}
               onElevated={(bpm) => {
                 setJustMeasured(bpm);
                 setElevatedReading(true);
@@ -399,7 +427,7 @@ export default function RhythmSheet({
                 {/* Operator, 10 okt 2026 ("wat als iemand opnieuw wil meten?
                     op het einde save of opnieuw"): bewaren is een bewuste
                     keuze, opnieuw meten staat er altijd onder. */}
-                <Text style={s.ctaTxt}>{savedBpm !== null ? "Let's Go" : 'Save'}</Text>
+                <Text style={s.ctaTxt}>{now || savedBpm !== null ? "Let's Go" : 'Save'}</Text>
               </PressScale>
               {savedBpm !== null ? (
                 <Text style={[s.fact, { textAlign: 'center', marginTop: 14, marginBottom: 6 }]}>

@@ -178,6 +178,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 114 | State Control-agenda actieblad: Done/Partial/Missed + Edit duration (geldt voor elke dag vanaf vandaag) + Remove from plan; geen play-icoon meer | A16 | ⏳ (geen plan op toestel tijdens test) |
 | 115 | "This week" = maandag t.e.m. zondag (historiek State Control + Breathwork, Activity-tellers), "Today" op de juiste dag | A16 | ✅ screenshot 10 okt |
 | 116 | State Control-intro: "The Power to Shift. From Your Wrist." | A16 | ✅ screenshot 10 okt |
+| 117 | bpm-pil (Session Control): kop RESTING HEART RATE, 81 bpm + "Measured 10 Oct", knop "Measure for This Session" (verandert rusthartslag NIET, ook >100 geldig, daarna Let's Go) en "Update Resting Heart Rate ›" → zelfde opbouw met Measure my heart rate / Enter it myself / Use an average; geen uitleg in het blad | A16 | ✅ screenshots 10 okt (meten zelf ⏳) |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

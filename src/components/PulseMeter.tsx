@@ -114,6 +114,10 @@ type Props = {
       dan een melding dat dit geen rusthartslag is"): een geldige meting
       boven het rustbereik. Getoond, maar niet als rusthartslag bewaard. */
   onElevated?: (bpm: number) => void;
+  /** Operator, 10 okt 2026: 'session' = meting via de bpm-pil, enkel als
+   *  startpunt van de volgende sessie (bv. bij stress). Dan is elk ritme
+   *  geldig (ook boven 100) en geen rusthartslag-teksten. */
+  purpose?: 'baseline' | 'session';
   /** "Enter it myself" vanuit een fout- of weigerstatus. */
   onManual: () => void;
   /** Foutscherm aan/uit — het blad verbergt dan zijn meetuitleg. */
@@ -298,7 +302,7 @@ const CHECK_C = 2 * Math.PI * 10;
    rustige minuten opnieuw te meten. Geen verplichting, geen diagnose. */
 export const HIGH_REST_BPM = 90;
 
-function DoneMessage({ elevated = false, high = false }: { elevated?: boolean; high?: boolean }) {
+function DoneMessage({ elevated = false, high = false, session = false }: { elevated?: boolean; high?: boolean; session?: boolean }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.value = withTiming(1, { duration: 1000, easing: ReEasing.out(ReEasing.cubic) });
@@ -322,7 +326,9 @@ function DoneMessage({ elevated = false, high = false }: { elevated?: boolean; h
       style={s.doneMsg}
       accessibilityLiveRegion="polite"
       accessibilityLabel={
-        elevated
+        session
+          ? 'Measurement complete. Your next session starts from this heart rate.'
+          : elevated
           ? 'Not a resting heart rate. Your session starts here. Measure at rest for your baseline.'
           : high
             ? 'Measurement complete. A little high for rest. Sit still a few minutes and measure again for a truer baseline.'
@@ -357,7 +363,9 @@ function DoneMessage({ elevated = false, high = false }: { elevated?: boolean; h
         <Text style={s.doneTitle}>{elevated ? 'Not a resting heart rate' : 'Measurement complete'}</Text>
       </Reanimated.View>
       <Reanimated.Text style={[s.doneSub, subStyle]}>
-        {elevated
+        {session
+          ? 'Your next session starts from this heart rate'
+          : elevated
           ? 'Your session starts here. Measure at rest for your baseline'
           : high
             ? 'A little high for rest. Sit still a few minutes and measure again for a truer baseline'
@@ -443,7 +451,7 @@ function CalcArc() {
   );
 }
 
-export default function PulseMeter({ onResult, onElevated, onManual, onErrorChange }: Props) {
+export default function PulseMeter({ onResult, onElevated, onManual, onErrorChange, purpose = 'baseline' }: Props) {
   const permission = useCameraPermission();
   const [status, setStatus] = useState<Status>('placing');
   const [progress, setProgress] = useState(0);
@@ -748,7 +756,9 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
         const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
         /* Geldig maar boven het rustbereik (101–180): meteen tonen, niet
            eerst doormeten tot de foutmelding. */
-        const high = !!res && res.bpm > 100 && res.confidence >= 0.35;
+        const high = purpose !== 'session' && !!res && res.bpm > 100 && res.confidence >= 0.35;
+        /* Sessiemeting: elk geldig ritme 45–180 is goed (stress = hoog). */
+        const okSession = purpose === 'session' && !!res && res.bpm >= 45 && res.bpm <= 180 && res.confidence >= 0.35;
         if (high && res) {
           finished.current = true;
           setCalculating(true);
@@ -763,7 +773,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             onElevated?.(res.bpm);
           }, 1200);
-        } else if (ok && res) {
+        } else if ((ok || okSession) && res) {
           finished.current = true;
           /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst
              even het eindgetal tonen, met een tik, dan pas door. */
@@ -1177,7 +1187,11 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
         /* Operator, 10 okt 2026 ("op het einde moet er een melding komen
            dat de meting ok is — nu stopt het gewoon"): wat er gebeurd is +
            wat je nu doet. */
-        <DoneMessage elevated={elevated} high={!elevated && finalBpm !== null && finalBpm > HIGH_REST_BPM} />
+        <DoneMessage
+          session={purpose === 'session'}
+          elevated={elevated}
+          high={purpose !== 'session' && !elevated && finalBpm !== null && finalBpm > HIGH_REST_BPM}
+        />
       ) : (
         /* Operator, 10 okt 2026: wat er gebeurt op de eerste regel, wat je
            doet op de tweede (i.p.v. één regel met een gedachtestreep). */
