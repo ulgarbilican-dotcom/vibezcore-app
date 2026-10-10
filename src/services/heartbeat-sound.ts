@@ -44,7 +44,15 @@ let headphones: AudioPlayer | null = null;
    drie opnames die op Pixabay goed klonken, klonken in de app allemaal
    "niet goed" met koptelefoon). */
 let keepAwake: AudioPlayer | null = null;
-let active = false;
+/* Operator, 10 okt 2026 ("ik hoor het hartslaggeluid niet meer"): de
+   Resting Heart Rate-pagina én de meting (PulseMeter) gebruiken dit geluid.
+   Eén gedeelde aan/uit-vlag liet de meting bij het sluiten van haar blad
+   het geluid van de pagina mee uitzetten (het blad verdwijnt pas ná de
+   animatie, dus nadat de pagina het al weer had aangezet). Nu heeft elke
+   gebruiker een eigen sleutel; het geluid stopt pas als niemand het nog
+   nodig heeft. */
+export type HeartbeatOwner = 'page' | 'measure' | 'state-control';
+const owners = new Set<HeartbeatOwner>();
 
 /* Operator, 9 okt 2026 ("de hartslag speelt niet meteen, duurt ~4 s"): de
    spelers worden vooraf aangemaakt (zodra de pagina er is, nog vóór ze in
@@ -97,10 +105,12 @@ export function preloadHeartbeatSound(): void {
   ensurePlayers();
 }
 
-export function startHeartbeatSound(): void {
-  if (active) return;
+export function startHeartbeatSound(owner: HeartbeatOwner): void {
+  if (owners.has(owner)) return;
   if (getBreathSession().isRunning || getSnapshot().session !== null) return;
-  active = true;
+  const wasActive = owners.size > 0;
+  owners.add(owner);
+  if (wasActive) return;
   invalidateAudioMode();
   invalidateAudioModeSet();
   /* Niet wachten: de modus wordt gezet terwijl de eerste slag al kan klinken. */
@@ -119,7 +129,7 @@ export function startHeartbeatSound(): void {
 
 /** Eén slag (de "lub"; de "dub" zit in hetzelfde geluid). */
 export function heartbeatTick(): void {
-  if (!active) return;
+  if (owners.size === 0) return;
   const p = isHeadphonesOutput() ? headphones : speaker;
   if (!p) return;
   try {
@@ -143,8 +153,9 @@ export function heartbeatTick(): void {
   }
 }
 
-export function stopHeartbeatSound(): void {
-  active = false;
+export function stopHeartbeatSound(owner: HeartbeatOwner): void {
+  owners.delete(owner);
+  if (owners.size > 0) return;
   for (const p of [speaker, headphones, keepAwake]) {
     if (!p) continue;
     try {

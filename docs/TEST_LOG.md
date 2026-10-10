@@ -163,6 +163,8 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 99b | Flits-melding opnieuw (operator 10 okt: "Flash unavailable terwijl de flits brandde"): vaste beslisregel — nooit melding zodra flitslicht gezien; enkel bij 2× zaklamp-fout of lage batterij + 8 s pikzwart. Testen: (a) flits aan, vinger naast de flits 10 s → GEEN foutscherm; (b) flits aan, vinger goed → meting; (c) batterij ≤ 15 % en flits uit → melding na ±8 s | A16 | ⏳ |
 | 100 | Vinger-animatie (resting heart rate): vingertop landt bovenaan de cameramodule en bedekt flits + lenzen; teal licht komt van de flits ONDER de vinger en lekt langs de randen | A16 | ⏳ |
 | 101 | Tabbalk: State Control · Breath · Library · Activity · Profile (operator 10 okt) | A16 | ⏳ (vorige volgorde Breath·State Control·Library ✅) |
+| 102 | Hartslaggeluid op Resting Heart Rate-pagina klinkt weer, ook na een meting openen en sluiten (eigen sleutel per gebruiker: pagina / meting / State Control) | A16 | ⏳ (operator 10 okt: "hoor het niet meer") |
+| 103 | Hartslag-blad: titel "Resting Heart Rate" wit vet 18 zoals de andere onderbladen (was grijs kapitaal-label), Cancel rechts | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

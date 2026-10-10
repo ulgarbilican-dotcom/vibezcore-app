@@ -374,7 +374,7 @@ function silence(keepService = false): void {
   generation += 1;
   if (jsSoundOn) {
     jsSoundOn = false;
-    stopHeartbeatSound();
+    stopHeartbeatSound('state-control');
   }
   clearPending();
   stopNativeWaveform();
@@ -420,7 +420,7 @@ function play(
   } else if (!silent) {
     if (clock) {
       jsSoundOn = true;
-      startHeartbeatSound();
+      startHeartbeatSound('state-control');
     }
     scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);
   }

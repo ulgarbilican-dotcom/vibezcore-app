@@ -158,12 +158,12 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   useEffect(() => {
     const on = focused && appActive && sheet === null;
     live.current = on;
-    if (on) startHeartbeatSound();
-    else stopHeartbeatSound();
+    if (on) startHeartbeatSound('page');
+    else stopHeartbeatSound('page');
   }, [focused, appActive, sheet]);
   useEffect(() => {
     preloadHeartbeatSound();
-    return () => stopHeartbeatSound();
+    return () => stopHeartbeatSound('page');
   }, []);
   const beat = useDerivedValue(() => {
     const ph = (((clock.value - travelMs) % BEAT_MS) + BEAT_MS) % BEAT_MS;

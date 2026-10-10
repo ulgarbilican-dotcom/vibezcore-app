@@ -151,7 +151,10 @@ export default function RhythmSheet({
           <View style={s.grip} />
         </Pressable>
         <View style={s.head}>
-          <Text style={s.eyebrow}>{now ? 'HEART RATE' : 'RESTING HEART RATE'}</Text>
+          {/* Operator, 10 okt 2026 ("is de header consistent met andere
+              headers?"): zelfde bladtitel als de andere onderbladen — wit,
+              vet, gewone hoofdletters — i.p.v. een grijs kapitaal-labeltje. */}
+          <Text style={s.eyebrow}>{now ? 'Heart Rate' : 'Resting Heart Rate'}</Text>
           {/* Actieblad (protocol): de keuze in State Control heeft onderaan
               al "Not Now" — geen tweede Cancel bovenaan. */}
           {step !== 'result' && !(now && step === 'choose') ? (
@@ -487,7 +490,7 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30 },
-  eyebrow: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: BrandFonts.bold, letterSpacing: 1.6 },
+  eyebrow: { color: '#ffffff', fontSize: 18, fontFamily: BrandFonts.bold, letterSpacing: -0.2 },
   done: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
   iconWrap: {
     width: 56,

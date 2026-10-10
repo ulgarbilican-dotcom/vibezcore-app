@@ -504,11 +504,11 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const finalRef = useRef(false);
   useEffect(() => {
     if (finalBpm === null) {
-      if (finalRef.current) stopHeartbeatSound();
+      if (finalRef.current) stopHeartbeatSound('measure');
       finalRef.current = false;
     }
   }, [finalBpm]);
-  useEffect(() => () => stopHeartbeatSound(), []);
+  useEffect(() => () => stopHeartbeatSound('measure'), []);
   const [calculating, setCalculating] = useState(false);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -695,7 +695,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
             /* Het hart klopt verder op precies dit getal, met geluid. */
             liveEma.current = res.bpm;
             finalRef.current = true;
-            startHeartbeatSound();
+            startHeartbeatSound('measure');
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onResult(res.bpm);
           }, 1200);
