@@ -51,7 +51,6 @@ import {
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
-import Svg, { Circle } from 'react-native-svg';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -152,18 +151,13 @@ const TAB_ACTIVE_COLOR = '#1D1D1F';
 const TAB_INACTIVE_COLOR = '#8E8E93';
 
 /* Operator, 10 okt 2026 ("gebruik deze iconen voor de tabbladen" —
-   website-sectie "Three tools. One system."): elk icoon in een dunne
-   cirkel, zelfde familie als de website. Het geselecteerde tabblad krijgt
-   een Bio-Teal icoon ("aangeduide tab mag in Bio-Teal"). */
-const TAB_GLYPH = 23;
+   website-sectie "Three tools. One system."; vervolg: "iconen zonder
+   cirkels"): dezelfde symbolen als de website, zonder de ring. Het
+   geselecteerde tabblad krijgt een Bio-Teal icoon. */
 function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) {
-  const color = focused ? AudioAccent : TAB_INACTIVE_COLOR;
   return (
-    <View style={{ width: TAB_GLYPH, height: TAB_GLYPH, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={TAB_GLYPH} height={TAB_GLYPH} style={StyleSheet.absoluteFill}>
-        <Circle cx={TAB_GLYPH / 2} cy={TAB_GLYPH / 2} r={TAB_GLYPH / 2 - 0.9} stroke={color} strokeWidth={1.6} fill="none" />
-      </Svg>
-      <Icon size={12.5} color={color} strokeWidth={2.2} />
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Icon size={21} color={focused ? AudioAccent : TAB_INACTIVE_COLOR} strokeWidth={2} />
     </View>
   );
 }
