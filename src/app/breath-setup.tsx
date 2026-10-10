@@ -1780,7 +1780,13 @@ export default function BreathSetupScreen() {
     }
   };
   const dialFracSV = useSharedValue(0);
-  const heroDial = Gesture.Pan()
+  const openTechInfo = () => setInfoModal({ title: tech.name, techniqueKey: tech.key });
+  const heroTap = Gesture.Tap()
+    .maxDistance(10)
+    .onEnd((_e, ok) => {
+      if (ok) scheduleOnRN(openTechInfo);
+    });
+  const heroDialPan = Gesture.Pan()
     .manualActivation(true)
     .onTouchesDown((e, manager) => {
       const t = e.allTouches[0];
@@ -1803,6 +1809,7 @@ export default function BreathSetupScreen() {
       dialFracSV.value = nf;
       scheduleOnRN(onDialFrac, nf);
     });
+  const heroDial = Gesture.Exclusive(heroDialPan, heroTap);
 
 
   /* Operator, 24 september 2026 ("bolletje op het uiteinde van de boog" →
@@ -2474,21 +2481,12 @@ export default function BreathSetupScreen() {
            "professioneel geanimeerd" gevoel uit de referentiemockup.
            Operator, 18 september 2026: enkel nog de NORMALE flow — addToDay
            gebruikt `AddToDayHero` hierboven. */}
+        {/* Operator, 10 okt 2026: boven de cirkel de toestand; de techniek
+            staat in de cirkel. */}
         {!isAddToDay && (
-        <Pressable
-          onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
-          hitSlop={10}
-          style={s.techTitle}
-          accessibilityRole="button"
-          accessibilityLabel={`${tech.name}. Tap for how it works.`}
-        >
-          {/* Operator, 10 okt 2026: boven de cirkel gewoon de naam van de
-              techniek (i = uitleg); de keuze zit in het draaiwiel eronder. */}
-          <Text style={s.techTitleTxt} numberOfLines={1}>
-            {tech.name}
-          </Text>
-          <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-        </Pressable>
+        <Text style={[s.techTitle, s.techTitleTxt]} numberOfLines={1}>
+          {displayName(st.eyebrow)}
+        </Text>
         )}
         {!isAddToDay && (
         <GestureHandlerRootView style={{ flex: 0 }}>
@@ -2592,9 +2590,14 @@ export default function BreathSetupScreen() {
             {/* Operator, 10 okt 2026 (Apple-consistentie met State Control):
                zelfde volgorde in de cirkel — bovenaan WAT (de techniek), in
                het midden de tijd, onderaan "● Recommended" (was omgekeerd). */}
-            <Text style={s.heroTech} numberOfLines={1}>
-              {displayName(st.eyebrow)}
-            </Text>
+            <View style={s.heroTechRow}>
+              <View style={s.heroTechLine}>
+                <Text style={s.heroTech} numberOfLines={2}>
+                  {tech.name}
+                </Text>
+                <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+              </View>
+            </View>
             <Animated.Text
               key={`clock-${tech.key}`}
               entering={FadeIn.duration(240)}
@@ -2972,7 +2975,7 @@ export default function BreathSetupScreen() {
             cirkel); de technieken als draaiwiel ONDER de cirkel. */}
         <View style={s.techWheelWrap}>
           <DurationWheel
-            options={st.techniques.map((t, i) => ({ value: i, label: t.name }))}
+            options={st.techniques.map((t, i) => ({ value: i, label: techShortLabel(t) }))}
             textMode
             value={techIdx}
             accent={accent}
@@ -3900,7 +3903,8 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
      voortgangsring, hoger op het scherm. */
   techTitle: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 40 },
   techTitleTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
-  techWheelWrap: { alignSelf: 'center', width: 300, marginTop: 26 },
+  /* Operator: "de pil van de carrousel korter" — op maat van de korte namen. */
+  techWheelWrap: { alignSelf: 'center', width: 190, marginTop: 48 },
   heroWrap: {
     width: HERO_SIZE,
     height: HERO_SIZE,
@@ -3989,12 +3993,16 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   /* Operator, 8 okt 2026 ("extended exhale breathing mag op 2 lijnen, nu te
      dicht tegen de cirkel"): smaller vak zodat lange namen netjes breken,
      ruim binnen de rand. */
+  /* Operator, 10 okt 2026: de tijd staat altijd op dezelfde plek — vaste
+     hoogte van twee regels, de naam onderaan uitgelijnd. */
+  heroTechRow: { alignItems: 'center', justifyContent: 'flex-end', height: 38, marginBottom: 14 },
+  /* Operator: "Extended Exhale Breathing mag op 2 lijnen" — smaller blok. */
+  heroTechLine: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 176 },
   heroTech: {
-    maxWidth: 180,
+    flexShrink: 1,
     alignSelf: 'center',
     marginTop: 0,
-    /* Zelfde ademruimte als State Control: naam los van tijd + Recommended. */
-    marginBottom: 18,
+    /* Ademruimte zit op heroTechRow. */
     fontFamily: BrandFonts.regular,
     fontSize: 14,
     lineHeight: 18,
@@ -4234,8 +4242,10 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   /* Operator, 5 okt 2026 ("ruimte tussen alles, minuten ver naar
      beneden"). */
   segWrap: { alignSelf: 'stretch', marginHorizontal: 26, marginTop: 44 },
-  heroRecRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  heroRecDot: { width: 6, height: 6, borderRadius: 3 },
+  /* Zelfde hoogte als het naamvak erboven (38 + 14), zodat de tijd exact
+     in het midden van de cirkel staat (operator: "minuten mooi in center"). */
+  heroRecRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 6, marginTop: 14, height: 38, paddingTop: 2 },
+  heroRecDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
   heroRecTxt: {
     fontFamily: BrandFonts.medium,
     fontSize: 12,
