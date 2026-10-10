@@ -2622,16 +2622,24 @@ export default function BreathSetupScreen() {
             >
               {fmtClock(chosen.minutes)}
             </Animated.Text>
-            <View
-              style={[s.heroRecRow, { opacity: isRecommendedChoice ? 1 : 0 }]}
-              accessibilityElementsHidden={!isRecommendedChoice}
-            >
-              <View style={[s.heroRecDot, { backgroundColor: waveAccent }]} />
-              <Text style={s.heroRecTxt}>
-                {/* Een stap omhoog wordt één keer gemeld, nooit stil. */}
-                {steppedUp ? 'Recommended · built up' : 'Recommended'}
-              </Text>
-            </View>
+            {/* Operator, 10 okt 2026 ("ook hier info over de tijdsduren —
+                Recommended is goed"): op de aanbevolen duur "Recommended",
+                anders de naam van de duur (bv. Deep Release), zoals de zones
+                in State Control. */}
+            {(() => {
+              const z = zoneFor(chosen.minutes);
+              const label = isRecommendedChoice || z?.recommended
+                ? steppedUp
+                  ? 'Recommended · built up'
+                  : 'Recommended'
+                : z?.name;
+              return (
+                <View style={[s.heroRecRow, { opacity: label ? 1 : 0 }]} accessibilityElementsHidden={!label}>
+                  <View style={[s.heroRecDot, { backgroundColor: waveAccent }]} />
+                  <Text style={s.heroRecTxt}>{label ?? ''}</Text>
+                </View>
+              );
+            })()}
           </View>
           {/* Greep op de rand (zoals State Control): slepen = tijd kiezen. */}
           <View pointerEvents="none" style={{ position: 'absolute', left: -16, top: -16 }}>
@@ -3196,22 +3204,30 @@ export default function BreathSetupScreen() {
                       <Text style={s.modalCaution}>{modalTech.safetyNote}</Text>
                     </View>
                   ) : null}
-                  {/* De gekozen duur, in dezelfde uitleg (5 okt 2026 — één i). */}
-                  {modalTech.key === tech.key && zoneFor(chosen.minutes) ? (
+                  {/* Operator, 10 okt 2026: alle duren met hun naam, tijd en
+                      uitleg (zoals "Session length" in State Control); de
+                      gekozen duur licht op. */}
+                  {modalTech.key === tech.key && durationZones.length > 0 ? (
                     <>
-                      <Text style={s.sheetSectionLabel}>
-                        {fmtClock(chosen.minutes)} · {zoneFor(chosen.minutes)?.name?.toUpperCase()}
-                      </Text>
-                      {zoneFor(chosen.minutes)?.why ? (
-                        <Text style={s.sheetInfoBody}>{zoneFor(chosen.minutes)?.why}</Text>
-                      ) : null}
-                      {zoneFor(chosen.minutes)?.recommended ? (
-                        <Text style={s.sheetRecommendedNote}>
-                          {zoneFor(chosen.minutes)?.researchProtocol
-                            ? 'VIBEZCORE recommended · research protocol — the exact dose used in the cited study.'
-                            : 'VIBEZCORE recommended — not the only right length, just the one that works for most people, most days.'}
-                        </Text>
-                      ) : null}
+                      <Text style={s.sheetSectionLabel}>SESSION LENGTH</Text>
+                      <View style={s.zoneList}>
+                        {durationZones.map((z) => {
+                          const on = zoneFor(chosen.minutes) === z;
+                          const range = z.start === z.end ? `${z.minutes} min` : `${z.start}–${z.end} min`;
+                          return (
+                            <View key={z.name + z.minutes} style={s.zoneRow}>
+                              <View style={s.zoneHead}>
+                                <Text style={[s.zoneName, !on && { color: 'rgba(255,255,255,0.75)' }]}>
+                                  {z.name}
+                                  {z.recommended ? '  ·  Recommended' : ''}
+                                </Text>
+                                <Text style={s.zoneRange}>{range}</Text>
+                              </View>
+                              {z.why ? <Text style={s.zoneText}>{z.why}</Text> : null}
+                            </View>
+                          );
+                        })}
+                      </View>
                     </>
                   ) : null}
                   </ScrollView>
@@ -3918,6 +3934,12 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   },
   /* Operator, 9 september 2026: de rechthoekige kaart is nu een grote
      voortgangsring, hoger op het scherm. */
+  zoneList: { gap: 14, marginTop: 4, marginBottom: 8 },
+  zoneRow: { gap: 3 },
+  zoneHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  zoneName: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', flexShrink: 1 },
+  zoneRange: { fontFamily: BrandFonts.medium, fontSize: 13.5, color: 'rgba(255,255,255,0.6)', fontVariant: ['tabular-nums'] },
+  zoneText: { fontFamily: BrandFonts.medium, fontSize: 13.5, lineHeight: 19, color: 'rgba(255,255,255,0.6)' },
   techTitle: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 40 },
   techTitleTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
   /* Operator: "de pil van de carrousel korter" — op maat van de korte namen. */
