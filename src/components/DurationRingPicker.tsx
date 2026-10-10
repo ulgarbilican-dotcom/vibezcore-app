@@ -173,7 +173,8 @@ export function DurationRing({
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <ModeColorRing key={color} color={color} size={size} />
+      {/* Operator, 10 okt 2026 ("overal consistentie, dus dun"): geen volle
+          dikke kleurring meer, de shimmer blijft enkel op de dunne rand. */}
       <View style={shineMaskStyle} pointerEvents="none">
         <ReanimatedAnimated.View style={[shineStripStyle, shineStyle]}>
           <LinearGradient
@@ -198,10 +199,38 @@ export function DurationRing({
       >
         <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} />
       </View>
+      {/* Zelfde ring als Session Control: dun, gedimd spoor + boog tot de
+          gekozen duur + witte greep met rand in de toestandskleur. */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: -12, top: -12 }}>
+        <Svg width={size + 24} height={size + 24}>
+          {(() => {
+            const r = size / 2 - 1;
+            const c = size / 2 + 12;
+            const f = Math.min(0.9999, Math.max(0, fillFraction));
+            const ang = f * 2 * Math.PI;
+            const ex = c + r * Math.sin(ang);
+            const ey = c - r * Math.cos(ang);
+            const large = f > 0.5 ? 1 : 0;
+            return (
+              <>
+                <Circle cx={c} cy={c} r={r + 1} stroke="#000000" strokeWidth={4} fill="none" />
+                <Circle cx={c} cy={c} r={r} stroke={color} strokeOpacity={0.22} strokeWidth={1.5} fill="none" />
+                <Path
+                  d={`M ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`}
+                  stroke={color}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <Circle cx={ex} cy={ey} r={6} fill="#ffffff" stroke={color} strokeWidth={1.5} />
+              </>
+            );
+          })()}
+        </Svg>
+      </View>
       <View pointerEvents="none" style={rs.durationRingCenter}>
-        <Text style={[rs.durationRingLabel, { color: fg }, rs.textShadow]}>{label.toUpperCase()}</Text>
-        <Text style={[rs.durationRingNum, { color: numColor }, rs.textShadow]}>{value}</Text>
-        <Text style={[rs.durationRingUnit, { color: fg }, rs.textShadow]}>min</Text>
+        <Text style={[rs.durationRingLabel, { color: 'rgba(255,255,255,0.75)' }, rs.textShadow]}>{label}</Text>
+        <Text style={[rs.durationRingNum, { color: numColor }, rs.textShadow]}>{`${value}:00`}</Text>
       </View>
     </View>
   );
@@ -377,8 +406,8 @@ const rs = StyleSheet.create({
   wheelTxt: { fontFamily: BrandFonts.semibold, fontSize: 16 },
   wheelTxtOn: { fontFamily: BrandFonts.extrabold, fontSize: 20 },
   durationRingCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  durationRingLabel: { fontSize: 11, fontFamily: BrandFonts.bold, letterSpacing: 1.2, marginBottom: 2 },
-  durationRingNum: { fontSize: 88, fontFamily: BrandFonts.extrabold, letterSpacing: -2, lineHeight: 92 },
+  durationRingLabel: { fontSize: 15, fontFamily: BrandFonts.medium, marginBottom: 4 },
+  durationRingNum: { fontSize: 48, fontFamily: BrandFonts.extrabold, letterSpacing: -1.5, lineHeight: 54, fontVariant: ['tabular-nums'] },
   durationRingUnit: { fontSize: 13, fontFamily: BrandFonts.semibold, letterSpacing: 0.3, marginTop: 2 },
   textShadow: {
     textShadowColor: 'rgba(0,0,0,0.5)',
