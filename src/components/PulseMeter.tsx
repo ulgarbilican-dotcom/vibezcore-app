@@ -292,7 +292,13 @@ function EcgTrace({ beats, running, progress }: { beats: EcgBeat[]; running: boo
    zichzelf tekent in een rondje, de titel schuift zacht omhoog in beeld, de
    tweede regel volgt. ±1 s, daarna stil. */
 const CHECK_C = 2 * Math.PI * 10;
-function DoneMessage({ elevated = false }: { elevated?: boolean }) {
+/* Operator, 10 okt 2026 ("97 gemeten maar geen melding dat dit waarschijnlijk
+   niet in rust is"): 91–100 telt nog als rusthartslag (normaal bereik tot
+   100), maar ligt hoog voor rust — dan een zachte hint om na een paar
+   rustige minuten opnieuw te meten. Geen verplichting, geen diagnose. */
+export const HIGH_REST_BPM = 90;
+
+function DoneMessage({ elevated = false, high = false }: { elevated?: boolean; high?: boolean }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.value = withTiming(1, { duration: 1000, easing: ReEasing.out(ReEasing.cubic) });
@@ -318,7 +324,9 @@ function DoneMessage({ elevated = false }: { elevated?: boolean }) {
       accessibilityLabel={
         elevated
           ? 'Not a resting heart rate. Your session starts here. Measure at rest for your baseline.'
-          : 'Measurement complete. This is your baseline for all sessions.'
+          : high
+            ? 'Measurement complete. A little high for rest. Sit still a few minutes and measure again for a truer baseline.'
+            : 'Measurement complete. This is your baseline for all sessions.'
       }
     >
       <Reanimated.View style={[s.doneRow, titleStyle]}>
@@ -349,7 +357,11 @@ function DoneMessage({ elevated = false }: { elevated?: boolean }) {
         <Text style={s.doneTitle}>{elevated ? 'Not a resting heart rate' : 'Measurement complete'}</Text>
       </Reanimated.View>
       <Reanimated.Text style={[s.doneSub, subStyle]}>
-        {elevated ? 'Your session starts here. Measure at rest for your baseline' : 'This is your baseline for all sessions'}
+        {elevated
+          ? 'Your session starts here. Measure at rest for your baseline'
+          : high
+            ? 'A little high for rest. Sit still a few minutes and measure again for a truer baseline'
+            : 'This is your baseline for all sessions'}
       </Reanimated.Text>
     </View>
   );
@@ -1165,7 +1177,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
         /* Operator, 10 okt 2026 ("op het einde moet er een melding komen
            dat de meting ok is — nu stopt het gewoon"): wat er gebeurd is +
            wat je nu doet. */
-        <DoneMessage elevated={elevated} />
+        <DoneMessage elevated={elevated} high={!elevated && finalBpm !== null && finalBpm > HIGH_REST_BPM} />
       ) : (
         /* Operator, 10 okt 2026: wat er gebeurt op de eerste regel, wat je
            doet op de tweede (i.p.v. één regel met een gedachtestreep). */

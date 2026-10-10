@@ -49,6 +49,8 @@ import { hapticTap, hapticTick } from '@/utils/haptics';
 
 /* De cameramodule zit pas in de build vanaf fase 2. In een oudere build
    ontbreekt de native kant: dan geen meetknop i.p.v. een crash. */
+/* Gelijk aan PulseMeter's HIGH_REST_BPM (geen import: PulseMeter laadt optioneel). */
+const HIGH_REST_BPM = 90;
 let PulseMeter: typeof import('./PulseMeter').default | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -352,8 +354,9 @@ export default function RhythmSheet({
             ) : measuredOk ? (
               /* Enkel bij een veel lagere meting dan je rusthartslag eerst het
                  uitlegscherm (die waarde wordt nog niet overgenomen). */
+              <View style={{ marginTop: 'auto', alignSelf: 'stretch' }}>
               <PressScale
-                style={[s.cta, { marginTop: 'auto', marginBottom: 10, alignSelf: 'stretch' }]}
+                style={[s.cta, { alignSelf: 'stretch' }, justMeasured !== null && justMeasured > HIGH_REST_BPM ? null : { marginBottom: 10 }]}
                 haptic
                 scaleTo={0.97}
                 onPress={() => {
@@ -369,6 +372,21 @@ export default function RhythmSheet({
               >
                 <Text style={s.ctaTxt}>{nextLabel}</Text>
               </PressScale>
+              {/* 91–100: hoog voor rust — opnieuw meten mag, hoeft niet. */}
+              {justMeasured !== null && justMeasured > HIGH_REST_BPM ? (
+                <PressScale
+                  style={s.secondary}
+                  onPress={() => {
+                    setMeasuredOk(false);
+                    setJustMeasured(null);
+                    setMeterKey((k) => k + 1);
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.secondaryTxt}>Measure Again</Text>
+                </PressScale>
+              ) : null}
+              </View>
             ) : (
               <View style={[s.facts, { marginTop: 'auto', marginBottom: 26, alignSelf: 'center' }, meterError ? { opacity: 0 } : null]}>
                 {/* Enkel de privacy-geruststelling, op het moment dat de camera aangaat. */}
