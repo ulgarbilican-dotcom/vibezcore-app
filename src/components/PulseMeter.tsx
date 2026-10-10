@@ -441,6 +441,11 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const darkSince = useRef<number | null>(null);
   const torchErrors = useRef(0);
   const [darkLong, setDarkLong] = useState(false);
+  const frameCount = useRef(0);
+  const fpsRef = useRef(0);
+  const deadSince = useRef<number | null>(null);
+  const revives = useRef(0);
+  const [reviving, setReviving] = useState(false);
   const [torchFailed, setTorchFailed] = useState(false);
   useEffect(() => {
     if (!Battery) return;
@@ -561,6 +566,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       raw0.current = rawStamps.current[0];
     }
     const t = (rawTs - raw0.current) * scale.current;
+    frameCount.current += 1;
     const s = { t, r, g };
     lastRaw.current = s;
     if (s.r > FLASH_LIGHT_R && s.r > s.g * 1.6) flashSeen.current = true;
@@ -595,8 +601,28 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       if (__DEV__ && ++logTick % 4 === 0) {
         const r0 = lastRaw.current;
         console.log(
-          `[PulseMeter] r=${r0 ? Math.round(r0.r) : '-'} g=${r0 ? Math.round(r0.g) : '-'} finger=${fingerSince.current !== null} flashSeen=${flashSeen.current} darkMs=${darkSince.current ? Date.now() - darkSince.current : 0} batteryLow=${batteryLowRef.current} torchErr=${torchErrors.current}`,
+          `[PulseMeter] r=${r0 ? Math.round(r0.r) : '-'} g=${r0 ? Math.round(r0.g) : '-'} finger=${fingerSince.current !== null} fps=${fpsRef.current} samples=${samples.current.length} hist=${liveHist.current.join('/')} live=${liveEma.current} flashSeen=${flashSeen.current} darkMs=${darkSince.current ? Date.now() - darkSince.current : 0} batteryLow=${batteryLowRef.current} torchErr=${torchErrors.current} revive=${revives.current}`,
         );
+      }
+      /* Beelden per seconde (diagnose). */
+      fpsRef.current = frameCount.current * 4;
+      frameCount.current = 0;
+      /* Camera vastgelopen (10 okt 2026, log A16: na een meting bleef elk
+         beeld pikzwart, r = g = 1, ook zonder vinger met de flits aan): zo
+         donker wordt het nooit met een werkende flits. Na 3 s zonder vinger
+         de camera kort herstarten (max. 3× per poging). */
+      {
+        const r1 = lastRaw.current;
+        const dead = fingerSince.current === null && !!r1 && r1.r <= 2 && r1.g <= 2;
+        if (!dead) deadSince.current = null;
+        else if (deadSince.current === null) deadSince.current = Date.now();
+        else if (Date.now() - deadSince.current > 3000 && revives.current < 3 && !reviving) {
+          revives.current += 1;
+          deadSince.current = null;
+          console.warn('[PulseMeter] camera stuck black — restarting camera');
+          setReviving(true);
+          setTimeout(() => setReviving(false), 600);
+        }
       }
       const last = samples.current[samples.current.length - 1];
       const start = measureStart.current;
@@ -733,7 +759,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
       }
     }, 250);
     return () => clearInterval(id);
-  }, [status, beat, onResult, attempt]);
+  }, [status, beat, onResult, attempt, reviving]);
 
   /* Zonder vinger: rustig ademen. Vinger erop (operator, 9 okt 2026:
      "hartslag mag beginnen bij vinger op de camera, maar rustig"): een
@@ -823,7 +849,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const outputs = useMemo(() => [frameOutput], [frameOutput]);
 
   const cameraOn =
-    permission.hasPermission && appActive && (status === 'placing' || status === 'settling' || status === 'measuring');
+    permission.hasPermission &&
+    appActive &&
+    !reviving &&
+    (status === 'placing' || status === 'settling' || status === 'measuring');
   /* Zaklamp pas aan als de camera echt draait: eerder vraagt Android hem
      aan een sessie die nog niet bestaat (7 okt 2026, A16: "camera kon niet
      starten" terwijl de camera zelf prima opende). */
@@ -838,7 +867,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     onStarted: () => setStarted(true),
     onStopped: () => setStarted(false),
     onError: (e) => {
-      console.warn('[PulseMeter] camera error:', String(e), e?.name, e?.message);
+      console.warn(`[PulseMeter] camera error: ${String(e)} | ${e?.name ?? ''} | ${e?.message ?? ''}`);
       if (/torch|flash/i.test(`${String(e)} ${e?.name ?? ''} ${e?.message ?? ''}`)) {
         torchErrors.current += 1;
         if (torchErrors.current >= TORCH_ERRORS_NEEDED) setTorchFailed(true);
@@ -860,6 +889,8 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     flashSeen.current = false;
     darkSince.current = null;
     torchErrors.current = 0;
+    revives.current = 0;
+    deadSince.current = null;
     failures.current = 0;
     finished.current = false;
     samples.current = [];
