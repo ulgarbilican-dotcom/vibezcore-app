@@ -414,6 +414,9 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const lastRaw = useRef<PulseSample | null>(null);
   const [looksDark, setLooksDark] = useState(false);
   const [flashWasOff, setFlashWasOff] = useState(false);
+  /* De camera meldt zelf dat de zaklamp niet aan kan (bv. Samsung bij lage
+     batterij) — dan meteen de flits-melding, niet eerst 6 s wachten. */
+  const [torchFailed, setTorchFailed] = useState(false);
   useEffect(() => {
     if (!Battery) return;
     const check = () =>
@@ -791,6 +794,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     onStopped: () => setStarted(false),
     onError: (e) => {
       console.warn('[PulseMeter] camera error:', String(e), e?.name, e?.message);
+      if (/torch|flash/i.test(`${String(e)} ${e?.name ?? ''} ${e?.message ?? ''}`)) setTorchFailed(true);
       /* Eén losse fout (bv. de zaklamp) is geen reden om op te geven;
          pas bij herhaling eerlijk melden dat de camera niet wil. */
       failures.current += 1;
@@ -803,6 +807,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
 
   const retry = () => {
     setFlashWasOff(false);
+    setTorchFailed(false);
     failures.current = 0;
     finished.current = false;
     samples.current = [];
@@ -839,11 +844,18 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   });
   /* Operator, 9 okt 2026: "als de flits aanstaat nooit die meldingen" —
      de batterij krijgt enkel de schuld als de flits er echt niet was. */
-  const lowBatteryFail = status === 'failed' && batteryLow && flashWasOff;
-  /* Operator, 9 okt 2026 ("en als de flits op 12% wél aangaat?"): enkel
-     "Flash unavailable" als de batterij laag is ÉN het beeld donker blijft —
-     anders gewoon de normale plaats-hint. */
-  const flashOff = batteryLow && looksDark;
+  /* Operator, 10 okt 2026 ("op 15% lukte het niet en ik kreeg de melding
+     niet — die % is misschien overal anders; als de zaklamp niet aangaat is
+     het een batterijprobleem"): niet meer afhankelijk van een vast
+     batterijpercentage. Het beeld zelf zegt of de flits brandt: met flits
+     en vinger is het fel rood, zonder flits donker. Blijft het donker, dan
+     melden we dat de flits niet aanging (met de batterij als waarschijnlijke
+     oorzaak); brandt de flits, dan nooit deze melding. */
+  const lowBatteryFail = status === 'failed' && flashWasOff;
+  const flashOff = looksDark;
+  const flashBody = batteryLow
+    ? 'Low battery. Charge your phone and try again.'
+    : "Your flash didn't turn on. This usually happens when the battery is low — charge your phone and try again.";
   const message =
     status === 'placing'
       ? justLost
@@ -869,16 +881,16 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
      scherm — teal uitroepteken, titel, korte uitleg, witte knop en een
      onderlijnde "Enter Manually". */
   const errorView: { title: string; body: string; cta: string; onCta: () => void } | null =
-    status === 'placing' && placingLong && flashOff && !justLost
-      ? { title: 'Flash unavailable', body: 'Low battery. Charge your phone and try again.', cta: 'Try Again', onCta: retry }
+    (status === 'placing' && torchFailed) || (status === 'placing' && placingLong && flashOff && !justLost)
+      ? { title: 'Flash unavailable', body: flashBody, cta: 'Try Again', onCta: retry }
       : status === 'camera-error'
-        ? batteryLow
-          ? { title: 'Flash unavailable', body: 'Low battery. Charge your phone and try again.', cta: 'Try Again', onCta: retry }
+        ? batteryLow || torchFailed
+          ? { title: 'Flash unavailable', body: flashBody, cta: 'Try Again', onCta: retry }
           : { title: 'Camera unavailable', body: "Your camera couldn't start on this device.", cta: 'Try Again', onCta: retry }
         : status === 'failed'
           ? {
               title: 'Measurement failed',
-              body: lowBatteryFail ? 'Low battery may affect the flash. Charge your phone and try again.' : failReason,
+              body: lowBatteryFail ? flashBody : failReason,
               cta: 'Try Again',
               onCta: retry,
             }

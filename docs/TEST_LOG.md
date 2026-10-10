@@ -159,6 +159,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 96 | State Control-agenda: sessie verslepen/verwijderen geldt voor elke dag vanaf vandaag; Change protocol start van vandaag's planning en houdt voorbije dagen | A16 | ⏳ |
 | 97 | Slepen op de rand van de cirkel (Breathwork-setup én State Control): greep volgt de vinger vloeiend (UI-thread), getal + tik per stap, bij loslaten veert hij zacht naar de gekozen tijd (geen schokken, geen naijlen) | A16 | ⏳ |
 | 98 | Resting heart rate meten: hartlijn achter de cirkel (door de ring = "te druk", teruggedraaid); voortgangsring dunner (2, zoals State Control) | A16 | ✅ ringdikte operator "goed"; lijn achter de cirkel ⏳ |
+| 99 | Hartslag meten bij lage batterij (flits gaat niet aan): na ~6 s of meteen bij een zaklamp-fout van de camera → "Flash unavailable" met batterij-uitleg, los van een vast %; brandt de flits wél → nooit deze melding | A16 | ⏳ (operator 10 okt: op 15% geen melding → herbouwd) |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
