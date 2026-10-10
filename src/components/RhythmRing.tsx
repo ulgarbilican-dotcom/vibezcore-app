@@ -132,6 +132,10 @@ type Props = {
    *  meerdere: staatnaam + een lijstje van alle tijden. `null`/`undefined`
    *  (of leeg) valt terug op het bestaande "Next"-gedrag. */
   centerItems?: RhythmRingItem[] | null;
+  /** Test 10 okt 2026: loopt het plan morgen verder? Zo niet en is alles
+   *  vandaag voorbij, dan geen "Next … in 13h" naar een sessie die niet
+   *  bestaat, maar "No more sessions today". Standaard: ja. */
+  continuesTomorrow?: boolean;
   /** Operator, 23 september 2026 ("waarom zijn stippen niet meer mooi
    *  rond?"): de gekleurde boogjes (comet-staart terug vanaf elke stip)
    *  gaven op deze kleinere ring een uitgerekte/komeetvorm i.p.v. een
@@ -247,6 +251,7 @@ export default function RhythmRing({
   size,
   items,
   isToday,
+  continuesTomorrow = true,
   now,
   onTapItem,
   onDragEnd,
@@ -418,8 +423,9 @@ export default function RhythmRing({
     if (items.length === 0) return null;
     const sorted = [...items].sort((a, b) => a.reminderAt - b.reminderAt);
     const upcoming = sorted.find((it) => it.reminderAt >= nowMinutes);
+    if (!upcoming && isToday && !continuesTomorrow) return null;
     return upcoming ?? sorted[0];
-  }, [items, nowMinutes]);
+  }, [items, nowMinutes, isToday, continuesTomorrow]);
 
   const minutesUntilNext = useMemo(() => {
     if (!nextItem) return 0;
@@ -664,7 +670,9 @@ export default function RhythmRing({
             {isToday && <Text style={s.centerCountdown}>{countdownTxt}</Text>}
           </>
         ) : (
-          <Text style={s.centerLabel}>Nothing planned</Text>
+          <Text style={s.centerLabel}>
+            {items.length > 0 && isToday ? 'No more sessions today' : 'Nothing planned'}
+          </Text>
         )}
       </View>
       )}

@@ -4739,7 +4739,15 @@ function BraceletControlScreen({
   /* Stabiele referentie (audit): een nieuwe functie per render liet het
      sessiescherm z'n terugknop-koppeling en de tabbalk-vlag elke seconde
      opnieuw zetten. */
-  const minimizeSession = useCallback(() => setMinimized(true), []);
+  /* Test 10 okt 2026: na minimaliseren staat de keuze op de LOPENDE
+     sessie (bv. Boost, gestart vanuit het plan) — anders toonde Session
+     Control een andere toestand met "Switch to …" en zag je nergens dat er
+     iets liep. Nu verschijnt de "Boost · x left"-balk. */
+  const minimizeSession = useCallback(() => {
+    const snap = getBraceletSessionSnapshot();
+    if (snap.active) setSelectedMode(snap.mode as BraceletMode);
+    setMinimized(true);
+  }, []);
 
   /* Iter 9k: mode-detail popup terug op state-cards. Tap card opent
      bottom-sheet met "intent / bracelet / breath / use this for"

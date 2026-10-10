@@ -386,9 +386,12 @@ export default function BraceletSetDayScreen() {
      is het net-opgeslagen PLAN zelf bekijken — dus naar
      `/bracelet-agenda`. Buiten onboarding (Activity/agenda-edit) blijft
      `back()` correct: dan kwam de gebruiker via een gewone push. */
+  /* Test 10 okt 2026: na opslaan altijd je plan tonen (zoals Breathwork na
+     plan-success). Kwam je uit de agenda, dan terug naar díe agenda (geen
+     tweede kopie op de stapel); anders wordt de agenda geopend. */
   const finish = () => {
     if (fromOnboarding) router.replace('/bracelet-agenda' as never);
-    else router.back();
+    else router.dismissTo('/bracelet-agenda' as never);
   };
 
   /* Operator, 4 okt 2026 (smoothness-audit: "geen haptic, 3 awaits zonder

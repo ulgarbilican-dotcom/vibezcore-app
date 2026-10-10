@@ -789,6 +789,11 @@ export default function AgendaScreen() {
                 size={RING_SIZE}
                 items={ringItems}
                 isToday={selectedKey === todayKey}
+                continuesTomorrow={(() => {
+                  const t = new Date();
+                  t.setDate(t.getDate() + 1);
+                  return (plan?.days[dayKey(t)]?.items.length ?? 0) > 0;
+                })()}
                 now={new Date()}
                 onTapItem={(key) => {
                   hapticTap();

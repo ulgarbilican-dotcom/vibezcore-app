@@ -45,6 +45,7 @@ import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -276,11 +277,20 @@ export default function BraceletScreen() {
     }
   }, [open]);
 
-  useFocusEffect(
-    useCallback(() => {
-      return () => setShowIntro(true);
-    }, []),
-  );
+  /* Test 10 okt 2026: enkel terug naar het intro als je naar een ANDER
+     TABBLAD gaat — niet als er een scherm bovenop komt (Set your plan,
+     agenda, info). Anders landde je na "Save your plan" of de terugknop op
+     het intro i.p.v. op Session Control. */
+  const navigation = useNavigation();
+  useEffect(() => {
+    /* `navigation` van een tabbladscherm = de tab-navigator zelf. */
+    const unsub = (navigation as any).addListener('state', (e: any) => {
+      const st = e?.data?.state;
+      const current = st?.routes?.[st.index]?.name;
+      if (current && current !== 'bracelet') setShowIntro(true);
+    });
+    return unsub;
+  }, [navigation]);
 
   /* Pill op het intro tonen als er een sessie loopt (audit 5 okt 2026). */
   const [focused, setFocused] = useState(false);
