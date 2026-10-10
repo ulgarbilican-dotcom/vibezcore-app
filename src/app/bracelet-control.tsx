@@ -166,6 +166,7 @@ import ReanimatedAnimated, {
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import VibezGlass from '@/components/VibezGlass';
+import { ModeGlyph } from '@/components/GuidanceSelector';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
 import type { SimulatedBracelet } from '../services/bracelet-sim';
@@ -925,6 +926,8 @@ function SwitchSessionConfirm({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <Pressable style={s.switchBackdrop} onPress={onCancel}>
         <Pressable style={s.switchCard} onPress={() => {}}>
+          {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
+          <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
           <Text style={s.switchTitle}>Switch to {toName}?</Text>
           <Text style={s.switchBody}>
             Your {fromName} session will end and {toName} starts in its place.
@@ -3515,12 +3518,12 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
     {
       v: false,
       title: 'Haptic',
-      body: 'Feel the rhythm. Hold your phone in your hand, or follow it on your smartwatch.',
+      body: 'Feel the rhythm on your smartphone or smartwatch.',
     },
     {
       v: true,
       title: 'Haptic + Audio',
-      body: 'Feel and hear the rhythm. A soft heartbeat plays with every pulse, with headphones or with your phone nearby.',
+      body: 'Feel and hear the rhythm. A soft heartbeat plays with every pulse.',
     },
   ] as const;
   return (
@@ -3555,9 +3558,10 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
               accessibilityRole="radio"
               accessibilityState={{ selected: on }}
             >
+              {/* Vaste VIBEZCORE-iconen (zelfde als de keuze Voice / Haptics /
+                  Voice + Haptics bij breathwork). */}
               <View style={s.avCardIcons}>
-                <Vibrate size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} strokeWidth={2} />
-                {o.v ? <Volume2 size={18} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} strokeWidth={2} /> : null}
+                <ModeGlyph mode={o.v ? 'both' : 'haptic'} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} scale={1.25} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[s.avCardTitle, on && { color: '#ffffff' }]}>{o.title}</Text>
@@ -6195,26 +6199,27 @@ const s = StyleSheet.create({
     borderTopRightRadius: 24,
     overflow: 'hidden',
     paddingTop: 10,
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
   },
   avGrip: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', marginBottom: 14 },
-  avHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  avHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 26 },
   avTitle: { fontFamily: BrandFonts.bold, fontSize: 20, color: '#ffffff' },
   avDone: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   avCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 18,
-    borderRadius: 18,
+    gap: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   avCardOn: { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.08)' },
-  avCardIcons: { width: 44, flexDirection: 'row', gap: 4, justifyContent: 'center' },
-  avCardTitle: { fontFamily: BrandFonts.bold, fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 4 },
-  avCardBody: { fontFamily: BrandFonts.medium, fontSize: 13.5, lineHeight: 19, color: 'rgba(255,255,255,0.6)' },
+  avCardIcons: { width: 52, alignItems: 'center', justifyContent: 'center' },
+  avCardTitle: { fontFamily: BrandFonts.bold, fontSize: 17, color: 'rgba(255,255,255,0.85)', marginBottom: 6 },
+  avCardBody: { fontFamily: BrandFonts.medium, fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.6)' },
   avRadio: {
     width: 22,
     height: 22,
@@ -8135,7 +8140,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 28,
   },
   switchCard: {
-    backgroundColor: '#161616',
+    overflow: 'hidden',
     borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',

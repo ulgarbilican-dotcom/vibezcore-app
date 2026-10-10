@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
+import VibezGlass from '@/components/VibezGlass';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -81,6 +82,8 @@ export default function ProtocolTeaserModal({
            op zodat ze niet doorborrelen naar de backdrop; geen eigen
            onPress-actie, dus geen press-scale nodig hier. */}
         <Pressable style={s.card} onPress={() => {}}>
+          {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
+          <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
           <AnimatedPressable
             style={[s.close, closePressStyle]}
             onPress={onClose}
@@ -151,10 +154,10 @@ const s = StyleSheet.create({
   card: {
     width: '100%',
     borderRadius: 22,
-    backgroundColor: '#141018',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     padding: 24,
+    overflow: 'hidden',
   },
   close: { position: 'absolute', top: 16, right: 16, zIndex: 2 },
 

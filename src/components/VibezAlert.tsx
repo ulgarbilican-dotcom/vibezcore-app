@@ -21,6 +21,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { Brand, BrandFonts } from '@/constants/theme';
+import VibezGlass from './VibezGlass';
 import { useEffect, useState } from 'react';
 import {
   Modal,
@@ -139,6 +140,9 @@ export function VibezAlertHost() {
     >
       <Pressable style={s.scrim} onPress={() => { /* tap outside = no dismiss */ }}>
         <View style={[s.card, light && s.cardLight]}>
+          {/* Operator, 10 okt 2026 ("popupkaarten moeten allemaal glas"):
+              zelfde VIBEZCORE-glas als de kaarten in de ademsessie. */}
+          {!light ? <VibezGlass radius={20} level="sheet" style={StyleSheet.absoluteFill} /> : null}
           <Text style={[s.title, light && s.titleLight]}>{current.title}</Text>
           {current.message ? (
             <Text style={[s.message, light && s.messageLight]}>{current.message}</Text>
@@ -238,10 +242,11 @@ const s = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: Brand.bg,
-    borderColor: Brand.border,
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
     padding: 22,
     width: '100%',
     maxWidth: 360,

@@ -57,6 +57,12 @@ class StateHapticsModule : Module() {
 
     /* Zonder amplitude-sturing rondt Android elke niet-nul amplitude af
        naar 100% — dan hoort de JS-kant terug te vallen op expo-haptics. */
+    /** Feel & Hear: hartslaggeluid op elke slag aan/uit — ook tijdens een
+     *  lopende sessie (de service leest de vlag bij elke tik). */
+    Function("setSessionSound") { on: Boolean ->
+      StateHapticsService.soundEnabled = on
+    }
+
     Function("hasAmplitudeControl") {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && (vibrator()?.hasAmplitudeControl() ?: false)
     }

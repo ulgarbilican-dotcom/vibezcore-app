@@ -57,6 +57,7 @@ import ReanimatedView, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import VibezGlass from '@/components/VibezGlass';
 
 const AnimatedPressable = ReanimatedView.createAnimatedComponent(Pressable);
 
@@ -430,6 +431,8 @@ export default function BreathSampleScreen() {
       <Modal visible={finished} transparent animationType="fade">
         <View style={s.modalBackdrop}>
           <View style={s.modalCard}>
+          {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
+          <VibezGlass radius={20} level="sheet" style={StyleSheet.absoluteFill} />
             <Text style={s.modalEyebrow}>SESSION COMPLETE</Text>
             <Text style={s.modalTitle}>{isPro ? 'Nice.' : 'Loved it?'}</Text>
             <Text style={s.modalBody}>
@@ -599,12 +602,12 @@ const s = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: Brand.panel,
     borderRadius: 20,
     padding: 26,
     borderWidth: 1,
     borderColor: Brand.border,
     gap: 12,
+    overflow: 'hidden',
   },
   /* Huisstijl v4.4: Brand.accent (#3a8fff, Signal Blue) is enkel voor
      haptic-pulse/"nu actief" — nooit tekst/knoppen. AudioAccent is

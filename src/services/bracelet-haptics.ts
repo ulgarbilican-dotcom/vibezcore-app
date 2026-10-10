@@ -61,6 +61,7 @@ import {
   hasNativeWaveform,
   pauseNativeSession,
   playNativeWaveform,
+  setNativeSessionSound,
   startNativeSession,
   stopNativeSession,
   stopNativeWaveform,
@@ -80,6 +81,12 @@ import {
 } from '../../modules/watch-breath';
 
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
+import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
+import { getStateHear } from './state-sound-pref';
+
+/* Feel & Hear zonder native service (iOS, oud Android): de app speelt het
+   hartslaggeluid zelf op elke slag, zolang ze open is. */
+let jsSoundOn = false;
 
 const SESSION_HOLD_SECONDS = 10;
 /** Versnelde glijding in de voorproef voor de trage modi (Sleep, Clarity). */
@@ -336,6 +343,7 @@ function scheduleBeat(
   pendingTimeouts.length = 0;
   const { cycleMs, dubAt } = beatAt(spec, (Date.now() - curveStartedAt) / 1000, timing);
   fire(spec.lubStyle);
+  if (jsSoundOn && getStateHear()) heartbeatTick();
   emitPulse({ kind: 'lub', mode, cycleMs });
   pendingTimeouts.push(
     setTimeout(() => {
@@ -364,6 +372,10 @@ function endNativeSession(): void {
  *  stoppen, anders verdwijnt de melding even van het vergrendelscherm. */
 function silence(keepService = false): void {
   generation += 1;
+  if (jsSoundOn) {
+    jsSoundOn = false;
+    stopHeartbeatSound();
+  }
   clearPending();
   stopNativeWaveform();
   if (!keepService) endNativeSession();
@@ -391,7 +403,9 @@ function play(
     const amplitudes = silent ? built.amplitudes.map(() => 0) : built.amplitudes;
     const anchorWallMs = Date.now();
     if (clock) {
-      /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. */
+      /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. Feel &
+         Hear: de service speelt het hartslaggeluid zelf, op elke tik. */
+      setNativeSessionSound(getStateHear() && !silent);
       startNativeSession(
         timings,
         amplitudes,
@@ -404,6 +418,10 @@ function play(
     }
     scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation);
   } else if (!silent) {
+    if (clock) {
+      jsSoundOn = true;
+      startHeartbeatSound();
+    }
     scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);
   }
 }

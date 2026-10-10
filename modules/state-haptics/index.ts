@@ -8,6 +8,7 @@ import { requireNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
 type StateHapticsNativeModule = {
+  setSessionSound?(on: boolean): void;
   hasAmplitudeControl(): boolean;
   play(timings: number[], amplitudes: number[], repeat: number): void;
   stop(): void;
@@ -146,5 +147,18 @@ export function dismissCompletionNotice(): void {
     native?.dismissCompletionNotice();
   } catch {
     /* stil */
+  }
+}
+
+/** Feel & Hear (10 okt 2026): hartslaggeluid op elke slag van de native
+ *  sessie (Android), ook op slot. Geen native → false (JS speelt het dan
+ *  zelf af, zolang de app open is). */
+export function setNativeSessionSound(on: boolean): boolean {
+  if (!native?.setSessionSound) return false;
+  try {
+    native.setSessionSound(on);
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -56,6 +56,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import VibezGlass from '@/components/VibezGlass';
 
 /* Logo / brand mark — exact identiek aan welcome.tsx en welke header
    dan ook. Lokaal asset, geen netwerk-roundtrip.
@@ -108,6 +109,8 @@ export function WelcomeBackPopup() {
       <Pressable style={s.backdrop} onPress={dismissWelcomePopup} />
 
       <View style={s.card}>
+          {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
+          <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
         {/* ✕ rechtsboven. Pressable hitSlop voor mobile-tap-target ≥44dp. */}
         <Pressable
           style={s.close}
@@ -243,7 +246,6 @@ const s = StyleSheet.create({
   card: {
     width: '88%',
     maxWidth: 420,
-    backgroundColor: Brand.panel,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Brand.border,
@@ -251,6 +253,7 @@ const s = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
     alignItems: 'stretch',
+    overflow: 'hidden',
   },
   close: {
     position: 'absolute',

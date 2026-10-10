@@ -27,6 +27,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.media.SoundPool
 import android.os.Build
 import android.os.HandlerThread
 import android.os.Process
@@ -92,6 +95,10 @@ class StateHapticsService : Service() {
         else -> "none"
       }
     }
+    /* Feel & Hear (operator, 10 okt 2026): bij elke slag ook het hartslag-
+       geluid, precies op de tik — ook met het scherm op slot. De app zet dit
+       aan/uit (ook tijdens een lopende sessie). */
+    @Volatile var soundEnabled = false
     const val EXTRA_TIMINGS = "timings"
     const val EXTRA_AMPLITUDES = "amplitudes"
     const val EXTRA_TITLE = "title"
@@ -278,6 +285,59 @@ class StateHapticsService : Service() {
     return out
   }
 
+  /* ── Hartslaggeluid (Feel & Hear) ── SoundPool: lage vertraging, geen
+     audiofocus (muziek van de gebruiker speelt gewoon door), mediavolume.
+     Zelfde opnames en volumes als in de app (heartbeat-sound.ts): speaker
+     6396 op 100%, koptelefoon 297400 met zachte lub op 30%. */
+  private var soundPool: SoundPool? = null
+  private var soundSpeaker = 0
+  private var soundHeadphones = 0
+
+  private fun ensureSoundPool() {
+    if (soundPool != null) return
+    try {
+      val pool = SoundPool.Builder()
+        .setMaxStreams(2)
+        .setAudioAttributes(
+          AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build(),
+        )
+        .build()
+      soundSpeaker = pool.load(this, R.raw.heartbeat_speaker, 1)
+      soundHeadphones = pool.load(this, R.raw.heartbeat_headphones, 1)
+      soundPool = pool
+    } catch (_: Exception) {
+      soundPool = null
+    }
+  }
+
+  private fun headphonesConnected(): Boolean {
+    return try {
+      val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      val types = mutableSetOf(
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+      )
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) types.add(AudioDeviceInfo.TYPE_BLE_HEADSET)
+      am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { it.type in types }
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  private fun playHeartSound() {
+    val pool = soundPool ?: return
+    val hp = headphonesConnected()
+    val id = if (hp) soundHeadphones else soundSpeaker
+    val vol = if (hp) 0.3f else 1f
+    if (id != 0) pool.play(id, vol, vol, 1, 0, 1f)
+  }
+
   private fun playDueUnitAndScheduleNext() {
     if (nextUnit >= units.size) return
     val now = SystemClock.uptimeMillis()
@@ -290,6 +350,13 @@ class StateHapticsService : Service() {
           vibrateForSession(this, vibratorOf(this), VibrationEffect.createWaveform(u.t, u.a, -1))
         }
       } catch (_: Exception) {
+      }
+      /* Enkel op een hartslag (lub-dub-eenheid), niet op het eindsignaal. */
+      if (soundEnabled && u.t.size == 3) {
+        try {
+          playHeartSound()
+        } catch (_: Exception) {
+        }
       }
     }
     nextUnit++
@@ -311,6 +378,7 @@ class StateHapticsService : Service() {
   override fun onCreate() {
     super.onCreate()
     instance = this
+    ensureSoundPool()
     startPending = false
   }
 
@@ -377,6 +445,11 @@ class StateHapticsService : Service() {
 
   override fun onDestroy() {
     if (instance === this) instance = null
+    try {
+      soundPool?.release()
+    } catch (_: Exception) {
+    }
+    soundPool = null
     handler.removeCallbacksAndMessages(null)
     beatHandler.removeCallbacksAndMessages(null)
     beatThread.quitSafely()
@@ -481,9 +554,11 @@ class StateHapticsService : Service() {
      overgang. De seconden toont de tijdsbalk van het systeem zelf, die het
      uit positie + duur van de PlaybackState doortelt. */
   private fun remainingLabel(): String {
-    val remMs = (sessionTotalMs - sessionElapsedNowMs()).coerceAtLeast(0L)
-    val min = ((remMs + 59_999L) / 60_000L).coerceAtLeast(1L)
-    val clock = "$min min left"
+    /* Operator, 10 okt 2026 ("op het lockscreen telt het niet af, toont enkel
+       hoeveel minuten left"): zelfde als de ademsessie — M:SS die per
+       seconde aftelt. */
+    val remSec = ((sessionTotalMs - sessionElapsedNowMs()).coerceAtLeast(0L) / 1000L).toInt()
+    val clock = "%d:%02d".format(remSec / 60, remSec % 60)
     return if (paused) "Paused · $clock" else clock
   }
 
@@ -496,7 +571,16 @@ class StateHapticsService : Service() {
      Vervolg ("logo V heel onduidelijk" in de vergrote Now Bar): niet het
      kleine, al afgeronde launcher-icoon, maar de V-laag zelf op groot
      formaat op een VIERKANT donker vlak — het systeem rondt zelf af. */
-  private val artBitmap: Bitmap? by lazy { brandArt() ?: launcherIconArt() }
+  /* Operator, 10 okt 2026: dezelfde merk-kaart als de ademsessie (V-teken +
+     VIBEZCORE-woordmerk, res/drawable-nodpi/vibezcore_lockscreen_art.png). */
+  private val artBitmap: Bitmap? by lazy {
+    try {
+      android.graphics.BitmapFactory.decodeResource(resources, R.drawable.vibezcore_lockscreen_art)
+    } catch (_: Exception) {
+      null
+    } ?: brandArt() ?: launcherIconArt()
+  }
+  private val iconBitmap: Bitmap? by lazy { launcherIconArt() ?: brandArt() }
 
   private fun brandArt(): Bitmap? =
     try {
@@ -579,15 +663,16 @@ class StateHapticsService : Service() {
     val s = ensureMediaSession()
     s.setMetadata(
       MediaMetadataCompat.Builder()
-        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title.uppercase())
         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, text)
         .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "VIBEZCORE")
         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, sessionTotalMs)
         .apply {
           artBitmap?.let {
             putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
-            putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, it)
+            putBitmap(MediaMetadataCompat.METADATA_KEY_ART, it)
           }
+          iconBitmap?.let { putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, it) }
         }
         .build(),
     )
