@@ -62,7 +62,10 @@ function fmtMMSS(sec: number): string {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
-export function BraceletMiniIndicator() {
+/* Operator, 10 okt 2026 ("pill over de paginatitel" → "balk onderaan"):
+   niet meer bovenaan over titels, maar gedockt net boven de tabbalk, zoals
+   Apple Music zijn speler toont. `docked` = in de tabbalk-zone. */
+export function BraceletMiniIndicator({ docked = false }: { docked?: boolean } = {}) {
   const [snap, setSnap] = useState<BraceletSessionSnapshot>(
     getBraceletSessionSnapshot(),
   );
@@ -101,15 +104,17 @@ export function BraceletMiniIndicator() {
 
   const topY = insets.top + 8;
 
-  return <ActiveSessionPill topY={topY} snap={snap} isBraceletOwner={isBraceletOwner} />;
+  return <ActiveSessionPill topY={topY} docked={docked} snap={snap} isBraceletOwner={isBraceletOwner} />;
 }
 
 function ActiveSessionPill({
   topY,
+  docked,
   snap,
   isBraceletOwner,
 }: {
   topY: number;
+  docked: boolean;
   snap: BraceletSessionSnapshot;
   isBraceletOwner: boolean;
 }) {
@@ -125,7 +130,7 @@ function ActiveSessionPill({
   }));
 
   return (
-    <View style={[s.wrap, { top: topY }]} pointerEvents="box-none">
+    <View style={docked ? s.dockWrap : [s.wrap, { top: topY }]} pointerEvents="box-none">
       <AnimatedPressable
         style={pressStyle}
         /* 5 okt 2026: voor iedereen dezelfde plek — de State Control-tab,
@@ -151,6 +156,7 @@ function ActiveSessionPill({
 }
 
 const s = StyleSheet.create({
+  dockWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 4 },
   wrap: {
     position: 'absolute',
     left: 0,

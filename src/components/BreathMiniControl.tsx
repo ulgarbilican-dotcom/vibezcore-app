@@ -20,12 +20,19 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Reanimated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePathname } from 'expo-router';
 import StateGlyph from './StateGlyph';
 import VibezGlass from './VibezGlass';
 
 const AnimatedPressable = Reanimated.createAnimatedComponent(Pressable);
 
-export function BreathMiniControl(): React.ReactElement | null {
+/* Operator, 10 okt 2026 ("pill over de paginatitel" → "balk onderaan"):
+   op tabbladen gedockt net boven de tabbalk (zie (tabs)/_layout.tsx), op
+   schermen zonder tabbalk zwevend onderaan — nooit meer over een titel. */
+const TAB_ROUTES = new Set(['/', '/breath', '/bracelet', '/activity', '/account']);
+
+export function BreathMiniControl({ docked = false }: { docked?: boolean } = {}): React.ReactElement | null {
+  const pathname = usePathname();
   const [host, setHost] = useState(getBreathHost());
   useEffect(() => subscribeBreathHost(() => setHost(getBreathHost())), []);
   const [bracelet, setBracelet] = useState(getBraceletSessionSnapshot());
@@ -36,13 +43,20 @@ export function BreathMiniControl(): React.ReactElement | null {
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   if (!host || !host.minimized) return null;
+  /* De zwevende variant enkel waar geen tabbalk is; op tabbladen doet de dock het. */
+  if (!docked && TAB_ROUTES.has(pathname)) return null;
 
   const key = (host.params.state ?? host.params.mode ?? 'calm') as BreathStateKey;
   const st = BREATH_STATES[key] ?? BREATH_STATES.calm;
-  const top = insets.top + 8 + (bracelet.active ? 46 : 0);
-
+  void bracelet;
   return (
-    <View style={[s.wrap, { top }]} pointerEvents="box-none">
+    <View
+      /* Zonder tabbalk: net BOVEN de vaste hoofdknop-zone onderaan (knop
+         56 hoog, 26 boven de veilige rand, overal in de app dezelfde) —
+         nooit over "Start session" of een andere CTA. */
+      style={docked ? s.dockWrap : [s.wrap, { bottom: insets.bottom + 26 + 56 + 14 }]}
+      pointerEvents="box-none"
+    >
       <AnimatedPressable
         style={pressStyle}
         onPress={restoreBreathSession}
@@ -67,6 +81,7 @@ export function BreathMiniControl(): React.ReactElement | null {
 }
 
 const s = StyleSheet.create({
+  dockWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 4 },
   wrap: {
     position: 'absolute',
     left: 0,

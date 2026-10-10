@@ -22,6 +22,7 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { saveLastTab } from '@/utils/last-tab';
 import { bootDecided } from '@/utils/boot';
 import BraceletIcon from '@/components/BraceletIcon';
@@ -267,6 +268,10 @@ export default function TabLayout() {
           const hidden = style?.display === 'none';
           return (
             <View>
+              {/* Lopende sessies (State Control, geminimaliseerde ademsessie)
+                  net boven de tabbalk, zoals Apple Music (10 okt 2026). */}
+              {!hidden && <BraceletMiniIndicator docked />}
+              {!hidden && <BreathMiniControl docked />}
               {!hidden && <MiniPlayer docked />}
               <BottomTabBar {...props} />
             </View>
@@ -437,7 +442,6 @@ export default function TabLayout() {
          hide-subscribe die destijds samen met deze pill een crash-on-
          launch veroorzaakte (nooit met zekerheid geïsoleerd welke van
          de twee) — kleiner risico-oppervlak. */}
-      <BraceletMiniIndicator />
       {/* Vaste Premium-ingang (6 okt 2026) — niet op schermen zonder
           tabbalk (lopende sessie, State Control-keuzescherm). */}
       <PremiumPill hidden={hideStateControlBar} />
