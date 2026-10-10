@@ -47,7 +47,28 @@ try {
 /* Operator, 9 okt 2026 ("bij 7% gaat de zaklamp niet aan en weet ik als
    gebruiker niet waarom"): veel toestellen (o.a. Samsung) blokkeren de
    flitser bij een bijna lege batterij. Onder deze grens zeggen we dat. */
-const LOW_BATTERY = 0.15;
+const LOW_BATTERY = 0.2;
+/* ── Flits-beslisregel (operator, 10 okt 2026: "een correct werkend systeem,
+   denk 10 stappen vooruit") ─────────────────────────────────────────────
+   Uit het camerabeeld alleen kun je "flits uit" niet onderscheiden van
+   "vinger naast de flits": in beide gevallen is het beeld donker. Daarom
+   melden we "Flash unavailable" enkel bij HARD bewijs, en nooit zodra er
+   ook maar één keer flitslicht door een vinger gezien is:
+   1. Flitslicht gezien (fel rood beeld: r > 120 en duidelijk roder dan
+      groen) → de flits werkt; deze poging nooit een flits-melding.
+   2. De camera meldt minstens 2× een zaklamp-fout → flits-melding.
+   3. Batterij laag (≤ 20 %, toestellen verschillen: Samsung ±15 %, andere
+      5–10 %) ÉN het beeld ≥ 8 s aan één stuk pikzwart (r < 35, g < 30) →
+      flits-melding. Pikzwart = er komt geen licht door de vinger.
+   4. Al het andere (batterij oké, of onbekend) → gewoon de plaats-hint,
+      geen foutscherm: dan ligt het bijna altijd aan de vingerpositie.
+   Bij een mislukte meting geldt dezelfde regel: enkel de batterij-uitleg
+   als de batterij laag is én er nooit flitslicht gezien werd. */
+const FLASH_LIGHT_R = 120;
+const BLACK_R = 35;
+const BLACK_G = 30;
+const DARK_HOLD_MS = 8000;
+const TORCH_ERRORS_NEEDED = 2;
 
 /* Operator, 9 okt 2026: "desnoods mag de meting langer duren, als ze maar
    correct is" — 20 s meten, tot 35 s als de controle niet klopt. */
@@ -412,10 +433,12 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const [batteryLow, setBatteryLow] = useState(false);
   /* Laatste beeldwaarde (ook zonder vinger), om te zien of de flits brandt. */
   const lastRaw = useRef<PulseSample | null>(null);
-  const [looksDark, setLooksDark] = useState(false);
   const [flashWasOff, setFlashWasOff] = useState(false);
-  /* De camera meldt zelf dat de zaklamp niet aan kan (bv. Samsung bij lage
-     batterij) — dan meteen de flits-melding, niet eerst 6 s wachten. */
+  /* Zie de flits-beslisregel bovenaan dit bestand. */
+  const flashSeen = useRef(false);
+  const darkSince = useRef<number | null>(null);
+  const torchErrors = useRef(0);
+  const [darkLong, setDarkLong] = useState(false);
   const [torchFailed, setTorchFailed] = useState(false);
   useEffect(() => {
     if (!Battery) return;
@@ -538,6 +561,7 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     const t = (rawTs - raw0.current) * scale.current;
     const s = { t, r, g };
     lastRaw.current = s;
+    if (s.r > FLASH_LIGHT_R && s.r > s.g * 1.6) flashSeen.current = true;
     if (fingerOnLens(s)) {
       lastFingerAt.current = t;
       if (fingerSince.current === null) fingerSince.current = t;
@@ -577,11 +601,19 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
         /* Donker beeld = geen flitslicht (vinger op een lens zonder licht,
            of de flits staat uit). Met de flits aan is het beeld helder. */
         const raw = lastRaw.current;
-        setLooksDark(!!raw && raw.r < 60 && raw.g < 45);
+        const black = !!raw && raw.r < BLACK_R && raw.g < BLACK_G;
+        const nowMs = Date.now();
+        if (!black) darkSince.current = null;
+        else if (darkSince.current === null) darkSince.current = nowMs;
+        setDarkLong(
+          !flashSeen.current && darkSince.current !== null && nowMs - darkSince.current >= DARK_HOLD_MS,
+        );
         setJustLost(Date.now() - lostAt.current < 3000);
         return;
       }
       setJustLost(false);
+      darkSince.current = null;
+      setDarkLong(false);
       placingSince.current = Date.now();
       setPlacingLong(false);
       if (start === null || !last) {
@@ -794,7 +826,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
     onStopped: () => setStarted(false),
     onError: (e) => {
       console.warn('[PulseMeter] camera error:', String(e), e?.name, e?.message);
-      if (/torch|flash/i.test(`${String(e)} ${e?.name ?? ''} ${e?.message ?? ''}`)) setTorchFailed(true);
+      if (/torch|flash/i.test(`${String(e)} ${e?.name ?? ''} ${e?.message ?? ''}`)) {
+        torchErrors.current += 1;
+        if (torchErrors.current >= TORCH_ERRORS_NEEDED) setTorchFailed(true);
+      }
       /* Eén losse fout (bv. de zaklamp) is geen reden om op te geven;
          pas bij herhaling eerlijk melden dat de camera niet wil. */
       failures.current += 1;
@@ -808,6 +843,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
   const retry = () => {
     setFlashWasOff(false);
     setTorchFailed(false);
+    setDarkLong(false);
+    flashSeen.current = false;
+    darkSince.current = null;
+    torchErrors.current = 0;
     failures.current = 0;
     finished.current = false;
     samples.current = [];
@@ -851,11 +890,13 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
      en vinger is het fel rood, zonder flits donker. Blijft het donker, dan
      melden we dat de flits niet aanging (met de batterij als waarschijnlijke
      oorzaak); brandt de flits, dan nooit deze melding. */
-  const lowBatteryFail = status === 'failed' && flashWasOff;
-  const flashOff = looksDark;
+  const flashWorks = flashSeen.current;
+  const flashUnavailable =
+    !flashWorks && (torchFailed || (batteryLow && darkLong));
+  const lowBatteryFail = status === 'failed' && batteryLow && flashWasOff && !flashWorks;
   const flashBody = batteryLow
-    ? 'Low battery. Charge your phone and try again.'
-    : "Your flash didn't turn on. This usually happens when the battery is low — charge your phone and try again.";
+    ? 'Your battery is low, so the flash can’t turn on. Charge your phone and try again.'
+    : "Your flash couldn't turn on. Restart the measurement, or charge your phone if the battery is low.";
   const message =
     status === 'placing'
       ? justLost
@@ -881,10 +922,10 @@ export default function PulseMeter({ onResult, onManual, onErrorChange }: Props)
      scherm — teal uitroepteken, titel, korte uitleg, witte knop en een
      onderlijnde "Enter Manually". */
   const errorView: { title: string; body: string; cta: string; onCta: () => void } | null =
-    (status === 'placing' && torchFailed) || (status === 'placing' && placingLong && flashOff && !justLost)
+    status === 'placing' && flashUnavailable && !justLost
       ? { title: 'Flash unavailable', body: flashBody, cta: 'Try Again', onCta: retry }
       : status === 'camera-error'
-        ? batteryLow || torchFailed
+        ? torchFailed || (batteryLow && !flashWorks)
           ? { title: 'Flash unavailable', body: flashBody, cta: 'Try Again', onCta: retry }
           : { title: 'Camera unavailable', body: "Your camera couldn't start on this device.", cta: 'Try Again', onCta: retry }
         : status === 'failed'

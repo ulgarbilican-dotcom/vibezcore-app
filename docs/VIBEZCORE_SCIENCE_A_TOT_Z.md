@@ -267,6 +267,7 @@ pace": meten / zelf invullen / gemiddelde).
      (≥ 70% binnen 15%); rood of groen kanaal, het duidelijkste wint.
 - **Verloop:** vinger erop → 0,5 s stil → exact 30 s meten → uitkomst (operator 9 okt 2026: "elke keer exact 30 seconden"; getest: pols 74, telefoon 76). Operator 9 okt 2026: "liever langer, als het maar correct is". Eindcontrole: het volledige venster en de laatste 10 s apart moeten binnen 7% overeenkomen, anders "Measurement failed" (geen verlenging). Het live getal tijdens het meten gebruikt dezelfde strenge analyse, mediaan van de laatste 5 schattingen, max. 3 bpm verandering per slag (eigen keuze, horloge-gedrag).
   of "try again". Geen trillingen tijdens het meten.
+- **Flits-melding** (⚪ eigen keuze, 10 okt 2026): "Flash unavailable" enkel bij hard bewijs — nooit als er flitslicht door de vinger gezien is (r > 120, duidelijk roder dan groen). Wel bij ≥ 2 zaklamp-fouten van de camera, of bij een lage batterij (≤ 20 %; toestellen blokkeren de flits tussen ±5 en 15 %) én ≥ 8 s een pikzwart beeld (r < 35, g < 30). Anders enkel de plaats-hint: een donker beeld komt meestal van een vinger naast de flits.
 - **Getest:** op nagebootste signalen binnen ±1 bpm (55–110 bpm, met
   ruis, drift, haperende beelden, verzadigd rood); geen uitkomst bij
   ruis zonder hartslag. Op een echte vinger: 68 en 66 bij de operator

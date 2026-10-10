@@ -160,6 +160,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 97 | Slepen op de rand van de cirkel (Breathwork-setup én State Control): greep volgt de vinger vloeiend (UI-thread), getal + tik per stap, bij loslaten veert hij zacht naar de gekozen tijd (geen schokken, geen naijlen) | A16 | ⏳ |
 | 98 | Resting heart rate meten: hartlijn achter de cirkel (door de ring = "te druk", teruggedraaid); voortgangsring dunner (2, zoals State Control) | A16 | ✅ ringdikte operator "goed"; lijn achter de cirkel ⏳ |
 | 99 | Hartslag meten bij lage batterij (flits gaat niet aan): na ~6 s of meteen bij een zaklamp-fout van de camera → "Flash unavailable" met batterij-uitleg, los van een vast %; brandt de flits wél → nooit deze melding | A16 | ✅ screenshot 10 okt (13%): "Flash unavailable" verschijnt |
+| 99b | Flits-melding opnieuw (operator 10 okt: "Flash unavailable terwijl de flits brandde"): vaste beslisregel — nooit melding zodra flitslicht gezien; enkel bij 2× zaklamp-fout of lage batterij + 8 s pikzwart. Testen: (a) flits aan, vinger naast de flits 10 s → GEEN foutscherm; (b) flits aan, vinger goed → meting; (c) batterij ≤ 15 % en flits uit → melding na ±8 s | A16 | ⏳ |
 | 100 | Vinger-animatie (resting heart rate): vingertop landt bovenaan de cameramodule en bedekt flits + lenzen; teal licht komt van de flits ONDER de vinger en lekt langs de randen | A16 | ⏳ |
 | 101 | Tabbalk: State Control · Breath · Library · Activity · Profile (operator 10 okt) | A16 | ⏳ (vorige volgorde Breath·State Control·Library ✅) |
 
