@@ -197,8 +197,8 @@ export default function RhythmSheet({
                 : pulse.source === 'average'
                   ? 'Average — not measured yet'
                   : pulse.source === 'manual'
-                    ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`
-                    : `Your last measurement${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`}
+                    ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`
+                    : `Your last measurement${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`}
             </Text>
             <Text style={[s.body, { textAlign: 'center', marginTop: 18 }]}>
               {/* Operator, 9 okt 2026: enkel waarvoor het getal dient. */}

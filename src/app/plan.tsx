@@ -20,6 +20,7 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { planItemStatuses } from '@/utils/plan-status';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { CTA } from '@/constants/theme';
 import {
@@ -383,9 +384,19 @@ export default function PlanScreen() {
     const doneInWindow = (from: number, to: number) =>
       history.some((e) => {
         if (e.ts < startOfDay.getTime()) return false;
+        if (e.completed === false) return false;
         const eh = new Date(e.ts).getHours();
         return eh >= from && eh < to;
       });
+    /* Test 10 okt 2026: hier telde ELKE sessie in het dagdeel als "Done
+       today" (ook een andere toestand, ook vroeg gestopt), terwijl de agenda
+       voor hetzelfde moment "Partial" toonde. Nu dezelfde regel als de
+       agenda: een volledig afgeronde sessie van DEZE toestand, vandaag en
+       sinds het plan bestaat. */
+    const since = Math.max(startOfDay.getTime(), plan?.createdAt ?? 0);
+    const statuses = planDay
+      ? planItemStatuses(planDay.items, history.filter((e) => e.ts >= since))
+      : [];
 
     /* MET actief protocol: één rij per ECHT item uit `planDay.items`, niet
        één per dagdeel — operator, 17 september 2026 ("Bouw je dag"): een
@@ -409,7 +420,7 @@ export default function PlanScreen() {
           techKey: tech.key,
           minutes: planItem.minutes,
           exact: roundsFor(tech, planItem.minutes) * cycleSeconds(tech),
-          done: doneInWindow(m.from, m.to),
+          done: statuses[planIndex] === 'done',
           planIndex,
           reminderAt: planItem.reminderAt,
         };
@@ -445,7 +456,7 @@ export default function PlanScreen() {
         reminderAt: minsFor(m.key),
       };
     });
-  }, [history, goalKeys, visible, planDay]);
+  }, [history, goalKeys, visible, planDay, plan?.createdAt]);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>

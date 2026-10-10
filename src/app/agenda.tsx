@@ -20,6 +20,7 @@ import { clearActivePlan, saveActivePlan, useActivePlan, type PlanDay } from '@/
 import ConfirmCard from '@/components/ConfirmCard';
 import { goToTab } from '@/utils/state-control-ui';
 import { syncPlanReminders } from '@/services/reminders';
+import { planItemStatuses } from '@/utils/plan-status';
 import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
 import { DurationWheel } from '@/components/DurationWheel';
@@ -402,25 +403,18 @@ export default function AgendaScreen() {
      belonen (bewuste, eerdere beslissing) — maar het per-sessie label in
      de agenda hoort eerlijk te zijn over wat er ECHT gebeurde. Nu een Map
      naar boolean (`ooit volledig afgerond?`) i.p.v. een kale Set. */
+  /* Test 10 okt 2026: sessies per dag (sinds het plan bestaat); de status
+     per gepland moment komt uit utils/plan-status (gedeeld met "Your
+     protocol"), zodat één sessie niet twee momenten van dezelfde toestand
+     afvinkt. */
   const historyByDay = useMemo(() => {
-    const map = new Map<string, Map<string, boolean>>();
-    /* Alleen sessies NA het aanmaken van dit protocol tellen mee (operator,
-       13 augustus 2026: "ik heb net protocol veranderd... dat kan nooit
-       done zijn"). Zonder deze grens claimde een vers, nog niet uitgevoerd
-       protocol krediet voor een sessie die je toevallig eerder vandaag —
-       onder een ANDER, inmiddels vervangen protocol — al had gedaan. */
+    const map = new Map<string, { key: string; ts: number; completed?: boolean }[]>();
     const since = plan?.createdAt ?? 0;
     for (const e of history) {
       if (e.ts < since) continue;
       const k = dayKey(new Date(e.ts));
-      if (!map.has(k)) map.set(k, new Map());
-      const day = map.get(k)!;
-      /* `completed` is optional — oudere entries zonder het veld tellen
-         als volledig afgerond (zie het `?? true`-commentaar bij het
-         type). Eén keer volledig afgerond die dag is genoeg, ook als een
-         ANDERE sessie van dezelfde toestand die dag wel afgebroken was. */
-      const wasCompleted = e.completed ?? true;
-      day.set(e.key, (day.get(e.key) ?? false) || wasCompleted);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(e);
     }
     return map;
   }, [history, plan?.createdAt]);
@@ -431,8 +425,8 @@ export default function AgendaScreen() {
     const day = plan?.days[dk];
     if (!day || day.items.length === 0) return 'none';
     if (dk > todayKey) return 'future';
-    const done = historyByDay.get(dk) ?? new Map<string, boolean>();
-    const matched = day.items.filter((it) => done.has(it.state)).length;
+    const statuses = planItemStatuses(day.items, historyByDay.get(dk) ?? []);
+    const matched = statuses.filter((st) => st !== 'none').length;
     if (matched === 0) return dk === todayKey ? 'future' : 'red';
     if (matched === day.items.length) return 'green';
     return 'orange';
@@ -440,7 +434,9 @@ export default function AgendaScreen() {
 
   const selectedKey = dayKey(selected);
   const selectedDay: PlanDay | null = plan?.days[selectedKey] ?? null;
-  const selectedDone = historyByDay.get(selectedKey) ?? new Map<string, boolean>();
+  const selectedStatuses = selectedDay
+    ? planItemStatuses(selectedDay.items, historyByDay.get(selectedKey) ?? [])
+    : [];
 
   /* Index in `selectedDay.items` waarvan de duur-kiezer openstaat. */
   const [durationPicking, setDurationPicking] = useState<number | null>(null);
@@ -676,7 +672,7 @@ export default function AgendaScreen() {
           onPressOut={onDateRowPressOut}
         >
           <Text style={s.dateRowTxt}>
-            {selected.toLocaleDateString([], { month: 'long', day: 'numeric' })}
+            {selected.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
           </Text>
           <ChevronDown
             size={16}
@@ -716,7 +712,7 @@ export default function AgendaScreen() {
                 <ChevronLeft size={18} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
               </AnimatedPressable>
               <Text style={s.dayNavTxt}>
-                {selected.toLocaleDateString([], { month: 'long', year: 'numeric' })}
+                {selected.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
               </Text>
               <AnimatedPressable
                 onPress={() => {
@@ -1027,9 +1023,10 @@ export default function AgendaScreen() {
               /* Zelfde done/partial/missed-afleiding als voorheen op de
                  (nu verwijderde) lijstrij — het statuslabel dat daar
                  verdween, staat nu hier in de popup. */
-              const attempted = selectedDone.has(it.state);
-              const done = selectedDone.get(it.state) === true;
-              const partial = attempted && !done;
+              const status = selectedStatuses[actionItemIndex] ?? 'none';
+              const attempted = status !== 'none';
+              const done = status === 'done';
+              const partial = status === 'partial';
               const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
               const isPastDay = selectedKey < todayKey;
               const isPastTime = selectedKey === todayKey && it.reminderAt < nowMins;

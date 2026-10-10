@@ -57,7 +57,8 @@ export function BreathMiniControl(): React.ReactElement | null {
         <VibezGlass radius={999} tint={st.accent} style={s.pill}>
           <StateGlyph stateKey={st.key} size={15} color="#ffffff" strokeWidth={2} />
           <Text style={s.label} numberOfLines={1}>
-            Breathwork · {st.eyebrow.charAt(0) + st.eyebrow.slice(1).toLowerCase()}
+            {/* Zelfde schrijfwijze als overal ("Clarity & Relax", niet "Clarity & relax"). */}
+            Breathwork · {st.eyebrow.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
         </VibezGlass>
       </AnimatedPressable>

@@ -729,7 +729,7 @@ export function nextFireText(minsOfDay: number, days?: number[]): string {
     const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     if (i === 0) return `First reminder today at ${t}`;
     if (i === 1) return `First reminder tomorrow at ${t}`;
-    return `First reminder ${d.toLocaleDateString([], { weekday: 'long' })} at ${t}`;
+    return `First reminder ${d.toLocaleDateString('en-GB', { weekday: 'long' })} at ${t}`;
   }
   return 'No day selected yet';
 }

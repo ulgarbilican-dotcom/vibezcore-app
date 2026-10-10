@@ -411,7 +411,7 @@ export default function BraceletAgendaScreen() {
               <Text style={s.dateRowTxt}>
                 {selectedKey === todayKey
                   ? 'Today'
-                  : selected.toLocaleDateString([], { month: 'long', day: 'numeric' })}
+                  : selected.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
               </Text>
               <Text style={s.dateRowSub}> · {HORIZON_LABEL[plan.horizon] ?? plan.horizon}</Text>
               <ChevronDown
@@ -441,7 +441,7 @@ export default function BraceletAgendaScreen() {
                     <ChevronLeft size={18} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
                   </Pressable>
                   <Text style={s.monthNavTxt}>
-                    {selected.toLocaleDateString([], { month: 'long', year: 'numeric' })}
+                    {selected.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                   </Text>
                   <Pressable
                     onPress={() => {

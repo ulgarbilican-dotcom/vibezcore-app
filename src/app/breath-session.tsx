@@ -1086,7 +1086,7 @@ export function BreathSession() {
      hieronder — `st.eyebrow` is de bestaande toestandsnaam, maar staat
      overal in HOOFDLETTERS (een eyebrow-label); midden in een knoptekst
      leest dat als schreeuwen. */
-  const stateLabel = st.eyebrow.charAt(0) + st.eyebrow.slice(1).toLowerCase();
+  const stateLabel = st.eyebrow.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   /* Operator, 20 september 2026 ("moet user niet de keuze krijgen om enkel
      voor deze state of voor alle states te setten?"): 11 september had dit
      bewust vereenvoudigd tot ENKEL globaal ("gewoon bij 1 keuze overal de
