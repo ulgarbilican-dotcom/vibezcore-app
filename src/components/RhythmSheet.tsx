@@ -151,10 +151,13 @@ export default function RhythmSheet({
           <View style={s.grip} />
         </Pressable>
         <View style={s.head}>
-          {/* Operator, 10 okt 2026 ("is de header consistent met andere
-              headers?"): zelfde bladtitel als de andere onderbladen — wit,
-              vet, gewone hoofdletters — i.p.v. een grijs kapitaal-labeltje. */}
-          <Text style={s.eyebrow}>{now ? 'Heart Rate' : 'Resting Heart Rate'}</Text>
+          {/* Operator, 10 okt 2026: gecentreerd in hoofdletters, zelfde kop
+              als SESSION CONTROL / BREATHWORK (dit blad voelt als een pagina).
+              Absoluut gecentreerd, zodat "Cancel" het niet opzij duwt. */}
+          <Text style={s.eyebrow} pointerEvents="none">
+            {now ? 'Heart Rate' : 'Resting Heart Rate'}
+          </Text>
+          <View />
           {/* Actieblad (protocol): de keuze in State Control heeft onderaan
               al "Not Now" — geen tweede Cancel bovenaan. */}
           {step !== 'result' && !(now && step === 'choose') ? (
@@ -489,8 +492,18 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.20)',
     marginBottom: 14,
   },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30 },
-  eyebrow: { color: '#ffffff', fontSize: 18, fontFamily: BrandFonts.bold, letterSpacing: -0.2 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24, marginBottom: 30 },
+  eyebrow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
   done: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
   iconWrap: {
     width: 56,
