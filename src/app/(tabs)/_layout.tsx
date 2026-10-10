@@ -330,25 +330,8 @@ export default function TabLayout() {
           },
         }}
       >
-        {/* Operator, 7 september 2026: Breath als 1ste tabblad, Audio Library
-           als 2de — volgorde in de balk volgt gewoon de JSX-volgorde
-           hieronder, `name="index"` blijft ondertussen de technische
-           beginroute van de groep (zie `backBehavior` hierboven). */}
-        <Tabs.Screen
-          name="breath"
-          options={{
-            title: 'Breath',
-            tabBarIcon: ({ focused }: { focused: boolean }) => (
-              <TabGlyph Icon={Wind} focused={focused} />
-            ),
-            tabBarLabel: ({ focused }: { focused: boolean }) => (
-              <TabLabel label="Breath" focused={focused} />
-            ),
-            tabBarButton: (props) => <TabButton path="/breath" {...props} />,
-          }}
-        />
-        {/* Operator, 10 okt 2026: State Control als 2de tabblad, Audio
-            Library als 3de (gewisseld). */}
+        {/* Operator, 10 okt 2026: State Control als 1ste tabblad (het
+            sterkste verkoopargument), dan Breath, dan Audio Library. */}
         <Tabs.Screen
           name="bracelet"
           options={{
@@ -366,6 +349,23 @@ export default function TabLayout() {
             /* Sleutel enkel meegeven als de balk weg moet — een `undefined`
                zou de stijl uit screenOptions overschrijven. */
             ...(hideStateControlBar ? { tabBarStyle: { display: 'none' as const } } : {}),
+          }}
+        />
+        {/* Operator, 7 september 2026: Breath als 1ste tabblad, Audio Library
+           als 2de — volgorde in de balk volgt gewoon de JSX-volgorde
+           hieronder, `name="index"` blijft ondertussen de technische
+           beginroute van de groep (zie `backBehavior` hierboven). */}
+        <Tabs.Screen
+          name="breath"
+          options={{
+            title: 'Breath',
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <TabGlyph Icon={Wind} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }: { focused: boolean }) => (
+              <TabLabel label="Breath" focused={focused} />
+            ),
+            tabBarButton: (props) => <TabButton path="/breath" {...props} />,
           }}
         />
         {/* De audiobibliotheek is VERBORGEN, niet verwijderd (operator,
