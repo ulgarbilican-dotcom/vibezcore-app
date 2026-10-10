@@ -287,7 +287,7 @@ function DoneMessage() {
     return { opacity: t, transform: [{ translateY: 6 * (1 - t) }] };
   });
   return (
-    <View style={s.doneMsg} accessibilityLiveRegion="polite" accessibilityLabel="Measurement complete. You can lift your finger.">
+    <View style={s.doneMsg} accessibilityLiveRegion="polite" accessibilityLabel="Measurement complete. This is your baseline for all sessions.">
       <Reanimated.View style={[s.doneRow, titleStyle]}>
         <Svg width={24} height={24} viewBox="0 0 24 24">
           <AnimatedCircle
@@ -315,7 +315,7 @@ function DoneMessage() {
         </Svg>
         <Text style={s.doneTitle}>Measurement complete</Text>
       </Reanimated.View>
-      <Reanimated.Text style={[s.doneSub, subStyle]}>You can lift your finger</Reanimated.Text>
+      <Reanimated.Text style={[s.doneSub, subStyle]}>This is your baseline for all sessions</Reanimated.Text>
     </View>
   );
 }
