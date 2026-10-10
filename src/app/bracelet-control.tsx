@@ -167,6 +167,7 @@ import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import VibezGlass from '@/components/VibezGlass';
 import { ModeGlyph } from '@/components/GuidanceSelector';
+import { STATE_ZONES, ZONE_NAME, ZONE_ORDER, ZONE_TEXT, zoneFor } from '@/data/state-zones';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { getBracelet, getSimHooks, USE_SIMULATED_BLE } from '../services/bracelet';
 import type { SimulatedBracelet } from '../services/bracelet-sim';
@@ -1350,6 +1351,26 @@ function ModeDetailModal({
               </View>
             ))}
           </View>
+
+          {/* Operator, 10 okt 2026: uitleg bij de zone in de cirkel — één
+              i-blad, alle uitleg op één plek. */}
+          <Text style={s.modeModalSectionLbl}>Session length</Text>
+          <View style={s.zoneList}>
+            {ZONE_ORDER.filter((k) => STATE_ZONES[mode][k]).map((k) => {
+              const r = STATE_ZONES[mode][k]!;
+              return (
+                <View key={k} style={s.zoneRow}>
+                  <View style={s.zoneHead}>
+                    <Text style={s.zoneName}>{ZONE_NAME[k]}</Text>
+                    <Text style={s.zoneRange}>
+                      {r[0]}–{r[1]} min
+                    </Text>
+                  </View>
+                  <Text style={s.zoneText}>{ZONE_TEXT[k]}</Text>
+                </View>
+              );
+            })}
+          </View>
       </View>
     </GlassSheet>
   );
@@ -1661,7 +1682,7 @@ const RING_R = 84;
 const RING_STROKE = 4;
 const RING_SIZE = (RING_R + RING_STROKE) * 2;
 /* Operator, 9 okt 2026 ("cirkel groter"): 230 → 270. */
-const RING_DIAL = 270; // past met de duurkeuze + hartslagkaart eronder
+const RING_DIAL = 304; // operator, 10 okt 2026: groter (was 270), duurpillen eronder weg
 const RING_CIRC = 2 * Math.PI * RING_R;
 const AnimatedRingCircle = ReanimatedAnimated.createAnimatedComponent(Circle);
 
@@ -2195,6 +2216,7 @@ function DurationRing({
   dark,
   fillOnMount,
   recommended,
+  zone,
   clockOverride,
   subOverride,
   dialHandle,
@@ -2210,6 +2232,9 @@ function DurationRing({
   fillOnMount?: boolean;
   /** De gekozen duur is de aanbevolen duur → "● Recommended" onder de tijd. */
   recommended?: boolean;
+  /** Operator, 10 okt 2026: de zone van de gekozen duur (Short /
+      Recommended / Extended / Long) op de plaats van "Recommended". */
+  zone?: string;
   min: number;
   max: number;
   value: number;
@@ -2373,9 +2398,9 @@ function DurationRing({
         <Text style={[s.ringClock, { color: numColor }, textShadow]}>
           {clockOverride ?? `${value}:00`}
         </Text>
-        <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || recommended) ? 1 : 0 }]}>
+        <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || zone || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
-          <Text style={s.ringRecTxt}>{subOverride ?? 'Recommended'}</Text>
+          <Text style={s.ringRecTxt}>{subOverride ?? zone ?? 'Recommended'}</Text>
         </View>
       </View>
       {/* Boog + greep BOVENOP alles (de zwarte binnenkant en de golf
@@ -3861,6 +3886,29 @@ function IdleScreen({
         {/* Operator, 9 okt 2026: cirkel lager — net boven het midden. */}
         <View style={{ height: 0 }} />
         <View style={s.durationRingWrap}>
+          {/* Operator, 10 okt 2026: de bpm-pil BOVEN de cirkel (was erin).
+              Operator, 9 okt 2026: je hartslag als klein pilletje onder de
+              vaste tijden — enkel hart, bpm en pijltje (in de ring was het
+              verwarrend onder "Recommended"). Tik = hartslag-blad. */}
+          {!trialRunning && !sessionRunning ? (
+            <PressScale
+              onPress={() => {
+                hapticTap();
+                pendingAfterRhythm.current = null;
+                setRhythmOpen(true);
+              }}
+              hitSlop={12}
+              scaleTo={0.94}
+              style={[s.ringHr, s.ringHrAbove]}
+              accessibilityRole="button"
+              accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
+            >
+              <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
+              <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
+              {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+              <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+            </PressScale>
+          ) : null}
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
           {MODES.findIndex((m) => m.mode === selectedMode) > 0 && (
@@ -3910,30 +3958,9 @@ function IdleScreen({
               recommended={
                 duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
               }
+              zone={ZONE_NAME[zoneFor(selectedMode, duration)]}
             />
           </ModeSwipeRing>
-          {/* Operator, 9 okt 2026: je hartslag als klein pilletje onder de
-              vaste tijden — enkel hart, bpm en pijltje (in de ring was het
-              verwarrend onder "Recommended"). Tik = hartslag-blad. */}
-          {!trialRunning && !sessionRunning ? (
-            <PressScale
-              onPress={() => {
-                hapticTap();
-                pendingAfterRhythm.current = null;
-                setRhythmOpen(true);
-              }}
-              hitSlop={12}
-              scaleTo={0.94}
-              style={[s.ringHr, s.ringHrTop]}
-              accessibilityRole="button"
-              accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
-            >
-              <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
-              <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
-              {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
-              <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
-            </PressScale>
-          ) : null}
         </View>
 
         {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
@@ -3985,36 +4012,8 @@ function IdleScreen({
         {/* Operator, 9 okt 2026 (Apple-stijl): de duur als segmented control
             onder de cirkel — alle keuzes in één oogopslag. Gekozen = volle
             toestandskleur, de rest dezelfde kleur transparant. */}
-        {!trialRunning ? (
-          <View style={s.durSeg} accessibilityRole="radiogroup">
-            {/* Operator, 9 okt 2026: max. drie — kort, aanbevolen, lang.
-                Alles daartussen kies je op de rand van de cirkel. */}
-            {threePresets(selectedMode).map((p) => {
-              const on = p.value === duration;
-              return (
-                <Pressable
-                  key={p.value}
-                  onPress={() => {
-                    if (on) return;
-                    hapticTap();
-                    setDuration(p.value);
-                  }}
-                  style={[
-                    s.durSegItem,
-                    { backgroundColor: on ? meta.color : `${meta.color}26` },
-                  ]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: on }}
-                  accessibilityLabel={`${p.value} minutes${p.recommended ? ', recommended' : ''}`}
-                >
-                  <Text style={[s.durSegTxt, { color: on ? '#0a0a0a' : 'rgba(255,255,255,0.85)' }]}>
-                    {p.value} min
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
+        {/* Operator, 10 okt 2026: de drie duurpillen onder de cirkel zijn weg —
+            de duur kies je op de rand; de zone staat in de cirkel. */}
 
         {/* Spacer — pushes Start-CTA naar onderkant. */}
         <View style={{ flex: 1, minHeight: 2 }} />
@@ -6248,6 +6247,13 @@ const s = StyleSheet.create({
   durSegItem: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
   ringHrTop: { position: 'absolute', top: 26 },
+  ringHrAbove: { alignSelf: 'center', marginBottom: 18 },
+  zoneList: { gap: 14, marginTop: 4 },
+  zoneRow: { gap: 3 },
+  zoneHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  zoneName: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  zoneRange: { fontFamily: BrandFonts.medium, fontSize: 13.5, color: 'rgba(255,255,255,0.6)', fontVariant: ['tabular-nums'] },
+  zoneText: { fontFamily: BrandFonts.medium, fontSize: 13.5, lineHeight: 19, color: 'rgba(255,255,255,0.6)' },
   ringHr: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -6302,6 +6308,7 @@ const s = StyleSheet.create({
     /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
        8→16. 5 okt 2026: 16→8 (paste anders niet boven de tabbalk). */
     marginBottom: 8,
+    marginTop: 14,
   },
   /* Wrapper rond de DurationWheel, direct onder de ring — de ring zelf
      toont enkel het resultaat (operator: "dat moet meer in deze stijl,

@@ -147,6 +147,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 84 | Opstart: zwart systeemscherm, V bouwt zich op + lichtstreep + onthulling (enkel zichtbaar in release-build) | A16 | ⏳ release-APK |
 | 85 | Kleuren: Sleep-golf echt Bio-Teal (State Control + breath), harten Bio-Teal-overgang, alle pop-ups glas | A16 | ✅ cirkel operator "fout groen" → opgelost (screenshot); pop-ups ⏳ |
 | 86 | "Early 2027" i.p.v. Fall 2026 overal in de app | A16 | ⏳ visuele controle |
+| 87 | State Control-scherm 10 okt: duurpillen weg, cirkel groter (304) en lager, bpm-pil boven de cirkel, zone (Short/Recommended/Extended/Long) in de cirkel, i-blad met "Session length"; titel welkomstscherm "Feel different. Perform differently." | A16 | ✅🔒 operator: "heel goed gedaan, dit perfect" |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
