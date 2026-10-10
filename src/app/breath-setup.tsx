@@ -73,6 +73,7 @@ import {
   AlertTriangle,
   CalendarRange,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -232,7 +233,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    platte lijst in een rechthoek. */
 /* Operator, 10 okt 2026 (consistentie met State Control: "cirkel groter"):
    zo groot als dit scherm toelaat (was 0,58 × breedte, max 230). */
-const HERO_SIZE = Math.min(Math.round(SCREEN_W * 0.68), 260);
+/* Vervolg: techniekbalk en duurwiel zijn weg → zelfde maat als State
+   Control (304), de ruimte is er nu. */
+const HERO_SIZE = Math.min(Math.round(SCREEN_W * 0.845), 304);
 /* Operator, 9 september 2026: "de glow is niet goed te aanwezig... ik had
    de glow niet gevraagd" — de radiale gloed-cirkel achter de ring is
    weer weg. "Meer subtiele ring, nog dunner, moet elegant": 6 → 4 → 3.
@@ -386,7 +389,9 @@ const C = light ? LIGHT : DARK;
 
 /* Gedeeld met de plannen (utils/duration-options.ts, 8 okt 2026). */
 import { CUSTOM_CEILING_MIN, NO_EXTEND_TECHNIQUE_KEYS } from '@/utils/duration-options';
-import { hapticPress, hapticTap } from '@/utils/haptics';
+import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 
 /* Operator, 11 september 2026: "hoe weet gebruiker wat er in de knop staat
    als dat is afgekort met 3 puntjes" — de pil-knop toonde tot nu toe
@@ -1326,7 +1331,8 @@ export default function BreathSetupScreen() {
      dekking werd op zwart een modderig donkergroen. Golven en boog gebruiken
      daar het lichte Bio-Teal (zelfde keuze als de terugkeer-gloed op
      Activity); de andere toestanden blijven ongewijzigd. */
-  const waveAccent = st.key === 'rest' ? '#4AF0D4' : accent; // subtekst onder de duur-cirkel ("Total Alignment")
+  /* Operator, 10 okt 2026: Sleep-golf in echt Bio-Teal #00A3A3 (40/55%), gelijk aan State Control. */
+  const waveAccent = accent; // subtekst onder de duur-cirkel ("Total Alignment")
   const ctaBg = isNeutralAccent ? '#1C1C1E' : accent;
   const ctaTextColor = isNeutralAccent ? '#ffffff' : '#0a0a0a';
   const modalBtnTextColor = isNeutralAccent ? '#ffffff' : '#0a0a0a';
@@ -1739,6 +1745,65 @@ export default function BreathSetupScreen() {
   const heroRingProps = useAnimatedProps(() => ({
     strokeDashoffset: HERO_C * (1 - heroProgress.value),
   }));
+  /* Operator, 10 okt 2026 ("kunnen we de tijd ook via de cirkel zelf
+     doen?"): zelfde greep en gebaar als State Control — sleep over de rand,
+     de greep springt naar de dichtstbijzijnde toegelaten duur (bij ademrondes
+     zijn dat vaste stappen), met een fijne tik per stap. */
+  const heroKnobProps = useAnimatedProps(() => {
+    const a = -Math.PI / 2 + heroProgress.value * 2 * Math.PI;
+    return { cx: 16 + HERO_SIZE / 2 + HERO_R * Math.cos(a), cy: 16 + HERO_SIZE / 2 + HERO_R * Math.sin(a) };
+  });
+  const dialStops = durationWheelOptions.map((o) => {
+    const d = DURATIONS.find((x) => x.minutes === o.value);
+    const v = isCyclesBased ? (d?.cycles ?? d?.minutes ?? o.value) : o.value;
+    return { value: o.value, ratio: maxDurationVal > 0 ? v / maxDurationVal : 0 };
+  });
+  const dialStopsRef = useRef(dialStops);
+  dialStopsRef.current = dialStops;
+  const lastDialValue = useRef(chosen.minutes);
+  lastDialValue.current = chosen.minutes;
+  const onDialFrac = (f: number) => {
+    const stops = dialStopsRef.current;
+    if (!stops.length) return;
+    let best = stops[0];
+    for (const st0 of stops) if (Math.abs(st0.ratio - f) < Math.abs(best.ratio - f)) best = st0;
+    if (best.value === lastDialValue.current) return;
+    lastDialValue.current = best.value;
+    hapticTick();
+    const presetIdx = DURATIONS.findIndex((d) => d.minutes === best.value);
+    if (presetIdx !== -1) {
+      setCustomSelected(false);
+      setDurationIdx(presetIdx);
+    } else {
+      setCustomMinutes(best.value);
+      setCustomSelected(true);
+    }
+  };
+  const dialFracSV = useSharedValue(0);
+  const heroDial = Gesture.Pan()
+    .manualActivation(true)
+    .onTouchesDown((e, manager) => {
+      const t = e.allTouches[0];
+      const c = HERO_SIZE / 2;
+      const d = Math.hypot(t.x - c, t.y - c);
+      if (d > c * 0.7 && d < c * 1.3) manager.activate();
+      else manager.fail();
+    })
+    .onStart(() => {
+      dialFracSV.value = heroProgress.value;
+    })
+    .onUpdate((e) => {
+      const c = HERO_SIZE / 2;
+      let f = Math.atan2(e.x - c, -(e.y - c)) / (2 * Math.PI);
+      if (f < 0) f += 1;
+      let delta = f - dialFracSV.value;
+      if (delta > 0.5) delta -= 1;
+      if (delta < -0.5) delta += 1;
+      const nf = Math.min(1, Math.max(0, dialFracSV.value + delta));
+      dialFracSV.value = nf;
+      scheduleOnRN(onDialFrac, nf);
+    });
+
 
   /* Operator, 24 september 2026 ("bolletje op het uiteinde van de boog" →
      "moet niet cirkel zijn, mag ook rechthoek met afgeronde hoeken"):
@@ -2355,8 +2420,11 @@ export default function BreathSetupScreen() {
            kopje nog. */}
         {!isAddToDay && (
         <View style={s.stateHeader}>
+          {/* Operator, 10 okt 2026 (zelfde opbouw als State Control, daar
+              "SESSION CONTROL"): algemene titel bovenaan, de toestand staat
+              nu in de cirkel. */}
           <Text style={s.stateHeaderTxt} numberOfLines={1}>
-            {displayName(st.eyebrow)}
+            BREATHWORK
           </Text>
           {/* Operator, 5 okt 2026 ("heel druk — de 'From high activation…'-
              tekst mag weg"): enkel nog de naam van de toestand. */}
@@ -2407,6 +2475,24 @@ export default function BreathSetupScreen() {
            Operator, 18 september 2026: enkel nog de NORMALE flow — addToDay
            gebruikt `AddToDayHero` hierboven. */}
         {!isAddToDay && (
+        <Pressable
+          onPress={() => setInfoModal({ title: tech.name, techniqueKey: tech.key })}
+          hitSlop={10}
+          style={s.techTitle}
+          accessibilityRole="button"
+          accessibilityLabel={`${tech.name}. Tap for how it works.`}
+        >
+          {/* Operator, 10 okt 2026: boven de cirkel gewoon de naam van de
+              techniek (i = uitleg); de keuze zit in het draaiwiel eronder. */}
+          <Text style={s.techTitleTxt} numberOfLines={1}>
+            {tech.name}
+          </Text>
+          <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+        </Pressable>
+        )}
+        {!isAddToDay && (
+        <GestureHandlerRootView style={{ flex: 0 }}>
+        <GestureDetector gesture={heroDial}>
         <View style={s.heroWrap}>
           {/* Operator, 11 september 2026: "binnenkant van de cirkel moet
              duidelijker grijs" — de ring had zelf geen vulling (`fill=
@@ -2468,7 +2554,7 @@ export default function BreathSetupScreen() {
                 <AnimatedPath
                   animatedProps={wavePathBackProps}
                   fill={isNeutralAccent ? '#000000' : waveAccent}
-                  fillOpacity={isNeutralAccent ? 0.07 : st.key === 'rest' ? 0.2 : 0.1}
+                  fillOpacity={isNeutralAccent ? 0.07 : st.key === 'rest' ? 0.4 : 0.1}
                 />
               </Svg>
             </Animated.View>
@@ -2477,7 +2563,7 @@ export default function BreathSetupScreen() {
                 <AnimatedPath
                   animatedProps={wavePathFrontProps}
                   fill={isNeutralAccent ? '#000000' : waveAccent}
-                  fillOpacity={isNeutralAccent ? 0.1 : st.key === 'rest' ? 0.3 : 0.15}
+                  fillOpacity={isNeutralAccent ? 0.1 : st.key === 'rest' ? 0.55 : 0.15}
                 />
               </Svg>
             </Animated.View>
@@ -2506,14 +2592,9 @@ export default function BreathSetupScreen() {
             {/* Operator, 10 okt 2026 (Apple-consistentie met State Control):
                zelfde volgorde in de cirkel — bovenaan WAT (de techniek), in
                het midden de tijd, onderaan "● Recommended" (was omgekeerd). */}
-            <Animated.Text
-              key={tech.key}
-              entering={FadeIn.duration(240)}
-              style={s.heroTech}
-              numberOfLines={1}
-            >
-              {tech.name}
-            </Animated.Text>
+            <Text style={s.heroTech} numberOfLines={1}>
+              {displayName(st.eyebrow)}
+            </Text>
             <Animated.Text
               key={`clock-${tech.key}`}
               entering={FadeIn.duration(240)}
@@ -2532,7 +2613,15 @@ export default function BreathSetupScreen() {
               </Text>
             </View>
           </View>
+          {/* Greep op de rand (zoals State Control): slepen = tijd kiezen. */}
+          <View pointerEvents="none" style={{ position: 'absolute', left: -16, top: -16 }}>
+            <Svg width={HERO_SIZE + 32} height={HERO_SIZE + 32}>
+              <AnimatedCircle animatedProps={heroKnobProps} r={7} fill="#ffffff" />
+            </Svg>
+          </View>
         </View>
+        </GestureDetector>
+        </GestureHandlerRootView>
         )}
 
 
@@ -2879,37 +2968,18 @@ export default function BreathSetupScreen() {
            balk, transparant blur — hebben we elders al"): de glazen
            segmented control met het schuivende kussentje. De i rechts op de
            labelregel opent de uitleg van de gekozen techniek. */}
-        <View style={s.segWrap}>
-          <TechniqueSegmentedControl
-            techniques={st.techniques}
-            techIdx={techIdx}
-            techniquePicked
-            onInfo={(t) => setInfoModal({ title: t.name, techniqueKey: t.key })}
-            onPick={(i) => {
-              if (i === techIdx) return;
-              hapticTap();
-              pickTechnique(i);
-            }}
-          />
-        </View>
-
-        <View style={s.rulerWrap}>
-          {/* Operator, 5 okt 2026 ("liniaal vind ik niet goed, terug het
-             wiel"). */}
+        {/* Operator, 10 okt 2026: duurwiel weg (tijd via de rand van de
+            cirkel); de technieken als draaiwiel ONDER de cirkel. */}
+        <View style={s.techWheelWrap}>
           <DurationWheel
-            options={durationWheelOptions}
-            value={chosen.minutes}
+            options={st.techniques.map((t, i) => ({ value: i, label: t.name }))}
+            textMode
+            value={techIdx}
             accent={accent}
             trackColor="rgba(255,255,255,0.4)"
-            onChange={(v) => {
-              const presetIdx = DURATIONS.findIndex((d) => d.minutes === v);
-              if (presetIdx !== -1) {
-                setCustomSelected(false);
-                setDurationIdx(presetIdx);
-              } else {
-                setCustomMinutes(v);
-                setCustomSelected(true);
-              }
+            onChange={(i) => {
+              if (i === techIdx) return;
+              pickTechnique(i);
             }}
           />
         </View>
@@ -3828,10 +3898,13 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   },
   /* Operator, 9 september 2026: de rechthoekige kaart is nu een grote
      voortgangsring, hoger op het scherm. */
+  techTitle: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 40 },
+  techTitleTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  techWheelWrap: { alignSelf: 'center', width: 300, marginTop: 26 },
   heroWrap: {
     width: HERO_SIZE,
     height: HERO_SIZE,
-    marginTop: 20,
+    marginTop: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3920,6 +3993,8 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     maxWidth: 180,
     alignSelf: 'center',
     marginTop: 0,
+    /* Zelfde ademruimte als State Control: naam los van tijd + Recommended. */
+    marginBottom: 18,
     fontFamily: BrandFonts.regular,
     fontSize: 14,
     lineHeight: 18,

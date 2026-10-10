@@ -41,7 +41,10 @@ function DurationWheelRow({
   scrollY,
   viewportHeight,
   dotColor,
+  textMode = false,
 }: {
+  /** Tekstlabels i.p.v. korte getallen (technieken, 10 okt 2026). */
+  textMode?: boolean;
   index: number;
   label: string;
   on: boolean;
@@ -63,7 +66,7 @@ function DurationWheelRow({
     const fontSize = interpolate(
       Math.abs(normalizedDistance),
       [0, 1],
-      [26, 17],
+      textMode ? [19, 15] : [26, 17],
       Extrapolation.CLAMP,
     );
     return {
@@ -107,6 +110,7 @@ export function DurationWheel({
   visibleRows = DURATION_WHEEL_VISIBLE,
   recommendedValue,
   recommendedAsDot = false,
+  textMode = false,
 }: {
   options: { value: number; label: string }[];
   value: number;
@@ -117,6 +121,8 @@ export function DurationWheel({
   recommendedValue?: number;
   /** Klein stipje naast de aanbevolen waarde i.p.v. het woord (5 okt 2026). */
   recommendedAsDot?: boolean;
+  /** Lange tekstlabels: kleinere letters, oplichtend vlak over de breedte. */
+  textMode?: boolean;
 }) {
   const viewportHeight = DURATION_WHEEL_ITEM_H * visibleRows;
   const listRef = useRef<Animated.ScrollView>(null);
@@ -172,6 +178,7 @@ export function DurationWheel({
       <View
         style={[
           s.wheelPill,
+          textMode && { left: 0, right: 0 },
           { top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2, backgroundColor: `${accent}1F` },
         ]}
         pointerEvents="none"
@@ -212,6 +219,7 @@ export function DurationWheel({
             scrollY={scrollY}
             viewportHeight={viewportHeight}
             dotColor={recommendedAsDot && o.value === recommendedValue ? accent : undefined}
+            textMode={textMode}
           />
         ))}
       </Animated.ScrollView>

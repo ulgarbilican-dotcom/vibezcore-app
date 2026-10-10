@@ -6373,7 +6373,9 @@ const s = StyleSheet.create({
     fontSize: 20,
   },
   /* Zelfde maten als de breath-setup-ring (heroClock/heroTech/heroRec*). */
-  ringNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 },
+  /* Operator, 10 okt 2026 ("in de cirkel staat alles dicht op elkaar — de
+     naam naar boven"): ruimte tussen naam en tijd; tijd + zone blijven samen. */
+  ringNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180, marginBottom: 18 },
   ringName: {
     fontFamily: BrandFonts.regular,
     fontSize: 14,
