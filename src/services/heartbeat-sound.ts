@@ -85,17 +85,15 @@ const log = (msg: string) => {
 
 /* Operator, 10 okt 2026 ("opnieuw geen geluid"): niet meer bij elk bezoek
    verse spelers (een verse speler is nog aan het laden en slikt de eerste
-   slagen), enkel opnieuw aanmaken als een speler na 3 s nog altijd niet
-   geladen is — dan is hij echt stuk. */
-function playersBroken(): boolean {
-  if (!speaker || !headphones) return true;
-  if (Date.now() - createdAt < 3000) return false;
-  return !speaker.isLoaded || !headphones.isLoaded;
-}
+   slagen). Spelers blijven bestaan; enkel opnieuw aanmaken als spelen echt
+   faalt (`broken`). LET OP: `player.isLoaded` blijft op Android `false` voor
+   gebundelde bestanden (log A16, 10 okt) — daar nooit op vertrouwen, anders
+   wordt de speler elke paar seconden vervangen en vallen slagen weg. */
+let broken = false;
 
-function ensurePlayers(fresh = false): void {
-  if (!fresh && speaker) return;
-  if (!playersBroken()) return;
+function ensurePlayers(_fresh = false): void {
+  if (speaker && headphones && !broken) return;
+  broken = false;
   log(`creating players (had=${!!speaker})`);
   releasePlayers();
   createdAt = Date.now();
@@ -150,14 +148,9 @@ export function startHeartbeatSound(owner: HeartbeatOwner): void {
 /** Eén slag (de "lub"; de "dub" zit in hetzelfde geluid). */
 export function heartbeatTick(): void {
   if (owners.size === 0) return;
-  /* Een stuk geraakte speler meteen vervangen (zie playersBroken). */
-  if (playersBroken()) ensurePlayers(true);
+  if (!speaker || !headphones || broken) ensurePlayers(true);
   const p = isHeadphonesOutput() ? headphones : speaker;
   if (!p) return;
-  if (!p.isLoaded) {
-    log('tick: player not loaded yet');
-    return;
-  }
   try {
     /* Eerst echt terug naar het begin, dán spelen: anders staat de speler
        nog aan het einde van de vorige slag en speelt hij niets (gezien op
@@ -174,7 +167,9 @@ export function heartbeatTick(): void {
       .seekTo(0)
       .then(() => p.play())
       .catch(() => p.play());
-  } catch {
+  } catch (e) {
+    log(`tick failed: ${String(e)}`);
+    broken = true;
     /* geluid is een extraatje — nooit de pagina laten haperen */
   }
 }
