@@ -118,25 +118,41 @@ export default function RhythmSheet({
       setMeterError(false);
       setMeasuredOk(false);
       setElevatedReading(false);
+      setSavedBpm(null);
     }
   }, [visible, startAt]);
 
   /* Bewaren van een geslaagde meting (knop Save of de vraag bij sluiten). */
-  const saveMeasured = () => {
+  /* Operator, 10 okt 2026 ("na Save sluiten en dan een CTA Let's Go, pas
+     dan naar de volgende pagina"): Save bewaart enkel; daarna staat er één
+     knop om verder te gaan. Via de vraag bij het sluiten (`andClose`) wil
+     je weg, dus dan meteen dicht. */
+  const [savedBpm, setSavedBpm] = useState<number | null>(null);
+  const [savedBelow, setSavedBelow] = useState(false);
+  const saveMeasured = (andClose = false) => {
     setConfirmUnsaved(false);
     if (justMeasured === null) return;
     const below = justMeasured < getRestingPulse().bpm;
     if (!addRestingPulseReading(justMeasured)) return;
     /* De sessie die nu volgt, begint bij het hart van nu. */
     setLiveStartPulse(justMeasured);
-    if (below) setStep('result');
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (andClose) {
+      onClose();
+      return;
+    }
+    setSavedBelow(below);
+    setSavedBpm(justMeasured);
+  };
+  const continueAfterSave = () => {
+    if (savedBelow) setStep('result');
     else onDone();
   };
   /* Sluiten met een meting die nog niet bewaard is: eerst vragen, anders
      ging ze stil verloren (test 10 okt 2026: 97 bpm nooit opgeslagen). */
   const [confirmUnsaved, setConfirmUnsaved] = useState(false);
   const guardedClose = () => {
-    if (step === 'measure' && measuredOk && justMeasured !== null) setConfirmUnsaved(true);
+    if (step === 'measure' && measuredOk && justMeasured !== null && savedBpm === null) setConfirmUnsaved(true);
     else onClose();
   };
 
@@ -377,20 +393,25 @@ export default function RhythmSheet({
                 style={[s.cta, { alignSelf: 'stretch' }]}
                 haptic
                 scaleTo={0.97}
-                onPress={saveMeasured}
+                onPress={() => (savedBpm !== null ? continueAfterSave() : saveMeasured())}
                 accessibilityRole="button"
               >
                 {/* Operator, 10 okt 2026 ("wat als iemand opnieuw wil meten?
                     op het einde save of opnieuw"): bewaren is een bewuste
                     keuze, opnieuw meten staat er altijd onder. */}
-                <Text style={s.ctaTxt}>Save</Text>
+                <Text style={s.ctaTxt}>{savedBpm !== null ? "Let's Go" : 'Save'}</Text>
               </PressScale>
-              {justMeasured !== null ? (
+              {savedBpm !== null ? (
+                <Text style={[s.fact, { textAlign: 'center', marginTop: 14, marginBottom: 6 }]}>
+                  Saved as your resting heart rate
+                </Text>
+              ) : justMeasured !== null ? (
                 <PressScale
                   style={s.secondary}
                   onPress={() => {
                     setMeasuredOk(false);
                     setJustMeasured(null);
+                    setSavedBpm(null);
                     setMeterKey((k) => k + 1);
                   }}
                   accessibilityRole="button"
@@ -473,7 +494,7 @@ export default function RhythmSheet({
           setConfirmUnsaved(false);
           onClose();
         }}
-        onConfirm={saveMeasured}
+        onConfirm={() => saveMeasured(true)}
       />
     </GlassSheet>
   );
