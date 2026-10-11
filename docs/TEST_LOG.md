@@ -186,6 +186,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 122 | Sessie uit State Control-plan/herinnering start GEPAUZEERD (zelf op play, zoals Start op Session Control); Quick Chill/Boost blijven meteen lopen. Actieblad bracelet-agenda telt enkel sessies sinds het plan (Missed i.p.v. foutief Partial) | A16 | ✅ 10 okt |
 | 123 | Audio & Haptics: VIBRATION STRENGTH Soft / Medium / Strong — voelbaar verschil, tik bij kiezen, wijzigt meteen tijdens een lopende sessie (zelfde punt in de curve), onthouden | A16 | ⏳ |
 | 124 | Kortere minimumduur: Boost/Sharp Focus/Calm Control vanaf 5 min, Clarity & Relax/Sleep vanaf 10 min (cirkel, Add session, agenda Edit duration); zone "Short" tot de aanbevolen duur | A16 | ⏳ (verbinding weg) |
+| 125 | Sessie uit plan/herinnering laten aflopen → terug naar de keuzepagina: GEEN lopende balk meer, sessie start niet opnieuw (startlink werkt één keer, app-breed) | A16 | ⏳ (operator 11 okt: liep opnieuw door) |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

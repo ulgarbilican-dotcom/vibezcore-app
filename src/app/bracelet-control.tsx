@@ -4356,6 +4356,12 @@ function IdleScreen({
    slaat dan het intro over (zie (tabs)/bracelet.tsx). */
 /** `open`-tokens van links die al afgehandeld zijn (zie `freshLink`). */
 const handledLinkTokens = new Set<string>();
+/* Operator, 11 okt 2026 ("tijd gaat naar 0, maar terug op de keuzepagina
+   blijft de knop actief en loopt hij opnieuw"): een plan-/herinneringslink
+   startte de sessie opnieuw telkens dit scherm opnieuw opbouwde (de link-
+   parameters blijven op de route staan; `lastLinkTokenRef` hoort bij één
+   instantie). Elk startlink-token werkt nu precies één keer, app-breed. */
+const startedLinkTokens = new Set<string>();
 
 export default function BraceletControl(props: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
   const pathname = usePathname();
@@ -5193,8 +5199,13 @@ function BraceletControlScreen({
        liet het scherm crashen (getModeMeta(7) bestaat niet). */
     const modeNum = Number.isInteger(rawMode) && rawMode >= 0 && rawMode <= 4 ? rawMode : NaN;
     if (params.plan === '1' && Number.isFinite(modeNum)) {
+      if (startedLinkTokens.has(token)) {
+        lastLinkTokenRef.current = token;
+        return;
+      }
       if (subscription.isLoading) return; // wachten, de effect loopt opnieuw
       lastLinkTokenRef.current = token;
+      startedLinkTokens.add(token);
       if (sessionsLocked) {
         setPaywallOpen(true);
         return;
