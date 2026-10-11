@@ -30,11 +30,12 @@ export const ZONE_TEXT: Record<ZoneKey, string> = {
 
 /** [vanaf, tot en met] in minuten; ontbrekende zone = bestaat niet. */
 export const STATE_ZONES: Record<BraceletMode, Partial<Record<ZoneKey, [number, number]>>> = {
-  [BraceletMode.Gamma]: { short: [8, 9], recommended: [10, 12], extended: [13, 16], long: [17, 20] },
-  [BraceletMode.Beta]: { recommended: [15, 17], extended: [18, 24], long: [25, 30] },
-  [BraceletMode.Alpha]: { short: [15, 17], recommended: [18, 20], extended: [21, 25], long: [26, 30] },
-  [BraceletMode.Theta]: { short: [20, 24], recommended: [25, 28], extended: [29, 37], long: [38, 45] },
-  [BraceletMode.Delta]: { recommended: [30, 33], extended: [34, 42], long: [43, 50] },
+  /* 11 okt 2026: kortere minimumtijden — "Short" begint nu op het nieuwe minimum. */
+  [BraceletMode.Gamma]: { short: [5, 9], recommended: [10, 12], extended: [13, 16], long: [17, 20] },
+  [BraceletMode.Beta]: { short: [5, 14], recommended: [15, 17], extended: [18, 24], long: [25, 30] },
+  [BraceletMode.Alpha]: { short: [5, 17], recommended: [18, 20], extended: [21, 25], long: [26, 30] },
+  [BraceletMode.Theta]: { short: [10, 24], recommended: [25, 28], extended: [29, 37], long: [38, 45] },
+  [BraceletMode.Delta]: { short: [10, 29], recommended: [30, 33], extended: [34, 42], long: [43, 50] },
 };
 
 export const ZONE_ORDER: ZoneKey[] = ['short', 'recommended', 'extended', 'long'];

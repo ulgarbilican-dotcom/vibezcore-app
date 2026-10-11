@@ -37,6 +37,7 @@ import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 import { setStateHear, useStateHear } from '@/services/state-sound-pref';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
+import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -250,39 +251,18 @@ function threePresets(mode: BraceletMode): { value: number; recommended?: boolea
   return picks.filter((p, i) => picks.findIndex((q) => q.value === p.value) === i);
 }
 
-const DURATION_PRESETS: Record<BraceletMode, { value: number; recommended?: boolean }[]> = {
-  [BraceletMode.Gamma]: [
-    { value: 8 },
-    { value: 10, recommended: true },
-    { value: 15 },
-    { value: 20 },
-  ],
-  [BraceletMode.Beta]: [
-    { value: 15, recommended: true },
-    { value: 20 },
-    { value: 25 },
-    { value: 30 },
-  ],
-  [BraceletMode.Alpha]: [
-    { value: 15 },
-    { value: 18, recommended: true },
-    { value: 20 },
-    { value: 25 },
-    { value: 30 },
-  ],
-  [BraceletMode.Theta]: [
-    { value: 20 },
-    { value: 25, recommended: true },
-    { value: 35 },
-    { value: 45 },
-  ],
-  [BraceletMode.Delta]: [
-    { value: 30, recommended: true },
-    { value: 35 },
-    { value: 40 },
-    { value: 50 },
-  ],
-};
+/* 11 okt 2026: kort · aanbevolen · lang, afgeleid van ble-contract (geen
+   tweede, losse lijst meer die kan afwijken). */
+const DURATION_PRESETS: Record<BraceletMode, { value: number; recommended?: boolean }[]> = Object.fromEntries(
+  MODES.map((m) => [
+    m.mode,
+    [
+      { value: m.minMinutes },
+      { value: m.defaultMinutes, recommended: true },
+      { value: m.maxMinutes },
+    ],
+  ]),
+) as Record<BraceletMode, { value: number; recommended?: boolean }[]>;
 
 /* Per-mode breathwork-tempo voor PulsingCircle + BreathingHint.
    Operator-feedback 2026-05-27: tekst en pulse moeten matchen met
@@ -3604,6 +3584,7 @@ function ActiveSessionScreen({
 function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const hear = useStateHear();
+  const strength = useHapticStrength();
   if (!visible) return null;
   const options = [
     {
@@ -3662,6 +3643,35 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             </Pressable>
           );
         })}
+        {/* Operator, 11 okt 2026: sterkte van de trillingen — drie vaste
+            standen (iOS-segmentregelaar). Verandert meteen, ook tijdens een
+            sessie. */}
+        <Text style={s.avSection}>VIBRATION STRENGTH</Text>
+        <View style={s.avSeg}>
+          {(['soft', 'medium', 'strong'] as const).map((k) => {
+            const on = k === strength;
+            return (
+              <Pressable
+                key={k}
+                onPress={() => {
+                  if (on) return;
+                  setHapticStrength(k);
+                  /* Voel meteen het verschil. */
+                  void Haptics.impactAsync(
+                    k === 'soft' ? Haptics.ImpactFeedbackStyle.Light : k === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
+                  );
+                }}
+                style={[s.avSegItem, on && s.avSegItemOn]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[s.avSegTxt, on && s.avSegTxtOn]}>
+                  {k === 'soft' ? 'Soft' : k === 'medium' ? 'Medium' : 'Strong'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </GlassSheet>
   );
@@ -6308,6 +6318,25 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   avCardOn: { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.08)' },
+  avSection: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.55)',
+    marginTop: 10,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  avSeg: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  avSegItem: { flex: 1, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  avSegItemOn: { backgroundColor: '#ffffff' },
+  avSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: 'rgba(255,255,255,0.7)' },
+  avSegTxtOn: { color: '#0a0a0a' },
   avCardIcons: { width: 52, alignItems: 'center', justifyContent: 'center' },
   avCardTitle: { fontFamily: BrandFonts.bold, fontSize: 17, color: 'rgba(255,255,255,0.85)', marginBottom: 6 },
   avCardBody: { fontFamily: BrandFonts.medium, fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.6)' },

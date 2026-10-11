@@ -46,6 +46,7 @@ import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
+import { subscribeHapticStrength } from './haptic-strength-pref';
 import {
   addRemoteControlListener,
   dismissCompletionNotice,
@@ -598,6 +599,12 @@ function syncHaptics(): void {
   const remSec = currentRemainingSec();
   playModeSessionHaptic(state.mode, state.totalSec - remSec, remSec);
 }
+
+/* Sterkte gewijzigd tijdens een lopende sessie: meteen opnieuw afspelen
+   vanaf hetzelfde punt in de curve (operator, 11 okt 2026). */
+subscribeHapticStrength(() => {
+  if (state && !state.paused) syncHaptics();
+});
 
 /** Aanroepen vanuit onPause. Bevriest de projectie op het exacte moment. */
 export function pauseBraceletSessionMonitor(): void {

@@ -77,6 +77,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 10 okt 2026 avond (vervolg, operator akkoord 1–6): pillen gedockt, witte tekst, Save/Measure Again + bewaarvraag, dunne ring Add session, actieblad State Control gelijk aan breathwork, week vanaf maandag, State Control-kop "The Power to Shift. From Your Wrist." (tests 110–116).
 
+- 11 okt 2026: State Control trilsterkte Soft/Medium/Strong (services/haptic-strength-pref.ts) en kortere minima 5/5/5/10/10 na onderzoek (Science §3.7, CLAUDE.md §5). Tests 123–124 open.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

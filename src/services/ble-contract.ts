@@ -132,7 +132,8 @@ export const MODES: ModeMeta[] = [
        look, niet aggressief. Op donkere bg leest 't als wit-met-
        outline, op cards als wit-fill-met-donker-text. */
     color: '#F5A524',
-    minMinutes: 8,
+    /* Operator, 11 okt 2026 (onderzoek: You 2021 — 5 min trage ademhaling = 20 min voor HRV; Azevedo 2017 ±5 min; yoga nidra 11 min, Moszeik 2020/2025): minimum verlaagd, zie Science A tot Z. */
+    minMinutes: 5,
     /* Operator, 16 september 2026 (research-onderbouwd voorstel,
        bevestigd): 15→20. Powernap-onderzoek plaatst het optimale
        venster op 20-30 min; 20 is het bewezen plafond voor Boost, hoger
@@ -145,7 +146,8 @@ export const MODES: ModeMeta[] = [
     name: 'Sharp Focus',
     blurb: 'Clear, active attention — work mode.',
     color: '#3E9BFF', // FOCUS-blauw, gelijk aan breathwork
-    minMinutes: 15,
+    /* Operator, 11 okt 2026 (onderzoek: You 2021 — 5 min trage ademhaling = 20 min voor HRV; Azevedo 2017 ±5 min; yoga nidra 11 min, Moszeik 2020/2025): minimum verlaagd, zie Science A tot Z. */
+    minMinutes: 5,
     /* Operator, 16 september 2026: 20→30. Attentie-onderzoek gebruikt
        vaak 20-30 min voor sustained-attention-effecten. */
     maxMinutes: 30,
@@ -156,7 +158,8 @@ export const MODES: ModeMeta[] = [
     name: 'Calm Control',
     blurb: 'Relaxed but focused — flow.',
     color: '#B478FF', // CALM-violet, gelijk aan breathwork
-    minMinutes: 15,
+    /* Operator, 11 okt 2026 (onderzoek: You 2021 — 5 min trage ademhaling = 20 min voor HRV; Azevedo 2017 ±5 min; yoga nidra 11 min, Moszeik 2020/2025): minimum verlaagd, zie Science A tot Z. */
+    minMinutes: 5,
     /* Operator, 16 september 2026: ongewijzigd bevestigd — relaxation-
        onderzoek toont weinig extra meerwaarde voorbij 30 min. */
     maxMinutes: 30,
@@ -170,7 +173,8 @@ export const MODES: ModeMeta[] = [
     name: 'Clarity & Relax',
     blurb: 'Deep relaxation and letting go.',
     color: '#FFFFFF', // CLARITY-wit, gelijk aan breathwork
-    minMinutes: 20,
+    /* Operator, 11 okt 2026 (onderzoek: You 2021 — 5 min trage ademhaling = 20 min voor HRV; Azevedo 2017 ±5 min; yoga nidra 11 min, Moszeik 2020/2025): minimum verlaagd, zie Science A tot Z. */
+    minMinutes: 10,
     /* Operator, 16 september 2026: 30→45. Meditatieve diepte bouwt
        geleidelijker op, langere sessies zijn hier wél verdedigbaar. */
     maxMinutes: 45,
@@ -181,7 +185,8 @@ export const MODES: ModeMeta[] = [
     name: 'Sleep',
     blurb: 'Deep rest and the transition to sleep.',
     color: '#00A3A3', // SLEEP — VIBEZCORE Bio-Teal, gelijk aan breathwork (breath-states.ts, 5 oktober 2026)
-    minMinutes: 30,
+    /* Operator, 11 okt 2026 (onderzoek: You 2021 — 5 min trage ademhaling = 20 min voor HRV; Azevedo 2017 ±5 min; yoga nidra 11 min, Moszeik 2020/2025): minimum verlaagd, zie Science A tot Z. */
+    minMinutes: 10,
     /* Operator, 16 september 2026: 45→50 (operator-keuze — NSDR-
        onderzoek ondersteunt zelfs tot 60 min, maar 50 is een
        batterij-bewustere tussenstap voor een overnight-sessie). */

@@ -83,6 +83,8 @@ import {
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
 import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
 import { getStateHear } from './state-sound-pref';
+import { AMP_FACTOR, MS_FACTOR, getHapticStrength } from './haptic-strength-pref';
+
 
 /* Feel & Hear zonder native service (iOS, oud Android): de app speelt het
    hartslaggeluid zelf op elke slag, zolang ze open is. */
@@ -220,10 +222,15 @@ function buildWaveform(
   let t = offsetSec;
   let repeat = -1;
 
-  const lubMs = amplitudeControl ? LUB_MS : spec.lubMsNoAmp;
-  const dubMs = amplitudeControl ? DUB_MS : spec.dubMsNoAmp;
-  const lubAmp = amplitudeControl ? spec.lubAmp : 255;
-  const dubAmp = amplitudeControl ? spec.dubAmp : 255;
+  /* Sterkte (operator, 11 okt 2026): met amplitude-regeling de kracht,
+     zonder de tikduur. */
+  const st = getHapticStrength();
+  const ampOf = (a: number) => Math.max(1, Math.min(255, Math.round(a * AMP_FACTOR[st])));
+  const msOf = (ms: number) => Math.round(ms * MS_FACTOR[st]);
+  const lubMs = amplitudeControl ? LUB_MS : msOf(spec.lubMsNoAmp);
+  const dubMs = amplitudeControl ? DUB_MS : msOf(spec.dubMsNoAmp);
+  const lubAmp = amplitudeControl ? ampOf(spec.lubAmp) : 255;
+  const dubAmp = amplitudeControl ? ampOf(spec.dubAmp) : 255;
   const pushBeat = (cycleMs: number, dubAt: number) => {
     timings.push(lubMs, dubAt - lubMs, dubMs, cycleMs - dubAt - dubMs);
     amplitudes.push(lubAmp, 0, dubAmp, 0);
@@ -334,8 +341,18 @@ function scheduleVisual(
   );
 }
 
+/* JS-weg (iOS / zonder eigen golfvorm): de stijl schuift één trede. */
+const STYLE_LADDER = [S.Soft, S.Light, S.Medium, S.Heavy, S.Rigid];
+function strengthStyle(style: Haptics.ImpactFeedbackStyle): Haptics.ImpactFeedbackStyle {
+  const st = getHapticStrength();
+  if (st === 'medium') return style;
+  const i = STYLE_LADDER.indexOf(style);
+  if (i < 0) return style;
+  return STYLE_LADDER[Math.max(0, Math.min(STYLE_LADDER.length - 1, i + (st === 'strong' ? 1 : -1)))];
+}
+
 function fire(style: Haptics.ImpactFeedbackStyle): void {
-  Haptics.impactAsync(style).catch(() => {
+  Haptics.impactAsync(strengthStyle(style)).catch(() => {
     /* toestel/emulator zonder trilmotor mag niets breken */
   });
 }

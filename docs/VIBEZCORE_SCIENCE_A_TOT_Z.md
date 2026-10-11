@@ -289,11 +289,21 @@ pace": meten / zelf invullen / gemiddelde).
 
 | Toestand | Aanbevolen | Bereik | Reden (⚪ keuze binnen 🟡 richting) |
 |---|---:|---|---|
-| Boost | 10 min | 8–20 | snel ritme werkt snel; lang kan onrustig worden — "keep it short" |
-| Sharp Focus | 15 min | 15–30 | één gefocust blok |
-| Calm Control | 18 min | 15–30 | trage ritmes werkten binnen minuten; eigen waarde t.o.v. de andere toestanden |
-| Clarity & Relax | 25 min | 20–45 | tijd voor 2 min glijden + een lange rustige fase |
-| Sleep | 30 min | 30–50 | afbouwen; dekt de gewone inslaaptijd |
+| Boost | 10 min | 5–20 | snel ritme werkt snel; lang kan onrustig worden — "keep it short" |
+| Sharp Focus | 15 min | 5–30 | één gefocust blok |
+| Calm Control | 18 min | 5–30 | trage ritmes werkten binnen minuten; eigen waarde t.o.v. de andere toestanden |
+| Clarity & Relax | 25 min | 10–45 | tijd voor 2 min glijden + een lange rustige fase |
+| Sleep | 30 min | 10–50 | afbouwen; dekt de gewone inslaaptijd |
+
+**Minimumduur** (GEWIJZIGD 11 okt 2026, operator: "misschien willen mensen minder lang"; was 8/15/15/20/30). Onderzocht:
+- 🟢 **Calm Control 5 min — matig sterk.** You et al. 2021 (*IJERPH* 18:12478): trage ademhaling 5, 10, 15 en 20 min → HRV (RMSSD) steeg even sterk na 5 als na 20 min. Azevedo et al. 2017 (*Sci Rep* 7:2285): trage pols-trilling (−20 % van de rust) tijdens ±5 min speechvoorbereiding → minder huidgeleiding en angst (duur via secundaire bron, nog te checken in de methode). Balban et al. 2023 (*Cell Rep Med*): 5 min/dag.
+- 🟡 **Clarity & Relax 10 min — matig.** Yoga nidra van 11 min werkt bij dagelijks gebruik (Moszeik 2020 *Curr Psychol*; RCT 2025 *Stress & Health*, kleine effecten).
+- ⚪ **Sleep 10 min — zwak, eigen keuze.** Geen studie korter dan 20 min gevonden (Tsai 2015: 20 min trage ademhaling vóór het slapen). 10 min is enkel een ondergrens; aanbevolen blijft 30.
+- ⚪ **Sharp Focus en Boost 5 min — zwak, eigen keuze.** Geen duurdata. Snelle trilling (110 bpm) verhoogt arousal, maar op de pols zwak en soms met meer onrust (Valente 2024 UIST; Wang 2023 ICMI) — geen energie-claim.
+- **Niet zeggen:** "je hart volgt het ritme" — onderzoek vindt geen meeslepen van de hartslag door een ritme (Koelsch & Jäncke 2015 *Eur Heart J*; *Psychol Music* 2024). Het effect loopt via hoe het ritme gevoeld wordt.
+- Bracelet-firmware moet deze minimumduren ook aanvaarden (BLE-commando ongewijzigd: `duration` in minuten).
+
+**Sterkte van de trilling** (11 okt 2026): Soft / Medium (standaard) / Strong in "Audio & Haptics". Met amplitude-regeling ×0,55 / ×1 / ×1,7 op de kracht (max 255); zonder amplitude-regeling ×0,75 / ×1 / ×1,35 op de tikduur; iOS een trede lichter/zwaarder (expo-haptics). Ritme en timing veranderen niet.
 
 ### 3.8 Quick Chill en Quick Boost
 

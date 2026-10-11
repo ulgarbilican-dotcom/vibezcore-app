@@ -195,11 +195,16 @@ methodiek als de Sleep-hernoeming hierboven. Enkel de naam wijzigt; index
 
 | Idx | Intern | App-naam (voorlopig) | Kleur | Duur (min – max) | Default |
 |-----|--------|----------------------|-------|-------------------|---------|
-| 0 | Gamma | Boost | Amber #F5A524 | 8 – 20 min | 10 min |
-| 1 | Beta | Sharp Focus | Blauw #3E9BFF | 15 – 30 min | 15 min |
-| 2 | Alpha | Calm Control | Violet #B478FF | 15 – 30 min | 18 min |
-| 3 | Theta | Clarity & Relax | Wit #FFFFFF | 20 – 45 min | 25 min |
-| 4 | Delta | Sleep | Bio-Teal #00A3A3 | 30 – 50 min | 30 min |
+| 0 | Gamma | Boost | Amber #F5A524 | 5 – 20 min | 10 min |
+| 1 | Beta | Sharp Focus | Blauw #3E9BFF | 5 – 30 min | 15 min |
+| 2 | Alpha | Calm Control | Violet #B478FF | 5 – 30 min | 18 min |
+| 3 | Theta | Clarity & Relax | Wit #FFFFFF | 10 – 45 min | 25 min |
+| 4 | Delta | Sleep | Bio-Teal #00A3A3 | 10 – 50 min | 30 min |
+
+**GEWIJZIGD 11 oktober 2026 (operator: "misschien willen mensen minder lang"):
+minimumduur verlaagd naar 5 min (Boost, Sharp Focus, Calm Control) en 10 min
+(Clarity & Relax, Sleep), na onderzoek (zie Science A tot Z §3.7). Aanbevolen
+duur en maximum ongewijzigd. Firmware moet deze minima aanvaarden.
 
 **GEWIJZIGD 16 september 2026 (operator, officiële hardware-spec-tabel
 Haptic_Bracelet_Spec_v2_3): duur-ranges + defaults bijgewerkt** — was
