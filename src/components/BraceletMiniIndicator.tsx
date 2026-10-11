@@ -146,8 +146,9 @@ function ActiveSessionPill({
         <Text style={s.label} numberOfLines={1}>
           State Control · {snap.modeName}
         </Text>
+        {/* 11 okt 2026: een gepauzeerde sessie zag eruit alsof ze liep. */}
         <Text style={[s.time, { color: snap.modeColor }]}>
-          {fmtMMSS(snap.remainingSec)}
+          {snap.paused ? `Paused · ${fmtMMSS(snap.remainingSec)}` : fmtMMSS(snap.remainingSec)}
         </Text>
         </VibezGlass>
       </AnimatedPressable>
