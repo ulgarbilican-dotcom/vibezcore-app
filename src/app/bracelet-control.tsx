@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -3246,6 +3247,7 @@ function ActiveSessionScreen({
      app licht blijft. Losse const i.p.v. de module-brede `light` omzetten,
      zodat andere schermen in dit bestand ongemoeid blijven. */
   const activeDark = true;
+  const [confirmEnd, setConfirmEnd] = useState(false);
   return (
     <SafeAreaView
       style={[s.root, activeDark && { backgroundColor: '#000000' }]}
@@ -3535,18 +3537,34 @@ function ActiveSessionScreen({
           {/* Iter v214 (2026-07-04): End = GEEN navigate — enkel
               setEndedLocally + onStop; de render valt vanzelf terug naar
               Choose Mode van dezelfde instance. */}
+          {/* Audit 12 okt 2026 (operator akkoord): End vraagt eerst
+              bevestiging, zoals Apple Fitness/Headspace — één tik op 11 px
+              tekst mocht een sessie niet meer onomkeerbaar afsluiten.
+              Gedeelde ConfirmCard (ook agenda/hartslag), niet de oude
+              modal die in juli 6× faalde. */}
           <Pressable
             style={({ pressed }) => [s.endTxtWrap, pressed && { opacity: 0.6 }]}
             hitSlop={10}
-            onPress={() => {
-              setEndedLocally(true);
-              void onStop();
-            }}
+            onPress={() => setConfirmEnd(true)}
             disabled={busy}
+            accessibilityRole="button"
             accessibilityLabel="End session"
           >
             <Text style={s.endTxt}>END SESSION</Text>
           </Pressable>
+          <ConfirmCard
+            visible={confirmEnd}
+            title="End session?"
+            body="Your time so far is saved."
+            confirmLabel="End Session"
+            cancelLabel="Keep Going"
+            onCancel={() => setConfirmEnd(false)}
+            onConfirm={() => {
+              setConfirmEnd(false);
+              setEndedLocally(true);
+              void onStop();
+            }}
+          />
           {/* iPhone trilt enkel zolang de app in beeld is (Apple staat geen
               haptiek op de achtergrond toe). Eerlijk zeggen, tenzij een
               Apple Watch het ritme al overneemt (6 okt 2026). */}

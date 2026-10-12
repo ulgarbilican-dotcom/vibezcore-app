@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import ConfirmCard from '@/components/ConfirmCard';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
@@ -997,6 +998,7 @@ export function BreathSession() {
   /* Operator, 8 september 2026: "wij zouden moeten kunnen pauzeren ook". */
   const [paused, setPaused] = useState(false);
   const [done, setDone] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   /* Het scherm mag niet in slaap vallen zolang dit scherm open staat.
      Een ademsessie is het enige moment waarop iemand mínutenlang naar een
      telefoon kijkt zonder hem aan te raken — precies wat een toestel als
@@ -3325,15 +3327,35 @@ export function BreathSession() {
                 <Pause size={24} color={activeIconColor} strokeWidth={2.2} />
               )}
             </AnimatedPressable>
+            {/* Audit 12 okt 2026 (operator akkoord): eerst bevestigen,
+                zoals State Control. Onboarding-proefsessie en voorproef
+                houden hun eigen afhandeling (requestStop). */}
             <AnimatedPressable
-              onPress={requestStop}
+              onPress={() => {
+                if (isFreeOnboardingSession || locked) requestStop();
+                else setConfirmEnd(true);
+              }}
               onPressIn={pressEndSession.onPressIn}
               onPressOut={pressEndSession.onPressOut}
               hitSlop={10}
               style={[s.endTxtWrap, pressEndSession.style]}
+              accessibilityRole="button"
+              accessibilityLabel="End session"
             >
               <Text style={[s.endTxt, { color: light ? '#0a0a0c' : C.dim72 }]}>END SESSION</Text>
             </AnimatedPressable>
+            <ConfirmCard
+              visible={confirmEnd}
+              title="End session?"
+              body="Your time so far is saved."
+              confirmLabel="End Session"
+              cancelLabel="Keep Going"
+              onCancel={() => setConfirmEnd(false)}
+              onConfirm={() => {
+                setConfirmEnd(false);
+                requestStop();
+              }}
+            />
           </View>
         ) : true ? null : (
           /* VOL in de kleur van de toestand (operator, 7 augustus 2026).

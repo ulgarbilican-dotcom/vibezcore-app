@@ -418,13 +418,28 @@ function fmtDate(iso?: string | null): string | null {
 
 /** Korte status voor de kop en de Membership-rij. */
 function useMembershipStatus() {
-  const { isPro, tier, validUntil, willRenew, isLoading, braceletModel } = useSubscription();
+  const { isPro, tier, validUntil, willRenew, isLoading, braceletModel, isTrialing } = useSubscription();
   const isBraceletOwner = useBraceletOwner();
   const tierLabel = braceletModel === 'bundle' ? 'Full Bundle' : tier === 'yearly' ? 'Yearly' : tier === 'monthly' ? 'Monthly' : null;
   const date = fmtDate(validUntil);
-  const renewLine = date ? (willRenew ? `Renews on ${date}` : `Active until ${date}`) : null;
+  /* Audit 12 okt 2026: een trial-gebruiker zag "Renews on …" zonder te
+     weten dat het een proefperiode is (Apple/Calm tonen de einddatum
+     altijd). Tijdens de trial is validUntil het einde van de proef. */
+  const trial = isPro && isTrialing === true && braceletModel !== 'bundle';
+  const renewLine = trial
+    ? date
+      ? willRenew
+        ? `Free trial ends on ${date}. Your plan starts then, with the full library.`
+        : `Free trial ends on ${date}. You won't be charged.`
+      : 'Free trial'
+    : date
+      ? willRenew
+        ? `Renews on ${date}`
+        : `Active until ${date}`
+      : null;
   let label: string;
   if (isLoading) label = 'Checking…';
+  else if (trial) label = 'Premium · Free Trial';
   else if (isPro) label = tierLabel ? `Premium · ${tierLabel}` : 'Premium';
   else if (isBraceletOwner) label = 'Bracelet';
   else label = 'Free';

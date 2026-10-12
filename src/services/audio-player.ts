@@ -660,12 +660,13 @@ export function reactivateLockScreen(): void {
  */
 export async function loadSession(
   session: SessionInfo,
-  opts: { preview?: boolean; autoStart?: boolean } = {}
+  opts: { preview?: boolean; autoStart?: boolean; force?: boolean } = {}
 ): Promise<void> {
   // Same session already loaded? Skip — minimize+reopen scenario.
+  // `force` (audit 12 okt 2026: Retry na een laadfout) laadt altijd opnieuw.
   // Iter 9dq v160: urlEq i.p.v. === voor de zekerheid (encoded vs decoded
   // mismatch zou anders een onnodige re-load veroorzaken).
-  if (state.session?.url && player && urlEq(state.session.url, session.url)) {
+  if (!opts.force && state.session?.url && player && urlEq(state.session.url, session.url)) {
     /* Audit 8 okt 2026: dezelfde sessie, maar de gebruiker is intussen
        Premium (aankoop, inloggen, of de status kwam pas na de start binnen)
        → de voorproef-grens weg, zonder herladen. */

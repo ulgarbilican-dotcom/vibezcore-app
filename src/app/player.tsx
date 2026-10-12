@@ -972,17 +972,41 @@ export default function PlayerScreen() {
               <>
                 <Text style={s.modalTitle}>Couldn't load this session</Text>
                 <Text style={s.modalBody}>
-                  Please check your connection and try again.
+                  Check your connection and try again.
                 </Text>
+                {/* Audit 12 okt 2026: de tekst zei "try again" maar er was
+                    enkel Close — nu echt opnieuw proberen, Close eronder. */}
                 <View style={s.modalBtns}>
                   <AnimatedPressable
                     style={[s.modalPrimary, pressStyleErrorClose]}
-                    onPress={() => router.back()}
+                    onPress={() => {
+                      if (!urlSession) return;
+                      void loadSession(
+                        {
+                          url: urlSession.url,
+                          title: urlSession.title,
+                          series: urlSession.series,
+                          isFree: urlSession.free,
+                          desc: urlSession.desc,
+                        },
+                        { preview: usePreview, force: true },
+                      );
+                    }}
                     onPressIn={onPressInErrorClose}
                     onPressOut={onPressOutErrorClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Try again"
                   >
-                    <Text style={s.modalPrimaryText}>Close</Text>
+                    <Text style={s.modalPrimaryText}>Try Again</Text>
                   </AnimatedPressable>
+                  <Pressable
+                    onPress={() => router.back()}
+                    hitSlop={10}
+                    style={{ alignSelf: 'center', paddingVertical: 12 }}
+                    accessibilityRole="button"
+                  >
+                    <Text style={s.modalSecondaryText}>Close</Text>
+                  </Pressable>
                 </View>
               </>
             )}
