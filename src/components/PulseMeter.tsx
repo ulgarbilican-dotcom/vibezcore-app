@@ -1037,7 +1037,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
           : status === 'denied'
             ? {
                 title: 'Camera access is off',
-                body: 'Allow camera access for VIBEZCORE in Settings to measure your heart rate.',
+                body: 'Allow camera access for VIBEZCORE in Settings to read your pulse, or enter your resting heart rate yourself.',
                 cta: 'Open Settings',
                 onCta: () => void Linking.openSettings(),
               }

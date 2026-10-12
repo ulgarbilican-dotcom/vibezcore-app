@@ -31,7 +31,7 @@
    nieuwe sessie het juiste tier toe.
    ─────────────────────────────────────────────────────────────────────── */
 
-import type { Session } from '@/data/audio-library-data';
+import { SESSIONS, type Session } from '@/data/audio-library-data';
 
 export type AccessTier = 'public' | 'account' | 'pro';
 
@@ -105,6 +105,33 @@ export function resolveAccess(
     case 'pro':
       return isPro && !isTrialing ? 'allowed' : 'needs-pro';
   }
+}
+
+/* ── Eén regel voor de player (audit 12 okt 2026) ─────────────────────
+   De player besliste "voorproef of volledig" op het oude `free`-veld, niet
+   op de tier-regels hierboven. Gevolg: een gratis sessie herspelen vanuit
+   "Your Journey" (die geen `free` bewaart) stopte na 60 s, en Continue /
+   autoplay / Play next speelden trial-sessies zonder enige check. Nu
+   zoekt elke weg de sessie op in de bibliotheek en volgt resolveAccess. */
+let byUrl: Map<string, Session> | null = null;
+export function findLibrarySessionByUrl(url: string): Session | null {
+  if (!byUrl) byUrl = new Map(SESSIONS.map((s) => [s.url, s]));
+  return byUrl.get(url) ?? null;
+}
+
+/** Moet deze sessie als 60 s-voorproef spelen? `fallbackFree` enkel voor
+ *  een url die niet in de bibliotheek staat. */
+export function needsPreview(
+  url: string,
+  fallbackFree: boolean,
+  isPro: boolean,
+  isTrialing: boolean,
+  isBundle: boolean,
+): boolean {
+  if (isBundle) return false;
+  const meta = findLibrarySessionByUrl(url);
+  if (!meta) return !fallbackFree && !(isPro && !isTrialing);
+  return resolveAccess(meta, true, isPro, isTrialing) !== 'allowed';
 }
 
 /** UI-helper: korte label voor de tier-badge in LibraryListRow. */

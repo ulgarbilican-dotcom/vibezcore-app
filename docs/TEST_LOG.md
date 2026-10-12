@@ -187,6 +187,14 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 123 | Audio & Haptics: VIBRATION STRENGTH Soft / Medium / Strong — voelbaar verschil, tik bij kiezen, wijzigt meteen tijdens een lopende sessie (zelfde punt in de curve), onthouden | A16 | ⏳ |
 | 124 | Kortere minimumduur: Boost/Sharp Focus/Calm Control vanaf 5 min, Clarity & Relax/Sleep vanaf 10 min (cirkel, Add session, agenda Edit duration); zone "Short" tot de aanbevolen duur | A16 | ⏳ (verbinding weg) |
 | 125 | Sessie uit plan/herinnering laten aflopen → terug naar de keuzepagina: GEEN lopende balk meer, sessie start niet opnieuw (startlink werkt één keer, app-breed) | A16 | ⏳ (operator 11 okt: liep opnieuw door) |
+| 126 | Audit 12 okt: State Control Start → gepauzeerd op 18:00 (niet 17:59); Play → haptiek start (log [haptic-test]); Pause → tijd staat stil; End → keuzepagina, blijft stil (8 s gewacht). Bracelet-opdrachten nu na de monitor met foutopvang; geen zoek-/verbindscherm meer vóór State Control | A16 | ✅ 12 okt (End bij verse 18:00-sessie niet afgerond: dev-LogBox lag over de knop — operator hertest) |
+| 127 | iOS: app afsluiten tijdens State Control → bij openen gepauzeerd, "Session complete"-melding en Live Activity stoppen mee | iPhone | ⏳ |
+| 128 | Breathwork: sessie minimaliseren, andere sessie starten → "End current session?" (End & Start New / Cancel); bij End staan de geademde minuten in de geschiedenis en stopt het horloge | A16 | ⏳ |
+| 129 | Instant "Anxious / nervous" (en vrije tekst "panic") → Physiological Sigh 5 min (Clarity & Relax), geen holds | A16 | ⏳ |
+| 130 | Audio: gratis sessie herspelen vanuit Your Journey → volledig (geen 60 s); trial-sessie via Continue/autoplay zonder trial → 60 s-voorproef; trial-rijen tonen "FREE WITH TRIAL" i.p.v. "PREVIEW · 60S" | A16 | ⏳ |
+| 131 | Heart Rate-pagina: "Clear Heart Rate Data" → bevestiging → metingen (ook sessie-metingen) weg, 70 bpm gemiddeld | A16 | ⏳ |
+| 132 | Delete account → alle lokale gegevens weg (geschiedenis, hartslag, plannen, favorieten); Settings → Clear all local data werkt zonder herstart | A16 | ⏳ |
+| 133 | Privacyverklaring: Camera & flash-kaart + vingertop-meting vermeld; camera-toestemmingstekst "estimate your pulse … not a medical measurement" (nieuwe build) | A16 + iPhone | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

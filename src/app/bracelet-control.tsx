@@ -4664,9 +4664,9 @@ function BraceletControlScreen({
      de bracelet-status levert enkel nog batterij/fout/laden. */
   const [monitorSnap, setMonitorSnap] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setMonitorSnap), []);
-  const isPaused = USE_SIMULATED_BLE
-    ? monitorSnap.active && monitorSnap.paused
-    : pausedAt !== null;
+  /* Audit 12 okt 2026: ook met een echte bracelet volgt het scherm de
+     monitor — de telefoon/het horloge is de kern, de bracelet een extra. */
+  const isPaused = monitorSnap.active && monitorSnap.paused;
 
   /* Herstelde (of elders gestarte) sessie: de eigen refs van dit scherm
      — duur, start, pauzepositie — gelijkzetten met de monitor, zodat de
@@ -4686,7 +4686,7 @@ function BraceletControlScreen({
         pausedAtElapsedMsRef.current = elapsedMs;
         setPausedAt(Math.max(1, Math.ceil(monitorSnap.remainingSec / 60)));
       }
-    } else if (pausedAt !== null && USE_SIMULATED_BLE) {
+    } else if (pausedAt !== null) {
       setPausedAt(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -5135,51 +5135,31 @@ function BraceletControlScreen({
       return;
     }
 
-    (async () => {
+    /* Audit 12 okt 2026: eerst de sessie (gepauzeerd, iter 2026-06-05 —
+       de gebruiker drukt zelf op play), daarna pas stil verbinden met een
+       bracelet als die er is. Geen bracelet = geen probleem. */
+    const dur = clampDuration(
+      initialMode,
+      planDurationMinutes ?? getModeMeta(initialMode).defaultMinutes,
+    );
+    setEndedLocally(false);
+    const startMs = Date.now();
+    sessionStartedAtRef.current = startMs;
+    sessionRealStartedAtRef.current = startMs;
+    sessionPlannedRef.current = dur;
+    pausedAtElapsedMsRef.current = 0;
+    setPausedAt(dur);
+    if (!isBraceletSessionMonitorActive()) {
+      startBraceletSessionMonitor({ mode: initialMode, totalSec: dur * 60 });
+      pauseBraceletSessionMonitor();
+    }
+    void (async () => {
       try {
-        if (bracelet.getConnectionState() !== 'connected') {
-          await bracelet.connect();
-        }
-        const dur = clampDuration(
-          initialMode,
-          planDurationMinutes ?? getModeMeta(initialMode).defaultMinutes,
-        );
-        /* Iter v200: endedLocally reset op autoStart. */
-        setEndedLocally(false);
-        await bracelet.sendCommand({
-          mode: initialMode,
-          duration: dur,
-          command: BleCommand.Start,
-        });
-        const startMs = Date.now();
-        sessionStartedAtRef.current = startMs;
-        sessionRealStartedAtRef.current = startMs;
-        sessionPlannedRef.current = dur;
-        /* Iter 2026-06-05: auto-pause direct na auto-start (operator-
-           feedback: in free/CTA-flow mag de bracelet-timer niet vanzelf
-           aftellen — user kwam voor breathwork, niet voor een bracelet-
-           sessie). Sessie wordt geladen op 8:00, klaar om Resume te
-           tappen wanneer user wil. Mimics onPause: Stop-command +
-           setPausedAt = volledige geplande duration (niets verstreken). */
-        pausedAtElapsedMsRef.current = 0;
-        await bracelet.sendCommand({
-          mode: initialMode,
-          duration: 0,
-          command: BleCommand.Stop,
-        });
-        setPausedAt(dur);
-        startBraceletSessionMonitor({ mode: initialMode, totalSec: dur * 60 });
-        pauseBraceletSessionMonitor();
-        const st = await bracelet.requestStatus();
-        setStatus(st);
-      } catch (e) {
-        console.warn('[bracelet-control] auto-start failed:', e);
-        /* Operator, 1 okt 2026 ("verschijnt eerst bracelet connect
-           pagina"): bij een falende auto-connect NIET eindeloos op de
-           lichte loader blijven hangen — terugvallen op het normale
-           zoek-scherm (met eigen Retry-knop) i.p.v. een dode lege loader. */
-        setAutoStartFailed(true);
+        if (bracelet.getConnectionState() !== 'connected') await bracelet.connect();
+      } catch {
+        /* geen bracelet bereikbaar — de sessie op de telefoon staat klaar */
       }
+      await refreshStatus();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscription.isLoading]);
@@ -5250,6 +5230,23 @@ function BraceletControlScreen({
     void onStart();
   };
 
+  /* Audit 12 okt 2026: elke bracelet-opdracht is een EXTRA na de monitor.
+     Faalt de bracelet (buiten bereik, uit, fout), dan loopt de sessie op de
+     telefoon/het horloge gewoon correct verder — vroeger brak een fout hier
+     de hele knop af (scherm Idle, sessie liep door). */
+  const bleBestEffort = async (fn: () => Promise<void>) => {
+    try {
+      if (bracelet.getConnectionState() !== 'connected') return;
+      await fn();
+    } catch (e) {
+      if (__DEV__) console.warn('[bracelet-control] bracelet command failed:', e);
+    }
+  };
+  const refreshStatus = () =>
+    bleBestEffort(async () => {
+      setStatus(await bracelet.requestStatus());
+    });
+
   const onStart = async () => {
     setBusy(true);
     /* Iter v197 (2026-07-04): endedLocally reset — nieuwe sessie mag niet
@@ -5257,50 +5254,22 @@ function BraceletControlScreen({
     setEndedLocally(false);
     try {
       const dur = clampDuration(selectedMode, duration);
-      await bracelet.sendCommand({
-        mode: selectedMode,
-        duration: dur,
-        command: BleCommand.Start,
-      });
-      /* Track wanneer de sessie begon — gebruikt voor stats-recording
-         bij eind. Wordt over pauses heen behouden zodat de hele
-         sessie als 1 entry wordt vastgelegd.
-         Iter 9bj (2026-05-31): zowel sessionStartedAtRef (display, kan
-         re-anchoren op resume) als sessionRealStartedAtRef (echte
-         wall-clock, voor history-ISO) op nu zetten. */
+      /* sessionStartedAtRef (display, re-anchort op resume) en
+         sessionRealStartedAtRef (echte wall-clock, voor history-ISO). */
       const startMs = Date.now();
       sessionStartedAtRef.current = startMs;
       sessionRealStartedAtRef.current = startMs;
       sessionPlannedRef.current = dur;
-      /* Iter v147 (2026-06-25): voice-cue bij sessie-start. SessionKey
-         = mode-duration-startMs zodat opeenvolgende sessies elk hun
-         eigen cue krijgen (idempotent voor poll-renders binnen 1
-         sessie). */
+      /* Voice-cue bij sessie-start (iter v147). */
       playBraceletStartCue(selectedMode, `${selectedMode}-${dur}-${startMs}`);
       /* Operator, 27 september 2026 ("de sessie moet pas starten nadat
-         gebruiker op play drukt"): Start liet de hardware-timer tot nu
-         toe meteen actief aftellen — de gebruiker kwam op het Active-
-         scherm terecht met de sessie al lopend, zonder ooit zelf op
-         Play/Resume te hebben gedrukt. Zelfde patroon als de bestaande
-         Free-Breathwork-auto-start hierboven: direct na Start een Stop-
-         command sturen (pausedAtElapsedMsRef=0, dus NIETS verstreken) en
-         `pausedAt` op de volle geplande duur zetten — de gebruiker landt
-         zo op een GEPAUZEERD Active-scherm en moet zelf op Resume/Play
-         tikken om de aftelling echt te starten. */
+         gebruiker op play drukt"): Start landt GEPAUZEERD op het Active-
+         scherm; de bracelet krijgt pas bij Play zijn Start-opdracht. */
       pausedAtElapsedMsRef.current = 0;
-      await bracelet.sendCommand({
-        mode: selectedMode,
-        duration: 0,
-        command: BleCommand.Stop,
-      });
       setPausedAt(dur);
-      /* Operator, 17 september 2026: start de mount-onafhankelijke
-         achtergrond-monitor (lockscreen-melding + live pill-updates,
-         blijft draaien ongeacht welk scherm/tab zichtbaar is). */
       startBraceletSessionMonitor({ mode: selectedMode, totalSec: dur * 60 });
       pauseBraceletSessionMonitor();
-      const st = await bracelet.requestStatus();
-      setStatus(st);
+      await refreshStatus();
     } finally {
       setBusy(false);
     }
@@ -5311,44 +5280,24 @@ function BraceletControlScreen({
   const onStopRef = useRef<(() => Promise<void>) | null>(null);
   const onStop = async () => {
     setBusy(true);
-    /* Iter v197 (2026-07-04): endedLocally flag DIRECT true. Overruled
-       de 5s poll die anders na 5s status.sessionActive=true kan zetten
-       (sim race, spec §8.3). setStatus force blijft als fallback voor
-       de eerste render voordat de effect propagert. */
+    /* Iter v197: endedLocally DIRECT true (poll-race). */
     setEndedLocally(true);
     setStatus((prev) =>
       prev ? { ...prev, sessionActive: false, remainingMinutes: 0 } : prev,
     );
     try {
-      await bracelet.sendCommand({
-        mode: selectedMode,
-        duration: 0,
-        command: BleCommand.Stop,
-      });
-      /* Manual end — record als 'stopped'.
-         Iter 9bl (2026-05-31): duration = ACTIEVE tijd (pauzes uitgesloten).
-         Operator-spec: 1 min run + 10 min pause + 3 min run = 4 min duration.
-         - End-during-pause → pausedAtElapsedMsRef (exact-elapsed-bij-pause).
-         - End-during-active → (now - sessionStartedAtRef) waar startedAt
-           re-anchored is op resume → cumulatieve actieve tijd over
-           meerdere pause/resume cycli heen.
-         startedAt-ISO blijft de echte wall-clock Start-druk. */
+      /* Manual end — record als 'stopped' met de ACTIEVE tijd (iter 9bl).
+         Eerst de sessie zelf afsluiten, dan pas de bracelet (audit 12 okt). */
+      const runMode = (getBraceletMonitorSession()?.mode ?? selectedMode) as BraceletMode;
       finishSession('stopped');
       void stopBraceletSessionMonitor();
       pausedAtElapsedMsRef.current = 0;
       setPausedAt(null);
-      /* Iter v195 (2026-07-04): setStatus na Stop-command moet ALTIJD
-         sessionActive=false erin overschrijven. Vroeger vertrouwden we op
-         sim.requestStatus() → maar de sim kan (a) niet direct reageren op
-         Stop of (b) stale sessionActive=true teruggeven → force blijft
-         waar activation was toen operator End tikte. Nu: neem sim's
-         status als basis, dwing sessionActive=false + remainingMinutes=0. */
-      try {
+      await bleBestEffort(async () => {
+        await bracelet.sendCommand({ mode: runMode, duration: 0, command: BleCommand.Stop });
         const st = await bracelet.requestStatus();
         setStatus(st ? { ...st, sessionActive: false, remainingMinutes: 0 } : st);
-      } catch {
-        /* swallow — v193 force setStatus vóór de try/catch heeft al gezet */
-      }
+      });
     } finally {
       setBusy(false);
     }
@@ -5362,32 +5311,24 @@ function BraceletControlScreen({
      14:23 → 14:00 sprong meer). pausedAt blijft in minuten voor het
      Resume-BLE-command (BLE accepteert geen sub-minute). */
   const onPause = async () => {
-    if (!status) return;
-    /* Capture exact ms-elapsed NU, vóór de async BLE-roundtrip. */
-    const startedAt = sessionStartedAtRef.current;
+    if (!isBraceletSessionMonitorActive()) return;
+    /* Exacte elapsed-ms NU vangen (iter 9be) — uit de monitor, niet uit de
+       bracelet-status (die bestaat niet zonder bracelet). */
     const plannedSec = sessionPlannedRef.current * 60;
+    const remSecNow = getBraceletMonitorRemainingSec() ?? plannedSec;
+    const startedAt = sessionStartedAtRef.current;
     const exactElapsedMs =
-      startedAt !== null
-        ? Math.max(0, Date.now() - startedAt)
-        : (sessionPlannedRef.current - status.remainingMinutes) * 60_000;
+      startedAt !== null ? Math.max(0, Date.now() - startedAt) : Math.max(0, plannedSec - remSecNow) * 1000;
     pausedAtElapsedMsRef.current = exactElapsedMs;
-    /* Voor BLE Resume: ceil naar minuten zodat we niet onderschrijden.
-       Display gebruikt de exact-ms ref onafhankelijk hiervan. */
-    const exactRemSec = Math.max(0, plannedSec - exactElapsedMs / 1000);
-    const remMinForBle = Math.max(1, Math.ceil(exactRemSec / 60));
+    const runMode = (getBraceletMonitorSession()?.mode ?? selectedMode) as BraceletMode;
     setBusy(true);
     try {
-      await bracelet.sendCommand({
-        mode: selectedMode,
-        duration: 0,
-        command: BleCommand.Stop,
-      });
-      setPausedAt(remMinForBle);
       pauseBraceletSessionMonitor();
-      /* Refresh status zodat sessionActive=false meekomt in state. UI
-         blijft active dankzij isPaused. */
-      const st = await bracelet.requestStatus();
-      setStatus(st);
+      setPausedAt(Math.max(1, Math.ceil(remSecNow / 60)));
+      await bleBestEffort(async () => {
+        await bracelet.sendCommand({ mode: runMode, duration: 0, command: BleCommand.Stop });
+        setStatus(await bracelet.requestStatus());
+      });
     } finally {
       setBusy(false);
     }
@@ -5407,35 +5348,23 @@ function BraceletControlScreen({
        één synchrone batch → één render i.p.v. twee → geen glitch. */
   const onResume = async () => {
     if (!isPaused) return;
-    /* Audit 5 okt 2026: de ECHT lopende modus (niet de aangetikte) en de
-       echte resterende minuten — geen clamp naar het modus-minimum meer
-       hier; het einde bewaakt de monitor (die de bracelet zelf stopt). */
+    /* De ECHT lopende modus en resterende tijd uit de monitor (audit 5 okt). */
     const runMode = (getBraceletMonitorSession()?.mode ?? selectedMode) as BraceletMode;
     const remainingSecNow = getBraceletMonitorRemainingSec() ?? (pausedAt ?? 1) * 60;
     const resumeDuration = Math.max(1, Math.ceil(remainingSecNow / 60));
     const exactElapsedMs = pausedAtElapsedMsRef.current;
     setBusy(true);
-    /* Iter v200 (2026-07-04): endedLocally reset op Resume. Anders zou
-       een Resume na een Pause + End cycle (edge case) de UI in idle
-       houden ondanks nieuwe actieve sessie. Defensive reset. */
     setEndedLocally(false);
     try {
-      await bracelet.sendCommand({
-        mode: runMode,
-        duration: resumeDuration,
-        command: BleCommand.Start,
-      });
-      /* Status eerst ophalen — daarna alle state-updates batchen zodat
-         React maar één keer rendert (geen tussentijdse flicker). */
-      const st = await bracelet.requestStatus();
-      /* Re-anchor startedAt: (now - startedAt) = exactElapsedMs → het
-         lokale display continueert van precies de pause-tijd. Planned
-         blijft de oorspronkelijke (niet vervangen door BLE-ceil). */
+      /* Re-anchor (iter 9bf): (now - startedAt) = elapsed bij pauze. */
       sessionStartedAtRef.current = Date.now() - exactElapsedMs;
       pausedAtElapsedMsRef.current = 0;
       setPausedAt(null);
       resumeBraceletSessionMonitor();
-      setStatus(st);
+      await bleBestEffort(async () => {
+        await bracelet.sendCommand({ mode: runMode, duration: resumeDuration, command: BleCommand.Start });
+        setStatus(await bracelet.requestStatus());
+      });
     } finally {
       setBusy(false);
     }
@@ -5482,9 +5411,7 @@ function BraceletControlScreen({
 
 
   /* ── Derived state ─────────────────────────────────────────────── */
-  const sessionActive = USE_SIMULATED_BLE
-    ? monitorSnap.active && !monitorSnap.paused
-    : !endedLocally && (status?.sessionActive ?? false);
+  const sessionActive = monitorSnap.active && !monitorSnap.paused;
   /* Geen sessie meer → niets om "geminimaliseerd" te houden. */
   useEffect(() => {
     if (!sessionActive && !isPaused) setMinimized(false);
@@ -5704,13 +5631,10 @@ function BraceletControlScreen({
      we i.p.v. daarvan een simpele, merk-eigen loader; bij een falende
      auto-connect (`autoStartFailed`) valt het alsnog terug op het echte
      zoek-scherm, zodat de gebruiker niet op een dode loader blijft hangen. */
-  if (conn !== 'connected') {
-    if (autoStartBracelet && !autoStartFailed) {
-      return <AutoStartLoader />;
-    }
-    if (autoConnect) {
-      return <AutoStartLoader text="Connecting…" />;
-    }
+  /* Audit 12 okt 2026: State Control draait op de telefoon/het horloge —
+     het zoek-scherm verschijnt enkel nog als iemand bewust de bracelet
+     komt verbinden (geen auto-start/auto-connect) en er geen sessie loopt. */
+  if (conn !== 'connected' && !autoStartBracelet && !autoConnect && !monitorSnap.active) {
     return (
       <SearchingScreen
         conn={conn}
@@ -5730,7 +5654,7 @@ function BraceletControlScreen({
   ) : null;
 
   /* SCREEN 6: Fault state (firmware reported error) */
-  if (fault) {
+  if (fault && !monitorSnap.active) {
     return (
       <>
         <FaultScreen

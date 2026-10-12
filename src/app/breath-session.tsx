@@ -145,6 +145,7 @@ import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsel
 import { useBreathHost, useBreathParams } from '@/components/breath-host-context';
 import {
   closeBreathSession,
+  registerRunningBreathSession,
   minimizeBreathSession,
   openBreathSession,
   getBreathHost,
@@ -2546,6 +2547,23 @@ export function BreathSession() {
     });
     return () => sub.remove();
   }, [handleTopbarBack, minimized]);
+
+  /* Audit 12 okt 2026: aanmelden bij de sessie-laag, zodat een nieuwe
+     sessie eerst vraagt om deze af te sluiten — en dat dan netjes gebeurt
+     (geademde tijd bewaard, horloge gestopt). */
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
+  const labelRef = useRef(stateLabel);
+  labelRef.current = stateLabel;
+  useEffect(
+    () =>
+      registerRunningBreathSession({
+        isActive: () => runningRef.current,
+        label: () => labelRef.current,
+        end: () => finishRef.current(false),
+      }),
+    [],
+  );
 
   useEffect(
     () => () => {

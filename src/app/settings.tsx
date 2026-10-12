@@ -47,6 +47,7 @@ import {
   setDevUserOverride,
   useDevUserOverride,
 } from '@/utils/dev-user-override';
+import { wipeLocalData } from '@/services/local-data';
 import { unload as unloadAudioPlayer } from '@/services/audio-player';
 import { clearHistory } from '@/utils/history';
 import { clearLastPlayed } from '@/utils/last-played';
@@ -192,64 +193,13 @@ export default function SettingsScreen() {
           onPress: async () => {
             setClearing(true);
             try {
-              /* AsyncStorage.clear() wist ALLES — incl. de bewust
-                 persistent gehouden `vz_last_login_email` die we juist
-                 NIET willen verliezen (pre-fill voor re-login). Dus we
-                 doen het stuksgewijs via getAllKeys + multiRemove en
-                 exclude die ene key. */
-              const allKeys = await AsyncStorage.getAllKeys();
-              /* Audit 8 okt 2026: wat de dialoog belooft ("account en
-                 abonnement blijven") ook doen — de inlogsessie en de
-                 koppeling van een gast-aankoop blijven staan. */
-              const KEEP = new Set([
-                'vz_last_login_email',
-                'vz_session_token',
-                'vz_refresh_token',
-                'vz_token_expires_at',
-                'vz_user_email',
-                'vz_auth_provider',
-                'vz_guest_purchase_rc_id',
-                'vz_pending_rc_link',
-              ]);
-              const toRemove = allKeys.filter((k) => !KEEP.has(k));
-              if (toRemove.length > 0) {
-                await AsyncStorage.multiRemove(toRemove);
-              }
-              /* Iter 9dq v122/v123/v124 (2026-06-04): drie-traps-fix.
-                 v122: AsyncStorage.multiRemove wist storage maar niet de
-                       in-memory module-state van vzp/history/last-played.
-                 v123: audio-player state.session bleef plakken door
-                       loadSession's same-session-fast-path.
-                 v124: unload() roept saveCurrentPositionIfWorthwhile aan,
-                       die de huidige positie schrijft NÁ clearAllSaved-
-                       Positions → Continue-prompt bleef bestaan.
-                 Volgorde nu STRIKT sequentieel:
-                   1. unload met skipSave=true → reset player+state, geen
-                      stiekeme save naar vzp
-                   2. clearAllSavedPositions → vzp module wist
-                   3. clearLastPlayed + clearHistory parallel (onafhankelijk) */
-              await unloadAudioPlayer({ skipSave: true });
-              await clearAllSavedPositions();
-              await Promise.all([
-                clearLastPlayed(),
-                clearHistory(),
-                /* Iter 9dq v125: ook activation-flag wissen (in-memory +
-                   storage). Anders kon "Looking for your bracelet" blijven
-                   verschijnen voor owners die voorheen geactiveerd waren. */
-                setDevBraceletActivated(false),
-              ]);
-              /* Herinneringen staan nu allemaal uit in de instellingen —
-                 dan ook de geplande meldingen weg (audit 8 okt 2026). */
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
-                await require('expo-notifications').cancelAllScheduledNotificationsAsync();
-              } catch {
-                /* swallow */
-              }
+              /* Audit 12 okt 2026: gedeelde wis-functie — stopt alles, maakt
+                 de stores in het geheugen leeg en wist de opslag; inloggen
+                 en een gast-aankoop blijven (zoals de dialoog belooft). */
+              await wipeLocalData({ keepAuth: true });
               void showVibezAlert({
                 title: 'Cleared',
-                message:
-                  'All local data has been removed. Restart the app to see a fresh state.',
+                message: 'All local data has been removed from this device.',
               });
             } catch (e) {
               void showVibezAlert({

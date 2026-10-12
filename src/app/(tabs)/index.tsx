@@ -598,7 +598,9 @@ function SessionRow({
              daar is geen andere visuele cue voor. */
           return (
             <Text style={s.libRowTag}>
-              {canPlay ? (
+              {/* Audit 12 okt 2026: een trial-sessie opent het trial-blad,
+                  geen voorproef — dus "FREE WITH TRIAL", niet "PREVIEW". */}
+              {canPlay || tier === 'account' ? (
                 <Text style={{ color: badgeColor }}>{label}</Text>
               ) : (
                 <Text style={{ color: C.dim }}>PREVIEW · 60S</Text>

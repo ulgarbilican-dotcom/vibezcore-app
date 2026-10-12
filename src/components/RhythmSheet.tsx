@@ -508,7 +508,7 @@ export default function RhythmSheet({
             {now && !belowRest ? (
               <Text style={s.restNote}>For this session only. Your resting heart rate stays {pulse.bpm} bpm.</Text>
             ) : aboveRest ? (
-              <Text style={s.restNote}>Your resting heart rate stays {pulse.bpm} — we keep your calmest reading.</Text>
+              <Text style={s.restNote}>Your resting heart rate stays {pulse.bpm} bpm.</Text>
             ) : null}
             <Text style={s.note}>
               We use your heart rate only to set your rhythm. It stays on this device. Not a medical device.

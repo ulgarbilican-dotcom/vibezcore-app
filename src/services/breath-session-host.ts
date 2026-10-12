@@ -32,9 +32,56 @@ function notify(): void {
   });
 }
 
-/** Opent een ademsessie (vervangt een eventuele vorige). */
+/* Audit 12 okt 2026: een nieuwe sessie starten terwijl er een
+   (geminimaliseerde) sessie loopt, verving die stil — de geademde minuten
+   verdwenen en het horloge bleef de oude sessie begeleiden. Nu vraagt de
+   app eerst "End current session?" (zoals State Control "Switch to …?"),
+   en sluit hij de lopende sessie netjes af (opslaan + horloge stoppen). */
+type RunningSession = { isActive: () => boolean; label: () => string; end: () => void };
+let running: RunningSession | null = null;
+let pendingOpen: BreathSessionParams | null = null;
+
+/** De gemonteerde sessie meldt zich aan (en af bij het demonteren). */
+export function registerRunningBreathSession(r: RunningSession): () => void {
+  running = r;
+  return () => {
+    if (running === r) running = null;
+  };
+}
+
+/** Opent een ademsessie. Loopt er al een, dan eerst bevestigen. */
 export function openBreathSession(params: BreathSessionParams): void {
+  if (host && running?.isActive()) {
+    pendingOpen = params;
+    notify();
+    return;
+  }
   host = { id: Date.now(), params, minimized: false };
+  notify();
+}
+
+export function getPendingBreathOpen(): { label: string } | null {
+  return pendingOpen ? { label: running?.label() ?? 'Breathwork' } : null;
+}
+
+/** "End & Start": de lopende sessie afsluiten (bewaart de geademde tijd),
+ *  dan de nieuwe openen. */
+export function confirmPendingBreathOpen(): void {
+  const params = pendingOpen;
+  pendingOpen = null;
+  if (!params) return;
+  try {
+    running?.end();
+  } catch {
+    /* afsluiten mag het openen van de nieuwe sessie nooit blokkeren */
+  }
+  host = { id: Date.now(), params, minimized: false };
+  notify();
+}
+
+export function cancelPendingBreathOpen(): void {
+  if (!pendingOpen) return;
+  pendingOpen = null;
   notify();
 }
 

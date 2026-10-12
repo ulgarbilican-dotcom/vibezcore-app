@@ -10,6 +10,7 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { wipeLocalData } from '@/services/local-data';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import Constants from 'expo-constants';
@@ -1317,7 +1318,10 @@ export default function AccountScreen() {
                       setEmail(null);
                       setEmailInput('');
                       setPwInput('');
-                      await clearLastPlayed();
+                      /* Audit 12 okt 2026: wat de dialoog belooft ook doen —
+                         alle gegevens op dit toestel weg (geschiedenis,
+                         hartslag, plannen, favorieten, instellingen). */
+                      await wipeLocalData({ keepAuth: false });
                       await clearSignedUrlCache();
                       /* Iter v170: synchroon FREE-marker, identiek aan
                          sign-out flow — voorkomt UI dat PRO-rendering

@@ -211,9 +211,17 @@ export const INSTANT_SITUATIONS: InstantSituation[] = [
      beide identiek 10 min geven. severity 0 houdt deze op "Daily
      Grounding" (5 min, de eigen recommended tier van Box), een stap
      korter dan `feel_stressed`, dus geen duplicaat. */
+  /* Audit 12 okt 2026 (akkoord operator): was Box — twee keer adem
+     vasthouden, en de vrije tekst stuurt ook "panic"/"panicky" hierheen.
+     Bij angst en paniek kan vasthouden het gevoel van luchttekort
+     versterken. Nu de Physiological Sigh (geen enkele hold): in Balban et
+     al. 2023 (Cell Rep Med) gaf dagelijks 5 min cyclisch zuchten de
+     grootste stemmingswinst van de onderzochte ademvormen, met minder
+     angst. severity 0 = de eigen aanbevolen tier "Equilibrium" (5 min, de
+     studiedosis). */
   {
-    id: 'anxious_nervous', label: 'Anxious / nervous', state: 'calm', isCoreBasis: false, severity: 0, technique: 'box',
-    why: 'An anxious mind does better with something steady to follow — four equal parts give your attention a clear, calming structure in the moment.',
+    id: 'anxious_nervous', label: 'Anxious / nervous', state: 'clarity', isCoreBasis: false, severity: 0, technique: 'physiological-sigh',
+    why: 'Two easy inhales and one long, slow exhale — no breath-holds. A simple, well-studied way to settle nerves and feel more at ease in a few minutes.',
   },
 
   // ── Focus & energy (nuance) ──────────────────────────────────────────

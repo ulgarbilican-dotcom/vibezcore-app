@@ -61,6 +61,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { needsPreview } from '@/utils/access-tier';
 import { MoreHorizontal } from 'lucide-react-native';
 import { showVibezAlert } from '@/components/VibezAlert';
 import Animated, {
@@ -221,7 +222,10 @@ export default function PlayerScreen() {
      trial beperkt tot 27 sessies + Breathwork. `isBundleUser` blijft WEL
      onvoorwaardelijk — dat is geen trial-product. */
   const hasSubscription = (realIsPro && !isTrialing) || isBundleUser;
-  const usePreview = !!urlSession && !urlSession.free && !hasSubscription;
+  /* Audit 12 okt 2026: de tier-regels (access-tier.ts), niet het oude
+     `free`-veld — zie needsPreview. `hasSubscription` blijft voor de CTA's. */
+  const usePreview =
+    !!urlSession && needsPreview(urlSession.url, urlSession.free, realIsPro, isTrialing, isBundleUser);
 
   /* Laden bij mount — driven door urlSession (= de sessie waar dit scherm
      voor geopend werd). Service skipt zelf wanneer dezelfde URL al loaded

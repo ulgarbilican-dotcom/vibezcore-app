@@ -4,11 +4,9 @@
 
    State Control start op de rusthartslag van de gebruiker en vertraagt van
    daaruit (bracelet-haptics.ts). Waar die waarde vandaan komt, in volgorde:
-     1. een meting (camera, later ook horloge) — de LAAGSTE van de laatste
-        60 dagen: rust is per definitie je laagste waarde, één meting na de
-        trap verpest dus niets;
-     2. wat de gebruiker zelf invult;
-     3. het gemiddelde van een volwassene (70 bpm), duidelijk zo benoemd.
+     1. de NIEUWSTE bewaarde waarde — meting (camera, later horloge) of
+        zelf ingevuld (operator, 10 okt 2026: "altijd de laatste meting");
+     2. anders het gemiddelde van een volwassene (70 bpm), zo benoemd.
 
    De waarde blijft op dit toestel (nooit naar de server) — zo staat het
    ook in de privacyverklaring. Geen medische meting: enkel om het ritme
@@ -130,7 +128,16 @@ function commit(next: Stored): void {
 /** Dev/test: alles wissen, alsof er nooit een keuze was (8–9 okt 2026,
  *  om de pagina "Your Resting Heart Rate" opnieuw te kunnen zien). */
 export function resetRestingPulse(): void {
+  forgetSessionLog();
   commit(EMPTY);
+}
+
+/* Audit 12 okt 2026: "vergeten" moet ook de sessie-metingen wissen — anders
+   blijven ze op de Heart Rate-pagina staan terwijl de app belooft dat hij
+   je hartslag niet meer bewaart. */
+function forgetSessionLog(): void {
+  sessionLog = [];
+  AsyncStorage.removeItem(SESSION_LOG_KEY).catch(() => {});
 }
 
 /** Eén keer bij het opstarten (en veilig om vaker aan te roepen). */
@@ -199,6 +206,7 @@ export function addRestingPulseReading(bpm: number): boolean {
  *  alle eigen waarden — wie terug naar het gemiddelde wil, wil ook dat de
  *  app zijn hartslag niet meer bewaart. */
 export function chooseAverageRestingPulse(): void {
+  forgetSessionLog();
   liveStart = null;
   if (liveTimer) clearTimeout(liveTimer);
   liveTimer = null;

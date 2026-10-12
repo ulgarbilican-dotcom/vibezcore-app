@@ -79,6 +79,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 11 okt 2026: State Control trilsterkte Soft/Medium/Strong (services/haptic-strength-pref.ts) en kortere minima 5/5/5/10/10 na onderzoek (Science §3.7, CLAUDE.md §5). Tests 123–124 open.
 
+- 12 okt 2026: A-tot-Z-audit (docs/AUDIT_2026-10-12.md), ronde 1 punt 1–5 gebouwd (operator "doe 1 tot 5"): privacy/camera-copy in welzijnstaal (legal-content, withPulseCamera → **nieuwe build**), State Control monitor-eerst + bracelet best-effort + iOS-herstel, Breathwork "End current session?" + Instant angst → Physiological Sigh, Audio één toegangsregel (needsPreview), lokale gegevens wissen bij Delete account (services/local-data.ts) + Clear Heart Rate Data. Tests 126–133. Volgende: ronde 2 (P1) uit het auditdocument.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

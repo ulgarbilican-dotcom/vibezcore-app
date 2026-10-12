@@ -133,6 +133,12 @@ daarna per techniek één stap per 12 afgewerkte sessies van díe techniek.
 - Technieken met adem vasthouden (Box, 4-7-8) dragen een waarschuwing;
   4-7-8 begint bewust met 4 cycli.
 - Faster Equal: kort, stoppen bij een licht gevoel in het hoofd.
+- **Instant "Anxious / nervous" (ook vrije tekst "panic")** → Physiological
+  Sigh, 5 min, geen enkele hold (GEWIJZIGD 12 okt 2026, was Box). 🟢 Balban
+  2023: cyclisch zuchten gaf de grootste stemmingswinst, minder angst. ⚪
+  Eigen keuze: bij angst/paniek geen adem vasthouden, omdat dat
+  luchttekort kan versterken. "I feel stressed" blijft Box (🟢 ook een arm
+  in Balban 2023, korte holds van 4 s).
 - Health & Safety (`src/data/legal-content.ts`): nooit tijdens rijden,
   fietsen, zwemmen of machines bedienen; stoppen bij duizeligheid.
 

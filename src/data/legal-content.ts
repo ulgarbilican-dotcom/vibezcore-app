@@ -176,7 +176,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'The platform — including Breathwork, State Control, the Audio Library, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition, and it does not measure or monitor any body function.',
+      text: 'The platform — including Breathwork, State Control, the Audio Library, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition, and it does not monitor any body function. The optional fingertip pulse reading in State Control is a wellness estimate used only to set the pace of your rhythm — not a medical measurement.',
     },
     {
       kind: 'p',
@@ -411,12 +411,12 @@ export const PRIVACY: LegalDoc = {
         'Bracelet pairing info',
         'Session history (Breathwork & State Control)',
         'Reminder schedule',
-        'Resting heart rate (optional, State Control)',
+        'Resting heart rate (optional, State Control — entered or read with the camera)',
       ],
     },
     {
       kind: 'highlight',
-      text: 'We do not collect your IMEI, MAC address, biometric data, or any health information — not from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting heart rate for State Control, it is used only to set the starting pace of your rhythm and never leaves your device. Session history, reminders, your resting heart rate and smartwatch settings stay on your device. You can remove your resting heart rate anytime in Profile → Your rhythm.',
+      text: 'We do not collect your IMEI, MAC address or biometric identifiers, and no health information reaches our servers — not from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting heart rate for State Control, or read it with your phone\'s camera and flash on your fingertip, the number is used only to set the pace of your rhythm and never leaves your device. Camera frames are analysed live and are never recorded, saved or uploaded. Session history, reminders, your heart rate readings and smartwatch settings stay on your device. You can remove your heart rate readings anytime in Activity → Resting Heart Rate.',
     },
 
     { kind: 'h3', text: 'Cookies & Local Storage' },
@@ -533,13 +533,14 @@ export const PRIVACY: LegalDoc = {
         { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
         { title: 'Smartwatch',     text: 'Optional — if you pair a Wear OS watch or Apple Watch, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch.' },
+        { title: 'Camera & flash', text: 'Optional — only when you choose to read your pulse from your fingertip in State Control. Frames are analysed live on your device and never recorded, saved or uploaded. You can always enter your resting heart rate yourself instead.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
       ],
     },
     {
       kind: 'highlight',
       title: 'What we do NOT request',
-      text: 'VIBEZCORE does not request access to your microphone, camera, location, contacts, calendar, photos, or health data. The Smart Bead Bracelet does not collect biometric or health information.',
+      text: 'VIBEZCORE does not request access to your microphone, location, contacts, calendar, photos, or the health data stored by Apple Health or Health Connect. The camera is used only for the optional fingertip pulse reading described above. The Smart Bead Bracelet does not collect biometric or health information.',
     },
 
     /* ── 07. International Data Transfers ── */

@@ -9,12 +9,27 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { BreathSession } from '@/app/breath-session';
-import { getBreathHost, subscribeBreathHost } from '@/services/breath-session-host';
+import {
+  cancelPendingBreathOpen,
+  confirmPendingBreathOpen,
+  getBreathHost,
+  getPendingBreathOpen,
+  subscribeBreathHost,
+} from '@/services/breath-session-host';
+import ConfirmCard from './ConfirmCard';
 import { BreathHostContext } from './breath-host-context';
 
 export function BreathSessionHost() {
   const [host, setHost] = useState(getBreathHost());
-  useEffect(() => subscribeBreathHost(() => setHost(getBreathHost())), []);
+  const [pending, setPending] = useState(getPendingBreathOpen());
+  useEffect(
+    () =>
+      subscribeBreathHost(() => {
+        setHost(getBreathHost());
+        setPending(getPendingBreathOpen());
+      }),
+    [],
+  );
   const { height } = useWindowDimensions();
   const offset = useSharedValue(height);
 
@@ -32,14 +47,24 @@ export function BreathSessionHost() {
 
   if (!host) return null;
   return (
-    <Animated.View
-      style={[StyleSheet.absoluteFill, s.layer, style]}
-      pointerEvents={minimized ? 'none' : 'auto'}
-    >
-      <BreathHostContext.Provider value={{ params: host.params, minimized }}>
-        <BreathSession key={host.id} />
-      </BreathHostContext.Provider>
-    </Animated.View>
+    <>
+      <Animated.View
+        style={[StyleSheet.absoluteFill, s.layer, style]}
+        pointerEvents={minimized ? 'none' : 'auto'}
+      >
+        <BreathHostContext.Provider value={{ params: host.params, minimized }}>
+          <BreathSession key={host.id} />
+        </BreathHostContext.Provider>
+      </Animated.View>
+      <ConfirmCard
+        visible={pending !== null}
+        title="End current session?"
+        body={`Your ${pending?.label ?? 'Breathwork'} session ends. The time you breathed is saved.`}
+        confirmLabel="End & Start New"
+        onCancel={cancelPendingBreathOpen}
+        onConfirm={confirmPendingBreathOpen}
+      />
+    </>
   );
 }
 

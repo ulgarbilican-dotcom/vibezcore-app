@@ -83,6 +83,7 @@ import {
   requestNotificationPermissionsAsync,
   setAudioModeAsync,
 } from 'expo-audio';
+import { findLibrarySessionByUrl, getEffectiveTier, needsPreview } from '@/utils/access-tier';
 import { useEffect, useState } from 'react';
 
 export type SessionInfo = {
@@ -165,7 +166,11 @@ const initialState: PlayerState = {
  * Sync — leest huidige cached subscription-status uit useSubscription.
  */
 function shouldPreview(session: SessionInfo): boolean {
-  if (session.isFree) return false;
+  /* Audit 12 okt 2026: tier-regels i.p.v. het oude `isFree`-veld — anders
+     speelden Continue / autoplay / Play next trial-sessies zonder check. */
+  const meta = findLibrarySessionByUrl(session.url);
+  const isPublic = meta ? getEffectiveTier(meta) === 'public' : session.isFree;
+  if (isPublic) return false;
   /* Iter v227 (2026-07-07, audit AU1): null-safe check.
      Iter v229 (2026-07-08): bundle-users hebben audio inclusive
      (braceletModel === 'bundle') — backend subscriptions-row komt via
@@ -181,7 +186,7 @@ function shouldPreview(session: SessionInfo): boolean {
      playback. Bedoeld model (project-free-tier-facts, operator-bevestigd):
      trial ontgrendelt enkel 27 sessies + Breathwork, niet de PRO-
      catalogus. */
-  return sub.active !== true || sub.isTrialing === true;
+  return needsPreview(session.url, session.isFree, sub.active === true, sub.isTrialing === true, false);
 }
 
 let state: PlayerState = { ...initialState };

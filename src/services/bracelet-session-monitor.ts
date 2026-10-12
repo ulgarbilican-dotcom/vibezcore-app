@@ -490,6 +490,11 @@ async function restoreFromStorage(): Promise<void> {
     startTimers();
     void publish(true);
     persist();
+    /* Audit 12 okt 2026: iOS heeft geen service die doorloopt — de
+       "Session complete"-melding en de Live Activity moeten de herstelde
+       (gepauzeerde) staat volgen. Android niet: daar zou dit de lopende
+       haptiek herstarten. */
+    if (Platform.OS === 'ios') syncHaptics();
     return;
   }
   if (elapsedNow >= saved.totalSec - 5) {
@@ -505,6 +510,8 @@ async function restoreFromStorage(): Promise<void> {
   startTimers();
   void publish(true);
   persist();
+  /* Audit 12 okt 2026: melding, Live Activity en keep-awake volgen de pauze. */
+  syncHaptics();
 }
 
 void restoreFromStorage();
@@ -610,10 +617,13 @@ subscribeHapticStrength(() => {
 export function pauseBraceletSessionMonitor(): void {
   if (!state) return;
   const remSec = currentRemainingSec();
+  const elapsed = state.totalSec - remSec;
   state = {
     ...state,
     paused: true,
-    elapsedBeforeRunSec: state.totalSec - remSec,
+    /* Audit 12 okt 2026: "Start" = starten + meteen pauzeren; de paar ms
+       ertussen lieten een verse 18-min-sessie op 17:59 staan. */
+    elapsedBeforeRunSec: state.elapsedBeforeRunSec === 0 && elapsed < 1 ? 0 : elapsed,
     runStartedAt: null,
   };
   persist();

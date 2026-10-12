@@ -14,11 +14,12 @@ import PressScale from '@/components/PressScale';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { AudioAccentLight, Brand, BrandFonts } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
-import { getPulseHistory, type PulseHistoryEntry } from '@/services/resting-pulse';
+import ConfirmCard from '@/components/ConfirmCard';
+import { chooseAverageRestingPulse, getPulseHistory, type PulseHistoryEntry } from '@/services/resting-pulse';
 import { Stack } from 'expo-router';
 import { ChevronRight, HeartPulse, PencilLine, Timer } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function fmtWhen(at: number): string {
@@ -37,6 +38,7 @@ function rowTitle(e: PulseHistoryEntry): string {
 export default function HeartRateScreen() {
   const pulse = useRestingPulse();
   const [sheet, setSheet] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   /* Herberekend bij elke wijziging van de rusthartslag of een sessiemeting. */
   const history = useMemo(() => getPulseHistory(), [pulse]);
 
@@ -108,7 +110,33 @@ export default function HeartRateScreen() {
           </HistoryGroup>
         )}
         <Text style={s.note}>For wellness only, not a medical measurement.</Text>
+        {/* Audit 12 okt 2026 (privacy): je eigen hartslag-gegevens wissen,
+            zoals Apple Health onderaan "Delete All Data". */}
+        {history.length > 0 || pulse.source !== 'average' ? (
+          <Pressable
+            onPress={() => setConfirmClear(true)}
+            hitSlop={10}
+            style={s.clear}
+            accessibilityRole="button"
+            accessibilityLabel="Clear heart rate data"
+          >
+            <Text style={s.clearTxt}>Clear Heart Rate Data</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
+
+      <ConfirmCard
+        visible={confirmClear}
+        title="Clear heart rate data?"
+        body="All your readings are removed from this device. Sessions use the average resting heart rate of 70 bpm until you measure again."
+        confirmLabel="Clear Data"
+        destructive
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={() => {
+          setConfirmClear(false);
+          chooseAverageRestingPulse();
+        }}
+      />
 
       <RhythmSheet
         visible={sheet}
@@ -160,4 +188,6 @@ const s = StyleSheet.create({
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
   empty: { color: 'rgba(255,255,255,0.55)', fontSize: 15, fontFamily: BrandFonts.medium, marginTop: 6 },
   note: { color: 'rgba(255,255,255,0.4)', fontSize: 12.5, fontFamily: BrandFonts.medium, textAlign: 'center', marginTop: 24 },
+  clear: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },
+  clearTxt: { color: Brand.error, fontSize: 15, fontFamily: BrandFonts.semibold },
 });
