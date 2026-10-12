@@ -51,15 +51,15 @@ function lookFor(pulse: HapticPulse): RingLook {
   return { peakOpacity: lub ? 0.5 : 0.3, maxScale: lub ? 1.26 : 1.16, durationMs };
 }
 
-type RingHandle = { fire: (look: RingLook, reduced: boolean) => void };
+type RingHandle = { fire: (look: RingLook, reduced: boolean, startScale?: number) => void };
 
 const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ring({ size, color }, ref) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
   useImperativeHandle(ref, () => ({
-    fire(look, reduced) {
-      scale.value = 1;
+    fire(look, reduced, startScale = 1) {
+      scale.value = startScale;
       if (!reduced) {
         scale.value = withTiming(look.maxScale, {
           duration: look.durationMs,
@@ -91,18 +91,40 @@ const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ri
   );
 });
 
-export function HapticPulseRings({ size, color = RING_COLOR }: { size: number; color?: string }) {
+/* 12 okt 2026 (operator: "te druk"): met `beatSynced` (sessiescherm, waar
+   de cirkel zelf meeklopt via HeartbeatScale) één ring per HARTSLAG — enkel
+   bij lub, niet bij dub — die vertrekt waar de kloppende cirkel op zijn
+   grootst is (+7 %, na 80 ms). Eén duidelijk effect per slag. */
+export function HapticPulseRings({
+  size,
+  color = RING_COLOR,
+  beatSynced = false,
+}: {
+  size: number;
+  color?: string;
+  beatSynced?: boolean;
+}) {
   const reduced = useReducedMotion();
   const rings = useRef<(RingHandle | null)[]>([]);
   const next = useRef(0);
 
   useEffect(() => {
-    return subscribeHapticPulse((pulse) => {
-      const ring = rings.current[next.current];
-      next.current = (next.current + 1) % POOL_SIZE;
-      ring?.fire(lookFor(pulse), reduced);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const off = subscribeHapticPulse((pulse) => {
+      if (beatSynced && pulse.kind === 'dub') return;
+      const fire = () => {
+        const ring = rings.current[next.current];
+        next.current = (next.current + 1) % POOL_SIZE;
+        ring?.fire(lookFor(pulse), reduced, beatSynced && !reduced ? 1.07 : 1);
+      };
+      if (beatSynced && !reduced) timers.push(setTimeout(fire, 80));
+      else fire();
     });
-  }, [reduced]);
+    return () => {
+      off();
+      timers.forEach(clearTimeout);
+    };
+  }, [reduced, beatSynced]);
 
   return (
     <View pointerEvents="none" style={[s.wrap, { width: size, height: size }]}>

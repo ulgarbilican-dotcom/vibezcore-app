@@ -3377,7 +3377,7 @@ function ActiveSessionScreen({
              ringen vanaf de rand naar buiten uitzetten. */}
           {/* In de kleur van de toestand (operator, 6 okt 2026), zelfde tint
              als de rand — Sleep dus licht teal. */}
-          <HapticPulseRings size={240} color={breathWaveLook(activeMeta.color).color} />
+          <HapticPulseRings size={240} color={breathWaveLook(activeMeta.color).color} beatSynced />
           <HeartbeatScale size={240}>
             <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
           </HeartbeatScale>

@@ -98,7 +98,9 @@ class SessionRingView @JvmOverloads constructor(
 
   /** Een echte tik op de pols: een ring laten uitdijen. */
   fun pulse(strong: Boolean) {
-    pulses.add(Pulse(SystemClock.uptimeMillis(), strong))
+    /* 12 okt 2026: één ring per hartslag (enkel lub) — de schijf klopt zelf
+       al mee; twee ringen per slag oogde druk. */
+    if (strong) pulses.add(Pulse(SystemClock.uptimeMillis(), strong))
     lastBeat = Pulse(SystemClock.uptimeMillis(), strong)
     postInvalidateOnAnimation()
   }
