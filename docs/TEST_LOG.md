@@ -223,6 +223,30 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 
 ---
 
+## Horloge — volledige testlijst (Wear OS, Galaxy Watch4) — eerst ALLES groen door Claude, dan pas operator
+Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perfect werkt zonder bug — een unieke, duidelijke ervaring". Opstelling: telefoon + horloge ≥ 80 %, Watch4-plugin en Galaxy Wearable op onbeperkte batterij, horloge "verbonden" in Galaxy Wearable, één horlogeversie (geen wijzigingen tijdens de test).
+
+| # | Test | Verwacht | Status |
+|---|---|---|---|
+| W1 | State Control starten op telefoon (Haptic, Medium) | ons scherm komt vanzelf naar voren op het horloge, ring vol, trilling op de pols, telefoon stil | ⏳ |
+| W2 | Haptic + Audio | hartslag hoorbaar op het horloge (horloge-versie), exact op de tik | ⏳ |
+| W3 | Soft / Medium / Strong tijdens de sessie | ~60 / ~80 / 100 %, meteen voelbaar verschil | ⏳ |
+| W4 | Ring klopt mee | schijf zwelt op elke slag (lub sterker), tempo vertraagt mee met de curve | ⏳ |
+| W5 | Pauze op horloge, hervat op horloge | telefoon volgt, tijd klopt (geen sprong) | ⏳ |
+| W6 | Pauze op telefoon, hervat op telefoon | horloge volgt | ⏳ |
+| W7 | END op horloge | horloge meteen idle, telefoon stopt, geschiedenis +1 | ⏳ |
+| W8 | END op telefoon (End Session) | horloge stopt | ⏳ |
+| W9 | Sessie loopt natuurlijk af | eind-signaal op de pols, beide schermen afgesloten | ⏳ |
+| W10 | Pols omlaag / omhoog (Always On aan en uit) | ambient = gedimd sessiescherm; omhoog = meteen de ring | ⏳ |
+| W11 | Wijzerplaat tijdens sessie | V-icoon (Ongoing Activity), één tik = terug in de sessie | ⏳ |
+| W12 | Breathwork vanaf telefoon | figuur/fase op horloge, ademritme op de pols | ⏳ |
+| W13 | Telefoon vergrendeld in de zak, 10 min | ritme loopt door op de pols | ⏳ |
+| W14 | Verbinding weg tijdens sessie (Bluetooth telefoon uit/aan) | telefoon neemt het ritme over; na herstel geen dubbel ritme | ⏳ |
+| W15 | Horloge zonder VIBEZCORE-app | telefoon toont "Install VIBEZCORE on your watch" | ⏳ |
+| W16 | Geen horloge verbonden (eerder wel) | telefoon toont "Watch not connected" + uitleg | ⏳ |
+| W17 | Eerste keer openen horloge-app | vraagt om meldingen (Wear OS 4) | ⏳ |
+| W18 | App-icoon in de app-lijst | glazen V, vindbaar | ✅ 12 okt |
+
 ## Nog niet getest (gebouwd)
 - ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); V-logo i.p.v. muzieknoot (`6be14fc`, native); let ook op: 9 okt stonden er 12 open expo-audio-mediasessies (ExpoAudioBasicMediaSession) — mogen de ademsessie niet van het vergrendelscherm verdringen, anders opruimen; haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen
 - ⏳ Quick Chill/Boost-knoppen: paywall-pad zonder abonnement; eerste keer zonder rusthartslag (paneel eerst)
