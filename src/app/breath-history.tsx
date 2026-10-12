@@ -27,8 +27,8 @@ import {
 } from '@/components/HistoryList';
 import { WeekSummaryCard } from '@/components/WeekSummaryCard';
 import { showVibezAlert } from '@/components/VibezAlert';
-import { router, Stack } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -244,9 +244,17 @@ export default function BreathHistoryScreen() {
      zodra je twee dagen wil vergelijken. */
   const [openDays, setOpenDays] = useState<Set<string> | null>(null);
   const effectiveOpenDays = useMemo(
-    () => openDays ?? new Set(dayGroups.slice(0, 7).map((g) => g.key)),
-    [openDays, dayGroups],
+    () => openDays ?? new Set([localDayKey(Date.now())]),
+    [openDays],
   );
+  /* Operator, 12 okt 2026: elke keer dat je de pagina opent staat enkel
+     VANDAAG open, al het oudere ingeklapt — anders werd de lijst heel lang. */
+  useFocusEffect(
+    useCallback(() => {
+      setOpenDays(null);
+    }, []),
+  );
+
   const toggleDay = (key: string) => {
     const next = new Set(effectiveOpenDays);
     if (next.has(key)) next.delete(key);

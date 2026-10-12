@@ -35,8 +35,8 @@ import {
   useBraceletStats,
   type SessionRecord,
 } from '@/utils/bracelet-history';
-import { Stack, router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { Stack, router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BraceletMode } from '../services/ble-contract';
@@ -123,12 +123,20 @@ export default function BraceletHistory() {
   const weekKeys = new Set(weekDays.map((d) => d.dayKey));
   const weekSessions = sessions.filter((r) => weekKeys.has(getDayKey(new Date(r.endedAt)))).length;
 
-  /* Recente dagen open, oudere ingeklapt — zelfde regel als Your Practice. */
+  /* Enkel vandaag open, de rest ingeklapt — zelfde regel als Your Practice. */
   const [openDays, setOpenDays] = useState<Set<string> | null>(null);
   const effectiveOpen = useMemo(
-    () => openDays ?? new Set(groups.slice(0, 7).map((g) => g.key)),
-    [openDays, groups],
+    () => openDays ?? new Set([getDayKey(new Date())]),
+    [openDays],
   );
+  /* Operator, 12 okt 2026: elke keer dat je de pagina opent staat enkel
+     VANDAAG open, al het oudere ingeklapt — anders werd de lijst heel lang. */
+  useFocusEffect(
+    useCallback(() => {
+      setOpenDays(null);
+    }, []),
+  );
+
   const toggleDay = (key: string) => {
     const next = new Set(effectiveOpen);
     if (next.has(key)) next.delete(key);
