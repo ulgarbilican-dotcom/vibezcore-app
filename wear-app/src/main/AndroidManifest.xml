@@ -16,7 +16,7 @@
 
     <application
         android:label="VIBEZCORE"
-        android:icon="@drawable/ic_launcher_wear"
+        android:icon="@drawable/ic_launcher_vz"
         android:allowBackup="false"
         android:supportsRtl="true">
 
