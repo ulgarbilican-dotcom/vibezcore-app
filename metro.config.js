@@ -19,6 +19,14 @@ config.resolver.blockList = [
   /android[\\/]app[\\/]build[\\/].*/,
   /android[\\/]\.gradle[\\/].*/,
   /android[\\/]app[\\/]\.cxx[\\/].*/,
+  /* 12 okt 2026: ook de horloge-build, de eigen native modules en elke
+     andere Gradle-build-map (opnieuw EMFILE na de lokale builds). */
+  /android[\\/]wear[\\/]build[\\/].*/,
+  /android[\\/]build[\\/].*/,
+  /modules[\\/][^\\/]+[\\/]android[\\/]build[\\/].*/,
+  /modules[\\/][^\\/]+[\\/]android[\\/]\.cxx[\\/].*/,
+  /node_modules[\\/].*[\\/]android[\\/]build[\\/].*/,
+  /node_modules[\\/].*[\\/]android[\\/]\.cxx[\\/].*/,
 ];
 
 /* Operator, 16 september 2026: de blockList hierboven verhielp het niet
