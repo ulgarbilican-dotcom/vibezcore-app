@@ -348,7 +348,11 @@ class WearStateSessionService : Service() {
             .build(),
         )
         .build()
-      heartId = pool.load(this, R.raw.heartbeat_speaker, 1)
+      /* 12 okt 2026: eigen horloge-versie — de telefoonopname zit voor 97 %
+         onder 150 Hz, wat een horlogeluidspreker niet kan weergeven. Deze
+         versie draagt dezelfde lub-dub in boventonen (400–1000 Hz), zodat
+         je oor de diepe slag nog hoort ("missing fundamental"). */
+      heartId = pool.load(this, R.raw.heartbeat_watch, 1)
       soundPool = pool
     } catch (_: Exception) {
       soundPool = null

@@ -99,7 +99,23 @@ class SessionRingView @JvmOverloads constructor(
   /** Een echte tik op de pols: een ring laten uitdijen. */
   fun pulse(strong: Boolean) {
     pulses.add(Pulse(SystemClock.uptimeMillis(), strong))
+    lastBeat = Pulse(SystemClock.uptimeMillis(), strong)
     postInvalidateOnAnimation()
+  }
+
+  /* 12 okt 2026 (operator: "de ring zelf laten meekloppen"): de schijf
+     zwelt bij elke slag heel licht op — sterk bij lub, zacht bij dub — en
+     zakt zacht terug. Zelfde slag als de trilling (BeatBus), dus beeld,
+     gevoel en geluid uit één bron. */
+  private var lastBeat: Pulse? = null
+  private fun beatScale(now: Long): Float {
+    val b = lastBeat ?: return 1f
+    val dur = if (b.strong) 320f else 220f
+    val k = (now - b.startMs) / dur
+    if (k >= 1f || k < 0f) return 1f
+    val up = if (k < 0.18f) k / 0.18f else 1f - (k - 0.18f) / 0.82f
+    val e = up * up * (3f - 2f * up)
+    return 1f + (if (b.strong) 0.035f else 0.018f) * e
   }
 
   override fun onDraw(canvas: Canvas) {
@@ -109,7 +125,7 @@ class SessionRingView @JvmOverloads constructor(
     val cy = height / 2f
     // 12 okt 2026: de ring vult het scherm; de tik-ringen dijen nog net tot
     // aan de rand uit (tot 1,08×) i.p.v. ver erbuiten.
-    val r = min(width, height) / 2f / 1.10f
+    val r = min(width, height) / 2f / 1.10f * beatScale(now)
     val size = 2f * r
 
     // 1 · schijf
