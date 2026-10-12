@@ -22,7 +22,7 @@
             android:layout_height="wrap_content"
             android:text="VIBEZCORE"
             android:textColor="#8A8A8A"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:letterSpacing="0.15"
             android:textStyle="bold" />
 
@@ -35,7 +35,7 @@
             android:gravity="center"
             android:text="Start a session in the VIBEZCORE App"
             android:textColor="#F4F4F4"
-            android:textSize="14sp" />
+            android:textSize="17sp" />
     </LinearLayout>
 
     <!-- Lopende of gepauzeerde sessie -->
@@ -69,7 +69,7 @@
                 android:maxLines="1"
                 android:text=""
                 android:textColor="#F4F4F4"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -97,7 +97,7 @@
             android:gravity="center"
             android:text="END"
             android:textColor="#B8FFFFFF"
-            android:textSize="10sp"
+            android:textSize="12sp"
             android:letterSpacing="0.16"
             android:textStyle="bold" />
     </LinearLayout>
