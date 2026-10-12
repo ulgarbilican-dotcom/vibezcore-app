@@ -20,7 +20,26 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
 
-class MainActivity : Activity() {
+class MainActivity : androidx.activity.ComponentActivity() {
+  /* 12 okt 2026: ambient-modus (zoals Apple's Workout) — pols omlaag =
+     ons scherm blijft gedimd staan i.p.v. terug naar de wijzerplaat; pols
+     omhoog = meteen weer de ring. De golf staat stil in ambient (batterij). */
+  private var ambient = false
+  private val ambientCallback = object : androidx.wear.ambient.AmbientLifecycleObserver.AmbientLifecycleCallback {
+    override fun onEnterAmbient(ambientDetails: androidx.wear.ambient.AmbientLifecycleObserver.AmbientDetails) {
+      ambient = true
+      ring.flowing = false
+      ring.alpha = 0.6f
+    }
+    override fun onExitAmbient() {
+      ambient = false
+      ring.alpha = 1f
+      render()
+    }
+    override fun onUpdateAmbient() {
+      render()
+    }
+  }
   private lateinit var idleContainer: View
   private lateinit var sessionContainer: View
   private lateinit var nameDot: View
@@ -36,6 +55,7 @@ class MainActivity : Activity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+    lifecycle.addObserver(androidx.wear.ambient.AmbientLifecycleObserver(this, ambientCallback))
     idleContainer = findViewById(R.id.idleContainer)
     sessionContainer = findViewById(R.id.sessionContainer)
     nameDot = findViewById(R.id.nameDot)
@@ -196,7 +216,7 @@ class MainActivity : Activity() {
     ring.color = light
     ring.backAlpha = if (sleepLike) 0.20f else 0.10f
     ring.frontAlpha = if (sleepLike) 0.30f else 0.15f
-    ring.flowing = !paused
+    ring.flowing = !paused && !ambient
     nameLabel.text = title
     nameDot.background = GradientDrawable().apply {
       shape = GradientDrawable.OVAL

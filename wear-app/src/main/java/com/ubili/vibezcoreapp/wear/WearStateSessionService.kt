@@ -486,21 +486,8 @@ class WearStateSessionService : Service() {
     )
   }
 
-  private fun buildNotification(text: String, title: String): Notification {
-    val pendingIntent = PendingIntent.getActivity(
-      this,
-      1,
-      Intent(this, MainActivity::class.java),
-      PendingIntent.FLAG_IMMUTABLE,
-    )
-    return Notification.Builder(this, CHANNEL_ID)
-      .setContentTitle(title.ifBlank { "VIBEZCORE" })
-      .setContentText(text)
-      .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-      .setOngoing(true)
-      .setContentIntent(pendingIntent)
-      .build()
-  }
+  private fun buildNotification(text: String, title: String): Notification =
+    buildOngoingNotification(this, CHANNEL_ID, NOTIFICATION_ID, title, text)
 
   private fun notify(notification: Notification) {
     try {

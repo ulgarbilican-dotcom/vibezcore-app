@@ -227,22 +227,8 @@ class WearBreathSessionService : Service() {
     )
   }
 
-  private fun buildNotification(phaseLabel: String, modeName: String): Notification {
-    val openIntent = Intent(this, MainActivity::class.java)
-    val pendingIntent = PendingIntent.getActivity(
-      this,
-      0,
-      openIntent,
-      PendingIntent.FLAG_IMMUTABLE,
-    )
-    return Notification.Builder(this, CHANNEL_ID)
-      .setContentTitle(if (modeName.isNotBlank()) modeName else "VIBEZCORE")
-      .setContentText(phaseLabel)
-      .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-      .setOngoing(true)
-      .setContentIntent(pendingIntent)
-      .build()
-  }
+  private fun buildNotification(phaseLabel: String, modeName: String): Notification =
+    buildOngoingNotification(this, CHANNEL_ID, NOTIFICATION_ID, modeName, phaseLabel)
 
   private fun updateNotification(phaseLabel: String, modeName: String, round: Int, totalRounds: Int) {
     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
