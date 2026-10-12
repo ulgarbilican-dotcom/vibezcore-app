@@ -97,10 +97,20 @@ class SessionRingView @JvmOverloads constructor(
       }
     }
 
+  /** Grootte en verticale ligging van het onderwerp in zijn beeld — zelfde
+   *  `artScale`/`focusY` als breath-states.ts (de PNG's hebben veel lege rand). */
+  var artScale = 1f
+  var artFocusY = 0.5f
+
   private val artPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
   private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
   private val playPaint = Paint(Paint.ANTI_ALIAS_FLAG)
   private val artRect = RectF()
+  private var glowShader: RadialGradient? = null
+  private var glowColor = 0
+  private val glowMatrix = android.graphics.Matrix()
+  private var scaled: Bitmap? = null
+  private var scaledFor: Bitmap? = null
   private val playPath = Path()
 
   private data class Pulse(val startMs: Long, val strong: Boolean)
@@ -163,8 +173,8 @@ class SessionRingView @JvmOverloads constructor(
     val r = min(width, height) / 2f / 1.10f * beatScale(now)
     val size = 2f * r
 
-    // 1 · schijf
-    canvas.drawCircle(cx, cy, r, discPaint)
+    // 1 · schijf (State Control); Breathwork heeft geen cirkel
+    if (art == null) canvas.drawCircle(cx, cy, r, discPaint)
 
     if (art != null) {
       drawBreathFigure(canvas, cx, cy, r, now)
@@ -228,36 +238,58 @@ class SessionRingView @JvmOverloads constructor(
   }
 
   /** Breathwork: rand, gloed, figuur en "Inhale · Nose" eronder. */
-  private fun drawBreathFigure(canvas: Canvas, cx: Float, cy: Float, r: Float, now: Long) {
+  private fun drawBreathFigure(canvas: Canvas, cx: Float, cy: Float, @Suppress("UNUSED_PARAMETER") rBeat: Float, now: Long) {
     val bmp = art ?: return
+    // vaste maat (zonder hartslag-zwelling): de figuur ademt, hij klopt niet
+    val r = min(width, height) / 2f / 1.10f
     // waterpeil van de service: 0,18 (uitgeademd) … 0,85 (ingeademd)
     val b = ((levelAt(now) - 0.18f) / 0.67f).coerceIn(0f, 1f)
-    val acy = cy - r * 0.10f
+    val acy = cy - r * 0.02f
 
-    // gloed — zoals SessionArt (glowBoost): 0,18 + 0,5·adem, 0,70 → 1,14×
-    val gR = r * 0.66f * (0.7f + 0.44f * b)
-    val ga = ((0.18f + 0.5f * b) * 255).toInt().coerceIn(0, 255)
-    val c = Color.argb(ga, Color.red(color), Color.green(color), Color.blue(color))
-    glowPaint.shader = RadialGradient(
-      cx, acy, gR,
-      intArrayOf(c, c, Color.argb(0, Color.red(color), Color.green(color), Color.blue(color))),
-      floatArrayOf(0f, 0.14f, 1f),
-      Shader.TileMode.CLAMP,
-    )
+    /* Vloeiend op de Watch4 (12 okt 2026, gemeten 14–16 ms GPU per beeld):
+       de gloed is één vaste verloop-shader die enkel geschaald wordt, en de
+       illustratie wordt één keer vooraf op schermmaat gezet i.p.v. elk beeld
+       een 500 px-bestand te verkleinen. */
+    if (glowColor != color || glowShader == null) {
+      glowColor = color
+      val solid = Color.rgb(Color.red(color), Color.green(color), Color.blue(color))
+      glowShader = RadialGradient(
+        0f, 0f, 1f,
+        intArrayOf(solid, solid, Color.argb(0, Color.red(color), Color.green(color), Color.blue(color))),
+        floatArrayOf(0f, 0.14f, 1f),
+        Shader.TileMode.CLAMP,
+      )
+    }
+    /* Zonder cirkel eromheen moet het licht binnen de figuur blijven: kleiner
+       en zachter dan op de telefoon, anders overstraalt het lichte teal
+       (Sleep) alles. */
+    val gR = r * 0.56f * (0.7f + 0.44f * b)
+    glowMatrix.setScale(gR, gR)
+    glowMatrix.postTranslate(cx, acy)
+    glowShader!!.setLocalMatrix(glowMatrix)
+    glowPaint.shader = glowShader
+    glowPaint.alpha = ((0.10f + 0.34f * b) * 255).toInt().coerceIn(0, 255)
     canvas.drawCircle(cx, acy, gR, glowPaint)
 
     // de figuur
-    val s = r * 0.96f * (0.7f + 0.3f * b)
+    val maxS = r * 1.55f * artScale
     val aspect = bmp.width.toFloat() / bmp.height
-    val w = if (aspect >= 1f) s else s * aspect
-    val h = if (aspect >= 1f) s / aspect else s
-    artRect.set(cx - w / 2f, acy - h / 2f, cx + w / 2f, acy + h / 2f)
+    val maxW = if (aspect >= 1f) maxS else maxS * aspect
+    val maxH = if (aspect >= 1f) maxS / aspect else maxS
+    if (scaledFor !== bmp || scaled == null || scaled!!.width != maxW.toInt().coerceAtLeast(1)) {
+      scaledFor = bmp
+      scaled = Bitmap.createScaledBitmap(bmp, maxW.toInt().coerceAtLeast(1), maxH.toInt().coerceAtLeast(1), true)
+    }
+    val k = 0.7f + 0.3f * b
+    val w = maxW * k
+    val h = maxH * k
+    val dy = (0.5f - artFocusY) * h
+    artRect.set(cx - w / 2f, acy - h / 2f + dy, cx + w / 2f, acy + h / 2f + dy)
     artPaint.alpha = ((0.74f + 0.26f * b) * (if (paused) 0.4f else 1f) * 255).toInt()
-    canvas.drawBitmap(bmp, null, artRect, artPaint)
+    canvas.drawBitmap(scaled!!, null, artRect, artPaint)
 
-    // rand
-    rimPaint.color = color
-    canvas.drawCircle(cx, cy, r, rimPaint)
+    /* Geen cirkel of rand (operator 12 okt 2026: "cirkel weg en enkel de
+       figuren laten ademen") — enkel de figuur en zijn licht op zwart. */
 
     // gepauzeerd: wit rondje met donker play-teken (CTA-stijl)
     if (paused) {

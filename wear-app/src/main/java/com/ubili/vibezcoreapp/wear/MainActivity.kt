@@ -85,6 +85,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
+    setIntent(intent)
     runDemo(intent)
   }
 
@@ -108,7 +109,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
           action = WearBreathSessionService.ACTION_START
           putExtra(
             WearBreathSessionService.EXTRA_SESSION_JSON,
-            """{"modeName":"Calm Control","colorHex":"#B478FF","rounds":12,"phases":[{"key":"inhale","secs":4,"pattern":[0,60],"via":"Nose"},{"key":"hold","secs":4,"pattern":[0,40]},{"key":"exhale","secs":4,"pattern":[0,60],"via":"Mouth"},{"key":"hold-2","secs":4,"pattern":[0,40]}]}""",
+            """{"modeName":"${intent?.getStringExtra("vz_name") ?: "Calm Control"}","colorHex":"${intent?.getStringExtra("vz_color") ?: "#B478FF"}",""" + """"rounds":12,"phases":[{"key":"inhale","secs":4,"pattern":[0,60],"via":"Nose"},{"key":"hold","secs":4,"pattern":[0,40]},{"key":"exhale","secs":4,"pattern":[0,60],"via":"Mouth"},{"key":"hold-2","secs":4,"pattern":[0,40]}]}""",
           )
         },
       )
@@ -213,6 +214,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.paused = false
     ring.isClickable = false
     pauseButton.visibility = View.VISIBLE
+    setNameTop(44)
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
@@ -224,10 +226,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun renderBreath(b: BreathSessionState.Snapshot) {
     showSession(b.modeName, b.colorHex, b.paused)
     ring.art = artFor(b.colorHex)
+    val (scale, focus) = when (b.colorHex.uppercase()) {
+      "#F5A524" -> 1f to 0.5f
+      "#3E9BFF" -> 0.72f to 0.5f
+      "#B478FF" -> 1.14f to 0.43f
+      /* de boom vult zijn beeld bijna helemaal — kleiner, anders raakt hij
+         de naam bovenaan */
+      "#00A3A3", "#4AF0D4" -> 0.56f to 0.5f
+      else -> 0.7f to 0.5f
+    }
+    ring.artScale = scale
+    ring.artFocusY = focus
     ring.paused = b.paused
     ring.isClickable = true
     ring.contentDescription = if (b.paused) "Resume" else "Pause"
     pauseButton.visibility = View.GONE
+    setNameTop(30)
     ring.centerText = b.phaseLabel
     ring.subText = if (b.paused) "" else b.via
     val from = b.levelFrom
@@ -281,6 +295,18 @@ class MainActivity : androidx.activity.ComponentActivity() {
       else -> R.drawable.vz_art_lotus
     }
     return artCache.getOrPut(res) { android.graphics.BitmapFactory.decodeResource(resources, res) }
+  }
+
+  /* Breathwork heeft geen cirkel: de naam hoger, zodat hij vrij boven de
+     figuur staat (operator 12 okt 2026: "die sleep staat zeer laag"). */
+  private fun setNameTop(dp: Int) {
+    val row = nameLabel.parent as View
+    val lp = row.layoutParams as android.widget.FrameLayout.LayoutParams
+    val px = (dp * resources.displayMetrics.density).toInt()
+    if (lp.topMargin != px) {
+      lp.topMargin = px
+      row.layoutParams = lp
+    }
   }
 
   private fun parse(hex: String): Int = try {
