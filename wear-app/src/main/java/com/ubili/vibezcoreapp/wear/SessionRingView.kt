@@ -107,8 +107,9 @@ class SessionRingView @JvmOverloads constructor(
     val now = SystemClock.uptimeMillis()
     val cx = width / 2f
     val cy = height / 2f
-    // ruimte rondom voor de uitdijende ringen (tot 1,32×)
-    val r = min(width, height) / 2f / 1.36f
+    // 12 okt 2026: de ring vult het scherm; de tik-ringen dijen nog net tot
+    // aan de rand uit (tot 1,08×) i.p.v. ver erbuiten.
+    val r = min(width, height) / 2f / 1.10f
     val size = 2f * r
 
     // 1 · schijf
@@ -144,20 +145,25 @@ class SessionRingView @JvmOverloads constructor(
         continue
       }
       val ease = 1f - (1f - k) * (1f - k)
-      val grow = if (p.strong) 0.32f else 0.14f
-      val alpha = (if (p.strong) 0.7f else 0.32f) * (1f - k)
+      /* 12 okt 2026 (operator: "buitenringen niet duidelijk"): dikker en
+         helderder, tot net aan de rand van het scherm. */
+      val grow = if (p.strong) 0.09f else 0.05f
+      val alpha = (if (p.strong) 0.95f else 0.55f) * (1f - k)
       pulsePaint.color = color
       pulsePaint.alpha = (alpha * 255).toInt()
-      pulsePaint.strokeWidth = 2.2f * density
+      pulsePaint.strokeWidth = (if (p.strong) 4.5f else 3f) * density
       canvas.drawCircle(cx, cy, r * (1f + grow * ease), pulsePaint)
     }
 
     // 5 · tekst
-    bigPaint.textSize = r * (if (centerText.length > 6) 0.34f else 0.46f)
-    val bigY = if (subText.isEmpty()) cy + bigPaint.textSize * 0.35f else cy + bigPaint.textSize * 0.15f
+    bigPaint.textSize = r * (if (centerText.length > 6) 0.26f else 0.36f)
+    // 12 okt 2026: tijd iets boven het midden — pauze + END staan eronder,
+    // binnen de cirkel.
+    val lift = r * 0.10f
+    val bigY = (if (subText.isEmpty()) cy + bigPaint.textSize * 0.35f else cy + bigPaint.textSize * 0.15f) - lift
     canvas.drawText(centerText, cx, bigY, bigPaint)
     if (subText.isNotEmpty()) {
-      smallPaint.textSize = r * 0.15f
+      smallPaint.textSize = r * 0.12f
       canvas.drawText(subText, cx, bigY + smallPaint.textSize * 1.6f, smallPaint)
     }
 

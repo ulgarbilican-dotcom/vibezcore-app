@@ -46,20 +46,25 @@
             android:textSize="17sp" />
     </LinearLayout>
 
-    <!-- Lopende of gepauzeerde sessie -->
-    <LinearLayout
+    <!-- Lopende of gepauzeerde sessie. 12 okt 2026 (operator: "cirkel groot,
+         bediening aan de binnenkant"): de ring vult het scherm (zoals Apple's
+         Workout), naam bovenaan en pauze + END onderaan BINNEN de cirkel. -->
+    <FrameLayout
         android:id="@+id/sessionContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:paddingTop="14dp"
-        android:paddingBottom="10dp"
         android:visibility="gone">
+
+        <com.ubili.vibezcoreapp.wear.SessionRingView
+            android:id="@+id/ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="44dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -74,40 +79,45 @@
                 android:id="@+id/nameLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:maxWidth="120dp"
                 android:maxLines="1"
+                android:ellipsize="end"
                 android:text=""
                 android:textColor="#F4F4F4"
                 android:textSize="15sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <com.ubili.vibezcoreapp.wear.SessionRingView
-            android:id="@+id/ring"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <ImageButton
-            android:id="@+id/pauseButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:contentDescription="Pause"
-            android:scaleType="center"
-            android:src="@drawable/ic_vz_pause" />
-
-        <TextView
-            android:id="@+id/endButton"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minHeight="28dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:gravity="center"
-            android:text="END"
-            android:textColor="#B8FFFFFF"
-            android:textSize="12sp"
-            android:letterSpacing="0.16"
-            android:textStyle="bold" />
-    </LinearLayout>
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/pauseButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="Pause"
+                android:scaleType="center"
+                android:src="@drawable/ic_vz_pause" />
+
+            <TextView
+                android:id="@+id/endButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="30dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:gravity="center"
+                android:text="END"
+                android:textColor="#B8FFFFFF"
+                android:textSize="12sp"
+                android:letterSpacing="0.16"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </FrameLayout>
 
 </FrameLayout>

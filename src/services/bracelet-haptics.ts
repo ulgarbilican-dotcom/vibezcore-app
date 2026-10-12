@@ -538,6 +538,33 @@ export function isWatchPlayingRhythm(): boolean {
 }
 let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; at: number } | null = null;
 
+/* Operator, 12 okt 2026 ("haptic niveau verandert niet op het horloge;
+   strong mag echt heel voelbaar"): de trilsterkte (Soft/Medium/Strong) gaat
+   nu mee naar het horloge. Een horlogemotor tegen de pols voelt zwakker dan
+   de telefoon in de hand, dus de basis ligt ×1,4 hoger; Strong ×2,6 (Boost
+   bijna vol vermogen, Sleep blijft zacht) en langere tikken. Verhouding
+   tussen de toestanden blijft. Ritme en timing veranderen niet. */
+const WATCH_BASE = 1.4;
+const WATCH_AMP: Record<'soft' | 'medium' | 'strong', number> = { soft: 0.6, medium: 1, strong: 2.6 };
+const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 0.8, medium: 1, strong: 1.5 };
+function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: number; dubMsNoAmp: number }) {
+  const st = getHapticStrength();
+  const amp = (a: number) => Math.max(1, Math.min(255, Math.round(a * WATCH_BASE * WATCH_AMP[st])));
+  const ms = (m: number) => Math.round(m * WATCH_MS[st]);
+  return {
+    lubAmp: amp(spec.lubAmp),
+    dubAmp: amp(spec.dubAmp),
+    lubMs: ms(45),
+    dubMs: ms(35),
+    lubMsNoAmp: ms(spec.lubMsNoAmp),
+    dubMsNoAmp: ms(spec.dubMsNoAmp),
+    /* "Haptic + Audio": het horloge speelt de hartslag zelf, exact op de
+       tik (12 okt 2026) — de telefoon blijft stil zodra het horloge
+       overneemt, zoals de trilling. */
+    sound: getStateHear(),
+  };
+}
+
 function relayToWatch(
   mode: BraceletMode,
   curveOffsetSec: number,
@@ -557,10 +584,7 @@ function relayToWatch(
     rampSec: spec.rampSec,
     curveOffsetSec,
     remainingSec: Math.round(remainingSec),
-    lubAmp: spec.lubAmp,
-    dubAmp: spec.dubAmp,
-    lubMsNoAmp: spec.lubMsNoAmp,
-    dubMsNoAmp: spec.dubMsNoAmp,
+    ...watchStrength(spec),
   };
   sendWearState(start);
   sendAppleState(start);
@@ -653,10 +677,7 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     rampSec: previewTiming(mode).rampSec,
     curveOffsetSec: 0,
     remainingSec: PREVIEW_MAX_SECONDS,
-    lubAmp: spec.lubAmp,
-    dubAmp: spec.dubAmp,
-    lubMsNoAmp: spec.lubMsNoAmp,
-    dubMsNoAmp: spec.dubMsNoAmp,
+    ...watchStrength(spec),
   };
   sendWearState(start);
   sendAppleState(start);

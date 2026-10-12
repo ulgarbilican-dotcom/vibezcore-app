@@ -27,6 +27,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.os.Build
+import android.media.SoundPool
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
@@ -70,6 +71,12 @@ private data class StateStart(
   val dubAmp: Int,
   val lubMsNoAmp: Long,
   val dubMsNoAmp: Long,
+  /** Tikduur met amplitude-regeling — de telefoon stuurt hem mee volgens de
+   *  gekozen sterkte (12 okt 2026); oudere telefoon-apps: 45/35 ms. */
+  val lubMs: Long = LUB_MS,
+  val dubMs: Long = DUB_MS,
+  /** "Haptic + Audio" op de telefoon → hartslaggeluid op elke slag. */
+  val sound: Boolean = false,
 )
 
 private fun bpmAt(s: StateStart, t: Double): Double {
@@ -97,8 +104,8 @@ private fun buildWaveform(s: StateStart, amplitudeControl: Boolean): Waveform {
   val total = s.remainingSec
   var t = offset
 
-  val lubMs = if (amplitudeControl) LUB_MS else s.lubMsNoAmp
-  val dubMs = if (amplitudeControl) DUB_MS else s.dubMsNoAmp
+  val lubMs = if (amplitudeControl) s.lubMs else s.lubMsNoAmp
+  val dubMs = if (amplitudeControl) s.dubMs else s.dubMsNoAmp
   val lubAmp = if (amplitudeControl) s.lubAmp else 255
   val dubAmp = if (amplitudeControl) s.dubAmp else 255
   fun pushBeat(cycleMs: Long, dubAt: Long) {
@@ -192,6 +199,7 @@ class WearStateSessionService : Service() {
     beatThread = HandlerThread("vibezcore-state-beats", Process.THREAD_PRIORITY_URGENT_AUDIO).also { it.start() }
     beatHandler = Handler(beatThread.looper)
     ensureChannel()
+    ensureSound()
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -229,6 +237,9 @@ class WearStateSessionService : Service() {
       dubAmp = j.optInt("dubAmp", 32).coerceIn(1, 255),
       lubMsNoAmp = j.optLong("lubMsNoAmp", 50L).coerceAtLeast(1L),
       dubMsNoAmp = j.optLong("dubMsNoAmp", 40L).coerceAtLeast(1L),
+      lubMs = j.optLong("lubMs", LUB_MS).coerceIn(20L, 120L),
+      dubMs = j.optLong("dubMs", DUB_MS).coerceIn(15L, 100L),
+      sound = j.optBoolean("sound", false),
     ).takeIf { it.targetBpm > 0 }
   } catch (_: Exception) {
     null
@@ -309,6 +320,9 @@ class WearStateSessionService : Service() {
     if (SystemClock.uptimeMillis() - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
       vibrate(u.t, u.a)
       if (nextUnit < units.size - 1) {
+        /* 12 okt 2026: hartslaggeluid op de luidspreker van het horloge,
+           op exact dezelfde slag als de trilling. */
+        if (session?.sound == true) playHeart()
         BeatBus.beat(true)
         val dubDelay = u.t[0] + u.t[1]
         beatHandler.postDelayed({ if (!paused) BeatBus.beat(false) }, dubDelay)
@@ -316,6 +330,36 @@ class WearStateSessionService : Service() {
     }
     nextUnit++
     scheduleNextUnit()
+  }
+
+  /* ── Hartslaggeluid (Feel & Hear op het horloge) ── SoundPool: lage
+     vertraging; zelfde opname als de telefoon (speaker-versie). */
+  private var soundPool: SoundPool? = null
+  private var heartId = 0
+  private fun ensureSound() {
+    if (soundPool != null) return
+    try {
+      val pool = SoundPool.Builder()
+        .setMaxStreams(2)
+        .setAudioAttributes(
+          AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build(),
+        )
+        .build()
+      heartId = pool.load(this, R.raw.heartbeat_speaker, 1)
+      soundPool = pool
+    } catch (_: Exception) {
+      soundPool = null
+    }
+  }
+  private fun playHeart() {
+    try {
+      val pool = soundPool ?: return
+      if (heartId != 0) pool.play(heartId, 1f, 1f, 1, 0, 1f)
+    } catch (_: Exception) {
+    }
   }
 
   private fun scheduleNextUnit() {
@@ -469,6 +513,11 @@ class WearStateSessionService : Service() {
     if (instance === this) instance = null
     beatHandler.removeCallbacksAndMessages(null)
     cancelVibration()
+    try {
+      soundPool?.release()
+    } catch (_: Exception) {
+    }
+    soundPool = null
     releaseWakeLock()
     if (StateSessionState.current.active) StateSessionState.update(StateSessionState.IDLE)
     beatThread.quitSafely()
