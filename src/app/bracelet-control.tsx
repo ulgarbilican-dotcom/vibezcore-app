@@ -3378,7 +3378,7 @@ function ActiveSessionScreen({
           {/* In de kleur van de toestand (operator, 6 okt 2026), zelfde tint
              als de rand — Sleep dus licht teal. */}
           <HapticPulseRings size={240} color={breathWaveLook(activeMeta.color).color} />
-          <HeartbeatScale>
+          <HeartbeatScale size={240}>
             <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
           </HeartbeatScale>
           {/* Operator, 27 september 2026 ("doe die draaiende buitenlijn

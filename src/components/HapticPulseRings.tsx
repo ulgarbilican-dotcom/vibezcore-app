@@ -137,7 +137,7 @@ const s = StyleSheet.create({
    zacht terug. Zelfde bron als de ringen (subscribeHapticPulse), dus exact
    op de trilling; zelfde gedrag als de ring op het horloge. Uit bij
    "Beweging beperken". */
-export function HeartbeatScale({ children }: { children: React.ReactNode }) {
+export function HeartbeatScale({ size, children }: { size: number; children: React.ReactNode }) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   useEffect(() => {
@@ -153,5 +153,15 @@ export function HeartbeatScale({ children }: { children: React.ReactNode }) {
     });
   }, [reduced, scale]);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return <Animated.View style={style}>{children}</Animated.View>;
+  /* Eigen vlak van exact de cirkelgrootte, absoluut en gecentreerd zoals
+     de cirkel zelf (die is position:absolute) — anders schaalde een vlak
+     van 0×0 en bewoog er niets (test 12 okt 2026). */
+  return (
+    <Animated.View
+      pointerEvents="box-none"
+      style={[{ position: 'absolute', width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+    >
+      {children}
+    </Animated.View>
+  );
 }
