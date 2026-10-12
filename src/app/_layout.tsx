@@ -32,6 +32,10 @@ import { goToTab } from '@/utils/state-control-ui';
 import { BreathSessionHost } from '@/components/BreathSessionHost';
 import { getBreathHost, openBreathSession, restoreBreathSession } from '@/services/breath-session-host';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { initCrashReporting } from '@/services/crash-reporting';
+
+/* Audit 12 okt 2026: zo vroeg mogelijk, vóór de eerste render. */
+initCrashReporting();
 import { VibezAlertHost } from '@/components/VibezAlert';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';

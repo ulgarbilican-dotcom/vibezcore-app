@@ -512,6 +512,7 @@ export const PRIVACY: LegalDoc = {
         { title: 'Bunny CDN (EU)',   text: 'Audio content delivery — based in the European Union' },
         { title: 'RevenueCat',       text: 'Verifies App Store and Google Play receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details' },
         { title: 'Google / Apple sign-in', text: 'Optional — only if you choose to sign in with Google or Apple. We receive your email address and a sign-in token' },
+        { title: 'Sentry (EU)',      text: 'Crash reports — when the app crashes or hits an error, we receive a technical report (error, app version, device model and operating system) so we can fix it. No name, email address, IP address, heart rate or session content — hosted in the European Union' },
       ],
     },
     {

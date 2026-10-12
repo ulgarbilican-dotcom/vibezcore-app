@@ -15,6 +15,7 @@
    Catch) om het te initiëren.
    ─────────────────────────────────────────────────────────────────── */
 
+import { reportError } from '@/services/crash-reporting';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -95,6 +96,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (__DEV__) {
       console.error('[ErrorBoundary]', error, info.componentStack);
     }
+    /* Audit 12 okt 2026: echte builds melden de fout aan Sentry. */
+    reportError(error, { componentStack: info.componentStack });
   }
 
   reset = (): void => {

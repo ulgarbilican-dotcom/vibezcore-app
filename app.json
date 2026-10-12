@@ -152,7 +152,11 @@
         }
       ],
       "expo-localization",
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "@sentry/react-native",
+        { "organization": "ulgar-bilican", "project": "react-native", "url": "https://sentry.io/" }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
