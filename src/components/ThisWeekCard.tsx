@@ -117,7 +117,7 @@ export default function ThisWeekCard() {
         <View style={s.col}>
           <View style={s.colHead}>
             <Radio size={14} color={ink(0.55)} strokeWidth={2.2} />
-            <Text style={s.colLbl}>State Control</Text>
+            <Text style={s.colLbl} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>State Control</Text>
           </View>
           <Text style={s.num}>
             {data.scMin}
@@ -128,7 +128,7 @@ export default function ThisWeekCard() {
         <View style={s.col}>
           <View style={s.colHead}>
             <Wind size={14} color={ink(0.55)} strokeWidth={2.2} />
-            <Text style={s.colLbl}>Breathwork</Text>
+            <Text style={s.colLbl} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Breathwork</Text>
           </View>
           <Text style={s.num}>
             {data.breathMin}
@@ -139,7 +139,7 @@ export default function ThisWeekCard() {
         <View style={s.col}>
           <View style={s.colHead}>
             <Flame size={14} color={data.streak > 0 ? AudioAccentLight : ink(0.55)} strokeWidth={2.2} />
-            <Text style={s.colLbl}>Streak</Text>
+            <Text style={s.colLbl} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Streak</Text>
           </View>
           <Text style={s.num}>
             {data.streak}
@@ -181,7 +181,9 @@ const s = StyleSheet.create({
   cols: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: 12, paddingBottom: 14 },
   col: { flex: 1, minWidth: 0 },
   divider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: ink(0.12), marginHorizontal: 12 },
-  colHead: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  /* Operator, 12 okt 2026 ("cijfers mooi uitlijnen"): icoon boven het
+     label, label op één regel — zo staan de drie cijfers op één lijn. */
+  colHead: { gap: 6 },
   colLbl: { fontFamily: BrandFonts.semibold, fontSize: 12, color: ink(0.55), flexShrink: 1 },
   num: { fontFamily: BrandFonts.extrabold, fontSize: 28, letterSpacing: -0.5, color: BrandDark.text, marginTop: 4, fontVariant: ['tabular-nums'] },
   unit: { fontFamily: BrandFonts.semibold, fontSize: 13, letterSpacing: 0, color: ink(0.55) },
