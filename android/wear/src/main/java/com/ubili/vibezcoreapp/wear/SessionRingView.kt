@@ -14,6 +14,10 @@ package com.ubili.vibezcoreapp.wear
    Tekent enkel zolang het zichtbaar is. */
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.RadialGradient
+import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -69,6 +73,35 @@ class SessionRingView @JvmOverloads constructor(
       field = value
       invalidate()
     }
+
+  /* 12 okt 2026 (operator: "breathwork ook animatie zoals besproken"):
+     Breathwork toont de ademfiguur van de app (SessionArt.tsx — zon, bloem,
+     lotus, kristal, boom) in plaats van de golf. Zelfde beweging als op de
+     telefoon: schaal 0,70 → 1,00 en helderheid 0,74 → 1,00 met de adem,
+     een gloed in de kleur van de toestand erachter die harder meezwelt.
+     null = State Control (golf). */
+  var art: Bitmap? = null
+    set(value) {
+      if (field !== value) {
+        field = value
+        invalidate()
+      }
+    }
+
+  /** Breathwork gepauzeerd: play-teken over de figuur (tik = hervatten). */
+  var paused = false
+    set(value) {
+      if (field != value) {
+        field = value
+        invalidate()
+      }
+    }
+
+  private val artPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+  private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val playPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val artRect = RectF()
+  private val playPath = Path()
 
   private data class Pulse(val startMs: Long, val strong: Boolean)
 
@@ -133,6 +166,12 @@ class SessionRingView @JvmOverloads constructor(
     // 1 · schijf
     canvas.drawCircle(cx, cy, r, discPaint)
 
+    if (art != null) {
+      drawBreathFigure(canvas, cx, cy, r, now)
+      if (flowing || pulses.isNotEmpty()) postInvalidateOnAnimation()
+      return
+    }
+
     // 2 · golf in twee lagen, binnen de cirkel
     canvas.save()
     clip.reset()
@@ -186,6 +225,66 @@ class SessionRingView @JvmOverloads constructor(
     }
 
     if (flowing || pulses.isNotEmpty()) postInvalidateOnAnimation()
+  }
+
+  /** Breathwork: rand, gloed, figuur en "Inhale · Nose" eronder. */
+  private fun drawBreathFigure(canvas: Canvas, cx: Float, cy: Float, r: Float, now: Long) {
+    val bmp = art ?: return
+    // waterpeil van de service: 0,18 (uitgeademd) … 0,85 (ingeademd)
+    val b = ((levelAt(now) - 0.18f) / 0.67f).coerceIn(0f, 1f)
+    val acy = cy - r * 0.10f
+
+    // gloed — zoals SessionArt (glowBoost): 0,18 + 0,5·adem, 0,70 → 1,14×
+    val gR = r * 0.66f * (0.7f + 0.44f * b)
+    val ga = ((0.18f + 0.5f * b) * 255).toInt().coerceIn(0, 255)
+    val c = Color.argb(ga, Color.red(color), Color.green(color), Color.blue(color))
+    glowPaint.shader = RadialGradient(
+      cx, acy, gR,
+      intArrayOf(c, c, Color.argb(0, Color.red(color), Color.green(color), Color.blue(color))),
+      floatArrayOf(0f, 0.14f, 1f),
+      Shader.TileMode.CLAMP,
+    )
+    canvas.drawCircle(cx, acy, gR, glowPaint)
+
+    // de figuur
+    val s = r * 0.96f * (0.7f + 0.3f * b)
+    val aspect = bmp.width.toFloat() / bmp.height
+    val w = if (aspect >= 1f) s else s * aspect
+    val h = if (aspect >= 1f) s / aspect else s
+    artRect.set(cx - w / 2f, acy - h / 2f, cx + w / 2f, acy + h / 2f)
+    artPaint.alpha = ((0.74f + 0.26f * b) * (if (paused) 0.4f else 1f) * 255).toInt()
+    canvas.drawBitmap(bmp, null, artRect, artPaint)
+
+    // rand
+    rimPaint.color = color
+    canvas.drawCircle(cx, cy, r, rimPaint)
+
+    // gepauzeerd: wit rondje met donker play-teken (CTA-stijl)
+    if (paused) {
+      val pr = r * 0.17f
+      playPaint.color = Color.WHITE
+      canvas.drawCircle(cx, acy, pr, playPaint)
+      playPath.reset()
+      val t = pr * 0.42f
+      playPath.moveTo(cx - t * 0.7f, acy - t)
+      playPath.lineTo(cx + t, acy)
+      playPath.lineTo(cx - t * 0.7f, acy + t)
+      playPath.close()
+      playPaint.color = Color.parseColor("#0A0A0A")
+      canvas.drawPath(playPath, playPaint)
+    }
+
+    // "Inhale · Nose" onder de figuur, de neus/mond-regel gedimd
+    bigPaint.textSize = r * 0.19f
+    smallPaint.textSize = r * 0.19f
+    val y = cy + r * 0.60f
+    val head = centerText
+    val tail = if (subText.isNotEmpty()) "  ·  $subText" else ""
+    val wHead = bigPaint.measureText(head)
+    val wTail = smallPaint.measureText(tail)
+    val x0 = cx - (wHead + wTail) / 2f
+    canvas.drawText(head, x0 + wHead / 2f, y, bigPaint)
+    if (tail.isNotEmpty()) canvas.drawText(tail, x0 + wHead + wTail / 2f, y, smallPaint)
   }
 
   /** Zelfde vorm als de app: periode = halve breedte, schuift één breedte per `durMs`. */

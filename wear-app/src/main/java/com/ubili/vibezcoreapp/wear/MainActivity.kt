@@ -65,6 +65,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
     endButton = findViewById(R.id.endButton)
 
     pauseButton.setOnClickListener { onPauseTap() }
+    /* Breathwork: tik op de figuur = pauze / hervatten (geen aparte knop —
+       op een horlogescherm is de figuur zelf het grootste doel). */
+    ring.setOnClickListener {
+      if (!StateSessionState.current.active && BreathSessionState.current.let { it.running || it.paused }) onPauseTap()
+    }
     endButton.setOnClickListener { onEndTap() }
     /* 12 okt 2026: vanaf Wear OS 4 (Android 13) moet een app zelf om
        meldingen vragen — zonder die toestemming loopt de sessie wel, maar
@@ -103,7 +108,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
           action = WearBreathSessionService.ACTION_START
           putExtra(
             WearBreathSessionService.EXTRA_SESSION_JSON,
-            """{"modeName":"Calm Control","colorHex":"#B478FF","rounds":12,"phases":[{"key":"inhale","secs":4,"pattern":[0,60]},{"key":"hold","secs":4,"pattern":[0,40]},{"key":"exhale","secs":4,"pattern":[0,60]},{"key":"hold-2","secs":4,"pattern":[0,40]}]}""",
+            """{"modeName":"Calm Control","colorHex":"#B478FF","rounds":12,"phases":[{"key":"inhale","secs":4,"pattern":[0,60],"via":"Nose"},{"key":"hold","secs":4,"pattern":[0,40]},{"key":"exhale","secs":4,"pattern":[0,60],"via":"Mouth"},{"key":"hold-2","secs":4,"pattern":[0,40]}]}""",
           )
         },
       )
@@ -204,6 +209,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun renderState(s: StateSessionState.Snapshot) {
     showSession(s.title, s.colorHex, s.paused)
+    ring.art = null
+    ring.paused = false
+    ring.isClickable = false
+    pauseButton.visibility = View.VISIBLE
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
@@ -214,9 +223,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun renderBreath(b: BreathSessionState.Snapshot) {
     showSession(b.modeName, b.colorHex, b.paused)
+    ring.art = artFor(b.colorHex)
+    ring.paused = b.paused
+    ring.isClickable = true
+    ring.contentDescription = if (b.paused) "Resume" else "Pause"
+    pauseButton.visibility = View.GONE
     ring.centerText = b.phaseLabel
-    val rounds = if (b.totalRounds > 0) "${b.round} / ${b.totalRounds}" else ""
-    ring.subText = if (b.paused) rounds else listOf(b.via, rounds).filter { it.isNotBlank() }.joinToString(" · ")
+    ring.subText = if (b.paused) "" else b.via
     val from = b.levelFrom
     val to = b.levelTo
     val start = b.phaseStartUptime
@@ -252,6 +265,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
     pauseButton.setImageResource(if (paused) R.drawable.ic_vz_play else R.drawable.ic_vz_pause)
     pauseButton.contentDescription = if (paused) "Resume" else "Pause"
+  }
+
+  /* Dezelfde figuur als in de app, per toestand (breath-states.ts `art`).
+     De telefoon stuurt de kleur van de toestand mee; Sleep komt als het
+     lichte teal. */
+  private val artCache = HashMap<Int, android.graphics.Bitmap>()
+  private fun artFor(colorHex: String): android.graphics.Bitmap? {
+    val res = when (colorHex.uppercase()) {
+      "#F5A524" -> R.drawable.vz_art_sun
+      "#3E9BFF" -> R.drawable.vz_art_flower
+      "#B478FF" -> R.drawable.vz_art_lotus
+      "#FFFFFF" -> R.drawable.vz_art_clarity
+      "#00A3A3", "#4AF0D4" -> R.drawable.vz_art_tree
+      else -> R.drawable.vz_art_lotus
+    }
+    return artCache.getOrPut(res) { android.graphics.BitmapFactory.decodeResource(resources, res) }
   }
 
   private fun parse(hex: String): Int = try {
