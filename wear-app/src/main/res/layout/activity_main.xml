@@ -41,7 +41,7 @@
             android:paddingStart="24dp"
             android:paddingEnd="24dp"
             android:gravity="center"
-            android:text="Start a session in the VIBEZCORE App"
+            android:text="Start a session on your phone"
             android:textColor="#F4F4F4"
             android:textSize="17sp" />
     </LinearLayout>
