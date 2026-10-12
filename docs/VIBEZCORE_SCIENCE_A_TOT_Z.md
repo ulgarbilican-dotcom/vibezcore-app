@@ -312,6 +312,10 @@ pace": meten / zelf invullen / gemiddelde).
 
 **Sterkte van de trilling** (11 okt 2026): Soft / Medium (standaard) / Strong in "Audio & Haptics". Met amplitude-regeling ×0,55 / ×1 / ×1,7 op de kracht (max 255); zonder amplitude-regeling ×0,75 / ×1 / ×1,35 op de tikduur; iOS een trede lichter/zwaarder (expo-haptics). Ritme en timing veranderen niet.
 
+**Sterkte op het horloge** (12 okt 2026, operator: "soft bijna onvoelbaar"): de pols voelt minder dan de hand, dus vaste niveaus — Strong = vol vermogen (elke toestand), Medium ≈ 70 %, Soft ≈ 40 %; rustige toestanden bij Soft/Medium ×0,75 (Sleep) … ×1 (Boost); tweede tik ≈ 70 % van de eerste; tikduur ×1 / ×1,3 / ×1,8.
+- 🟡 **Wat sterkte doet:** het RITME draagt het effect; de sterkte moet het ritme duidelijk voelbaar maken. Studies gebruikten "duidelijk voelbaar, niet storend" (Azevedo 2017; Valente 2024; Wang 2023). Te zwak = niet waargenomen = geen effect; te sterk kan zelf de alertheid verhogen (Wang 2023) — ongunstig voor Sleep/Clarity, passend voor Boost.
+- ⚪ **Advies aan de gebruiker:** kies de zachtste stand die je nog duidelijk voelt; Strong voor wie het anders te weinig voelt (losse band, drukke omgeving). Geen "hoe harder hoe beter".
+
 ### 3.8 Quick Chill en Quick Boost
 
 - Eén tik op het keuzescherm, **5 minuten**, meteen bezig.
