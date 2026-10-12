@@ -550,12 +550,14 @@ let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; a
    toestand, Medium ≈ 70 %, Soft ≈ 40 % — de rustige toestanden blijven
    bij Soft/Medium iets zachter dan Boost (×0,75 … ×1), nooit onvoelbaar.
    Tweede tik (dub) ≈ 70 % van de eerste, zoals een echte hartslag. */
-const WATCH_LEVEL: Record<'soft' | 'medium' | 'strong', number> = { soft: 105, medium: 180, strong: 255 };
-const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 1, medium: 1.3, strong: 1.8 };
+/* Vervolg 3 (operator: "soft is nog echt te soft"): onder ~50 % voelt een
+   horlogemotor bijna niets — Soft ≈ 60 %, Medium ≈ 80 %, Strong 100 %. */
+const WATCH_LEVEL: Record<'soft' | 'medium' | 'strong', number> = { soft: 155, medium: 205, strong: 255 };
+const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 1.15, medium: 1.4, strong: 1.8 };
 function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: number; dubMsNoAmp: number }) {
   const st = getHapticStrength();
   /* Sleep (18) → 0,75 · Boost (65) → 1 */
-  const modeScale = st === 'strong' ? 1 : 0.75 + 0.25 * Math.min(1, Math.max(0, (spec.lubAmp - 18) / (65 - 18)));
+  const modeScale = st === 'strong' ? 1 : 0.85 + 0.15 * Math.min(1, Math.max(0, (spec.lubAmp - 18) / (65 - 18)));
   const lub = Math.max(1, Math.min(255, Math.round(WATCH_LEVEL[st] * modeScale)));
   const dub = Math.max(1, Math.min(255, Math.round(lub * 0.7)));
   const ms = (m: number) => Math.round(m * WATCH_MS[st]);
