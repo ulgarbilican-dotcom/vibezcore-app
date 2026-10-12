@@ -199,19 +199,22 @@ class SessionRingView @JvmOverloads constructor(
     durMs: Long,
     alpha: Float,
   ) {
+    /* 12 okt 2026 (operator: "het water lijkt harder te golven"): exact
+       hetzelfde pad als de telefoon (components/LiquidWave.tsx wavePath) —
+       vier S-bochten (kubisch) over twee breedtes. De vroegere sinus op
+       volle amplitude golfde ~3,5× hoger dan de app. */
     val shift = (now % durMs) / durMs.toFloat() * size
-    val period = size / 2f
+    val p = size
+    val bottom = maxOf(size, baseY + amp) + 2f
+    val x0 = left - shift
     wave.reset()
-    val bottom = baseY + size
-    wave.moveTo(left, bottom)
-    var x = 0f
-    val step = maxOf(2f, size / 60f)
-    while (x <= size + step) {
-      val y = baseY + amp * sin(2.0 * PI * ((x + shift) / period)).toFloat()
-      wave.lineTo(left + x, y)
-      x += step
+    wave.moveTo(x0, baseY)
+    for (i in 0 until 4) {
+      val sx = x0 + p * 0.5f * i
+      wave.cubicTo(sx + p * 0.25f, baseY - amp, sx + p * 0.25f, baseY + amp, sx + p * 0.5f, baseY)
     }
-    wave.lineTo(left + size + step, bottom)
+    wave.lineTo(x0 + p * 2f, baseY + bottom)
+    wave.lineTo(x0, baseY + bottom)
     wave.close()
     wavePaint.color = color
     wavePaint.alpha = (alpha * 255).toInt()

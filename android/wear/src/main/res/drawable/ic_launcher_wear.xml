@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Horloge-app-icoon (12 okt 2026, operator: "ik weet niet waar het staat"):
+     het V-merkteken (project-brand-v-mark) wit op #0A0A0A — zelfde merk als
+     de telefoon-app, was een losse groene ring. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 12 okt 2026 (operator: "de V staat heel los — cirkel in onze
+         Bio-Teal"): gevuld vlak in de accentkleur, V wit erin; Wear OS
+         snijdt het pictogram zelf rond. -->
+    <path
+        android:fillColor="#00A3A3"
+        android:pathData="M0,0h108v108h-108z" />
+    <group
+        android:translateX="31.86"
+        android:translateY="32.66"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M0,0 L16.8,0 L42.8,68.85 L26,68.85 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54.6,0 L71.4,0 L49.89,56.95 L41.49,34.71 Z" />
+    </group>
+</vector>

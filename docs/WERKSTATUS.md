@@ -87,6 +87,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 12 okt 2026: Apple Health / Health Connect (services/health-sync.ts, components/HealthSyncSetting.tsx): sessies ≥ 1 min als mindful minutes, rusthartslag van het horloge lezen (resting-pulse bron 'health'), privacyverklaring + Limited Use-zin, rationale-scherm via state-haptics (launchAction/OnNewIntent). Pakketten react-native-health-connect 4.1.3, @kingstinct/react-native-healthkit 16.1, react-native-nitro-modules. minSdk 26 (Android 8+). **Nieuwe build nodig.** Operator: Google Play-formulier gezondheidsgegevens + Data safety, App Store-privacylabel "Health & Fitness". Tests 147–151.
 
+- 12 okt 2026 (avond): horloge — de golf is nu exact het pad van de telefoon (LiquidWave: vier kubische S-bochten; de oude sinus golfde ~3,5× hoger), en tijdens een sessie staat het sessiescherm boven het vergrendelscherm (setShowWhenLocked/setTurnScreenOn). Wear-APK gebouwd, nog te installeren zodra het horloge bereikbaar is. Volgende: breathwork-figuren op het horloge.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

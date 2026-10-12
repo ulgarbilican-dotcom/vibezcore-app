@@ -178,6 +178,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun render() {
     val st = StateSessionState.current
     val b = BreathSessionState.current
+    overLockScreen(st.active || b.running || b.paused)
     when {
       st.active -> renderState(st)
       b.running || b.paused -> renderBreath(b)
@@ -186,6 +187,19 @@ class MainActivity : androidx.activity.ComponentActivity() {
         idleContainer.visibility = View.VISIBLE
       }
     }
+  }
+
+  /* 12 okt 2026 (operator: "de lockscreen komt onmiddellijk en het is
+     moeilijk onze app terug te openen"): tijdens een sessie staat ons scherm
+     BOVEN het vergrendelscherm van het horloge — pols omhoog = de sessie,
+     geen pincode, geen app zoeken (zoals Apple's Workout). Zonder sessie
+     gewoon weer achter het slot. */
+  private var shownOverLock: Boolean? = null
+  private fun overLockScreen(on: Boolean) {
+    if (shownOverLock == on) return
+    shownOverLock = on
+    setShowWhenLocked(on)
+    setTurnScreenOn(on)
   }
 
   private fun renderState(s: StateSessionState.Snapshot) {

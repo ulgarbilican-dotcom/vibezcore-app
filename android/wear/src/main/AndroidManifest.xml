@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <!-- Android 14+: een foreground service van het type "health" vereist
+         naast FOREGROUND_SERVICE_HEALTH ook één van ACTIVITY_RECOGNITION /
+         BODY_SENSORS / HIGH_SAMPLING_RATE_SENSORS. Deze laatste is een
+         gewone (install-time) toestemming — geen dialoog, geen sensorgebruik. -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:label="VIBEZCORE"
+        android:icon="@drawable/ic_launcher_vz"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+
+        <!-- Embedded, geen eigen leven op het horloge zonder de telefoon-app
+             — moet áltijd via de telefoon een sessie krijgen om iets te
+             tonen, nooit los gestart worden als zelfstandige app. -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="false" />
+
+        <uses-library
+            android:name="com.google.android.wearable"
+            android:required="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".BreathListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/vibezcore/breath" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/vibezcore/state" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".WearBreathSessionService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
+        <service
+            android:name=".WearStateSessionService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
+    </application>
+</manifest>
