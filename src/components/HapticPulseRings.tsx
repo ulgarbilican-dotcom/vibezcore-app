@@ -131,3 +131,26 @@ const s = StyleSheet.create({
     borderWidth: 1.75,
   },
 });
+
+/* 12 okt 2026 (operator: "meekloppen ook op de telefoon"): de cirkel zelf
+   zwelt bij elke slag heel licht op — lub sterker, dub zachter — en zakt
+   zacht terug. Zelfde bron als de ringen (subscribeHapticPulse), dus exact
+   op de trilling; zelfde gedrag als de ring op het horloge. Uit bij
+   "Beweging beperken". */
+export function HeartbeatScale({ children }: { children: React.ReactNode }) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (reduced) return;
+    return subscribeHapticPulse((pulse) => {
+      const peak = pulse.kind === 'lub' ? 1.035 : 1.018;
+      const back = Math.min(420, Math.max(160, pulse.cycleMs * 0.35));
+      scale.value = withSequence(
+        withTiming(peak, { duration: 60, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
+      );
+    });
+  }, [reduced, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+}

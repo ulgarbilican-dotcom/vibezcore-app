@@ -34,7 +34,7 @@ import { rootBlurRef } from '@/utils/root-blur';
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
 import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
-import { HapticPulseRings } from '@/components/HapticPulseRings';
+import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 import { setStateHear, useStateHear } from '@/services/state-sound-pref';
@@ -3378,7 +3378,9 @@ function ActiveSessionScreen({
           {/* In de kleur van de toestand (operator, 6 okt 2026), zelfde tint
              als de rand — Sleep dus licht teal. */}
           <HapticPulseRings size={240} color={breathWaveLook(activeMeta.color).color} />
-          <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
+          <HeartbeatScale>
+            <DrainingCircle progress={progress} color={activeMeta.color} size={240} />
+          </HeartbeatScale>
           {/* Operator, 27 september 2026 ("doe die draaiende buitenlijn
              weg"): SlowAmbientPulse-render verwijderd — DrainingCircle's
              eigen outline (zie de component zelf) markeert de rand nu
