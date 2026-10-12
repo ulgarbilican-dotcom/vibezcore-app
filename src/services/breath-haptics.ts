@@ -46,6 +46,7 @@
 
 import type { PhaseKey } from '@/data/breath-states';
 import { Vibration } from 'react-native';
+import { MS_FACTOR, getHapticStrength } from './haptic-strength-pref';
 
 /* De trilling vult de fase niet helemaal: de laatste tiende blijft stil.
    Die stilte is functioneel — ze kondigt de wissel aan, en zonder haar loopt
@@ -128,6 +129,31 @@ function tickPerSecond(secs: number): number[] {
  *  Apart exporteerbaar zodat de bracelet-firmware straks dezelfde reeksen
  *  kan afleiden in plaats van een eigen versie te verzinnen. */
 export function phaseHapticPattern(phase: PhaseKey, secs: number): number[] {
+  return withStrength(basePattern(phase, secs));
+}
+
+/* Operator, 12 okt 2026: één trilsterkte voor de hele app (Soft / Medium /
+   Strong, zelfde instelling als State Control). Deze weg kent geen
+   krachtregeling, dus — zoals State Control op toestellen zonder — wordt
+   elke tik korter of langer (MS_FACTOR); de pauze erna krimpt of groeit
+   mee, zodat het ritme exact gelijk blijft. Medium = ongewijzigd. */
+function withStrength(pattern: number[]): number[] {
+  const f = MS_FACTOR[getHapticStrength()];
+  if (f === 1) return pattern;
+  const out = [...pattern];
+  /* [wacht, aan, uit, aan, uit, …] — oneven indexen zijn "aan". */
+  for (let i = 1; i < out.length; i += 2) {
+    const on = out[i];
+    const off = i + 1 < out.length ? out[i + 1] : 0;
+    const next = Math.max(40, Math.round(on * f));
+    const grow = Math.min(next - on, Math.max(0, off - 20));
+    out[i] = on + grow;
+    if (i + 1 < out.length) out[i + 1] = off - grow;
+  }
+  return out;
+}
+
+function basePattern(phase: PhaseKey, secs: number): number[] {
   /* 'inhale-2'/'exhale-2' — operator, 8 september 2026 (V1-protocolset):
      de tweede inademing van Physiological Sigh en de tweede in/uitademing
      van Alternate Nostril Breathing voelen als hetzelfde soort beweging als

@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -1129,6 +1130,7 @@ export function BreathSession() {
   /* Telefoon-trilling: opgeslagen stand plus die van deze sessie, net als de
      stem. Zelfde autostoel-regel. */
   const [hapticsOn, setHapticsOn] = useState(hapticDefault);
+  const hapticStrength = useHapticStrength();
   const tookHaptic = useRef(false);
   useEffect(() => {
     if (tookHaptic.current) return;
@@ -3967,8 +3969,8 @@ export function BreathSession() {
             {/* Rij 2 — Soundscapes. Operator, 10 okt 2026 ("de soundscapes
                moeten gegroepeerd worden … alles moet kunnen ademen"): per
                groep (Noise · Water · Earth · Tone) een eigen rij die
-               doorloopt naar een volgende regel — geen verborgen horizontale
-               scroll meer. Gratis geluiden binnen hun groep vooraan. */}
+               doorloopt naar een volgende regel. GEWIJZIGD 12 okt 2026
+               (operator): per groep horizontaal scrollen als nodig. Gratis geluiden binnen hun groep vooraan. */}
             <Text style={[s.avRowLabel, s.avSection]}>Soundscapes</Text>
             <View style={s.avScapeWrap}>
               <AnimatedPressable
@@ -3994,7 +3996,15 @@ export function BreathSession() {
               return (
                 <View key={g} style={s.avScapeGroup}>
                   <Text style={s.avScapeGroupLbl}>{g}</Text>
-                  <View style={s.avScapeWrap}>
+                  {/* Operator, 12 okt 2026: per groep één rij die opzij
+                      scrolt als ze niet past (loopt tot de rand van het
+                      blad, zoals Apple Music-rijen). */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={s.avScapeHScroll}
+                    contentContainerStyle={s.avScapeScrollRow}
+                  >
                     {list.map((x) => {
                       const on = scape?.key === x.key;
                       return (
@@ -4015,7 +4025,7 @@ export function BreathSession() {
                         </AnimatedPressable>
                       );
                     })}
-                  </View>
+                  </ScrollView>
                 </View>
               );
             })}
@@ -4077,6 +4087,38 @@ export function BreathSession() {
                 ios_backgroundColor="#3a3a3a"
               />
             </View>
+            {/* Operator, 12 okt 2026: één trilsterkte voor de hele app —
+                dezelfde instelling als State Control (haptic-strength-pref).
+                Zelfde chips als "Soundscape volume" hierboven. */}
+            {hapticsOn ? (
+              <View style={[s.levelRow, { marginBottom: 14 }]}>
+                {(['soft', 'medium', 'strong'] as const).map((l) => {
+                  const on = l === hapticStrength;
+                  return (
+                    <Pressable
+                      key={l}
+                      onPress={() => {
+                        if (on) return;
+                        setHapticStrength(l);
+                        void Haptics.impactAsync(
+                          l === 'soft'
+                            ? Haptics.ImpactFeedbackStyle.Light
+                            : l === 'strong'
+                              ? Haptics.ImpactFeedbackStyle.Heavy
+                              : Haptics.ImpactFeedbackStyle.Medium,
+                        ).catch(() => {});
+                      }}
+                      style={[s.levelChip, on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' }]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                      accessibilityLabel={`Vibration ${l}`}
+                    >
+                      <Text style={[s.levelTxt, on && { color: '#ffffff' }]}>{l.toUpperCase()}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
 
             {/* Rij 4 — Bracelet haptics (zelfde tik-logica als de vorige
                losse Gem-knop: schakelaar zodra er hardware is, anders de
@@ -5330,6 +5372,8 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     marginBottom: 10,
   },
   avScapeWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  avScapeHScroll: { marginHorizontal: -22 },
+  avScapeScrollRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 22 },
   avScapeChip: {
     flexDirection: 'row',
     alignItems: 'center',

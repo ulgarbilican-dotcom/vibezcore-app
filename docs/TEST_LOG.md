@@ -204,6 +204,9 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 140 | Audio Library: zoekbalk ook voor gast/gratis; resultaat opent de serie met de gewone sloten | A16 | ⏳ |
 | 141 | Activity: kaart "This week" bovenaan (minuten per soort, dagreeks + beste, Up next uit plannen van vandaag) | A16 | ✅ 12 okt (4 min, reeks 5) |
 | 142 | Afsluitscherm State Control + Breathwork: "How do you feel now?" Better / Same / Worse, één tik, bewaard op toestel (Instant houdt eigen vraag) | A16 | ⏳ |
+| 143 | Activity "This week": drie aparte cijfers (State Control min · Breathwork min · reeks + beste) | A16 | ⏳ |
+| 144 | Eén trilsterkte app-breed: Breathwork Audio & Haptics → onder Phone haptics SOFT / MEDIUM / STRONG (zelfde instelling als State Control; tikken korter/langer, ritme gelijk) | A16 | ⏳ |
+| 145 | Breathwork Audio & Haptics: soundscapes per groep op één rij, horizontaal scrollen als ze niet passen (tot de rand van het blad) | A16 | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 
