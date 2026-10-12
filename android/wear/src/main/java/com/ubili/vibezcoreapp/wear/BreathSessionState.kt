@@ -9,6 +9,9 @@ object BreathSessionState {
     val modeName: String,
     val round: Int,
     val totalRounds: Int,
+    /** Langs waar de lucht gaat, zoals in de app: Nose / Mouth / Left Nostril
+     *  / Right Nostril; leeg tijdens vasthouden (12 okt 2026). */
+    val via: String = "",
     val running: Boolean,
     /** Gepauzeerd (op telefoon of horloge): toon Resume, het ritme staat stil. */
     val paused: Boolean = false,

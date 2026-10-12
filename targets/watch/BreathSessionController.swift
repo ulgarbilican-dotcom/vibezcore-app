@@ -23,6 +23,8 @@ import WatchKit
 private struct WatchPhase {
   let key: String
   let secs: Int
+  /// Nose / Mouth / … zoals in de app; leeg bij vasthouden (12 okt 2026).
+  let via: String
 }
 
 /* 6 okt 2026: geen WCSessionDelegate meer — PhoneConnector.swift is de
@@ -35,6 +37,7 @@ final class BreathSessionController: NSObject, ObservableObject {
   @Published var modeName: String = ""
   @Published var round: Int = 0
   @Published var totalRounds: Int = 0
+  @Published var via: String = ""
   @Published var running: Bool = false
   /// Gepauzeerd (op iPhone of Watch): het ritme staat stil, de knop toont Resume.
   @Published var paused: Bool = false
@@ -69,7 +72,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     guard let phasesRaw = message["phases"] as? [[String: Any]] else { return }
     let parsed: [WatchPhase] = phasesRaw.compactMap { p in
       guard let key = p["key"] as? String, let secs = p["secs"] as? Int, secs > 0 else { return nil }
-      return WatchPhase(key: key, secs: secs)
+      return WatchPhase(key: key, secs: secs, via: p["via"] as? String ?? "")
     }
     guard !parsed.isEmpty else { return }
 
@@ -105,6 +108,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     }
     let phase = phases[idx]
     phaseLabel = displayLabel(for: phase.key)
+    via = phase.via
     self.round = round
     if firstDelay == nil {
       playHaptics(for: phase.key, secs: phase.secs)
@@ -136,8 +140,8 @@ final class BreathSessionController: NSObject, ObservableObject {
 
   private func displayLabel(for key: String) -> String {
     switch key {
-    case "inhale", "inhale-2": return "Breathe in"
-    case "exhale", "exhale-2": return "Breathe out"
+    case "inhale", "inhale-2": return "Inhale"
+    case "exhale", "exhale-2": return "Exhale"
     default: return "Hold"
     }
   }

@@ -215,7 +215,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun renderBreath(b: BreathSessionState.Snapshot) {
     showSession(b.modeName, b.colorHex, b.paused)
     ring.centerText = b.phaseLabel
-    ring.subText = if (b.totalRounds > 0) "Round ${b.round} / ${b.totalRounds}" else ""
+    val rounds = if (b.totalRounds > 0) "${b.round} / ${b.totalRounds}" else ""
+    ring.subText = if (b.paused) rounds else listOf(b.via, rounds).filter { it.isNotBlank() }.joinToString(" · ")
     val from = b.levelFrom
     val to = b.levelTo
     val start = b.phaseStartUptime

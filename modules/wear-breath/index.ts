@@ -22,6 +22,8 @@ export type WearBreathPhase = {
   /** phaseHapticPattern(key, secs) uit breath-haptics.ts — geen eigen
    *  berekening hier, zie de toelichting in WearBreathModule.kt. */
   pattern: number[];
+  /** Langs waar de lucht gaat (Nose / Mouth / …), leeg bij vasthouden. */
+  via?: string;
 };
 
 export type WearBreathSession = {

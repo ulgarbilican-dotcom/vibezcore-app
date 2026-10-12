@@ -47,7 +47,8 @@ struct ContentView: View {
           color: nil,
           paused: controller.paused,
           center: { _ in controller.phaseLabel },
-          sub: controller.totalRounds > 0 ? "Round \(controller.round) / \(controller.totalRounds)" : "",
+          sub: [controller.paused ? "" : controller.via, controller.totalRounds > 0 ? "\(controller.round) / \(controller.totalRounds)" : ""]
+            .filter { !$0.isEmpty }.joined(separator: " · "),
           level: { now in
             let span = max(0.001, controller.phaseEnd.timeIntervalSince(controller.phaseStart))
             let k = min(1, max(0, now.timeIntervalSince(controller.phaseStart) / span))

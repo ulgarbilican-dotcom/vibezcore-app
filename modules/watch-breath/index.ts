@@ -16,6 +16,8 @@ import { requireNativeModule } from 'expo-modules-core';
 export type WatchBreathPhase = {
   key: string;
   secs: number;
+  /** Langs waar de lucht gaat (Nose / Mouth / …), leeg bij vasthouden. */
+  via?: string;
 };
 
 export type WatchBreathSession = {

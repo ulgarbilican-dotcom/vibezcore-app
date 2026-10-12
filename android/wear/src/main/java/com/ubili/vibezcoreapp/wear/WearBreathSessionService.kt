@@ -32,7 +32,7 @@ import org.json.JSONObject
 private const val CHANNEL_ID = "vibezcore_breath"
 private const val NOTIFICATION_ID = 1001
 
-private data class Phase(val key: String, val secs: Int, val pattern: LongArray)
+private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
 
 class WearBreathSessionService : Service() {
   private var thread: HandlerThread? = null
@@ -76,7 +76,7 @@ class WearBreathSessionService : Service() {
       val p = phasesArr.getJSONObject(i)
       val patternArr = p.getJSONArray("pattern")
       val pattern = LongArray(patternArr.length()) { j -> patternArr.getLong(j) }
-      Phase(p.getString("key"), p.getInt("secs"), pattern)
+      Phase(p.getString("key"), p.getInt("secs"), pattern, p.optString("via", ""))
     }
     if (phases.isEmpty()) return
     /* Hervatten (6 okt 2026): verder op exact de plek waar de telefoon
@@ -139,7 +139,7 @@ class WearBreathSessionService : Service() {
     val now = SystemClock.uptimeMillis()
     BreathSessionState.update(
       BreathSessionState.Snapshot(
-        label, modeName, round, totalRounds, running = true, paused = false, colorHex = colorHex,
+        label, modeName, round, totalRounds, via = phase.via, running = true, paused = false, colorHex = colorHex,
         levelFrom = level, levelTo = target, phaseStartUptime = now, phaseEndUptime = now + durMs,
       ),
     )
@@ -156,8 +156,10 @@ class WearBreathSessionService : Service() {
   }
 
   private fun phaseDisplayLabel(key: String): String = when (key) {
-    "inhale", "inhale-2" -> "Breathe in"
-    "exhale", "exhale-2" -> "Breathe out"
+    /* 12 okt 2026: dezelfde woorden als de app (INHALE · NOSE); de
+       neus/mond-regel staat klein eronder (via in de Snapshot). */
+    "inhale", "inhale-2" -> "Inhale"
+    "exhale", "exhale-2" -> "Exhale"
     else -> "Hold"
   }
 

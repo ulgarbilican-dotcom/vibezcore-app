@@ -2061,6 +2061,7 @@ export function BreathSession() {
             key: p.key,
             secs: p.secs,
             pattern: phaseHapticPattern(p.key, p.secs),
+            via: p.via ?? '',
           })),
           rounds: effectiveRoundsRef.current,
           modeName: name,
@@ -2068,7 +2069,7 @@ export function BreathSession() {
           ...(at ?? {}),
         });
         sendBreathSessionToWatch({
-          phases: phases.map((p) => ({ key: p.key, secs: p.secs })),
+          phases: phases.map((p) => ({ key: p.key, secs: p.secs, via: p.via ?? '' })),
           rounds: effectiveRoundsRef.current,
           modeName: name,
           colorHex,

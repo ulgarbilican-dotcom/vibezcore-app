@@ -39,6 +39,8 @@ class WearBreathPhase(
      — geen eigen vertaling hier, dat zou een tweede versie zijn die uit de
      pas kan lopen (zie breath-haptics.ts, slotopmerking). */
   @Field val pattern: List<Int> = emptyList(),
+  /* Nose / Mouth / Left Nostril / Right Nostril — leeg bij vasthouden. */
+  @Field val via: String = "",
 ) : Record
 
 class WearBreathSession(
@@ -252,6 +254,7 @@ class WearBreathModule : Module() {
           put("key", p.key)
           put("secs", p.secs)
           put("pattern", JSONArray(p.pattern))
+          put("via", p.via)
         },
       )
     }
