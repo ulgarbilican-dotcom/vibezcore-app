@@ -155,6 +155,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun onEndTap() {
     if (StateSessionState.current.active) {
       PhoneLink.sendWatchAction(this, "stop", "bracelet")
+      /* 12 okt 2026 (operator: "bij end session krijg ik 0-scherm en blijf
+         ik in session active"): niet meer wachten op de telefoon — het
+         horloge stopt meteen zelf (zoals Breathwork) en meldt het. */
+      if (WearStateSessionService.instance != null) {
+        startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_STOP })
+      } else {
+        StateSessionState.update(StateSessionState.IDLE)
+      }
       return
     }
     PhoneLink.sendWatchAction(this, "stop", "breath")
