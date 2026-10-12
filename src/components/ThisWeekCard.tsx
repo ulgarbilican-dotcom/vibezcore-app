@@ -19,7 +19,7 @@ import { startOfWeekMonday } from '@/utils/locale';
 import { useActivePlan } from '@/utils/plan-store';
 import { currentStreak } from '@/utils/streak';
 import { router } from 'expo-router';
-import { ChevronRight, Flame } from 'lucide-react-native';
+import { ChevronRight, Flame, Radio, Wind } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -103,29 +103,48 @@ export default function ThisWeekCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [breath, bStats, plan, bPlan, now]);
 
-  const parts: string[] = [];
-  if (data.scMin > 0) parts.push(`State Control ${data.scMin} min`);
-  if (data.breathMin > 0) parts.push(`Breathwork ${data.breathMin} min`);
-
+  /* Operator, 12 okt 2026 ("liever als aparte cijfers"): drie gelijke
+     kolommen zoals Apple Fitness — State Control, Breathwork, reeks —
+     i.p.v. één totaal met een sub-regel. */
   return (
     <View
       style={s.card}
       accessible
-      accessibilityLabel={`This week: ${data.total} minutes. Streak ${data.streak} ${data.streak === 1 ? 'day' : 'days'}, best ${data.best}.`}
+      accessibilityLabel={`This week: State Control ${data.scMin} minutes, Breathwork ${data.breathMin} minutes. Streak ${data.streak} ${data.streak === 1 ? 'day' : 'days'}, best ${data.best}.`}
     >
-      <View style={s.top}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.eyebrow}>THIS WEEK</Text>
-          <Text style={s.big}>
-            {data.total}
+      <Text style={s.eyebrow}>THIS WEEK</Text>
+      <View style={s.cols}>
+        <View style={s.col}>
+          <View style={s.colHead}>
+            <Radio size={14} color={ink(0.55)} strokeWidth={2.2} />
+            <Text style={s.colLbl}>State Control</Text>
+          </View>
+          <Text style={s.num}>
+            {data.scMin}
             <Text style={s.unit}> min</Text>
           </Text>
-          <Text style={s.sub}>{parts.length > 0 ? parts.join(' · ') : 'No sessions yet this week'}</Text>
         </View>
-        <View style={s.streak}>
-          <Flame size={22} color={data.streak > 0 ? AudioAccentLight : ink(0.3)} strokeWidth={2.2} />
-          <Text style={s.streakNum}>{data.streak}</Text>
-          <Text style={s.streakLbl}>day streak</Text>
+        <View style={s.divider} />
+        <View style={s.col}>
+          <View style={s.colHead}>
+            <Wind size={14} color={ink(0.55)} strokeWidth={2.2} />
+            <Text style={s.colLbl}>Breathwork</Text>
+          </View>
+          <Text style={s.num}>
+            {data.breathMin}
+            <Text style={s.unit}> min</Text>
+          </Text>
+        </View>
+        <View style={s.divider} />
+        <View style={s.col}>
+          <View style={s.colHead}>
+            <Flame size={14} color={data.streak > 0 ? AudioAccentLight : ink(0.55)} strokeWidth={2.2} />
+            <Text style={s.colLbl}>Streak</Text>
+          </View>
+          <Text style={s.num}>
+            {data.streak}
+            <Text style={s.unit}> {data.streak === 1 ? 'day' : 'days'}</Text>
+          </Text>
           {data.best > data.streak ? <Text style={s.best}>Best {data.best}</Text> : null}
         </View>
       </View>
@@ -155,18 +174,18 @@ const s = StyleSheet.create({
     backgroundColor: ink(0.035),
     paddingHorizontal: 16,
     paddingTop: 15,
-    paddingBottom: 6,
+    paddingBottom: 2,
     marginBottom: 22,
   },
-  top: { flexDirection: 'row', alignItems: 'flex-start', paddingBottom: 10 },
   eyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.6, color: ink(0.4) },
-  big: { fontFamily: BrandFonts.extrabold, fontSize: 40, letterSpacing: -1, color: BrandDark.text, marginTop: 2 },
-  unit: { fontFamily: BrandFonts.semibold, fontSize: 17, letterSpacing: 0, color: ink(0.55) },
-  sub: { fontFamily: BrandFonts.medium, fontSize: 13, color: ink(0.5), marginTop: 2 },
-  streak: { alignItems: 'center', minWidth: 76, paddingTop: 4 },
-  streakNum: { fontFamily: BrandFonts.extrabold, fontSize: 24, color: BrandDark.text, marginTop: 4, fontVariant: ['tabular-nums'] },
-  streakLbl: { fontFamily: BrandFonts.medium, fontSize: 11.5, color: ink(0.5) },
-  best: { fontFamily: BrandFonts.medium, fontSize: 11.5, color: ink(0.35), marginTop: 2 },
+  cols: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: 12, paddingBottom: 14 },
+  col: { flex: 1, minWidth: 0 },
+  divider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: ink(0.12), marginHorizontal: 12 },
+  colHead: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  colLbl: { fontFamily: BrandFonts.semibold, fontSize: 12, color: ink(0.55), flexShrink: 1 },
+  num: { fontFamily: BrandFonts.extrabold, fontSize: 28, letterSpacing: -0.5, color: BrandDark.text, marginTop: 4, fontVariant: ['tabular-nums'] },
+  unit: { fontFamily: BrandFonts.semibold, fontSize: 13, letterSpacing: 0, color: ink(0.55) },
+  best: { fontFamily: BrandFonts.medium, fontSize: 11.5, color: ink(0.4), marginTop: 2 },
   next: {
     flexDirection: 'row',
     alignItems: 'center',
