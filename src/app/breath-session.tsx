@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import WatchStatusRow from '@/components/WatchStatusRow';
 import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -3901,6 +3902,10 @@ export function BreathSession() {
               contentContainerStyle={{ paddingBottom: 8 }}
               showsVerticalScrollIndicator={false}
             >
+            {/* 12 okt 2026: horloge-status (enkel met een horloge). */}
+            <View style={{ marginTop: 16 }}>
+              <WatchStatusRow />
+            </View>
             {/* Rij 1 — Voice Guidance. */}
             <View style={[s.voiceSheetRow, s.avSection]}>
               <Text style={s.voiceSheetRowLabel}>Voice guidance</Text>

@@ -16,6 +16,10 @@ package com.ubili.vibezcoreapp.wearbreath
       (breath-session.tsx/bracelet-control.tsx) beslist wat dat betekent. */
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.wear.remote.interactions.RemoteActivityHelper
+import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
@@ -90,6 +94,8 @@ private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 private const val PATH_STATE_ACK = "/vibezcore/state/ack"
 
+private const val WATCH_CAPABILITY = "vibezcore_watch_app"
+
 class WearBreathModule : Module() {
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -124,6 +130,56 @@ class WearBreathModule : Module() {
 
     OnDestroy {
       Wearable.getMessageClient(context).removeListener(messageListener)
+    }
+
+    /* 12 okt 2026 (operator: "gebruikers mogen niet sukkelen"): wat het
+       horloge doet, in één woord voor de statusregel op de telefoon.
+         "none"       → geen horloge verbonden;
+         "noApp"      → wel een horloge, maar zonder VIBEZCORE;
+         "ready"      → horloge mét VIBEZCORE, alles werkt.
+       De horloge-app meldt zich via de capability "vibezcore_watch_app"
+       (wear-app/src/main/res/values/wear.xml). */
+    AsyncFunction("watchStatus") { promise: Promise ->
+      Wearable.getNodeClient(context).connectedNodes
+        .addOnSuccessListener { nodes ->
+          if (nodes.isEmpty()) {
+            promise.resolve(mapOf("status" to "none", "name" to ""))
+            return@addOnSuccessListener
+          }
+          val watch = nodes.first()
+          Wearable.getCapabilityClient(context)
+            .getCapability(WATCH_CAPABILITY, CapabilityClient.FILTER_REACHABLE)
+            .addOnSuccessListener { info ->
+              val hasApp = info.nodes.isNotEmpty()
+              val name = (info.nodes.firstOrNull() ?: watch).displayName ?: ""
+              promise.resolve(mapOf("status" to (if (hasApp) "ready" else "noApp"), "name" to name))
+            }
+            .addOnFailureListener { promise.resolve(mapOf("status" to "noApp", "name" to (watch.displayName ?: ""))) }
+        }
+        .addOnFailureListener { promise.resolve(mapOf("status" to "none", "name" to "")) }
+    }
+
+    /* Opent de Play Store OP HET HORLOGE bij VIBEZCORE — één tik op de
+       telefoon, de gebruiker bevestigt op zijn pols. */
+    AsyncFunction("openStoreOnWatch") { promise: Promise ->
+      Wearable.getNodeClient(context).connectedNodes
+        .addOnSuccessListener { nodes ->
+          val node = nodes.firstOrNull()
+          if (node == null) {
+            promise.resolve(false)
+            return@addOnSuccessListener
+          }
+          try {
+            val intent = Intent(Intent.ACTION_VIEW)
+              .addCategory(Intent.CATEGORY_BROWSABLE)
+              .setData(Uri.parse("market://details?id=" + context.packageName))
+            RemoteActivityHelper(context).startRemoteActivity(intent, node.id)
+            promise.resolve(true)
+          } catch (_: Exception) {
+            promise.resolve(false)
+          }
+        }
+        .addOnFailureListener { promise.resolve(false) }
     }
 
     AsyncFunction("isWatchReachable") { promise: Promise ->

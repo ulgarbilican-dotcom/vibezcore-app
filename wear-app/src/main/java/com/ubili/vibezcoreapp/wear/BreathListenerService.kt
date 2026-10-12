@@ -19,6 +19,22 @@ private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 
 class BreathListenerService : WearableListenerService() {
+  /* 12 okt 2026 (operator: "gebruikers mogen niet sukkelen"): zodra de
+     telefoon een sessie start, komt ONS sessiescherm naar voren — anders
+     opent Samsung zijn eigen mediabediening (die elke "media" van de
+     telefoon overneemt) en ziet de gebruiker de ring niet. */
+  private fun bringSessionToFront() {
+    try {
+      startActivity(
+        Intent(this, MainActivity::class.java).addFlags(
+          Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+        ),
+      )
+    } catch (e: Exception) {
+      android.util.Log.w("VZWear", "bringSessionToFront blocked: ${e.message}")
+    }
+  }
+
   override fun onMessageReceived(event: MessageEvent) {
     try {
       when (event.path) {
@@ -29,6 +45,7 @@ class BreathListenerService : WearableListenerService() {
             putExtra(WearBreathSessionService.EXTRA_SESSION_JSON, json)
           }
           startForegroundService(intent)
+          bringSessionToFront()
         }
         PATH_PAUSE -> {
           /* Loopt er niets (al gepauzeerd), dan is er niets te doen. */
@@ -65,6 +82,7 @@ class BreathListenerService : WearableListenerService() {
             putExtra(WearStateSessionService.EXTRA_START_JSON, json)
           }
           startForegroundService(intent)
+          bringSessionToFront()
         }
         PATH_STATE_PAUSE, PATH_STATE_STOP -> {
           /* Zonder lopende service is er niets te pauzeren/stoppen — dan

@@ -19,4 +19,6 @@ dependencies {
      horloge. Geen extra permissie nodig op de telefoon: Play Services
      regelt de koppeling, de app vraagt enkel de client-API aan. */
   implementation "com.google.android.gms:play-services-wearable:18.2.0"
+  /* Play Store op het horloge openen vanaf de telefoon (12 okt 2026). */
+  implementation "androidx.wear:wear-remote-interactions:1.1.0"
 }

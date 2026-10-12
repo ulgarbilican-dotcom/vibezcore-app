@@ -76,6 +76,8 @@ export type StateSessionStart = {
 
 type WearBreathNativeModule = {
   isWatchReachable(): Promise<boolean>;
+  watchStatus?(): Promise<{ status: WatchAppStatus; name: string }>;
+  openStoreOnWatch?(): Promise<boolean>;
   sendBreathSession(session: WearBreathSession): void;
   pauseBreathSession(): void;
   stopBreathSession(): void;
@@ -98,6 +100,27 @@ try {
 /** `false` op iOS/web/Expo Go, en op Android zonder gekoppeld horloge —
  *  de UI gebruikt dit om de watch-indicator pas te tonen als er écht iets
  *  is om naar te sturen. */
+/** "none" = geen horloge verbonden · "noApp" = horloge zonder VIBEZCORE ·
+ *  "ready" = horloge met VIBEZCORE. */
+export type WatchAppStatus = 'none' | 'noApp' | 'ready';
+
+export async function getWatchStatus(): Promise<{ status: WatchAppStatus; name: string }> {
+  try {
+    return (await native?.watchStatus?.()) ?? { status: 'none', name: '' };
+  } catch {
+    return { status: 'none', name: '' };
+  }
+}
+
+/** Opent de Play Store op het horloge bij VIBEZCORE. */
+export async function openStoreOnWatch(): Promise<boolean> {
+  try {
+    return (await native?.openStoreOnWatch?.()) ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export async function isWatchReachable(): Promise<boolean> {
   try {
     return (await native?.isWatchReachable()) ?? false;

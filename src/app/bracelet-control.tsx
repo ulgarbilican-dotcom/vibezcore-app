@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import WatchStatusRow from '@/components/WatchStatusRow';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
@@ -3640,6 +3641,9 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             <Text style={s.avDone}>Done</Text>
           </Pressable>
         </View>
+        {/* 12 okt 2026: horloge-status bovenaan — verbonden, installeren
+            of opnieuw verbinden (verschijnt enkel met een horloge). */}
+        <WatchStatusRow />
         {options.map((o) => {
           const on = o.v === hear;
           return (
