@@ -41,6 +41,8 @@
    CAP op 500 records (~1 jaar bij 1-2/dag).
    ─────────────────────────────────────────────────────────────────── */
 
+import { saveSessionToHealth } from '@/services/health-sync';
+import { getModeMeta, type BraceletMode } from '@/services/ble-contract';
 import { currentStreak } from '@/utils/streak';
 import { daysOfThisWeek, startOfWeekMonday } from '@/utils/locale';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -280,6 +282,21 @@ export async function recordSession(
   cache = [record, ...cache].slice(0, MAX_RECORDS);
   notify();
   persist();
+  /* Apple Health / Health Connect (12 okt 2026): de ACTIEVE tijd, eindigend
+     op het einde van de sessie. Enkel als de gebruiker het aanzette. */
+  const endMs = Date.parse(record.endedAt);
+  const wallStartMs = Date.parse(record.startedAt);
+  if (Number.isFinite(endMs) && Number.isFinite(wallStartMs)) {
+    /* durationMin is afgerond (minstens 1) — nooit langer dan de echte
+       wandkloktijd, zodat een sessie van 10 s geen minuut in Health wordt. */
+    const activeMs = Math.min(Math.max(0, record.durationMin) * 60_000, Math.max(0, endMs - wallStartMs));
+    void saveSessionToHealth({
+      kind: 'state',
+      title: `VIBEZCORE · State Control · ${getModeMeta(record.mode as BraceletMode).name}`,
+      startMs: endMs - activeMs,
+      endMs,
+    });
+  }
   /* Best-effort sync — silent fail bij netwerk/auth probleem. Dynamic
      import om circular dependency te vermijden (sync-module importeert
      deze module). */

@@ -28,7 +28,34 @@ type StateHapticsNativeModule = {
     event: 'onRemoteControl',
     cb: (e: { action: 'pause' | 'resume' }) => void,
   ): { remove(): void };
+  addListener(event: 'onHealthRationale', cb: (e: { action: string }) => void): { remove(): void };
+  launchAction?(): string;
 };
+
+const HEALTH_RATIONALE_ACTIONS = new Set([
+  'androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE',
+  'android.intent.action.VIEW_PERMISSION_USAGE',
+]);
+
+/** Werd de app geopend vanuit het Health Connect-toestemmingsscherm
+ *  ("privacybeleid")? Dan hoort de privacyverklaring meteen te openen. */
+export function launchedForHealthRationale(): boolean {
+  try {
+    return HEALTH_RATIONALE_ACTIONS.has(native?.launchAction?.() ?? '');
+  } catch {
+    return false;
+  }
+}
+
+/** Zelfde vraag terwijl de app al draaide. */
+export function onHealthRationale(cb: () => void): () => void {
+  try {
+    const sub = native?.addListener('onHealthRationale', () => cb());
+    return () => sub?.remove();
+  } catch {
+    return () => {};
+  }
+}
 
 export type NativeSessionStatus = 'none' | 'starting' | 'running' | 'paused';
 

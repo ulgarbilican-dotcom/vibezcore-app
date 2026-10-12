@@ -17,6 +17,8 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { healthAppName } from '@/services/health-sync';
+import { pulseSourceLabel } from '@/services/resting-pulse';
 import ThisWeekCard from '@/components/ThisWeekCard';
 import { startOfWeekMonday } from '@/utils/locale';
 import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
@@ -301,8 +303,7 @@ export default function ActivityScreen() {
 function rhythmSub(p: RestingPulse): string {
   if (p.source === 'average') return `Average resting heart rate · ${p.bpm} bpm · Personalize`;
   if (shouldSuggestRemeasure(p)) return `${p.bpm} bpm · Time to measure again`;
-  const when = p.at ? new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-  return p.source === 'measured' ? `${p.bpm} bpm · measured ${when}` : `${p.bpm} bpm · entered ${when}`;
+  return `${p.bpm} bpm · ${pulseSourceLabel(p, healthAppName())}`;
 }
 
 /* Operator, 30 september 2026 ("bij activity lange rechthoekige kaarten

@@ -11,6 +11,8 @@
    Woordkeuze (CLAUDE.md, operator 7 okt 2026): "heart rate" (niet "pulse") / rhythm, nooit stress, HRV, diagnose.
    "Not a medical device" staat bij elk getal. */
 
+import { healthAppName } from '@/services/health-sync';
+import { pulseSourceLabel } from '@/services/resting-pulse';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -240,11 +242,7 @@ export default function RhythmSheet({
             <Text style={[s.resultLbl, { textAlign: 'center' }]}>
               {pulse.liveBpm !== null
                 ? `For your next session · Resting ${pulse.bpm} bpm`
-                : pulse.source === 'average'
-                  ? 'Average — not measured yet'
-                  : pulse.source === 'manual'
-                    ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`
-                    : `Measured${pulse.at ? ` ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`}
+                : pulseSourceLabel(pulse, healthAppName())}
             </Text>
             {/* Operator, 10 okt 2026 ("is die uitleg hier nodig? kan op de
                 website"): geen uitleg in dit blad — wie hier komt, kent het
@@ -305,11 +303,7 @@ export default function RhythmSheet({
               <Text style={s.bigUnit}> bpm</Text>
             </Text>
             <Text style={[s.resultLbl, { textAlign: 'center', marginBottom: 18 }]}>
-              {pulse.source === 'average'
-                ? 'Average — not measured yet'
-                : pulse.source === 'manual'
-                  ? `Entered by you${pulse.at ? ` · ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`
-                  : `Measured${pulse.at ? ` ${new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}`}
+              {pulseSourceLabel(pulse, healthAppName())}
             </Text>
             {PulseMeter ? (
               <>

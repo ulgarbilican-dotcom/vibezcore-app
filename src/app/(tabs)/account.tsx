@@ -10,6 +10,8 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { healthAppName } from '@/services/health-sync';
+import { pulseSourceLabel } from '@/services/resting-pulse';
 import { wipeLocalData } from '@/services/local-data';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
@@ -532,9 +534,7 @@ function RhythmGroup() {
               ? 'Average — not measured yet'
               : shouldSuggestRemeasure(pulse)
                 ? 'Time to measure again'
-                : `${pulse.source === 'measured' ? 'Measured' : 'Entered'} ${
-                    pulse.at ? new Date(pulse.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''
-                  }`
+                : pulseSourceLabel(pulse, healthAppName())
           }
           value={`${pulse.bpm} bpm`}
           onPress={() => setOpen(true)}

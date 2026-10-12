@@ -83,6 +83,7 @@ import {
 } from '@/services/reminders';
 import * as Notifications from 'expo-notifications';
 import { bootDecided, markBootDecided } from '@/utils/boot';
+import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
 import { AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -256,6 +257,29 @@ export default function RootLayout() {
   const [pendingAuthLink, setPendingAuthLink] = useState<boolean | undefined>(
     undefined
   );
+
+  /* Health Connect (12 okt 2026): geopend via "privacybeleid" in het
+     toestemmingsscherm van Health Connect → meteen de privacyverklaring
+     (Google-vereiste). Wacht tot de opstartroute gekozen is. */
+  useEffect(() => {
+    const open = () => router.push({ pathname: '/legal/[doc]', params: { doc: 'privacy' } } as never);
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (launchedForHealthRationale()) {
+      timer = setInterval(() => {
+        if (!bootDecided()) return;
+        if (timer) clearInterval(timer);
+        timer = null;
+        open();
+      }, 200);
+    }
+    const off = onHealthRationale(() => {
+      if (bootDecided()) open();
+    });
+    return () => {
+      if (timer) clearInterval(timer);
+      off();
+    };
+  }, []);
 
   /* Is de app geopend door op een herinnering te tikken? Dan hoort hij daar
      uit te komen en niet op het welkomstscherm (operator, 7 augustus 2026:

@@ -33,6 +33,7 @@
    De oude sleutel wordt eenmalig overgezet, dus niemand raakt iets kwijt.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { saveSessionToHealth } from '@/services/health-sync';
 import { currentStreak } from '@/utils/streak';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
@@ -200,6 +201,15 @@ export async function addBreathSession(
   };
   notify();
   await persist();
+  /* Apple Health / Health Connect (12 okt 2026) — enkel als de gebruiker
+     dat aanzette; de functie zelf slaat korte sessies over. */
+  const label = entry.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  void saveSessionToHealth({
+    kind: 'breath',
+    title: `VIBEZCORE · ${label} breathing`,
+    startMs: newEntry.ts - Math.max(0, Math.round(entry.durSec)) * 1000,
+    endMs: newEntry.ts,
+  });
 }
 
 /* Wis alle historiek. Voorlopig geen UI ervoor; operator-tool. */

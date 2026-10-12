@@ -26,6 +26,9 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.functions.Queues
 
+private const val RATIONALE_ACTION = "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"
+private const val VIEW_PERMISSION_USAGE_ACTION = "android.intent.action.VIEW_PERMISSION_USAGE"
+
 class StateHapticsModule : Module() {
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -43,7 +46,23 @@ class StateHapticsModule : Module() {
 
     /* Knop op het vergrendelscherm ("pause"/"resume") → JS, zodat de
        sessie-monitor (bron van waarheid) en de bracelet meegaan. */
-    Events("onRemoteControl")
+    Events("onRemoteControl", "onHealthRationale")
+
+    /* Health Connect (12 okt 2026): tikt de gebruiker in het Health
+       Connect-toestemmingsscherm op het privacybeleid, dan opent Android
+       deze app met een vaste actie — Google eist dat we dan meteen de
+       privacyverklaring tonen. Koude start: launchAction(); app draaide
+       al: OnNewIntent → event. */
+    Function("launchAction") {
+      appContext.currentActivity?.intent?.action ?: ""
+    }
+
+    OnNewIntent { intent ->
+      val action = intent.action ?: ""
+      if (action == RATIONALE_ACTION || action == VIEW_PERMISSION_USAGE_ACTION) {
+        sendEvent("onHealthRationale", mapOf("action" to action))
+      }
+    }
 
     OnCreate {
       StateHapticsService.remoteListener = { action ->

@@ -232,7 +232,7 @@ hart" het best onderbouwd. De sporter-grens is een randgeval.
 | Meting met de camera | vinger op de achtercamera + flits, vast 30 s | ✔ gebouwd (Android getest, iOS nog niet) |
 | Zelf invullen | draaiwiel 40–100 | ✔ gebouwd |
 | Gemiddelde | 70 bpm (gemiddelde volwassene) | ✔ standaard voor wie overslaat |
-| Horloge | Apple Health / Health Connect rusthartslag | ⏳ fase 3 |
+| Horloge | Apple Health / Health Connect rusthartslag (≤ 7 dagen oud, 40–100) | ✔ gebouwd 12 okt 2026 (vraagt nieuwe build; telt als gedateerde waarde, nieuwste wint) |
 
 **Regels (⚪):**
 - **Plafond op het doel** (⚪ eigen keuze, 10 okt 2026): het eindtempo wordt op R berekend, maar nooit hoger dan bij R = 80 (bovenkant van de gangbare rust 60–80 bpm). Plafonds: Calm Control 64, Clarity & Relax 56, Sleep 44, Sharp Focus 72; Boost vast 110. Reden: een basis gemeten na inspanning (bv. 97 i.p.v. 70) zou anders elk doel te hoog zetten (Sleep 53 i.p.v. 40) en nooit onder je echte rust brengen. Het BEGIN blijft R of de meting van nu.
@@ -245,7 +245,8 @@ hart" het best onderbouwd. De sporter-grens is een randgeval.
 - **> 100 bpm** = geen rustwaarde: niet bewaard, "Sit still for a
   minute, then try again".
 - **Zelf ingevuld** geldt tot er opnieuw gemeten wordt.
-- **"Use an average"** wist alle eigen waarden (privacy).
+- **"Use an average" / "Clear Heart Rate Data"** wist alle eigen waarden én de sessie-metingen (privacy); een waarde uit Health van vóór dat moment komt niet terug.
+- **Horloge (Health):** de rusthartslag die het horloge zelf berekent (Apple Watch, Galaxy Watch, Oura …) is een gewone gedateerde waarde — de nieuwste waarde wint, zoals bij meten en invullen. Ouder dan 7 dagen of buiten 40–100 = niet gebruikt. Geen eigen schatting uit losse hartslagmetingen (⚪ keuze: enkel wat het toestel zelf als rust bestempelt).
 - **Na 30 dagen** een zachte "measure again" (stipje in de cirkel,
   Activity, Profile).
 - **Hartslag van nu:** een verse meting **boven** R is 15 minuten lang

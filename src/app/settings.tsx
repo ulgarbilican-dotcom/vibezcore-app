@@ -23,6 +23,7 @@
      beschikbaar is.
    ─────────────────────────────────────────────────────────────────────── */
 
+import HealthSyncSetting from '@/components/HealthSyncSetting';
 import { resetRestingPulse } from '@/services/resting-pulse';
 import { AUDIO_ENABLED } from '@/constants/features';
 import * as Haptics from 'expo-haptics';
@@ -452,6 +453,16 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
+
+        {/* ── HEALTH (12 okt 2026) — Apple Health / Health Connect. */}
+        <HealthSyncSetting
+          cardStyle={s.card}
+          rowStyle={s.row}
+          rowTextStyle={s.rowText}
+          titleStyle={s.rowTitle}
+          subStyle={s.rowSub}
+          labelStyle={s.sectionLabel}
+        />
 
         {/* ── SMART BEAD BRACELET ──────────────────────────────────────
             Verschijnt alleen voor wie er een heeft. Een gast ziet de etalage

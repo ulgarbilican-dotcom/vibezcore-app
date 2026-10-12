@@ -32,9 +32,11 @@ const SESSION_LOG_KEY = 'vz_session_pulse_log_v1';
 const SESSION_LOG_MAX = 50;
 let sessionLog: { bpm: number; at: number }[] = [];
 
-export type PulseSource = 'measured' | 'manual' | 'average';
+export type PulseSource = 'measured' | 'manual' | 'average' | 'health';
 
-type Reading = { bpm: number; at: number };
+/** `src: 'health'` = rusthartslag van je horloge/ring via Apple Health of
+ *  Health Connect (12 okt 2026), anders een camerameting. */
+type Reading = { bpm: number; at: number; src?: 'health' };
 type Stored = {
   /** Metingen (camera/horloge). */
   readings: Reading[];
@@ -44,6 +46,9 @@ type Stored = {
   average: boolean;
   /** Heeft de gebruiker de keuze al één keer gemaakt (scherm "Match your rhythm")? */
   decided: boolean;
+  /** Moment van "Clear Heart Rate Data" — een oudere waarde uit Health
+   *  komt daarna niet stilletjes terug. */
+  clearedAt?: number;
 };
 
 export type RestingPulse = {
@@ -91,7 +96,12 @@ function resolve(s: Stored): RestingPulse {
       return withLive({ bpm: s.manual.bpm, source: 'manual', at: s.manual.at, decided: s.decided });
     }
     if (latestReading) {
-      return withLive({ bpm: latestReading.bpm, source: 'measured', at: latestReading.at, decided: s.decided });
+      return withLive({
+        bpm: latestReading.bpm,
+        source: latestReading.src === 'health' ? 'health' : 'measured',
+        at: latestReading.at,
+        decided: s.decided,
+      });
     }
   }
   return withLive({ bpm: AVERAGE_RESTING_BPM, source: 'average', at: null, decided: s.decided });
@@ -161,6 +171,7 @@ export async function loadRestingPulse(): Promise<RestingPulse> {
         manual: p.manual && p.manual.bpm > 0 ? p.manual : null,
         average: !!p.average,
         decided: !!p.decided,
+        clearedAt: typeof p.clearedAt === 'number' ? p.clearedAt : undefined,
       };
     }
   } catch {
@@ -210,7 +221,32 @@ export function chooseAverageRestingPulse(): void {
   liveStart = null;
   if (liveTimer) clearTimeout(liveTimer);
   liveTimer = null;
-  commit({ ...EMPTY, decided: true });
+  commit({ ...EMPTY, decided: true, clearedAt: Date.now() });
+}
+
+/** Rusthartslag uit Apple Health / Health Connect (services/health-sync.ts).
+ *  Telt als gewone, gedateerde waarde: de nieuwste waarde wint, zoals
+ *  altijd (operator, 10 okt 2026). Geen dubbels, niets van vóór "Clear". */
+export function importHealthRestingPulse(bpm: number, at: number): boolean {
+  if (!(bpm >= MIN_RESTING_BPM) || bpm > MAX_RESTING_BPM) return false;
+  if (stored.clearedAt && at <= stored.clearedAt) return false;
+  if (stored.readings.some((r) => r.src === 'health' && r.at === at)) return false;
+  commit({
+    ...stored,
+    readings: [...recentReadings(stored), { bpm: clamp(bpm), at, src: 'health' as const }].slice(-20),
+    average: false,
+    decided: true,
+  });
+  return true;
+}
+
+/** Korte bronregel onder het getal — overal dezelfde woorden. */
+export function pulseSourceLabel(p: RestingPulse, healthName: string): string {
+  const when = p.at ? new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  if (p.source === 'average') return 'Average — not measured yet';
+  if (p.source === 'manual') return `Entered by you${when ? ` · ${when}` : ''}`;
+  if (p.source === 'health') return `From ${healthName}${when ? ` · ${when}` : ''}`;
+  return `Measured${when ? ` ${when}` : ''}`;
 }
 
 
@@ -261,7 +297,7 @@ export function recordSessionPulse(bpm: number): void {
 }
 
 export type PulseHistoryEntry = {
-  kind: 'measured' | 'entered' | 'session';
+  kind: 'measured' | 'entered' | 'session' | 'health';
   bpm: number;
   at: number;
   /** Deze waarde is nu je rusthartslag. */
@@ -273,7 +309,8 @@ export function getPulseHistory(): PulseHistoryEntry[] {
   const p = resolve(stored);
   const out: PulseHistoryEntry[] = [];
   for (const r of stored.readings) {
-    out.push({ kind: 'measured', bpm: r.bpm, at: r.at, inUse: p.source === 'measured' && r.bpm === p.bpm });
+    const kind = r.src === 'health' ? 'health' : 'measured';
+    out.push({ kind, bpm: r.bpm, at: r.at, inUse: p.source === kind && r.bpm === p.bpm && r.at === p.at });
   }
   if (stored.manual) {
     out.push({ kind: 'entered', bpm: stored.manual.bpm, at: stored.manual.at, inUse: p.source === 'manual' });

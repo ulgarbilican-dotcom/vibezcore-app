@@ -8,6 +8,7 @@
    Welzijnstaal: geen diagnose, geen nauwkeurigheidsclaim.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { connectHealth, healthAppName, isHealthModulePresent, useHealthSync } from '@/services/health-sync';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HistoryGroup, HistoryRow, HistorySectionLabel } from '@/components/HistoryList';
 import PressScale from '@/components/PressScale';
@@ -17,7 +18,7 @@ import { BraceletMode } from '@/services/ble-contract';
 import ConfirmCard from '@/components/ConfirmCard';
 import { chooseAverageRestingPulse, getPulseHistory, type PulseHistoryEntry } from '@/services/resting-pulse';
 import { Stack } from 'expo-router';
-import { ChevronRight, HeartPulse, PencilLine, Timer } from 'lucide-react-native';
+import { ChevronRight, HeartPulse, PencilLine, Timer, Watch } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,12 +33,14 @@ function fmtWhen(at: number): string {
 function rowTitle(e: PulseHistoryEntry): string {
   if (e.kind === 'session') return 'For a session';
   if (e.kind === 'entered') return 'Entered by you';
+  if (e.kind === 'health') return `From ${healthAppName()}`;
   return 'Resting · measured';
 }
 
 export default function HeartRateScreen() {
   const pulse = useRestingPulse();
   const [sheet, setSheet] = useState(false);
+  const healthOn = useHealthSync();
   const [confirmClear, setConfirmClear] = useState(false);
   /* Herberekend bij elke wijziging van de rusthartslag of een sessiemeting. */
   const history = useMemo(() => getPulseHistory(), [pulse]);
@@ -50,7 +53,9 @@ export default function HeartRateScreen() {
       ? 'Average — not measured yet'
       : pulse.source === 'manual'
         ? `Entered by you${inUse ? ` · ${fmtWhen(inUse.at)}` : ''}`
-        : `Measured${inUse ? ` · ${fmtWhen(inUse.at)}` : ''}`;
+        : pulse.source === 'health'
+          ? `From ${healthAppName()}${inUse ? ` · ${fmtWhen(inUse.at)}` : ''}`
+          : `Measured${inUse ? ` · ${fmtWhen(inUse.at)}` : ''}`;
 
   return (
     <SafeAreaView style={s.root} edges={['bottom']}>
@@ -83,6 +88,24 @@ export default function HeartRateScreen() {
           </PressScale>
         </View>
 
+        {/* 12 okt 2026: rusthartslag van je horloge/ring via Apple Health /
+            Health Connect — enkel tonen zolang dat nog niet gekoppeld is. */}
+        {isHealthModulePresent() && !healthOn ? (
+          <Pressable
+            style={({ pressed }) => [s.watchRow, pressed && { opacity: 0.7 }]}
+            onPress={() => void connectHealth()}
+            accessibilityRole="button"
+            accessibilityLabel={`Use your watch. Connect ${healthAppName()}`}
+          >
+            <Watch size={20} color={AudioAccentLight} strokeWidth={1.9} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.watchTitle}>Use your watch</Text>
+              <Text style={s.watchSub}>Connect {healthAppName()} for your resting heart rate</Text>
+            </View>
+            <ChevronRight size={18} color="rgba(255,255,255,0.35)" />
+          </Pressable>
+        ) : null}
+
         <HistorySectionLabel>History</HistorySectionLabel>
         {history.length === 0 ? (
           <Text style={s.empty}>Your measurements appear here.</Text>
@@ -95,6 +118,8 @@ export default function HeartRateScreen() {
                 icon={
                   e.kind === 'session' ? (
                     <Timer size={16} color="#ffffff" strokeWidth={1.9} />
+                  ) : e.kind === 'health' ? (
+                    <Watch size={16} color="#ffffff" strokeWidth={1.9} />
                   ) : e.kind === 'entered' ? (
                     <PencilLine size={16} color="#ffffff" strokeWidth={1.9} />
                   ) : (
@@ -189,5 +214,17 @@ const s = StyleSheet.create({
   empty: { color: 'rgba(255,255,255,0.55)', fontSize: 15, fontFamily: BrandFonts.medium, marginTop: 6 },
   note: { color: 'rgba(255,255,255,0.4)', fontSize: 12.5, fontFamily: BrandFonts.medium, textAlign: 'center', marginTop: 24 },
   clear: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },
+  watchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+  },
+  watchTitle: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
+  watchSub: { color: 'rgba(255,255,255,0.55)', fontSize: 13.5, fontFamily: BrandFonts.medium, marginTop: 2 },
   clearTxt: { color: Brand.error, fontSize: 15, fontFamily: BrandFonts.semibold },
 });

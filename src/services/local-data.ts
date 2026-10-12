@@ -13,6 +13,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { unload as unloadAudioPlayer } from '@/services/audio-player';
 import { closeBreathSession } from '@/services/breath-session-host';
+import { disconnectHealth } from '@/services/health-sync';
 import { stopBraceletSessionMonitor } from '@/services/bracelet-session-monitor';
 import { syncBraceletPlanReminder } from '@/services/reminders';
 import { resetRestingPulse } from '@/services/resting-pulse';
@@ -50,6 +51,8 @@ export async function wipeLocalData(opts: { keepAuth: boolean }): Promise<void> 
   /* 1. Alles wat loopt stoppen. unload zonder positie te bewaren (iter
         9dq v124), anders schreef hij na het wissen nog een positie weg. */
   closeBreathSession();
+  /* Geen koppeling met Apple Health / Health Connect meer na het wissen. */
+  disconnectHealth();
   await quietly(() => stopBraceletSessionMonitor());
   await quietly(() => unloadAudioPlayer({ skipSave: true }));
 

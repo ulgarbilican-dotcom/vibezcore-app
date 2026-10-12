@@ -85,6 +85,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 12 okt 2026: crash reporting via Sentry (EU-regio, org ulgar-bilican, project react-native), src/services/crash-reporting.ts. **Nieuwe build nodig.** Source maps uploaden staat uit (SENTRY_DISABLE_AUTO_UPLOAD in eas.json) tot er een SENTRY_AUTH_TOKEN als EAS-secret is. Eén trilsterkte app-breed; soundscapes horizontaal per groep.
 
+- 12 okt 2026: Apple Health / Health Connect (services/health-sync.ts, components/HealthSyncSetting.tsx): sessies ≥ 1 min als mindful minutes, rusthartslag van het horloge lezen (resting-pulse bron 'health'), privacyverklaring + Limited Use-zin, rationale-scherm via state-haptics (launchAction/OnNewIntent). Pakketten react-native-health-connect 4.1.3, @kingstinct/react-native-healthkit 16.1, react-native-nitro-modules. minSdk 26 (Android 8+). **Nieuwe build nodig.** Operator: Google Play-formulier gezondheidsgegevens + Data safety, App Store-privacylabel "Health & Fitness". Tests 147–151.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
