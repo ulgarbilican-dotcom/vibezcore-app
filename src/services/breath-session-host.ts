@@ -37,7 +37,13 @@ function notify(): void {
    verdwenen en het horloge bleef de oude sessie begeleiden. Nu vraagt de
    app eerst "End current session?" (zoals State Control "Switch to …?"),
    en sluit hij de lopende sessie netjes af (opslaan + horloge stoppen). */
-type RunningSession = { isActive: () => boolean; label: () => string; end: () => void };
+type RunningSession = {
+  isActive: () => boolean;
+  label: () => string;
+  end: () => void;
+  /** Voor de pill (audit 12 okt 2026): gepauzeerd + resterende tijd. */
+  status?: () => { paused: boolean; remainingSec: number } | null;
+};
 let running: RunningSession | null = null;
 let pendingOpen: BreathSessionParams | null = null;
 
@@ -58,6 +64,16 @@ export function openBreathSession(params: BreathSessionParams): void {
   }
   host = { id: Date.now(), params, minimized: false };
   notify();
+}
+
+/** Status van de lopende sessie voor de pill (null = niet gestart). */
+export function getRunningBreathStatus(): { paused: boolean; remainingSec: number } | null {
+  if (!running?.isActive()) return null;
+  try {
+    return running.status?.() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function getPendingBreathOpen(): { label: string } | null {

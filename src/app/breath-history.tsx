@@ -9,6 +9,7 @@
    Kleur zit enkel nog in de toestand-icoontjes.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { currentStreak } from '@/utils/streak';
 import { daysOfThisWeek } from '@/utils/locale';
 import { Brand } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
@@ -151,17 +152,6 @@ function dayKey(ts: number): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-function todayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-function shiftDayKey(daysBack: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - daysBack);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
 function computeStats(history: BreathHistoryEntry[]): StatsResult {
   if (history.length === 0) {
     return {
@@ -179,14 +169,11 @@ function computeStats(history: BreathHistoryEntry[]): StatsResult {
   const completionRate = Math.round((completedCount / history.length) * 100);
   const avgSessionSec = totalSec / history.length;
 
-  /* Streak: aaneengesloten dagen vanaf vandaag met minstens 1 sessie. */
+  /* Streak: gedeelde regel (utils/streak.ts) — blijft staan tot vandaag
+     voorbij is, zoals Apple (audit 12 okt 2026). */
   const daysWithSession = new Set<string>();
   for (const e of history) daysWithSession.add(dayKey(e.ts));
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    if (daysWithSession.has(shiftDayKey(i))) streak++;
-    else break;
-  }
+  const streak = currentStreak((d) => daysWithSession.has(dayKey(d.getTime())));
 
   /* Per-pattern aggregate */
   const byKey = new Map<string, { count: number; totalSec: number }>();

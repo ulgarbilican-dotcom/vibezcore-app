@@ -566,10 +566,10 @@ function ProductsGroup() {
       <Group title="Products">
         <Row
           icon={BraceletIcon}
-          title="Session Control"
+          title="State Control"
           subtitle="Your bracelet is activated"
           onPress={() => router.navigate('/bracelet' as never)}
-          accessibilityLabel="Open Session Control"
+          accessibilityLabel="Open State Control"
         />
         <Row icon={Package} title="Order new beadband" onPress={() => openExternal(BRACELET_SHOP_URL)} />
         {/* Operator, 7 okt 2026 ("ik zie niet hoe ik naar bracelet moet"):

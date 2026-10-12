@@ -3858,7 +3858,7 @@ function IdleScreen({
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
-        title="Session Control"
+        title="State Control"
         /* In de State Control-tab: terug naar het intro (zelfde als de
            chevron/terugknop elders, 5 okt 2026). `onDisconnect` liet de tab
            anders op "Connecting…" hangen (stil verbinden gebeurt één keer). */

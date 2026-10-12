@@ -33,6 +33,7 @@
    De oude sleutel wordt eenmalig overgezet, dus niemand raakt iets kwijt.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { currentStreak } from '@/utils/streak';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeUserBucket } from '@/utils/user-bucket';
@@ -248,14 +249,9 @@ export function calculateStreak(
   for (const e of entries) {
     days.add(new Date(e.ts).toDateString());
   }
-  /* Loop terug vanaf vandaag tot de eerste dag zonder sessie. */
-  let streak = 0;
-  const cursor = new Date();
-  while (days.has(cursor.toDateString())) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
+  /* Audit 12 okt 2026 (operator akkoord): vervangt het "vandaag-anker" —
+     gedeelde regel in utils/streak.ts, de reeks blijft tot vandaag voorbij is. */
+  return currentStreak((d) => days.has(d.toDateString()));
 }
 
 /** Synchrone, niet-reactieve lezing — voor pure util-functies buiten React

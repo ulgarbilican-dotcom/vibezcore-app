@@ -1737,7 +1737,7 @@ export default function SmartBeadBraceletScreen() {
               <View style={s.ownerDot} />
               <View>
                 <Text style={s.ownerTitle}>Your bracelet is active</Text>
-                <Text style={s.ownerSub}>Tap to open Session Control</Text>
+                <Text style={s.ownerSub}>Tap to open State Control</Text>
               </View>
             </View>
             <Text style={s.ownerArrow}>›</Text>

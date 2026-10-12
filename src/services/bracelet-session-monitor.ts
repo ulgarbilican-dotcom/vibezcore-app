@@ -322,7 +322,7 @@ async function ensureChannel(): Promise<void> {
        status-melding, geen "kom nu iets doen"-aanmaning; geen geluid/
        trilling nodig, wel zichtbaar op het vergrendelscherm. */
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Bracelet session',
+      name: 'State Control session',
       description: 'Shows your running bracelet session.',
       importance: Notifications.AndroidImportance.LOW,
       sound: null,

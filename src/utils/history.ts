@@ -19,6 +19,7 @@
    Your Journey-screen meteen re-rendert bij elke flush.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { currentStreak } from '@/utils/streak';
 import { urlEq } from '@/utils/url-eq';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
@@ -300,19 +301,9 @@ export function computeStreak(raw: HistoryEntry[]): number {
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     days.add(key);
   }
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
   const keyOf = (dt: Date) =>
     `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-  if (!days.has(keyOf(cursor))) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  let streak = 0;
-  while (days.has(keyOf(cursor))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
+  return currentStreak((d) => days.has(keyOf(d)));
 }
 
 export type HistoryStats = {

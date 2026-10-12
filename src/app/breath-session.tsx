@@ -2561,6 +2561,13 @@ export function BreathSession() {
         isActive: () => runningRef.current,
         label: () => labelRef.current,
         end: () => finishRef.current(false),
+        status: () => ({
+          paused: pausedRef.current,
+          remainingSec: Math.max(
+            0,
+            Math.round(effectiveRoundsRef.current * cycleRef.current - elapsedRef.current),
+          ),
+        }),
       }),
     [],
   );

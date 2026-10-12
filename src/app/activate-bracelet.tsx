@@ -351,9 +351,9 @@ export default function ActivateBraceletScreen() {
             onPress={() => router.dismissTo('/bracelet' as never)}
             onPressIn={doneBtnScale.onPressIn}
             onPressOut={doneBtnScale.onPressOut}
-            accessibilityLabel="Open Session Control screen"
+            accessibilityLabel="Open State Control"
           >
-            <Text style={s.doneBtnText}>Open Session Control</Text>
+            <Text style={s.doneBtnText}>Open State Control</Text>
           </AnimatedPressable>
 
           <Text style={s.doneFooter}>

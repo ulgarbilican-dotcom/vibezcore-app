@@ -41,6 +41,7 @@
    CAP op 500 records (~1 jaar bij 1-2/dag).
    ─────────────────────────────────────────────────────────────────── */
 
+import { currentStreak } from '@/utils/streak';
 import { daysOfThisWeek, startOfWeekMonday } from '@/utils/locale';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
@@ -547,15 +548,9 @@ export function computeStats(forMode?: number): BraceletStats {
     }
   }
 
-  /* Streak — count back day by day from today. */
-  let streak = 0;
-  if (daysWithSession.has(todayKey)) {
-    let cursor = new Date(now);
-    while (daysWithSession.has(dayKey(cursor))) {
-      streak += 1;
-      cursor = new Date(cursor.getTime() - 24 * 60 * 60 * 1000);
-    }
-  }
+  /* Streak — gedeelde regel (utils/streak.ts, audit 12 okt 2026): blijft
+     staan tot vandaag voorbij is; kalenderdagen, geen 24 u-stappen. */
+  const streak = currentStreak((d) => daysWithSession.has(dayKey(d)), new Date(now));
 
   /* Iter 9dq v6: hoogste streak ooit. Itereert door alle dagen met
      sessies in chronologische volgorde en telt de langste opeenvolgende

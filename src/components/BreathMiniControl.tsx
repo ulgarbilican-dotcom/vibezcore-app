@@ -14,8 +14,12 @@
 
 import { BrandFonts, Brand } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
-import { getBraceletSessionSnapshot, subscribeBraceletSession } from '@/services/bracelet-session-state';
-import { getBreathHost, restoreBreathSession, subscribeBreathHost } from '@/services/breath-session-host';
+import {
+  getBreathHost,
+  getRunningBreathStatus,
+  restoreBreathSession,
+  subscribeBreathHost,
+} from '@/services/breath-session-host';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Reanimated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -26,6 +30,11 @@ import VibezGlass from './VibezGlass';
 
 const AnimatedPressable = Reanimated.createAnimatedComponent(Pressable);
 
+function fmtMMSS(sec: number): string {
+  const t = Math.max(0, Math.round(sec));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
 /* Operator, 10 okt 2026 ("pill over de paginatitel" → "balk onderaan"):
    op tabbladen gedockt net boven de tabbalk (zie (tabs)/_layout.tsx), op
    schermen zonder tabbalk zwevend onderaan — nooit meer over een titel. */
@@ -35,9 +44,17 @@ export function BreathMiniControl({ docked = false }: { docked?: boolean } = {})
   const pathname = usePathname();
   const [host, setHost] = useState(getBreathHost());
   useEffect(() => subscribeBreathHost(() => setHost(getBreathHost())), []);
-  const [bracelet, setBracelet] = useState(getBraceletSessionSnapshot());
-  useEffect(() => subscribeBraceletSession(setBracelet), []);
   const insets = useSafeAreaInsets();
+  /* Audit 12 okt 2026: zoals de State Control-pill — "Paused" en de
+     resterende tijd, elke seconde bijgewerkt zolang de pill zichtbaar is. */
+  const minimized = !!host?.minimized;
+  const [status, setStatus] = useState(getRunningBreathStatus());
+  useEffect(() => {
+    if (!minimized) return;
+    setStatus(getRunningBreathStatus());
+    const id = setInterval(() => setStatus(getRunningBreathStatus()), 1000);
+    return () => clearInterval(id);
+  }, [minimized]);
 
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -48,7 +65,6 @@ export function BreathMiniControl({ docked = false }: { docked?: boolean } = {})
 
   const key = (host.params.state ?? host.params.mode ?? 'calm') as BreathStateKey;
   const st = BREATH_STATES[key] ?? BREATH_STATES.calm;
-  void bracelet;
   return (
     <View
       /* Zonder tabbalk: net BOVEN de vaste hoofdknop-zone onderaan (knop
@@ -74,6 +90,11 @@ export function BreathMiniControl({ docked = false }: { docked?: boolean } = {})
             {/* Zelfde schrijfwijze als overal ("Clarity & Relax", niet "Clarity & relax"). */}
             Breathwork · {st.eyebrow.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
+          {status ? (
+            <Text style={s.time}>
+              {status.paused ? `Paused · ${fmtMMSS(status.remainingSec)}` : fmtMMSS(status.remainingSec)}
+            </Text>
+          ) : null}
         </VibezGlass>
       </AnimatedPressable>
     </View>
@@ -97,6 +118,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     maxWidth: '90%',
+  },
+  time: {
+    color: Brand.text,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 13,
+    fontVariant: ['tabular-nums'],
+    opacity: 0.85,
   },
   label: {
     color: Brand.text,
