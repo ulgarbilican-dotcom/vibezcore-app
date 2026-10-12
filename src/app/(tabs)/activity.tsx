@@ -17,6 +17,7 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
+import ThisWeekCard from '@/components/ThisWeekCard';
 import { startOfWeekMonday } from '@/utils/locale';
 import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import {
@@ -153,6 +154,10 @@ export default function ActivityScreen() {
         </View>
 
         <View style={s.headerSpacer} />
+
+        {/* Audit 12 okt 2026: eerst de samenvatting van de week (minuten,
+            reeks, volgende sessie), dan de ingangen — zoals Apple Fitness. */}
+        <ThisWeekCard />
 
         {/* Operator, 29 september 2026 ("zeer belangrijke elementen en
            eigenlijk de essentie van breathwork... bovenaan onder de foto
