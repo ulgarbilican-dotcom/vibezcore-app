@@ -207,6 +207,7 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 143 | Activity "This week": drie aparte cijfers (State Control min · Breathwork min · reeks + beste) | A16 | ⏳ |
 | 144 | Eén trilsterkte app-breed: Breathwork Audio & Haptics → onder Phone haptics SOFT / MEDIUM / STRONG (zelfde instelling als State Control; tikken korter/langer, ritme gelijk) | A16 | ⏳ |
 | 145 | Breathwork Audio & Haptics: soundscapes per groep op één rij, horizontaal scrollen als ze niet passen (tot de rand van het blad) | A16 | ⏳ |
+| 146 | Sentry (EU, project react-native): na nieuwe build een testfout → verschijnt in Sentry Issues, zonder e-mail/IP; dev build stuurt niets | echte build | ⏳ |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

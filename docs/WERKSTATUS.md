@@ -83,6 +83,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 12 okt 2026: audit ronde 2 (operator "nu dit aanpakken"): streak-regel overal (utils/streak.ts), End-bevestiging, titel State Control, trial-einddatum in Profile, Breathwork-pil met tijd, Try Again in player, zoeken voor iedereen, "This week"-kaart (components/ThisWeekCard.tsx), "How do you feel now?" (components/FeelCheck.tsx, utils/feel-checkin.ts). Tests 134–142. Open: crash reporting (Sentry-account operator), Apple Health/Health Connect + widgets/Siri (native, nieuwe build).
 
+- 12 okt 2026: crash reporting via Sentry (EU-regio, org ulgar-bilican, project react-native), src/services/crash-reporting.ts. **Nieuwe build nodig.** Source maps uploaden staat uit (SENTRY_DISABLE_AUTO_UPLOAD in eas.json) tot er een SENTRY_AUTH_TOKEN als EAS-secret is. Eén trilsterkte app-breed; soundscapes horizontaal per groep.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
