@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VIBEZCORE V-merkteken (keuze B, 15% korter — zie geheugen
+     project-brand-v-mark): exact dezelfde polygonen als welcome.tsx. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="38.57dp"
+    android:viewportWidth="71.4"
+    android:viewportHeight="68.85">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,0 L16.8,0 L42.8,68.85 L26,68.85 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54.6,0 L71.4,0 L49.89,56.95 L41.49,34.71 Z" />
+</vector>
