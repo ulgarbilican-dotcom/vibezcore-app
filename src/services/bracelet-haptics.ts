@@ -545,8 +545,12 @@ let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; a
    bijna vol vermogen, Sleep blijft zacht) en langere tikken. Verhouding
    tussen de toestanden blijft. Ritme en timing veranderen niet. */
 const WATCH_BASE = 1.4;
-const WATCH_AMP: Record<'soft' | 'medium' | 'strong', number> = { soft: 0.6, medium: 1, strong: 2.6 };
-const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 0.8, medium: 1, strong: 1.5 };
+/* Operator, 12 okt 2026 (vervolg): "strong mag heel sterk, medium zoals
+   strong nu is en soft normaal" — op het horloge alles één trede hoger:
+   Soft = vroegere Medium, Medium = vroegere Strong, Strong = bijna vol
+   vermogen met langere tikken (ook Sleep duidelijk voelbaar). */
+const WATCH_AMP: Record<'soft' | 'medium' | 'strong', number> = { soft: 1, medium: 2.6, strong: 4.6 };
+const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 1, medium: 1.5, strong: 2 };
 function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: number; dubMsNoAmp: number }) {
   const st = getHapticStrength();
   const amp = (a: number) => Math.max(1, Math.min(255, Math.round(a * WATCH_BASE * WATCH_AMP[st])));
