@@ -23,6 +23,7 @@
      beschikbaar is.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { getCrashReportsEnabled, setCrashReportsEnabled } from '@/services/crash-reporting';
 import HealthSyncSetting from '@/components/HealthSyncSetting';
 import { resetRestingPulse } from '@/services/resting-pulse';
 import { AUDIO_ENABLED } from '@/constants/features';
@@ -58,7 +59,7 @@ import { clearAllSavedPositions } from '@/utils/vzp';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Stack, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -148,6 +149,10 @@ function PressFeedback({
 export default function SettingsScreen() {
   const [saveProgress, setSaveProgress] = useSetting('saveProgress');
   const [trackHistory, setTrackHistory] = useSetting('trackHistory');
+  const [crashReports, setCrashReports] = useState(true);
+  useEffect(() => {
+    void getCrashReportsEnabled().then(setCrashReports);
+  }, []);
   const [audioQuality, setAudioQuality] = useSetting('audioQuality');
   /* Iter 9pp: auto-play next session verhuisd van Audio Library
      naar Settings (operator-feedback "library is content-focused,
@@ -306,6 +311,25 @@ export default function SettingsScreen() {
             <Switch
               value={trackHistory}
               onValueChange={setTrackHistory}
+              trackColor={{ false: '#3a3a3a', true: AudioAccent }}
+              thumbColor="#ffffff"
+              ios_backgroundColor="#3a3a3a"
+            />
+          </View>
+          {/* 12 okt 2026: crashrapporten (Sentry) — standaard aan, uit te zetten. */}
+          <View style={s.row}>
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Share crash reports</Text>
+              <Text style={s.rowSub}>
+                Helps us fix problems. Technical details only — never your name, email or health data.
+              </Text>
+            </View>
+            <Switch
+              value={crashReports}
+              onValueChange={(v) => {
+                setCrashReports(v);
+                void setCrashReportsEnabled(v);
+              }}
               trackColor={{ false: '#3a3a3a', true: AudioAccent }}
               thumbColor="#ffffff"
               ios_backgroundColor="#3a3a3a"

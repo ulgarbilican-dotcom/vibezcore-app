@@ -23,8 +23,50 @@ type SentryLike = {
 
 let sentry: SentryLike | null = null;
 
+/* 12 okt 2026: de gebruiker kan crashrapporten uitzetten (Settings →
+   Privacy). Standaard aan, uitgelegd in de privacyverklaring. */
+const OPT_OUT_KEY = 'vz_crash_reports_off_v1';
+
+export async function getCrashReportsEnabled(): Promise<boolean> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const AS = require('@react-native-async-storage/async-storage').default;
+    return (await AS.getItem(OPT_OUT_KEY)) !== '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function setCrashReportsEnabled(on: boolean): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const AS = require('@react-native-async-storage/async-storage').default;
+    await AS.setItem(OPT_OUT_KEY, on ? '0' : '1');
+  } catch {
+    /* stil */
+  }
+  if (!on && sentry) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      await require('@sentry/react-native').close();
+    } catch {
+      /* stil */
+    }
+    sentry = null;
+  } else if (on) {
+    initCrashReporting();
+  }
+}
+
 export function initCrashReporting(): void {
   if (__DEV__ || !SENTRY_DSN || sentry) return;
+  void getCrashReportsEnabled().then((on) => {
+    if (on) initNow();
+  });
+}
+
+function initNow(): void {
+  if (sentry) return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const S = require('@sentry/react-native') as SentryLike;

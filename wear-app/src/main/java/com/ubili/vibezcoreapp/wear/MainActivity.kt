@@ -46,6 +46,15 @@ class MainActivity : Activity() {
 
     pauseButton.setOnClickListener { onPauseTap() }
     endButton.setOnClickListener { onEndTap() }
+    /* 12 okt 2026: vanaf Wear OS 4 (Android 13) moet een app zelf om
+       meldingen vragen — zonder die toestemming loopt de sessie wel, maar
+       verbergt het horloge de lopende-sessie-melding (terugkeren naar de
+       sessie vanaf de wijzerplaat). Eén keer, bij het eerste openen. */
+    if (android.os.Build.VERSION.SDK_INT >= 33 &&
+      checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    ) {
+      requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 41)
+    }
     runDemo(intent)
   }
 
