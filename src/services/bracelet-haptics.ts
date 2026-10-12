@@ -544,20 +544,24 @@ let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; a
    de telefoon in de hand, dus de basis ligt ×1,4 hoger; Strong ×2,6 (Boost
    bijna vol vermogen, Sleep blijft zacht) en langere tikken. Verhouding
    tussen de toestanden blijft. Ritme en timing veranderen niet. */
-const WATCH_BASE = 1.4;
-/* Operator, 12 okt 2026 (vervolg): "strong mag heel sterk, medium zoals
-   strong nu is en soft normaal" — op het horloge alles één trede hoger:
-   Soft = vroegere Medium, Medium = vroegere Strong, Strong = bijna vol
-   vermogen met langere tikken (ook Sleep duidelijk voelbaar). */
-const WATCH_AMP: Record<'soft' | 'medium' | 'strong', number> = { soft: 1, medium: 2.6, strong: 4.6 };
-const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 1, medium: 1.5, strong: 2 };
+/* Operator, 12 okt 2026 (vervolg 2: "soft is bijna onvoelbaar en strong,
+   is dat max?"): de zachte toestanden (Sleep 18/255) bleven op de pols te
+   zwak. Op het horloge nu vaste niveaus: Strong = vol vermogen bij elke
+   toestand, Medium ≈ 70 %, Soft ≈ 40 % — de rustige toestanden blijven
+   bij Soft/Medium iets zachter dan Boost (×0,75 … ×1), nooit onvoelbaar.
+   Tweede tik (dub) ≈ 70 % van de eerste, zoals een echte hartslag. */
+const WATCH_LEVEL: Record<'soft' | 'medium' | 'strong', number> = { soft: 105, medium: 180, strong: 255 };
+const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 1, medium: 1.3, strong: 1.8 };
 function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: number; dubMsNoAmp: number }) {
   const st = getHapticStrength();
-  const amp = (a: number) => Math.max(1, Math.min(255, Math.round(a * WATCH_BASE * WATCH_AMP[st])));
+  /* Sleep (18) → 0,75 · Boost (65) → 1 */
+  const modeScale = st === 'strong' ? 1 : 0.75 + 0.25 * Math.min(1, Math.max(0, (spec.lubAmp - 18) / (65 - 18)));
+  const lub = Math.max(1, Math.min(255, Math.round(WATCH_LEVEL[st] * modeScale)));
+  const dub = Math.max(1, Math.min(255, Math.round(lub * 0.7)));
   const ms = (m: number) => Math.round(m * WATCH_MS[st]);
   return {
-    lubAmp: amp(spec.lubAmp),
-    dubAmp: amp(spec.dubAmp),
+    lubAmp: lub,
+    dubAmp: dub,
     lubMs: ms(45),
     dubMs: ms(35),
     lubMsNoAmp: ms(spec.lubMsNoAmp),
