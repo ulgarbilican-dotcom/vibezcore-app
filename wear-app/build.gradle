@@ -26,7 +26,23 @@ android {
     versionName "1.0.0"
   }
 
+  /* 12 okt 2026: zelfde debug-sleutel als de telefoon-app (android/app/
+     debug.keystore). Google Play Services levert berichten tussen telefoon
+     en horloge ENKEL tussen apps met dezelfde handtekening — met de
+     standaard ~/.android-sleutel kwam er niets aan (getest op Watch4). */
+  signingConfigs {
+    debug {
+      storeFile file('../app/debug.keystore')
+      storePassword 'android'
+      keyAlias 'androiddebugkey'
+      keyPassword 'android'
+    }
+  }
+
   buildTypes {
+    debug {
+      signingConfig signingConfigs.debug
+    }
     release {
       minifyEnabled false
     }
