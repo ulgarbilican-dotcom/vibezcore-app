@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -1837,6 +1838,11 @@ function CompletionModal({
         {minutes !== null && minutes > 0 && (
           <Text style={s.completionDuration}>{minutes} min</Text>
         )}
+        {/* Audit 12 okt 2026: één tik — je merkt het effect en de app leert
+            wat voor jou werkt (utils/feel-checkin.ts). */}
+        <View style={{ marginTop: 28 }}>
+          <FeelCheck session={{ kind: 'state', key: String(mode) }} />
+        </View>
       </ReanimatedAnimated.View>
       </ReanimatedAnimated.View>
 

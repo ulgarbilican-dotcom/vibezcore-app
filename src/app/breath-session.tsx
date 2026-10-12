@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -4242,6 +4243,13 @@ export function BreathSession() {
                voltooiing (dit is het "Well done"-scherm, geen preview-
                afbreking) — geen modal, geen sluitknop nodig, het scherm
                verdwijnt toch zodra de gebruiker verdergaat. */}
+            {/* Audit 12 okt 2026: "How do you feel now?" na elke gewone
+                sessie; een Instant-sessie houdt haar eigen afstemvraag. */}
+            {!isInstantSession && (
+              <View style={{ marginBottom: 22 }}>
+                <FeelCheck session={{ kind: 'breath', key: st.key, technique: tech.key }} />
+              </View>
+            )}
             {isInstantSession && (
               <View style={s.instantFeedbackRow}>
                 {instantFeedbackGiven ? (

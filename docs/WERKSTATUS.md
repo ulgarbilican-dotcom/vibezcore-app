@@ -81,6 +81,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 12 okt 2026: A-tot-Z-audit (docs/AUDIT_2026-10-12.md), ronde 1 punt 1–5 gebouwd (operator "doe 1 tot 5"): privacy/camera-copy in welzijnstaal (legal-content, withPulseCamera → **nieuwe build**), State Control monitor-eerst + bracelet best-effort + iOS-herstel, Breathwork "End current session?" + Instant angst → Physiological Sigh, Audio één toegangsregel (needsPreview), lokale gegevens wissen bij Delete account (services/local-data.ts) + Clear Heart Rate Data. Tests 126–133. Volgende: ronde 2 (P1) uit het auditdocument.
 
+- 12 okt 2026: audit ronde 2 (operator "nu dit aanpakken"): streak-regel overal (utils/streak.ts), End-bevestiging, titel State Control, trial-einddatum in Profile, Breathwork-pil met tijd, Try Again in player, zoeken voor iedereen, "This week"-kaart (components/ThisWeekCard.tsx), "How do you feel now?" (components/FeelCheck.tsx, utils/feel-checkin.ts). Tests 134–142. Open: crash reporting (Sentry-account operator), Apple Health/Health Connect + widgets/Siri (native, nieuwe build).
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
