@@ -143,10 +143,11 @@ export function HeartbeatScale({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (reduced) return;
     return subscribeHapticPulse((pulse) => {
-      const peak = pulse.kind === 'lub' ? 1.035 : 1.018;
-      const back = Math.min(420, Math.max(160, pulse.cycleMs * 0.35));
+      /* Vervolg (operator: "niet sterk genoeg"): 3,5 % was ~8 px. */
+      const peak = pulse.kind === 'lub' ? 1.07 : 1.035;
+      const back = Math.min(520, Math.max(220, pulse.cycleMs * 0.5));
       scale.value = withSequence(
-        withTiming(peak, { duration: 60, easing: Easing.out(Easing.quad) }),
+        withTiming(peak, { duration: 80, easing: Easing.out(Easing.quad) }),
         withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
       );
     });

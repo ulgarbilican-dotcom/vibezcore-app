@@ -110,12 +110,12 @@ class SessionRingView @JvmOverloads constructor(
   private var lastBeat: Pulse? = null
   private fun beatScale(now: Long): Float {
     val b = lastBeat ?: return 1f
-    val dur = if (b.strong) 320f else 220f
+    val dur = if (b.strong) 420f else 300f
     val k = (now - b.startMs) / dur
     if (k >= 1f || k < 0f) return 1f
     val up = if (k < 0.18f) k / 0.18f else 1f - (k - 0.18f) / 0.82f
     val e = up * up * (3f - 2f * up)
-    return 1f + (if (b.strong) 0.035f else 0.018f) * e
+    return 1f + (if (b.strong) 0.06f else 0.03f) * e
   }
 
   override fun onDraw(canvas: Canvas) {
