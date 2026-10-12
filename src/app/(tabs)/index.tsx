@@ -1835,8 +1835,11 @@ function AudioScreen({
         {/* ── SEARCH BAR ── boven pillars (operator-fix 2026-06-18).
             Voorheen stond search ÓNDER de pillar-grid; operator wil 'm
             bovenaan voor sneller toegang. Alleen PRO-users (zien volle
-            library; voor guests is search voor 14 free sessies overhead). */}
-        {hasSub && (
+            library; voor guests is search voor 14 free sessies overhead).
+            Audit 12 okt 2026 (operator akkoord): voor iedereen — ook een
+            gast moet de hele catalogus kunnen doorzoeken. Resultaten openen
+            de serie, waar de gewone toegangsregels gelden (slot/trial/PRO). */}
+        {(
           <View
             style={s.searchWrap}
             onLayout={(e) => {
