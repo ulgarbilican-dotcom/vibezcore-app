@@ -38,15 +38,40 @@ object CatalogStore {
   fun save(context: Context, json: String) {
     try {
       JSONObject(json) // enkel geldige JSON bewaren
-      /* Een nieuwe catalogus bevat de keuze van de telefoon (die ook de
-         horloge-sessies al verwerkte) — die is dan leidend. */
-      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+      /* Keuze op het horloge blijft staan, tenzij de telefoon voor die
+         toestand intussen zelf een ANDERE techniek koos — dan is die leidend.
+         (Een nieuwe catalogus wiste eerst alles, ook als de telefoon de
+         horloge-keuze nog niet kende: "Last used" verdween.) */
+      val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      val local = try {
+        JSONObject(prefs.getString("techByState", "{}") ?: "{}")
+      } catch (_: Exception) {
+        JSONObject()
+      }
+      val before = selectedKeys(prefs.getString(KEY_CATALOG, null))
+      val after = selectedKeys(json)
+      for (k in after.keys) if (before[k] != null && before[k] != after[k]) local.remove(k)
+      prefs.edit()
         .putString(KEY_CATALOG, json)
-        .remove("techByState")
+        .putString("techByState", local.toString())
         .apply()
       listeners.toList().forEach { it() }
     } catch (_: Exception) {
     }
+  }
+
+  /** Per toestand de techniek die de telefoon klaarzet (selectedIdx). */
+  private fun selectedKeys(raw: String?): Map<String, String> = try {
+    val arr = JSONObject(raw ?: "{}").optJSONArray("breath")
+    val out = HashMap<String, String>()
+    for (i in 0 until (arr?.length() ?: 0)) {
+      val e = arr!!.optJSONObject(i) ?: continue
+      val idx = e.optInt("selectedIdx", e.optInt("recommendedIdx", 0))
+      out[e.optString("key")] = e.optJSONArray("techniques")?.optJSONObject(idx)?.optString("key") ?: ""
+    }
+    out
+  } catch (_: Exception) {
+    emptyMap()
   }
 
   fun load(context: Context): JSONObject? = try {

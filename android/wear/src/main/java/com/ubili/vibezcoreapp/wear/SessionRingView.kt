@@ -263,7 +263,9 @@ class SessionRingView @JvmOverloads constructor(
     // waterpeil van de service: 0,18 (uitgeademd) … 0,85 (ingeademd)
     val b = ((levelAt(now) - 0.18f) / 0.67f).coerceIn(0f, 1f)
     // naam staat enkel bij pauze bovenaan — de figuur mag hoger
-    val acy = cy - r * (if (paused) 0.02f else 0.36f)
+    /* 13 okt 2026 (operator: "de animatie moet de hoofdzaak zijn, de tekst
+       overheerst"): figuur groot en centraal, tekst klein eronder */
+    val acy = cy - r * (if (paused) 0.02f else 0.14f)
 
     /* Vloeiend op de Watch4 (12 okt 2026, gemeten 14–16 ms GPU per beeld):
        de gloed is één vaste verloop-shader die enkel geschaald wordt, en de
@@ -291,7 +293,7 @@ class SessionRingView @JvmOverloads constructor(
     canvas.drawCircle(cx, acy, gR, glowPaint)
 
     // de figuur
-    val maxS = r * 1.55f * artScale
+    val maxS = r * 1.8f * artScale
     val aspect = bmp.width.toFloat() / bmp.height
     val maxW = if (aspect >= 1f) maxS else maxS * aspect
     val maxH = if (aspect >= 1f) maxS / aspect else maxS
@@ -348,14 +350,14 @@ class SessionRingView @JvmOverloads constructor(
     }
 
     // "Inhale  Nose" op één regel — de neus/mond gedimd ernaast (operator 13 okt 2026)
-    bigPaint.textSize = r * 0.20f
-    val y = cy + r * (if (paused) 0.42f else 0.30f)
+    bigPaint.textSize = r * (if (paused) 0.18f else 0.135f)
+    val y = cy + r * (if (paused) 0.42f else 0.56f)
     val head = centerText
     val tail = if (subText.isNotEmpty()) "  $subText" else ""
     if (tail.isEmpty()) {
       canvas.drawText(head, cx, y, bigPaint)
     } else {
-      smallPaint.textSize = r * 0.20f
+      smallPaint.textSize = r * 0.135f
       val wHead = bigPaint.measureText(head)
       val wTail = smallPaint.measureText(tail)
       val x0 = cx - (wHead + wTail) / 2f
@@ -365,10 +367,10 @@ class SessionRingView @JvmOverloads constructor(
     val foot = footerAt(now)
     if (foot.isNotEmpty() && !paused) {
       /* 13 okt 2026 (operator: "minuten groter"): duidelijk leesbaar */
-      smallPaint.textSize = r * 0.155f
+      smallPaint.textSize = r * 0.105f
       val saved = smallPaint.color
-      smallPaint.color = Color.argb(235, 255, 255, 255)
-      canvas.drawText(foot, cx, cy + r * 0.55f, smallPaint)
+      smallPaint.color = Color.argb(150, 255, 255, 255)
+      canvas.drawText(foot, cx, cy + r * 0.71f, smallPaint)
       smallPaint.color = saved
     }
   }
