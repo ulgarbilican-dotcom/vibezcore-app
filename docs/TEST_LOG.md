@@ -271,6 +271,7 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W41 | Figuren optisch even groot: Sharp Focus-bol iets kleiner, Boost-zon iets groter | zon, bol | ✅ 13 okt (Claude) |
 | W42 | Gloed op de toestandpagina rond en binnen de pagina (geen rechte rand bij scrollen) | Clarity → Sleep | ✅ 13 okt (Claude) |
 | W43 | Actieve sessie: alle vijf figuren even groot (bijgesneden figuur, zelfde vak als startscherm) | 5 toestanden (demo) | ✅ 13 okt (Claude) |
+| W44 | Startscherm: heel het scherm in de kleur van de toestand (glazig, lichter achter de figuur), kleur vloeit bij scrollen over naar de volgende toestand | Boost, Clarity, Sleep | ✅ 13 okt (Claude) |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 

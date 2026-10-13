@@ -59,6 +59,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     findViewById<View>(R.id.idleContainer).setOnScrollChangeListener { v, _, _, _, _ ->
       v.removeCallbacks(snapRunnable)
       v.postDelayed(snapRunnable, 140)
+      updateHomeTint()
     }
     lifecycle.addObserver(androidx.wear.ambient.AmbientLifecycleObserver(this, ambientCallback))
     idleContainer = findViewById(R.id.idleContainer)
@@ -400,6 +401,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
        Scrollen klikt per toestand vast. Een tik opent het toestandscherm
        (techniek, duur, Start) — hier start nooit iets. */
     if (entries.isEmpty()) {
+      homeColors.clear()
+      updateHomeTint()
       list.addView(TextView(this).apply {
         text = "Open VIBEZCORE on your phone once to set up your watch"
         setTextColor(Color.parseColor("#F4F4F4"))
@@ -410,6 +413,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       return
     }
     val pageH = resources.displayMetrics.heightPixels
+    homeColors.clear()
     for (e in entries) {
       val c = parse(e.optString("colorHex"))
       val page = android.widget.LinearLayout(this).apply {
@@ -422,14 +426,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
           startActivity(Intent(this@MainActivity, StateActivity::class.java).putExtra("key", e.optString("key")))
         }
       }
-      /* (operator: "de pagina zelf bij verticaal scrollen glas-effect in de
-         kleur van de state") de hele pagina is een zachte gloed in de kleur
-         van de toestand — licht rond de figuur, naar zwart aan de rand.
-         Bij het scrollen schuift de ene kleur zo in de andere. */
-      /* rond en helemaal binnen de pagina uitlopend naar zwart — anders werd
-         de gloed boven en onder recht afgesneden, zichtbaar bij het scrollen
-         (operator: "de gloedkleur wordt afgesneden, moet rond zijn") */
-      page.background = stateGlow(this, e.optString("colorHex"), 0.46f, 0.46f)
+      homeColors.add(figureColor(this, e.optString("colorHex")))
       val figure = android.widget.ImageView(this).apply {
         setImageBitmap(trimmedArt(this@MainActivity, e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
@@ -454,6 +451,39 @@ class MainActivity : androidx.activity.ComponentActivity() {
       })
       list.addView(page, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
     }
+    idleContainer.post { updateHomeTint() }
+  }
+
+  /* (operator: "hadden wij niet heel de pagina met glass-effect kleur-
+     achtergrond per state?") één achtergrond achter alle pagina's: het hele
+     scherm in de kleur van de toestand, glazig — iets lichter achter de
+     figuur, nooit zwart aan de rand. Bij het scrollen vloeit de kleur
+     geleidelijk van de ene toestand in de volgende (geen naad). */
+  private val homeColors = ArrayList<Int>()
+  private val homeTint = GradientDrawable().apply {
+    gradientType = GradientDrawable.RADIAL_GRADIENT
+    setGradientCenter(0.5f, 0.4f)
+  }
+
+  private fun updateHomeTint() {
+    if (homeColors.isEmpty()) {
+      idleContainer.background = null
+      return
+    }
+    val h = idleContainer.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels
+    val pos = ((idleContainer as android.widget.ScrollView).scrollY / h.toFloat()).coerceIn(0f, (homeColors.size - 1).toFloat())
+    val i = pos.toInt()
+    val t = pos - i
+    val c = if (i + 1 < homeColors.size) {
+      android.animation.ArgbEvaluator().evaluate(t, homeColors[i], homeColors[i + 1]) as Int
+    } else {
+      homeColors[i]
+    }
+    fun mix(a: Int) = Color.argb(a, Color.red(c), Color.green(c), Color.blue(c))
+    homeTint.gradientRadius = h * 0.75f
+    homeTint.colors = intArrayOf(mix(120), mix(62), mix(34))
+    homeTint.invalidateSelf()
+    idleContainer.background = homeTint
   }
 
   /** Na het scrollen: vastklikken op een toestand. Een korte veeg (of één
