@@ -54,6 +54,21 @@
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:name=".ModesActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
+        <activity
+            android:name=".StateControlActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
+        <activity
+            android:name=".StateDurationActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
+        <activity
             android:name=".DurationActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />

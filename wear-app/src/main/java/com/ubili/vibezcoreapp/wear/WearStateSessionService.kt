@@ -71,6 +71,10 @@ private data class StateStart(
   val gridOriginSec: Double = curveOffsetSec,
   /** Telefoonklok toen dit bericht vertrok (0 = onbekend). */
   val sentAtMs: Long = 0L,
+  /** Op het horloge zelf gestart (geen telefoon die meespeelt). */
+  val local: Boolean = false,
+  /** Het oorspronkelijke bericht, om een horloge-sessie te kunnen hervatten. */
+  val raw: String = "",
   val remainingSec: Double,
   val lubAmp: Int,
   val dubAmp: Int,
@@ -321,7 +325,7 @@ class WearStateSessionService : Service() {
       lubMs = j.optLong("lubMs", LUB_MS).coerceIn(20L, 120L),
       dubMs = j.optLong("dubMs", DUB_MS).coerceIn(15L, 100L),
       sound = j.optBoolean("sound", false),
-    ).takeIf { it.targetBpm > 0 }?.copy(sentAtMs = j.optLong("sentAtMs", 0L))
+    ).takeIf { it.targetBpm > 0 }?.copy(sentAtMs = j.optLong("sentAtMs", 0L), local = j.optBoolean("local", false), raw = raw)
   } catch (_: Exception) {
     null
   }
@@ -360,14 +364,16 @@ class WearStateSessionService : Service() {
       origin
     }
     var gridT = origin
-    while (gridT < phoneCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
+    if (s.sentAtMs > 0L) while (gridT < phoneCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
     val targetWall = if (s.sentAtMs > 0L) {
       s.sentAtMs + WATCH_CLOCK_AHEAD_MS + ((gridT - origin) * 1000).roundToLong()
     } else {
-      nowWall + ((gridT - phoneCurve) * 1000).roundToLong()
+      /* horloge-sessie: meteen (na het opbouwen van het scherm) */
+      nowWall + 120L
     }
     val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - (gridT - origin))
     if (aligned.remainingSec <= 0.5) return finish(startId)
+    localResumeJson = null
     android.util.Log.d("VZSync", "start sentAt=${s.sentAtMs} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetWall - nowWall}ms")
     session = aligned
     val waveform = buildWaveform(aligned, amplitudeControl)
@@ -423,8 +429,24 @@ class WearStateSessionService : Service() {
   private fun pause(startId: Int) {
     if (session == null) return finish(startId)
     if (paused) return
-    pausedRemainingMs = (sessionEndUptime - SystemClock.uptimeMillis()).coerceAtLeast(0L)
+    val now = SystemClock.uptimeMillis()
+    pausedRemainingMs = (sessionEndUptime - now).coerceAtLeast(0L)
     paused = true
+    session?.let { cur ->
+      if (cur.local && cur.raw.isNotEmpty()) {
+        /* Horloge-sessie: hervatten doet het horloge zelf, op dezelfde plek
+           in de curve (13 okt 2026). */
+        val curveNow = cur.curveOffsetSec + ((now - startUptime).coerceAtLeast(0L)) / 1000.0
+        localResumeJson = try {
+          org.json.JSONObject(cur.raw).apply {
+            put("curveOffsetSec", curveNow)
+            put("remainingSec", pausedRemainingMs / 1000.0)
+          }.toString()
+        } catch (_: Exception) {
+          null
+        }
+      }
+    }
     clearScheduled()
     cancelVibration()
     releaseWakeLock()
@@ -434,6 +456,11 @@ class WearStateSessionService : Service() {
   /** stopSelf(startId): stopt enkel als dit de laatste opdracht was — een
    *  START die intussen binnenkwam blijft dus gewoon spelen. */
   private fun finish(startId: Int) {
+    session?.takeIf { it.local }?.let { cur ->
+      val remainingMs = if (paused) pausedRemainingMs else (sessionEndUptime - SystemClock.uptimeMillis()).coerceAtLeast(0L)
+      logLocal(cur, remainingMs)
+    }
+    localResumeJson = null
     clearScheduled()
     /* Bij een natuurlijk einde is het eind-signaal al uitgespeeld; cancel
        is dan een no-op. */
@@ -671,11 +698,42 @@ class WearStateSessionService : Service() {
 
   override fun onBind(intent: Intent?): IBinder? = null
 
+  /** Een horloge-sessie in de geschiedenis op de telefoon (via de Data
+   *  Layer; de telefoon neemt hem op bij het openen). Enkel ≥ 10 s. */
+  private fun logLocal(cur: StateStart, remainingMs: Long) {
+    try {
+      val j = org.json.JSONObject(cur.raw)
+      val planned = j.optInt("plannedSec", 0)
+      val active = (planned - remainingMs / 1000.0).coerceAtLeast(0.0)
+      if (active < 10.0) return
+      CatalogStore.logSession(
+        this,
+        org.json.JSONObject().apply {
+          put("kind", "state")
+          put("mode", j.optInt("mode"))
+          put("startedAt", j.optLong("startedAt", System.currentTimeMillis()))
+          put("endedAt", System.currentTimeMillis())
+          put("activeSec", active)
+          put("plannedSec", planned)
+          put("completed", remainingMs <= 1500L)
+        },
+      )
+    } catch (_: Exception) {
+    }
+  }
+
   companion object {
     const val ACTION_START = "com.ubili.vibezcoreapp.wear.action.STATE_START"
     const val ACTION_PAUSE = "com.ubili.vibezcoreapp.wear.action.STATE_PAUSE"
     const val ACTION_STOP = "com.ubili.vibezcoreapp.wear.action.STATE_STOP"
     const val EXTRA_START_JSON = "stateStartJson"
+
+    /** Gepauzeerde horloge-sessie: het bericht om te hervatten (null = geen). */
+    @Volatile
+    var localResumeJson: String? = null
+
+    /** Draait er een State Control-sessie die op het horloge zelf startte? */
+    val isLocalSession: Boolean get() = instance?.session?.local == true
     private const val LATE_SKIP_MS = 150L
     private const val MAX_WAKE_LOCK_MS = 60 * 60 * 1000L
 

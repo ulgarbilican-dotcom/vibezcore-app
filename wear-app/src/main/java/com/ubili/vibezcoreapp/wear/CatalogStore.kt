@@ -221,6 +221,26 @@ object CatalogStore {
     }
   }
 
+  /** State Control-toestanden uit de catalogus (13 okt 2026; leeg bij een
+   *  oudere telefoon-app). */
+  fun state(context: Context): List<JSONObject> {
+    val arr = load(context)?.optJSONArray("state") ?: return emptyList()
+    return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }
+  }
+
+  /** Gekozen duur voor deze State Control-toestand, anders de aanbevolen. */
+  fun stateMinutes(context: Context, e: JSONObject): Int {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val m = prefs.getInt("stateDur_" + e.optString("key"), -1)
+    val min = e.optInt("minMinutes", 5)
+    val max = e.optInt("maxMinutes", 30)
+    return if (m in min..max) m else e.optInt("defaultMinutes", min).coerceIn(min, max)
+  }
+
+  fun setStateMinutes(context: Context, key: String, minutes: Int) {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt("stateDur_$key", minutes).apply()
+  }
+
   fun breath(context: Context): List<JSONObject> {
     val arr = load(context)?.optJSONArray("breath") ?: return emptyList()
     return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }

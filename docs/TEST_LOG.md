@@ -285,6 +285,8 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | T161 | Resterende tijd horloge = telefoon (naar beneden afronden + verversen net na de secondewissel; was ceil + vrij interval = tot 2 s verschil) | screenshots ±1 s | ⏳ operator kijkt |
 | T162 | Pols en telefoon voelbaar gelijk na bijstelling −80 ms (WATCH_CLOCK_AHEAD_MS 20) | Quick Boost | ✅ 13 okt (operator: "nu lijkt het goed") |
 | T163 | Breathwork op het horloge: zelfde sterkte als State Control (Soft 155 / Medium 205 / Strong 255) | Soft/Medium/Strong voelen | ✅ 13 okt (operator: "lijkt goed") |
+| W39b | Horloge startscherm = keuze State Control / Breathe; daarna per toestand een pagina met label STATE CONTROL (waterring) of BREATHE (figuur) | | ⏳ install |
+| W40b | State Control op het horloge zelf starten: duur per minuut (Recommended), Start; pauze/hervat/END op het horloge; sessie in de geschiedenis op de telefoon | | ⏳ install |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 

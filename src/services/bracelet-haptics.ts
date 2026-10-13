@@ -592,6 +592,21 @@ function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: numbe
   };
 }
 
+/** De parameters waarmee het horloge een State Control-sessie ZELF start
+ *  (13 okt 2026 — State Control op het horloge, zonder telefoon): hetzelfde
+ *  ritme als de telefoon nu zou spelen (rusthartslag, sterkte). */
+export function watchStateParams(mode: BraceletMode) {
+  const resting = getRestingPulse().bpm;
+  const spec = resolveSpec(mode, resting, resting);
+  return {
+    startBpm: spec.startBpm,
+    targetBpm: spec.targetBpm,
+    holdSec: SESSION_HOLD_SECONDS,
+    rampSec: spec.rampSec,
+    ...watchStrength(spec),
+  };
+}
+
 function relayToWatch(
   mode: BraceletMode,
   curveOffsetSec: number,

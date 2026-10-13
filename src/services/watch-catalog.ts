@@ -15,12 +15,17 @@
 import { BREATH_STATES, roundsFor, type BreathState, type BreathStateKey } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import { phaseHapticPattern, watchBreathAmplitude } from '@/services/breath-haptics';
+import { watchStateParams } from '@/services/bracelet-haptics';
+import { MODES } from '@/services/ble-contract';
 import { useHapticStrength } from '@/services/haptic-strength-pref';
+import { getRestingPulse, subscribeRestingPulse } from '@/services/resting-pulse';
+import { recordSession } from '@/utils/bracelet-history';
+import { useBraceletOwner } from '@/utils/dev-user-override';
 import { levelForTechnique, personalRecommendedMinutes, techniqueForLevel } from '@/utils/breath-level';
 import { addBreathSession, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { getSetting, setSetting, useSetting } from '@/utils/settings';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { syncWatchCatalog, takeWatchSessions } from '../../modules/wear-breath';
 
@@ -73,7 +78,7 @@ function techForWatch(key: BreathStateKey, base: BreathState['techniques'][numbe
   };
 }
 
-export function buildWatchCatalog(locked: boolean): string {
+export function buildWatchCatalog(locked: boolean, stateLocked = false): string {
   const breath = ORDER.map((key) => {
     const st = BREATH_STATES[key];
     /* 13 okt 2026 (operator: "gebruiker moet eerst de techniek kunnen
@@ -104,8 +109,32 @@ export function buildWatchCatalog(locked: boolean): string {
       defaultIdx: rec.defaultIdx,
     };
   });
-  return JSON.stringify({ v: 2, amp: watchBreathAmplitude(), breath });
+  /* 13 okt 2026 (operator: "in de horloge-app ook State Control bedienen"):
+     de vijf toestanden met hun duurbereik en het ritme dat de telefoon nu
+     zou spelen — het horloge start ze zelf. */
+  const state = MODES.map((m) => ({
+    key: m.mode,
+    name: m.name,
+    colorHex: m.color,
+    minMinutes: m.minMinutes,
+    maxMinutes: m.maxMinutes,
+    defaultMinutes: m.defaultMinutes,
+    locked: stateLocked,
+    params: watchStateParams(m.mode),
+  }));
+  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state });
 }
+
+/** Een State Control-sessie die op het horloge zelf liep (13 okt 2026). */
+type WatchStateRecord = {
+  kind: 'state';
+  mode: number;
+  startedAt: number;
+  endedAt: number;
+  activeSec: number;
+  plannedSec: number;
+  completed: boolean;
+};
 
 type WatchSessionRecord = {
   state: BreathStateKey;
@@ -122,7 +151,21 @@ async function importWatchSessions(): Promise<void> {
   const items = await takeWatchSessions();
   for (const raw of items) {
     try {
-      const r = JSON.parse(raw) as WatchSessionRecord;
+      const any = JSON.parse(raw) as { kind?: string };
+      if (any.kind === 'state') {
+        const st = any as WatchStateRecord;
+        if (!(st.activeSec >= 10) || !MODES.some((m) => m.mode === st.mode)) continue;
+        await recordSession({
+          mode: st.mode,
+          startedAt: new Date(st.startedAt).toISOString(),
+          endedAt: new Date(st.endedAt).toISOString(),
+          durationMin: Math.max(1, Math.round(st.activeSec / 60)),
+          plannedMin: Math.max(1, Math.round(st.plannedSec / 60)),
+          status: st.completed ? 'completed' : 'stopped',
+        });
+        continue;
+      }
+      const r = any as WatchSessionRecord;
       const st = BREATH_STATES[r.state];
       if (!st || !(r.durSec >= 10)) continue;
       await addBreathSession({
@@ -156,12 +199,17 @@ export function useWatchCatalogSync(): void {
   const [freeUsedAt] = useSetting('breathFreeSessionUsedAt');
   const [techByState] = useSetting('breathTechByState');
   const history = useBreathHistory();
+  const ownsBracelet = useBraceletOwner();
+  const [restingBpm, setRestingBpm] = useState(() => getRestingPulse().bpm);
+  useEffect(() => subscribeRestingPulse((p) => setRestingBpm(p.bpm)), []);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const locked = !sub.isPro && !!freeUsedAt;
-    syncWatchCatalog(buildWatchCatalog(locked));
-  }, [sub.isPro, freeUsedAt, strength, experience, history.length, techByState]);
+    /* zelfde regel als het State Control-scherm (bracelet-control.tsx) */
+    const stateLocked = !sub.isLoading && !sub.isPro && !ownsBracelet;
+    syncWatchCatalog(buildWatchCatalog(locked, stateLocked));
+  }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, strength, experience, history.length, techByState, restingBpm]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;

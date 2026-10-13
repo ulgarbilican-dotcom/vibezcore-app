@@ -171,6 +171,21 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun onPauseTap() {
     val st = StateSessionState.current
     if (st.active) {
+      /* Op het horloge gestart: pauzeren en hervatten doet het horloge zelf. */
+      val resume = WearStateSessionService.localResumeJson
+      if (st.paused && resume != null) {
+        startForegroundService(
+          Intent(this, WearStateSessionService::class.java).apply {
+            action = WearStateSessionService.ACTION_START
+            putExtra(WearStateSessionService.EXTRA_START_JSON, resume)
+          },
+        )
+        return
+      }
+      if (!st.paused && WearStateSessionService.isLocalSession) {
+        startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_PAUSE })
+        return
+      }
       PhoneLink.sendWatchAction(this, if (st.paused) "resume" else "pause", "bracelet")
       return
     }
@@ -387,72 +402,76 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
   private fun renderHome() {
-    val entries = CatalogStore.breath(this)
-    val sig = entries.joinToString { it.optString("key") + it.optBoolean("locked") + it.optString("technique") } + "|" + CatalogStore.homeSignature(this)
+    val hasState = CatalogStore.state(this).isNotEmpty()
+    val hasBreath = CatalogStore.breath(this).isNotEmpty()
+    val sig = "$hasState|$hasBreath"
     if (sig == homeSignature) return
     homeSignature = sig
     val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
     list.removeAllViews()
+    val pageH = resources.displayMetrics.heightPixels
 
-    /* 13 okt 2026 (operator: "de figuur en state name dienen als eerste
-       pagina, dan erop klikken en door naar de instellingen"): per toestand
-       één scherm met enkel de grote figuur die traag ademt en de naam.
-       Scrollen klikt per toestand vast. Een tik opent het toestandscherm
-       (techniek, duur, Start) — hier start nooit iets. */
-    if (entries.isEmpty()) {
+    /* 13 okt 2026 (operator: "het was mij niet duidelijk dat ik in
+       breathwork zat"): het startscherm is een KEUZE — State Control of
+       Breathe, in de volgorde van de telefoon. Daarna de toestanden van dat
+       ene onderdeel, met het label bovenaan (ModesActivity). */
+    if (!hasState && !hasBreath) {
       list.addView(TextView(this).apply {
         text = "Open VIBEZCORE on your phone once to set up your watch"
         setTextColor(Color.parseColor("#F4F4F4"))
         textSize = 15f
         gravity = android.view.Gravity.CENTER
         setPadding(dp(28f), 0, dp(28f), 0)
-      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, resources.displayMetrics.heightPixels))
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
       return
     }
-    val pageH = resources.displayMetrics.heightPixels
-    for (e in entries) {
-      val c = parse(e.optString("colorHex"))
-      val page = android.widget.LinearLayout(this).apply {
-        orientation = android.widget.LinearLayout.VERTICAL
-        gravity = android.view.Gravity.CENTER
-        tag = "page"
+    val col = android.widget.LinearLayout(this).apply {
+      orientation = android.widget.LinearLayout.VERTICAL
+      gravity = android.view.Gravity.CENTER
+      setPadding(dp(22f), 0, dp(22f), 0)
+    }
+    fun choice(label: String, icon: View, kind: String) {
+      val row = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        setPadding(dp(14f), 0, dp(14f), 0)
+        background = GradientDrawable().apply {
+          cornerRadius = dp(28f).toFloat()
+          setColor(Color.parseColor("#1C1C1E"))
+        }
         isClickable = true
-        contentDescription = e.optString("name") + (if (e.optBoolean("locked")) ", locked" else "")
+        contentDescription = label
         setOnClickListener {
-          startActivity(Intent(this@MainActivity, StateActivity::class.java).putExtra("key", e.optString("key")))
+          startActivity(Intent(this@MainActivity, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, kind))
         }
       }
-      /* (operator: "achtergrond terug zwart, geef figuren eigen gloed maar
-         professioneel") zwarte pagina; achter de figuur een ingetogen halo
-         in haar eigen kleur die ruim binnen de pagina uitdooft */
-      // de boom van Sleep zonder halo (operator 13 okt: "gloed van tree of life weg")
-      if (artResFor(e.optString("colorHex")) != R.drawable.vz_art_tree) {
-        page.background = figureHalo(e.optString("colorHex"), pageH)
-      }
-      val figure = android.widget.ImageView(this).apply {
-        setImageBitmap(trimmedArt(this@MainActivity, e.optString("colorHex")))
+      row.addView(icon, android.widget.LinearLayout.LayoutParams(dp(30f), dp(30f)).apply { marginEnd = dp(10f) })
+      row.addView(TextView(this).apply {
+        text = label
+        setTextColor(Color.WHITE)
+        textSize = 15f
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        maxLines = 1
+      })
+      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(56f)).apply {
+        bottomMargin = dp(8f)
+      })
+    }
+    if (hasState) {
+      choice("State Control", WaterCircleView(this).apply {
+        color = Color.parseColor("#F5A524")
+        level = 0.5f
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      }, ModesActivity.KIND_STATE)
+    }
+    if (hasBreath) {
+      choice("Breathe", android.widget.ImageView(this).apply {
+        setImageBitmap(trimmedArt(this@MainActivity, "#B478FF"))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }
-      // alle figuren in hetzelfde vak, zonder lege rand = even groot
-      val sz = dp(118f * artOpticalScale(e.optString("colorHex")))
-      page.addView(figure, android.widget.LinearLayout.LayoutParams(sz, sz))
-      breathe(figure)
-      page.addView(TextView(this).apply {
-        text = e.optString("name")
-        setTextColor(Color.WHITE)
-        textSize = 18f
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
-        gravity = android.view.Gravity.CENTER
-        if (e.optBoolean("locked")) {
-          setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_lock, 0)
-          compoundDrawablePadding = dp(6f)
-        }
-      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-        topMargin = dp(10f)
-      })
-      list.addView(page, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
+      }, ModesActivity.KIND_BREATH)
     }
+    list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
   }
 
   private fun figureHalo(colorHex: String, pageH: Int): GradientDrawable {
