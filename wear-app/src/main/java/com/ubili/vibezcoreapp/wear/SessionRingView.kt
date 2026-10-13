@@ -347,22 +347,27 @@ class SessionRingView @JvmOverloads constructor(
       canvas.drawPath(playPath, playPaint)
     }
 
-    // "Inhale" groot, "through your nose" eronder, "12 min left" boven END
+    // "Inhale  Nose" op één regel — de neus/mond gedimd ernaast (operator 13 okt 2026)
     bigPaint.textSize = r * 0.20f
     val y = cy + r * (if (paused) 0.55f else 0.36f)
-    canvas.drawText(centerText, cx, y, bigPaint)
-    var y2 = y
-    if (subText.isNotEmpty()) {
-      smallPaint.textSize = r * 0.115f
-      y2 = y + smallPaint.textSize * 1.35f
-      canvas.drawText(subText, cx, y2, smallPaint)
+    val head = centerText
+    val tail = if (subText.isNotEmpty()) "  $subText" else ""
+    if (tail.isEmpty()) {
+      canvas.drawText(head, cx, y, bigPaint)
+    } else {
+      smallPaint.textSize = r * 0.20f
+      val wHead = bigPaint.measureText(head)
+      val wTail = smallPaint.measureText(tail)
+      val x0 = cx - (wHead + wTail) / 2f
+      canvas.drawText(head, x0 + wHead / 2f, y, bigPaint)
+      canvas.drawText(tail, x0 + wHead + wTail / 2f, y, smallPaint)
     }
     val foot = footerAt(now)
     if (foot.isNotEmpty() && !paused) {
       smallPaint.textSize = r * 0.115f
       val saved = smallPaint.color
       smallPaint.color = Color.argb(215, 255, 255, 255)
-      canvas.drawText(foot, cx, cy + r * 0.66f, smallPaint)
+      canvas.drawText(foot, cx, cy + r * 0.58f, smallPaint)
       smallPaint.color = saved
     }
   }

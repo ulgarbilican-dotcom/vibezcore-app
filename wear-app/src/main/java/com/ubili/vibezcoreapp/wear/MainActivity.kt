@@ -71,6 +71,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
       if (!StateSessionState.current.active && BreathSessionState.current.let { it.running || it.paused }) onPauseTap()
     }
     endButton.setOnClickListener { onEndTap() }
+    /* END als pil (operator 13 okt 2026): zacht wit vlak, witte tekst. */
+    endButton.background = GradientDrawable().apply {
+      cornerRadius = 999f
+      setColor(Color.argb(38, 255, 255, 255))
+    }
     /* 12 okt 2026: vanaf Wear OS 4 (Android 13) moet een app zelf om
        meldingen vragen — zonder die toestemming loopt de sessie wel, maar
        verbergt het horloge de lopende-sessie-melding (terugkeren naar de
@@ -255,7 +260,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
     (nameLabel.parent as View).visibility = if (b.paused) View.VISIBLE else View.INVISIBLE
     ring.footerAt = { now ->
       val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
-      if (b.sessionEndUptime <= 0L) "" else "${((leftMs + 59_999L) / 60_000L).coerceAtLeast(1L)} min left"
+      /* Zoals de telefoon ("10:08 left"): minuten en seconden, zodat je hem
+         ziet aftellen — hele minuten bleven een minuut lang gelijk staan. */
+      if (b.sessionEndUptime <= 0L) "" else {
+        val sec = ((leftMs + 999L) / 1000L).coerceAtLeast(0L)
+        "%d:%02d left".format(sec / 60, sec % 60)
+      }
     }
     val from = b.levelFrom
     val to = b.levelTo
