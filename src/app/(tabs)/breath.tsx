@@ -375,10 +375,20 @@ function StateThumb({
       >
         {sentenceCase(t.eyebrow)}
       </Text>
-      {/* Operator, 13 okt 2026 ("zie geen how it works"): de i-knop is weg,
-         dus hier zichtbaar maken dat de gekozen cirkel de uitleg opent —
-         klein en gedimd, enkel onder de gekozen toestand. */}
-      {on ? <Text style={s.thumbHow}>How it works</Text> : null}
+      {/* Operator, 13 okt 2026 ("zie geen how it works" → "gewoon de i dan
+         onderaan"): de i staat niet meer boven de cirkel maar klein onder
+         de naam van de gekozen toestand. */}
+      {on ? (
+        <Pressable
+          onPress={onInfoPress}
+          hitSlop={12}
+          style={s.thumbHow}
+          accessibilityRole="button"
+          accessibilityLabel="How it works"
+        >
+          <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+        </Pressable>
+      ) : null}
       {/* Operator, 24 september 2026 ("streep bij aanklikken moet ander"):
          het onderstreepje onder de naam van de geselecteerde staat weg —
          ring + schaalvergroting + wit-vs-gedimde tekst dragen de selectie
@@ -1817,11 +1827,8 @@ const s = StyleSheet.create({
      hier volstaat om de knop te centreren zonder de cirkel se eigen
      breedte te hoeven kennen. */
   thumbHow: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: 4,
-    textAlign: 'center',
+    marginTop: 6,
+    alignItems: 'center',
   },
   thumbInfoBtn: {
     position: 'absolute',
