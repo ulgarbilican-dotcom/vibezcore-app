@@ -512,15 +512,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
       }
       page.addView(col, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER))
 
-      col.addView(android.widget.ImageView(this).apply {
-        setImageBitmap(artFor(e.optString("colorHex")))
-        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, android.widget.LinearLayout.LayoutParams(dp(42f), dp(42f)))
+      /* geen figuur in de cirkel (operator 13 okt 2026): de kleur van de
+         ring en de naam tonen de toestand; de figuur zie je groot tijdens
+         de sessie */
       col.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 14f
+        textSize = 15f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         gravity = android.view.Gravity.CENTER
         if (locked) {
