@@ -60,6 +60,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     findViewById<View>(R.id.idleContainer).setOnScrollChangeListener { v, _, _, _, _ ->
       v.removeCallbacks(snapRunnable)
       v.postDelayed(snapRunnable, 140)
+      updateDots()
     }
     idleContainer = findViewById(R.id.idleContainer)
     sessionContainer = findViewById(R.id.sessionContainer)
@@ -236,6 +237,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       else -> {
         sessionContainer.visibility = View.GONE
         idleContainer.visibility = View.VISIBLE
+        findViewById<View>(R.id.homeDots).visibility = View.VISIBLE
         overLockScreen(false)
         renderHome()
       }
@@ -331,6 +333,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun showSession(title: String, colorHex: String, paused: Boolean) {
     idleContainer.visibility = View.GONE
+    findViewById<View>(R.id.homeDots).visibility = View.GONE
     sessionContainer.visibility = View.VISIBLE
     val c = parse(colorHex)
     // Sleep: het lichte teal, zoals de ring in de app
@@ -398,18 +401,29 @@ class MainActivity : androidx.activity.ComponentActivity() {
     homeSignature = sig
     val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
     list.removeAllViews()
-
-    list.addView(android.widget.ImageView(this).apply {
+    /* 13 okt 2026: elke pagina vult het hele scherm (geen naam van een andere
+       toestand meer in beeld); stipjes rechts tonen waar je bent. De eerste
+       pagina = de V + "Again" (als er een laatste sessie is). */
+    val pageH = resources.displayMetrics.heightPixels
+    val header = android.widget.LinearLayout(this).apply {
+      orientation = android.widget.LinearLayout.VERTICAL
+      gravity = android.view.Gravity.CENTER
+      tag = "page"
+      setPadding(dp(22f), 0, dp(22f), 0)
+      layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH)
+    }
+    header.addView(android.widget.ImageView(this).apply {
       setImageResource(R.drawable.vz_vmark)
       adjustViewBounds = true
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      layoutParams = android.widget.LinearLayout.LayoutParams(dp(22f), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-        bottomMargin = dp(10f)
+      layoutParams = android.widget.LinearLayout.LayoutParams(dp(26f), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = dp(16f)
       }
     })
 
     if (entries.isEmpty()) {
-      list.addView(TextView(this).apply {
+      list.addView(header)
+      header.addView(TextView(this).apply {
         text = "Open VIBEZCORE on your phone once to set up your watch"
         setTextColor(Color.parseColor("#F4F4F4"))
         textSize = 15f
@@ -426,7 +440,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       if (e != null && !e.optBoolean("locked")) {
         val durIdx = durationIndexFor(e, last.second)
         val label = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: ""
-        list.addView(TextView(this).apply {
+        header.addView(TextView(this).apply {
           /* naam en duur op twee regels — op het ronde scherm paste het
              op één regel niet ("Calm Control · …") */
           val name = e.optString("name")
@@ -456,52 +470,172 @@ class MainActivity : androidx.activity.ComponentActivity() {
         })
       }
     }
+    if (header.childCount > 1) list.addView(header, 0)
 
     /* 13 okt 2026 (operator: "de state-cirkel horizontaal laten scrollen?"):
        één toestand per scherm, de figuur groot — maar VERTICAAL (een veeg
        naar rechts is op Wear OS "terug"). De volgende figuur piept onderaan
        in beeld, zodat je ziet dat er meer is; het scherm klikt per
        toestand vast (snapHome). Rand/kroon bladert ook. */
-    val pageH = (resources.displayMetrics.heightPixels * 0.70f).toInt()
-    for (e in entries) {
-      val page = android.widget.LinearLayout(this).apply {
-        orientation = android.widget.LinearLayout.VERTICAL
-        gravity = android.view.Gravity.CENTER
+    /* 13 okt 2026 (operator: "verticaal, maar de cirkels zelf met de
+       minuten erin"): elke toestand is meteen zijn tijdcirkel — fijne ring
+       in de kleur van de toestand, binnenin figuur, naam, techniek (⌄),
+       minuten groot en de glazen Start. Start = meteen beginnen; tik op de
+       minuten = draaiwiel (daar is de rand voor de minuten, hier voor het
+       bladeren); tik op de techniek = andere techniek. */
+    for (e0 in entries) {
+      val color = parse(e0.optString("colorHex"))
+      val e = CatalogStore.withTechnique(e0, e0.optJSONArray("techniques")?.optJSONObject(CatalogStore.selectedIdx(this, e0))?.optString("key"))
+      val durs = e.optJSONArray("durations")
+      var durIdx = e.optInt("defaultIdx", 0)
+      if (last != null && last.first == e.optString("key")) durIdx = durationIndexFor(e, last.second)
+      val locked = e.optBoolean("locked")
+
+      val page = android.widget.FrameLayout(this).apply {
         tag = "page"
-        isClickable = true
-        contentDescription = e.optString("name")
-        setOnClickListener {
-          startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")))
-        }
         layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH)
       }
-      page.addView(android.widget.ImageView(this).apply {
+      // fijne ring in de kleur van de toestand
+      page.addView(View(this).apply {
+        background = GradientDrawable().apply {
+          shape = GradientDrawable.OVAL
+          setColor(Color.TRANSPARENT)
+          setStroke(dp(2f).coerceAtLeast(1), Color.argb(200, Color.red(color), Color.green(color), Color.blue(color)))
+        }
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      }, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT).apply {
+        setMargins(dp(5f), dp(5f), dp(5f), dp(5f))
+      })
+      val col = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.VERTICAL
+        gravity = android.view.Gravity.CENTER_HORIZONTAL
+      }
+      page.addView(col, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER))
+
+      col.addView(android.widget.ImageView(this).apply {
         setImageBitmap(artFor(e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, android.widget.LinearLayout.LayoutParams(dp(112f), dp(112f)))
-      page.addView(TextView(this).apply {
+      }, android.widget.LinearLayout.LayoutParams(dp(42f), dp(42f)))
+      col.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 17f
+        textSize = 14f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         gravity = android.view.Gravity.CENTER
-        if (e.optBoolean("locked")) {
+        if (locked) {
           setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_lock, 0)
           compoundDrawablePadding = dp(6f)
         }
-      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-        topMargin = dp(6f)
       })
-      val tech = CatalogStore.withTechnique(e, e.optJSONArray("techniques")?.optJSONObject(CatalogStore.selectedIdx(this, e))?.optString("key"))
-      page.addView(TextView(this).apply {
-        text = tech.optString("technique")
-        setTextColor(Color.argb(140, 255, 255, 255))
-        textSize = 11f
+      val manyTechs = (e.optJSONArray("techniques")?.length() ?: 0) > 1
+      col.addView(TextView(this).apply {
+        text = e.optString("technique")
+        setTextColor(Color.argb(200, 255, 255, 255))
+        textSize = 10f
+        maxLines = 1
         gravity = android.view.Gravity.CENTER
+        setPadding(dp(10f), dp(3f), dp(8f), dp(3f))
+        if (manyTechs) {
+          setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_chevron_down, 0)
+          compoundDrawablePadding = dp(3f)
+          background = GradientDrawable().apply {
+            cornerRadius = dp(12f).toFloat()
+            setColor(Color.argb(30, 255, 255, 255))
+            setStroke(dp(1f).coerceAtLeast(1), Color.argb(40, 255, 255, 255))
+          }
+          contentDescription = "Technique ${e.optString("technique")}. Tap to change."
+          setOnClickListener {
+            startActivity(Intent(this@MainActivity, TechniqueActivity::class.java).putExtra("key", e.optString("key")))
+          }
+        }
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = dp(4f)
       })
+      col.addView(TextView(this).apply {
+        text = durs?.optJSONObject(durIdx)?.optString("label") ?: ""
+        setTextColor(Color.WHITE)
+        textSize = 30f
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        gravity = android.view.Gravity.CENTER
+        contentDescription = "Duration ${text}. Tap to change."
+        setOnClickListener {
+          startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")).putExtra("tech", e.optString("techniqueKey")))
+        }
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = dp(2f)
+        bottomMargin = dp(6f)
+      })
+      if (locked) {
+        col.addView(TextView(this).apply {
+          text = "Unlock with Premium\non your phone"
+          setTextColor(Color.argb(170, 255, 255, 255))
+          textSize = 11f
+          gravity = android.view.Gravity.CENTER
+        })
+      } else {
+        col.addView(TextView(this).apply {
+          text = "Start"
+          setTextColor(Color.WHITE)
+          textSize = 13f
+          typeface = android.graphics.Typeface.DEFAULT_BOLD
+          gravity = android.view.Gravity.CENTER
+          background = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Color.argb(82, 255, 255, 255), Color.argb(34, 255, 255, 255)),
+          ).apply {
+            cornerRadius = dp(16f).toFloat()
+            setStroke(dp(1f).coerceAtLeast(1), Color.argb(50, 255, 255, 255))
+          }
+          contentDescription = "Start ${e.optString("name")}"
+          setOnClickListener { startLocalSession(this@MainActivity, e, durIdx) }
+        }, android.widget.LinearLayout.LayoutParams(dp(78f), dp(30f)))
+      }
       list.addView(page)
     }
+    buildDots()
+  }
+
+  /* Stipjes rechts: één per pagina, de huidige helder (Wear OS-patroon). */
+  private fun pages(): List<View> {
+    val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
+    return (0 until list.childCount).map { list.getChildAt(it) }.filter { it.tag == "page" }
+  }
+
+  private fun buildDots() {
+    val dots = findViewById<android.widget.LinearLayout>(R.id.homeDots)
+    dots.removeAllViews()
+    val n = pages().size
+    if (n < 2) return
+    repeat(n) {
+      dots.addView(View(this).apply {
+        background = GradientDrawable().apply {
+          shape = GradientDrawable.OVAL
+          setColor(Color.WHITE)
+        }
+      }, android.widget.LinearLayout.LayoutParams(dp(5f), dp(5f)).apply {
+        topMargin = dp(3f)
+        bottomMargin = dp(3f)
+      })
+    }
+    updateDots()
+  }
+
+  private fun updateDots() {
+    val dots = findViewById<android.widget.LinearLayout>(R.id.homeDots)
+    val scroll = idleContainer as? android.widget.ScrollView ?: return
+    val center = scroll.scrollY + scroll.height / 2
+    val ps = pages()
+    var cur = 0
+    var best = Int.MAX_VALUE
+    ps.forEachIndexed { i, c ->
+      val d = kotlin.math.abs(c.top + c.height / 2 - center)
+      if (d < best) {
+        best = d
+        cur = i
+      }
+    }
+    for (i in 0 until dots.childCount) dots.getChildAt(i).alpha = if (i == cur) 1f else 0.3f
   }
 
   /** Na het scrollen: de dichtstbijzijnde toestand mooi in het midden. */
@@ -523,8 +657,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
       }
     }
     val target = best ?: return
-    // het "Again"-blok bovenaan mag gewoon in beeld blijven
-    if (scroll.scrollY < target.top - scroll.height / 2) return
     scroll.smoothScrollTo(0, target.top + target.height / 2 - scroll.height / 2)
   }
 
