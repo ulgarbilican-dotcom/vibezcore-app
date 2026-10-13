@@ -46,7 +46,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private lateinit var nameLabel: TextView
   private lateinit var ring: SessionRingView
   private lateinit var pauseButton: ImageButton
-  private lateinit var endButton: TextView
+  private lateinit var endButton: ImageButton
 
   private val breathListener: (BreathSessionState.Snapshot) -> Unit = { runOnUiThread { render() } }
   private val stateListener: (StateSessionState.Snapshot) -> Unit = { runOnUiThread { render() } }
@@ -73,8 +73,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
     endButton.setOnClickListener { onEndTap() }
     /* END als pil (operator 13 okt 2026): zacht wit vlak, witte tekst. */
     endButton.background = GradientDrawable().apply {
-      cornerRadius = 999f
-      setColor(Color.argb(38, 255, 255, 255))
+      shape = GradientDrawable.OVAL
+      setColor(Color.parseColor("#2C2C2E"))
     }
     /* 12 okt 2026: vanaf Wear OS 4 (Android 13) moet een app zelf om
        meldingen vragen — zonder die toestemming loopt de sessie wel, maar
@@ -260,6 +260,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     (nameLabel.parent as View).visibility = View.VISIBLE
     ring.isClickable = false
     pauseButton.visibility = View.VISIBLE
+    setEndSize(44)
     setNameTop(44)
     nameLabel.textSize = 15f
     val sec = s.remainingSec.coerceAtLeast(0)
@@ -289,6 +290,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.isClickable = true
     ring.contentDescription = if (b.paused) "Resume" else "Pause"
     pauseButton.visibility = View.GONE
+    setEndSize(36)
     setNameTop(30)
     nameLabel.textSize = 12f
     ring.centerText = b.phaseLabel
@@ -502,6 +504,18 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val durs = e.optJSONArray("durations") ?: return 0
     for (i in 0 until durs.length()) if (durs.optJSONObject(i)?.optInt("minutes") == minutes) return i
     return e.optInt("defaultIdx", 0)
+  }
+
+  /** Breathwork: kleinere ✕ (de tekst staat erboven); State Control: even
+   *  groot als de pauzeknop ernaast. */
+  private fun setEndSize(dpSize: Int) {
+    val px = (dpSize * resources.displayMetrics.density).toInt()
+    val lp = endButton.layoutParams
+    if (lp.width != px) {
+      lp.width = px
+      lp.height = px
+      endButton.layoutParams = lp
+    }
   }
 
   private fun parse(hex: String): Int = try {

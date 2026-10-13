@@ -80,31 +80,30 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
+            android:layout_marginBottom="18dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
+            <!-- 13 okt 2026 (operator: "moet END een pil zijn? hoe zou Apple
+                 dat doen?"): zoals Apple's Workout — twee ronde knoppen naast
+                 elkaar, Pauze en Einde (✕), even groot. Bij Breathwork is de
+                 figuur de pauzeknop, dan staat enkel de ✕ er. -->
             <ImageButton
                 android:id="@+id/pauseButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
+                android:layout_marginEnd="14dp"
                 android:contentDescription="Pause"
                 android:scaleType="center"
                 android:src="@drawable/ic_vz_pause" />
 
-            <TextView
+            <ImageButton
                 android:id="@+id/endButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="26dp"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp"
-                android:gravity="center"
-                android:text="END"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:letterSpacing="0.16"
-                android:textStyle="bold" />
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="End session"
+                android:scaleType="center"
+                android:src="@drawable/ic_vz_close" />
         </LinearLayout>
     </FrameLayout>
 
