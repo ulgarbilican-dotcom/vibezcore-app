@@ -14,7 +14,7 @@
 
 import { BREATH_STATES, roundsFor, type BreathState, type BreathStateKey } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
-import { breathAmplitude, phaseHapticPattern } from '@/services/breath-haptics';
+import { phaseHapticPattern, watchBreathAmplitude } from '@/services/breath-haptics';
 import { useHapticStrength } from '@/services/haptic-strength-pref';
 import { levelForTechnique, personalRecommendedMinutes, techniqueForLevel } from '@/utils/breath-level';
 import { addBreathSession, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
@@ -104,7 +104,7 @@ export function buildWatchCatalog(locked: boolean): string {
       defaultIdx: rec.defaultIdx,
     };
   });
-  return JSON.stringify({ v: 2, amp: breathAmplitude(), breath });
+  return JSON.stringify({ v: 2, amp: watchBreathAmplitude(), breath });
 }
 
 type WatchSessionRecord = {

@@ -46,7 +46,7 @@
 
 import type { PhaseKey } from '@/data/breath-states';
 import { Vibration } from 'react-native';
-import { BREATH_AMP, MS_FACTOR, getHapticStrength } from './haptic-strength-pref';
+import { BREATH_AMP, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 import { canPlayNativeWaveform, playNativeWaveform } from '../../modules/state-haptics';
 
 /* De trilling vult de fase niet helemaal: de laatste tiende blijft stil.
@@ -172,6 +172,12 @@ function basePattern(phase: PhaseKey, secs: number): number[] {
 /** Kracht 0–255 voor breathwork bij de gekozen sterkte (0 = toestel-standaard). */
 export function breathAmplitude(): number {
   return BREATH_AMP[getHapticStrength()];
+}
+
+/** Kracht voor breathwork op het horloge — dezelfde niveaus als State
+ *  Control op het horloge (WATCH_HAPTIC_LEVEL). */
+export function watchBreathAmplitude(): number {
+  return WATCH_HAPTIC_LEVEL[getHapticStrength()];
 }
 
 export function playPhaseHaptic(phase: PhaseKey, secs: number): void {

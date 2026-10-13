@@ -83,7 +83,7 @@ import {
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
 import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
 import { getStateHear } from './state-sound-pref';
-import { AMP_FACTOR, MS_FACTOR, getHapticStrength } from './haptic-strength-pref';
+import { AMP_FACTOR, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 
 
 /* Feel & Hear zonder native service (iOS, oud Android): de app speelt het
@@ -568,7 +568,7 @@ let lastClock: { mode: BraceletMode; elapsedSec: number; remainingSec: number; a
    Tweede tik (dub) ≈ 70 % van de eerste, zoals een echte hartslag. */
 /* Vervolg 3 (operator: "soft is nog echt te soft"): onder ~50 % voelt een
    horlogemotor bijna niets — Soft ≈ 60 %, Medium ≈ 80 %, Strong 100 %. */
-const WATCH_LEVEL: Record<'soft' | 'medium' | 'strong', number> = { soft: 155, medium: 205, strong: 255 };
+const WATCH_LEVEL = WATCH_HAPTIC_LEVEL;
 const WATCH_MS: Record<'soft' | 'medium' | 'strong', number> = { soft: 1.15, medium: 1.4, strong: 1.8 };
 function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: number; dubMsNoAmp: number }) {
   const st = getHapticStrength();

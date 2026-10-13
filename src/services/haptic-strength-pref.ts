@@ -24,6 +24,11 @@ export const AMP_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 
  *  trilde bij breathwork altijd op standaardkracht — Soft voelde daardoor
  *  niet zacht. */
 export const BREATH_AMP: Record<HapticStrength, number> = { soft: 120, medium: 0, strong: 255 };
+/** Kracht op het HORLOGE (0–255), één bron voor State Control én
+ *  breathwork (operator 13 okt 2026: "sterkte bij breathwork zelfde als bij
+ *  State Control voor horloge"). Onder ~50 % voelt een horlogemotor tegen de
+ *  pols bijna niets. */
+export const WATCH_HAPTIC_LEVEL: Record<HapticStrength, number> = { soft: 155, medium: 205, strong: 255 };
 export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1, strong: 1.35 };
 
 let strength: HapticStrength = 'medium';
