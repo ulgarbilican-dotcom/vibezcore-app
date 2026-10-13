@@ -457,20 +457,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
         bottomMargin = dp(8f)
       })
     }
-    if (hasState) {
-      choice("State Control", WaterCircleView(this).apply {
-        color = Color.parseColor("#F5A524")
-        level = 0.5f
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, ModesActivity.KIND_STATE)
+    /* dezelfde symbolen als de tabbalk van de app (operator: "kijk naar de
+       symbolen in de app en gebruik dezelfde"): Radio en Wind */
+    fun glyph(res: Int) = android.widget.ImageView(this).apply {
+      setImageResource(res)
+      scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+      setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
+      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    if (hasBreath) {
-      choice("Breathe", android.widget.ImageView(this).apply {
-        setImageBitmap(trimmedArt(this@MainActivity, "#B478FF"))
-        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, ModesActivity.KIND_BREATH)
-    }
+    if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE)
+    if (hasBreath) choice("Breathe", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH)
     list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
   }
 
