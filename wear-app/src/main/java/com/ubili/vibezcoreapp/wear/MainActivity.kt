@@ -449,10 +449,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
       row.addView(TextView(this).apply {
         text = label
         setTextColor(Color.WHITE)
-        textSize = 15f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         maxLines = 1
-      })
+        // "State Control" moet heel blijven: zo nodig iets kleiner
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 11, 15, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+      }, android.widget.LinearLayout.LayoutParams(0, dp(24f), 1f))
       col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(56f)).apply {
         bottomMargin = dp(8f)
       })
