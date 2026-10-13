@@ -16,7 +16,9 @@ const KEY = 'vibezcore.stateControl.strength';
 /** Factor op de kracht van de motor (toestellen met amplitude-regeling). */
 export const AMP_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1, strong: 1.7 };
 /** Factor op de tikduur (toestellen zonder amplitude-regeling). */
-export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.75, medium: 1, strong: 1.35 };
+/* 13 okt 2026 (operator: "kan soft wat zachter"): soft 0,75 → 0,55 — gelijk
+   aan de krachtfactor; voelbaar korter, minimum blijft 40 ms per tik. */
+export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1, strong: 1.35 };
 
 let strength: HapticStrength = 'medium';
 const listeners = new Set<(v: HapticStrength) => void>();
