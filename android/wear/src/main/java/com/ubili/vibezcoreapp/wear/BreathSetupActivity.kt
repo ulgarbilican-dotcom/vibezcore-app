@@ -33,6 +33,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
   private lateinit var durText: TextView
   private var rotaryAcc = 0f
   private var lastStepAt = 0L
+  private var lastRotaryAt = 0L
 
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
@@ -181,11 +182,17 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
      een snelle draai niet in één keer naar het einde schiet. */
   override fun onGenericMotionEvent(event: MotionEvent): Boolean {
     if (event.action == MotionEvent.ACTION_SCROLL && event.isFromSource(InputDevice.SOURCE_ROTARY_ENCODER)) {
+      android.util.Log.d("VZDial", "rotary axis=${event.getAxisValue(MotionEvent.AXIS_SCROLL)} t=${SystemClock.uptimeMillis()}")
       val delta = -event.getAxisValue(MotionEvent.AXIS_SCROLL) *
         ViewConfiguration.get(this).getScaledVerticalScrollFactor()
       rotaryAcc += delta
       val now = SystemClock.uptimeMillis()
-      if (kotlin.math.abs(rotaryAcc) >= dp(24f) && now - lastStepAt > 90) {
+      /* 13 okt 2026 (operator: "bij instellen tijd is de cirkel te
+         gevoelig"): een groter stuk draaien per stap (was 24 dp) en minstens
+         ~0,2 s tussen twee stappen; een draai die stilvalt begint opnieuw. */
+      if (now - lastRotaryAt > 400) rotaryAcc = delta
+      lastRotaryAt = now
+      if (kotlin.math.abs(rotaryAcc) >= dp(70f) && now - lastStepAt > 200) {
         dial.setIndex(dial.index + if (rotaryAcc > 0) 1 else -1, fromUser = true)
         rotaryAcc = 0f
         lastStepAt = now

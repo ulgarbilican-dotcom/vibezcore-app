@@ -175,7 +175,7 @@ class DurationDialView @JvmOverloads constructor(
   private var dragging = false
 
   override fun onTouchEvent(event: MotionEvent): Boolean {
-    val step = 34f * density
+    val step = 46f * density
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
         dragging = true
