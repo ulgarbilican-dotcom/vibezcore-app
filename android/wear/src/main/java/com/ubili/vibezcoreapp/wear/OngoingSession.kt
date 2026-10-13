@@ -15,7 +15,7 @@ internal fun buildOngoingNotification(
     context,
     notificationId,
     android.content.Intent(context, MainActivity::class.java)
-      .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
+      .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP),
     android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
   )
   val builder = androidx.core.app.NotificationCompat.Builder(context, channelId)

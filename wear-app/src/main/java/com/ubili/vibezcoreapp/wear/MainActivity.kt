@@ -522,7 +522,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
 }
 
-/** Start een Breathe-sessie op het horloge zelf, uit de catalogus. */
+/** Start een Breathe-sessie op het horloge zelf, uit de catalogus.
+ *  CLEAR_TOP (13 okt 2026, operator: "ik kom direct op het techniekenscherm"):
+ *  techniek- en tijdscherm worden opgeruimd, anders lagen ze nog achter de
+ *  sessie en kwam je daar terug na wegvegen of opnieuw openen. */
 internal fun startLocalSession(context: android.content.Context, e: org.json.JSONObject, durIdx: Int) {
   val json = CatalogStore.sessionJson(context, e, durIdx)
   val minutes = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optInt("minutes") ?: 0
@@ -536,7 +539,7 @@ internal fun startLocalSession(context: android.content.Context, e: org.json.JSO
   )
   context.startActivity(
     Intent(context, MainActivity::class.java).addFlags(
-      Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+      Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP,
     ),
   )
 }
