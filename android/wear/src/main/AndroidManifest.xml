@@ -49,6 +49,11 @@
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:name=".OptionsActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
+        <activity
             android:name=".DurationActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />

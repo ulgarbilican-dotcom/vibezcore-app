@@ -481,6 +481,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
        minuten groot en de glazen Start. Start = meteen beginnen; tik op de
        minuten = draaiwiel (daar is de rand voor de minuten, hier voor het
        bladeren); tik op de techniek = andere techniek. */
+    /* 13 okt 2026 (operator, Apple-richting + "onze eigen animaties"):
+       per toestand onze eigen figuur die traag ademt met een gloed in de
+       kleur van de toestand — geen harde ring, geen dubbele kaders. Tik op
+       de figuur = meteen ademen met wat klaarstaat. Eronder de naam en als
+       subkop "techniek · duur". Een klein ···-knopje opent Techniek en Duur
+       (OptionsActivity). Kleuren = de vaste kleuren van de toestanden. */
     for (e0 in entries) {
       val color = parse(e0.optString("colorHex"))
       val e = CatalogStore.withTechnique(e0, e0.optJSONArray("techniques")?.optJSONObject(CatalogStore.selectedIdx(this, e0))?.optString("key"))
@@ -488,100 +494,74 @@ class MainActivity : androidx.activity.ComponentActivity() {
       val durIdx = CatalogStore.durationIdx(this, e)
       val locked = e.optBoolean("locked")
 
-      val page = android.widget.FrameLayout(this).apply {
+      val page = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.VERTICAL
+        gravity = android.view.Gravity.CENTER
         tag = "page"
         layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH)
       }
-      // fijne ring in de kleur van de toestand
-      page.addView(View(this).apply {
+      // de ademende figuur = de startknop
+      val figure = android.widget.ImageView(this).apply {
+        setImageBitmap(artFor(e.optString("colorHex")))
+        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+        val pad = dp(14f)
+        setPadding(pad, pad, pad, pad)
         background = GradientDrawable().apply {
           shape = GradientDrawable.OVAL
-          setColor(Color.TRANSPARENT)
-          setStroke(dp(2f).coerceAtLeast(1), Color.argb(200, Color.red(color), Color.green(color), Color.blue(color)))
+          gradientType = GradientDrawable.RADIAL_GRADIENT
+          gradientRadius = dp(66f).toFloat()
+          colors = intArrayOf(Color.argb(95, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
         }
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT).apply {
-        setMargins(dp(5f), dp(5f), dp(5f), dp(5f))
-      })
-      val col = android.widget.LinearLayout(this).apply {
-        orientation = android.widget.LinearLayout.VERTICAL
-        gravity = android.view.Gravity.CENTER_HORIZONTAL
+        contentDescription = if (locked) "${e.optString("name")}, locked" else "Start ${e.optString("name")}"
+        setOnClickListener {
+          if (locked) {
+            android.widget.Toast.makeText(this@MainActivity, "Unlock with Premium on your phone", android.widget.Toast.LENGTH_SHORT).show()
+          } else {
+            startLocalSession(this@MainActivity, e, durIdx)
+          }
+        }
       }
-      page.addView(col, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER))
-
-      /* geen figuur in de cirkel (operator 13 okt 2026): de kleur van de
-         ring en de naam tonen de toestand; de figuur zie je groot tijdens
-         de sessie */
-      col.addView(TextView(this).apply {
+      page.addView(figure, android.widget.LinearLayout.LayoutParams(dp(132f), dp(132f)))
+      breathe(figure)
+      page.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 15f
+        textSize = 17f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         gravity = android.view.Gravity.CENTER
         if (locked) {
           setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_lock, 0)
           compoundDrawablePadding = dp(6f)
         }
-      })
-      val manyTechs = (e.optJSONArray("techniques")?.length() ?: 0) > 1
-      col.addView(TextView(this).apply {
-        text = e.optString("technique")
-        setTextColor(Color.argb(200, 255, 255, 255))
-        textSize = 10f
-        maxLines = 1
-        gravity = android.view.Gravity.CENTER
-        setPadding(dp(10f), dp(3f), dp(8f), dp(3f))
-        if (manyTechs) {
-          setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_chevron_down, 0)
-          compoundDrawablePadding = dp(3f)
-          /* geen pil, enkel het pijltje (operator 13 okt 2026) */
-          contentDescription = "Technique ${e.optString("technique")}. Tap to change."
-          setOnClickListener {
-            startActivity(Intent(this@MainActivity, TechniqueActivity::class.java).putExtra("key", e.optString("key")))
-          }
-        }
-      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-        topMargin = dp(4f)
-      })
-      col.addView(TextView(this).apply {
-        text = durs?.optJSONObject(durIdx)?.optString("label") ?: ""
-        setTextColor(Color.WHITE)
-        textSize = 30f
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
-        gravity = android.view.Gravity.CENTER
-        contentDescription = "Duration ${text}. Tap to change."
-        setOnClickListener {
-          startActivity(Intent(this@MainActivity, DurationActivity::class.java).putExtra("key", e.optString("key")))
-        }
       }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
         topMargin = dp(2f)
-        bottomMargin = dp(6f)
       })
-      if (locked) {
-        col.addView(TextView(this).apply {
-          text = "Unlock with Premium\non your phone"
-          setTextColor(Color.argb(170, 255, 255, 255))
-          textSize = 11f
-          gravity = android.view.Gravity.CENTER
-        })
-      } else {
-        col.addView(TextView(this).apply {
-          text = "Start"
-          setTextColor(Color.WHITE)
-          textSize = 13f
-          typeface = android.graphics.Typeface.DEFAULT_BOLD
-          gravity = android.view.Gravity.CENTER
-          background = GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(Color.argb(82, 255, 255, 255), Color.argb(34, 255, 255, 255)),
-          ).apply {
-            cornerRadius = dp(16f).toFloat()
-            setStroke(dp(1f).coerceAtLeast(1), Color.argb(50, 255, 255, 255))
-          }
-          contentDescription = "Start ${e.optString("name")}"
-          setOnClickListener { startLocalSession(this@MainActivity, e, durIdx) }
-        }, android.widget.LinearLayout.LayoutParams(dp(78f), dp(30f)))
-      }
+      page.addView(TextView(this).apply {
+        val dur = durs?.optJSONObject(durIdx)?.optString("label") ?: ""
+        text = "${e.optString("technique")} · $dur"
+        setTextColor(Color.argb(150, 255, 255, 255))
+        textSize = 11f
+        maxLines = 1
+        gravity = android.view.Gravity.CENTER
+      })
+      // ··· = Techniek en Duur
+      page.addView(TextView(this).apply {
+        text = "•••"
+        setTextColor(Color.argb(220, 255, 255, 255))
+        textSize = 10f
+        letterSpacing = 0.1f
+        gravity = android.view.Gravity.CENTER
+        background = GradientDrawable().apply {
+          shape = GradientDrawable.OVAL
+          setColor(Color.parseColor("#2C2C2E"))
+        }
+        contentDescription = "Options for ${e.optString("name")}: technique and duration"
+        setOnClickListener {
+          startActivity(Intent(this@MainActivity, OptionsActivity::class.java).putExtra("key", e.optString("key")))
+        }
+      }, android.widget.LinearLayout.LayoutParams(dp(34f), dp(34f)).apply {
+        topMargin = dp(10f)
+      })
       list.addView(page)
     }
   }
@@ -614,6 +594,24 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
     val target = best ?: return
     scroll.smoothScrollTo(0, target.top + target.height / 2 - scroll.height / 2)
+  }
+
+  /** Traag ademen: groter en lichter in, kleiner en zachter uit — zoals de
+   *  figuur tijdens de sessie, maar rustiger (6 s per adem). */
+  private fun breathe(v: View) {
+    val sx = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_X, 0.9f, 1f)
+    val sy = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_Y, 0.9f, 1f)
+    val al = android.animation.ObjectAnimator.ofFloat(v, View.ALPHA, 0.78f, 1f)
+    listOf(sx, sy, al).forEach {
+      it.duration = 3000
+      it.repeatCount = android.animation.ValueAnimator.INFINITE
+      it.repeatMode = android.animation.ValueAnimator.REVERSE
+      it.interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+    }
+    android.animation.AnimatorSet().apply {
+      playTogether(sx, sy, al)
+      start()
+    }
   }
 
   private fun durationIndexFor(e: org.json.JSONObject, minutes: Int): Int {
