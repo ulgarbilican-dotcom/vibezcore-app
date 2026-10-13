@@ -614,20 +614,39 @@ function relayToWatch(
 function onWatchTookOver(): void {
   if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
   watchHasRhythm = true;
-  /* Zelfde plek in de curve, nu stil — sessie, timer en melding blijven. */
-  const passed = (Date.now() - lastClock.at) / 1000;
-  const elapsedSec = lastClock.elapsedSec + passed;
-  const remainingSec = Math.max(0, lastClock.remainingSec - passed);
-  if (remainingSec <= 1) return;
-  play(
-    lastClock.mode,
-    { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[lastClock.mode].rampSec },
-    Math.max(0, elapsedSec - session.curveZeroSec),
-    remainingSec,
-    { elapsedSec, totalSec: elapsedSec + remainingSec },
-    true,
-    session.restingBpm,
-    session.startBpm,
+  /* Zelfde plek in de curve, nu stil — sessie, timer en melding blijven.
+     13 okt 2026 (meting: tikken van horloge en telefoon vielen ~0,63 s
+     naast elkaar): de stille herstart (die het hartslaggeluid speelt) begint
+     op de eerstvolgende slag van HETZELFDE rooster als het horloge, niet op
+     het moment van de bevestiging. Tot dan loopt de huidige curve door. */
+  const clock = lastClock;
+  const sess = session;
+  const timing = { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[clock.mode].rampSec };
+  const spec = resolveSpec(clock.mode, sess.restingBpm, sess.startBpm);
+  const originCurve = Math.max(0, clock.elapsedSec - sess.curveZeroSec);
+  const nowCurve = originCurve + (Date.now() - clock.at) / 1000;
+  let gridCurve = originCurve;
+  while (gridCurve < nowCurve + 0.05) gridCurve += beatAt(spec, gridCurve, timing).cycleMs / 1000;
+  const myGeneration = generation;
+  const startAt = clock.at + (gridCurve - originCurve) * 1000;
+  pendingTimeouts.push(
+    setTimeout(() => {
+      if (myGeneration !== generation || !session || session.pausedAt !== null) return;
+      const ahead = gridCurve - originCurve;
+      const elapsedSec = clock.elapsedSec + ahead;
+      const remainingSec = Math.max(0, clock.remainingSec - ahead);
+      if (remainingSec <= 1) return;
+      play(
+        clock.mode,
+        timing,
+        gridCurve,
+        remainingSec,
+        { elapsedSec, totalSec: elapsedSec + remainingSec },
+        true,
+        sess.restingBpm,
+        sess.startBpm,
+      );
+    }, Math.max(0, startAt - Date.now())),
   );
 }
 onWearStateAck(onWatchTookOver);

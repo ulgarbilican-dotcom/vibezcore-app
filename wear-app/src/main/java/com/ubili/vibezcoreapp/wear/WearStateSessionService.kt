@@ -66,6 +66,9 @@ private data class StateStart(
   val holdSec: Double,
   val rampSec: Double,
   val curveOffsetSec: Double,
+  /** Waar het slagenrooster van de telefoon begon (= de verzonden offset):
+   *  de eerste tik valt op de eerstvolgende slag van dát rooster. */
+  val gridOriginSec: Double = curveOffsetSec,
   val remainingSec: Double,
   val lubAmp: Int,
   val dubAmp: Int,
@@ -255,7 +258,7 @@ class WearStateSessionService : Service() {
         0.0
       }
       android.util.Log.d("VZSync", "start sentAt=$sentAt now=${System.currentTimeMillis()} lag=$lagSec offset=${st.curveOffsetSec}")
-      st.copy(curveOffsetSec = st.curveOffsetSec + lagSec, remainingSec = st.remainingSec - lagSec)
+      st.copy(gridOriginSec = st.curveOffsetSec, curveOffsetSec = st.curveOffsetSec + lagSec, remainingSec = st.remainingSec - lagSec)
         .takeIf { it.remainingSec > 0.5 }
     }
   } catch (_: Exception) {
@@ -280,24 +283,44 @@ class WearStateSessionService : Service() {
     } catch (_: Exception) {
       false
     }
-    val waveform = buildWaveform(s, amplitudeControl)
+    /* 13 okt 2026 (meting: tikken vielen constant ~0,63 s naast die van de
+       telefoon): niet meteen tikken op het moment van aankomst, maar wachten
+       tot de eerstvolgende slag van het rooster van de telefoon. */
+    var gridT = s.gridOriginSec
+    while (gridT < s.curveOffsetSec - 0.001) gridT += beatAt(s, gridT).first / 1000.0
+    val gapSec = gridT - s.curveOffsetSec
+    val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - gapSec)
+    session = aligned
+    val waveform = buildWaveform(aligned, amplitudeControl)
     units = splitIntoUnits(waveform)
     nextUnit = 0
     val totalMs = waveform.timings.sum()
-    startUptime = SystemClock.uptimeMillis() + 50L
-    sessionEndUptime = startUptime + (s.remainingSec * 1000).roundToLong()
+    val nowUp = SystemClock.uptimeMillis() + 50L
+    startUptime = nowUp + (gapSec * 1000).roundToLong()
+    sessionEndUptime = nowUp + (s.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
+    /* 13 okt 2026 (operator: "stopt regelmatig, mag gewoon niet stoppen"):
+       met het scherm uit schakelt Wear OS onze wakelock uit (DISABLED in
+       dumpsys power, ook als voorgronddienst) — de processor slaapt en een
+       tik-per-tik-planning lag tot 100 s stil. Daarom krijgt de trilmotor
+       het HELE patroon in één keer: de trildienst van het systeem houdt het
+       toestel zelf wakker zolang het patroon loopt, en speelt de timing
+       exact af. De slagplanning hieronder doet nog enkel beeld/geluid. */
+    val full = waveform
+    beatHandler.postAtTime({
+      if (session === aligned && !paused) vibrate(full.timings, full.amplitudes)
+    }, wholeVibrationToken, startUptime)
     scheduleNextUnit()
     /* Natuurlijk einde: de curve + het eind-signaal uitspelen, dan stoppen.
        Minstens remainingSec + 1,5 s (protocol). */
-    val endDelay = maxOf(totalMs + 300L, (s.remainingSec * 1000).roundToLong() + 1500L)
+    val endDelay = maxOf(totalMs + 300L, (aligned.remainingSec * 1000).roundToLong() + 1500L)
     beatHandler.postAtTime(endRunnable, startUptime + endDelay)
     beatHandler.post(tickRunnable)
     PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
     /* Nog eens na 3 s (meting 13 okt: na een koude start kwam de eerste
        bevestiging niet aan, en dan trilden telefoon én horloge elk apart). */
     beatHandler.postDelayed({
-      if (session === s && !paused) {
+      if (session === aligned && !paused) {
         PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
       }
     }, 3000L)
@@ -332,7 +355,10 @@ class WearStateSessionService : Service() {
     stopSelf(startId)
   }
 
+  private val wholeVibrationToken = Any()
+
   private fun clearScheduled() {
+    beatHandler.removeCallbacksAndMessages(wholeVibrationToken)
     beatHandler.removeCallbacks(beatRunnable)
     beatHandler.removeCallbacks(endRunnable)
     beatHandler.removeCallbacks(tickRunnable)
@@ -341,8 +367,11 @@ class WearStateSessionService : Service() {
   private fun playDueUnitAndScheduleNext() {
     if (paused || nextUnit >= units.size) return
     val u = units[nextUnit]
-    if (SystemClock.uptimeMillis() - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
-      vibrate(u.t, u.a)
+    val lateMs = SystemClock.uptimeMillis() - (startUptime + u.offsetMs)
+    if (lateMs > 40) android.util.Log.d("VZSync", "late unit=$nextUnit by=${lateMs}ms${if (lateMs > LATE_SKIP_MS) " SKIPPED" else ""}")
+    if (lateMs <= LATE_SKIP_MS) {
+      /* De trilling zelf speelt de trilmotor (zie start(): het hele patroon
+         in één keer); hier enkel beeld, geluid en meting per slag. */
       /* Meting synchronisatie (13 okt 2026): wandklok + plek in de curve per
          slag; de telefoon logt hetzelfde ([sync] in ReactNativeJS). */
       if (nextUnit < 40) {
@@ -401,6 +430,7 @@ class WearStateSessionService : Service() {
     /* Te late slagen (CPU even bezet) overslaan i.p.v. uit de maat spelen —
        het eind-signaal (laatste stuk) wordt nooit overgeslagen. */
     while (nextUnit < units.size - 1 && startUptime + units[nextUnit].offsetMs < now - LATE_SKIP_MS) {
+      android.util.Log.d("VZSync", "skip unit=$nextUnit (scheduler ${now - startUptime - units[nextUnit].offsetMs}ms late)")
       nextUnit++
     }
     if (nextUnit >= units.size) return
