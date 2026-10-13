@@ -527,6 +527,7 @@ internal fun startLocalSession(context: android.content.Context, e: org.json.JSO
   val json = CatalogStore.sessionJson(context, e, durIdx)
   val minutes = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optInt("minutes") ?: 0
   CatalogStore.setLast(context, e.optString("key"), minutes, e.optString("techniqueKey"))
+  CatalogStore.setTechFor(context, e.optString("key"), e.optString("techniqueKey"))
   context.startForegroundService(
     Intent(context, WearBreathSessionService::class.java).apply {
       action = WearBreathSessionService.ACTION_START

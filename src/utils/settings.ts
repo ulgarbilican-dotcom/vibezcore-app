@@ -181,6 +181,10 @@ export type Settings = {
   intensity: Intensity | null;
   /** Zie `ExperienceLevel` hierboven. `null` = nog niet gekozen. */
   experienceLevel: ExperienceLevel | null;
+  /** 13 okt 2026 (operator): laatst gekozen techniek per Breathwork-
+   *  toestand (telefoon én horloge). Leeg = de techniek van het
+   *  ervaringsniveau. Een nieuw niveau kiezen wist deze keuzes. */
+  breathTechByState: Partial<Record<string, string>>;
   /** Heeft deze gebruiker OOIT een volledig protocol bevestigd (operator,
    *  13 augustus 2026: "user moet wel van 1 volledige versie kunnen
    *  proeven")? Bepaalt of "Build my protocol" nog gratis doorgaat naar
@@ -266,6 +270,7 @@ const defaults: Settings = {
   profile: {},
   intensity: null,
   experienceLevel: null,
+  breathTechByState: {},
   hasBuiltProtocol: false,
   testFullSessions: false,
   hasSeenBatteryPrompt: false,
@@ -412,6 +417,9 @@ async function loadOnce(): Promise<void> {
             obj.experienceLevel === null
               ? { experienceLevel: obj.experienceLevel }
               : {}),
+            ...(obj.breathTechByState && typeof obj.breathTechByState === 'object'
+              ? { breathTechByState: obj.breathTechByState as Partial<Record<string, string>> }
+              : {}),
             ...(typeof obj.hasBuiltProtocol === 'boolean'
               ? { hasBuiltProtocol: obj.hasBuiltProtocol }
               : {}),
@@ -480,6 +488,9 @@ export async function setSetting<K extends keyof Settings>(
   /* Wie de stem omzet, doet dat bewust — en vanaf dat moment is zijn keuze
      leidend, ook als een latere versie een andere standaard kiest. */
   if (key === 'voiceCues') state = { ...state, voiceCuesChosen: true };
+  /* 13 okt 2026: een nieuw ervaringsniveau is een bewuste keuze — de
+     onthouden technieken per toestand springen dan terug naar dat niveau. */
+  if (key === 'experienceLevel') state = { ...state, breathTechByState: {} };
   notify();
   /* Operator, 7 september 2026: elders (settings.tsx) volgt op een
      `await setSetting(...)` soms een harde `DevSettings.reload()` — als

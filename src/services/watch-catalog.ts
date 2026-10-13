@@ -72,7 +72,12 @@ export function buildWatchCatalog(locked: boolean): string {
        is degene die de telefoon voor deze gebruiker zou kiezen. */
     const recommendedIdx = defaultTechIdx(st.techniques.length - 1);
     const techniques = st.techniques.map((t) => techForWatch(key, t));
-    const rec = techniques[recommendedIdx] ?? techniques[0];
+    /* De laatst gekozen techniek (telefoon of horloge) staat klaar; "For
+       you" blijft het advies van het niveau. */
+    const remembered = getSetting('breathTechByState')[key];
+    const chosenIdx = Math.max(0, remembered ? techniques.findIndex((t) => t.key === remembered) : -1);
+    const selectedIdx = remembered && techniques[chosenIdx]?.key === remembered ? chosenIdx : recommendedIdx;
+    const rec = techniques[selectedIdx] ?? techniques[0];
     return {
       key,
       name: titleCase(st.eyebrow),
@@ -80,6 +85,7 @@ export function buildWatchCatalog(locked: boolean): string {
       colorHex: key === 'rest' ? '#4AF0D4' : st.accent,
       locked,
       recommendedIdx,
+      selectedIdx,
       techniques,
       /* Aanbevolen techniek ook plat, voor oudere horloge-versies. */
       technique: rec.name,
@@ -120,6 +126,11 @@ async function importWatchSessions(): Promise<void> {
         ts: typeof r.endedAt === 'number' ? r.endedAt : undefined,
       });
       if (!getSetting('breathFreeSessionUsedAt')) setSetting('breathFreeSessionUsedAt', Date.now());
+      /* De techniek die op het horloge gekozen werd, staat ook op de
+         telefoon voortaan klaar voor die toestand. */
+      if (r.techniqueKey && st.techniques.some((t) => t.key === r.techniqueKey)) {
+        setSetting('breathTechByState', { ...getSetting('breathTechByState'), [st.key]: r.techniqueKey });
+      }
     } catch {
       /* één kapot record mag de rest niet tegenhouden */
     }
@@ -134,13 +145,14 @@ export function useWatchCatalogSync(): void {
   const strength = useHapticStrength();
   const [experience] = useSetting('experienceLevel');
   const [freeUsedAt] = useSetting('breathFreeSessionUsedAt');
+  const [techByState] = useSetting('breathTechByState');
   const history = useBreathHistory();
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const locked = !sub.isPro && !!freeUsedAt;
     syncWatchCatalog(buildWatchCatalog(locked));
-  }, [sub.isPro, freeUsedAt, strength, experience, history.length]);
+  }, [sub.isPro, freeUsedAt, strength, experience, history.length, techByState]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;

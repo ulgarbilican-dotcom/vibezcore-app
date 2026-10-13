@@ -38,7 +38,12 @@ object CatalogStore {
   fun save(context: Context, json: String) {
     try {
       JSONObject(json) // enkel geldige JSON bewaren
-      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_CATALOG, json).apply()
+      /* Een nieuwe catalogus bevat de keuze van de telefoon (die ook de
+         horloge-sessies al verwerkte) — die is dan leidend. */
+      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        .putString(KEY_CATALOG, json)
+        .remove("techByState")
+        .apply()
       listeners.toList().forEach { it() }
     } catch (_: Exception) {
     }
@@ -74,6 +79,34 @@ object CatalogStore {
       .putString(KEY_LAST, JSONObject().put("key", key).put("minutes", minutes).put("tech", techKey).toString()).apply()
   }
 
+  /** Laatst gekozen techniek per toestand op het horloge (ook zonder
+   *  telefoon); de telefoon neemt hem over via de geschiedenis. */
+  fun setTechFor(context: Context, stateKey: String, techKey: String) {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val m = try {
+      JSONObject(prefs.getString("techByState", "{}") ?: "{}")
+    } catch (_: Exception) {
+      JSONObject()
+    }
+    prefs.edit().putString("techByState", m.put(stateKey, techKey).toString()).apply()
+  }
+
+  /** Index van de techniek die klaarstaat: eigen keuze op het horloge,
+   *  anders die van de telefoon (selectedIdx), anders het advies. */
+  fun selectedIdx(context: Context, entry: JSONObject): Int {
+    val techs = entry.optJSONArray("techniques") ?: return 0
+    val local = try {
+      JSONObject(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("techByState", "{}") ?: "{}")
+        .optString(entry.optString("key"), "")
+    } catch (_: Exception) {
+      ""
+    }
+    if (local.isNotEmpty()) {
+      for (i in 0 until techs.length()) if (techs.optJSONObject(i)?.optString("key") == local) return i
+    }
+    return entry.optInt("selectedIdx", entry.optInt("recommendedIdx", 0))
+  }
+
   fun lastTech(context: Context): String = try {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LAST, null)
       ?.let { JSONObject(it).optString("tech", "") } ?: ""
@@ -88,7 +121,7 @@ object CatalogStore {
     val techs = entry.optJSONArray("techniques") ?: return entry
     var t: JSONObject? = null
     for (i in 0 until techs.length()) if (techs.optJSONObject(i)?.optString("key") == techKey) t = techs.optJSONObject(i)
-    if (t == null) t = techs.optJSONObject(entry.optInt("recommendedIdx", 0)) ?: return entry
+    if (t == null) t = techs.optJSONObject(entry.optInt("selectedIdx", entry.optInt("recommendedIdx", 0))) ?: return entry
     return JSONObject(entry.toString())
       .put("technique", t.optString("name"))
       .put("techniqueKey", t.optString("key"))

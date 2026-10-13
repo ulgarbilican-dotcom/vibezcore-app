@@ -256,6 +256,8 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W26 | Horloge-sessie komt in de geschiedenis van de telefoon ("Sleep · 14:05 · Slow Extended Exhale · 32 sec") | ok | ✅ 13 okt (Claude) |
 | W27 | State Control vanaf de telefoon: het horloge toont ons scherm, niet Samsungs Media-bediening (melding setLocalOnly) | ons scherm blijft vooraan | ✅ 13 okt (Claude); Samsung zet nog wel een mediamelding in de lijst — operator bevestigt |
 | W28 | Draaiende rand op het kies-scherm verandert de duur | per tik één stap | ⏳ operator (niet via adb te testen) |
+| W29 | Techniek onthouden per toestand: kies op telefoon of horloge een andere techniek → volgende keer staat die klaar op beide; "For you" blijft het advies van het niveau; horloge toont "Last used" + rand | zoals beschreven | ⏳ (horloge viel weg bij de test) |
+| W30 | Ander ervaringsniveau kiezen (onboarding / Set your routine / Too hard) → onthouden technieken terug naar het niveau | ok | ⏳ |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 

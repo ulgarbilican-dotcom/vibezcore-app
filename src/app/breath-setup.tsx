@@ -1365,6 +1365,13 @@ export default function BreathSetupScreen() {
       const i = st.techniques.findIndex((t) => t.key === params.technique);
       if (i !== -1) return i;
     }
+    /* 13 okt 2026 (operator): de laatst gekozen techniek van deze toestand
+       staat weer klaar (ook als ze op het horloge gekozen werd). */
+    const remembered = getSetting('breathTechByState')[st.key];
+    if (remembered) {
+      const i = st.techniques.findIndex((t) => t.key === remembered);
+      if (i !== -1) return i;
+    }
     return defaultTechIdxFromExperience(st.techniques.length - 1);
   });
   /* Operator, 17 september 2026 (addToDay, vervolg: "de techniques moet
@@ -2183,6 +2190,8 @@ export default function BreathSetupScreen() {
        niet uitmaakt via welk scherm de user zijn eerste sessie start. */
     const freeParam = claimFreeSessionParam();
     setSetting('breathLevelSeen', { ...levelSeen, [levelSeenKey(st.key, baseTech.key)]: userLevel });
+    /* Gekozen techniek onthouden voor deze toestand (telefoon + horloge). */
+    setSetting('breathTechByState', { ...getSetting('breathTechByState'), [st.key]: baseTech.key });
     openBreathSession({
         ...freeParam,
         mode: st.key,

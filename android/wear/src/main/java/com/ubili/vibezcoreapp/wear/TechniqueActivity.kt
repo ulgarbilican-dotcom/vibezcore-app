@@ -34,6 +34,9 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
       Color.parseColor("#00A3A3")
     }
     val recommended = e.optInt("recommendedIdx", 0)
+    /* 13 okt 2026: je laatste keuze staat klaar ("Last used"); "For you"
+       blijft het advies van je niveau. */
+    val selected = CatalogStore.selectedIdx(this, e)
 
     val scroll = ScrollView(this).apply {
       setBackgroundColor(Color.BLACK)
@@ -67,6 +70,8 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
         background = GradientDrawable().apply {
           cornerRadius = dp(24f).toFloat()
           setColor(Color.parseColor("#1C1C1E"))
+          /* de techniek die klaarstaat: dunne rand in de kleur van de toestand */
+          if (i == selected) setStroke(dp(1.5f).coerceAtLeast(1), Color.argb(150, Color.red(color), Color.green(color), Color.blue(color)))
         }
         minimumHeight = dp(52f)
         isClickable = true
@@ -88,8 +93,13 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
       })
       row.addView(TextView(this).apply {
         val level = t.optString("level")
-        text = if (i == recommended) "$level · For you" else level
-        setTextColor(if (i == recommended) color else Color.argb(140, 255, 255, 255))
+        val tags = listOfNotNull(
+          level,
+          if (i == recommended) "For you" else null,
+          if (i == selected && selected != recommended) "Last used" else null,
+        )
+        text = tags.joinToString(" · ")
+        setTextColor(if (i == recommended || i == selected) color else Color.argb(140, 255, 255, 255))
         textSize = 11f
       })
       list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
