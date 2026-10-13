@@ -246,14 +246,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
     setNameTop(30)
     nameLabel.textSize = 12f
     ring.centerText = b.phaseLabel
-    /* 13 okt 2026 (operator): voluit "through your nose / mouth", zoals de
-       app vroeger toonde; neusgat-varianten blijven kort. */
-    ring.subText = if (b.paused) "" else when (b.via.lowercase()) {
-      "" -> ""
-      "nose" -> "through your nose"
-      "mouth" -> "through your mouth"
-      else -> b.via
-    }
+    /* Kort, zoals het horloge vraagt (operator 13 okt 2026): "Inhale" en
+       eronder enkel "Nose" / "Mouth". */
+    ring.subText = if (b.paused) "" else b.via
     /* De naam enkel bij pauze — tijdens het ademen krijgt de figuur de
        ruimte (operator 13 okt 2026). */
     (nameLabel.parent as View).visibility = if (b.paused) View.VISIBLE else View.INVISIBLE
