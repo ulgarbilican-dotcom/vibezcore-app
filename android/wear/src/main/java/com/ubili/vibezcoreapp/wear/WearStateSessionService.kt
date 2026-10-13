@@ -207,8 +207,12 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
   return out
 }
 
-/** Gemeten 13 okt 2026: klok horloge ≈ 0,1 s voor op de telefoon. */
-private const val WATCH_CLOCK_AHEAD_MS = 100L
+/** Klokverschil horloge − telefoon, plus de reactietijd van de motoren.
+ *  Gemeten ~0,1 s (± 0,1 s, adb), daarna op gevoel bijgesteld door de
+ *  operator (13 okt 2026): met 100 liep de pols een fractie voor t.o.v. de
+ *  oude telefoonstart, met de echte telefoonstart (+160) een fractie achter
+ *  → het midden. */
+private const val WATCH_CLOCK_AHEAD_MS = 20L
 
 /** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
  *  vallen weg, de lopende stap wordt korter). */
