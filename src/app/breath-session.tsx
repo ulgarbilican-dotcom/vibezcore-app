@@ -3786,6 +3786,9 @@ export function BreathSession() {
                       pressScapeLevelChip.style,
                     ]}
                   >
+                    {on ? (
+                      <VibezGlass radius={10} level="raised" tint={accent} style={StyleSheet.absoluteFill} />
+                    ) : null}
                     <Text style={[s.levelTxt, on && s.levelTxtOn]}>
                       {l.charAt(0).toUpperCase() + l.slice(1)}
                     </Text>
@@ -3986,6 +3989,9 @@ export function BreathSession() {
                       pressNarratorChip.style,
                     ]}
                   >
+                    {on ? (
+                      <VibezGlass radius={10} level="raised" tint={accent} style={StyleSheet.absoluteFill} />
+                    ) : null}
                     <Text style={[s.levelTxt, on && s.levelTxtOn]}>
                       {label} · {g === 'male' ? 'Male' : 'Female'}
                     </Text>
@@ -4005,9 +4011,15 @@ export function BreathSession() {
                 onPress={() => pickScape(null)}
                 onPressIn={pressAvScapeNone.onPressIn}
                 onPressOut={pressAvScapeNone.onPressOut}
-                style={[s.avScapeChip, !scape && s.avScapeChipOn, pressAvScapeNone.style]}
+                style={[s.avScapeChip, pressAvScapeNone.style]}
               >
-                <VolumeX size={22} color={!scape ? '#0a0a0a' : 'rgba(255,255,255,0.75)'} strokeWidth={2} />
+                <VibezGlass
+                  radius={20}
+                  level={!scape ? 'raised' : 'normal'}
+                  tint={!scape ? accent : undefined}
+                  style={StyleSheet.absoluteFill}
+                />
+                <VolumeX size={22} color={!scape ? '#ffffff' : 'rgba(255,255,255,0.7)'} strokeWidth={2} />
                 <Text style={[s.avScapeChipTxt, !scape && s.avScapeChipTxtOn]}>None</Text>
               </AnimatedPressable>
             </View>
@@ -4037,15 +4049,21 @@ export function BreathSession() {
                           onPress={() => pickScapeGated(x.key)}
                           onPressIn={pressAvScapeChip.onPressIn}
                           onPressOut={pressAvScapeChip.onPressOut}
-                          style={[s.avScapeChip, on && s.avScapeChipOn, pressAvScapeChip.style]}
+                          style={[s.avScapeChip, pressAvScapeChip.style]}
                         >
-                          <x.Icon size={22} color={on ? '#0a0a0a' : 'rgba(255,255,255,0.75)'} strokeWidth={2} />
+                          <VibezGlass
+                            radius={20}
+                            level={on ? 'raised' : 'normal'}
+                            tint={on ? accent : undefined}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <x.Icon size={22} color={on ? '#ffffff' : 'rgba(255,255,255,0.7)'} strokeWidth={2} />
                           <Text style={[s.avScapeChipTxt, on && s.avScapeChipTxtOn]} numberOfLines={1}>
                             {x.name}
                           </Text>
                           {scapeLocked(x.key) && (
                             <View style={s.avScapeLock}>
-                              <Crown size={12} color={on ? '#0a0a0a' : C.dim55} strokeWidth={2.2} />
+                              <Crown size={12} color={C.dim55} strokeWidth={2.2} />
                             </View>
                           )}
                         </AnimatedPressable>
@@ -4082,6 +4100,9 @@ export function BreathSession() {
                           pressScapeLevelChip.style,
                         ]}
                       >
+                        {on ? (
+                          <VibezGlass radius={10} level="raised" tint={accent} style={StyleSheet.absoluteFill} />
+                        ) : null}
                         <Text style={[s.levelTxt, on && s.levelTxtOn]}>
                           {l.charAt(0).toUpperCase() + l.slice(1)}
                         </Text>
@@ -4139,6 +4160,9 @@ export function BreathSession() {
                       accessibilityState={{ selected: on }}
                       accessibilityLabel={`Vibration ${l}`}
                     >
+                      {on ? (
+                        <VibezGlass radius={10} level="raised" tint={accent} style={StyleSheet.absoluteFill} />
+                      ) : null}
                       <Text style={[s.levelTxt, on && s.levelTxtOn]}>{l.charAt(0).toUpperCase() + l.slice(1)}</Text>
                     </Pressable>
                   );
@@ -5409,15 +5433,15 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     borderRadius: 20,
     padding: 12,
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    overflow: 'hidden',
   },
-  avScapeChipOn: { backgroundColor: '#ffffff' },
+  avScapeChipOn: {},
   avScapeChipTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.7)',
   },
-  avScapeChipTxtOn: { color: '#0a0a0a' },
+  avScapeChipTxtOn: { color: '#ffffff' },
   avScapeLock: { position: 'absolute', top: 12, right: 12 },
   avBraceletBadge: {
     flexDirection: 'row',
@@ -5457,13 +5481,15 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     flexDirection: 'row',
     padding: 4,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     marginBottom: 6,
   },
-  levelChip: { flex: 1, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  levelChipOn: { backgroundColor: '#ffffff' },
-  levelTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: 'rgba(255,255,255,0.7)' },
-  levelTxtOn: { color: '#0a0a0a' },
+  levelChip: { flex: 1, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  /* Gekozen stand = lichter glas met een glans bovenaan, witte tekst
+     (operator 13 okt 2026: "zo grijs en niet glass"). */
+  levelChipOn: {},
+  levelTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: 'rgba(255,255,255,0.6)' },
+  levelTxtOn: { color: '#ffffff' },
   scapeGroup: {
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
