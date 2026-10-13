@@ -425,7 +425,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
       /* (operator: "achtergrond terug zwart, geef figuren eigen gloed maar
          professioneel") zwarte pagina; achter de figuur een ingetogen halo
          in haar eigen kleur die ruim binnen de pagina uitdooft */
-      page.background = figureHalo(e.optString("colorHex"), pageH)
+      // de boom van Sleep zonder halo (operator 13 okt: "gloed van tree of life weg")
+      if (artResFor(e.optString("colorHex")) != R.drawable.vz_art_tree) {
+        page.background = figureHalo(e.optString("colorHex"), pageH)
+      }
       val figure = android.widget.ImageView(this).apply {
         setImageBitmap(trimmedArt(this@MainActivity, e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
