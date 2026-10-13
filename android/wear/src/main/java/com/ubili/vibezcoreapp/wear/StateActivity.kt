@@ -19,7 +19,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -45,53 +44,33 @@ class StateActivity : androidx.activity.ComponentActivity() {
     val e = CatalogStore.withTechnique(raw, raw.optJSONArray("techniques")?.optJSONObject(selected)?.optString("key"))
     val durIdx = CatalogStore.durationIdx(this, e)
     val dur = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: ""
-    val color = try {
-      Color.parseColor(e.optString("colorHex"))
-    } catch (_: Exception) {
-      Color.parseColor("#00A3A3")
-    }
+    val color = figureColor(this, e.optString("colorHex"))
     val locked = e.optBoolean("locked")
     val manyTechs = (e.optJSONArray("techniques")?.length() ?: 0) > 1
 
     // terug uit een keuzelijst: blijf waar je was (Start in beeld)
     val keepY = scrollView?.scrollY ?: 0
     val scroll = ScrollView(this).apply {
-      setBackgroundColor(Color.BLACK)
+      // zelfde gloed als de pagina van de toestand: je blijft "in" die toestand
+      background = stateGlow(this@StateActivity, e.optString("colorHex"), 0.3f)
       isFocusable = true
       isFocusableInTouchMode = true
     }
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(10f), dp(24f), dp(34f))
+      setPadding(dp(24f), dp(34f), dp(24f), dp(34f))
     }
     scroll.addView(col)
-
-    // de ademende figuur met zijn gloed
-    val figure = ImageView(this).apply {
-      setImageBitmap(android.graphics.BitmapFactory.decodeResource(resources, artResFor(e.optString("colorHex"))))
-      scaleType = ImageView.ScaleType.FIT_CENTER
-      val pad = dp(4f)
-      setPadding(pad, pad, pad, pad)
-      background = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        gradientType = GradientDrawable.RADIAL_GRADIENT
-        gradientRadius = dp(54f).toFloat()
-        colors = intArrayOf(Color.argb(100, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
-      }
-      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }
-    col.addView(figure, LinearLayout.LayoutParams(dp(104f), dp(104f)))
-    breatheView(figure)
 
     col.addView(TextView(this).apply {
       text = e.optString("name")
       setTextColor(Color.WHITE)
-      textSize = 16f
+      textSize = 18f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      bottomMargin = dp(8f)
+      bottomMargin = dp(10f)
     })
 
     fun row(label: String, value: String, tag: String?, onTap: (() -> Unit)?) {
@@ -101,7 +80,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
         setPadding(dp(16f), dp(6f), dp(14f), dp(6f))
         background = GradientDrawable().apply {
           cornerRadius = dp(20f).toFloat()
-          setColor(Color.parseColor("#1C1C1E"))
+          setColor(Color.argb(36, 255, 255, 255))
         }
         minimumHeight = dp(44f)
         if (onTap != null) {
@@ -185,20 +164,4 @@ class StateActivity : androidx.activity.ComponentActivity() {
     }
   }
 
-  /** Traag ademen, zoals de figuur tijdens de sessie (6 s per adem). */
-  private fun breatheView(v: View) {
-    val sx = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_X, 0.9f, 1f)
-    val sy = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_Y, 0.9f, 1f)
-    val al = android.animation.ObjectAnimator.ofFloat(v, View.ALPHA, 0.8f, 1f)
-    listOf(sx, sy, al).forEach {
-      it.duration = 3000
-      it.repeatCount = android.animation.ValueAnimator.INFINITE
-      it.repeatMode = android.animation.ValueAnimator.REVERSE
-      it.interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-    }
-    android.animation.AnimatorSet().apply {
-      playTogether(sx, sy, al)
-      start()
-    }
-  }
 }

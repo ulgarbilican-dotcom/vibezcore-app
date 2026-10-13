@@ -28,18 +28,14 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
       finish()
       return
     }
-    val color = try {
-      Color.parseColor(e.optString("colorHex"))
-    } catch (_: Exception) {
-      Color.parseColor("#00A3A3")
-    }
+    val color = figureColor(this, e.optString("colorHex"))
     val recommended = e.optInt("recommendedIdx", 0)
     /* 13 okt 2026: je laatste keuze staat klaar ("Last used"); "For you"
        blijft het advies van je niveau. */
     val selected = CatalogStore.selectedIdx(this, e)
 
     val scroll = ScrollView(this).apply {
-      setBackgroundColor(Color.BLACK)
+      background = stateGlow(this@TechniqueActivity, e.optString("colorHex"), 0.3f)
       isVerticalScrollBarEnabled = false
       isFocusable = true
       isFocusableInTouchMode = true
@@ -69,7 +65,7 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
         setPadding(dp(16f), dp(8f), dp(14f), dp(8f))
         background = GradientDrawable().apply {
           cornerRadius = dp(24f).toFloat()
-          setColor(Color.parseColor("#1C1C1E"))
+          setColor(Color.argb(36, 255, 255, 255))
           /* de techniek die klaarstaat: dunne rand in de kleur van de toestand */
           if (i == selected) setStroke(dp(1.5f).coerceAtLeast(1), Color.argb(150, Color.red(color), Color.green(color), Color.blue(color)))
         }
