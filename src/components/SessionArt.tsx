@@ -55,8 +55,10 @@ export const SESSION_ART = {
   /* REST, operator 2 augustus 2026 — vervangt de buddha. Ook dit is geen
      bol, dus de naam "Soft Orb" past er nog steeds niet bij. */
   tree: 'https://vibezcore-audio.b-cdn.net/images/tree_of_life-removebg-preview%20(1).png',
-  clarity:
-    'https://vibezcore-audio.b-cdn.net/images/cristal-removebg-preview.png',
+  /* CLARITY & RELAX, operator 13 okt 2026 — vervangt het kristal: het oog
+     ("pic calm relax.png"), zwart omgezet naar doorzichtig en strak
+     bijgesneden, door de operator opgeladen als "pic calm relax 2.png". */
+  clarity: 'https://vibezcore-audio.b-cdn.net/images/pic%20calm%20relax%202.png',
   /* FOCUS. Het bestand heet "bol", maar het IS de Flower of Life — niet
      achter de naam aanlopen bij het opruimen. */
   flower: 'https://vibezcore-audio.b-cdn.net/images/bol-removebg-preview.png',

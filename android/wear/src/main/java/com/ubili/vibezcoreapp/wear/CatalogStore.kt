@@ -369,6 +369,9 @@ internal fun artOpticalScale(colorHex: String): Float = when (colorHex.uppercase
   /* de zon: de dunne stralen tellen mee in het vak, maar het oog ziet de
      ring — iets groter (operator: "is boost kleiner dan de rest?") */
   "#F5A524" -> 1.12f
+  /* het oog van Clarity & Relax: veel doorzichtige gloed rondom telt mee
+     in het vak, het oog zelf oogt kleiner (operator: "beetje groter") */
+  "#FFFFFF" -> 1.18f
   else -> 1f
 }
 

@@ -675,7 +675,10 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     gradient: ['#2F4059', '#7A93B6', '#CBD9EA'],
     art: 'clarity',
     focusY: 0.5,
-    artScale: 0.7,
+    /* Het oog (13 okt 2026) is strak bijgesneden (het kristal had ~17% lege
+       rand), en de zachte doorzichtige rand rond het oog laat het kleiner
+       ogen — vandaar niet 0.7 maar dit. */
+    artScale: 0.68,
     phases: [inhale(4, 'Nose'), exhale(4, 'Nose')],
     techniques: [
       {
