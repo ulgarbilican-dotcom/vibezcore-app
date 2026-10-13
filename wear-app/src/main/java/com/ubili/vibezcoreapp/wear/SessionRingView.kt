@@ -99,6 +99,15 @@ class SessionRingView @JvmOverloads constructor(
 
   /** Grootte en verticale ligging van het onderwerp in zijn beeld — zelfde
    *  `artScale`/`focusY` als breath-states.ts (de PNG's hebben veel lege rand). */
+  /** Voortgang van de lopende fase 0..1 — de halve boog bovenaan telt af,
+   *  zoals de ademboog in de app (13 okt 2026). */
+  var phaseProgressAt: (Long) -> Float = { 0f }
+  private val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+  }
+  private val arcRect = RectF()
+
   var artScale = 1f
   var artFocusY = 0.5f
 
@@ -287,6 +296,20 @@ class SessionRingView @JvmOverloads constructor(
     artRect.set(cx - w / 2f, acy - h / 2f + dy, cx + w / 2f, acy + h / 2f + dy)
     artPaint.alpha = ((0.74f + 0.26f * b) * (if (paused) 0.4f else 1f) * 255).toInt()
     canvas.drawBitmap(scaled!!, null, artRect, artPaint)
+
+    /* Halve boog langs de bovenrand: dun spoor, en de kleur van de toestand
+       die over de fase van links naar rechts volloopt — de aftelling. */
+    val inset = 7f * density
+    arcRect.set(inset, inset, width - inset, height - inset)
+    arcPaint.strokeWidth = 4f * density
+    arcPaint.color = Color.argb(36, 255, 255, 255)
+    canvas.drawArc(arcRect, 200f, 140f, false, arcPaint)
+    val prog = phaseProgressAt(now).coerceIn(0f, 1f)
+    if (prog > 0f) {
+      arcPaint.color = color
+      arcPaint.alpha = if (paused) 110 else 255
+      canvas.drawArc(arcRect, 200f, 140f * prog, false, arcPaint)
+    }
 
     /* Geen cirkel of rand (operator 12 okt 2026: "cirkel weg en enkel de
        figuren laten ademen") — enkel de figuur en zijn licht op zwart. */

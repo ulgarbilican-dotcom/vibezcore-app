@@ -95,10 +95,21 @@ class WearBreathSessionService : Service() {
 
     val myGeneration = ++generation
     instance = this
+    /* 13 okt 2026 (operator: "sessie niet synchroon met de telefoon"): de
+       telefoon zegt wanneer hij dit bericht verstuurde (zijn klok); de
+       Bluetooth-vertraging wordt van de eerste fase afgetrokken, zodat de
+       pols op hetzelfde moment overgaat als de telefoon. Begrensd tot
+       1,5 s — een horlogeklok die verder afwijkt vertrouwen we niet. */
+    val sentAt = json.optLong("sentAtMs", 0L)
+    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt).coerceIn(0L, 1500L) else 0L
+    val now = SystemClock.uptimeMillis()
     val midPhase = phaseRemainingMs in 0 until phases[startPhase].secs * 1000L
+    val firstDur = if (midPhase) phaseRemainingMs else phases[startPhase].secs * 1000L
     runPhase(
       myGeneration, phases, rounds, modeName, round = startRound, phaseIdx = startPhase,
-      firstDelayMs = if (midPhase) phaseRemainingMs else null,
+      startUptime = now - lag,
+      durMs = (firstDur - lag).coerceAtLeast(200L) + lag,
+      silentStart = midPhase,
     )
   }
 
@@ -109,9 +120,14 @@ class WearBreathSessionService : Service() {
     modeName: String,
     round: Int,
     phaseIdx: Int,
+    /** Gepland begin van deze fase (uptime). Elke fase begint op het geplande
+     *  EINDE van de vorige — zo loopt er over een sessie niets op. */
+    startUptime: Long,
+    /** Duur van deze fase vanaf `startUptime`. */
+    durMs: Long,
     /** Hervatten midden in een fase: die fase is al aangekondigd en getrild,
      *  dus enkel de resterende tijd afwachten. */
-    firstDelayMs: Long? = null,
+    silentStart: Boolean = false,
   ) {
     if (gen != generation) return // een nieuwere START (of STOP) heeft dit overruled
     if (round > totalRounds) {
@@ -121,26 +137,25 @@ class WearBreathSessionService : Service() {
     val phase = phases[phaseIdx]
     val label = phaseDisplayLabel(phase.key)
 
-    if (firstDelayMs == null) {
+    if (!silentStart) {
       try {
-        vibrator?.vibrate(VibrationEffect.createWaveform(phase.pattern, -1))
+        vibrateOutsideTouch(VibrationEffect.createWaveform(phase.pattern, -1))
       } catch (_: Exception) {
         /* een toestel/emulator zonder trilmotor mag de lus niet stoppen */
       }
       BeatBus.beat(true)
     }
 
-    val durMs = firstDelayMs ?: (phase.secs * 1000L)
+    val endUptime = startUptime + durMs
     val target = when {
       phase.key.startsWith("inhale") -> 0.85f
       phase.key.startsWith("exhale") -> 0.18f
       else -> level
     }
-    val now = SystemClock.uptimeMillis()
     BreathSessionState.update(
       BreathSessionState.Snapshot(
         label, modeName, round, totalRounds, via = phase.via, running = true, paused = false, colorHex = colorHex,
-        levelFrom = level, levelTo = target, phaseStartUptime = now, phaseEndUptime = now + durMs,
+        levelFrom = level, levelTo = target, phaseStartUptime = startUptime, phaseEndUptime = endUptime,
       ),
     )
     level = target
@@ -149,9 +164,10 @@ class WearBreathSessionService : Service() {
     val nextPhaseIdx = (phaseIdx + 1) % phases.size
     val nextRound = if (nextPhaseIdx == 0) round + 1 else round
 
-    handler?.postDelayed(
-      { runPhase(gen, phases, totalRounds, modeName, nextRound, nextPhaseIdx) },
-      firstDelayMs ?: (phase.secs * 1000L),
+    val nextDur = phases[nextPhaseIdx].secs * 1000L
+    handler?.postAtTime(
+      { runPhase(gen, phases, totalRounds, modeName, nextRound, nextPhaseIdx, startUptime = endUptime, durMs = nextDur) },
+      endUptime,
     )
   }
 
@@ -180,7 +196,7 @@ class WearBreathSessionService : Service() {
     val here = cur.levelFrom + (cur.levelTo - cur.levelFrom) * k
     level = here
     BreathSessionState.update(
-      cur.copy(phaseLabel = "Paused", running = false, paused = true, levelFrom = here, levelTo = here),
+      cur.copy(phaseLabel = "Paused", running = false, paused = true, levelFrom = here, levelTo = here, pausedProgress = k),
     )
     releaseWakeLock()
     stopForeground(STOP_FOREGROUND_REMOVE)
@@ -206,6 +222,37 @@ class WearBreathSessionService : Service() {
     stopForeground(STOP_FOREGROUND_REMOVE)
     instance = null
     stopSelf()
+  }
+
+  /* 13 okt 2026 (operator: "als het scherm donker wordt stoppen de
+     haptics"): zonder attributen telt een trilling als TOUCH, en die legt
+     Wear OS stil zodra het scherm uitgaat. Zoals State Control: MEDIA, en
+     in batterijbesparing of stille modus ALARM (wordt nergens stilgelegd). */
+  private fun vibrateOutsideTouch(effect: VibrationEffect) {
+    val v = vibrator ?: return
+    val asAlarm = try {
+      val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+      val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+      (pm?.isPowerSaveMode == true) || (am?.ringerMode == android.media.AudioManager.RINGER_MODE_SILENT)
+    } catch (_: Exception) {
+      false
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      v.vibrate(
+        effect,
+        android.os.VibrationAttributes.createForUsage(
+          if (asAlarm) android.os.VibrationAttributes.USAGE_ALARM else android.os.VibrationAttributes.USAGE_MEDIA,
+        ),
+      )
+    } else {
+      @Suppress("DEPRECATION")
+      v.vibrate(
+        effect,
+        android.media.AudioAttributes.Builder()
+          .setUsage(if (asAlarm) android.media.AudioAttributes.USAGE_ALARM else android.media.AudioAttributes.USAGE_MEDIA)
+          .build(),
+      )
+    }
   }
 
   private fun acquireWakeLock() {

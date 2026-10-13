@@ -1528,6 +1528,13 @@ export function BreathSession() {
   }, [idleBreathing, stopAll]);
 
   /* ── De fase-loop ──────────────────────────────────────────────────── */
+  /* 13 okt 2026 (operator: "daarnet was een sessie niet synchroon met de
+     telefoon"): elke fase rekent vanaf het geplande EINDE van de vorige,
+     niet vanaf "nu". Met een seconde-interval kwam elke tik een paar ms te
+     laat, en dat liep over een sessie op tot seconden — het horloge (eigen
+     klok) liep daardoor uit de pas. Nu blijft de sessie op de echte klok. */
+  const nextAnchorRef = useRef(0);
+
   const runPhase = useCallback(
     /* Operator, 8 september 2026 (pauzeren): `resumeAt` is nieuw en puur
        ADDITIEF — elke bestaande aanroep (nieuwe fase, nieuwe ronde, de
@@ -1538,6 +1545,14 @@ export function BreathSession() {
     (k: Phase, r: number, resumeAt?: number) => {
       const def = byKey(k);
       const startLeft = resumeAt ?? def.secs;
+      const nowMs = Date.now();
+      const sinceAnchor = nowMs - nextAnchorRef.current;
+      const anchor =
+        resumeAt === undefined && nextAnchorRef.current > 0 && sinceAnchor >= 0 && sinceAnchor < 1000
+          ? nextAnchorRef.current
+          : nowMs;
+      const endAt = anchor + startLeft * 1000;
+      nextAnchorRef.current = endAt;
       setPhase(k);
       setSecsLeft(startLeft);
 
@@ -1570,7 +1585,7 @@ export function BreathSession() {
       if (preRef.current) clearTimeout(preRef.current);
       preRef.current = setTimeout(
         () => speak(upcoming),
-        Math.max(0, startLeft * 1000 - CUE_LEAD_MS),
+        Math.max(0, endAt - CUE_LEAD_MS - Date.now()),
       );
 
       /* Beeld: alleen in- en uitademen bewegen. Tijdens het vasthouden
@@ -1593,7 +1608,7 @@ export function BreathSession() {
            doel, dus dit blijft naadloos zonder een aparte tussenwaarde te
            moeten uitrekenen. */
         breath.value = withTiming(k === 'inhale' ? 1 : 0, {
-          duration: startLeft * 1000,
+          duration: Math.max(0, endAt - Date.now()),
           easing: Easing.out(Easing.sin),
         });
       }
@@ -1605,18 +1620,24 @@ export function BreathSession() {
         arc.value = 0;
       }
       arc.value = withTiming(1, {
-        duration: startLeft * 1000,
+        duration: Math.max(0, endAt - Date.now()),
         easing: Easing.linear,
       });
 
-      let left = startLeft;
+      /* Elke tik op zijn eigen geplande seconde (anchor + n·1000), dus een
+         late tik schuift de volgende niet mee op. */
+      let n = 0;
       if (tickRef.current) clearInterval(tickRef.current);
-      tickRef.current = setInterval(() => {
-        left -= 1;
+      const tick = () => {
+        n += 1;
+        const left = startLeft - n;
         elapsedRef.current += 1;
         setSecsLeft(left);
-        if (left <= 0) {
-          if (tickRef.current) clearInterval(tickRef.current);
+        if (left > 0) {
+          tickRef.current = setTimeout(tick, Math.max(0, anchor + (n + 1) * 1000 - Date.now()));
+          return;
+        }
+        {
           tickRef.current = null;
           /* Nul laten renderen vóór de fase wisselt, anders blijft "1"
              even hangen op de overgang. */
@@ -1660,7 +1681,8 @@ export function BreathSession() {
             }
           }, 0);
         }
-      }, 1000);
+      };
+      tickRef.current = setTimeout(tick, Math.max(0, anchor + 1000 - Date.now()));
     },
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
     [arc, breath, finish],
@@ -2067,6 +2089,7 @@ export function BreathSession() {
           modeName: name,
           colorHex,
           ...(at ?? {}),
+          sentAtMs: Date.now(),
         });
         sendBreathSessionToWatch({
           phases: phases.map((p) => ({ key: p.key, secs: p.secs, via: p.via ?? '' })),
@@ -2074,6 +2097,7 @@ export function BreathSession() {
           modeName: name,
           colorHex,
           ...(at ?? {}),
+          sentAtMs: Date.now(),
         });
       } catch {
         /* stil */

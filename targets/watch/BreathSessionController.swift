@@ -91,16 +91,28 @@ final class BreathSessionController: NSObject, ObservableObject {
     let remainingMs = message["phaseRemainingMs"] as? Int ?? -1
     let midPhase = remainingMs >= 0 && remainingMs < phases[startPhase].secs * 1000
 
+    /* 13 okt 2026: de iPhone zegt wanneer hij dit verstuurde; die vertraging
+       gaat van de eerste fase af (max 1,5 s), zodat de pols tegelijk met de
+       iPhone overgaat. */
+    var lag: TimeInterval = 0
+    if let sentAt = message["sentAtMs"] as? Double, sentAt > 0 {
+      lag = min(1.5, max(0, Date().timeIntervalSince1970 - sentAt / 1000))
+    }
+    let firstDur = midPhase ? TimeInterval(remainingMs) / 1000 : TimeInterval(phases[startPhase].secs)
     generation += 1
     runPhase(
       gen: generation, round: startRound, idx: startPhase,
-      firstDelay: midPhase ? TimeInterval(remainingMs) / 1000 : nil
+      start: Date().addingTimeInterval(-lag),
+      duration: max(0.2, firstDur - lag) + lag,
+      silentStart: midPhase
     )
   }
 
-  /// `firstDelay`: hervatten midden in een fase — die fase is al getrild,
-  /// dus enkel de resterende tijd afwachten.
-  private func runPhase(gen: Int, round: Int, idx: Int, firstDelay: TimeInterval? = nil) {
+  /// `start`/`duration`: gepland begin en duur — elke fase begint op het
+  /// geplande EINDE van de vorige, zodat er over een sessie niets oploopt
+  /// (13 okt 2026). `silentStart`: hervatten midden in een fase — die fase
+  /// is al getrild, dus enkel de resterende tijd afwachten.
+  private func runPhase(gen: Int, round: Int, idx: Int, start: Date, duration: TimeInterval, silentStart: Bool = false) {
     guard gen == generation else { return }
     guard round <= totalRounds else {
       stop()
@@ -110,11 +122,10 @@ final class BreathSessionController: NSObject, ObservableObject {
     phaseLabel = displayLabel(for: phase.key)
     via = phase.via
     self.round = round
-    if firstDelay == nil {
+    if !silentStart {
       playHaptics(for: phase.key, secs: phase.secs)
       beats.send(true)
     }
-    let duration = firstDelay ?? TimeInterval(phase.secs)
     let target: Double
     if phase.key.hasPrefix("inhale") {
       target = 0.85
@@ -125,17 +136,22 @@ final class BreathSessionController: NSObject, ObservableObject {
     }
     levelFrom = level
     levelTo = target
-    phaseStart = Date()
-    phaseEnd = phaseStart.addingTimeInterval(duration)
+    phaseStart = start
+    phaseEnd = start.addingTimeInterval(duration)
     level = target
 
     let nextIdx = (idx + 1) % phases.count
     let nextRound = nextIdx == 0 ? round + 1 : round
 
     phaseTimer?.invalidate()
-    phaseTimer = Timer.scheduledTimer(withTimeInterval: firstDelay ?? TimeInterval(phase.secs), repeats: false) { [weak self] _ in
-      self?.runPhase(gen: gen, round: nextRound, idx: nextIdx)
+    let end = phaseEnd
+    let nextDur = TimeInterval(phases[nextIdx].secs)
+    let t = Timer(fire: end, interval: 0, repeats: false) { [weak self] _ in
+      self?.runPhase(gen: gen, round: nextRound, idx: nextIdx, start: end, duration: nextDur)
     }
+    t.tolerance = 0
+    RunLoop.main.add(t, forMode: .common)
+    phaseTimer = t
   }
 
   private func displayLabel(for key: String) -> String {

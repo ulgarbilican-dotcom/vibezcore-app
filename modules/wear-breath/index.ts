@@ -37,6 +37,9 @@ export type WearBreathSession = {
   startRound?: number;
   startPhase?: number;
   phaseRemainingMs?: number;
+  /** Date.now() van de telefoon bij versturen — het horloge trekt de
+   *  Bluetooth-vertraging af (13 okt 2026). */
+  sentAtMs?: number;
 };
 
 export type WearBraceletStatus = {

@@ -89,6 +89,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 12 okt 2026 (avond): horloge — de golf is nu exact het pad van de telefoon (LiquidWave: vier kubische S-bochten; de oude sinus golfde ~3,5× hoger), en tijdens een sessie staat het sessiescherm boven het vergrendelscherm (setShowWhenLocked/setTurnScreenOn). Wear-APK gebouwd, nog te installeren zodra het horloge bereikbaar is. Volgende: breathwork-figuren op het horloge.
 
+- 13 okt 2026: breathwork op het horloge — ademfiguur van de app (zon/bloem/lotus/kristal/boom) zonder cirkel, halve boog bovenaan als fase-aftelling, "Inhale · Nose", tik op figuur = pauze. Trilling blijft bij donker scherm (MEDIA/ALARM i.p.v. TOUCH). Ritme: telefoon (breath-session.tsx) én horloges plannen elke fase vanaf het geplande einde van de vorige (geen oplopende drift meer); telefoon stuurt sentAtMs mee, horloge trekt de Bluetooth-vertraging af. **Native wijziging wear-breath-module → nieuwe telefoonbuild nodig** (ook voor via). Apple Watch: zelfde ritme-fix + via, nog geen figuren; niet compileerbaar op Windows.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

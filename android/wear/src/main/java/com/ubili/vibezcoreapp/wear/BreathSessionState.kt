@@ -23,6 +23,8 @@ object BreathSessionState {
     val levelTo: Float = 0.3f,
     val phaseStartUptime: Long = 0L,
     val phaseEndUptime: Long = 0L,
+    /** Waar de fase-boog stond toen er gepauzeerd werd (0..1). */
+    val pausedProgress: Float = 0f,
   )
 
   @Volatile

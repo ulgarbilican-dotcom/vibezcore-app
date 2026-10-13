@@ -215,6 +215,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.isClickable = false
     pauseButton.visibility = View.VISIBLE
     setNameTop(44)
+    nameLabel.textSize = 15f
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
@@ -242,12 +243,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.contentDescription = if (b.paused) "Resume" else "Pause"
     pauseButton.visibility = View.GONE
     setNameTop(30)
+    nameLabel.textSize = 12f
     ring.centerText = b.phaseLabel
     ring.subText = if (b.paused) "" else b.via
     val from = b.levelFrom
     val to = b.levelTo
     val start = b.phaseStartUptime
     val span = (b.phaseEndUptime - b.phaseStartUptime).coerceAtLeast(1L)
+    ring.phaseProgressAt = { now ->
+      if (b.paused) b.pausedProgress else ((now - start).toFloat() / span).coerceIn(0f, 1f)
+    }
     ring.levelAt = { now ->
       val k = ((now - start).toFloat() / span).coerceIn(0f, 1f)
       // zacht in en uit, zoals een adem

@@ -55,6 +55,9 @@ class WearBreathSession(
   @Field val startRound: Int = 1,
   @Field val startPhase: Int = 0,
   @Field val phaseRemainingMs: Int = -1,
+  /* Date.now() van de telefoon bij versturen (13 okt 2026): het horloge
+     trekt de Bluetooth-vertraging van de eerste fase af. */
+  @Field val sentAtMs: Double = 0.0,
 ) : Record
 
 /** Lichtgewicht, periodiek te hersturen status voor Instant State Control
@@ -266,6 +269,7 @@ class WearBreathModule : Module() {
       put("startRound", session.startRound)
       put("startPhase", session.startPhase)
       put("phaseRemainingMs", session.phaseRemainingMs)
+      put("sentAtMs", session.sentAtMs.toLong())
     }
   }
 

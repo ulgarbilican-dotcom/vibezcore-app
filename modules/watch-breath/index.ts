@@ -31,6 +31,9 @@ export type WatchBreathSession = {
   startRound?: number;
   startPhase?: number;
   phaseRemainingMs?: number;
+  /** Date.now() van de telefoon bij versturen — het horloge trekt de
+   *  Bluetooth-vertraging af (13 okt 2026). */
+  sentAtMs?: number;
 };
 
 /** Lichtgewicht, periodiek te hersturen status voor Instant State Control
