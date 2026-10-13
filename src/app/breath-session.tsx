@@ -3782,17 +3782,12 @@ export function BreathSession() {
                     }}
                     style={[
                       s.levelChip,
-                      on && { borderColor: accent, backgroundColor: accentSoft },
+                      on && s.levelChipOn,
                       pressScapeLevelChip.style,
                     ]}
                   >
-                    <Text
-                      style={[
-                        s.levelTxt,
-                        on && { color: accent },
-                      ]}
-                    >
-                      {l.toUpperCase()}
+                    <Text style={[s.levelTxt, on && s.levelTxtOn]}>
+                      {l.charAt(0).toUpperCase() + l.slice(1)}
                     </Text>
                   </AnimatedPressable>
                 );
@@ -3987,12 +3982,12 @@ export function BreathSession() {
                     }}
                     style={[
                       s.levelChip,
-                      on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
+                      on && s.levelChipOn,
                       pressNarratorChip.style,
                     ]}
                   >
-                    <Text style={[s.levelTxt, on && { color: '#ffffff' }]}>
-                      {label.toUpperCase()} · {g === 'male' ? 'MALE' : 'FEMALE'}
+                    <Text style={[s.levelTxt, on && s.levelTxtOn]}>
+                      {label} · {g === 'male' ? 'Male' : 'Female'}
                     </Text>
                   </AnimatedPressable>
                 );
@@ -4010,14 +4005,10 @@ export function BreathSession() {
                 onPress={() => pickScape(null)}
                 onPressIn={pressAvScapeNone.onPressIn}
                 onPressOut={pressAvScapeNone.onPressOut}
-                style={[
-                  s.avScapeChip,
-                  !scape && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
-                  pressAvScapeNone.style,
-                ]}
+                style={[s.avScapeChip, !scape && s.avScapeChipOn, pressAvScapeNone.style]}
               >
-                <VolumeX size={16} color={!scape ? '#ffffff' : C.dim55} strokeWidth={2.2} />
-                <Text style={[s.avScapeChipTxt, !scape && { color: '#ffffff' }]}>None</Text>
+                <VolumeX size={22} color={!scape ? '#0a0a0a' : 'rgba(255,255,255,0.75)'} strokeWidth={2} />
+                <Text style={[s.avScapeChipTxt, !scape && s.avScapeChipTxtOn]}>None</Text>
               </AnimatedPressable>
             </View>
             {GROUP_ORDER.map((g) => {
@@ -4046,15 +4037,17 @@ export function BreathSession() {
                           onPress={() => pickScapeGated(x.key)}
                           onPressIn={pressAvScapeChip.onPressIn}
                           onPressOut={pressAvScapeChip.onPressOut}
-                          style={[
-                            s.avScapeChip,
-                            on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
-                            pressAvScapeChip.style,
-                          ]}
+                          style={[s.avScapeChip, on && s.avScapeChipOn, pressAvScapeChip.style]}
                         >
-                          <x.Icon size={16} color={on ? '#ffffff' : C.dim55} strokeWidth={2.2} />
-                          <Text style={[s.avScapeChipTxt, on && { color: '#ffffff' }]}>{x.name}</Text>
-                          {scapeLocked(x.key) && <Crown size={12} color={C.dim55} strokeWidth={2.2} />}
+                          <x.Icon size={22} color={on ? '#0a0a0a' : 'rgba(255,255,255,0.75)'} strokeWidth={2} />
+                          <Text style={[s.avScapeChipTxt, on && s.avScapeChipTxtOn]} numberOfLines={1}>
+                            {x.name}
+                          </Text>
+                          {scapeLocked(x.key) && (
+                            <View style={s.avScapeLock}>
+                              <Crown size={12} color={on ? '#0a0a0a' : C.dim55} strokeWidth={2.2} />
+                            </View>
+                          )}
                         </AnimatedPressable>
                       );
                     })}
@@ -4085,12 +4078,12 @@ export function BreathSession() {
                         }}
                         style={[
                           s.levelChip,
-                          on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' },
+                          on && s.levelChipOn,
                           pressScapeLevelChip.style,
                         ]}
                       >
-                        <Text style={[s.levelTxt, on && { color: '#ffffff' }]}>
-                          {l.toUpperCase()}
+                        <Text style={[s.levelTxt, on && s.levelTxtOn]}>
+                          {l.charAt(0).toUpperCase() + l.slice(1)}
                         </Text>
                       </AnimatedPressable>
                     );
@@ -4141,12 +4134,12 @@ export function BreathSession() {
                               : Haptics.ImpactFeedbackStyle.Medium,
                         ).catch(() => {});
                       }}
-                      style={[s.levelChip, on && { borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.12)' }]}
+                      style={[s.levelChip, on && s.levelChipOn]}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: on }}
                       accessibilityLabel={`Vibration ${l}`}
                     >
-                      <Text style={[s.levelTxt, on && { color: '#ffffff' }]}>{l.toUpperCase()}</Text>
+                      <Text style={[s.levelTxt, on && s.levelTxtOn]}>{l.charAt(0).toUpperCase() + l.slice(1)}</Text>
                     </Pressable>
                   );
                 })}
@@ -5407,21 +5400,25 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   avScapeWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   avScapeHScroll: { marginHorizontal: -22 },
   avScapeScrollRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 22 },
+  /* 13 okt 2026 (operator, Apple-stijl): vierkante kaarten met afgeronde
+     hoeken i.p.v. pillen — icoon linksboven, naam linksonder, de gekozen
+     kaart wit met donkere tekst. Per groep blijft de rij opzij scrollen. */
   avScapeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    width: 92,
+    height: 92,
+    borderRadius: 20,
+    padding: 12,
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
+  avScapeChipOn: { backgroundColor: '#ffffff' },
   avScapeChipTxt: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 13,
-    color: C.dim55,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
   },
+  avScapeChipTxtOn: { color: '#0a0a0a' },
+  avScapeLock: { position: 'absolute', top: 12, right: 12 },
   avBraceletBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -5453,21 +5450,20 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      half onzichtbaar onderaan bleef hangen. Nu krimpt de lijst en houdt de
      knop zijn plek. */
   sheetList: { flexShrink: 1 },
-  levelRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
-  levelChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.dim12,
-    alignItems: 'center',
+  /* 13 okt 2026 (operator, Apple-stijl): gesegmenteerde keuze — één blok,
+     gelijke vlakken, de gekozen stand wit met donkere tekst. Exact dezelfde
+     look als VIBRATION STRENGTH in State Control (bracelet-control avSeg). */
+  levelRow: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 6,
   },
-  levelTxt: {
-    fontFamily: BrandFonts.bold,
-    fontSize: 10.5,
-    letterSpacing: 1.4,
-    color: C.dim50,
-  },
+  levelChip: { flex: 1, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  levelChipOn: { backgroundColor: '#ffffff' },
+  levelTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: 'rgba(255,255,255,0.7)' },
+  levelTxtOn: { color: '#0a0a0a' },
   scapeGroup: {
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
