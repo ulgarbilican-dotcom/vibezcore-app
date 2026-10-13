@@ -280,7 +280,9 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | T156 | State Control "Haptics + Audio" met horloge: hartslaggeluid speelt de telefoon (horloge trilt enkel); telefoon-module stuurde sound/lubMs/dubMs nooit door | | ⏳ operator hoort |
 | T157 | State Control END (telefoon) → terug naar keuzescherm; END (horloge) → beide terug | Sleep | ✅ 13 okt (Claude) |
 | T158 | Horloge State Control stopt nooit meer bij scherm uit: Wear OS zette onze wakelock op DISABLED (Dozing) → tik-per-tik lag tot 100 s stil; nu speelt de trilmotor het hele patroon in één keer | Quick Boost, scherm uit ≥ 2 min | ⏳ operator voelt |
-| T159 | Horloge-tik op hetzelfde ritmerooster als de telefoon (meting: constant 0,63 s ernaast); telefoon blijft bij het overnemen op hetzelfde rooster (geluid) | VZSync/[sync] | ⏳ hermeten |
+| T159 | Horloge-tik op het rooster van de telefoon — gemeten 13 okt 21:21: telefoon slag 1,538 trilmotor 21:21:55,904, horloge 21:21:55,896 (telefoonklok) → ~0,01 s; cirkel op de telefoon 0,05 s vóór de eigen trilling (was 0,18) | Quick Boost | ✅ 13 okt (Claude, meting) |
+| T160 | Horloge drijft niet af: 124 slagen gemiddeld 545,01 ms (verwacht 545) | Quick Boost | ✅ 13 okt (Claude, meting) |
+| T161 | Resterende tijd horloge = telefoon (naar beneden afronden + verversen net na de secondewissel; was ceil + vrij interval = tot 2 s verschil) | screenshots ±1 s | ⏳ operator kijkt |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 

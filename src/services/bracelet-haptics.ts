@@ -307,6 +307,8 @@ function clearPending(): void {
 /** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
  *  af (zelfde afgeronde cycleMs, zelfde startpunt) puur voor het beeld.
  *  Corrigeert zichzelf op de wandklok, zodat er geen drift opbouwt. */
+/** Gemeten opstarttijd van de trildienst op Android (13 okt 2026: 145–178 ms). */
+const NATIVE_START_LAG_MS = 160;
 let syncLogCount = 0;
 function scheduleVisual(
   mode: BraceletMode,
@@ -442,7 +444,12 @@ function play(
         `[haptic-test] mode=${mode} resting=${restingBpm} start=${spec.startBpm} target=${spec.targetBpm} hold=${timing.holdSec}s ramp=${timing.rampSec}s offset=${offsetSec.toFixed(1)}s session=${totalSec ?? '-'}s beats=${beats} firstBpm=${(60000 / cyc(0)).toFixed(1)} lastBpm=${(60000 / cyc((beats - 1) * 4)).toFixed(1)} waveform=${(totalMs / 1000).toFixed(1)}s clock=${!!clock} silent=${silent}`,
       );
     }
-    const anchorWallMs = Date.now();
+    /* De trildienst begint ~0,15–0,18 s na deze aanroep (gemeten 13 okt
+       2026, VibratorManagerService). Beeld én horloge rekenen vanaf het
+       moment dat de eerste tik ECHT voelbaar is — zo vallen cirkel,
+       trilling, geluid en pols samen (operator: "horloge loopt een fractie
+       vooruit"). */
+    const anchorWallMs = Date.now() + (clock ? NATIVE_START_LAG_MS : 0);
     if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. Feel &
          Hear: de service speelt het hartslaggeluid zelf, op elke tik. */
@@ -605,7 +612,8 @@ function relayToWatch(
     curveOffsetSec,
     remainingSec: Math.round(remainingSec),
     ...watchStrength(spec),
-    sentAtMs: Date.now(),
+    /* = het moment dat slag 0 van deze curve op de telefoon voelbaar is */
+    sentAtMs: Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0),
   };
   sendWearState(start);
   sendAppleState(start);

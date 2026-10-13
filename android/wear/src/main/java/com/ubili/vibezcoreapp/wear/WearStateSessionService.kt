@@ -255,7 +255,12 @@ class WearStateSessionService : Service() {
   private val tickRunnable = object : Runnable {
     override fun run() {
       publish()
-      beatHandler.postDelayed(this, 1000L)
+      /* Net NA de wissel van elke seconde verversen (zoals de telefoon) —
+         een vrij interval van 1 s liet het getal tot bijna 1 s achterlopen
+         (operator 13 okt: "seconden op horloge lopen 2 s achter"). */
+      val rem = sessionEndUptime - SystemClock.uptimeMillis()
+      val delay = if (!paused && rem > 0) (rem % 1000L) + 15L else 1000L
+      beatHandler.postDelayed(this, delay)
     }
   }
 
@@ -582,7 +587,8 @@ class WearStateSessionService : Service() {
       title = s.title,
       colorHex = s.colorHex,
       remainingMinutes = minutes,
-      remainingSec = ceil(remainingMs / 1000.0).toInt(),
+      /* naar beneden afronden, zoals de telefoon (was ceil: +1 s) */
+      remainingSec = (remainingMs / 1000L).toInt(),
       totalSec = sessionTotalSec,
     )
     StateSessionState.update(snapshot)
