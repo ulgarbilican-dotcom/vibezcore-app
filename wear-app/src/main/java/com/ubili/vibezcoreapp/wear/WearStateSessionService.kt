@@ -69,6 +69,8 @@ private data class StateStart(
   /** Waar het slagenrooster van de telefoon begon (= de verzonden offset):
    *  de eerste tik valt op de eerstvolgende slag van dát rooster. */
   val gridOriginSec: Double = curveOffsetSec,
+  /** Telefoonklok toen dit bericht vertrok (0 = onbekend). */
+  val sentAtMs: Long = 0L,
   val remainingSec: Double,
   val lubAmp: Int,
   val dubAmp: Int,
@@ -138,6 +140,51 @@ private fun buildWaveform(s: StateStart, amplitudeControl: Boolean): Waveform {
   return Waveform(timings.toLongArray(), amplitudes.toIntArray())
 }
 
+/** Het trilpatroon voor de trilmotor, compact: de opbouw van het ritme en
+ *  daarna één vaste slag die zichzelf herhaalt (repeat-index). Een volledig
+ *  patroon van 5–50 min (duizenden stappen) liet de trildienst 0,4 s
+ *  nadenken voor hij begon (meting 13 okt 2026). `skipMs` knipt het begin
+ *  weg als we te laat starten; het eindsignaal speelt apart. */
+private class VibPattern(val timings: LongArray, val amplitudes: IntArray, val repeat: Int)
+
+private fun buildVibPattern(s: StateStart, amplitudeControl: Boolean, skipMs: Long): VibPattern {
+  val lubMs = if (amplitudeControl) s.lubMs else s.lubMsNoAmp
+  val dubMs = if (amplitudeControl) s.dubMs else s.dubMsNoAmp
+  val lubAmp = if (amplitudeControl) s.lubAmp else 255
+  val dubAmp = if (amplitudeControl) s.dubAmp else 255
+  fun beat(cycleMs: Long, dubAt: Long, t: MutableList<Long>, a: MutableList<Int>) {
+    t.add(lubMs); t.add((dubAt - lubMs).coerceAtLeast(0)); t.add(dubMs); t.add((cycleMs - dubAt - dubMs).coerceAtLeast(0))
+    a.add(lubAmp); a.add(0); a.add(dubAmp); a.add(0)
+  }
+  val curveEnd = s.holdSec + s.rampSec
+  val rt = ArrayList<Long>()
+  val ra = ArrayList<Int>()
+  var t = s.curveOffsetSec
+  while (t < curveEnd) {
+    val (c, d) = beatAt(s, t)
+    beat(c, d, rt, ra)
+    t += c / 1000.0
+  }
+  val st = ArrayList<Long>()
+  val sa = ArrayList<Int>()
+  val (sc, sd) = beatAt(s, curveEnd)
+  beat(sc, sd, st, sa)
+  val rampMs = rt.sum()
+  if (skipMs < rampMs) {
+    val (tt, aa) = trimStart(rt.toLongArray(), ra.toIntArray(), skipMs)
+    return VibPattern(tt + st.toLongArray(), aa + sa.toIntArray(), tt.size)
+  }
+  val r = (skipMs - rampMs) % sc
+  val (pt, pa) = trimStart(st.toLongArray(), sa.toIntArray(), r)
+  return VibPattern(pt + st.toLongArray(), pa + sa.toIntArray(), pt.size)
+}
+
+/** Eind-signaal: 600 ms stilte, dan drie oplopende tikken. */
+private fun endSignal(amplitudeControl: Boolean): Pair<LongArray, IntArray> {
+  fun strong(amp: Int) = if (amplitudeControl) amp else 255
+  return longArrayOf(600L, 70L, 120L, 90L, 120L, 160L) to intArrayOf(0, strong(90), 0, strong(130), 0, strong(180))
+}
+
 /** Eén af te spelen stuk met zijn begintijd t.o.v. de start. */
 private class BeatUnit(val offsetMs: Long, val t: LongArray, val a: IntArray)
 
@@ -160,7 +207,27 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
   return out
 }
 
-private const val STATE_CLOCK_MARGIN_MS = 150L
+/** Gemeten 13 okt 2026: klok horloge ≈ 0,1 s voor op de telefoon. */
+private const val WATCH_CLOCK_AHEAD_MS = 100L
+
+/** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
+ *  vallen weg, de lopende stap wordt korter). */
+private fun trimStart(t: LongArray, a: IntArray, skipMs: Long): Pair<LongArray, IntArray> {
+  if (skipMs <= 0L) return t to a
+  var left = skipMs
+  var i = 0
+  while (i < t.size && left >= t[i]) {
+    left -= t[i]
+    i++
+  }
+  if (i >= t.size) return LongArray(0) to IntArray(0)
+  val nt = t.copyOfRange(i, t.size)
+  val na = a.copyOfRange(i, a.size)
+  nt[0] = nt[0] - left
+  /* een half afgeknipte tik niet als stomp laten trillen */
+  if (na[0] > 0 && nt[0] < 20L) na[0] = 0
+  return nt to na
+}
 
 class WearStateSessionService : Service() {
   private lateinit var beatThread: HandlerThread
@@ -245,22 +312,7 @@ class WearStateSessionService : Service() {
       lubMs = j.optLong("lubMs", LUB_MS).coerceIn(20L, 120L),
       dubMs = j.optLong("dubMs", DUB_MS).coerceIn(15L, 100L),
       sound = j.optBoolean("sound", false),
-    ).takeIf { it.targetBpm > 0 }?.let { st ->
-      /* 13 okt 2026 (operator: "2 sec achterstand op de watch"): de
-         Bluetooth-vertraging aftrekken, zoals bij breathwork — verder in de
-         curve beginnen, minder resterende tijd. Klok van het horloge loopt
-         ~0,1–0,2 s voor, vandaar de marge. Geen grens van 8 s meer: na een
-         koude start kwam het bericht pas na 10,5 s aan (meting). */
-      val sentAt = j.optLong("sentAtMs", 0L)
-      val lagSec = if (sentAt > 0L) {
-        ((System.currentTimeMillis() - sentAt - STATE_CLOCK_MARGIN_MS).coerceIn(0L, 10 * 60_000L)) / 1000.0
-      } else {
-        0.0
-      }
-      android.util.Log.d("VZSync", "start sentAt=$sentAt now=${System.currentTimeMillis()} lag=$lagSec offset=${st.curveOffsetSec}")
-      st.copy(gridOriginSec = st.curveOffsetSec, curveOffsetSec = st.curveOffsetSec + lagSec, remainingSec = st.remainingSec - lagSec)
-        .takeIf { it.remainingSec > 0.5 }
-    }
+    ).takeIf { it.targetBpm > 0 }?.copy(sentAtMs = j.optLong("sentAtMs", 0L))
   } catch (_: Exception) {
     null
   }
@@ -283,21 +335,38 @@ class WearStateSessionService : Service() {
     } catch (_: Exception) {
       false
     }
-    /* 13 okt 2026 (meting: tikken vielen constant ~0,63 s naast die van de
-       telefoon): niet meteen tikken op het moment van aankomst, maar wachten
-       tot de eerstvolgende slag van het rooster van de telefoon. */
-    var gridT = s.gridOriginSec
-    while (gridT < s.curveOffsetSec - 0.001) gridT += beatAt(s, gridT).first / 1000.0
-    val gapSec = gridT - s.curveOffsetSec
-    val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - gapSec)
+    /* 13 okt 2026 — synchroon met de telefoon (gemeten met VZSync/[sync]):
+       de telefoon speelt slag 0 van zijn rooster op `sentAtMs` (curve =
+       curveOffsetSec). We rekenen HIER, vlak voor het plannen, uit waar de
+       telefoon nu in de curve zit (Bluetooth-vertraging + de tijd dat dit
+       horloge nog bezig was), en starten op de eerstvolgende slag van
+       datzelfde rooster, op het juiste moment op de klok. De klok van het
+       horloge loopt ~0,1 s voor op de telefoon (gemeten). */
+    val origin = s.curveOffsetSec
+    val nowWall = System.currentTimeMillis()
+    val nowUp = SystemClock.uptimeMillis()
+    val phoneCurve = if (s.sentAtMs > 0L) {
+      origin + ((nowWall - WATCH_CLOCK_AHEAD_MS - s.sentAtMs).coerceIn(0L, 10 * 60_000L)) / 1000.0
+    } else {
+      origin
+    }
+    var gridT = origin
+    while (gridT < phoneCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
+    val targetWall = if (s.sentAtMs > 0L) {
+      s.sentAtMs + WATCH_CLOCK_AHEAD_MS + ((gridT - origin) * 1000).roundToLong()
+    } else {
+      nowWall + ((gridT - phoneCurve) * 1000).roundToLong()
+    }
+    val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - (gridT - origin))
+    if (aligned.remainingSec <= 0.5) return finish(startId)
+    android.util.Log.d("VZSync", "start sentAt=${s.sentAtMs} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetWall - nowWall}ms")
     session = aligned
     val waveform = buildWaveform(aligned, amplitudeControl)
     units = splitIntoUnits(waveform)
     nextUnit = 0
     val totalMs = waveform.timings.sum()
-    val nowUp = SystemClock.uptimeMillis() + 50L
-    startUptime = nowUp + (gapSec * 1000).roundToLong()
-    sessionEndUptime = nowUp + (s.remainingSec * 1000).roundToLong()
+    startUptime = nowUp + (targetWall - nowWall)
+    sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
     /* 13 okt 2026 (operator: "stopt regelmatig, mag gewoon niet stoppen"):
        met het scherm uit schakelt Wear OS onze wakelock uit (DISABLED in
@@ -306,15 +375,31 @@ class WearStateSessionService : Service() {
        het HELE patroon in één keer: de trildienst van het systeem houdt het
        toestel zelf wakker zolang het patroon loopt, en speelt de timing
        exact af. De slagplanning hieronder doet nog enkel beeld/geluid. */
-    val full = waveform
+    val amp = amplitudeControl
     beatHandler.postAtTime({
-      if (session === aligned && !paused) vibrate(full.timings, full.amplitudes)
+      if (session === aligned && !paused) {
+        /* Liep deze draad wat achter (melding/scherm opbouwen), dan het al
+           verstreken stukje van het begin wegknippen — elke volgende tik
+           valt zo toch exact op het rooster. */
+        val late = (SystemClock.uptimeMillis() - startUptime).coerceAtLeast(0L)
+        val pat = buildVibPattern(aligned, amp, late)
+        android.util.Log.d("VZSync", "vibrate pattern steps=${pat.timings.size} repeat=${pat.repeat} late=${late}ms")
+        vibrate(pat.timings, pat.amplitudes, pat.repeat)
+      }
     }, wholeVibrationToken, startUptime)
     scheduleNextUnit()
     /* Natuurlijk einde: de curve + het eind-signaal uitspelen, dan stoppen.
        Minstens remainingSec + 1,5 s (protocol). */
-    val endDelay = maxOf(totalMs + 300L, (aligned.remainingSec * 1000).roundToLong() + 1500L)
-    beatHandler.postAtTime(endRunnable, startUptime + endDelay)
+    /* Op het einde van de sessietijd: de herhalende slag stoppen, het
+       eindsignaal spelen, en 1,5 s later afsluiten. */
+    val sessionMs = (aligned.remainingSec * 1000).roundToLong()
+    beatHandler.postAtTime({
+      if (session === aligned && !paused) {
+        val (et, ea) = endSignal(amp)
+        vibrate(et, ea)
+      }
+    }, wholeVibrationToken, startUptime + sessionMs)
+    beatHandler.postAtTime(endRunnable, startUptime + sessionMs + 1500L)
     beatHandler.post(tickRunnable)
     PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
     /* Nog eens na 3 s (meting 13 okt: na een koude start kwam de eerste
@@ -437,10 +522,10 @@ class WearStateSessionService : Service() {
     beatHandler.postAtTime(beatRunnable, startUptime + units[nextUnit].offsetMs)
   }
 
-  private fun vibrate(t: LongArray, a: IntArray) {
+  private fun vibrate(t: LongArray, a: IntArray, repeat: Int = -1) {
     val v = vibrator ?: return
     try {
-      val effect = VibrationEffect.createWaveform(t, a, -1)
+      val effect = VibrationEffect.createWaveform(t, a, repeat)
       /* Expliciet MEDIA (niet TOUCH: dat volgt "trillen bij aanraken");
          in batterijbesparing/stil als ALARM, dat wordt nergens stilgelegd —
          zelfde regel als StateHapticsService op de telefoon. */
