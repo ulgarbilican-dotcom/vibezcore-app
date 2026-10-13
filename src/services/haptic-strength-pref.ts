@@ -18,6 +18,12 @@ export const AMP_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 
 /** Factor op de tikduur (toestellen zonder amplitude-regeling). */
 /* 13 okt 2026 (operator: "kan soft wat zachter"): soft 0,75 → 0,55 — gelijk
    aan de krachtfactor; voelbaar korter, minimum blijft 40 ms per tik. */
+/** Kracht (0–255) voor breathwork-tikken op toestellen MET amplitude-regeling
+ *  (horloge, sommige telefoons). 0 = standaardkracht van het toestel, zoals
+ *  voorheen. 13 okt 2026 (operator: "zacht blijft te hard"): het horloge
+ *  trilde bij breathwork altijd op standaardkracht — Soft voelde daardoor
+ *  niet zacht. */
+export const BREATH_AMP: Record<HapticStrength, number> = { soft: 120, medium: 0, strong: 255 };
 export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1, strong: 1.35 };
 
 let strength: HapticStrength = 'medium';

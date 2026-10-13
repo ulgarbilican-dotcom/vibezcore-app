@@ -40,6 +40,8 @@ export type WearBreathSession = {
   /** Date.now() van de telefoon bij versturen — het horloge trekt de
    *  Bluetooth-vertraging af (13 okt 2026). */
   sentAtMs?: number;
+  /** Trilkracht 0–255 (0 = standaard van het horloge) — Soft/Medium/Strong. */
+  amp?: number;
 };
 
 export type WearBraceletStatus = {

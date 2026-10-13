@@ -73,7 +73,7 @@ import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
 } from '@/services/session-keepalive';
-import { phaseHapticPattern, playPhaseHaptic } from '@/services/breath-haptics';
+import { breathAmplitude, phaseHapticPattern, playPhaseHaptic } from '@/services/breath-haptics';
 import { ensurePermission as ensureNotificationPermission } from '@/services/reminders';
 import { addBreathSession, useBreathHistory } from '@/utils/breath-history';
 import { getSetting, useSetting } from '@/utils/settings';
@@ -2093,6 +2093,7 @@ export function BreathSession() {
           colorHex,
           ...(at ?? {}),
           sentAtMs: Date.now(),
+          amp: breathAmplitude(),
         });
         sendBreathSessionToWatch({
           phases: phases.map((p) => ({ key: p.key, secs: p.secs, via: p.via ?? '' })),

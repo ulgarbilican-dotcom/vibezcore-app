@@ -46,7 +46,8 @@
 
 import type { PhaseKey } from '@/data/breath-states';
 import { Vibration } from 'react-native';
-import { MS_FACTOR, getHapticStrength } from './haptic-strength-pref';
+import { BREATH_AMP, MS_FACTOR, getHapticStrength } from './haptic-strength-pref';
+import { canPlayNativeWaveform, playNativeWaveform } from '../../modules/state-haptics';
 
 /* De trilling vult de fase niet helemaal: de laatste tiende blijft stil.
    Die stilte is functioneel — ze kondigt de wissel aan, en zonder haar loopt
@@ -168,6 +169,11 @@ function basePattern(phase: PhaseKey, secs: number): number[] {
  *  Faalt stil: een trilmotor die niet meewerkt — emulator, toestel zonder
  *  motor, of systeemhaptiek uitgezet — mag een lopende sessie nooit
  *  onderbreken. */
+/** Kracht 0–255 voor breathwork bij de gekozen sterkte (0 = toestel-standaard). */
+export function breathAmplitude(): number {
+  return BREATH_AMP[getHapticStrength()];
+}
+
 export function playPhaseHaptic(phase: PhaseKey, secs: number): void {
   try {
     /* Eerst STOPPEN, dan starten (operator, 5 augustus 2026: de haptiek moet
@@ -177,9 +183,22 @@ export function playPhaseHaptic(phase: PhaseKey, secs: number): void {
        en klopt niets meer met wat je ziet en hoort. Eén regel die dat
        uitsluit. */
     Vibration.cancel();
+    const pattern = phaseHapticPattern(phase, secs);
+    /* 13 okt 2026: met amplitude-regeling ook echt ZACHTER/STERKER, niet enkel
+       korter (Galaxy A16 heeft geen amplitude-regeling — daar blijft het de
+       tikduur). */
+    const amp = breathAmplitude();
+    if (amp > 0 && canPlayNativeWaveform()) {
+      playNativeWaveform(
+        pattern,
+        pattern.map((_, i) => (i % 2 === 1 ? amp : 0)),
+        -1,
+      );
+      return;
+    }
     /* `false` = niet herhalen. Zonder die tweede parameter blijft het
        patroon op sommige Android-versies eeuwig doorlopen. */
-    Vibration.vibrate(phaseHapticPattern(phase, secs), false);
+    Vibration.vibrate(pattern, false);
   } catch {
     /* stil */
   }

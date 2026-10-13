@@ -43,6 +43,8 @@ class WearBreathSessionService : Service() {
   private var vibrator: Vibrator? = null
   private var generation = 0 // elke nieuwe START annuleert vorige geplande callbacks
   private var colorHex = "#00A3A3"
+  /** Trilkracht 0–255 van de telefoon (Soft/Medium/Strong); 0 = standaard. */
+  private var amp = 0
   /** Waterpeil op het scherm: stijgt bij inademen, zakt bij uitademen. */
   private var level = 0.3f
 
@@ -72,6 +74,7 @@ class WearBreathSessionService : Service() {
     val json = JSONObject(sessionJson)
     val modeName = json.optString("modeName", "Breathwork")
     colorHex = json.optString("colorHex", "#00A3A3")
+    amp = json.optInt("amp", 0).coerceIn(0, 255)
     val rounds = json.optInt("rounds", 1).coerceAtLeast(1)
     val phasesArr = json.getJSONArray("phases")
     val phases = (0 until phasesArr.length()).map { i ->
@@ -164,7 +167,14 @@ class WearBreathSessionService : Service() {
 
     if (!silentStart) {
       try {
-        vibrateOutsideTouch(VibrationEffect.createWaveform(phase.pattern, -1))
+        /* 13 okt 2026 (operator: "zacht blijft te hard"): met de gekozen
+           kracht i.p.v. altijd de standaardkracht van het horloge. */
+        val effect = if (amp > 0 && vibrator?.hasAmplitudeControl() == true) {
+          VibrationEffect.createWaveform(phase.pattern, IntArray(phase.pattern.size) { if (it % 2 == 1) amp else 0 }, -1)
+        } else {
+          VibrationEffect.createWaveform(phase.pattern, -1)
+        }
+        vibrateOutsideTouch(effect)
       } catch (_: Exception) {
         /* een toestel/emulator zonder trilmotor mag de lus niet stoppen */
       }
