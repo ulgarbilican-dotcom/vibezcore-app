@@ -1,10 +1,13 @@
 package com.ubili.vibezcoreapp.wear
 
 /* 13 okt 2026 — het horloge zelfstandig: één toestand kiezen en starten.
-   Zoals Apple's Ademhalen: de figuur, de naam, de duur groot in het midden
-   (draai aan de rand of tik − / +), en één witte Start-pil. De duurstappen
-   en de techniek komen van de telefoon (CatalogStore) — hier wordt niets
-   zelf bedacht. Zonder toegang: geen Start, wel waar je het ontgrendelt. */
+   Operator: "het mooiste is een cirkel met draaisysteem, + en − weg, alles
+   in de cirkel moet kunnen ademen". Daarom: een ring langs de rand
+   (DurationDialView) — veeg rond de ring of draai aan de rand/kroon — en in
+   het midden enkel de figuur, de naam, de duur groot en de witte Start-pil.
+   De duurstappen en de techniek komen van de telefoon (CatalogStore) — hier
+   wordt niets zelf bedacht. Zonder toegang: geen Start, wel waar je het
+   ontgrendelt. */
 
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -13,7 +16,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.Gravity
-import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
@@ -26,7 +28,7 @@ import org.json.JSONObject
 
 class BreathSetupActivity : androidx.activity.ComponentActivity() {
   private var entry: JSONObject? = null
-  private var durIdx = 0
+  private lateinit var dial: DurationDialView
   private lateinit var durText: TextView
   private var rotaryAcc = 0f
   private var lastStepAt = 0L
@@ -42,11 +44,11 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
       return
     }
     entry = e
-    durIdx = e.optInt("defaultIdx", 0)
+    val durs = e.optJSONArray("durations")
+    var startIdx = e.optInt("defaultIdx", 0)
     CatalogStore.last(this)?.let { (k, minutes) ->
       if (k == key) {
-        val durs = e.optJSONArray("durations")
-        for (i in 0 until (durs?.length() ?: 0)) if (durs?.optJSONObject(i)?.optInt("minutes") == minutes) durIdx = i
+        for (i in 0 until (durs?.length() ?: 0)) if (durs?.optJSONObject(i)?.optInt("minutes") == minutes) startIdx = i
       }
     }
     val color = try {
@@ -54,60 +56,61 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     } catch (_: Exception) {
       Color.parseColor("#00A3A3")
     }
+    val locked = e.optBoolean("locked")
 
     val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+
+    dial = DurationDialView(this).apply {
+      steps = durs?.length() ?: 1
+      this.color = color
+      setIndex(startIdx, fromUser = false)
+      onChange = { showDuration() }
+    }
+    root.addView(dial, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(16f), dp(20f), dp(16f), dp(6f))
     }
-    root.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+    root.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
 
     col.addView(ImageView(this).apply {
       setImageBitmap(BitmapFactory.decodeResource(resources, artResFor(e.optString("colorHex"))))
       scaleType = ImageView.ScaleType.FIT_CENTER
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }, LinearLayout.LayoutParams(dp(46f), dp(46f)))
+      background = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        gradientType = GradientDrawable.RADIAL_GRADIENT
+        gradientRadius = dp(24f).toFloat()
+        colors = intArrayOf(Color.argb(70, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
+      }
+    }, LinearLayout.LayoutParams(dp(44f), dp(44f)))
 
     col.addView(TextView(this).apply {
       text = e.optString("name")
-      setTextColor(Color.WHITE)
-      textSize = 14f
+      setTextColor(Color.argb(200, 255, 255, 255))
+      textSize = 13f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
-    })
-    col.addView(TextView(this).apply {
-      text = e.optString("technique")
-      setTextColor(Color.argb(140, 255, 255, 255))
-      textSize = 10f
-      maxLines = 1
-      gravity = Gravity.CENTER
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+      topMargin = dp(4f)
     })
 
-    val locked = e.optBoolean("locked")
-    val durRow = LinearLayout(this).apply {
-      orientation = LinearLayout.HORIZONTAL
-      gravity = Gravity.CENTER_VERTICAL
-    }
-    durRow.addView(stepButton("−") { step(-1) })
     durText = TextView(this).apply {
       setTextColor(Color.WHITE)
-      textSize = 21f
+      textSize = 28f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }
-    durRow.addView(durText, LinearLayout.LayoutParams(dp(92f), LinearLayout.LayoutParams.WRAP_CONTENT))
-    durRow.addView(stepButton("+") { step(1) })
-    col.addView(durRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      topMargin = dp(6f)
-      bottomMargin = dp(6f)
+    col.addView(durText, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+      bottomMargin = dp(10f)
     })
 
     if (locked) {
       col.addView(TextView(this).apply {
-        text = "Unlock with Premium on your phone"
+        text = "Unlock with Premium\non your phone"
         setTextColor(Color.argb(170, 255, 255, 255))
-        textSize = 12f
+        textSize = 11f
         gravity = Gravity.CENTER
       })
     } else {
@@ -118,23 +121,15 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         background = GradientDrawable().apply {
-          cornerRadius = dp(24f).toFloat()
+          cornerRadius = dp(20f).toFloat()
           setColor(Color.WHITE)
         }
         contentDescription = "Start ${e.optString("name")}"
         setOnClickListener {
-          startLocalSession(this@BreathSetupActivity, e, durIdx)
+          startLocalSession(this@BreathSetupActivity, e, dial.index)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(112f), dp(38f)))
-    }
-
-    /* een dun accent in de kleur van de toestand onder de figuur */
-    col.getChildAt(0).background = GradientDrawable().apply {
-      shape = GradientDrawable.OVAL
-      gradientType = GradientDrawable.RADIAL_GRADIENT
-      gradientRadius = dp(26f).toFloat()
-      colors = intArrayOf(Color.argb(70, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
+      }, LinearLayout.LayoutParams(dp(104f), dp(38f)))
     }
 
     setContentView(root)
@@ -144,33 +139,10 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     showDuration()
   }
 
-  private fun stepButton(label: String, onTap: () -> Unit) = TextView(this).apply {
-    text = label
-    setTextColor(Color.WHITE)
-    textSize = 18f
-    gravity = Gravity.CENTER
-    background = GradientDrawable().apply {
-      shape = GradientDrawable.OVAL
-      setColor(Color.parseColor("#1C1C1E"))
-    }
-    contentDescription = if (label == "+") "Longer" else "Shorter"
-    setOnClickListener { onTap() }
-    layoutParams = LinearLayout.LayoutParams(dp(30f), dp(30f))
-  }
-
-  private fun durations() = entry?.optJSONArray("durations")
-
-  private fun step(dir: Int) {
-    val n = durations()?.length() ?: return
-    val next = (durIdx + dir).coerceIn(0, n - 1)
-    if (next == durIdx) return
-    durIdx = next
-    durText.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-    showDuration()
-  }
-
   private fun showDuration() {
-    durText.text = durations()?.optJSONObject(durIdx)?.optString("label") ?: ""
+    val d = entry?.optJSONArray("durations")?.optJSONObject(dial.index)
+    durText.text = d?.optString("label") ?: ""
+    durText.contentDescription = "Duration ${d?.optString("label") ?: ""}. Turn the bezel to change."
   }
 
   /* Draaiende rand / kroon: één stap per tik, kort na elkaar geremd zodat
@@ -182,7 +154,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
       rotaryAcc += delta
       val now = SystemClock.uptimeMillis()
       if (kotlin.math.abs(rotaryAcc) >= dp(24f) && now - lastStepAt > 90) {
-        step(if (rotaryAcc > 0) 1 else -1)
+        dial.setIndex(dial.index + if (rotaryAcc > 0) 1 else -1, fromUser = true)
         rotaryAcc = 0f
         lastStepAt = now
       }
