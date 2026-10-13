@@ -48,9 +48,9 @@ import {
   BatteryLow,
   Brain,
   ChevronLeft,
+  ChevronRight,
   Cloud,
   HeartPulse,
-  Info,
   Leaf,
   Moon,
   Plug,
@@ -63,6 +63,7 @@ import { useState } from 'react';
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -105,6 +106,18 @@ const ICON_FOR: Record<string, LucideIcon> = {
   tired_wired: Plug,
   ready_unwind: Leaf,
 };
+
+/* Operator, 13 okt 2026 (Apple-stijl): op de kaarten één kernwoord i.p.v.
+   "I feel …" — de vraag bovenaan zegt al dat het over jouw gevoel gaat.
+   Enkel weergave; de data (instant-feel.ts) blijft ongewijzigd. Geen
+   medische termen (bv. geen "insomnia"). */
+const SHORT_LABEL: Record<string, string> = {
+  feel_stressed: 'Stressed',
+  feel_tired: 'Low energy',
+  cant_sleep: "Can't sleep",
+  cant_focus: "Can't focus",
+};
+const labelOf = (x: InstantSituation) => SHORT_LABEL[x.id] ?? x.label;
 
 export default function FeelNowScreen() {
   const [phase, setPhase] = useState<Phase>('pick');
@@ -173,22 +186,16 @@ export default function FeelNowScreen() {
         >
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
         </AnimatedPressable>
-        <Text style={s.title}>How do you feel?</Text>
         <View style={s.back} />
       </View>
 
       {phase === 'pick' && (
-        // Operator, 2 okt 2026: "kaart mag niet scrollen" — vast scherm,
-        // geen ScrollView. Alles (invoer + 4 core + 8 nuance) moet in de
-        // beschikbare hoogte passen; zie de compactere maten hieronder.
-        <View style={s.body}>
-          {/* Operator ("volgens mij heeft de invoerbalk geen meerwaarde,
-             gebruiker moet toch al iets specifieks ingeven anders vinden we
-             niets — hebben we zowat alle staten al op de pagina?"): klopt —
-             de matcher is keyword-gebaseerd, geen echt taalbegrip, en de 12
-             chips dekken de 5 staten al breed. Vrije-tekst-invoer weg;
-             `matchFreeText`/`instant-feel.ts` blijft bestaan (onschuldige,
-             ongebruikte util) mocht dit later terugkomen. */}
+        /* Operator, 13 okt 2026 (Apple Health-stijl): grote titel links,
+           4 kaarten zonder i-knop (lang drukken = uitleg), en de specifieke
+           gevoelens als één doorlopende iOS-lijst met pijltje. Daardoor mag
+           de pagina nu scrollen. */
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
+          <Text style={s.largeTitle}>How do you feel?</Text>
           <Text style={s.subheading}>Choose what's going on — we'll take it from there.</Text>
 
           <View style={s.grid}>
@@ -204,22 +211,35 @@ export default function FeelNowScreen() {
           </View>
 
           <Text style={s.nuanceLabel}>OR SOMETHING MORE SPECIFIC</Text>
-          <View style={s.grid}>
-            {nuance.map((situation, idx) => (
-              <SituationCard
-                key={situation.id}
-                situation={situation}
-                /* +4: vervolg van de stagger op de 4 core-kaarten hierboven,
-                   zodat het hele scherm als één doorlopende reveal voelt
-                   i.p.v. twee aparte animatie-groepen. */
-                index={idx + core.length}
-                onPress={() => choose(situation)}
-                onInfoPress={() => setInfoFor(situation)}
-                compact
-              />
-            ))}
+          <View style={s.list}>
+            <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
+            {nuance.map((situation, idx) => {
+              const Icon = ICON_FOR[situation.id] ?? Zap;
+              const st = stateFor(situation.state);
+              return (
+                <View key={situation.id}>
+                  {idx > 0 ? <View style={s.listSep} /> : null}
+                  <Pressable
+                    onPress={() => choose(situation)}
+                    onLongPress={() => {
+                      hapticTap();
+                      setInfoFor(situation);
+                    }}
+                    style={({ pressed }) => [s.listRow, pressed && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={situation.label}
+                    accessibilityHint="Starts a session. Long press for why it helps."
+                  >
+                    <Icon size={20} color={st.accent} strokeWidth={2} />
+                    <Text style={s.listLabel}>{situation.label}</Text>
+                    <ChevronRight size={18} color="rgba(255,255,255,0.35)" strokeWidth={2.4} />
+                  </Pressable>
+                </View>
+              );
+            })}
           </View>
-        </View>
+          <Text style={s.hint}>Long press any option to see why it helps</Text>
+        </ScrollView>
       )}
 
       {phase === 'personalizing' && (
@@ -277,7 +297,7 @@ export default function FeelNowScreen() {
                     </Pressable>
                   </View>
                   <Text style={s.modalEyebrow}>
-                    FOR "{infoFor.label.toUpperCase()}"
+                    FOR "{labelOf(infoFor).toUpperCase()}"
                   </Text>
                   {/* Operator, 2 okt 2026 ("uw uitleg over military klopt
                      niet voor I feel stressed, dat hoort ergens anders"):
@@ -356,6 +376,14 @@ function SituationCard({
          overshoot-risico meer. */
       entering={FadeInUp.delay(150 + index * 40).duration(280)}
       onPress={onPress}
+      /* 13 okt 2026: geen i-knop meer op de kaart — lang drukken toont
+         waarom deze techniek en duur helpen. */
+      onLongPress={() => {
+        if (!onInfoPress) return;
+        hapticTap();
+        onInfoPress();
+      }}
+      accessibilityHint="Starts a session. Long press for why it helps."
       onPressIn={() => { scale.value = withTiming(0.97, { duration: 80 }); }}
       onPressOut={() => { scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); }}
       style={[s.cardSlot, pressStyle]}
@@ -367,24 +395,7 @@ function SituationCard({
          zonder kleur te gebruiken. */}
       {/* Operator ("iconen mogen los zonder placeholder eronder"): geen
          vierkant kader/badge meer achter het icoon — gewoon los icoon. */}
-      {compact ? (
-        <View style={[s.card, s.cardRow, s.cardCompactRow, s.cardFlat]}>
-          <Icon size={18} color="#ffffff" strokeWidth={2} />
-          <Text style={[s.cardLabel, s.cardLabelCompact, s.cardLabelRow]}>
-            {situation.label}
-          </Text>
-          {/* Operator, 2 okt 2026 ("en i voor de 8 andere kaarten?"): als
-             laatste item IN de rij i.p.v. absoluut gepositioneerd — deze
-             rijen zijn te smal/laag voor een losse hoek-plaatsing zoals
-             bij de core-kaarten, maar als rij-laatste item past de "i"
-             gewoon natuurlijk mee zonder overlap met het label. */}
-          {!!onInfoPress && (
-            <Pressable onPress={onInfoPress} hitSlop={10}>
-              <Info size={14} color="rgba(255,255,255,0.4)" strokeWidth={2} />
-            </Pressable>
-          )}
-        </View>
-      ) : (
+      {
         // Operator ("iconen op grote kaarten moeten boven de tekst, tekst
         // moet links onder"): kolom i.p.v. rij — icoon linksboven, label
         // links onderaan, beide op dezelfde linker-as.
@@ -403,33 +414,19 @@ function SituationCard({
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[s.card, s.cardColumn]}
           >
-            <Icon size={26} color="#ffffff" strokeWidth={1.8} />
+            <Icon size={26} color={st.accent} strokeWidth={1.8} />
             <View style={s.cardColumnSpacer} />
             <Text style={[s.cardLabel, s.cardColumnLabel]} numberOfLines={2}>
-              {situation.label}
+              {labelOf(situation)}
             </Text>
             {!!techniqueName && (
               <Text style={s.cardTechnique} numberOfLines={1}>
                 {techniqueName}
               </Text>
             )}
-            {/* Operator, 2 okt 2026 ("i met daaronder apple-stijl info"):
-               losse tikzone bovenop de kaart-Pressable — in React Native
-               wint de binnenste responder de touch (geen DOM-bubbling),
-               dus deze knop opent de info-sheet zonder ook de kaart se
-               eigen `onPress` (= sessie starten) te triggeren. */}
-            {!!onInfoPress && (
-              <Pressable
-                onPress={onInfoPress}
-                hitSlop={10}
-                style={s.cardInfoBtn}
-              >
-                <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2} />
-              </Pressable>
-            )}
           </BlurView>
         </>
-      )}
+      }
     </AnimatedPressable>
   );
 }
@@ -459,16 +456,47 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
   body: {
-    flex: 1,
     paddingTop: 4,
-    paddingBottom: 20,
+    paddingBottom: 32,
     paddingHorizontal: 24,
+  },
+  /* 13 okt 2026: grote titel links (Apple Large Title). */
+  largeTitle: {
+    fontFamily: BrandFonts.extrabold,
+    fontSize: 32,
+    letterSpacing: -0.6,
+    color: '#ffffff',
+  },
+  /* Specifieke gevoelens als iOS-lijst: één glazen blok, rijen over de
+     volle breedte, gekleurd icoon, pijltje rechts, dunne scheidingslijn. */
+  list: { borderRadius: 18, overflow: 'hidden' },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    minHeight: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  listLabel: {
+    flex: 1,
+    fontFamily: BrandFonts.medium,
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  listSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 50 },
+  hint: {
+    marginTop: 14,
+    fontFamily: BrandFonts.medium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
   },
   /* Operator ("invoerbalk weg, chips dekken de staten al"): subheading
      staat nu direct boven de kaarten-grid, iets meer ruimte eronder dan
      toen de invoerbalk er nog tussen stond. */
   subheading: {
-    marginTop: 14,
+    marginTop: 6,
     fontFamily: BrandFonts.medium,
     fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
