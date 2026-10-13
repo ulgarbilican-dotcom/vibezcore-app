@@ -95,6 +95,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 13 okt 2026 (avond): horloge-flow vastgelegd met de operator — 1) startscherm = per toestand één pagina met enkel grote ademende figuur + naam, de pagina gloeit in de toestandskleur, verticaal bladeren klikt per toestand vast; 2) tik = StateActivity (techniek Recommended/Last used, duur, witte Start — de enige start); 3) sessie. "Again" en V-merk van het startscherm gehaald. Tests W35–W37.
 
+- 13 okt 2026 (laat): State Control met horloge, gemeten en opgelost — (1) Wear OS zet onze wakelock op DISABLED met scherm uit → het horloge geeft nu een compact trilpatroon (opbouw + herhalende slag, eindsignaal apart) aan de trilmotor, geen tik-per-tik meer; (2) synchronisatie: startmoment op de klok vlak voor het plannen, te late start wegknippen, eerste tik op het rooster van de telefoon, telefoon-anker = moment van echte trilling (+160 ms), bijgesteld op gevoel (WATCH_CLOCK_AHEAD_MS 20) — operator: "nu lijkt het goed"; (3) hartslaggeluid speelt de telefoon (module stuurde sound nooit door); (4) timer horloge rondt af zoals de telefoon. **Native wijziging wear-breath → nieuwe telefoonbuild nodig.** Meetlogs: VZSync (horloge), [sync] (telefoon, enkel dev). Tests T155–T162.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

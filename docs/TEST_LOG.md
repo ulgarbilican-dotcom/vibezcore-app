@@ -283,6 +283,7 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | T159 | Horloge-tik op het rooster van de telefoon — gemeten 13 okt 21:21: telefoon slag 1,538 trilmotor 21:21:55,904, horloge 21:21:55,896 (telefoonklok) → ~0,01 s; cirkel op de telefoon 0,05 s vóór de eigen trilling (was 0,18) | Quick Boost | ✅ 13 okt (Claude, meting) |
 | T160 | Horloge drijft niet af: 124 slagen gemiddeld 545,01 ms (verwacht 545) | Quick Boost | ✅ 13 okt (Claude, meting) |
 | T161 | Resterende tijd horloge = telefoon (naar beneden afronden + verversen net na de secondewissel; was ceil + vrij interval = tot 2 s verschil) | screenshots ±1 s | ⏳ operator kijkt |
+| T162 | Pols en telefoon voelbaar gelijk na bijstelling −80 ms (WATCH_CLOCK_AHEAD_MS 20) | Quick Boost | ✅ 13 okt (operator: "nu lijkt het goed") |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 
