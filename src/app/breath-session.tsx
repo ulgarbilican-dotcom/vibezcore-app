@@ -1725,13 +1725,6 @@ export function BreathSession() {
     setPaused(false);
     resumeScape();
     resumeLiveSession();
-    /* De pols gaat verder op exact dezelfde plek: zelfde ronde, zelfde fase,
-       met wat er van die fase nog over is (6 okt 2026). */
-    relayBreathToWatches({
-      startRound: round,
-      startPhase: Math.max(0, techRef.current.phases.findIndex((p) => p.key === phase)),
-      phaseRemainingMs: Math.round(secsLeft * 1000),
-    });
     /* Operator, 24 september 2026 (10de melding, de echte oorzaak): bij de
        ALLEREERSTE hervatting (na `start(preview, startPaused=true)`) is de
        huidige fase nog nooit gesproken — `runPhase()` hieronder kondigt
@@ -1747,6 +1740,16 @@ export function BreathSession() {
        deze functie wordt rechtstreeks vanuit een tik aangeroepen (geen
        verouderde timer-closure), dus vers genoeg om zonder refs te lezen. */
     runPhase(phase, round, secsLeft);
+    /* De pols gaat verder op exact dezelfde plek: zelfde ronde, zelfde fase,
+       met wat er van die fase nog over is (6 okt 2026). 13 okt 2026: pas NA
+       runPhase versturen — het meegestuurde tijdstip (sentAtMs) moet het
+       echte begin van de fase zijn; ervoor zaten geluid hervatten en de stem
+       ertussen (~0,2 s) en trilde het horloge te vroeg (gemeten). */
+    relayBreathToWatches({
+      startRound: round,
+      startPhase: Math.max(0, techRef.current.phases.findIndex((p) => p.key === phase)),
+      phaseRemainingMs: Math.round(secsLeft * 1000),
+    });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [phase, round, secsLeft, runPhase, speak, byKey]);
 

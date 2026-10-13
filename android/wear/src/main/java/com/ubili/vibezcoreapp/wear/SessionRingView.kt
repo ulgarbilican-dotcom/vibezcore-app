@@ -263,7 +263,7 @@ class SessionRingView @JvmOverloads constructor(
     // waterpeil van de service: 0,18 (uitgeademd) … 0,85 (ingeademd)
     val b = ((levelAt(now) - 0.18f) / 0.67f).coerceIn(0f, 1f)
     // naam staat enkel bij pauze bovenaan — de figuur mag hoger
-    val acy = cy - r * (if (paused) 0.02f else 0.17f)
+    val acy = cy - r * (if (paused) 0.02f else 0.21f)
 
     /* Vloeiend op de Watch4 (12 okt 2026, gemeten 14–16 ms GPU per beeld):
        de gloed is één vaste verloop-shader die enkel geschaald wordt, en de
@@ -313,23 +313,20 @@ class SessionRingView @JvmOverloads constructor(
     arcRect.set(inset, inset, width - inset, height - inset)
     arcPaint.strokeWidth = 4f * density
     arcPaint.color = Color.argb(36, 255, 255, 255)
-    canvas.drawArc(arcRect, 200f, 140f, false, arcPaint)
+    canvas.drawArc(arcRect, 180f, 180f, false, arcPaint)
     val prog = phaseProgressAt(now).coerceIn(0f, 1f)
     if (prog > 0f) {
       arcPaint.color = color
       arcPaint.alpha = if (paused) 110 else 255
-      canvas.drawArc(arcRect, 200f, 140f * prog, false, arcPaint)
+      canvas.drawArc(arcRect, 180f, 180f * prog, false, arcPaint)
     }
+    /* Seconden groot bovenaan in het midden, onder de boog (operator 13 okt
+       2026). Bij pauze staat daar de naam. */
     val secs = secondsLeftAt(now)
-    if (secs >= 0) {
-      // linksonder het begin van de boog, binnen de rand
-      val a = Math.toRadians(212.0)
-      val rr = (width / 2f - inset) * 0.80f
-      val sx = cx + (rr * Math.cos(a)).toFloat()
-      val sy = cy + (rr * Math.sin(a)).toFloat()
-      secPaint.textSize = 17f * density
-      secPaint.color = Color.argb(if (paused) 140 else 235, 255, 255, 255)
-      canvas.drawText(secs.toString(), sx, sy + secPaint.textSize * 0.35f, secPaint)
+    if (secs >= 0 && !paused) {
+      secPaint.textSize = 22f * density
+      secPaint.color = Color.argb(240, 255, 255, 255)
+      canvas.drawText(secs.toString(), cx, inset + 34f * density, secPaint)
     }
 
     /* Geen cirkel of rand (operator 12 okt 2026: "cirkel weg en enkel de
@@ -352,7 +349,7 @@ class SessionRingView @JvmOverloads constructor(
 
     // "Inhale" groot, "through your nose" eronder, "12 min left" boven END
     bigPaint.textSize = r * 0.20f
-    val y = cy + r * (if (paused) 0.55f else 0.40f)
+    val y = cy + r * (if (paused) 0.55f else 0.36f)
     canvas.drawText(centerText, cx, y, bigPaint)
     var y2 = y
     if (subText.isNotEmpty()) {
@@ -362,10 +359,10 @@ class SessionRingView @JvmOverloads constructor(
     }
     val foot = footerAt(now)
     if (foot.isNotEmpty() && !paused) {
-      smallPaint.textSize = r * 0.095f
+      smallPaint.textSize = r * 0.115f
       val saved = smallPaint.color
-      smallPaint.color = Color.argb(115, 255, 255, 255)
-      canvas.drawText(foot, cx, cy + r * 0.69f, smallPaint)
+      smallPaint.color = Color.argb(215, 255, 255, 255)
+      canvas.drawText(foot, cx, cy + r * 0.66f, smallPaint)
       smallPaint.color = saved
     }
   }

@@ -246,6 +246,12 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W16 | Geen horloge verbonden (eerder wel) | telefoon toont "Watch not connected" + uitleg | ⏳ |
 | W17 | Eerste keer openen horloge-app | vraagt om meldingen (Wear OS 4) | ⏳ |
 | W18 | App-icoon in de app-lijst | glazen V, vindbaar | ✅ 12 okt |
+| W19 | Breathwork-figuur op het horloge (geen cirkel), halve boog bovenaan, seconden bovenaan, "Inhale / through your nose", "N min left", naam enkel bij pauze | zoals in de app, ademt mee | ✅ 13 okt (Claude, testsessie + echte Calm Control-sessie) |
+| W20 | Tik op de figuur = pauze, play-teken; END stopt meteen | werkt | ✅ 13 okt (Claude) |
+| W21 | Trilling breathwork met scherm uit | blijft doorgaan (MEDIA, niet TOUCH) | ✅ 13 okt (Claude: 3× trillen om de 4 s met scherm uit); operator zag 1× een stop bij de eerste keer — open |
+| W22 | Ritme telefoon ↔ horloge over 40 s | geen oplopende afwijking; verschil bij start | ✅ 13 okt (Claude: beide exact 4,0 s; verschil na correctie ~0,05 s) |
+| W23 | App-icoon even groot als andere apps; opstartscherm = enkel V op zwart | adaptief icoon | ⏳ operator |
+| T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 
 ## Nog niet getest (gebouwd)
 - ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); V-logo i.p.v. muzieknoot (`6be14fc`, native); let ook op: 9 okt stonden er 12 open expo-audio-mediasessies (ExpoAudioBasicMediaSession) — mogen de ademsessie niet van het vergrendelscherm verdringen, anders opruimen; haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen

@@ -32,6 +32,8 @@ import org.json.JSONObject
 private const val CHANNEL_ID = "vibezcore_breath"
 private const val NOTIFICATION_ID = 1001
 
+private const val CLOCK_MARGIN_MS = 150L
+
 private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
 
 class WearBreathSessionService : Service() {
@@ -101,7 +103,11 @@ class WearBreathSessionService : Service() {
        pols op hetzelfde moment overgaat als de telefoon. Begrensd tot
        1,5 s — een horlogeklok die verder afwijkt vertrouwen we niet. */
     val sentAt = json.optLong("sentAtMs", 0L)
-    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt).coerceIn(0L, 1500L) else 0L
+    /* Gemeten op Galaxy Watch4 + A16: een bericht doet er ~0,7–0,8 s over;
+       de horlogeklok loopt ~0,1–0,2 s voor op die van de telefoon. Zonder
+       correctie trilde de pols 0,65 s te laat, met de volle klokmeting
+       0,2 s te vroeg — vandaar 150 ms marge voor klokverschil. */
+    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, 1500L) else 0L
     val now = SystemClock.uptimeMillis()
     val midPhase = phaseRemainingMs in 0 until phases[startPhase].secs * 1000L
     val firstDur = if (midPhase) phaseRemainingMs else phases[startPhase].secs * 1000L

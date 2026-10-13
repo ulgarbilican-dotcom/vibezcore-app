@@ -632,6 +632,25 @@ function playUrl(url: string): void {
     }
 
     if (__DEV__) {
+      /* 13 okt 2026: elke cue logde "loaded= false" — meten of er na 2,5 s
+         ECHT geluid gespeeld heeft (currentTime > 0), en waar hij vandaan
+         laadt (lokaal bestand of CDN). */
+      setTimeout(() => {
+        try {
+          console.log(
+            '[breath-voice] after 2.5s',
+            url.split('/').pop(),
+            'loaded=',
+            player.isLoaded,
+            'currentTime=',
+            player.currentTime,
+            'src=',
+            assetUri(url).slice(0, 60),
+          );
+        } catch {
+          /* stil */
+        }
+      }, 2500);
       console.log(
         '[breath-voice] play',
         url.split('/').pop(),
