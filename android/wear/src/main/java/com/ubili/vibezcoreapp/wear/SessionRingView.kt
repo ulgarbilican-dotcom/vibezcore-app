@@ -320,13 +320,13 @@ class SessionRingView @JvmOverloads constructor(
       arcPaint.alpha = if (paused) 110 else 255
       canvas.drawArc(arcRect, 180f, 180f * prog, false, arcPaint)
     }
-    /* Seconden groot bovenaan in het midden, onder de boog (operator 13 okt
-       2026). Bij pauze staat daar de naam. */
+    /* Seconden linksonder, net onder het linkeruiteinde van de boog
+       (operator 13 okt 2026). Bij pauze gedimd. */
     val secs = secondsLeftAt(now)
-    if (secs >= 0 && !paused) {
-      secPaint.textSize = 22f * density
-      secPaint.color = Color.argb(240, 255, 255, 255)
-      canvas.drawText(secs.toString(), cx, inset + 34f * density, secPaint)
+    if (secs >= 0) {
+      secPaint.textSize = 20f * density
+      secPaint.color = Color.argb(if (paused) 130 else 240, 255, 255, 255)
+      canvas.drawText(secs.toString(), inset + 11f * density, cy + 26f * density, secPaint)
     }
 
     /* Geen cirkel of rand (operator 12 okt 2026: "cirkel weg en enkel de
