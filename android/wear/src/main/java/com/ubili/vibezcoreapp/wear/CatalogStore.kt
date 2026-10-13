@@ -317,28 +317,27 @@ internal fun figureColor(context: android.content.Context, colorHex: String): In
     val h = bm.height
     val px = IntArray(w * h)
     bm.getPixels(px, 0, w, 0, 0, w, h)
-    var rs = 0L
-    var gs = 0L
-    var bs = 0L
-    var n = 0L
+    /* de overheersende tint (histogram over 36 tinten, gewogen naar
+       helderheid × verzadiging) — een gemiddelde mengt bv. lichtgroen en
+       teal tot een vale olijfkleur */
+    val bins = FloatArray(36)
+    val hsv = FloatArray(3)
+    var grey = 0f
     for (i in px.indices step 3) {
       val c = px[i]
-      val r = (c shr 16) and 0xff
-      val g = (c shr 8) and 0xff
-      val b = c and 0xff
-      if (maxOf(r, g, b) > 90) {
-        rs += r
-        gs += g
-        bs += b
-        n++
+      android.graphics.Color.colorToHSV(c, hsv)
+      if (hsv[2] < 0.35f) continue
+      if (hsv[1] < 0.18f) {
+        grey += hsv[2]
+        continue
       }
+      bins[(hsv[0] / 10f).toInt().coerceIn(0, 35)] += hsv[1] * hsv[2]
     }
-    if (n == 0L) return@getOrPut android.graphics.Color.WHITE
-    // even helder maken: de tint van de figuur, op volle helderheid
-    val hsv = FloatArray(3)
-    android.graphics.Color.RGBToHSV((rs / n).toInt(), (gs / n).toInt(), (bs / n).toInt(), hsv)
-    hsv[2] = 1f
-    android.graphics.Color.HSVToColor(hsv)
+    var best = 0
+    for (i in bins.indices) if (bins[i] > bins[best]) best = i
+    // vooral wit/grijs (het kristal van Clarity): een zacht wit
+    if (bins[best] < grey * 0.25f) return@getOrPut android.graphics.Color.WHITE
+    android.graphics.Color.HSVToColor(floatArrayOf(best * 10f + 5f, 0.8f, 1f))
   }
 }
 
