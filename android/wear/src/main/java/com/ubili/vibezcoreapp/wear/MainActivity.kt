@@ -230,7 +230,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.art = artFor(b.colorHex)
     val (scale, focus) = when (b.colorHex.uppercase()) {
       "#F5A524" -> 1f to 0.5f
-      "#3E9BFF" -> 0.72f to 0.5f
+      /* de bloem heeft veel lege rand: op het kleine scherm groter dan in de app */
+      "#3E9BFF" -> 1.0f to 0.5f
       "#B478FF" -> 1.14f to 0.43f
       /* de boom vult zijn beeld bijna helemaal — kleiner, anders raakt hij
          de naam bovenaan */
@@ -262,7 +263,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val span = (b.phaseEndUptime - b.phaseStartUptime).coerceAtLeast(1L)
     ring.secondsLeftAt = { now ->
       val leftMs = if (b.paused) ((1f - b.pausedProgress) * span).toLong() else b.phaseEndUptime - now
-      ((leftMs + 999L) / 1000L).toInt().coerceAtLeast(0)
+      // nooit "0": bij de overgang staat de volgende fase al klaar
+      ((leftMs + 999L) / 1000L).toInt().coerceAtLeast(1)
     }
     ring.phaseProgressAt = { now ->
       if (b.paused) b.pausedProgress else ((now - start).toFloat() / span).coerceIn(0f, 1f)
