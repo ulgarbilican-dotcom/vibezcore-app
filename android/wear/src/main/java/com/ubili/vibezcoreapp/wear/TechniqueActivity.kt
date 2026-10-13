@@ -82,6 +82,7 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
               .putExtra("key", key)
               .putExtra("tech", t.optString("key")),
           )
+          finish()
         }
       }
       row.addView(TextView(this).apply {

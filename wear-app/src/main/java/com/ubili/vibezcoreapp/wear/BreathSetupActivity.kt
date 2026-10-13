@@ -9,6 +9,7 @@ package com.ubili.vibezcoreapp.wear
    wordt niets zelf bedacht. Zonder toegang: geen Start, wel waar je het
    ontgrendelt. */
 
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
@@ -39,7 +40,13 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     super.onCreate(savedInstanceState)
     val key = intent.getStringExtra("key")
     val e = CatalogStore.breath(this).firstOrNull { it.optString("key") == key }
-      ?.let { CatalogStore.withTechnique(it, intent.getStringExtra("tech")) }
+      ?.let { raw ->
+        /* gekozen techniek: uit de lijst, anders wat klaarstaat (eigen keuze
+           op het horloge of die van de telefoon) */
+        val tech = intent.getStringExtra("tech")
+          ?: raw.optJSONArray("techniques")?.optJSONObject(CatalogStore.selectedIdx(this, raw))?.optString("key")
+        CatalogStore.withTechnique(raw, tech)
+      }
     if (e == null) {
       finish()
       return
@@ -87,13 +94,23 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
       }
     }, LinearLayout.LayoutParams(dp(34f), dp(34f)))
 
+    val manyTechs = (e.optJSONArray("techniques")?.length() ?: 0) > 1
     col.addView(TextView(this).apply {
-      text = e.optString("technique")
+      text = if (manyTechs) "${e.optString("technique")}  ›" else e.optString("technique")
       setTextColor(Color.argb(170, 255, 255, 255))
       textSize = 11f
       maxLines = 1
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
+      if (manyTechs) {
+        /* tik = andere techniek kiezen */
+        setPadding(dp(10f), dp(6f), dp(10f), dp(6f))
+        contentDescription = "Technique ${e.optString("technique")}. Tap to change."
+        setOnClickListener {
+          startActivity(Intent(this@BreathSetupActivity, TechniqueActivity::class.java).putExtra("key", e.optString("key")))
+          finish()
+        }
+      }
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
       topMargin = dp(4f)
     })

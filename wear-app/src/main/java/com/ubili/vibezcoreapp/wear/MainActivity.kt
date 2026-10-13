@@ -479,12 +479,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
         isClickable = true
         contentDescription = e.optString("name")
         setOnClickListener {
-          /* eerst de techniek (operator 13 okt 2026), behalve als er maar één is */
-          val many = (e.optJSONArray("techniques")?.length() ?: 0) > 1
-          startActivity(
-            Intent(this@MainActivity, if (many) TechniqueActivity::class.java else BreathSetupActivity::class.java)
-              .putExtra("key", e.optString("key")),
-          )
+          /* 13 okt 2026 (operator: "moet de gebruiker elke keer de techniek
+             doorlopen?"): nee — meteen naar de tijd, met de techniek die
+             klaarstaat; tik op de technieknaam daar om te wisselen. */
+          startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")))
         }
       }
       row.addView(android.widget.ImageView(this).apply {

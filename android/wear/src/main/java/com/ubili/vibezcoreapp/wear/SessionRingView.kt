@@ -351,7 +351,7 @@ class SessionRingView @JvmOverloads constructor(
 
     // "Inhale  Nose" op één regel — de neus/mond gedimd ernaast (operator 13 okt 2026)
     bigPaint.textSize = r * (if (paused) 0.18f else 0.135f)
-    val y = cy + r * (if (paused) 0.42f else 0.56f)
+    val y = cy + r * (if (paused) 0.42f else 0.52f)
     val head = centerText
     val tail = if (subText.isNotEmpty()) "  $subText" else ""
     if (tail.isEmpty()) {
@@ -370,7 +370,7 @@ class SessionRingView @JvmOverloads constructor(
       smallPaint.textSize = r * 0.105f
       val saved = smallPaint.color
       smallPaint.color = Color.argb(150, 255, 255, 255)
-      canvas.drawText(foot, cx, cy + r * 0.71f, smallPaint)
+      canvas.drawText(foot, cx, cy + r * 0.65f, smallPaint)
       smallPaint.color = saved
     }
   }
