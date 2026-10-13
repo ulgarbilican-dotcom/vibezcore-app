@@ -263,7 +263,7 @@ class SessionRingView @JvmOverloads constructor(
     // waterpeil van de service: 0,18 (uitgeademd) … 0,85 (ingeademd)
     val b = ((levelAt(now) - 0.18f) / 0.67f).coerceIn(0f, 1f)
     // naam staat enkel bij pauze bovenaan — de figuur mag hoger
-    val acy = cy - r * (if (paused) 0.02f else 0.31f)
+    val acy = cy - r * (if (paused) 0.02f else 0.36f)
 
     /* Vloeiend op de Watch4 (12 okt 2026, gemeten 14–16 ms GPU per beeld):
        de gloed is één vaste verloop-shader die enkel geschaald wordt, en de
@@ -349,7 +349,7 @@ class SessionRingView @JvmOverloads constructor(
 
     // "Inhale" groot, "through your nose" eronder, "12 min left" boven END
     bigPaint.textSize = r * 0.20f
-    val y = cy + r * (if (paused) 0.55f else 0.27f)
+    val y = cy + r * (if (paused) 0.55f else 0.36f)
     canvas.drawText(centerText, cx, y, bigPaint)
     var y2 = y
     if (subText.isNotEmpty()) {
@@ -362,7 +362,7 @@ class SessionRingView @JvmOverloads constructor(
       smallPaint.textSize = r * 0.115f
       val saved = smallPaint.color
       smallPaint.color = Color.argb(215, 255, 255, 255)
-      canvas.drawText(foot, cx, cy + r * 0.58f, smallPaint)
+      canvas.drawText(foot, cx, cy + r * 0.66f, smallPaint)
       smallPaint.color = saved
     }
   }
