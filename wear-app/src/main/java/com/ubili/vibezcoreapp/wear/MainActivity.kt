@@ -504,12 +504,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
       val figure = android.widget.ImageView(this).apply {
         setImageBitmap(artFor(e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-        val pad = dp(14f)
+        val pad = dp(10f)
         setPadding(pad, pad, pad, pad)
         background = GradientDrawable().apply {
           shape = GradientDrawable.OVAL
           gradientType = GradientDrawable.RADIAL_GRADIENT
-          gradientRadius = dp(66f).toFloat()
+          gradientRadius = dp(46f).toFloat()
           colors = intArrayOf(Color.argb(95, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
         }
         contentDescription = if (locked) "${e.optString("name")}, locked" else "Start ${e.optString("name")}"
@@ -521,12 +521,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
           }
         }
       }
-      page.addView(figure, android.widget.LinearLayout.LayoutParams(dp(132f), dp(132f)))
+      page.addView(figure, android.widget.LinearLayout.LayoutParams(dp(92f), dp(92f)))
       breathe(figure)
       page.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 17f
+        textSize = 16f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         gravity = android.view.Gravity.CENTER
         if (locked) {
@@ -541,8 +541,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
         text = "${e.optString("technique")} · $dur"
         setTextColor(Color.argb(150, 255, 255, 255))
         textSize = 11f
-        maxLines = 1
+        maxLines = 2
         gravity = android.view.Gravity.CENTER
+        setPadding(dp(30f), 0, dp(30f), 0)
       })
       // ··· = Techniek en Duur
       page.addView(TextView(this).apply {
@@ -559,8 +560,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
         setOnClickListener {
           startActivity(Intent(this@MainActivity, OptionsActivity::class.java).putExtra("key", e.optString("key")))
         }
-      }, android.widget.LinearLayout.LayoutParams(dp(34f), dp(34f)).apply {
-        topMargin = dp(10f)
+      }, android.widget.LinearLayout.LayoutParams(dp(30f), dp(30f)).apply {
+        topMargin = dp(8f)
       })
       list.addView(page)
     }
