@@ -762,6 +762,11 @@ class StateHapticsService : Service() {
     val text = "VIBEZCORE · $label"
     updateMediaSession(label)
     val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+      /* 13 okt 2026 (operator: "ik krijg het scherm van de smartwatch zelf
+         te zien"): niet doorsturen naar het horloge — anders opent Samsung
+         daar zijn eigen Media-bediening over ons sessiescherm. Het horloge
+         heeft zijn eigen VIBEZCORE-scherm. */
+      .setLocalOnly(true)
       .setContentTitle(title)
       .setContentText(text)
       .setSmallIcon(smallIconRes())

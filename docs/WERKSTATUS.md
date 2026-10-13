@@ -91,6 +91,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 13 okt 2026: breathwork op het horloge — ademfiguur van de app (zon/bloem/lotus/kristal/boom) zonder cirkel, halve boog bovenaan als fase-aftelling, "Inhale · Nose", tik op figuur = pauze. Trilling blijft bij donker scherm (MEDIA/ALARM i.p.v. TOUCH). Ritme: telefoon (breath-session.tsx) én horloges plannen elke fase vanaf het geplande einde van de vorige (geen oplopende drift meer); telefoon stuurt sentAtMs mee, horloge trekt de Bluetooth-vertraging af. **Native wijziging wear-breath-module → nieuwe telefoonbuild nodig** (ook voor via). Apple Watch: zelfde ritme-fix + via, nog geen figuren; niet compileerbaar op Windows.
 
+- 13 okt 2026 (middag): horloge zelfstandig, stap 1 — services/watch-catalog.ts zet een catalogus op het horloge (Data Layer, /vibezcore/catalog); horloge: startscherm (Again + Breathe-lijst), BreathSetupActivity (duur via rand/−/+, Start), lokale sessies pauzeren/hervatten op het horloge, in de geschiedenis via /vibezcore/watchlog. Breathwork-sterkte als echte kracht (BREATH_AMP). Mediamelding van State Control/Breath op de telefoon setLocalOnly (geen Samsung-mediabediening op het horloge). Native → telefoonbuild geïnstalleerd op de A16. Volgende: State Control op het horloge zelf (stap 2), Apple Watch.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

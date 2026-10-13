@@ -59,7 +59,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(20f), dp(18f), dp(20f), dp(12f))
+      setPadding(dp(16f), dp(20f), dp(16f), dp(6f))
     }
     root.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
 
@@ -67,19 +67,20 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
       setImageBitmap(BitmapFactory.decodeResource(resources, artResFor(e.optString("colorHex"))))
       scaleType = ImageView.ScaleType.FIT_CENTER
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }, LinearLayout.LayoutParams(dp(78f), dp(78f)))
+    }, LinearLayout.LayoutParams(dp(46f), dp(46f)))
 
     col.addView(TextView(this).apply {
       text = e.optString("name")
       setTextColor(Color.WHITE)
-      textSize = 15f
+      textSize = 14f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     })
     col.addView(TextView(this).apply {
       text = e.optString("technique")
       setTextColor(Color.argb(140, 255, 255, 255))
-      textSize = 11f
+      textSize = 10f
+      maxLines = 1
       gravity = Gravity.CENTER
     })
 
@@ -91,15 +92,15 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     durRow.addView(stepButton("−") { step(-1) })
     durText = TextView(this).apply {
       setTextColor(Color.WHITE)
-      textSize = 24f
+      textSize = 21f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }
-    durRow.addView(durText, LinearLayout.LayoutParams(dp(110f), LinearLayout.LayoutParams.WRAP_CONTENT))
+    durRow.addView(durText, LinearLayout.LayoutParams(dp(92f), LinearLayout.LayoutParams.WRAP_CONTENT))
     durRow.addView(stepButton("+") { step(1) })
     col.addView(durRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      topMargin = dp(8f)
-      bottomMargin = dp(10f)
+      topMargin = dp(6f)
+      bottomMargin = dp(6f)
     })
 
     if (locked) {
@@ -125,14 +126,14 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
           startLocalSession(this@BreathSetupActivity, e, durIdx)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(124f), dp(44f)))
+      }, LinearLayout.LayoutParams(dp(112f), dp(38f)))
     }
 
     /* een dun accent in de kleur van de toestand onder de figuur */
     col.getChildAt(0).background = GradientDrawable().apply {
       shape = GradientDrawable.OVAL
       gradientType = GradientDrawable.RADIAL_GRADIENT
-      gradientRadius = dp(40f).toFloat()
+      gradientRadius = dp(26f).toFloat()
       colors = intArrayOf(Color.argb(70, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
     }
 
@@ -146,7 +147,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
   private fun stepButton(label: String, onTap: () -> Unit) = TextView(this).apply {
     text = label
     setTextColor(Color.WHITE)
-    textSize = 20f
+    textSize = 18f
     gravity = Gravity.CENTER
     background = GradientDrawable().apply {
       shape = GradientDrawable.OVAL
@@ -154,7 +155,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     }
     contentDescription = if (label == "+") "Longer" else "Shorter"
     setOnClickListener { onTap() }
-    layoutParams = LinearLayout.LayoutParams(dp(34f), dp(34f))
+    layoutParams = LinearLayout.LayoutParams(dp(30f), dp(30f))
   }
 
   private fun durations() = entry?.optJSONArray("durations")

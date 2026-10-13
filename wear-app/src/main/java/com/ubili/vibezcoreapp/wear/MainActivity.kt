@@ -480,14 +480,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
       row.addView(android.widget.ImageView(this).apply {
         setImageBitmap(artFor(e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-        layoutParams = android.widget.LinearLayout.LayoutParams(dp(36f), dp(36f)).apply { marginEnd = dp(10f) }
+        layoutParams = android.widget.LinearLayout.LayoutParams(dp(32f), dp(32f)).apply { marginEnd = dp(8f) }
       })
       row.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 15f
+        textSize = 14f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
-        maxLines = 1
+        maxLines = 2
         ellipsize = android.text.TextUtils.TruncateAt.END
         layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
       })

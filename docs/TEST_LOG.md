@@ -251,6 +251,11 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W21 | Trilling breathwork met scherm uit | blijft doorgaan (MEDIA, niet TOUCH) | ✅ 13 okt (Claude: 3× trillen om de 4 s met scherm uit); operator zag 1× een stop bij de eerste keer — open |
 | W22 | Ritme telefoon ↔ horloge over 40 s | geen oplopende afwijking; verschil bij start | ✅ 13 okt (Claude: beide exact 4,0 s; verschil na correctie ~0,05 s) |
 | W23 | App-icoon even groot als andere apps; opstartscherm = enkel V op zwart | adaptief icoon | ⏳ operator |
+| W24 | Horloge zelfstandig: catalogus van de telefoon komt aan (Data Layer), startscherm met 5 Breathe-toestanden + figuur | ok | ✅ 13 okt (Claude) |
+| W25 | Kiezen op het horloge (duur −/+, Start), sessie start op het horloge, pauze + hervatten op het horloge zelf, END | ok | ✅ 13 okt (Claude, Sleep) |
+| W26 | Horloge-sessie komt in de geschiedenis van de telefoon ("Sleep · 14:05 · Slow Extended Exhale · 32 sec") | ok | ✅ 13 okt (Claude) |
+| W27 | State Control vanaf de telefoon: het horloge toont ons scherm, niet Samsungs Media-bediening (melding setLocalOnly) | ons scherm blijft vooraan | ✅ 13 okt (Claude); Samsung zet nog wel een mediamelding in de lijst — operator bevestigt |
+| W28 | Draaiende rand op het kies-scherm verandert de duur | per tik één stap | ⏳ operator (niet via adb te testen) |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 
