@@ -417,6 +417,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     /* Again — de laatste sessie, meteen starten */
     if (last != null) {
       val e = entries.firstOrNull { it.optString("key") == last.first }
+        ?.let { CatalogStore.withTechnique(it, CatalogStore.lastTech(this)) }
       if (e != null && !e.optBoolean("locked")) {
         val durIdx = durationIndexFor(e, last.second)
         val label = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: ""
@@ -478,7 +479,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
         isClickable = true
         contentDescription = e.optString("name")
         setOnClickListener {
-          startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")))
+          /* eerst de techniek (operator 13 okt 2026), behalve als er maar één is */
+          val many = (e.optJSONArray("techniques")?.length() ?: 0) > 1
+          startActivity(
+            Intent(this@MainActivity, if (many) TechniqueActivity::class.java else BreathSetupActivity::class.java)
+              .putExtra("key", e.optString("key")),
+          )
         }
       }
       row.addView(android.widget.ImageView(this).apply {
@@ -520,7 +526,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
 internal fun startLocalSession(context: android.content.Context, e: org.json.JSONObject, durIdx: Int) {
   val json = CatalogStore.sessionJson(context, e, durIdx)
   val minutes = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optInt("minutes") ?: 0
-  CatalogStore.setLast(context, e.optString("key"), minutes)
+  CatalogStore.setLast(context, e.optString("key"), minutes, e.optString("techniqueKey"))
   context.startForegroundService(
     Intent(context, WearBreathSessionService::class.java).apply {
       action = WearBreathSessionService.ACTION_START

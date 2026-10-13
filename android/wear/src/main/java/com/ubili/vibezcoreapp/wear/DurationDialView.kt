@@ -47,13 +47,13 @@ class DurationDialView @JvmOverloads constructor(
   private val density = resources.displayMetrics.density
   private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.STROKE
-    strokeWidth = 6f * density
+    strokeWidth = 2.5f * density
     strokeCap = Paint.Cap.ROUND
     color = Color.argb(46, 255, 255, 255)
   }
   private val progress = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.STROKE
-    strokeWidth = 6f * density
+    strokeWidth = 3f * density
     strokeCap = Paint.Cap.ROUND
   }
   private val tick = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -76,7 +76,7 @@ class DurationDialView @JvmOverloads constructor(
     invalidate()
   }
 
-  private fun radius() = min(width, height) / 2f - 9f * density
+  private fun radius() = min(width, height) / 2f - 7f * density
 
   /** Hoek (graden, 0 = boven, met de klok mee) van stap i. Eén stap = een
    *  gelijk deel van de ring; de laatste stap vult de ring helemaal. */
@@ -103,7 +103,7 @@ class DurationDialView @JvmOverloads constructor(
 
     // bolletje aan het einde van de gekozen duur
     val a = Math.toRadians((-90f + sweep).toDouble())
-    canvas.drawCircle(cx + (r * cos(a)).toFloat(), cy + (r * sin(a)).toFloat(), 7f * density, knob)
+    canvas.drawCircle(cx + (r * cos(a)).toFloat(), cy + (r * sin(a)).toFloat(), 5f * density, knob)
   }
 
   override fun onTouchEvent(event: MotionEvent): Boolean {

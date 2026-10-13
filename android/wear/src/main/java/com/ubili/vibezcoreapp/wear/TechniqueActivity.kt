@@ -1,0 +1,103 @@
+package com.ubili.vibezcoreapp.wear
+
+/* 13 okt 2026 (operator: "gebruiker moet eerst de techniek kunnen kiezen").
+   Na de toestand: de technieken van die toestand, met hun niveau — zoals op
+   de telefoon (breath-setup). De techniek die de telefoon voor deze
+   gebruiker zou kiezen, staat gemarkeerd ("For you"). Daarna de tijd
+   (BreathSetupActivity). Draaiende rand scrolt. */
+
+import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
+import android.view.Gravity
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+
+class TechniqueActivity : androidx.activity.ComponentActivity() {
+  private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val key = intent.getStringExtra("key")
+    val e = CatalogStore.breath(this).firstOrNull { it.optString("key") == key }
+    val techs = e?.optJSONArray("techniques")
+    if (e == null || techs == null || techs.length() == 0) {
+      finish()
+      return
+    }
+    val color = try {
+      Color.parseColor(e.optString("colorHex"))
+    } catch (_: Exception) {
+      Color.parseColor("#00A3A3")
+    }
+    val recommended = e.optInt("recommendedIdx", 0)
+
+    val scroll = ScrollView(this).apply {
+      setBackgroundColor(Color.BLACK)
+      isVerticalScrollBarEnabled = false
+      isFocusable = true
+      isFocusableInTouchMode = true
+    }
+    val list = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      gravity = Gravity.CENTER_HORIZONTAL
+      setPadding(dp(22f), dp(30f), dp(22f), dp(48f))
+    }
+    scroll.addView(list)
+
+    list.addView(TextView(this).apply {
+      text = e.optString("name")
+      setTextColor(color)
+      textSize = 13f
+      typeface = Typeface.DEFAULT_BOLD
+      gravity = Gravity.CENTER
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+      bottomMargin = dp(10f)
+    })
+
+    for (i in 0 until techs.length()) {
+      val t = techs.optJSONObject(i) ?: continue
+      val row = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(16f), dp(8f), dp(14f), dp(8f))
+        background = GradientDrawable().apply {
+          cornerRadius = dp(24f).toFloat()
+          setColor(Color.parseColor("#1C1C1E"))
+        }
+        minimumHeight = dp(52f)
+        isClickable = true
+        contentDescription = t.optString("name")
+        setOnClickListener {
+          startActivity(
+            Intent(this@TechniqueActivity, BreathSetupActivity::class.java)
+              .putExtra("key", key)
+              .putExtra("tech", t.optString("key")),
+          )
+        }
+      }
+      row.addView(TextView(this).apply {
+        text = t.optString("name")
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        typeface = Typeface.DEFAULT_BOLD
+        maxLines = 2
+      })
+      row.addView(TextView(this).apply {
+        val level = t.optString("level")
+        text = if (i == recommended) "$level · For you" else level
+        setTextColor(if (i == recommended) color else Color.argb(140, 255, 255, 255))
+        textSize = 11f
+      })
+      list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = dp(6f)
+      })
+    }
+
+    setContentView(scroll)
+    scroll.requestFocus()
+  }
+}

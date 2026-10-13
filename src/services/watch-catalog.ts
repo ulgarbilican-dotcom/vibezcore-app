@@ -12,7 +12,7 @@
    geschiedenis (en zo in Apple Health / Health Connect).
    ───────────────────────────────────────────────────────────────────────── */
 
-import { BREATH_STATES, roundsFor, type BreathStateKey } from '@/data/breath-states';
+import { BREATH_STATES, roundsFor, type BreathState, type BreathStateKey } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import { breathAmplitude, phaseHapticPattern } from '@/services/breath-haptics';
 import { useHapticStrength } from '@/services/haptic-strength-pref';
@@ -34,40 +34,62 @@ function defaultTechIdx(maxIdx: number): number {
   return Math.min(idx, maxIdx);
 }
 
+/** Eén techniek zoals het horloge hem nodig heeft: fasen (met het ritme van
+ *  het niveau van de gebruiker), trilpatronen en de vaste duurstappen. */
+function techForWatch(key: BreathStateKey, base: BreathState['techniques'][number]) {
+  const st = BREATH_STATES[key];
+  const lvl = levelForTechnique(key, base.key, getBreathHistory());
+  const tech = techniqueForLevel(key, base, lvl);
+  const durations = tech.durations ?? st.durations;
+  const personal = personalRecommendedMinutes(key, tech.key, durations, lvl);
+  let def = personal != null ? durations.findIndex((d) => d.minutes === personal) : -1;
+  if (def < 0) def = durations.findIndex((d) => d.recommended);
+  if (def < 0) def = Math.min(st.defaultDuration, durations.length - 1);
+  return {
+    key: tech.key,
+    name: tech.name,
+    level: base.level,
+    phases: tech.phases.map((p) => ({
+      key: p.key,
+      secs: p.secs,
+      via: p.via ?? '',
+      pattern: phaseHapticPattern(p.key, p.secs),
+    })),
+    durations: durations.map((d) => ({
+      label: d.cycles ? `${d.cycles} cycles` : `${d.minutes} min`,
+      minutes: d.minutes,
+      rounds: d.cycles ?? roundsFor(tech, d.minutes),
+    })),
+    defaultIdx: Math.max(0, def),
+  };
+}
+
 export function buildWatchCatalog(locked: boolean): string {
   const breath = ORDER.map((key) => {
     const st = BREATH_STATES[key];
-    const base = st.techniques[defaultTechIdx(st.techniques.length - 1)] ?? st.techniques[0];
-    const lvl = levelForTechnique(key, base.key, getBreathHistory());
-    const tech = techniqueForLevel(key, base, lvl);
-    const durations = tech.durations ?? st.durations;
-    const personal = personalRecommendedMinutes(key, tech.key, durations, lvl);
-    let def = personal != null ? durations.findIndex((d) => d.minutes === personal) : -1;
-    if (def < 0) def = durations.findIndex((d) => d.recommended);
-    if (def < 0) def = Math.min(st.defaultDuration, durations.length - 1);
+    /* 13 okt 2026 (operator: "gebruiker moet eerst de techniek kunnen
+       kiezen"): alle technieken van de toestand gaan mee; `recommendedIdx`
+       is degene die de telefoon voor deze gebruiker zou kiezen. */
+    const recommendedIdx = defaultTechIdx(st.techniques.length - 1);
+    const techniques = st.techniques.map((t) => techForWatch(key, t));
+    const rec = techniques[recommendedIdx] ?? techniques[0];
     return {
       key,
       name: titleCase(st.eyebrow),
       /* Sleep in het lichte teal, zoals de ring in de app (relayBreathToWatches). */
       colorHex: key === 'rest' ? '#4AF0D4' : st.accent,
-      technique: tech.name,
-      techniqueKey: tech.key,
       locked,
-      phases: tech.phases.map((p) => ({
-        key: p.key,
-        secs: p.secs,
-        via: p.via ?? '',
-        pattern: phaseHapticPattern(p.key, p.secs),
-      })),
-      durations: durations.map((d) => ({
-        label: d.cycles ? `${d.cycles} cycles` : `${d.minutes} min`,
-        minutes: d.minutes,
-        rounds: d.cycles ?? roundsFor(tech, d.minutes),
-      })),
-      defaultIdx: Math.max(0, def),
+      recommendedIdx,
+      techniques,
+      /* Aanbevolen techniek ook plat, voor oudere horloge-versies. */
+      technique: rec.name,
+      techniqueKey: rec.key,
+      phases: rec.phases,
+      durations: rec.durations,
+      defaultIdx: rec.defaultIdx,
     };
   });
-  return JSON.stringify({ v: 1, amp: breathAmplitude(), breath });
+  return JSON.stringify({ v: 2, amp: breathAmplitude(), breath });
 }
 
 type WatchSessionRecord = {

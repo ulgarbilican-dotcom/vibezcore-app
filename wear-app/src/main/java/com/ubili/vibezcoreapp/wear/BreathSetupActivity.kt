@@ -39,6 +39,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
     super.onCreate(savedInstanceState)
     val key = intent.getStringExtra("key")
     val e = CatalogStore.breath(this).firstOrNull { it.optString("key") == key }
+      ?.let { CatalogStore.withTechnique(it, intent.getStringExtra("tech")) }
     if (e == null) {
       finish()
       return
@@ -84,12 +85,13 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
         gradientRadius = dp(24f).toFloat()
         colors = intArrayOf(Color.argb(70, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
       }
-    }, LinearLayout.LayoutParams(dp(44f), dp(44f)))
+    }, LinearLayout.LayoutParams(dp(34f), dp(34f)))
 
     col.addView(TextView(this).apply {
-      text = e.optString("name")
-      setTextColor(Color.argb(200, 255, 255, 255))
-      textSize = 13f
+      text = e.optString("technique")
+      setTextColor(Color.argb(170, 255, 255, 255))
+      textSize = 11f
+      maxLines = 1
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -98,7 +100,7 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
 
     durText = TextView(this).apply {
       setTextColor(Color.WHITE)
-      textSize = 28f
+      textSize = 32f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }
@@ -115,21 +117,26 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
       })
     } else {
       col.addView(TextView(this).apply {
+        /* subtiel, als glas (operator 13 okt 2026: "startknop subtieler,
+           kan dat glas?"): licht van boven, dunne lichte rand */
         text = "Start"
-        setTextColor(Color.parseColor("#0A0A0A"))
-        textSize = 15f
+        setTextColor(Color.WHITE)
+        textSize = 13f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        background = GradientDrawable().apply {
-          cornerRadius = dp(20f).toFloat()
-          setColor(Color.WHITE)
+        background = GradientDrawable(
+          GradientDrawable.Orientation.TOP_BOTTOM,
+          intArrayOf(Color.argb(82, 255, 255, 255), Color.argb(34, 255, 255, 255)),
+        ).apply {
+          cornerRadius = dp(16f).toFloat()
+          setStroke(dp(1f).coerceAtLeast(1), Color.argb(50, 255, 255, 255))
         }
         contentDescription = "Start ${e.optString("name")}"
         setOnClickListener {
           startLocalSession(this@BreathSetupActivity, e, dial.index)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(104f), dp(38f)))
+      }, LinearLayout.LayoutParams(dp(78f), dp(30f)))
     }
 
     setContentView(root)

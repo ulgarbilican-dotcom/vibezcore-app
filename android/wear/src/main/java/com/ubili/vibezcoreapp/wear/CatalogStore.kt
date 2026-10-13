@@ -69,9 +69,32 @@ object CatalogStore {
     }
   }
 
-  fun setLast(context: Context, key: String, minutes: Int) {
+  fun setLast(context: Context, key: String, minutes: Int, techKey: String = "") {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-      .putString(KEY_LAST, JSONObject().put("key", key).put("minutes", minutes).toString()).apply()
+      .putString(KEY_LAST, JSONObject().put("key", key).put("minutes", minutes).put("tech", techKey).toString()).apply()
+  }
+
+  fun lastTech(context: Context): String = try {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LAST, null)
+      ?.let { JSONObject(it).optString("tech", "") } ?: ""
+  } catch (_: Exception) {
+    ""
+  }
+
+  /** De toestand met één gekozen techniek erin (fasen, duurstappen, naam) —
+   *  zelfde vorm als de toestand zelf, zodat de rest niets anders hoeft te
+   *  weten. Lege of onbekende techKey = de aanbevolen techniek. */
+  fun withTechnique(entry: JSONObject, techKey: String?): JSONObject {
+    val techs = entry.optJSONArray("techniques") ?: return entry
+    var t: JSONObject? = null
+    for (i in 0 until techs.length()) if (techs.optJSONObject(i)?.optString("key") == techKey) t = techs.optJSONObject(i)
+    if (t == null) t = techs.optJSONObject(entry.optInt("recommendedIdx", 0)) ?: return entry
+    return JSONObject(entry.toString())
+      .put("technique", t.optString("name"))
+      .put("techniqueKey", t.optString("key"))
+      .put("phases", t.optJSONArray("phases"))
+      .put("durations", t.optJSONArray("durations"))
+      .put("defaultIdx", t.optInt("defaultIdx", 0))
   }
 
   fun last(context: Context): Pair<String, Int>? = try {

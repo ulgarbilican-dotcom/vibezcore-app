@@ -44,6 +44,11 @@
 
         <!-- 13 okt 2026: een toestand kiezen en op het horloge zelf starten -->
         <activity
+            android:name=".TechniqueActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
+        <activity
             android:name=".BreathSetupActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
