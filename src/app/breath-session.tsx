@@ -3932,8 +3932,16 @@ export function BreathSession() {
             <View style={{ marginTop: 16 }}>
               <WatchStatusRow />
             </View>
+            {/* Operator, 13 okt 2026 ("teksten zweven, per sectie werken en
+               duidelijk afbakenen — voice guidance en Eli/Benjamin horen bij
+               elkaar"): drie blokken zoals iOS Instellingen — VOICE,
+               SOUNDSCAPE, HAPTICS — elk een glazen kaart met een kleine
+               grijze titel erboven. */}
+            <Text style={s.avSectionHdr}>VOICE</Text>
+            <View style={s.avCard}>
+              <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
             {/* Rij 1 — Voice Guidance. */}
-            <View style={[s.voiceSheetRow, s.avSection]}>
+            <View style={[s.voiceSheetRow, { marginBottom: 0 }]}>
               <Text style={s.voiceSheetRowLabel}>Voice guidance</Text>
               <Switch
                 value={voiceOn}
@@ -3961,8 +3969,9 @@ export function BreathSession() {
                scherm — dat is hier voorbehouden aan langere lijsten
                (Soundscapes hieronder). Narrator nu als inline chip-rij,
                zelfde patroon als de bestaande soft/medium/loud-chips. */}
-            <Text style={[s.avRowLabel, { marginTop: 4 }]}>Narrator</Text>
-            <View style={s.levelRow}>
+            <View style={s.avCardSep} />
+            <Text style={[s.avRowLabel, !voiceOn && { opacity: 0.45 }]}>Narrator</Text>
+            <View style={[s.levelRow, { marginBottom: 0 }, !voiceOn && { opacity: 0.45 }]}>
               {(['female', 'male'] as const).map((g) => {
                 const on = g === voiceGenderLocal;
                 const label = g === 'male' ? 'Benjamin' : 'Eli';
@@ -4005,7 +4014,11 @@ export function BreathSession() {
                groep (Noise · Water · Earth · Tone) een eigen rij die
                doorloopt naar een volgende regel. GEWIJZIGD 12 okt 2026
                (operator): per groep horizontaal scrollen als nodig. Gratis geluiden binnen hun groep vooraan. */}
-            <Text style={[s.avRowLabel, s.avSection]}>Soundscapes</Text>
+            </View>
+
+            <Text style={s.avSectionHdr}>SOUNDSCAPE</Text>
+            <View style={s.avCard}>
+              <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
             <View style={s.avScapeWrap}>
               <AnimatedPressable
                 onPress={() => pickScape(null)}
@@ -4080,7 +4093,8 @@ export function BreathSession() {
                Zelfde wit-protocol als de narrator-chips. */}
             {scape ? (
               <>
-                <Text style={[s.avRowLabel, s.avSection]}>Soundscape volume</Text>
+                <View style={s.avCardSep} />
+                <Text style={s.avRowLabel}>Volume</Text>
                 <View style={[s.levelRow, { marginBottom: 14 }]}>
                   {(['soft', 'medium', 'loud'] as const).map((l) => {
                     const on = l === scapeLevel;
@@ -4113,8 +4127,13 @@ export function BreathSession() {
               </>
             ) : null}
 
+            </View>
+
+            <Text style={s.avSectionHdr}>HAPTICS</Text>
+            <View style={s.avCard}>
+              <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
             {/* Rij 3 — Phone haptics. */}
-            <View style={[s.voiceSheetRow, s.avSection]}>
+            <View style={s.voiceSheetRow}>
               <Text style={s.voiceSheetRowLabel}>Phone haptics</Text>
               <Switch
                 value={hapticsOn}
@@ -4170,10 +4189,11 @@ export function BreathSession() {
               </View>
             ) : null}
 
+            <View style={[s.avCardSep, { marginTop: 0 }]} />
             {/* Rij 4 — Bracelet haptics (zelfde tik-logica als de vorige
                losse Gem-knop: schakelaar zodra er hardware is, anders de
                bestaande preview-bevestiging). */}
-            <View style={s.voiceSheetRow}>
+            <View style={[s.voiceSheetRow, { marginBottom: 0 }]}>
               <Text style={s.voiceSheetRowLabel}>Bracelet haptics</Text>
               {braceletReady ? (
                 <Switch
@@ -4213,6 +4233,7 @@ export function BreathSession() {
                   <Text style={s.avBraceletBadgeTxt}>Early 2027</Text>
                 </AnimatedPressable>
               )}
+            </View>
             </View>
 
             {/* Operator, 19 september 2026 ("hoe weten gebruikers dat ze na
@@ -5413,6 +5434,21 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      kunnen ademen"). */
   avSheetTall: { maxHeight: '90%', paddingHorizontal: 22 },
   avSection: { marginTop: 22 },
+  avSectionHdr: {
+    marginTop: 24,
+    marginBottom: 8,
+    marginLeft: 4,
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  avCard: { borderRadius: 18, overflow: 'hidden', padding: 16 },
+  avCardSep: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    marginVertical: 14,
+  },
   avScapeGroup: { marginTop: 16 },
   avScapeGroupLbl: {
     fontFamily: BrandFonts.semibold,
@@ -5422,8 +5458,8 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     marginBottom: 10,
   },
   avScapeWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  avScapeHScroll: { marginHorizontal: -22 },
-  avScapeScrollRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 22 },
+  avScapeHScroll: { marginHorizontal: -16 },
+  avScapeScrollRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16 },
   /* 13 okt 2026 (operator, Apple-stijl): vierkante kaarten met afgeronde
      hoeken i.p.v. pillen — icoon linksboven, naam linksonder, de gekozen
      kaart wit met donkere tekst. Per groep blijft de rij opzij scrollen. */
