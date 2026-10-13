@@ -46,7 +46,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private lateinit var nameLabel: TextView
   private lateinit var ring: SessionRingView
   private lateinit var pauseButton: ImageButton
-  private lateinit var endButton: ImageButton
+  private lateinit var endButton: TextView
 
   private val breathListener: (BreathSessionState.Snapshot) -> Unit = { runOnUiThread { render() } }
   private val stateListener: (StateSessionState.Snapshot) -> Unit = { runOnUiThread { render() } }
@@ -72,10 +72,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
     endButton.setOnClickListener { onEndTap() }
     /* END als pil (operator 13 okt 2026): zacht wit vlak, witte tekst. */
-    endButton.background = GradientDrawable().apply {
-      shape = GradientDrawable.OVAL
-      setColor(Color.parseColor("#2C2C2E"))
-    }
+    endButton.background = null
     /* 12 okt 2026: vanaf Wear OS 4 (Android 13) moet een app zelf om
        meldingen vragen — zonder die toestemming loopt de sessie wel, maar
        verbergt het horloge de lopende-sessie-melding (terugkeren naar de
@@ -260,7 +257,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
     (nameLabel.parent as View).visibility = View.VISIBLE
     ring.isClickable = false
     pauseButton.visibility = View.VISIBLE
-    setEndSize(44)
     setNameTop(44)
     nameLabel.textSize = 15f
     val sec = s.remainingSec.coerceAtLeast(0)
@@ -290,7 +286,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.isClickable = true
     ring.contentDescription = if (b.paused) "Resume" else "Pause"
     pauseButton.visibility = View.GONE
-    setEndSize(36)
     setNameTop(30)
     nameLabel.textSize = 12f
     ring.centerText = b.phaseLabel
@@ -426,12 +421,19 @@ class MainActivity : androidx.activity.ComponentActivity() {
         val durIdx = durationIndexFor(e, last.second)
         val label = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: ""
         list.addView(TextView(this).apply {
-          text = "${e.optString("name")} · $label"
+          /* naam en duur op twee regels — op het ronde scherm paste het
+             op één regel niet ("Calm Control · …") */
+          val name = e.optString("name")
+          text = android.text.SpannableString(name + "\n" + label).apply {
+            setSpan(android.text.style.RelativeSizeSpan(0.8f), name.length + 1, length, 0)
+            setSpan(android.text.style.ForegroundColorSpan(Color.parseColor("#55555A")), name.length + 1, length, 0)
+          }
           setTextColor(Color.parseColor("#0A0A0A"))
           textSize = 14f
           typeface = android.graphics.Typeface.DEFAULT_BOLD
           gravity = android.view.Gravity.CENTER
-          maxLines = 1
+          setLineSpacing(0f, 0.95f)
+          maxLines = 2
           ellipsize = android.text.TextUtils.TruncateAt.END
           setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_vz_play_small, 0, 0, 0)
           compoundDrawablePadding = dp(6f)
@@ -441,7 +443,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
             setColor(Color.WHITE)
           }
           contentDescription = "Start ${e.optString("name")}, $label"
-          layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(46f)).apply {
+          layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(54f)).apply {
             bottomMargin = dp(14f)
           }
           setOnClickListener { startLocalSession(this@MainActivity, e, durIdx) }
@@ -504,18 +506,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val durs = e.optJSONArray("durations") ?: return 0
     for (i in 0 until durs.length()) if (durs.optJSONObject(i)?.optInt("minutes") == minutes) return i
     return e.optInt("defaultIdx", 0)
-  }
-
-  /** Breathwork: kleinere ✕ (de tekst staat erboven); State Control: even
-   *  groot als de pauzeknop ernaast. */
-  private fun setEndSize(dpSize: Int) {
-    val px = (dpSize * resources.displayMetrics.density).toInt()
-    val lp = endButton.layoutParams
-    if (lp.width != px) {
-      lp.width = px
-      lp.height = px
-      endButton.layoutParams = lp
-    }
   }
 
   private fun parse(hex: String): Int = try {
