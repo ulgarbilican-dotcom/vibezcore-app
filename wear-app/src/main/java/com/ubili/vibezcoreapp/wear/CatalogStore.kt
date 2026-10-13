@@ -343,14 +343,14 @@ internal fun figureColor(context: android.content.Context, colorHex: String): In
 
 /** Dezelfde gloed op elke pagina van een toestand (startpagina, instellingen,
  *  lijsten): licht in het midden, naar zwart aan de rand. */
-internal fun stateGlow(context: android.content.Context, colorHex: String, centerY: Float = 0.42f): android.graphics.drawable.GradientDrawable {
+internal fun stateGlow(context: android.content.Context, colorHex: String, centerY: Float = 0.42f, radius: Float = 0.62f): android.graphics.drawable.GradientDrawable {
   val c = figureColor(context, colorHex)
   val r = android.graphics.Color.red(c)
   val g = android.graphics.Color.green(c)
   val b = android.graphics.Color.blue(c)
   return android.graphics.drawable.GradientDrawable().apply {
     gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
-    gradientRadius = context.resources.displayMetrics.heightPixels * 0.62f
+    gradientRadius = context.resources.displayMetrics.heightPixels * radius
     setGradientCenter(0.5f, centerY)
     colors = intArrayOf(
       android.graphics.Color.argb(105, r, g, b),
@@ -370,13 +370,3 @@ internal fun artOpticalScale(colorHex: String): Float = when (colorHex.uppercase
   else -> 1f
 }
 
-/** Hoe groot elke figuur getekend wordt zodat ze even groot ogen: elke
- *  afbeelding heeft een andere lege rand (zon en bloem veel, lotus iets
- *  minder maar laag in het beeld, kristal weinig, de boom vult bijna alles). */
-internal fun artScaleFor(colorHex: String): Float = when (colorHex.uppercase()) {
-  "#F5A524" -> 1f
-  "#3E9BFF" -> 1f
-  "#B478FF" -> 1.14f
-  "#00A3A3", "#4AF0D4" -> 0.56f
-  else -> 0.7f
-}

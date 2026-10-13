@@ -274,9 +274,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun renderBreath(b: BreathSessionState.Snapshot) {
     showSession(b.modeName, b.colorHex, b.paused)
-    ring.art = artFor(b.colorHex)
-    val scale = artScaleFor(b.colorHex)
-    val focus = if (b.colorHex.uppercase() == "#B478FF") 0.43f else 0.5f
+    /* operator 13 okt: "bij actieve sessies ook telkens andere formaten" —
+       zelfde bijgesneden figuur als op het startscherm, alle vijf in hetzelfde
+       vak (r × 0.95 op het grootst van de adem), enkel de optische correctie
+       voor de bol en de zon */
+    ring.art = trimmedArt(this, b.colorHex)
+    val scale = 0.53f * artOpticalScale(b.colorHex)
+    val focus = 0.5f
     ring.artScale = scale
     ring.artFocusY = focus
     ring.paused = b.paused
@@ -422,7 +426,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
          kleur van de state") de hele pagina is een zachte gloed in de kleur
          van de toestand — licht rond de figuur, naar zwart aan de rand.
          Bij het scrollen schuift de ene kleur zo in de andere. */
-      page.background = stateGlow(this, e.optString("colorHex"))
+      /* rond en helemaal binnen de pagina uitlopend naar zwart — anders werd
+         de gloed boven en onder recht afgesneden, zichtbaar bij het scrollen
+         (operator: "de gloedkleur wordt afgesneden, moet rond zijn") */
+      page.background = stateGlow(this, e.optString("colorHex"), 0.46f, 0.46f)
       val figure = android.widget.ImageView(this).apply {
         setImageBitmap(trimmedArt(this@MainActivity, e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
