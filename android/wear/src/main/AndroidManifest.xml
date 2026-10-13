@@ -42,6 +42,12 @@
             </intent-filter>
         </activity>
 
+        <!-- 13 okt 2026: een toestand kiezen en op het horloge zelf starten -->
+        <activity
+            android:name=".BreathSetupActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
         <service
             android:name=".BreathListenerService"
             android:exported="true">
@@ -55,6 +61,14 @@
                     android:scheme="wear"
                     android:host="*"
                     android:pathPrefix="/vibezcore/state" />
+            </intent-filter>
+            <!-- 13 okt 2026: catalogus van de telefoon (bewaard gegeven) -->
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/vibezcore/catalog" />
             </intent-filter>
         </service>
 

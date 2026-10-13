@@ -93,6 +93,8 @@ type WearBreathNativeModule = {
   sendStateSession(start: StateSessionStart): void;
   pauseStateSession(): void;
   stopStateSession(): void;
+  syncCatalog?(json: string): void;
+  takeWatchSessions?(): Promise<string[]>;
   addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): { remove(): void };
   addListener(eventName: 'onStateAck', listener: () => void): { remove(): void };
 };
@@ -229,5 +231,25 @@ export function onStateAck(cb: () => void): () => void {
     return () => sub?.remove();
   } catch {
     return () => {};
+  }
+}
+
+/** 13 okt 2026 — het horloge zelfstandig: de "catalogus" (toestanden,
+ *  techniek, fasen, trilpatronen, sterkte, toegang) als bewaard gegeven naar
+ *  het horloge. Zie services/watch-catalog.ts. */
+export function syncWatchCatalog(json: string): void {
+  try {
+    native?.syncCatalog?.(json);
+  } catch {
+    /* stil */
+  }
+}
+
+/** Sessies die op het horloge zelf gedaan zijn (en meteen gewist). */
+export async function takeWatchSessions(): Promise<string[]> {
+  try {
+    return (await native?.takeWatchSessions?.()) ?? [];
+  } catch {
+    return [];
   }
 }

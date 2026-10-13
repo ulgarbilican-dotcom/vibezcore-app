@@ -187,11 +187,13 @@ export async function reloadBreathHistory(): Promise<void> {
 /* Voeg een afgeronde sessie toe aan de historiek. Wordt aangeroepen door
    de Breath-tab vlak na natural completion. */
 export async function addBreathSession(
-  entry: Omit<BreathHistoryEntry, 'ts'>,
+  /* `ts` optioneel (13 okt 2026): een sessie die op het horloge gedaan is,
+     komt later binnen met haar eigen eindtijd. */
+  entry: Omit<BreathHistoryEntry, 'ts'> & { ts?: number },
 ): Promise<void> {
   await load();
-  const newEntry: BreathHistoryEntry = { ...entry, ts: Date.now() };
-  state = [newEntry, ...state].slice(0, MAX_ENTRIES);
+  const newEntry: BreathHistoryEntry = { ...entry, ts: entry.ts ?? Date.now() };
+  state = [newEntry, ...state].sort((a, b) => b.ts - a.ts).slice(0, MAX_ENTRIES);
   /* De totalen bij, VOOR het afkappen telt — daarom staan ze los van de
      lijst. Dit is het enige getal dat nooit kan zakken. */
   totals = {

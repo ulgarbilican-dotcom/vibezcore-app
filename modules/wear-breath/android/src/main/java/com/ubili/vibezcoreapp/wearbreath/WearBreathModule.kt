@@ -22,6 +22,7 @@ import androidx.wear.remote.interactions.RemoteActivityHelper
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.PutDataRequest
 import com.google.android.gms.wearable.Wearable
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.Exceptions
@@ -102,6 +103,13 @@ private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 private const val PATH_STATE_ACK = "/vibezcore/state/ack"
 
 private const val WATCH_CAPABILITY = "vibezcore_watch_app"
+/* 13 okt 2026 — het horloge zelfstandig: de telefoon zet de "catalogus"
+   (toestanden, techniek, fasen, trilpatronen, sterkte, toegang) als BEWAARD
+   gegeven klaar; het horloge krijgt hem ook als het even weg was. Sessies
+   die op het horloge zelf gedaan zijn, laat het horloge achter onder
+   /vibezcore/watchlog/… — de telefoon haalt ze op en wist ze. */
+private const val PATH_CATALOG = "/vibezcore/catalog"
+private const val PATH_WATCHLOG = "/vibezcore/watchlog"
 
 class WearBreathModule : Module() {
   private val context: Context
@@ -193,6 +201,42 @@ class WearBreathModule : Module() {
       Wearable.getNodeClient(context).connectedNodes
         .addOnSuccessListener { nodes -> promise.resolve(nodes.isNotEmpty()) }
         .addOnFailureListener { promise.resolve(false) }
+    }
+
+    Function("syncCatalog") { json: String ->
+      try {
+        val req = PutDataRequest.create(PATH_CATALOG)
+          .setData(json.toByteArray(Charsets.UTF_8))
+          .setUrgent()
+        Wearable.getDataClient(context).putDataItem(req)
+      } catch (_: Exception) {
+        /* geen horloge / geen Play Services: niets te doen */
+      }
+    }
+
+    /** Sessies die op het horloge gedaan zijn (JSON-strings), en meteen
+     *  gewist zodat ze nooit dubbel in de geschiedenis komen. */
+    AsyncFunction("takeWatchSessions") { promise: Promise ->
+      try {
+        val client = Wearable.getDataClient(context)
+        client.getDataItems(Uri.parse("wear://*$PATH_WATCHLOG"), com.google.android.gms.wearable.DataClient.FILTER_PREFIX)
+          .addOnSuccessListener { buffer ->
+            val out = ArrayList<String>()
+            try {
+              for (item in buffer) {
+                val data = item.data ?: continue
+                out.add(String(data, Charsets.UTF_8))
+                client.deleteDataItems(item.uri)
+              }
+            } finally {
+              buffer.release()
+            }
+            promise.resolve(out)
+          }
+          .addOnFailureListener { promise.resolve(emptyList<String>()) }
+      } catch (_: Exception) {
+        promise.resolve(emptyList<String>())
+      }
     }
 
     Function("sendBreathSession") { session: WearBreathSession ->

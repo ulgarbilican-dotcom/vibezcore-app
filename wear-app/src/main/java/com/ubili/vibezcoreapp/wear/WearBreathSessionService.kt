@@ -45,6 +45,14 @@ class WearBreathSessionService : Service() {
   private var colorHex = "#00A3A3"
   /** Trilkracht 0–255 van de telefoon (Soft/Medium/Strong); 0 = standaard. */
   private var amp = 0
+  /* 13 okt 2026 — sessie die op het horloge zelf gestart is ("local"):
+     pauze/hervatten zonder telefoon, en bij het einde in de geschiedenis. */
+  private var localJson: JSONObject? = null
+  private var activeMs = 0L
+  private var runStartUptime = 0L
+  private var curRound = 1
+  private var curIdx = 0
+  private var curTotalRounds = 1
   /** Waterpeil op het scherm: stijgt bij inademen, zakt bij uitademen. */
   private var level = 0.3f
 
@@ -89,6 +97,10 @@ class WearBreathSessionService : Service() {
     val startRound = json.optInt("startRound", 1).coerceIn(1, rounds)
     val startPhase = json.optInt("startPhase", 0).coerceIn(0, phases.size - 1)
     val phaseRemainingMs = json.optLong("phaseRemainingMs", -1L)
+    localJson = if (json.optBoolean("local", false)) json else null
+    activeMs = json.optLong("activeMs", 0L)
+    runStartUptime = SystemClock.uptimeMillis()
+    pausedLocal = null
 
     acquireWakeLock()
     val notification = buildNotification("Starting…", modeName)
@@ -130,7 +142,7 @@ class WearBreathSessionService : Service() {
       skipped = true
     }
     if (round > rounds) {
-      finishSession()
+      finishSession(completed = false)
       return
     }
     runPhase(
@@ -159,10 +171,13 @@ class WearBreathSessionService : Service() {
   ) {
     if (gen != generation) return // een nieuwere START (of STOP) heeft dit overruled
     if (round > totalRounds) {
-      finishSession()
+      finishSession(completed = true)
       return
     }
     val phase = phases[phaseIdx]
+    curRound = round
+    curIdx = phaseIdx
+    curTotalRounds = totalRounds
     val label = phaseDisplayLabel(phase.key)
 
     if (!silentStart) {
@@ -235,6 +250,15 @@ class WearBreathSessionService : Service() {
     val k = ((now - cur.phaseStartUptime).toFloat() / span).coerceIn(0f, 1f)
     val here = cur.levelFrom + (cur.levelTo - cur.levelFrom) * k
     level = here
+    localJson?.let { j ->
+      activeMs += now - runStartUptime
+      pausedLocal = JSONObject(j.toString())
+        .put("startRound", curRound)
+        .put("startPhase", curIdx)
+        .put("phaseRemainingMs", (cur.phaseEndUptime - now).coerceAtLeast(0L))
+        .put("activeMs", activeMs)
+        .toString()
+    }
     BreathSessionState.update(
       cur.copy(
         phaseLabel = "Paused", running = false, paused = true, levelFrom = here, levelTo = here, pausedProgress = k,
@@ -249,11 +273,16 @@ class WearBreathSessionService : Service() {
 
   private fun stopSession() {
     generation++ // annuleert elke geplande runPhase()
-    finishSession()
+    finishSession(completed = false)
   }
 
-  private fun finishSession() {
+  private fun finishSession(completed: Boolean) {
     handler?.removeCallbacksAndMessages(null)
+    localJson?.let { j ->
+      activeMs += SystemClock.uptimeMillis() - runStartUptime
+      logLocal(this, j, activeMs, if (completed) curTotalRounds else curRound, completed)
+      localJson = null
+    }
     try {
       vibrator?.cancel()
     } catch (_: Exception) {
@@ -345,5 +374,25 @@ class WearBreathSessionService : Service() {
     @Volatile
     var instance: WearBreathSessionService? = null
     const val EXTRA_SESSION_JSON = "sessionJson"
+
+    /** Gepauzeerde horloge-sessie (JSON met de plek erin) — hervatten doet
+     *  het horloge dan zelf, niet via de telefoon. */
+    @Volatile
+    var pausedLocal: String? = null
+
+    /** Horloge-sessie in de geschiedenis van de telefoon (CatalogStore). */
+    fun logLocal(context: Context, j: JSONObject, activeMs: Long, rounds: Int, completed: Boolean) {
+      if (activeMs < 10_000L) return
+      CatalogStore.logSession(
+        context,
+        JSONObject()
+          .put("state", j.optString("stateKey"))
+          .put("techniqueKey", j.optString("techniqueKey"))
+          .put("durSec", activeMs / 1000L)
+          .put("rounds", rounds.coerceAtLeast(1))
+          .put("completed", completed)
+          .put("endedAt", System.currentTimeMillis()),
+      )
+    }
   }
 }

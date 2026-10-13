@@ -6,6 +6,8 @@ package com.ubili.vibezcoreapp.wear
    BreathSessionService op de telefoon-kant van deze module. */
 
 import android.content.Intent
+import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 
@@ -32,6 +34,22 @@ class BreathListenerService : WearableListenerService() {
       )
     } catch (e: Exception) {
       android.util.Log.w("VZWear", "bringSessionToFront blocked: ${e.message}")
+    }
+  }
+
+  /* 13 okt 2026: de catalogus van de telefoon (CatalogStore) — bewaard
+     gegeven, komt ook binnen als het horloge even weg was. */
+  override fun onDataChanged(events: DataEventBuffer) {
+    try {
+      for (e in events) {
+        if (e.type != DataEvent.TYPE_CHANGED) continue
+        val item = e.dataItem
+        if (item.uri.path == CatalogStore.PATH_CATALOG) {
+          item.data?.let { CatalogStore.save(this, String(it, Charsets.UTF_8)) }
+        }
+      }
+    } catch (_: Exception) {
+      /* de buffer geeft Play Services zelf vrij na deze methode */
     }
   }
 

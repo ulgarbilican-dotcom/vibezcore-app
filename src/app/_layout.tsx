@@ -19,6 +19,7 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { useWatchCatalogSync } from '@/services/watch-catalog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurTargetView } from 'expo-blur';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -227,6 +228,9 @@ let lastPlanResyncDay = new Date().toDateString();
 let handledInitialUrl: string | null = null;
 
 export default function RootLayout() {
+  /* 13 okt 2026: het horloge zelfstandig — catalogus actueel houden en
+     horloge-sessies ophalen (services/watch-catalog.ts). */
+  useWatchCatalogSync();
   /* Huidig pad, voor de deeplink-ontdubbeling hieronder (audit 8 okt 2026). */
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);

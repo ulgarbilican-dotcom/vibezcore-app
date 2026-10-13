@@ -118,6 +118,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
           )
         },
       )
+      /* testcatalogus (enkel debug) — tot de telefoon hem stuurt */
+      "catalog" -> CatalogStore.save(
+        this,
+        """{"v":1,"amp":120,"breath":[{"key":"calm","name":"Calm Control","colorHex":"#B478FF","technique":"Box Breathing","techniqueKey":"box","locked":false,"phases":[{"key":"inhale","secs":4,"via":"Nose","pattern":[0,60]},{"key":"hold-in","secs":4,"via":"","pattern":[0,40]},{"key":"exhale","secs":4,"via":"Mouth","pattern":[0,60]},{"key":"hold-out","secs":4,"via":"","pattern":[0,40]}],"durations":[{"label":"5 min","minutes":5,"rounds":19},{"label":"10 min","minutes":10,"rounds":38}],"defaultIdx":0},{"key":"rest","name":"Sleep","colorHex":"#4AF0D4","technique":"4-7-8 Breathing","techniqueKey":"478","locked":true,"phases":[{"key":"inhale","secs":4,"via":"Nose","pattern":[0,60]}],"durations":[{"label":"4 cycles","minutes":1,"rounds":4}],"defaultIdx":0}]}""",
+      )
       "pause" -> {
         if (StateSessionState.current.active) {
           startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_PAUSE })
@@ -134,14 +139,25 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
   }
 
+  private val catalogListener: () -> Unit = { runOnUiThread { render() } }
+
   override fun onStart() {
     super.onStart()
+    CatalogStore.addListener(catalogListener)
+    CatalogStore.refresh(this)
     BreathSessionState.addListener(breathListener)
     StateSessionState.addListener(stateListener)
     BeatBus.add(beatListener)
   }
 
+  override fun onResume() {
+    super.onResume()
+    /* draaiende rand scrolt het startscherm */
+    idleContainer.requestFocus()
+  }
+
   override fun onStop() {
+    CatalogStore.removeListener(catalogListener)
     BreathSessionState.removeListener(breathListener)
     StateSessionState.removeListener(stateListener)
     BeatBus.remove(beatListener)
@@ -157,6 +173,17 @@ class MainActivity : androidx.activity.ComponentActivity() {
       return
     }
     val b = BreathSessionState.current
+    /* Horloge-sessie: hervatten doet het horloge zelf (13 okt 2026). */
+    val local = WearBreathSessionService.pausedLocal
+    if (b.paused && local != null) {
+      startForegroundService(
+        Intent(this, WearBreathSessionService::class.java).apply {
+          action = WearBreathSessionService.ACTION_START
+          putExtra(WearBreathSessionService.EXTRA_SESSION_JSON, local)
+        },
+      )
+      return
+    }
     PhoneLink.sendWatchAction(this, if (b.paused) "resume" else "pause", "breath")
     if (!b.paused && WearBreathSessionService.instance != null) {
       startService(Intent(this, WearBreathSessionService::class.java).apply { action = WearBreathSessionService.ACTION_PAUSE })
@@ -174,6 +201,17 @@ class MainActivity : androidx.activity.ComponentActivity() {
       } else {
         StateSessionState.update(StateSessionState.IDLE)
       }
+      return
+    }
+    WearBreathSessionService.pausedLocal?.let { raw ->
+      /* gepauzeerde horloge-sessie beëindigen: in de geschiedenis, klaar */
+      try {
+        val j = org.json.JSONObject(raw)
+        WearBreathSessionService.logLocal(this, j, j.optLong("activeMs", 0L), j.optInt("startRound", 1), false)
+      } catch (_: Exception) {
+      }
+      WearBreathSessionService.pausedLocal = null
+      BreathSessionState.update(BreathSessionState.Snapshot("Waiting for phone…", "", 0, 0, running = false))
       return
     }
     PhoneLink.sendWatchAction(this, "stop", "breath")
@@ -196,6 +234,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
       else -> {
         sessionContainer.visibility = View.GONE
         idleContainer.visibility = View.VISIBLE
+        overLockScreen(false)
+        renderHome()
       }
     }
   }
@@ -316,7 +356,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
      De telefoon stuurt de kleur van de toestand mee; Sleep komt als het
      lichte teal. */
   private val artCache = HashMap<Int, android.graphics.Bitmap>()
-  private fun artFor(colorHex: String): android.graphics.Bitmap? {
+  internal fun artFor(colorHex: String): android.graphics.Bitmap? {
     val res = when (colorHex.uppercase()) {
       "#F5A524" -> R.drawable.vz_art_sun
       "#3E9BFF" -> R.drawable.vz_art_flower
@@ -340,10 +380,152 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
   }
 
+  /* ── Startscherm (13 okt 2026 — het horloge zelfstandig) ─────────────
+     Zoals Apple's Ademhalen/Workout: bovenaan "Again" (laatste sessie, één
+     tik), daaronder de vijf Breathe-toestanden met hun figuur. Zonder
+     catalogus: uitleg om de telefoon-app één keer te openen. */
+  private var homeSignature = ""
+
+  private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
+
+  private fun renderHome() {
+    val entries = CatalogStore.breath(this)
+    val last = CatalogStore.last(this)
+    val sig = entries.joinToString { it.optString("key") + it.optBoolean("locked") + it.optString("technique") } + "|" + last
+    if (sig == homeSignature) return
+    homeSignature = sig
+    val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
+    list.removeAllViews()
+
+    list.addView(android.widget.ImageView(this).apply {
+      setImageResource(R.drawable.vz_vmark)
+      adjustViewBounds = true
+      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      layoutParams = android.widget.LinearLayout.LayoutParams(dp(22f), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = dp(10f)
+      }
+    })
+
+    if (entries.isEmpty()) {
+      list.addView(TextView(this).apply {
+        text = "Open VIBEZCORE on your phone once to set up your watch"
+        setTextColor(Color.parseColor("#F4F4F4"))
+        textSize = 15f
+        gravity = android.view.Gravity.CENTER
+        setPadding(dp(6f), dp(18f), dp(6f), 0)
+      })
+      return
+    }
+
+    /* Again — de laatste sessie, meteen starten */
+    if (last != null) {
+      val e = entries.firstOrNull { it.optString("key") == last.first }
+      if (e != null && !e.optBoolean("locked")) {
+        val durIdx = durationIndexFor(e, last.second)
+        val label = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: ""
+        list.addView(TextView(this).apply {
+          text = "${e.optString("name")} · $label"
+          setTextColor(Color.parseColor("#0A0A0A"))
+          textSize = 14f
+          typeface = android.graphics.Typeface.DEFAULT_BOLD
+          gravity = android.view.Gravity.CENTER
+          maxLines = 1
+          ellipsize = android.text.TextUtils.TruncateAt.END
+          setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_vz_play_small, 0, 0, 0)
+          compoundDrawablePadding = dp(6f)
+          setPadding(dp(14f), 0, dp(14f), 0)
+          background = GradientDrawable().apply {
+            cornerRadius = dp(26f).toFloat()
+            setColor(Color.WHITE)
+          }
+          contentDescription = "Start ${e.optString("name")}, $label"
+          layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(46f)).apply {
+            bottomMargin = dp(14f)
+          }
+          setOnClickListener { startLocalSession(this@MainActivity, e, durIdx) }
+        })
+      }
+    }
+
+    list.addView(TextView(this).apply {
+      text = "BREATHE"
+      setTextColor(Color.argb(128, 255, 255, 255))
+      textSize = 11f
+      letterSpacing = 0.14f
+      typeface = android.graphics.Typeface.DEFAULT_BOLD
+      layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = dp(6f)
+        marginStart = dp(8f)
+      }
+    })
+
+    for (e in entries) {
+      val row = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        setPadding(dp(10f), 0, dp(14f), 0)
+        background = GradientDrawable().apply {
+          cornerRadius = dp(26f).toFloat()
+          setColor(Color.parseColor("#1C1C1E"))
+        }
+        layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
+          bottomMargin = dp(6f)
+        }
+        isClickable = true
+        contentDescription = e.optString("name")
+        setOnClickListener {
+          startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")))
+        }
+      }
+      row.addView(android.widget.ImageView(this).apply {
+        setImageBitmap(artFor(e.optString("colorHex")))
+        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+        layoutParams = android.widget.LinearLayout.LayoutParams(dp(36f), dp(36f)).apply { marginEnd = dp(10f) }
+      })
+      row.addView(TextView(this).apply {
+        text = e.optString("name")
+        setTextColor(Color.WHITE)
+        textSize = 15f
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
+        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+      })
+      if (e.optBoolean("locked")) {
+        row.addView(android.widget.ImageView(this).apply { setImageResource(R.drawable.ic_vz_lock) })
+      }
+      list.addView(row)
+    }
+  }
+
+  private fun durationIndexFor(e: org.json.JSONObject, minutes: Int): Int {
+    val durs = e.optJSONArray("durations") ?: return 0
+    for (i in 0 until durs.length()) if (durs.optJSONObject(i)?.optInt("minutes") == minutes) return i
+    return e.optInt("defaultIdx", 0)
+  }
+
   private fun parse(hex: String): Int = try {
     Color.parseColor(hex)
   } catch (_: Exception) {
     Color.parseColor("#00A3A3")
   }
 
+}
+
+/** Start een Breathe-sessie op het horloge zelf, uit de catalogus. */
+internal fun startLocalSession(context: android.content.Context, e: org.json.JSONObject, durIdx: Int) {
+  val json = CatalogStore.sessionJson(context, e, durIdx)
+  val minutes = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optInt("minutes") ?: 0
+  CatalogStore.setLast(context, e.optString("key"), minutes)
+  context.startForegroundService(
+    Intent(context, WearBreathSessionService::class.java).apply {
+      action = WearBreathSessionService.ACTION_START
+      putExtra(WearBreathSessionService.EXTRA_SESSION_JSON, json)
+    },
+  )
+  context.startActivity(
+    Intent(context, MainActivity::class.java).addFlags(
+      Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+    ),
+  )
 }
