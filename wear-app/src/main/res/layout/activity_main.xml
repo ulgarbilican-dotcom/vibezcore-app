@@ -20,7 +20,7 @@
         android:fillViewport="true"
         android:focusable="true"
         android:focusableInTouchMode="true"
-        android:scrollbars="none">
+        android:scrollbars="vertical">
 
         <LinearLayout
             android:id="@+id/homeList"
@@ -34,15 +34,6 @@
             android:paddingBottom="0dp" />
     </ScrollView>
 
-    <!-- stipjes rechts: waar je bent op het startscherm (MainActivity) -->
-    <LinearLayout
-        android:id="@+id/homeDots"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end|center_vertical"
-        android:layout_marginEnd="16dp"
-        android:gravity="center_horizontal"
-        android:orientation="vertical" />
 
     <!-- Lopende of gepauzeerde sessie. 12 okt 2026 (operator: "cirkel groot,
          bediening aan de binnenkant"): de ring vult het scherm (zoals Apple's

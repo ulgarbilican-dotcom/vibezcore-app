@@ -4,7 +4,7 @@ package com.ubili.vibezcoreapp.wear
    Na de toestand: de technieken van die toestand, met hun niveau — zoals op
    de telefoon (breath-setup). De techniek die de telefoon voor deze
    gebruiker zou kiezen, staat gemarkeerd ("For you"). Daarna de tijd
-   (BreathSetupActivity). Draaiende rand scrolt. */
+   (terug naar de cirkel op het startscherm). Draaiende rand scrolt. */
 
 import android.content.Intent
 import android.graphics.Color
@@ -77,11 +77,8 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
         isClickable = true
         contentDescription = t.optString("name")
         setOnClickListener {
-          startActivity(
-            Intent(this@TechniqueActivity, BreathSetupActivity::class.java)
-              .putExtra("key", key)
-              .putExtra("tech", t.optString("key")),
-          )
+          /* kiezen = onthouden en terug naar de cirkel van deze toestand */
+          CatalogStore.setTechFor(this@TechniqueActivity, key ?: "", t.optString("key"))
           finish()
         }
       }

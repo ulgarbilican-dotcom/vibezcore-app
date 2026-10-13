@@ -49,7 +49,7 @@
             android:theme="@style/VzWearTheme" />
 
         <activity
-            android:name=".BreathSetupActivity"
+            android:name=".DurationActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 

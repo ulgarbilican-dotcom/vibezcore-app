@@ -132,6 +132,51 @@ object CatalogStore {
     return entry.optInt("selectedIdx", entry.optInt("recommendedIdx", 0))
   }
 
+  /** Gekozen duur per toestand (met de techniek waarvoor ze gekozen werd). */
+  fun setDurationFor(context: Context, stateKey: String, techKey: String, minutes: Int) {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val m = try {
+      JSONObject(prefs.getString("durByState", "{}") ?: "{}")
+    } catch (_: Exception) {
+      JSONObject()
+    }
+    m.put(stateKey, JSONObject().put("tech", techKey).put("minutes", minutes))
+    prefs.edit().putString("durByState", m.toString()).apply()
+  }
+
+  /** Index van de duur die klaarstaat voor deze toestand+techniek: eigen
+   *  keuze op het horloge, anders de laatste sessie, anders het advies. */
+  fun durationIdx(context: Context, e: JSONObject): Int {
+    val durs = e.optJSONArray("durations") ?: return 0
+    fun idxOf(minutes: Int): Int {
+      for (i in 0 until durs.length()) if (durs.optJSONObject(i)?.optInt("minutes") == minutes) return i
+      return -1
+    }
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val chosen = try {
+      JSONObject(prefs.getString("durByState", "{}") ?: "{}").optJSONObject(e.optString("key"))
+    } catch (_: Exception) {
+      null
+    }
+    if (chosen != null && chosen.optString("tech") == e.optString("techniqueKey")) {
+      val i = idxOf(chosen.optInt("minutes"))
+      if (i >= 0) return i
+    }
+    last(context)?.let { (k, minutes) ->
+      if (k == e.optString("key")) {
+        val i = idxOf(minutes)
+        if (i >= 0) return i
+      }
+    }
+    return e.optInt("defaultIdx", 0)
+  }
+
+  /** Alles wat het startscherm toont, voor de "is er iets veranderd"-check. */
+  fun homeSignature(context: Context): String {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    return (prefs.getString("durByState", "") ?: "") + (prefs.getString("techByState", "") ?: "") + (prefs.getString(KEY_LAST, "") ?: "")
+  }
+
   fun lastTech(context: Context): String = try {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LAST, null)
       ?.let { JSONObject(it).optString("tech", "") } ?: ""

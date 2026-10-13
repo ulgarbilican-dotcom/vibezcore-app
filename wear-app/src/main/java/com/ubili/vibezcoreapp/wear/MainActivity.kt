@@ -60,7 +60,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     findViewById<View>(R.id.idleContainer).setOnScrollChangeListener { v, _, _, _, _ ->
       v.removeCallbacks(snapRunnable)
       v.postDelayed(snapRunnable, 140)
-      updateDots()
+
     }
     idleContainer = findViewById(R.id.idleContainer)
     sessionContainer = findViewById(R.id.sessionContainer)
@@ -237,7 +237,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
       else -> {
         sessionContainer.visibility = View.GONE
         idleContainer.visibility = View.VISIBLE
-        findViewById<View>(R.id.homeDots).visibility = View.VISIBLE
         overLockScreen(false)
         renderHome()
       }
@@ -333,7 +332,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun showSession(title: String, colorHex: String, paused: Boolean) {
     idleContainer.visibility = View.GONE
-    findViewById<View>(R.id.homeDots).visibility = View.GONE
     sessionContainer.visibility = View.VISIBLE
     val c = parse(colorHex)
     // Sleep: het lichte teal, zoals de ring in de app
@@ -396,7 +394,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun renderHome() {
     val entries = CatalogStore.breath(this)
     val last = CatalogStore.last(this)
-    val sig = entries.joinToString { it.optString("key") + it.optBoolean("locked") + it.optString("technique") } + "|" + last
+    val sig = entries.joinToString { it.optString("key") + it.optBoolean("locked") + it.optString("technique") } + "|" + CatalogStore.homeSignature(this)
     if (sig == homeSignature) return
     homeSignature = sig
     val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
@@ -487,8 +485,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       val color = parse(e0.optString("colorHex"))
       val e = CatalogStore.withTechnique(e0, e0.optJSONArray("techniques")?.optJSONObject(CatalogStore.selectedIdx(this, e0))?.optString("key"))
       val durs = e.optJSONArray("durations")
-      var durIdx = e.optInt("defaultIdx", 0)
-      if (last != null && last.first == e.optString("key")) durIdx = durationIndexFor(e, last.second)
+      val durIdx = CatalogStore.durationIdx(this, e)
       val locked = e.optBoolean("locked")
 
       val page = android.widget.FrameLayout(this).apply {
@@ -554,7 +551,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         gravity = android.view.Gravity.CENTER
         contentDescription = "Duration ${text}. Tap to change."
         setOnClickListener {
-          startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")).putExtra("tech", e.optString("techniqueKey")))
+          startActivity(Intent(this@MainActivity, DurationActivity::class.java).putExtra("key", e.optString("key")))
         }
       }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
         topMargin = dp(2f)
@@ -587,49 +584,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
       }
       list.addView(page)
     }
-    buildDots()
   }
 
-  /* Stipjes rechts: één per pagina, de huidige helder (Wear OS-patroon). */
+  /* Geen eigen stipjes meer (operator 13 okt 2026): Wear OS tekent zelf een
+     gebogen scrollbalk langs de rand terwijl je scrollt — die kent elke
+     gebruiker (idleContainer, android:scrollbars). */
   private fun pages(): List<View> {
     val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
     return (0 until list.childCount).map { list.getChildAt(it) }.filter { it.tag == "page" }
-  }
-
-  private fun buildDots() {
-    val dots = findViewById<android.widget.LinearLayout>(R.id.homeDots)
-    dots.removeAllViews()
-    val n = pages().size
-    if (n < 2) return
-    repeat(n) {
-      dots.addView(View(this).apply {
-        background = GradientDrawable().apply {
-          shape = GradientDrawable.OVAL
-          setColor(Color.WHITE)
-        }
-      }, android.widget.LinearLayout.LayoutParams(dp(5f), dp(5f)).apply {
-        topMargin = dp(3f)
-        bottomMargin = dp(3f)
-      })
-    }
-    updateDots()
-  }
-
-  private fun updateDots() {
-    val dots = findViewById<android.widget.LinearLayout>(R.id.homeDots)
-    val scroll = idleContainer as? android.widget.ScrollView ?: return
-    val center = scroll.scrollY + scroll.height / 2
-    val ps = pages()
-    var cur = 0
-    var best = Int.MAX_VALUE
-    ps.forEachIndexed { i, c ->
-      val d = kotlin.math.abs(c.top + c.height / 2 - center)
-      if (d < best) {
-        best = d
-        cur = i
-      }
-    }
-    for (i in 0 until dots.childCount) dots.getChildAt(i).alpha = if (i == cur) 1f else 0.3f
   }
 
   /** Na het scrollen: de dichtstbijzijnde toestand mooi in het midden. */

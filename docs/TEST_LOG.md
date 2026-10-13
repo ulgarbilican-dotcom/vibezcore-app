@@ -258,6 +258,10 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W28 | Draaiende rand op het kies-scherm verandert de duur | per tik één stap | ⏳ operator (niet via adb te testen) |
 | W29 | Techniek onthouden per toestand: kies op telefoon of horloge een andere techniek → volgende keer staat die klaar op beide; "For you" blijft het advies van het niveau; horloge toont "Last used" + rand | zoals beschreven | ⏳ (horloge viel weg bij de test) |
 | W30 | Ander ervaringsniveau kiezen (onboarding / Set your routine / Too hard) → onthouden technieken terug naar het niveau | ok | ⏳ |
+| W31 | Horloge startscherm: per toestand een cirkel (ring in toestandskleur, naam, techniek ⌄, minuten, Start), verticaal bladeren, Wear OS-scrollbalk | ok | ✅ 13 okt (Claude) |
+| W32 | Tik op minuten → lijst met duurstappen (Recommended, huidige omrand) → terug met de gekozen duur | 3 → 5 min | ✅ 13 okt (Claude) |
+| W33 | Tik op techniek → lijst (For you / Last used) → terug met de gekozen techniek en zijn duur | Equal → Diaphragmatic 3 min | ✅ 13 okt (Claude) |
+| W34 | Start vanuit de cirkel = meteen ademen met wat klaarstaat | 1 tik | ⏳ operator |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 
