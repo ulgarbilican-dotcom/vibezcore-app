@@ -422,23 +422,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
          kleur van de state") de hele pagina is een zachte gloed in de kleur
          van de toestand — licht rond de figuur, naar zwart aan de rand.
          Bij het scrollen schuift de ene kleur zo in de andere. */
-      page.background = GradientDrawable().apply {
-        gradientType = GradientDrawable.RADIAL_GRADIENT
-        gradientRadius = pageH * 0.62f
-        setGradientCenter(0.5f, 0.42f)
-        colors = intArrayOf(
-          Color.argb(120, Color.red(c), Color.green(c), Color.blue(c)),
-          Color.argb(40, Color.red(c), Color.green(c), Color.blue(c)),
-          Color.BLACK,
-        )
-      }
+      page.background = stateGlow(this, e.optString("colorHex"))
       val figure = android.widget.ImageView(this).apply {
         setImageBitmap(trimmedArt(this@MainActivity, e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
       }
       // alle figuren in hetzelfde vak, zonder lege rand = even groot
-      val sz = dp(118f)
+      val sz = dp(118f * artOpticalScale(e.optString("colorHex")))
       page.addView(figure, android.widget.LinearLayout.LayoutParams(sz, sz))
       breathe(figure)
       page.addView(TextView(this).apply {

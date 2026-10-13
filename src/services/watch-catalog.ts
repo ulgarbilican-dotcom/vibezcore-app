@@ -18,6 +18,7 @@ import { breathAmplitude, phaseHapticPattern } from '@/services/breath-haptics';
 import { useHapticStrength } from '@/services/haptic-strength-pref';
 import { levelForTechnique, personalRecommendedMinutes, techniqueForLevel } from '@/utils/breath-level';
 import { addBreathSession, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
+import { durationOptionsFor } from '@/utils/duration-options';
 import { getSetting, setSetting, useSetting } from '@/utils/settings';
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -45,6 +46,7 @@ function techForWatch(key: BreathStateKey, base: BreathState['techniques'][numbe
   let def = personal != null ? durations.findIndex((d) => d.minutes === personal) : -1;
   if (def < 0) def = durations.findIndex((d) => d.recommended);
   if (def < 0) def = Math.min(st.defaultDuration, durations.length - 1);
+  const watchMinutes = durationOptionsFor(key, base.key).options.map((o) => o.value);
   return {
     key: tech.key,
     name: tech.name,
@@ -55,12 +57,19 @@ function techForWatch(key: BreathStateKey, base: BreathState['techniques'][numbe
       via: p.via ?? '',
       pattern: phaseHapticPattern(p.key, p.secs),
     })),
-    durations: durations.map((d) => ({
-      label: d.cycles ? `${d.cycles} cycles` : `${d.minutes} min`,
-      minutes: d.minutes,
-      rounds: d.cycles ?? roundsFor(tech, d.minutes),
-    })),
-    defaultIdx: Math.max(0, def),
+    /* Operator 13 okt 2026 ("waarom per 5 minuten? in de app kan het per
+       minuut"): dezelfde keuzes als het instelscherm van de telefoon
+       (duration-options.ts) — elke hele minuut, cyclus-technieken enkel hun
+       vaste stappen. */
+    durations: watchMinutes.map((m) => {
+      const preset = durations.find((d) => d.minutes === m);
+      return {
+        label: preset?.cycles ? `${preset.cycles} cycles` : `${m} min`,
+        minutes: m,
+        rounds: preset?.cycles ?? roundsFor(tech, m),
+      };
+    }),
+    defaultIdx: Math.max(0, watchMinutes.indexOf(durations[Math.max(0, def)]?.minutes ?? -1)),
   };
 }
 

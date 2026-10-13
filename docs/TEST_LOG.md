@@ -266,6 +266,9 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W36 | Tik op toestand → instellingen: figuur, Recommended/Last used + techniek, Duration, witte Start; terug uit een lijst = Start blijft in beeld | Boost: 3 → 5 min, Equal → Diaphragmatic | ✅ 13 okt (Claude) |
 | W37 | Start op het instellingenscherm → sessie | 1 tik | ⏳ operator |
 | W38 | Alle vijf figuren even groot op startscherm en instellingenscherm (lege rand per afbeelding gemeten en weggesneden) | zon, bloem, lotus, kristal, boom | ✅ 13 okt (Claude) |
+| W39 | Doorklikken = één geheel: instellingen, techniek- en duurlijst krijgen dezelfde gloed als de toestandpagina; geen figuur meer op het instellingenscherm; gloed en accenten in de kleur van de figuur zelf (Sleep-groen = boom) | Calm Control | ✅ 13 okt (Claude) |
+| W40 | Duur op het horloge per minuut, zoals de telefoon (duration-options.ts); cyclus-technieken vaste stappen; lijst opent op de huidige keuze | telefoon-app openen om de nieuwe catalogus te sturen | ⏳ |
+| W41 | Figuren optisch even groot: Sharp Focus-bol iets kleiner, Boost-zon iets groter | | ⏳ install |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 

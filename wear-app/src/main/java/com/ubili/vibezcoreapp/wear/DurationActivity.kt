@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -35,16 +36,12 @@ class DurationActivity : androidx.activity.ComponentActivity() {
       finish()
       return
     }
-    val color = try {
-      Color.parseColor(e.optString("colorHex"))
-    } catch (_: Exception) {
-      Color.parseColor("#00A3A3")
-    }
+    val color = figureColor(this, e.optString("colorHex"))
     val current = CatalogStore.durationIdx(this, e)
     val recommended = e.optInt("defaultIdx", 0)
 
     val scroll = ScrollView(this).apply {
-      setBackgroundColor(Color.BLACK)
+      background = stateGlow(this@DurationActivity, e.optString("colorHex"), 0.3f)
       isVerticalScrollBarEnabled = true
       isFocusable = true
       isFocusableInTouchMode = true
@@ -66,6 +63,7 @@ class DurationActivity : androidx.activity.ComponentActivity() {
       bottomMargin = dp(10f)
     })
 
+    var currentRow: View? = null
     for (i in 0 until durs.length()) {
       val d = durs.optJSONObject(i) ?: continue
       val row = LinearLayout(this).apply {
@@ -73,7 +71,7 @@ class DurationActivity : androidx.activity.ComponentActivity() {
         gravity = Gravity.CENTER
         background = GradientDrawable().apply {
           cornerRadius = dp(24f).toFloat()
-          setColor(Color.parseColor("#1C1C1E"))
+          setColor(Color.argb(36, 255, 255, 255))
           if (i == current) setStroke(dp(1.5f).coerceAtLeast(1), Color.argb(170, Color.red(color), Color.green(color), Color.blue(color)))
         }
         minimumHeight = dp(50f)
@@ -102,9 +100,19 @@ class DurationActivity : androidx.activity.ComponentActivity() {
       list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
         bottomMargin = dp(6f)
       })
+      if (i == current) currentRow = row
     }
 
     setContentView(scroll)
     scroll.requestFocus()
+    /* per minuut is de lijst lang: open op je huidige keuze, in het midden */
+    currentRow?.let { row ->
+      scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+        override fun onGlobalLayout() {
+          scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+          scroll.scrollTo(0, (row.top + row.height / 2 - scroll.height / 2).coerceAtLeast(0))
+        }
+      })
+    }
   }
 }

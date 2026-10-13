@@ -304,6 +304,73 @@ internal fun trimmedArt(context: android.content.Context, colorHex: String): and
   }
 }
 
+private val figureColorCache = HashMap<Int, Int>()
+
+/** De kleur van de figuur zelf (gemiddelde van haar oplichtende pixels).
+ *  Operator 13 okt: "kleur groen is anders dan groen van figuur" — de gloed
+ *  en accenten op het horloge volgen de figuur, zodat alles één geheel is. */
+internal fun figureColor(context: android.content.Context, colorHex: String): Int {
+  val res = artResFor(colorHex)
+  return figureColorCache.getOrPut(res) {
+    val bm = trimmedArt(context, colorHex)
+    val w = bm.width
+    val h = bm.height
+    val px = IntArray(w * h)
+    bm.getPixels(px, 0, w, 0, 0, w, h)
+    var rs = 0L
+    var gs = 0L
+    var bs = 0L
+    var n = 0L
+    for (i in px.indices step 3) {
+      val c = px[i]
+      val r = (c shr 16) and 0xff
+      val g = (c shr 8) and 0xff
+      val b = c and 0xff
+      if (maxOf(r, g, b) > 90) {
+        rs += r
+        gs += g
+        bs += b
+        n++
+      }
+    }
+    if (n == 0L) return@getOrPut android.graphics.Color.WHITE
+    // even helder maken: de tint van de figuur, op volle helderheid
+    val hsv = FloatArray(3)
+    android.graphics.Color.RGBToHSV((rs / n).toInt(), (gs / n).toInt(), (bs / n).toInt(), hsv)
+    hsv[2] = 1f
+    android.graphics.Color.HSVToColor(hsv)
+  }
+}
+
+/** Dezelfde gloed op elke pagina van een toestand (startpagina, instellingen,
+ *  lijsten): licht in het midden, naar zwart aan de rand. */
+internal fun stateGlow(context: android.content.Context, colorHex: String, centerY: Float = 0.42f): android.graphics.drawable.GradientDrawable {
+  val c = figureColor(context, colorHex)
+  val r = android.graphics.Color.red(c)
+  val g = android.graphics.Color.green(c)
+  val b = android.graphics.Color.blue(c)
+  return android.graphics.drawable.GradientDrawable().apply {
+    gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+    gradientRadius = context.resources.displayMetrics.heightPixels * 0.62f
+    setGradientCenter(0.5f, centerY)
+    colors = intArrayOf(
+      android.graphics.Color.argb(105, r, g, b),
+      android.graphics.Color.argb(36, r, g, b),
+      android.graphics.Color.BLACK,
+    )
+  }
+}
+
+/** Optische correctie: een volle bol (de bloem van Sharp Focus) oogt groter
+ *  dan een open figuur in hetzelfde vak. */
+internal fun artOpticalScale(colorHex: String): Float = when (colorHex.uppercase()) {
+  "#3E9BFF" -> 0.86f
+  /* de zon: de dunne stralen tellen mee in het vak, maar het oog ziet de
+     ring — iets groter (operator: "is boost kleiner dan de rest?") */
+  "#F5A524" -> 1.12f
+  else -> 1f
+}
+
 /** Hoe groot elke figuur getekend wordt zodat ze even groot ogen: elke
  *  afbeelding heeft een andere lege rand (zon en bloem veel, lotus iets
  *  minder maar laag in het beeld, kristal weinig, de boom vult bijna alles). */
