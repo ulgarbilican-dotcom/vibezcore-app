@@ -15,9 +15,7 @@ import android.util.AttributeSet
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -65,9 +63,52 @@ class DurationDialView @JvmOverloads constructor(
   }
   private val rect = RectF()
 
+  /* 13 okt 2026 (operator: "kan de cirkel bij het kiezen ook vollopen?"):
+     water in de kleur van de toestand, zoals het duurscherm op de telefoon
+     (LiquidWave) — hoe langer de duur, hoe hoger; stijgt/zakt vloeiend. */
+  private val wavePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+  private val wave = android.graphics.Path()
+  private val clip = android.graphics.Path()
+  private var levelShown = -1f
+  private var levelFrom = 0f
+  private var levelStartMs = 0L
+
+  private fun targetLevel() = 0.18f + 0.62f * (index + 1f) / steps
+
+  private fun currentLevel(now: Long): Float {
+    val target = targetLevel()
+    if (levelShown < 0f) {
+      levelShown = target
+      levelFrom = target
+    }
+    val k = ((now - levelStartMs) / 420f).coerceIn(0f, 1f)
+    val e = 1f - (1f - k) * (1f - k) * (1f - k)
+    levelShown = levelFrom + (target - levelFrom) * e
+    return levelShown
+  }
+
+  private fun drawWave(canvas: Canvas, left: Float, size: Float, baseY: Float, amp: Float, now: Long, durMs: Long, alpha: Int) {
+    val shift = (now % durMs) / durMs.toFloat() * size
+    val x0 = left - shift
+    wave.reset()
+    wave.moveTo(x0, baseY)
+    for (i in 0 until 4) {
+      val sx = x0 + size * 0.5f * i
+      wave.cubicTo(sx + size * 0.25f, baseY - amp, sx + size * 0.25f, baseY + amp, sx + size * 0.5f, baseY)
+    }
+    wave.lineTo(x0 + size * 2f, baseY + size)
+    wave.lineTo(x0, baseY + size)
+    wave.close()
+    wavePaint.color = color
+    wavePaint.alpha = alpha
+    canvas.drawPath(wave, wavePaint)
+  }
+
   fun setIndex(i: Int, fromUser: Boolean) {
     val n = i.coerceIn(0, steps - 1)
     if (n == index) return
+    levelFrom = if (levelShown >= 0f) levelShown else targetLevel()
+    levelStartMs = android.os.SystemClock.uptimeMillis()
     index = n
     if (fromUser) {
       performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -88,6 +129,21 @@ class DurationDialView @JvmOverloads constructor(
     val cy = height / 2f
     val r = radius()
     rect.set(cx - r, cy - r, cx + r, cy + r)
+
+    // water binnen de cirkel
+    val now = android.os.SystemClock.uptimeMillis()
+    val size = 2f * r
+    val level = currentLevel(now)
+    val waterY = cy + r - size * level
+    canvas.save()
+    clip.reset()
+    clip.addCircle(cx, cy, r - 2f * density, android.graphics.Path.Direction.CW)
+    canvas.clipPath(clip)
+    val bright = Color.red(color) + Color.green(color) + Color.blue(color) > 600
+    drawWave(canvas, cx - r, size, waterY + size * 0.027f, size * 0.040f, now, 5200L, if (bright) 26 else 38)
+    drawWave(canvas, cx - r, size, waterY - size * 0.018f, size * 0.031f, now, 3600L, if (bright) 38 else 56)
+    canvas.restore()
+
     canvas.drawCircle(cx, cy, r, track)
 
     progress.color = color
@@ -104,34 +160,49 @@ class DurationDialView @JvmOverloads constructor(
     // bolletje aan het einde van de gekozen duur
     val a = Math.toRadians((-90f + sweep).toDouble())
     canvas.drawCircle(cx + (r * cos(a)).toFloat(), cy + (r * sin(a)).toFloat(), 5f * density, knob)
+    postInvalidateOnAnimation() // het water golft
   }
 
+  /* 13 okt 2026 (operator: "de ring is heel gevoelig, gaat te ver en te
+     snel"): de ring ligt tegen de rand van het scherm, en daar zitten de
+     systeemgebaren van Wear OS (vanaf boven = snelmenu, vanaf links =
+     terug) — vegen langs de ring botste daarmee. Daarom: draaien aan de
+     rand/kroon is de hoofdmanier; met de vinger veeg je in het scherm
+     omhoog (langer) of omlaag (korter), één stap per korte veeg. De ring
+     toont enkel de keuze. */
+  private var lastY = 0f
+  private var accY = 0f
+  private var dragging = false
+
   override fun onTouchEvent(event: MotionEvent): Boolean {
-    val cx = width / 2f
-    val cy = height / 2f
-    val dx = event.x - cx
-    val dy = event.y - cy
-    val onRing = hypot(dx, dy) > radius() - 34f * density
+    val step = 34f * density
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
-        if (!onRing) return false
-        parent?.requestDisallowInterceptTouchEvent(true)
-        pick(dx, dy)
+        dragging = true
+        lastY = event.y
+        accY = 0f
         return true
       }
       MotionEvent.ACTION_MOVE -> {
-        pick(dx, dy)
+        if (!dragging) return false
+        accY += lastY - event.y // omhoog = positief = langer
+        lastY = event.y
+        if (kotlin.math.abs(accY) > 8f * density) parent?.requestDisallowInterceptTouchEvent(true)
+        while (accY >= step) {
+          setIndex(index + 1, fromUser = true)
+          accY -= step
+        }
+        while (accY <= -step) {
+          setIndex(index - 1, fromUser = true)
+          accY += step
+        }
+        return true
+      }
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+        dragging = false
         return true
       }
     }
     return true
-  }
-
-  private fun pick(dx: Float, dy: Float) {
-    // hoek met de klok mee vanaf boven, 0..360
-    var deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 90f
-    if (deg < 0) deg += 360f
-    val i = ((deg / 360f) * steps).toInt().coerceIn(0, steps - 1)
-    setIndex(i, fromUser = true)
   }
 }

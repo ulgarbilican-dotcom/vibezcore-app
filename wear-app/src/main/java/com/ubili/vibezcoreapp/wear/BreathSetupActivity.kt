@@ -96,15 +96,23 @@ class BreathSetupActivity : androidx.activity.ComponentActivity() {
 
     val manyTechs = (e.optJSONArray("techniques")?.length() ?: 0) > 1
     col.addView(TextView(this).apply {
-      text = if (manyTechs) "${e.optString("technique")}  ›" else e.optString("technique")
-      setTextColor(Color.argb(170, 255, 255, 255))
+      text = e.optString("technique")
+      setTextColor(Color.argb(210, 255, 255, 255))
       textSize = 11f
       maxLines = 1
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
       if (manyTechs) {
-        /* tik = andere techniek kiezen */
-        setPadding(dp(10f), dp(6f), dp(10f), dp(6f))
+        /* tik = andere techniek kiezen — als keuzeknopje (operator 13 okt
+           2026: "enkel de laatst gekozen techniek tonen, met een dropdown") */
+        setPadding(dp(12f), dp(5f), dp(10f), dp(5f))
+        setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_chevron_down, 0)
+        compoundDrawablePadding = dp(4f)
+        background = GradientDrawable().apply {
+          cornerRadius = dp(14f).toFloat()
+          setColor(Color.argb(30, 255, 255, 255))
+          setStroke(dp(1f).coerceAtLeast(1), Color.argb(40, 255, 255, 255))
+        }
         contentDescription = "Technique ${e.optString("technique")}. Tap to change."
         setOnClickListener {
           startActivity(Intent(this@BreathSetupActivity, TechniqueActivity::class.java).putExtra("key", e.optString("key")))
