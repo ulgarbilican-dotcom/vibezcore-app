@@ -56,6 +56,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     lifecycle.addObserver(androidx.wear.ambient.AmbientLifecycleObserver(this, ambientCallback))
+    /* startscherm: per toestand vastklikken na het scrollen */
+    findViewById<View>(R.id.idleContainer).setOnScrollChangeListener { v, _, _, _, _ ->
+      v.removeCallbacks(snapRunnable)
+      v.postDelayed(snapRunnable, 140)
+    }
     idleContainer = findViewById(R.id.idleContainer)
     sessionContainer = findViewById(R.id.sessionContainer)
     nameDot = findViewById(R.id.nameDot)
@@ -452,58 +457,75 @@ class MainActivity : androidx.activity.ComponentActivity() {
       }
     }
 
-    list.addView(TextView(this).apply {
-      text = "BREATHE"
-      setTextColor(Color.argb(128, 255, 255, 255))
-      textSize = 11f
-      letterSpacing = 0.14f
-      typeface = android.graphics.Typeface.DEFAULT_BOLD
-      layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-        bottomMargin = dp(6f)
-        marginStart = dp(8f)
-      }
-    })
-
+    /* 13 okt 2026 (operator: "de state-cirkel horizontaal laten scrollen?"):
+       één toestand per scherm, de figuur groot — maar VERTICAAL (een veeg
+       naar rechts is op Wear OS "terug"). De volgende figuur piept onderaan
+       in beeld, zodat je ziet dat er meer is; het scherm klikt per
+       toestand vast (snapHome). Rand/kroon bladert ook. */
+    val pageH = (resources.displayMetrics.heightPixels * 0.70f).toInt()
     for (e in entries) {
-      val row = android.widget.LinearLayout(this).apply {
-        orientation = android.widget.LinearLayout.HORIZONTAL
-        gravity = android.view.Gravity.CENTER_VERTICAL
-        setPadding(dp(10f), 0, dp(14f), 0)
-        background = GradientDrawable().apply {
-          cornerRadius = dp(26f).toFloat()
-          setColor(Color.parseColor("#1C1C1E"))
-        }
-        layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
-          bottomMargin = dp(6f)
-        }
+      val page = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.VERTICAL
+        gravity = android.view.Gravity.CENTER
+        tag = "page"
         isClickable = true
         contentDescription = e.optString("name")
         setOnClickListener {
-          /* 13 okt 2026 (operator: "moet de gebruiker elke keer de techniek
-             doorlopen?"): nee — meteen naar de tijd, met de techniek die
-             klaarstaat; tik op de technieknaam daar om te wisselen. */
           startActivity(Intent(this@MainActivity, BreathSetupActivity::class.java).putExtra("key", e.optString("key")))
         }
+        layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH)
       }
-      row.addView(android.widget.ImageView(this).apply {
+      page.addView(android.widget.ImageView(this).apply {
         setImageBitmap(artFor(e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-        layoutParams = android.widget.LinearLayout.LayoutParams(dp(32f), dp(32f)).apply { marginEnd = dp(8f) }
-      })
-      row.addView(TextView(this).apply {
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      }, android.widget.LinearLayout.LayoutParams(dp(112f), dp(112f)))
+      page.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 14f
+        textSize = 17f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
-        maxLines = 2
-        ellipsize = android.text.TextUtils.TruncateAt.END
-        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        gravity = android.view.Gravity.CENTER
+        if (e.optBoolean("locked")) {
+          setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_lock, 0)
+          compoundDrawablePadding = dp(6f)
+        }
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = dp(6f)
       })
-      if (e.optBoolean("locked")) {
-        row.addView(android.widget.ImageView(this).apply { setImageResource(R.drawable.ic_vz_lock) })
-      }
-      list.addView(row)
+      val tech = CatalogStore.withTechnique(e, e.optJSONArray("techniques")?.optJSONObject(CatalogStore.selectedIdx(this, e))?.optString("key"))
+      page.addView(TextView(this).apply {
+        text = tech.optString("technique")
+        setTextColor(Color.argb(140, 255, 255, 255))
+        textSize = 11f
+        gravity = android.view.Gravity.CENTER
+      })
+      list.addView(page)
     }
+  }
+
+  /** Na het scrollen: de dichtstbijzijnde toestand mooi in het midden. */
+  private val snapRunnable = Runnable { snapHome() }
+
+  private fun snapHome() {
+    val scroll = idleContainer as? android.widget.ScrollView ?: return
+    val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
+    val centerY = scroll.scrollY + scroll.height / 2
+    var best: View? = null
+    var bestD = Int.MAX_VALUE
+    for (i in 0 until list.childCount) {
+      val c = list.getChildAt(i)
+      if (c.tag != "page") continue
+      val d = kotlin.math.abs(c.top + c.height / 2 - centerY)
+      if (d < bestD) {
+        bestD = d
+        best = c
+      }
+    }
+    val target = best ?: return
+    // het "Again"-blok bovenaan mag gewoon in beeld blijven
+    if (scroll.scrollY < target.top - scroll.height / 2) return
+    scroll.smoothScrollTo(0, target.top + target.height / 2 - scroll.height / 2)
   }
 
   private fun durationIndexFor(e: org.json.JSONObject, minutes: Int): Int {
