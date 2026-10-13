@@ -90,13 +90,13 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
         maxLines = 2
       })
       row.addView(TextView(this).apply {
-        val level = t.optString("level")
-        val tags = listOfNotNull(
-          level,
-          if (i == recommended) "For you" else null,
-          if (i == selected && selected != recommended) "Last used" else null,
-        )
-        text = tags.joinToString(" · ")
+        // één regel: waarom deze klaarstaat, anders het niveau
+        text = when {
+          i == recommended -> "Recommended"
+          i == selected -> "Last used"
+          else -> t.optString("level")
+        }
+        maxLines = 1
         setTextColor(if (i == recommended || i == selected) color else Color.argb(140, 255, 255, 255))
         textSize = 11f
       })

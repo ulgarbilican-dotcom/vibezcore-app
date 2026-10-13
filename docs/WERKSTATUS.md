@@ -93,6 +93,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 13 okt 2026 (middag): horloge zelfstandig, stap 1 — services/watch-catalog.ts zet een catalogus op het horloge (Data Layer, /vibezcore/catalog); horloge: startscherm (Again + Breathe-lijst), BreathSetupActivity (duur via rand/−/+, Start), lokale sessies pauzeren/hervatten op het horloge, in de geschiedenis via /vibezcore/watchlog. Breathwork-sterkte als echte kracht (BREATH_AMP). Mediamelding van State Control/Breath op de telefoon setLocalOnly (geen Samsung-mediabediening op het horloge). Native → telefoonbuild geïnstalleerd op de A16. Volgende: State Control op het horloge zelf (stap 2), Apple Watch.
 
+- 13 okt 2026 (avond): horloge-flow vastgelegd met de operator — 1) startscherm = per toestand één pagina met enkel grote ademende figuur + naam, de pagina gloeit in de toestandskleur, verticaal bladeren klikt per toestand vast; 2) tik = StateActivity (techniek Recommended/Last used, duur, witte Start — de enige start); 3) sessie. "Again" en V-merk van het startscherm gehaald. Tests W35–W37.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

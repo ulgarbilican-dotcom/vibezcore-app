@@ -26,6 +26,7 @@ import android.widget.TextView
 
 class StateActivity : androidx.activity.ComponentActivity() {
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
+  private var scrollView: ScrollView? = null
 
   override fun onResume() {
     super.onResume()
@@ -52,6 +53,8 @@ class StateActivity : androidx.activity.ComponentActivity() {
     val locked = e.optBoolean("locked")
     val manyTechs = (e.optJSONArray("techniques")?.length() ?: 0) > 1
 
+    // terug uit een keuzelijst: blijf waar je was (Start in beeld)
+    val keepY = scrollView?.scrollY ?: 0
     val scroll = ScrollView(this).apply {
       setBackgroundColor(Color.BLACK)
       isFocusable = true
@@ -60,7 +63,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(18f), dp(24f), dp(30f))
+      setPadding(dp(24f), dp(10f), dp(24f), dp(34f))
     }
     scroll.addView(col)
 
@@ -68,17 +71,17 @@ class StateActivity : androidx.activity.ComponentActivity() {
     val figure = ImageView(this).apply {
       setImageBitmap(android.graphics.BitmapFactory.decodeResource(resources, artResFor(e.optString("colorHex"))))
       scaleType = ImageView.ScaleType.FIT_CENTER
-      val pad = dp(8f)
+      val pad = dp(4f)
       setPadding(pad, pad, pad, pad)
       background = GradientDrawable().apply {
         shape = GradientDrawable.OVAL
         gradientType = GradientDrawable.RADIAL_GRADIENT
-        gradientRadius = dp(36f).toFloat()
+        gradientRadius = dp(54f).toFloat()
         colors = intArrayOf(Color.argb(100, Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT)
       }
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    col.addView(figure, LinearLayout.LayoutParams(dp(72f), dp(72f)))
+    col.addView(figure, LinearLayout.LayoutParams(dp(104f), dp(104f)))
     breatheView(figure)
 
     col.addView(TextView(this).apply {
@@ -108,7 +111,10 @@ class StateActivity : androidx.activity.ComponentActivity() {
         contentDescription = "$label: $value" + (if (tag != null) ", $tag" else "") + (if (onTap != null) ". Tap to change." else "")
       }
       r.addView(TextView(this).apply {
-        text = if (tag != null) "$label · $tag" else label
+        // één regel: het label, of — als er gekozen kan worden — waarom
+        // deze techniek klaarstaat ("Recommended" / "Last used")
+        text = tag ?: label
+        maxLines = 1
         setTextColor(if (tag != null) color else Color.argb(140, 255, 255, 255))
         textSize = 10f
       })
@@ -166,7 +172,17 @@ class StateActivity : androidx.activity.ComponentActivity() {
     }
 
     setContentView(scroll)
+    scrollView = scroll
     scroll.requestFocus()
+    if (keepY > 0) {
+      // pas na de opbouw terugscrollen, anders is er nog niets om te scrollen
+      scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+        override fun onGlobalLayout() {
+          scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+          scroll.scrollTo(0, keepY)
+        }
+      })
+    }
   }
 
   /** Traag ademen, zoals de figuur tijdens de sessie (6 s per adem). */

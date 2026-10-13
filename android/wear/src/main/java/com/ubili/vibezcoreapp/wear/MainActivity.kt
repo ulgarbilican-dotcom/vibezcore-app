@@ -55,6 +55,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+    /* startscherm: per toestand vastklikken na het scrollen */
+    findViewById<View>(R.id.idleContainer).setOnScrollChangeListener { v, _, _, _, _ ->
+      v.removeCallbacks(snapRunnable)
+      v.postDelayed(snapRunnable, 140)
+    }
     lifecycle.addObserver(androidx.wear.ambient.AmbientLifecycleObserver(this, ambientCallback))
     idleContainer = findViewById(R.id.idleContainer)
     sessionContainer = findViewById(R.id.sessionContainer)
@@ -387,135 +392,115 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun renderHome() {
     val entries = CatalogStore.breath(this)
-    val last = CatalogStore.last(this)
     val sig = entries.joinToString { it.optString("key") + it.optBoolean("locked") + it.optString("technique") } + "|" + CatalogStore.homeSignature(this)
     if (sig == homeSignature) return
     homeSignature = sig
     val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
     list.removeAllViews()
 
-    /* 13 okt 2026 — de flow, vastgelegd met de operator ("je moet hier echt
-       beginnen nadenken"): 1) startscherm = KIEZEN welke toestand (rustige
-       lijst, figuur + naam, geen techniek of duur); 2) toestandscherm =
-       techniek + duur nakijken/wijzigen en Start (StateActivity); 3) sessie.
-       Een tik op een toestand start NOOIT meteen. Bovenaan "Again" om de
-       laatste sessie in één tik te herhalen. */
-    list.addView(android.widget.ImageView(this).apply {
-      setImageResource(R.drawable.vz_vmark)
-      adjustViewBounds = true
-      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }, android.widget.LinearLayout.LayoutParams(dp(22f), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      bottomMargin = dp(12f)
-    })
-
+    /* 13 okt 2026 (operator: "de figuur en state name dienen als eerste
+       pagina, dan erop klikken en door naar de instellingen"): per toestand
+       één scherm met enkel de grote figuur die traag ademt en de naam.
+       Scrollen klikt per toestand vast. Een tik opent het toestandscherm
+       (techniek, duur, Start) — hier start nooit iets. */
     if (entries.isEmpty()) {
       list.addView(TextView(this).apply {
         text = "Open VIBEZCORE on your phone once to set up your watch"
         setTextColor(Color.parseColor("#F4F4F4"))
         textSize = 15f
         gravity = android.view.Gravity.CENTER
-        setPadding(dp(6f), dp(18f), dp(6f), 0)
-      })
+        setPadding(dp(28f), 0, dp(28f), 0)
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, resources.displayMetrics.heightPixels))
       return
     }
-
-    if (last != null) {
-      val e = entries.firstOrNull { it.optString("key") == last.first }
-        ?.let { CatalogStore.withTechnique(it, CatalogStore.lastTech(this)) }
-      if (e != null && !e.optBoolean("locked")) {
-        val durIdx = durationIndexFor(e, last.second)
-        val label = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: ""
-        list.addView(TextView(this).apply {
-          text = "Again"
-          setTextColor(Color.argb(128, 255, 255, 255))
-          textSize = 11f
-          letterSpacing = 0.1f
-          typeface = android.graphics.Typeface.DEFAULT_BOLD
-        }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-          marginStart = dp(10f)
-          bottomMargin = dp(4f)
-        })
-        list.addView(TextView(this).apply {
-          val name = e.optString("name")
-          text = android.text.SpannableString(name + "\n" + label).apply {
-            setSpan(android.text.style.RelativeSizeSpan(0.8f), name.length + 1, length, 0)
-            setSpan(android.text.style.ForegroundColorSpan(Color.parseColor("#55555A")), name.length + 1, length, 0)
-          }
-          setTextColor(Color.parseColor("#0A0A0A"))
-          textSize = 14f
-          typeface = android.graphics.Typeface.DEFAULT_BOLD
-          gravity = android.view.Gravity.CENTER
-          maxLines = 2
-          setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_vz_play_small, 0, 0, 0)
-          compoundDrawablePadding = dp(6f)
-          setPadding(dp(14f), 0, dp(14f), 0)
-          background = GradientDrawable().apply {
-            cornerRadius = dp(26f).toFloat()
-            setColor(Color.WHITE)
-          }
-          contentDescription = "Start again: $name, $label"
-          setOnClickListener { startLocalSession(this@MainActivity, e, durIdx) }
-        }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(54f)).apply {
-          bottomMargin = dp(14f)
-        })
-      }
-    }
-
-    list.addView(TextView(this).apply {
-      text = "Breathe"
-      setTextColor(Color.argb(128, 255, 255, 255))
-      textSize = 11f
-      letterSpacing = 0.1f
-      typeface = android.graphics.Typeface.DEFAULT_BOLD
-    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      marginStart = dp(10f)
-      bottomMargin = dp(4f)
-    })
-
+    val pageH = resources.displayMetrics.heightPixels
     for (e in entries) {
       val c = parse(e.optString("colorHex"))
-      val row = android.widget.LinearLayout(this).apply {
-        orientation = android.widget.LinearLayout.HORIZONTAL
-        gravity = android.view.Gravity.CENTER_VERTICAL
-        setPadding(dp(6f), 0, dp(14f), 0)
-        /* een vleugje toestandskleur links dat naar donker uitloopt */
-        background = GradientDrawable(
-          GradientDrawable.Orientation.LEFT_RIGHT,
-          intArrayOf(Color.argb(56, Color.red(c), Color.green(c), Color.blue(c)), Color.parseColor("#1C1C1E"), Color.parseColor("#1C1C1E")),
-        ).apply {
-          cornerRadius = dp(32f).toFloat()
-        }
+      val page = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.VERTICAL
+        gravity = android.view.Gravity.CENTER
+        tag = "page"
         isClickable = true
-        contentDescription = e.optString("name")
+        contentDescription = e.optString("name") + (if (e.optBoolean("locked")) ", locked" else "")
         setOnClickListener {
           startActivity(Intent(this@MainActivity, StateActivity::class.java).putExtra("key", e.optString("key")))
         }
       }
-      row.addView(android.widget.ImageView(this).apply {
+      /* (operator: "de pagina zelf bij verticaal scrollen glas-effect in de
+         kleur van de state") de hele pagina is een zachte gloed in de kleur
+         van de toestand — licht rond de figuur, naar zwart aan de rand.
+         Bij het scrollen schuift de ene kleur zo in de andere. */
+      page.background = GradientDrawable().apply {
+        gradientType = GradientDrawable.RADIAL_GRADIENT
+        gradientRadius = pageH * 0.62f
+        setGradientCenter(0.5f, 0.42f)
+        colors = intArrayOf(
+          Color.argb(120, Color.red(c), Color.green(c), Color.blue(c)),
+          Color.argb(40, Color.red(c), Color.green(c), Color.blue(c)),
+          Color.BLACK,
+        )
+      }
+      val figure = android.widget.ImageView(this).apply {
         setImageBitmap(artFor(e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        /* zachte gloed in de kleur van de toestand achter de figuur */
-        background = GradientDrawable().apply {
-          shape = GradientDrawable.OVAL
-          gradientType = GradientDrawable.RADIAL_GRADIENT
-          gradientRadius = dp(26f).toFloat()
-          colors = intArrayOf(Color.argb(110, Color.red(c), Color.green(c), Color.blue(c)), Color.TRANSPARENT)
-        }
-      }, android.widget.LinearLayout.LayoutParams(dp(52f), dp(52f)).apply { marginEnd = dp(8f) })
-      row.addView(TextView(this).apply {
+      }
+      page.addView(figure, android.widget.LinearLayout.LayoutParams(dp(150f), dp(150f)))
+      breathe(figure)
+      page.addView(TextView(this).apply {
         text = e.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 15f
+        textSize = 18f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
-        maxLines = 2
-      }, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-      if (e.optBoolean("locked")) {
-        row.addView(android.widget.ImageView(this).apply { setImageResource(R.drawable.ic_vz_lock) })
-      }
-      list.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(64f)).apply {
-        bottomMargin = dp(6f)
+        gravity = android.view.Gravity.CENTER
+        if (e.optBoolean("locked")) {
+          setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_lock, 0)
+          compoundDrawablePadding = dp(6f)
+        }
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = dp(10f)
       })
+      list.addView(page, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
+    }
+  }
+
+  /** Na het scrollen: vastklikken op een toestand. Een korte veeg (of één
+   *  tik van de rand) is al genoeg voor de volgende of vorige — anders
+   *  sprong je terug naar dezelfde. */
+  private val snapRunnable = Runnable { snapHome() }
+  private var homePage = 0
+
+  private fun snapHome() {
+    val scroll = idleContainer as? android.widget.ScrollView ?: return
+    val h = scroll.height
+    if (h <= 0) return
+    val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
+    val pages = (0 until list.childCount).count { list.getChildAt(it).tag == "page" }
+    if (pages == 0) return
+    val delta = scroll.scrollY - homePage * h
+    homePage = when {
+      delta > h * 0.12f -> kotlin.math.ceil(scroll.scrollY / h.toFloat()).toInt()
+      delta < -h * 0.12f -> kotlin.math.floor(scroll.scrollY / h.toFloat()).toInt()
+      else -> homePage
+    }.coerceIn(0, pages - 1)
+    val y = homePage * h
+    if (y != scroll.scrollY) scroll.smoothScrollTo(0, y)
+  }
+
+  /** Traag ademen, zoals de figuur tijdens de sessie (6 s per adem). */
+  private fun breathe(v: View) {
+    val sx = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_X, 0.9f, 1f)
+    val sy = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_Y, 0.9f, 1f)
+    val al = android.animation.ObjectAnimator.ofFloat(v, View.ALPHA, 0.8f, 1f)
+    listOf(sx, sy, al).forEach {
+      it.duration = 3000
+      it.repeatCount = android.animation.ValueAnimator.INFINITE
+      it.repeatMode = android.animation.ValueAnimator.REVERSE
+      it.interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+    }
+    android.animation.AnimatorSet().apply {
+      playTogether(sx, sy, al)
+      start()
     }
   }
 
