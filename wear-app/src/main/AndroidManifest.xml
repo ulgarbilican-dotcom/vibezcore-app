@@ -49,7 +49,7 @@
             android:theme="@style/VzWearTheme" />
 
         <activity
-            android:name=".OptionsActivity"
+            android:name=".StateActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 
