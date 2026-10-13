@@ -107,15 +107,34 @@ class WearBreathSessionService : Service() {
        de horlogeklok loopt ~0,1–0,2 s voor op die van de telefoon. Zonder
        correctie trilde de pols 0,65 s te laat, met de volle klokmeting
        0,2 s te vroeg — vandaar 150 ms marge voor klokverschil. */
-    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, 1500L) else 0L
+    /* 13 okt 2026: na een koude start (app net geïnstalleerd of door het
+       systeem gestopt) kwam het bericht ~2,5 s na versturen binnen — de
+       oude grens van 1,5 s liet de pols dan 1,1 s achterlopen. Nu tot 8 s;
+       is de vertraging langer dan de lopende fase, dan springt het horloge
+       door naar de fase waar de telefoon nu is (stil, zonder trilling — de
+       volgende overgang trilt weer gewoon). */
+    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, 8000L) else 0L
     val now = SystemClock.uptimeMillis()
-    val midPhase = phaseRemainingMs in 0 until phases[startPhase].secs * 1000L
-    val firstDur = if (midPhase) phaseRemainingMs else phases[startPhase].secs * 1000L
+    var round = startRound
+    var idx = startPhase
+    var midPhase = phaseRemainingMs in 0 until phases[startPhase].secs * 1000L
+    var left = (if (midPhase) phaseRemainingMs else phases[startPhase].secs * 1000L) - lag
+    var skipped = false
+    while (left <= 150L) {
+      idx = (idx + 1) % phases.size
+      if (idx == 0) round++
+      left += phases[idx].secs * 1000L
+      skipped = true
+    }
+    if (round > rounds) {
+      finishSession()
+      return
+    }
     runPhase(
-      myGeneration, phases, rounds, modeName, round = startRound, phaseIdx = startPhase,
-      startUptime = now - lag,
-      durMs = (firstDur - lag).coerceAtLeast(200L) + lag,
-      silentStart = midPhase,
+      myGeneration, phases, rounds, modeName, round = round, phaseIdx = idx,
+      startUptime = now,
+      durMs = left,
+      silentStart = midPhase || skipped,
     )
   }
 
