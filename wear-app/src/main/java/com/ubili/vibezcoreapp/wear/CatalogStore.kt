@@ -343,7 +343,7 @@ internal fun figureColor(context: android.content.Context, colorHex: String): In
 
 /** Dezelfde gloed op elke pagina van een toestand (startpagina, instellingen,
  *  lijsten): licht in het midden, naar zwart aan de rand. */
-internal fun stateGlow(context: android.content.Context, colorHex: String, centerY: Float = 0.42f, radius: Float = 0.62f): android.graphics.drawable.GradientDrawable {
+internal fun stateGlow(context: android.content.Context, colorHex: String, centerY: Float = 0.42f, radius: Float = 0.5f): android.graphics.drawable.GradientDrawable {
   val c = figureColor(context, colorHex)
   val r = android.graphics.Color.red(c)
   val g = android.graphics.Color.green(c)
@@ -352,9 +352,11 @@ internal fun stateGlow(context: android.content.Context, colorHex: String, cente
     gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
     gradientRadius = context.resources.displayMetrics.heightPixels * radius
     setGradientCenter(0.5f, centerY)
+    // ingetogen, zoals de halo op het startscherm (operator: "achtergrond
+    // te veel, terug zwart, professioneel")
     colors = intArrayOf(
-      android.graphics.Color.argb(105, r, g, b),
-      android.graphics.Color.argb(36, r, g, b),
+      android.graphics.Color.argb(70, r, g, b),
+      android.graphics.Color.argb(22, r, g, b),
       android.graphics.Color.BLACK,
     )
   }

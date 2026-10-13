@@ -82,7 +82,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
           cornerRadius = dp(20f).toFloat()
           setColor(Color.argb(36, 255, 255, 255))
         }
-        minimumHeight = dp(44f)
+        // (operator: "knoppen allemaal even groot, buiten Start") vaste hoogte
         if (onTap != null) {
           isClickable = true
           setOnClickListener { onTap() }
@@ -100,12 +100,14 @@ class StateActivity : androidx.activity.ComponentActivity() {
       r.addView(TextView(this).apply {
         text = if (onTap != null) "$value  ›" else value
         setTextColor(Color.WHITE)
-        textSize = 13f
         typeface = Typeface.DEFAULT_BOLD
-        maxLines = 2
-      })
-      col.addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-        bottomMargin = dp(5f)
+        // één regel; een lange technieknaam wordt iets kleiner in plaats van
+        // de knop hoger te maken
+        maxLines = 1
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 10, 14, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(20f)))
+      col.addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
+        bottomMargin = dp(6f)
       })
     }
 
