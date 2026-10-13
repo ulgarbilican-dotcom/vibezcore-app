@@ -276,6 +276,9 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W46 | Instellingen: Technique- en Duration-knop even groot (vaste hoogte, naam op één regel, lange namen iets kleiner) | Boost, Sharp Focus, Sleep | ✅ 13 okt (Claude) |
 | W47 | Clarity & Relax: nieuwe figuur (operator, "pic calm relax.png"), zwart omgezet naar doorzichtig — horloge startscherm + sessie | | ✅ 13 okt (Claude) — oog 1.18× optisch groter |
 | T154 | Clarity & Relax-figuur in de app = het oog ("pic calm relax 2.png" op Bunny), artScale 0.8 | Breath-tab, Clarity-sessie | ⏳ operator |
+| T155 | State Control met horloge: horloge trekt Bluetooth-vertraging af (sentAtMs, marge 150 ms) — operator mat 2 s achterstand | Quick Boost | ⏳ operator voelt |
+| T156 | State Control "Haptics + Audio" met horloge: hartslaggeluid speelt de telefoon (horloge trilt enkel); telefoon-module stuurde sound/lubMs/dubMs nooit door | | ⏳ operator hoort |
+| T157 | State Control END (telefoon) → terug naar keuzescherm; END (horloge) → beide terug | Sleep | ✅ 13 okt (Claude) |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
 | T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 

@@ -157,6 +157,8 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
   return out
 }
 
+private const val STATE_CLOCK_MARGIN_MS = 150L
+
 class WearStateSessionService : Service() {
   private lateinit var beatThread: HandlerThread
   private lateinit var beatHandler: Handler
@@ -240,7 +242,20 @@ class WearStateSessionService : Service() {
       lubMs = j.optLong("lubMs", LUB_MS).coerceIn(20L, 120L),
       dubMs = j.optLong("dubMs", DUB_MS).coerceIn(15L, 100L),
       sound = j.optBoolean("sound", false),
-    ).takeIf { it.targetBpm > 0 }
+    ).takeIf { it.targetBpm > 0 }?.let { st ->
+      /* 13 okt 2026 (operator: "2 sec achterstand op de watch"): de
+         Bluetooth-vertraging aftrekken, zoals bij breathwork — verder in de
+         curve beginnen, minder resterende tijd. Klok van het horloge loopt
+         ~0,1–0,2 s voor, vandaar de marge; nooit meer dan 8 s. */
+      val sentAt = j.optLong("sentAtMs", 0L)
+      val lagSec = if (sentAt > 0L) {
+        ((System.currentTimeMillis() - sentAt - STATE_CLOCK_MARGIN_MS).coerceIn(0L, 8000L)) / 1000.0
+      } else {
+        0.0
+      }
+      st.copy(curveOffsetSec = st.curveOffsetSec + lagSec, remainingSec = st.remainingSec - lagSec)
+        .takeIf { it.remainingSec > 0.5 }
+    }
   } catch (_: Exception) {
     null
   }

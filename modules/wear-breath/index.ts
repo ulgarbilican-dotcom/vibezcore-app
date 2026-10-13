@@ -79,6 +79,13 @@ export type StateSessionStart = {
   /** tikduur zonder amplitude-sturing */
   lubMsNoAmp: number;
   dubMsNoAmp: number;
+  /** tikduur met amplitude-sturing */
+  lubMs?: number;
+  dubMs?: number;
+  /** hartslaggeluid op het horloge (sinds 13 okt 2026 speelt de telefoon het) */
+  sound?: boolean;
+  /** telefoonklok bij verzenden — het horloge trekt de vertraging af */
+  sentAtMs?: number;
 };
 
 type WearBreathNativeModule = {

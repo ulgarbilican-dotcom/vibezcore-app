@@ -439,7 +439,9 @@ function play(
     if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. Feel &
          Hear: de service speelt het hartslaggeluid zelf, op elke tik. */
-      setNativeSessionSound(getStateHear() && !silent);
+      /* Ook als het horloge de trilling overneemt (silent): het geluid blijft
+         hier (13 okt 2026, zie watchStrength). */
+      setNativeSessionSound(getStateHear());
       startNativeSession(
         timings,
         amplitudes,
@@ -568,10 +570,11 @@ function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: numbe
     dubMs: ms(35),
     lubMsNoAmp: ms(spec.lubMsNoAmp),
     dubMsNoAmp: ms(spec.dubMsNoAmp),
-    /* "Haptic + Audio": het horloge speelt de hartslag zelf, exact op de
-       tik (12 okt 2026) — de telefoon blijft stil zodra het horloge
-       overneemt, zoals de trilling. */
-    sound: getStateHear(),
+    /* GEWIJZIGD 13 okt 2026 (operator: "bij haptics + voice moet de
+       hartslag hoorbaar worden"): het geluid speelt de TELEFOON (luider,
+       en via oortjes), ook als het horloge trilt. Het horloge trekt de
+       Bluetooth-vertraging af (sentAtMs), dus tik en geluid vallen samen. */
+    sound: false,
   };
 }
 
@@ -595,6 +598,7 @@ function relayToWatch(
     curveOffsetSec,
     remainingSec: Math.round(remainingSec),
     ...watchStrength(spec),
+    sentAtMs: Date.now(),
   };
   sendWearState(start);
   sendAppleState(start);
@@ -688,6 +692,7 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     curveOffsetSec: 0,
     remainingSec: PREVIEW_MAX_SECONDS,
     ...watchStrength(spec),
+    sentAtMs: Date.now(),
   };
   sendWearState(start);
   sendAppleState(start);

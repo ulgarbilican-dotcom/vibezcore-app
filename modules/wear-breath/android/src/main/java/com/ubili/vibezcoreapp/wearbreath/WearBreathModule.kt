@@ -89,6 +89,14 @@ class WearStateSessionStart(
   @Field val dubAmp: Int = 32,
   @Field val lubMsNoAmp: Int = 50,
   @Field val dubMsNoAmp: Int = 40,
+  /* 13 okt 2026: deze velden kwamen uit JS maar werden hier nooit
+     doorgestuurd — het horloge kreeg dus nooit de tiklengtes of het geluid. */
+  @Field val lubMs: Int = 0,
+  @Field val dubMs: Int = 0,
+  @Field val sound: Boolean = false,
+  /** Telefoonklok bij verzenden: het horloge trekt de Bluetooth-vertraging
+   *  af (operator: "2 sec achterstand op de watch"). */
+  @Field val sentAtMs: Double = 0.0,
 ) : Record
 
 private const val PATH_BREATH_START = "/vibezcore/breath/start"
@@ -282,6 +290,10 @@ class WearBreathModule : Module() {
         put("dubAmp", start.dubAmp)
         put("lubMsNoAmp", start.lubMsNoAmp)
         put("dubMsNoAmp", start.dubMsNoAmp)
+        if (start.lubMs > 0) put("lubMs", start.lubMs)
+        if (start.dubMs > 0) put("dubMs", start.dubMs)
+        put("sound", start.sound)
+        put("sentAtMs", if (start.sentAtMs > 0) start.sentAtMs.toLong() else System.currentTimeMillis())
       }
       broadcast(PATH_STATE_START, payload.toString().toByteArray(Charsets.UTF_8))
     }
