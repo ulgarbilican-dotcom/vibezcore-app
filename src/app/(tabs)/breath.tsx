@@ -310,7 +310,7 @@ function StateThumb({
 
   return (
     <AnimatedPressable
-      onPress={onPress}
+      onPress={on ? onInfoPress : onPress}
       onPressIn={() => {
         pressScale.value = withTiming(0.95, { duration: 80 });
       }}
@@ -319,6 +319,7 @@ function StateThumb({
       }}
       style={[s.thumbCol, pressStyle]}
       accessibilityLabel={t.eyebrow}
+      accessibilityHint={on ? 'Shows how this mode works' : undefined}
     >
       {/* Operator, 2 okt 2026: losse, geneste tikzone boven de cirkel —
          binnenste responder wint de touch (zelfde patroon als elders in
@@ -329,15 +330,9 @@ function StateThumb({
          boven laten gaan samen met de i"): dezelfde `translateY` als
          `thumbSelected` hieronder, zodat de knop mee omhoog schuift met
          de cirkel i.p.v. een losse sibling die blijft staan. */}
-      {on && (
-        <Pressable
-          onPress={onInfoPress}
-          hitSlop={10}
-          style={[s.thumbInfoBtn, { transform: [{ translateY: -6 }] }]}
-        >
-          <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
-        </Pressable>
-      )}
+      {/* Operator, 13 okt 2026 ("die i bovenaan de cirkels stoort mij"): geen
+         losse i-knop meer — een tik op de cirkel die AL gekozen is opent
+         "How it works" (zie onPress hierboven). */}
       <View style={[s.thumb, on && s.thumbSelected]}>
         {/* Operator, 5 okt 2026 (voorbeeldpagina VIBEZCORE-glas, Apple's
            Liquid Glass als referentie, geen rand): elk bolletje is een

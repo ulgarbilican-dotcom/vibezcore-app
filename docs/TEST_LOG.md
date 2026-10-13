@@ -252,6 +252,7 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | W22 | Ritme telefoon ↔ horloge over 40 s | geen oplopende afwijking; verschil bij start | ✅ 13 okt (Claude: beide exact 4,0 s; verschil na correctie ~0,05 s) |
 | W23 | App-icoon even groot als andere apps; opstartscherm = enkel V op zwart | adaptief icoon | ⏳ operator |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |
+| T153 | Breath-keuzepagina: geen i-knop meer boven de cirkels; tik op de gekozen cirkel = "How it works", tik op een andere = die toestand kiezen | beide werken | ✅ 13 okt (Claude op de A16) |
 
 ## Nog niet getest (gebouwd)
 - ⏳ **Echte build, einde ronde 8 okt:** vergrendelscherm-tekst vast (`76420ff`, native); V-logo i.p.v. muzieknoot (`6be14fc`, native); let ook op: 9 okt stonden er 12 open expo-audio-mediasessies (ExpoAudioBasicMediaSession) — mogen de ademsessie niet van het vergrendelscherm verdringen, anders opruimen; haperen sessie op vergrendelscherm; Boost: 1× stemcue overgeslagen (dev, via wifi) — zo nodig cues lokaal voorladen
