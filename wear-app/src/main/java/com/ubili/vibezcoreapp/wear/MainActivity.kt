@@ -275,16 +275,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun renderBreath(b: BreathSessionState.Snapshot) {
     showSession(b.modeName, b.colorHex, b.paused)
     ring.art = artFor(b.colorHex)
-    val (scale, focus) = when (b.colorHex.uppercase()) {
-      "#F5A524" -> 1f to 0.5f
-      /* de bloem heeft veel lege rand: op het kleine scherm groter dan in de app */
-      "#3E9BFF" -> 1.0f to 0.5f
-      "#B478FF" -> 1.14f to 0.43f
-      /* de boom vult zijn beeld bijna helemaal — kleiner, anders raakt hij
-         de naam bovenaan */
-      "#00A3A3", "#4AF0D4" -> 0.56f to 0.5f
-      else -> 0.7f to 0.5f
-    }
+    val scale = artScaleFor(b.colorHex)
+    val focus = if (b.colorHex.uppercase() == "#B478FF") 0.43f else 0.5f
     ring.artScale = scale
     ring.artFocusY = focus
     ring.paused = b.paused
@@ -441,11 +433,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
         )
       }
       val figure = android.widget.ImageView(this).apply {
-        setImageBitmap(artFor(e.optString("colorHex")))
+        setImageBitmap(trimmedArt(this@MainActivity, e.optString("colorHex")))
         scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
       }
-      page.addView(figure, android.widget.LinearLayout.LayoutParams(dp(150f), dp(150f)))
+      // alle figuren in hetzelfde vak, zonder lege rand = even groot
+      val sz = dp(118f)
+      page.addView(figure, android.widget.LinearLayout.LayoutParams(sz, sz))
       breathe(figure)
       page.addView(TextView(this).apply {
         text = e.optString("name")

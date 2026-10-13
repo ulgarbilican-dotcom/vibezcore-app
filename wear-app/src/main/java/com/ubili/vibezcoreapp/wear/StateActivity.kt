@@ -69,9 +69,9 @@ class StateActivity : androidx.activity.ComponentActivity() {
 
     // de ademende figuur met zijn gloed
     val figure = ImageView(this).apply {
-      setImageBitmap(android.graphics.BitmapFactory.decodeResource(resources, artResFor(e.optString("colorHex"))))
+      setImageBitmap(trimmedArt(this@StateActivity, e.optString("colorHex")))
       scaleType = ImageView.ScaleType.FIT_CENTER
-      val pad = dp(4f)
+      val pad = dp(10f)
       setPadding(pad, pad, pad, pad)
       background = GradientDrawable().apply {
         shape = GradientDrawable.OVAL
@@ -81,7 +81,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
       }
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    col.addView(figure, LinearLayout.LayoutParams(dp(104f), dp(104f)))
+    col.addView(figure, LinearLayout.LayoutParams(dp(84f), dp(84f)))
     breatheView(figure)
 
     col.addView(TextView(this).apply {
