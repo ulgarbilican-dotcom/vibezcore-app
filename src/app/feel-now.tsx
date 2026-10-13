@@ -215,7 +215,6 @@ export default function FeelNowScreen() {
             <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
             {nuance.map((situation, idx) => {
               const Icon = ICON_FOR[situation.id] ?? Zap;
-              const st = stateFor(situation.state);
               return (
                 <View key={situation.id}>
                   {idx > 0 ? <View style={s.listSep} /> : null}
@@ -230,7 +229,7 @@ export default function FeelNowScreen() {
                     accessibilityLabel={situation.label}
                     accessibilityHint="Starts a session. Long press for why it helps."
                   >
-                    <Icon size={20} color={st.accent} strokeWidth={2} />
+                    <Icon size={20} color="#ffffff" strokeWidth={2} />
                     <Text style={s.listLabel}>{situation.label}</Text>
                     <ChevronRight size={18} color="rgba(255,255,255,0.35)" strokeWidth={2.4} />
                   </Pressable>
@@ -414,7 +413,7 @@ function SituationCard({
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[s.card, s.cardColumn]}
           >
-            <Icon size={26} color={st.accent} strokeWidth={1.8} />
+            <Icon size={26} color="#ffffff" strokeWidth={1.8} />
             <View style={s.cardColumnSpacer} />
             <Text style={[s.cardLabel, s.cardColumnLabel]} numberOfLines={2}>
               {labelOf(situation)}
@@ -457,7 +456,8 @@ const s = StyleSheet.create({
   },
   body: {
     paddingTop: 4,
-    paddingBottom: 32,
+    /* ruimte voor de sessie-pil onderaan (geminimaliseerde sessie) */
+    paddingBottom: 120,
     paddingHorizontal: 24,
   },
   /* 13 okt 2026: grote titel links (Apple Large Title). */
