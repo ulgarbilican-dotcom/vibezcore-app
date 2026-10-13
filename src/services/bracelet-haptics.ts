@@ -307,6 +307,7 @@ function clearPending(): void {
 /** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
  *  af (zelfde afgeronde cycleMs, zelfde startpunt) puur voor het beeld.
  *  Corrigeert zichzelf op de wandklok, zodat er geen drift opbouwt. */
+let syncLogCount = 0;
 function scheduleVisual(
   mode: BraceletMode,
   spec: ResolvedSpec,
@@ -328,6 +329,11 @@ function scheduleVisual(
   const { cycleMs, dubAt } = beat;
   emitPulse({ kind: 'lub', mode, cycleMs });
   const beatWallMs = anchorWallMs + (curveSec - offsetSec) * 1000;
+  /* Meting synchronisatie met het horloge (13 okt 2026, VZSync op het horloge). */
+  if (__DEV__ && syncLogCount < 40) {
+    syncLogCount += 1;
+    console.log(`[sync] lub wall=${Math.round(beatWallMs)} curve=${curveSec.toFixed(3)}`);
+  }
   const nextCurveSec = curveSec + cycleMs / 1000;
   const nextWallMs = anchorWallMs + (nextCurveSec - offsetSec) * 1000;
   pendingTimeouts.push(
@@ -422,6 +428,7 @@ function play(
 ): void {
   silence(!!clock && hasNativeWaveform());
   const spec = resolveSpec(mode, restingBpm, startBpm);
+  syncLogCount = 0;
   if (hasNativeWaveform()) {
     const built = buildWaveform(spec, timing, offsetSec, totalSec, canPlayNativeWaveform());
     const { timings, repeat } = built;

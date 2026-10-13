@@ -33,6 +33,11 @@ private const val CHANNEL_ID = "vibezcore_breath"
 private const val NOTIFICATION_ID = 1001
 
 private const val CLOCK_MARGIN_MS = 150L
+/* 13 okt 2026 (meting: bericht kwam na een koude start pas na 10,5 s aan;
+   de oude grens van 8 s liet de pols 2,5 s achter). De klokken verschillen
+   maar ~0,2 s (netwerktijd), dus de volle vertraging aftrekken is veilig;
+   deze grens vangt enkel een kapotte klok op. */
+private const val MAX_LAG_MS = 10 * 60_000L
 
 private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
 
@@ -128,7 +133,7 @@ class WearBreathSessionService : Service() {
        is de vertraging langer dan de lopende fase, dan springt het horloge
        door naar de fase waar de telefoon nu is (stil, zonder trilling — de
        volgende overgang trilt weer gewoon). */
-    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, 8000L) else 0L
+    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, MAX_LAG_MS) else 0L
     val now = SystemClock.uptimeMillis()
     var round = startRound
     var idx = startPhase

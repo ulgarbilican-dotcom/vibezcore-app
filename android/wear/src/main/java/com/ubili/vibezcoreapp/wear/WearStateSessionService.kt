@@ -246,13 +246,15 @@ class WearStateSessionService : Service() {
       /* 13 okt 2026 (operator: "2 sec achterstand op de watch"): de
          Bluetooth-vertraging aftrekken, zoals bij breathwork — verder in de
          curve beginnen, minder resterende tijd. Klok van het horloge loopt
-         ~0,1–0,2 s voor, vandaar de marge; nooit meer dan 8 s. */
+         ~0,1–0,2 s voor, vandaar de marge. Geen grens van 8 s meer: na een
+         koude start kwam het bericht pas na 10,5 s aan (meting). */
       val sentAt = j.optLong("sentAtMs", 0L)
       val lagSec = if (sentAt > 0L) {
-        ((System.currentTimeMillis() - sentAt - STATE_CLOCK_MARGIN_MS).coerceIn(0L, 8000L)) / 1000.0
+        ((System.currentTimeMillis() - sentAt - STATE_CLOCK_MARGIN_MS).coerceIn(0L, 10 * 60_000L)) / 1000.0
       } else {
         0.0
       }
+      android.util.Log.d("VZSync", "start sentAt=$sentAt now=${System.currentTimeMillis()} lag=$lagSec offset=${st.curveOffsetSec}")
       st.copy(curveOffsetSec = st.curveOffsetSec + lagSec, remainingSec = st.remainingSec - lagSec)
         .takeIf { it.remainingSec > 0.5 }
     }
@@ -292,6 +294,13 @@ class WearStateSessionService : Service() {
     beatHandler.postAtTime(endRunnable, startUptime + endDelay)
     beatHandler.post(tickRunnable)
     PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
+    /* Nog eens na 3 s (meting 13 okt: na een koude start kwam de eerste
+       bevestiging niet aan, en dan trilden telefoon én horloge elk apart). */
+    beatHandler.postDelayed({
+      if (session === s && !paused) {
+        PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
+      }
+    }, 3000L)
   }
 
   private fun pause(startId: Int) {
@@ -334,6 +343,11 @@ class WearStateSessionService : Service() {
     val u = units[nextUnit]
     if (SystemClock.uptimeMillis() - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
       vibrate(u.t, u.a)
+      /* Meting synchronisatie (13 okt 2026): wandklok + plek in de curve per
+         slag; de telefoon logt hetzelfde ([sync] in ReactNativeJS). */
+      if (nextUnit < 40) {
+        android.util.Log.d("VZSync", "lub wall=${System.currentTimeMillis()} curve=${"%.3f".format((session?.curveOffsetSec ?: 0.0) + u.offsetMs / 1000.0)}")
+      }
       if (nextUnit < units.size - 1) {
         /* 12 okt 2026: hartslaggeluid op de luidspreker van het horloge,
            op exact dezelfde slag als de trilling. */
