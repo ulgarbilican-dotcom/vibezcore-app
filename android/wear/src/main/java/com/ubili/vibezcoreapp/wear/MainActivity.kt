@@ -212,6 +212,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     showSession(s.title, s.colorHex, s.paused)
     ring.art = null
     ring.paused = false
+    (nameLabel.parent as View).visibility = View.VISIBLE
     ring.isClickable = false
     pauseButton.visibility = View.VISIBLE
     setNameTop(44)
@@ -245,7 +246,21 @@ class MainActivity : androidx.activity.ComponentActivity() {
     setNameTop(30)
     nameLabel.textSize = 12f
     ring.centerText = b.phaseLabel
-    ring.subText = if (b.paused) "" else b.via
+    /* 13 okt 2026 (operator): voluit "through your nose / mouth", zoals de
+       app vroeger toonde; neusgat-varianten blijven kort. */
+    ring.subText = if (b.paused) "" else when (b.via.lowercase()) {
+      "" -> ""
+      "nose" -> "through your nose"
+      "mouth" -> "through your mouth"
+      else -> b.via
+    }
+    /* De naam enkel bij pauze — tijdens het ademen krijgt de figuur de
+       ruimte (operator 13 okt 2026). */
+    (nameLabel.parent as View).visibility = if (b.paused) View.VISIBLE else View.INVISIBLE
+    ring.footerAt = { now ->
+      val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
+      if (b.sessionEndUptime <= 0L) "" else "${((leftMs + 59_999L) / 60_000L).coerceAtLeast(1L)} min left"
+    }
     val from = b.levelFrom
     val to = b.levelTo
     val start = b.phaseStartUptime

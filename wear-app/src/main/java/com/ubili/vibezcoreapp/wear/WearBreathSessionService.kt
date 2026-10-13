@@ -152,10 +152,15 @@ class WearBreathSessionService : Service() {
       phase.key.startsWith("exhale") -> 0.18f
       else -> level
     }
+    /* Einde van de hele sessie: de rest van deze ronde + de volle rondes erna. */
+    var sessionEnd = endUptime
+    for (i in phaseIdx + 1 until phases.size) sessionEnd += phases[i].secs * 1000L
+    sessionEnd += (totalRounds - round).coerceAtLeast(0) * phases.sumOf { it.secs * 1000L }
     BreathSessionState.update(
       BreathSessionState.Snapshot(
         label, modeName, round, totalRounds, via = phase.via, running = true, paused = false, colorHex = colorHex,
         levelFrom = level, levelTo = target, phaseStartUptime = startUptime, phaseEndUptime = endUptime,
+        sessionEndUptime = sessionEnd,
       ),
     )
     level = target
@@ -196,7 +201,10 @@ class WearBreathSessionService : Service() {
     val here = cur.levelFrom + (cur.levelTo - cur.levelFrom) * k
     level = here
     BreathSessionState.update(
-      cur.copy(phaseLabel = "Paused", running = false, paused = true, levelFrom = here, levelTo = here, pausedProgress = k),
+      cur.copy(
+        phaseLabel = "Paused", running = false, paused = true, levelFrom = here, levelTo = here, pausedProgress = k,
+        pausedSessionLeftMs = (cur.sessionEndUptime - now).coerceAtLeast(0L),
+      ),
     )
     releaseWakeLock()
     stopForeground(STOP_FOREGROUND_REMOVE)

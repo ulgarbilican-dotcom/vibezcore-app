@@ -109,6 +109,8 @@ class SessionRingView @JvmOverloads constructor(
   private val arcRect = RectF()
   /** Resterende seconden van de fase — linksonder de boog (13 okt 2026). */
   var secondsLeftAt: (Long) -> Int = { -1 }
+  /** Kleine regel onderaan, boven END ("12 min left"). */
+  var footerAt: (Long) -> String = { "" }
   private val secPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     textAlign = Paint.Align.CENTER
     typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -260,7 +262,8 @@ class SessionRingView @JvmOverloads constructor(
     val r = min(width, height) / 2f / 1.10f
     // waterpeil van de service: 0,18 (uitgeademd) … 0,85 (ingeademd)
     val b = ((levelAt(now) - 0.18f) / 0.67f).coerceIn(0f, 1f)
-    val acy = cy - r * 0.02f
+    // naam staat enkel bij pauze bovenaan — de figuur mag hoger
+    val acy = cy - r * (if (paused) 0.02f else 0.17f)
 
     /* Vloeiend op de Watch4 (12 okt 2026, gemeten 14–16 ms GPU per beeld):
        de gloed is één vaste verloop-shader die enkel geschaald wordt, en de
@@ -347,17 +350,24 @@ class SessionRingView @JvmOverloads constructor(
       canvas.drawPath(playPath, playPaint)
     }
 
-    // "Inhale · Nose" onder de figuur, de neus/mond-regel gedimd
-    bigPaint.textSize = r * 0.19f
-    smallPaint.textSize = r * 0.19f
-    val y = cy + r * 0.60f
-    val head = centerText
-    val tail = if (subText.isNotEmpty()) "  ·  $subText" else ""
-    val wHead = bigPaint.measureText(head)
-    val wTail = smallPaint.measureText(tail)
-    val x0 = cx - (wHead + wTail) / 2f
-    canvas.drawText(head, x0 + wHead / 2f, y, bigPaint)
-    if (tail.isNotEmpty()) canvas.drawText(tail, x0 + wHead + wTail / 2f, y, smallPaint)
+    // "Inhale" groot, "through your nose" eronder, "12 min left" boven END
+    bigPaint.textSize = r * 0.20f
+    val y = cy + r * (if (paused) 0.55f else 0.40f)
+    canvas.drawText(centerText, cx, y, bigPaint)
+    var y2 = y
+    if (subText.isNotEmpty()) {
+      smallPaint.textSize = r * 0.115f
+      y2 = y + smallPaint.textSize * 1.35f
+      canvas.drawText(subText, cx, y2, smallPaint)
+    }
+    val foot = footerAt(now)
+    if (foot.isNotEmpty() && !paused) {
+      smallPaint.textSize = r * 0.095f
+      val saved = smallPaint.color
+      smallPaint.color = Color.argb(115, 255, 255, 255)
+      canvas.drawText(foot, cx, cy + r * 0.69f, smallPaint)
+      smallPaint.color = saved
+    }
   }
 
   /** Zelfde vorm als de app: periode = halve breedte, schuift één breedte per `durMs`. */
