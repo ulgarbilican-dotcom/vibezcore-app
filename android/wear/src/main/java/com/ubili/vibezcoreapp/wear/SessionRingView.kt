@@ -245,11 +245,16 @@ class SessionRingView @JvmOverloads constructor(
     // 12 okt 2026: tijd iets boven het midden — pauze + END staan eronder,
     // binnen de cirkel.
     val lift = r * 0.10f
-    val bigY = (if (subText.isEmpty()) cy + bigPaint.textSize * 0.35f else cy + bigPaint.textSize * 0.15f) - lift
+    val bigY = cy + bigPaint.textSize * 0.35f - lift
     canvas.drawText(centerText, cx, bigY, bigPaint)
     if (subText.isNotEmpty()) {
-      smallPaint.textSize = r * 0.12f
-      canvas.drawText(subText, cx, bigY + smallPaint.textSize * 1.6f, smallPaint)
+      /* 13 okt 2026 (operator: "pauze-tekst overlapt de play-knop"): BOVEN
+         de tijd, in kleine hoofdletters — zoals "PAUSED" op de telefoon. */
+      smallPaint.textSize = r * 0.11f
+      val oldSpacing = smallPaint.letterSpacing
+      smallPaint.letterSpacing = 0.15f
+      canvas.drawText(subText.uppercase(), cx, bigY - bigPaint.textSize * 0.92f, smallPaint)
+      smallPaint.letterSpacing = oldSpacing
     }
 
     if (flowing || pulses.isNotEmpty()) postInvalidateOnAnimation()
