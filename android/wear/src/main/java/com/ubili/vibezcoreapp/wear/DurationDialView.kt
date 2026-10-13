@@ -178,6 +178,13 @@ class DurationDialView @JvmOverloads constructor(
     val step = 46f * density
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
+        /* Watch4: draaien = je vinger langs de rand van het scherm schuiven
+           (touch-bezel). Die aanraking kwam hier ook binnen als veeg en
+           vocht met de draai (operator: "ik heb geen controle"). Aanrakingen
+           bij de rand laten we aan de bezel; vegen enkel in het midden. */
+        val dx = event.x - width / 2f
+        val dy = event.y - height / 2f
+        if (kotlin.math.hypot(dx, dy) > min(width, height) / 2f - 44f * density) return false
         dragging = true
         lastY = event.y
         accY = 0f
