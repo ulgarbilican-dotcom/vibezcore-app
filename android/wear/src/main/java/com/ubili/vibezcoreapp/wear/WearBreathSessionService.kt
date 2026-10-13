@@ -8,7 +8,16 @@ package com.ubili.vibezcoreapp.wear
    (zelfde array als phaseHapticPattern() op de telefoon). Deze service
    speelt ze gewoon na elkaar af op een eigen klok, dus een BLE-hobbel of
    een telefoon die in slaap valt kan deze lus niet meer raken — dezelfde
-   autonomie als de bracelet (spec §8). */
+   autonomie als de bracelet (spec §8).
+
+   13 okt 2026 (zelfde les als State Control): met het scherm uit zet Wear
+   OS onze wakelock op DISABLED (dumpsys power), ook als voorgronddienst —
+   een trilling per fase via Handler.postAtTime kon dan tot 100 s stilliggen.
+   Daarom krijgt de trilmotor bij de start het HELE ritme in één patroon:
+   de rest van de lopende ronde, daarna één volle ronde die zichzelf
+   herhaalt (repeat-index). De trildienst houdt het toestel zelf wakker
+   zolang het patroon loopt; de faseplanning hieronder doet enkel nog beeld
+   en melding. */
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -28,11 +37,21 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import org.json.JSONObject
+import kotlin.math.min
 
 private const val CHANNEL_ID = "vibezcore_breath"
 private const val NOTIFICATION_ID = 1001
 
-private const val CLOCK_MARGIN_MS = 150L
+/* 13 okt 2026 (operator: "breathwork op het horloge loopt een fractie te
+   traag") — zelfde tijdsbasis als State Control (WearStateSessionService):
+   - de telefoon stuurt sentAtMs net NA het starten van zijn fase, maar zijn
+     trildienst begint pas ~160 ms na de aanroep (gemeten 145–178 ms, zie
+     NATIVE_START_LAG_MS in bracelet-haptics.ts) → dát is het gevoelde begin;
+   - de horlogeklok + de reactietijd van de horlogemotor: 20 ms, voor State
+     Control op gevoel bijgesteld door de operator ("nu lijkt het goed"). */
+private const val PHONE_VIBRATOR_LAG_MS = 160L
+private const val WATCH_CLOCK_AHEAD_MS = 20L
+private const val CLOCK_MARGIN_MS = PHONE_VIBRATOR_LAG_MS + WATCH_CLOCK_AHEAD_MS
 /* 13 okt 2026 (meting: bericht kwam na een koude start pas na 10,5 s aan;
    de oude grens van 8 s liet de pols 2,5 s achter). De klokken verschillen
    maar ~0,2 s (netwerktijd), dus de volle vertraging aftrekken is veilig;
@@ -40,6 +59,53 @@ private const val CLOCK_MARGIN_MS = 150L
 private const val MAX_LAG_MS = 10 * 60_000L
 
 private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
+
+/** Eén stuk trilpatroon: stappen + kracht per stap. */
+private class Seg(val t: LongArray, val a: IntArray)
+
+/** Het patroon van één fase ([wacht, aan, uit, aan, …], oneven = aan),
+ *  afgeknipt of met stilte aangevuld tot precies `durMs`. `onAmp` = kracht
+ *  van de "aan"-stappen (DEFAULT_AMPLITUDE = standaardkracht). */
+private fun phaseSeg(pattern: LongArray, durMs: Long, onAmp: Int): Seg {
+  val t = ArrayList<Long>()
+  val a = ArrayList<Int>()
+  var used = 0L
+  for (i in pattern.indices) {
+    if (used >= durMs) break
+    val step = min(pattern[i].coerceAtLeast(0L), durMs - used)
+    if (step > 0L) {
+      t.add(step)
+      a.add(if (i % 2 == 1) onAmp else 0)
+    }
+    used += step
+  }
+  if (used < durMs) {
+    t.add(durMs - used)
+    a.add(0)
+  }
+  return Seg(t.toLongArray(), a.toIntArray())
+}
+
+private fun silence(durMs: Long) = Seg(longArrayOf(durMs), intArrayOf(0))
+
+/** Knip de eerste `skipMs` weg (zelfde regel als trimStart in State
+ *  Control): al voorbije stappen vallen weg, de lopende wordt korter. */
+private fun trimHead(seg: Seg, skipMs: Long): Seg {
+  if (skipMs <= 0L) return seg
+  var left = skipMs
+  var i = 0
+  while (i < seg.t.size && left >= seg.t[i]) {
+    left -= seg.t[i]
+    i++
+  }
+  if (i >= seg.t.size) return Seg(LongArray(0), IntArray(0))
+  val t = seg.t.copyOfRange(i, seg.t.size)
+  val a = seg.a.copyOfRange(i, seg.a.size)
+  t[0] -= left
+  /* een half afgeknipte tik niet als stomp laten trillen */
+  if (a[0] != 0 && t[0] < 20L) a[0] = 0
+  return Seg(t, a)
+}
 
 class WearBreathSessionService : Service() {
   private var thread: HandlerThread? = null
@@ -126,14 +192,16 @@ class WearBreathSessionService : Service() {
     /* Gemeten op Galaxy Watch4 + A16: een bericht doet er ~0,7–0,8 s over;
        de horlogeklok loopt ~0,1–0,2 s voor op die van de telefoon. Zonder
        correctie trilde de pols 0,65 s te laat, met de volle klokmeting
-       0,2 s te vroeg — vandaar 150 ms marge voor klokverschil. */
+       0,2 s te vroeg — vandaar een marge (sinds 13 okt: CLOCK_MARGIN_MS,
+       zelfde tijdsbasis als State Control). */
     /* 13 okt 2026: na een koude start (app net geïnstalleerd of door het
        systeem gestopt) kwam het bericht ~2,5 s na versturen binnen — de
        oude grens van 1,5 s liet de pols dan 1,1 s achterlopen. Nu tot 8 s;
        is de vertraging langer dan de lopende fase, dan springt het horloge
-       door naar de fase waar de telefoon nu is (stil, zonder trilling — de
-       volgende overgang trilt weer gewoon). */
+       door naar de fase waar de telefoon nu is (en speelt van die fase het
+       stuk dat de telefoon nu voelt, zie startVibration). */
     val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, MAX_LAG_MS) else 0L
+    android.util.Log.d("VZSync", "breath start sentAt=$sentAt now=${System.currentTimeMillis()} lag=${lag}ms")
     val now = SystemClock.uptimeMillis()
     var round = startRound
     var idx = startPhase
@@ -150,12 +218,93 @@ class WearBreathSessionService : Service() {
       finishSession(completed = false)
       return
     }
+    val silentStart = midPhase || skipped
+    startVibration(myGeneration, phases, rounds, round, idx, left, resumed = midPhase && !skipped, now)
     runPhase(
       myGeneration, phases, rounds, modeName, round = round, phaseIdx = idx,
       startUptime = now,
       durMs = left,
-      silentStart = midPhase || skipped,
+      silentStart = silentStart,
     )
+  }
+
+  /** Het hele resterende ritme in één trilpatroon (zie kop van dit bestand).
+   *  Begint NU (`startUptime`): de lopende fase duurt nog `leftMs`. Liep de
+   *  telefoon al in die fase (Bluetooth-vertraging), dan speelt enkel het
+   *  resterende stuk van zijn patroon — zoals de telefoon het nu voelt —
+   *  i.p.v. het hele patroon te laat. Hervatten na pauze: stilte tot de
+   *  volgende fase (die fase was al aangekondigd). */
+  private fun startVibration(
+    gen: Int,
+    phases: List<Phase>,
+    totalRounds: Int,
+    round: Int,
+    idx: Int,
+    leftMs: Long,
+    resumed: Boolean,
+    startUptime: Long,
+  ) {
+    val v = vibrator ?: return
+    val ampControl = try {
+      v.hasAmplitudeControl()
+    } catch (_: Exception) {
+      false
+    }
+    /* 13 okt 2026 (operator: "zacht blijft te hard"): met de gekozen kracht
+       i.p.v. altijd de standaardkracht van het horloge. */
+    val onAmp = if (amp > 0 && ampControl) amp else VibrationEffect.DEFAULT_AMPLITUDE
+    val pieces = ArrayList<Seg>()
+    val curMs = phases[idx].secs * 1000L
+    pieces.add(
+      if (resumed || leftMs > curMs) silence(leftMs)
+      else trimHead(phaseSeg(phases[idx].pattern, curMs, onAmp), curMs - leftMs),
+    )
+    for (i in idx + 1 until phases.size) pieces.add(phaseSeg(phases[i].pattern, phases[i].secs * 1000L, onAmp))
+    val headSteps = pieces.sumOf { it.t.size }
+    val fullRoundsLeft = (totalRounds - round).coerceAtLeast(0)
+    if (fullRoundsLeft > 0) {
+      for (p in phases) pieces.add(phaseSeg(p.pattern, p.secs * 1000L, onAmp))
+    }
+    val t = LongArray(pieces.sumOf { it.t.size })
+    val a = IntArray(t.size)
+    var k = 0
+    for (p in pieces) {
+      p.t.copyInto(t, k)
+      p.a.copyInto(a, k)
+      k += p.t.size
+    }
+    val repeat = if (fullRoundsLeft > 0) headSteps else -1
+    try {
+      vibrateOutsideTouch(VibrationEffect.createWaveform(t, a, repeat))
+    } catch (_: Exception) {
+      /* een toestel/emulator zonder trilmotor mag de sessie niet stoppen */
+    }
+    val roundMs = phases.sumOf { it.secs * 1000L }
+    var restMs = leftMs
+    for (i in idx + 1 until phases.size) restMs += phases[i].secs * 1000L
+    val sessionEnd = startUptime + restMs + fullRoundsLeft * roundMs
+    android.util.Log.d(
+      "VZSync",
+      "breath vibrate wall=${System.currentTimeMillis()} steps=${t.size} repeat=$repeat round=$round/$totalRounds phase=$idx left=${leftMs}ms resumed=$resumed endIn=${sessionEnd - startUptime}ms",
+    )
+    if (fullRoundsLeft > 0) {
+      /* Het herhalende patroon stopt niet vanzelf: na de laatste trilling
+         van de laatste fase afbreken, vóór de "volgende ronde" begint. De
+         trilling houdt het toestel wakker, dus dit komt op tijd. */
+      val last = phases.last()
+      val lastMs = last.secs * 1000L
+      val patternMs = min(last.pattern.sum(), lastMs)
+      val cancelAt = (sessionEnd - lastMs + patternMs + 30L).coerceAtMost(sessionEnd - 20L)
+      handler?.postAtTime({
+        if (gen == generation) {
+          android.util.Log.d("VZSync", "breath vibrate end late=${SystemClock.uptimeMillis() - cancelAt}ms")
+          try {
+            vibrator?.cancel()
+          } catch (_: Exception) {
+          }
+        }
+      }, cancelAt)
+    }
   }
 
   private fun runPhase(
@@ -185,19 +334,11 @@ class WearBreathSessionService : Service() {
     curTotalRounds = totalRounds
     val label = phaseDisplayLabel(phase.key)
 
+    /* De trilling zelf speelt de trilmotor (startVibration); hier enkel
+       beeld en melding. */
+    val late = SystemClock.uptimeMillis() - startUptime
+    if (late > 40) android.util.Log.d("VZSync", "breath phase late round=$round phase=$phaseIdx by=${late}ms")
     if (!silentStart) {
-      try {
-        /* 13 okt 2026 (operator: "zacht blijft te hard"): met de gekozen
-           kracht i.p.v. altijd de standaardkracht van het horloge. */
-        val effect = if (amp > 0 && vibrator?.hasAmplitudeControl() == true) {
-          VibrationEffect.createWaveform(phase.pattern, IntArray(phase.pattern.size) { if (it % 2 == 1) amp else 0 }, -1)
-        } else {
-          VibrationEffect.createWaveform(phase.pattern, -1)
-        }
-        vibrateOutsideTouch(effect)
-      } catch (_: Exception) {
-        /* een toestel/emulator zonder trilmotor mag de lus niet stoppen */
-      }
       BeatBus.beat(true)
     }
 
