@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 13 okt 2026: opstartscherm = enkel de witte V op zwart, geen
+         icoon-achtergrond ("knop") eromheen. -->
+    <style name="VzWearTheme" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowSplashScreenBackground">@android:color/black</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/black</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/vz_splash</item>
+    </style>
+</resources>

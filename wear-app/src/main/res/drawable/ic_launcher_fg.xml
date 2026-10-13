@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 13 okt 2026 (operator: "ons rondje is kleiner dan de rest"): voorgrond
+     van het adaptieve icoon. Een gewone PNG werd door Wear OS verkleind in
+     een eigen cirkel gezet; adaptief vult het de volle cirkel zoals elke
+     andere app. De V staat binnen de veilige zone, ~40% van de cirkel. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/vz_vmark"
+    android:inset="36%" />

@@ -250,6 +250,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val to = b.levelTo
     val start = b.phaseStartUptime
     val span = (b.phaseEndUptime - b.phaseStartUptime).coerceAtLeast(1L)
+    ring.secondsLeftAt = { now ->
+      val leftMs = if (b.paused) ((1f - b.pausedProgress) * span).toLong() else b.phaseEndUptime - now
+      ((leftMs + 999L) / 1000L).toInt().coerceAtLeast(0)
+    }
     ring.phaseProgressAt = { now ->
       if (b.paused) b.pausedProgress else ((now - start).toFloat() / span).coerceIn(0f, 1f)
     }

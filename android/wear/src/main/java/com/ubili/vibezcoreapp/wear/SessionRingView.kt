@@ -107,6 +107,13 @@ class SessionRingView @JvmOverloads constructor(
     strokeCap = Paint.Cap.ROUND
   }
   private val arcRect = RectF()
+  /** Resterende seconden van de fase — linksonder de boog (13 okt 2026). */
+  var secondsLeftAt: (Long) -> Int = { -1 }
+  private val secPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    textAlign = Paint.Align.CENTER
+    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    fontFeatureSettings = "tnum"
+  }
 
   var artScale = 1f
   var artFocusY = 0.5f
@@ -309,6 +316,17 @@ class SessionRingView @JvmOverloads constructor(
       arcPaint.color = color
       arcPaint.alpha = if (paused) 110 else 255
       canvas.drawArc(arcRect, 200f, 140f * prog, false, arcPaint)
+    }
+    val secs = secondsLeftAt(now)
+    if (secs >= 0) {
+      // linksonder het begin van de boog, binnen de rand
+      val a = Math.toRadians(212.0)
+      val rr = (width / 2f - inset) * 0.80f
+      val sx = cx + (rr * Math.cos(a)).toFloat()
+      val sy = cy + (rr * Math.sin(a)).toFloat()
+      secPaint.textSize = 17f * density
+      secPaint.color = Color.argb(if (paused) 140 else 235, 255, 255, 255)
+      canvas.drawText(secs.toString(), sx, sy + secPaint.textSize * 0.35f, secPaint)
     }
 
     /* Geen cirkel of rand (operator 12 okt 2026: "cirkel weg en enkel de
