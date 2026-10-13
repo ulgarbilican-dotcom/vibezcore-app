@@ -537,11 +537,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         if (manyTechs) {
           setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_vz_chevron_down, 0)
           compoundDrawablePadding = dp(3f)
-          background = GradientDrawable().apply {
-            cornerRadius = dp(12f).toFloat()
-            setColor(Color.argb(30, 255, 255, 255))
-            setStroke(dp(1f).coerceAtLeast(1), Color.argb(40, 255, 255, 255))
-          }
+          /* geen pil, enkel het pijltje (operator 13 okt 2026) */
           contentDescription = "Technique ${e.optString("technique")}. Tap to change."
           setOnClickListener {
             startActivity(Intent(this@MainActivity, TechniqueActivity::class.java).putExtra("key", e.optString("key")))
