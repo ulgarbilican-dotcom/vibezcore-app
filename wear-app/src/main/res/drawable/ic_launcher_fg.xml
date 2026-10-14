@@ -2,7 +2,9 @@
 <!-- 13 okt 2026 (operator: "ons rondje is kleiner dan de rest"): voorgrond
      van het adaptieve icoon. Een gewone PNG werd door Wear OS verkleind in
      een eigen cirkel gezet; adaptief vult het de volle cirkel zoals elke
-     andere app. De V staat binnen de veilige zone, ~40% van de cirkel. -->
+     andere app. De V staat binnen de veilige zone. 14 okt 2026 (operator:
+     "die van ons is nu de kleinste"): V groter, inset 36% → 28% (V = de
+     helft van het vlak, binnen de veilige zone van 61%). -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/vz_vmark"
-    android:inset="36%" />
+    android:inset="28%" />
