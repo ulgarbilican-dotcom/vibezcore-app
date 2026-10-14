@@ -223,8 +223,18 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
  *  15:25: "nog altijd voor"; klokverschil opnieuw gemeten 107–206 ms (≈170),
  *  pols ≈45 ms vóór de voelbare tik van de telefoon → 110.
  *  15:27: "nog te snel". Met het horloge aan trilt de telefoon niet; de
- *  vergelijking is de puls op het scherm (+ beeldvertraging) → 170. */
-private const val WATCH_CLOCK_AHEAD_MS = 170L
+ *  vergelijking is de puls op het scherm (+ beeldvertraging) → 170.
+ *  15:36 (operator: "tijd loopt fractie trager op horloge maar puls sneller"):
+ *  de tijd terug naar 20 (de klok klopte), enkel de tik apart later — zie
+ *  WATCH_HAPTIC_DELAY_MS. */
+private const val WATCH_CLOCK_AHEAD_MS = 20L
+
+/** Enkel de trilling (niet de tijd): de puls op het telefoonscherm piekt
+ *  ~85 ms na het ritmemoment + beeldvertraging, en het oog neemt de piek als
+ *  slag; de pols voelt de tik meteen. Op gevoel van de operator (14 okt
+ *  2026): 150 nog "sneller" → 250. Geldt enkel als de telefoon de sessie
+ *  stuurt (sentAtMs), niet voor een sessie op het horloge zelf. */
+private const val WATCH_HAPTIC_DELAY_MS = 250L
 
 /** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
  *  vallen weg, de lopende stap wordt korter). */
@@ -389,6 +399,7 @@ class WearStateSessionService : Service() {
     nextUnit = 0
     val totalMs = waveform.timings.sum()
     startUptime = nowUp + (targetWall - nowWall)
+    val hapticUptime = startUptime + if (s.sentAtMs > 0L) WATCH_HAPTIC_DELAY_MS else 0L
     sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
     /* 13 okt 2026 (operator: "stopt regelmatig, mag gewoon niet stoppen"):
@@ -404,12 +415,12 @@ class WearStateSessionService : Service() {
         /* Liep deze draad wat achter (melding/scherm opbouwen), dan het al
            verstreken stukje van het begin wegknippen — elke volgende tik
            valt zo toch exact op het rooster. */
-        val late = (SystemClock.uptimeMillis() - startUptime).coerceAtLeast(0L)
+        val late = (SystemClock.uptimeMillis() - hapticUptime).coerceAtLeast(0L)
         val pat = buildVibPattern(aligned, amp, late)
         android.util.Log.d("VZSync", "vibrate pattern steps=${pat.timings.size} repeat=${pat.repeat} late=${late}ms")
         vibrate(pat.timings, pat.amplitudes, pat.repeat)
       }
-    }, wholeVibrationToken, startUptime)
+    }, wholeVibrationToken, hapticUptime)
     scheduleNextUnit()
     /* Natuurlijk einde: de curve + het eind-signaal uitspelen, dan stoppen.
        Minstens remainingSec + 1,5 s (protocol). */
@@ -421,7 +432,7 @@ class WearStateSessionService : Service() {
         val (et, ea) = endSignal(amp)
         vibrate(et, ea)
       }
-    }, wholeVibrationToken, startUptime + sessionMs)
+    }, wholeVibrationToken, hapticUptime + sessionMs)
     beatHandler.postAtTime(endRunnable, startUptime + sessionMs + 1500L)
     beatHandler.post(tickRunnable)
     PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
