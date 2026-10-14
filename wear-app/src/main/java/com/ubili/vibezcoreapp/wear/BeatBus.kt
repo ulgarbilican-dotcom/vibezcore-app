@@ -17,8 +17,13 @@ object BeatBus {
     listeners.remove(listener)
   }
 
+  /** Duur van de huidige slag in ms (State Control), 0 = onbekend. Het
+   *  scherm stemt er de duur van de animatie op af, net als de telefoon. */
+  @Volatile var cycleMs: Long = 0L
+
   /** `strong` = de eerste tik van een slag (of een fasewissel bij breathwork). */
-  fun beat(strong: Boolean) {
+  fun beat(strong: Boolean, cycleMs: Long = 0L) {
+    if (cycleMs > 0L) this.cycleMs = cycleMs
     val copy = synchronized(this) { listeners.toList() }
     copy.forEach { it(strong) }
   }

@@ -229,6 +229,13 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
  *  WATCH_HAPTIC_DELAY_MS. */
 private const val WATCH_CLOCK_AHEAD_MS = 20L
 
+/** Enkel het beeld op het horloge (ring, kloppende schijf, geluid), niet de
+ *  tijd en niet de trilling. 14 okt 2026 (operator: "tijd klopt perfect,
+ *  ringanimatie niet"): gemeten loopt de klok van het horloge ≈ 93 ms voor
+ *  op de telefoon (min-RTT) en de tijd gebruikt maar 20 → het beeld kwam
+ *  ~90 ms te vroeg. Enkel als de telefoon de sessie stuurt. */
+private const val WATCH_VISUAL_DELAY_MS = 90L
+
 /** Enkel de trilling (niet de tijd): de puls op het telefoonscherm piekt
  *  ~85 ms na het ritmemoment + beeldvertraging, en het oog neemt de piek als
  *  slag; de pols voelt de tik meteen. Op gevoel van de operator (14 okt
@@ -272,6 +279,8 @@ class WearStateSessionService : Service() {
   private var units: List<BeatUnit> = emptyList()
   private var nextUnit = 0
   private var startUptime = 0L
+  /** Uptime van slag 0 voor het SCHERM (ring + kloppende schijf + geluid). */
+  private var visualUptime = 0L
   /** Uptime waarop de sessietijd (remainingSec) op is. */
   private var sessionEndUptime = 0L
   private var paused = false
@@ -406,6 +415,7 @@ class WearStateSessionService : Service() {
     nextUnit = 0
     val totalMs = waveform.timings.sum()
     startUptime = nowUp + (targetWall - nowWall)
+    visualUptime = startUptime + if (s.sentAtMs > 0L) WATCH_VISUAL_DELAY_MS else 0L
     val hapticUptime = startUptime + if (s.sentAtMs > 0L) WATCH_HAPTIC_DELAY_MS else 0L
     sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
@@ -514,7 +524,7 @@ class WearStateSessionService : Service() {
   private fun playDueUnitAndScheduleNext() {
     if (paused || nextUnit >= units.size) return
     val u = units[nextUnit]
-    val lateMs = SystemClock.uptimeMillis() - (startUptime + u.offsetMs)
+    val lateMs = SystemClock.uptimeMillis() - (visualUptime + u.offsetMs)
     if (lateMs > 40) android.util.Log.d("VZSync", "late unit=$nextUnit by=${lateMs}ms${if (lateMs > LATE_SKIP_MS) " SKIPPED" else ""}")
     if (lateMs <= LATE_SKIP_MS) {
       /* De trilling zelf speelt de trilmotor (zie start(): het hele patroon
@@ -528,7 +538,8 @@ class WearStateSessionService : Service() {
         /* 12 okt 2026: hartslaggeluid op de luidspreker van het horloge,
            op exact dezelfde slag als de trilling. */
         if (session?.sound == true) playHeart()
-        BeatBus.beat(true)
+        val cycle = if (nextUnit + 1 < units.size) units[nextUnit + 1].offsetMs - u.offsetMs else 0L
+        BeatBus.beat(true, cycle)
         val dubDelay = u.t[0] + u.t[1]
         beatHandler.postDelayed({ if (!paused) BeatBus.beat(false) }, dubDelay)
       }
@@ -576,12 +587,12 @@ class WearStateSessionService : Service() {
     val now = SystemClock.uptimeMillis()
     /* Te late slagen (CPU even bezet) overslaan i.p.v. uit de maat spelen —
        het eind-signaal (laatste stuk) wordt nooit overgeslagen. */
-    while (nextUnit < units.size - 1 && startUptime + units[nextUnit].offsetMs < now - LATE_SKIP_MS) {
-      android.util.Log.d("VZSync", "skip unit=$nextUnit (scheduler ${now - startUptime - units[nextUnit].offsetMs}ms late)")
+    while (nextUnit < units.size - 1 && visualUptime + units[nextUnit].offsetMs < now - LATE_SKIP_MS) {
+      android.util.Log.d("VZSync", "skip unit=$nextUnit (scheduler ${now - visualUptime - units[nextUnit].offsetMs}ms late)")
       nextUnit++
     }
     if (nextUnit >= units.size) return
-    beatHandler.postAtTime(beatRunnable, startUptime + units[nextUnit].offsetMs)
+    beatHandler.postAtTime(beatRunnable, visualUptime + units[nextUnit].offsetMs)
   }
 
   private fun vibrate(t: LongArray, a: IntArray, repeat: Int = -1) {

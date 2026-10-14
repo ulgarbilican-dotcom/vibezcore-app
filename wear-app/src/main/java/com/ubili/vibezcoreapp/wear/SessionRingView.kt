@@ -27,6 +27,7 @@ import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import kotlin.math.PI
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -161,7 +162,9 @@ class SessionRingView @JvmOverloads constructor(
   fun pulse(strong: Boolean) {
     /* 12 okt 2026: één ring per hartslag (enkel lub) — de schijf klopt zelf
        al mee; twee ringen per slag oogde druk. */
-    if (strong) pulses.add(Pulse(SystemClock.uptimeMillis(), strong))
+    /* Zoals de telefoon: de ring vertrekt 80 ms na de slag, waar de
+       kloppende schijf op zijn grootst is. */
+    if (strong) pulses.add(Pulse(SystemClock.uptimeMillis() + 80L, strong))
     lastBeat = Pulse(SystemClock.uptimeMillis(), strong)
     postInvalidateOnAnimation()
   }
@@ -171,14 +174,22 @@ class SessionRingView @JvmOverloads constructor(
      zakt zacht terug. Zelfde slag als de trilling (BeatBus), dus beeld,
      gevoel en geluid uit één bron. */
   private var lastBeat: Pulse? = null
+  /* 14 okt 2026 (operator: "ringanimatie niet gelijk"): exact dezelfde
+     beweging als HeartbeatScale op de telefoon — in 80 ms op naar +7 %
+     (dub +3,5 %), dan in de helft van de slag (220–520 ms) zacht terug. */
   private fun beatScale(now: Long): Float {
     val b = lastBeat ?: return 1f
-    val dur = if (b.strong) 420f else 300f
-    val k = (now - b.startMs) / dur
-    if (k >= 1f || k < 0f) return 1f
-    val up = if (k < 0.18f) k / 0.18f else 1f - (k - 0.18f) / 0.82f
-    val e = up * up * (3f - 2f * up)
-    return 1f + (if (b.strong) 0.06f else 0.03f) * e
+    val el = (now - b.startMs).toFloat()
+    if (el < 0f) return 1f
+    val peak = if (b.strong) 0.07f else 0.035f
+    if (el < 80f) {
+      val k = el / 80f
+      return 1f + peak * (1f - (1f - k) * (1f - k))
+    }
+    val back = min(520f, max(220f, BeatBus.cycleMs.coerceAtLeast(1L) * 0.5f))
+    val k = (el - 80f) / back
+    if (k >= 1f) return 1f
+    return 1f + peak * (0.5f + 0.5f * kotlin.math.cos(Math.PI.toFloat() * k))
   }
 
   override fun onDraw(canvas: Canvas) {
@@ -219,25 +230,37 @@ class SessionRingView @JvmOverloads constructor(
     rimPaint.color = color
     canvas.drawCircle(cx, cy, r, rimPaint)
 
-    // 4 · ringen per tik
+    // 4 · ringen per tik — 14 okt 2026: zelfde verloop als de telefoon
+    // (HapticPulseRings): duur = 1,5 slag (500–2600 ms), uitdijen met
+    // ease-out cubic, in 90 ms op volle sterkte en dan uitdoven (ease-in).
+    val base = min(width, height) / 2f / 1.10f
     val it = pulses.iterator()
     while (it.hasNext()) {
       val p = it.next()
-      val dur = if (p.strong) 1400f else 900f
-      val k = (now - p.startMs) / dur
+      val el = (now - p.startMs).toFloat()
+      if (el < 0f) continue
+      val dur = min(2600f, max(500f, BeatBus.cycleMs.coerceAtLeast(1L) * 1.5f))
+      val k = el / dur
       if (k >= 1f) {
         it.remove()
         continue
       }
-      val ease = 1f - (1f - k) * (1f - k)
+      val ease = 1f - (1f - k) * (1f - k) * (1f - k)
       /* 12 okt 2026 (operator: "buitenringen niet duidelijk"): dikker en
-         helderder, tot net aan de rand van het scherm. */
-      val grow = if (p.strong) 0.09f else 0.05f
-      val alpha = (if (p.strong) 0.95f else 0.55f) * (1f - k)
+         helderder, tot net aan de rand van het scherm. Start op de grootte
+         van de kloppende schijf (+7 %), zoals op de telefoon. */
+      val peakA = if (p.strong) 0.95f else 0.55f
+      val alpha = if (el < 90f) {
+        val q = el / 90f
+        peakA * (1f - (1f - q) * (1f - q))
+      } else {
+        val q = (el - 90f) / (dur - 90f)
+        peakA * (1f - q * q)
+      }
       pulsePaint.color = color
       pulsePaint.alpha = (alpha * 255).toInt()
       pulsePaint.strokeWidth = (if (p.strong) 4.5f else 3f) * density
-      canvas.drawCircle(cx, cy, r * (1f + grow * ease), pulsePaint)
+      canvas.drawCircle(cx, cy, base * (1.07f + 0.04f * ease), pulsePaint)
     }
 
     // 5 · tekst
