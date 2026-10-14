@@ -410,8 +410,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       in 12..17 -> "Good afternoon"
       else -> "Good evening"
     }
-    val lastKind = CatalogStore.lastKind(this)
-    val sig = "$hasState|$hasBreath|$greeting|$lastKind|" +
+    val sig = "$hasState|$hasBreath|$greeting|" +
       CatalogStore.state(this).joinToString { it.optString("key") + it.optBoolean("locked") } +
       CatalogStore.breath(this).joinToString { it.optString("key") + it.optBoolean("locked") }
     if (sig == homeSignature) return
@@ -437,32 +436,32 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val col = android.widget.LinearLayout(this).apply {
       orientation = android.widget.LinearLayout.VERTICAL
       gravity = android.view.Gravity.CENTER
-      setPadding(dp(22f), dp(24f), dp(22f), dp(24f))
+      setPadding(dp(18f), dp(12f), dp(18f), dp(12f))
       minimumHeight = pageH
     }
     /* 14 okt 2026 (operator-mock-up "idee voor startpagina, maar dat
        correct"): bovenaan het V-merkteken, een groet volgens het uur en
-       "Choose your session"; daaronder de twee onderdelen met een pijltje.
-       Het laatst gebruikte onderdeel krijgt een dunne rand in Bio-Teal
-       (onze accentkleur — Signal Blue is enkel voor de haptische puls). */
+       "Choose your session"; daaronder de twee onderdelen met een pijltje,
+       gelijkwaardig (operator: "heeft die omlijning zin? je klikt op de
+       pil en het start?" — een tik opent het onderdeel, dus geen rand). */
     col.addView(android.widget.ImageView(this).apply {
       setImageResource(R.drawable.vz_vmark)
       scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }, android.widget.LinearLayout.LayoutParams(dp(20f), dp(19f)).apply { bottomMargin = dp(6f) })
+    }, android.widget.LinearLayout.LayoutParams(dp(17f), dp(16f)).apply { bottomMargin = dp(4f) })
     col.addView(TextView(this).apply {
       text = greeting
       setTextColor(Color.WHITE)
-      textSize = 15f
+      textSize = 14f
       typeface = android.graphics.Typeface.DEFAULT_BOLD
       gravity = android.view.Gravity.CENTER
     }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
     col.addView(TextView(this).apply {
       text = "Choose your session"
       setTextColor(Color.argb(140, 255, 255, 255))
-      textSize = 11f
+      textSize = 10f
       gravity = android.view.Gravity.CENTER
-    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12f) })
+    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(9f) })
     /* 14 okt 2026 (operator: "recent per onderdeel i.p.v. op de
        startpagina"): enkel de twee onderdelen; elk opent op je laatst
        gebruikte toestand (ModesActivity). */
@@ -470,11 +469,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
       val row = android.widget.LinearLayout(this).apply {
         orientation = android.widget.LinearLayout.HORIZONTAL
         gravity = android.view.Gravity.CENTER_VERTICAL
-        setPadding(dp(14f), 0, dp(14f), 0)
+        setPadding(dp(12f), 0, dp(10f), 0)
         background = GradientDrawable().apply {
           cornerRadius = dp(28f).toFloat()
           setColor(Color.parseColor("#1C1C1E"))
-          if (kind == lastKind) setStroke(dp(1.5f), Color.parseColor("#00A3A3"))
         }
         isClickable = true
         contentDescription = label
@@ -482,15 +480,17 @@ class MainActivity : androidx.activity.ComponentActivity() {
           startActivity(Intent(this@MainActivity, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, kind))
         }
       }
-      row.addView(icon, android.widget.LinearLayout.LayoutParams(dp(30f), dp(30f)).apply { marginEnd = dp(10f) })
+      row.addView(icon, android.widget.LinearLayout.LayoutParams(dp(24f), dp(24f)).apply { marginEnd = dp(8f) })
       val texts = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL }
       texts.addView(TextView(this).apply {
         text = label
         setTextColor(Color.WHITE)
         typeface = android.graphics.Typeface.DEFAULT_BOLD
-        maxLines = 1
-        // "State Control" moet heel blijven: zo nodig iets kleiner
-        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 11, 15, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+        isSingleLine = true
+        hyphenationFrequency = android.text.Layout.HYPHENATION_FREQUENCY_NONE
+        // beide knoppen dezelfde vaste grootte (14 okt 2026: met autosize
+        // stond "State Control" kleiner dan "Breathwork"); 12,5 sp past heel
+        textSize = 12.5f
       }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(21f)))
       if (sub.isNotBlank()) {
         texts.addView(TextView(this).apply {
@@ -505,9 +505,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
         setImageResource(R.drawable.ic_vz_chevron_right)
         alpha = 0.55f
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, android.widget.LinearLayout.LayoutParams(dp(16f), dp(16f)))
-      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
-        bottomMargin = dp(8f)
+      }, android.widget.LinearLayout.LayoutParams(dp(13f), dp(13f)))
+      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
+        bottomMargin = dp(6f)
       })
     }
     /* dezelfde symbolen als de tabbalk van de app (operator: "kijk naar de
