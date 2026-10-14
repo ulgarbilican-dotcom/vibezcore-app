@@ -275,6 +275,11 @@ export type HapticPulse = {
   /** Duur van de huidige hartslagcyclus — het beeld schaalt zijn ring-
    *  beweging hierop: traag tempo = trage, brede ring. */
   cycleMs: number;
+  /** Gepland slagmoment (wandklok, ms). 14 okt 2026 (operator: "de ring op
+   *  de smartwatch gaat sneller t.o.v. de telefoon"): de JS-timer die dit
+   *  event afvuurt liep tot ±150 ms naast de slag (logs [sync]); het beeld
+   *  rekent daarom vanaf DIT moment, zoals het horloge (vaste klok). */
+  atMs: number;
 };
 
 type PulseListener = (pulse: HapticPulse) => void;
@@ -330,8 +335,8 @@ function scheduleVisual(
     beat = beatAt(spec, curveSec, timing);
   }
   const { cycleMs, dubAt } = beat;
-  emitPulse({ kind: 'lub', mode, cycleMs });
   const beatWallMs = anchorWallMs + (curveSec - offsetSec) * 1000;
+  emitPulse({ kind: 'lub', mode, cycleMs, atMs: beatWallMs });
   /* Meting synchronisatie met het horloge (13 okt 2026, VZSync op het horloge). */
   if (__DEV__ && syncLogCount < 40) {
     syncLogCount += 1;
@@ -341,7 +346,7 @@ function scheduleVisual(
   const nextWallMs = anchorWallMs + (nextCurveSec - offsetSec) * 1000;
   pendingTimeouts.push(
     setTimeout(() => {
-      if (myGeneration === generation) emitPulse({ kind: 'dub', mode, cycleMs });
+      if (myGeneration === generation) emitPulse({ kind: 'dub', mode, cycleMs, atMs: beatWallMs + dubAt });
     }, Math.max(0, beatWallMs + dubAt - Date.now())),
     setTimeout(
       () => scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, nextCurveSec, myGeneration),
@@ -378,13 +383,14 @@ function scheduleBeat(
   const { cycleMs, dubAt } = beatAt(spec, (Date.now() - curveStartedAt) / 1000, timing);
   fire(spec.lubStyle);
   if (jsSoundOn && getStateHear()) heartbeatLub();
-  emitPulse({ kind: 'lub', mode, cycleMs });
+  const lubAt = Date.now();
+  emitPulse({ kind: 'lub', mode, cycleMs, atMs: lubAt });
   pendingTimeouts.push(
     setTimeout(() => {
       if (myGeneration !== generation) return;
       fire(spec.dubStyle);
       if (jsSoundOn && getStateHear()) heartbeatDub();
-      emitPulse({ kind: 'dub', mode, cycleMs });
+      emitPulse({ kind: 'dub', mode, cycleMs, atMs: lubAt + dubAt });
     }, dubAt),
     setTimeout(() => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration), cycleMs),
   );
