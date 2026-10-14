@@ -165,7 +165,7 @@ class SessionRingView @JvmOverloads constructor(
     /* Zoals de telefoon: de ring vertrekt 80 ms na de slag, waar de
        kloppende schijf op zijn grootst is. */
     if (strong) pulses.add(Pulse(SystemClock.uptimeMillis() + 80L, strong))
-    lastBeat = Pulse(SystemClock.uptimeMillis(), strong)
+    if (strong) lastLubMs = SystemClock.uptimeMillis()
     postInvalidateOnAnimation()
   }
 
@@ -173,23 +173,32 @@ class SessionRingView @JvmOverloads constructor(
      zwelt bij elke slag heel licht op — sterk bij lub, zacht bij dub — en
      zakt zacht terug. Zelfde slag als de trilling (BeatBus), dus beeld,
      gevoel en geluid uit één bron. */
-  private var lastBeat: Pulse? = null
-  /* 14 okt 2026 (operator: "ringanimatie niet gelijk"): exact dezelfde
-     beweging als HeartbeatScale op de telefoon — in 80 ms op naar +7 %
-     (dub +3,5 %), dan in de helft van de slag (220–520 ms) zacht terug. */
+  /* 14 okt 2026 (operator: "oogt amateuristisch en stroef — zoek op hoe
+     professionals dit doen"): één doorlopende curve per hartslag (lub op,
+     kleine dip, dub op, uitzakken, rust), berekend uit de tijd sinds de lub
+     — geen tweede animatie die de eerste onderbreekt of terugspringt.
+     Identiek aan HeartbeatScale op de telefoon. */
+  private var lastLubMs = -1L
+  private fun easeOutQuad(k: Float) = 1f - (1f - k) * (1f - k)
+  private fun easeInOutSine(k: Float) = 0.5f - 0.5f * kotlin.math.cos(Math.PI.toFloat() * k)
   private fun beatScale(now: Long): Float {
-    val b = lastBeat ?: return 1f
-    val el = (now - b.startMs).toFloat()
+    if (lastLubMs < 0L) return 1f
+    val el = (now - lastLubMs).toFloat()
     if (el < 0f) return 1f
-    val peak = if (b.strong) 0.07f else 0.035f
-    if (el < 80f) {
-      val k = el / 80f
-      return 1f + peak * (1f - (1f - k) * (1f - k))
+    val c = BeatBus.cycleMs.coerceAtLeast(300L).toFloat()
+    val dubAt = kotlin.math.round(min(c * 0.3f, 350f))
+    val rise = 80f
+    val back = max(160f, minOf(520f, c * 0.45f, c - dubAt - rise - 40f))
+    val lub = 1.07f
+    val valley = 1.015f
+    val dub = 1.04f
+    return when {
+      el < rise -> 1f + (lub - 1f) * easeOutQuad(el / rise)
+      el < dubAt -> lub + (valley - lub) * easeInOutSine((el - rise) / max(40f, dubAt - rise))
+      el < dubAt + rise -> valley + (dub - valley) * easeOutQuad((el - dubAt) / rise)
+      el < dubAt + rise + back -> dub + (1f - dub) * easeInOutSine((el - dubAt - rise) / back)
+      else -> 1f
     }
-    val back = min(520f, max(220f, BeatBus.cycleMs.coerceAtLeast(1L) * 0.5f))
-    val k = (el - 80f) / back
-    if (k >= 1f) return 1f
-    return 1f + peak * (0.5f + 0.5f * kotlin.math.cos(Math.PI.toFloat() * k))
   }
 
   override fun onDraw(canvas: Canvas) {

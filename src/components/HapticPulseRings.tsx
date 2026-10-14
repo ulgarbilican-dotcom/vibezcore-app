@@ -180,6 +180,11 @@ const s = StyleSheet.create({
    zacht terug. Zelfde bron als de ringen (subscribeHapticPulse), dus exact
    op de trilling; zelfde gedrag als de ring op het horloge. Uit bij
    "Beweging beperken". */
+/** Hartslagcurve (telefoon = horloge): lub-top, dip, dub-top. */
+const BEAT_LUB = 1.07;
+const BEAT_VALLEY = 1.015;
+const BEAT_DUB = 1.04;
+
 export function HeartbeatScale({ size, children }: { size: number; children: React.ReactNode }) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
@@ -187,23 +192,23 @@ export function HeartbeatScale({ size, children }: { size: number; children: Rea
     if (reduced) return;
     return subscribeHapticPulse((pulse) => {
       /* Vervolg (operator: "niet sterk genoeg"): 3,5 % was ~8 px. */
-      const peak = pulse.kind === 'lub' ? 1.07 : 1.035;
-      const back = Math.min(520, Math.max(220, pulse.cycleMs * 0.5));
-      if (pulse.kind === 'dub') {
-        /* 14 okt 2026 (operator: "op telefoon lijkt dat nog altijd 1 klik"):
-           de dub valt terwijl de cirkel nog terugzakt van de lub (~1,05) —
-           "op naar 1,035" was dan geen klop. Exact zoals het horloge
-           (SessionRingView.beatScale): meteen terug naar 1, dan in 80 ms
-           opnieuw op. Twee kloppen per hartslag. */
-        scale.value = withSequence(
-          withTiming(1, { duration: 0 }),
-          withTiming(peak, { duration: 80, easing: Easing.out(Easing.quad) }),
-          withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
-        );
-        return;
-      }
+      /* 14 okt 2026 (operator: "oogt amateuristisch en stroef — zoek op hoe
+         professionals dit doen"): één doorlopende curve per hartslag, zoals
+         een keyframe-hartslag (lub op, kleine dip, dub op, uitzakken, rust)
+         — geen twee losse animaties die elkaar onderbreken of terugspringen
+         (Apple "Designing Fluid Interfaces": nooit springen, altijd verder
+         vanaf de huidige stand). De dub-gebeurtenis stuurt de schaal niet;
+         de curve legt de dub op exact hetzelfde moment als de trilling.
+         Identiek aan SessionRingView.beatScale op het horloge. */
+      if (pulse.kind !== 'lub') return;
+      const c = pulse.cycleMs;
+      const dubAt = Math.round(Math.min(c * 0.3, 350));
+      const rise = 80;
+      const back = Math.max(160, Math.min(520, c * 0.45, c - dubAt - rise - 40));
       scale.value = withSequence(
-        withTiming(peak, { duration: 80, easing: Easing.out(Easing.quad) }),
+        withTiming(BEAT_LUB, { duration: rise, easing: Easing.out(Easing.quad) }),
+        withTiming(BEAT_VALLEY, { duration: Math.max(40, dubAt - rise), easing: Easing.inOut(Easing.sin) }),
+        withTiming(BEAT_DUB, { duration: rise, easing: Easing.out(Easing.quad) }),
         withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
       );
     });
