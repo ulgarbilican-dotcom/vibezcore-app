@@ -18,7 +18,7 @@
 import { BrandDark } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { subscribeHapticPulse, type HapticPulse } from '@/services/bracelet-haptics';
-import { Canvas, Circle, Group } from '@shopify/react-native-skia';
+import { BlurMask, Canvas, Circle, Group } from '@shopify/react-native-skia';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -107,19 +107,22 @@ const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ri
    professioneel moet"). Het gangbare sonar-/ripple-patroon:
      · vertrekt vanuit het element zelf (achter de rand van de kloppende
        cirkel, dus geen "plop" bij het verschijnen) en groeit naar buiten;
-     · ease-out (Material "decelerate", cubic-bezier(0, 0, 0.2, 1)): snel
-       weg, vertraagt — een signaal dat uitwaaiert;
+     · ease-out cubic (cubic-bezier(0.33, 1, 0.68, 1)): snel weg,
+       vertraagt — een signaal dat uitwaaiert;
      · doorzichtigheid ~0,5 → 0, geleidelijk tot nul, geen harde stop;
      · gelijkmatige lijn (enkel straal en doorzichtigheid bewegen);
-     · rustig: elke golf leeft ~2 slagen, zodat er steeds twee elkaar
-       gelijkmatig opvolgen (gestaffeld, doorlopend).
+     · ÉÉN golffront per slag: weg vóór de volgende slag (schermopname
+       14 okt 16:52: met 2 slagen levensduur stonden er steeds 2–3 dunne
+       ringen tegelijk die zich buiten opstapelden — een schietschijf, geen
+       drukgolf); het front is een zachte, lichtende lijn (blur).
    Bronnen: travis.media/blog/css-pulse-effect, educative "Pulsating CTA",
    Material motion (decelerate easing). Getekend met Skia (UI-thread). */
-const WAVE_POOL = 4;
+const WAVE_POOL = 2;
 const WAVE_START = 1.0; // vanuit de rand van de cirkel (verborgen erachter)
-const WAVE_END = 1.5;
-const WAVE_STROKE = 2.5;
-const WAVE_PEAK_OPACITY = 0.55;
+const WAVE_END = 1.45;
+const WAVE_STROKE = 3;
+const WAVE_BLUR = 3;
+const WAVE_PEAK_OPACITY = 0.8;
 
 type WaveHandle = { fire: (durationMs: number) => void };
 
@@ -128,14 +131,17 @@ const Wave = forwardRef<WaveHandle, { r0: number; c: number; color: string }>(fu
   useImperativeHandle(ref, () => ({
     fire(durationMs) {
       p.value = 0;
-      p.value = withTiming(1, { duration: durationMs, easing: Easing.bezier(0, 0, 0.2, 1) });
+      p.value = withTiming(1, { duration: durationMs, easing: Easing.bezier(0.33, 1, 0.68, 1) });
     },
   }));
   const r = useDerivedValue(() => r0 * (WAVE_START + (WAVE_END - WAVE_START) * p.value));
-  const o = useDerivedValue(() => WAVE_PEAK_OPACITY * (1 - p.value));
+  /* Kwadratisch uitdoven: de energie zit vooraan, buiten is hij weg. */
+  const o = useDerivedValue(() => WAVE_PEAK_OPACITY * (1 - p.value) * (1 - p.value));
   return (
     <Group opacity={o}>
-      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={WAVE_STROKE} />
+      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={WAVE_STROKE}>
+        <BlurMask blur={WAVE_BLUR} style="solid" />
+      </Circle>
     </Group>
   );
 });
@@ -150,10 +156,10 @@ function PressureWaves({ size, color }: { size: number; color: string }) {
     return subscribeHapticPulse((pulse) => {
       if (pulse.kind !== 'lub') return;
       /* Op de slag zelf; de golf zit eerst achter de cirkel en komt naar
-         buiten terwijl die opzwelt. Leeft ~2 slagen (1,2–2,6 s). */
+         buiten terwijl die opzwelt. Weg vóór de volgende slag (0,8 slag). */
       const w = waves.current[next.current];
       next.current = (next.current + 1) % WAVE_POOL;
-      w?.fire(Math.min(2600, Math.max(1200, pulse.cycleMs * 2)));
+      w?.fire(Math.min(1300, Math.max(450, pulse.cycleMs * 0.8)));
     });
   }, [reduced]);
   if (reduced) return null;
