@@ -110,6 +110,57 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
       bottomMargin = dp(6f)
     })
 
+    /* 14 okt 2026 (operator: "geen hartslag op het horloge — go, maar
+       correct en overzichtelijk"): Sound aan/uit, zelfde vorm als Duration;
+       de hele rij is de schakelaar. Aan = de hartslag op de luidspreker van
+       het horloge (lub en dub apart, op de tikken). Wordt onthouden. */
+    val soundOn = CatalogStore.stateSound(this)
+    val soundSwitch = android.widget.Switch(this).apply {
+      isChecked = soundOn
+      isClickable = false
+      isFocusable = false
+      importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+      trackTintList = android.content.res.ColorStateList(
+        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+        intArrayOf(Color.parseColor("#00A3A3"), Color.argb(90, 255, 255, 255)),
+      )
+    }
+    val soundRow = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = Gravity.CENTER_VERTICAL
+      setPadding(dp(16f), 0, dp(10f), 0)
+      background = GradientDrawable().apply {
+        cornerRadius = dp(20f).toFloat()
+        setColor(Color.argb(36, 255, 255, 255))
+      }
+      isClickable = true
+      contentDescription = "Sound"
+      accessibilityDelegate = object : android.view.View.AccessibilityDelegate() {
+        override fun onInitializeAccessibilityNodeInfo(host: android.view.View, info: android.view.accessibility.AccessibilityNodeInfo) {
+          super.onInitializeAccessibilityNodeInfo(host, info)
+          info.isCheckable = true
+          info.isChecked = soundSwitch.isChecked
+        }
+      }
+      setOnClickListener {
+        val on = !soundSwitch.isChecked
+        soundSwitch.isChecked = on
+        CatalogStore.setStateSound(this@StateControlActivity, on)
+      }
+    }
+    soundRow.addView(TextView(this).apply {
+      text = "Sound"
+      setTextColor(Color.WHITE)
+      textSize = 14f
+      typeface = Typeface.DEFAULT_BOLD
+      maxLines = 1
+    }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+    soundRow.addView(soundSwitch)
+    col.addView(soundRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
+      bottomMargin = dp(6f)
+    })
+
     if (e.optBoolean("locked")) {
       col.addView(TextView(this).apply {
         text = "Unlock with Premium on your phone"
@@ -153,7 +204,7 @@ internal fun startLocalStateSession(context: Context, e: JSONObject, minutes: In
     put("colorHex", e.optString("colorHex"))
     put("curveOffsetSec", 0.0)
     put("remainingSec", minutes * 60.0)
-    put("sound", false)
+    put("sound", CatalogStore.stateSound(context))
     put("local", true)
     put("mode", e.optInt("key"))
     put("plannedSec", minutes * 60)
