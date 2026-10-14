@@ -88,9 +88,10 @@ export default function AboutScreen() {
             Future." — dit is de finale, goedgekeurde copy. */}
         <Text style={s.heroSub}>
           VIBEZCORE is a platform for state control and personal growth.
-          It combines a Smart Bead Bracelet for instant state control,
-          guided breathwork for active state training, and a structured
-          Audio Library for long-term growth. Not just feeling better —
+          It combines State Control — a heartbeat rhythm on your phone or
+          smartwatch — for shifting your state in the moment, guided
+          breathwork for active state training, and a structured Audio
+          Library for long-term growth. Not just feeling better —
           performing better, and continuing to develop over time.
         </Text>
         <Text style={s.heroResult}>
@@ -100,12 +101,23 @@ export default function AboutScreen() {
         {/* ── Two products (commercieel: wat je NU kunt kopen vs. wat nog
             komt — dit is een aankoop-indeling, geen merk-identiteit; de
             drie instrumenten hieronder blijven wel apart benoemd) ── */}
+        {/* 14 okt 2026 (operator-goedkeuring copyvoorstel A2): State Control
+            op telefoon en horloge is nu de kern — eigen kaart, bovenaan. */}
+        <ProductCard
+          status="available"
+          badge="AVAILABLE NOW"
+          tag="Shift your state in the moment"
+          title="State Control"
+          desc="Five states — energy, focus, calm, clarity, sleep. A heartbeat rhythm on your phone or smartwatch that starts at your own resting heart rate and settles toward the state you choose. No effort, no screen to watch."
+          ctaLabel="Open State Control"
+          onPress={() => router.dismissTo('/bracelet' as never)}
+        />
         <ProductCard
           status="available"
           badge="AVAILABLE NOW"
           tag="Practiced today"
           title="Guided Breathwork"
-          desc="All 35 guided sessions across five states — energy, focus, calm, clarity, rest. Voice, visuals and haptics carry every breath, with the full Audio Library included."
+          desc="15 techniques across five states — energy, focus, calm, clarity, sleep. Voice, visuals and haptics carry every breath, on your phone or your smartwatch."
           ctaLabel="Start Breathing"
           onPress={() => router.dismissTo('/breath' as never)}
         />
@@ -118,7 +130,7 @@ export default function AboutScreen() {
           badge="AVAILABLE NOW"
           tag="Long-term growth"
           title="The Audio Library"
-          desc="A structured library built on neuroscience, psychology and philosophy — training the mind for change that lasts. Included with Breathwork Premium."
+          desc="A structured library built on psychology, philosophy and research — training the mind for change that lasts. Included with VIBEZCORE Premium."
           ctaLabel="Explore Library"
           onPress={() => router.dismissTo('/' as never)}
         />
@@ -131,9 +143,9 @@ export default function AboutScreen() {
         <ProductCard
           status="upcoming"
           badge="KICKSTARTER · EARLY 2027"
-          tag="Standalone bottom-up state regulation"
+          tag="The premium upgrade"
           title="Smart Bead Bracelet"
-          desc="One HapticCore, built into a bracelet of premium natural gemstone beads — jewelry first, technology second. Calm, focus or recovery on demand. And for breathwork, a selling point on its own: a pre-set, structured session carried entirely through haptic pulses on your wrist, no screen needed."
+          desc="The same State Control rhythm, built into a bracelet — stainless steel with real gemstone beads, and interchangeable bead sets. Nature meets tech: worn all day, no phone needed."
           ctaLabel="Explore Bracelet"
           /* Bracelet-links → de website (operator 7 okt; audit 8 okt 2026). */
           onPress={() => void openBraceletWebsite()}
@@ -166,24 +178,21 @@ export default function AboutScreen() {
         <SectionHeader num="02" title="How the three instruments work" />
 
         <Text style={s.subSection}>Instant State Control</Text>
-        <Text style={s.tagline}>Smart Bead Bracelet</Text>
+        <Text style={s.tagline}>On your phone and smartwatch</Text>
         <P>
-          Precision haptics at the wrist change your physiological state
-          within minutes — calm, focus, energy or sleep, on demand. No
-          screen to watch, no effort: pure bottom-up regulation, passive
-          by design.
+          A heartbeat rhythm, felt as gentle taps, starts at your own
+          resting heart rate and moves toward the state you choose —
+          energy, focus, calm, clarity or sleep. Nothing to follow,
+          nothing to watch: you simply feel it.
         </P>
         <P>
-          The body influences the mind: signals from your nervous
-          system shape attention, emotion and decisions before
-          cognition engages. The bracelet works with that biology —
-          a direct route to inner state, bottom-up by design.
+          Your body influences your mind, and this rhythm works from the
+          body up. Built on research, bottom-up by design.
         </P>
         <P>
-          And when you do want to breathe, it becomes something more:
-          the same haptic guidance can carry a breathwork session
-          discreetly onto your wrist — an innovative, screen-free way
-          to practice, on top of everything it already does on its own.
+          From Early 2027, the Smart Bead Bracelet carries the same rhythm
+          on your wrist, independent of your phone — and can guide a
+          breathwork session discreetly.
         </P>
         <Text style={[s.p, s.pBoldClose]}>
           <Text style={s.bold}>Body first. Mind follows.</Text>
@@ -195,11 +204,12 @@ export default function AboutScreen() {
         <Text style={s.tagline}>Guided Breathwork</Text>
         <P>
           Learn to consciously steer your state through your breath.
-          All 35 guided sessions across five states — energy, focus,
-          calm, clarity, rest — regulate stress, raise focus, activate
-          energy or create relaxation, with voice, visuals and haptics
-          carrying every breath in real time. This is active practice:
-          something you do, not something you passively receive.
+          15 techniques across five states — energy, focus, calm,
+          clarity, sleep — help you ease stress, sharpen focus, raise
+          energy or relax, with voice, visuals and haptics carrying every
+          breath in real time, on your phone or your smartwatch. This is
+          active practice: something you do, not something you passively
+          receive.
         </P>
 
         <Text style={[s.subSection, { marginTop: 32 }]}>
@@ -207,7 +217,7 @@ export default function AboutScreen() {
         </Text>
         <Text style={s.tagline}>The Audio Library</Text>
         <P>
-          Built on neuroscience, psychology and philosophy. Not
+          Built on psychology, philosophy and research. Not
           motivation — understanding. Sessions that develop new mental
           models, habits and behavioural patterns that create real
           shifts over time.
@@ -276,11 +286,13 @@ export default function AboutScreen() {
             mensen die niet willen leven op automatische piloot." */}
         <SectionHeader num="03" title="Who it's for" />
         <P>
-          VIBEZCORE is for people who want greater control over
-          themselves — entrepreneurs, professionals, leaders, creatives,
-          high-performers under pressure, anyone committed to personal
-          growth. It&apos;s not for everyone. In short: for people who
-          refuse to live on autopilot.
+          VIBEZCORE is for anyone who wants more control over how they
+          feel, think and live — whether you&apos;re a parent with a full
+          day ahead, a student before an exam, working shifts or behind a
+          desk, or building something of your own as an entrepreneur,
+          leader or creative. You don&apos;t need to be a high-performer
+          to start. You only need to want more from your days. In short:
+          for everyone who refuses to live on autopilot.
         </P>
         <Text style={s.smallNote}>
           The platform is intended for users aged 18 and older.

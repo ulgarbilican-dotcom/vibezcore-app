@@ -97,6 +97,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 13 okt 2026 (laat): State Control met horloge, gemeten en opgelost — (1) Wear OS zet onze wakelock op DISABLED met scherm uit → het horloge geeft nu een compact trilpatroon (opbouw + herhalende slag, eindsignaal apart) aan de trilmotor, geen tik-per-tik meer; (2) synchronisatie: startmoment op de klok vlak voor het plannen, te late start wegknippen, eerste tik op het rooster van de telefoon, telefoon-anker = moment van echte trilling (+160 ms), bijgesteld op gevoel (WATCH_CLOCK_AHEAD_MS 20) — operator: "nu lijkt het goed"; (3) hartslaggeluid speelt de telefoon (module stuurde sound nooit door); (4) timer horloge rondt af zoals de telefoon. **Native wijziging wear-breath → nieuwe telefoonbuild nodig.** Meetlogs: VZSync (horloge), [sync] (telefoon, enkel dev). Tests T155–T162.
 
+- 14 okt 2026: bracelet-opkuis (bracelet = Early 2027): welkom/Profile-activatielinks weg, tandwiel State Control weg, teksten Settings/meldingen/herinnering zonder bracelet, oude pagina's smart-bead-bracelet/bracelet-preview/coming verwijderd, "Welcome back Warrior"-pop-up weg. About/FAQ/Privacy herschreven (voorstel goedgekeurd: "herschrijf en ik zie wel"). Horloge: startscherm State Control/Breathwork met app-symbolen, State Control zelf starten op het horloge, Recent-rij, labels grijs + toestandsnaam in kleur. Bibliotheek: Soundscapes & Affirmations schermbreed bij abonnement.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

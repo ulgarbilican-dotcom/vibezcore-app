@@ -233,15 +233,15 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'bracelet',
     question: 'How does the Smart Bead Bracelet work?',
     answer:
-      "The VIBEZCORE Smart Bead Bracelet delivers precisely calibrated haptic pulses to the wrist at specific intervals and intensities. This stimulates the body's nervous system directly — triggering a physiological response before the mind can interfere.\n\n" +
-      "Select your desired state in the app. Body shifts. Mind follows. Most users notice a meaningful shift toward calm, focus, or presence within 15–30 minutes. No screens. No effort. Just results.",
+      "From Early 2027, the Smart Bead Bracelet will carry State Control on your wrist: gentle haptic pulses in a heartbeat rhythm that starts at your own resting heart rate and settles toward the state you choose. Choose your state in the app and the bracelet runs the session on its own — no screen needed.\n\n" +
+      "Until then, you can use State Control today on your phone or smartwatch.",
   },
   {
     id: 'bracelet-why-wrist',
     category: 'bracelet',
     question: 'Why the wrist for haptic feedback?',
     answer:
-      "The wrist provides direct access to nerve pathways that influence the autonomic nervous system. Haptic stimulation at this location produces faster, more reliable physiological responses. The signals bypass visual distraction and cognitive filtering — reaching you directly, in the moment, without requiring you to look at a screen.",
+      "The wrist is where you can feel a gentle rhythm without looking or listening — discreet, always within reach, and easy to notice without distraction. It's also where many people already wear a watch or bracelet all day.",
   },
   {
     /* Herschreven (operator, 11 augustus 2026: "echt alles nakijken, want
@@ -260,7 +260,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'bracelet',
     question: 'Can VIBEZCORE be used multiple times per day?',
     answer:
-      "Yes. The Smart Bead Bracelet can be worn throughout the entire day and used as often as you choose. Many users wear it from morning to evening as a constant awareness anchor.\n\n" +
+      "Yes. State Control and breathwork can be used as often as you like — today on your phone or smartwatch, and from Early 2027 on the bracelet, which is designed to be worn all day.\n\n" +
       "For audio sessions, listen at whatever pace fits your life. Some users do one session per day, others several. Returning to the same session multiple times also has value — repetition deepens integration as the ideas compound over time.",
   },
   {
@@ -268,21 +268,22 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'bracelet',
     question: 'Does the Smart Bead Bracelet track personal data?',
     answer:
-      "No. The VIBEZCORE Smart Bead Bracelet does not monitor biometrics, heart rate, sleep, or any other personal health metrics. It is a precision delivery instrument for haptic signals — its purpose is state regulation, not data collection.",
+      "No. The Smart Bead Bracelet is designed without health sensors: it won't monitor heart rate, sleep or other health metrics. Its only job is to deliver the rhythm.\n\n" +
+      "If you choose, the VIBEZCORE app can read your resting heart rate from Apple Health or Health Connect to personalise State Control — only with your permission.",
   },
   {
     id: 'bracelet-needs-smartphone',
     category: 'bracelet',
     question: 'Does VIBEZCORE require a smartphone?',
     answer:
-      "Yes. The VIBEZCORE Smart Bead Bracelet is operated via the VIBEZCORE app, available for iOS and Android. The app is used to configure haptic schedules, select your state, and access the audio library. Once configured, the bracelet operates independently without needing your phone nearby.",
+      "Yes. The bracelet will be set up and controlled with the VIBEZCORE app for iOS and Android, where you choose your state and session. Once a session starts, the bracelet runs it on its own — your phone doesn't need to stay nearby.",
   },
   {
     id: 'bracelet-medical-device',
     category: 'bracelet',
     question: 'Is the bracelet a medical device?',
     answer:
-      "No. The VIBEZCORE Smart Bead Bracelet is a precision-engineered personal performance instrument. It has not been submitted for medical device classification and is not approved or certified for any medical, diagnostic, or therapeutic purpose by any regulatory authority.\n\n" +
+      "No. The Smart Bead Bracelet is a personal wellbeing product, not a medical device. It has not been submitted for medical device classification and is not approved or certified for any medical, diagnostic, or therapeutic purpose by any regulatory authority.\n\n" +
       "It should not be used as a substitute for medical treatment or professional health monitoring.",
   },
 
@@ -344,19 +345,15 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'design',
     question: 'What materials are used in the bracelet?',
     answer:
-      "The VIBEZCORE Smart Bead Bracelet is centered around its advanced smart pod, built using high-end composite materials for a lightweight, durable, and refined experience designed for continuous daily use.\n\n" +
-      "The bracelet is constructed around a precision-engineered metal core string that runs through each bead, creating a strong yet flexible structure that maintains its shape over time.\n\n" +
-      "The beads are crafted from carefully selected premium gemstones, giving the bracelet its distinctive character and elevated aesthetic.\n\n" +
-      "The locking system is made from high-quality stainless steel, engineered for secure closure, strength, and long-term wear resistance.\n\n" +
-      "Every component is designed for structural integrity, comfort, and performance. Full specifications are available on the product page.",
+      "The Smart Bead Bracelet is designed around a compact smart pod, threaded on a strong, flexible metal core string, with beads of real gemstones and a stainless steel locking system. Bead sets will be interchangeable, so you can change its look.\n\n" +
+      "Final specifications will be published on the product page before launch.",
   },
   {
     id: 'design-waterproof',
     category: 'design',
     question: 'Is the bracelet waterproof?',
     answer:
-      "**No. The VIBEZCORE Smart Bead Bracelet is not waterproof.** It is designed for everyday wear and can handle light, incidental moisture — but prolonged submersion, swimming, and high-pressure water contact must be avoided to preserve the precision components and finish.\n\n" +
-      "Specific water resistance ratings are listed on the product page. When in doubt, remove the bracelet before water exposure.",
+      "No. The Smart Bead Bracelet is not designed to be waterproof. It's made for everyday wear and light, incidental moisture — remove it before swimming, showering or other prolonged water contact. Final water-resistance details will be published on the product page before launch.",
   },
   {
     /* Herschreven (operator, 11 augustus 2026: "echt alles nakijken"). De
@@ -368,14 +365,14 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'design',
     question: 'How is the bracelet charged?',
     answer:
-      "The Smart Bead Bracelet charges by resting on its included charging dock — precision POGO-pin contacts on the dock connect to the bracelet automatically, no cable to plug in. A full charge provides several days of regular use. Exact charging time and battery life are listed on the product page.",
+      "The Smart Bead Bracelet is designed to charge by resting on its charging dock — POGO-pin contacts connect automatically, no cable to plug in. Battery life and charging time will be confirmed on the product page before launch.",
   },
   {
     id: 'design-sizes',
     category: 'design',
     question: 'Does the bracelet come in different sizes or styles?',
     answer:
-      "Yes. The VIBEZCORE Smart Bead Bracelet is available in multiple sizes and finishes. Available options are shown on the product page.",
+      "Multiple sizes and interchangeable bead sets are planned. The final options will be shown on the product page at launch.",
   },
 
   /* ── ORDERS & SHIPPING ────────────────────────────────────────── */

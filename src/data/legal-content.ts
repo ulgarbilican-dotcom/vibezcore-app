@@ -540,7 +540,7 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'cards',
       items: [
-        { title: 'Bluetooth',      text: 'Required to connect and control your Smart Bead Bracelet. Not used for tracking or location.' },
+        { title: 'Bluetooth',      text: 'Only used to connect a Smart Bead Bracelet (launching Early 2027). Not used for tracking or location.' },
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
         { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
@@ -1166,7 +1166,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. Bracelet session history is stored entirely on your device.',
+      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. State Control session history is stored entirely on your device.',
     },
 
     /* ── 02. What We Store ── */
@@ -1236,7 +1236,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Smart Bead Bracelet session history is stored **entirely locally** and never leaves your device.',
+      text: 'State Control session history is stored **entirely locally** and never leaves your device.',
     },
 
     /* ── 06. Do Not Track ── */
