@@ -221,8 +221,10 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
  *  gevoel wint van de adb-meting → terug naar 20, de waarde die goed voelde.
  *  Daarna "loopt nog fractie voor" → nog 40 ms later (60). Hoger = pols later.
  *  15:25: "nog altijd voor"; klokverschil opnieuw gemeten 107–206 ms (≈170),
- *  pols ≈45 ms vóór de voelbare tik van de telefoon → 110. */
-private const val WATCH_CLOCK_AHEAD_MS = 110L
+ *  pols ≈45 ms vóór de voelbare tik van de telefoon → 110.
+ *  15:27: "nog te snel". Met het horloge aan trilt de telefoon niet; de
+ *  vergelijking is de puls op het scherm (+ beeldvertraging) → 170. */
+private const val WATCH_CLOCK_AHEAD_MS = 170L
 
 /** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
  *  vallen weg, de lopende stap wordt korter). */
