@@ -470,12 +470,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
         // "State Control" moet heel blijven: zo nodig iets kleiner
         androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 11, 15, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
       }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(21f)))
-      texts.addView(TextView(this).apply {
-        text = sub
-        setTextColor(Color.argb(140, 255, 255, 255))
-        textSize = 10f
-        maxLines = 1
-      })
+      if (sub.isNotBlank()) {
+        texts.addView(TextView(this).apply {
+          text = sub
+          setTextColor(Color.argb(140, 255, 255, 255))
+          textSize = 10f
+          maxLines = 1
+        })
+      }
       row.addView(texts, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
       col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(56f)).apply {
         bottomMargin = dp(8f)
@@ -489,11 +491,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
       setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    val nState = CatalogStore.state(this).size
-    val breathList = CatalogStore.breath(this)
-    val nTech = breathList.sumOf { it.optJSONArray("techniques")?.length() ?: 1 }
-    if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE, "$nState states")
-    if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH, "${breathList.size} states · $nTech techniques")
+    // geen ondertitel (operator 14 okt: "die info mag weg")
+    if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE, "")
+    if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH, "")
     list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
   }
 
