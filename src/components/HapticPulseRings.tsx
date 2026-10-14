@@ -37,7 +37,19 @@ const POOL_SIZE = 6;
 
 type RingLook = { peakOpacity: number; maxScale: number; durationMs: number };
 
-function lookFor(pulse: HapticPulse): RingLook {
+/* 14 okt 2026 (operator: "die op de smartwatch is eigenlijk beter"): op het
+   sessiescherm dezelfde strakke ring als op het horloge — hij blijft vlak
+   rond de kloppende cirkel (+7 % → +11 %), dikker en helderder, zodat het
+   dubbele kloppen van de cirkel zelf het hoofdeffect is. Tempo en duur
+   ongewijzigd. */
+const BEAT_SYNCED_MAX_SCALE = 1.11;
+const BEAT_SYNCED_PEAK_OPACITY = 0.9;
+
+function lookFor(pulse: HapticPulse, beatSynced = false): RingLook {
+  if (beatSynced) {
+    const durationMs = Math.min(2600, Math.max(500, pulse.cycleMs * 1.5));
+    return { peakOpacity: BEAT_SYNCED_PEAK_OPACITY, maxScale: BEAT_SYNCED_MAX_SCALE, durationMs };
+  }
   const calm =
     pulse.mode === BraceletMode.Delta ||
     pulse.mode === BraceletMode.Theta ||
@@ -53,7 +65,10 @@ function lookFor(pulse: HapticPulse): RingLook {
 
 type RingHandle = { fire: (look: RingLook, reduced: boolean, startScale?: number) => void };
 
-const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ring({ size, color }, ref) {
+const Ring = forwardRef<RingHandle, { size: number; color: string; width?: number }>(function Ring(
+  { size, color, width },
+  ref,
+) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -86,7 +101,12 @@ const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ri
   return (
     <Animated.View
       pointerEvents="none"
-      style={[s.ring, { width: size, height: size, borderRadius: size / 2, borderColor: color }, style]}
+      style={[
+        s.ring,
+        { width: size, height: size, borderRadius: size / 2, borderColor: color },
+        width ? { borderWidth: width } : null,
+        style,
+      ]}
     />
   );
 });
@@ -115,7 +135,7 @@ export function HapticPulseRings({
       const fire = () => {
         const ring = rings.current[next.current];
         next.current = (next.current + 1) % POOL_SIZE;
-        ring?.fire(lookFor(pulse), reduced, beatSynced && !reduced ? 1.07 : 1);
+        ring?.fire(lookFor(pulse, beatSynced), reduced, beatSynced && !reduced ? 1.07 : 1);
       };
       if (beatSynced && !reduced) timers.push(setTimeout(fire, 80));
       else fire();
@@ -133,6 +153,7 @@ export function HapticPulseRings({
           key={i}
           size={size}
           color={color}
+          width={beatSynced ? 2.75 : undefined}
           ref={(r) => {
             rings.current[i] = r;
           }}
