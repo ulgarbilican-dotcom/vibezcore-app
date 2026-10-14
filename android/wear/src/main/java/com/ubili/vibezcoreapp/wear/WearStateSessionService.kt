@@ -576,6 +576,9 @@ class WearStateSessionService : Service() {
          onder 150 Hz, wat een horlogeluidspreker niet kan weergeven. Deze
          versie draagt dezelfde lub-dub in boventonen (400–1000 Hz), zodat
          je oor de diepe slag nog hoort ("missing fundamental"). */
+      /* 14 okt 2026 (operator: "klinkt als een kikker"): de horloge-versie
+         met boventonen klonk niet als een hart → de natuurlijke opname van
+         de telefoon (6396), gesplitst in lub en dub. */
       heartId = pool.load(this, R.raw.heartbeat_watch_lub, 1)
       heartDubId = pool.load(this, R.raw.heartbeat_watch_dub, 1)
       soundPool = pool
