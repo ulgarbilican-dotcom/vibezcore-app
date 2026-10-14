@@ -289,6 +289,20 @@ class WearStateSessionService : Service() {
    *  waterpeil op het scherm; hervatten stuurt enkel wat er nog over is). */
   private var sessionTotalSec = 0
 
+  /* 14 okt 2026 (operator: "scherm uit, trilling weg"): Wear OS breekt een
+     lopende trilling af als het scherm uitgaat door een knop of een
+     polsbeweging (dumpsys vibrator_manager: "cancelled_by_screen_off" — ook
+     voor ALARM; bij een time-out niet). Daarom zet de dienst de trilling
+     meteen opnieuw in, op exact dezelfde plek in het ritme. */
+  private val screenOffReceiver = object : android.content.BroadcastReceiver() {
+    override fun onReceive(c: Context?, i: Intent?) {
+      beatHandler.postDelayed({ rearmVibration() }, 300L)
+    }
+  }
+
+  /** Uptime waarop het trilpatroon begon (voor het herstarten na scherm uit). */
+  private var hapticStartUptime = 0L
+
   private val beatRunnable = Runnable { playDueUnitAndScheduleNext() }
   /** startId van de lopende START — een natuurlijk einde stopt de service
    *  enkel als er intussen geen nieuwere opdracht binnenkwam. */
@@ -317,6 +331,10 @@ class WearStateSessionService : Service() {
     }
     beatThread = HandlerThread("vibezcore-state-beats", Process.THREAD_PRIORITY_URGENT_AUDIO).also { it.start() }
     beatHandler = Handler(beatThread.looper)
+    androidx.core.content.ContextCompat.registerReceiver(
+      this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF),
+      androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
+    )
     ensureChannel()
     ensureSound()
   }
@@ -417,6 +435,7 @@ class WearStateSessionService : Service() {
     startUptime = nowUp + (targetWall - nowWall)
     visualUptime = startUptime + if (s.sentAtMs > 0L) WATCH_VISUAL_DELAY_MS else 0L
     val hapticUptime = startUptime + if (s.sentAtMs > 0L) WATCH_HAPTIC_DELAY_MS else 0L
+    hapticStartUptime = hapticUptime
     sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
     /* 13 okt 2026 (operator: "stopt regelmatig, mag gewoon niet stoppen"):
@@ -615,7 +634,10 @@ class WearStateSessionService : Service() {
       /* Expliciet MEDIA (niet TOUCH: dat volgt "trillen bij aanraken");
          in batterijbesparing/stil als ALARM, dat wordt nergens stilgelegd —
          zelfde regel als StateHapticsService op de telefoon. */
-      val asAlarm = mustBypassQuietModes()
+      /* 14 okt 2026: ALTIJD alarm. Wear OS stopt een media-trilling die al
+         liep zodra het scherm uitgaat (dumpsys vibrator_manager:
+         "cancelled_by_screen_off"); een alarm-trilling loopt door. */
+      val asAlarm = true
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         v.vibrate(
           effect,
@@ -637,12 +659,21 @@ class WearStateSessionService : Service() {
     }
   }
 
-  private fun mustBypassQuietModes(): Boolean = try {
-    val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
-    val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-    (pm?.isPowerSaveMode == true) || (am?.ringerMode == android.media.AudioManager.RINGER_MODE_SILENT)
-  } catch (_: Exception) {
-    false
+  /** Na scherm uit: het lopende patroon opnieuw inzetten vanaf NU. */
+  private fun rearmVibration() {
+    val s = session ?: return
+    if (paused) return
+    val now = SystemClock.uptimeMillis()
+    val late = now - hapticStartUptime
+    if (late < 0L || now >= sessionEndUptime - 200L) return
+    val amp = try {
+      vibrator?.hasAmplitudeControl() == true
+    } catch (_: Exception) {
+      false
+    }
+    val pat = buildVibPattern(s, amp, late)
+    android.util.Log.d("VZSync", "rearm after screen off late=${late}ms")
+    vibrate(pat.timings, pat.amplitudes, pat.repeat)
   }
 
   private fun cancelVibration() {
@@ -696,6 +727,10 @@ class WearStateSessionService : Service() {
 
   private fun acquireWakeLock(durationMs: Long) {
     releaseWakeLock()
+    if (!keepAliveHeld) {
+      KeepAlive.acquire(this)
+      keepAliveHeld = true
+    }
     val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
     wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vibezcore:state-wear").apply {
       setReferenceCounted(false)
@@ -704,7 +739,14 @@ class WearStateSessionService : Service() {
     }
   }
 
+  /** Stil geluid tegen het bevriezen door Samsung (zie KeepAlive). */
+  private var keepAliveHeld = false
+
   private fun releaseWakeLock() {
+    if (keepAliveHeld) {
+      KeepAlive.release()
+      keepAliveHeld = false
+    }
     try {
       if (wakeLock?.isHeld == true) wakeLock?.release()
     } catch (_: Exception) {
@@ -732,6 +774,10 @@ class WearStateSessionService : Service() {
   }
 
   override fun onDestroy() {
+    try {
+      unregisterReceiver(screenOffReceiver)
+    } catch (_: Exception) {
+    }
     if (instance === this) instance = null
     beatHandler.removeCallbacksAndMessages(null)
     cancelVibration()

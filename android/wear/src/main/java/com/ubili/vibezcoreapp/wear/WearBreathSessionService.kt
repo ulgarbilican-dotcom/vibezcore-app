@@ -124,6 +124,22 @@ class WearBreathSessionService : Service() {
   private var curRound = 1
   private var curIdx = 0
   private var curTotalRounds = 1
+  /* 14 okt 2026 (operator: "scherm uit, trilling weg"): Wear OS breekt een
+     lopende trilling af als het scherm uitgaat door een knop of een
+     polsbeweging (dumpsys vibrator_manager: "cancelled_by_screen_off" — ook
+     voor ALARM; bij een time-out niet). Daarom zet de dienst de trilling
+     meteen opnieuw in, op exact dezelfde plek in het ritme. */
+  private val screenOffReceiver = object : android.content.BroadcastReceiver() {
+    override fun onReceive(c: Context?, i: Intent?) {
+      handler?.postDelayed({ rearmVibration() }, 300L)
+    }
+  }
+
+  /** Lopende fase (voor het herstarten na scherm uit). */
+  private var curPhases: List<Phase> = emptyList()
+  private var curPhaseEndUptime = 0L
+  private var playing = false
+
   /** Waterpeil op het scherm: stijgt bij inademen, zakt bij uitademen. */
   private var level = 0.3f
 
@@ -137,6 +153,10 @@ class WearBreathSessionService : Service() {
     }
     thread = HandlerThread("vibezcore-breath-loop").also { it.start() }
     handler = Handler(thread!!.looper)
+    androidx.core.content.ContextCompat.registerReceiver(
+      this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF),
+      androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
+    )
     ensureChannel()
   }
 
@@ -332,6 +352,8 @@ class WearBreathSessionService : Service() {
     curRound = round
     curIdx = phaseIdx
     curTotalRounds = totalRounds
+    curPhases = phases
+    playing = true
     val label = phaseDisplayLabel(phase.key)
 
     /* De trilling zelf speelt de trilmotor (startVibration); hier enkel
@@ -343,6 +365,7 @@ class WearBreathSessionService : Service() {
     }
 
     val endUptime = startUptime + durMs
+    curPhaseEndUptime = endUptime
     val target = when {
       phase.key.startsWith("inhale") -> 0.85f
       phase.key.startsWith("exhale") -> 0.18f
@@ -383,6 +406,7 @@ class WearBreathSessionService : Service() {
   /** Pauze: het ritme stopt, het scherm toont Resume. Hervatten komt als een
    *  nieuwe START van de telefoon, met de plek in de sessie. */
   private fun pauseSession() {
+    playing = false
     generation++
     handler?.removeCallbacksAndMessages(null)
     try {
@@ -418,11 +442,13 @@ class WearBreathSessionService : Service() {
   }
 
   private fun stopSession() {
+    playing = false
     generation++ // annuleert elke geplande runPhase()
     finishSession(completed = false)
   }
 
   private fun finishSession(completed: Boolean) {
+    playing = false
     handler?.removeCallbacksAndMessages(null)
     localJson?.let { j ->
       activeMs += SystemClock.uptimeMillis() - runStartUptime
@@ -446,15 +472,23 @@ class WearBreathSessionService : Service() {
      haptics"): zonder attributen telt een trilling als TOUCH, en die legt
      Wear OS stil zodra het scherm uitgaat. Zoals State Control: MEDIA, en
      in batterijbesparing of stille modus ALARM (wordt nergens stilgelegd). */
+  /** Na scherm uit: het resterende ritme opnieuw inzetten vanaf NU. */
+  private fun rearmVibration() {
+    if (!playing || curPhases.isEmpty()) return
+    val now = SystemClock.uptimeMillis()
+    val left = curPhaseEndUptime - now
+    if (left <= 150L) return
+    android.util.Log.d("VZSync", "breath rearm after screen off round=$curRound phase=$curIdx left=${left}ms")
+    startVibration(generation, curPhases, curTotalRounds, curRound, curIdx, left, resumed = false, startUptime = now)
+  }
+
   private fun vibrateOutsideTouch(effect: VibrationEffect) {
     val v = vibrator ?: return
-    val asAlarm = try {
-      val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
-      val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-      (pm?.isPowerSaveMode == true) || (am?.ringerMode == android.media.AudioManager.RINGER_MODE_SILENT)
-    } catch (_: Exception) {
-      false
-    }
+    /* 14 okt 2026 (operator: "scherm uit, trilling weg"): ALTIJD alarm.
+       Wear OS stopt een media-trilling die al liep zodra het scherm uitgaat
+       (dumpsys vibrator_manager: "cancelled_by_screen_off", gemeten op de
+       Watch4); een alarm-trilling loopt door. */
+    val asAlarm = true
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       v.vibrate(
         effect,
@@ -474,14 +508,25 @@ class WearBreathSessionService : Service() {
   }
 
   private fun acquireWakeLock() {
+    if (!keepAliveHeld) {
+      KeepAlive.acquire(this)
+      keepAliveHeld = true
+    }
     if (wakeLock?.isHeld == true) return
     val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
     wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vibezcore:breath-wear")
     wakeLock?.setReferenceCounted(false)
-    wakeLock?.acquire(30 * 60 * 1000L) // hard plafond van 30 min — nooit onbeperkt vasthouden
+    wakeLock?.acquire(60 * 60 * 1000L) // hard plafond van 60 min (sessies tot 30 min + pauzes) — nooit onbeperkt
   }
 
+  /** Stil geluid tegen het bevriezen door Samsung (zie KeepAlive). */
+  private var keepAliveHeld = false
+
   private fun releaseWakeLock() {
+    if (keepAliveHeld) {
+      KeepAlive.release()
+      keepAliveHeld = false
+    }
     if (wakeLock?.isHeld == true) wakeLock?.release()
   }
 
@@ -503,6 +548,10 @@ class WearBreathSessionService : Service() {
   }
 
   override fun onDestroy() {
+    try {
+      unregisterReceiver(screenOffReceiver)
+    } catch (_: Exception) {
+    }
     if (instance === this) instance = null
     releaseWakeLock()
     thread?.quitSafely()
