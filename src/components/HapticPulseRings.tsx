@@ -18,7 +18,7 @@
 import { BrandDark } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { subscribeHapticPulse, type HapticPulse } from '@/services/bracelet-haptics';
-import { BlurMask, Canvas, Circle, Group } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group } from '@shopify/react-native-skia';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -114,14 +114,18 @@ const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ri
      · ÉÉN golffront per slag: weg vóór de volgende slag (schermopname
        14 okt 16:52: met 2 slagen levensduur stonden er steeds 2–3 dunne
        ringen tegelijk die zich buiten opstapelden — een schietschijf, geen
-       drukgolf); het front is een zachte, lichtende lijn (blur).
+       drukgolf); het front is een lichtende lijn: een scherpe kern met
+       een brede, zwakke halo (twee lijnen — een BlurMask was te zwaar
+       voor de A16: schermopname 17:10 toonde nog ~10 beelden/s).
+   Identiek aan SessionRingView op het horloge.
    Bronnen: travis.media/blog/css-pulse-effect, educative "Pulsating CTA",
    Material motion (decelerate easing). Getekend met Skia (UI-thread). */
 const WAVE_POOL = 2;
 const WAVE_START = 1.0; // vanuit de rand van de cirkel (verborgen erachter)
 const WAVE_END = 1.45;
 const WAVE_STROKE = 3;
-const WAVE_BLUR = 3;
+const WAVE_HALO_STROKE = 10;
+const WAVE_HALO_OPACITY = 0.22;
 const WAVE_PEAK_OPACITY = 0.8;
 
 type WaveHandle = { fire: (durationMs: number) => void };
@@ -139,9 +143,8 @@ const Wave = forwardRef<WaveHandle, { r0: number; c: number; color: string }>(fu
   const o = useDerivedValue(() => WAVE_PEAK_OPACITY * (1 - p.value) * (1 - p.value));
   return (
     <Group opacity={o}>
-      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={WAVE_STROKE}>
-        <BlurMask blur={WAVE_BLUR} style="solid" />
-      </Circle>
+      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={WAVE_HALO_STROKE} opacity={WAVE_HALO_OPACITY} />
+      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={WAVE_STROKE} />
     </Group>
   );
 });

@@ -277,7 +277,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
     (nameLabel.parent as View).visibility = View.VISIBLE
     ring.isClickable = false
     pauseButton.visibility = View.VISIBLE
-    setNameTop(44)
+    setNameTop(48)
+    setControlsBottom(20)
     nameLabel.textSize = 15f
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
@@ -289,6 +290,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun renderBreath(b: BreathSessionState.Snapshot) {
     showSession(b.modeName, b.colorHex, b.paused)
+    setControlsBottom(12)
     /* operator 13 okt: "bij actieve sessies ook telkens andere formaten" —
        zelfde bijgesneden figuur als op het startscherm, alle vijf in hetzelfde
        vak (r × 0.95 op het grootst van de adem), enkel de optische correctie
@@ -383,6 +385,19 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   /* Breathwork heeft geen cirkel: de naam hoger, zodat hij vrij boven de
      figuur staat (operator 12 okt 2026: "die sleep staat zeer laag"). */
+  /* 14 okt 2026: State Control heeft een kleinere schijf (ruimte voor de
+     drukgolf) — pauze + END iets hoger zodat ze binnen de schijf blijven.
+     Breathwork houdt 12 dp. */
+  private fun setControlsBottom(dp: Int) {
+    val col = endButton.parent as View
+    val lp = col.layoutParams as android.widget.FrameLayout.LayoutParams
+    val px = (dp * resources.displayMetrics.density).toInt()
+    if (lp.bottomMargin != px) {
+      lp.bottomMargin = px
+      col.layoutParams = lp
+    }
+  }
+
   private fun setNameTop(dp: Int) {
     val row = nameLabel.parent as View
     val lp = row.layoutParams as android.widget.FrameLayout.LayoutParams

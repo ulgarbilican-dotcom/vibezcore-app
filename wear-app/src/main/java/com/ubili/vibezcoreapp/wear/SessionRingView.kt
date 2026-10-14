@@ -162,9 +162,10 @@ class SessionRingView @JvmOverloads constructor(
   fun pulse(strong: Boolean) {
     /* 12 okt 2026: één ring per hartslag (enkel lub) — de schijf klopt zelf
        al mee; twee ringen per slag oogde druk. */
-    /* Zoals de telefoon: de ring vertrekt 80 ms na de slag, waar de
-       kloppende schijf op zijn grootst is. */
-    if (strong) pulses.add(Pulse(SystemClock.uptimeMillis() + 80L, strong))
+    /* Zoals de telefoon (PressureWaves): de drukgolf vertrekt op de slag,
+       achter de rand van de schijf, en komt naar buiten terwijl die
+       opzwelt. */
+    if (strong) pulses.add(Pulse(SystemClock.uptimeMillis(), strong))
     if (strong) lastLubMs = SystemClock.uptimeMillis()
     postInvalidateOnAnimation()
   }
@@ -208,13 +209,53 @@ class SessionRingView @JvmOverloads constructor(
     val cy = height / 2f
     // 12 okt 2026: de ring vult het scherm; de tik-ringen dijen nog net tot
     // aan de rand uit (tot 1,08×) i.p.v. ver erbuiten.
-    val r = min(width, height) / 2f / 1.10f * beatScale(now)
+    /* 14 okt 2026: State Control-schijf kleiner (1/1,18 i.p.v. 1/1,10) zodat
+       de drukgolf — zoals op de telefoon — zichtbaar naar buiten kan reizen
+       tot de schermrand. Breathwork (figuur) houdt zijn maat. */
+    val disc = if (art == null) STATE_DISC_DIV else 1.10f
+    val r = min(width, height) / 2f / disc * beatScale(now)
     val size = 2f * r
+
+    // 0 · drukgolf — 14 okt 2026 (operator: "telefoon en horloge anders,
+    // maak correct"): exact de golf van de telefoon (PressureWaves): één
+    // golffront per slag, vertrekt achter de rand van de schijf (daarom
+    // vóór de schijf getekend), ease-out cubic, kwadratisch uitdoven, leeft
+    // 0,8 slag (450–1300 ms); kern 2,5 dp + halo 7 dp op 25 %. De
+    // golf reist tot de schermrand.
+    if (art == null) {
+      val base = min(width, height) / 2f / STATE_DISC_DIV
+      val it = pulses.iterator()
+      while (it.hasNext()) {
+        val p = it.next()
+        val el = (now - p.startMs).toFloat()
+        if (el < 0f) continue
+        val dur = min(1300f, max(450f, BeatBus.cycleMs.coerceAtLeast(1L) * 0.8f))
+        val k = el / dur
+        if (k >= 1f) {
+          it.remove()
+          continue
+        }
+        val e = 1f - (1f - k) * (1f - k) * (1f - k)
+        val o = 0.8f * (1f - e) * (1f - e)
+        /* Vertrekt op de rand van de opgezwollen schijf (1,07) — op het
+           kleine scherm zou hij anders pas zichtbaar worden als hij al
+           grotendeels uitgedoofd is. Reist tot net voorbij de schermrand. */
+        val rr = base * (1.07f + (STATE_DISC_DIV - 1.07f + 0.02f) * e)
+        pulsePaint.color = color
+        pulsePaint.strokeWidth = 7f * density
+        pulsePaint.alpha = (o * 0.25f * 255).toInt()
+        canvas.drawCircle(cx, cy, rr, pulsePaint)
+        pulsePaint.strokeWidth = 2.5f * density
+        pulsePaint.alpha = (o * 255).toInt()
+        canvas.drawCircle(cx, cy, rr, pulsePaint)
+      }
+    }
 
     // 1 · schijf (State Control); Breathwork heeft geen cirkel
     if (art == null) canvas.drawCircle(cx, cy, r, discPaint)
 
     if (art != null) {
+      pulses.clear() // geen drukgolf bij Breathwork
       drawBreathFigure(canvas, cx, cy, r, now)
       if (flowing || pulses.isNotEmpty()) postInvalidateOnAnimation()
       return
@@ -238,39 +279,6 @@ class SessionRingView @JvmOverloads constructor(
     // 3 · rand
     rimPaint.color = color
     canvas.drawCircle(cx, cy, r, rimPaint)
-
-    // 4 · ringen per tik — 14 okt 2026: zelfde verloop als de telefoon
-    // (HapticPulseRings): duur = 1,5 slag (500–2600 ms), uitdijen met
-    // ease-out cubic, in 90 ms op volle sterkte en dan uitdoven (ease-in).
-    val base = min(width, height) / 2f / 1.10f
-    val it = pulses.iterator()
-    while (it.hasNext()) {
-      val p = it.next()
-      val el = (now - p.startMs).toFloat()
-      if (el < 0f) continue
-      val dur = min(2600f, max(500f, BeatBus.cycleMs.coerceAtLeast(1L) * 1.5f))
-      val k = el / dur
-      if (k >= 1f) {
-        it.remove()
-        continue
-      }
-      val ease = 1f - (1f - k) * (1f - k) * (1f - k)
-      /* 12 okt 2026 (operator: "buitenringen niet duidelijk"): dikker en
-         helderder, tot net aan de rand van het scherm. Start op de grootte
-         van de kloppende schijf (+7 %), zoals op de telefoon. */
-      val peakA = if (p.strong) 0.95f else 0.55f
-      val alpha = if (el < 90f) {
-        val q = el / 90f
-        peakA * (1f - (1f - q) * (1f - q))
-      } else {
-        val q = (el - 90f) / (dur - 90f)
-        peakA * (1f - q * q)
-      }
-      pulsePaint.color = color
-      pulsePaint.alpha = (alpha * 255).toInt()
-      pulsePaint.strokeWidth = (if (p.strong) 4.5f else 3f) * density
-      canvas.drawCircle(cx, cy, base * (1.07f + 0.04f * ease), pulsePaint)
-    }
 
     // 5 · tekst — 14 okt 2026 (operator: "PAUSED moet boven Sharp Focus
     // staan; alles moet ademen"): één verticaal ritme met gelijke lucht
@@ -448,3 +456,6 @@ class SessionRingView @JvmOverloads constructor(
     if (visibility == VISIBLE) postInvalidateOnAnimation()
   }
 }
+
+/** State Control-schijf = halve schermbreedte / deze waarde (rest = ruimte voor de drukgolf). */
+private const val STATE_DISC_DIV = 1.18f
