@@ -192,10 +192,11 @@ export function HeartbeatScale({ size, children }: { size: number; children: Rea
       if (pulse.kind === 'dub') {
         /* 14 okt 2026 (operator: "op telefoon lijkt dat nog altijd 1 klik"):
            de dub valt terwijl de cirkel nog terugzakt van de lub (~1,05) —
-           "op naar 1,035" was dan geen klop. Zoals het horloge: eerst kort
-           terug, dan duidelijk opnieuw op. Twee kloppen per hartslag. */
+           "op naar 1,035" was dan geen klop. Exact zoals het horloge
+           (SessionRingView.beatScale): meteen terug naar 1, dan in 80 ms
+           opnieuw op. Twee kloppen per hartslag. */
         scale.value = withSequence(
-          withTiming(1, { duration: 50, easing: Easing.in(Easing.quad) }),
+          withTiming(1, { duration: 0 }),
           withTiming(peak, { duration: 80, easing: Easing.out(Easing.quad) }),
           withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
         );
