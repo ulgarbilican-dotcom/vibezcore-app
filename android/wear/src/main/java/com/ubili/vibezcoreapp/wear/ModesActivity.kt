@@ -78,6 +78,11 @@ class ModesActivity : androidx.activity.ComponentActivity() {
       return
     }
     for (e in entries) list.addView(pageFor(e, pageH), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, pageH))
+    /* 14 okt 2026: openen op de laatst gebruikte toestand van dit onderdeel
+       (i.p.v. een "Recent"-rij op het startscherm) — zoals Workout. */
+    val last = CatalogStore.lastKey(this, if (kind == KIND_STATE) "state" else "breath")
+    val idx = entries.indexOfFirst { it.optString("key") == last }
+    if (idx > 0) scroll.post { scroll.scrollTo(0, idx * pageH) }
   }
 
   private fun pageFor(e: org.json.JSONObject, pageH: Int): View {

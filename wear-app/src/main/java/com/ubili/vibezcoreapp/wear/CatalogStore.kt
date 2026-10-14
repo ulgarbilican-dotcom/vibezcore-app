@@ -99,17 +99,28 @@ object CatalogStore {
     }
   }
 
-  /** De laatst gestarte horloge-sessie, Breathwork of State Control (voor
-   *  de "Recent"-rij op het startscherm, 14 okt 2026). */
+  /** De laatst gestarte horloge-sessie, Breathwork of State Control.
+   *  14 okt 2026 (operator: "recent per onderdeel i.p.v. op de startpagina"):
+   *  per onderdeel ook de laatste toestand (`last_state` / `last_breath`) —
+   *  het onderdeel opent daarop, zoals Workout op je laatste training. */
   fun setRecent(context: Context, kind: String, key: String, minutes: Int, techKey: String = "") {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-      .putString("recent", JSONObject().put("kind", kind).put("key", key).put("minutes", minutes).put("tech", techKey).toString()).apply()
+      .putString("recent", JSONObject().put("kind", kind).put("key", key).put("minutes", minutes).put("tech", techKey).toString())
+      .putString("last_$kind", key)
+      .apply()
   }
 
-  fun recent(context: Context): JSONObject? = try {
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("recent", null)?.let { JSONObject(it) }
-  } catch (_: Exception) {
-    null
+  /** Laatst gestarte toestand van een onderdeel ("state" of "breath"), of null. */
+  fun lastKey(context: Context, kind: String): String? {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    prefs.getString("last_$kind", null)?.let { return it }
+    /* van vóór 14 okt: enkel één gezamenlijke "recent" */
+    return try {
+      prefs.getString("recent", null)?.let { JSONObject(it) }
+        ?.takeIf { it.optString("kind") == kind }?.optString("key")
+    } catch (_: Exception) {
+      null
+    }
   }
 
   fun setLast(context: Context, key: String, minutes: Int, techKey: String = "") {
