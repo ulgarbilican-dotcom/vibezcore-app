@@ -404,7 +404,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun renderHome() {
     val hasState = CatalogStore.state(this).isNotEmpty()
     val hasBreath = CatalogStore.breath(this).isNotEmpty()
-    val sig = "$hasState|$hasBreath"
+    val sig = "$hasState|$hasBreath|" + (CatalogStore.recent(this)?.toString() ?: "") +
+      CatalogStore.state(this).joinToString { it.optString("key") + it.optBoolean("locked") } +
+      CatalogStore.breath(this).joinToString { it.optString("key") + it.optBoolean("locked") }
     if (sig == homeSignature) return
     homeSignature = sig
     val list = findViewById<android.widget.LinearLayout>(R.id.homeList)
@@ -428,9 +430,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val col = android.widget.LinearLayout(this).apply {
       orientation = android.widget.LinearLayout.VERTICAL
       gravity = android.view.Gravity.CENTER
-      setPadding(dp(22f), 0, dp(22f), 0)
+      setPadding(dp(22f), dp(30f), dp(22f), dp(30f))
+      minimumHeight = pageH
     }
-    fun choice(label: String, icon: View, kind: String) {
+    /* 14 okt 2026 (operator: "hoe ziet een professioneel startscherm eruit"):
+       bovenaan je laatste sessie, één tik om meteen te starten — zoals
+       Workout en Strava op het horloge. Daaronder de twee onderdelen. */
+    recentRow()?.let { (caption, pill) ->
+      col.addView(caption, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        marginStart = dp(12f)
+        bottomMargin = dp(3f)
+      })
+      col.addView(pill, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(56f)).apply {
+        bottomMargin = dp(12f)
+      })
+    }
+    fun choice(label: String, icon: View, kind: String, sub: String) {
       val row = android.widget.LinearLayout(this).apply {
         orientation = android.widget.LinearLayout.HORIZONTAL
         gravity = android.view.Gravity.CENTER_VERTICAL
@@ -446,14 +461,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
         }
       }
       row.addView(icon, android.widget.LinearLayout.LayoutParams(dp(30f), dp(30f)).apply { marginEnd = dp(10f) })
-      row.addView(TextView(this).apply {
+      val texts = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL }
+      texts.addView(TextView(this).apply {
         text = label
         setTextColor(Color.WHITE)
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         maxLines = 1
         // "State Control" moet heel blijven: zo nodig iets kleiner
         androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 11, 15, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
-      }, android.widget.LinearLayout.LayoutParams(0, dp(24f), 1f))
+      }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(21f)))
+      texts.addView(TextView(this).apply {
+        text = sub
+        setTextColor(Color.argb(140, 255, 255, 255))
+        textSize = 10f
+        maxLines = 1
+      })
+      row.addView(texts, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
       col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(56f)).apply {
         bottomMargin = dp(8f)
       })
@@ -466,9 +489,80 @@ class MainActivity : androidx.activity.ComponentActivity() {
       setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE)
-    if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH)
-    list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
+    val nState = CatalogStore.state(this).size
+    val breathList = CatalogStore.breath(this)
+    val nTech = breathList.sumOf { it.optJSONArray("techniques")?.length() ?: 1 }
+    if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE, "$nState states")
+    if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH, "${breathList.size} states · $nTech techniques")
+    list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
+  }
+
+  /** "RECENT" + witte pil met je laatste horloge-sessie; tik = meteen starten.
+   *  Null als er nog geen is of die toestand op slot staat. */
+  private fun recentRow(): Pair<View, View>? {
+    val r = CatalogStore.recent(this) ?: return null
+    val key = r.optString("key")
+    val minutes = r.optInt("minutes")
+    val title: String
+    val sub: String
+    val start: () -> Unit
+    if (r.optString("kind") == "state") {
+      val e = CatalogStore.state(this).firstOrNull { it.optString("key") == key } ?: return null
+      if (e.optBoolean("locked")) return null
+      title = "${e.optString("name")} · $minutes min"
+      sub = "State Control"
+      start = { startLocalStateSession(this, e, minutes) }
+    } else {
+      val raw = CatalogStore.breath(this).firstOrNull { it.optString("key") == key } ?: return null
+      val e = CatalogStore.withTechnique(raw, r.optString("tech"))
+      if (e.optBoolean("locked")) return null
+      val durIdx = durationIndexFor(e, minutes)
+      val label = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optString("label") ?: "$minutes min"
+      title = "${e.optString("name")} · $label"
+      sub = "Breathwork · ${e.optString("technique")}"
+      start = { startLocalSession(this, e, durIdx) }
+    }
+    val caption = TextView(this).apply {
+      text = "RECENT"
+      setTextColor(Color.argb(128, 255, 255, 255))
+      textSize = 10f
+      letterSpacing = 0.14f
+      typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val pill = android.widget.LinearLayout(this).apply {
+      orientation = android.widget.LinearLayout.HORIZONTAL
+      gravity = android.view.Gravity.CENTER_VERTICAL
+      setPadding(dp(14f), 0, dp(14f), 0)
+      background = GradientDrawable().apply {
+        cornerRadius = dp(28f).toFloat()
+        setColor(Color.WHITE)
+      }
+      isClickable = true
+      contentDescription = "Start $title, $sub"
+      setOnClickListener { start() }
+    }
+    pill.addView(android.widget.ImageView(this).apply {
+      setImageResource(R.drawable.ic_vz_play_small)
+      setColorFilter(Color.parseColor("#0A0A0A"))
+      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }, android.widget.LinearLayout.LayoutParams(dp(18f), dp(18f)).apply { marginEnd = dp(10f) })
+    val texts = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL }
+    texts.addView(TextView(this).apply {
+      text = title
+      setTextColor(Color.parseColor("#0A0A0A"))
+      typeface = android.graphics.Typeface.DEFAULT_BOLD
+      maxLines = 1
+      androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 10, 14, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(20f)))
+    texts.addView(TextView(this).apply {
+      text = sub
+      setTextColor(Color.parseColor("#55555A"))
+      textSize = 10f
+      maxLines = 1
+      ellipsize = android.text.TextUtils.TruncateAt.END
+    })
+    pill.addView(texts, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+    return caption to pill
   }
 
   private fun figureHalo(colorHex: String, pageH: Int): GradientDrawable {
@@ -544,6 +638,7 @@ internal fun startLocalSession(context: android.content.Context, e: org.json.JSO
   val json = CatalogStore.sessionJson(context, e, durIdx)
   val minutes = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optInt("minutes") ?: 0
   CatalogStore.setLast(context, e.optString("key"), minutes, e.optString("techniqueKey"))
+  CatalogStore.setRecent(context, "breath", e.optString("key"), minutes, e.optString("techniqueKey"))
   CatalogStore.setTechFor(context, e.optString("key"), e.optString("techniqueKey"))
   context.startForegroundService(
     Intent(context, WearBreathSessionService::class.java).apply {

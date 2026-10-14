@@ -147,6 +147,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
 internal fun startLocalStateSession(context: Context, e: JSONObject, minutes: Int) {
   val p = e.optJSONObject("params") ?: return
   CatalogStore.setStateMinutes(context, e.optString("key"), minutes)
+  CatalogStore.setRecent(context, "state", e.optString("key"), minutes)
   val json = JSONObject(p.toString()).apply {
     put("title", e.optString("name"))
     put("colorHex", e.optString("colorHex"))

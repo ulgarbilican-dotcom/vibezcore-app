@@ -99,6 +99,19 @@ object CatalogStore {
     }
   }
 
+  /** De laatst gestarte horloge-sessie, Breathwork of State Control (voor
+   *  de "Recent"-rij op het startscherm, 14 okt 2026). */
+  fun setRecent(context: Context, kind: String, key: String, minutes: Int, techKey: String = "") {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+      .putString("recent", JSONObject().put("kind", kind).put("key", key).put("minutes", minutes).put("tech", techKey).toString()).apply()
+  }
+
+  fun recent(context: Context): JSONObject? = try {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("recent", null)?.let { JSONObject(it) }
+  } catch (_: Exception) {
+    null
+  }
+
   fun setLast(context: Context, key: String, minutes: Int, techKey: String = "") {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
       .putString(KEY_LAST, JSONObject().put("key", key).put("minutes", minutes).put("tech", techKey).toString()).apply()
