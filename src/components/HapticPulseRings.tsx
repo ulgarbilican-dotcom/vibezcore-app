@@ -189,6 +189,18 @@ export function HeartbeatScale({ size, children }: { size: number; children: Rea
       /* Vervolg (operator: "niet sterk genoeg"): 3,5 % was ~8 px. */
       const peak = pulse.kind === 'lub' ? 1.07 : 1.035;
       const back = Math.min(520, Math.max(220, pulse.cycleMs * 0.5));
+      if (pulse.kind === 'dub') {
+        /* 14 okt 2026 (operator: "op telefoon lijkt dat nog altijd 1 klik"):
+           de dub valt terwijl de cirkel nog terugzakt van de lub (~1,05) —
+           "op naar 1,035" was dan geen klop. Zoals het horloge: eerst kort
+           terug, dan duidelijk opnieuw op. Twee kloppen per hartslag. */
+        scale.value = withSequence(
+          withTiming(1, { duration: 50, easing: Easing.in(Easing.quad) }),
+          withTiming(peak, { duration: 80, easing: Easing.out(Easing.quad) }),
+          withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
+        );
+        return;
+      }
       scale.value = withSequence(
         withTiming(peak, { duration: 80, easing: Easing.out(Easing.quad) }),
         withTiming(1, { duration: back, easing: Easing.inOut(Easing.sin) }),
