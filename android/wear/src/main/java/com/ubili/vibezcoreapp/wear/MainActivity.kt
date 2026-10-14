@@ -467,7 +467,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
     if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE)
-    if (hasBreath) choice("Breathe", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH)
+    if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH)
     list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
   }
 

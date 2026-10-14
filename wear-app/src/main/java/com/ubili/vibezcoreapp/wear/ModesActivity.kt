@@ -101,7 +101,7 @@ class ModesActivity : androidx.activity.ComponentActivity() {
     }
     // het label: waar je bent
     page.addView(TextView(this).apply {
-      text = if (kind == KIND_STATE) "STATE CONTROL" else "BREATHE"
+      text = if (kind == KIND_STATE) "STATE CONTROL" else "BREATHWORK"
       setTextColor(if (kind == KIND_STATE) c else figureColor(this@ModesActivity, hex))
       textSize = 10f
       letterSpacing = 0.14f
