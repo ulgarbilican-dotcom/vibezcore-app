@@ -110,6 +110,14 @@ object CatalogStore {
       .apply()
   }
 
+  /** Onderdeel van de laatst gestarte sessie ("state" / "breath"), of null. */
+  fun lastKind(context: Context): String? = try {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("recent", null)
+      ?.let { JSONObject(it).optString("kind").ifBlank { null } }
+  } catch (_: Exception) {
+    null
+  }
+
   /** Laatst gestarte toestand van een onderdeel ("state" of "breath"), of null. */
   fun lastKey(context: Context, kind: String): String? {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

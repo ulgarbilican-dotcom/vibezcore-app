@@ -404,7 +404,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private fun renderHome() {
     val hasState = CatalogStore.state(this).isNotEmpty()
     val hasBreath = CatalogStore.breath(this).isNotEmpty()
-    val sig = "$hasState|$hasBreath|" +
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (hour) {
+      in 5..11 -> "Good morning"
+      in 12..17 -> "Good afternoon"
+      else -> "Good evening"
+    }
+    val lastKind = CatalogStore.lastKind(this)
+    val sig = "$hasState|$hasBreath|$greeting|$lastKind|" +
       CatalogStore.state(this).joinToString { it.optString("key") + it.optBoolean("locked") } +
       CatalogStore.breath(this).joinToString { it.optString("key") + it.optBoolean("locked") }
     if (sig == homeSignature) return
@@ -430,9 +437,32 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val col = android.widget.LinearLayout(this).apply {
       orientation = android.widget.LinearLayout.VERTICAL
       gravity = android.view.Gravity.CENTER
-      setPadding(dp(22f), dp(30f), dp(22f), dp(30f))
+      setPadding(dp(22f), dp(24f), dp(22f), dp(24f))
       minimumHeight = pageH
     }
+    /* 14 okt 2026 (operator-mock-up "idee voor startpagina, maar dat
+       correct"): bovenaan het V-merkteken, een groet volgens het uur en
+       "Choose your session"; daaronder de twee onderdelen met een pijltje.
+       Het laatst gebruikte onderdeel krijgt een dunne rand in Bio-Teal
+       (onze accentkleur — Signal Blue is enkel voor de haptische puls). */
+    col.addView(android.widget.ImageView(this).apply {
+      setImageResource(R.drawable.vz_vmark)
+      scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }, android.widget.LinearLayout.LayoutParams(dp(20f), dp(19f)).apply { bottomMargin = dp(6f) })
+    col.addView(TextView(this).apply {
+      text = greeting
+      setTextColor(Color.WHITE)
+      textSize = 15f
+      typeface = android.graphics.Typeface.DEFAULT_BOLD
+      gravity = android.view.Gravity.CENTER
+    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
+    col.addView(TextView(this).apply {
+      text = "Choose your session"
+      setTextColor(Color.argb(140, 255, 255, 255))
+      textSize = 11f
+      gravity = android.view.Gravity.CENTER
+    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12f) })
     /* 14 okt 2026 (operator: "recent per onderdeel i.p.v. op de
        startpagina"): enkel de twee onderdelen; elk opent op je laatst
        gebruikte toestand (ModesActivity). */
@@ -444,6 +474,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         background = GradientDrawable().apply {
           cornerRadius = dp(28f).toFloat()
           setColor(Color.parseColor("#1C1C1E"))
+          if (kind == lastKind) setStroke(dp(1.5f), Color.parseColor("#00A3A3"))
         }
         isClickable = true
         contentDescription = label
@@ -470,7 +501,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
         })
       }
       row.addView(texts, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(56f)).apply {
+      row.addView(android.widget.ImageView(this).apply {
+        setImageResource(R.drawable.ic_vz_chevron_right)
+        alpha = 0.55f
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      }, android.widget.LinearLayout.LayoutParams(dp(16f), dp(16f)))
+      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
         bottomMargin = dp(8f)
       })
     }
