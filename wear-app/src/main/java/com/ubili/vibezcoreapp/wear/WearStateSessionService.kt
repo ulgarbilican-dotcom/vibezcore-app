@@ -232,9 +232,16 @@ private const val WATCH_CLOCK_AHEAD_MS = 20L
 /** Enkel de trilling (niet de tijd): de puls op het telefoonscherm piekt
  *  ~85 ms na het ritmemoment + beeldvertraging, en het oog neemt de piek als
  *  slag; de pols voelt de tik meteen. Op gevoel van de operator (14 okt
- *  2026): 150 nog "sneller" → 250. Geldt enkel als de telefoon de sessie
- *  stuurt (sentAtMs), niet voor een sessie op het horloge zelf. */
-private const val WATCH_HAPTIC_DELAY_MS = 250L
+ *  2026): 150 nog "sneller" → 250.
+ *  GEMETEN 14 okt 15:45 (HAL-logs "Vibrator on" op het horloge vs VZSync
+ *  en [sync] op de telefoon, klokverschil met min-RTT ≈ +93 ms): de motor
+ *  van het horloge start ~190 ms na de aanroep; plan horloge = plan
+ *  telefoon (geen tempo-drift, 40 slagen constant). Met 250 viel de pols
+ *  dus ~330 ms NA de slag — bij 75–80 bpm bijna een halve slag, voelt als
+ *  "voor" de volgende. 0 → pols ≈ 80 ms na het ritmemoment; de
+ *  schermpuls piekt na ~85 ms + beeldvertraging → 60. Geldt enkel als de
+ *  telefoon de sessie stuurt (sentAtMs). */
+private const val WATCH_HAPTIC_DELAY_MS = 60L
 
 /** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
  *  vallen weg, de lopende stap wordt korter). */
