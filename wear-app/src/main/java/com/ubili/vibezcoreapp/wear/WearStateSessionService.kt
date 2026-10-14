@@ -216,8 +216,10 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
  *  operator (13 okt 2026): met 100 liep de pols een fractie voor t.o.v. de
  *  oude telefoonstart, met de echte telefoonstart (+160) een fractie achter
  *  → het midden (20). Vervolg 21:44 (meting andere sessie, klokverschil
- *  5× gemeten ≈ +140 ms ±50): pols nog 20–30 ms achter → −5. */
-private const val WATCH_CLOCK_AHEAD_MS = -5L
+ *  5× gemeten ≈ +140 ms ±50): pols nog 20–30 ms achter → −5. 14 okt
+ *  15:12 (operator: "horloge lijkt fractie van seconde voor te lopen"):
+ *  gevoel wint van de adb-meting → terug naar 20, de waarde die goed voelde. */
+private const val WATCH_CLOCK_AHEAD_MS = 20L
 
 /** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
  *  vallen weg, de lopende stap wordt korter). */
