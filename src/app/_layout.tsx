@@ -39,7 +39,6 @@ import { initCrashReporting } from '@/services/crash-reporting';
 initCrashReporting();
 import { VibezAlertHost } from '@/components/VibezAlert';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
-import { WelcomeBackWarrior } from '@/components/WelcomeBackWarrior';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
   getAuthUserIdFromToken,
@@ -918,11 +917,9 @@ export default function RootLayout() {
             'ie nooit over /welcome verschijnt. */}
         <WelcomeBackPopup />
 
-      {/* Welcome-back-warrior — motivationele begroeting bij cold-start
-          na >12h gap (iter 9s, operator-feedback "Welcome back Warrior").
-          Apart van WelcomeBackPopup (die over audio-resume gaat).
-          Subscription-relevant copy + send-feedback link. */}
-      <WelcomeBackWarrior />
+      {/* Welcome-back-warrior VERWIJDERD 14 okt 2026 (operator: "die popup
+          moet weg" — beloofde o.a. "Your bracelet's ready" terwijl de
+          bracelet er nog niet is). */}
 
       {/* Operator, 5 okt 2026: de ademsessie leeft als laag boven de hele
           app (zie services/breath-session-host.ts) zodat ze kan
