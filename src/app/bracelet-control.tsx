@@ -25,7 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
-import WatchStatusRow from '@/components/WatchStatusRow';
+import WatchHapticsRow from '@/components/WatchHapticsRow';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
@@ -48,6 +48,7 @@ import {
   stopModePreviewHaptic,
   subscribeHapticPulse,
   isWatchPlayingRhythm,
+  setWatchHapticsEnabled,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
@@ -3643,9 +3644,6 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             <Text style={s.avDone}>Done</Text>
           </Pressable>
         </View>
-        {/* 12 okt 2026: horloge-status bovenaan — verbonden, installeren
-            of opnieuw verbinden (verschijnt enkel met een horloge). */}
-        <WatchStatusRow />
         {options.map((o) => {
           const on = o.v === hear;
           return (
@@ -3702,6 +3700,16 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             );
           })}
         </View>
+        {/* 14 okt 2026 (operator): Smartwatch aan/uit — het ritme op je pols,
+            of de telefoon trilt zelf. Ook midden in een sessie. Enkel
+            zichtbaar met een horloge. */}
+        <WatchHapticsRow
+          separatorStyle={s.avWatchSep}
+          onToggle={(v) => {
+            hapticTap();
+            setWatchHapticsEnabled(v);
+          }}
+        />
       </View>
     </GlassSheet>
   );
@@ -6284,6 +6292,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 4,
   },
+  avWatchSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.14)', marginTop: 18 },
   avSeg: {
     flexDirection: 'row',
     padding: 4,

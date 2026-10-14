@@ -39,7 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
-import WatchStatusRow from '@/components/WatchStatusRow';
+import WatchHapticsRow from '@/components/WatchHapticsRow';
 import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -76,7 +76,7 @@ import {
 import { phaseHapticPattern, playPhaseHaptic, watchBreathAmplitude } from '@/services/breath-haptics';
 import { ensurePermission as ensureNotificationPermission } from '@/services/reminders';
 import { addBreathSession, useBreathHistory } from '@/utils/breath-history';
-import { getSetting, useSetting } from '@/utils/settings';
+import { getSetting, setSetting, useSetting } from '@/utils/settings';
 import {
   skipBreathIntroOnce,
   skipBreathOnboardingRedirectOnce,
@@ -1131,6 +1131,12 @@ export function BreathSession() {
   /* Telefoon-trilling: opgeslagen stand plus die van deze sessie, net als de
      stem. Zelfde autostoel-regel. */
   const [hapticsOn, setHapticsOn] = useState(hapticDefault);
+  /* 14 okt 2026 (operator: "is het blok voor soundscapes niet te lang?"):
+     de groepen (Noise · Water · Earth · Tone) als tabs, één rij eronder. */
+  const [scapeTab, setScapeTab] = useState<string>(
+    () => SOUNDSCAPES.find((x) => x.key === scape?.key)?.group ?? GROUP_ORDER[0],
+  );
+  const [watchOn] = useSetting('watchHaptics');
   const hapticStrength = useHapticStrength();
   const tookHaptic = useRef(false);
   useEffect(() => {
@@ -2075,6 +2081,8 @@ export function BreathSession() {
      van die fase nog over is). Faalt stil: geen horloge, of het andere OS. */
   const relayBreathToWatches = useCallback(
     (at?: { startRound: number; startPhase: number; phaseRemainingMs: number }) => {
+      /* "Smartwatch" uit in Audio & Haptics (14 okt 2026): niets naar het horloge. */
+      if (!getSetting('watchHaptics')) return;
       try {
         const phases = techRef.current.phases;
         /* Zelfde naam en kleur als in de app ("Calm Control", Sleep in het
@@ -3929,10 +3937,7 @@ export function BreathSession() {
               contentContainerStyle={{ paddingBottom: 8 }}
               showsVerticalScrollIndicator={false}
             >
-            {/* 12 okt 2026: horloge-status (enkel met een horloge). */}
-            <View style={{ marginTop: 16 }}>
-              <WatchStatusRow />
-            </View>
+            <View style={{ height: 16 }} />
             {/* Operator, 13 okt 2026 ("teksten zweven, per sectie werken en
                duidelijk afbakenen — voice guidance en Eli/Benjamin horen bij
                elkaar"): drie blokken zoals iOS Instellingen — VOICE,
@@ -4020,12 +4025,43 @@ export function BreathSession() {
             <Text style={s.avSectionHdr}>SOUNDSCAPE</Text>
             <View style={s.avCard}>
               <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
-            <View style={s.avScapeWrap}>
+            {/* 14 okt 2026: groepen als tabs, één rij eronder (None vooraan) —
+               het blok is even hoog als Voice en Haptics. */}
+            <View style={s.scapeTabs} accessibilityRole="tablist">
+              {GROUP_ORDER.map((g) => {
+                const on = g === scapeTab;
+                return (
+                  <Pressable
+                    key={g}
+                    onPress={() => {
+                      if (on) return;
+                      hapticTap();
+                      setScapeTab(g);
+                    }}
+                    style={[s.scapeTab, on && s.scapeTabOn]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                  >
+                    {on ? <VibezGlass radius={10} level="raised" tint={accent} style={StyleSheet.absoluteFill} /> : null}
+                    <Text style={[s.scapeTabTxt, on && s.scapeTabTxtOn]}>
+                      {g.charAt(0).toUpperCase() + g.slice(1).toLowerCase()}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={s.avScapeHScroll}
+              contentContainerStyle={s.avScapeScrollRow}
+            >
               <AnimatedPressable
                 onPress={() => pickScape(null)}
                 onPressIn={pressAvScapeNone.onPressIn}
                 onPressOut={pressAvScapeNone.onPressOut}
                 style={[s.avScapeChip, pressAvScapeNone.style]}
+                accessibilityLabel="No soundscape"
               >
                 <VibezGlass
                   radius={20}
@@ -4036,57 +4072,41 @@ export function BreathSession() {
                 <VolumeX size={22} color={!scape ? '#ffffff' : 'rgba(255,255,255,0.7)'} strokeWidth={2} />
                 <Text style={[s.avScapeChipTxt, !scape && s.avScapeChipTxtOn]}>None</Text>
               </AnimatedPressable>
-            </View>
-            {GROUP_ORDER.map((g) => {
-              const inGroup = SOUNDSCAPES.filter((x) => x.group === g);
-              const list = isPro
-                ? inGroup
-                : [...inGroup.filter((x) => FREE_SOUNDSCAPES.has(x.key)), ...inGroup.filter((x) => !FREE_SOUNDSCAPES.has(x.key))];
-              if (!list.length) return null;
-              return (
-                <View key={g} style={s.avScapeGroup}>
-                  <Text style={s.avScapeGroupLbl}>{g}</Text>
-                  {/* Operator, 12 okt 2026: per groep één rij die opzij
-                      scrolt als ze niet past (loopt tot de rand van het
-                      blad, zoals Apple Music-rijen). */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={s.avScapeHScroll}
-                    contentContainerStyle={s.avScapeScrollRow}
-                  >
-                    {list.map((x) => {
-                      const on = scape?.key === x.key;
-                      return (
-                        <AnimatedPressable
-                          key={x.key}
-                          onPress={() => pickScapeGated(x.key)}
-                          onPressIn={pressAvScapeChip.onPressIn}
-                          onPressOut={pressAvScapeChip.onPressOut}
-                          style={[s.avScapeChip, pressAvScapeChip.style]}
-                        >
-                          <VibezGlass
-                            radius={20}
-                            level={on ? 'raised' : 'normal'}
-                            tint={on ? accent : undefined}
-                            style={StyleSheet.absoluteFill}
-                          />
-                          <x.Icon size={22} color={on ? '#ffffff' : 'rgba(255,255,255,0.7)'} strokeWidth={2} />
-                          <Text style={[s.avScapeChipTxt, on && s.avScapeChipTxtOn]} numberOfLines={1}>
-                            {x.name}
-                          </Text>
-                          {scapeLocked(x.key) && (
-                            <View style={s.avScapeLock}>
-                              <Crown size={12} color={C.dim55} strokeWidth={2.2} />
-                            </View>
-                          )}
-                        </AnimatedPressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              );
-            })}
+              {(() => {
+                const inGroup = SOUNDSCAPES.filter((x) => x.group === scapeTab);
+                const list = isPro
+                  ? inGroup
+                  : [...inGroup.filter((x) => FREE_SOUNDSCAPES.has(x.key)), ...inGroup.filter((x) => !FREE_SOUNDSCAPES.has(x.key))];
+                return list.map((x) => {
+                  const on = scape?.key === x.key;
+                  return (
+                    <AnimatedPressable
+                      key={x.key}
+                      onPress={() => pickScapeGated(x.key)}
+                      onPressIn={pressAvScapeChip.onPressIn}
+                      onPressOut={pressAvScapeChip.onPressOut}
+                      style={[s.avScapeChip, pressAvScapeChip.style]}
+                    >
+                      <VibezGlass
+                        radius={20}
+                        level={on ? 'raised' : 'normal'}
+                        tint={on ? accent : undefined}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <x.Icon size={22} color={on ? '#ffffff' : 'rgba(255,255,255,0.7)'} strokeWidth={2} />
+                      <Text style={[s.avScapeChipTxt, on && s.avScapeChipTxtOn]} numberOfLines={1}>
+                        {x.name}
+                      </Text>
+                      {scapeLocked(x.key) && (
+                        <View style={s.avScapeLock}>
+                          <Crown size={12} color={C.dim55} strokeWidth={2.2} />
+                        </View>
+                      )}
+                    </AnimatedPressable>
+                  );
+                });
+              })()}
+            </ScrollView>
 
             {/* Operator, 9 okt 2026 ("ik zie die drie standen niet"): de
                sterkte van de soundscape stond in het oude, niet meer
@@ -4157,7 +4177,7 @@ export function BreathSession() {
             {/* Operator, 12 okt 2026: één trilsterkte voor de hele app —
                 dezelfde instelling als State Control (haptic-strength-pref).
                 Zelfde chips als "Soundscape volume" hierboven. */}
-            {hapticsOn ? (
+            {hapticsOn || watchOn ? (
               <View style={[s.levelRow, { marginBottom: 14 }]}>
                 {(['soft', 'medium', 'strong'] as const).map((l) => {
                   const on = l === hapticStrength;
@@ -4190,6 +4210,25 @@ export function BreathSession() {
               </View>
             ) : null}
 
+            {/* 14 okt 2026: Smartwatch aan/uit — het ritme op je pols, of
+               de telefoon trilt zelf. Enkel zichtbaar met een horloge. */}
+            <WatchHapticsRow
+              separatorStyle={{ ...s.avCardSep, marginTop: 0, marginVertical: 0 }}
+              labelStyle={s.voiceSheetRowLabel}
+              onToggle={(v) => {
+                setSetting('watchHaptics', v);
+                if (!v) {
+                  stopBreathSessionOnWear();
+                  stopBreathSessionOnWatch();
+                } else if (running && !paused) {
+                  relayBreathToWatches({
+                    startRound: round,
+                    startPhase: Math.max(0, techRef.current.phases.findIndex((p) => p.key === phase)),
+                    phaseRemainingMs: Math.round(secsLeft * 1000),
+                  });
+                }
+              }}
+            />
             <View style={[s.avCardSep, { marginTop: 0 }]} />
             {/* Rij 4 — Bracelet haptics (zelfde tik-logica als de vorige
                losse Gem-knop: schakelaar zodra er hardware is, anders de
@@ -5451,6 +5490,19 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     marginVertical: 14,
   },
   avScapeGroup: { marginTop: 16 },
+  scapeTabs: { flexDirection: 'row', gap: 6, marginBottom: 14 },
+  scapeTab: {
+    flex: 1,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  scapeTabOn: { backgroundColor: 'transparent' },
+  scapeTabTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, color: 'rgba(255,255,255,0.6)' },
+  scapeTabTxtOn: { color: '#ffffff' },
   avScapeGroupLbl: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11,

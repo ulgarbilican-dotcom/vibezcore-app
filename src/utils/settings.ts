@@ -185,6 +185,9 @@ export type Settings = {
    *  toestand (telefoon én horloge). Leeg = de techniek van het
    *  ervaringsniveau. Een nieuw niveau kiezen wist deze keuzes. */
   breathTechByState: Partial<Record<string, string>>;
+  /** 14 okt 2026 (operator): trillen op het verbonden horloge (Breathwork
+   *  én State Control). Uit = de telefoon trilt zelf. Standaard aan. */
+  watchHaptics: boolean;
   /** Heeft deze gebruiker OOIT een volledig protocol bevestigd (operator,
    *  13 augustus 2026: "user moet wel van 1 volledige versie kunnen
    *  proeven")? Bepaalt of "Build my protocol" nog gratis doorgaat naar
@@ -271,6 +274,7 @@ const defaults: Settings = {
   intensity: null,
   experienceLevel: null,
   breathTechByState: {},
+  watchHaptics: true,
   hasBuiltProtocol: false,
   testFullSessions: false,
   hasSeenBatteryPrompt: false,
@@ -420,6 +424,7 @@ async function loadOnce(): Promise<void> {
             ...(obj.breathTechByState && typeof obj.breathTechByState === 'object'
               ? { breathTechByState: obj.breathTechByState as Partial<Record<string, string>> }
               : {}),
+            ...(typeof obj.watchHaptics === 'boolean' ? { watchHaptics: obj.watchHaptics } : {}),
             ...(typeof obj.hasBuiltProtocol === 'boolean'
               ? { hasBuiltProtocol: obj.hasBuiltProtocol }
               : {}),

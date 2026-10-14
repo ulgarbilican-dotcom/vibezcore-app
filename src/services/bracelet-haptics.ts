@@ -83,6 +83,7 @@ import {
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
 import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
 import { getStateHear } from './state-sound-pref';
+import { getSetting, setSetting } from '@/utils/settings';
 import { AMP_FACTOR, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 
 
@@ -615,6 +616,9 @@ function relayToWatch(
   startBpm: number,
 ): void {
   if (remainingSec <= 0) return;
+  /* "Smartwatch" uit in Audio & Haptics (14 okt 2026): niets naar het
+     horloge — de telefoon blijft zelf trillen. */
+  if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode, restingBpm, startBpm);
   const meta = getModeMeta(mode);
   const start = {
@@ -673,6 +677,41 @@ function onWatchTookOver(): void {
   );
 }
 onWearStateAck(onWatchTookOver);
+
+/** "Smartwatch"-schakelaar in Audio & Haptics, ook midden in een sessie
+ *  (14 okt 2026). Uit: het horloge stopt en de telefoon trilt weer zelf,
+ *  op dezelfde plek in het ritme. Aan: het horloge neemt het over. */
+export function setWatchHapticsEnabled(on: boolean): void {
+  setSetting('watchHaptics', on);
+  if (!session || session.pausedAt !== null || !lastClock) return;
+  const clock = lastClock;
+  const passed = (Date.now() - clock.at) / 1000;
+  const elapsedSec = clock.elapsedSec + passed;
+  const remainingSec = Math.max(0, clock.remainingSec - passed);
+  if (remainingSec <= 1) return;
+  const offset = Math.max(0, elapsedSec - session.curveZeroSec);
+  if (!on) {
+    stopWearState();
+    stopAppleState();
+    if (watchHasRhythm) {
+      watchHasRhythm = false;
+      play(
+        clock.mode,
+        { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[clock.mode].rampSec },
+        offset,
+        remainingSec,
+        { elapsedSec, totalSec: elapsedSec + remainingSec },
+        false,
+        session.restingBpm,
+        session.startBpm,
+      );
+      lastClock = { mode: clock.mode, elapsedSec, remainingSec, at: Date.now() };
+    }
+  } else {
+    lastClock = { mode: clock.mode, elapsedSec, remainingSec, at: Date.now() };
+    relayToWatch(clock.mode, offset, remainingSec, session.restingBpm, session.startBpm);
+  }
+}
 onAppleStateAck(onWatchTookOver);
 
 export function pauseModeSessionHaptic(): void {
@@ -729,6 +768,7 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
 let previewOnWatch = false;
 export function playModeTrialHaptic(mode: BraceletMode): void {
   playModePreviewHaptic(mode);
+  if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode);
   const meta = getModeMeta(mode);
   const start = {
