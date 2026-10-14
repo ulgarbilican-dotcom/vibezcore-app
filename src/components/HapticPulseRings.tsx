@@ -18,11 +18,13 @@
 import { BrandDark } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { subscribeHapticPulse, type HapticPulse } from '@/services/bracelet-haptics';
+import { Canvas, Circle, Group } from '@shopify/react-native-skia';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
+  useDerivedValue,
   useReducedMotion,
   useSharedValue,
   withSequence,
@@ -37,19 +39,7 @@ const POOL_SIZE = 6;
 
 type RingLook = { peakOpacity: number; maxScale: number; durationMs: number };
 
-/* 14 okt 2026 (operator: "die op de smartwatch is eigenlijk beter"): op het
-   sessiescherm dezelfde strakke ring als op het horloge — hij blijft vlak
-   rond de kloppende cirkel (+7 % → +11 %), dikker en helderder, zodat het
-   dubbele kloppen van de cirkel zelf het hoofdeffect is. Tempo en duur
-   ongewijzigd. */
-const BEAT_SYNCED_MAX_SCALE = 1.11;
-const BEAT_SYNCED_PEAK_OPACITY = 0.9;
-
-function lookFor(pulse: HapticPulse, beatSynced = false): RingLook {
-  if (beatSynced) {
-    const durationMs = Math.min(2600, Math.max(500, pulse.cycleMs * 1.5));
-    return { peakOpacity: BEAT_SYNCED_PEAK_OPACITY, maxScale: BEAT_SYNCED_MAX_SCALE, durationMs };
-  }
+function lookFor(pulse: HapticPulse): RingLook {
   const calm =
     pulse.mode === BraceletMode.Delta ||
     pulse.mode === BraceletMode.Theta ||
@@ -65,10 +55,7 @@ function lookFor(pulse: HapticPulse, beatSynced = false): RingLook {
 
 type RingHandle = { fire: (look: RingLook, reduced: boolean, startScale?: number) => void };
 
-const Ring = forwardRef<RingHandle, { size: number; color: string; width?: number }>(function Ring(
-  { size, color, width },
-  ref,
-) {
+const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ring({ size, color }, ref) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -104,7 +91,6 @@ const Ring = forwardRef<RingHandle, { size: number; color: string; width?: numbe
       style={[
         s.ring,
         { width: size, height: size, borderRadius: size / 2, borderColor: color },
-        width ? { borderWidth: width } : null,
         style,
       ]}
     />
@@ -115,6 +101,89 @@ const Ring = forwardRef<RingHandle, { size: number; color: string; width?: numbe
    de cirkel zelf meeklopt via HeartbeatScale) één ring per HARTSLAG — enkel
    bij lub, niet bij dub — die vertrekt waar de kloppende cirkel op zijn
    grootst is (+7 %, na 80 ms). Eén duidelijk effect per slag. */
+/* ── Drukgolf (sessiescherm) ──────────────────────────────────────────
+   14 okt 2026 (operator: "binnenring is al goed, enkel de buitenring moet
+   een soort drukgolf worden"). Zoals een schokgolf/sonar-puls in
+   professionele UI: vertrekt op de rand van de kloppende cirkel, schiet
+   snel weg en vertraagt (ease-out), de lijn wordt dunner naarmate hij
+   uitdijt en hij dooft uit. Getekend met Skia op de UI-thread — straal en
+   lijndikte animeren zonder de lay-out opnieuw te berekenen (de oude
+   borderWidth-animatie haperde daarom). */
+const WAVE_POOL = 3;
+const WAVE_START = 1.07; // rand van de kloppende cirkel op de lub-top
+const WAVE_END = 1.42;
+const WAVE_STROKE_START = 5;
+const WAVE_STROKE_END = 0.75;
+const WAVE_PEAK_OPACITY = 0.75;
+
+type WaveHandle = { fire: (durationMs: number) => void };
+
+const Wave = forwardRef<WaveHandle, { r0: number; c: number; color: string }>(function Wave({ r0, c, color }, ref) {
+  const p = useSharedValue(1);
+  useImperativeHandle(ref, () => ({
+    fire(durationMs) {
+      p.value = 0;
+      p.value = withTiming(1, { duration: durationMs, easing: Easing.bezier(0.15, 0.7, 0.3, 1) });
+    },
+  }));
+  const r = useDerivedValue(() => r0 * (WAVE_START + (WAVE_END - WAVE_START) * p.value));
+  const w = useDerivedValue(() => WAVE_STROKE_START + (WAVE_STROKE_END - WAVE_STROKE_START) * p.value);
+  const o = useDerivedValue(() => {
+    const v = p.value;
+    const fadeIn = Math.min(1, v / 0.06);
+    return WAVE_PEAK_OPACITY * fadeIn * (1 - v) * (1 - v);
+  });
+  return (
+    <Group opacity={o}>
+      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={w} />
+    </Group>
+  );
+});
+
+function PressureWaves({ size, color }: { size: number; color: string }) {
+  const reduced = useReducedMotion();
+  const waves = useRef<(WaveHandle | null)[]>([]);
+  const next = useRef(0);
+  const box = Math.ceil(size * (WAVE_END + 0.06));
+  useEffect(() => {
+    if (reduced) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const off = subscribeHapticPulse((pulse) => {
+      if (pulse.kind !== 'lub') return;
+      /* Vertrekt op de top van de lub (80 ms), zoals de cirkel. */
+      timers.push(
+        setTimeout(() => {
+          const w = waves.current[next.current];
+          next.current = (next.current + 1) % WAVE_POOL;
+          w?.fire(Math.min(1800, Math.max(700, pulse.cycleMs * 1.4)));
+        }, 80),
+      );
+    });
+    return () => {
+      off();
+      timers.forEach(clearTimeout);
+    };
+  }, [reduced]);
+  if (reduced) return null;
+  return (
+    <View pointerEvents="none" style={[s.wrap, { width: size, height: size }]}>
+      <Canvas style={{ position: 'absolute', width: box, height: box, left: (size - box) / 2, top: (size - box) / 2 }}>
+        {Array.from({ length: WAVE_POOL }, (_, i) => (
+          <Wave
+            key={i}
+            r0={size / 2}
+            c={box / 2}
+            color={color}
+            ref={(h) => {
+              waves.current[i] = h;
+            }}
+          />
+        ))}
+      </Canvas>
+    </View>
+  );
+}
+
 export function HapticPulseRings({
   size,
   color = RING_COLOR,
@@ -124,27 +193,22 @@ export function HapticPulseRings({
   color?: string;
   beatSynced?: boolean;
 }) {
+  if (beatSynced) return <PressureWaves size={size} color={color} />;
+  return <ClassicRings size={size} color={color} />;
+}
+
+function ClassicRings({ size, color }: { size: number; color: string }) {
   const reduced = useReducedMotion();
   const rings = useRef<(RingHandle | null)[]>([]);
   const next = useRef(0);
 
   useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const off = subscribeHapticPulse((pulse) => {
-      if (beatSynced && pulse.kind === 'dub') return;
-      const fire = () => {
-        const ring = rings.current[next.current];
-        next.current = (next.current + 1) % POOL_SIZE;
-        ring?.fire(lookFor(pulse, beatSynced), reduced, beatSynced && !reduced ? 1.07 : 1);
-      };
-      if (beatSynced && !reduced) timers.push(setTimeout(fire, 80));
-      else fire();
+    return subscribeHapticPulse((pulse) => {
+      const ring = rings.current[next.current];
+      next.current = (next.current + 1) % POOL_SIZE;
+      ring?.fire(lookFor(pulse), reduced);
     });
-    return () => {
-      off();
-      timers.forEach(clearTimeout);
-    };
-  }, [reduced, beatSynced]);
+  }, [reduced]);
 
   return (
     <View pointerEvents="none" style={[s.wrap, { width: size, height: size }]}>
@@ -153,7 +217,6 @@ export function HapticPulseRings({
           key={i}
           size={size}
           color={color}
-          width={beatSynced ? 2.75 : undefined}
           ref={(r) => {
             rings.current[i] = r;
           }}
