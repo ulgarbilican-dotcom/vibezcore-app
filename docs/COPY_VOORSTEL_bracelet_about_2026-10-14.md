@@ -55,6 +55,11 @@ Keur per nummer goed (bv. "A1–A6 ok, F3 anders").
 - Oud: "Built on neuroscience, psychology and philosophy."
 - Nieuw: "Built on psychology, philosophy and research."
 
+**A9 · Sectie 03 "Who it's for"** (operator: ook voor de gewone man en vrouw, niet enkel ondernemers/creatieven)
+- Oud: "VIBEZCORE is for people who want greater control over themselves — entrepreneurs, professionals, leaders, creatives, high-performers under pressure, anyone committed to personal growth. It's not for everyone. In short: for people who refuse to live on autopilot."
+- Nieuw: "VIBEZCORE is for anyone who wants more control over how they feel, think and live — whether you're a parent with a full day ahead, a student before an exam, working shifts or behind a desk, or building something of your own as an entrepreneur, leader or creative. You don't need to be a high-performer to start. You only need to want more from your days. In short: for everyone who refuses to live on autopilot."
+- "It's not for everyone" valt weg. De regel "intended for users aged 18 and older" blijft.
+
 ---
 
 ## F — FAQ (src/data/faq-content.ts, categorie bracelet + design)
