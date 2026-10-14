@@ -102,7 +102,8 @@ class ModesActivity : androidx.activity.ComponentActivity() {
     // het label: waar je bent
     page.addView(TextView(this).apply {
       text = if (kind == KIND_STATE) "STATE CONTROL" else "BREATHWORK"
-      setTextColor(if (kind == KIND_STATE) c else figureColor(this@ModesActivity, hex))
+      // het label is enkel "waar ben je" — rustig grijs (operator 14 okt)
+      setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
       letterSpacing = 0.14f
       typeface = Typeface.DEFAULT_BOLD
@@ -130,7 +131,8 @@ class ModesActivity : androidx.activity.ComponentActivity() {
     }
     page.addView(TextView(this).apply {
       text = e.optString("name")
-      setTextColor(Color.WHITE)
+      // de naam van de toestand in zijn kleur (Breathwork: de kleur van de figuur)
+      setTextColor(if (kind == KIND_STATE) c else figureColor(this@ModesActivity, hex))
       textSize = 17f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER

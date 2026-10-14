@@ -61,7 +61,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     scroll.addView(col)
     col.addView(TextView(this).apply {
       text = "STATE CONTROL"
-      setTextColor(c)
+      setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
       letterSpacing = 0.14f
       typeface = Typeface.DEFAULT_BOLD
@@ -69,7 +69,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     })
     col.addView(TextView(this).apply {
       text = e.optString("name")
-      setTextColor(Color.WHITE)
+      setTextColor(c)
       textSize = 18f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
