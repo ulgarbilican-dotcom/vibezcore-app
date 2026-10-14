@@ -96,7 +96,7 @@ async function explainNotificationsBlocked() {
   const ok = await confirmVibezAlert({
     title: 'Notifications are off',
     message:
-      "VIBEZCORE can't show reminders or the lock-screen progress for breathwork and bracelet sessions without notification permission. You can turn it back on in your phone's settings, any time.",
+      "VIBEZCORE can't show reminders or the lock-screen progress for Breathwork and State Control sessions without notification permission. You can turn it back on in your phone's settings, any time.",
     confirmText: 'Open Settings',
     cancelText: 'Not now',
   });
@@ -584,7 +584,7 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Version</Text>
-              <Text style={s.rowSub}>VIBEZCORE App · Audio + Bracelet</Text>
+              <Text style={s.rowSub}>VIBEZCORE App · Audio, Breathwork, State Control</Text>
             </View>
             <Text style={s.versionText}>{versionLabel}</Text>
           </View>

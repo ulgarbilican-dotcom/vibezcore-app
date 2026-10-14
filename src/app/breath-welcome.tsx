@@ -2043,7 +2043,7 @@ function BraceletInfoModal({
         <View style={s.braceletModalCard}>
           <Image source={{ uri: IMG }} style={s.braceletModalImg} resizeMode="cover" />
           <View style={s.braceletModalBody}>
-            <Text style={s.braceletModalEyebrow}>SMART BEAD BRACELET</Text>
+            <Text style={s.braceletModalEyebrow}>SMART BEAD BRACELET · EARLY 2027</Text>
             <Text style={s.braceletModalTitle}>Wear the rhythm</Text>
             <Text style={s.braceletModalSubhead}>
               {'Haptic guidance, designed\nas a statement piece'}
@@ -2065,7 +2065,9 @@ function BraceletInfoModal({
             <Text style={s.braceletModalText}>Use discreetly. Anytime. Anywhere.</Text>
             <View style={s.braceletModalHintRow}>
               <Info size={13} color="rgba(255,255,255,0.45)" strokeWidth={2.2} />
-              <Text style={s.braceletModalHint}>Full details in the Bracelet tab in the app</Text>
+              {/* was "Full details in the Bracelet tab" — die tab bestaat niet
+                  meer (operator, 14 okt 2026) */}
+              <Text style={s.braceletModalHint}>Launching on Kickstarter, Early 2027</Text>
             </View>
             <Pressable onPress={onClose} style={s.braceletModalClose}>
               <Text style={s.braceletModalCloseTxt}>Got it</Text>

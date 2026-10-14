@@ -494,7 +494,9 @@ export async function syncBraceletPlanReminder(
              modus+duur al ingevuld. Zie `reminderRoute`/`reminderParams`. */
           /* Kort, zodat hij niet wordt afgekapt (6 okt 2026). */
           title: `${meta.name} · ${item.durationMinutes} min`,
-          body: 'One press. No screen, no sound, no effort.',
+          /* Was "One press…" — de knop van de bracelet, die er nog niet is
+             (operator, 14 okt 2026). Tikken opent State Control, klaar. */
+          body: 'Tap to start. Your rhythm is ready.',
           data: {
             kind: 'bracelet-plan',
             braceletMode: item.mode,

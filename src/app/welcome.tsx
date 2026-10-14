@@ -287,19 +287,6 @@ export default function WelcomeScreen() {
      Kleine tekstlinks, dus 0.94 (icoon-/knop-schaal), geen aparte kaart.
      Operator ("kijk alle CTA's na"): ontbrak opacity(.85) + haptic-tik
      (huisstijl §5) — nu op allebei toegevoegd. */
-  const activateScale = useSharedValue(1);
-  const onActivatePressIn = () => {
-    activateScale.value = withTiming(0.94, { duration: 80 });
-    hapticPress();
-  };
-  const onActivatePressOut = () => {
-    activateScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const activateStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: activateScale.value }],
-    opacity: 1 - (1 - activateScale.value) * 2.5,
-  }));
-
   const signInScale = useSharedValue(1);
   const onSignInPressIn = () => {
     signInScale.value = withTiming(0.94, { duration: 80 });
@@ -391,19 +378,10 @@ export default function WelcomeScreen() {
         <View style={s.divider} />
 
         <View style={s.bottomLinks}>
-          <AnimatedPressable
-            accessibilityRole="link"
-            onPress={() => router.navigate('/activate-bracelet' as never)}
-            onPressIn={onActivatePressIn}
-            onPressOut={onActivatePressOut}
-            hitSlop={10}
-            style={[s.bottomLinkRow, activateStyle]}
-          >
-            <Text style={s.bottomLinkText}>
-              Have a bracelet? <Text style={s.bottomLinkAction}>Activate now</Text>
-            </Text>
-            <ChevronRight size={15} color="#ffffff" strokeWidth={2} />
-          </AnimatedPressable>
+          {/* "Have a bracelet? Activate now" weg (operator, 14 okt 2026): de
+              bracelet komt pas Early 2027 — de activeringspagina blijft
+              bestaan voor de lancering, maar niemand wordt er nu heen
+              gestuurd. */}
           <AnimatedPressable
             accessibilityRole="link"
             onPress={() => {

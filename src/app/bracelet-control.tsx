@@ -70,7 +70,7 @@ import {
   startStateControlNow,
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, Settings, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
@@ -3944,17 +3944,9 @@ function IdleScreen({
                  Operator, zelfde dag ("die 87% moet weg"): het
                  percentage-tekstje ernaast is nu ook weg — enkel het
                  tandwiel-icoon blijft in deze rechter-slot over. */}
-              <Pressable
-                onPress={onDisconnect}
-                hitSlop={12}
-                accessibilityLabel="Bracelet settings — disconnect"
-              >
-                <Settings
-                  size={20}
-                  color={idleDark ? 'rgba(255,255,255,0.55)' : C.textDim}
-                  strokeWidth={2}
-                />
-              </Pressable>
+              {/* 14 okt 2026 (operator): het tandwiel ("Bracelet settings —
+                 disconnect") is weg — het verbrak enkel de gesimuleerde
+                 bracelet en deed voor de gebruiker niets. */}
             </View>
           ) : undefined
         }

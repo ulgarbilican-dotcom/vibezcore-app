@@ -601,13 +601,8 @@ function ProductsGroup() {
   }
   return (
     <Group title="Products">
-      <Row
-        icon={Package}
-        title="Activate your product"
-        subtitle="Bracelet or Full Bundle code"
-        onPress={() => router.navigate('/activate-bracelet' as never)}
-        accessibilityLabel="Activate your Bracelet or Full Bundle code"
-      />
+      {/* "Activate your product" weg (operator, 14 okt 2026): er bestaat
+          nog geen bracelet om te activeren (Early 2027). */}
       <Row
         icon={BraceletIcon}
         title="Smart Bead Bracelet"

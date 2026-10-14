@@ -3410,66 +3410,8 @@ function AudioScreen({
                 );
               })}
 
-          {/* ── 13e card — VIBEZCORE ROADMAP / "What's Coming Next" ──
-              Iter 9dq v48 (2026-06-03): operator-besluit — card tijdelijk
-              verborgen op alle pagina's. /coming-route blijft intact
-              (src/app/coming.tsx + Stack-registratie via screen-eigen
-              <Stack.Screen>), alleen de toegangs-card uit de library is
-              uit zicht. Styles (libCardStandalone, exploreText,
-              comingEyebrow) blijven staan om restore triviaal te houden.
-              JSX hieronder bewust uitgecomment ipv verwijderd zodat
-              re-enable één blok-uncomment is.
-
-              ── Originele JSX (re-enable: verwijder de wrapping comment) ──
-              <View style={s.libCardUnit}>
-                <Pressable
-                  style={[s.libCard, s.libCardStandalone]}
-                  onPress={() => router.push('/coming')}
-                  android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
-                >
-                  <Image
-                    source={{
-                      uri: 'https://vibezcore-audio.b-cdn.net/images/whats-coming.png',
-                    }}
-                    style={s.libCardBg}
-                    resizeMode="cover"
-                  />
-                  <LinearGradient
-                    colors={[
-                      'transparent',
-                      'rgba(0,0,0,0.15)',
-                      'rgba(0,0,0,0.4)',
-                      'rgba(0,0,0,0.92)',
-                    ]}
-                    locations={[0, 0.4, 0.55, 1]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View style={s.pillCluster}>
-                    <Pressable
-                      style={s.viewAllPill}
-                      onPress={() => router.push('/coming')}
-                      hitSlop={6}
-                      android_ripple={{
-                        color: 'rgba(255,255,255,0.10)',
-                        borderless: true,
-                      }}
-                    >
-                      <Text style={s.exploreText}>Explore</Text>
-                      <Text style={s.viewAllChev}>›</Text>
-                    </Pressable>
-                  </View>
-                  <View style={s.libCardBody}>
-                    <Text style={s.comingEyebrow}>VIBEZCORE ROADMAP</Text>
-                    <Text style={s.libCardTitle}>What's Coming Next</Text>
-                    <Text style={s.libCardSubline}>
-                      New series, new tools, new layers
-                    </Text>
-                  </View>
-                </Pressable>
-              </View>
-              ─────────────────────────────────────────────────────────── */}
+          {/* 13e card "What's Coming Next" en de /coming-pagina zijn
+              verwijderd (operator, 14 okt 2026) — niet meer in gebruik. */}
             </>
           )}
         </View>

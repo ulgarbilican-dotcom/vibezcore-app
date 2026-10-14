@@ -439,7 +439,7 @@ export default function BreathSampleScreen() {
               {/* Operator, 1 okt 2026: "49" was fout — correct: 64 (15
                  technieken × hun benoemde duur-varianten). */}
               {isPro
-                ? 'That was a taste. All 64 guided sessions and bracelet guidance are already unlocked in your account.'
+                ? 'That was a taste. All 64 guided sessions are already unlocked in your account.'
                 : 'That was a taste. Continue with VIBEZCORE Premium to unlock all 64 guided sessions and the complete audio library.'}
             </Text>
 

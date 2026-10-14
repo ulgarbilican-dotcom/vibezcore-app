@@ -789,13 +789,6 @@ export default function RootLayout() {
            BraceletHeader) — title/headerBackTitle hier zijn dus nooit
            zichtbaar geweest, opgeruimd. */}
         <Stack.Screen name="bracelet-control" options={{ title: 'Bracelet' }} />
-        {/* Iter v149 v3 (2026-06-25): preview-screen voor uitgelogde
-            users die de 5 bracelet-states willen verkennen zonder eerst
-            een account te hoeven aanmaken. */}
-        <Stack.Screen
-          name="bracelet-preview"
-          options={{ title: 'Preview' }}
-        />
         {/* `bracelet-history` — sub-screen voor sessie-overzicht. Push
             vanaf bracelet-control idle (history-knop). */}
         <Stack.Screen

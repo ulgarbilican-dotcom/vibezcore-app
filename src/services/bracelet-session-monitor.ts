@@ -323,7 +323,7 @@ async function ensureChannel(): Promise<void> {
        trilling nodig, wel zichtbaar op het vergrendelscherm. */
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'State Control session',
-      description: 'Shows your running bracelet session.',
+      description: 'Shows your running State Control session.',
       importance: Notifications.AndroidImportance.LOW,
       sound: null,
       vibrationPattern: [0],

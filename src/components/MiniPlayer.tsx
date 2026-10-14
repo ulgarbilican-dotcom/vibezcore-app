@@ -137,7 +137,6 @@ export function MiniPlayer({
   if (pathname === '/player') return null;
   if (pathname === '/welcome') return null;
   if (pathname === '/breath-welcome') return null;
-  if (pathname === '/bracelet-preview') return null;
 
   const session = state.session;
   const pct =
