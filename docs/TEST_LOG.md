@@ -286,6 +286,7 @@ Operator, 12 okt 2026: "voor het horloge is het een absolute must dat alles perf
 | T162 | Pols en telefoon voelbaar gelijk na bijstelling −80 ms (WATCH_CLOCK_AHEAD_MS 20) | Quick Boost | ✅ 13 okt (operator: "nu lijkt het goed") |
 | T163 | Breathwork op het horloge: zelfde sterkte als State Control (Soft 155 / Medium 205 / Strong 255) | Soft/Medium/Strong voelen | ✅ 13 okt (operator: "lijkt goed") |
 | T164 | "Welcome back Warrior"-pop-up (o.a. "Your bracelet's ready") verwijderd — verschijnt niet meer na >12 u | app openen | ⏳ operator |
+| T165 | Bibliotheek met abonnement: Soundscapes & Affirmations-kaart schermbreed (Free Picks valt weg); zonder abonnement naast Free Picks | Library | ⏳ operator |
 | W39b | Horloge startscherm = keuze State Control / Breathe (symbolen Radio/Wind uit de app); per toestand een pagina met label STATE CONTROL (waterring) of BREATHE (figuur) | | ✅ 13 okt (Claude) |
 | W40b | State Control op het horloge zelf starten: duur per minuut (Recommended), Start; pauze/hervat/END op het horloge; sessie in de geschiedenis op de telefoon | Boost 10 min: start, PAUSED boven de tijd (niet meer over de knop), END | ✅ 13 okt (Claude) — geschiedenis nog te checken |
 | T152 | Telefoon: Breathwork-sessie na ritme-wijziging (fasen vanaf gepland einde) — stem, trilling, boog, ronde-teller | ongewijzigd voor de gebruiker | ✅ 13 okt (Claude: Box Breathing, stem speelt (currentTime loopt), trilling elke 4,0 s) |

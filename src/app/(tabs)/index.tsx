@@ -284,6 +284,8 @@ const PILLAR_CARD_WIDTH = Math.round(
   (Dimensions.get('window').width - PILLAR_SIDE_INSET * 2 - PILLAR_CARD_GAP) / 2,
 );
 const PILLAR_CARD_HEIGHT = Math.round(PILLAR_CARD_WIDTH * 1.25);
+/** Volle rij: twee kaarten + de tussenruimte. */
+const PILLAR_FULL_WIDTH = PILLAR_CARD_WIDTH * 2 + PILLAR_CARD_GAP;
 
 
 /* Iter 9dq v150 (operator 2026-06-17): Gumroad-checkout URLs verwijderd
@@ -1922,7 +1924,15 @@ function AudioScreen({
                       .springify()
                       .damping(16)}
                     style={[
-                      { width: PILLAR_CARD_WIDTH, marginBottom: PILLAR_CARD_GAP },
+                      {
+                        /* Operator, 14 okt 2026 ("bij premium moet de
+                           Soundscapes & Affirmations-kaart schermbreed,
+                           anders heel lelijk"): met een abonnement valt
+                           Free Picks weg en stond deze kaart alleen op een
+                           halve rij — dan over de volle breedte. */
+                        width: p.key === 'tools' && hasSub ? PILLAR_FULL_WIDTH : PILLAR_CARD_WIDTH,
+                        marginBottom: PILLAR_CARD_GAP,
+                      },
                       breathStyles[pillarIdx],
                     ]}
                   >
