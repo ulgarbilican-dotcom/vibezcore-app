@@ -273,7 +273,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Does VIBEZCORE work on my smartwatch?",
     answer:
       "Yes. VIBEZCORE works with Wear OS watches (Wear OS 3 or later, such as Samsung Galaxy Watch4 and newer) and with Apple Watch.\n\n" +
-      "Breathwork and State Control sessions guide you on your wrist with gentle vibration — also when the watch screen is off. On Wear OS you can pause or end a session right from your watch. On Apple Watch, sessions you start on your iPhone are guided on your wrist.",
+      "Breathwork and State Control sessions guide you on your wrist with gentle vibration — also when the watch screen is off. You can pause or end a session right from your watch. On Apple Watch, sessions you start on your iPhone are guided on your wrist.",
   },
   {
     id: 'watch-without-phone',
@@ -295,7 +295,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'smartwatch',
     question: "Do I need a separate membership for my watch?",
     answer:
-      "No. Your watch uses the same membership as your account on your phone: what's unlocked on your phone is unlocked on your watch.",
+      "No. Your watch uses the same membership as your account on your phone: what's unlocked on your phone is unlocked on your watch. After you subscribe, open VIBEZCORE on your phone once so your watch is updated.",
   },
   {
     id: 'watch-heart-rate',

@@ -44,13 +44,6 @@ export type WearBreathSession = {
   amp?: number;
 };
 
-export type WearBraceletStatus = {
-  title: string;
-  colorHex: string;
-  remainingMinutes: number;
-  paused: boolean;
-  active: boolean;
-};
 
 export type WatchAction = {
   action: 'pause' | 'resume' | 'stop';
@@ -82,8 +75,6 @@ export type StateSessionStart = {
   /** tikduur met amplitude-sturing */
   lubMs?: number;
   dubMs?: number;
-  /** hartslaggeluid op het horloge (sinds 13 okt 2026 speelt de telefoon het) */
-  sound?: boolean;
   /** telefoonklok bij verzenden — het horloge trekt de vertraging af */
   sentAtMs?: number;
 };
@@ -95,8 +86,6 @@ type WearBreathNativeModule = {
   sendBreathSession(session: WearBreathSession): void;
   pauseBreathSession(): void;
   stopBreathSession(): void;
-  sendBraceletStatus(status: WearBraceletStatus): void;
-  stopBraceletRelay(): void;
   sendStateSession(start: StateSessionStart): void;
   pauseStateSession(): void;
   stopStateSession(): void;
@@ -169,23 +158,6 @@ export function pauseBreathSessionOnWatch(): void {
 export function stopBreathSessionOnWatch(): void {
   try {
     native?.stopBreathSession();
-  } catch {
-    /* stil */
-  }
-}
-
-/** Aanroepen bij elke bracelet-statuspoll (bracelet-control.tsx, elke 5s). */
-export function sendBraceletStatusToWatch(status: WearBraceletStatus): void {
-  try {
-    native?.sendBraceletStatus(status);
-  } catch {
-    /* stil */
-  }
-}
-
-export function stopBraceletRelayOnWatch(): void {
-  try {
-    native?.stopBraceletRelay();
   } catch {
     /* stil */
   }

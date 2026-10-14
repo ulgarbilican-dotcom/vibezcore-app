@@ -531,6 +531,7 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
      bevestigt dat het overneemt (`state-ack`, zie hieronder). Zo voel je
      altijd iets, ook als er geen horloge-app is. */
   watchHasRhythm = false;
+  stopWatchdog();
   play(
     mode,
     { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[mode].rampSec },
@@ -592,11 +593,9 @@ function watchStrength(spec: { lubAmp: number; dubAmp: number; lubMsNoAmp: numbe
     dubMs: ms(35),
     lubMsNoAmp: ms(spec.lubMsNoAmp),
     dubMsNoAmp: ms(spec.dubMsNoAmp),
-    /* GEWIJZIGD 13 okt 2026 (operator: "bij haptics + voice moet de
-       hartslag hoorbaar worden"): het geluid speelt de TELEFOON (luider,
-       en via oortjes), ook als het horloge trilt. Het horloge trekt de
-       Bluetooth-vertraging af (sentAtMs), dus tik en geluid vallen samen. */
-    sound: false,
+    /* Het hartslaggeluid speelt de TELEFOON (luider, en via oortjes), ook
+       als het horloge trilt (13 okt 2026); het horloge speelt geen geluid
+       (14 okt 2026). */
   };
 }
 
@@ -645,9 +644,55 @@ function relayToWatch(
   sendAppleState(start);
 }
 
-function onWatchTookOver(): void {
+/* 14 okt 2026 (A-tot-Z-audit): het horloge bevestigt elke 10 s dat het
+   nog speelt. Valt het weg midden in een sessie (batterij leeg, app door
+   het systeem gestopt, opnieuw geïnstalleerd), dan neemt de telefoon na
+   25 s zonder bevestiging het ritme weer zelf over, op dezelfde plek —
+   anders voelde je de rest van de sessie niets. (Werkt zolang de app-JS
+   loopt; met de telefoon op slot kan Android dit vertragen.) */
+const WATCH_ACK_TIMEOUT_MS = 25_000;
+let lastWatchAckAt = 0;
+let watchdog: ReturnType<typeof setInterval> | null = null;
+
+function stopWatchdog(): void {
+  if (watchdog) clearInterval(watchdog);
+  watchdog = null;
+}
+
+/** De telefoon trilt weer zelf, vanaf de huidige plek in het ritme. */
+function phoneTakesRhythmBack(): void {
+  stopWatchdog();
+  if (!watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
+  watchHasRhythm = false;
+  const clock = lastClock;
+  const passed = (Date.now() - clock.at) / 1000;
+  const elapsedSec = clock.elapsedSec + passed;
+  const remainingSec = Math.max(0, clock.remainingSec - passed);
+  if (remainingSec <= 1) return;
+  play(
+    clock.mode,
+    { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[clock.mode].rampSec },
+    Math.max(0, elapsedSec - session.curveZeroSec),
+    remainingSec,
+    { elapsedSec, totalSec: elapsedSec + remainingSec },
+    false,
+    session.restingBpm,
+    session.startBpm,
+  );
+  lastClock = { mode: clock.mode, elapsedSec, remainingSec, at: Date.now() };
+}
+
+/** `watchdog`: enkel voor Wear OS — dat horloge herhaalt zijn bevestiging
+ *  elke 10 s; de Apple Watch bevestigt één keer (geen tijdslimiet). */
+function onWatchTookOver(watchdogOn = false): void {
+  lastWatchAckAt = Date.now();
   if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
   watchHasRhythm = true;
+  stopWatchdog();
+  if (watchdogOn) watchdog = setInterval(() => {
+    if (!watchHasRhythm) return stopWatchdog();
+    if (Date.now() - lastWatchAckAt > WATCH_ACK_TIMEOUT_MS) phoneTakesRhythmBack();
+  }, 5_000);
   /* Zelfde plek in de curve, nu stil — sessie, timer en melding blijven.
      13 okt 2026 (meting: tikken van horloge en telefoon vielen ~0,63 s
      naast elkaar): de stille herstart (die het hartslaggeluid speelt) begint
@@ -683,7 +728,7 @@ function onWatchTookOver(): void {
     }, Math.max(0, startAt - Date.now())),
   );
 }
-onWearStateAck(onWatchTookOver);
+onWearStateAck(() => onWatchTookOver(true));
 
 /** "Smartwatch"-schakelaar in Audio & Haptics, ook midden in een sessie
  *  (14 okt 2026). Uit: het horloge stopt en de telefoon trilt weer zelf,
@@ -702,26 +747,13 @@ export async function setWatchHapticsEnabled(on: boolean): Promise<void> {
   if (!on) {
     stopWearState();
     stopAppleState();
-    if (watchHasRhythm) {
-      watchHasRhythm = false;
-      play(
-        clock.mode,
-        { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[clock.mode].rampSec },
-        offset,
-        remainingSec,
-        { elapsedSec, totalSec: elapsedSec + remainingSec },
-        false,
-        session.restingBpm,
-        session.startBpm,
-      );
-      lastClock = { mode: clock.mode, elapsedSec, remainingSec, at: Date.now() };
-    }
+    phoneTakesRhythmBack();
   } else {
     lastClock = { mode: clock.mode, elapsedSec, remainingSec, at: Date.now() };
     relayToWatch(clock.mode, offset, remainingSec, session.restingBpm, session.startBpm);
   }
 }
-onAppleStateAck(onWatchTookOver);
+onAppleStateAck(() => onWatchTookOver(false));
 
 export function pauseModeSessionHaptic(): void {
   /* De service blijft draaien in pauze-stand: zo blijft de sessie op het
@@ -736,6 +768,7 @@ export function pauseModeSessionHaptic(): void {
   pauseWearState();
   pauseAppleState();
   watchHasRhythm = false;
+  stopWatchdog();
   sessionEndsAt = null;
   if (session && session.pausedAt === null) session.pausedAt = Date.now();
 }
@@ -790,7 +823,9 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     curveOffsetSec: 0,
     remainingSec: PREVIEW_MAX_SECONDS,
     ...watchStrength(spec),
-    sentAtMs: Date.now(),
+    /* zoals relayToWatch: het moment dat de eerste tik op de telefoon
+       voelbaar is (audit 14 okt 2026) */
+    sentAtMs: Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0),
   };
   sendWearState(start);
   sendAppleState(start);
@@ -818,9 +853,9 @@ export function stopModePreviewHaptic(): void {
   if (!endingNaturally) {
     stopNativeWaveform();
     endNativeSession();
-    /* Enkel als er een echte sessie liep — een voorproef gaat niet naar
-       het horloge. Bij een natuurlijk einde speelt het horloge zelf het
-       eind-signaal en stopt het vanzelf. */
+    /* Enkel als er een echte sessie of een voorproef op het horloge liep.
+       Bij een natuurlijk einde speelt het horloge zelf het eind-signaal en
+       stopt het vanzelf. */
     if (session || previewOnWatch) {
       stopWearState();
       stopAppleState();
@@ -828,6 +863,7 @@ export function stopModePreviewHaptic(): void {
   }
   previewOnWatch = false;
   watchHasRhythm = false;
+  stopWatchdog();
   lastClock = null;
   /* Bij een natuurlijk einde speelt de service het eind-signaal uit en
      stopt dan zelf. */

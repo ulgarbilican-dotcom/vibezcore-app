@@ -9,11 +9,10 @@ package com.ubili.vibezcoreapp.wear
    het horloge bewaart hem hier en werkt daarmee ook zonder telefoon. Zo
    bestaat er nooit een tweede, uit de pas lopende versie van de protocollen.
 
-   Ook hier: de laatst gestarte sessie ("Again" op het startscherm). */
+   Ook hier: de laatst gestarte toestand per onderdeel (daarop opent het). */
 
 import android.content.Context
 import android.net.Uri
-import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.PutDataRequest
 import com.google.android.gms.wearable.Wearable
 import org.json.JSONObject
@@ -195,19 +194,6 @@ object CatalogStore {
     return e.optInt("defaultIdx", 0)
   }
 
-  /** Alles wat het startscherm toont, voor de "is er iets veranderd"-check. */
-  fun homeSignature(context: Context): String {
-    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    return (prefs.getString("durByState", "") ?: "") + (prefs.getString("techByState", "") ?: "") + (prefs.getString(KEY_LAST, "") ?: "")
-  }
-
-  fun lastTech(context: Context): String = try {
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LAST, null)
-      ?.let { JSONObject(it).optString("tech", "") } ?: ""
-  } catch (_: Exception) {
-    ""
-  }
-
   /** De toestand met één gekozen techniek erin (fasen, duurstappen, naam) —
    *  zelfde vorm als de toestand zelf, zodat de rest niets anders hoeft te
    *  weten. Lege of onbekende techKey = de aanbevolen techniek. */
@@ -237,7 +223,11 @@ object CatalogStore {
    *  telefoon ophaalt (takeWatchSessions) — ook als ze nu niet verbonden is. */
   fun logSession(context: Context, record: JSONObject) {
     try {
-      val req = PutDataRequest.create("$PATH_WATCHLOG/${System.currentTimeMillis()}")
+      /* id = uniek pad; de telefoon onthoudt ze en importeert nooit dubbel
+         (audit 14 okt 2026). */
+      val id = "${System.currentTimeMillis()}-${(1000..9999).random()}"
+      if (!record.has("id")) record.put("id", id)
+      val req = PutDataRequest.create("$PATH_WATCHLOG/$id")
         .setData(record.toString().toByteArray(Charsets.UTF_8))
         .setUrgent()
       Wearable.getDataClient(context.applicationContext).putDataItem(req)
@@ -266,8 +256,21 @@ object CatalogStore {
   }
 
   fun breath(context: Context): List<JSONObject> {
-    val arr = load(context)?.optJSONArray("breath") ?: return emptyList()
-    return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }
+    val cat = load(context) ?: return emptyList()
+    val arr = cat.optJSONArray("breath") ?: return emptyList()
+    /* 14 okt 2026 (audit): de ene gratis Breathwork-sessie geldt ook op de
+       pols — na die sessie op slot, ook zonder telefoon in de buurt. */
+    val freeUsedHere = cat.optBoolean("breathFreeOnce", false) &&
+      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("freeBreathUsed", false)
+    return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.map { e ->
+      if (freeUsedHere && !e.optBoolean("locked")) JSONObject(e.toString()).put("locked", true) else e
+    }
+  }
+
+  /** Een gratis Breathwork-sessie is op het horloge gestart. */
+  fun markFreeBreathUsed(context: Context) {
+    if (load(context)?.optBoolean("breathFreeOnce", false) != true) return
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("freeBreathUsed", true).apply()
   }
 
   fun amp(context: Context): Int = load(context)?.optInt("amp", 0) ?: 0
@@ -288,9 +291,6 @@ object CatalogStore {
       .put("phases", entry.optJSONArray("phases"))
       .toString()
   }
-
-  @Suppress("unused")
-  private val unusedFilter = DataClient.FILTER_LITERAL
 }
 
 /** Dezelfde figuur als in de app, per toestand (kleur van de toestand). */

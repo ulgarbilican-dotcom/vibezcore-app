@@ -22,7 +22,11 @@ android {
     applicationId 'com.ubili.vibezcoreapp'
     minSdkVersion 30
     targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 1
+    /* 14 okt 2026 (audit): Play eist een uniek, stijgend versienummer per
+       upload, ook naast de telefoon-app (die zit onder de 1000). Standaard
+       jjMMddUU (bv. 26101423 = 14 okt 2026, 23 u); vast zetten kan met
+       -PwearVersionCode=… */
+    versionCode project.hasProperty('wearVersionCode') ? project.property('wearVersionCode').toString().toInteger() : new Date().format('yyMMddHH').toInteger()
     versionName "1.0.0"
   }
 
@@ -37,6 +41,20 @@ android {
       keyAlias 'androiddebugkey'
       keyPassword 'android'
     }
+    /* Upload-sleutel voor de Play Console (14 okt 2026): uit
+       wear-app/keystore.properties (staat NIET in git) — zie
+       docs/WEAR_RELEASE.md. Zonder dat bestand: geen release-handtekening. */
+    def ksFile = rootProject.file('../wear-app/keystore.properties')
+    if (ksFile.exists()) {
+      def ks = new Properties()
+      ksFile.withInputStream { ks.load(it) }
+      release {
+        storeFile rootProject.file('../' + ks['storeFile'])
+        storePassword ks['storePassword']
+        keyAlias ks['keyAlias']
+        keyPassword ks['keyPassword']
+      }
+    }
   }
 
   buildTypes {
@@ -45,6 +63,7 @@ android {
     }
     release {
       minifyEnabled false
+      if (signingConfigs.findByName('release') != null) signingConfig signingConfigs.release
     }
   }
 

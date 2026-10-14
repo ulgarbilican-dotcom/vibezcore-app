@@ -145,6 +145,7 @@ class WearBreathSessionService : Service() {
 
   override fun onCreate() {
     super.onCreate()
+    VzLog.init(this)
     vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
     } else {
@@ -170,19 +171,44 @@ class WearBreathSessionService : Service() {
   }
 
   private fun startSession(sessionJson: String) {
-    val json = JSONObject(sessionJson)
+    /* 14 okt 2026 (audit): startForeground meteen, vóór het lezen van de
+       sessie — anders crasht het proces na startForegroundService als de
+       inhoud onbruikbaar is. */
+    val json = try {
+      JSONObject(sessionJson)
+    } catch (_: Exception) {
+      JSONObject()
+    }
     val modeName = json.optString("modeName", "Breathwork")
+    val notification = buildNotification("Starting…", modeName)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+    } else {
+      startForeground(NOTIFICATION_ID, notification)
+    }
+    if (!json.has("phases") || (json.optJSONArray("phases")?.length() ?: 0) == 0) {
+      /* onbruikbaar bericht: een lopende sessie laten doorlopen */
+      if (!playing && pausedLocal == null) finishSession(completed = false)
+      return
+    }
     colorHex = json.optString("colorHex", "#00A3A3")
     amp = json.optInt("amp", 0).coerceIn(0, 255)
     val rounds = json.optInt("rounds", 1).coerceAtLeast(1)
-    val phasesArr = json.getJSONArray("phases")
-    val phases = (0 until phasesArr.length()).map { i ->
-      val p = phasesArr.getJSONObject(i)
-      val patternArr = p.getJSONArray("pattern")
-      val pattern = LongArray(patternArr.length()) { j -> patternArr.getLong(j) }
-      Phase(p.getString("key"), p.getInt("secs"), pattern, p.optString("via", ""))
+    val phases = try {
+      val phasesArr = json.getJSONArray("phases")
+      (0 until phasesArr.length()).map { i ->
+        val p = phasesArr.getJSONObject(i)
+        val patternArr = p.getJSONArray("pattern")
+        val pattern = LongArray(patternArr.length()) { j -> patternArr.getLong(j) }
+        Phase(p.getString("key"), p.getInt("secs").coerceAtLeast(1), pattern, p.optString("via", ""))
+      }
+    } catch (_: Exception) {
+      emptyList()
     }
-    if (phases.isEmpty()) return
+    if (phases.isEmpty()) {
+      if (!playing && pausedLocal == null) finishSession(completed = false)
+      return
+    }
     /* Hervatten (6 okt 2026): verder op exact de plek waar de telefoon
        pauzeerde — ronde, fase en wat er van die fase nog over was. */
     val startRound = json.optInt("startRound", 1).coerceIn(1, rounds)
@@ -194,12 +220,6 @@ class WearBreathSessionService : Service() {
     pausedLocal = null
 
     acquireWakeLock()
-    val notification = buildNotification("Starting…", modeName)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
-    } else {
-      startForeground(NOTIFICATION_ID, notification)
-    }
 
     val myGeneration = ++generation
     instance = this
@@ -221,7 +241,7 @@ class WearBreathSessionService : Service() {
        door naar de fase waar de telefoon nu is (en speelt van die fase het
        stuk dat de telefoon nu voelt, zie startVibration). */
     val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, MAX_LAG_MS) else 0L
-    android.util.Log.d("VZSync", "breath start sentAt=$sentAt now=${System.currentTimeMillis()} lag=${lag}ms")
+    VzLog.d("breath start sentAt=$sentAt now=${System.currentTimeMillis()} lag=${lag}ms")
     val now = SystemClock.uptimeMillis()
     var round = startRound
     var idx = startPhase
@@ -303,8 +323,7 @@ class WearBreathSessionService : Service() {
     var restMs = leftMs
     for (i in idx + 1 until phases.size) restMs += phases[i].secs * 1000L
     val sessionEnd = startUptime + restMs + fullRoundsLeft * roundMs
-    android.util.Log.d(
-      "VZSync",
+    VzLog.d(
       "breath vibrate wall=${System.currentTimeMillis()} steps=${t.size} repeat=$repeat round=$round/$totalRounds phase=$idx left=${leftMs}ms resumed=$resumed endIn=${sessionEnd - startUptime}ms",
     )
     if (fullRoundsLeft > 0) {
@@ -317,7 +336,7 @@ class WearBreathSessionService : Service() {
       val cancelAt = (sessionEnd - lastMs + patternMs + 30L).coerceAtMost(sessionEnd - 20L)
       handler?.postAtTime({
         if (gen == generation) {
-          android.util.Log.d("VZSync", "breath vibrate end late=${SystemClock.uptimeMillis() - cancelAt}ms")
+          VzLog.d("breath vibrate end late=${SystemClock.uptimeMillis() - cancelAt}ms")
           try {
             vibrator?.cancel()
           } catch (_: Exception) {
@@ -359,7 +378,7 @@ class WearBreathSessionService : Service() {
     /* De trilling zelf speelt de trilmotor (startVibration); hier enkel
        beeld en melding. */
     val late = SystemClock.uptimeMillis() - startUptime
-    if (late > 40) android.util.Log.d("VZSync", "breath phase late round=$round phase=$phaseIdx by=${late}ms")
+    if (late > 40) VzLog.d("breath phase late round=$round phase=$phaseIdx by=${late}ms")
     if (!silentStart) {
       BeatBus.beat(true)
     }
@@ -478,7 +497,7 @@ class WearBreathSessionService : Service() {
     val now = SystemClock.uptimeMillis()
     val left = curPhaseEndUptime - now
     if (left <= 150L) return
-    android.util.Log.d("VZSync", "breath rearm after screen off round=$curRound phase=$curIdx left=${left}ms")
+    VzLog.d("breath rearm after screen off round=$curRound phase=$curIdx left=${left}ms")
     startVibration(generation, curPhases, curTotalRounds, curRound, curIdx, left, resumed = false, startUptime = now)
   }
 
@@ -561,6 +580,8 @@ class WearBreathSessionService : Service() {
   override fun onBind(intent: Intent?): IBinder? = null
 
   companion object {
+    /** Loopt er nu een sessie die op het horloge zelf gestart is? */
+    val isLocalSession: Boolean get() = instance?.localJson != null
     const val ACTION_START = "com.ubili.vibezcoreapp.wear.action.START"
     const val ACTION_STOP = "com.ubili.vibezcoreapp.wear.action.STOP"
     const val ACTION_PAUSE = "com.ubili.vibezcoreapp.wear.action.PAUSE"

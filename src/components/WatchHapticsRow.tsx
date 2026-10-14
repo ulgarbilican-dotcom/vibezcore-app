@@ -11,8 +11,9 @@
                 (opent de Play Store OP het horloge).
      · none   → enkel als hier ooit een horloge verbonden was: "Not
                 connected". Wie geen horloge heeft, ziet niets.
-   Vervangt de losse WatchStatusRow bovenaan de bladen. Android (Wear OS);
-   op de iPhone installeert Apple de horloge-app zelf.
+   Vervangt de losse WatchStatusRow bovenaan de bladen. Android (Wear OS)
+   én iPhone (Apple Watch, sinds 14 okt 2026): op de iPhone zonder Install-
+   knop — Apple installeert de horloge-app via de Watch-app.
    ───────────────────────────────────────────────────────────────────────── */
 
 import { showVibezAlert } from '@/components/VibezAlert';
@@ -21,6 +22,7 @@ import { useSetting } from '@/utils/settings';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View, type TextStyle, type ViewStyle } from 'react-native';
+import { getAppleWatchStatus } from '../../modules/watch-breath';
 import { getWatchStatus, openStoreOnWatch, type WatchAppStatus } from '../../modules/wear-breath';
 
 const SEEN_KEY = 'vz_watch_seen_v1';
@@ -30,13 +32,13 @@ export function useWatchStatus(): { status: WatchAppStatus; name: string; seen: 
   const [st, setSt] = useState<{ status: WatchAppStatus; name: string } | null>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
     let alive = true;
     void AsyncStorage.getItem(SEEN_KEY)
       .then((v) => alive && setSeen(v === '1'))
       .catch(() => {});
     const check = async () => {
-      const r = await getWatchStatus();
+      const r = Platform.OS === 'ios' ? await getAppleWatchStatus() : await getWatchStatus();
       if (!alive) return;
       setSt(r);
       if (r.status !== 'none') {
@@ -68,12 +70,18 @@ type Props = {
 export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }: Props) {
   const w = useWatchStatus();
   const [on] = useSetting('watchHaptics');
-  if (Platform.OS !== 'android' || !w) return null;
+  if (!w) return null;
   if (w.status === 'none' && !w.seen) return null;
 
   const name = w.name || 'Your watch';
   const sub =
-    w.status === 'ready' ? name : w.status === 'noApp' ? `Install VIBEZCORE on ${name}` : 'Not connected';
+    w.status === 'ready'
+      ? name
+      : w.status === 'noApp'
+        ? Platform.OS === 'ios'
+          ? 'Install VIBEZCORE in the Watch app'
+          : `Install VIBEZCORE on ${name}`
+        : 'Not connected';
 
   return (
     <>
@@ -96,7 +104,7 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
             ios_backgroundColor="#3a3a3a"
             accessibilityLabel={`Vibrate on ${name}`}
           />
-        ) : w.status === 'noApp' ? (
+        ) : w.status === 'noApp' && Platform.OS === 'android' ? (
           <Pressable
             style={({ pressed }) => [s.btn, pressed && { opacity: 0.7 }]}
             onPress={async () => {

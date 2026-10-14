@@ -63,16 +63,6 @@ class WearBreathSession(
   @Field val amp: Int = 0,
 ) : Record
 
-/** Lichtgewicht, periodiek te hersturen status voor Instant State Control
- *  (bracelet) — zie WatchBraceletStatus in wear-breath/index.ts. */
-class WearBraceletStatus(
-  @Field val title: String = "",
-  @Field val colorHex: String = "#B478FF",
-  @Field val remainingMinutes: Int = 0,
-  @Field val paused: Boolean = false,
-  @Field val active: Boolean = false,
-) : Record
-
 /** State Control-sessie voor het horloge — velden exact zoals `state-start`
  *  in docs/WATCH_PROTOCOL.md. Het horloge rekent het ritme zelf uit. */
 class WearStateSessionStart(
@@ -90,10 +80,9 @@ class WearStateSessionStart(
   @Field val lubMsNoAmp: Int = 50,
   @Field val dubMsNoAmp: Int = 40,
   /* 13 okt 2026: deze velden kwamen uit JS maar werden hier nooit
-     doorgestuurd — het horloge kreeg dus nooit de tiklengtes of het geluid. */
+     doorgestuurd — het horloge kreeg dus nooit de tiklengtes. */
   @Field val lubMs: Int = 0,
   @Field val dubMs: Int = 0,
-  @Field val sound: Boolean = false,
   /** Telefoonklok bij verzenden: het horloge trekt de Bluetooth-vertraging
    *  af (operator: "2 sec achterstand op de watch"). */
   @Field val sentAtMs: Double = 0.0,
@@ -102,8 +91,6 @@ class WearStateSessionStart(
 private const val PATH_BREATH_START = "/vibezcore/breath/start"
 private const val PATH_BREATH_STOP = "/vibezcore/breath/stop"
 private const val PATH_BREATH_PAUSE = "/vibezcore/breath/pause"
-private const val PATH_BRACELET_STATUS = "/vibezcore/bracelet/status"
-private const val PATH_BRACELET_STOP = "/vibezcore/bracelet/stop"
 private const val PATH_WATCH_ACTION = "/vibezcore/watch/action"
 private const val PATH_STATE_START = "/vibezcore/state/start"
 private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
@@ -259,21 +246,6 @@ class WearBreathModule : Module() {
       broadcast(PATH_BREATH_STOP, ByteArray(0))
     }
 
-    Function("sendBraceletStatus") { status: WearBraceletStatus ->
-      val payload = JSONObject().apply {
-        put("title", status.title)
-        put("colorHex", status.colorHex)
-        put("remainingMinutes", status.remainingMinutes)
-        put("paused", status.paused)
-        put("active", status.active)
-      }
-      broadcast(PATH_BRACELET_STATUS, payload.toString().toByteArray(Charsets.UTF_8))
-    }
-
-    Function("stopBraceletRelay") {
-      broadcast(PATH_BRACELET_STOP, ByteArray(0))
-    }
-
     /* ── State Control op de pols (docs/WATCH_PROTOCOL.md) ─────────────── */
 
     Function("sendStateSession") { start: WearStateSessionStart ->
@@ -292,7 +264,6 @@ class WearBreathModule : Module() {
         put("dubMsNoAmp", start.dubMsNoAmp)
         if (start.lubMs > 0) put("lubMs", start.lubMs)
         if (start.dubMs > 0) put("dubMs", start.dubMs)
-        put("sound", start.sound)
         put("sentAtMs", if (start.sentAtMs > 0) start.sentAtMs.toLong() else System.currentTimeMillis())
       }
       broadcast(PATH_STATE_START, payload.toString().toByteArray(Charsets.UTF_8))

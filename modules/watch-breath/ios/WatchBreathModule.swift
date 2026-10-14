@@ -45,6 +45,18 @@ public class WatchBreathModule: Module {
       WCSession.isSupported() && WCSession.default.isReachable
     }
 
+    /* 14 okt 2026 (audit, iOS = Android): de status voor de "Smartwatch"-
+       regel in Audio & Haptics. "none" = geen gekoppelde Apple Watch,
+       "noApp" = wel een Watch maar zonder VIBEZCORE, "ready" = alles klaar.
+       WatchConnectivity geeft de naam van de Watch niet prijs. */
+    AsyncFunction("watchStatus") { () -> [String: String] in
+      guard WCSession.isSupported() else { return ["status": "none", "name": ""] }
+      let s = WCSession.default
+      if s.activationState != .activated || !s.isPaired { return ["status": "none", "name": ""] }
+      if !s.isWatchAppInstalled { return ["status": "noApp", "name": "Apple Watch"] }
+      return ["status": "ready", "name": "Apple Watch"]
+    }
+
     Function("sendBreathSession") { (session: [String: Any]) in
       WatchBridge.shared.sendSession(session)
     }

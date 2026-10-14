@@ -78,7 +78,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
       bottomMargin = dp(10f)
     })
 
-    // Duur — zelfde knop als bij Breathe
+    // Duur — zelfde knop als bij Breathwork
     val row = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_VERTICAL
@@ -153,7 +153,6 @@ internal fun startLocalStateSession(context: Context, e: JSONObject, minutes: In
     put("colorHex", e.optString("colorHex"))
     put("curveOffsetSec", 0.0)
     put("remainingSec", minutes * 60.0)
-    put("sound", false) // geen geluid op het horloge (operator 14 okt 2026: de luidspreker klinkt als een kikker of zwijgt)
     put("local", true)
     put("mode", e.optInt("key"))
     put("plannedSec", minutes * 60)

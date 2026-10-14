@@ -25,6 +25,7 @@ import { levelForTechnique, personalRecommendedMinutes, techniqueForLevel } from
 import { addBreathSession, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { getSetting, setSetting, useSetting } from '@/utils/settings';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { syncWatchCatalog, takeWatchSessions } from '../../modules/wear-breath';
@@ -78,7 +79,10 @@ function techForWatch(key: BreathStateKey, base: BreathState['techniques'][numbe
   };
 }
 
-export function buildWatchCatalog(locked: boolean, stateLocked = false): string {
+/** `breathFreeOnce`: de gratis Breathwork-sessie is nog niet gebruikt (niet-
+ *  Premium). Het horloge zet zelf het slot zodra die ene sessie op de pols
+ *  gedaan is — ook zonder telefoon (audit 14 okt 2026). */
+export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFreeOnce = false): string {
   const breath = ORDER.map((key) => {
     const st = BREATH_STATES[key];
     /* 13 okt 2026 (operator: "gebruiker moet eerst de techniek kunnen
@@ -122,7 +126,7 @@ export function buildWatchCatalog(locked: boolean, stateLocked = false): string 
     locked: stateLocked,
     params: watchStateParams(m.mode),
   }));
-  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state });
+  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce });
 }
 
 /** Een State Control-sessie die op het horloge zelf liep (13 okt 2026). */
@@ -147,11 +151,40 @@ type WatchSessionRecord = {
 
 /** Sessies van het horloge in de geschiedenis zetten (en de gratis sessie
  *  als gebruikt markeren, net als op de telefoon). */
+/* 14 okt 2026 (audit): nooit dubbel in de geschiedenis — één import tegelijk
+   (openen en terugkomen vielen soms samen), en elk horloge-record heeft een
+   id die we onthouden (voor het geval het wissen op het horloge niet lukt). */
+const IMPORTED_KEY = 'vz_watch_imported_ids_v1';
+let importing = false;
+
 async function importWatchSessions(): Promise<void> {
+  if (importing) return;
+  importing = true;
+  try {
+    await importWatchSessionsOnce();
+  } finally {
+    importing = false;
+  }
+}
+
+async function importWatchSessionsOnce(): Promise<void> {
   const items = await takeWatchSessions();
+  if (items.length === 0) return;
+  let seen: string[] = [];
+  try {
+    seen = JSON.parse((await AsyncStorage.getItem(IMPORTED_KEY)) ?? '[]') as string[];
+  } catch {
+    seen = [];
+  }
+  const seenSet = new Set(seen);
   for (const raw of items) {
     try {
-      const any = JSON.parse(raw) as { kind?: string };
+      const any = JSON.parse(raw) as { kind?: string; id?: string };
+      if (any.id) {
+        if (seenSet.has(any.id)) continue;
+        seenSet.add(any.id);
+        seen.push(any.id);
+      }
       if (any.kind === 'state') {
         const st = any as WatchStateRecord;
         if (!(st.activeSec >= 10) || !MODES.some((m) => m.mode === st.mode)) continue;
@@ -187,6 +220,11 @@ async function importWatchSessions(): Promise<void> {
       /* één kapot record mag de rest niet tegenhouden */
     }
   }
+  try {
+    await AsyncStorage.setItem(IMPORTED_KEY, JSON.stringify(seen.slice(-300)));
+  } catch {
+    /* niet erg: het horloge wist zijn records ook zelf */
+  }
 }
 
 /** Eén keer in de root-layout: houdt de catalogus op het horloge actueel en
@@ -205,10 +243,14 @@ export function useWatchCatalogSync(): void {
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
+    /* 14 okt 2026 (audit): pas doorsturen als het abonnement geladen is —
+       anders kon een gratis gebruiker State Control open krijgen op het
+       horloge (en bleef dat zo als de app daarna sloot). */
+    if (sub.isLoading) return;
     const locked = !sub.isPro && !!freeUsedAt;
     /* zelfde regel als het State Control-scherm (bracelet-control.tsx) */
-    const stateLocked = !sub.isLoading && !sub.isPro && !ownsBracelet;
-    syncWatchCatalog(buildWatchCatalog(locked, stateLocked));
+    const stateLocked = !sub.isPro && !ownsBracelet;
+    syncWatchCatalog(buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt));
   }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, strength, experience, history.length, techByState, restingBpm]);
 
   useEffect(() => {

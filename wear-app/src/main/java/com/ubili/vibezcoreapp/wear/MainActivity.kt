@@ -187,6 +187,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
         return
       }
       PhoneLink.sendWatchAction(this, if (st.paused) "resume" else "pause", "bracelet")
+      /* 14 okt 2026 (audit): pauze meteen ook op de pols — ook als de
+         telefoon buiten bereik is. Hervatten volgt de telefoon (die kent de
+         juiste plek in de sessie). */
+      if (!st.paused && WearStateSessionService.instance != null) {
+        startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_PAUSE })
+      }
       return
     }
     val b = BreathSessionState.current
@@ -201,7 +207,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
       )
       return
     }
-    PhoneLink.sendWatchAction(this, if (b.paused) "resume" else "pause", "breath")
+    /* een horloge-sessie stuurt de telefoon niet (audit 14 okt 2026) */
+    if (!WearBreathSessionService.isLocalSession) PhoneLink.sendWatchAction(this, if (b.paused) "resume" else "pause", "breath")
     if (!b.paused && WearBreathSessionService.instance != null) {
       startService(Intent(this, WearBreathSessionService::class.java).apply { action = WearBreathSessionService.ACTION_PAUSE })
     }
@@ -209,7 +216,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
   private fun onEndTap() {
     if (StateSessionState.current.active) {
-      PhoneLink.sendWatchAction(this, "stop", "bracelet")
+      /* Een horloge-sessie beëindigen mag een sessie op de telefoon niet
+         stoppen (audit 14 okt 2026). */
+      if (!WearStateSessionService.isLocalSession) PhoneLink.sendWatchAction(this, "stop", "bracelet")
       /* 12 okt 2026 (operator: "bij end session krijg ik 0-scherm en blijf
          ik in session active"): niet meer wachten op de telefoon — het
          horloge stopt meteen zelf (zoals Breathwork) en meldt het. */
@@ -231,7 +240,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       BreathSessionState.update(BreathSessionState.Snapshot("Waiting for phone…", "", 0, 0, running = false))
       return
     }
-    PhoneLink.sendWatchAction(this, "stop", "breath")
+    if (!WearBreathSessionService.isLocalSession) PhoneLink.sendWatchAction(this, "stop", "breath")
     if (WearBreathSessionService.instance != null) {
       startService(Intent(this, WearBreathSessionService::class.java).apply { action = WearBreathSessionService.ACTION_STOP })
     } else {
@@ -394,8 +403,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
   }
 
   /* ── Startscherm (13 okt 2026 — het horloge zelfstandig) ─────────────
-     Zoals Apple's Ademhalen/Workout: bovenaan "Again" (laatste sessie, één
-     tik), daaronder de vijf Breathe-toestanden met hun figuur. Zonder
+     V-merkteken, groet en de twee onderdelen (State Control, Breathwork);
+     elk onderdeel opent op je laatst gebruikte toestand. Zonder
      catalogus: uitleg om de telefoon-app één keer te openen. */
   private var homeSignature = ""
 
@@ -421,7 +430,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
     /* 13 okt 2026 (operator: "het was mij niet duidelijk dat ik in
        breathwork zat"): het startscherm is een KEUZE — State Control of
-       Breathe, in de volgorde van de telefoon. Daarna de toestanden van dat
+       Breathwork, in de volgorde van de telefoon. Daarna de toestanden van dat
        ene onderdeel, met het label bovenaan (ModesActivity). */
     if (!hasState && !hasBreath) {
       list.addView(TextView(this).apply {
@@ -590,7 +599,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
 }
 
-/** Start een Breathe-sessie op het horloge zelf, uit de catalogus.
+/** Start een Breathwork-sessie op het horloge zelf, uit de catalogus.
  *  CLEAR_TOP (13 okt 2026, operator: "ik kom direct op het techniekenscherm"):
  *  techniek- en tijdscherm worden opgeruimd, anders lagen ze nog achter de
  *  sessie en kwam je daar terug na wegvegen of opnieuw openen. */
@@ -600,6 +609,7 @@ internal fun startLocalSession(context: android.content.Context, e: org.json.JSO
   CatalogStore.setLast(context, e.optString("key"), minutes, e.optString("techniqueKey"))
   CatalogStore.setRecent(context, "breath", e.optString("key"), minutes, e.optString("techniqueKey"))
   CatalogStore.setTechFor(context, e.optString("key"), e.optString("techniqueKey"))
+  CatalogStore.markFreeBreathUsed(context)
   context.startForegroundService(
     Intent(context, WearBreathSessionService::class.java).apply {
       action = WearBreathSessionService.ACTION_START

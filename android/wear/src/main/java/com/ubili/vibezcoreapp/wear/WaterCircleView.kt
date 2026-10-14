@@ -3,7 +3,7 @@ package com.ubili.vibezcoreapp.wear
 /* 13 okt 2026 — het beeld van State Control op het horloge, zoals op de
    telefoon: een fijne ring in de kleur van de toestand met water dat
    zachtjes golft, en de duur in het midden. Water = State Control,
-   figuur = Breathe — zo zie je meteen waar je bent. */
+   figuur = Breathwork — zo zie je meteen waar je bent. */
 
 import android.animation.ValueAnimator
 import android.content.Context

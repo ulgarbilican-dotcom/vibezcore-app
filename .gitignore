@@ -99,3 +99,9 @@ crop-test.html
 modules/**/android/build/
 modules/**/android/.gradle/
 modules/**/ios/build/
+
+# Wear-upload-sleutel (14 okt 2026) — nooit committen
+wear-app/keystore.properties
+*.jks
+*.keystore
+!android/app/debug.keystore

@@ -21,9 +21,9 @@
         android:allowBackup="false"
         android:supportsRtl="true">
 
-        <!-- Embedded, geen eigen leven op het horloge zonder de telefoon-app
-             — moet áltijd via de telefoon een sessie krijgen om iets te
-             tonen, nooit los gestart worden als zelfstandige app. -->
+        <!-- Niet standalone: de telefoon-app zet de catalogus (toestanden,
+             technieken, toegang) klaar. Daarna start het horloge State
+             Control en Breathwork ook zelf, zonder telefoon in de buurt. -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="false" />

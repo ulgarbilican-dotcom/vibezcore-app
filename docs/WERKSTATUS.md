@@ -103,6 +103,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 14 okt 2026 (17:45): ritme telefoon = horloge — de telefoon rekent cirkel en drukgolf uit vanaf het geplande slagmoment (vaste klok, zoals het horloge); operator: "nu lijkt het goed" (T178). Horloge-ring = vorige versie (drukgolf op het horloge teruggedraaid). Nog: nieuwe telefoonbuild voor de Play Store (gesplitst hartslaggeluid is native).
 
+- 14 okt 2026 (avond): smartwatch A-tot-Z-audit afgewerkt — trilling met scherm uit (T182), telefoon neemt over als het horloge wegvalt, horloge-sessies sturen de telefoon niet, premium/gratis-slot op het horloge, geen dubbele geschiedenis, pauze op de pols, opruimwerk (geluid, ongebruikte bestanden, logs enkel in testversie), iPhone-Smartwatch-regel, FAQ, versienummer + docs/WEAR_RELEASE.md. Tests T183–T189. **Nieuwe telefoonbuild nodig** (native). Operator: Wear OS-form factor + upload in de Play Console.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).

@@ -27,7 +27,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.os.Build
-import android.media.SoundPool
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
@@ -84,8 +83,6 @@ private data class StateStart(
    *  gekozen sterkte (12 okt 2026); oudere telefoon-apps: 45/35 ms. */
   val lubMs: Long = LUB_MS,
   val dubMs: Long = DUB_MS,
-  /** "Haptic + Audio" op de telefoon → hartslaggeluid op elke slag. */
-  val sound: Boolean = false,
 )
 
 private fun bpmAt(s: StateStart, t: Double): Double {
@@ -323,6 +320,7 @@ class WearStateSessionService : Service() {
   override fun onCreate() {
     super.onCreate()
     instance = this
+    VzLog.init(this)
     vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
     } else {
@@ -336,7 +334,6 @@ class WearStateSessionService : Service() {
       androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
     )
     ensureChannel()
-    ensureSound()
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -376,7 +373,6 @@ class WearStateSessionService : Service() {
       dubMsNoAmp = j.optLong("dubMsNoAmp", 40L).coerceAtLeast(1L),
       lubMs = j.optLong("lubMs", LUB_MS).coerceIn(20L, 120L),
       dubMs = j.optLong("dubMs", DUB_MS).coerceIn(15L, 100L),
-      sound = j.optBoolean("sound", false),
     ).takeIf { it.targetBpm > 0 }?.copy(sentAtMs = j.optLong("sentAtMs", 0L), local = j.optBoolean("local", false), raw = raw)
   } catch (_: Exception) {
     null
@@ -385,6 +381,12 @@ class WearStateSessionService : Service() {
   /* ── Op beatThread ───────────────────────────────────────────────────── */
 
   private fun start(s: StateStart, startId: Int) {
+    /* 14 okt 2026 (audit): een lopende horloge-sessie die door een
+       telefoon-start vervangen wordt, eerst in de geschiedenis zetten. */
+    session?.takeIf { it.local && !s.local }?.let { prev ->
+      val remMs = if (paused) pausedRemainingMs else (sessionEndUptime - SystemClock.uptimeMillis()).coerceAtLeast(0L)
+      logLocal(prev, remMs)
+    }
     clearScheduled()
     cancelVibration()
     if (StateSessionState.current.active.not() || StateSessionState.current.title != s.title) sessionTotalSec = 0
@@ -426,7 +428,7 @@ class WearStateSessionService : Service() {
     val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - (gridT - origin))
     if (aligned.remainingSec <= 0.5) return finish(startId)
     localResumeJson = null
-    android.util.Log.d("VZSync", "start sentAt=${s.sentAtMs} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetWall - nowWall}ms")
+    VzLog.d("start sentAt=${s.sentAtMs} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetWall - nowWall}ms")
     session = aligned
     val waveform = buildWaveform(aligned, amplitudeControl)
     units = splitIntoUnits(waveform)
@@ -453,7 +455,7 @@ class WearStateSessionService : Service() {
            valt zo toch exact op het rooster. */
         val late = (SystemClock.uptimeMillis() - hapticUptime).coerceAtLeast(0L)
         val pat = buildVibPattern(aligned, amp, late)
-        android.util.Log.d("VZSync", "vibrate pattern steps=${pat.timings.size} repeat=${pat.repeat} late=${late}ms")
+        VzLog.d("vibrate pattern steps=${pat.timings.size} repeat=${pat.repeat} late=${late}ms")
         vibrate(pat.timings, pat.amplitudes, pat.repeat)
       }
     }, wholeVibrationToken, hapticUptime)
@@ -471,14 +473,23 @@ class WearStateSessionService : Service() {
     }, wholeVibrationToken, hapticUptime + sessionMs)
     beatHandler.postAtTime(endRunnable, startUptime + sessionMs + 1500L)
     beatHandler.post(tickRunnable)
-    PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
-    /* Nog eens na 3 s (meting 13 okt: na een koude start kwam de eerste
-       bevestiging niet aan, en dan trilden telefoon én horloge elk apart). */
-    beatHandler.postDelayed({
-      if (session === aligned && !paused) {
-        PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
+    /* Bevestigen aan de telefoon dat het horloge het ritme speelt — enkel
+       voor een sessie van de telefoon (een horloge-sessie mag een sessie op
+       de telefoon niet stil maken, audit 14 okt 2026). Nog eens na 3 s (na
+       een koude start kwam de eerste niet aan, meting 13 okt) en daarna elke
+       10 s: blijft die weg, dan neemt de telefoon het ritme terug. */
+    if (!aligned.local) {
+      PhoneLink.send(this, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
+      val ack = object : Runnable {
+        override fun run() {
+          if (session === aligned && !paused) {
+            PhoneLink.send(this@WearStateSessionService, PhoneLink.PATH_STATE_ACK, """{"playing":true}""".toByteArray(Charsets.UTF_8))
+            beatHandler.postAtTime(this, wholeVibrationToken, SystemClock.uptimeMillis() + ACK_EVERY_MS)
+          }
+        }
       }
-    }, 3000L)
+      beatHandler.postAtTime(ack, wholeVibrationToken, SystemClock.uptimeMillis() + 3000L)
+    }
   }
 
   private fun pause(startId: Int) {
@@ -506,6 +517,10 @@ class WearStateSessionService : Service() {
     cancelVibration()
     releaseWakeLock()
     publish()
+    /* 14 okt 2026 (audit): een pauze blijft niet eeuwig als voorgronddienst
+       staan (bv. als de telefoon-app intussen dicht is) — na 60 min klaar. */
+    val myStart = sessionStartId
+    beatHandler.postAtTime({ if (paused && sessionStartId == myStart) finish(myStart) }, wholeVibrationToken, now + MAX_PAUSE_MS)
   }
 
   /** stopSelf(startId): stopt enkel als dit de laatste opdracht was — een
@@ -544,27 +559,21 @@ class WearStateSessionService : Service() {
     if (paused || nextUnit >= units.size) return
     val u = units[nextUnit]
     val lateMs = SystemClock.uptimeMillis() - (visualUptime + u.offsetMs)
-    if (lateMs > 40) android.util.Log.d("VZSync", "late unit=$nextUnit by=${lateMs}ms${if (lateMs > LATE_SKIP_MS) " SKIPPED" else ""}")
+    if (lateMs > 40) VzLog.d("late unit=$nextUnit by=${lateMs}ms${if (lateMs > LATE_SKIP_MS) " SKIPPED" else ""}")
     if (lateMs <= LATE_SKIP_MS) {
       /* De trilling zelf speelt de trilmotor (zie start(): het hele patroon
          in één keer); hier enkel beeld, geluid en meting per slag. */
       /* Meting synchronisatie (13 okt 2026): wandklok + plek in de curve per
          slag; de telefoon logt hetzelfde ([sync] in ReactNativeJS). */
       if (nextUnit < 40) {
-        android.util.Log.d("VZSync", "lub wall=${System.currentTimeMillis()} curve=${"%.3f".format((session?.curveOffsetSec ?: 0.0) + u.offsetMs / 1000.0)}")
+        VzLog.d("lub wall=${System.currentTimeMillis()} curve=${"%.3f".format((session?.curveOffsetSec ?: 0.0) + u.offsetMs / 1000.0)}")
       }
       if (nextUnit < units.size - 1) {
-        /* 12 okt 2026: hartslaggeluid op de luidspreker van het horloge,
-           op exact dezelfde slag als de trilling. */
-        if (session?.sound == true) playHeart(dub = false)
         val cycle = if (nextUnit + 1 < units.size) units[nextUnit + 1].offsetMs - u.offsetMs else 0L
         BeatBus.beat(true, cycle)
         val dubDelay = u.t[0] + u.t[1]
         beatHandler.postDelayed({
           if (!paused) {
-            /* 14 okt 2026: de dub als eigen geluid, op de tweede tik —
-               de opname had hem op een vaste 0,24 s. */
-            if (session?.sound == true) playHeart(dub = true)
             BeatBus.beat(false)
           }
         }, dubDelay)
@@ -574,45 +583,9 @@ class WearStateSessionService : Service() {
     scheduleNextUnit()
   }
 
-  /* ── Hartslaggeluid (Feel & Hear op het horloge) ── SoundPool: lage
-     vertraging; zelfde opname als de telefoon (speaker-versie). */
-  private var soundPool: SoundPool? = null
-  private var heartId = 0
-  private var heartDubId = 0
-  private fun ensureSound() {
-    if (soundPool != null) return
-    try {
-      val pool = SoundPool.Builder()
-        .setMaxStreams(2)
-        .setAudioAttributes(
-          AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build(),
-        )
-        .build()
-      /* 12 okt 2026: eigen horloge-versie — de telefoonopname zit voor 97 %
-         onder 150 Hz, wat een horlogeluidspreker niet kan weergeven. Deze
-         versie draagt dezelfde lub-dub in boventonen (400–1000 Hz), zodat
-         je oor de diepe slag nog hoort ("missing fundamental"). */
-      /* 14 okt 2026 (operator: "klinkt als een kikker"): de horloge-versie
-         met boventonen klonk niet als een hart → de natuurlijke opname van
-         de telefoon (6396), gesplitst in lub en dub. */
-      heartId = pool.load(this, R.raw.heartbeat_watch_lub, 1)
-      heartDubId = pool.load(this, R.raw.heartbeat_watch_dub, 1)
-      soundPool = pool
-    } catch (_: Exception) {
-      soundPool = null
-    }
-  }
-  private fun playHeart(dub: Boolean) {
-    try {
-      val pool = soundPool ?: return
-      val id = if (dub) heartDubId else heartId
-      if (id != 0) pool.play(id, 1f, 1f, 1, 0, 1f)
-    } catch (_: Exception) {
-    }
-  }
+  /* Geen hartslaggeluid op het horloge (operator 14 okt 2026: de
+     luidspreker van de Watch4 klonk als een kikker of zweeg) — het geluid
+     blijft op de telefoon/oortjes, de pols krijgt de trilling. */
 
   private fun scheduleNextUnit() {
     beatHandler.removeCallbacks(beatRunnable)
@@ -620,7 +593,7 @@ class WearStateSessionService : Service() {
     /* Te late slagen (CPU even bezet) overslaan i.p.v. uit de maat spelen —
        het eind-signaal (laatste stuk) wordt nooit overgeslagen. */
     while (nextUnit < units.size - 1 && visualUptime + units[nextUnit].offsetMs < now - LATE_SKIP_MS) {
-      android.util.Log.d("VZSync", "skip unit=$nextUnit (scheduler ${now - visualUptime - units[nextUnit].offsetMs}ms late)")
+      VzLog.d("skip unit=$nextUnit (scheduler ${now - visualUptime - units[nextUnit].offsetMs}ms late)")
       nextUnit++
     }
     if (nextUnit >= units.size) return
@@ -672,7 +645,7 @@ class WearStateSessionService : Service() {
       false
     }
     val pat = buildVibPattern(s, amp, late)
-    android.util.Log.d("VZSync", "rearm after screen off late=${late}ms")
+    VzLog.d("rearm after screen off late=${late}ms")
     vibrate(pat.timings, pat.amplitudes, pat.repeat)
   }
 
@@ -781,11 +754,6 @@ class WearStateSessionService : Service() {
     if (instance === this) instance = null
     beatHandler.removeCallbacksAndMessages(null)
     cancelVibration()
-    try {
-      soundPool?.release()
-    } catch (_: Exception) {
-    }
-    soundPool = null
     releaseWakeLock()
     if (StateSessionState.current.active) StateSessionState.update(StateSessionState.IDLE)
     beatThread.quitSafely()
@@ -830,6 +798,10 @@ class WearStateSessionService : Service() {
 
     /** Draait er een State Control-sessie die op het horloge zelf startte? */
     val isLocalSession: Boolean get() = instance?.session?.local == true
+    /** Herhaalde bevestiging aan de telefoon (zie start()). */
+    private const val ACK_EVERY_MS = 10_000L
+    /** Langste pauze vóór de dienst zichzelf afsluit. */
+    private const val MAX_PAUSE_MS = 60 * 60_000L
     private const val LATE_SKIP_MS = 150L
     private const val MAX_WAKE_LOCK_MS = 60 * 60 * 1000L
 

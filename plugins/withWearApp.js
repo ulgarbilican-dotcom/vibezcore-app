@@ -34,6 +34,9 @@ module.exports = function withWearApp(config) {
       const src = path.join(cfg.modRequest.projectRoot, 'wear-app');
       const dest = path.join(cfg.modRequest.platformProjectRoot, 'wear');
       if (fs.existsSync(src)) {
+        /* 14 okt 2026 (audit): eerst de oude bron weg, zodat een bestand dat
+           in wear-app/ verwijderd is ook uit android/wear verdwijnt. */
+        fs.rmSync(path.join(dest, 'src'), { recursive: true, force: true });
         copyDir(src, dest);
       }
       return cfg;
