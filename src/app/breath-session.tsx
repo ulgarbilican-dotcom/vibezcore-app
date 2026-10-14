@@ -4215,8 +4215,9 @@ export function BreathSession() {
             <WatchHapticsRow
               separatorStyle={{ ...s.avCardSep, marginTop: 0, marginVertical: 0 }}
               labelStyle={s.voiceSheetRowLabel}
-              onToggle={(v) => {
-                setSetting('watchHaptics', v);
+              onToggle={async (v) => {
+                /* eerst bewaren — relayBreathToWatches leest de instelling */
+                await setSetting('watchHaptics', v);
                 if (!v) {
                   stopBreathSessionOnWear();
                   stopBreathSessionOnWatch();

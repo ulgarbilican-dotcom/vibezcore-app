@@ -681,8 +681,10 @@ onWearStateAck(onWatchTookOver);
 /** "Smartwatch"-schakelaar in Audio & Haptics, ook midden in een sessie
  *  (14 okt 2026). Uit: het horloge stopt en de telefoon trilt weer zelf,
  *  op dezelfde plek in het ritme. Aan: het horloge neemt het over. */
-export function setWatchHapticsEnabled(on: boolean): void {
-  setSetting('watchHaptics', on);
+export async function setWatchHapticsEnabled(on: boolean): Promise<void> {
+  /* eerst bewaren: setSetting is asynchroon, en relayToWatch leest de
+     instelling — anders ging er bij "aan" niets naar het horloge (getest). */
+  await setSetting('watchHaptics', on);
   if (!session || session.pausedAt !== null || !lastClock) return;
   const clock = lastClock;
   const passed = (Date.now() - clock.at) / 1000;

@@ -3707,7 +3707,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           separatorStyle={s.avWatchSep}
           onToggle={(v) => {
             hapticTap();
-            setWatchHapticsEnabled(v);
+            void setWatchHapticsEnabled(v);
           }}
         />
       </View>

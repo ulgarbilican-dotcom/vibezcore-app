@@ -19,7 +19,6 @@ import { showVibezAlert } from '@/components/VibezAlert';
 import { BrandFonts } from '@/constants/theme';
 import { useSetting } from '@/utils/settings';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Watch } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import { getWatchStatus, openStoreOnWatch, type WatchAppStatus } from '../../modules/wear-breath';
@@ -80,7 +79,6 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
     <>
       {separatorStyle ? <View style={separatorStyle} /> : null}
       <View style={s.row} accessible={w.status !== 'ready'} accessibilityLabel={`Smartwatch. ${sub}`}>
-        <Watch size={20} color={w.status === 'ready' && on ? '#4AF0D4' : 'rgba(255,255,255,0.55)'} strokeWidth={2} />
         <View style={{ flex: 1 }}>
           <Text style={[s.title, labelStyle]} numberOfLines={1}>
             Smartwatch
