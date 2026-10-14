@@ -260,6 +260,9 @@ class StateHapticsService : Service() {
   private var nextUnit = 0
   private var startUptime = 0L
 
+  /** Ingeplande dub-geluiden — mee weg bij pauze/herstart. */
+  private val dubToken = Any()
+
   private val beatRunnable = object : Runnable {
     override fun run() {
       playDueUnitAndScheduleNext()
@@ -290,14 +293,23 @@ class StateHapticsService : Service() {
      Zelfde opnames en volumes als in de app (heartbeat-sound.ts): speaker
      6396 op 100%, koptelefoon 297400 met zachte lub op 30%. */
   private var soundPool: SoundPool? = null
-  private var soundSpeaker = 0
-  private var soundHeadphones = 0
+  /* 14 okt 2026 (operator: "hartslaggeluid en ritmeweergave moeten altijd
+     perfect overeenkomen — iemand moet horen wat ze zien"): lub en dub als
+     LOSSE geluiden. De opname had de dub op een vaste 0,24 s (speaker) /
+     0,28 s (koptelefoon); trilling en beeld leggen hem op 30 % van de slag
+     (max 350 ms) — enkel rond 70–80 bpm viel dat samen (Boost ~80 ms te
+     laat, Sleep ~110 ms te vroeg). Nu speelt de dub op exact dubAt. Elk
+     stukje begint na 10–15 ms (gemeten), lub en dub dus even snel. */
+  private var soundSpeakerLub = 0
+  private var soundSpeakerDub = 0
+  private var soundHeadphonesLub = 0
+  private var soundHeadphonesDub = 0
 
   private fun ensureSoundPool() {
     if (soundPool != null) return
     try {
       val pool = SoundPool.Builder()
-        .setMaxStreams(2)
+        .setMaxStreams(3)
         .setAudioAttributes(
           AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -305,8 +317,10 @@ class StateHapticsService : Service() {
             .build(),
         )
         .build()
-      soundSpeaker = pool.load(this, R.raw.heartbeat_speaker, 1)
-      soundHeadphones = pool.load(this, R.raw.heartbeat_headphones, 1)
+      soundSpeakerLub = pool.load(this, R.raw.heartbeat_speaker_lub, 1)
+      soundSpeakerDub = pool.load(this, R.raw.heartbeat_speaker_dub, 1)
+      soundHeadphonesLub = pool.load(this, R.raw.heartbeat_headphones_lub, 1)
+      soundHeadphonesDub = pool.load(this, R.raw.heartbeat_headphones_dub, 1)
       soundPool = pool
     } catch (_: Exception) {
       soundPool = null
@@ -330,10 +344,15 @@ class StateHapticsService : Service() {
     }
   }
 
-  private fun playHeartSound() {
+  private fun playHeartSound(dub: Boolean) {
     val pool = soundPool ?: return
     val hp = headphonesConnected()
-    val id = if (hp) soundHeadphones else soundSpeaker
+    val id = when {
+      hp && dub -> soundHeadphonesDub
+      hp -> soundHeadphonesLub
+      dub -> soundSpeakerDub
+      else -> soundSpeakerLub
+    }
     val vol = if (hp) 0.3f else 1f
     if (id != 0) pool.play(id, vol, vol, 1, 0, 1f)
   }
@@ -354,9 +373,18 @@ class StateHapticsService : Service() {
       /* Enkel op een hartslag (lub-dub-eenheid), niet op het eindsignaal. */
       if (soundEnabled && u.t.size == 3) {
         try {
-          playHeartSound()
+          playHeartSound(dub = false)
         } catch (_: Exception) {
         }
+        /* De dub op exact hetzelfde moment als de tweede tik (lub + pauze). */
+        beatHandler.postAtTime({
+          if (soundEnabled) {
+            try {
+              playHeartSound(dub = true)
+            } catch (_: Exception) {
+            }
+          }
+        }, dubToken, startUptime + u.offsetMs + u.t[0] + u.t[1])
       }
     }
     nextUnit++
@@ -432,6 +460,7 @@ class StateHapticsService : Service() {
     handler.postDelayed(tickRunnable, 1000L)
 
     acquireWakeLock()
+    beatHandler.removeCallbacksAndMessages(dubToken)
     units = buildUnits(t, a)
     nextUnit = 0
     startUptime = SystemClock.uptimeMillis()
@@ -503,6 +532,7 @@ class StateHapticsService : Service() {
     pausedCurveElapsedMs = (SystemClock.uptimeMillis() - startUptime).coerceAtLeast(0L)
     paused = true
     beatHandler.removeCallbacks(beatRunnable)
+    beatHandler.removeCallbacksAndMessages(dubToken)
     handler.removeCallbacks(endRunnable)
     handler.removeCallbacks(tickRunnable)
     try {

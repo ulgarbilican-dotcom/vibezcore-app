@@ -44,6 +44,15 @@ let headphones: AudioPlayer | null = null;
    drie opnames die op Pixabay goed klonken, klonken in de app allemaal
    "niet goed" met koptelefoon). */
 let keepAwake: AudioPlayer | null = null;
+/* 14 okt 2026 (operator: "iemand moet horen wat ze zien"): State Control
+   speelt lub en dub als LOSSE geluiden, de dub op exact hetzelfde moment
+   als de tweede tik en de tweede klop van de cirkel (30 % van de slag,
+   max 350 ms). De volledige opname had de dub op een vaste 0,24 s. De
+   hartslagmeter (echte, gemeten slagen) houdt de volledige opname. */
+let speakerLub: AudioPlayer | null = null;
+let speakerDub: AudioPlayer | null = null;
+let headphonesLub: AudioPlayer | null = null;
+let headphonesDub: AudioPlayer | null = null;
 /* Operator, 10 okt 2026 ("ik hoor het hartslaggeluid niet meer"): de
    Resting Heart Rate-pagina én de meting (PulseMeter) gebruiken dit geluid.
    Eén gedeelde aan/uit-vlag liet de meting bij het sluiten van haar blad
@@ -65,7 +74,7 @@ const owners = new Set<HeartbeatOwner>();
 let createdAt = 0;
 
 function releasePlayers(): void {
-  for (const p of [speaker, headphones, keepAwake]) {
+  for (const p of [speaker, headphones, keepAwake, speakerLub, speakerDub, headphonesLub, headphonesDub]) {
     if (!p) continue;
     try {
       p.pause();
@@ -77,6 +86,7 @@ function releasePlayers(): void {
   speaker = null;
   headphones = null;
   keepAwake = null;
+  speakerLub = speakerDub = headphonesLub = headphonesDub = null;
 }
 
 const log = (msg: string) => {
@@ -104,9 +114,19 @@ function ensurePlayers(_fresh = false): void {
     hp.volume = VOLUME_HEADPHONES;
     const ka = createAudioPlayer(require('../../assets/silence.wav'));
     ka.loop = true;
+    const spL = createAudioPlayer(require('../../assets/heartbeat-speaker-lub.wav'));
+    const spD = createAudioPlayer(require('../../assets/heartbeat-speaker-dub.wav'));
+    const hpL = createAudioPlayer(require('../../assets/heartbeat-headphones-lub.wav'));
+    const hpD = createAudioPlayer(require('../../assets/heartbeat-headphones-dub.wav'));
+    spL.volume = spD.volume = VOLUME_SPEAKER;
+    hpL.volume = hpD.volume = VOLUME_HEADPHONES;
     speaker = sp;
     headphones = hp;
     keepAwake = ka;
+    speakerLub = spL;
+    speakerDub = spD;
+    headphonesLub = hpL;
+    headphonesDub = hpD;
   } catch {
     speaker = null;
     headphones = null;
@@ -145,11 +165,28 @@ export function startHeartbeatSound(owner: HeartbeatOwner): void {
   }
 }
 
-/** Eén slag (de "lub"; de "dub" zit in hetzelfde geluid). */
+/** Eén slag (de "lub"; de "dub" zit in hetzelfde geluid) — hartslagmeter. */
 export function heartbeatTick(): void {
   if (owners.size === 0) return;
   if (!speaker || !headphones || broken) ensurePlayers(true);
-  const p = isHeadphonesOutput() ? headphones : speaker;
+  playFromStart(isHeadphonesOutput() ? headphones : speaker);
+}
+
+/** State Control: de eerste slag. */
+export function heartbeatLub(): void {
+  if (owners.size === 0) return;
+  if (!speakerLub || !headphonesLub || broken) ensurePlayers(true);
+  playFromStart(isHeadphonesOutput() ? headphonesLub : speakerLub);
+}
+
+/** State Control: de tweede slag, op het moment van de tweede tik. */
+export function heartbeatDub(): void {
+  if (owners.size === 0) return;
+  if (!speakerDub || !headphonesDub || broken) ensurePlayers(true);
+  playFromStart(isHeadphonesOutput() ? headphonesDub : speakerDub);
+}
+
+function playFromStart(p: AudioPlayer | null): void {
   if (!p) return;
   try {
     /* Eerst echt terug naar het begin, dán spelen: anders staat de speler
@@ -178,7 +215,7 @@ export function stopHeartbeatSound(owner: HeartbeatOwner): void {
   if (owners.has(owner)) log(`stop(${owner})`);
   owners.delete(owner);
   if (owners.size > 0) return;
-  for (const p of [speaker, headphones, keepAwake]) {
+  for (const p of [speaker, headphones, keepAwake, speakerLub, speakerDub, headphonesLub, headphonesDub]) {
     if (!p) continue;
     try {
       p.pause();

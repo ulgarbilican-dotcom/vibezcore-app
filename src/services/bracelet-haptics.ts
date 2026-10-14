@@ -81,7 +81,7 @@ import {
 } from '../../modules/watch-breath';
 
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
-import { heartbeatTick, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
+import { heartbeatDub, heartbeatLub, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
 import { getStateHear } from './state-sound-pref';
 import { getSetting, setSetting } from '@/utils/settings';
 import { AMP_FACTOR, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
@@ -377,12 +377,13 @@ function scheduleBeat(
   pendingTimeouts.length = 0;
   const { cycleMs, dubAt } = beatAt(spec, (Date.now() - curveStartedAt) / 1000, timing);
   fire(spec.lubStyle);
-  if (jsSoundOn && getStateHear()) heartbeatTick();
+  if (jsSoundOn && getStateHear()) heartbeatLub();
   emitPulse({ kind: 'lub', mode, cycleMs });
   pendingTimeouts.push(
     setTimeout(() => {
       if (myGeneration !== generation) return;
       fire(spec.dubStyle);
+      if (jsSoundOn && getStateHear()) heartbeatDub();
       emitPulse({ kind: 'dub', mode, cycleMs });
     }, dubAt),
     setTimeout(() => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration), cycleMs),

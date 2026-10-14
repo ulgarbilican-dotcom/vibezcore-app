@@ -272,20 +272,18 @@ class SessionRingView @JvmOverloads constructor(
       canvas.drawCircle(cx, cy, base * (1.07f + 0.04f * ease), pulsePaint)
     }
 
-    // 5 · tekst
-    bigPaint.textSize = r * (if (centerText.length > 6) 0.26f else 0.36f)
-    // 12 okt 2026: tijd iets boven het midden — pauze + END staan eronder,
-    // binnen de cirkel.
-    val lift = r * 0.10f
-    val bigY = cy + bigPaint.textSize * 0.35f - lift
+    // 5 · tekst — 14 okt 2026 (operator: "PAUSED moet boven Sharp Focus
+    // staan; alles moet ademen"): één verticaal ritme met gelijke lucht
+    // tussen PAUSED · naam · tijd · knop · END. De tijd iets kleiner (0,30 r)
+    // en net boven het midden; PAUSED bovenaan, boven de naam.
+    bigPaint.textSize = r * (if (centerText.length > 6) 0.24f else 0.30f)
+    val bigY = cy - r * 0.04f
     canvas.drawText(centerText, cx, bigY, bigPaint)
     if (subText.isNotEmpty()) {
-      /* 13 okt 2026 (operator: "pauze-tekst overlapt de play-knop"): BOVEN
-         de tijd, in kleine hoofdletters — zoals "PAUSED" op de telefoon. */
-      smallPaint.textSize = r * 0.11f
+      smallPaint.textSize = r * 0.10f
       val oldSpacing = smallPaint.letterSpacing
-      smallPaint.letterSpacing = 0.15f
-      canvas.drawText(subText.uppercase(), cx, bigY - bigPaint.textSize * 0.92f, smallPaint)
+      smallPaint.letterSpacing = 0.18f
+      canvas.drawText(subText.uppercase(), cx, cy - r * 0.68f, smallPaint)
       smallPaint.letterSpacing = oldSpacing
     }
 

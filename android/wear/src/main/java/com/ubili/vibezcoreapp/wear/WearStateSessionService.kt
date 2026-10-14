@@ -537,11 +537,18 @@ class WearStateSessionService : Service() {
       if (nextUnit < units.size - 1) {
         /* 12 okt 2026: hartslaggeluid op de luidspreker van het horloge,
            op exact dezelfde slag als de trilling. */
-        if (session?.sound == true) playHeart()
+        if (session?.sound == true) playHeart(dub = false)
         val cycle = if (nextUnit + 1 < units.size) units[nextUnit + 1].offsetMs - u.offsetMs else 0L
         BeatBus.beat(true, cycle)
         val dubDelay = u.t[0] + u.t[1]
-        beatHandler.postDelayed({ if (!paused) BeatBus.beat(false) }, dubDelay)
+        beatHandler.postDelayed({
+          if (!paused) {
+            /* 14 okt 2026: de dub als eigen geluid, op de tweede tik —
+               de opname had hem op een vaste 0,24 s. */
+            if (session?.sound == true) playHeart(dub = true)
+            BeatBus.beat(false)
+          }
+        }, dubDelay)
       }
     }
     nextUnit++
@@ -552,6 +559,7 @@ class WearStateSessionService : Service() {
      vertraging; zelfde opname als de telefoon (speaker-versie). */
   private var soundPool: SoundPool? = null
   private var heartId = 0
+  private var heartDubId = 0
   private fun ensureSound() {
     if (soundPool != null) return
     try {
@@ -568,16 +576,18 @@ class WearStateSessionService : Service() {
          onder 150 Hz, wat een horlogeluidspreker niet kan weergeven. Deze
          versie draagt dezelfde lub-dub in boventonen (400–1000 Hz), zodat
          je oor de diepe slag nog hoort ("missing fundamental"). */
-      heartId = pool.load(this, R.raw.heartbeat_watch, 1)
+      heartId = pool.load(this, R.raw.heartbeat_watch_lub, 1)
+      heartDubId = pool.load(this, R.raw.heartbeat_watch_dub, 1)
       soundPool = pool
     } catch (_: Exception) {
       soundPool = null
     }
   }
-  private fun playHeart() {
+  private fun playHeart(dub: Boolean) {
     try {
       val pool = soundPool ?: return
-      if (heartId != 0) pool.play(heartId, 1f, 1f, 1, 0, 1f)
+      val id = if (dub) heartDubId else heartId
+      if (id != 0) pool.play(id, 1f, 1f, 1, 0, 1f)
     } catch (_: Exception) {
     }
   }

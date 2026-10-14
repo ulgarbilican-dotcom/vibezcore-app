@@ -99,6 +99,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 14 okt 2026: bracelet-opkuis (bracelet = Early 2027): welkom/Profile-activatielinks weg, tandwiel State Control weg, teksten Settings/meldingen/herinnering zonder bracelet, oude pagina's smart-bead-bracelet/bracelet-preview/coming verwijderd, "Welcome back Warrior"-pop-up weg. About/FAQ/Privacy herschreven (voorstel goedgekeurd: "herschrijf en ik zie wel"). Horloge: startscherm State Control/Breathwork met app-symbolen, State Control zelf starten op het horloge, Recent-rij, labels grijs + toestandsnaam in kleur. Bibliotheek: Soundscapes & Affirmations schermbreed bij abonnement.
 
+- 14 okt 2026 (namiddag): horloge-sync gemeten i.p.v. gegokt (tijd 20 / tik apart 60 ms, motor ~190 ms), Smartwatch-schakelaar getest (T170/T171), hartslag-cirkel één doorlopende lub-dub-curve, buitenring = drukgolf (Skia), hartslaggeluid gesplitst in lub/dub zodat geluid = beeld bij elk tempo (native → **nieuwe telefoonbuild nodig**), horloge-sessiescherm met PAUSED bovenaan en meer lucht. Tests T172–T177. Volgende: operator-gevoel tik horloge + geluid/beeld bevestigen; horloge-Breathwork met scherm uit nog te testen.
+
 ## 4. Wacht op de operator (niet zelf beslissen)
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
