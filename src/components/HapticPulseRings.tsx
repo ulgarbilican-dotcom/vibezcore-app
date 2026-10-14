@@ -103,18 +103,23 @@ const Ring = forwardRef<RingHandle, { size: number; color: string }>(function Ri
    grootst is (+7 %, na 80 ms). Eén duidelijk effect per slag. */
 /* ── Drukgolf (sessiescherm) ──────────────────────────────────────────
    14 okt 2026 (operator: "binnenring is al goed, enkel de buitenring moet
-   een soort drukgolf worden"). Zoals een schokgolf/sonar-puls in
-   professionele UI: vertrekt op de rand van de kloppende cirkel, schiet
-   snel weg en vertraagt (ease-out), de lijn wordt dunner naarmate hij
-   uitdijt en hij dooft uit. Getekend met Skia op de UI-thread — straal en
-   lijndikte animeren zonder de lay-out opnieuw te berekenen (de oude
-   borderWidth-animatie haperde daarom). */
-const WAVE_POOL = 3;
-const WAVE_START = 1.07; // rand van de kloppende cirkel op de lub-top
-const WAVE_END = 1.42;
-const WAVE_STROKE_START = 5;
-const WAVE_STROKE_END = 0.75;
-const WAVE_PEAK_OPACITY = 0.75;
+   een soort drukgolf worden"; vervolg: "blijft raar, kijk na hoe dit
+   professioneel moet"). Het gangbare sonar-/ripple-patroon:
+     · vertrekt vanuit het element zelf (achter de rand van de kloppende
+       cirkel, dus geen "plop" bij het verschijnen) en groeit naar buiten;
+     · ease-out (Material "decelerate", cubic-bezier(0, 0, 0.2, 1)): snel
+       weg, vertraagt — een signaal dat uitwaaiert;
+     · doorzichtigheid ~0,5 → 0, geleidelijk tot nul, geen harde stop;
+     · gelijkmatige lijn (enkel straal en doorzichtigheid bewegen);
+     · rustig: elke golf leeft ~2 slagen, zodat er steeds twee elkaar
+       gelijkmatig opvolgen (gestaffeld, doorlopend).
+   Bronnen: travis.media/blog/css-pulse-effect, educative "Pulsating CTA",
+   Material motion (decelerate easing). Getekend met Skia (UI-thread). */
+const WAVE_POOL = 4;
+const WAVE_START = 1.0; // vanuit de rand van de cirkel (verborgen erachter)
+const WAVE_END = 1.5;
+const WAVE_STROKE = 2.5;
+const WAVE_PEAK_OPACITY = 0.55;
 
 type WaveHandle = { fire: (durationMs: number) => void };
 
@@ -123,19 +128,14 @@ const Wave = forwardRef<WaveHandle, { r0: number; c: number; color: string }>(fu
   useImperativeHandle(ref, () => ({
     fire(durationMs) {
       p.value = 0;
-      p.value = withTiming(1, { duration: durationMs, easing: Easing.bezier(0.15, 0.7, 0.3, 1) });
+      p.value = withTiming(1, { duration: durationMs, easing: Easing.bezier(0, 0, 0.2, 1) });
     },
   }));
   const r = useDerivedValue(() => r0 * (WAVE_START + (WAVE_END - WAVE_START) * p.value));
-  const w = useDerivedValue(() => WAVE_STROKE_START + (WAVE_STROKE_END - WAVE_STROKE_START) * p.value);
-  const o = useDerivedValue(() => {
-    const v = p.value;
-    const fadeIn = Math.min(1, v / 0.06);
-    return WAVE_PEAK_OPACITY * fadeIn * (1 - v) * (1 - v);
-  });
+  const o = useDerivedValue(() => WAVE_PEAK_OPACITY * (1 - p.value));
   return (
     <Group opacity={o}>
-      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={w} />
+      <Circle cx={c} cy={c} r={r} color={color} style="stroke" strokeWidth={WAVE_STROKE} />
     </Group>
   );
 });
@@ -147,22 +147,14 @@ function PressureWaves({ size, color }: { size: number; color: string }) {
   const box = Math.ceil(size * (WAVE_END + 0.06));
   useEffect(() => {
     if (reduced) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const off = subscribeHapticPulse((pulse) => {
+    return subscribeHapticPulse((pulse) => {
       if (pulse.kind !== 'lub') return;
-      /* Vertrekt op de top van de lub (80 ms), zoals de cirkel. */
-      timers.push(
-        setTimeout(() => {
-          const w = waves.current[next.current];
-          next.current = (next.current + 1) % WAVE_POOL;
-          w?.fire(Math.min(1800, Math.max(700, pulse.cycleMs * 1.4)));
-        }, 80),
-      );
+      /* Op de slag zelf; de golf zit eerst achter de cirkel en komt naar
+         buiten terwijl die opzwelt. Leeft ~2 slagen (1,2–2,6 s). */
+      const w = waves.current[next.current];
+      next.current = (next.current + 1) % WAVE_POOL;
+      w?.fire(Math.min(2600, Math.max(1200, pulse.cycleMs * 2)));
     });
-    return () => {
-      off();
-      timers.forEach(clearTimeout);
-    };
   }, [reduced]);
   if (reduced) return null;
   return (
