@@ -261,16 +261,6 @@ object CatalogStore {
     return if (m in min..max) m else e.optInt("defaultMinutes", min).coerceIn(min, max)
   }
 
-  /** Hartslaggeluid bij State Control op het horloge zelf (14 okt 2026,
-   *  operator: "geen hartslag op het horloge"). Standaard uit: het horloge
-   *  is meestal stil; aan = de horloge-opname op de luidspreker. */
-  fun stateSound(context: Context): Boolean =
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("stateSound", false)
-
-  fun setStateSound(context: Context, on: Boolean) {
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("stateSound", on).apply()
-  }
-
   fun setStateMinutes(context: Context, key: String, minutes: Int) {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt("stateDur_$key", minutes).apply()
   }
