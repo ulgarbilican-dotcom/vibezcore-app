@@ -28,6 +28,10 @@ module.exports = {
      Op het horloge blijft de naam "VIBEZCORE" (displayName). */
   name: 'VIBEZCOREWatch',
   displayName: 'VIBEZCORE',
+  /* 15 okt 2026: App Store weigerde build 19 (ITMS-90391/90713: geen
+     icoon voor de Watch-app). 1024 px, ondoorzichtig, zelfde V op grafiet
+     als de Galaxy Watch (ic_launcher_bg + vz_vmark). */
+  icon: './icon.png',
   bundleIdentifier: 'com.ubili.vibezcoreapp.watchkitapp',
   deploymentTarget: '10.0',
   colors: {
