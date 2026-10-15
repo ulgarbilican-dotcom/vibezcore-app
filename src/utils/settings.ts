@@ -249,6 +249,10 @@ export type Settings = {
    *  null = nog niet gebruikt. Wordt gezet zodra die sessie start, en NIET
    *  teruggezet door "Watch the intro again". */
   stateFreeSessionUsedAt: number | null;
+  /** De toestand die in de onboarding gekozen werd: ENKEL die is één keer
+   *  gratis; de andere blijven op de voorproef van 30 s (operator, 15 okt
+   *  2026). null = geen keuze (dan geldt de gratis sessie voor elke). */
+  stateFreeMode: number | null;
   /** Operator, 2 oktober 2026 ("How do you feel"-instant-knop): duur-bijstelling
    *  op basis van de "Worked"/"Too long"/"Too short"-feedback na een instant-
    *  gestarte sessie (zie `utils/instant-feel.ts`). Globaal, net als
@@ -295,6 +299,7 @@ const defaults: Settings = {
   braceletOnboardingCompletedAt: null,
   stateOnboardingCompletedAt: null,
   stateFreeSessionUsedAt: null,
+  stateFreeMode: null,
   instantDurationBias: 0,
 };
 
@@ -466,6 +471,9 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.braceletOnboardingCompletedAt === 'number' ||
             obj.braceletOnboardingCompletedAt === null
               ? { braceletOnboardingCompletedAt: obj.braceletOnboardingCompletedAt }
+              : {}),
+            ...(typeof obj.stateFreeMode === 'number' || obj.stateFreeMode === null
+              ? { stateFreeMode: obj.stateFreeMode }
               : {}),
             ...(typeof obj.stateFreeSessionUsedAt === 'number' || obj.stateFreeSessionUsedAt === null
               ? { stateFreeSessionUsedAt: obj.stateFreeSessionUsedAt }

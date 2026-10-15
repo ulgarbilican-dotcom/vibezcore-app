@@ -32,6 +32,7 @@ export default function StateOnboardingScreen() {
       return;
     }
     void setSetting('stateOnboardingCompletedAt', Date.now());
+    void setSetting('stateFreeMode', mode);
     /* De gekozen toestand staat klaar in State Control (en daar is één
        volledige sessie gratis, zie bracelet-control.tsx). */
     router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
@@ -42,7 +43,7 @@ export default function StateOnboardingScreen() {
       <Stack.Screen options={{ headerShown: false, gestureEnabled: !isFirst }} />
       <StateControlOnboarding
         includeRestingHr={hrNext}
-        finalLabel="Done"
+        finalLabel={isFirst ? 'Continue' : 'Done'}
         onDone={done}
         onBack={back}
       />

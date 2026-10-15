@@ -96,53 +96,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
      krijgt enkel de ruimte die echt overblijft (gemeten), max 280. */
   const [area, setArea] = useState(0);
   const stage = Math.round(Math.max(140, Math.min(280, height * 0.32, area > 0 ? area - 24 : 280)));
-  const core = Math.round(stage * 0.6); // 9 okt 2026: volle cirkel (operator: "kleiner nu")
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
-
-  /* Operator, 9 okt 2026 ("een kloppend hart waardoor de hartgrafiek
-     loopt"): één klok voor hart én lijn — de piek gaat precies op de "lub"
-     door het hart. De witte ringen en de extra ring zijn weg (te druk). */
-  const clock = useSharedValue(0);
-  const t0 = useSharedValue(-1);
-  useFrameCallback((f) => {
-    if (t0.value < 0) t0.value = f.timestamp;
-    clock.value = f.timestamp - t0.value;
-  });
-  /* Vervolg (operator, 9 okt 2026: "je moet zien hoe de pieken vormen —
-     de echte beweging"): zoals een monitor schrijft een lichtpuntje rechts
-     van het hart de lijn; de piek ontstaat daar en het spoor schuift naar
-     links door het hart. Het hart klopt wanneer de piek erdoor gaat. */
-  const lineW = Math.round(Math.min(width - 32, stage * 1.7));
-  const lineH = Math.round(core * 0.8);
-  const headX = Math.round(lineW * 0.82);
-  const speed = lineW / 2 / (BEAT_MS * 1.5); // px per ms (1,5× trager)
-  const travelMs = (headX - lineW / 2) / speed; // van schrijfpunt tot hart
-  /* Operator, 9 okt 2026 ("hartslaggeluid op deze pagina"): op elke slag
-     een zachte lub-dub + een fijne tik — enkel zolang de pagina in beeld is
-     (andere tab, meetblad open of app op de achtergrond → stil). */
-  const live = useRef(false);
-  const onBeat = useCallback(() => {
-    if (!live.current) return;
-    heartbeatTick();
-    hapticTap();
-  }, []);
-  /* Eerste beeldje: enkel de huidige slag onthouden. Daarna klinkt elke
-     nieuwe slag — ook de allereerste "lub" (k gaat van −1 naar 0 na
-     ~1 s); die werd eerst overgeslagen (operator: "duurt 3 à 4 s"). */
-  const lastBeatK = useSharedValue(0);
-  const beatInit = useSharedValue(false);
-  useFrameCallback(() => {
-    const k = Math.floor((clock.value - travelMs + SOUND_LEAD_MS) / BEAT_MS);
-    if (!beatInit.value) {
-      beatInit.value = true;
-      lastBeatK.value = k;
-      return;
-    }
-    if (k !== lastBeatK.value) {
-      lastBeatK.value = k;
-      scheduleOnRN(onBeat);
-    }
-  });
   const [focused, setFocused] = useState(false);
   useFocusEffect(
     useCallback(() => {
@@ -155,64 +109,6 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     const sub = AppState.addEventListener('change', (st) => setAppActive(st === 'active'));
     return () => sub.remove();
   }, []);
-  useEffect(() => {
-    const on = focused && appActive && sheet === null;
-    live.current = on;
-    if (on) startHeartbeatSound('page');
-    else stopHeartbeatSound('page');
-  }, [focused, appActive, sheet]);
-  useEffect(() => {
-    preloadHeartbeatSound();
-    return () => stopHeartbeatSound('page');
-  }, []);
-  const beat = useDerivedValue(() => {
-    const ph = (((clock.value - travelMs) % BEAT_MS) + BEAT_MS) % BEAT_MS;
-    return beatScale(ph);
-  });
-  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
-
-  /* Hoogte van de lijn op het schrijfpunt, nu. */
-  const headY = useDerivedValue(() => {
-    const now = clock.value;
-    const tk = now - ((((now - R_AT) % BEAT_MS) + BEAT_MS) % BEAT_MS);
-    let dt = now - tk;
-    if (dt > PQRST[PQRST.length - 1][0]) dt -= BEAT_MS;
-    if (dt < PQRST[0][0] || dt > PQRST[PQRST.length - 1][0]) return 0;
-    for (let j = 1; j < PQRST.length; j++) {
-      if (dt <= PQRST[j][0]) {
-        const [t0, a0] = PQRST[j - 1];
-        const [t1, a1] = PQRST[j];
-        return a0 + ((a1 - a0) * (dt - t0)) / (t1 - t0);
-      }
-    }
-    return 0;
-  });
-  const lineProps = useAnimatedProps(() => {
-    const mid = lineH / 2;
-    const amp = (lineH / 2 - 3) * 0.95;
-    const now = clock.value;
-    const pts: number[][] = [];
-    const kMax = Math.floor((now - R_AT) / BEAT_MS) + 1;
-    const kMin = Math.floor((now - headX / speed - R_AT) / BEAT_MS) - 1;
-    for (let k = kMin; k <= kMax; k++) {
-      const tk = k * BEAT_MS + R_AT;
-      for (let j = 0; j < PQRST.length; j++) {
-        const t = tk + PQRST[j][0];
-        if (t > now) break; // nog niet geschreven
-        const x = headX + (t - now) * speed;
-        if (x < 0) continue;
-        pts.push([x, mid - PQRST[j][1] * amp]);
-      }
-    }
-    pts.sort((m, n) => m[0] - n[0]);
-    let d = `M0 ${mid}`;
-    for (let i = 0; i < pts.length; i++) d += ` L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
-    d += ` L${headX} ${(mid - headY.value * amp).toFixed(1)}`;
-    return { d };
-  });
-  const dotProps = useAnimatedProps(() => ({ cy: lineH / 2 - headY.value * (lineH / 2 - 3) * 0.95 }));
-  const dotGlowProps = useAnimatedProps(() => ({ cy: lineH / 2 - headY.value * (lineH / 2 - 3) * 0.95 }));
-
   return (
     <View style={s.root}>
       {/* Operator, 9 okt 2026: achtergrond helemaal zwart (geen gloed). */}
@@ -226,78 +122,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         {/* Verborgen zolang het meetblad open is: anders schemert het groene
             hart door het glas achter de telefoon-animatie (operator, 9 okt 2026). */}
         <View style={[s.stageArea, { opacity: sheet ? 0 : 1 }]} onLayout={(e) => setArea(e.nativeEvent.layout.height)}>
-        <View style={[s.stage, { width: stage, height: stage }]}>
-          {/* Operator, 9 okt 2026: de cirkel staat stil — enkel het hart klopt. */}
-          <View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }]}>
-            {/* Vervolg (operator, 9 okt 2026: "de volle cirkel toch groen glas"):
-                Bio-Teal tint, lichte glans bovenaan, dunne heldere rand
-                (s.core). Geen echte vervaging buiten een sheet — dat crasht
-                op Android (memory real-glass-only-in-sheets). */}
-            <LinearGradient
-              colors={['rgba(74,240,212,0.30)', 'rgba(0,163,163,0.12)']}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 0.8, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <LinearGradient
-              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 0.55 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </View>
-          {/* Hartlijn tussen het glas en het hart. */}
-          <Svg
-            pointerEvents="none"
-            width={lineW}
-            height={lineH}
-            style={{ position: 'absolute', left: (stage - lineW) / 2, top: (stage - lineH) / 2, zIndex: 3 }}
-          >
-            <Defs>
-              <SvgLinearGradient id="ecgPage" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={lineW} y2="0">
-                <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0} />
-                <Stop offset="0.3" stopColor="#4AF0D4" stopOpacity={0.8} />
-                <Stop offset="0.82" stopColor="#4AF0D4" stopOpacity={1} />
-                <Stop offset="1" stopColor="#4AF0D4" stopOpacity={1} />
-              </SvgLinearGradient>
-            </Defs>
-            <AnimatedPath
-              animatedProps={lineProps}
-              stroke="url(#ecgPage)"
-              strokeWidth={2.4}
-              fill="none"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {/* Schrijfpunt: zachte gloed + helder puntje */}
-            <AnimatedCircle cx={headX} r={7} fill="#4AF0D4" fillOpacity={0.18} animatedProps={dotGlowProps} />
-            <AnimatedCircle cx={headX} r={2.8} fill="#CFFFF6" animatedProps={dotProps} />
-          </Svg>
-          <Animated.View pointerEvents="none" style={[{ position: 'absolute', zIndex: 4 }, heartStyle]}>
-              {/* Operator, 9 okt 2026: hart in Bio-Teal als glas — één kleur
-                  (doorschijnend teal), geen harde omlijning, enkel een zachte
-                  glans bovenaan die wegvloeit. Zelfde vorm als het lucide-hart. */}
-              <Svg width={Math.round(core * 0.6)} height={Math.round(core * 0.6)} viewBox="0 0 24 24">
-                <Defs>
-                  {/* Operator, 10 okt 2026 ("consistentie over heel de app"):
-                      enkel de huisstijl-overgang Bio-Teal #4AF0D4 → #00A3A3
-                      (theme.ts AudioAccentLight → AudioAccent), geen eigen tint. */}
-                  <SvgLinearGradient id="hgFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={AudioAccentLight} />
-                    <Stop offset="1" stopColor={AudioAccent} />
-                  </SvgLinearGradient>
-                  <SvgLinearGradient id="hgShine" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
-                    <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
-                  </SvgLinearGradient>
-                </Defs>
-                {/* Vervolg (operator, 9 okt 2026): groter, en steviger glas zodat de
-                    hartlijn er duidelijk achter verdwijnt. */}
-                <Path d={HEART_D} fill="url(#hgFill)" />
-                <Path d={HEART_D} fill="url(#hgShine)" />
-              </Svg>
-          </Animated.View>
-        </View>
+          <HeartbeatHero stage={stage} sound={focused && appActive && sheet === null} />
         </View>
 
 
@@ -448,3 +273,189 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.42)',
   },
 });
+
+/** Het kloppende hart met de lopende hartlijn — gedeeld met de
+ *  State Control-onboarding (operator, 15 okt 2026: "deze pagina mag
+ *  zelfde animatie als de hartslag hebben"). `sound`: lub-dub + tik op
+ *  elke slag (enkel deze pagina, zolang ze in beeld is). */
+export function HeartbeatHero({ stage, sound = false }: { stage: number; sound?: boolean }) {
+  const { width } = useWindowDimensions();
+  const core = Math.round(stage * 0.6); // 9 okt 2026: volle cirkel (operator: "kleiner nu")
+
+  /* Operator, 9 okt 2026 ("een kloppend hart waardoor de hartgrafiek
+     loopt"): één klok voor hart én lijn — de piek gaat precies op de "lub"
+     door het hart. De witte ringen en de extra ring zijn weg (te druk). */
+  const clock = useSharedValue(0);
+  const t0 = useSharedValue(-1);
+  useFrameCallback((f) => {
+    if (t0.value < 0) t0.value = f.timestamp;
+    clock.value = f.timestamp - t0.value;
+  });
+  /* Vervolg (operator, 9 okt 2026: "je moet zien hoe de pieken vormen —
+     de echte beweging"): zoals een monitor schrijft een lichtpuntje rechts
+     van het hart de lijn; de piek ontstaat daar en het spoor schuift naar
+     links door het hart. Het hart klopt wanneer de piek erdoor gaat. */
+  const lineW = Math.round(Math.min(width - 32, stage * 1.7));
+  const lineH = Math.round(core * 0.8);
+  const headX = Math.round(lineW * 0.82);
+  const speed = lineW / 2 / (BEAT_MS * 1.5); // px per ms (1,5× trager)
+  const travelMs = (headX - lineW / 2) / speed; // van schrijfpunt tot hart
+  /* Operator, 9 okt 2026 ("hartslaggeluid op deze pagina"): op elke slag
+     een zachte lub-dub + een fijne tik — enkel zolang de pagina in beeld is
+     (andere tab, meetblad open of app op de achtergrond → stil). */
+  const live = useRef(false);
+  const onBeat = useCallback(() => {
+    if (!live.current) return;
+    heartbeatTick();
+    hapticTap();
+  }, []);
+  /* Eerste beeldje: enkel de huidige slag onthouden. Daarna klinkt elke
+     nieuwe slag — ook de allereerste "lub" (k gaat van −1 naar 0 na
+     ~1 s); die werd eerst overgeslagen (operator: "duurt 3 à 4 s"). */
+  const lastBeatK = useSharedValue(0);
+  const beatInit = useSharedValue(false);
+  useFrameCallback(() => {
+    const k = Math.floor((clock.value - travelMs + SOUND_LEAD_MS) / BEAT_MS);
+    if (!beatInit.value) {
+      beatInit.value = true;
+      lastBeatK.value = k;
+      return;
+    }
+    if (k !== lastBeatK.value) {
+      lastBeatK.value = k;
+      scheduleOnRN(onBeat);
+    }
+  });
+  useEffect(() => {
+    live.current = sound;
+    if (sound) startHeartbeatSound('page');
+    else stopHeartbeatSound('page');
+  }, [sound]);
+  useEffect(() => {
+    preloadHeartbeatSound();
+    return () => stopHeartbeatSound('page');
+  }, []);
+  const beat = useDerivedValue(() => {
+    const ph = (((clock.value - travelMs) % BEAT_MS) + BEAT_MS) % BEAT_MS;
+    return beatScale(ph);
+  });
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
+
+  /* Hoogte van de lijn op het schrijfpunt, nu. */
+  const headY = useDerivedValue(() => {
+    const now = clock.value;
+    const tk = now - ((((now - R_AT) % BEAT_MS) + BEAT_MS) % BEAT_MS);
+    let dt = now - tk;
+    if (dt > PQRST[PQRST.length - 1][0]) dt -= BEAT_MS;
+    if (dt < PQRST[0][0] || dt > PQRST[PQRST.length - 1][0]) return 0;
+    for (let j = 1; j < PQRST.length; j++) {
+      if (dt <= PQRST[j][0]) {
+        const [t0, a0] = PQRST[j - 1];
+        const [t1, a1] = PQRST[j];
+        return a0 + ((a1 - a0) * (dt - t0)) / (t1 - t0);
+      }
+    }
+    return 0;
+  });
+  const lineProps = useAnimatedProps(() => {
+    const mid = lineH / 2;
+    const amp = (lineH / 2 - 3) * 0.95;
+    const now = clock.value;
+    const pts: number[][] = [];
+    const kMax = Math.floor((now - R_AT) / BEAT_MS) + 1;
+    const kMin = Math.floor((now - headX / speed - R_AT) / BEAT_MS) - 1;
+    for (let k = kMin; k <= kMax; k++) {
+      const tk = k * BEAT_MS + R_AT;
+      for (let j = 0; j < PQRST.length; j++) {
+        const t = tk + PQRST[j][0];
+        if (t > now) break; // nog niet geschreven
+        const x = headX + (t - now) * speed;
+        if (x < 0) continue;
+        pts.push([x, mid - PQRST[j][1] * amp]);
+      }
+    }
+    pts.sort((m, n) => m[0] - n[0]);
+    let d = `M0 ${mid}`;
+    for (let i = 0; i < pts.length; i++) d += ` L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+    d += ` L${headX} ${(mid - headY.value * amp).toFixed(1)}`;
+    return { d };
+  });
+  const dotProps = useAnimatedProps(() => ({ cy: lineH / 2 - headY.value * (lineH / 2 - 3) * 0.95 }));
+  const dotGlowProps = useAnimatedProps(() => ({ cy: lineH / 2 - headY.value * (lineH / 2 - 3) * 0.95 }));
+
+
+  return (
+  <View style={[s.stage, { width: stage, height: stage }]}>
+    {/* Operator, 9 okt 2026: de cirkel staat stil — enkel het hart klopt. */}
+    <View style={[s.core, { width: core, height: core, borderRadius: core / 2, zIndex: 2 }]}>
+      {/* Vervolg (operator, 9 okt 2026: "de volle cirkel toch groen glas"):
+          Bio-Teal tint, lichte glans bovenaan, dunne heldere rand
+          (s.core). Geen echte vervaging buiten een sheet — dat crasht
+          op Android (memory real-glass-only-in-sheets). */}
+      <LinearGradient
+        colors={['rgba(74,240,212,0.30)', 'rgba(0,163,163,0.12)']}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.55 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+    {/* Hartlijn tussen het glas en het hart. */}
+    <Svg
+      pointerEvents="none"
+      width={lineW}
+      height={lineH}
+      style={{ position: 'absolute', left: (stage - lineW) / 2, top: (stage - lineH) / 2, zIndex: 3 }}
+    >
+      <Defs>
+        <SvgLinearGradient id="ecgPage" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={lineW} y2="0">
+          <Stop offset="0" stopColor="#4AF0D4" stopOpacity={0} />
+          <Stop offset="0.3" stopColor="#4AF0D4" stopOpacity={0.8} />
+          <Stop offset="0.82" stopColor="#4AF0D4" stopOpacity={1} />
+          <Stop offset="1" stopColor="#4AF0D4" stopOpacity={1} />
+        </SvgLinearGradient>
+      </Defs>
+      <AnimatedPath
+        animatedProps={lineProps}
+        stroke="url(#ecgPage)"
+        strokeWidth={2.4}
+        fill="none"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {/* Schrijfpunt: zachte gloed + helder puntje */}
+      <AnimatedCircle cx={headX} r={7} fill="#4AF0D4" fillOpacity={0.18} animatedProps={dotGlowProps} />
+      <AnimatedCircle cx={headX} r={2.8} fill="#CFFFF6" animatedProps={dotProps} />
+    </Svg>
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', zIndex: 4 }, heartStyle]}>
+        {/* Operator, 9 okt 2026: hart in Bio-Teal als glas — één kleur
+            (doorschijnend teal), geen harde omlijning, enkel een zachte
+            glans bovenaan die wegvloeit. Zelfde vorm als het lucide-hart. */}
+        <Svg width={Math.round(core * 0.6)} height={Math.round(core * 0.6)} viewBox="0 0 24 24">
+          <Defs>
+            {/* Operator, 10 okt 2026 ("consistentie over heel de app"):
+                enkel de huisstijl-overgang Bio-Teal #4AF0D4 → #00A3A3
+                (theme.ts AudioAccentLight → AudioAccent), geen eigen tint. */}
+            <SvgLinearGradient id="hgFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={AudioAccentLight} />
+              <Stop offset="1" stopColor={AudioAccent} />
+            </SvgLinearGradient>
+            <SvgLinearGradient id="hgShine" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#ffffff" stopOpacity={0.3} />
+              <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0} />
+            </SvgLinearGradient>
+          </Defs>
+          {/* Vervolg (operator, 9 okt 2026): groter, en steviger glas zodat de
+              hartlijn er duidelijk achter verdwijnt. */}
+          <Path d={HEART_D} fill="url(#hgFill)" />
+          <Path d={HEART_D} fill="url(#hgShine)" />
+        </Svg>
+    </Animated.View>
+  </View>
+  );
+}

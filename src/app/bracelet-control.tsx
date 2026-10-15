@@ -3744,6 +3744,9 @@ type IdleScreenProps = {
   startLocked: boolean;
   /** Eén volledige sessie nog gratis (15 okt 2026). */
   freeSession?: boolean;
+  /** Mag deze toestand (bv. Quick Chill/Boost) nu een volledige sessie? */
+  isModeLocked?: (m: BraceletMode) => boolean;
+  onPaywall?: () => void;
   /** Einde van de gratis voorproef → paywall. */
   onTrialEnd: () => void;
   busy: boolean;
@@ -3786,6 +3789,8 @@ function IdleScreen({
   onStart,
   startLocked,
   freeSession = false,
+  isModeLocked,
+  onPaywall,
   onTrialEnd,
   busy,
   stats,
@@ -4333,6 +4338,11 @@ function IdleScreen({
           setQuickOpen(null);
           if (startLocked) {
             onStart();
+            return;
+          }
+          /* De gratis sessie geldt enkel voor de gekozen toestand. */
+          if (isModeLocked?.(q.mode)) {
+            onPaywall?.();
             return;
           }
           withRhythm(() => {
@@ -5153,12 +5163,16 @@ function BraceletControlScreen({
      gebruikt is, is State Control niet op slot; zodra een sessie start
      telt ze als gebruikt (effect hieronder). */
   const [freeUsedAt] = useSetting('stateFreeSessionUsedAt');
+  const [freeMode] = useSetting('stateFreeMode');
   const premiumLocked =
     !subscription.isLoading &&
     !subscription.isPro &&
     !ownsBracelet &&
     !(__DEV__ && testFullSessions);
-  const freeSessionAvailable = premiumLocked && freeUsedAt === null;
+  /* Enkel de toestand uit de onboarding; de andere blijven op de
+     voorproef van 30 s (operator, 15 okt 2026). */
+  const freeLeft = premiumLocked && freeUsedAt === null;
+  const freeSessionAvailable = freeLeft && (freeMode === null || selectedMode === freeMode);
   const sessionsLocked = premiumLocked && !freeSessionAvailable;
   const [paywallOpen, setPaywallOpen] = useState(false);
 
@@ -5817,6 +5831,8 @@ function BraceletControlScreen({
         onStart={onStartGated}
         startLocked={sessionsLocked}
         freeSession={freeSessionAvailable}
+        isModeLocked={(m: BraceletMode) => premiumLocked && !(freeLeft && (freeMode === null || m === freeMode))}
+        onPaywall={() => setPaywallOpen(true)}
         onTrialEnd={() => setPaywallOpen(true)}
         busy={busy}
         stats={stats}
