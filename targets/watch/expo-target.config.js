@@ -22,7 +22,12 @@
 /** @type {import('@bacons/apple-targets/app.plugin').Config} */
 module.exports = {
   type: 'watch',
-  name: 'VIBEZCORE',
+  /* 15 okt 2026: interne target-naam moet verschillen van de iPhone-app
+     (die heet ook "VIBEZCORE"). Met dezelfde naam gaf EAS het Watch-profiel
+     aan het iPhone-target en faalde de build (Configure Xcode project).
+     Op het horloge blijft de naam "VIBEZCORE" (displayName). */
+  name: 'VIBEZCOREWatch',
+  displayName: 'VIBEZCORE',
   bundleIdentifier: 'com.ubili.vibezcoreapp.watchkitapp',
   deploymentTarget: '10.0',
   colors: {
