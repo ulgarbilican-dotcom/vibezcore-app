@@ -1,0 +1,16 @@
+diff --git a/node_modules/react-native-worklets/RNWorklets.podspec b/node_modules/react-native-worklets/RNWorklets.podspec
+index d658b49..9ead070 100644
+--- a/node_modules/react-native-worklets/RNWorklets.podspec
++++ b/node_modules/react-native-worklets/RNWorklets.podspec
+@@ -36,6 +36,11 @@ Pod::Spec.new do |s|
+       sss.source_files = "apple/worklets/**/*.{mm,h,m}"
+       sss.header_dir = "worklets"
+       sss.header_mappings_dir = "apple/worklets"
++      # VIBEZCORE patch (15 okt 2026): intern C++-hulpbestand niet in de
++      # publieke module — het importeert React/RCTMessageThread.h, dat in
++      # Expo's voorgebouwde React.xcframework ontbreekt. Anders faalt elke
++      # Swift-module die RNWorklets importeert (VisionCameraWorklets).
++      sss.private_header_files = "apple/worklets/apple/WorkletsMessageThread.h"
+     end
+   end
+ 
