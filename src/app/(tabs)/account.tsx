@@ -1200,62 +1200,46 @@ export default function AccountScreen() {
           text: 'Sign out',
           style: 'destructive',
           onPress: async () => {
+            /* 15 okt 2026 (operator: "ik was uitgelogd maar geen welcome
+               scherm" + "na uitloggen kan ik gewoon sessies afspelen"): één
+               mislukte opruimstap brak de rest af — ook "geen abonnement
+               meer" (setSignedOutStatus) en de stap naar het welkomstscherm,
+               zodat de app je tot een herstart als Pro behandelde. Nu loopt
+               elke stap los; een fout in de ene slaat de andere niet over. */
+            const step = async (name: string, fn: () => unknown) => {
+              try {
+                await fn();
+              } catch (e) {
+                if (__DEV__) console.warn(`[account] sign-out step "${name}" failed (non-fatal):`, e);
+              }
+            };
             /* Iter v227 (2026-07-07, audit A6): stop actieve audio + bracelet
-               VOORDAT session gewist wordt. Voorheen: playback bleef doorlopen
-               na sign-out met dode tokens; bracelet-mode bleef actief zodat
-               een volgende user op dit toestel de vorige sessie zag. Beide
-               calls swallow errors — mogen sign-out nooit blokkeren. */
-            await stopPlaybackAndBracelet();
-
-            await clearSession();
-            /* Iter 9dq v99 (2026-06-04): bij sign-out óók dev-overrides
-               wissen. Anders bleef de override (bv 'bracelet') hangen
-               terwijl Account 'uitgelogd' toonde — andere tabs (Bracelet,
-               Audio) toonden nog steeds de PRO-omgeving = inconsistent.
-               Productie kent dit probleem niet (overrides bestaan daar
-               niet); puur dev-hygiene zodat sign-out altijd in een
-               schone 'echte gast'-staat eindigt. Re-test als PRO?
-               Settings → Override opnieuw zetten. */
+               VOORDAT session gewist wordt. */
+            await step('stop playback', stopPlaybackAndBracelet);
+            await step('clear session', clearSession);
+            /* Iter v170: synchroon {active:false} — meteen geen Premium meer,
+               ook als hierboven iets misliep. */
+            await step('signed-out status', setSignedOutStatus);
+            /* Iter 9dq v99: dev-overrides wissen (enkel ontwikkelversie). */
             if (__DEV__) {
-              await setDevUserOverride(null);
-              await setDevBraceletActivated(false);
+              await step('dev override', () => setDevUserOverride(null));
+              await step('dev bracelet', () => setDevBraceletActivated(false));
             }
             setEmail(null);
             setEmailInput('');
             setPwInput('');
-            /* Iter v170 (2026-06-28): synchroon notify {active:false} ipv
-               refreshSubscription() dat een async fetchStatus afwacht.
-               Voorheen: na sign-out bleef Audio Library de PRO-rendering
-               vasthouden (geen Free Picks tile) totdat fetchStatus voltooide
-               of, bij RC SDK cache stale, tot app-restart. Operator zag dit
-               direct: "Free Picks card komt pas terug na app afsluiten". */
-            setSignedOutStatus();
-            /* Iter 9dn (2026-05-31): history-bucket re-evalueren — geen
-               token meer → schakelt naar 'anon' bucket, voormalige user's
-               history blijft staan onder hun eigen key (niet gewist).
-               Iter 9dq v55 (2026-06-03, audit C5+C6): AWAIT zodat de
-               bucket-switch klaar is voordat we de in-memory cleanups
-               (clearSignedUrlCache, clearLastPlayed) firen — zonder
-               await kon een vroege re-render nog op de oude bucket
-               schrijven. */
-            await refreshUserBucket();
-            /* Wis ook de in-memory signed-URL cache zodat een volgende user
-               op dit toestel geen leftover-URLs van vorige sessie krijgt. */
-            clearSignedUrlCache();
-            /* Continue-card op de library mag geen sessie van de vorige
-               user tonen aan de volgende user op dit toestel. */
-            clearLastPlayed();
-            /* Email-veld pre-fillen met laatst-gebruikte email zodat
-               re-login alleen wachtwoord vergt (LAST_EMAIL_KEY overleeft
-               clearSession). */
-            const lastEmail = await getLastLoginEmail();
-            if (lastEmail) setEmailInput(lastEmail);
-            /* Iter v199 (2026-07-04): na sign-out expliciet naar welkomst-
-               scherm. Anders bleef user in Account-tab uitgelogde variant
-               (Subscribe + Reserve + Invite) — operator vond dit
-               onprofessioneel want de app "onthield" niet dat de user
-               net was afgemeld. Welkomstscherm geeft duidelijk pad terug
-               naar sign-in of nieuwe onboarding. */
+            /* Iter 9dn / 9dq v55: history-bucket naar 'anon', daarna de
+               in-memory caches van de vorige gebruiker leeg. */
+            await step('user bucket', refreshUserBucket);
+            await step('signed urls', clearSignedUrlCache);
+            await step('last played', clearLastPlayed);
+            /* E-mailveld vooraf invullen voor de volgende aanmelding. */
+            await step('last email', async () => {
+              const lastEmail = await getLastLoginEmail();
+              if (lastEmail) setEmailInput(lastEmail);
+            });
+            /* Iter v199 (2026-07-04): na sign-out altijd naar het
+               welkomstscherm. */
             router.replace('/welcome' as never);
           },
         },
