@@ -133,6 +133,7 @@
         "expo-build-properties",
         {
           "ios": {
+            "buildReactNativeFromSource": true,
             "extraPods": [
               {
                 "name": "GoogleUtilities",
