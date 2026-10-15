@@ -476,6 +476,20 @@ export default function SettingsScreen() {
               ios_backgroundColor="#3a3a3a"
             />
           </View>
+          <View style={s.divider} />
+          {/* 15 okt 2026 (operator: "zorg ook voor herbekijken onboarding
+             knop in settings"): zelfde rij als bij Breathwork. */}
+          <PressFeedback
+            style={s.row}
+            onPress={() => router.push('/state-onboarding' as never)}
+            accessibilityLabel="Watch the State Control intro again"
+          >
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Watch the intro again</Text>
+              <Text style={s.rowSub}>How State Control works, in two screens.</Text>
+            </View>
+            <Text style={s.versionText}>›</Text>
+          </PressFeedback>
         </View>
 
         {/* ── HEALTH (12 okt 2026) — Apple Health / Health Connect. */}

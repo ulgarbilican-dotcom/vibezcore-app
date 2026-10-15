@@ -237,6 +237,12 @@ export type Settings = {
    *  tegenstelling tot de breath-versie, die je zelf via Settings kan
    *  herstarten — hier is er geen "intro opnieuw bekijken"-equivalent). */
   braceletOnboardingCompletedAt: number | null;
+  /** 15 okt 2026 (operator: "voor State Control is het heel belangrijk dat
+   *  de gebruiker het principe echt begrijpt"): de korte State Control-
+   *  onboarding (components/StateControlOnboarding.tsx) — null = nog nooit
+   *  gezien → de State Control-tab toont ze na de foto-intro. Settings →
+   *  "Watch the State Control intro again" toont ze opnieuw. */
+  stateOnboardingCompletedAt: number | null;
   /** Operator, 2 oktober 2026 ("How do you feel"-instant-knop): duur-bijstelling
    *  op basis van de "Worked"/"Too long"/"Too short"-feedback na een instant-
    *  gestarte sessie (zie `utils/instant-feel.ts`). Globaal, net als
@@ -281,6 +287,7 @@ const defaults: Settings = {
   themeMode: 'dark',
   voiceGender: 'female',
   braceletOnboardingCompletedAt: null,
+  stateOnboardingCompletedAt: null,
   instantDurationBias: 0,
 };
 
@@ -452,6 +459,10 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.braceletOnboardingCompletedAt === 'number' ||
             obj.braceletOnboardingCompletedAt === null
               ? { braceletOnboardingCompletedAt: obj.braceletOnboardingCompletedAt }
+              : {}),
+            ...(typeof obj.stateOnboardingCompletedAt === 'number' ||
+            obj.stateOnboardingCompletedAt === null
+              ? { stateOnboardingCompletedAt: obj.stateOnboardingCompletedAt }
               : {}),
             ...(typeof obj.instantDurationBias === 'number'
               ? { instantDurationBias: obj.instantDurationBias }

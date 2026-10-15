@@ -60,6 +60,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import BraceletControl from '../bracelet-control';
 import RestingHeartRatePage from '@/components/RestingHeartRatePage';
+import StateControlOnboarding from '@/components/StateControlOnboarding';
+import { ensureSettingsLoaded, setSetting, useSetting } from '@/utils/settings';
 import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
@@ -310,12 +312,20 @@ export default function BraceletScreen() {
   useEffect(() => {
     void loadRestingPulse().then(() => setPulseLoaded(true));
   }, []);
-  const showHrPage = !showIntro && pulseLoaded && !pulse.decided;
+  /* 15 okt 2026: eerst de State Control-onboarding (het principe), daarna
+     pas de rusthartslag — één keer, tot ze afgerond is. */
+  const [onboardedAt] = useSetting('stateOnboardingCompletedAt');
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  useEffect(() => {
+    void ensureSettingsLoaded().then(() => setSettingsLoaded(true));
+  }, []);
+  const showOnboarding = !showIntro && settingsLoaded && pulseLoaded && onboardedAt === null;
+  const showHrPage = !showIntro && !showOnboarding && pulseLoaded && !pulse.decided;
 
   useEffect(() => {
-    setStateControlIntroVisible(focused && (showIntro || showHrPage));
+    setStateControlIntroVisible(focused && (showIntro || showOnboarding || showHrPage));
     return () => setStateControlIntroVisible(false);
-  }, [focused, showIntro, showHrPage]);
+  }, [focused, showIntro, showOnboarding, showHrPage]);
 
   /* Stabiele referentie: het sessiescherm koppelt er de terugknop aan in een
      focus-effect — een nieuwe functie per render zou dat steeds opnieuw
@@ -324,6 +334,15 @@ export default function BraceletScreen() {
 
   if (showIntro) {
     return <StateControlIntro onDone={() => setShowIntro(false)} />;
+  }
+  if (showOnboarding) {
+    return (
+      <StateControlOnboarding
+        totalSteps={pulse.decided ? 2 : 3}
+        onDone={() => void setSetting('stateOnboardingCompletedAt', Date.now())}
+        onBack={() => setShowIntro(true)}
+      />
+    );
   }
   if (showHrPage) {
     /* onDone: de keuze is opgeslagen → `pulse.decided` wordt true en dit
