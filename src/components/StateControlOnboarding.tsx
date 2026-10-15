@@ -315,7 +315,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 <Text style={s.header}>How it works</Text>
                 <Text style={s.lead}>A rhythm that starts at your heart</Text>
               </Animated.View>
-              <Animated.View entering={enter(1)}>
+              {/* Pillen + grafiek samen in één glaskaart (operator, 15 okt
+                  2026: "grafiek in kaart samen met de pills"). */}
+              <Animated.View entering={enter(1)} style={s.chartCard}>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -335,11 +337,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   />
                 ))}
               </ScrollView>
+                <RhythmChart mode={chartMode} />
               </Animated.View>
               <View style={[s.pad, { flex: 1 }]}>
-                <Animated.View entering={enter(2)}>
-                  <RhythmChart mode={chartMode} />
-                </Animated.View>
                 {/* Ademruimte (operator: "niet alles opproppen"): de drie
                     stappen zakken naar het midden van de vrije ruimte. */}
                 <View style={{ flex: 1 }} />
@@ -407,7 +407,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               {/* Zelfde kloppende hart + hartlijn + hartslaggeluid als "Your
                   Resting Heart Rate" (operator). */}
               <Animated.View entering={enter(1)} style={s.heroWrap}>
-                <HeartbeatHero stage={210} sound={focused && appActive && sheet === null} />
+                <HeartbeatHero stage={273} sound={focused && appActive && sheet === null} />
               </Animated.View>
               <Animated.View entering={enter(2)} style={s.optionsTight}>
                 <HrOption
@@ -751,7 +751,7 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
   const { width } = useWindowDimensions();
   const r = rhythmFor(mode, pulse.bpm);
   const meta = getModeMeta(mode);
-  const W = width - 52;
+  const W = width - 80;
   const H = 150;
   /* Hoogte = tempo (sneller = hoger): Boost stijgt, de kalme toestanden
      dalen — met de echte getallen van deze gebruiker. */
@@ -862,11 +862,22 @@ const s = StyleSheet.create({
   pad: { paddingHorizontal: 26 },
   header: { marginTop: 4, ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
   lead: { marginTop: 6, ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.55)' },
-  chipsScroll: { flexGrow: 0, marginTop: 22 },
-  chips: { paddingHorizontal: 26, gap: 8 },
+  chartCard: {
+    marginTop: 22,
+    marginHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 6,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    overflow: 'hidden',
+  },
+  chipsScroll: { flexGrow: 0 },
+  chips: { paddingHorizontal: 14, gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 999, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 16 },
   chipTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.7)' },
-  chart: { marginTop: 8, marginBottom: 4 },
+  chart: { marginTop: 8, marginBottom: 4, alignItems: 'center' },
   steps: {},
   step: { flexDirection: 'row', gap: 16 },
   stepRail: { alignItems: 'center', width: 28 },
@@ -915,11 +926,11 @@ const s = StyleSheet.create({
     textAlign: 'justify',
   },
   options: { marginTop: 22, gap: 10 },
-  optionsTight: { marginTop: 4, marginBottom: 8, gap: 10 },
+  optionsTight: { marginTop: 4, marginBottom: 28, gap: 10 },
   meterWrap: { flex: 1, justifyContent: 'center' },
   secondaryBtn: { height: 44, marginTop: 6, alignItems: 'center', justifyContent: 'center' },
   secondaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: 'rgba(255,255,255,0.85)' },
-  heroWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 238 },
+  heroWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
