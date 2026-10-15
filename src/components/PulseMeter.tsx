@@ -74,8 +74,14 @@ const TORCH_ERRORS_NEEDED = 2;
    correct is" — 20 s meten, tot 35 s als de controle niet klopt. */
 /* Vervolg (operator, 9 okt 2026: "de meting moet exact 30 seconden in
    totaal duren, elke keer"): vaste 30 s, geen verlenging. */
-const MEASURE_MS = 30_000;
-const MAX_MS = 30_000;
+/* 15 okt 2026 (operator: "30 seconden blijkt te lang, kunnen we dat
+   sneller correct meten?"): vast 20 s — het venster dat gevalideerd is
+   tegen een ECG (Yan e.a. 2017, JMIR mHealth: vingertop-camera, 20 s,
+   AAMI-norm ≤ 5 bpm). Zelfde strenge controles: robustPulse vraagt ≥ 5
+   schone vensters van 8 s (bij 20 s zijn er 13) en de laatste 10 s moeten
+   binnen 7 % met het geheel overeenkomen. Science A tot Z §3.6. */
+const MEASURE_MS = 20_000;
+const MAX_MS = 20_000;
 const SETTLE_MS = 500; // 9 okt 2026: "bpm begint te laat" (was 1 s)
 /** Zo lang mag de vinger even wegglijden voor de meting opnieuw begint. */
 const LOST_GRACE_MS = 700;

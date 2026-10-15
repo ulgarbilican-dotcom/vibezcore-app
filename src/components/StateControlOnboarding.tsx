@@ -124,7 +124,7 @@ function getRestingDecided(): boolean {
   return getRestingPulse().decided;
 }
 
-type HrChoice = 'keep' | 'measure' | 'manual' | 'average';
+type HrChoice = 'measure' | 'manual' | 'average';
 
 /* Inkomend per blok, zelfde rustige reveal als de Breathwork-onboarding
    (operator: "alles is nu weer statisch"). */
@@ -141,11 +141,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const [measured, setMeasured] = useState<number | null>(null);
   const [elevated, setElevated] = useState(false);
   const [meterKey, setMeterKey] = useState(0);
-  const pulseNow = useRestingPulse();
-  /* Al een eigen waarde? Dan staat "Keep my current" klaar (intro opnieuw
-     via Settings mag een meting nooit per ongeluk overschrijven). */
-  const hasOwnPulse = pulseNow.decided && pulseNow.source !== 'average';
-  const [hrChoice, setHrChoice] = useState<HrChoice>(hasOwnPulse ? 'keep' : 'measure');
+  /* "Keep my current" weg (operator: "staat dubbel" — wie zijn waarde wil
+     houden, tikt Skip). */
+  const [hrChoice, setHrChoice] = useState<HrChoice>('measure');
   /* Hartslaggeluid op stap 3, enkel zolang ze echt in beeld is. */
   const [focused, setFocused] = useState(true);
   useFocusEffect(
@@ -209,9 +207,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
       return;
     }
     if (includeRestingHr) {
-      if (hrChoice === 'keep') {
-        onDone(chosen);
-      } else if (hrChoice === 'average') {
+      if (hrChoice === 'average') {
         chooseAverageRestingPulse();
         onDone(chosen);
       } else if (hrChoice === 'measure') {
@@ -253,9 +249,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     step < lastStep
       ? 'Next'
       : includeRestingHr
-        ? hrChoice === 'keep'
-          ? 'Continue'
-          : hrChoice === 'measure'
+        ? hrChoice === 'measure'
           ? 'Measure Now'
           : hrChoice === 'manual'
             ? 'Enter Heart Rate'
@@ -353,7 +347,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             <Animated.View key="s3" entering={FadeIn.duration(240)} style={[s.slide, s.pad]}>
               <Animated.View entering={enter(0)}>
                 <Text style={s.header}>Measure</Text>
-                <Text style={s.lead}>Stay still for 30 seconds</Text>
+                <Text style={s.lead}>Stay still for 20 seconds</Text>
               </Animated.View>
               <View style={s.meterWrap}>
                 <PulseMeter
@@ -380,21 +374,13 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               </Animated.View>
               {/* Zelfde kloppende hart + hartlijn + hartslaggeluid als "Your
                   Resting Heart Rate" (operator). */}
-              <Animated.View entering={enter(1)} style={[s.heroWrap, hasOwnPulse && { height: 140 }]}>
-                <HeartbeatHero stage={hasOwnPulse ? 124 : 150} sound={focused && appActive && sheet === null} />
+              <Animated.View entering={enter(1)} style={s.heroWrap}>
+                <HeartbeatHero stage={150} sound={focused && appActive && sheet === null} />
               </Animated.View>
               <Animated.View entering={enter(2)} style={s.optionsTight}>
-                {hasOwnPulse && (
-                  <HrOption
-                    title="Keep my current"
-                    sub={`${pulseNow.bpm} bpm`}
-                    on={hrChoice === 'keep'}
-                    onPress={() => setHrChoice('keep')}
-                  />
-                )}
                 <HrOption
                   title="Measure now"
-                  sub="30 seconds with your phone's camera"
+                  sub="20 seconds with your phone's camera"
                   on={hrChoice === 'measure'}
                   onPress={() => setHrChoice('measure')}
                 />
