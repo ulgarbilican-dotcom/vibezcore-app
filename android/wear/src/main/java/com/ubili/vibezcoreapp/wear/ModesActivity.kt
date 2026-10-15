@@ -62,7 +62,11 @@ class ModesActivity : androidx.activity.ComponentActivity() {
 
   private fun render() {
     val entries = if (kind == KIND_STATE) CatalogStore.state(this) else CatalogStore.breath(this)
-    val sig = entries.joinToString { it.optString("key") + it.optBoolean("locked") + it.optString("colorHex") }
+    /* ook naam en "wanneer"-regel: anders bleef een gewijzigde tekst staan
+       zolang de lijst open was (15 okt 2026) */
+    val sig = entries.joinToString {
+      it.optString("key") + it.optBoolean("locked") + it.optString("colorHex") + it.optString("name") + it.optString("use")
+    }
     if (sig == signature) return
     signature = sig
     list.removeAllViews()
