@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import WatchKit
 
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE op de Apple Watch — één scherm voor State Control en
@@ -184,16 +185,7 @@ private struct SessionScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(paused ? "Resume" : "Pause")
 
-        Button(action: onEnd) {
-          Text("END")
-            .font(.system(size: 10, weight: .semibold))
-            .tracking(1.6)
-            .foregroundColor(Color.white.opacity(0.72))
-            .padding(.vertical, 4)
-            .padding(.horizontal, 14)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("End session")
+        HoldToEndButton(onEnd: onEnd)
       }
     }
     .onReceive(beats) { strong in
@@ -207,6 +199,59 @@ private struct SessionScreen: View {
         pulses.append(RingPulse(start: now, strong: strong))
       }
     }
+  }
+}
+
+/// END vasthouden in plaats van tikken (15 okt 2026, zoals HoldToEnd.kt op de
+/// Galaxy Watch): een losse aanraking stopte daar een sessie. 0,8 s vasthouden,
+/// het vlak loopt van links naar rechts vol; loslaten vóór het vol is = niets,
+/// een korte tik toont "HOLD TO END". VoiceOver: dubbeltik beëindigt meteen.
+private struct HoldToEndButton: View {
+  let onEnd: () -> Void
+  @State private var progress: CGFloat = 0
+  @State private var pressStart: Date?
+  @State private var hint = false
+
+  var body: some View {
+    Text(hint ? "HOLD TO END" : "END")
+      .font(.system(size: 10, weight: .semibold))
+      .tracking(1.6)
+      .foregroundColor(Color.white.opacity(0.72))
+      .padding(.vertical, 4)
+      .padding(.horizontal, 14)
+      .background(
+        GeometryReader { geo in
+          ZStack(alignment: .leading) {
+            Capsule().fill(Color.white.opacity(progress > 0 ? 0.12 : 0))
+            Capsule().fill(Color.white.opacity(0.35))
+              .frame(width: geo.size.width * progress)
+          }
+          .clipShape(Capsule())
+        }
+      )
+      .contentShape(Capsule())
+      .onLongPressGesture(minimumDuration: 0.8, perform: {
+        WKInterfaceDevice.current().play(.click)
+        progress = 0
+        onEnd()
+      }, onPressingChanged: { pressing in
+        if pressing {
+          hint = false
+          pressStart = Date()
+          withAnimation(.linear(duration: 0.8)) { progress = 1 }
+        } else {
+          let short = pressStart.map { Date().timeIntervalSince($0) < 0.3 } ?? false
+          pressStart = nil
+          withAnimation(.easeOut(duration: 0.18)) { progress = 0 }
+          if short {
+            hint = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { hint = false }
+          }
+        }
+      })
+      .accessibilityLabel("End session")
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction { onEnd() }
   }
 }
 

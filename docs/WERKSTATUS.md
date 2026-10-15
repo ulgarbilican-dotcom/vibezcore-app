@@ -6,7 +6,7 @@
 > verderzetten zonder vragen"). Een nieuwe sessie leest dit als eerste na
 > `CLAUDE.md`, daarna `git log -20`, `docs/TEST_LOG.md` en het geheugen.
 >
-> Laatst bijgewerkt: 9 oktober 2026 (avond).
+> Laatst bijgewerkt: 15 oktober 2026.
 
 ---
 
@@ -104,6 +104,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 - 14 okt 2026 (17:45): ritme telefoon = horloge — de telefoon rekent cirkel en drukgolf uit vanaf het geplande slagmoment (vaste klok, zoals het horloge); operator: "nu lijkt het goed" (T178). Horloge-ring = vorige versie (drukgolf op het horloge teruggedraaid). Nog: nieuwe telefoonbuild voor de Play Store (gesplitst hartslaggeluid is native).
 
 - 14 okt 2026 (avond): smartwatch A-tot-Z-audit afgewerkt — trilling met scherm uit (T182), telefoon neemt over als het horloge wegvalt, horloge-sessies sturen de telefoon niet, premium/gratis-slot op het horloge, geen dubbele geschiedenis, pauze op de pols, opruimwerk (geluid, ongebruikte bestanden, logs enkel in testversie), iPhone-Smartwatch-regel, FAQ, versienummer + docs/WEAR_RELEASE.md. Tests T183–T189. **Nieuwe telefoonbuild nodig** (native). Operator: Wear OS-form factor + upload in de Play Console.
+
+- 15 okt 2026: iOS-build (TestFlight) — Apple-profielen vernieuwd (interactieve login, sms-code); build 15 en 16 faalden op "Configure Xcode project": Watch-target heette ook "VIBEZCORE" en Live Activity "VIBEZCORE Live" (spatie) → nu VIBEZCOREWatch / VIBEZCORELive (T192), build 17 loopt (`--auto-submit`). Horloge: END = 0,8 s vasthouden (een losse aanraking stopte een sessie, T190), Galaxy + Apple Watch; Wear-debug-APK gebouwd, installeren na de lopende testsessie. Geschiedenis leeg = horloge niet verbonden met de telefoon (T191).
 
 ## 4. Wacht op de operator (niet zelf beslissen)
 

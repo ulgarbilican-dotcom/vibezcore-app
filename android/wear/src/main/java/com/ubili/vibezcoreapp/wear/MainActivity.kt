@@ -75,9 +75,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.setOnClickListener {
       if (!StateSessionState.current.active && BreathSessionState.current.let { it.running || it.paused }) onPauseTap()
     }
-    endButton.setOnClickListener { onEndTap() }
-    /* END als pil (operator 13 okt 2026): zacht wit vlak, witte tekst. */
-    endButton.background = null
+    /* 15 okt 2026: END vasthouden (een losse aanraking stopte een sessie) —
+       zie HoldToEnd.kt. */
+    HoldToEnd.attach(endButton) { onEndTap() }
     /* 12 okt 2026: vanaf Wear OS 4 (Android 13) moet een app zelf om
        meldingen vragen — zonder die toestemming loopt de sessie wel, maar
        verbergt het horloge de lopende-sessie-melding (terugkeren naar de
