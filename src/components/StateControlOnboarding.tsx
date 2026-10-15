@@ -38,6 +38,7 @@ import { HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { HeartbeatHero } from '@/components/RestingHeartRatePage';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
+import PressScale from '@/components/PressScale';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { STATE_USAGE } from '@/data/state-usage';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
@@ -270,8 +271,6 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     return () => sub.remove();
   }, [step, onBack, goBack, sheet]);
 
-  const ctaScale = useSharedValue(1);
-  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   const ctaLabel =
     step < lastStep
@@ -408,7 +407,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               {/* Zelfde kloppende hart + hartlijn + hartslaggeluid als "Your
                   Resting Heart Rate" (operator). */}
               <Animated.View entering={enter(1)} style={s.heroWrap}>
-                <HeartbeatHero stage={150} sound={focused && appActive && sheet === null} />
+                <HeartbeatHero stage={210} sound={focused && appActive && sheet === null} />
               </Animated.View>
               <Animated.View entering={enter(2)} style={s.optionsTight}>
                 <HrOption
@@ -438,7 +437,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           <View style={s.footer}>
             {measured !== null ? (
               <Animated.View entering={FadeInDown.duration(320)}>
-                <Pressable
+                <PressScale
+                  haptic
+                  scaleTo={0.97}
                   onPress={() => {
                     /* Zelfde regels als het meetblad (RhythmSheet): een
                        rustwaarde wordt je rusthartslag; boven het rustbereik
@@ -457,8 +458,8 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
                     <Text style={s.ctaTxtDark}>{elevated ? 'Continue' : 'Save and Continue'}</Text>
                   </View>
-                </Pressable>
-                <Pressable
+                </PressScale>
+                <PressScale
                   onPress={() => {
                     setMeasured(null);
                     setElevated(false);
@@ -468,30 +469,17 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   accessibilityRole="button"
                 >
                   <Text style={s.secondaryTxt}>Measure Again</Text>
-                </Pressable>
+                </PressScale>
               </Animated.View>
             ) : null}
           </View>
         ) : (
         <View style={s.footer}>
-          <Animated.View style={ctaStyle}>
-            <Pressable
-              onPress={goNext}
-              onPressIn={() => {
-                ctaScale.value = withTiming(0.96, { duration: 80 });
-              }}
-              onPressOut={() => {
-                ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-              }}
-              android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-              style={s.ctaWrap}
-              accessibilityRole="button"
-            >
-              <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
-                <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
-              </View>
-            </Pressable>
-          </Animated.View>
+          <PressScale onPress={goNext} haptic scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button">
+            <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
+              <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
+            </View>
+          </PressScale>
         </View>
         )}
       </SafeAreaView>
@@ -628,14 +616,11 @@ function StateCard({
 }) {
   const meta = getModeMeta(mode);
   const Icon = MODE_GLYPH_ICONS[mode];
-  /* Indrukken = zelfde bounce als de kaarten in de Breathwork-onboarding
-     (0,95 in 80 ms, veer terug), bovenop de schaal van het scrollen. */
-  const press = useSharedValue(1);
   const anim = useAnimatedStyle(() => {
     const dist = Math.min(1, Math.abs(scrollX.value - index * step) / step);
     return {
       opacity: 1 - dist * 0.55,
-      transform: [{ scale: (1 - dist * 0.2) * press.value }],
+      transform: [{ scale: 1 - dist * 0.2 }],
     };
   });
   const d = width;
@@ -663,21 +648,12 @@ function StateCard({
   );
   return (
     <Animated.View style={[{ width, height: d }, anim]}>
-      <Pressable
-        onPress={onPress}
-        onPressIn={() => {
-          press.value = withTiming(0.95, { duration: 80 });
-        }}
-        onPressOut={() => {
-          press.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-        }}
-        accessibilityRole="button"
-        accessibilityLabel={`${meta.name}, tap to feel it`}
-      >
+      {/* Indrukken = PressScale, zoals overal in de app. */}
+      <PressScale onPress={onPress} scaleTo={0.95} accessibilityRole="button" accessibilityLabel={`${meta.name}, tap to feel it`}>
         {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
             trilmotor), zoals de cirkel tijdens een sessie. */}
         {playing ? <HeartbeatScale size={d}>{circle}</HeartbeatScale> : circle}
-      </Pressable>
+      </PressScale>
     </Animated.View>
   );
 }
@@ -712,66 +688,49 @@ function Fact({ label, value }: { label: string; value: string }) {
    en poppen"). */
 function GlassChip({ mode, label, on, onPress }: { mode: BraceletMode; label: string; on: boolean; onPress: () => void }) {
   const Icon = MODE_GLYPH_ICONS[mode];
-  const scale = useSharedValue(1);
+  /* Indrukken = PressScale (zelfde als de rest van de app: krimpen + dimmen,
+     terugveren). Gekozen = lichte witte rand + korte pop. */
+  const pop = useSharedValue(1);
   const k = useSharedValue(on ? 1 : 0);
   useEffect(() => {
     k.value = withTiming(on ? 1 : 0, { duration: 220 });
-    if (on) scale.value = withSequence(withTiming(1.06, { duration: 110 }), withSpring(1, { duration: 320, dampingRatio: 0.6 }));
-  }, [on, k, scale]);
+    if (on) pop.value = withSequence(withTiming(1.07, { duration: 120 }), withSpring(1, { duration: 360, dampingRatio: 0.55 }));
+  }, [on, k, pop]);
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    borderColor: `rgba(255,255,255,${0.1 + k.value * 0.45})`,
-    backgroundColor: `rgba(255,255,255,${0.06 + k.value * 0.06})`,
+    transform: [{ scale: pop.value }],
+    borderColor: `rgba(255,255,255,${0.1 + k.value * 0.5})`,
+    backgroundColor: `rgba(255,255,255,${0.06 + k.value * 0.08})`,
   }));
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => {
-        scale.value = withTiming(0.95, { duration: 80 });
-      }}
-      onPressOut={() => {
-        if (!on) scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-      }}
-      accessibilityRole="button"
-      accessibilityState={{ selected: on }}
-    >
+    <PressScale onPress={onPress} scaleTo={0.92} accessibilityRole="button" accessibilityState={{ selected: on }}>
       <Animated.View style={[s.chip, style]}>
         <Icon size={17} color={on ? getModeMeta(mode).color : 'rgba(255,255,255,0.7)'} />
         <Text style={[s.chipTxt, on && { color: '#ffffff' }]}>{label}</Text>
       </Animated.View>
-    </Pressable>
+    </PressScale>
   );
 }
 
 /* ── Pagina 3: keuze-rij ───────────────────────────────────────────────── */
 
 function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on: boolean; onPress: () => void }) {
-  /* Zelfde bounce als de kaarten in de Breathwork-onboarding. */
-  const press = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
   return (
-    <Pressable
+    <PressScale
       onPress={() => {
         hapticTap();
         onPress();
       }}
-      onPressIn={() => {
-        press.value = withTiming(0.97, { duration: 80 });
-      }}
-      onPressOut={() => {
-        press.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-      }}
+      scaleTo={0.97}
+      style={[s.option, on && s.optionOn]}
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
     >
-      <Animated.View style={[s.option, on && s.optionOn, style]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.optionTitle}>{title}</Text>
-          <Text style={s.optionSub}>{sub}</Text>
-        </View>
-        <View style={[s.radio, on && s.radioOn]}>{on && <Check size={14} color="#0a0a0c" strokeWidth={3} />}</View>
-      </Animated.View>
-    </Pressable>
+      <View style={{ flex: 1 }}>
+        <Text style={s.optionTitle}>{title}</Text>
+        <Text style={s.optionSub}>{sub}</Text>
+      </View>
+      <View style={[s.radio, on && s.radioOn]}>{on && <Check size={14} color="#0a0a0c" strokeWidth={3} />}</View>
+    </PressScale>
   );
 }
 
@@ -956,11 +915,11 @@ const s = StyleSheet.create({
     textAlign: 'justify',
   },
   options: { marginTop: 22, gap: 10 },
-  optionsTight: { marginTop: 4, gap: 10 },
+  optionsTight: { marginTop: 4, marginBottom: 8, gap: 10 },
   meterWrap: { flex: 1, justifyContent: 'center' },
   secondaryBtn: { height: 44, marginTop: 6, alignItems: 'center', justifyContent: 'center' },
   secondaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: 'rgba(255,255,255,0.85)' },
-  heroWrap: { alignItems: 'center', justifyContent: 'center', height: 170 },
+  heroWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 238 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
