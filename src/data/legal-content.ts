@@ -14,6 +14,15 @@
    chronologische volgorde. H2 start een nieuwe sectie visueel.
    ─────────────────────────────────────────────────────────────────── */
 
+import { Platform } from 'react-native';
+
+/* App Review 2.3.10 (24 juli 2026): de iPhone-app mag geen andere platforms
+   noemen. De winkel waar de gebruiker koopt, volgt daarom het toestel; op
+   Android blijft de tekst zoals hij was. */
+const IOS = Platform.OS === 'ios';
+const STORE = IOS ? 'the Apple App Store' : 'Google Play';
+const STORE_ACCOUNT = IOS ? 'Apple ID' : 'Google Play account';
+
 export type LegalSlug =
   | 'terms'
   | 'privacy'
@@ -216,16 +225,16 @@ export const TERMS: LegalDoc = {
     { kind: 'h3', text: 'VIBEZCORE Premium (subscription)' },
     {
       kind: 'p',
-      text: 'VIBEZCORE Premium unlocks Breathwork, State Control and the Audio Library in the app. It is an auto-renewing subscription, offered monthly or yearly, purchased through the Apple App Store or Google Play.',
+      text: `VIBEZCORE Premium unlocks Breathwork, State Control and the Audio Library in the app. It is an auto-renewing subscription, offered monthly or yearly, purchased through ${STORE}.`,
     },
     {
       kind: 'ul',
       items: [
-        'The price and billing period are shown before you confirm the purchase. Payment is charged to your Apple ID or Google Play account',
+        `The price and billing period are shown before you confirm the purchase. Payment is charged to your ${STORE_ACCOUNT}`,
         'The subscription renews automatically at the end of each period unless you cancel at least 24 hours before it ends',
         'Where a free trial is offered, its length and the price that applies afterwards are shown before you start it. You are only charged if you do not cancel before the trial ends',
         'Where an introductory price is offered, the regular price that applies after the introductory period is shown before purchase',
-        'You can manage or cancel your subscription at any time in your Apple ID or Google Play account settings. Deleting the app or your VIBEZCORE account does not cancel it',
+        `You can manage or cancel your subscription at any time in your ${STORE_ACCOUNT} settings. Deleting the app or your VIBEZCORE account does not cancel it`,
         'Purchases can be restored on a new device with Restore Purchases in the app',
       ],
     },
@@ -461,7 +470,7 @@ export const PRIVACY: LegalDoc = {
         'Directly from you when you register, contact us, or subscribe',
         'Automatically through website usage and basic technical logs',
         'Through the mobile app when you create an account or purchase a subscription',
-        'Through Apple App Store and Google Play when you make in-app purchases',
+        `Through ${STORE} when you make in-app purchases`,
         'Through interactions with our content or services',
       ],
     },
@@ -478,7 +487,7 @@ export const PRIVACY: LegalDoc = {
       items: [
         'Providing, maintaining, and improving our services',
         'Processing transactions and managing accounts',
-        'Verifying subscription entitlements with Apple App Store and Google Play',
+        `Verifying subscription entitlements with ${STORE}`,
         'Responding to inquiries and support requests',
         'Communicating updates and service-related messages',
         'Sending newsletters when you have opted in',
@@ -517,11 +526,12 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'cards',
       items: [
-        { title: 'Apple App Store',  text: 'Merchant of Record for iOS in-app purchases — handles billing, taxes, and refunds' },
-        { title: 'Google Play',      text: 'Merchant of Record for Android in-app purchases — handles billing, taxes, and refunds' },
+        IOS
+          ? { title: 'Apple App Store', text: 'Merchant of Record for in-app purchases — handles billing, taxes, and refunds' }
+          : { title: 'Google Play', text: 'Merchant of Record for in-app purchases — handles billing, taxes, and refunds' },
         { title: 'Supabase (EU)',    text: 'Authentication, account data, and subscription state — hosted in the European Union' },
         { title: 'Bunny CDN (EU)',   text: 'Audio content delivery — based in the European Union' },
-        { title: 'RevenueCat',       text: 'Verifies App Store and Google Play receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details' },
+        { title: 'RevenueCat',       text: `Verifies ${IOS ? 'App Store' : 'Google Play'} receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details` },
         { title: 'Google / Apple sign-in', text: 'Optional — only if you choose to sign in with Google or Apple. We receive your email address and a sign-in token' },
         { title: 'Sentry (EU)',      text: 'Crash reports — when the app crashes or hits an error, we receive a technical report (error, app version, device model and operating system) so we can fix it. No name, email address, IP address, heart rate or session content — hosted in the European Union. You can turn this off anytime in Settings → Privacy → Share crash reports' },
       ],
@@ -1071,7 +1081,7 @@ export const REFUND: LegalDoc = {
     { kind: 'h2', text: 'Digital Products and Services' },
     {
       kind: 'p',
-      text: 'Digital products and services — including the VIBEZCORE Premium subscription (Breathwork, State Control and the Audio Library), Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions purchased through Google Play or the App Store follow the refund rules of that store.',
+      text: `Digital products and services — including the VIBEZCORE Premium subscription (Breathwork, State Control and the Audio Library), Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions purchased through ${STORE} follow the refund rules of that store.`,
     },
     {
       kind: 'p',
@@ -1190,7 +1200,7 @@ export const COOKIES: LegalDoc = {
     { kind: 'h3', text: 'Third-party — only at payment' },
     {
       kind: 'p',
-      text: "**Apple App Store** and **Google Play** handle all in-app subscription payments. Receipt verification and renewal are managed by their systems and follow their privacy policies — out of our control.",
+      text: (IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app subscription payments. Receipt verification and renewal are managed by its systems and follow its privacy policy — out of our control.",
     },
     {
       kind: 'highlight',

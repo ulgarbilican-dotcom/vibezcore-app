@@ -484,7 +484,7 @@ function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; rest
              opende een lege store-lijst (audit 8 okt 2026). */
           value={braceletModel === 'bundle' ? undefined : 'Manage'}
           onPress={braceletModel === 'bundle' ? undefined : () => openExternal(storeSubscriptionsUrl(tier))}
-          accessibilityLabel="Manage your subscription in the App Store or Google Play"
+          accessibilityLabel={`Manage your subscription in ${Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}`}
         />
       ) : (
         <Row
@@ -1295,7 +1295,7 @@ export default function AccountScreen() {
     void showVibezAlert({
       title: 'Delete account?',
       message:
-        "This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — cancel it separately in your App Store or Google Play subscriptions.\n\nThis cannot be undone.",
+        `This will permanently remove your VIBEZCORE account, listening history, favorites, and saved settings.\n\nIf you have an active subscription, this does NOT cancel it — cancel it separately in your ${Platform.OS === 'ios' ? 'App Store' : 'Google Play'} subscriptions.\n\nThis cannot be undone.`,
       buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1611,7 +1611,9 @@ export default function AccountScreen() {
                 {appleAvailable && (
                   <AppleAuthentication.AppleAuthenticationButton
                     buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    /* App Review 4.0 (24 juli 2026): zwart op onze donkere achtergrond
+                       was niet herkenbaar als knop — op donker de witte versie (HIG). */
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
                     cornerRadius={12}
                     style={{ flex: 1, height: 48 }}
                     onPress={() => { if (!busy) void onAppleSignIn(); }}

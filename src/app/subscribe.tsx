@@ -1043,8 +1043,8 @@ export default function SubscribeScreen() {
       >
         Privacy Policy
       </Text>
-      . Subscription auto-renews. Cancel anytime in your Apple ID or
-      Google Play account settings.
+      . Subscription auto-renews. Cancel anytime in your{' '}
+      {Platform.OS === 'ios' ? 'Apple ID' : 'Google Play account'} settings.
     </Text>
   );
 
@@ -1461,7 +1461,9 @@ export default function SubscribeScreen() {
             {appleAvailable && (
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                /* App Review 4.0 (24 juli 2026): zwart op onze donkere achtergrond
+                   was niet herkenbaar als knop — op donker de witte versie (HIG). */
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
                 cornerRadius={12}
                 style={s.appleBtn}
                 onPress={() => void onAppleSignIn()}
