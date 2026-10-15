@@ -148,6 +148,23 @@ class ModesActivity : androidx.activity.ComponentActivity() {
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
       topMargin = dp(8f)
     })
+    /* 15 okt 2026 (operator: per toestand kort wanneer te gebruiken, "maar
+       moet overzichtelijk blijven"): één rustige grijze regel onder de naam,
+       geen i-knop. Leeg bij een oudere telefoon-app → niets. */
+    e.optString("use").takeIf { it.isNotBlank() }?.let { use ->
+      page.addView(TextView(this).apply {
+        text = use
+        setTextColor(Color.argb(150, 255, 255, 255))
+        textSize = 12f
+        gravity = Gravity.CENTER
+        maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = dp(2f)
+      })
+      page.contentDescription = "${page.contentDescription}. $use"
+    }
     return page
   }
 

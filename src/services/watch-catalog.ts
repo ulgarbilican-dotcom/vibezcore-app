@@ -17,6 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { phaseHapticPattern, watchBreathAmplitude } from '@/services/breath-haptics';
 import { watchStateParams } from '@/services/bracelet-haptics';
 import { MODES } from '@/services/ble-contract';
+import { BREATH_STATE_MODE, STATE_USAGE } from '@/data/state-usage';
 import { useHapticStrength } from '@/services/haptic-strength-pref';
 import { getRestingPulse, subscribeRestingPulse } from '@/services/resting-pulse';
 import { recordSession } from '@/utils/bracelet-history';
@@ -99,6 +100,8 @@ export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFr
     return {
       key,
       name: titleCase(st.eyebrow),
+      /* korte "wanneer"-regel onder de naam (15 okt 2026) */
+      use: STATE_USAGE[BREATH_STATE_MODE[key]],
       /* Sleep in het lichte teal, zoals de ring in de app (relayBreathToWatches). */
       colorHex: key === 'rest' ? '#4AF0D4' : st.accent,
       locked,
@@ -119,6 +122,7 @@ export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFr
   const state = MODES.map((m) => ({
     key: m.mode,
     name: m.name,
+    use: STATE_USAGE[m.mode],
     colorHex: m.color,
     minMinutes: m.minMinutes,
     maxMinutes: m.maxMinutes,
