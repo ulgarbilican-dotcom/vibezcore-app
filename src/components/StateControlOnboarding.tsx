@@ -4,28 +4,32 @@
    Operator, 15 okt 2026: "voor State Control is het heel belangrijk dat
    gebruiker het principe echt begrijpt" — en: "die heartbeat is niet de
    kern, de onderzochte haptics wel. Start idd op uw eigen hartslag, dan
-   ... uitleg". Twee schermen, elk met één taak (zelfde opzet als de
-   Breathwork-onboarding, breath-welcome.tsx):
+   ... uitleg".
 
-     1  DE KERN     Haptiek gebaseerd op onderzoek: een ritme dat je voelt.
-                    Trager → tot rust komen, sneller → op gang komen.
-                    Meteen VOELEN (Calm Control / Boost) via de bestaande
-                    voorproef (playModePreviewHaptic, 30 s, zelfde curve
-                    als een sessie) — het beeld klopt op dezelfde klok.
-     2  HOE         Het ritme sluit aan bij je eigen hartslag, glijdt naar
-                    het tempo van de toestand, en blijft daar. Met jouw
-                    eigen getallen (rhythmFor). ENKEL hier staat de
-                    hartslag-uitleg (operator: "ik zie 2x ... uitleg").
+   HERZIEN 15 okt 2026 (operator: "heel slecht en niet consistent met de
+   app — kijk onboarding breathwork of protocol, headers staan links"):
+   exact het protocol van breath-welcome.tsx — bovenbalk met Back / "STEP X
+   OF N" + dunne voortgangslijn / Skip, kop LINKS (TypeScale.pageHeader +
+   pageSubhead, geen punt), matglazen kaarten (`ModeCard`-recept: rand
+   0.14→0.40, press 0.95 + spring, niet-gekozen kaart dimt naar 0.45), witte
+   CTA (radius 14, padding 16, 17 pt). Geen eigen stijl verzonnen.
+
+     1  DE KERN   Haptiek gebaseerd op onderzoek. Twee kaarten (Calm Control
+                  / Boost): aantikken = de echte voorproef voelen
+                  (playModePreviewHaptic, 30 s, zelfde curve als een
+                  sessie); het icoon klopt op dezelfde slagklok.
+     2  HOE       Het ritme sluit aan bij je eigen hartslag, glijdt naar het
+                  tempo van de toestand en blijft daar — met jouw eigen
+                  getallen (rhythmFor). ENKEL hier de hartslag-uitleg.
 
    Daarna (in de tab) het bestaande "Your Resting Heart Rate"-scherm als
-   derde stap, zolang er nog geen keuze is. Woordkeuze: Science A tot Z §6
-   (welzijnstaal, de Cornell-zin letterlijk zoals daar goedgekeurd).
+   stap 3, zolang er nog geen keuze is. Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
-import { breathWaveLook } from '@/components/LiquidWave';
-import PressScale from '@/components/PressScale';
-import { BrandFonts } from '@/constants/theme';
+import { HeartbeatScale } from '@/components/HapticPulseRings';
+import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
+import { useRestingPulse } from '@/components/RhythmSheet';
+import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { BraceletMode, getModeMeta } from '@/services/ble-contract';
 import {
   PREVIEW_MAX_SECONDS,
@@ -34,45 +38,56 @@ import {
   stopModePreviewHaptic,
 } from '@/services/bracelet-haptics';
 import { isBraceletSessionMonitorActive } from '@/services/bracelet-session-monitor';
-import { useRestingPulse } from '@/components/RhythmSheet';
 import { hapticTap } from '@/utils/haptics';
+import { BlurView } from 'expo-blur';
+import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
-const DEMO_MODES = [BraceletMode.Alpha, BraceletMode.Gamma] as const;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const CAPTION: Record<(typeof DEMO_MODES)[number], string> = {
-  [BraceletMode.Alpha]: 'Slower than your heart. Designed to help you settle',
-  [BraceletMode.Gamma]: 'Faster than your heart. Designed to help you get going',
+const DEMO_MODES = [BraceletMode.Alpha, BraceletMode.Gamma] as const;
+type DemoMode = (typeof DEMO_MODES)[number];
+
+/* Wat je voelt, per kaart (welzijnstaal). */
+const DEMO_FEEL: Record<DemoMode, string> = {
+  [BraceletMode.Alpha]: 'Slower than your heart',
+  [BraceletMode.Gamma]: 'Faster than your heart',
 };
 
 type Props = {
-  /** Na het laatste scherm. */
+  /** Na het laatste scherm, of na Skip. */
   onDone: () => void;
-  /** Android-terug op het eerste scherm (bv. terug naar de foto-intro). */
+  /** Back op stap 1 (bv. terug naar de foto-intro). */
   onBack?: () => void;
-  /** Totaal aantal stappen voor de puntjes (3 als het rusthartslag-scherm
-   *  nog volgt, anders 2). */
+  /** Totaal aantal stappen in de balk (3 als het rusthartslag-scherm nog
+   *  volgt, anders 2). */
   totalSteps?: number;
-  /** Knoptekst op het laatste scherm. */
+  /** Knoptekst op het laatste scherm van deze onboarding. */
   finalLabel?: string;
 };
 
-export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2, finalLabel = 'Continue' }: Props) {
-  const insets = useSafeAreaInsets();
-  const [page, setPage] = useState<0 | 1>(0);
+export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2, finalLabel = 'Next' }: Props) {
+  const [step, setStep] = useState<0 | 1>(0);
 
-  /* Voorproef altijd stoppen bij weggaan van scherm 1 of de onboarding. */
-  const [playing, setPlayingState] = useState<BraceletMode | null>(null);
-  const playingRef = useRef<BraceletMode | null>(null);
-  const setPlaying = useCallback((m: BraceletMode | null) => {
+  /* De voorproef stopt altijd bij weggaan van stap 1 of de onboarding. */
+  const [playing, setPlayingState] = useState<DemoMode | null>(null);
+  const playingRef = useRef<DemoMode | null>(null);
+  const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setPlaying = useCallback((m: DemoMode | null) => {
     playingRef.current = m;
     setPlayingState(m);
   }, []);
-  const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopDemo = useCallback(() => {
     if (stopTimer.current) clearTimeout(stopTimer.current);
     stopTimer.current = null;
@@ -81,195 +96,249 @@ export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2,
   }, [setPlaying]);
   useEffect(() => stopDemo, [stopDemo]);
 
-  const goNext = useCallback(() => {
+  /* Een lopende sessie nooit onderbreken (intro opnieuw via Settings
+     tijdens een sessie): dan enkel de uitleg, geen voorproef. */
+  const busy = isBraceletSessionMonitorActive();
+  const play = (m: DemoMode) => {
+    hapticTap();
+    if (busy) {
+      setPlaying(m);
+      return;
+    }
+    if (stopTimer.current) clearTimeout(stopTimer.current);
+    playModePreviewHaptic(m);
+    setPlaying(m);
+    stopTimer.current = setTimeout(() => setPlaying(null), PREVIEW_MAX_SECONDS * 1000);
+  };
+
+  const goNext = () => {
     stopDemo();
-    if (page === 0) setPage(1);
+    if (step === 0) setStep(1);
     else onDone();
-  }, [page, onDone, stopDemo]);
+  };
+  const goBack = useCallback(() => {
+    stopDemo();
+    if (step === 1) setStep(0);
+    else onBack?.();
+  }, [step, onBack, stopDemo]);
+  const skip = () => {
+    stopDemo();
+    onDone();
+  };
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (page === 1) {
-        setPage(0);
-        return true;
-      }
-      if (onBack) {
-        stopDemo();
-        onBack();
-        return true;
-      }
-      return false;
+      if (step === 0 && !onBack) return false;
+      goBack();
+      return true;
     });
     return () => sub.remove();
-  }, [page, onBack, stopDemo]);
+  }, [step, onBack, goBack]);
+
+  /* CTA-druk: zelfde recept als breath-welcome (0.96 in 80 ms, veer terug). */
+  const ctaScale = useSharedValue(1);
+  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   return (
     <View style={s.root}>
-      <View style={[s.content, { paddingTop: insets.top + 28 }]}>
-        {page === 0 ? (
-          <Animated.View key="p0" entering={FadeIn.duration(260)} exiting={FadeOut.duration(160)} style={s.page}>
-            <FeelPage playing={playing} setPlaying={setPlaying} stopTimer={stopTimer} />
+      <SafeAreaView style={s.safeContent} edges={['top', 'bottom']}>
+        <View style={s.topbar}>
+          <View style={s.backWrap}>
+            {(step > 0 || onBack) && (
+              <Pressable onPress={goBack} hitSlop={14} style={s.backBtn} accessibilityRole="button">
+                <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
+                <Text style={s.skipTxt}>Back</Text>
+              </Pressable>
+            )}
+          </View>
+          <View style={s.stepCenter} pointerEvents="none">
+            <Text style={s.stepEyebrow}>{`STEP ${step + 1} OF ${totalSteps}`}</Text>
+            <View style={s.stepTrack}>
+              <View style={[s.stepFill, { width: `${((step + 1) / totalSteps) * 100}%` }]} />
+            </View>
+          </View>
+          <View style={[s.backWrap, { alignItems: 'flex-end' }]}>
+            <Pressable onPress={skip} hitSlop={14} style={s.skipWrap} accessibilityRole="button">
+              <Text style={s.skipTxtSecondary}>Skip</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={s.slideArea}>
+          {step === 0 ? (
+            <Animated.View key="s0" entering={FadeIn.duration(240)} style={s.slide}>
+              <Text style={s.header}>Haptics built on research</Text>
+              <Text style={s.lead}>Tap a state and feel it on your phone</Text>
+              <View style={s.cardRow}>
+                {DEMO_MODES.map((m) => (
+                  <DemoCard
+                    key={m}
+                    mode={m}
+                    playing={playing === m}
+                    dimmed={playing !== null && playing !== m}
+                    onPress={() => play(m)}
+                  />
+                ))}
+              </View>
+              <Text style={s.body}>
+                A rhythm you feel on your skin can shift how you feel. Slower helps you settle, faster helps you get going.
+              </Text>
+              {busy && <Text style={s.note}>The preview plays when no session is running.</Text>}
+              <View style={{ flex: 1 }} />
+              <Text style={s.footnote}>
+                In a Cornell study, a slow heartbeat rhythm from a smartwatch helped people stay calmer under pressure.
+              </Text>
+            </Animated.View>
+          ) : (
+            <Animated.View key="s1" entering={FadeIn.duration(240)} style={s.slide}>
+              <Text style={s.header}>It meets you where you are</Text>
+              <Text style={s.lead}>Every session follows the same three steps</Text>
+              <RhythmChart />
+              <View style={s.steps}>
+                <Step n="1" title="Match" text="The rhythm starts at your own heart rate, so it feels familiar." />
+                <Step n="2" title="Glide" text="It slowly moves to the tempo of the state you chose." />
+                <Step n="3" title="Hold" text="It stays there until your session ends." />
+              </View>
+            </Animated.View>
+          )}
+        </View>
+
+        <View style={s.footer}>
+          <Animated.View style={ctaStyle}>
+            <Pressable
+              onPress={goNext}
+              onPressIn={() => {
+                ctaScale.value = withTiming(0.96, { duration: 80 });
+              }}
+              onPressOut={() => {
+                ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+              }}
+              android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+              style={s.ctaWrap}
+              accessibilityRole="button"
+            >
+              <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
+                <Text style={s.ctaTxtDark}>{step === 0 ? 'Next' : finalLabel}</Text>
+              </View>
+            </Pressable>
           </Animated.View>
-        ) : (
-          <Animated.View key="p1" entering={FadeIn.duration(260)} exiting={FadeOut.duration(160)} style={s.page}>
-            <HowPage />
-          </Animated.View>
-        )}
-      </View>
-      <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        <Dots total={totalSteps} index={page} />
-        <PressScale style={s.cta} haptic scaleTo={0.97} onPress={goNext} accessibilityRole="button">
-          <Text style={s.ctaTxt}>{page === 0 ? 'Continue' : finalLabel}</Text>
-        </PressScale>
-      </View>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
 
-/* ── 1 · De kern: haptiek die je voelt ─────────────────────────────────── */
+/* ── Kaart: zelfde recept als ModeCard in breath-welcome.tsx ───────────── */
 
-function FeelPage({
+function DemoCard({
+  mode,
   playing,
-  setPlaying,
-  stopTimer,
+  dimmed,
+  onPress,
 }: {
-  playing: BraceletMode | null;
-  setPlaying: (m: BraceletMode | null) => void;
-  stopTimer: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  mode: DemoMode;
+  playing: boolean;
+  dimmed: boolean;
+  onPress: () => void;
 }) {
-  const { height } = useWindowDimensions();
-  const size = Math.round(Math.max(130, Math.min(190, height * 0.21)));
-  const [selected, setSelected] = useState<(typeof DEMO_MODES)[number]>(BraceletMode.Alpha);
-  /* Een lopende sessie nooit onderbreken (Settings → intro opnieuw tijdens
-     een sessie): dan enkel de uitleg, geen voorproef. */
-  const busy = isBraceletSessionMonitorActive();
-  const meta = getModeMeta(selected);
-  const tint = breathWaveLook(meta.color).color;
-
-  const play = (mode: (typeof DEMO_MODES)[number]) => {
-    hapticTap();
-    setSelected(mode);
-    if (busy) return;
-    if (stopTimer.current) clearTimeout(stopTimer.current);
-    playModePreviewHaptic(mode);
-    setPlaying(mode);
-    stopTimer.current = setTimeout(() => setPlaying(null), PREVIEW_MAX_SECONDS * 1000);
-  };
+  const meta = getModeMeta(mode);
+  const Icon = MODE_GLYPH_ICONS[mode];
+  const sel = useSharedValue(playing ? 1 : 0);
+  useEffect(() => {
+    sel.value = withTiming(playing ? 1 : 0, { duration: playing ? 200 : 500, easing: Easing.out(Easing.cubic) });
+  }, [playing, sel]);
+  const borderStyle = useAnimatedStyle(() => ({
+    borderColor: `rgba(255,255,255,${0.14 + sel.value * 0.26})`,
+  }));
+  const pressScale = useSharedValue(1);
+  const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
+  useEffect(() => {
+    cardOpacity.value = withTiming(dimmed ? 0.45 : 1, { duration: 200, easing: Easing.out(Easing.quad) });
+  }, [dimmed, cardOpacity]);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: cardOpacity.value,
+  }));
 
   return (
-    <>
-      <Text style={s.title}>Haptics Built{'\n'}on Research</Text>
-      <Text style={s.body}>
-        A rhythm you feel on your skin can shift how you feel. Slower helps you settle. Faster helps you get going.
-      </Text>
-      <View style={s.stageArea}>
-        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-          <HapticPulseRings size={size} color={tint} beatSynced />
-          <HeartbeatScale size={size}>
-            <View
-              style={{
-                width: size,
-                height: size,
-                borderRadius: size / 2,
-                backgroundColor: `${meta.color}22`,
-                borderWidth: 2,
-                borderColor: tint,
-              }}
-            />
-          </HeartbeatScale>
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => {
+        pressScale.value = withTiming(0.95, { duration: 80 });
+      }}
+      onPressOut={() => {
+        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      }}
+      style={[s.cardWrap, pressStyle]}
+      accessibilityRole="button"
+      accessibilityLabel={`Feel ${meta.name}`}
+    >
+      <Animated.View style={[s.card, borderStyle]}>
+        <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
+        <View style={s.cardIconWrap}>
+          {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
+              trilmotor) — enkel zolang deze kaart speelt. */}
+          {playing ? (
+            <HeartbeatScale size={56}>
+              <Icon size={44} color="#ffffff" />
+            </HeartbeatScale>
+          ) : (
+            <Icon size={44} color="#ffffff" />
+          )}
         </View>
-        <Text style={s.caption}>
-          {busy
-            ? 'Available when no session is running'
-            : playing !== null
-              ? CAPTION[selected]
-              : 'Tap a state and feel it on your phone'}
-        </Text>
-      </View>
-      <View style={s.seg}>
-        {DEMO_MODES.map((m) => {
-          const mm = getModeMeta(m);
-          const on = selected === m && (playing !== null || busy);
-          return (
-            <Pressable
-              key={m}
-              onPress={() => play(m)}
-              style={({ pressed }) => [
-                s.segBtn,
-                on && { backgroundColor: mm.color, borderColor: mm.color },
-                pressed && { opacity: 0.8 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Feel ${mm.name}`}
-            >
-              <Text style={[s.segTxt, on && { color: '#0a0a0a' }]}>{mm.name}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <Text style={s.footnote}>
-        In a Cornell study, a slow heartbeat rhythm from a smartwatch helped people stay calmer under pressure.
-      </Text>
-    </>
+        <Text style={s.cardLabel}>{meta.name}</Text>
+        <Text style={s.cardSub}>{playing ? 'Feel it now' : DEMO_FEEL[mode]}</Text>
+      </Animated.View>
+    </AnimatedPressable>
   );
 }
 
-/* ── 2 · Hoe een sessie verloopt ───────────────────────────────────────── */
+/* ── Grafiek: begin bij jouw hartslag → glijden → aanhouden ────────────── */
 
-function HowPage() {
+function RhythmChart() {
   const pulse = useRestingPulse();
   const { width } = useWindowDimensions();
   const calm = rhythmFor(BraceletMode.Alpha, pulse.bpm);
   const calmColor = getModeMeta(BraceletMode.Alpha).color;
-  const W = Math.min(width - 56, 340);
-  const H = 132;
-  const yTop = 34;
-  const yLow = 88;
-  const x0 = 8;
+  const W = width - 52;
+  const H = 150;
+  const yTop = 40;
+  const yLow = 96;
+  const x0 = 6;
   const x1 = W * 0.3;
-  const x2 = W * 0.62;
-  const xe = W - 8;
-  const d = `M${x0} ${yTop} L${x1} ${yTop} C${x1 + (x2 - x1) * 0.5} ${yTop} ${x1 + (x2 - x1) * 0.5} ${yLow} ${x2} ${yLow} L${xe} ${yLow}`;
-
+  const x2 = W * 0.64;
+  const xe = W - 6;
+  const mid = (x1 + x2) / 2;
+  const d = `M${x0} ${yTop} L${x1} ${yTop} C${mid} ${yTop} ${mid} ${yLow} ${x2} ${yLow} L${xe} ${yLow}`;
+  const lbl = { fill: 'rgba(255,255,255,0.45)', fontSize: 11, fontFamily: BrandFonts.medium } as const;
   return (
-    <>
-      <Text style={s.title}>It Meets You{'\n'}Where You Are</Text>
-      <View style={[s.stageArea, { flex: 0, marginTop: 26, marginBottom: 18 }]}>
-        <Svg width={W} height={H}>
-          <Line x1={x0} y1={H - 18} x2={xe} y2={H - 18} stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
-          <Path d={d} stroke={calmColor} strokeWidth={3} fill="none" strokeLinecap="round" />
-          <Circle cx={x0} cy={yTop} r={5} fill="#ffffff" />
-          <Circle cx={xe} cy={yLow} r={5} fill={calmColor} />
-          <SvgText x={x0} y={yTop - 14} fill="#ffffff" fontSize={12.5} fontFamily={BrandFonts.semibold}>
-            {`Your heart rate · ${calm.startBpm} bpm`}
-          </SvgText>
-          <SvgText x={xe} y={yLow + 22} fill={calmColor} fontSize={12.5} fontFamily={BrandFonts.semibold} textAnchor="end">
-            {`Calm Control · ${calm.targetBpm} bpm`}
-          </SvgText>
-          <SvgText x={(x0 + x1) / 2} y={H - 3} fill="rgba(255,255,255,0.45)" fontSize={11} fontFamily={BrandFonts.medium} textAnchor="middle">
-            1
-          </SvgText>
-          <SvgText x={(x1 + x2) / 2} y={H - 3} fill="rgba(255,255,255,0.45)" fontSize={11} fontFamily={BrandFonts.medium} textAnchor="middle">
-            2
-          </SvgText>
-          <SvgText x={(x2 + xe) / 2} y={H - 3} fill="rgba(255,255,255,0.45)" fontSize={11} fontFamily={BrandFonts.medium} textAnchor="middle">
-            3
-          </SvgText>
-        </Svg>
-      </View>
-      <View style={s.steps}>
-        <Step n="1" title="Match" text="The rhythm starts at your own heart rate, so it feels familiar." />
-        <Step n="2" title="Glide" text="It slowly moves to the tempo of the state you chose." />
-        <Step n="3" title="Hold" text="It stays there until your session ends." />
-      </View>
-    </>
+    <View style={s.chart}>
+      <Svg width={W} height={H}>
+        <Line x1={x1} y1={14} x2={x1} y2={H - 22} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
+        <Line x1={x2} y1={14} x2={x2} y2={H - 22} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
+        <Path d={d} stroke={calmColor} strokeWidth={3} fill="none" strokeLinecap="round" />
+        <Circle cx={x0} cy={yTop} r={5} fill="#ffffff" />
+        <Circle cx={xe} cy={yLow} r={5} fill={calmColor} />
+        <SvgText x={x0} y={yTop - 14} fill="#ffffff" fontSize={13} fontFamily={BrandFonts.semibold}>
+          {`Your heart rate · ${calm.startBpm} bpm`}
+        </SvgText>
+        <SvgText x={xe} y={yLow + 24} fill={calmColor} fontSize={13} fontFamily={BrandFonts.semibold} textAnchor="end">
+          {`Calm Control · ${calm.targetBpm} bpm`}
+        </SvgText>
+        <SvgText x={(x0 + x1) / 2} y={H - 4} textAnchor="middle" {...lbl}>Match</SvgText>
+        <SvgText x={mid} y={H - 4} textAnchor="middle" {...lbl}>Glide</SvgText>
+        <SvgText x={(x2 + xe) / 2} y={H - 4} textAnchor="middle" {...lbl}>Hold</SvgText>
+      </Svg>
+    </View>
   );
 }
 
 function Step({ n, title, text }: { n: string; title: string; text: string }) {
   return (
     <View style={s.step}>
-      <Text style={s.stepN}>{n}</Text>
+      <View style={s.stepNum}>
+        <Text style={s.stepNumTxt}>{n}</Text>
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={s.stepTitle}>{title}</Text>
         <Text style={s.stepTxt}>{text}</Text>
@@ -278,96 +347,76 @@ function Step({ n, title, text }: { n: string; title: string; text: string }) {
   );
 }
 
-function Dots({ total, index }: { total: number; index: number }) {
-  return (
-    <View style={s.dots} accessibilityLabel={`Step ${index + 1} of ${total}`}>
-      {Array.from({ length: total }, (_, i) => (
-        <View key={i} style={[s.dot, i === index && s.dotOn]} />
-      ))}
-    </View>
-  );
-}
-
+/* Maten/kleuren 1-op-1 uit breath-welcome.tsx (topbar, step*, skip*,
+   slideArea, header/lead, modeCard*, footer, cta*). */
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0a0a' },
-  content: { flex: 1, paddingHorizontal: 28 },
-  page: { flex: 1, alignItems: 'center' },
-  title: {
-    marginTop: 8,
-    fontFamily: BrandFonts.bold,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.6,
-    color: '#ffffff',
-    textAlign: 'center',
+  root: { flex: 1, backgroundColor: Brand.bg },
+  safeContent: { flex: 1 },
+  topbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
+  backWrap: { minWidth: 64 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 6, paddingHorizontal: 4, alignSelf: 'flex-start' },
+  stepCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  stepEyebrow: { marginTop: 2, color: '#ffffff', fontFamily: BrandFonts.bold, fontSize: 9, letterSpacing: 2 },
+  stepTrack: {
+    width: 120,
+    height: 1.5,
+    borderRadius: 0.75,
+    marginTop: 10,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  stepFill: { height: '100%', borderRadius: 0.75, backgroundColor: '#ffffff' },
+  skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
+  skipTxt: { color: Brand.textDim, fontFamily: BrandFonts.medium, fontSize: 14 },
+  skipTxtSecondary: { color: 'rgba(255,255,255,0.92)', fontFamily: BrandFonts.semibold, fontSize: 15 },
+  slideArea: { flex: 1, paddingHorizontal: 26, paddingTop: 4 },
+  slide: { flex: 1, width: '100%' },
+  header: { marginTop: 4, ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
+  lead: { marginTop: 6, ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.55)' },
+  cardRow: { flexDirection: 'row', gap: 10, marginTop: 22 },
+  cardWrap: { flex: 1, minHeight: 156 },
+  card: { flex: 1, borderRadius: 18, borderWidth: 1, overflow: 'hidden', padding: 14, justifyContent: 'flex-end' },
+  cardIconWrap: { width: 72, height: 72, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  cardLabel: { fontFamily: BrandFonts.semibold, fontSize: 15, lineHeight: 19, color: '#ffffff' },
+  /* vaste hoogte (2 regels): anders verspringt de kaart bij "Feel it now" */
+  cardSub: { marginTop: 2, minHeight: 34, fontFamily: BrandFonts.regular, fontSize: 13, lineHeight: 17, color: 'rgba(255,255,255,0.55)' },
   body: {
-    marginTop: 16,
-    maxWidth: 330,
+    marginTop: 22,
     fontFamily: BrandFonts.regular,
     fontSize: 16,
     lineHeight: 23,
     color: 'rgba(255,255,255,0.72)',
-    textAlign: 'center',
   },
-  stageArea: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', minHeight: 170 },
-  caption: {
-    marginTop: 22,
-    minHeight: 40,
-    maxWidth: 300,
-    fontFamily: BrandFonts.medium,
-    fontSize: 14.5,
-    lineHeight: 20,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-  },
-  seg: { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
-  segBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  note: { marginTop: 10, fontFamily: BrandFonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.5)' },
   footnote: {
-    marginTop: 14,
-    maxWidth: 320,
+    marginBottom: 6,
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,
     lineHeight: 17,
     color: 'rgba(255,255,255,0.42)',
-    textAlign: 'center',
   },
-  steps: { alignSelf: 'stretch', gap: 16 },
+  chart: { marginTop: 26, marginBottom: 22 },
+  steps: { gap: 18 },
   step: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
-  stepN: {
+  stepNum: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    overflow: 'hidden',
-    textAlign: 'center',
-    lineHeight: 28,
-    fontFamily: BrandFonts.semibold,
-    fontSize: 13,
-    color: '#ffffff',
     backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  stepTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
-  stepTxt: { marginTop: 2, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 20, color: 'rgba(255,255,255,0.66)' },
-  actions: { paddingHorizontal: 24, paddingTop: 18 },
-  dots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 16 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)' },
-  dotOn: { width: 18, backgroundColor: '#ffffff' },
-  cta: {
-    height: 54,
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
+  stepNumTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, color: '#ffffff' },
+  stepTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  stepTxt: { marginTop: 2, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 20, color: 'rgba(255,255,255,0.66)' },
+  footer: { paddingHorizontal: 26, paddingBottom: 32, gap: 18 },
+  ctaWrap: { borderRadius: 14, overflow: 'hidden' },
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, paddingVertical: 16 },
+  ctaTxtDark: { color: '#0a0a0c', fontFamily: BrandFonts.semibold, fontSize: 17 },
 });

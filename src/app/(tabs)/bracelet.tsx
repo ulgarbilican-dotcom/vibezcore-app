@@ -339,6 +339,7 @@ export default function BraceletScreen() {
     return (
       <StateControlOnboarding
         totalSteps={pulse.decided ? 2 : 3}
+        finalLabel={pulse.decided ? 'Done' : 'Next'}
         onDone={() => void setSetting('stateOnboardingCompletedAt', Date.now())}
         onBack={() => setShowIntro(true)}
       />
