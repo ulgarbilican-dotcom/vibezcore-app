@@ -18,17 +18,19 @@
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
+  useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { hapticTap } from '@/utils/haptics';
+import { hapticTick } from '@/utils/haptics';
 
 export const DURATION_WHEEL_ITEM_H = 44;
 export const DURATION_WHEEL_VISIBLE = 3;
@@ -63,18 +65,22 @@ function DurationWheelRow({
     if (Math.abs(normalizedDistance) < 0.03) normalizedDistance = 0;
     const angleX = normalizedDistance * 38;
     const opacity = Math.max(0.12, 1 - Math.abs(normalizedDistance) * 0.85);
-    const fontSize = interpolate(
+    /* 15 okt 2026 (operator: "hard scrollen gaat niet vlot, moet echt smooth,
+       Apple-stijl"): schalen i.p.v. de lettergrootte animeren — een andere
+       fontSize per beeldje dwong elke frame een nieuwe tekst-opmaak af (dat
+       haperde). Enkel transform/opacity, zoals UIPickerView. */
+    const scale = interpolate(
       Math.abs(normalizedDistance),
       [0, 1],
-      textMode ? [19, 15] : [26, 17],
+      textMode ? [1, 15 / 19] : [1, 17 / 26],
       Extrapolation.CLAMP,
     );
     return {
       opacity,
-      fontSize,
       transform: [
         { perspective: 800 },
         { rotateX: `${angleX}deg` },
+        { scale },
       ],
     };
   });
@@ -84,8 +90,9 @@ function DurationWheelRow({
         <Animated.Text
           style={[
             s.wheelTxt,
-            { color: on ? '#ffffff' : trackColor },
-            on && s.wheelTxtOn,
+            /* Kleur en gewicht liggen vast: het midden licht op via opacity
+               en schaal, zodat er aan het einde niets meer verspringt. */
+            { fontSize: textMode ? 19 : 26, color: '#ffffff' },
             rowStyle,
           ]}
         >
@@ -160,18 +167,44 @@ export function DurationWheel({
 
   const commit = (offsetY: number) => {
     const idx = Math.min(options.length - 1, Math.max(0, Math.round(offsetY / DURATION_WHEEL_ITEM_H)));
-    listRef.current?.scrollTo({ y: idx * DURATION_WHEEL_ITEM_H, animated: true });
+    /* Enkel bijsturen als de snap er niet exact op landde (anders een
+       tweede, zichtbare mini-beweging na het uitlopen). */
+    if (Math.abs(offsetY - idx * DURATION_WHEEL_ITEM_H) > 0.5) {
+      listRef.current?.scrollTo({ y: idx * DURATION_WHEEL_ITEM_H, animated: true });
+    }
     const picked = options[idx];
     if (picked && picked.value !== value) {
-      hapticTap();
       internalChange.current = true;
       onChange(picked.value);
     }
   };
 
-  const scrollHandler = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
+  /* Een fijne tik bij elke regel die door het midden gaat, zolang de
+     gebruiker scrolt (zoals Apple's draaiwiel) — niet bij een scroll die de
+     app zelf zet. */
+  const userScrolling = useSharedValue(false);
+  const lastIdx = useSharedValue(settledIndex);
+  const scrollHandler = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      userScrolling.value = true;
+    },
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+    onMomentumEnd: () => {
+      userScrolling.value = false;
+    },
   });
+  useAnimatedReaction(
+    () => Math.round(scrollY.value / DURATION_WHEEL_ITEM_H),
+    (idx, prev) => {
+      if (prev === null || idx === prev) return;
+      if (idx < 0 || idx >= options.length) return;
+      if (userScrolling.value && idx !== lastIdx.value) scheduleOnRN(hapticTick);
+      lastIdx.value = idx;
+    },
+    [options.length],
+  );
 
   return (
     <View style={[s.wheelWrap, { height: viewportHeight }]}>
@@ -203,7 +236,9 @@ export function DurationWheel({
         contentOffset={{ x: 0, y: settledIndex * DURATION_WHEEL_ITEM_H }}
         showsVerticalScrollIndicator={false}
         snapToInterval={DURATION_WHEEL_ITEM_H}
-        decelerationRate="fast"
+        /* "normal" (15 okt 2026): met "fast" stopte een harde veeg na een
+           paar regels — nu loopt hij natuurlijk uit en snapt dan. */
+        decelerationRate="normal"
         contentContainerStyle={{ paddingVertical: DURATION_WHEEL_ITEM_H }}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
