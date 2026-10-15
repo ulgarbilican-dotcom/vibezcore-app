@@ -243,6 +243,12 @@ export type Settings = {
    *  gezien → de State Control-tab toont ze na de foto-intro. Settings →
    *  "Watch the State Control intro again" toont ze opnieuw. */
   stateOnboardingCompletedAt: number | null;
+  /** 15 okt 2026 (operator: "op basis van gekozen state 1 sessie volledig
+   *  gratis in te stellen en gebruiken"): één volledige State Control-
+   *  sessie zonder Premium, zoals `breathFreeSessionUsedAt` bij Breathwork.
+   *  null = nog niet gebruikt. Wordt gezet zodra die sessie start, en NIET
+   *  teruggezet door "Watch the intro again". */
+  stateFreeSessionUsedAt: number | null;
   /** Operator, 2 oktober 2026 ("How do you feel"-instant-knop): duur-bijstelling
    *  op basis van de "Worked"/"Too long"/"Too short"-feedback na een instant-
    *  gestarte sessie (zie `utils/instant-feel.ts`). Globaal, net als
@@ -288,6 +294,7 @@ const defaults: Settings = {
   voiceGender: 'female',
   braceletOnboardingCompletedAt: null,
   stateOnboardingCompletedAt: null,
+  stateFreeSessionUsedAt: null,
   instantDurationBias: 0,
 };
 
@@ -459,6 +466,9 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.braceletOnboardingCompletedAt === 'number' ||
             obj.braceletOnboardingCompletedAt === null
               ? { braceletOnboardingCompletedAt: obj.braceletOnboardingCompletedAt }
+              : {}),
+            ...(typeof obj.stateFreeSessionUsedAt === 'number' || obj.stateFreeSessionUsedAt === null
+              ? { stateFreeSessionUsedAt: obj.stateFreeSessionUsedAt }
               : {}),
             ...(typeof obj.stateOnboardingCompletedAt === 'number' ||
             obj.stateOnboardingCompletedAt === null

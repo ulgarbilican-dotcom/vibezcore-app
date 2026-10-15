@@ -26,13 +26,15 @@ export default function StateOnboardingScreen() {
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/bracelet' as never);
   };
-  const done = () => {
+  const done = (mode: number) => {
     if (!isFirst) {
       back();
       return;
     }
     void setSetting('stateOnboardingCompletedAt', Date.now());
-    router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()) } } as never);
+    /* De gekozen toestand staat klaar in State Control (en daar is één
+       volledige sessie gratis, zie bracelet-control.tsx). */
+    router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
   };
 
   return (

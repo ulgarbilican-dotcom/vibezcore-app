@@ -28,6 +28,11 @@
                   (operator, 15 okt 2026, als bezoeker getest). Meten /
                   invullen opent het bestaande meetblad (RhythmSheet).
 
+   HERZIEN (3) 15 okt 2026 (operator): stap 1 toont ALLE vijf toestanden in
+   hun eigen kleur als glazen kaarten; de grafiek op stap 2 volgt de
+   aangetikte toestand; na stap 3 opent State Control op die toestand met
+   één volledige sessie gratis (settings `stateFreeSessionUsedAt`).
+
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
@@ -35,7 +40,8 @@ import { HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
-import { BraceletMode, getModeMeta } from '@/services/ble-contract';
+import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
+import { STATE_USAGE } from '@/data/state-usage';
 import {
   PREVIEW_MAX_SECONDS,
   playModePreviewHaptic,
@@ -62,18 +68,20 @@ import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const DEMO_MODES = [BraceletMode.Alpha, BraceletMode.Gamma] as const;
-type DemoMode = (typeof DEMO_MODES)[number];
+/* Alle vijf, in de volgorde van de app (Boost … Sleep). */
+const DEMO_MODES = MODES.map((m) => m.mode);
+type DemoMode = BraceletMode;
 
-/* Wat je voelt, per kaart (welzijnstaal). */
-const DEMO_FEEL: Record<DemoMode, string> = {
-  [BraceletMode.Alpha]: 'Slower than your heart',
-  [BraceletMode.Gamma]: 'Faster than your heart',
-};
+/* Onder de kaarten: wat je nu voelt, t.o.v. je eigen hart (welzijnstaal). */
+function feelLine(mode: BraceletMode): string {
+  return mode === BraceletMode.Gamma
+    ? 'Faster than your heart. Designed to help you get going'
+    : 'Slower than your heart. Designed to help you settle';
+}
 
 type Props = {
-  /** Na het laatste scherm, of na Skip. */
-  onDone: () => void;
+  /** Na het laatste scherm, of na Skip — met de gekozen toestand. */
+  onDone: (mode: BraceletMode) => void;
   /** Back op stap 1 (bv. terug naar de foto-intro). */
   onBack?: () => void;
   /** Stap 3: de rusthartslag kiezen (enkel als dat nog niet gebeurde). */
@@ -90,6 +98,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const lastStep = totalSteps - 1;
   const [hrChoice, setHrChoice] = useState<HrChoice>('measure');
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
+  /* De aangetikte toestand: kleurt de grafiek op stap 2 en staat na de
+     onboarding klaar in State Control. */
+  const [chosen, setChosen] = useState<BraceletMode>(BraceletMode.Alpha);
 
   /* De voorproef stopt altijd bij weggaan van stap 1 of de onboarding. */
   const [playing, setPlayingState] = useState<DemoMode | null>(null);
@@ -112,6 +123,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const busy = isBraceletSessionMonitorActive();
   const play = (m: DemoMode) => {
     hapticTap();
+    setChosen(m);
     if (busy) {
       setPlaying(m);
       return;
@@ -131,13 +143,13 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     if (includeRestingHr) {
       if (hrChoice === 'average') {
         chooseAverageRestingPulse();
-        onDone();
+        onDone(chosen);
       } else {
         setSheet(hrChoice);
       }
       return;
     }
-    onDone();
+    onDone(chosen);
   };
   const goBack = useCallback(() => {
     stopDemo();
@@ -146,7 +158,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   }, [step, onBack, stopDemo]);
   const skip = () => {
     stopDemo();
-    onDone();
+    onDone(chosen);
   };
 
   useEffect(() => {
@@ -193,20 +205,20 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             <Animated.View key="s0" entering={FadeIn.duration(240)} style={s.slide}>
               <Text style={s.header}>Haptics built on research</Text>
               <Text style={s.lead}>Tap a state and feel it on your phone</Text>
-              <View style={s.cardRow}>
-                {DEMO_MODES.map((m) => (
+              <View style={s.cardGrid}>
+                {DEMO_MODES.map((m, i) => (
                   <DemoCard
                     key={m}
                     mode={m}
+                    wide={i === DEMO_MODES.length - 1}
                     playing={playing === m}
+                    chosen={chosen === m}
                     dimmed={playing !== null && playing !== m}
                     onPress={() => play(m)}
                   />
                 ))}
               </View>
-              <Text style={s.body}>
-                A rhythm you feel on your skin can shift how you feel. Slower helps you settle, faster helps you get going.
-              </Text>
+              <Text style={s.body}>{feelLine(chosen)}</Text>
               {busy && <Text style={s.note}>The preview plays when no session is running.</Text>}
               <View style={{ flex: 1 }} />
               <Text style={s.footnote}>
@@ -217,7 +229,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             <Animated.View key="s1" entering={FadeIn.duration(240)} style={s.slide}>
               <Text style={s.header}>It meets you where you are</Text>
               <Text style={s.lead}>Every session follows the same three steps</Text>
-              <RhythmChart />
+              <RhythmChart mode={chosen} />
               <View style={s.steps}>
                 <Step n="1" title="Match" text="The rhythm starts at your own heart rate, so it feels familiar." />
                 <Step n="2" title="Glide" text="It slowly moves to the tempo of the state you chose." />
@@ -294,7 +306,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           onClose={() => setSheet(null)}
           onDone={() => {
             setSheet(null);
-            onDone();
+            onDone(chosen);
           }}
         />
       )}
@@ -326,25 +338,39 @@ function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on:
 
 /* ── Kaart: zelfde recept als ModeCard in breath-welcome.tsx ───────────── */
 
+function hexRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
 function DemoCard({
   mode,
+  wide,
   playing,
+  chosen,
   dimmed,
   onPress,
 }: {
   mode: DemoMode;
+  wide: boolean;
   playing: boolean;
+  chosen: boolean;
   dimmed: boolean;
   onPress: () => void;
 }) {
   const meta = getModeMeta(mode);
   const Icon = MODE_GLYPH_ICONS[mode];
-  const sel = useSharedValue(playing ? 1 : 0);
+  const [r, g, b] = hexRgb(meta.color);
+  /* Glas in de kleur van de toestand: zachte tint, rand in die kleur die
+     oplicht bij de gekozen kaart (zelfde 200/500 ms als ModeCard). */
+  const on = playing || chosen;
+  const sel = useSharedValue(on ? 1 : 0);
   useEffect(() => {
-    sel.value = withTiming(playing ? 1 : 0, { duration: playing ? 200 : 500, easing: Easing.out(Easing.cubic) });
-  }, [playing, sel]);
+    sel.value = withTiming(on ? 1 : 0, { duration: on ? 200 : 500, easing: Easing.out(Easing.cubic) });
+  }, [on, sel]);
   const borderStyle = useAnimatedStyle(() => ({
-    borderColor: `rgba(255,255,255,${0.14 + sel.value * 0.26})`,
+    borderColor: `rgba(${r},${g},${b},${0.28 + sel.value * 0.62})`,
+    backgroundColor: `rgba(${r},${g},${b},${0.08 + sel.value * 0.08})`,
   }));
   const pressScale = useSharedValue(1);
   const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
@@ -365,7 +391,7 @@ function DemoCard({
       onPressOut={() => {
         pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
       }}
-      style={[s.cardWrap, pressStyle]}
+      style={[wide ? s.cardWrapWide : s.cardWrap, pressStyle]}
       accessibilityRole="button"
       accessibilityLabel={`Feel ${meta.name}`}
     >
@@ -375,15 +401,15 @@ function DemoCard({
           {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
               trilmotor) — enkel zolang deze kaart speelt. */}
           {playing ? (
-            <HeartbeatScale size={56}>
-              <Icon size={44} color="#ffffff" />
+            <HeartbeatScale size={40}>
+              <Icon size={30} color={meta.color} />
             </HeartbeatScale>
           ) : (
-            <Icon size={44} color="#ffffff" />
+            <Icon size={30} color={meta.color} />
           )}
         </View>
-        <Text style={s.cardLabel}>{meta.name}</Text>
-        <Text style={s.cardSub}>{playing ? 'Feel it now' : DEMO_FEEL[mode]}</Text>
+        <Text style={s.cardLabel} numberOfLines={1}>{meta.name}</Text>
+        <Text style={s.cardSub} numberOfLines={1}>{playing ? 'Feel it now' : STATE_USAGE[mode]}</Text>
       </Animated.View>
     </AnimatedPressable>
   );
@@ -391,15 +417,20 @@ function DemoCard({
 
 /* ── Grafiek: begin bij jouw hartslag → glijden → aanhouden ────────────── */
 
-function RhythmChart() {
+function RhythmChart({ mode }: { mode: BraceletMode }) {
   const pulse = useRestingPulse();
   const { width } = useWindowDimensions();
-  const calm = rhythmFor(BraceletMode.Alpha, pulse.bpm);
-  const calmColor = getModeMeta(BraceletMode.Alpha).color;
+  const calm = rhythmFor(mode, pulse.bpm);
+  const calmMeta = getModeMeta(mode);
+  const calmColor = calmMeta.color;
   const W = width - 52;
   const H = 150;
-  const yTop = 40;
-  const yLow = 96;
+  /* Hoogte = tempo (sneller = hoger), zodat Boost stijgt en de kalme
+     toestanden dalen — telkens met de echte getallen van deze gebruiker. */
+  const yOf = (bpm: number) => 104 - ((Math.min(115, Math.max(40, bpm)) - 40) / 75) * 76;
+  const yTop = yOf(calm.startBpm);
+  const yLow = yOf(calm.targetBpm);
+  const rising = yLow < yTop;
   const x0 = 6;
   const x1 = W * 0.3;
   const x2 = W * 0.64;
@@ -415,11 +446,11 @@ function RhythmChart() {
         <Path d={d} stroke={calmColor} strokeWidth={3} fill="none" strokeLinecap="round" />
         <Circle cx={x0} cy={yTop} r={5} fill="#ffffff" />
         <Circle cx={xe} cy={yLow} r={5} fill={calmColor} />
-        <SvgText x={x0} y={yTop - 14} fill="#ffffff" fontSize={13} fontFamily={BrandFonts.semibold}>
+        <SvgText x={x0} y={rising ? yTop + 24 : yTop - 14} fill="#ffffff" fontSize={13} fontFamily={BrandFonts.semibold}>
           {`Your heart rate · ${calm.startBpm} bpm`}
         </SvgText>
-        <SvgText x={xe} y={yLow + 24} fill={calmColor} fontSize={13} fontFamily={BrandFonts.semibold} textAnchor="end">
-          {`Calm Control · ${calm.targetBpm} bpm`}
+        <SvgText x={xe} y={rising ? yLow - 14 : yLow + 24} fill={calmColor} fontSize={13} fontFamily={BrandFonts.semibold} textAnchor="end">
+          {`${calmMeta.name} · ${calm.targetBpm} bpm`}
         </SvgText>
         <SvgText x={(x0 + x1) / 2} y={H - 4} textAnchor="middle" {...lbl}>Match</SvgText>
         <SvgText x={mid} y={H - 4} textAnchor="middle" {...lbl}>Glide</SvgText>
@@ -475,13 +506,14 @@ const s = StyleSheet.create({
   slide: { flex: 1, width: '100%' },
   header: { marginTop: 4, ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
   lead: { marginTop: 6, ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.55)' },
-  cardRow: { flexDirection: 'row', gap: 10, marginTop: 22 },
-  cardWrap: { flex: 1, minHeight: 156 },
-  card: { flex: 1, borderRadius: 18, borderWidth: 1, overflow: 'hidden', padding: 14, justifyContent: 'flex-end' },
-  cardIconWrap: { width: 72, height: 72, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
+  cardWrap: { width: '48.4%', height: 104 },
+  cardWrapWide: { width: '100%', height: 104 },
+  card: { flex: 1, borderRadius: 18, borderWidth: 1, overflow: 'hidden', padding: 14, justifyContent: 'space-between' },
+  cardIconWrap: { width: 40, height: 40, alignItems: 'flex-start', justifyContent: 'center' },
   cardLabel: { fontFamily: BrandFonts.semibold, fontSize: 15, lineHeight: 19, color: '#ffffff' },
   /* vaste hoogte (2 regels): anders verspringt de kaart bij "Feel it now" */
-  cardSub: { marginTop: 2, minHeight: 34, fontFamily: BrandFonts.regular, fontSize: 13, lineHeight: 17, color: 'rgba(255,255,255,0.55)' },
+  cardSub: { marginTop: 2, fontFamily: BrandFonts.regular, fontSize: 13, lineHeight: 17, color: 'rgba(255,255,255,0.55)' },
   body: {
     marginTop: 22,
     fontFamily: BrandFonts.regular,

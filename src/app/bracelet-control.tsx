@@ -183,7 +183,7 @@ import {
   playBraceletStartCue,
   playBraceletCompletionCue,
 } from '@/services/bracelet-voice';
-import { useSetting } from '@/utils/settings';
+import { setSetting, useSetting } from '@/utils/settings';
 import { isLightColor } from '@/utils/color';
 import { useSubscription } from '@/hooks/useSubscription';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
@@ -3742,6 +3742,8 @@ type IdleScreenProps = {
   /** Sessies zitten in het VIBEZCORE-pakket; zonder abonnement opent Start
    *  de paywall (Feel it blijft vrij als voorproef). */
   startLocked: boolean;
+  /** Eén volledige sessie nog gratis (15 okt 2026). */
+  freeSession?: boolean;
   /** Einde van de gratis voorproef → paywall. */
   onTrialEnd: () => void;
   busy: boolean;
@@ -3783,6 +3785,7 @@ function IdleScreen({
   setDuration,
   onStart,
   startLocked,
+  freeSession = false,
   onTrialEnd,
   busy,
   stats,
@@ -4227,6 +4230,11 @@ function IdleScreen({
             )}
           </PrimaryCtaButton>
         )}
+        {freeSession && !sessionRunning ? (
+          <View style={s.trialInfo}>
+            <Text style={s.trialInfoTxt}>Your first full session is free</Text>
+          </View>
+        ) : null}
         {/* Gratis (operator, 7 okt 2026: "alles opgepropt"): de uitleg en
             "Unlock all sessions" staan nu in het paneel bij het aantikken.
             Onder de knop enkel nog de melding tijdens een versnelde voor-
@@ -5140,11 +5148,18 @@ function BraceletControlScreen({
      Simulate user type), net als isPro — zo is elk gebruikerstype testbaar. */
   const ownsBracelet = useBraceletOwner();
   const [testFullSessions] = useSetting('testFullSessions');
-  const sessionsLocked =
+  /* 15 okt 2026 (operator): één volledige sessie gratis — na de State
+     Control-onboarding staat de gekozen toestand klaar. Zolang die niet
+     gebruikt is, is State Control niet op slot; zodra een sessie start
+     telt ze als gebruikt (effect hieronder). */
+  const [freeUsedAt] = useSetting('stateFreeSessionUsedAt');
+  const premiumLocked =
     !subscription.isLoading &&
     !subscription.isPro &&
     !ownsBracelet &&
     !(__DEV__ && testFullSessions);
+  const freeSessionAvailable = premiumLocked && freeUsedAt === null;
+  const sessionsLocked = premiumLocked && !freeSessionAvailable;
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const autoStartFiredRef = useRef(false);
@@ -5442,6 +5457,11 @@ function BraceletControlScreen({
 
   /* ── Derived state ─────────────────────────────────────────────── */
   const sessionActive = monitorSnap.active && !monitorSnap.paused;
+  /* De gratis sessie is opgebruikt zodra ze echt loopt — via Start, Quick
+     Chill/Boost of een plan-link, allemaal via de monitor. */
+  useEffect(() => {
+    if (sessionActive && freeSessionAvailable) void setSetting('stateFreeSessionUsedAt', Date.now());
+  }, [sessionActive, freeSessionAvailable]);
   /* Geen sessie meer → niets om "geminimaliseerd" te houden. */
   useEffect(() => {
     if (!sessionActive && !isPaused) setMinimized(false);
@@ -5796,6 +5816,7 @@ function BraceletControlScreen({
         setDuration={setDuration}
         onStart={onStartGated}
         startLocked={sessionsLocked}
+        freeSession={freeSessionAvailable}
         onTrialEnd={() => setPaywallOpen(true)}
         busy={busy}
         stats={stats}
