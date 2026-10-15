@@ -62,6 +62,7 @@ import { hapticTap, hapticTick } from '@/utils/haptics';
 import { stopHeartbeatSound } from '@/services/heartbeat-sound';
 import { Check, ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
   BackHandler,
   type NativeScrollEvent,
@@ -75,6 +76,11 @@ import {
 } from 'react-native';
 import Animated, {
   FadeIn,
+  FadeInLeft,
+  FadeInRight,
+  type SharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedProps,
   FadeInDown,
   useAnimatedStyle,
   useSharedValue,
@@ -85,7 +91,7 @@ import Animated, {
 import { useFocusEffect } from 'expo-router';
 import { AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient as SvgLinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 
 /* Volgorde van de app: Boost … Sleep. */
 const ALL_MODES = MODES.map((m) => m.mode);
@@ -133,7 +139,20 @@ const enter = (i: number) => FadeInDown.duration(420).delay(80 + i * 90);
 type StepIdx = 0 | 1 | 2 | 3;
 
 export default function StateControlOnboarding({ onDone, onBack, includeRestingHr = false, finalLabel = 'Done' }: Props) {
-  const [step, setStep] = useState<StepIdx>(0);
+  const [step, setStepRaw] = useState<StepIdx>(0);
+  /* Richting van de paginawissel: Next schuift van rechts in, Back van
+     links (iOS-gevoel, operator: "bij veranderen pagina"). */
+  const [dir, setDir] = useState<1 | -1>(1);
+  const setStep = useCallback(
+    (next: StepIdx) => {
+      setStepRaw((cur) => {
+        setDir(next >= cur ? 1 : -1);
+        return next;
+      });
+    },
+    [],
+  );
+  const pageIn = dir > 0 ? FadeInRight.duration(320) : FadeInLeft.duration(320);
   /* Met hartslag: 4 stappen — 3 kiezen, 4 meten (operator: "stap 3 en 4").
      Kies je niet "meten", dan eindigt de onboarding na stap 3. */
   const totalSteps = includeRestingHr ? 4 : 2;
@@ -292,7 +311,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
 
         <View style={s.slideArea}>
           {step === 0 ? (
-            <Animated.View key="s0" entering={FadeIn.duration(240)} style={s.slide}>
+            <Animated.View key="s0" entering={pageIn} style={s.slide}>
               <Animated.View entering={enter(0)} style={s.pad}>
                 <Text style={s.header}>How it works</Text>
                 <Text style={s.lead}>A rhythm that starts at your heart</Text>
@@ -307,6 +326,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 {ALL_MODES.map((m) => (
                   <GlassChip
                     key={m}
+                    mode={m}
                     label={getModeMeta(m).name}
                     on={chartMode === m}
                     onPress={() => {
@@ -323,20 +343,24 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 </Animated.View>
                 {/* Ademruimte (operator: "niet alles opproppen"): de drie
                     stappen zakken naar het midden van de vrije ruimte. */}
-                <View style={{ flex: 1, minHeight: 16 }} />
+                <View style={{ flex: 1 }} />
                 <Animated.View entering={enter(3)} style={s.steps}>
-                  <Step n="1" title="Match" text="Starts at your own heart rate" />
-                  <Step n="2" title="Glide" text="Moves to the tempo of your state" />
-                  <Step n="3" title="Hold" text="Stays there until the end" />
+                  <Step n="1" title="Match" text="Starts at your own heart rate." />
+                  <Step n="2" title="Glide" text="Moves gently to the tempo of your state." />
+                  <Step n="3" title="Hold" text="Stays there until your session ends." last />
                 </Animated.View>
-                <View style={{ flex: 1, minHeight: 16 }} />
+                <View style={{ flex: 1 }} />
               </View>
               <Text style={[s.footnote, s.pad]}>
-                In a Cornell study, a slow heartbeat rhythm from a smartwatch helped people stay calmer under pressure.
+                {/* Beide richtingen, kloppend met Science A tot Z §3.1 (operator:
+                    "Cornell gaat enkel over calmer under pressure"): trager →
+                    kalmer (Azevedo 2017; Costa 2019), sneller → alerter
+                    (Valente 2024), geleidelijk werkt (Motokawa & Kato 2025). */}
+                Inspired by research on heartbeat-like touch: slower helped people stay calm, faster made them more alert.
               </Text>
             </Animated.View>
           ) : step === 1 ? (
-            <Animated.View key="s1" entering={FadeIn.duration(240)} style={s.slide}>
+            <Animated.View key="s1" entering={pageIn} style={s.slide}>
               <Animated.View entering={enter(0)} style={s.pad}>
                 <Text style={s.header}>Choose your state</Text>
                 <Text style={s.lead}>Swipe, then tap to feel it</Text>
@@ -353,7 +377,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               <View style={{ flex: 0.6 }} />
             </Animated.View>
           ) : step === 3 ? (
-            <Animated.View key="s3" entering={FadeIn.duration(240)} style={[s.slide, s.pad]}>
+            <Animated.View key="s3" entering={pageIn} style={[s.slide, s.pad]}>
               <Animated.View entering={enter(0)}>
                 <Text style={s.header}>Measure</Text>
                 <Text style={s.lead}>Stay still for 20 seconds</Text>
@@ -376,7 +400,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               <Text style={s.footnote}>For wellness only, not a medical measurement.</Text>
             </Animated.View>
           ) : (
-            <Animated.View key="s2" entering={FadeIn.duration(240)} style={[s.slide, s.pad]}>
+            <Animated.View key="s2" entering={pageIn} style={[s.slide, s.pad]}>
               <Animated.View entering={enter(0)}>
                 <Text style={s.header}>Your heart rate</Text>
                 <Text style={s.lead}>Your starting point</Text>
@@ -509,8 +533,31 @@ function StateCarousel({
   const cardW = Math.round(width * 0.6);
   const side = Math.round((width - cardW) / 2);
   const step = cardW + CARD_GAP;
-  const ref = useRef<ScrollView>(null);
+  const ref = useRef<Animated.ScrollView>(null);
   const lastIdx = useRef(ALL_MODES.indexOf(chosen));
+  /* Schaal en helderheid volgen de vinger vloeiend (operator: "is de
+     animatie overal correct, bij scrollen ..."), zoals een iOS-carrousel —
+     niet pas springen als een cirkel in het midden staat. */
+  const scrollX = useSharedValue(ALL_MODES.indexOf(chosen) * step);
+  const pick = useCallback(
+    (i: number) => {
+      if (i !== lastIdx.current) {
+        lastIdx.current = i;
+        hapticTick();
+        onChoose(ALL_MODES[i]);
+      }
+    },
+    [onChoose],
+  );
+  const centred = useSharedValue(ALL_MODES.indexOf(chosen));
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollX.value = e.contentOffset.x;
+    const i = Math.max(0, Math.min(ALL_MODES.length - 1, Math.round(e.contentOffset.x / step)));
+    if (i !== centred.value) {
+      centred.value = i;
+      scheduleOnRN(pick, i);
+    }
+  });
 
   /* Start op de huidige keuze (Calm Control), zonder animatie. */
   useEffect(() => {
@@ -519,20 +566,9 @@ function StateCarousel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Tijdens het scrollen wisselt de info al mee (met een fijne tik), zodat
-     de tekst eronder altijd bij de kaart in het midden hoort. */
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = Math.max(0, Math.min(ALL_MODES.length - 1, Math.round(e.nativeEvent.contentOffset.x / step)));
-    if (i !== lastIdx.current) {
-      lastIdx.current = i;
-      hapticTick();
-      onChoose(ALL_MODES[i]);
-    }
-  };
-
   return (
     <View>
-      <ScrollView
+      <Animated.ScrollView
         ref={ref}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -540,7 +576,7 @@ function StateCarousel({
         decelerationRate="fast"
         disableIntervalMomentum
         contentContainerStyle={{ paddingHorizontal: side, gap: CARD_GAP }}
-        onScroll={onScroll}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
         style={s.carousel}
       >
@@ -548,6 +584,9 @@ function StateCarousel({
           <StateCard
             key={m}
             mode={m}
+            index={i}
+            step={step}
+            scrollX={scrollX}
             width={cardW}
             active={chosen === m}
             playing={playing === m}
@@ -557,7 +596,7 @@ function StateCarousel({
             }}
           />
         ))}
-      </ScrollView>
+      </Animated.ScrollView>
       <View style={s.dots}>
         {ALL_MODES.map((m) => {
           const on = chosen === m;
@@ -570,12 +609,18 @@ function StateCarousel({
 
 function StateCard({
   mode,
+  index,
+  step,
+  scrollX,
   width,
   active,
   playing,
   onPress,
 }: {
   mode: BraceletMode;
+  index: number;
+  step: number;
+  scrollX: SharedValue<number>;
   width: number;
   active: boolean;
   playing: boolean;
@@ -583,14 +628,16 @@ function StateCard({
 }) {
   const meta = getModeMeta(mode);
   const Icon = MODE_GLYPH_ICONS[mode];
-  const k = useSharedValue(active ? 1 : 0);
-  useEffect(() => {
-    k.value = withTiming(active ? 1 : 0, { duration: 220 });
-  }, [active, k]);
-  const anim = useAnimatedStyle(() => ({
-    opacity: 0.45 + k.value * 0.55,
-    transform: [{ scale: 0.8 + k.value * 0.2 }],
-  }));
+  /* Indrukken = zelfde bounce als de kaarten in de Breathwork-onboarding
+     (0,95 in 80 ms, veer terug), bovenop de schaal van het scrollen. */
+  const press = useSharedValue(1);
+  const anim = useAnimatedStyle(() => {
+    const dist = Math.min(1, Math.abs(scrollX.value - index * step) / step);
+    return {
+      opacity: 1 - dist * 0.55,
+      transform: [{ scale: (1 - dist * 0.2) * press.value }],
+    };
+  });
   const d = width;
   const circle = (
     <View
@@ -616,7 +663,17 @@ function StateCard({
   );
   return (
     <Animated.View style={[{ width, height: d }, anim]}>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${meta.name}, tap to feel it`}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => {
+          press.value = withTiming(0.95, { duration: 80 });
+        }}
+        onPressOut={() => {
+          press.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`${meta.name}, tap to feel it`}
+      >
         {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
             trilmotor), zoals de cirkel tijdens een sessie. */}
         {playing ? <HeartbeatScale size={d}>{circle}</HeartbeatScale> : circle}
@@ -653,7 +710,8 @@ function Fact({ label, value }: { label: string; value: string }) {
 /* Apple-glas-pil: neutraal glas; aangetikt = fijne lichte rand + korte pop
    (operator: "pills apple stijl glass, bij aantikken heel licht omlijning
    en poppen"). */
-function GlassChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+function GlassChip({ mode, label, on, onPress }: { mode: BraceletMode; label: string; on: boolean; onPress: () => void }) {
+  const Icon = MODE_GLYPH_ICONS[mode];
   const scale = useSharedValue(1);
   const k = useSharedValue(on ? 1 : 0);
   useEffect(() => {
@@ -678,6 +736,7 @@ function GlassChip({ label, on, onPress }: { label: string; on: boolean; onPress
       accessibilityState={{ selected: on }}
     >
       <Animated.View style={[s.chip, style]}>
+        <Icon size={17} color={on ? getModeMeta(mode).color : 'rgba(255,255,255,0.7)'} />
         <Text style={[s.chipTxt, on && { color: '#ffffff' }]}>{label}</Text>
       </Animated.View>
     </Pressable>
@@ -687,31 +746,48 @@ function GlassChip({ label, on, onPress }: { label: string; on: boolean; onPress
 /* ── Pagina 3: keuze-rij ───────────────────────────────────────────────── */
 
 function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on: boolean; onPress: () => void }) {
+  /* Zelfde bounce als de kaarten in de Breathwork-onboarding. */
+  const press = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
   return (
     <Pressable
       onPress={() => {
         hapticTap();
         onPress();
       }}
-      style={({ pressed }) => [s.option, on && s.optionOn, pressed && { opacity: 0.85 }]}
+      onPressIn={() => {
+        press.value = withTiming(0.97, { duration: 80 });
+      }}
+      onPressOut={() => {
+        press.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      }}
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
     >
-      <View style={{ flex: 1 }}>
-        <Text style={s.optionTitle}>{title}</Text>
-        <Text style={s.optionSub}>{sub}</Text>
-      </View>
-      <View style={[s.radio, on && s.radioOn]}>{on && <Check size={14} color="#0a0a0c" strokeWidth={3} />}</View>
+      <Animated.View style={[s.option, on && s.optionOn, style]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.optionTitle}>{title}</Text>
+          <Text style={s.optionSub}>{sub}</Text>
+        </View>
+        <View style={[s.radio, on && s.radioOn]}>{on && <Check size={14} color="#0a0a0c" strokeWidth={3} />}</View>
+      </Animated.View>
     </Pressable>
   );
 }
 
 /* ── Pagina 1: grafiek ─────────────────────────────────────────────────── */
 
+/* Grafiek in de stijl van de referentie van de operator (15 okt 2026,
+   "flow van grafiek meer zoals in bijlage"): één vloeiende S-lijn over de
+   volle breedte met een zachte gloed, van wit (jouw hartslag) naar de kleur
+   van de toestand; stippellijnen tussen de fasen; labels met een regel
+   eronder. De lijn tekent zich telkens opnieuw bij het wisselen van toestand. */
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 function RhythmChart({ mode }: { mode: BraceletMode }) {
   const pulse = useRestingPulse();
-  /* Nog geen eigen waarde: eerlijk "Average" i.p.v. "Your heart rate"
-     (operator: "die is niet 70 standaard he") — stap 3 zet de eigen. */
+  /* Nog geen eigen waarde: eerlijk "Average" (operator: "die is niet 70
+     standaard he") — stap 3 zet de eigen. */
   const own = pulse.decided && pulse.source !== 'average';
   const { width } = useWindowDimensions();
   const r = rhythmFor(mode, pulse.bpm);
@@ -720,49 +796,76 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
   const H = 150;
   /* Hoogte = tempo (sneller = hoger): Boost stijgt, de kalme toestanden
      dalen — met de echte getallen van deze gebruiker. */
-  const yOf = (bpm: number) => 104 - ((Math.min(115, Math.max(40, bpm)) - 40) / 75) * 76;
+  const top = 52;
+  const bottom = 118;
+  const yOf = (bpm: number) => bottom - ((Math.min(115, Math.max(40, bpm)) - 40) / 75) * (bottom - top);
   const yA = yOf(r.startBpm);
   const yB = yOf(r.targetBpm);
   const rising = yB < yA;
-  const x0 = 6;
-  const x1 = W * 0.3;
-  const x2 = W * 0.64;
-  const xe = W - 6;
-  const mid = (x1 + x2) / 2;
-  const d = `M${x0} ${yA} L${x1} ${yA} C${mid} ${yA} ${mid} ${yB} ${x2} ${yB} L${xe} ${yB}`;
-  const lbl = { fill: 'rgba(255,255,255,0.45)', fontSize: 11, fontFamily: BrandFonts.medium } as const;
+  const x0 = 10;
+  const xe = W - 10;
+  const x1 = W / 3;
+  const x2 = (2 * W) / 3;
+  /* Match (vlak) → Glide (zachte S) → Hold (vlak uitlopend). */
+  const d = `M${x0} ${yA} C${x1 * 0.7} ${yA} ${x1 * 0.9} ${yA} ${x1} ${yA + (yB - yA) * 0.08} S${x2 - (x2 - x1) * 0.25} ${yB} ${x2} ${yB - (yB - yA) * 0.04} S${xe - 40} ${yB} ${xe} ${yB}`;
+  const LEN = W * 1.25;
+  const draw = useSharedValue(0);
+  useEffect(() => {
+    draw.value = 0;
+    draw.value = withTiming(1, { duration: 900 });
+  }, [mode, draw]);
+  const lineProps = useAnimatedProps(() => ({ strokeDashoffset: LEN * (1 - draw.value) }));
+  const startLabelY = rising ? yA + 26 : yA - 30;
+  const endLabelY = rising ? yB - 30 : yB + 26;
   return (
     <View style={s.chart}>
       <Svg width={W} height={H}>
-        <Line x1={x1} y1={14} x2={x1} y2={H - 22} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
-        <Line x1={x2} y1={14} x2={x2} y2={H - 22} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
-        <Path d={d} stroke={meta.color} strokeWidth={3} fill="none" strokeLinecap="round" />
+        <Defs>
+          <SvgLinearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#ffffff" stopOpacity={0.95} />
+            <Stop offset="0.45" stopColor={meta.color} stopOpacity={0.9} />
+            <Stop offset="1" stopColor={meta.color} stopOpacity={1} />
+          </SvgLinearGradient>
+        </Defs>
+        <Line x1={x1} y1={20} x2={x1} y2={H - 6} stroke="rgba(255,255,255,0.12)" strokeWidth={1} strokeDasharray="3 5" />
+        <Line x1={x2} y1={20} x2={x2} y2={H - 6} stroke="rgba(255,255,255,0.12)" strokeWidth={1} strokeDasharray="3 5" />
+        {/* gloed */}
+        <AnimatedPath d={d} stroke={meta.color} strokeOpacity={0.18} strokeWidth={12} fill="none" strokeLinecap="round" strokeDasharray={`${LEN} ${LEN}`} animatedProps={lineProps} />
+        <AnimatedPath d={d} stroke="url(#flow)" strokeWidth={3} fill="none" strokeLinecap="round" strokeDasharray={`${LEN} ${LEN}`} animatedProps={lineProps} />
+        <Circle cx={x0} cy={yA} r={8} fill="#ffffff" fillOpacity={0.15} />
         <Circle cx={x0} cy={yA} r={5} fill="#ffffff" />
+        <Circle cx={xe} cy={yB} r={9} fill={meta.color} fillOpacity={0.2} />
         <Circle cx={xe} cy={yB} r={5} fill={meta.color} />
-        <SvgText x={x0} y={rising ? yA + 24 : yA - 14} fill="#ffffff" fontSize={13} fontFamily={BrandFonts.semibold}>
-          {own ? `Your heart rate · ${r.startBpm} bpm` : `Average · ${r.startBpm} bpm`}
+        <SvgText x={x0} y={startLabelY} fill="#ffffff" fontSize={14} fontFamily={BrandFonts.semibold}>
+          {own ? 'Your heart rate' : 'Average'}
         </SvgText>
-        <SvgText x={xe} y={rising ? yB - 14 : yB + 24} fill={meta.color} fontSize={13} fontFamily={BrandFonts.semibold} textAnchor="end">
-          {`${meta.name} · ${r.targetBpm} bpm`}
+        <SvgText x={x0} y={startLabelY + 17} fill="rgba(255,255,255,0.55)" fontSize={12.5} fontFamily={BrandFonts.regular}>
+          {`Starts at ${r.startBpm} bpm`}
         </SvgText>
-        <SvgText x={(x0 + x1) / 2} y={H - 4} textAnchor="middle" {...lbl}>Match</SvgText>
-        <SvgText x={mid} y={H - 4} textAnchor="middle" {...lbl}>Glide</SvgText>
-        <SvgText x={(x2 + xe) / 2} y={H - 4} textAnchor="middle" {...lbl}>Hold</SvgText>
+        <SvgText x={xe} y={endLabelY} fill={meta.color} fontSize={14} fontFamily={BrandFonts.semibold} textAnchor="end">
+          {meta.name}
+        </SvgText>
+        <SvgText x={xe} y={endLabelY + 17} fill="rgba(255,255,255,0.55)" fontSize={12.5} fontFamily={BrandFonts.regular} textAnchor="end">
+          {`Settles at ${r.targetBpm} bpm`}
+        </SvgText>
       </Svg>
     </View>
   );
 }
 
-function Step({ n, title, text }: { n: string; title: string; text: string }) {
+function Step({ n, title, text, last = false }: { n: string; title: string; text: string; last?: boolean }) {
   return (
     <View style={s.step}>
-      <View style={s.stepNum}>
-        <Text style={s.stepNumTxt}>{n}</Text>
+      <View style={s.stepRail}>
+        <View style={s.stepNum}>
+          <Text style={s.stepNumTxt}>{n}</Text>
+        </View>
+        {!last && <View style={s.stepLine} />}
       </View>
-      <Text style={s.stepTitle}>{title}</Text>
-      <Text style={s.stepTxt} numberOfLines={1}>
-        {text}
-      </Text>
+      <View style={{ flex: 1, paddingBottom: last ? 0 : 10 }}>
+        <Text style={s.stepTitle}>{title}</Text>
+        <Text style={s.stepTxt}>{text}</Text>
+      </View>
     </View>
   );
 }
@@ -802,29 +905,32 @@ const s = StyleSheet.create({
   lead: { marginTop: 6, ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.55)' },
   chipsScroll: { flexGrow: 0, marginTop: 22 },
   chips: { paddingHorizontal: 26, gap: 8 },
-  chip: { borderRadius: 999, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 14 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 999, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 16 },
   chipTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.7)' },
-  chart: { marginTop: 18, marginBottom: 14 },
-  steps: { gap: 20 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  chart: { marginTop: 8, marginBottom: 4 },
+  steps: {},
+  step: { flexDirection: 'row', gap: 16 },
+  stepRail: { alignItems: 'center', width: 28 },
+  stepLine: { flex: 1, width: 0, marginVertical: 4, borderLeftWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.2)' },
   stepNum: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepNumTxt: { fontFamily: BrandFonts.semibold, fontSize: 12.5, color: '#ffffff' },
-  stepTitle: { width: 52, fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
-  stepTxt: { flex: 1, fontFamily: BrandFonts.regular, fontSize: 14.5, color: 'rgba(255,255,255,0.66)' },
+  stepTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff', marginTop: 3 },
+  stepTxt: { marginTop: 1, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 20, color: 'rgba(255,255,255,0.62)' },
   carousel: { flexGrow: 0, marginTop: 24 },
   stateCircle: { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 18 },
   stateName: { marginTop: 6, fontFamily: BrandFonts.bold, fontSize: 21, color: '#ffffff' },
   stateUse: { fontFamily: BrandFonts.regular, fontSize: 14.5, color: 'rgba(255,255,255,0.62)' },
   dots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 16 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)' },
-  dotOn: { width: 18, backgroundColor: '#ffffff' },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.25)' },
+  /* Protocol: ook het actieve blijft een rond puntje, enkel vol wit (operator). */
+  dotOn: { backgroundColor: '#ffffff' },
   info: { marginTop: 22 },
   /* Tekst over twee regels in blok (operator, 15 okt 2026). */
   infoTitle: { fontFamily: BrandFonts.regular, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.8)', textAlign: 'justify' },
