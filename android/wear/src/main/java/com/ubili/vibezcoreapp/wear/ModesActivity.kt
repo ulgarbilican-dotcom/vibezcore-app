@@ -157,8 +157,9 @@ class ModesActivity : androidx.activity.ComponentActivity() {
         setTextColor(Color.argb(150, 255, 255, 255))
         textSize = 12f
         gravity = Gravity.CENTER
-        maxLines = 1
-        ellipsize = android.text.TextUtils.TruncateAt.END
+        /* rond scherm: onderaan smaller — nooit afknippen, desnoods 2 regels */
+        maxLines = 2
+        setPadding(dp(30f), 0, dp(30f), 0)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
       }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
         topMargin = dp(2f)

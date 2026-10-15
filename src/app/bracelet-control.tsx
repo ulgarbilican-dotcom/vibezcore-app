@@ -487,7 +487,7 @@ const BREATH_WHEN: Record<BraceletMode, string> = {
   [BraceletMode.Alpha]:
     'Before creative or social moments — when you want to feel calm yet engaged.',
   [BraceletMode.Theta]:
-    'For introspective work — journaling, meditation, or moments of deep self-reflection.',
+    'For introspective work — journaling or moments of deep self-reflection.',
   [BraceletMode.Delta]:
     'Before sleep or during recovery — when you need to wind the system down.',
 };
