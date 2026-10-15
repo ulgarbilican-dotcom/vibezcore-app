@@ -15,7 +15,7 @@ import { BraceletMode } from '@/services/ble-contract';
 import type { BreathStateKey } from '@/data/breath-states';
 
 export const STATE_USAGE: Record<BraceletMode, string> = {
-  [BraceletMode.Gamma]: 'Before a workout',
+  [BraceletMode.Gamma]: 'When energy is low',
   [BraceletMode.Beta]: 'For deep work',
   [BraceletMode.Alpha]: 'Under pressure',
   [BraceletMode.Theta]: 'To unwind',
