@@ -1,25 +1,49 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   VIBEZCORE — State Control-intro opnieuw bekijken (Settings)
+   VIBEZCORE — State Control-onboarding als volledig scherm
 
-   Operator, 15 okt 2026: "zorg ook voor herbekijken onboarding knop in
-   settings". Zelfde twee schermen als de eerste keer in de State Control-
-   tab (components/StateControlOnboarding.tsx); "Done" gaat terug naar
-   Settings. Het rusthartslag-scherm hoort hier niet bij — dat wijzig je
-   via het label bovenaan State Control of in Profile.
+   Twee ingangen:
+   - `?first=1` — de eerste keer, na "Explore State Control" in de State
+     Control-tab ((tabs)/bracelet.tsx). Volledig scherm bovenop de tabs,
+     zoals breath-welcome: geen tabbalk, geen zwevend Premium-knopje
+     (operator, 15 okt 2026: "bekijk dat als bezoeker" — dat knopje lag
+     over "STEP 1 OF 3"). `hr=1`: het rusthartslag-scherm volgt nog als
+     stap 3 (in de tab). Na afloop of Skip: gezien, en de tab opent zonder
+     intro (`open`-token).
+   - zonder parameters — Settings → "Watch the intro again" (operator: "zorg
+     ook voor herbekijken onboarding knop in settings"). "Done" gaat terug.
    ───────────────────────────────────────────────────────────────────────── */
 
 import StateControlOnboarding from '@/components/StateControlOnboarding';
-import { Stack, router } from 'expo-router';
+import { setSetting } from '@/utils/settings';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 
-export default function StateOnboardingReplay() {
-  const close = () => {
+export default function StateOnboardingScreen() {
+  const { first, hr } = useLocalSearchParams<{ first?: string; hr?: string }>();
+  const isFirst = first === '1';
+  const hrNext = isFirst && hr === '1';
+
+  const back = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/bracelet' as never);
   };
+  const done = () => {
+    if (!isFirst) {
+      back();
+      return;
+    }
+    void setSetting('stateOnboardingCompletedAt', Date.now());
+    router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()) } } as never);
+  };
+
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <StateControlOnboarding totalSteps={2} finalLabel="Done" onDone={close} onBack={close} />
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: !isFirst }} />
+      <StateControlOnboarding
+        includeRestingHr={hrNext}
+        finalLabel="Done"
+        onDone={done}
+        onBack={back}
+      />
     </>
   );
 }

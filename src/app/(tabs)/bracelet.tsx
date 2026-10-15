@@ -44,7 +44,7 @@ import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -60,8 +60,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import BraceletControl from '../bracelet-control';
 import RestingHeartRatePage from '@/components/RestingHeartRatePage';
-import StateControlOnboarding from '@/components/StateControlOnboarding';
-import { ensureSettingsLoaded, setSetting, useSetting } from '@/utils/settings';
+import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
@@ -313,19 +312,22 @@ export default function BraceletScreen() {
     void loadRestingPulse().then(() => setPulseLoaded(true));
   }, []);
   /* 15 okt 2026: eerst de State Control-onboarding (het principe), daarna
-     pas de rusthartslag — één keer, tot ze afgerond is. */
+     pas de rusthartslag — één keer, tot ze afgerond is. Als VOLLEDIG scherm
+     bovenop de tabs (/state-onboarding, zoals breath-welcome): zonder
+     tabbalk en zonder het zwevende Premium-knopje, dat bij een bezoeker
+     over "STEP 1 OF 3" lag (operator: "bekijk dat als bezoeker"). */
   const [onboardedAt] = useSetting('stateOnboardingCompletedAt');
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   useEffect(() => {
     void ensureSettingsLoaded().then(() => setSettingsLoaded(true));
   }, []);
-  const showOnboarding = !showIntro && settingsLoaded && pulseLoaded && onboardedAt === null;
-  const showHrPage = !showIntro && !showOnboarding && pulseLoaded && !pulse.decided;
+  const needsOnboarding = settingsLoaded && onboardedAt === null;
+  const showHrPage = !showIntro && pulseLoaded && !pulse.decided;
 
   useEffect(() => {
-    setStateControlIntroVisible(focused && (showIntro || showOnboarding || showHrPage));
+    setStateControlIntroVisible(focused && (showIntro || showHrPage));
     return () => setStateControlIntroVisible(false);
-  }, [focused, showIntro, showOnboarding, showHrPage]);
+  }, [focused, showIntro, showHrPage]);
 
   /* Stabiele referentie: het sessiescherm koppelt er de terugknop aan in een
      focus-effect — een nieuwe functie per render zou dat steeds opnieuw
@@ -333,15 +335,18 @@ export default function BraceletScreen() {
   const minimize = useCallback(() => setShowIntro(true), []);
 
   if (showIntro) {
-    return <StateControlIntro onDone={() => setShowIntro(false)} />;
-  }
-  if (showOnboarding) {
     return (
-      <StateControlOnboarding
-        totalSteps={pulse.decided ? 2 : 3}
-        finalLabel={pulse.decided ? 'Done' : 'Next'}
-        onDone={() => void setSetting('stateOnboardingCompletedAt', Date.now())}
-        onBack={() => setShowIntro(true)}
+      <StateControlIntro
+        onDone={() => {
+          if (needsOnboarding) {
+            /* Het intro blijft eronder staan: Back in de onboarding komt
+               hier terug; na afloop opent /state-onboarding deze tab met een
+               `open`-token (geen intro meer). */
+            router.push({ pathname: '/state-onboarding', params: { first: '1', hr: pulse.decided ? '0' : '1' } } as never);
+            return;
+          }
+          setShowIntro(false);
+        }}
       />
     );
   }

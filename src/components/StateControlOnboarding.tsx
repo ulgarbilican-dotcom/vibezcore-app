@@ -22,13 +22,18 @@
                   tempo van de toestand en blijft daar — met jouw eigen
                   getallen (rhythmFor). ENKEL hier de hartslag-uitleg.
 
-   Daarna (in de tab) het bestaande "Your Resting Heart Rate"-scherm als
-   stap 3, zolang er nog geen keuze is. Woordkeuze: Science A tot Z §6.
+     3  START     (enkel als de rusthartslag nog niet gekozen is) — in
+                  hetzelfde patroon, niet meer het losse scherm met
+                  gecentreerde titel + tabbalk + Premium-knopje erover
+                  (operator, 15 okt 2026, als bezoeker getest). Meten /
+                  invullen opent het bestaande meetblad (RhythmSheet).
+
+   Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
 import { HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
-import { useRestingPulse } from '@/components/RhythmSheet';
+import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { BraceletMode, getModeMeta } from '@/services/ble-contract';
 import {
@@ -38,9 +43,10 @@ import {
   stopModePreviewHaptic,
 } from '@/services/bracelet-haptics';
 import { isBraceletSessionMonitorActive } from '@/services/bracelet-session-monitor';
+import { AVERAGE_RESTING_BPM, chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { hapticTap } from '@/utils/haptics';
 import { BlurView } from 'expo-blur';
-import { ChevronLeft } from 'lucide-react-native';
+import { Check, ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -70,15 +76,20 @@ type Props = {
   onDone: () => void;
   /** Back op stap 1 (bv. terug naar de foto-intro). */
   onBack?: () => void;
-  /** Totaal aantal stappen in de balk (3 als het rusthartslag-scherm nog
-   *  volgt, anders 2). */
-  totalSteps?: number;
-  /** Knoptekst op het laatste scherm van deze onboarding. */
+  /** Stap 3: de rusthartslag kiezen (enkel als dat nog niet gebeurde). */
+  includeRestingHr?: boolean;
+  /** Knoptekst op het laatste scherm. */
   finalLabel?: string;
 };
 
-export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2, finalLabel = 'Next' }: Props) {
-  const [step, setStep] = useState<0 | 1>(0);
+type HrChoice = 'measure' | 'manual' | 'average';
+
+export default function StateControlOnboarding({ onDone, onBack, includeRestingHr = false, finalLabel = 'Done' }: Props) {
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const totalSteps = includeRestingHr ? 3 : 2;
+  const lastStep = totalSteps - 1;
+  const [hrChoice, setHrChoice] = useState<HrChoice>('measure');
+  const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
 
   /* De voorproef stopt altijd bij weggaan van stap 1 of de onboarding. */
   const [playing, setPlayingState] = useState<DemoMode | null>(null);
@@ -113,12 +124,24 @@ export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2,
 
   const goNext = () => {
     stopDemo();
-    if (step === 0) setStep(1);
-    else onDone();
+    if (step < lastStep) {
+      setStep((step + 1) as 0 | 1 | 2);
+      return;
+    }
+    if (includeRestingHr) {
+      if (hrChoice === 'average') {
+        chooseAverageRestingPulse();
+        onDone();
+      } else {
+        setSheet(hrChoice);
+      }
+      return;
+    }
+    onDone();
   };
   const goBack = useCallback(() => {
     stopDemo();
-    if (step === 1) setStep(0);
+    if (step > 0) setStep((step - 1) as 0 | 1 | 2);
     else onBack?.();
   }, [step, onBack, stopDemo]);
   const skip = () => {
@@ -128,12 +151,13 @@ export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2,
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (sheet) return false;
       if (step === 0 && !onBack) return false;
       goBack();
       return true;
     });
     return () => sub.remove();
-  }, [step, onBack, goBack]);
+  }, [step, onBack, goBack, sheet]);
 
   /* CTA-druk: zelfde recept als breath-welcome (0.96 in 80 ms, veer terug). */
   const ctaScale = useSharedValue(1);
@@ -189,7 +213,7 @@ export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2,
                 In a Cornell study, a slow heartbeat rhythm from a smartwatch helped people stay calmer under pressure.
               </Text>
             </Animated.View>
-          ) : (
+          ) : step === 1 ? (
             <Animated.View key="s1" entering={FadeIn.duration(240)} style={s.slide}>
               <Text style={s.header}>It meets you where you are</Text>
               <Text style={s.lead}>Every session follows the same three steps</Text>
@@ -199,6 +223,33 @@ export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2,
                 <Step n="2" title="Glide" text="It slowly moves to the tempo of the state you chose." />
                 <Step n="3" title="Hold" text="It stays there until your session ends." />
               </View>
+            </Animated.View>
+          ) : (
+            <Animated.View key="s2" entering={FadeIn.duration(240)} style={s.slide}>
+              <Text style={s.header}>Set your starting point</Text>
+              <Text style={s.lead}>Your resting heart rate, set once</Text>
+              <View style={s.options}>
+                <HrOption
+                  title="Measure now"
+                  sub="30 seconds with your phone's camera"
+                  on={hrChoice === 'measure'}
+                  onPress={() => setHrChoice('measure')}
+                />
+                <HrOption
+                  title="Enter it yourself"
+                  sub="If you already know it"
+                  on={hrChoice === 'manual'}
+                  onPress={() => setHrChoice('manual')}
+                />
+                <HrOption
+                  title="Use an average"
+                  sub={`${AVERAGE_RESTING_BPM} bpm for now, change it anytime`}
+                  on={hrChoice === 'average'}
+                  onPress={() => setHrChoice('average')}
+                />
+              </View>
+              <View style={{ flex: 1 }} />
+              <Text style={s.footnote}>For wellness only, not a medical measurement.</Text>
             </Animated.View>
           )}
         </View>
@@ -218,13 +269,58 @@ export default function StateControlOnboarding({ onDone, onBack, totalSteps = 2,
               accessibilityRole="button"
             >
               <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
-                <Text style={s.ctaTxtDark}>{step === 0 ? 'Next' : finalLabel}</Text>
+                <Text style={s.ctaTxtDark}>
+                  {step < lastStep
+                    ? 'Next'
+                    : includeRestingHr
+                      ? hrChoice === 'measure'
+                        ? 'Measure Now'
+                        : hrChoice === 'manual'
+                          ? 'Enter Heart Rate'
+                          : 'Continue'
+                      : finalLabel}
+                </Text>
               </View>
             </Pressable>
           </Animated.View>
         </View>
       </SafeAreaView>
+      {includeRestingHr && (
+        <RhythmSheet
+          visible={sheet !== null}
+          mode={BraceletMode.Alpha}
+          startAt={sheet ?? 'measure'}
+          nextLabel="Let's Go"
+          onClose={() => setSheet(null)}
+          onDone={() => {
+            setSheet(null);
+            onDone();
+          }}
+        />
+      )}
     </View>
+  );
+}
+
+/* ── Keuze-rij (zelfde glazen kaart-taal als de demo-kaarten) ──────────── */
+
+function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => {
+        hapticTap();
+        onPress();
+      }}
+      style={({ pressed }) => [s.option, on && s.optionOn, pressed && { opacity: 0.85 }]}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: on }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={s.optionTitle}>{title}</Text>
+        <Text style={s.optionSub}>{sub}</Text>
+      </View>
+      <View style={[s.radio, on && s.radioOn]}>{on && <Check size={14} color="#0a0a0c" strokeWidth={3} />}</View>
+    </Pressable>
   );
 }
 
@@ -415,6 +511,31 @@ const s = StyleSheet.create({
   stepNumTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, color: '#ffffff' },
   stepTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
   stepTxt: { marginTop: 2, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 20, color: 'rgba(255,255,255,0.66)' },
+  options: { marginTop: 22, gap: 10 },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  optionOn: { borderColor: 'rgba(255,255,255,0.4)' },
+  optionTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  optionSub: { marginTop: 2, fontFamily: BrandFonts.regular, fontSize: 13.5, lineHeight: 18, color: 'rgba(255,255,255,0.55)' },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOn: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
   footer: { paddingHorizontal: 26, paddingBottom: 32, gap: 18 },
   ctaWrap: { borderRadius: 14, overflow: 'hidden' },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, paddingVertical: 16 },
