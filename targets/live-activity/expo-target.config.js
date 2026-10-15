@@ -18,7 +18,11 @@
 /** @type {import('@bacons/apple-targets/app.plugin').Config} */
 module.exports = {
   type: 'widget',
-  name: 'VIBEZCORE Live',
+  /* 15 okt 2026: zonder spatie. apple-targets geeft het Xcode-target de
+     naam zoals hier, maar EAS zoekt het op zonder spatie ("VIBEZCORELive")
+     → "Could not find target 'VIBEZCORELive' in project.pbxproj". */
+  name: 'VIBEZCORELive',
+  displayName: 'VIBEZCORE',
   bundleIdentifier: 'com.ubili.vibezcoreapp.liveactivity',
   deploymentTarget: '16.2',
   frameworks: ['SwiftUI', 'WidgetKit', 'ActivityKit', 'AppIntents'],
