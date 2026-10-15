@@ -105,6 +105,11 @@ final class StateSessionController: ObservableObject {
   @Published private(set) var endDate: Date?
   /** Resterende tijd, bevroren tijdens pauze. */
   @Published private(set) var pausedRemainingSec: Double = 0
+  /** Gepland moment van de laatste lub + duur van die slag: het scherm
+   *  rekent de kloppende cirkel en de ring hiervan uit, beeld per beeld
+   *  (zoals de telefoon en de Galaxy Watch, 15 okt 2026). */
+  private(set) var lastLubDate: Date?
+  private(set) var lastCycleMs: Double = 800
 
   private var params: StateParams?
   /** Wandklok-moment waarop de curve op `offsetSec` stond. */
@@ -119,6 +124,8 @@ final class StateSessionController: ObservableObject {
 
   private var beatTimer: Timer?
   private var dubTimer: Timer?
+  /** Herhaalde bevestiging aan de iPhone (elke 10 s, zie startAckLoop). */
+  private var ackTimer: Timer?
   private var endTimers: [Timer] = []
   private var generation = 0
   /** Laatst toegepaste `sentAtMs` van de telefoon (volgorde-bewaking). */
@@ -213,6 +220,7 @@ final class StateSessionController: ObservableObject {
     RuntimeSessionManager.shared.acquire(.state)
     scheduleNextBeat(gen: generation)
     ackIfRuntimeRunning()
+    startAckLoop()
   }
 
   /** Telefoon zegt pauze (of lokale terugval): tikken stoppen, sessie
@@ -311,6 +319,8 @@ final class StateSessionController: ObservableObject {
     }
     let beatDate = wallDate(forCurve: nextBeatT)
     WKInterfaceDevice.current().play(.click)
+    lastLubDate = beatDate
+    lastCycleMs = beat.cycleMs
     beats.send(true)
     if playDub {
       dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000)) { [weak self] in
@@ -352,6 +362,8 @@ final class StateSessionController: ObservableObject {
   }
 
   private func cancelTimers() {
+    ackTimer?.invalidate()
+    ackTimer = nil
     beatTimer?.invalidate()
     beatTimer = nil
     dubTimer?.invalidate()
@@ -369,6 +381,21 @@ final class StateSessionController: ObservableObject {
     guard active, !paused, !ackedCurrentStart, RuntimeSessionManager.shared.isRunning else { return }
     ackedCurrentStart = true
     PhoneConnector.shared.send(["type": "state_ack", "playing": true])
+  }
+
+  /** 15 okt 2026 (zoals de Galaxy Watch): elke 10 s bevestigen dat het
+   *  horloge nog speelt. Blijft dat 25 s uit (app geschorst, batterij leeg,
+   *  runtime kwijt), dan neemt de iPhone het ritme weer zelf over. */
+  private func startAckLoop() {
+    ackTimer?.invalidate()
+    let timer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
+      guard let self = self, self.active, !self.paused, self.ackedCurrentStart,
+        RuntimeSessionManager.shared.isRunning else { return }
+      PhoneConnector.shared.send(["type": "state_ack", "playing": true])
+    }
+    timer.tolerance = 0.5
+    RunLoop.main.add(timer, forMode: .common)
+    ackTimer = timer
   }
 
   private func runtimeChanged(_ running: Bool) {

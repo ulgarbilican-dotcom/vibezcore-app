@@ -682,8 +682,8 @@ function phoneTakesRhythmBack(): void {
   lastClock = { mode: clock.mode, elapsedSec, remainingSec, at: Date.now() };
 }
 
-/** `watchdog`: enkel voor Wear OS — dat horloge herhaalt zijn bevestiging
- *  elke 10 s; de Apple Watch bevestigt één keer (geen tijdslimiet). */
+/** `watchdog`: beide horloges herhalen hun bevestiging elke 10 s (Apple
+ *  Watch sinds 15 okt 2026, StateSessionController.startAckLoop). */
 function onWatchTookOver(watchdogOn = false): void {
   lastWatchAckAt = Date.now();
   if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
@@ -753,7 +753,7 @@ export async function setWatchHapticsEnabled(on: boolean): Promise<void> {
     relayToWatch(clock.mode, offset, remainingSec, session.restingBpm, session.startBpm);
   }
 }
-onAppleStateAck(() => onWatchTookOver(false));
+onAppleStateAck(() => onWatchTookOver(true));
 
 export function pauseModeSessionHaptic(): void {
   /* De service blijft draaien in pauze-stand: zo blijft de sessie op het
