@@ -231,6 +231,13 @@ object CatalogStore {
         .setData(record.toString().toByteArray(Charsets.UTF_8))
         .setUrgent()
       Wearable.getDataClient(context.applicationContext).putDataItem(req)
+        .addOnSuccessListener {
+          VzLog.d("watchlog saved id=${record.optString("id")}")
+          /* 15 okt 2026: de telefoon meteen laten ophalen (ook als de app
+             al open staat); niet verbonden → bij het volgende openen. */
+          PhoneLink.sendWatchAction(context.applicationContext, "logged", "history")
+        }
+        .addOnFailureListener { e -> VzLog.d("watchlog FAILED ${e.message}") }
     } catch (_: Exception) {
     }
   }

@@ -174,6 +174,21 @@ export function onWatchAction(cb: (event: WatchAction) => void): () => void {
   }
 }
 
+/** 15 okt 2026: het horloge meldt dat een horloge-sessie in de geschiedenis
+ *  klaarstaat (bericht `{action:"logged", kind:"history"}` op hetzelfde pad
+ *  als Pause/Stop — geen nieuwe native code nodig). Zo verschijnt ze meteen,
+ *  ook als de app al open staat. Bestaande handlers negeren deze kind. */
+export function onWatchSessionLogged(cb: () => void): () => void {
+  try {
+    const sub = native?.addListener('onWatchAction', (e) => {
+      if ((e as { kind: string }).kind === 'history') cb();
+    });
+    return () => sub?.remove();
+  } catch {
+    return () => {};
+  }
+}
+
 /* ── State Control op de pols (docs/WATCH_PROTOCOL.md) ─────────────────── */
 
 /** Start (of hervat — vervangt een lopende/gepauzeerde sessie) State

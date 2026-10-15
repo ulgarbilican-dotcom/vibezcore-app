@@ -28,7 +28,7 @@ import { getSetting, setSetting, useSetting } from '@/utils/settings';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
-import { syncWatchCatalog, takeWatchSessions } from '../../modules/wear-breath';
+import { onWatchSessionLogged, syncWatchCatalog, takeWatchSessions } from '../../modules/wear-breath';
 
 const ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
 
@@ -259,6 +259,17 @@ export function useWatchCatalogSync(): void {
     const s = AppState.addEventListener('change', (st) => {
       if (st === 'active') void importWatchSessions();
     });
-    return () => s.remove();
+    /* 15 okt 2026: het horloge meldt een afgelopen sessie meteen (operator:
+       sessie stond niet in de geschiedenis terwijl de app open stond). Het
+       bericht kan vóór het gegeven zelf aankomen → nog eens na enkele s. */
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const offLogged = onWatchSessionLogged(() => {
+      for (const ms of [1500, 6000]) timers.push(setTimeout(() => void importWatchSessions(), ms));
+    });
+    return () => {
+      s.remove();
+      offLogged();
+      timers.forEach(clearTimeout);
+    };
   }, []);
 }
