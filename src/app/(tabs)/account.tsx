@@ -11,7 +11,8 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 import { healthAppName } from '@/services/health-sync';
-import { pulseSourceLabel } from '@/services/resting-pulse';
+import { pulseSourceLabel, resetRestingPulse } from '@/services/resting-pulse';
+import { setSetting } from '@/utils/settings';
 import { wipeLocalData } from '@/services/local-data';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
@@ -1224,6 +1225,19 @@ export default function AccountScreen() {
             if (__DEV__) {
               await step('dev override', () => setDevUserOverride(null));
               await step('dev bracelet', () => setDevBraceletActivated(false));
+              /* 15 okt 2026 (operator: "bij uitloggen opnieuw de exacte
+                 onboarding flow zien"): ENKEL in de testversie terug naar
+                 "nieuwe bezoeker" — onboardings, gratis sessies, gekozen
+                 toestand, rusthartslag. Nooit in de winkelversie (anders
+                 is uitloggen een omweg naar een nieuwe gratis sessie). */
+              await step('dev fresh visitor', async () => {
+                await setSetting('stateOnboardingCompletedAt', null);
+                await setSetting('stateFreeMode', null);
+                await setSetting('stateFreeSessionUsedAt', null);
+                await setSetting('breathOnboardingCompletedAt', null);
+                await setSetting('breathFreeSessionUsedAt', null);
+                resetRestingPulse();
+              });
             }
             setEmail(null);
             setEmailInput('');
