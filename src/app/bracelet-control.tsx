@@ -5174,7 +5174,9 @@ function BraceletControlScreen({
   const freeLeft = premiumLocked && freeUsedAt === null;
   /* Enkel als de onboarding een toestand koos (operator: "andere sessies
      blijven op 30 s lock") — zonder keuze geen gratis sessie. */
-  const freeSessionAvailable = freeLeft && freeMode !== null && selectedMode === freeMode;
+  /* -1 = elke toestand (na de onboarding, 15 okt 2026). */
+  const freeFor = (m: BraceletMode) => freeLeft && freeMode !== null && (freeMode === -1 || m === freeMode);
+  const freeSessionAvailable = freeFor(selectedMode);
   const sessionsLocked = premiumLocked && !freeSessionAvailable;
   const [paywallOpen, setPaywallOpen] = useState(false);
 
@@ -5833,7 +5835,7 @@ function BraceletControlScreen({
         onStart={onStartGated}
         startLocked={sessionsLocked}
         freeSession={freeSessionAvailable}
-        isModeLocked={(m: BraceletMode) => premiumLocked && !(freeLeft && freeMode !== null && m === freeMode)}
+        isModeLocked={(m: BraceletMode) => premiumLocked && !freeFor(m)}
         onPaywall={() => setPaywallOpen(true)}
         onTrialEnd={() => setPaywallOpen(true)}
         busy={busy}

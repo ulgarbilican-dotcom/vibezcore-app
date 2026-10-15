@@ -186,24 +186,57 @@ export function heartbeatDub(): void {
   playFromStart(isHeadphonesOutput() ? headphonesDub : speakerDub);
 }
 
+/* 15 okt 2026 (operator: "hartslag moet correct stabiel, klopt nu
+   onregelmatig"): terugspoelen gebeurde vlak vóór elke slag (pauze → seek →
+   play), en die seek duurt telkens anders lang — de slagen vielen dus
+   ongelijk. Nu spoelen we ~0,8 s NA elke slag terug (langer dan het langste
+   geluid, 0,73 s; korter dan de kortste slag op deze pagina), zodat de
+   speler bij de volgende slag al klaarstaat en meteen speelt. */
+const REWIND_AFTER_MS = 800;
+const rewindTimers = new Map<AudioPlayer, ReturnType<typeof setTimeout>>();
+function scheduleRewind(p: AudioPlayer): void {
+  const prev = rewindTimers.get(p);
+  if (prev) clearTimeout(prev);
+  rewindTimers.set(
+    p,
+    setTimeout(() => {
+      rewindTimers.delete(p);
+      try {
+        p.pause();
+        void p.seekTo(0).catch(() => {});
+      } catch {
+        /* al weg */
+      }
+    }, REWIND_AFTER_MS),
+  );
+}
+
 function playFromStart(p: AudioPlayer | null): void {
   if (!p) return;
   try {
+    if (p.currentTime <= 0.01) {
+      p.play();
+      scheduleRewind(p);
+      return;
+    }
     /* Eerst echt terug naar het begin, dán spelen: anders staat de speler
        nog aan het einde van de vorige slag en speelt hij niets (gezien op
        de A16: enkel de eerste slag klonk). */
     /* Vervolg (operator: "hij slaat in het begin één slag over"): een
        verse speler staat nog aan het begin en is mogelijk nog aan het laden
        — terugspoelen faalt dan. Gewoon spelen; hij start zodra hij klaar is. */
-    if (p.currentTime <= 0.01) {
-      p.play();
-      return;
-    }
+    /* Uitzondering (bv. een slag die vlak na de vorige komt): oude weg, maar
+       nooit meer spelen als intussen alles gestopt is. */
     p.pause();
     void p
       .seekTo(0)
-      .then(() => p.play())
-      .catch(() => p.play());
+      .then(() => {
+        if (owners.size > 0) p.play();
+      })
+      .catch(() => {
+        if (owners.size > 0) p.play();
+      });
+    scheduleRewind(p);
   } catch (e) {
     log(`tick failed: ${String(e)}`);
     broken = true;

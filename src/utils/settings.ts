@@ -251,7 +251,7 @@ export type Settings = {
   stateFreeSessionUsedAt: number | null;
   /** De toestand die in de onboarding gekozen werd: ENKEL die is één keer
    *  gratis; de andere blijven op de voorproef van 30 s (operator, 15 okt
-   *  2026). null = geen keuze (dan geldt de gratis sessie voor elke). */
+   *  2026). -1 = elke toestand (na de onboarding); null = geen gratis sessie. */
   stateFreeMode: number | null;
   /** Operator, 2 oktober 2026 ("How do you feel"-instant-knop): duur-bijstelling
    *  op basis van de "Worked"/"Too long"/"Too short"-feedback na een instant-

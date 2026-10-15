@@ -35,7 +35,11 @@ export default function StateOnboardingScreen() {
       return;
     }
     void setSetting('stateOnboardingCompletedAt', Date.now());
-    void setSetting('stateFreeMode', mode);
+    /* Na de onboarding: één volledige sessie gratis voor ELKE toestand
+       (operator: "na hartrate-meting alle sessies 1-malig unlocken, zo kan
+       de gebruiker zelf kiezen") — de gekozen toestand staat klaar. -1 =
+       elke toestand; na die ene sessie alles terug op 30 s. */
+    void setSetting('stateFreeMode', -1);
     /* De gekozen toestand staat klaar in State Control (en daar is één
        volledige sessie gratis, zie bracelet-control.tsx). */
     router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);

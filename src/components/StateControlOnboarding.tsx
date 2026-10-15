@@ -59,6 +59,7 @@ import {
 import PulseMeter from '@/components/PulseMeter';
 import * as Haptics from 'expo-haptics';
 import { hapticTap, hapticTick } from '@/utils/haptics';
+import { stopHeartbeatSound } from '@/services/heartbeat-sound';
 import { Check, ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -200,6 +201,14 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     [stopDemo],
   );
 
+  /* Na de onboarding valt alle hartslaggeluid stil (operator: "bij
+     doorklikken na meting moet hartslag stoppen"). */
+  const finish = (m: BraceletMode) => {
+    stopHeartbeatSound('page');
+    stopHeartbeatSound('measure');
+    onDone(m);
+  };
+
   const goNext = () => {
     stopDemo();
     if (step < lastStep) {
@@ -209,7 +218,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     if (includeRestingHr) {
       if (hrChoice === 'average') {
         chooseAverageRestingPulse();
-        onDone(chosen);
+        finish(chosen);
       } else if (hrChoice === 'measure') {
         setMeasured(null);
         setElevated(false);
@@ -220,7 +229,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
       }
       return;
     }
-    onDone(chosen);
+    finish(chosen);
   };
   const goBack = useCallback(() => {
     stopDemo();
@@ -229,7 +238,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   }, [step, onBack, stopDemo]);
   const skip = () => {
     stopDemo();
-    onDone(chosen);
+    finish(chosen);
   };
 
   useEffect(() => {
@@ -416,7 +425,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                     }
                     setLiveStartPulse(measured);
                     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    onDone(chosen);
+                    finish(chosen);
                   }}
                   style={s.ctaWrap}
                   accessibilityRole="button"
@@ -471,7 +480,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           onClose={() => setSheet(null)}
           onDone={() => {
             setSheet(null);
-            onDone(chosen);
+            finish(chosen);
           }}
         />
       )}
