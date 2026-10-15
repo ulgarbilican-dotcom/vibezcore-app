@@ -48,7 +48,16 @@ import {
   stopModePreviewHaptic,
 } from '@/services/bracelet-haptics';
 import { isBraceletSessionMonitorActive } from '@/services/bracelet-session-monitor';
-import { AVERAGE_RESTING_BPM, chooseAverageRestingPulse } from '@/services/resting-pulse';
+import {
+  AVERAGE_RESTING_BPM,
+  addRestingPulseReading,
+  chooseAverageRestingPulse,
+  getRestingPulse,
+  recordSessionPulse,
+  setLiveStartPulse,
+} from '@/services/resting-pulse';
+import PulseMeter from '@/components/PulseMeter';
+import * as Haptics from 'expo-haptics';
 import { hapticTap, hapticTick } from '@/utils/haptics';
 import { Check, ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -63,7 +72,17 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
+import { AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
@@ -101,14 +120,45 @@ type Props = {
   finalLabel?: string;
 };
 
-type HrChoice = 'measure' | 'manual' | 'average';
-type StepIdx = 0 | 1 | 2;
+function getRestingDecided(): boolean {
+  return getRestingPulse().decided;
+}
+
+type HrChoice = 'keep' | 'measure' | 'manual' | 'average';
+
+/* Inkomend per blok, zelfde rustige reveal als de Breathwork-onboarding
+   (operator: "alles is nu weer statisch"). */
+const enter = (i: number) => FadeInDown.duration(420).delay(80 + i * 90);
+type StepIdx = 0 | 1 | 2 | 3;
 
 export default function StateControlOnboarding({ onDone, onBack, includeRestingHr = false, finalLabel = 'Done' }: Props) {
   const [step, setStep] = useState<StepIdx>(0);
-  const totalSteps = includeRestingHr ? 3 : 2;
-  const lastStep = totalSteps - 1;
-  const [hrChoice, setHrChoice] = useState<HrChoice>('measure');
+  /* Met hartslag: 4 stappen — 3 kiezen, 4 meten (operator: "stap 3 en 4").
+     Kies je niet "meten", dan eindigt de onboarding na stap 3. */
+  const totalSteps = includeRestingHr ? 4 : 2;
+  const lastStep = includeRestingHr ? 2 : 1;
+  /* Stap 4: resultaat van de meting. */
+  const [measured, setMeasured] = useState<number | null>(null);
+  const [elevated, setElevated] = useState(false);
+  const [meterKey, setMeterKey] = useState(0);
+  const pulseNow = useRestingPulse();
+  /* Al een eigen waarde? Dan staat "Keep my current" klaar (intro opnieuw
+     via Settings mag een meting nooit per ongeluk overschrijven). */
+  const hasOwnPulse = pulseNow.decided && pulseNow.source !== 'average';
+  const [hrChoice, setHrChoice] = useState<HrChoice>(hasOwnPulse ? 'keep' : 'measure');
+  /* Hartslaggeluid op stap 3, enkel zolang ze echt in beeld is. */
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => setAppActive(st === 'active'));
+    return () => sub.remove();
+  }, []);
   const [sheet, setSheet] = useState<null | 'measure' | 'manual'>(null);
   /* Pagina 1: welke toestand de grafiek toont. Pagina 2: de keuze. */
   const [chartMode, setChartMode] = useState<BraceletMode>(BraceletMode.Alpha);
@@ -159,11 +209,18 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
       return;
     }
     if (includeRestingHr) {
-      if (hrChoice === 'average') {
+      if (hrChoice === 'keep') {
+        onDone(chosen);
+      } else if (hrChoice === 'average') {
         chooseAverageRestingPulse();
         onDone(chosen);
+      } else if (hrChoice === 'measure') {
+        setMeasured(null);
+        setElevated(false);
+        setMeterKey((k) => k + 1);
+        setStep(3);
       } else {
-        setSheet(hrChoice);
+        setSheet('manual');
       }
       return;
     }
@@ -196,7 +253,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     step < lastStep
       ? 'Next'
       : includeRestingHr
-        ? hrChoice === 'measure'
+        ? hrChoice === 'keep'
+          ? 'Continue'
+          : hrChoice === 'measure'
           ? 'Measure Now'
           : hrChoice === 'manual'
             ? 'Enter Heart Rate'
@@ -231,46 +290,43 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         <View style={s.slideArea}>
           {step === 0 ? (
             <Animated.View key="s0" entering={FadeIn.duration(240)} style={s.slide}>
-              <View style={s.pad}>
+              <Animated.View entering={enter(0)} style={s.pad}>
                 <Text style={s.header}>How it works</Text>
                 <Text style={s.lead}>A rhythm that starts at your heart</Text>
-              </View>
+              </Animated.View>
+              <Animated.View entering={enter(1)}>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={s.chips}
                 style={s.chipsScroll}
               >
-                {ALL_MODES.map((m) => {
-                  const meta = getModeMeta(m);
-                  const on = chartMode === m;
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => {
-                        hapticTap();
-                        setChartMode(m);
-                      }}
-                      style={[
-                        s.chip,
-                        { borderColor: rgba(meta.color, on ? 0.9 : 0.3), backgroundColor: rgba(meta.color, on ? 0.18 : 0.06) },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: on }}
-                    >
-                      <Text style={[s.chipTxt, on && { color: '#ffffff' }]}>{meta.name}</Text>
-                    </Pressable>
-                  );
-                })}
+                {ALL_MODES.map((m) => (
+                  <GlassChip
+                    key={m}
+                    label={getModeMeta(m).name}
+                    on={chartMode === m}
+                    onPress={() => {
+                      hapticTap();
+                      setChartMode(m);
+                    }}
+                  />
+                ))}
               </ScrollView>
+              </Animated.View>
               <View style={[s.pad, { flex: 1 }]}>
-                <RhythmChart mode={chartMode} />
-                <View style={s.steps}>
+                <Animated.View entering={enter(2)}>
+                  <RhythmChart mode={chartMode} />
+                </Animated.View>
+                {/* Ademruimte (operator: "niet alles opproppen"): de drie
+                    stappen zakken naar het midden van de vrije ruimte. */}
+                <View style={{ flex: 1, minHeight: 16 }} />
+                <Animated.View entering={enter(3)} style={s.steps}>
                   <Step n="1" title="Match" text="Starts at your own heart rate" />
                   <Step n="2" title="Glide" text="Moves to the tempo of your state" />
                   <Step n="3" title="Hold" text="Stays there until the end" />
-                </View>
-                <View style={{ flex: 1 }} />
+                </Animated.View>
+                <View style={{ flex: 1, minHeight: 16 }} />
               </View>
               <Text style={[s.footnote, s.pad]}>
                 In a Cornell study, a slow heartbeat rhythm from a smartwatch helped people stay calmer under pressure.
@@ -278,26 +334,64 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             </Animated.View>
           ) : step === 1 ? (
             <Animated.View key="s1" entering={FadeIn.duration(240)} style={s.slide}>
-              <View style={s.pad}>
+              <Animated.View entering={enter(0)} style={s.pad}>
                 <Text style={s.header}>Choose your state</Text>
                 <Text style={s.lead}>Swipe, then tap to feel it</Text>
-              </View>
-              <StateCarousel chosen={chosen} playing={playing} onChoose={choose} onPlay={play} />
-              <View style={[s.pad, s.info]}>
+              </Animated.View>
+              <Animated.View entering={enter(1)}>
+                <StateCarousel chosen={chosen} playing={playing} onChoose={choose} onPlay={play} />
+              </Animated.View>
+              {/* Tekst en kaarten zakken (operator): lucht tussen scroll en info. */}
+              <View style={{ flex: 1, minHeight: 20 }} />
+              <Animated.View entering={enter(2)} style={s.pad}>
                 <InfoBlock mode={chosen} />
                 {busy && <Text style={s.note}>The preview plays when no session is running.</Text>}
+              </Animated.View>
+              <View style={{ flex: 0.6 }} />
+            </Animated.View>
+          ) : step === 3 ? (
+            <Animated.View key="s3" entering={FadeIn.duration(240)} style={[s.slide, s.pad]}>
+              <Animated.View entering={enter(0)}>
+                <Text style={s.header}>Measure</Text>
+                <Text style={s.lead}>Stay still for 30 seconds</Text>
+              </Animated.View>
+              <View style={s.meterWrap}>
+                <PulseMeter
+                  key={meterKey}
+                  purpose="baseline"
+                  onResult={(bpm) => {
+                    setMeasured(bpm);
+                    setElevated(false);
+                  }}
+                  onElevated={(bpm) => {
+                    setMeasured(bpm);
+                    setElevated(true);
+                  }}
+                  onManual={() => setSheet('manual')}
+                />
               </View>
+              <Text style={s.footnote}>For wellness only, not a medical measurement.</Text>
             </Animated.View>
           ) : (
             <Animated.View key="s2" entering={FadeIn.duration(240)} style={[s.slide, s.pad]}>
-              <Text style={s.header}>Your heart rate</Text>
-              <Text style={s.lead}>Your starting point</Text>
-              {/* Zelfde kloppende hart + hartlijn als "Your Resting Heart
-                  Rate" (operator: "zelfde animatie als de hartslag"). */}
-              <View style={s.heroWrap}>
-                <HeartbeatHero stage={150} />
-              </View>
-              <View style={s.optionsTight}>
+              <Animated.View entering={enter(0)}>
+                <Text style={s.header}>Your heart rate</Text>
+                <Text style={s.lead}>Your starting point</Text>
+              </Animated.View>
+              {/* Zelfde kloppende hart + hartlijn + hartslaggeluid als "Your
+                  Resting Heart Rate" (operator). */}
+              <Animated.View entering={enter(1)} style={[s.heroWrap, hasOwnPulse && { height: 140 }]}>
+                <HeartbeatHero stage={hasOwnPulse ? 124 : 150} sound={focused && appActive && sheet === null} />
+              </Animated.View>
+              <Animated.View entering={enter(2)} style={s.optionsTight}>
+                {hasOwnPulse && (
+                  <HrOption
+                    title="Keep my current"
+                    sub={`${pulseNow.bpm} bpm`}
+                    on={hrChoice === 'keep'}
+                    onPress={() => setHrChoice('keep')}
+                  />
+                )}
                 <HrOption
                   title="Measure now"
                   sub="30 seconds with your phone's camera"
@@ -316,13 +410,50 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   on={hrChoice === 'average'}
                   onPress={() => setHrChoice('average')}
                 />
-              </View>
-              <View style={{ flex: 1 }} />
-              <Text style={s.footnote}>For wellness only, not a medical measurement.</Text>
+              </Animated.View>
             </Animated.View>
           )}
         </View>
 
+        {step === 3 ? (
+          <View style={s.footer}>
+            {measured !== null ? (
+              <Animated.View entering={FadeInDown.duration(320)}>
+                <Pressable
+                  onPress={() => {
+                    /* Zelfde regels als het meetblad (RhythmSheet): een
+                       rustwaarde wordt je rusthartslag; boven het rustbereik
+                       start enkel deze sessie op dit ritme. */
+                    if (elevated || !addRestingPulseReading(measured)) {
+                      recordSessionPulse(measured);
+                      if (!getRestingDecided()) chooseAverageRestingPulse();
+                    }
+                    setLiveStartPulse(measured);
+                    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    onDone(chosen);
+                  }}
+                  style={s.ctaWrap}
+                  accessibilityRole="button"
+                >
+                  <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
+                    <Text style={s.ctaTxtDark}>{elevated ? 'Continue' : 'Save and Continue'}</Text>
+                  </View>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setMeasured(null);
+                    setElevated(false);
+                    setMeterKey((k) => k + 1);
+                  }}
+                  style={s.secondaryBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.secondaryTxt}>Measure Again</Text>
+                </Pressable>
+              </Animated.View>
+            ) : null}
+          </View>
+        ) : (
         <View style={s.footer}>
           <Animated.View style={ctaStyle}>
             <Pressable
@@ -343,12 +474,13 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             </Pressable>
           </Animated.View>
         </View>
+        )}
       </SafeAreaView>
       {includeRestingHr && (
         <RhythmSheet
           visible={sheet !== null}
           mode={chosen}
-          startAt={sheet ?? 'measure'}
+          startAt={sheet ?? 'manual'}
           nextLabel="Let's Go"
           onClose={() => setSheet(null)}
           onDone={() => {
@@ -434,7 +566,7 @@ function StateCarousel({
       <View style={s.dots}>
         {ALL_MODES.map((m) => {
           const on = chosen === m;
-          return <View key={m} style={[s.dot, on && { width: 18, backgroundColor: getModeMeta(m).color }]} />;
+          return <View key={m} style={[s.dot, on && s.dotOn]} />;
         })}
       </View>
     </View>
@@ -507,19 +639,53 @@ function InfoBlock({ mode }: { mode: BraceletMode }) {
     <Animated.View key={mode} entering={FadeIn.duration(180)}>
       <Text style={s.infoTitle}>{feelLine(mode)}</Text>
       <View style={s.facts}>
-        <Fact label="Ends near" value={`${r.targetBpm} bpm`} color={meta.color} />
-        <Fact label="Recommended" value={`${meta.defaultMinutes} min`} color={meta.color} />
+        <Fact label="Ends near" value={`${r.targetBpm} bpm`} />
+        <Fact label="Recommended" value={`${meta.defaultMinutes} min`} />
       </View>
     </Animated.View>
   );
 }
 
-function Fact({ label, value, color }: { label: string; value: string; color: string }) {
+function Fact({ label, value }: { label: string; value: string }) {
   return (
     <View style={s.fact}>
       <Text style={s.factLabel}>{label}</Text>
-      <Text style={[s.factValue, { color }]}>{value}</Text>
+      <Text style={s.factValue}>{value}</Text>
     </View>
+  );
+}
+
+/* Apple-glas-pil: neutraal glas; aangetikt = fijne lichte rand + korte pop
+   (operator: "pills apple stijl glass, bij aantikken heel licht omlijning
+   en poppen"). */
+function GlassChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const k = useSharedValue(on ? 1 : 0);
+  useEffect(() => {
+    k.value = withTiming(on ? 1 : 0, { duration: 220 });
+    if (on) scale.value = withSequence(withTiming(1.06, { duration: 110 }), withSpring(1, { duration: 320, dampingRatio: 0.6 }));
+  }, [on, k, scale]);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    borderColor: `rgba(255,255,255,${0.1 + k.value * 0.45})`,
+    backgroundColor: `rgba(255,255,255,${0.06 + k.value * 0.06})`,
+  }));
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withTiming(0.95, { duration: 80 });
+      }}
+      onPressOut={() => {
+        if (!on) scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+    >
+      <Animated.View style={[s.chip, style]}>
+        <Text style={[s.chipTxt, on && { color: '#ffffff' }]}>{label}</Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -549,6 +715,9 @@ function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on:
 
 function RhythmChart({ mode }: { mode: BraceletMode }) {
   const pulse = useRestingPulse();
+  /* Nog geen eigen waarde: eerlijk "Average" i.p.v. "Your heart rate"
+     (operator: "die is niet 70 standaard he") — stap 3 zet de eigen. */
+  const own = pulse.decided && pulse.source !== 'average';
   const { width } = useWindowDimensions();
   const r = rhythmFor(mode, pulse.bpm);
   const meta = getModeMeta(mode);
@@ -576,7 +745,7 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
         <Circle cx={x0} cy={yA} r={5} fill="#ffffff" />
         <Circle cx={xe} cy={yB} r={5} fill={meta.color} />
         <SvgText x={x0} y={rising ? yA + 24 : yA - 14} fill="#ffffff" fontSize={13} fontFamily={BrandFonts.semibold}>
-          {`Your heart rate · ${r.startBpm} bpm`}
+          {own ? `Your heart rate · ${r.startBpm} bpm` : `Average · ${r.startBpm} bpm`}
         </SvgText>
         <SvgText x={xe} y={rising ? yB - 14 : yB + 24} fill={meta.color} fontSize={13} fontFamily={BrandFonts.semibold} textAnchor="end">
           {`${meta.name} · ${r.targetBpm} bpm`}
@@ -641,7 +810,7 @@ const s = StyleSheet.create({
   chip: { borderRadius: 999, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 14 },
   chipTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.7)' },
   chart: { marginTop: 18, marginBottom: 14 },
-  steps: { gap: 12 },
+  steps: { gap: 20 },
   step: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepNum: {
     width: 26,
@@ -660,6 +829,7 @@ const s = StyleSheet.create({
   stateUse: { fontFamily: BrandFonts.regular, fontSize: 14.5, color: 'rgba(255,255,255,0.62)' },
   dots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 16 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)' },
+  dotOn: { width: 18, backgroundColor: '#ffffff' },
   info: { marginTop: 22 },
   /* Tekst over twee regels in blok (operator, 15 okt 2026). */
   infoTitle: { fontFamily: BrandFonts.regular, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.8)', textAlign: 'justify' },
@@ -674,7 +844,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
   },
   factLabel: { fontFamily: BrandFonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.5)' },
-  factValue: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17 },
+  factValue: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17, color: '#ffffff' },
   note: { marginTop: 10, fontFamily: BrandFonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.5)' },
   footnote: {
     marginBottom: 6,
@@ -686,6 +856,9 @@ const s = StyleSheet.create({
   },
   options: { marginTop: 22, gap: 10 },
   optionsTight: { marginTop: 4, gap: 10 },
+  meterWrap: { flex: 1, justifyContent: 'center' },
+  secondaryBtn: { height: 44, marginTop: 6, alignItems: 'center', justifyContent: 'center' },
+  secondaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: 'rgba(255,255,255,0.85)' },
   heroWrap: { alignItems: 'center', justifyContent: 'center', height: 170 },
   option: {
     flexDirection: 'row',
@@ -695,7 +868,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 16,
   },
   optionOn: { borderColor: 'rgba(255,255,255,0.4)' },

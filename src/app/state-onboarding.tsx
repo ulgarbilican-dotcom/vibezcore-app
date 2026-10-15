@@ -20,7 +20,10 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 export default function StateOnboardingScreen() {
   const { first, hr } = useLocalSearchParams<{ first?: string; hr?: string }>();
   const isFirst = first === '1';
-  const hrNext = isFirst && hr === '1';
+  /* Stap 3 (hartslag) ook bij "Watch the intro again" (operator: "waar
+     zijn 2 pagina's voor heartrate?"); wie al een waarde heeft, krijgt daar
+     "Keep my current" als standaard. */
+  const hrNext = isFirst ? hr === '1' : true;
 
   const back = () => {
     if (router.canGoBack()) router.back();
