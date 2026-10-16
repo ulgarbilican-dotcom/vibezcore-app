@@ -91,4 +91,7 @@ intro-aanbiedingen uitzetten; maand- en jaarprijs op €9,99 / €69,99 zetten.
   - Let op: "Prijzen in bulk bewerken" rekent de ingetypte prijs als prijs ZONDER btw (1,29 gaf België €1,59). België moet op €1,29 incl. btw staan.
 - **RevenueCat:** dagpas geïmporteerd (Consumable) en als pakket `day_pass` (Custom) in offering `default` gezet (Play Store) — 16 okt. NIET aan het Pro-entitlement koppelen. Een eenmalige aankoop geeft daar anders voor altijd toegang; de app rekent de 24 u vanaf de aankoopdatum.
 - **App Store Connect (16 okt):** groep-weergavenaam = VIBEZCORE Premium; maand €9,99 zonder intro, uit de conceptindiening gehaald om naam/beschrijving te wijzigen ("VIBEZCORE Premium Monthly", "Full access: Breathwork, State Control & Audio Library"); jaar idem nog te doen; dagpas nog aan te maken. Nog te doen: (dagpas als non-consumable/consumable, intro-aanbiedingen uit, prijzen).
+- **16 okt: iOS-jaarabonnement `vibezcore_audio_yearly` per ongeluk verwijderd in App Store Connect.** Een verwijderde ID kan Apple nooit opnieuw gebruiken. Daarom komt er een nieuw abonnement `vibezcore_premium_yearly` (1 jaar, €69,99).
+  - **Code:** op iOS is de jaar-ID `vibezcore_premium_yearly`; Android blijft `vibezcore_audio_yearly` (iap-contract.ts `PRODUCT_IDS` per platform).
+  - **RevenueCat:** het nieuwe iOS-product toevoegen, koppelen aan het entitlement VIBEZCORE Pro en in offering default bij Yearly (App Store) zetten.
 
