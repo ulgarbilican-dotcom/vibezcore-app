@@ -3215,6 +3215,8 @@ const s = StyleSheet.create({
     color: 'rgba(244,244,244,0.78)',
   },
   skipSheetBtn: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     marginTop: 8,
     paddingVertical: 14,
     borderRadius: 14,
@@ -3593,6 +3595,8 @@ const s = StyleSheet.create({
     fontSize: 12,
   },
   braceletModalClose: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     marginTop: 18,
     alignSelf: 'stretch',
     paddingVertical: 14,

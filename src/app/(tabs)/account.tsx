@@ -2615,6 +2615,8 @@ const s = StyleSheet.create({
      augustus 2026: "cta knop is te dik pijl moet achter sign in niet
      eronder"). */
   primaryBtn: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52,
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: 12,

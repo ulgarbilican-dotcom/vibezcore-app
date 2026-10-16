@@ -324,6 +324,8 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
   },
   primary: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 14,

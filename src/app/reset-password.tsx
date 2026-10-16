@@ -615,6 +615,8 @@ const s = StyleSheet.create({
   },
   /* Iter v180 (2026-07-02): CTA breder + tekst-ademruimte (systemisch). */
   btnPrimary: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,

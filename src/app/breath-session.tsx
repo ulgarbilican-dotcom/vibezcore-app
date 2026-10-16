@@ -5300,6 +5300,8 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
      trial-einde, Audio&Haptics/narrator Done, veiligheidsnote,
      premium-upsell, sessie-einde). */
   modalBtn: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     marginTop: 8,
     paddingVertical: 14,
     borderRadius: 14,

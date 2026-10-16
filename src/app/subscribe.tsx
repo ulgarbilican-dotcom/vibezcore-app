@@ -2038,6 +2038,8 @@ const s = StyleSheet.create({
   /* Operator, 26 september 2026 (Huisstijl v4.4): donkere ondergrond →
      witte knop, donkere tekst. Brand.accent (#3a8fff) is nooit een CTA. */
   btnPrimary: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
@@ -2217,6 +2219,8 @@ const s = StyleSheet.create({
      Operator, 26 september 2026 (Huisstijl v4.4): witte knop/donkere tekst
      i.p.v. Signal Blue — zelfde regel als elke andere CTA op dit scherm. */
   doneCta: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52,
     backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,

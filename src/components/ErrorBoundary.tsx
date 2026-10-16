@@ -210,6 +210,8 @@ const s = StyleSheet.create({
   /* Huisstijl v4.4: CTA op donkere ondergrond = witte knop, donkere tekst.
      Brand.accent (Signal Blue) is nooit een knop-achtergrond of link-kleur. */
   btn: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 14,

@@ -629,6 +629,8 @@ const s = StyleSheet.create({
      subscribe.tsx). */
   /* Huisstijl v4.4: primaire CTA op donkere achtergrond = wit bg + donkere tekst. */
   btnPrimary: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 14,
     paddingVertical: 18,
@@ -736,6 +738,8 @@ const s = StyleSheet.create({
   },
   /* Huisstijl v4.4: primaire CTA op donkere achtergrond = wit bg + donkere tekst. */
   doneBtn: {
+    /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
+    minHeight: 52, justifyContent: 'center',
     backgroundColor: '#ffffff',
     paddingVertical: 14,
     paddingHorizontal: 32,
