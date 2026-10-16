@@ -34,6 +34,7 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { HeartbeatHero } from '@/components/RestingHeartRatePage';
@@ -286,6 +287,8 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+      if (isGlassSheetOpen()) return false;
       if (sheet) return false;
       if (step === 0 && !onBack) return false;
       goBack();

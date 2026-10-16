@@ -29,7 +29,7 @@ import WatchHapticsRow from '@/components/WatchHapticsRow';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
-import { GlassSheet } from '@/components/GlassSheetHost';
+import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { BraceletActivationCta } from '@/components/BraceletActivationCta';
 import PodPulse from '@/components/PodPulse';
@@ -3179,6 +3179,8 @@ function ActiveSessionScreen({
          hetzelfde als de chevron — sessie minimaliseren naar het State
          Control-intro, de sessie loopt door. */
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+        if (isGlassSheetOpen()) return false;
         if (!onMinimize) return false;
         onMinimize();
         return true;
@@ -5635,6 +5637,8 @@ function BraceletControlScreen({
          - moduskeuze in de tab → terug naar het State Control-intro, net
            als de "<"-pijl. Nooit meer router.back() naar een ander scherm. */
       const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+        /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+        if (isGlassSheetOpen()) return false;
         if (isActiveSessionVisible()) return false;
         if (onMinimize) {
           onMinimize();

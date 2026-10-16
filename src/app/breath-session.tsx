@@ -43,7 +43,7 @@ import WatchHapticsRow from '@/components/WatchHapticsRow';
 import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
-import { GlassSheet } from '@/components/GlassSheetHost';
+import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
 import BreathPacer from '@/components/BreathPacer';
@@ -2603,6 +2603,8 @@ export function BreathSession() {
        sessie). */
     if (minimized) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+      if (isGlassSheetOpen()) return false;
       handleTopbarBack();
       return true;
     });

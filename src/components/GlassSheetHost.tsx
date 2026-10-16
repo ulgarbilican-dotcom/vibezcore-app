@@ -23,10 +23,23 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 
 type Entry = { id: number; node: ReactNode; onClose: () => void; fullHeight?: boolean };
+/* Een stapel i.p.v. één plek (audit 16 okt 2026): staan er twee bladen
+   tegelijk open (bv. een ademsessie die op de achtergrond eindigt terwijl
+   je elders een blad open hebt), dan won vroeger wie het laatst hertekende
+   en raakte de ander zoek. Nu: het laatst geopende ligt bovenaan; sluit het,
+   dan komt het vorige terug. Hertekenen werkt de inhoud bij zonder de
+   volgorde te veranderen. */
+let stack: Entry[] = [];
 let current: Entry | null = null;
 const listeners = new Set<(e: Entry | null) => void>();
 function emit() {
+  current = stack.length ? stack[stack.length - 1] : null;
   listeners.forEach((l) => l(current));
+}
+
+/** Staat er nu een blad open? (Voor terugknop-afhandeling elders.) */
+export function isGlassSheetOpen(): boolean {
+  return stack.length > 0;
 }
 
 /** Toon `children` als sheet zolang `visible` waar is. */
@@ -44,18 +57,25 @@ export function GlassSheet({
 }) {
   const [id] = useState(() => Math.random());
   useEffect(() => {
+    const i = stack.findIndex((e) => e.id === id);
     if (visible) {
-      current = { id, node: children, onClose, fullHeight };
-      emit();
-    } else if (current?.id === id) {
-      current = null;
+      const entry = { id, node: children, onClose, fullHeight };
+      if (i >= 0) {
+        stack[i] = entry;
+        if (i === stack.length - 1) emit();
+      } else {
+        stack = [...stack, entry];
+        emit();
+      }
+    } else if (i >= 0) {
+      stack = stack.filter((e) => e.id !== id);
       emit();
     }
   });
   useEffect(
     () => () => {
-      if (current?.id === id) {
-        current = null;
+      if (stack.some((e) => e.id === id)) {
+        stack = stack.filter((e) => e.id !== id);
         emit();
       }
     },

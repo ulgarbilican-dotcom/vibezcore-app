@@ -30,7 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { GlassSheet } from '@/components/GlassSheetHost';
+import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import VibezGlass from '@/components/VibezGlass';
 import { BrandFonts, CTA } from '@/constants/theme';
@@ -2242,6 +2242,8 @@ export default function BreathSetupScreen() {
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+        if (isGlassSheetOpen()) return false;
         goBack();
         return true;
       });

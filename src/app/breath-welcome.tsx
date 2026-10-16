@@ -130,7 +130,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassSheet } from '@/components/GlassSheetHost';
+import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
 import { rootBlurRef } from '@/utils/root-blur';
 import Svg, { Path } from 'react-native-svg';
@@ -964,6 +964,8 @@ export default function BreathWelcomeScreen() {
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+        if (isGlassSheetOpen()) return false;
         if (skipAsk) {
           setSkipAsk(false);
         } else if (slide > 0) {

@@ -16,6 +16,7 @@
    Teksten: voorstel, operator beslist (welzijnstaal, geen meet-claim).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import PressScale from '@/components/PressScale';
 import RhythmSheet from '@/components/RhythmSheet';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
@@ -83,6 +84,8 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
   useEffect(() => {
     if (!onBack) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      /* Een open onderblad sluit eerst (GlassSheetHost doet dat zelf). */
+      if (isGlassSheetOpen()) return false;
       onBack();
       return true;
     });
