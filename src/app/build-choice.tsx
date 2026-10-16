@@ -58,6 +58,7 @@ import ProtocolTeaserModal from '@/components/ProtocolTeaserModal';
 import { skipBreathIntroOnce } from '@/utils/breath-entry';
 import { ChevronLeft, Sparkle } from 'lucide-react-native';
 import { router, Stack } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -350,7 +351,7 @@ export default function BuildChoiceScreen() {
         onMaybeLater={() => {
           setTeaserOpen(false);
           skipBreathIntroOnce();
-          router.replace('/breath' as never);
+          goToTab('/breath');
         }}
       />
       <PremiumPaywallModal visible={paywallOpen} onClose={() => setPaywallOpen(false)} />

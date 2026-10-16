@@ -49,7 +49,8 @@ import { SLOTS } from '@/services/reminders';
 import { useSetting, type ExperienceLevel } from '@/utils/settings';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
-import { router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { openBreathSession } from '@/services/breath-session-host';
 import { Check, ChevronLeft, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
@@ -163,7 +164,7 @@ export default function BreathQuizScreen() {
        augustus 2026: de knop opende een vaste standaard die niet eens in het
        plan stond). Plan en knop komen nu uit dezelfde formule. */
     if (isPro) {
-      router.replace('/breath' as never);
+      goToTab('/breath');
     } else {
       const first = pickForSlot(
         slotForHour(new Date().getHours()),

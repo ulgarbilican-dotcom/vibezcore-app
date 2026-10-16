@@ -29,7 +29,8 @@ import { refreshSubscription } from '@/hooks/useSubscription';
 import { getLastContentTabRoute } from '@/utils/last-tab';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -251,7 +252,7 @@ export default function AuthCallback() {
             <Text style={s.sub}>{state.message}</Text>
             <AnimatedPressable
               style={[s.btn, signInBtnPressStyle]}
-              onPress={() => router.replace('/account')}
+              onPress={() => goToTab('/account')}
               onPressIn={onSignInBtnPressIn}
               onPressOut={onSignInBtnPressOut}
               accessibilityLabel="Go to sign in"

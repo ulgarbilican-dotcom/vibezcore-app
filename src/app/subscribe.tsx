@@ -64,6 +64,7 @@ import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
 import { validateEmail, emailHintText } from '@/utils/validate-email';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -498,7 +499,7 @@ export default function SubscribeScreen() {
         } else if (router.canGoBack()) {
           router.back();
         } else {
-          router.replace('/');
+          goToTab('/');
         }
         return;
       }
@@ -830,7 +831,7 @@ export default function SubscribeScreen() {
           if (res.ok) {
             const status = await res.json().catch(() => ({}));
             if (status?.active === true) {
-              router.replace('/');
+              goToTab('/');
               return;
             }
           }
@@ -846,7 +847,7 @@ export default function SubscribeScreen() {
        linkRevenueCatUser() aan, wat de RC-purchase-historie van de
        anonymous customer merget naar deze net-aangemaakte user. */
     if (linkingAccount) {
-      router.replace('/');
+      goToTab('/');
       return;
     }
 
@@ -921,7 +922,7 @@ export default function SubscribeScreen() {
         if (res.ok) {
           const status = await res.json().catch(() => ({}));
           if (status?.active === true) {
-            router.replace('/');
+            goToTab('/');
             return;
           }
         }
@@ -933,7 +934,7 @@ export default function SubscribeScreen() {
     /* Iter (2026-07-30, Apple 5.1.1v fix): zie onSubmit — optionele
        post-purchase account-link slaat de IAP-call over. */
     if (linkingAccount) {
-      router.replace('/');
+      goToTab('/');
       return;
     }
 
@@ -972,7 +973,7 @@ export default function SubscribeScreen() {
         if (res.ok) {
           const status = await res.json().catch(() => ({}));
           if (status?.active === true) {
-            router.replace('/');
+            goToTab('/');
             return;
           }
         }
@@ -982,7 +983,7 @@ export default function SubscribeScreen() {
     }
 
     if (linkingAccount) {
-      router.replace('/');
+      goToTab('/');
       return;
     }
 
@@ -1072,7 +1073,7 @@ export default function SubscribeScreen() {
         void showVibezAlert({
           title: 'Subscription restored',
           message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
-          buttons: [{ text: 'OK', onPress: () => router.replace('/') }],
+          buttons: [{ text: 'OK', onPress: () => goToTab('/') }],
         });
       } else if (result.accountMismatch) {
         /* Iter v168 (2026-06-28): account-mismatch — VIBEZCORE-side weet
@@ -1247,7 +1248,7 @@ export default function SubscribeScreen() {
 
           <AnimatedPressable
             style={[s.doneCta, doneCtaPress.pressStyle]}
-            onPress={() => router.replace(doneDestination as never)}
+            onPress={() => (doneDestination === '/plan' ? router.replace('/plan' as never) : goToTab(doneDestination))}
             onPressIn={doneCtaPress.onPressIn}
             onPressOut={doneCtaPress.onPressOut}
             accessibilityLabel={doneCtaLabel}
@@ -1335,7 +1336,7 @@ export default function SubscribeScreen() {
                 style={[s.linkBtn, contactSupportPress.pressStyle]}
                 onPress={() => {
                   requestScrollTo('account-top');
-                  router.replace('/account' as never);
+                  goToTab('/account');
                 }}
               >
                 <Text style={s.linkText}>Sign in</Text>
@@ -1651,7 +1652,7 @@ export default function SubscribeScreen() {
         {linkingAccount && (
           <AnimatedPressable
             style={[s.linkBtn, skipPress.pressStyle]}
-            onPress={() => router.replace('/')}
+            onPress={() => goToTab('/')}
             onPressIn={skipPress.onPressIn}
             onPressOut={skipPress.onPressOut}
             accessibilityLabel="Skip creating an account for now"

@@ -31,7 +31,8 @@ import { refreshSubscription } from '@/hooks/useSubscription';
 import { clearSession, getToken, persistSession, relinkAfterSessionChange, fetchWithTimeout } from '@/services/auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -351,7 +352,7 @@ export default function ResetPassword() {
 
       /* Korte vertraging zodat user de done-state ziet, dan naar
          Audio Library. setTimeout-ref → cleanup bij unmount. */
-      doneTimerRef.current = setTimeout(() => router.replace('/'), 1200);
+      doneTimerRef.current = setTimeout(() => goToTab('/'), 1200);
     } catch {
       setErr('Network error — please try again.');
       setPhase('ready');

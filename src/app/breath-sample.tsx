@@ -37,7 +37,8 @@ import {
   stopVoice,
 } from '@/services/breath-voice';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -266,7 +267,7 @@ export default function BreathSampleScreen() {
   const stopEarly = () => {
     clearAll();
     if (router.canGoBack()) router.back();
-    else router.replace('/');
+    else goToTab('/');
   };
 
   /* Autostart op mount. Claim de voice-source zodat een parallelle
@@ -288,7 +289,7 @@ export default function BreathSampleScreen() {
   const goSubscribe = () => router.replace('/subscribe?returnTo=breathwork' as never);
   const goBreathTab = () => {
     if (router.canGoBack()) router.back();
-    else router.replace('/');
+    else goToTab('/');
   };
 
   const stopPressScale = useSharedValue(1);

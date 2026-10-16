@@ -23,6 +23,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
    actief" — nooit voor CTA's. CTA-regel v4.4 op donker: witte knop-bg +
    donkere tekst. */
 import { router, Stack } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -212,7 +213,7 @@ export default function ForgotPassword() {
           </Text>
           <AnimatedPressable
             style={[s.btnSecondary, backToSignInPressStyle]}
-            onPress={() => router.replace('/account')}
+            onPress={() => goToTab('/account')}
             onPressIn={onBackToSignInPressIn}
             onPressOut={onBackToSignInPressOut}
             accessibilityLabel="Back to sign in"

@@ -36,7 +36,8 @@ import {
   LegalSlug,
   SUPPORT_URL,
 } from '@/data/legal-content';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import * as WebBrowser from 'expo-web-browser';
 import { Fragment } from 'react';
 import {
@@ -287,7 +288,7 @@ export default function LegalDoc() {
           </Text>
           <AnimatedPressable
             style={[s.btn, backToAccountPressStyle]}
-            onPress={() => router.replace('/account')}
+            onPress={() => goToTab('/account')}
             onPressIn={onBackToAccountPressIn}
             onPressOut={onBackToAccountPressOut}
           >

@@ -36,6 +36,7 @@ import {
   setDevUserOverride,
 } from '@/utils/dev-user-override';
 import { Stack, router } from 'expo-router';
+import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -486,7 +487,7 @@ export default function ActivateBraceletScreen() {
 
         {!isSignedIn && (
           <AnimatedPressable
-            onPress={() => router.replace('/account' as never)}
+            onPress={() => goToTab('/account')}
             onPressIn={signInLinkScale.onPressIn}
             onPressOut={signInLinkScale.onPressOut}
             style={[s.signInLink, signInLinkScale.pressStyle]}
