@@ -774,7 +774,14 @@ export default function RootLayout() {
         {/* De hele app in één BlurTargetView (7 okt 2026): het glas van de
             sheets in GlassSheetHost (onderaan, BUITEN deze target) vervaagt
             dit — zo is het ook op Android echt glas. */}
-        <BlurTargetView ref={rootBlurRef} style={{ flex: 1 }}>
+        {/* collapsable={false} (16 okt 2026, iOS-test build 20: Audio &
+            Haptics/End session/Minimize in de ademsessie "kapot"): op iOS is
+            BlurTargetView een gewone View die Fabric wegvlakt. Dan werd de
+            sessielaag (zIndex 60) een broer van GlassSheetHost en lag ze
+            ERBOVEN — elk blad (Audio & Haptics, einde, paywall) opende
+            onzichtbaar achter de zwarte laag. Android heeft een echte
+            native view en had het probleem niet. */}
+        <BlurTargetView ref={rootBlurRef} style={{ flex: 1 }} collapsable={false}>
         <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Brand.bg },

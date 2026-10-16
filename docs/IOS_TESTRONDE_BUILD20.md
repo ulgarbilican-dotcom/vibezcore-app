@@ -20,10 +20,10 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 7 | Breathwork | Geen Breathwork-onboarding meer na de test van de State Control-onboarding | ⏳ |
 | 8 | Settings e.a. | Schuifknoppen (Switch) uitgerekt | ⏳ |
 | 9 | Contact support | Opent de website buiten de app — je bent weg uit de app | ✅ in-app browser (T208), iOS nog te zien in nieuwe build |
-| 10 | Breathwork actieve sessie | Knop Audio & Haptics reageert niet | ⏳ |
-| 11 | Breathwork actieve sessie | End session werkt niet | ⏳ |
-| 12 | Breathwork actieve sessie | Minimize-knop opent Audio & Haptics | ⏳ |
-| 13 | Breathwork actieve sessie | De boog met de secondenteller moet ~1 cm lager staan dan de ademanimatie | ⏳ |
+| 10 | Breathwork actieve sessie | Knop Audio & Haptics reageert niet | 🔍 oorzaak: sessielaag boven de bladen op iOS — fix T209, te testen in nieuwe build |
+| 11 | Breathwork actieve sessie | End session werkt niet | 🔍 oorzaak: sessielaag boven de bladen op iOS — fix T209, te testen in nieuwe build |
+| 12 | Breathwork actieve sessie | Minimize-knop opent Audio & Haptics | 🔍 oorzaak: sessielaag boven de bladen op iOS — fix T209, te testen in nieuwe build |
+| 13 | Breathwork actieve sessie | De boog met de secondenteller moet ~1 cm lager staan dan de ademanimatie | 🔧 iOS 36 dp lager (T209) |
 | 14 | Paywall | Geen prijzen in de prijskaarten — OORZAAK GEVONDEN: in RevenueCat offering `default` hebben Monthly en Yearly enkel een Play Store-product, App Store = "No product". Fix = vibezcore_audio_monthly / _yearly (App Store) koppelen in RevenueCat | 🔍 |
 | 15 | Audio (iPhone) | Geluid slecht van kwaliteit en maximaal volume heel zacht | ⏳ |
 | 16 | Hele app | CTA's lijken dunner (lager/lichter) dan op Android — hoort bij punt 1 | ⏳ |

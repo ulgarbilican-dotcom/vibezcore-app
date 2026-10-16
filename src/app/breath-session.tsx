@@ -4976,7 +4976,10 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ translateY: -36 }],
+    /* iOS-test build 20 (16 okt 2026): op de iPhone stond de boog met de
+       seconden te dicht tegen de ademanimatie — daar ~1 cm (36 dp) lager.
+       Android blijft zoals goedgekeurd. */
+    transform: [{ translateY: Platform.OS === 'ios' ? 0 : -36 }],
   },
   /* Vóór de sessie hoeft dit blok niet zo hoog: er staat geen boog in. */
   rhythmCardIdle: { paddingVertical: 12 },
