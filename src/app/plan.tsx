@@ -20,6 +20,7 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
 import { planItemStatuses } from '@/utils/plan-status';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
@@ -459,6 +460,10 @@ export default function PlanScreen() {
     });
   }, [history, goalKeys, visible, planDay, plan?.createdAt]);
 
+  /* Vegen/Android-terug = dezelfde weg als de terugpijl (audit 16 okt 2026). */
+  useBackTo(!!fromBreathWelcome && !plan, () =>
+    router.navigate({ pathname: '/breath-welcome', params: { resumeStep: '4' } } as never),
+  );
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />

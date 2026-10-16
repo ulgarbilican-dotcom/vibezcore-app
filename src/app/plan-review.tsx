@@ -26,6 +26,7 @@
    stap). Pad A is daardoor 4 stappen i.p.v. 5 (zie `totalSteps`
    hieronder). */
 
+import { useBackTo } from '@/hooks/useBackTo';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -456,6 +457,10 @@ export default function PlanReviewScreen() {
     setSaving(false);
   };
 
+  /* Vegen/Android-terug = dezelfde weg als de terugpijl (audit 16 okt 2026). */
+  useBackTo(!!fromBreathWelcome && !plan, () =>
+    router.navigate({ pathname: '/breath-welcome', params: { resumeStep: '4' } } as never),
+  );
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />

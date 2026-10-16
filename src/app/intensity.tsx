@@ -47,6 +47,7 @@
    levend overzicht van de 4 keuzes — zelfde cirkel-taal als "Build it
    yourself", nu ook hier. */
 
+import { useBackTo } from '@/hooks/useBackTo';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -836,6 +837,10 @@ export default function IntensityScreen() {
     } as never);
   };
 
+  /* Vegen/Android-terug = dezelfde weg als de terugpijl (audit 16 okt 2026). */
+  useBackTo(!!fromBreathWelcome && !plan, () =>
+    router.navigate({ pathname: '/breath-welcome', params: { resumeStep: '4' } } as never),
+  );
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />

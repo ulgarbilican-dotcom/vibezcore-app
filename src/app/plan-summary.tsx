@@ -8,6 +8,7 @@
    dit scherm wijzigt niets, het rondt af.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
@@ -103,6 +104,11 @@ export default function PlanSummaryScreen() {
         : ('/plan-success' as never),
     );
   };
+
+  /* Vegen/Android-terug = dezelfde weg als de terugpijl (audit 16 okt 2026). */
+  useBackTo(!!fromBreathWelcome && !plan, () =>
+    router.navigate({ pathname: '/breath-welcome', params: { resumeStep: '4' } } as never),
+  );
 
   if (!plan || !today) {
     return <SafeAreaView style={s.root} edges={['top']} />;
