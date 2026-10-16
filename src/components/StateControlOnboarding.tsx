@@ -721,7 +721,13 @@ function StateCard({
           animeren, bovenaan golven") — dezelfde LiquidWave als in
           breath-setup en de duurring; de gekozen cirkel staat iets hoger. */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <LiquidWave size={d} level={active ? 0.5 : 0.38} {...breathWaveLook(meta.color)} />
+        {/* Bij het tikken vult het water van onderuit tot bovenaan, in de
+            seconde voor de eerste slag (operator, 16 okt 2026). */}
+        {playing ? (
+          <LiquidWave key="fill" size={d} level={0.94} fillOnMount {...breathWaveLook(meta.color)} />
+        ) : (
+          <LiquidWave key="rest" size={d} level={active ? 0.5 : 0.38} {...breathWaveLook(meta.color)} />
+        )}
       </View>
       <Icon size={Math.round(d * 0.24)} color={meta.color} />
       <Text style={s.stateName} numberOfLines={1}>
