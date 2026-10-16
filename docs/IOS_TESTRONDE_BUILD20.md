@@ -30,6 +30,8 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 17 | FAQ, Settings, Support | Inhoud nalopen voor State Control, Breathwork, Audio en Smart Bead Bracelet: klopt alles met de app van nu (prijzen, trial weg → dagpas, 20 s meting, namen, Launching Early 2027)? | ⏳ |
 | 18 | Legal | Terms, Privacy en andere juridische teksten nalopen (o.a. trial → dagpas, Health/hartslag, camera) | ⏳ |
 | 19 | Alle schermen | Elke sluit-, verklein- en terugknop nalopen tegen Apple HIG (plaats, Done/X, veeggebaren, bladen) | ⏳ |
+| 21 | App Store Connect — Review Information (per abonnement) | Screenshot = oude Android-paywall met App Store- én Google Play-badge, blauwe knop, €5,83 (risico 2.3.10). Review notes beschrijven oude flows ("Full library access", 60 s-preview, "Continue listening?", 27 Free Picks). Na de nieuwe paywall: iPhone-screenshot + nieuwe notes (10 gratis, 30 s-preview, dagpas, maand, jaar, exacte knopnamen) | ⏳ |
+| 22 | Kopen zonder account (Apple 5.1.1(v)) | Nakijken of een gast nog echt kan kopen zonder account: de tekst zegt "continue as a guest below", maar de knop onderaan is "Skip for now" → naar home. Volledige flow testen bij de paywall-ombouw | ⏳ |
 | 20 | Opstartanimatie (nieuw) | Zoals WHOOP: de V verschijnt en loopt over in het volledige VIBEZCORE-woordmerk. Voorstel: bestaande V-animatie (LaunchReveal) behouden, daarna schuift de V naar links en vouwen de letters IBEZCORE er één voor één uit, dan opent de app. ±1,8 s, enkel bij koude start | ⏳ |
 
 Vermoedelijk dezelfde oorzaak voor 10–12: op iOS liggen de knoppen in de
@@ -88,5 +90,5 @@ intro-aanbiedingen uitzetten; maand- en jaarprijs op €9,99 / €69,99 zetten.
   - dagpas = product met eenmalige betaling `vibezcore_day_pass`, aankoopoptie `day-pass` (Bestellen, werkt met eerdere versies), 174 landen, actief.
   - Let op: "Prijzen in bulk bewerken" rekent de ingetypte prijs als prijs ZONDER btw (1,29 gaf België €1,59). België moet op €1,29 incl. btw staan.
 - **RevenueCat:** dagpas geïmporteerd (Consumable) en als pakket `day_pass` (Custom) in offering `default` gezet (Play Store) — 16 okt. NIET aan het Pro-entitlement koppelen. Een eenmalige aankoop geeft daar anders voor altijd toegang; de app rekent de 24 u vanaf de aankoopdatum.
-- **App Store Connect:** nog te doen (dagpas als non-consumable/consumable, intro-aanbiedingen uit, prijzen).
+- **App Store Connect (16 okt):** groep-weergavenaam = VIBEZCORE Premium; maand €9,99 zonder intro, uit de conceptindiening gehaald om naam/beschrijving te wijzigen ("VIBEZCORE Premium Monthly", "Full access: Breathwork, State Control & Audio Library"); jaar idem nog te doen; dagpas nog aan te maken. Nog te doen: (dagpas als non-consumable/consumable, intro-aanbiedingen uit, prijzen).
 
