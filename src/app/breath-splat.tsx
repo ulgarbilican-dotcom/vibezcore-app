@@ -31,7 +31,7 @@ import {
   type PhaseKey,
 } from '@/data/breath-states';
 import { router, Stack } from 'expo-router';
-import { X } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -245,7 +245,7 @@ export default function BreathSplatScreen() {
 
       <View style={s.bar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={s.icon}>
-          <X size={18} color="rgba(255,255,255,0.72)" strokeWidth={2.2} />
+          <ChevronLeft size={20} color="rgba(255,255,255,0.72)" strokeWidth={2.8} />
         </Pressable>
         <Text style={[s.eyebrow, { color: st.accent }]}>{st.eyebrow}</Text>
         <View style={s.icon} />

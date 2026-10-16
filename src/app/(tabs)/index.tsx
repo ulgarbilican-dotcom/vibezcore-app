@@ -3624,16 +3624,10 @@ function AudioScreen({
                 style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
               />
               <View style={s.pillarModalHandle} />
-              <Pressable
-                style={s.pillarModalClose}
-                onPress={() => setBreathChooserOpen(false)}
-                hitSlop={10}
-                accessibilityLabel="Close"
-              >
-                <Text style={s.pillarModalCloseText}>✕</Text>
-              </Pressable>
+              {/* Onderblad-protocol (audit 16 okt 2026): een keuzeblad heeft
+                  geen ✕ — vegen, tik ernaast of terug sluit het. */}
               <Text style={s.pillarModalEyebrow}>BREATHWORK</Text>
-              <Text style={s.breathChooserTitle}>Choose a state.</Text>
+              <Text style={s.breathChooserTitle}>Choose a state</Text>
               <Text style={s.breathChooserSub}>Five techniques.</Text>
               <View style={s.breathChooserList}>
                 {BREATHWORK_CHOOSER.map((opt) => {
@@ -3674,7 +3668,7 @@ function AudioScreen({
       )}
 
       {/* Iter 9aaa: Pillar-detail bottom sheet — Apple-style minimal.
-          Backdrop tap = close, ✕ rechtsboven, korte declaratieve copy. */}
+          Backdrop tap = close, Done rechtsboven, korte declaratieve copy. */}
       {detailPillar && (
         <GlassSheet visible={true} onClose={() => setDetailPillar(null)}>
             <View
@@ -3693,13 +3687,16 @@ function AudioScreen({
                 style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
               />
               <View style={s.pillarModalHandle} />
+              {/* Uitlegblad = Done rechtsboven (onderblad-protocol), zoals het
+                  Auto-play-blad verderop — geen ✕ (audit 16 okt 2026). */}
               <Pressable
-                style={s.pillarModalClose}
+                style={s.sheetDoneTopRight}
                 onPress={() => setDetailPillar(null)}
-                hitSlop={10}
-                accessibilityLabel="Close"
+                hitSlop={14}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
               >
-                <Text style={s.pillarModalCloseText}>✕</Text>
+                <Text style={s.sheetDoneTopRightTxt}>Done</Text>
               </Pressable>
               <Text style={s.pillarModalEyebrow}>
                 {detailPillar.num} · PILLAR

@@ -50,11 +50,14 @@ export function HeaderBackButton({
     transform: [{ scale: scale.value }],
   }));
 
-  if (!onPress && !router.canGoBack()) return null;
+  /* Audit 16 okt 2026: geopend via een link bij een koude start (bv. een
+     wachtwoord-reset uit de mail) is er geen scherm onder — vroeger
+     verdween de pijl dan en zat je vast. Nu brengt hij je naar de app. */
+  const fallback = () => router.replace('/(tabs)/account' as never);
 
   return (
     <AnimatedPressable
-      onPress={onPress ?? (() => router.back())}
+      onPress={onPress ?? (() => (router.canGoBack() ? router.back() : fallback()))}
       onPressIn={() => {
         scale.value = withTiming(0.92, { duration: 80 });
       }}

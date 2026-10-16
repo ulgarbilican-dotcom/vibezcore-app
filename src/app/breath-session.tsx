@@ -3792,7 +3792,28 @@ export function BreathSession() {
             >
               <View style={s.sheetGrip} />
             </Pressable>
-            <Text style={s.sheetTitle}>Background sound</Text>
+            {/* Onderblad-protocol (audit 16 okt 2026): kiezer = Done
+                rechtsboven naast de titel, zoals Audio & Haptics. */}
+            <View style={s.avHeaderRow}>
+              <Text style={[s.sheetTitle, { marginBottom: 0 }]}>Background sound</Text>
+              <AnimatedPressable
+                style={pressScapeDone.style}
+                onPressIn={pressScapeDone.onPressIn}
+                onPressOut={pressScapeDone.onPressOut}
+                onPress={() => {
+                  /* Voorbeluisteren stopt bij het sluiten; hij komt terug bij
+                     START. Anders speelt er geluid op een scherm waar niets
+                     loopt. */
+                  if (!running) stopScape();
+                  setScapeOpen(false);
+                }}
+                hitSlop={14}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
+              >
+                <Text style={s.avDoneTxt}>Done</Text>
+              </AnimatedPressable>
+            </View>
             {/* Drie standen, geen schuifregelaar. Die vraagt een extra pakket,
                 is lastig te raken terwijl je ademt, en het verschil tussen
                 0,30 en 0,35 hoort niemand. De stem blijft ongeregeld: die is
@@ -3882,20 +3903,6 @@ export function BreathSession() {
               <View style={{ height: 18 }} />
             </ScrollView>
 
-            <AnimatedPressable
-              style={[s.modalBtn, pressScapeDone.style]}
-              onPressIn={pressScapeDone.onPressIn}
-              onPressOut={pressScapeDone.onPressOut}
-              onPress={() => {
-                /* Voorbeluisteren stopt bij het sluiten; hij komt terug bij
-                   START. Anders speelt er geluid op een scherm waar niets
-                   loopt. */
-                if (!running) stopScape();
-                setScapeOpen(false);
-              }}
-            >
-              <Text style={s.modalBtnTxt}>Done</Text>
-            </AnimatedPressable>
           </View>
       </GlassSheet>
 
@@ -5464,7 +5471,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  avDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  avDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 12, paddingHorizontal: 6 },
   avSheetHint: {
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,
