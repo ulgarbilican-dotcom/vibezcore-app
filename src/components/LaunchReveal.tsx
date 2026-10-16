@@ -10,15 +10,23 @@
         omhoog (vloeiend vertragend);
      2. één lichtstreep glijdt over de V — het teken "staat";
      3. de V vervaagt en zakt licht weg terwijl de app eronder verschijnt.
+
+   GEWIJZIGD 16 okt 2026 (operator: "zoals WHOOP — de V laten zien die
+   overloopt naar VIBEZCORE"): na de lichtstreep schuift de V naar links en
+   krimpt tot de eerste letter van het woordmerk; I B E Z C O R E vouwen er
+   één voor één achter open (uit hetzelfde woordmerk-beeld als het
+   welkomstscherm, per letter uitgesneden). Kort vasthouden, dan vervaagt
+   het geheel en verschijnt de app. ±2 s, enkel bij een koude start.
    Geen gloed of kleur (operator: "die Bio-Teal bij opstart moet weg").
    De V = het VIBEZCORE-merkteken (keuze B, memory project-brand-v-mark).
    ───────────────────────────────────────────────────────────────────────── */
 
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import Reanimated, {
   Easing,
+  type SharedValue,
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
@@ -41,8 +49,33 @@ const TIP_Y = 56.95;
 const L0 = 0, L1 = 480; // linkerbeen
 const R0 = 140, R1 = 640; // rechterbeen
 const S0 = 640, S1 = 1000; // lichtstreep
-const O0 = 1000, O1 = 1380; // onthulling
+const U0 = 1000, U1 = 1420; // V schuift naar zijn plek in het woordmerk
+const LETTER0 = 1080, LETTER_STEP = 45, LETTER_DUR = 320; // I B E Z C O R E
+const O0 = 1700, O1 = 2080; // onthulling
 const TOTAL = O1;
+
+/* Het woordmerk (zelfde beeld als het welkomstscherm): 1175 × 83 px, de
+   negen letters staan op deze kolommen (gemeten op de alfa). */
+const WM_SRC = require('../../assets/vibezcore_wordmark_spaced.png');
+const WM_PX_W = 1175;
+const WM_PX_H = 83;
+const LETTERS: [number, number][] = [
+  [0, 87], // V
+  [151, 161], // I
+  [234, 303], // B
+  [377, 446], // E
+  [520, 588], // Z
+  [662, 733], // C
+  [807, 890], // O
+  [964, 1033], // R
+  [1107, 1175], // E
+];
+const WM_W = 240;
+const K = WM_W / WM_PX_W;
+const WM_H = WM_PX_H * K;
+/* De V landt op de plaats en grootte van de V in het woordmerk. */
+const V_TARGET_X = -WM_W / 2 + ((LETTERS[0][0] + LETTERS[0][1]) / 2) * K;
+const V_TARGET_SCALE = ((LETTERS[0][1] - LETTERS[0][0]) * K) / LAUNCH_V_WIDTH;
 
 /* Polygoon knippen tegen het halfvlak a·x + b·y + c ≥ 0 (Sutherland–Hodgman). */
 function clip(poly: number[][], a: number, b: number, c: number): number[][] {
@@ -78,6 +111,35 @@ function phase(t: number, a: number, b: number): number {
 function easeOutCubic(x: number): number {
   'worklet';
   return 1 - Math.pow(1 - x, 3);
+}
+
+function easeInOutCubic(x: number): number {
+  'worklet';
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+}
+
+/** Eén letter uit het woordmerk, uitgesneden met overflow:hidden. */
+function Letter({ index, t }: { index: number; t: SharedValue<number> }) {
+  const [x0, x1] = LETTERS[index];
+  const a = LETTER0 + (index - 1) * LETTER_STEP;
+  const st = useAnimatedStyle(() => {
+    const e = easeOutCubic(phase(t.value, a, a + LETTER_DUR));
+    return { opacity: e, transform: [{ translateX: -10 * (1 - e) }] };
+  });
+  return (
+    <Reanimated.View
+      style={[
+        { position: 'absolute', left: x0 * K, top: 0, width: (x1 - x0) * K, height: WM_H, overflow: 'hidden' },
+        st,
+      ]}
+    >
+      <Image
+        source={WM_SRC}
+        style={{ position: 'absolute', left: -x0 * K, top: 0, width: WM_W, height: WM_H, tintColor: '#ffffff' }}
+        resizeMode="stretch"
+      />
+    </Reanimated.View>
+  );
 }
 
 let trigger: (() => void) | null = null;
@@ -140,9 +202,17 @@ export default function LaunchReveal() {
     return { d: p > 0 && p < 1 ? sheen(RIGHT, x) : 'M0 0' };
   });
   const vStyle = useAnimatedStyle(() => {
-    const x = phase(t.value, O0, O1);
-    const o = x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-    return { opacity: 1 - o, transform: [{ scale: 1 - 0.08 * o }] };
+    const u = easeInOutCubic(phase(t.value, U0, U1));
+    return {
+      transform: [
+        { translateX: V_TARGET_X * u },
+        { scale: 1 - (1 - V_TARGET_SCALE) * u },
+      ],
+    };
+  });
+  const groupStyle = useAnimatedStyle(() => {
+    const o = easeInOutCubic(phase(t.value, O0, O1));
+    return { opacity: 1 - o, transform: [{ scale: 1 - 0.06 * o }] };
   });
   const bgStyle = useAnimatedStyle(() => {
     const o = phase(t.value, O0 + 80, O1);
@@ -152,7 +222,13 @@ export default function LaunchReveal() {
   if (done) return null;
   return (
     <Reanimated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.bg, bgStyle]}>
-      <View style={s.center}>
+      <Reanimated.View style={[s.center, groupStyle]}>
+        {/* I B E Z C O R E, rechts van de plek waar de V landt. */}
+        <View style={s.word}>
+          {LETTERS.slice(1).map((_, i) => (
+            <Letter key={i + 1} index={i + 1} t={t} />
+          ))}
+        </View>
         <Reanimated.View style={vStyle}>
           <Svg width={LAUNCH_V_WIDTH} height={V_H} viewBox={`0 0 ${VB_W} ${VB_H}`}>
             <AnimatedPath animatedProps={leftProps} fill="#ffffff" />
@@ -161,7 +237,7 @@ export default function LaunchReveal() {
             <AnimatedPath animatedProps={sheenRProps} fill="#ffffff" />
           </Svg>
         </Reanimated.View>
-      </View>
+      </Reanimated.View>
     </Reanimated.View>
   );
 }
@@ -169,4 +245,5 @@ export default function LaunchReveal() {
 const s = StyleSheet.create({
   bg: { backgroundColor: '#0a0a0a', zIndex: 1000, elevation: 1000 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  word: { position: 'absolute', width: WM_W, height: WM_H },
 });

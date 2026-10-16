@@ -906,7 +906,16 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
     [onSample],
   );
   const frameOutput = useFrameOutput({ pixelFormat: 'rgb', targetResolution: FRAME_SIZE, onFrame });
-  const outputs = useMemo(() => [frameOutput], [frameOutput]);
+  /* iOS-test build 20 (16 okt 2026: "camera flash gaat niet aan"):
+     VisionCamera weigert op iOS de camera in te richten zolang de
+     toestemming nog niet gegeven is, en probeert het daarna nooit opnieuw
+     — geen sessie, dus ook geen zaklamp. Android heeft die controle niet.
+     De outputs hangen nu af van de toestemming: zodra je "Allow" tikt,
+     wordt de camera opnieuw ingericht. */
+  const outputs = useMemo(
+    () => (permission.hasPermission ? [frameOutput] : []),
+    [frameOutput, permission.hasPermission],
+  );
 
   const cameraOn =
     permission.hasPermission &&
@@ -928,6 +937,9 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
     onStopped: () => setStarted(false),
     onError: (e) => {
       console.warn(`[PulseMeter] camera error: ${String(e)} | ${e?.name ?? ''} | ${e?.message ?? ''}`);
+      /* De inrichting vóór de toestemming faalt op iOS altijd één keer —
+         geen echte camerafout (zie outputs hierboven). */
+      if (!permission.hasPermission || /permission/i.test(`${String(e)} ${e?.message ?? ''}`)) return;
       if (/torch|flash/i.test(`${String(e)} ${e?.name ?? ''} ${e?.message ?? ''}`)) {
         torchErrors.current += 1;
         if (torchErrors.current >= TORCH_ERRORS_NEEDED) setTorchFailed(true);

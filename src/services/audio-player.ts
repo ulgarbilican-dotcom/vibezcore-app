@@ -888,9 +888,10 @@ export async function skipBy(deltaSec: number): Promise<void> {
 export async function setRate(rate: number): Promise<void> {
   if (!player) return;
   try {
-    /* expo-audio: setPlaybackRate is een synchroon void-method, optioneel
-       pitch-correction quality. We laten default — sounds best voor spraak. */
-    player.setPlaybackRate(rate);
+    /* expo-audio: 'high' = iOS' spectrale toonhoogte-correctie. De
+       standaard (timeDomain) klinkt op de iPhone "waterig" bij 1,25×–2×
+       (iOS-test build 20, 16 okt 2026). Android negeert de parameter. */
+    player.setPlaybackRate(rate, 'high');
     setState({ rate });
   } catch {}
 }

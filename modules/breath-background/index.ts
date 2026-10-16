@@ -106,6 +106,24 @@ export function stopBackgroundBreathSession(): void {
   } catch {
     /* stil */
   }
+  forgetAudioMode();
+}
+
+/* iOS-test build 20 (16 okt 2026): de native module zet zelf de iOS-
+   audiocategorie (playback + mixWithOthers) en zet de sessie daarna uit.
+   De JS-kant onthield intussen "modus al gezet" en zette hem nooit
+   opnieuw — de Audio Library speelde daarna in de verkeerde modus. Na
+   elke native start/stop dus vergeten, dan zet de volgende speler de
+   juiste modus weer. */
+function forgetAudioMode(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('@/services/audio-player').invalidateAudioMode();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('@/services/session-keepalive').invalidateAudioModeSet();
+  } catch {
+    /* stil */
+  }
 }
 
 /** Staat de app al buiten het batterijbeheer van het toestel (operator, 14

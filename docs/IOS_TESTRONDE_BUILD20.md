@@ -16,7 +16,7 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 3 | Onboarding | Geen "Skip"-tekst zichtbaar | ✅ nieuwe onboarding (15 okt) heeft Skip rechtsboven — te zien in nieuwe build |
 | 4 | Na de onboarding | Geen gratis volledige sessie, enkel de 30 s-preview | ✅ gebouwd 15 okt (T202/T204), zat niet in build 20 — te zien in nieuwe build |
 | 5 | Onboarding | Weggaan alleen met de Back-knop, niet met veeggebaar — correct gedrag? | 🔧 terugvegen per stap (T212) |
-| 6 | Hartslagmeting | Camera-flits gaat niet aan op iPhone | ⏳ |
+| 6 | Hartslagmeting | Camera-flits gaat niet aan op iPhone | 🔧 camera opnieuw ingericht na toestemming (T214) |
 | 7 | Breathwork | Geen Breathwork-onboarding meer na de test van de State Control-onboarding | ⏳ |
 | 8 | Settings e.a. | Schuifknoppen (Switch) uitgerekt | ⏳ |
 | 9 | Contact support | Opent de website buiten de app — je bent weg uit de app | ✅ in-app browser (T208), iOS nog te zien in nieuwe build |
@@ -25,14 +25,14 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 12 | Breathwork actieve sessie | Minimize-knop opent Audio & Haptics | 🔍 oorzaak: sessielaag boven de bladen op iOS — fix T209, te testen in nieuwe build |
 | 13 | Breathwork actieve sessie | De boog met de secondenteller moet ~1 cm lager staan dan de ademanimatie | 🔧 iOS 36 dp lager (T209) |
 | 14 | Paywall | Geen prijzen in de prijskaarten — OORZAAK GEVONDEN: in RevenueCat offering `default` hebben Monthly en Yearly enkel een Play Store-product, App Store = "No product". Fix = vibezcore_audio_monthly / _yearly (App Store) koppelen in RevenueCat | 🔍 |
-| 15 | Audio (iPhone) | Geluid slecht van kwaliteit en maximaal volume heel zacht | ⏳ |
+| 15 | Audio (iPhone) | Geluid slecht van kwaliteit en maximaal volume heel zacht | 🔍 bestanden te zacht (−17…−24 LUFS) + oude 96 kbps; code-fixes T215; bestanden normaliseren = met Bunny-project |
 | 16 | Hele app | CTA's lijken dunner (lager/lichter) dan op Android — hoort bij punt 1 | ⏳ |
 | 17 | FAQ, Settings, Support | Inhoud nalopen voor State Control, Breathwork, Audio en Smart Bead Bracelet: klopt alles met de app van nu (prijzen, trial weg → dagpas, 20 s meting, namen, Launching Early 2027)? | ⏳ |
 | 18 | Legal | Terms, Privacy en andere juridische teksten nalopen (o.a. trial → dagpas, Health/hartslag, camera) | ⏳ |
 | 19 | Alle schermen | Elke sluit-, verklein- en terugknop nalopen tegen Apple HIG (plaats, Done/X, veeggebaren, bladen) | ⏳ |
 | 21 | App Store Connect — Review Information (per abonnement) | Screenshot = oude Android-paywall met App Store- én Google Play-badge, blauwe knop, €5,83 (risico 2.3.10). Review notes beschrijven oude flows ("Full library access", 60 s-preview, "Continue listening?", 27 Free Picks). Na de nieuwe paywall: iPhone-screenshot + nieuwe notes (10 gratis, 30 s-preview, dagpas, maand, jaar, exacte knopnamen) | ⏳ |
 | 22 | Kopen zonder account (Apple 5.1.1(v)) | Nakijken of een gast nog echt kan kopen zonder account: de tekst zegt "continue as a guest below", maar de knop onderaan is "Skip for now" → naar home. Volledige flow testen bij de paywall-ombouw | ⏳ |
-| 20 | Opstartanimatie (nieuw) | Zoals WHOOP: de V verschijnt en loopt over in het volledige VIBEZCORE-woordmerk. Voorstel: bestaande V-animatie (LaunchReveal) behouden, daarna schuift de V naar links en vouwen de letters IBEZCORE er één voor één uit, dan opent de app. ±1,8 s, enkel bij koude start | ⏳ |
+| 20 | Opstartanimatie (nieuw) — 🔧 gebouwd T213 | Zoals WHOOP: de V verschijnt en loopt over in het volledige VIBEZCORE-woordmerk. Voorstel: bestaande V-animatie (LaunchReveal) behouden, daarna schuift de V naar links en vouwen de letters IBEZCORE er één voor één uit, dan opent de app. ±1,8 s, enkel bij koude start | ⏳ |
 
 Vermoedelijk dezelfde oorzaak voor 10–12: op iOS liggen de knoppen in de
 sessie anders of zit er een laag over (andere aanraakzones dan op Android).
