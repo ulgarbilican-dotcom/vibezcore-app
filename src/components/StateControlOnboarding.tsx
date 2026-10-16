@@ -107,6 +107,8 @@ import Svg, { Circle, Defs, Line, LinearGradient as SvgLinearGradient, Path, Sto
 
 /* Volgorde van de app: Boost … Sleep. */
 const ALL_MODES = MODES.map((m) => m.mode);
+/** Hoe lang het water erover doet om de cirkel te vullen vóór de eerste slag. */
+const FILL_MS = 1300;
 
 /* Per toestand een eigen regel (operator: "je gaat niet alles zelfde
    uitleg geven he"), kloppend met het echte eindtempo (Science A tot Z
@@ -198,6 +200,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const [playing, setPlayingState] = useState<BraceletMode | null>(null);
   const playingRef = useRef<BraceletMode | null>(null);
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const setPlaying = useCallback((m: BraceletMode | null) => {
     playingRef.current = m;
     setPlayingState(m);
@@ -205,6 +208,8 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const stopDemo = useCallback(() => {
     if (stopTimer.current) clearTimeout(stopTimer.current);
     stopTimer.current = null;
+    if (startTimer.current) clearTimeout(startTimer.current);
+    startTimer.current = null;
     if (playingRef.current !== null) stopModePreviewHaptic();
     setPlaying(null);
   }, [setPlaying]);
@@ -220,9 +225,14 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
       return;
     }
     if (stopTimer.current) clearTimeout(stopTimer.current);
-    playModeTasteHaptic(m);
+    if (startTimer.current) clearTimeout(startTimer.current);
+    /* Eerst vult het water de cirkel (±0,7 s), dan pas de eerste slag. */
     setPlaying(m);
-    stopTimer.current = setTimeout(() => setPlaying(null), TASTE_SECONDS * 1000);
+    startTimer.current = setTimeout(() => {
+      startTimer.current = null;
+      playModeTasteHaptic(m);
+    }, FILL_MS);
+    stopTimer.current = setTimeout(() => setPlaying(null), FILL_MS + TASTE_SECONDS * 1000);
   };
   const choose = useCallback(
     (m: BraceletMode) => {
@@ -723,11 +733,10 @@ function StateCard({
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {/* Bij het tikken vult het water van onderuit tot bovenaan, in de
             seconde voor de eerste slag (operator, 16 okt 2026). */}
-        {playing ? (
-          <LiquidWave key="fill" size={d} level={0.94} fillOnMount {...breathWaveLook(meta.color)} />
-        ) : (
-          <LiquidWave key="rest" size={d} level={active ? 0.5 : 0.38} {...breathWaveLook(meta.color)} />
-        )}
+        {/* Vervolg (operator: "water moet onderaan staan, bij tik vullen,
+            dan begint de tik"): in rust staat het water onderaan; bij een tik
+            stijgt het tot bovenaan, en pas dan begint het kloppen. */}
+        <LiquidWave size={d} level={playing ? 0.94 : 0.06} riseMs={FILL_MS} {...breathWaveLook(meta.color)} />
       </View>
       <Icon size={Math.round(d * 0.24)} color={meta.color} />
       <Text style={s.stateName} numberOfLines={1}>
@@ -761,11 +770,9 @@ function StateCard({
       >
         {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
             trilmotor), zoals de cirkel tijdens een sessie. */}
-        {playing ? (
-          <HeartbeatScale size={d}>{circle}</HeartbeatScale>
-        ) : (
-          <View style={{ position: 'absolute', width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>{circle}</View>
-        )}
+        <HeartbeatScale size={d} enabled={playing}>
+          {circle}
+        </HeartbeatScale>
       </PressScale>
     </Animated.View>
   );

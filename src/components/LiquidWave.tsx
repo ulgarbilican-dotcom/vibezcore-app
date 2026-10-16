@@ -50,6 +50,8 @@ type Props = {
   motion?: 'choice' | 'drain';
   /** Leeg binnenkomen en daarna vullen (bv. bij een modus-wissel). */
   fillOnMount?: boolean;
+  /** Geleidelijk naar het nieuwe peil over zoveel ms (i.p.v. de veer). */
+  riseMs?: number;
 };
 
 /* Tempo's en verhoudingen 1-op-1 uit breath-setup.tsx (WAVE_D ≈ 224:
@@ -65,6 +67,7 @@ export default function LiquidWave({
   frontOpacity = 0.15,
   motion = 'choice',
   fillOnMount,
+  riseMs,
 }: Props) {
   const clamped = Math.max(0, Math.min(1, level));
   /* Peil → y van de waterlijn. Bij een keuze blijft er onderaan altijd wat
@@ -76,7 +79,9 @@ export default function LiquidWave({
   const waterY = useSharedValue(fillOnMount ? emptyY : yFor(clamped));
   useEffect(() => {
     const target = yFor(clamped);
-    if (motion === 'drain') {
+    if (riseMs) {
+      waterY.value = withTiming(target, { duration: riseMs, easing: Easing.inOut(Easing.cubic) });
+    } else if (motion === 'drain') {
       /* Updates komen ±1× per seconde: lineair glijden over die seconde
          geeft één doorlopende beweging, geen trapjes. */
       waterY.value = withTiming(target, { duration: 1000, easing: Easing.linear });
@@ -84,7 +89,7 @@ export default function LiquidWave({
       waterY.value = withSpring(target, { damping: 8, stiffness: 90, mass: 1 });
     }
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [clamped, motion, size]);
+  }, [clamped, motion, size, riseMs]);
   useEffect(() => {
     if (!fillOnMount) return;
     waterY.value = withDelay(260, withSpring(yFor(clamped), { damping: 8, stiffness: 90, mass: 1 }));

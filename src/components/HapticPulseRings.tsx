@@ -267,13 +267,26 @@ const s = StyleSheet.create({
    op de trilling; zelfde gedrag als de ring op het horloge. Uit bij
    "Beweging beperken". */
 
-export function HeartbeatScale({ size, children }: { size: number; children: React.ReactNode }) {
+export function HeartbeatScale({
+  size,
+  children,
+  enabled = true,
+}: {
+  size: number;
+  children: React.ReactNode;
+  /** Uit = staat stil op ware grootte; het vlak (en wat erin staat) blijft
+   *  hetzelfde, zodat aan/uit niets opnieuw opbouwt. */
+  enabled?: boolean;
+}) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const lubAt = useSharedValue(-1);
   const cycle = useSharedValue(800);
   useEffect(() => {
-    if (reduced) return;
+    if (!enabled) lubAt.value = -1;
+  }, [enabled, lubAt]);
+  useEffect(() => {
+    if (reduced || !enabled) return;
     /* Eén doorlopende curve per hartslag (lub op, dip, dub op, uitzakken,
        rust) — vanaf het GEPLANDE slagmoment (zie "Vaste slagklok"). */
     return subscribeHapticPulse((pulse) => {
@@ -281,7 +294,7 @@ export function HeartbeatScale({ size, children }: { size: number; children: Rea
       lubAt.value = pulse.atMs;
       cycle.value = pulse.cycleMs;
     });
-  }, [reduced, lubAt, cycle]);
+  }, [reduced, enabled, lubAt, cycle]);
   useFrameCallback(() => {
     scale.value = lubAt.value < 0 ? 1 : beatCurve(Date.now() - lubAt.value, cycle.value);
   }, !reduced);
