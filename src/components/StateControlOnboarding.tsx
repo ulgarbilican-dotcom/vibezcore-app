@@ -373,10 +373,10 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 <Text style={s.header}>How it works</Text>
                 <Text style={s.lead}>A rhythm that starts at your heart</Text>
               </Animated.View>
-              {/* Pillen + grafiek samen in één glaskaart (operator, 15 okt
-                  2026: "grafiek in kaart samen met de pills"). */}
-              <View style={{ flex: 1 }} />
-              <Animated.View entering={enter(1)} style={s.chartCard}>
+              {/* Pillen boven de kaart, vlak onder de inleiding (operator, 16 okt
+                  2026: "pillen buiten kaart, meer naar boven"); de kaart draagt
+                  enkel de grafiek. */}
+              <Animated.View entering={enter(1)}>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -396,6 +396,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   />
                 ))}
               </ScrollView>
+              </Animated.View>
+              <View style={{ flex: 1 }} />
+              <Animated.View entering={enter(2)} style={s.chartCard}>
                 <RhythmChart mode={chartMode} />
               </Animated.View>
               {/* Operator, 16 okt 2026 ("pagina 1 is veel tekst, heel druk,
@@ -824,14 +827,21 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
   const r = rhythmFor(mode, pulse.bpm);
   const meta = getModeMeta(mode);
   const W = width - 80;
-  const H = 150;
+  const H = 200;
   /* Hoogte = tempo (sneller = hoger): Boost stijgt, de kalme toestanden
-     dalen — met de echte getallen van deze gebruiker. */
-  const top = 52;
-  const bottom = 118;
-  const yOf = (bpm: number) => bottom - ((Math.min(115, Math.max(40, bpm)) - 40) / 75) * (bottom - top);
-  const yA = yOf(r.startBpm);
-  const yB = yOf(r.targetBpm);
+     dalen — met de echte getallen van deze gebruiker.
+     Operator, 16 okt 2026 ("zelfde waarde maar visueel diepere curve"): op
+     een vaste bpm-schaal was 70 → 56 maar 12 px — bijna vlak. Nu krijgt
+     elke overgang een duidelijke diepte (55–100 % van de grafiek, groter
+     naarmate het verschil groter is); de getallen in de labels blijven de
+     echte. */
+  const top = 56;
+  const bottom = 150;
+  const mid = (top + bottom) / 2;
+  const delta = r.targetBpm - r.startBpm;
+  const depth = delta === 0 ? 0 : (bottom - top) * (0.55 + 0.45 * Math.min(1, Math.abs(delta) / 40));
+  const yA = mid + (Math.sign(delta) * depth) / 2;
+  const yB = mid - (Math.sign(delta) * depth) / 2;
   const rising = yB < yA;
   const x0 = 10;
   const xe = W - 10;
@@ -938,9 +948,8 @@ const s = StyleSheet.create({
   header: { marginTop: 4, ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
   lead: { marginTop: 6, ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.55)' },
   chartCard: {
-    marginTop: 22,
     marginHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 6,
     paddingBottom: 6,
     borderRadius: 22,
     borderWidth: 1,
@@ -948,8 +957,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     overflow: 'hidden',
   },
-  chipsScroll: { flexGrow: 0 },
-  chips: { paddingHorizontal: 14, gap: 8 },
+  chipsScroll: { flexGrow: 0, marginTop: 22 },
+  chips: { paddingHorizontal: 26, gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 999, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 16 },
   chipTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.7)' },
   chart: { marginTop: 8, marginBottom: 4, alignItems: 'center' },
