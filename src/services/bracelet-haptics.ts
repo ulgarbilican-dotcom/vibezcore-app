@@ -114,9 +114,12 @@ export const PREVIEW_MAX_SECONDS = 30;
  *  hun eindtempo halen, glijden exact zoals in de sessie — de voorproef IS
  *  dan de eerste 30 s. Enkel de trage modi (Sleep, Clarity: 2 min) glijden
  *  versneld, en enkel daar zegt de UI dat (previewCondensedRampMinutes). */
+/* Operator, 17 okt 2026 ("de free-sessie-haptics moeten 1 op 1 hetzelfde
+   ritme hebben" als Premium en het horloge): de voorproef is exact de
+   eerste 30 s van een echte sessie — geen versnelde glijding meer voor
+   Clarity & Relax en Sleep. */
 function previewTiming(mode: BraceletMode): Timing {
-  const ramp = SPECS[mode].rampSec;
-  return { holdSec: SESSION_HOLD_SECONDS, rampSec: ramp <= PREVIEW_RAMP_SECONDS ? ramp : PREVIEW_RAMP_SECONDS };
+  return { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[mode].rampSec };
 }
 const RESUME_WINDOW_SECONDS = 120;
 const LUB_DUB_FRACTION = 0.3;
@@ -826,9 +829,9 @@ export function pauseModeSessionHaptic(): void {
  *  de voorproef? Dan de sessieduur ervan in minuten (de UI zegt dat de
  *  voorproef ingekort is), anders null. Operator, 5 okt 2026: "moet dan wel
  *  duidelijk zijn dat het voor preview aangepast is". */
-export function previewCondensedRampMinutes(mode: BraceletMode): number | null {
-  const ramp = SPECS[mode].rampSec;
-  return ramp > PREVIEW_RAMP_SECONDS ? Math.round(ramp / 60) : null;
+/** Niet meer versneld (17 okt 2026) — altijd null, de melding valt weg. */
+export function previewCondensedRampMinutes(_mode: BraceletMode): number | null {
+  return null;
 }
 
 /** "Feel it"-preview: zelfde verloop, ingekort tot PREVIEW_MAX_SECONDS. */
