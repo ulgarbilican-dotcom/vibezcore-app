@@ -642,7 +642,7 @@ function StateCarousel({
         snapToInterval={step}
         decelerationRate="fast"
         disableIntervalMomentum
-        contentContainerStyle={{ paddingHorizontal: side, gap: CARD_GAP }}
+        contentContainerStyle={{ paddingHorizontal: side, gap: CARD_GAP, paddingVertical: 18 }}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         style={s.carousel}
@@ -751,7 +751,21 @@ function InfoBlock({ mode }: { mode: BraceletMode }) {
   const r = rhythmFor(mode, pulse.bpm);
   return (
     <Animated.View key={mode} entering={FadeIn.duration(180)}>
-      <Text style={s.infoTitle}>{feelLine(mode)}</Text>
+      {/* Elke zin op een eigen regel, in blok (operator, 16 okt 2026: "for
+          staying moet op volgende rij beginnen, alles mooi in blok"): eerst
+          wat het ritme doet, daaronder waarvoor. */}
+      {(() => {
+        const line = feelLine(mode);
+        const cut = line.indexOf('. ');
+        const what = cut > 0 ? line.slice(0, cut + 1) : line;
+        const why = cut > 0 ? line.slice(cut + 2) : '';
+        return (
+          <>
+            <BalancedText style={s.infoWhat}>{what}</BalancedText>
+            {why ? <BalancedText style={s.infoTitle}>{why}</BalancedText> : null}
+          </>
+        );
+      })()}
       <View style={s.facts}>
         <Fact label="Rhythm ends at" value={`${r.targetBpm} bpm`} />
         <Fact label="Recommended" value={`${meta.defaultMinutes} min`} />
@@ -993,7 +1007,9 @@ const s = StyleSheet.create({
   stepNumTxt: { fontFamily: BrandFonts.semibold, fontSize: 12.5, color: '#ffffff' },
   stepTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff', marginTop: 3 },
   stepTxt: { marginTop: 1, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 20, color: 'rgba(255,255,255,0.62)' },
-  carousel: { flexGrow: 0, marginTop: 24 },
+  /* paddingVertical 18 + marginTop 6 (was 24): ruimte voor de kloppende
+     cirkel — die schaalt mee met de slag en werd boven/onder afgesneden. */
+  carousel: { flexGrow: 0, marginTop: 6, marginBottom: -18 },
   stateCircle: { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 18 },
   stateName: { marginTop: 6, fontFamily: BrandFonts.bold, fontSize: 21, color: '#ffffff' },
   stateUse: { fontFamily: BrandFonts.regular, fontSize: 14.5, color: 'rgba(255,255,255,0.62)' },
@@ -1003,7 +1019,8 @@ const s = StyleSheet.create({
   dotOn: { backgroundColor: '#ffffff' },
   info: { marginTop: 22 },
   /* Tekst over twee regels in blok (operator, 15 okt 2026). */
-  infoTitle: { fontFamily: BrandFonts.regular, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.8)', textAlign: 'justify' },
+  infoWhat: { fontFamily: BrandFonts.semibold, fontSize: 16, lineHeight: 23, color: '#ffffff' },
+  infoTitle: { fontFamily: BrandFonts.regular, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   facts: { flexDirection: 'row', gap: 10, marginTop: 14 },
   fact: {
     flex: 1,
