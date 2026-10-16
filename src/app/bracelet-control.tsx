@@ -3862,9 +3862,13 @@ function IdleScreen({
     const started = Date.now();
     setTrialLeft(PREVIEW_MAX_SECONDS);
     trialTimer.current = setInterval(() => {
-      const left = Math.max(0, PREVIEW_MAX_SECONDS - Math.floor((Date.now() - started) / 1000));
+      /* Naar beneden afronden, zoals een lopende sessie en het horloge
+         (operator, 17 okt 2026: "telefoon 18, horloge 17"): was
+         30 − floor(verstreken) = naar boven. Stoppen blijft op 30 s. */
+      const leftMs = Math.max(0, PREVIEW_MAX_SECONDS * 1000 - (Date.now() - started));
+      const left = Math.floor(leftMs / 1000);
       setTrialLeft(left);
-      if (left <= 0) {
+      if (leftMs <= 0) {
         stopTrial(true);
         onTrialEnd();
       }
