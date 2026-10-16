@@ -10,6 +10,7 @@
    één accentkleur. Totaal ooit als stille voetregel.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { AudioAccent, AudioAccentLight, Brand, BrandFonts } from '@/constants/theme';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -64,7 +65,7 @@ export function WeekSummaryCard({
         <Text style={s.number}>{Math.round(weekMinutes)}</Text>
         <Text style={s.unit}>min</Text>
       </View>
-      <Text style={s.sub}>{sub}</Text>
+      <BalancedText style={s.sub}>{sub}</BalancedText>
 
       <View style={s.chart}>
         {/* Hulplijnen + schaal rechts (0 · midden · max), zoals Apple. */}

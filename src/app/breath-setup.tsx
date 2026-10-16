@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import VibezGlass from '@/components/VibezGlass';
@@ -3854,9 +3855,9 @@ export default function BreathSetupScreen() {
                    voor ALLE sessies in dit protocol. Dat stond nergens,
                    dus wie 'm op sessie 2 anders zette dacht een eigen
                    waarde voor die ene sessie te kiezen. Nu expliciet. */}
-                <Text style={s.horizonHint}>
+                <BalancedText style={s.horizonHint}>
                   Applies to your whole protocol, not just this session
-                </Text>
+                </BalancedText>
                 <ScrollView
                   style={{ flexShrink: 1 }}
                   showsVerticalScrollIndicator={false}

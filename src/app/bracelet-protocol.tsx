@@ -11,6 +11,7 @@
    (/bracelet-set-day), zoals bij breathwork.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { MODE_GLYPH_ICONS, MODE_STATE_KEY } from '@/components/ModeGlyph';
 import VibezGlass from '@/components/VibezGlass';
 import { Brand, BrandFonts } from '@/constants/theme';
@@ -86,7 +87,7 @@ export default function BraceletProtocol() {
         {!plan || items.length === 0 ? (
           <View style={s.empty}>
             <Text style={s.emptyT}>No protocol yet</Text>
-            <Text style={s.emptyB}>Choose your states, times and durations to build one.</Text>
+            <BalancedText style={s.emptyB}>Choose your states, times and durations to build one.</BalancedText>
             <Pressable style={s.primary} onPress={() => router.push('/bracelet-set-day' as never)}>
               <Text style={s.primaryTxt}>Set your plan</Text>
             </Pressable>

@@ -15,6 +15,7 @@
    was alleen nooit bijgewerkt en beweerde dus ten onrechte het
    tegendeel. */
 
+import BalancedText from '@/components/BalancedText';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { MiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import { usePlayerState } from '@/services/audio-player';
@@ -187,9 +188,9 @@ export default function LibraryFreeScreen() {
            thumbnails; em-streepje uit de hulptekst gehaald. */}
         <View style={s.header}>
           <Text style={s.h1}>Free Sessions</Text>
-          <Text style={s.subtitle}>
-            Listen to these any time, no subscription required
-          </Text>
+          {/* BalancedText: in blok, nooit één los woord op de laatste regel
+              (operator, 16 okt 2026 — regel voor de hele app). */}
+          <BalancedText style={s.subtitle}>Listen to these any time, no subscription required</BalancedText>
         </View>
         {/* Eén doorlopend wit Bento-vlak i.p.v. losse rijen op de kale
            achtergrond — zelfde patroon als de tracklijst op "Your

@@ -9,6 +9,7 @@
    (PremiumPaywallModal) open. Twee stappen, geen verrassing.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Crown, RefreshCw, Sparkles, X } from 'lucide-react-native';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
@@ -100,15 +101,15 @@ export default function ProtocolTeaserModal({
           </View>
 
           <Text style={s.title}>Build unlimited protocols</Text>
-          <Text style={s.body}>
+          <BalancedText style={s.body}>
             You already felt how a real protocol works — a goal, a schedule,
             reminders that follow through. Premium unlocks a new protocol any
             time your goal changes, no limits.
-          </Text>
+          </BalancedText>
 
           <View style={s.row}>
             <RefreshCw size={16} color={AudioAccent} strokeWidth={2.2} />
-            <Text style={s.rowTxt}>Rebuild your protocol whenever your goal shifts</Text>
+            <BalancedText style={s.rowTxt}>Rebuild your protocol whenever your goal shifts</BalancedText>
           </View>
           <View style={s.row}>
             <Crown size={16} color={AudioAccent} strokeWidth={2.2} />

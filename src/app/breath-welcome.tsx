@@ -31,6 +31,7 @@
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import GradientText, {
   SUB_COLORS,
   SUB_POSITIONS,
@@ -1838,9 +1839,9 @@ export function SlideIntro({
            `marginTop` (was 10 t.o.v. de tagline erboven) zodat hij op
            ongeveer dezelfde plek landt als voorheen i.p.v. omhoog te
            springen naar waar de tagline stond. */
-        <Text style={[s.introOrientLight, { marginTop: 34 }]}>
+        <BalancedText style={[s.introOrientLight, { marginTop: 34 }]}>
           Set your goal. Get a personalized session in 60 seconds
-        </Text>
+        </BalancedText>
       ) : (
         <View style={s.traits}>
           {TRAITS.map(({ key, label, Icon }, i) => (
@@ -2495,11 +2496,11 @@ function SlideExperience({
         <View style={[s.safetyCheck, safetyAck && s.safetyCheckOn]}>
           {safetyAck && <Check size={12} color="#0a0a0c" strokeWidth={3} />}
         </View>
-        <Text style={s.safetyTxt}>
+        <BalancedText style={s.safetyTxt}>
           Breathwork can affect your body quickly. If you&apos;re pregnant,
           or have epilepsy, a heart or respiratory condition, check with
           your doctor first.
-        </Text>
+        </BalancedText>
       </Pressable>
       </Animated.View>
     </View>

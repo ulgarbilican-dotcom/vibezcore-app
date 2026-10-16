@@ -25,6 +25,7 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { usePreventRemove } from '@react-navigation/native';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import MembershipPlans from '@/components/MembershipPlans';
@@ -1217,12 +1218,12 @@ export default function SubscribeScreen() {
               <>
                 <Text style={s.donePerkTitle}>For 24 hours, you have access to:</Text>
                 {params.returnTo === 'state-control' && (
-                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
                 )}
                 {/* Operator, 1 okt 2026: "49" was fout — correct: 64. */}
-                <Text style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</Text>
+                <BalancedText style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</BalancedText>
                 {params.returnTo !== 'state-control' && (
-                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
                 )}
                 <Text style={s.donePerkLine}>
                   · {TOTAL_SESSION_COUNT} Audio Library sessions to stream
@@ -1232,11 +1233,11 @@ export default function SubscribeScreen() {
               <>
                 <Text style={s.donePerkTitle}>One membership, you now have access to:</Text>
                 {params.returnTo === 'state-control' && (
-                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
                 )}
-                <Text style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</Text>
+                <BalancedText style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</BalancedText>
                 {params.returnTo !== 'state-control' && (
-                  <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
+                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
                 )}
                 <Text style={s.donePerkLine}>
                   · {TOTAL_SESSION_COUNT} Audio Library sessions across 4 pillars of growth
@@ -1280,9 +1281,9 @@ export default function SubscribeScreen() {
               onPressOut={saveSubPress.onPressOut}
               accessibilityLabel="Create an account to sync this subscription across your devices"
             >
-              <Text style={s.linkText}>
+              <BalancedText style={s.linkText}>
                 Create your free account to stream the Audio Library and use Premium on all your devices
-              </Text>
+              </BalancedText>
             </AnimatedPressable>
           )}
         </View>

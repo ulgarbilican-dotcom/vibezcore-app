@@ -15,6 +15,7 @@
    2026-05-27.
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { fetchWithTimeout } from '@/services/auth';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -206,11 +207,11 @@ export default function ForgotPassword() {
             <Text style={s.checkText}>✓</Text>
           </View>
           <Text style={s.title}>Check your inbox</Text>
-          <Text style={s.sub}>
+          <BalancedText style={s.sub}>
             If an account matches that email, a reset link is on its
             way. The link opens directly in this app and is valid for
             1 hour.
-          </Text>
+          </BalancedText>
           <AnimatedPressable
             style={[s.btnSecondary, backToSignInPressStyle]}
             onPress={() => goToTab('/account')}
@@ -247,10 +248,10 @@ export default function ForgotPassword() {
         extraScrollHeight={20}
       >
         <Text style={s.title}>Forgot your password?</Text>
-        <Text style={s.sub}>
+        <BalancedText style={s.sub}>
           No problem. Enter the email associated with your account
           and we'll send a link to reset it.
-        </Text>
+        </BalancedText>
 
         <Text style={s.label}>Email</Text>
         <TextInput
@@ -282,9 +283,9 @@ export default function ForgotPassword() {
           )}
         </AnimatedPressable>
 
-        <Text style={s.helpLine}>
+        <BalancedText style={s.helpLine}>
           The reset link opens directly in this app.
-        </Text>
+        </BalancedText>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

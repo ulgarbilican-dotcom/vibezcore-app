@@ -22,6 +22,7 @@
    niet Brand.accent, die is voor haptic-pulse/"nu actief".
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
@@ -86,14 +87,14 @@ export default function AboutScreen() {
             Training, Audio Library = Long-Term Growth. Sluit af met de
             operator's exacte tagline "Control Your State. Build Your
             Future." — dit is de finale, goedgekeurde copy. */}
-        <Text style={s.heroSub}>
+        <BalancedText style={s.heroSub}>
           VIBEZCORE is a platform for state control and personal growth.
           It combines State Control — a heartbeat rhythm on your phone or
           smartwatch — for shifting your state in the moment, guided
           breathwork for active state training, and a structured Audio
           Library for long-term growth. Not just feeling better —
           performing better, and continuing to develop over time.
-        </Text>
+        </BalancedText>
         <Text style={s.heroResult}>
           Control Your State. Build Your Future.
         </Text>
@@ -275,11 +276,11 @@ export default function AboutScreen() {
           product, not just the way you reach it.
         </P>
 
-        <Text style={s.smallNote}>
+        <BalancedText style={s.smallNote}>
           All referenced research and thought leaders in our content are
           independent of VIBEZCORE. No affiliation or endorsement of any
           kind exists or is implied.
-        </Text>
+        </BalancedText>
 
         {/* ── 03. Who — operator, definitieve essentie-tekst: "voor
             mensen die meer controle willen over zichzelf... kort: voor
@@ -294,21 +295,21 @@ export default function AboutScreen() {
           to start. You only need to want more from your days. In short:
           for everyone who refuses to live on autopilot.
         </P>
-        <Text style={s.smallNote}>
+        <BalancedText style={s.smallNote}>
           The platform is intended for users aged 18 and older.
-        </Text>
+        </BalancedText>
 
         {/* ── Closing — Mission ── */}
         <View style={s.missionBlock}>
-          <Text style={s.missionLine}>
+          <BalancedText style={s.missionLine}>
             Self-understanding. Self-control. Self-respect.
-          </Text>
+          </BalancedText>
           <Text style={s.missionLine}>
             Growth. Success. Freedom.
           </Text>
-          <Text style={s.missionFooter}>
+          <BalancedText style={s.missionFooter}>
             That&apos;s what VIBEZCORE exists to build.
-          </Text>
+          </BalancedText>
         </View>
 
         <View style={s.footer}>

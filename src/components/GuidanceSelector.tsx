@@ -18,6 +18,7 @@
    met die kleur en geeft een gloed af.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
@@ -301,10 +302,10 @@ export function BraceletHighlight({ onPress }: { onPress?: () => void }) {
             <Text style={s.comingTxt}>COMING</Text>
           </View>
         </View>
-        <Text style={s.braceletTitle}>
+        <BalancedText style={s.braceletTitle}>
           World&apos;s first Smart Bead Bracelet with synchronized haptic
           guidance
-        </Text>
+        </BalancedText>
       </View>
     </AnimatedPressable>
   );

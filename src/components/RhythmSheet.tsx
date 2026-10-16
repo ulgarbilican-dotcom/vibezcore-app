@@ -11,6 +11,7 @@
    Woordkeuze (CLAUDE.md, operator 7 okt 2026): "heart rate" (niet "pulse") / rhythm, nooit stress, HRV, diagnose.
    "Not a medical device" staat bij elk getal. */
 
+import BalancedText from '@/components/BalancedText';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel } from '@/services/resting-pulse';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -458,9 +459,9 @@ export default function RhythmSheet({
         {step === 'manual' && (
           <>
             <Text style={s.title}>Your resting heart rate</Text>
-            <Text style={s.body}>
+            <BalancedText style={s.body}>
               Your watch shows it. Or count your heart rate for 30 seconds after waking, and double it.
-            </Text>
+            </BalancedText>
             <BpmWheel value={manualBpm} onChange={setManualBpm} />
             <PressScale
               style={[s.cta]} haptic scaleTo={0.97}
@@ -504,9 +505,9 @@ export default function RhythmSheet({
             ) : aboveRest ? (
               <Text style={s.restNote}>Your resting heart rate stays {pulse.bpm} bpm.</Text>
             ) : null}
-            <Text style={s.note}>
+            <BalancedText style={s.note}>
               We use your heart rate only to set your rhythm. It stays on this device. Not a medical device.
-            </Text>
+            </BalancedText>
           </>
         )}
       </View>

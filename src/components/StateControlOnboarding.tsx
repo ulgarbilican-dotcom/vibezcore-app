@@ -34,6 +34,7 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
@@ -397,7 +398,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               <View style={{ flex: 1, minHeight: 20 }} />
               <Animated.View entering={enter(2)} style={s.pad}>
                 <InfoBlock mode={chosen} />
-                {busy && <Text style={s.note}>The preview plays when no session is running.</Text>}
+                {busy && <BalancedText style={s.note}>The preview plays when no session is running.</BalancedText>}
               </Animated.View>
               <View style={{ flex: 0.6 }} />
             </Animated.View>
@@ -422,7 +423,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   onManual={() => setSheet('manual')}
                 />
               </View>
-              <Text style={s.footnote}>For wellness only, not a medical measurement.</Text>
+              <BalancedText style={s.footnote}>For wellness only, not a medical measurement.</BalancedText>
             </Animated.View>
           ) : (
             <Animated.View key="s2" entering={pageIn} style={[s.slide, s.pad]}>

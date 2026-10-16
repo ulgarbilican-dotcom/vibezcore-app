@@ -1,4 +1,5 @@
 import { openStateControl } from '@/utils/state-control-ui';
+import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -610,7 +611,7 @@ function SessionRow({
             </Text>
           );
         })()}
-        <Text style={s.libRowTitle}>{session.title}</Text>
+        <BalancedText style={s.libRowTitle}>{session.title}</BalancedText>
         {session.desc ? <Text style={s.libRowDesc}>{session.desc}</Text> : null}
         {/* FIX 15b: status-regel ook hier in serie-expansion sessie-rijen.
             Iter 9dq v111 (2026-06-04): centralised formatListenedLabel
@@ -1496,9 +1497,9 @@ function AudioScreen({
                 de hoofdtitle. "The intellectual legacy..." voegt
                 instant-credibility toe vóór de bullets — leest als
                 fundament van het product, niet als marketing-claim. */}
-            <Text style={s.bLandingAuthoritySubtitle}>
+            <BalancedText style={s.bLandingAuthoritySubtitle}>
               The intellectual legacy of history's greatest minds.
-            </Text>
+            </BalancedText>
             <View style={s.bLandingFeatures}>
               {features.map((line, i) => (
                 <View key={i} style={s.bLandingFeatureRow}>
@@ -1727,10 +1728,10 @@ function AudioScreen({
               <Text style={s.braceletUpsellTitle}>
                 Add the Audio Library
               </Text>
-              <Text style={s.braceletUpsellSub}>
+              <BalancedText style={s.braceletUpsellSub}>
                 You have the bracelet. Add structured psychological
                 transformation alongside it.
-              </Text>
+              </BalancedText>
             </View>
             <Text style={s.braceletUpsellArrow}>→</Text>
           </CardBounce>
@@ -3159,7 +3160,7 @@ function AudioScreen({
                       </View>
                       <View style={s.freeContent}>
                         <View style={s.freeTopRow}>
-                          <Text style={s.freeSessionTitle}>{sess.title}</Text>
+                          <BalancedText style={s.freeSessionTitle}>{sess.title}</BalancedText>
                           <View
                             style={[
                               s.freePill,
@@ -3530,7 +3531,7 @@ function AudioScreen({
               <Text style={s.braceletCardTitle}>Smart Bead Bracelet</Text>
               <Text style={s.braceletCardChev}>›</Text>
             </View>
-            <Text style={s.braceletCardSub}>Nature meets tech. Your rhythm, on your wrist.</Text>
+            <BalancedText style={s.braceletCardSub}>Nature meets tech. Your rhythm, on your wrist.</BalancedText>
           </Pressable>
         )}
 
@@ -3740,11 +3741,11 @@ function AudioScreen({
               </Pressable>
               <Text style={s.pillarModalEyebrow}>AUTO-PLAY</Text>
               <Text style={s.pillarModalTitle}>Continuous flow</Text>
-              <Text style={s.pillarModalDesc}>
+              <BalancedText style={s.pillarModalDesc}>
                 When a session ends, the next one in the same series starts
                 automatically — listen straight through without tapping
                 play between sessions.
-              </Text>
+              </BalancedText>
 
               {/* Lijst met gebruikssituaties — visueel met blauwe stip
                   per item zodat het luchtig leest. */}
@@ -3796,7 +3797,7 @@ function AudioScreen({
                 ))}
               </View>
 
-              <Text
+              <BalancedText
                 style={{
                   color: 'rgba(255,255,255,0.40)',
                   fontFamily: 'Inter_500Medium',
@@ -3808,7 +3809,7 @@ function AudioScreen({
               >
                 Toggle off anytime if you prefer to choose each session
                 manually.
-              </Text>
+              </BalancedText>
 
             </View>
         </GlassSheet>

@@ -19,6 +19,7 @@
    blijft tot we de proxy uitbreiden met een verify-route.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts } from '@/constants/theme';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
@@ -249,7 +250,7 @@ export default function AuthCallback() {
               <Text style={s.errorText}>!</Text>
             </View>
             <Text style={s.title}>Link expired</Text>
-            <Text style={s.sub}>{state.message}</Text>
+            <BalancedText style={s.sub}>{state.message}</BalancedText>
             <AnimatedPressable
               style={[s.btn, signInBtnPressStyle]}
               onPress={() => goToTab('/account')}

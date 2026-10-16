@@ -24,6 +24,7 @@
    lage drempel om te proberen, het jaar blijft de aanbevolen keuze.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -167,9 +168,9 @@ export default function MembershipPlans({
       {showHero && (
         <>
           <Text style={s.hero}>Unlock your potential</Text>
-          <Text style={s.heroSub}>
+          <BalancedText style={s.heroSub}>
             One VIBEZCORE membership unlocks Breathwork, State Control and the Audio Library
-          </Text>
+          </BalancedText>
         </>
       )}
 

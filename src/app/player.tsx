@@ -19,6 +19,7 @@
    GUMROAD_URL leeft in src/constants/links.ts.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import {
   PILLAR_META,
   SERIES_PHOTO,
@@ -652,7 +653,7 @@ export default function PlayerScreen() {
             </View>
           </View>
           <Text style={s.series}>{session.series.toUpperCase()}</Text>
-          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+          {subtitle ? <BalancedText style={s.subtitle}>{subtitle}</BalancedText> : null}
         </Animated.View>
 
         {/* Operator, 8 okt 2026: "zet vanaf voortgangsbalk lager" — de vrije
@@ -924,9 +925,9 @@ export default function PlayerScreen() {
             {playerState.errorMessage.includes('LOGIN_REQUIRED') && displayIsPro ? (
               <>
                 <Text style={s.modalTitle}>One more step</Text>
-                <Text style={s.modalBody}>
+                <BalancedText style={s.modalBody}>
                   Create your free account to stream the Audio Library. Your Premium comes with you.
-                </Text>
+                </BalancedText>
                 <View style={s.modalBtns}>
                   <AnimatedPressable
                     style={[s.modalPrimary, pressStyleLoginPrimary]}
@@ -958,9 +959,9 @@ export default function PlayerScreen() {
             playerState.errorMessage.includes('SUBSCRIPTION_REQUIRED') ? (
               <>
                 <Text style={s.modalTitle}>Continue listening?</Text>
-                <Text style={s.modalBody}>
+                <BalancedText style={s.modalBody}>
                   Get full access to the complete VIBEZCORE library.
-                </Text>
+                </BalancedText>
                 <View style={s.modalBtns}>
                   <AnimatedPressable
                     style={[s.modalPrimary, pressStyleLoginPrimary]}

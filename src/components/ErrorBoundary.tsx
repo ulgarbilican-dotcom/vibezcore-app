@@ -15,6 +15,7 @@
    Catch) om het te initiëren.
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { reportError } from '@/services/crash-reporting';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import React from 'react';
@@ -113,10 +114,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <Text style={s.iconText}>!</Text>
             </View>
             <Text style={s.title}>Something went wrong</Text>
-            <Text style={s.sub}>
+            <BalancedText style={s.sub}>
               An unexpected error occurred. You can try again — if it keeps
               happening, please contact support.
-            </Text>
+            </BalancedText>
             {__DEV__ && this.state.error && (
               <Text style={s.devError} numberOfLines={6}>
                 {this.state.error.message}

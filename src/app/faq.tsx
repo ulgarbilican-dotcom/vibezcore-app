@@ -13,6 +13,7 @@
    wordt via een mini renderer (renderRichText) als bold weergegeven.
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import {
   FAQ_CATEGORY_LABELS,
   FAQ_CATEGORY_ORDER,
@@ -169,10 +170,10 @@ export default function FaqScreen() {
         </Text>
         {/* Breathwork erbij (operator, 11 augustus 2026) — stond eerder
             enkel "the platform, the bracelet", breathwork ontbrak. */}
-        <Text style={s.sub}>
+        <BalancedText style={s.sub}>
           Everything you need to know about VIBEZCORE — breathwork, the
           bracelet, the science, and your order.
-        </Text>
+        </BalancedText>
 
         {/* Search */}
         <View style={s.searchWrap}>
@@ -231,10 +232,10 @@ export default function FaqScreen() {
           <View style={s.empty}>
             <Text style={s.emptyIcon}>⌕</Text>
             <Text style={s.emptyTitle}>No questions found</Text>
-            <Text style={s.emptySub}>
+            <BalancedText style={s.emptySub}>
               Try a different search term, or contact us via the Support
               Center.
-            </Text>
+            </BalancedText>
             <AnimatedPressable
               style={[s.emptyBtn, emptyBtnPressStyle]}
               onPress={() => router.push('/support' as never)}
@@ -265,9 +266,9 @@ export default function FaqScreen() {
         {filteredItems.length > 0 && (
           <View style={s.helpCard}>
             <Text style={s.helpTitle}>Still need help?</Text>
-            <Text style={s.helpSub}>
+            <BalancedText style={s.helpSub}>
               Our support team responds within 24 hours on weekdays.
-            </Text>
+            </BalancedText>
             <AnimatedPressable
               style={[s.helpBtn, helpBtnPressStyle]}
               onPress={() => router.push('/support' as never)}

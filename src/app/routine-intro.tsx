@@ -16,6 +16,7 @@
    nu specifiek als bevestiging dat de net-gekozen doelen zijn
    meegenomen, niet als losse styling-tekst. */
 
+import BalancedText from '@/components/BalancedText';
 import { BrandDark, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { GOALS } from '@/data/goals';
@@ -129,9 +130,9 @@ export default function RoutineIntroScreen() {
           />
           {!!stateLabel && <Text style={s.eyebrow}>{stateLabel}</Text>}
           <Text style={s.header}>Before we build your protocol</Text>
-          <Text style={s.lead}>
+          <BalancedText style={s.lead}>
             A few quick questions, then we'll do the rest.
-          </Text>
+          </BalancedText>
         </View>
 
         {chosenGoals.length > 0 && (

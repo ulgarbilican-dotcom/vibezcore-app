@@ -7,6 +7,7 @@
    die verdwijnt direct uit de lijst.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -78,9 +79,9 @@ export default function LibraryFavoritesScreen() {
           <View style={s.empty}>
             <Text style={s.emptyGlyph}>♡</Text>
             <Text style={s.emptyTitle}>No favorites yet</Text>
-            <Text style={s.emptySub}>
+            <BalancedText style={s.emptySub}>
               Tap the heart on any session to save it here.
-            </Text>
+            </BalancedText>
           </View>
         ) : (
           sessions.map((sess) => (

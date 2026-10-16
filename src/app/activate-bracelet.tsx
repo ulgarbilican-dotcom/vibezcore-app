@@ -19,6 +19,7 @@
      backer; geen alternatief koop-pad in app (bracelet via webshop, niet IAP)
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { SESSIONS } from '@/data/audio-library-data';
 import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -357,9 +358,9 @@ export default function ActivateBraceletScreen() {
             <Text style={s.doneBtnText}>Open State Control</Text>
           </AnimatedPressable>
 
-          <Text style={s.doneFooter}>
+          <BalancedText style={s.doneFooter}>
             You can manage your bracelet anytime from the Bracelet tab.
-          </Text>
+          </BalancedText>
         </View>
       </SafeAreaView>
     );

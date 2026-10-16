@@ -36,6 +36,7 @@
    kennismakingssessie.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import {
@@ -311,15 +312,15 @@ export default function BreathQuizScreen() {
         {step === 0 && (
           <>
             <Text style={s.title}>When would you practice?</Text>
-            <Text style={s.lead}>
+            <BalancedText style={s.lead}>
               Pick as many as you like — these become your daily plan.
-            </Text>
+            </BalancedText>
             {/* WAAR de antwoorden blijven hoort hier te staan, niet in een
                 voorwaardenpagina: dit is het moment waarop iemand het zich
                 afvraagt. Het antwoord is: nergens heen. */}
-            <Text style={s.privacy}>
+            <BalancedText style={s.privacy}>
               Your answers stay on this device. No account, no upload.
-            </Text>
+            </BalancedText>
             {MOMENTS.map((m) => {
               const on = selMoments.includes(m.key);
               return (
@@ -350,10 +351,10 @@ export default function BreathQuizScreen() {
               <Text style={s.planBadgeTxt}>Built from your answers</Text>
             </View>
             <Text style={s.title}>Your plan</Text>
-            <Text style={s.lead}>
+            <BalancedText style={s.lead}>
               This shapes what gets suggested from here on — change any of
               it any time.
-            </Text>
+            </BalancedText>
 
             {/* JOUW DAG. Elk moment zijn eigen toestand, met de reden
                 ernaast. Geen verzonnen kloktijden — het moment is de
@@ -405,11 +406,11 @@ export default function BreathQuizScreen() {
             ) : (
               <View style={s.planCard}>
                 <Text style={s.planLbl}>Your day</Text>
-                <Text style={s.planBody}>
+                <BalancedText style={s.planBody}>
                   No fixed moments chosen — suggestions simply follow your
                   clock: energise in the morning, settle in the afternoon,
                   wind down at night.
-                </Text>
+                </BalancedText>
               </View>
             )}
 

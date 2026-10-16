@@ -6,6 +6,7 @@
    gesorteerd nieuwste-eerst. Bij geen matches: empty state.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { AudioAccent } from '@/constants/theme';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
@@ -83,17 +84,17 @@ export default function LibraryNewScreen() {
             /library/favorites + /library/free. H1 + subtitle volstaan. */}
         <View style={s.header}>
           <Text style={s.h1}>What's New</Text>
-          <Text style={s.subtitle}>
+          <BalancedText style={s.subtitle}>
             Fresh sessions added in the last 30 days
-          </Text>
+          </BalancedText>
         </View>
         {sessions.length === 0 ? (
           <View style={s.empty}>
             <Text style={s.emptyGlyph}>✨</Text>
             <Text style={s.emptyTitle}>No new sessions this week</Text>
-            <Text style={s.emptySub}>
+            <BalancedText style={s.emptySub}>
               Check back soon — fresh sessions drop monthly.
-            </Text>
+            </BalancedText>
           </View>
         ) : (
           sessions.map((sess) => (

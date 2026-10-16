@@ -48,6 +48,7 @@
    als breathwork's dagplan, leest VANDAAG's items uit het plan.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
 import { syncBraceletPlanReminder, MAX_BRACELET_SESSIONS } from '@/services/reminders';
@@ -576,7 +577,7 @@ export default function BraceletSetDayScreen() {
         {/* Operator, 5 okt 2026 ("choose your states then how often is
             raar"): zegt meteen wat je doet — een tik voegt een sessie toe.
             Hoeveel per dag staat al in de regel onder de kaarten. */}
-        <Text style={s.lead}>Tap a state to add a session to your day</Text>
+        <BalancedText style={s.lead}>Tap a state to add a session to your day</BalancedText>
 
         {/* Operator, 30 september 2026 ("5 verikante kaarten transparant
            blur tekst en iconen links"): echte `BlurView`-matglas-tegels

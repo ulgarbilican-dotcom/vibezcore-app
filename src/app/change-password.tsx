@@ -20,6 +20,7 @@
      - Account-tab → "Change password" row
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -335,9 +336,9 @@ export default function ChangePassword() {
             <Text style={s.checkText}>✓</Text>
           </View>
           <Text style={s.title}>Password changed</Text>
-          <Text style={s.sub}>
+          <BalancedText style={s.sub}>
             Your password has been updated. Returning to your account…
-          </Text>
+          </BalancedText>
         </View>
       </SafeAreaView>
     );
@@ -360,10 +361,10 @@ export default function ChangePassword() {
         extraScrollHeight={20}
       >
         <Text style={s.title}>Change your password</Text>
-        <Text style={s.sub}>
+        <BalancedText style={s.sub}>
           Enter your current password to confirm it's you, then choose
           a new one — at least 8 characters.
-        </Text>
+        </BalancedText>
 
         {/* Email (read-only context, helpt user te zien voor welk
             account 'ie het password wijzigt) */}

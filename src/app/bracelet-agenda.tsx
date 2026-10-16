@@ -75,6 +75,7 @@
    `/bracelet-set-day`, dat hier bereikbaar is via "Edit your plan".
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { openStateControl } from '@/utils/state-control-ui';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -393,7 +394,7 @@ export default function BraceletAgendaScreen() {
           <View style={s.emptyWrap}>
             <Watch size={22} color="rgba(255,255,255,0.3)" strokeWidth={2} />
             <Text style={s.emptyT}>No State Control plan yet</Text>
-            <Text style={s.emptyB}>Choose your states and times to get started.</Text>
+            <BalancedText style={s.emptyB}>Choose your states and times to get started.</BalancedText>
           </View>
         ) : (
           <>

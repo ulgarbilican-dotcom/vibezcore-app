@@ -22,6 +22,7 @@
    Na afloop: soft-paywall met "Continue with Premium" of "Not yet".
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import GuidanceSelector, {
   GUIDANCE_MODES,
   type GuidanceMode,
@@ -422,10 +423,10 @@ export default function BreathSampleScreen() {
           showBracelet={false}
         />
         {lockNote && (
-          <Text style={s.lockNote}>
+          <BalancedText style={s.lockNote}>
             Bracelet guidance moves the rhythm to your wrist — silent and
             hands-free.
-          </Text>
+          </BalancedText>
         )}
       </View>
 

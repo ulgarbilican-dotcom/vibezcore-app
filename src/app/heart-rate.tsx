@@ -8,6 +8,7 @@
    Welzijnstaal: geen diagnose, geen nauwkeurigheidsclaim.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { connectHealth, healthAppName, isHealthModulePresent, useHealthSync } from '@/services/health-sync';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HistoryGroup, HistoryRow, HistorySectionLabel } from '@/components/HistoryList';
@@ -134,7 +135,7 @@ export default function HeartRateScreen() {
             ))}
           </HistoryGroup>
         )}
-        <Text style={s.note}>For wellness only, not a medical measurement.</Text>
+        <BalancedText style={s.note}>For wellness only, not a medical measurement.</BalancedText>
         {/* Audit 12 okt 2026 (privacy): je eigen hartslag-gegevens wissen,
             zoals Apple Health onderaan "Delete All Data". */}
         {history.length > 0 || pulse.source !== 'average' ? (

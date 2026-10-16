@@ -8,6 +8,7 @@
    dit scherm wijzigt niets, het rondt af.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
@@ -181,10 +182,10 @@ export default function PlanSummaryScreen() {
           );
         })}
 
-        <Text style={s.foot}>
+        <BalancedText style={s.foot}>
           This repeats every day for the length of your plan. You can
           reshape it any time from your agenda.
-        </Text>
+        </BalancedText>
 
         <AnimatedPressable
           style={[s.cta, ctaPressStyle]}

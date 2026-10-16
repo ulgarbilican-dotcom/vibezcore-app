@@ -20,6 +20,7 @@
    doet die check; deze component is "dom".
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -61,9 +62,9 @@ export function BraceletActivationCta() {
     >
       <View style={s.left}>
         <Text style={s.title}>Activate your bracelet</Text>
-        <Text style={s.sub}>
+        <BalancedText style={s.sub}>
           Enter your 12-character code to link your bracelet
-        </Text>
+        </BalancedText>
       </View>
       <Text style={s.arrow}>→</Text>
     </AnimatedPressable>

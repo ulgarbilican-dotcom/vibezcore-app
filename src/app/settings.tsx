@@ -23,6 +23,7 @@
      beschikbaar is.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { getCrashReportsEnabled, setCrashReportsEnabled } from '@/services/crash-reporting';
 import HealthSyncSetting from '@/components/HealthSyncSetting';
 import { resetRestingPulse } from '@/services/resting-pulse';
@@ -278,9 +279,9 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Auto-play next session</Text>
-              <Text style={s.rowSub}>
+              <BalancedText style={s.rowSub}>
                 Automatically continue to the next session.
-              </Text>
+              </BalancedText>
             </View>
             <Switch
               value={autoPlayNext}
@@ -342,9 +343,9 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Share crash reports</Text>
-              <Text style={s.rowSub}>
+              <BalancedText style={s.rowSub}>
                 Helps us fix problems. Technical details only — never your name, email or health data.
-              </Text>
+              </BalancedText>
             </View>
             <Switch
               value={crashReports}
@@ -399,7 +400,7 @@ export default function SettingsScreen() {
                   <Text style={s.rowTitle}>
                     {slot.label} · {slot.when}
                   </Text>
-                  <Text style={s.rowSub}>{slot.body}</Text>
+                  <BalancedText style={s.rowSub}>{slot.body}</BalancedText>
                 </View>
                 <Switch
                   value={reminders[reminderKey('breath', slot.slot)] === true}
@@ -436,9 +437,9 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Plan reminders</Text>
-              <Text style={s.rowSub}>
+              <BalancedText style={s.rowSub}>
                 One reminder for each session in your daily plan. Your plan stays as it is.
-              </Text>
+              </BalancedText>
             </View>
             <Switch
               value={planReminders}
@@ -475,9 +476,9 @@ export default function SettingsScreen() {
           >
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Watch the intro again</Text>
-              <Text style={s.rowSub}>
+              <BalancedText style={s.rowSub}>
                 The five-screen walkthrough, from the start.
-              </Text>
+              </BalancedText>
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>
@@ -497,9 +498,9 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Plan reminders</Text>
-              <Text style={s.rowSub}>
+              <BalancedText style={s.rowSub}>
                 One reminder for each session in your daily State Control plan. Your plan stays as it is.
-              </Text>
+              </BalancedText>
             </View>
             <Switch
               value={braceletPlanReminders}
@@ -526,7 +527,7 @@ export default function SettingsScreen() {
           >
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Watch the intro again</Text>
-              <Text style={s.rowSub}>How State Control works, in two screens.</Text>
+              <BalancedText style={s.rowSub}>How State Control works, in two screens.</BalancedText>
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>
@@ -600,10 +601,10 @@ export default function SettingsScreen() {
               <View style={s.row}>
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Voice during sessions</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Spoken guidance while a bracelet session runs. The wrist
                     keeps working either way.
-                  </Text>
+                  </BalancedText>
                 </View>
                 <Switch
                   value={voiceCues}
@@ -625,9 +626,9 @@ export default function SettingsScreen() {
         >
           <View style={s.rowText}>
             <Text style={s.dangerTitle}>Clear all local data</Text>
-            <Text style={s.rowSub}>
+            <BalancedText style={s.rowSub}>
               Resets favorites, history, and progress.
-            </Text>
+            </BalancedText>
           </View>
           <Text style={s.dangerCta}>{clearing ? '…' : 'Clear'}</Text>
         </PressFeedback>
@@ -638,7 +639,7 @@ export default function SettingsScreen() {
           <View style={s.row}>
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Version</Text>
-              <Text style={s.rowSub}>VIBEZCORE App · Audio, Breathwork, State Control</Text>
+              <BalancedText style={s.rowSub}>VIBEZCORE App · Audio, Breathwork, State Control</BalancedText>
             </View>
             <Text style={s.versionText}>{versionLabel}</Text>
           </View>
@@ -670,11 +671,11 @@ export default function SettingsScreen() {
               >
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Puntenveld — prototype</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Punten trekken samen tot de gezichten bij het inademen en
                     waaieren uiteen bij het uitademen. Kies een modus, druk
                     START.
-                  </Text>
+                  </BalancedText>
                 </View>
               </Pressable>
               <View style={s.divider} />
@@ -689,10 +690,10 @@ export default function SettingsScreen() {
               >
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Subscribe — signed-in review</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Toont order-summary + "Continue to checkout" zonder
                     echt account.
-                  </Text>
+                  </BalancedText>
                 </View>
               </Pressable>
               <View style={s.divider} />
@@ -703,9 +704,9 @@ export default function SettingsScreen() {
               >
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Subscribe — signed-out form</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Toont email/password form (account-create-pad).
-                  </Text>
+                  </BalancedText>
                 </View>
               </Pressable>
               <View style={s.divider} />
@@ -730,9 +731,9 @@ export default function SettingsScreen() {
               >
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Breath onboarding — opnieuw</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Reset de first-run vlag en opent de onboarding meteen.
-                  </Text>
+                  </BalancedText>
                 </View>
               </PressFeedback>
               <View style={s.divider} />
@@ -752,10 +753,10 @@ export default function SettingsScreen() {
               >
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Bracelet onboarding — opnieuw</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Reset de first-run vlag — verschijnt bij de volgende
                     bracelet-connectie.
-                  </Text>
+                  </BalancedText>
                 </View>
               </PressFeedback>
               <View style={s.divider} />
@@ -782,11 +783,11 @@ export default function SettingsScreen() {
               >
                 <View style={s.rowText}>
                   <Text style={s.rowTitle}>Protocol flow — opnieuw</Text>
-                  <Text style={s.rowSub}>
+                  <BalancedText style={s.rowSub}>
                     Wist doelen, intensiteit, dagdeel-voorkeur, de
                     proefronde-vlag en het actieve protocol. Opent meteen
                     "How do you want to build it?".
-                  </Text>
+                  </BalancedText>
                 </View>
               </PressFeedback>
             </View>
@@ -887,12 +888,12 @@ function DevUserOverrideSection() {
           );
         })}
       </View>
-      <Text style={devS.hint}>
+      <BalancedText style={devS.hint}>
         Production has no free signed-in tier — accounts only exist via
         product purchase. "Free / Guest" simulates a non-logged-in visitor
         for testing without actually signing out. Dev-only · resets when
         clearing local data.
-      </Text>
+      </BalancedText>
       {/* Dev: rusthartslag-keuze wissen → "Your Resting Heart Rate"-pagina
           verschijnt opnieuw na de State Control-intro. */}
       <Pressable

@@ -20,6 +20,7 @@
    Provider-uitzondering: direct Supabase (zie auth-callback.tsx).
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -447,7 +448,7 @@ export default function ResetPassword() {
         extraScrollHeight={20}
       >
         <Text style={s.title}>{copy.heading}</Text>
-        <Text style={s.sub}>{copy.sub}</Text>
+        <BalancedText style={s.sub}>{copy.sub}</BalancedText>
 
         <Text style={s.label}>
           {mode === 'recovery' ? 'New password' : 'Password'}

@@ -21,6 +21,7 @@
    zonder shipping-informatie of andere claim. Props.subtitle blijft
    optioneel behouden voor eventueel toekomstig gebruik. */
 
+import BalancedText from '@/components/BalancedText';
 import { BrandFonts } from '@/constants/theme';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -36,7 +37,7 @@ export function PreviewBanner({ subtitle }: Props) {
       {subtitle ? (
         <>
           <Text style={s.sep}>·</Text>
-          <Text style={s.subtitle}>{subtitle}</Text>
+          <BalancedText style={s.subtitle}>{subtitle}</BalancedText>
         </>
       ) : null}
     </View>

@@ -21,6 +21,7 @@
                          iOS Safari View Controller, fallback Linking)
    ─────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -283,9 +284,9 @@ export default function LegalDoc() {
         />
         <View style={s.center}>
           <Text style={s.h2}>Page not found</Text>
-          <Text style={s.p}>
+          <BalancedText style={s.p}>
             The legal document you're looking for doesn't exist.
-          </Text>
+          </BalancedText>
           <AnimatedPressable
             style={[s.btn, backToAccountPressStyle]}
             onPress={() => goToTab('/account')}
@@ -323,7 +324,7 @@ export default function LegalDoc() {
           accessibilityLabel="VIBEZCORE"
         />
         <Text style={s.title}>{doc.title}</Text>
-        {doc.subtitle && <Text style={s.subtitle}>{doc.subtitle}</Text>}
+        {doc.subtitle && <BalancedText style={s.subtitle}>{doc.subtitle}</BalancedText>}
         <Text style={s.lastUpdatedText}>
           Last updated: {doc.lastUpdated}
         </Text>
@@ -355,10 +356,10 @@ export default function LegalDoc() {
         {/* Contact-support card aan de bodem */}
         <View style={s.contactCard}>
           <Text style={s.contactLabel}>QUESTIONS?</Text>
-          <Text style={s.contactBody}>
+          <BalancedText style={s.contactBody}>
             If anything is unclear or to exercise your rights, please reach
             out via the support form.
-          </Text>
+          </BalancedText>
           <AnimatedPressable
             style={[s.contactBtn, contactBtnPressStyle]}
             onPress={() => router.navigate('/support' as never)}

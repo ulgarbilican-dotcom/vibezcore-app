@@ -19,6 +19,7 @@
    er niets.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import SplatField from '@/components/SplatField';
 import Starfield from '@/components/Starfield';
 import { SESSION_ART } from '@/components/SessionArt';
@@ -304,9 +305,9 @@ export default function BreathSplatScreen() {
         </Text>
       </Pressable>
 
-      <Text style={s.note}>
+      <BalancedText style={s.note}>
         Prototype — the portrait replaces the figure once it is uploaded.
-      </Text>
+      </BalancedText>
     </SafeAreaView>
   );
 }

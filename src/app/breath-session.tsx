@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
 import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import FeelCheck from '@/components/FeelCheck';
@@ -3593,10 +3594,10 @@ export function BreathSession() {
             {!askScopeStep ? (
               <>
                 <Text style={s.modalTitle}>Make this your default?</Text>
-                <Text style={s.modalBody}>
+                <BalancedText style={s.modalBody}>
                   Or keep it just for this session — nothing changes until
                   you say so.
-                </Text>
+                </BalancedText>
                 <Pressable
                   style={s.modalBtn}
                   onPress={() => setAskScopeStep(true)}
@@ -3614,9 +3615,9 @@ export function BreathSession() {
             ) : (
               <>
                 <Text style={s.modalTitle}>Apply to just {stateLabel}?</Text>
-                <Text style={s.modalBody}>
+                <BalancedText style={s.modalBody}>
                   Or make it the default for every breathwork mode.
-                </Text>
+                </BalancedText>
                 <Pressable
                   style={s.modalBtn}
                   onPress={() => {
@@ -3675,10 +3676,10 @@ export function BreathSession() {
             <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
             <Text style={s.modalEyebrow}>UJJAYI BREATHING</Text>
             <Text style={s.modalTitle}>The sound is the technique</Text>
-            <Text style={s.modalBody}>
+            <BalancedText style={s.modalBody}>
               Create a soft Darth Vader–like sound at the back of your
               throat as you breathe in and out.
-            </Text>
+            </BalancedText>
             {/* Operator, 11 september 2026: "hoe creëren ze dat geluid" —
                korte "how to find it"-regel, Apple-stijl (kort, zelfverzekerd,
                geen overbodige woorden).
@@ -3687,10 +3688,10 @@ export function BreathSession() {
                eigen audio: beide regels samen in één opname, zie
                `MALE_UJJAYI_START_URL`/`FEMALE_UJJAYI_START_URL` in
                breath-voice.ts. */}
-            <Text style={[s.modalBody, { marginTop: 10 }]}>
+            <BalancedText style={[s.modalBody, { marginTop: 10 }]}>
               Slightly tighten the back of your throat — like a soft
               whisper.
-            </Text>
+            </BalancedText>
             <AnimatedPressable
               style={[s.modalBtn, pressUjjayiStart.style]}
               onPress={() => {
@@ -3734,10 +3735,10 @@ export function BreathSession() {
             </Pressable>
             <Text style={s.modalEyebrow}>{st.eyebrow}</Text>
             <Text style={s.modalTitle}>End trial?</Text>
-            <Text style={s.modalBody}>
+            <BalancedText style={s.modalBody}>
               This is your one free full session. Leaving now ends it — next
               time you'll only get a 30-second preview.
-            </Text>
+            </BalancedText>
             <AnimatedPressable
               style={[s.modalBtn, pressEndTrial.style]}
               onPressIn={pressEndTrial.onPressIn}
@@ -4313,9 +4314,9 @@ export function BreathSession() {
                te stellen?"): de knop zelf verdwijnt bewust tijdens het
                actieve ademen (focus mode) — zonder deze regel lijkt dat
                alsof de instellingen dan onbereikbaar zijn. */}
-            <Text style={s.avSheetHint}>
+            <BalancedText style={s.avSheetHint}>
               Pause your session anytime to reopen these settings.
-            </Text>
+            </BalancedText>
             </ScrollView>
           </View>
       </GlassSheet>
@@ -4340,12 +4341,12 @@ export function BreathSession() {
                   {DURATIONS[infoIdx].rounds} ROUNDS
                 </Text>
                 <Text style={s.modalTitle}>{DURATIONS[infoIdx].name}</Text>
-                <Text style={s.modalBody}>{DURATIONS[infoIdx].why}</Text>
-                <Text style={s.modalFoot}>
+                <BalancedText style={s.modalBody}>{DURATIONS[infoIdx].why}</BalancedText>
+                <BalancedText style={s.modalFoot}>
                   There is no single correct length. Pick what fits the
                   moment — a short session you actually do beats a long one
                   you skip.
-                </Text>
+                </BalancedText>
                 <AnimatedPressable
                   style={[s.modalBtn, pressDurationInfoDone.style]}
                   onPressIn={pressDurationInfoDone.onPressIn}

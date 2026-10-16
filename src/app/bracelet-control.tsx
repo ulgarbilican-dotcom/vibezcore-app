@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -1403,8 +1404,8 @@ function TrialSheet({
             <Text style={s.modeModalName}>{meta.name}</Text>
           </View>
         </View>
-        <Text style={s.quickSheetLine}>30 seconds of this rhythm on your phone and paired watch.</Text>
-        <Text style={s.quickSheetNote}>Starts at your resting heart rate, like a real session.</Text>
+        <BalancedText style={s.quickSheetLine}>30 seconds of this rhythm on your phone and paired watch.</BalancedText>
+        <BalancedText style={s.quickSheetNote}>Starts at your resting heart rate, like a real session.</BalancedText>
         <PressScale style={s.quickSheetCta} haptic scaleTo={0.97} onPress={onStartPreview} accessibilityRole="button">
           <Text style={s.quickSheetCtaTxt}>Start preview</Text>
         </PressScale>
@@ -2875,7 +2876,7 @@ function SearchingScreen({
             <Text style={[s.searchingTitle, searchingDark && { color: '#ffffff' }]}>
               Bracelet not linked
             </Text>
-            <Text
+            <BalancedText
               style={[
                 s.searchingSub,
                 searchingDark && { color: 'rgba(255,255,255,0.5)' },
@@ -2883,7 +2884,7 @@ function SearchingScreen({
             >
               Activate your bracelet with your 12-character code to
               connect it to this account.
-            </Text>
+            </BalancedText>
           </>
         ) : (
           <View style={{ alignItems: 'center' }}>
@@ -2910,14 +2911,14 @@ function SearchingScreen({
                 <Text style={[s.searchingTitle, searchingDark && { color: '#ffffff' }]}>
                   {conn === 'scanning' ? 'Searching' : conn === 'connecting' ? 'Connecting' : 'Looking for your bracelet'}
                 </Text>
-                <Text
+                <BalancedText
                   style={[
                     s.searchingSub,
                     searchingDark && { color: 'rgba(255,255,255,0.5)' },
                   ]}
                 >
                   Make sure your bracelet is nearby and powered on.
-                </Text>
+                </BalancedText>
               </>
             )}
             {/* Operator, 16 september 2026 ("die bracelet had ik eigenlijk
@@ -3039,10 +3040,10 @@ function FaultScreen({
           <Text style={s.faultIconText}>!</Text>
         </View>
         <Text style={s.faultTitle}>Something went wrong</Text>
-        <Text style={s.faultSub}>
+        <BalancedText style={s.faultSub}>
           Your bracelet reported an error. Disconnect and reconnect, or
           contact support if it continues.
-        </Text>
+        </BalancedText>
       </View>
       <View style={s.bottomBar}>
         <PrimaryCtaButton
@@ -3099,9 +3100,9 @@ function ChargingScreen({
           <Text style={s.chargingIconText}>⚡</Text>
         </View>
         <Text style={s.chargingTitle}>Charging</Text>
-        <Text style={s.chargingSub}>
+        <BalancedText style={s.chargingSub}>
           Sessions are paused while the bracelet charges.
-        </Text>
+        </BalancedText>
         <View style={s.chargingStats}>
           <View style={s.chargingStatRow}>
             <Text style={s.chargingStatLabel}>Battery</Text>
@@ -4270,9 +4271,9 @@ function IdleScreen({
         {!deviceCanVibrate() && (
           <View style={s.warnChip}>
             <Text style={s.warnChipIcon}>⚠</Text>
-            <Text style={s.warnChipText}>
+            <BalancedText style={s.warnChipText}>
               This device has no vibration motor, so sessions can&apos;t be felt here
-            </Text>
+            </BalancedText>
           </View>
         )}
 

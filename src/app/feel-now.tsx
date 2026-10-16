@@ -26,6 +26,7 @@
    plaats van een harde cut, Premium/bracelet-eigenaars de volledige sessie
    zonder enige limiet. */
 
+import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -196,7 +197,7 @@ export default function FeelNowScreen() {
            de pagina nu scrollen. */
         <ScrollView style={{ flex: 1 }} contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
           <Text style={s.largeTitle}>How do you feel?</Text>
-          <Text style={s.subheading}>Choose what's going on — we'll take it from there.</Text>
+          <BalancedText style={s.subheading}>Choose what's going on — we'll take it from there.</BalancedText>
 
           <View style={s.grid}>
             {core.map((situation, idx) => (
@@ -237,7 +238,7 @@ export default function FeelNowScreen() {
               );
             })}
           </View>
-          <Text style={s.hint}>Long press any option to see why it helps</Text>
+          <BalancedText style={s.hint}>Long press any option to see why it helps</BalancedText>
         </ScrollView>
       )}
 
@@ -310,11 +311,11 @@ export default function FeelNowScreen() {
                      een generieke techniek-beschrijving. */}
                   <View style={s.infoBlock}>
                     <Text style={s.infoLabel}>WHY THIS HELPS</Text>
-                    <Text style={s.modalBody}>{infoFor.why}</Text>
+                    <BalancedText style={s.modalBody}>{infoFor.why}</BalancedText>
                   </View>
                   <View style={s.infoBlock}>
                     <Text style={s.infoLabel}>WHY {duration.minutes} MIN</Text>
-                    <Text style={s.modalBody}>{duration.why}</Text>
+                    <BalancedText style={s.modalBody}>{duration.why}</BalancedText>
                   </View>
                 </>
               );

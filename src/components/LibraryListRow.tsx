@@ -7,6 +7,7 @@
    (NEW-pill / gevuld hartje / FREE-pill).
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { PILLAR_META, SERIES_PHOTO, SERIES_PILLAR, type Session } from '@/data/audio-library-data';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
@@ -128,9 +129,7 @@ export function LibraryListRow({
         {!hideTag && !effectivelyPro && badgeLabel && (
           <Text style={[s.tag, { color: badgeColor }]}>{badgeLabel}</Text>
         )}
-        <Text style={s.title} numberOfLines={2}>
-          {session.title}
-        </Text>
+        <BalancedText style={s.title} numberOfLines={2}>{session.title}</BalancedText>
         {/* Operator, 1 okt 2026 ("namen en zinnen van audio niet
            afbreken en 3 puntjes zetten"): serienaam mocht nooit
            afgekapt worden met "…" — `numberOfLines` weggehaald, de rij

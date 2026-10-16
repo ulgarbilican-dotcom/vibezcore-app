@@ -20,6 +20,7 @@
    webapp behouden, achterwaarts uitbreidbaar).
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { SERIES_PHOTO } from '@/data/audio-library-data';
 import {
   computeStats,
@@ -675,10 +676,10 @@ function EmptyState() {
     <View style={s.emptyWrap}>
       <Text style={s.emptyEmoji}>🎧</Text>
       <Text style={s.emptyTitle}>Your journey starts here</Text>
-      <Text style={s.emptyP}>
+      <BalancedText style={s.emptyP}>
         Play your first session and watch your transformation take shape —
         sessions, streaks, and progress will appear right here.
-      </Text>
+      </BalancedText>
     </View>
   );
 }

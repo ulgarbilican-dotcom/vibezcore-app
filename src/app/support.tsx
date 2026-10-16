@@ -14,6 +14,7 @@
    het geval de auto-redirect faalt.
    ─────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -102,10 +103,10 @@ export default function SupportScreen() {
       />
       <View style={s.center}>
         <Text style={s.title}>Opening Support…</Text>
-        <Text style={s.body}>
+        <BalancedText style={s.body}>
           We&apos;re taking you to the VIBEZCORE Support page where you can
           submit your request.
-        </Text>
+        </BalancedText>
         <AnimatedPressable
           style={[s.btn, pressStyle]}
           onPress={() => {

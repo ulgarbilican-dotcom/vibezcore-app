@@ -8,6 +8,7 @@
    wit (CTA-regel), enkel de tekst wordt rood.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import PressScale from '@/components/PressScale';
 import VibezGlass from '@/components/VibezGlass';
@@ -38,7 +39,7 @@ export default function ConfirmCard({
         <Pressable style={s.card} onPress={() => {}}>
           <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
           <Text style={s.title}>{title}</Text>
-          <Text style={s.body}>{body}</Text>
+          <BalancedText style={s.body}>{body}</BalancedText>
           <PressScale style={s.btn} haptic scaleTo={0.97} onPress={onConfirm} accessibilityLabel={confirmLabel}>
             <Text style={[s.btnTxt, destructive && { color: Brand.error }]}>{confirmLabel}</Text>
           </PressScale>

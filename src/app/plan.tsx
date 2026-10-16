@@ -20,6 +20,7 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
+import BalancedText from '@/components/BalancedText';
 import { planItemStatuses } from '@/utils/plan-status';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { CTA } from '@/constants/theme';
@@ -804,10 +805,10 @@ export default function PlanScreen() {
           </AnimatedPressable>
         )}
 
-        <Text style={s.foot}>
+        <BalancedText style={s.foot}>
           Nothing to tick off. What you do is saved as you go, and shows up
           here on its own.
-        </Text>
+        </BalancedText>
       </ScrollView>
 
       {/* ── Eigen tijdkiezer ──────────────────────────────────────────
