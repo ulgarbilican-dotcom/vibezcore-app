@@ -1572,19 +1572,17 @@ function ModeSwipeRing({
      NADAT React hem getekend heeft (anders zie je de oude even terugkomen). */
   const pendingDirRef = useRef(0);
 
-  /* Operator, 16 okt 2026 ("moeten die cirkels bij horizontaal scrollen
-     beetje bouncen?"): de nieuwe cirkel komt iets kleiner binnen en veert
-     naar zijn volle maat — zoals wijzerplaten op de Apple Watch. */
-  const scale = useSharedValue(1);
   useEffect(() => {
     indexSV.value = index;
     const dir = pendingDirRef.current;
     if (dir !== 0) {
       pendingDirRef.current = 0;
       x.value = dir * SWIPE_DISTANCE;
-      x.value = withSpring(0, { damping: 18, stiffness: 190, mass: 0.9 });
-      scale.value = 0.92;
-      scale.value = withSpring(1, { damping: 11, stiffness: 170, mass: 0.8 });
+      /* Dubbele bounce, zijwaarts in de veegrichting (operator, 16 okt 2026:
+         "links-rechts of rechts-links, afhankelijk naar welke kant je
+         scrolt"): minder demping, zodat de cirkel twee keer heen en weer
+         naveert (± 20 % en ± 4 % van de afstand) voor hij stilstaat. */
+      x.value = withSpring(0, { damping: 12, stiffness: 200, mass: 0.9 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
@@ -1689,7 +1687,7 @@ function ModeSwipeRing({
   const gesture = Gesture.Exclusive(edge, pan, tap);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { scale: scale.value }],
+    transform: [{ translateX: x.value }],
     opacity: interpolate(Math.abs(x.value), [0, SWIPE_DISTANCE], [1, 0], Extrapolation.CLAMP),
   }));
 
