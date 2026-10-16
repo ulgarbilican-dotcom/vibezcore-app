@@ -20,7 +20,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, BackHandler, Dimensions, Easing, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Dimensions, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 
 type Entry = { id: number; node: ReactNode; onClose: () => void; fullHeight?: boolean };
 let current: Entry | null = null;
@@ -70,6 +70,27 @@ export function GlassSheetHost() {
   const progress = useRef(new Animated.Value(0)).current;
   const shownRef = useRef<Entry | null>(null);
   const H = Dimensions.get('window').height;
+  /* Naar beneden vegen sluit het blad (audit 16 okt 2026): elk blad toont
+     Apple's grijze streepje bovenaan, en dat belooft precies dit. Het blad
+     volgt de vinger; ver genoeg of snel genoeg = sluiten, anders veert het
+     terug. Lijsten en schuifjes in het blad houden hun eigen beweging. */
+  const drag = useRef(new Animated.Value(0)).current;
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
+      onPanResponderMove: (_e, g) => drag.setValue(Math.max(0, g.dy)),
+      onPanResponderRelease: (_e, g) => {
+        if (g.dy > 110 || g.vy > 0.9) {
+          current?.onClose();
+        } else {
+          Animated.spring(drag, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(drag, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     const onChange = (e: Entry | null) => {
@@ -78,6 +99,7 @@ export function GlassSheetHost() {
         shownRef.current = e;
         setShown(e);
         if (!was || was.id !== e.id) {
+          drag.setValue(0);
           progress.stopAnimation();
           progress.setValue(0);
           Animated.timing(progress, {
@@ -107,7 +129,7 @@ export function GlassSheetHost() {
     return () => {
       listeners.delete(onChange);
     };
-  }, [progress]);
+  }, [progress, drag]);
 
   /* Android-terugknop sluit de sheet, zoals een Modal deed. */
   useEffect(() => {
@@ -130,9 +152,22 @@ export function GlassSheetHost() {
             style={[
               s.sheetWrap,
               shown.fullHeight ? s.sheetWrapFull : null,
-              { transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [H, 0] }) }] },
+              {
+                transform: [
+                  {
+                    translateY: Animated.add(
+                      progress.interpolate({ inputRange: [0, 1], outputRange: [H, 0] }),
+                      drag,
+                    ),
+                  },
+                ],
+              },
             ]}
             pointerEvents="box-none"
+            /* VoiceOver: enkel het blad is bereikbaar; twee-vinger-Z sluit. */
+            accessibilityViewIsModal
+            onAccessibilityEscape={() => current?.onClose()}
+            {...pan.panHandlers}
           >
             {shown.node}
           </Animated.View>
