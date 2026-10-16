@@ -30,6 +30,7 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 17 | FAQ, Settings, Support | Inhoud nalopen voor State Control, Breathwork, Audio en Smart Bead Bracelet: klopt alles met de app van nu (prijzen, trial weg → dagpas, 20 s meting, namen, Launching Early 2027)? | ⏳ |
 | 18 | Legal | Terms, Privacy en andere juridische teksten nalopen (o.a. trial → dagpas, Health/hartslag, camera) | ⏳ |
 | 19 | Alle schermen | Elke sluit-, verklein- en terugknop nalopen tegen Apple HIG (plaats, Done/X, veeggebaren, bladen) | ⏳ |
+| 20 | Opstartanimatie (nieuw) | Zoals WHOOP: de V verschijnt en loopt over in het volledige VIBEZCORE-woordmerk. Voorstel: bestaande V-animatie (LaunchReveal) behouden, daarna schuift de V naar links en vouwen de letters IBEZCORE er één voor één uit, dan opent de app. ±1,8 s, enkel bij koude start | ⏳ |
 
 Vermoedelijk dezelfde oorzaak voor 10–12: op iOS liggen de knoppen in de
 sessie anders of zit er een laag over (andere aanraakzones dan op Android).
