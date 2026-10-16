@@ -326,6 +326,8 @@ function clearPending(): void {
  *  Corrigeert zichzelf op de wandklok, zodat er geen drift opbouwt. */
 /** Gemeten opstarttijd van de trildienst op Android (13 okt 2026: 145–178 ms). */
 const NATIVE_START_LAG_MS = 160;
+/** Voorproef: trilmotor rechtstreeks, geen dienst (gemeten 17 okt 2026: 7–21 ms). */
+const PREVIEW_START_LAG_MS = 12;
 let syncLogCount = 0;
 function scheduleVisual(
   mode: BraceletMode,
@@ -890,9 +892,12 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     curveOffsetSec: 0,
     remainingSec: PREVIEW_MAX_SECONDS,
     ...watchStrength(spec),
-    /* zoals relayToWatch: het moment dat de eerste tik op de telefoon
-       voelbaar is (audit 14 okt 2026) */
-    sentAtMs: Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0),
+    /* Het moment dat de eerste tik op de telefoon voelbaar is. De
+       voorproef start de trilmotor rechtstreeks (geen voorgrondservice):
+       gemeten 17 okt 2026 op de A16, 6 voorproeven: 7–21 ms na dit
+       moment, niet de 160 ms van een sessie — met 160 liep het horloge
+       ~150 ms achter op de telefoon. */
+    sentAtMs: Date.now() + (hasNativeWaveform() ? PREVIEW_START_LAG_MS : 0),
   };
   sendWearState(start);
   sendAppleState(start);
