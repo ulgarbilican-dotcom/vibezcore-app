@@ -23,15 +23,24 @@ export default function StateOnboardingScreen() {
   /* Stap 3 (hartslag) ook bij "Watch the intro again" (operator: "waar
      zijn 2 pagina's voor heartrate?"); wie al een waarde heeft, krijgt daar
      "Keep my current" als standaard. */
-  const hrNext = isFirst ? hr === '1' : true;
+  /* Operator, 16 okt 2026 ("onboarding voor breathwork betekent niet dat
+     onboarding voor state control ook moet verdwijnen"): elke onboarding is
+     volledig op zichzelf — de hartslagstap hoort er altijd bij, ook als er
+     elders (Breathwork, Profile) al een keuze gemaakt is. */
+  const hrNext = true;
+  void hr;
 
   const back = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/bracelet' as never);
   };
+  /* Elke keuze (meten, zelf invullen, gemiddelde) eindigt op dezelfde
+     plek: State Control met de gekozen toestand klaar — ook bij "Watch the
+     intro again" (operator, 16 okt 2026: "alle keuzes moeten naar dezelfde
+     volgende stap"; vroeger ging herbekijken terug naar Settings). */
   const done = (mode: number) => {
     if (!isFirst) {
-      back();
+      router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
       return;
     }
     void setSetting('stateOnboardingCompletedAt', Date.now());
