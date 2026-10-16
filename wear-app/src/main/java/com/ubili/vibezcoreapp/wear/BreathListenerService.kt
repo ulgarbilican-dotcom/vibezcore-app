@@ -19,6 +19,9 @@ private const val PATH_PAUSE = "/vibezcore/breath/pause"
 private const val PATH_STATE_START = "/vibezcore/state/start"
 private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
+/** Enkel wakker worden: de telefoon stuurt dit als State Control opent,
+ *  zodat een echte start meteen aankomt (17 okt 2026). */
+private const val PATH_WAKE = "/vibezcore/state/wake"
 
 class BreathListenerService : WearableListenerService() {
   /* 12 okt 2026 (operator: "gebruikers mogen niet sukkelen"): zodra de
@@ -54,8 +57,11 @@ class BreathListenerService : WearableListenerService() {
   }
 
   override fun onMessageReceived(event: MessageEvent) {
+    /* Meting telefoon → horloge (17 okt 2026): ontvangstmoment. */
+    android.util.Log.d("VZSync", "recv ${event.path} at=${System.currentTimeMillis()}")
     try {
       when (event.path) {
+        PATH_WAKE -> Unit
         PATH_START -> {
           val json = String(event.data, Charsets.UTF_8)
           val intent = Intent(this, WearBreathSessionService::class.java).apply {

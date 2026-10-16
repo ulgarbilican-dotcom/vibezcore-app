@@ -50,6 +50,7 @@ import {
   subscribeHapticPulse,
   isWatchPlayingRhythm,
   setWatchHapticsEnabled,
+  wakeWatchForStateControl,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
@@ -3886,6 +3887,16 @@ function IdleScreen({
      starten van de sessie — anders is dat storend"): trilsterkte e.d. via
      een eigen knop rechtsboven, hetzelfde blad als in de lopende sessie. */
   const [hapticsOpen, setHapticsOpen] = useState(false);
+  /* Horloge-app alvast wekken: bij openen van dit scherm en van het
+     voorproef-blad (17 okt 2026). */
+  useFocusEffect(
+    useCallback(() => {
+      wakeWatchForStateControl();
+    }, []),
+  );
+  useEffect(() => {
+    if (trialSheetOpen) wakeWatchForStateControl();
+  }, [trialSheetOpen]);
   const withRhythm = (action: () => void) => () => {
     if (pulse.decided) {
       action();

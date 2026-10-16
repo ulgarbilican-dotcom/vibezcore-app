@@ -96,6 +96,9 @@ private const val PATH_STATE_START = "/vibezcore/state/start"
 private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 private const val PATH_STATE_ACK = "/vibezcore/state/ack"
+/** Wekt de horloge-app vooraf (17 okt 2026: een slapende app op de Watch4
+ *  kreeg de voorproef pas ~20 s later). Het horloge doet er verder niets mee. */
+private const val PATH_WAKE = "/vibezcore/state/wake"
 
 private const val WATCH_CAPABILITY = "vibezcore_watch_app"
 /* 13 okt 2026 — het horloge zelfstandig: de telefoon zet de "catalogus"
@@ -276,6 +279,10 @@ class WearBreathModule : Module() {
     Function("stopStateSession") {
       broadcast(PATH_STATE_STOP, ByteArray(0))
     }
+
+    Function("wakeWatch") {
+      broadcast(PATH_WAKE, ByteArray(0))
+    }
   }
 
   private fun toJson(session: WearBreathSession): JSONObject {
@@ -312,7 +319,11 @@ class WearBreathModule : Module() {
       val messageClient = Wearable.getMessageClient(context)
       Wearable.getNodeClient(context).connectedNodes
         .addOnSuccessListener { nodes ->
-          nodes.forEach { node -> messageClient.sendMessage(node.id, path, payload) }
+          nodes.forEach { node ->
+            messageClient.sendMessage(node.id, path, payload)
+            /* Meting telefoon → horloge (17 okt 2026): verzendmoment. */
+            android.util.Log.d("VZSend", "$path sent=${System.currentTimeMillis()} node=${node.displayName}")
+          }
         }
     } catch (_: Exception) {
       /* geen Play Services / geen context: stil, zoals beloofd */

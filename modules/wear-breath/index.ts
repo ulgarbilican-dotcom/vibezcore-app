@@ -87,6 +87,7 @@ type WearBreathNativeModule = {
   pauseBreathSession(): void;
   stopBreathSession(): void;
   sendStateSession(start: StateSessionStart): void;
+  wakeWatch?(): void;
   pauseStateSession(): void;
   stopStateSession(): void;
   syncCatalog?(json: string): void;
@@ -204,6 +205,17 @@ export function sendStateSessionToWatch(start: StateSessionStart): void {
 export function pauseStateSessionOnWatch(): void {
   try {
     native?.pauseStateSession();
+  } catch {
+    /* stil */
+  }
+}
+
+/** Wekt de horloge-app alvast (17 okt 2026): Samsung laat een slapende
+ *  app een bericht soms pas ~20 s later ontvangen. Faalt stil; ontbreekt
+ *  in een oudere build gewoon. */
+export function wakeWatch(): void {
+  try {
+    native?.wakeWatch?.();
   } catch {
     /* stil */
   }

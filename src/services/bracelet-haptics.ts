@@ -72,6 +72,7 @@ import {
   pauseStateSessionOnWatch as pauseWearState,
   sendStateSessionToWatch as sendWearState,
   stopStateSessionOnWatch as stopWearState,
+  wakeWatch as wakeWear,
 } from '../../modules/wear-breath';
 import {
   onStateAck as onAppleStateAck,
@@ -877,6 +878,19 @@ export function playModeTasteHaptic(mode: BraceletMode, seconds = TASTE_SECONDS)
 }
 
 let previewOnWatch = false;
+/** Wekt de horloge-app alvast als State Control of het voorproef-blad
+ *  opent (17 okt 2026, gemeten: een door Samsung bevroren app op de Watch4
+ *  ontving de voorproef pas ~20 s na de telefoon). Hoogstens om de 15 s,
+ *  enkel als het horloge mee mag trillen. */
+let lastWakeAt = 0;
+export function wakeWatchForStateControl(): void {
+  if (!getSetting('watchHaptics')) return;
+  const now = Date.now();
+  if (now - lastWakeAt < 15000) return;
+  lastWakeAt = now;
+  wakeWear();
+}
+
 export function playModeTrialHaptic(mode: BraceletMode): void {
   playModePreviewHaptic(mode);
   if (!getSetting('watchHaptics')) return;
