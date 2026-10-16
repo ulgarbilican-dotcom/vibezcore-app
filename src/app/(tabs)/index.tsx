@@ -51,6 +51,8 @@ import {
   ChevronRight,
   CircleDashed,
   Lock,
+  Play,
+  Search,
   Shield,
 } from 'lucide-react-native';
 import {
@@ -281,9 +283,11 @@ const PILLAR_SIDE_INSET = 16;
    apple dat doen"): 12 → 16 — Apple's gangbare spacing-unit voor een
    grid, geeft de kaarten letterlijk en visueel meer ademruimte. */
 const PILLAR_CARD_GAP = 16;
-const PILLAR_CARD_WIDTH = Math.round(
-  (Dimensions.get('window').width - PILLAR_SIDE_INSET * 2 - PILLAR_CARD_GAP) / 2,
-);
+/* Operator, 16 okt 2026 ("de audio-weergave lijkt 1 lange pagina … mensen
+   moeten rust hebben"): de pijlers staan nu in één horizontale rij om te
+   vegen (Apple Music/Calm) i.p.v. een raster onder elkaar — iets meer dan
+   twee kaarten in beeld, zodat je ziet dat er meer is. */
+const PILLAR_CARD_WIDTH = Math.round(Dimensions.get('window').width * 0.42);
 const PILLAR_CARD_HEIGHT = Math.round(PILLAR_CARD_WIDTH * 1.25);
 /** Volle rij: twee kaarten + de tussenruimte. */
 const PILLAR_FULL_WIDTH = PILLAR_CARD_WIDTH * 2 + PILLAR_CARD_GAP;
@@ -1175,6 +1179,9 @@ function AudioScreen({
      eigenaar-besluit verwijderd — alle "save voor later"-gedrag loopt
      nu via Favorites op sessie-niveau. ── */
   const [searchQuery, setSearchQuery] = useState('');
+  /* Zoeken achter een vergrootglas naast de titel (16 okt 2026): de balk
+     verschijnt pas als je erom vraagt — minder bovenaan de pagina. */
+  const [searchOpen, setSearchOpen] = useState(false);
   const { favorites, toggle: toggleFavorite } = useFavorites();
 
   /* Reset de zoekquery telkens wanneer deze tab gefocust wordt — gebruiker
@@ -1752,9 +1759,17 @@ function AudioScreen({
            helemaal geen titel op dit scherm — alleen de zoekbalk). */}
         {/* Ruimte voor de Premium-knop bovenaan (PremiumPill, 7 okt 2026):
            zonder deze extra marge zat de knop tegen de titel. */}
-        <Text style={[s.libPageTitle, !sub.isLoading && !sub.isPro && { paddingTop: 54 }]}>
-          Audio Library
-        </Text>
+        <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingTop: 54 }]}>
+          <Text style={[s.libPageTitle, { paddingTop: 0, flex: 1 }]}>Audio Library</Text>
+          <CardBounce
+            style={s.libSearchBtn}
+            onPress={() => setSearchOpen((v) => !v)}
+            hitSlop={10}
+            accessibilityLabel="Search the library"
+          >
+            <Search size={22} color="#ffffff" strokeWidth={2.2} />
+          </CardBounce>
+        </View>
 
         {/* Operator, 26 september 2026 ("verwijder subheader"): de 4-fasen-
            regel (Understanding · Awareness · Regulation · Integration)
@@ -1842,7 +1857,7 @@ function AudioScreen({
             Audit 12 okt 2026 (operator akkoord): voor iedereen — ook een
             gast moet de hele catalogus kunnen doorzoeken. Resultaten openen
             de serie, waar de gewone toegangsregels gelden (slot/trial/PRO). */}
-        {(
+        {(searchOpen || searchQuery.length > 0) && (
           <View
             style={s.searchWrap}
             onLayout={(e) => {
@@ -1859,10 +1874,14 @@ function AudioScreen({
               returnKeyType="search"
               autoCorrect={false}
               autoCapitalize="none"
+              autoFocus
             />
-            {searchActive ? (
+            {searchOpen || searchActive ? (
               <Pressable
-                onPress={() => setSearchQuery('')}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSearchOpen(false);
+                }}
                 hitSlop={12}
                 style={s.searchClear}
                 android_ripple={{
@@ -1897,18 +1916,51 @@ function AudioScreen({
                (Apple HIG). De kaarten hieronder communiceren dat nu zelf
                via schaduw/diepte. */}
 
+            {/* Eén uitgelichte kaart bovenaan (16 okt 2026): de eerste stap
+                voor wie binnenkomt — gast: de 10 gratis sessies; wie al
+                luisterde: verder waar je was. */}
+            {(!hasSub || lastPlayed) && (
+              <Animated.View entering={FadeInUp.delay(80).springify().damping(16)} style={s.featureWrap}>
+                <CardBounce
+                  style={s.featureCard}
+                  onPress={() =>
+                    lastPlayed
+                      ? showWelcomePopup()
+                      : navigateAway(() => router.push('/library/free'))
+                  }
+                  accessibilityLabel={lastPlayed ? 'Continue listening' : 'Start with 10 free sessions'}
+                >
+                  <View style={s.featureInner}>
+                  <View style={s.featureIcon}>
+                    <Play size={18} color="#0a0a0a" fill="#0a0a0a" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.featureEyebrow}>{lastPlayed ? 'CONTINUE LISTENING' : 'START HERE'}</Text>
+                    <Text style={s.featureTitle} numberOfLines={1}>
+                      {lastPlayed ? lastPlayed.title : '10 free sessions'}
+                    </Text>
+                    <Text style={s.featureSub} numberOfLines={1}>
+                      {lastPlayed ? lastPlayed.series : 'Listen any time, no subscription'}
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
+                  </View>
+                </CardBounce>
+              </Animated.View>
+            )}
             <View
               onLayout={(e) => {
                 pillarsYRef.current = e.nativeEvent.layout.y;
               }}
             >
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                paddingHorizontal: PILLAR_SIDE_INSET,
-              }}
+            <Text style={s.libSectionTitle}>Explore</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              snapToInterval={PILLAR_CARD_WIDTH + PILLAR_CARD_GAP}
+              snapToAlignment="start"
+              contentContainerStyle={{ paddingHorizontal: PILLAR_SIDE_INSET, gap: PILLAR_CARD_GAP }}
             >
               {PILLARS.map((p, pillarIdx) => {
                 const isActiveFilter = activePillarFilter === p.key;
@@ -1931,8 +1983,7 @@ function AudioScreen({
                            anders heel lelijk"): met een abonnement valt
                            Free Picks weg en stond deze kaart alleen op een
                            halve rij — dan over de volle breedte. */
-                        width: p.key === 'tools' && hasSub ? PILLAR_FULL_WIDTH : PILLAR_CARD_WIDTH,
-                        marginBottom: PILLAR_CARD_GAP,
+                        width: PILLAR_CARD_WIDTH,
                       },
                       breathStyles[pillarIdx],
                     ]}
@@ -1985,10 +2036,7 @@ function AudioScreen({
                              dan de 4 echte pijlers — staat als laatste
                              rij naast Free Picks, dus geen volgende rij
                              die erdoor scheeftrekt. */
-                          height:
-                            p.key === 'tools'
-                              ? PILLAR_CARD_HEIGHT * 0.5
-                              : PILLAR_CARD_HEIGHT,
+                          height: PILLAR_CARD_HEIGHT,
                           marginBottom: 0,
                         },
                         /* Operator, 26 september 2026 ("geen accentkleur bij
@@ -2127,167 +2175,7 @@ function AudioScreen({
                 );
               })}
 
-              {/* ── 6e CARD: FREE PICKS — "Taste the Library" ──
-                  Operator-fix 2026-06-17 iter 2: card hoort in de pillar-
-                  grid (positie 6, onder pillar 4 in 2-col layout). Tap
-                  zet activePillarFilter='free' wat de library-sectie
-                  switcht naar de 10 free-sessie-rijen (getEffectiveTier
-                  === 'public', geverifieerd 27 september 2026), en gebruiker kan
-                  doorklikken naar de juiste serie. "Back to pillars"-knop
-                  brengt 'm terug naar de pillar-grid.
-                  Iter 9dq v153 (operator-fix 2026-06-17): NIET tonen
-                  voor PRO-users (audio PRO + full PRO). Die hebben alles
-                  al — een "free picks" entry-point is dan visuele ruis. */}
-              {!hasSub && (() => {
-                const isFreeActive = activePillarFilter === 'free';
-                /* Operator, 14 september 2026 ("we hebben beslist geen 27
-                   sessies in free"): `sess.free` is een legacy-veld en
-                   telt inmiddels 28 — na het 1-september-besluit (10
-                   standaard gratis, 17 pas met de 7-dagen trial) is de
-                   ENIGE correcte telling `getEffectiveTier(sess)==='public'`. */
-                const freeCount = SESSIONS.filter(
-                  (sess) => getEffectiveTier(sess) === 'public',
-                ).length;
-                return (
-                  <Animated.View
-                    key="free-picks"
-                    style={[
-                      { width: PILLAR_CARD_WIDTH, marginBottom: PILLAR_CARD_GAP },
-                      breathStyles[5],
-                    ]}
-                  >
-                  {/* Operator, 26 september 2026 (Content-Card-consistentie):
-                     deze kaart had als enige nog tekst/badge/chevron bovenop
-                     de foto — nu hetzelfde patroon als de pillar-kaarten:
-                     schone foto (met een zachte "FREE" scrim, zelfde stijl
-                     als "PILLAR 0X"), content los eronder op de
-                     pagina-achtergrond. */}
-                  {/* Operator ("free picks moet ook aangepast, oude kleuren
-                     layout etc"): had nog een losse `<Pressable>` zonder
-                     tik-animatie/haptiek (de pillar-kaarten kregen
-                     CardBounce, deze werd gemist omdat 'ie buiten de
-                     .map() staat), een hardcoded fontFamily-string i.p.v.
-                     BrandFonts.extrabold, en geen selectie-gloed bij
-                     actief (de pillar-kaarten hebben die wel). Nu 1-op-1
-                     hetzelfde patroon als de pillar-kaarten hierboven. */}
-                  <CardBounce
-                    style={{ width: '100%' }}
-                    onPress={() => {
-                      if (isFreeActive) {
-                        setActivePillarFilter(null);
-                      } else {
-                        setActivePillarFilter('free');
-                        requestAnimationFrame(() => {
-                          requestAnimationFrame(() => {
-                            scrollViewRef.current?.scrollTo({
-                              y: Math.max(0, libListYRef.current - 24),
-                              animated: true,
-                            });
-                          });
-                        });
-                      }
-                    }}
-                    androidRipple={{ color: 'rgba(255,255,255,0.08)' }}
-                    accessibilityLabel="Free picks — first session of every series"
-                  >
-                    <View
-                      style={[
-                        s.pillar,
-                        {
-                          width: '100%',
-                          /* Operator ("kleiner moet even groot als
-                             soundscapes"): zelfde verkleining als de
-                             Soundscapes & Affirmations-kaart hiernaast in
-                             de laatste rij, zodat die rij weer gelijk
-                             oogt. */
-                          height: PILLAR_CARD_HEIGHT * 0.5,
-                          marginBottom: 0,
-                        },
-                        isFreeActive
-                          /* Operator ("moet elegant oplichten zoals ons
-                             protocol voorschrijft"): huisstijl §2.5 —
-                             rgba(255,255,255,0.4), geen solide wit. */
-                          ? { borderColor: 'rgba(255,255,255,0.4)' }
-                          /* Operator ("free 10 moet weg uit de foto en
-                             zoals de ander ook omlijnen"): zelfde lichte
-                             hairline-rand als de 4 pillar-kaarten en
-                             Soundscapes & Affirmations — was hier nog de
-                             onzichtbare C.border. */
-                          : { borderColor: 'rgba(255,255,255,0.14)' },
-                      ]}
-                    >
-                      {/* Operator ("de ster mag de randen niet raken" →
-                         "niet gecentreerd"): eerste poging combineerde
-                         s.pillarImg's expliciete width/height:'100%' met
-                         een top/left/right/bottom-inset — die twee
-                         botsen (Yoga geeft width:100% voorrang boven de
-                         links+rechts-afgeleide breedte), dus de foto
-                         schoof naar rechts i.p.v. te centreren. Losse
-                         stijl zonder width/height: enkel de vier
-                         inset-offsets bepalen nu positie ÉN grootte. */}
-                      {/* Operator ("ster mag beetje groter, icoon
-                         soundscapes beetje kleiner, zodat ze visueel
-                         gelijk zijn"): inset 20→12. */}
-                      <Image
-                        source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/pic%20free%20picks%202.png' }}
-                        style={{ position: 'absolute', top: 12, left: 12, right: 12, bottom: 12 }}
-                        resizeMode="contain"
-                      />
-                      {/* Operator ("free 10 moet weg uit de foto"): geen
-                         scrim/label meer op de foto zelf — zelfde
-                         beslissing als "PILLAR 0X" hierboven. De
-                         "Taste the library · X sessions"-tekst onder de
-                         foto communiceert het aantal al. */}
-                    </View>
-                    <View style={{ paddingTop: 10, minHeight: 68 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View
-                          style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: 13,
-                            backgroundColor: `${AudioAccent}26`,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: AudioAccent,
-                              fontFamily: BrandFonts.extrabold,
-                              fontSize: 11,
-                              marginLeft: 1.5,
-                            }}
-                          >
-                            ▶
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            s.pillarName,
-                            { fontSize: 18, lineHeight: 21, color: C.text, letterSpacing: -0.3 },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          Free Picks
-                        </Text>
-                      </View>
-                      <Text
-                        style={{
-                          color: isFreeActive ? C.text : C.dim,
-                          fontFamily: BrandFonts.medium,
-                          fontSize: 12,
-                          marginTop: 2,
-                        }}
-                      >
-                        {isFreeActive ? `Listening · ${freeCount} sessions` : `Taste the library · ${freeCount} sessions`}
-                      </Text>
-                    </View>
-                  </CardBounce>
-                  </Animated.View>
-                );
-              })()}
-            </View>
+            </ScrollView>
             </View>
 
           </>
@@ -3422,81 +3310,6 @@ function AudioScreen({
            kaart) zijn de plek om te kiezen. Wie hier vroeger naartoe
            scrolde ('pricing'), gaat nu rechtstreeks naar /subscribe. */}
 
-        {/* ── DISCLAIMER — Independent Content & Third-Party References ──
-            Uitklapbaar, default DICHT. Visueel + tekst exact uit bron
-            index_2_correct.html `.legal-toggle` / `.legal-body`. Niets
-            verzonnen, geen herformulering. Geen native SVG-dep — schild
-            via 🛡-emoji, chevron via "›" met rotatie zoals serie-cards.
-            Verbergen tijdens search zodat de autocomplete-overlay focus
-            houdt. */}
-        {!searchActive && (
-        <View style={s.legalBlock}>
-          <Pressable
-            style={s.legalToggle}
-            onPress={toggleLegal}
-            android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
-          >
-            {/* Operator, 15 september 2026 (Apple-upgrade): "rode schild-
-                icoon vloekt met de serene rust" — een emoji negeert de
-                `color`-stijl (rendert altijd zijn eigen, vaak gekleurde
-                glyph), dus `s.legalIcon`'s kleur deed hier al die tijd
-                niets. Een lucide `Shield`-component respecteert `color`
-                wél. */}
-            <Shield size={15} color={C.dim} strokeWidth={2} style={{ marginRight: 10 }} />
-            <Text style={s.legalLabel} numberOfLines={2}>
-              Independent Content & Third-Party References
-            </Text>
-            <Text style={[s.legalChev, legalOpen && s.legalChevOpen]}>›</Text>
-          </Pressable>
-          {legalOpen && (
-            <View style={s.legalBody}>
-              <Text style={s.legalPara}>
-                All audio sessions published on VIBEZCORE are original,
-                independently produced works. The content represents our own
-                creative interpretation and synthesis of widely available
-                knowledge, drawing on general scientific literature,
-                publicly accessible research, and interdisciplinary insights
-                in fields such as neuroscience, performance psychology, and
-                personal development.
-              </Text>
-              <Text style={s.legalPara}>
-                Where reference is made to public figures, researchers,
-                authors, or thought leaders, this is done solely for
-                contextual, educational, or descriptive purposes. Such
-                references do not imply any form of affiliation,
-                collaboration, endorsement, sponsorship, or direct
-                involvement by those individuals or their organisations.
-                VIBEZCORE is not associated with, approved by, or connected
-                to any of the persons or entities referenced.
-              </Text>
-              <Text style={s.legalPara}>
-                No proprietary content, copyrighted materials, scripts,
-                books, courses, podcasts, or protected works from any third
-                party have been reproduced, adapted, or used as a basis for
-                our audio productions.
-              </Text>
-              <Text style={s.legalSubHead}>
-                Educational & Informational Use Only
-              </Text>
-              <Text style={s.legalPara}>
-                The content on this platform is intended for personal
-                development, motivational, and educational purposes only.
-                It does not constitute medical, psychological, therapeutic,
-                or clinical advice. If you are experiencing mental health
-                challenges, please consult a qualified healthcare
-                professional.
-              </Text>
-              <Text style={s.legalSubHead}>No Liability</Text>
-              <Text style={s.legalPara}>
-                VIBEZCORE accepts no liability for any decisions made,
-                actions taken, or outcomes experienced based on the content
-                of these audio sessions.
-              </Text>
-            </View>
-          )}
-        </View>
-        )}
-
         {/* ── SMART BEAD BRACELET (operator, 7 okt 2026: "de bracelet moet
             al gepromoot worden, nu bijna nergens vindbaar") ──
             Strategie (CLAUDE.md §3): bracelet = premium upgrade van de app.
@@ -3595,6 +3408,84 @@ function AudioScreen({
             </Text>
           </Pressable>
         )}
+
+        {/* Juridische regel onderaan als afsluiter, niet meer midden in de
+            inhoud (16 okt 2026: "mensen moeten rust hebben"). */}
+        {/* ── DISCLAIMER — Independent Content & Third-Party References ──
+            Uitklapbaar, default DICHT. Visueel + tekst exact uit bron
+            index_2_correct.html `.legal-toggle` / `.legal-body`. Niets
+            verzonnen, geen herformulering. Geen native SVG-dep — schild
+            via 🛡-emoji, chevron via "›" met rotatie zoals serie-cards.
+            Verbergen tijdens search zodat de autocomplete-overlay focus
+            houdt. */}
+        {!searchActive && (
+        <View style={s.legalBlock}>
+          <Pressable
+            style={s.legalToggle}
+            onPress={toggleLegal}
+            android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
+          >
+            {/* Operator, 15 september 2026 (Apple-upgrade): "rode schild-
+                icoon vloekt met de serene rust" — een emoji negeert de
+                `color`-stijl (rendert altijd zijn eigen, vaak gekleurde
+                glyph), dus `s.legalIcon`'s kleur deed hier al die tijd
+                niets. Een lucide `Shield`-component respecteert `color`
+                wél. */}
+            <Shield size={15} color={C.dim} strokeWidth={2} style={{ marginRight: 10 }} />
+            <Text style={s.legalLabel} numberOfLines={2}>
+              Independent Content & Third-Party References
+            </Text>
+            <Text style={[s.legalChev, legalOpen && s.legalChevOpen]}>›</Text>
+          </Pressable>
+          {legalOpen && (
+            <View style={s.legalBody}>
+              <Text style={s.legalPara}>
+                All audio sessions published on VIBEZCORE are original,
+                independently produced works. The content represents our own
+                creative interpretation and synthesis of widely available
+                knowledge, drawing on general scientific literature,
+                publicly accessible research, and interdisciplinary insights
+                in fields such as neuroscience, performance psychology, and
+                personal development.
+              </Text>
+              <Text style={s.legalPara}>
+                Where reference is made to public figures, researchers,
+                authors, or thought leaders, this is done solely for
+                contextual, educational, or descriptive purposes. Such
+                references do not imply any form of affiliation,
+                collaboration, endorsement, sponsorship, or direct
+                involvement by those individuals or their organisations.
+                VIBEZCORE is not associated with, approved by, or connected
+                to any of the persons or entities referenced.
+              </Text>
+              <Text style={s.legalPara}>
+                No proprietary content, copyrighted materials, scripts,
+                books, courses, podcasts, or protected works from any third
+                party have been reproduced, adapted, or used as a basis for
+                our audio productions.
+              </Text>
+              <Text style={s.legalSubHead}>
+                Educational & Informational Use Only
+              </Text>
+              <Text style={s.legalPara}>
+                The content on this platform is intended for personal
+                development, motivational, and educational purposes only.
+                It does not constitute medical, psychological, therapeutic,
+                or clinical advice. If you are experiencing mental health
+                challenges, please consult a qualified healthcare
+                professional.
+              </Text>
+              <Text style={s.legalSubHead}>No Liability</Text>
+              <Text style={s.legalPara}>
+                VIBEZCORE accepts no liability for any decisions made,
+                actions taken, or outcomes experienced based on the content
+                of these audio sessions.
+              </Text>
+            </View>
+          )}
+        </View>
+        )}
+
 
       </ScrollView>
 
@@ -3819,6 +3710,47 @@ function AudioScreen({
 }
 
 const s = StyleSheet.create({
+  /* Bibliotheek in rustige secties (16 okt 2026). */
+  libTitleRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 22 },
+  libSearchBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  libSectionTitle: {
+    fontFamily: BrandFonts.bold,
+    fontSize: 20,
+    letterSpacing: -0.3,
+    color: '#ffffff',
+    paddingHorizontal: PILLAR_SIDE_INSET,
+    marginTop: 28,
+    marginBottom: 14,
+  },
+  featureWrap: { paddingHorizontal: PILLAR_SIDE_INSET, marginTop: 20 },
+  featureCard: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  featureInner: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  featureIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureEyebrow: { fontFamily: BrandFonts.semibold, fontSize: 11, letterSpacing: 1.2, color: AudioAccentLight, marginBottom: 3 },
+  featureTitle: { fontFamily: BrandFonts.semibold, fontSize: 17, color: '#ffffff' },
+  featureSub: { fontFamily: BrandFonts.regular, fontSize: 13.5, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
   root: { flex: 1, backgroundColor: C.bg },
   /* Smart Bead Bracelet-kaart onder de pijlers (operator, 7 okt 2026). */
   braceletCard: {
@@ -5912,12 +5844,13 @@ const s = StyleSheet.create({
   legalBlock: {
     /* Operator, 7 okt 2026: de disclaimer hoort duidelijk bij het audio-
        blok erboven — dichter tegen Free Picks, ver van de bracelet. */
-    marginTop: -14,
+    /* 16 okt 2026: als rustige afsluiter onderaan de pagina, onder Sign
+       in — geen eigen kaart meer, enkel een grijze regel. */
+    marginTop: 24,
     marginHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: C.surface,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
-    ...SOFT_SHADOW,
   },
   legalToggle: {
     flexDirection: 'row',
