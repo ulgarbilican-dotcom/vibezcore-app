@@ -1054,8 +1054,8 @@ const s = StyleSheet.create({
   dotOn: { backgroundColor: '#ffffff' },
   info: { marginTop: 22 },
   /* Tekst over twee regels in blok (operator, 15 okt 2026). */
-  infoWhat: { fontFamily: BrandFonts.semibold, fontSize: 16, lineHeight: 23, color: '#ffffff' },
-  infoTitle: { fontFamily: BrandFonts.regular, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  infoWhat: { fontFamily: BrandFonts.semibold, fontSize: 16, lineHeight: 23, color: '#ffffff', textAlign: 'center' },
+  infoTitle: { fontFamily: BrandFonts.regular, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.7)', marginTop: 2, textAlign: 'center' },
   facts: { flexDirection: 'row', gap: 10, marginTop: 14 },
   fact: {
     flex: 1,
