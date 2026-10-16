@@ -50,8 +50,8 @@ const L0 = 0, L1 = 480; // linkerbeen
 const R0 = 140, R1 = 640; // rechterbeen
 const S0 = 640, S1 = 1000; // lichtstreep
 const U0 = 1000, U1 = 1420; // V schuift naar zijn plek in het woordmerk
-const LETTER0 = 1080, LETTER_STEP = 45, LETTER_DUR = 320; // I B E Z C O R E
-const O0 = 1700, O1 = 2080; // onthulling
+const LETTER0 = 1260, LETTER_STEP = 35, LETTER_DUR = 260; // I B E Z C O R E — pas als de V bijna op zijn plek is
+const O0 = 1850, O1 = 2220; // onthulling
 const TOTAL = O1;
 
 /* Het woordmerk (zelfde beeld als het welkomstscherm): 1175 × 83 px, de
