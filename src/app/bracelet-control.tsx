@@ -1572,13 +1572,19 @@ function ModeSwipeRing({
      NADAT React hem getekend heeft (anders zie je de oude even terugkomen). */
   const pendingDirRef = useRef(0);
 
+  /* Operator, 16 okt 2026 ("moeten die cirkels bij horizontaal scrollen
+     beetje bouncen?"): de nieuwe cirkel komt iets kleiner binnen en veert
+     naar zijn volle maat — zoals wijzerplaten op de Apple Watch. */
+  const scale = useSharedValue(1);
   useEffect(() => {
     indexSV.value = index;
     const dir = pendingDirRef.current;
     if (dir !== 0) {
       pendingDirRef.current = 0;
       x.value = dir * SWIPE_DISTANCE;
-      x.value = withSpring(0, { damping: 22, stiffness: 190, mass: 0.9 });
+      x.value = withSpring(0, { damping: 18, stiffness: 190, mass: 0.9 });
+      scale.value = 0.92;
+      scale.value = withSpring(1, { damping: 11, stiffness: 170, mass: 0.8 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
@@ -1683,7 +1689,7 @@ function ModeSwipeRing({
   const gesture = Gesture.Exclusive(edge, pan, tap);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }],
+    transform: [{ translateX: x.value }, { scale: scale.value }],
     opacity: interpolate(Math.abs(x.value), [0, SWIPE_DISTANCE], [1, 0], Extrapolation.CLAMP),
   }));
 
@@ -3779,6 +3785,9 @@ type IdleScreenProps = {
   freeSession?: boolean;
   /** Mag deze toestand (bv. Quick Chill/Boost) nu een volledige sessie? */
   isModeLocked?: (m: BraceletMode) => boolean;
+  /** Premium/bracelet: alles open — Quick Chill/Boost starten met één tik,
+   *  zonder infoblad (operator, 16 okt 2026). */
+  fullAccess?: boolean;
   onPaywall?: () => void;
   /** Einde van de gratis voorproef → paywall. */
   onTrialEnd: () => void;
@@ -3823,6 +3832,7 @@ function IdleScreen({
   startLocked,
   freeSession = false,
   isModeLocked,
+  fullAccess = false,
   onPaywall,
   onTrialEnd,
   busy,
@@ -4204,6 +4214,15 @@ function IdleScreen({
                     key={q.key}
                     onPress={() => {
                       hapticTap();
+                      /* Operator, 16 okt 2026 ("telkens een popup — stoort dat
+                         niet bij premium? in free ok"): met volledige toegang
+                         start één tik meteen; free krijgt het infoblad. */
+                      if (fullAccess) {
+                        withRhythm(() => {
+                          void startStateControlNow(q.mode, QUICK_SESSION_MINUTES, { quick: true });
+                        })();
+                        return;
+                      }
                       setQuickOpen(q.key);
                     }}
                     style={[s.quickCard]} scaleTo={0.97}
@@ -5874,6 +5893,7 @@ function BraceletControlScreen({
         startLocked={sessionsLocked}
         freeSession={freeSessionAvailable}
         isModeLocked={(m: BraceletMode) => premiumLocked && !freeFor(m)}
+        fullAccess={!premiumLocked}
         onPaywall={() => setPaywallOpen(true)}
         onTrialEnd={() => setPaywallOpen(true)}
         busy={busy}
