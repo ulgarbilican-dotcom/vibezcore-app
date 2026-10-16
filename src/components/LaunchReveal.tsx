@@ -51,7 +51,7 @@ const R0 = 140, R1 = 640; // rechterbeen
 const S0 = 640, S1 = 1000; // lichtstreep
 const U0 = 1000, U1 = 1420; // V schuift naar zijn plek in het woordmerk
 const LETTER0 = 1260, LETTER_STEP = 35, LETTER_DUR = 260; // I B E Z C O R E — pas als de V bijna op zijn plek is
-const O0 = 1850, O1 = 2220; // onthulling
+const O0 = 2450, O1 = 2850; // onthulling — VIBEZCORE staat ±0,7 s volledig in beeld (operator 16 okt: "iets langer in beeld")
 const TOTAL = O1;
 
 /* Het woordmerk (zelfde beeld als het welkomstscherm): 1175 × 83 px, de
