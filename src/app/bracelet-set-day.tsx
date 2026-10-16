@@ -81,6 +81,7 @@ import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import TimePickerSheet from '@/components/TimePickerSheet';
+import { usePreventRemove } from '@react-navigation/native';
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -309,6 +310,10 @@ export default function BraceletSetDayScreen() {
 
   /* Nieuwe sessie in opbouw — `null` = geen "add session"-scherm actief. */
   const [addingMode, setAddingMode] = useState<BraceletMode | null>(null);
+  /* Audit 16 okt 2026: "Add session" is een tussenscherm binnen deze route.
+     Android-terug en iOS-terugvegen sloten de HELE route (en gooiden je
+     keuze weg); nu gaan ze eerst terug naar de dag, zoals de pijl links. */
+  usePreventRemove(addingMode !== null, () => setAddingMode(null));
   const [draftTime, setDraftTime] = useState(9 * 60);
   const [draftDuration, setDraftDuration] = useState(15);
   const [showTimePicker, setShowTimePicker] = useState(false);

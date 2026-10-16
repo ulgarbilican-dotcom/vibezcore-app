@@ -159,7 +159,9 @@ export default function PlanSuccessScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      <Stack.Screen options={{ headerShown: false }} />
+      {/* Audit 16 okt 2026: eindpunt van een bevestigde flow — terugvegen
+          bracht je terug in de schermen van die flow. */}
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
 
       <View style={s.center}>
         {building ? (
@@ -199,8 +201,12 @@ export default function PlanSuccessScreen() {
         {/* Operator ("kijk alle CTA's na"): had helemaal geen tik-
            feedback — geen scale/opacity, geen haptiek. Huisstijl §5. */}
         <PlanSuccessCta
-          onPress={() =>
-            router.replace(
+          onPress={() => {
+            /* Eerst de afgewerkte flow van de stapel (audit 16 okt 2026):
+               anders lagen goal/intensity/plan-review nog onder de agenda en
+               bracht terug of terugvegen je daar weer in. */
+            if (router.canDismiss()) router.dismissAll();
+            router.push(
               onboarding
                 ? ({
                     pathname: '/agenda',
@@ -210,8 +216,8 @@ export default function PlanSuccessScreen() {
                     },
                   } as never)
                 : ('/agenda' as never),
-            )
-          }
+            );
+          }}
         />
       </View>
       )}

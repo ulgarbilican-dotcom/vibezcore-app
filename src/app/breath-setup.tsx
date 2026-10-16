@@ -67,7 +67,7 @@ import type { PlanHorizon, PlanSlot } from '@/utils/plan-store';
 import { preloadBreathCues } from '@/services/breath-voice';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { openBreathSession } from '@/services/breath-session-host';
 import {
   AlertTriangle,
@@ -87,7 +87,7 @@ import {
   techniqueIcon,
   techniquePattern,
 } from '@/utils/technique-copy';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   Dimensions,
@@ -2235,13 +2235,26 @@ export default function BreathSetupScreen() {
     router.canGoBack() ? router.back() : router.replace('/breath');
   };
 
+  /* Audit 16 okt 2026: (1) enkel actief zolang dit scherm focus heeft
+     (useFocusEffect, anders ving hij ook de terugknop van een scherm erboven
+     op); (2) iOS-terugvegen is een gewone pop die goBack oversloeg — dus
+     dezelfde vlag ook bij elke verwijdering van dit scherm. */
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goBack();
+        return true;
+      });
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+  const navigation = useNavigation();
   useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
+    return navigation.addListener('beforeRemove', () => {
+      skipBreathIntroOnce();
     });
-    return () => sub.remove();
-  }, []);
+  }, [navigation]);
 
   /* Operator, 17 september 2026: addToDay kreeg twee secties MEER (tijd +
      staat) dan de normale flow, die bewust "alles op 1 scherm zonder

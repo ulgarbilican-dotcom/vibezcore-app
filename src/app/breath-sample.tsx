@@ -428,7 +428,7 @@ export default function BreathSampleScreen() {
         )}
       </View>
 
-      <Modal visible={finished} transparent animationType="fade">
+      <Modal visible={finished} transparent animationType="fade" onRequestClose={goBreathTab}>
         <View style={s.modalBackdrop}>
           <View style={s.modalCard}>
           {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}

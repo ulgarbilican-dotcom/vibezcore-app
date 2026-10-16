@@ -99,7 +99,10 @@ const PILLARS: Pillar[] = [
     title: 'Reset Yourself',
     onPress: () => {
       const seen = getSetting('breathOnboardingCompletedAt') !== null;
-      router.navigate((seen ? '/breath' : '/breath-welcome') as never);
+      /* replace (audit 16 okt 2026): het welkomstscherm is een ingang, geen
+         pagina om naar terug te keren — met navigate bleef het onder de
+         tabbladen liggen en bracht terug/terugvegen je erop terug. */
+      router.replace((seen ? '/breath' : '/breath-welcome') as never);
     },
   },
   {
@@ -107,14 +110,14 @@ const PILLARS: Pillar[] = [
     Icon: Radio,
     product: 'Feel',
     title: 'Control Your State', // operator 7 okt 2026: zelfde ritme als Reset Yourself / Train Your Mind
-    onPress: () => router.navigate('/bracelet'),
+    onPress: () => router.replace('/bracelet'),
   },
   {
     key: 'audio',
     Icon: AudioLines,
     product: 'Listen',
     title: 'Train Your Mind',
-    onPress: () => router.navigate('/'),
+    onPress: () => router.replace('/'),
   },
 ];
 
@@ -388,7 +391,7 @@ export default function WelcomeScreen() {
             onPress={() => {
               /* Formulier meteen open (operator, 7 okt 2026, account-audit). */
               requestScrollTo('account-top');
-              router.navigate('/account');
+              router.replace('/account');
             }}
             onPressIn={onSignInPressIn}
             onPressOut={onSignInPressOut}

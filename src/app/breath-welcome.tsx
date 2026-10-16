@@ -105,6 +105,8 @@ import {
   Dimensions,
   Image,
   Modal,
+  PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -945,6 +947,20 @@ export default function BreathWelcomeScreen() {
      standaardgedrag. `useFocusEffect` i.p.v. een kale `useEffect`: de
      listener moet weg zodra dit scherm niet meer focust, anders vangt hij
      ook de terugknop op een scherm ERBOVEN nog op. */
+  const edgeBackRef = useRef<() => void>(() => {});
+  edgeBackRef.current = () => {
+    if (skipAsk) setSkipAsk(false);
+    else if (slide > 0) goBack();
+    else askSkip();
+  };
+  const edgeSwipe = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => g.dx > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_e, g) => {
+        if (g.dx > 60 || g.vx > 0.5) edgeBackRef.current();
+      },
+    }),
+  ).current;
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -1184,7 +1200,11 @@ export default function BreathWelcomeScreen() {
        inspringing van de INHOUD (tekst/knoppen), niet meer voor de
        achtergrond zelf. */
     <View style={[s.root, light && s.rootLight, { flex: 1 }]}>
-      <Stack.Screen options={{ headerShown: false }} />
+      {/* iOS (audit 16 okt 2026): de systeemveeg popte de HELE onboarding
+          en sloeg Skip en de vlaggen over. Nu veegt de rand stap per stap
+          terug (stap 1 = Skip), net als Android's terugknop hierboven. */}
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
+      {Platform.OS === 'ios' && <View style={s.edgeSwipe} {...edgeSwipe.panHandlers} />}
 
       {/* Operator, 6 september 2026: stap 1-3 krijgen de lichte
          achtergrond i.p.v. het sterrenveld — de rest blijft voorlopig
@@ -3154,6 +3174,8 @@ function StartCard({
 /* ── Styles ───────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
+  /* Smalle strook langs de linkerrand voor de iOS-terugveeg. */
+  edgeSwipe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 22, zIndex: 100 },
   /* Skip-onderblad (8 okt 2026) — zelfde opbouw als "End trial?" in
      breath-session.tsx. */
   skipSheet: {

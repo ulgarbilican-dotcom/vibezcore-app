@@ -132,9 +132,12 @@ export function VibezAlertHost() {
       transparent
       animationType="fade"
       onRequestClose={() => {
-        /* Android back-button: treat as cancel if any cancel-style button. */
+        /* Android back-button: treat as cancel if any cancel-style button.
+           Zonder annuleerknop gewoon sluiten zonder keuze (-1) — vroeger gold
+           dat als knop 0, en dat kon de hoofd- of destructieve actie zijn
+           (audit 16 okt 2026). */
         const cancelIdx = buttons.findIndex((b) => b.style === 'cancel');
-        dismiss(cancelIdx >= 0 ? cancelIdx : 0);
+        dismiss(cancelIdx >= 0 ? cancelIdx : -1);
       }}
       statusBarTranslucent
     >

@@ -25,6 +25,7 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { usePreventRemove } from '@react-navigation/native';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import MembershipPlans from '@/components/MembershipPlans';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
@@ -245,6 +246,11 @@ export default function SubscribeScreen() {
   const [pw, setPw] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
+  /* Audit 16 okt 2026: tijdens "Confirming your purchase…" / account
+     aanmaken mag je de pagina niet verlaten (Android-terug, iOS-vegen of de
+     pijl) — anders liep een betaalde aankoop zonder bevestiging af. */
+  const busyLocked = phase === 'verifying' || phase === 'creating-account';
+  usePreventRemove(busyLocked, () => {});
   /* Operator, 10 september 2026: "bij succesvolle aankoop, als er al
      goals+intensity opgeslagen staan en er nog geen ActivePlan bestaat,
      roep dan gewoon buildPlanFromTemplate()/saveActivePlan() aan" — zie
@@ -1131,7 +1137,8 @@ export default function SubscribeScreen() {
             title: 'Subscribe',
             headerTitleAlign: 'center',
             headerBackVisible: false,
-            headerLeft: () => <HeaderBackButton />,
+            headerLeft: busyLocked ? () => null : () => <HeaderBackButton />,
+            gestureEnabled: !busyLocked,
           }}
         />
         <View style={s.center}>

@@ -20,6 +20,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Animated,
+  BackHandler,
   Easing,
   Platform,
   Pressable,
@@ -126,6 +127,17 @@ export function AccountWallModal() {
       listeners.delete(listener);
     };
   }, []);
+
+  /* Android-terug sluit eerst dit venster (audit 16 okt 2026) — anders ging
+     het scherm eronder terug terwijl het venster bleef staan. */
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      hideAccountWall();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open]);
 
   useEffect(() => {
     Animated.timing(opacity, {
