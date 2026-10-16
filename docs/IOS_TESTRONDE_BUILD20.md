@@ -94,4 +94,20 @@ intro-aanbiedingen uitzetten; maand- en jaarprijs op €9,99 / €69,99 zetten.
 - **16 okt: iOS-jaarabonnement `vibezcore_audio_yearly` per ongeluk verwijderd in App Store Connect.** Een verwijderde ID kan Apple nooit opnieuw gebruiken. Daarom komt er een nieuw abonnement `vibezcore_premium_yearly` (1 jaar, €69,99).
   - **Code:** op iOS is de jaar-ID `vibezcore_premium_yearly`; Android blijft `vibezcore_audio_yearly` (iap-contract.ts `PRODUCT_IDS` per platform).
   - **RevenueCat:** het nieuwe iOS-product toevoegen, koppelen aan het entitlement VIBEZCORE Pro en in offering default bij Yearly (App Store) zetten.
+- **Stores klaar (16 okt):**
+  - **App Store Connect:**
+    - groep "VIBEZCORE Premium";
+    - maand `vibezcore_audio_monthly` €9,99, "VIBEZCORE Premium Monthly";
+    - jaar `vibezcore_premium_yearly` €69,99 (VS $59,99), "VIBEZCORE Premium Yearly", Family Sharing aan;
+    - dagpas `vibezcore_day_pass` (consumable) €1,29, "VIBEZCORE Day Pass";
+    - geen intro-aanbiedingen;
+    - alles staat op "Prepare for Submission" en gaat mee met de nieuwe app-versie.
+  - **RevenueCat:**
+    - offering `default` = `day_pass` / `$rc_monthly` / `$rc_annual`, met per pakket een Play- en een App Store-product;
+    - Pro = maand en jaar op beide stores (dagpas NIET gekoppeld);
+    - het oude App Store-product `vibezcore_audio_yearly` is verwijderd.
+  - Status "Could not check" bij de App Store-producten = er staat nog geen App Store Connect API-sleutel in RevenueCat (optioneel, later).
+- **Later (operator):**
+  - aanmelden voor het App Store Small Business Program (15% i.p.v. 30%);
+  - de namen van de Google Play-abonnementen wijzigen naar "VIBEZCORE Premium — Monthly/Yearly" en de dagpas-beschrijving gelijk zetten met Apple ("Breathwork, State Control & Audio Library for 24 hours").
 
