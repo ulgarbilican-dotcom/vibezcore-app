@@ -375,6 +375,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               </Animated.View>
               {/* Pillen + grafiek samen in één glaskaart (operator, 15 okt
                   2026: "grafiek in kaart samen met de pills"). */}
+              <View style={{ flex: 1 }} />
               <Animated.View entering={enter(1)} style={s.chartCard}>
               <ScrollView
                 horizontal
@@ -397,17 +398,11 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               </ScrollView>
                 <RhythmChart mode={chartMode} />
               </Animated.View>
-              <View style={[s.pad, { flex: 1 }]}>
-                {/* Ademruimte (operator: "niet alles opproppen"): de drie
-                    stappen zakken naar het midden van de vrije ruimte. */}
-                <View style={{ flex: 1 }} />
-                <Animated.View entering={enter(3)} style={s.steps}>
-                  <Step n="1" title="Match" text="Starts at your own heart rate." />
-                  <Step n="2" title="Glide" text="Moves gently to the tempo of your state." />
-                  <Step n="3" title="Hold" text="Stays there until your session ends." last />
-                </Animated.View>
-                <View style={{ flex: 1 }} />
-              </View>
+              {/* Operator, 16 okt 2026 ("pagina 1 is veel tekst, heel druk,
+                  kan afschrikken"): de drie stappen Match/Glide/Hold zijn weg —
+                  de grafiek toont ze al (start bij je hartslag, glijdt, blijft).
+                  Eén scherm, één boodschap. */}
+              <View style={{ flex: 1 }} />
               <Text style={[s.footnote, s.pad]}>
                 {/* Beide richtingen, kloppend met Science A tot Z §3.1 (operator:
                     "Cornell gaat enkel over calmer under pressure"): trager →
@@ -876,13 +871,13 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
           {own ? 'Your heart rate' : 'Average'}
         </SvgText>
         <SvgText x={x0} y={startLabelY + 17} fill="rgba(255,255,255,0.55)" fontSize={12.5} fontFamily={BrandFonts.regular}>
-          {`Starts at ${r.startBpm} bpm`}
+          {`Rhythm starts at ${r.startBpm} bpm`}
         </SvgText>
         <SvgText x={xe} y={endLabelY} fill={meta.color} fontSize={14} fontFamily={BrandFonts.semibold} textAnchor="end">
           {meta.name}
         </SvgText>
         <SvgText x={xe} y={endLabelY + 17} fill="rgba(255,255,255,0.55)" fontSize={12.5} fontFamily={BrandFonts.regular} textAnchor="end">
-          {`Settles at ${r.targetBpm} bpm`}
+          {`Rhythm settles at ${r.targetBpm} bpm`}
         </SvgText>
       </Svg>
     </View>
