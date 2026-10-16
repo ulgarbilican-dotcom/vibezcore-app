@@ -329,6 +329,11 @@ function clearPending(): void {
 const NATIVE_START_LAG_MS = 160;
 /** Voorproef: trilmotor rechtstreeks, geen dienst (gemeten 17 okt 2026: 7–21 ms). */
 const PREVIEW_START_LAG_MS = 12;
+/** Startmoment (wandklok) van de laatst gestarte curve op de telefoon —
+ *  het horloge krijgt EXACT dit moment (17 okt 2026: het werd pas na het
+ *  opbouwen van de golfvorm genoteerd, ~128 ms te laat → horloge ~150 ms
+ *  achter in de voorproef, gemeten op de Watch4). */
+let lastAnchorWallMs = 0;
 let syncLogCount = 0;
 function scheduleVisual(
   mode: BraceletMode,
@@ -478,6 +483,7 @@ function play(
        trilling, geluid en pols samen (operator: "horloge loopt een fractie
        vooruit"). */
     const anchorWallMs = Date.now() + (clock ? NATIVE_START_LAG_MS : 0);
+    lastAnchorWallMs = anchorWallMs;
     if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. Feel &
          Hear: de service speelt het hartslaggeluid zelf, op elke tik. */
@@ -911,7 +917,7 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
        gemeten 17 okt 2026 op de A16, 6 voorproeven: 7–21 ms na dit
        moment, niet de 160 ms van een sessie — met 160 liep het horloge
        ~150 ms achter op de telefoon. */
-    sentAtMs: Date.now() + (hasNativeWaveform() ? PREVIEW_START_LAG_MS : 0),
+    sentAtMs: hasNativeWaveform() && lastAnchorWallMs > 0 ? lastAnchorWallMs + PREVIEW_START_LAG_MS : Date.now(),
   };
   sendWearState(start);
   sendAppleState(start);
