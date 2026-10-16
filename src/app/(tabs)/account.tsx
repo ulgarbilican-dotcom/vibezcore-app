@@ -151,7 +151,7 @@ const APP_LINK_URL = 'https://www.vibezcore.com/app';
 const BRAND_PITCH =
   'Control Your Body. Direct Your Mind. Become The Architect Of Your Life.\n\n' +
   'VIBEZCORE combines guided breathwork, premium audio sessions, and the upcoming Smart Bead Bracelet (early 2027) to help you feel calmer, think clearer, perform better, and grow with intention.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\nStart your 7-day free trial:\n${APP_LINK_URL}`;
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\nStart with 10 free sessions:\n${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {
@@ -412,6 +412,12 @@ function Row({
   );
 }
 
+function fmtDateTime(iso: string): string | null {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 function fmtDate(iso?: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -423,13 +429,29 @@ function fmtDate(iso?: string | null): string | null {
 function useMembershipStatus() {
   const { isPro, tier, validUntil, willRenew, isLoading, braceletModel, isTrialing } = useSubscription();
   const isBraceletOwner = useBraceletOwner();
-  const tierLabel = braceletModel === 'bundle' ? 'Full Bundle' : tier === 'yearly' ? 'Yearly' : tier === 'monthly' ? 'Monthly' : null;
+  const dayPass = isPro && tier === 'day' && braceletModel !== 'bundle';
+  const tierLabel =
+    braceletModel === 'bundle'
+      ? 'Full Bundle'
+      : tier === 'yearly'
+        ? 'Yearly'
+        : tier === 'monthly'
+          ? 'Monthly'
+          : tier === 'day'
+            ? 'Day Pass'
+            : null;
   const date = fmtDate(validUntil);
   /* Audit 12 okt 2026: een trial-gebruiker zag "Renews on …" zonder te
      weten dat het een proefperiode is (Apple/Calm tonen de einddatum
      altijd). Tijdens de trial is validUntil het einde van de proef. */
   const trial = isPro && isTrialing === true && braceletModel !== 'bundle';
-  const renewLine = trial
+  /* Dagpas: einde met uur, want hij loopt maar 24 uur. */
+  const passEnd = dayPass && validUntil ? fmtDateTime(validUntil) : null;
+  const renewLine = dayPass
+    ? passEnd
+      ? `Full access until ${passEnd}`
+      : 'Full access for 24 hours'
+    : trial
     ? date
       ? willRenew
         ? `Free trial ends on ${date}. Your plan starts then, with the full library.`
@@ -446,7 +468,7 @@ function useMembershipStatus() {
   else if (isPro) label = tierLabel ? `Premium · ${tierLabel}` : 'Premium';
   else if (isBraceletOwner) label = 'Bracelet';
   else label = 'Free';
-  return { isPro, tier, isLoading, braceletModel, isBraceletOwner, label, renewLine };
+  return { isPro, tier, isLoading, braceletModel, isBraceletOwner, label, renewLine, dayPass };
 }
 
 /** Kop voor ingelogde gebruikers: initialen, e-mail, status. */
@@ -469,10 +491,21 @@ function ProfileHeader({ email }: { email: string }) {
 }
 
 function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; restoring: boolean }) {
-  const { isPro, tier, isLoading, braceletModel, isBraceletOwner, renewLine } = useMembershipStatus();
+  const { isPro, tier, isLoading, braceletModel, isBraceletOwner, renewLine, dayPass } = useMembershipStatus();
   return (
     <Group title="Membership">
-      {isPro ? (
+      {dayPass ? (
+        /* Dagpas = geen abonnement: niets te beheren in de store, wel de
+           stap naar een maand- of jaarabonnement. */
+        <Row
+          icon={Crown}
+          title="VIBEZCORE Premium · Day Pass"
+          subtitle={renewLine ?? 'Full access for 24 hours'}
+          value="See plans"
+          onPress={() => router.navigate('/subscribe' as never)}
+          accessibilityLabel="See Premium plans"
+        />
+      ) : isPro ? (
         <Row
           icon={Crown}
           title="VIBEZCORE Premium"

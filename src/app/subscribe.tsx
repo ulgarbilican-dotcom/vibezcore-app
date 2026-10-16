@@ -30,7 +30,6 @@ import MembershipPlans from '@/components/MembershipPlans';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
-import { getEffectiveTier } from '@/utils/access-tier';
 import { getSetting } from '@/utils/settings';
 import { getActivePlan, reloadActivePlan, saveActivePlan } from '@/utils/plan-store';
 import { generateProtocol } from '@/utils/protocol';
@@ -121,10 +120,6 @@ type Phase = 'form' | 'creating-account' | 'iap-popup' | 'verifying' | 'done' | 
    'account'-tier content (27) + Breathwork ontgrendelt (resolveAccess() in
    access-tier.ts). Afgeleid uit de echte databron i.p.v. hardcoded. */
 const TOTAL_SESSION_COUNT = SESSIONS.length;
-const TRIAL_SESSION_COUNT = SESSIONS.filter((s) => {
-  const tier = getEffectiveTier(s);
-  return tier === 'public' || tier === 'account';
-}).length;
 
 /* Iter 9dq v134 (2026-06-14): mapt rauwe technische errors (auth-proxy
    "upstream fetch failed", IAP "network error", Supabase 401's, etc.)
@@ -215,7 +210,8 @@ export default function SubscribeScreen() {
      ?tier=monthly|yearly direct door. */
   const initialTier: AudioTier | null =
     params.tier === 'monthly' ? 'monthly' :
-    params.tier === 'yearly' ? 'yearly' : null;
+    params.tier === 'yearly' ? 'yearly' :
+    params.tier === 'day' ? 'day' : null;
   const [tier, setTier] = useState<AudioTier | null>(initialTier);
   const tierForCompute: AudioTier = tier ?? 'yearly';
   /* Iter 9dq v77 (2026-06-03): safe-area-aware bottom padding zodat
@@ -295,9 +291,15 @@ export default function SubscribeScreen() {
     tier: currentTier,
     isTrialing: alreadyTrialing,
     isLoading: subLoading,
+    validUntil: currentValidUntil,
   } = useSubscription();
+  /* Dagpas (operator, 16 okt 2026): wie een lopende pas heeft, moet nog
+     een maand- of jaarabonnement kunnen nemen — enkel een tweede pas
+     tijdens de eerste heeft geen zin. */
+  const hasDayPass = alreadyIsPro && currentTier === 'day';
+  const blocksPurchase = alreadyIsPro && (!hasDayPass || tier === 'day');
   useEffect(() => {
-    if (alreadyIsPro && phase === 'form' && !linkingAccount) {
+    if (blocksPurchase && phase === 'form' && !linkingAccount) {
       /* Zelfde purchaseWasTrial-signaal als de echte aankoopflow, maar dan
          voor de pre-emptive-skip (user is al geabonneerd) — hier is de
          useSubscription-cache al ververst, dus isTrialing is hier wél
@@ -306,7 +308,7 @@ export default function SubscribeScreen() {
       setAlreadyMember(true);
       setPhase('done');
     }
-  }, [alreadyIsPro, alreadyTrialing, phase, linkingAccount]);
+  }, [blocksPurchase, alreadyTrialing, phase, linkingAccount]);
   /* Iter v230 (2026-07-08, audit BUG 4): tier-switch detectie. Als user
      al een sub heeft op andere tier (Monthly → Yearly of andersom) en
      tapt op een pricing-card van de andere tier → RC/Google throwt
@@ -315,7 +317,7 @@ export default function SubscribeScreen() {
      + currentTier ≠ tierForCompute → tonen we een aparte info-state in
      runIapFlow zodat user weet dat 'ie via Play Store moet switchen. */
   const isTierSwitchAttempt =
-    alreadyIsPro && !!currentTier && currentTier !== tierForCompute;
+    alreadyIsPro && !!currentTier && currentTier !== 'day' && currentTier !== tierForCompute;
   const [errMsg, setErrMsg] = useState<string | null>(null);
   /* Iter v177 (2026-07-02): infoMsg voor positieve transities — bijv. duplicate
      email switch naar signin. Wordt in GROENE banner getoond ipv rood, zodat
@@ -554,14 +556,14 @@ export default function SubscribeScreen() {
   }, []);
   useEffect(() => {
     if (tier === null || linkingAccount || phase !== 'form') return;
-    if (signedIn === null || alreadyIsPro) return;
+    if (signedIn === null || blocksPurchase) return;
     if (subLoading && !subWaitOver) return;
     if (autoCheckoutRef.current) return;
     autoCheckoutRef.current = true;
     if (!signedIn) setGuestPurchase(true);
     void runIapFlow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tier, linkingAccount, phase, signedIn, alreadyIsPro, subLoading, subWaitOver]);
+  }, [tier, linkingAccount, phase, signedIn, blocksPurchase, subLoading, subWaitOver]);
 
   const verifyAndComplete = async (purchaseData: IapPurchase) => {
     setPhase('verifying');
@@ -593,7 +595,13 @@ export default function SubscribeScreen() {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Purchases = require('react-native-purchases').default;
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { ENTITLEMENT_AUDIO_PRO } = require('@/services/iap-real');
+      const { ENTITLEMENT_AUDIO_PRO, activeDayPass } = require('@/services/iap-real');
+      /* Dagpas: geen entitlement (losse aankoop), wel een aankoop van de
+         laatste 24 uur in RevenueCat's lijst van losse aankopen. */
+      const confirmed = (info: unknown): boolean =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        !!(info as any)?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO] ||
+        (purchaseData.tier === 'day' && !!activeDayPass(info));
 
       /* Iter v230 (2026-07-08, audit BUG 1): retry customerInfo lookup
          met sync tussen tries. Purchases.getCustomerInfo() leest een
@@ -603,7 +611,7 @@ export default function SubscribeScreen() {
          error scherm ondanks succesvolle betaling. Nu: probeer 3x met
          Purchases.syncPurchases() ertussen om cache te forceren. */
       let customerInfo = await Purchases.getCustomerInfo();
-      let isPro = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
+      let isPro = confirmed(customerInfo);
       for (let attempt = 1; !isPro && attempt <= 3; attempt++) {
         try {
           if (typeof Purchases.syncPurchases === 'function') {
@@ -614,7 +622,7 @@ export default function SubscribeScreen() {
         }
         await new Promise((r) => setTimeout(r, 700 * attempt));
         customerInfo = await Purchases.getCustomerInfo();
-        isPro = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
+        isPro = confirmed(customerInfo);
       }
 
       if (isPro) {
@@ -649,7 +657,10 @@ export default function SubscribeScreen() {
            welkomstscherm tonen. refreshSubscription() daarna is een backend-
            sync die de UI niet blokkeert — voorkomt de race waarbij de user
            na "Start listening" tap kort de FREE Audio Library ziet. */
-        setProSubscribedStatus(activeEntitlement?.periodType === 'TRIAL');
+        setProSubscribedStatus(
+          activeEntitlement?.periodType === 'TRIAL',
+          activeEntitlement ? undefined : activeDayPass(customerInfo)?.validUntil,
+        );
         refreshSubscription();
 
         /* Operator, 10 september 2026: goals+intensity liggen al vast
@@ -974,15 +985,16 @@ export default function SubscribeScreen() {
 
   /* ── Render ─────────────────────────────────────────────────────── */
 
-  const tierLabel = tierForCompute === 'yearly' ? 'Yearly' : 'Monthly';
+  const tierLabel =
+    tierForCompute === 'yearly' ? 'Yearly' : tierForCompute === 'day' ? 'Day Pass' : 'Monthly';
   /* WYSIWYG (operator): enkel de store-prijs, nooit een vaste euro-waarde. */
   const priceLabel = product?.localizedPrice ?? '—';
-  const periodLabel = tierForCompute === 'yearly' ? '/year' : '/month';
-  /* De trialregel voor het besteloverzicht. Eén bron (het store-product),
-     dus hij verschijnt alleen wanneer de trial echt geldt voor deze klant. */
-  const trialLine = product?.freeTrialDays
-    ? `${product.freeTrialDays} days free, then ${priceLabel}${periodLabel} — cancel anytime`
-    : null;
+  const periodLabel =
+    tierForCompute === 'yearly' ? '/year' : tierForCompute === 'day' ? ' once' : '/month';
+  /* Operator, 16 okt 2026: de trial en de "Launch offer" vervallen (vaste
+     prijzen). Eén korte, ware regel per keuze. */
+  const orderLine =
+    tierForCompute === 'day' ? '24 hours of full access · Nothing renews' : 'Cancel anytime';
 
   /* Iter (2026-07-30, bugfix): OrderSummary/LegalLine/RestoreLink MOETEN
      vóór alle vroege phase-returns gedeclareerd staan — de tier===null
@@ -1010,11 +1022,7 @@ export default function SubscribeScreen() {
           klanten behouden hun tarief (Play/Apple price-grandfathering). */}
       {/* De trial vervangt het label wanneer hij geldt: twee aanbiedingen
           op één kaart lezen als kleine lettertjes. */}
-      {trialLine ? (
-        <Text style={s.orderSave}>{trialLine}</Text>
-      ) : (
-        <Text style={s.orderSave}>Launch offer</Text>
-      )}
+      <Text style={s.orderSave}>{orderLine}</Text>
     </View>
   );
 
@@ -1136,6 +1144,13 @@ export default function SubscribeScreen() {
   }
 
   if (phase === 'done') {
+    /* Dagpas (operator, 16 okt 2026): eigen bevestiging met het einduur. */
+    const doneIsDayPass = tier === 'day' || (tier === null && currentTier === 'day');
+    const passEnd = currentTier === 'day' && currentValidUntil ? new Date(currentValidUntil) : null;
+    const passEndLabel =
+      passEnd && !isNaN(passEnd.getTime())
+        ? `${passEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${passEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+        : null;
     /* Iter v175 (2026-06-30): betekenisvol welkomstscherm ipv 1.2s flash.
        Operator-feedback: post-purchase moment moet dankbaarheid + wat je
        hebt gekocht communiceren. Manual "Start listening" CTA geeft user
@@ -1173,24 +1188,26 @@ export default function SubscribeScreen() {
             <Text style={s.checkText}>✓</Text>
           </View>
           <Text style={s.doneTitle}>
-            {alreadyMember ? "You're a VIBEZCORE Premium member" : 'Welcome to VIBEZCORE Premium'}
+            {doneIsDayPass
+              ? 'Your Day Pass is active'
+              : alreadyMember
+                ? "You're a VIBEZCORE Premium member"
+                : 'Welcome to VIBEZCORE Premium'}
           </Text>
           <Text style={s.doneThanks}>
-            {alreadyMember
-              ? purchaseWasTrial
-                ? 'Your free trial is active.'
-                : 'Your membership is active.'
-              : purchaseWasTrial
-                ? 'Your free trial has started.'
+            {doneIsDayPass
+              ? passEndLabel
+                ? `Full access until ${passEndLabel}.`
+                : 'Full access for the next 24 hours.'
+              : alreadyMember
+                ? 'Your membership is active.'
                 : 'Thank you for subscribing.'}
           </Text>
 
           <View style={s.donePerks}>
-            {purchaseWasTrial ? (
+            {doneIsDayPass ? (
               <>
-                <Text style={s.donePerkTitle}>
-                  During your trial, you have access to:
-                </Text>
+                <Text style={s.donePerkTitle}>For 24 hours, you have access to:</Text>
                 {params.returnTo === 'state-control' && (
                   <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
                 )}
@@ -1200,11 +1217,7 @@ export default function SubscribeScreen() {
                   <Text style={s.donePerkLine}>· Every State Control session — all five states</Text>
                 )}
                 <Text style={s.donePerkLine}>
-                  · {TRIAL_SESSION_COUNT} Audio Library sessions
-                </Text>
-                <Text style={s.donePerkLine}>
-                  · Stay subscribed after your trial to unlock all{' '}
-                  {TOTAL_SESSION_COUNT} sessions
+                  · {TOTAL_SESSION_COUNT} Audio Library sessions to stream
                 </Text>
               </>
             ) : (
@@ -1239,7 +1252,9 @@ export default function SubscribeScreen() {
             You&apos;ll receive a confirmation email from{' '}
             {Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}.
             {'\n'}
-            Manage your subscription anytime in Settings.
+            {doneIsDayPass
+              ? 'Your Day Pass ends on its own. Nothing renews.'
+              : 'Manage your subscription anytime in Settings.'}
           </Text>
 
           {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele

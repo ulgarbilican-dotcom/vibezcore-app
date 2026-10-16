@@ -140,7 +140,9 @@ export function tierBadgeLabel(tier: AccessTier): string | null {
     case 'public':
       return 'FREE';
     case 'account':
-      return 'FREE WITH TRIAL';
+      /* 16 okt 2026: de trial is vervallen — 'account' wordt niet meer
+         gebruikt; mocht een sessie het nog dragen, dan is ze Premium. */
+      return 'PRO';
     case 'pro':
       return 'PRO';
   }

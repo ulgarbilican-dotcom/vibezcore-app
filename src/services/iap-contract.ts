@@ -40,19 +40,36 @@
    localized title die Apple/Google teruggeven.
    ─────────────────────────────────────────────────────────────────────── */
 
-/** De twee tiers die VIBEZCORE Audio aanbiedt. */
-export type AudioTier = 'monthly' | 'yearly';
+import { Platform } from 'react-native';
 
-/** Product-IDs. Identiek op iOS én Android voor één codebase.
- *  Operator gebruikte simpele naming in Console (zonder package-prefix),
- *  dus we matchen dat hier. iOS App Store Connect moet dezelfde IDs
- *  aanmaken voor consistency. */
+/** Wat VIBEZCORE Premium aanbiedt (operator, 16 okt 2026): maand- en
+ *  jaarabonnement (automatisch verlengend) en een dagpas — een losse
+ *  aankoop die 24 uur alles opent. De 7-dagen-trial is vervallen. */
+export type AudioTier = 'monthly' | 'yearly' | 'day';
+
+/** Abonnementen (verlengen automatisch), zonder de dagpas. */
+export type SubscriptionTier = 'monthly' | 'yearly';
+
+/** Hoe lang een dagpas alles opent, gerekend vanaf de aankoop. */
+export const DAY_PASS_MS = 24 * 60 * 60 * 1000;
+
+/** Product-IDs zoals in de stores aangemaakt. Het iOS-jaarabonnement heeft
+ *  een eigen ID: `vibezcore_audio_yearly` werd op 16 okt 2026 in App Store
+ *  Connect verwijderd en Apple laat een verwijderde ID nooit opnieuw toe.
+ *  Android houdt `vibezcore_audio_yearly`. De dagpas heet op beide stores
+ *  `vibezcore_day_pass` (verbruiksartikel, herhaalbaar). */
+const IOS_YEARLY_ID = 'vibezcore_premium_yearly';
+const ANDROID_YEARLY_ID = 'vibezcore_audio_yearly';
+export const DAY_PASS_PRODUCT_ID = 'vibezcore_day_pass';
+
 export const PRODUCT_IDS: Record<AudioTier, string> = {
   monthly: 'vibezcore_audio_monthly',
-  yearly: 'vibezcore_audio_yearly',
+  yearly: Platform.OS === 'ios' ? IOS_YEARLY_ID : ANDROID_YEARLY_ID,
+  day: DAY_PASS_PRODUCT_ID,
 };
 
-/** Reverse lookup product-ID → tier-label. Handig voor receipt-parsing.
+/** Reverse lookup product-ID → tier-label. Herkent ook de ID van het andere
+ *  platform (wie op Android kocht en op iPhone inlogt).
  *
  *  Iter v158 (2026-06-26): RevenueCat formatteert Play Store products als
  *  `<product_id>:<base_plan_id>` (bv. 'vibezcore_audio_yearly:yearly').
@@ -60,12 +77,9 @@ export const PRODUCT_IDS: Record<AudioTier, string> = {
  *  identifier én de raw Play Store SKU beide werken. */
 export function tierFromProductId(productId: string): AudioTier | null {
   const baseSku = productId.split(':')[0];
-  for (const [tier, id] of Object.entries(PRODUCT_IDS) as [
-    AudioTier,
-    string,
-  ][]) {
-    if (id === baseSku) return tier;
-  }
+  if (baseSku === PRODUCT_IDS.monthly) return 'monthly';
+  if (baseSku === IOS_YEARLY_ID || baseSku === ANDROID_YEARLY_ID) return 'yearly';
+  if (baseSku === DAY_PASS_PRODUCT_ID) return 'day';
   return null;
 }
 
@@ -83,7 +97,8 @@ export type IapProduct = {
   /** Numerieke prijs in micro-units (1.000.000 = 1.00 in de valuta). */
   priceAmountMicros?: number;
   /** Per-platform subscription-period: 'P1M' (monthly) of 'P1Y' (yearly).
-   *  ISO 8601 duration format, zelfde op iOS en Android. */
+   *  ISO 8601 duration format, zelfde op iOS en Android. Leeg bij de
+   *  dagpas (geen abonnement). */
   subscriptionPeriod?: string;
   /** Gratis proefdagen, RECHTSTREEKS uit de store (operator, 8 augustus
    *  2026: 7 dagen trial op het jaarplan, geconfigureerd in Play Console).

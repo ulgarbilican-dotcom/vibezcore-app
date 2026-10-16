@@ -1045,7 +1045,7 @@ export default function PlayerScreen() {
                 ? 'The full Audio Library unlocks when your trial ends and your membership starts.'
                 : isBraceletOwner && !realIsPro && !isBundleUser
                   ? 'Add the Audio Library to complete your VIBEZCORE system.'
-                  : 'Start your free trial to unlock more sessions.'}
+                  : 'Unlock every session with Premium, or try it all for a day with a Day Pass.'}
               {'\n\n'}
               Not ready? Browse Free Picks to keep listening for free.
             </Text>

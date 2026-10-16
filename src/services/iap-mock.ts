@@ -63,9 +63,17 @@ const MOCK_PRODUCTS: IapProduct[] = [
     currency: 'EUR',
     priceAmountMicros: 69_990_000,
     subscriptionPeriod: 'P1Y',
-    /* Zelfde 7-dagen-trial als het echte jaarplan, zodat het planscherm
-       in de dev-app de trial-weergave toont (8 okt 2026). */
-    freeTrialDays: 7,
+  },
+  /* Dagpas (operator, 16 okt 2026): losse aankoop, 24 uur alles open.
+     De 7-dagen-trial is vervallen. */
+  {
+    productId: PRODUCT_IDS.day,
+    tier: 'day',
+    title: 'MOCK — VIBEZCORE Day Pass',
+    description: 'Mock day pass — geen echte aankoop.',
+    localizedPrice: '€1,29',
+    currency: 'EUR',
+    priceAmountMicros: 1_290_000,
   },
 ];
 

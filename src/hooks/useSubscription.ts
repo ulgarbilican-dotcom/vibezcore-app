@@ -34,7 +34,9 @@ const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type SubscriptionStatus = {
   active: boolean;
-  tier?: 'monthly' | 'yearly';
+  /** 'day' = dagpas (operator, 16 okt 2026): 24 uur alles open, geen
+   *  abonnement — `validUntil` = aankoop + 24 uur, `willRenew` false. */
+  tier?: 'monthly' | 'yearly' | 'day';
   status?: string;
   email?: string;
   /** ISO-datum tot wanneer het abonnement geldig is (backend snake_case
@@ -111,8 +113,27 @@ const subscribers = new Set<(s: SubscriptionStatus | null) => void>();
    bijgewerkt — synchrone lezers (bv. `getCachedSubscription()`) zien de
    nieuwe waarde meteen, enkel de subscriber-callbacks (die naar React
    `setState` leiden) schuiven op. */
+/* Dagpas: precies op het einde van de 24 uur opnieuw kijken, zodat alles
+   meteen weer op slot gaat — ook als de app al die tijd open stond. */
+let dayPassTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleDayPassEnd(status: SubscriptionStatus | null): void {
+  if (dayPassTimer) {
+    clearTimeout(dayPassTimer);
+    dayPassTimer = null;
+  }
+  if (!status?.active || status.tier !== 'day' || !status.validUntil) return;
+  const ms = Date.parse(status.validUntil) - Date.now();
+  if (!Number.isFinite(ms)) return;
+  /* setTimeout kan niet verder dan ~24,8 dagen; een pas loopt max 24 u. */
+  dayPassTimer = setTimeout(() => {
+    dayPassTimer = null;
+    void refreshSubscription();
+  }, Math.max(0, ms) + 1000);
+}
+
 function notifyAll(status: SubscriptionStatus | null): void {
   cachedStatus = status;
+  scheduleDayPassEnd(status);
   setTimeout(() => {
     subscribers.forEach((cb) => cb(status));
   }, 0);
@@ -225,7 +246,22 @@ async function tryRevenueCatStatus(
     const customerInfo = await Purchases.getCustomerInfo();
     if (requireAppUserId && customerInfo?.originalAppUserId !== requireAppUserId) return null;
     const audioPro = customerInfo?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO];
-    if (!audioPro) return null; /* geen actieve entitlement — fall through */
+    if (!audioPro) {
+      /* Geen abonnement: een lopende dagpas opent alles tot 24 uur na de
+         aankoop (losse aankoop, bewust niet aan het entitlement gekoppeld). */
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { activeDayPass } = require('@/services/iap-real');
+      const pass = activeDayPass(customerInfo);
+      if (!pass) return null; /* niets actief — fall through */
+      return {
+        active: true,
+        tier: 'day',
+        status: 'active',
+        validUntil: pass.validUntil,
+        willRenew: false,
+        isTrialing: false,
+      };
+    }
     const productId: string | undefined = audioPro.productIdentifier;
     const tier: 'monthly' | 'yearly' | undefined = productId?.includes('yearly')
       ? 'yearly'
@@ -480,7 +516,7 @@ export function setSigningInStatus(): void {
  *  consumers (Audio Library tile, player, About/FAQ, etc.) synchroon zien
  *  dat de user PRO is. Backend-sync loopt daarna alsnog via refreshSubscription
  *  maar de UI wacht daar niet meer op. */
-export function setProSubscribedStatus(isTrialing = false): void {
+export function setProSubscribedStatus(isTrialing = false, dayPassUntil?: string): void {
   fetchGeneration++;
   /* Iter v227 (2026-07-07, audit B6): merge in bestaande cache ipv
      vervangen. Voorheen: {active:true} zonder andere velden → wist
@@ -493,6 +529,13 @@ export function setProSubscribedStatus(isTrialing = false): void {
     /* Audit 8 okt 2026: een trial-aankoop is meteen een trial — anders
        speelde de Pro-audio even zonder voorproef-grens tot de refresh. */
     isTrialing,
+    /* Van dagpas naar abonnement: de pas-velden vallen weg, de refresh
+       vult het abonnement aan. */
+    ...(dayPassUntil
+      ? { tier: 'day' as const, validUntil: dayPassUntil, willRenew: false }
+      : cachedStatus?.tier === 'day'
+        ? { tier: undefined, validUntil: undefined, willRenew: undefined }
+        : {}),
   };
   cachedStatus = proStatus;
   notifyAll(proStatus);

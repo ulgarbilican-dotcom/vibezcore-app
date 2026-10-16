@@ -47,6 +47,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 - Mini-player in de tabbalk gedokt; glazen bottom sheets met vast sluitprotocol (geheugen: `feedback-sheet-close-protocol.md`).
 - Breathwork-onboarding: één keer, skip-bevestiging per stap, replay via Settings.
 - 15 okt 2026: State Control-onboarding (4 stappen) gebouwd; indrukken overal via PressScale, stap 3 groter hart (T205). Camera-toestemming pas bij stap 4.
+- 16 okt 2026: dagpas €1,29 (24 u) gebouwd, 7-dagen-trial weg, enkel 10 gratis audiosessies (T207). Stores ingesteld (zie docs/IOS_TESTRONDE_BUILD20.md). Echte aankoop testen = store-build. Daarna: de iOS-lijst uit build 20 afwerken.
 - Soundscapes: Rain en Canopy gratis, rest met kroon.
 - Resting Heart Rate-pagina (eerste State Control-scherm) + meetscherm: hart dat zich vult, live bpm, hartlijn (ECG), foutschermen, batterijcontrole via `expo-battery` (**nieuwe native module → vereist nieuwe build**).
 - State Control-scherm herontworpen: cirkel 270, tijd kiezen door over de rand te slepen (boog + greep), drie vaste tijden (kort/aanbevolen/lang, zie `threePresets` in `src/app/bracelet-control.tsx`), hartslag-pil bovenaan in de cirkel, Quick Chill/Boost-kaartjes, ronde paginapuntjes.

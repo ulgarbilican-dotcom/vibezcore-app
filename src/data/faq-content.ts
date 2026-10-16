@@ -256,7 +256,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'breathwork',
     question: 'Do I need a membership to practice breathwork?',
     answer:
-      "You can try each of the five states with a short free preview. The full breathwork experience — every technique and duration — is part of VIBEZCORE Premium, together with State Control and the complete Audio Library: one membership unlocks all three. New members can start with a free trial.",
+      "You can try each of the five states with a short free preview. The full breathwork experience — every technique and duration — is part of VIBEZCORE Premium, together with State Control and the complete Audio Library: one membership unlocks all three. Not ready for a membership? A Day Pass opens everything for 24 hours.",
   },
   {
     id: 'breathwork-professional-help',
@@ -506,7 +506,18 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'What does a VIBEZCORE membership include?',
     answer:
       "VIBEZCORE Premium gives you full access to State Control, all guided breathwork and the complete Audio Library — including every new session release — on your phone and your smartwatch.\n\n" +
-      "Choose Monthly or Yearly; new members can start with a free trial. Pricing and terms are shown in full before you subscribe.",
+      "Choose Monthly or Yearly, or try everything for 24 hours with a one-time Day Pass. Pricing and terms are shown in full before you buy.",
+  },
+  {
+    /* Operator, 16 okt 2026: de 7-dagen-trial vervalt, de dagpas komt in
+       de plaats (losse aankoop, verlengt niet, geen downloads). */
+    id: 'membership-day-pass',
+    category: 'membership',
+    question: 'What is a Day Pass?',
+    answer:
+      "A Day Pass is a one-time purchase that opens all of VIBEZCORE Premium — State Control, every breathwork session and the complete Audio Library — for 24 hours from the moment you buy it.\n\n" +
+      "It is not a subscription: nothing renews and there is nothing to cancel. Audio streams during your pass; downloads are part of a membership.\n\n" +
+      "You can buy a new Day Pass whenever you like, or switch to Monthly or Yearly at any time.",
   },
   {
     /* Cancel gaat via het OS-eigen abonnementsscherm (Apple/Google-policy
@@ -530,8 +541,8 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'membership',
     question: 'Can I pause my membership instead of canceling?',
     answer:
-      "**On Android** — yes. Open your Play Store subscription settings (reachable from the Account tab) and choose Pause instead of Cancel. This is the better option if you're on an intro-priced plan: pausing keeps that rate when you resume, while canceling loses it.\n\n" +
-      "**On iOS** — Apple doesn't offer a native pause option. You can cancel and resubscribe later, though this may mean losing any intro pricing.",
+      "**On Android** — yes. Open your Play Store subscription settings (reachable from the Account tab) and choose Pause instead of Cancel. Your plan picks up again when the pause ends.\n\n" +
+      "**On iOS** — Apple doesn't offer a native pause option. You can cancel and resubscribe later.",
   },
   {
     id: 'membership-cant-login',

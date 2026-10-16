@@ -15,15 +15,19 @@
    - automatische verlenging + hoe opzeggen, vóór de aankoop;
    - werkende links naar Terms of Use en Privacy Policy, plus Restore.
 
-   Alle bedragen komen uit de store (localizedPrice, freeTrialDays,
-   regularPriceLabel) — niets verzonnen; zonder store-data de vaste
-   EUR-standaard, zoals de rest van de app.
+   Alle bedragen komen uit de store (localizedPrice, regularPriceLabel) —
+   niets verzonnen; zonder store-data een streepje.
+
+   GEWIJZIGD 16 okt 2026 (operator): de 7-dagen-trial vervalt; nieuw is de
+   dagpas (losse aankoop, 24 uur alles open, verlengt niet). Maand en jaar
+   blijven de twee tegels; de dagpas staat er als brede rij onder — de
+   lage drempel om te proberen, het jaar blijft de aanbevolen keuze.
    ───────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
 import { SESSIONS } from '@/data/audio-library-data';
 import { useIAP } from '@/hooks/useIAP';
-import { getEffectiveTier } from '@/utils/access-tier';
+import { useSubscription } from '@/hooks/useSubscription';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
@@ -36,13 +40,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { hapticPress } from '@/utils/haptics';
 
-/* 10 gratis + 17 trial-sessies — afgeleid uit de data, blijft kloppen. */
-const TRIAL_SESSION_COUNT = SESSIONS.filter((x) => {
-  const t = getEffectiveTier(x);
-  return t === 'public' || t === 'account';
-}).length;
-
-export type MembershipPlan = 'monthly' | 'yearly';
+export type MembershipPlan = 'monthly' | 'yearly' | 'day';
 
 const TEXT = '#ffffff';
 const DIM = 'rgba(255,255,255,0.5)';
@@ -113,6 +111,11 @@ export default function MembershipPlans({
   const { getProduct } = useIAP();
   const monthly = getProduct('monthly');
   const yearly = getProduct('yearly');
+  const day = getProduct('day');
+  /* Wie al een lopende dagpas heeft, krijgt geen tweede aangeboden. */
+  const sub = useSubscription();
+  const showDay = !(sub.isPro && sub.tier === 'day');
+  const dayPrice = day?.localizedPrice ?? '—';
 
   /* Operator, 7 okt 2026 (account-audit, WYSIWYG): enkel de prijs die de
      store voor DEZE klant geeft — geen vaste euro-bedragen of verzonnen
@@ -129,10 +132,6 @@ export default function MembershipPlans({
     const p = Math.round((1 - y / m) * 100);
     return m > 0 && p > 0 ? p : null;
   })();
-  /* Proefperiode enkel als de store hem voor DEZE klant meldt. */
-  const trialDays = yearly?.freeTrialDays ?? 0;
-  const hasTrial = trialDays > 0;
-
   /* Introprijs (eerste jaar): wat het daarna kost — Apple wil dat vóór de aankoop zien. */
   const monthlyAfter = monthly?.regularPriceLabel;
   const yearlyAfter = yearly?.regularPriceLabel;
@@ -141,33 +140,30 @@ export default function MembershipPlans({
      regel (
  + harde spatie), niet middenin afgebroken. */
   const summary =
-    plan === 'yearly'
-      ? hasTrial
-        ? `Free for ${trialDays} days, then ${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}.
+    plan === 'day'
+      ? `${dayPrice} once for 24 hours of full access.
+No subscription, nothing renews.`
+      : plan === 'yearly'
+        ? `${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}.
 Cancel anytime.`
-        : `${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}.
-Cancel anytime.`
-      : `${monthlyPrice} per month${monthlyAfter ? ` for the first year, ${monthlyAfter} per month after` : ''}.
+        : `${monthlyPrice} per month${monthlyAfter ? ` for the first year, ${monthlyAfter} per month after` : ''}.
 Cancel anytime.`;
-  /* Operator, 8 okt 2026: de kop belooft "Audio Library" — maak vóór de
-     knop duidelijk dat de trial 27 sessies opent, niet alle (kort, Apple-
-     stijl; Breathwork/State Control staan al in de kop). */
-  /* Operator, 8 okt 2026: ook bij Monthly zeggen wat je krijgt — alle drie,
-     meteen volledig (geen trial = geen audio-beperking). */
-  const trialScope =
-    plan === 'yearly' && hasTrial
-      ? `During your trial, the Audio Library is limited to ${TRIAL_SESSION_COUNT} sessions.`
+  const scope =
+    plan === 'day'
+      ? `Breathwork, State Control and all ${SESSIONS.length} audio sessions, for 24 hours from purchase. Audio can't be downloaded with a Day Pass.`
       : `Full access from day one: Breathwork, State Control and all ${SESSIONS.length} audio sessions.`;
-  const cta = plan === 'yearly' && hasTrial ? 'Start free trial' : 'Subscribe';
+  const cta = plan === 'day' ? 'Get Day Pass' : 'Subscribe';
   /* Operator, 8 okt 2026: kleine lettertjes per store, actief geformuleerd.
      iOS = Apple's vaste tekst (24-uursregel, App Store-accountinstellingen);
      Android = Google Play (geen 24-uursregel, opzeggen via Play › Subscriptions).
-     Met trial wordt pas aangerekend wanneer de trial eindigt. */
-  const chargeMoment = plan === 'yearly' && hasTrial ? 'when your free trial ends' : 'when you confirm your purchase';
+     Dagpas = losse aankoop: enkel wanneer betaald wordt en dat er niets verlengt. */
+  const store = Platform.OS === 'ios' ? 'Your Apple ID' : 'Your Google Play account';
   const disclosure =
-    Platform.OS === 'ios'
-      ? `Your Apple ID is charged ${chargeMoment}. Your subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.`
-      : `Your Google Play account is charged ${chargeMoment}. Your subscription renews automatically until you cancel. Manage or cancel anytime in Google Play › Subscriptions.`;
+    plan === 'day'
+      ? `${store} is charged once when you confirm your purchase. The Day Pass ends 24 hours later and does not renew.`
+      : Platform.OS === 'ios'
+        ? 'Your Apple ID is charged when you confirm your purchase. Your subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.'
+        : 'Your Google Play account is charged when you confirm your purchase. Your subscription renews automatically until you cancel. Manage or cancel anytime in Google Play › Subscriptions.';
 
   return (
     <View>
@@ -207,7 +203,7 @@ Cancel anytime.`;
           style={s.cardOuter}
           onPress={() => setPlan('yearly')}
           selected={plan === 'yearly'}
-          accessibilityLabel={`Yearly, ${yearlyPrice} per year${hasTrial ? `, ${trialDays}-day free trial` : ''}`}
+          accessibilityLabel={`Yearly, ${yearlyPrice} per year`}
         >
           <View style={[s.card, plan === 'yearly' && s.cardOn]}>
             <Text style={s.planLabel}>Yearly</Text>
@@ -224,7 +220,6 @@ Cancel anytime.`;
               <Text style={s.per}>/year</Text>
             </View>
             <Text style={s.meta}>{`${yearlyPerMonth}/month`}</Text>
-            {hasTrial && <Text style={s.trial}>{`${trialDays} days free`}</Text>}
             <View style={[s.sel, plan === 'yearly' && s.selOn]} pointerEvents="none">
               {plan === 'yearly' && <Text style={s.selCheck}>✓</Text>}
             </View>
@@ -232,8 +227,30 @@ Cancel anytime.`;
         </Bounce>
       </View>
 
+      {showDay && (
+        <Bounce
+          style={s.dayOuter}
+          onPress={() => setPlan('day')}
+          selected={plan === 'day'}
+          accessibilityLabel={`Day Pass, ${dayPrice} once, 24 hours of full access`}
+        >
+          <View style={[s.card, s.dayCard, plan === 'day' && s.cardOn]}>
+            <View style={{ flex: 1, paddingRight: 36 }}>
+              <Text style={s.planLabel}>Day Pass</Text>
+              <Text style={s.meta}>24 hours of full access · No subscription</Text>
+            </View>
+            <Text style={s.dayPrice} numberOfLines={1}>
+              {dayPrice}
+            </Text>
+            <View style={[s.sel, s.daySel, plan === 'day' && s.selOn]} pointerEvents="none">
+              {plan === 'day' && <Text style={s.selCheck}>✓</Text>}
+            </View>
+          </View>
+        </Bounce>
+      )}
+
       <Text style={s.summary}>{summary}</Text>
-      {trialScope && <Text style={s.trialScope}>{trialScope}</Text>}
+      <Text style={s.trialScope}>{scope}</Text>
 
       <Bounce style={s.cta} onPress={() => onContinue(plan)} accessibilityLabel={cta}>
         <View style={s.ctaInner}>
@@ -287,7 +304,10 @@ const s = StyleSheet.create({
   price: { color: TEXT, fontSize: 30, fontFamily: BrandFonts.bold, letterSpacing: -0.6, flexShrink: 1 },
   per: { color: DIM, fontSize: 12, fontFamily: BrandFonts.semibold, marginLeft: 4, marginBottom: 4 },
   meta: { color: DIM, fontSize: 12, fontFamily: BrandFonts.semibold, marginTop: 6 },
-  trial: { color: AudioAccentLight, fontSize: 13, fontFamily: BrandFonts.semibold, marginTop: 6 },
+  dayOuter: { marginTop: 10 },
+  dayCard: { flexDirection: 'row', alignItems: 'center', paddingTop: 16 },
+  dayPrice: { color: TEXT, fontSize: 22, fontFamily: BrandFonts.bold, letterSpacing: -0.4, marginRight: 34 },
+  daySel: { top: undefined },
   sel: {
     position: 'absolute',
     top: 14,

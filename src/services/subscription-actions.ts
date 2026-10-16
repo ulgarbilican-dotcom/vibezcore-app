@@ -39,7 +39,7 @@ import { Platform } from 'react-native';
  *  verwacht. Generic URL = robuuster: opent direct de subscription-lijst,
  *  gebruiker ziet z'n VIBEZCORE-sub als die er is. Account-mismatch detectie
  *  blijft via restore-purchases.ts werken (toont gerichte modal). */
-export function storeSubscriptionsUrl(_tier?: 'monthly' | 'yearly'): string {
+export function storeSubscriptionsUrl(_tier?: 'monthly' | 'yearly' | 'day'): string {
   if (Platform.OS === 'ios') {
     return 'itms-apps://apps.apple.com/account/subscriptions';
   }

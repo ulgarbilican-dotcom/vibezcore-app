@@ -49,6 +49,8 @@ import {
   PRODUCT_IDS,
   AudioTier,
   tierFromProductId,
+  DAY_PASS_PRODUCT_ID,
+  DAY_PASS_MS,
 } from './iap-contract';
 
 /** RevenueCat Public SDK API keys per platform. Komen uit app.json
@@ -216,6 +218,31 @@ function extractIosIntro(
   return {};
 }
 
+/** De dagpas die nu nog loopt (laatste aankoop + 24 uur), of null.
+ *  RevenueCat bewaart losse aankopen in `nonSubscriptionTransactions`, ook
+ *  voor een gast en na herstel — zo is de pas overal dezelfde 24 uur
+ *  geldig, zonder backend. Bewust NIET aan het entitlement "VIBEZCORE Pro"
+ *  gekoppeld: RevenueCat zou een losse aankoop dan levenslang actief tonen. */
+export function activeDayPass(
+  customerInfo: CustomerInfo | null | undefined,
+  now = Date.now(),
+): { purchaseDate: string; validUntil: string; transactionId: string } | null {
+  const txs = customerInfo?.nonSubscriptionTransactions ?? [];
+  let best: { at: number; tx: (typeof txs)[number] } | null = null;
+  for (const tx of txs) {
+    if (tx.productIdentifier.split(':')[0] !== DAY_PASS_PRODUCT_ID) continue;
+    const at = Date.parse(tx.purchaseDate);
+    if (!Number.isFinite(at)) continue;
+    if (!best || at > best.at) best = { at, tx };
+  }
+  if (!best || best.at + DAY_PASS_MS <= now) return null;
+  return {
+    purchaseDate: best.tx.purchaseDate,
+    validUntil: new Date(best.at + DAY_PASS_MS).toISOString(),
+    transactionId: best.tx.transactionIdentifier,
+  };
+}
+
 function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
   const productId = pkg.product.identifier;
   const tier = tierFromProductId(productId);
@@ -240,7 +267,7 @@ function mapPackageToProduct(pkg: PurchasesPackage): IapProduct | null {
     freeTrialDays,
     currency: pkg.product.currencyCode,
     priceAmountMicros: displayMicros,
-    subscriptionPeriod: tier === 'monthly' ? 'P1M' : 'P1Y',
+    subscriptionPeriod: tier === 'monthly' ? 'P1M' : tier === 'yearly' ? 'P1Y' : undefined,
     regularPriceLabel: Platform.OS === 'ios' && intro ? pkg.product.priceString : reg?.label,
     regularPriceMicros:
       Platform.OS === 'ios' && intro ? Math.round(pkg.product.price * 1_000_000) : reg?.micros,
@@ -452,6 +479,18 @@ export class RealIAPProvider implements IAPProvider {
          als receiptToken; via RevenueCat webhook gaat de echte server-to-
          server validatie. */
       const restored: IapPurchase[] = [];
+      /* Een dagpas die nog loopt, komt ook terug (nieuw toestel, herinstallatie). */
+      const pass = activeDayPass(customerInfo);
+      if (pass && !customerInfo.entitlements.active[ENTITLEMENT_AUDIO_PRO]) {
+        restored.push({
+          productId: DAY_PASS_PRODUCT_ID,
+          tier: 'day',
+          transactionId: pass.transactionId,
+          receiptToken: customerInfo.originalAppUserId,
+          purchaseDate: pass.purchaseDate,
+          isRestore: true,
+        });
+      }
       const activeEntitlement = customerInfo.entitlements.active[ENTITLEMENT_AUDIO_PRO];
       if (activeEntitlement) {
         const productId = activeEntitlement.productIdentifier;

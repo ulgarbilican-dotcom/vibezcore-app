@@ -225,17 +225,25 @@ export const TERMS: LegalDoc = {
     { kind: 'h3', text: 'VIBEZCORE Premium (subscription)' },
     {
       kind: 'p',
-      text: `VIBEZCORE Premium unlocks Breathwork, State Control and the Audio Library in the app. It is an auto-renewing subscription, offered monthly or yearly, purchased through ${STORE}.`,
+      text: `VIBEZCORE Premium unlocks Breathwork, State Control and the Audio Library in the app. It is offered as an auto-renewing subscription (monthly or yearly) and as a one-time Day Pass, purchased through ${STORE}.`,
     },
     {
       kind: 'ul',
       items: [
         `The price and billing period are shown before you confirm the purchase. Payment is charged to your ${STORE_ACCOUNT}`,
         'The subscription renews automatically at the end of each period unless you cancel at least 24 hours before it ends',
-        'Where a free trial is offered, its length and the price that applies afterwards are shown before you start it. You are only charged if you do not cancel before the trial ends',
-        'Where an introductory price is offered, the regular price that applies after the introductory period is shown before purchase',
         `You can manage or cancel your subscription at any time in your ${STORE_ACCOUNT} settings. Deleting the app or your VIBEZCORE account does not cancel it`,
         'Purchases can be restored on a new device with Restore Purchases in the app',
+      ],
+    },
+    { kind: 'h3', text: 'Day Pass (one-time purchase)' },
+    {
+      kind: 'ul',
+      items: [
+        `The Day Pass is a one-time purchase charged to your ${STORE_ACCOUNT} when you confirm it. It is not a subscription and does not renew`,
+        'It gives access to all VIBEZCORE Premium content in the app for 24 hours from the moment of purchase. Access ends automatically after that',
+        'Audio is streamed during the Day Pass; downloading Premium audio is not included',
+        'You can buy a new Day Pass at any time, or switch to a subscription',
       ],
     },
 
@@ -1081,7 +1089,7 @@ export const REFUND: LegalDoc = {
     { kind: 'h2', text: 'Digital Products and Services' },
     {
       kind: 'p',
-      text: `Digital products and services — including the VIBEZCORE Premium subscription (Breathwork, State Control and the Audio Library), Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions purchased through ${STORE} follow the refund rules of that store.`,
+      text: `Digital products and services — including VIBEZCORE Premium (Breathwork, State Control and the Audio Library) as a subscription or Day Pass, Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions and Day Passes purchased through ${STORE} follow the refund rules of that store.`,
     },
     {
       kind: 'p',

@@ -148,12 +148,17 @@ export async function recoverOnStartup(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ENTITLEMENT_AUDIO_PRO } = require('./iap-real');
+    const { ENTITLEMENT_AUDIO_PRO, activeDayPass } = require('./iap-real');
     if (typeof Purchases?.syncPurchases === 'function') {
       await Purchases.syncPurchases();
     }
     const info = await Purchases.getCustomerInfo();
-    if (info?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO]) {
+    /* Een dagpas staat als losse aankoop in RevenueCat, niet als entitlement.
+       Is enkel een dagpas in de wachtrij en is die al verlopen, dan valt er
+       niets meer te herstellen. */
+    const onlyDayPasses = queue.every((q) => q.tier === 'day');
+    const passActive = !!activeDayPass(info);
+    if (info?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO] || passActive || onlyDayPasses) {
       await AsyncStorage.removeItem(PENDING_KEY);
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { refreshSubscription } = require('@/hooks/useSubscription');
