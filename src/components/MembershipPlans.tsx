@@ -25,7 +25,6 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
-import { SESSIONS } from '@/data/audio-library-data';
 import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
 import * as Haptics from 'expo-haptics';
@@ -136,22 +135,20 @@ export default function MembershipPlans({
   const monthlyAfter = monthly?.regularPriceLabel;
   const yearlyAfter = yearly?.regularPriceLabel;
 
-  /* Operator, 8 okt 2026: "Cancel anytime" altijd samen op een eigen
-     regel (
- + harde spatie), niet middenin afgebroken. */
+  /* Operator, 16 okt 2026 ("laat de paywall kaart mooi ademen, nu is dat
+     heel druk"): één rustige regel onder de kaarten i.p.v. twee blokjes
+     grijze tekst — wat Premium bevat staat al bovenaan het blad. De
+     voorwaarden blijven volledig in de kleine lettertjes (Apple 3.1.2). */
   const summary =
     plan === 'day'
-      ? `${dayPrice} once for 24 hours of full access.
-No subscription, nothing renews.`
+      ? `${dayPrice} once · 24 hours of full access`
       : plan === 'yearly'
-        ? `${yearlyPrice} per year${yearlyAfter ? ` for the first year, ${yearlyAfter} per year after` : ''}.
-Cancel anytime.`
-        : `${monthlyPrice} per month${monthlyAfter ? ` for the first year, ${monthlyAfter} per month after` : ''}.
-Cancel anytime.`;
-  const scope =
-    plan === 'day'
-      ? `Breathwork, State Control and all ${SESSIONS.length} audio sessions, for 24 hours from purchase. Audio can't be downloaded with a Day Pass.`
-      : `Full access from day one: Breathwork, State Control and all ${SESSIONS.length} audio sessions.`;
+        ? yearlyAfter
+          ? `${yearlyPrice} for the first year, then ${yearlyAfter} per year · Cancel anytime`
+          : `${yearlyPrice} per year · Cancel anytime`
+        : monthlyAfter
+          ? `${monthlyPrice} per month for the first year, then ${monthlyAfter} · Cancel anytime`
+          : `${monthlyPrice} per month · Cancel anytime`;
   const cta = plan === 'day' ? 'Get Day Pass' : 'Subscribe';
   /* Operator, 8 okt 2026: kleine lettertjes per store, actief geformuleerd.
      iOS = Apple's vaste tekst (24-uursregel, App Store-accountinstellingen);
@@ -160,7 +157,7 @@ Cancel anytime.`;
   const store = Platform.OS === 'ios' ? 'Your Apple ID' : 'Your Google Play account';
   const disclosure =
     plan === 'day'
-      ? `${store} is charged once when you confirm your purchase. The Day Pass ends 24 hours later and does not renew.`
+      ? `${store} is charged once when you confirm your purchase. The Day Pass ends 24 hours later and does not renew. Audio streams only.`
       : Platform.OS === 'ios'
         ? 'Your Apple ID is charged when you confirm your purchase. Your subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.'
         : 'Your Google Play account is charged when you confirm your purchase. Your subscription renews automatically until you cancel. Manage or cancel anytime in Google Play › Subscriptions.';
@@ -237,7 +234,7 @@ Cancel anytime.`;
           <View style={[s.card, s.dayCard, plan === 'day' && s.cardOn]}>
             <View style={{ flex: 1, paddingRight: 36 }}>
               <Text style={s.planLabel}>Day Pass</Text>
-              <Text style={s.meta}>24 hours of full access · No subscription</Text>
+              <Text style={s.meta}>24 hours · No subscription</Text>
             </View>
             <Text style={s.dayPrice} numberOfLines={1}>
               {dayPrice}
@@ -250,7 +247,6 @@ Cancel anytime.`;
       )}
 
       <Text style={s.summary}>{summary}</Text>
-      <Text style={s.trialScope}>{scope}</Text>
 
       <Bounce style={s.cta} onPress={() => onContinue(plan)} accessibilityLabel={cta}>
         <View style={s.ctaInner}>
@@ -283,7 +279,7 @@ Cancel anytime.`;
 const s = StyleSheet.create({
   hero: { color: TEXT, fontFamily: BrandFonts.bold, fontSize: 34, letterSpacing: -0.6, marginBottom: 6 },
   heroSub: { color: DIM, fontFamily: BrandFonts.medium, fontSize: 15, lineHeight: 21, marginBottom: 24 },
-  row: { flexDirection: 'row', gap: 10 },
+  row: { flexDirection: 'row', gap: 12 },
   cardOuter: { flex: 1 },
   card: {
     flex: 1,
@@ -304,7 +300,7 @@ const s = StyleSheet.create({
   price: { color: TEXT, fontSize: 30, fontFamily: BrandFonts.bold, letterSpacing: -0.6, flexShrink: 1 },
   per: { color: DIM, fontSize: 12, fontFamily: BrandFonts.semibold, marginLeft: 4, marginBottom: 4 },
   meta: { color: DIM, fontSize: 12, fontFamily: BrandFonts.semibold, marginTop: 6 },
-  dayOuter: { marginTop: 10 },
+  dayOuter: { marginTop: 12 },
   dayCard: { flexDirection: 'row', alignItems: 'center', paddingTop: 16 },
   dayPrice: { color: TEXT, fontSize: 22, fontFamily: BrandFonts.bold, letterSpacing: -0.4, marginRight: 34 },
   daySel: { top: undefined },
@@ -322,9 +318,9 @@ const s = StyleSheet.create({
   },
   selOn: { borderColor: AudioAccent, backgroundColor: AudioAccent },
   selCheck: { color: '#ffffff', fontSize: 11, fontWeight: '800', lineHeight: 13 },
-  summary: { color: DIM, fontFamily: BrandFonts.medium, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 18 },
+  summary: { color: 'rgba(255,255,255,0.7)', fontFamily: BrandFonts.medium, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 24 },
   trialScope: { color: DIM, fontFamily: BrandFonts.medium, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
-  cta: { marginTop: 12 },
+  cta: { marginTop: 16 },
   ctaInner: {
     backgroundColor: '#ffffff',
     height: 52,
@@ -334,7 +330,7 @@ const s = StyleSheet.create({
   },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.semibold },
   /* Wit (operator, 7 okt 2026): de voorwaarden moeten duidelijk leesbaar zijn. */
-  disclosure: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center', marginTop: 14 },
+  disclosure: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center', marginTop: 18 },
   links: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 12 },
   link: { color: '#ffffff', fontSize: 12, fontFamily: BrandFonts.medium },
   sep: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
