@@ -35,8 +35,7 @@ import {
 } from '@/utils/dev-user-override';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BookAudio, ChevronRight, Wind, type LucideIcon } from 'lucide-react-native';
-import BraceletIcon from '@/components/BraceletIcon';
+import { AudioLines, ChevronRight, Radio, Wind, type LucideIcon } from 'lucide-react-native';
 import Svg, { Polygon } from 'react-native-svg';
 import { router } from 'expo-router';
 import { requestScrollTo } from '@/utils/scroll-intent';
@@ -76,9 +75,11 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    redesign stond. */
 type Pillar = {
   key: string;
-  /* Operator, 7 okt 2026: zelfde iconen als de tabbalk onderaan
-     (Breath = Wind, State Control = BraceletIcon, Library = BookAudio). */
-  Icon: LucideIcon | typeof BraceletIcon;
+  /* Operator, 7 okt 2026: zelfde iconen als de tabbalk onderaan.
+     16 okt 2026 (operator: "state control icon op welcome ook aanpassen"):
+     bijgewerkt naar de huidige tabbalk — Breath = Wind, State Control =
+     Radio, Library = AudioLines. */
+  Icon: LucideIcon;
   product: string;
   title: string;
   onPress: () => void;
@@ -103,14 +104,14 @@ const PILLARS: Pillar[] = [
   },
   {
     key: 'bracelet',
-    Icon: BraceletIcon,
+    Icon: Radio,
     product: 'Feel',
     title: 'Control Your State', // operator 7 okt 2026: zelfde ritme als Reset Yourself / Train Your Mind
     onPress: () => router.navigate('/bracelet'),
   },
   {
     key: 'audio',
-    Icon: BookAudio,
+    Icon: AudioLines,
     product: 'Listen',
     title: 'Train Your Mind',
     onPress: () => router.navigate('/'),
