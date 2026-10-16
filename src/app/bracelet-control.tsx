@@ -4107,23 +4107,31 @@ function IdleScreen({
                 <HapticPulseRings size={RING_DIAL} color={breathWaveLook(meta.color).color} beatSynced />
               </View>
             ) : null}
-            <DurationRing
-              key={selectedMode}
-              clockOverride={trialRunning ? `0:${String(trialLeft).padStart(2, '0')}` : undefined}
-              fillOnMount={modeChangedRef.current}
-              min={meta.minMinutes}
-              max={meta.maxMinutes}
-              value={duration}
-              color={meta.color}
-              label={meta.name}
-              size={RING_DIAL}
-              dialHandle={!trialRunning}
-              dark={idleDark}
-              recommended={
-                duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
-              }
-              zone={ZONE_NAME[zoneFor(selectedMode, duration)]}
-            />
+            {/* Free-voorproef: de cirkel klopt zelf mee op elke slag, net als in
+                een lopende sessie (operator, 16 okt 2026: "bij free moet de ring
+                zelf ook mooi mee pulseren, niet statisch"). Altijd hetzelfde
+                omhulsel, enkel aan/uit — zo bouwt niets opnieuw op. */}
+            <View style={{ width: RING_DIAL, height: RING_DIAL, alignItems: 'center', justifyContent: 'center' }}>
+              <HeartbeatScale size={RING_DIAL} enabled={trialRunning}>
+                <DurationRing
+                  key={selectedMode}
+                  clockOverride={trialRunning ? `0:${String(trialLeft).padStart(2, '0')}` : undefined}
+                  fillOnMount={modeChangedRef.current}
+                  min={meta.minMinutes}
+                  max={meta.maxMinutes}
+                  value={duration}
+                  color={meta.color}
+                  label={meta.name}
+                  size={RING_DIAL}
+                  dialHandle={!trialRunning}
+                  dark={idleDark}
+                  recommended={
+                    duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
+                  }
+                  zone={ZONE_NAME[zoneFor(selectedMode, duration)]}
+                />
+              </HeartbeatScale>
+            </View>
           </ModeSwipeRing>
         </View>
 
