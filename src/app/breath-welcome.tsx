@@ -1771,6 +1771,9 @@ export function SlideIntro({
            voor de Skia-omweg). */}
         {light ? (
           <View style={s.stackTitle}>
+            {/* Wat dit is, in één woord (operator, 16 okt 2026: "weten mensen
+                dat dit breathwork is?") — zelfde eyebrow als de Breath-tab. */}
+            <Text style={s.onbEyebrow}>GUIDED BREATHWORK</Text>
             <Animated.Text style={[s.stackWord1Light, wordStyle1]}>Breathe</Animated.Text>
             <Animated.Text style={[s.stackWord2Light, wordStyle2]}>Build</Animated.Text>
             <Animated.Text style={[s.stackWord3Light, wordStyle3]}>Become</Animated.Text>
@@ -3177,6 +3180,14 @@ function StartCard({
 /* ── Styles ───────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
+  onbEyebrow: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   /* Smalle strook langs de linkerrand voor de iOS-terugveeg. */
   edgeSwipe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 22, zIndex: 100 },
   /* Skip-onderblad (8 okt 2026) — zelfde opbouw als "End trial?" in

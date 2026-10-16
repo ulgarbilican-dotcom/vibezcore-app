@@ -34,6 +34,8 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { BlurView } from 'expo-blur';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import BalancedText from '@/components/BalancedText';
 import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { HeartbeatScale } from '@/components/HapticPulseRings';
@@ -80,6 +82,10 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
+  interpolate,
+  withDelay,
+  withRepeat,
   FadeIn,
   FadeInLeft,
   FadeInRight,
@@ -299,6 +305,28 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   }, [step, onBack, goBack, sheet]);
 
 
+  /* Lichtflits over de knop op stap 1 — 1-op-1 het recept van
+     breath-welcome.tsx (pauze 2,6 s, veeg 1,1 s, rust 1,2 s). */
+  const [ctaWidth, setCtaWidth] = useState(300);
+  const ctaShimmer = useSharedValue(-1);
+  useEffect(() => {
+    ctaShimmer.value = withRepeat(
+      withSequence(
+        withTiming(-1, { duration: 0 }),
+        withDelay(2600, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })),
+        withDelay(1200, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+  }, [ctaShimmer]);
+  const ctaShimmerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(ctaShimmer.value, [-1, 1], [-70, ctaWidth + 40]) },
+      { rotate: '18deg' },
+    ],
+  }));
+
   const ctaLabel =
     step < lastStep
       ? 'Next'
@@ -339,6 +367,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           {step === 0 ? (
             <Animated.View key="s0" entering={pageIn} style={s.slide}>
               <Animated.View entering={enter(0)} style={s.pad}>
+                {/* Wat dit is (operator, 16 okt 2026) — zelfde eyebrow als de
+                    State Control-tab. */}
+                <Text style={s.onbEyebrow}>STATE CONTROL</Text>
                 <Text style={s.header}>How it works</Text>
                 <Text style={s.lead}>A rhythm that starts at your heart</Text>
               </Animated.View>
@@ -503,9 +534,27 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         ) : (
         <View style={s.footer}>
           <PressScale onPress={goNext} haptic scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button">
-            <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
-              <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
-            </View>
+            {/* Zelfde knop als de Breathwork-onboarding (operator, 16 okt
+                2026): stap 1 = matglas met lichtflits, daarna wit. */}
+            {step === 0 ? (
+              <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
+                <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.22)' }]} />
+                <Text style={[s.ctaTxtDark, { color: '#ffffff' }]}>{ctaLabel}</Text>
+                <Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none">
+                  <ExpoLinearGradient
+                    colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              </View>
+            ) : (
+              <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
+                <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
+              </View>
+            )}
           </PressScale>
         </View>
         )}
@@ -860,6 +909,7 @@ function Step({ n, title, text, last = false }: { n: string; title: string; text
 /* Maten/kleuren 1-op-1 uit breath-welcome.tsx (topbar, step*, skip*,
    header/lead, footer, cta*). */
 const s = StyleSheet.create({
+  onbEyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)', marginTop: 4, marginBottom: 6 },
   /* Smalle strook langs de linkerrand voor de iOS-terugveeg. */
   edgeSwipe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 22 },
   root: { flex: 1, backgroundColor: Brand.bg },
@@ -989,4 +1039,5 @@ const s = StyleSheet.create({
   ctaWrap: { borderRadius: 14, overflow: 'hidden' },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, paddingVertical: 16 },
   ctaTxtDark: { color: '#0a0a0c', fontFamily: BrandFonts.semibold, fontSize: 17 },
+  ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
 });
