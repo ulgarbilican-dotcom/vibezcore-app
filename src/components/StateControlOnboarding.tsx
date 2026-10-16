@@ -34,6 +34,7 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import { BlurView } from 'expo-blur';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import BalancedText from '@/components/BalancedText';
@@ -371,7 +372,10 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                     State Control-tab. */}
                 <Text style={s.onbEyebrow}>STATE CONTROL</Text>
                 <Text style={s.header}>How it works</Text>
-                <Text style={s.lead}>A rhythm that starts at your heart</Text>
+                {/* Operator, 16 okt 2026 ("start at your heart ook niet goed"): zegt nu
+                    precies wat er gebeurt — het RITME begint bij je hartslag en
+                    verschuift naar je toestand; geen belofte over je hart. */}
+                <Text style={s.lead}>Starts at your heart rate, then shifts to your state</Text>
               </Animated.View>
               {/* Pillen boven de kaart, vlak onder de inleiding (operator, 16 okt
                   2026: "pillen buiten kaart, meer naar boven"); de kaart draagt
@@ -708,10 +712,17 @@ function StateCard({
           height: d,
           borderRadius: d / 2,
           borderColor: rgba(meta.color, active ? 0.9 : 0.4),
-          backgroundColor: rgba(meta.color, active ? 0.16 : 0.08),
+          backgroundColor: rgba(meta.color, active ? 0.06 : 0.04),
+          overflow: 'hidden',
         },
       ]}
     >
+      {/* Golvende vulling (operator, 16 okt 2026: "binnenkant van step 2 ook
+          animeren, bovenaan golven") — dezelfde LiquidWave als in
+          breath-setup en de duurring; de gekozen cirkel staat iets hoger. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <LiquidWave size={d} level={active ? 0.5 : 0.38} {...breathWaveLook(meta.color)} />
+      </View>
       <Icon size={Math.round(d * 0.24)} color={meta.color} />
       <Text style={s.stateName} numberOfLines={1}>
         {meta.name}
@@ -742,7 +753,7 @@ function InfoBlock({ mode }: { mode: BraceletMode }) {
     <Animated.View key={mode} entering={FadeIn.duration(180)}>
       <Text style={s.infoTitle}>{feelLine(mode)}</Text>
       <View style={s.facts}>
-        <Fact label="Ends near" value={`${r.targetBpm} bpm`} />
+        <Fact label="Rhythm ends at" value={`${r.targetBpm} bpm`} />
         <Fact label="Recommended" value={`${meta.defaultMinutes} min`} />
       </View>
     </Animated.View>
@@ -837,11 +848,16 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
      echte. */
   const top = 56;
   const bottom = 150;
-  const mid = (top + bottom) / 2;
+  /* Vervolg (operator: "clarity, calm en sleep maken exact dezelfde curve,
+     dat mag niet"): diepte recht evenredig met het verschil in bpm — één
+     vaste schaal (2,35 px per bpm), zodat Sleep zichtbaar dieper zakt dan
+     Clarity en Clarity dieper dan Calm. Dalende toestanden starten altijd
+     bovenaan, stijgende onderaan: zo zijn ze onderling te vergelijken. */
   const delta = r.targetBpm - r.startBpm;
-  const depth = delta === 0 ? 0 : (bottom - top) * (0.55 + 0.45 * Math.min(1, Math.abs(delta) / 40));
-  const yA = mid + (Math.sign(delta) * depth) / 2;
-  const yB = mid - (Math.sign(delta) * depth) / 2;
+  const PX_PER_BPM = (bottom - top) / 40;
+  const depth = Math.min(bottom - top, Math.abs(delta) * PX_PER_BPM);
+  const yA = delta < 0 ? top : delta > 0 ? bottom : (top + bottom) / 2;
+  const yB = delta < 0 ? top + depth : delta > 0 ? bottom - depth : yA;
   const rising = yB < yA;
   const x0 = 10;
   const xe = W - 10;
