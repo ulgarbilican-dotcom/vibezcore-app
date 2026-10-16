@@ -38,6 +38,7 @@ import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import { BlurView } from 'expo-blur';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import BalancedText from '@/components/BalancedText';
+import VibezGlass from '@/components/VibezGlass';
 import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
@@ -108,7 +109,7 @@ import Svg, { Circle, Defs, Line, LinearGradient as SvgLinearGradient, Path, Sto
 /* Volgorde van de app: Boost … Sleep. */
 const ALL_MODES = MODES.map((m) => m.mode);
 /** Hoe lang het water erover doet om de cirkel te vullen vóór de eerste slag. */
-const FILL_MS = 1300;
+const FILL_MS = 800;
 
 /* Per toestand een eigen regel (operator: "je gaat niet alles zelfde
    uitleg geven he"), kloppend met het echte eindtempo (Science A tot Z
@@ -385,7 +386,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 {/* Operator, 16 okt 2026 ("start at your heart ook niet goed"): zegt nu
                     precies wat er gebeurt — het RITME begint bij je hartslag en
                     verschuift naar je toestand; geen belofte over je hart. */}
-                <Text style={s.lead}>Starts at your heart rate, then shifts to your state</Text>
+                <BalancedText style={s.lead}>Starts at your heart rate, then shifts to your state</BalancedText>
               </Animated.View>
               {/* Pillen boven de kaart, vlak onder de inleiding (operator, 16 okt
                   2026: "pillen buiten kaart, meer naar boven"); de kaart draagt
@@ -722,7 +723,6 @@ function StateCard({
           height: d,
           borderRadius: d / 2,
           borderColor: rgba(meta.color, active ? 0.9 : 0.4),
-          backgroundColor: rgba(meta.color, active ? 0.06 : 0.04),
           overflow: 'hidden',
         },
       ]}
@@ -730,6 +730,9 @@ function StateCard({
       {/* Golvende vulling (operator, 16 okt 2026: "binnenkant van step 2 ook
           animeren, bovenaan golven") — dezelfde LiquidWave als in
           breath-setup en de duurring; de gekozen cirkel staat iets hoger. */}
+      {/* Glas zoals de rest van de app (operator, 16 okt 2026), met een
+          vleugje toestandskleur; de gekozen cirkel is lichter glas. */}
+      <VibezGlass radius={d / 2} tint={meta.color} level={active ? 'normal' : 'subtle'} style={StyleSheet.absoluteFill} />
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {/* Bij het tikken vult het water van onderuit tot bovenaan, in de
             seconde voor de eerste slag (operator, 16 okt 2026). */}
