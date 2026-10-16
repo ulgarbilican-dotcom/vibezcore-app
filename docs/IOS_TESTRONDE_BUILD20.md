@@ -48,9 +48,21 @@ modus blijft staan, speelt audio in een andere iOS-categorie. Ook nagaan:
 volume van de speler, de bestanden zelf (bitrate) en of het geluid via de
 oorluidspreker i.p.v. de luidspreker gaat.
 
+## Afbakening (operator, 16 okt 2026)
+
+Punten 1–16 en 19 zijn **enkel op iOS** gezien; op Android leek alles in
+orde → oorzaak in iOS-specifiek gedrag zoeken, Android niet breken.
+**Gedeeld** (Android én iOS aanpassen): FAQ, prijzen, paywall en de gratis
+audiosessies (zie hieronder). Punt 20 (opstartanimatie) geldt voor beide.
+
 ## Beslissing monetisatie (operator, 16 okt 2026)
 
-- **De 7-dagen trial vervalt.**
+- **De 7-dagen trial vervalt** — overal (app, paywall, FAQ, legal, stores).
+- **Prijzen:** dag **€1,29** (full unlock 24 u) · maand **€9,99** · jaar
+  **€69,99**. Vaste prijzen — geen intro-prijs meer (was €14,99 met intro
+  €9,99 / €89,99 met intro €69,99).
+- **Gratis audio: enkel de 10 gratis sessies**, al de rest achter de
+  betaalmuur (het trial-niveau met 27 sessies + Breathwork vervalt mee).
 - **Nieuw: dagpas €1,29** — 24 uur alles ontgrendeld, losse aankoop
   (geen automatisch verlengend abonnement). Vervangt het eerdere idee van
   €0,90 (21 sept).
@@ -65,4 +77,5 @@ oorluidspreker i.p.v. de luidspreker gaat.
   - deellink per gebruiker; wie een vriend binnenbrengt krijgt 1 gratis premium-dag.
 
 Nodig van de operator in de stores: product "dagpas" aanmaken in App Store
-Connect en Play Console (non-renewing / consumable), intro-trial uitzetten.
+Connect en Play Console (non-renewing / consumable); gratis trial en
+intro-aanbiedingen uitzetten; maand- en jaarprijs op €9,99 / €69,99 zetten.
