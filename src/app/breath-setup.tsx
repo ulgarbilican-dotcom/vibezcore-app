@@ -34,7 +34,7 @@ import BalancedText from '@/components/BalancedText';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import VibezGlass from '@/components/VibezGlass';
-import { BrandFonts, CTA } from '@/constants/theme';
+import { BrandFonts, CTA, DIAL_SIZE } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
 /* Operator, 19 september 2026 ("ja doen" — echte glas-blur i.p.v. de
    rgba-truc): `expo-blur` zit al in de huidige native build (welcome.tsx
@@ -236,7 +236,8 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
    zo groot als dit scherm toelaat (was 0,58 × breedte, max 230). */
 /* Vervolg: techniekbalk en duurwiel zijn weg → zelfde maat als State
    Control (304), de ruimte is er nu. */
-const HERO_SIZE = Math.min(Math.round(SCREEN_W * 0.845), 304);
+/* 17 okt 2026: kleiner, zelfde maat als State Control (DIAL_SIZE). */
+const HERO_SIZE = DIAL_SIZE;
 /* Operator, 9 september 2026: "de glow is niet goed te aanwezig... ik had
    de glow niet gevraagd" — de radiale gloed-cirkel achter de ring is
    weer weg. "Meer subtiele ring, nog dunner, moet elegant": 6 → 4 → 3.

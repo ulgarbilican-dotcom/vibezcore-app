@@ -74,7 +74,7 @@ import {
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
-import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent } from '@/constants/theme';
+import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
    light/dark-toggle gehad, in tegenstelling tot de rest van de app sinds
@@ -1700,7 +1700,9 @@ const RING_R = 84;
 const RING_STROKE = 4;
 const RING_SIZE = (RING_R + RING_STROKE) * 2;
 /* Operator, 9 okt 2026 ("cirkel groter"): 230 → 270. */
-const RING_DIAL = 304; // operator, 10 okt 2026: groter (was 270), duurpillen eronder weg
+/* Operator, 10 okt 2026: 270 → 304; 17 okt 2026: kleiner, zelfde maat als
+   Breathwork Choose timing (DIAL_SIZE in theme.ts). */
+const RING_DIAL = DIAL_SIZE;
 const RING_CIRC = 2 * Math.PI * RING_R;
 const AnimatedRingCircle = ReanimatedAnimated.createAnimatedComponent(Circle);
 

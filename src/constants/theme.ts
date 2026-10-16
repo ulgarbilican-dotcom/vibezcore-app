@@ -5,7 +5,7 @@
 
 import '@/global.css';
 
-import { Platform } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
 export const Colors = {
   light: {
@@ -340,3 +340,8 @@ export const CTA = {
   },
   iconColor: '#1D1D1F',
 } as const;
+
+/* Eén maat voor de grote keuzecirkel van State Control (toestand/duur) en
+   Breathwork (Choose timing) — operator, 17 okt 2026: "kleiner, meer
+   ademruimte op de pagina, zelfde formaat op beide". Was 304. */
+export const DIAL_SIZE = Math.min(Math.round(Dimensions.get('window').width * 0.72), 264);
