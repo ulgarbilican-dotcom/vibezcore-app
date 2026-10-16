@@ -24,7 +24,7 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 11 | Breathwork actieve sessie | End session werkt niet | ⏳ |
 | 12 | Breathwork actieve sessie | Minimize-knop opent Audio & Haptics | ⏳ |
 | 13 | Breathwork actieve sessie | De boog met de secondenteller moet ~1 cm lager staan dan de ademanimatie | ⏳ |
-| 14 | Paywall | Geen prijzen in de prijskaarten | ⏳ |
+| 14 | Paywall | Geen prijzen in de prijskaarten — OORZAAK GEVONDEN: in RevenueCat offering `default` hebben Monthly en Yearly enkel een Play Store-product, App Store = "No product". Fix = vibezcore_audio_monthly / _yearly (App Store) koppelen in RevenueCat | 🔍 |
 | 15 | Audio (iPhone) | Geluid slecht van kwaliteit en maximaal volume heel zacht | ⏳ |
 | 16 | Hele app | CTA's lijken dunner (lager/lichter) dan op Android — hoort bij punt 1 | ⏳ |
 | 17 | FAQ, Settings, Support | Inhoud nalopen voor State Control, Breathwork, Audio en Smart Bead Bracelet: klopt alles met de app van nu (prijzen, trial weg → dagpas, 20 s meting, namen, Launching Early 2027)? | ⏳ |
@@ -87,6 +87,6 @@ intro-aanbiedingen uitzetten; maand- en jaarprijs op €9,99 / €69,99 zetten.
   - jaar €69,99: actief, aanbiedingen inactief;
   - dagpas = product met eenmalige betaling `vibezcore_day_pass`, aankoopoptie `day-pass` (Bestellen, werkt met eerdere versies), 174 landen, actief.
   - Let op: "Prijzen in bulk bewerken" rekent de ingetypte prijs als prijs ZONDER btw (1,29 gaf België €1,59). België moet op €1,29 incl. btw staan.
-- **RevenueCat:** dagpas nog toevoegen, NIET aan het Pro-entitlement koppelen. Een eenmalige aankoop geeft daar anders voor altijd toegang; de app rekent de 24 u vanaf de aankoopdatum.
+- **RevenueCat:** dagpas geïmporteerd (Consumable) en als pakket `day_pass` (Custom) in offering `default` gezet (Play Store) — 16 okt. NIET aan het Pro-entitlement koppelen. Een eenmalige aankoop geeft daar anders voor altijd toegang; de app rekent de 24 u vanaf de aankoopdatum.
 - **App Store Connect:** nog te doen (dagpas als non-consumable/consumable, intro-aanbiedingen uit, prijzen).
 
