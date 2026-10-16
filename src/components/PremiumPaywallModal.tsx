@@ -37,6 +37,10 @@ type Props = {
    *  voordelen en waar de gebruiker na aankoop terugkomt. Het pakket zelf
    *  is overal hetzelfde (operator, 5 okt 2026). */
   context?: PaywallContext;
+  /** Vlak vóór de stap naar /subscribe — bv. een ademsessie die als laag
+   *  boven de app ligt eerst verkleinen, anders opent de betaalpagina
+   *  onzichtbaar eronder (audit 16 okt 2026). */
+  onBeforeContinue?: () => void;
 };
 
 export type PaywallContext = 'breathwork' | 'state-control' | 'audio';
@@ -65,7 +69,7 @@ function benefitLines(context: PaywallContext): string[] {
   return [...breathwork, stateControlIncluded, audioIncluded];
 }
 
-export default function PremiumPaywallModal({ visible, onClose, context = 'breathwork' }: Props) {
+export default function PremiumPaywallModal({ visible, onClose, context = 'breathwork', onBeforeContinue }: Props) {
   const insets = useSafeAreaInsets();
   const [restoring, setRestoring] = useState(false);
 
@@ -136,6 +140,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
             <MembershipPlans
               showHero={false}
               onContinue={(plan) => {
+                onBeforeContinue?.();
                 onClose();
                 router.push(`/subscribe?tier=${plan}&returnTo=${context}` as never);
               }}

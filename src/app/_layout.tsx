@@ -65,8 +65,8 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
   Inter_900Black,
-  useFonts,
 } from '@expo-google-fonts/inter';
+import * as Font from 'expo-font';
 import * as Linking from 'expo-linking';
 import { router, Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -84,7 +84,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { bootDecided, markBootDecided } from '@/utils/boot';
 import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
-import { AppState, Image, Platform, Text as RNText, View } from 'react-native';
+import { AccessibilityInfo, AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -226,6 +226,57 @@ let lastPlanResyncDay = new Date().toDateString();
 /* Initiële deeplink die al verwerkt is (zie de deeplink-handler). */
 let handledInitialUrl: string | null = null;
 
+/* iOS "Vette tekst" (Instellingen › Beeldscherm › Bold Text, operator 16 okt
+   2026: "fonts lijken kleiner en dunner dan op Android"). iOS maakt dan al
+   zijn eigen tekst vetter, maar een eigen lettertype volgt dat niet — naast
+   de vette systeemtekst leek Inter dun en klein. Zoals Apple's eigen apps
+   volgen we die instelling: elk gewicht schuift een stap zwaarder (regular →
+   semibold …). Bij het opstarten bepaald; de namen in BrandFonts blijven
+   gelijk, enkel het bestand erachter verandert. */
+const INTER_BOLDER: Record<string, number> = {
+  Inter_400Regular: Inter_600SemiBold,
+  Inter_500Medium: Inter_600SemiBold,
+  Inter_600SemiBold: Inter_700Bold,
+  Inter_700Bold: Inter_800ExtraBold,
+  Inter_800ExtraBold: Inter_900Black,
+  Inter_900Black: Inter_900Black,
+};
+const INTER_NORMAL: Record<string, number> = {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+};
+function useBrandFonts(): [boolean, Error | null] {
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      let bold = false;
+      if (Platform.OS === 'ios') {
+        try {
+          bold = await AccessibilityInfo.isBoldTextEnabled();
+        } catch {
+          bold = false;
+        }
+      }
+      try {
+        await Font.loadAsync(bold ? INTER_BOLDER : INTER_NORMAL);
+        if (alive) setReady(true);
+      } catch (e) {
+        if (alive) setError(e instanceof Error ? e : new Error(String(e)));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return [ready, error];
+}
+
 export default function RootLayout() {
   /* 13 okt 2026: het horloge zelfstandig — catalogus actueel houden en
      horloge-sessies ophalen (services/watch-catalog.ts). */
@@ -239,14 +290,7 @@ export default function RootLayout() {
   const [hasStoredSession, setHasStoredSession] = useState(false);
   /* Audit 8 okt 2026: mislukt het laden van de lettertypes, dan toch
      openen (met systeemlettertype) i.p.v. eeuwig op het opstartscherm. */
-  const [fontsReady, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
-    Inter_900Black,
-  });
+  const [fontsReady, fontError] = useBrandFonts();
 
   const fontsLoaded = fontsReady || !!fontError;
   const [auth, setAuth] = useState<AuthState>(undefined);
@@ -311,6 +355,9 @@ export default function RootLayout() {
       /* Ademsessie: rechtstreeks de sessie-laag (loopt er al een, dan die
          terughalen — een melding vervangt nooit een lopende sessie). */
       if (reminderRoute(t) === '/breath-session') {
+        /* iOS: de speler is modaal en ligt boven de sessielaag — eerst dicht. */
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        if (require('./player').isPlayerOpen() && router.canGoBack()) router.back();
         if (getBreathHost()) restoreBreathSession();
         else openBreathSession({ from: 'reminder', ...reminderParams(t) });
         return;

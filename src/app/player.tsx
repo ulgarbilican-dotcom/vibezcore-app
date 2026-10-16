@@ -125,7 +125,22 @@ function fmt(sec: number): string {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
+/** Staat de speler (modaal op iOS) nu open? */
+let playerOpen = false;
+export function isPlayerOpen(): boolean {
+  return playerOpen;
+}
+
 export default function PlayerScreen() {
+  /* Audit 16 okt 2026: op iOS is de speler een echt modaal venster boven de
+     hele app — een ademsessie uit een herinnering startte dan onzichtbaar
+     eronder. De root sluit de speler eerst (zie _layout.tsx). */
+  useEffect(() => {
+    playerOpen = true;
+    return () => {
+      playerOpen = false;
+    };
+  }, []);
   const router = useRouter();
   /* Iter 9kk: safe-area-inset voor bottom CTA-knop (operator-feedback
      "onderste knop staat niet in safe zone"). Home-indicator iOS +

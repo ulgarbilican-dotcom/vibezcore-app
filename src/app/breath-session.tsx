@@ -2018,6 +2018,14 @@ export function BreathSession() {
      elke gewone stop — anders is het een irritante extra tik voor iedereen
      die gewoon een normale sessie afbreekt. */
   const [endTrialConfirm, setEndTrialConfirm] = useState(false);
+  /* Audit 16 okt 2026: einde van de voorproef, natuurlijk einde of Stop op
+     het horloge kunnen gebeuren terwijl de sessie verkleind is (je zit
+     dan op een andere pagina). Dan eerst de sessie terughalen, zodat het
+     blad bij de sessie hoort — anders verscheen het "uit het niets" en
+     sprong "Done" naar de Breath-tab. */
+  useEffect(() => {
+    if ((paywall || done || endTrialConfirm) && getBreathHost()?.minimized) restoreBreathSession();
+  }, [paywall, done, endTrialConfirm]);
   /* Operator, 2 okt 2026: niet-blokkerende feedback na een instant-
      gestarte, volledig afgeronde sessie — "Worked"/"Too hard"/"Too long"
      past de gedeelde `experienceLevel`/`instantDurationBias`-instellingen
@@ -3484,7 +3492,11 @@ export function BreathSession() {
           style={[StyleSheet.absoluteFill, { backgroundColor: '#050507', zIndex: 999, elevation: 999 }]}
         />
       ) : null}
-      <PremiumPaywallModal visible={scapePaywall} onClose={() => setScapePaywall(false)} />
+      <PremiumPaywallModal
+        visible={scapePaywall}
+        onClose={() => setScapePaywall(false)}
+        onBeforeContinue={minimizeBreathSession}
+      />
 
       <PremiumPaywallModal
         visible={paywall}
