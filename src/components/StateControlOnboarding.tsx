@@ -39,7 +39,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import BalancedText from '@/components/BalancedText';
 import { isGlassSheetOpen } from '@/components/GlassSheetHost';
-import { HeartbeatScale } from '@/components/HapticPulseRings';
+import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { HeartbeatHero } from '@/components/RestingHeartRatePage';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
@@ -48,8 +48,8 @@ import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { STATE_USAGE } from '@/data/state-usage';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
 import {
-  PREVIEW_MAX_SECONDS,
-  playModePreviewHaptic,
+  TASTE_SECONDS,
+  playModeTasteHaptic,
   rhythmFor,
   stopModePreviewHaptic,
 } from '@/services/bracelet-haptics';
@@ -220,9 +220,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
       return;
     }
     if (stopTimer.current) clearTimeout(stopTimer.current);
-    playModePreviewHaptic(m);
+    playModeTasteHaptic(m);
     setPlaying(m);
-    stopTimer.current = setTimeout(() => setPlaying(null), PREVIEW_MAX_SECONDS * 1000);
+    stopTimer.current = setTimeout(() => setPlaying(null), TASTE_SECONDS * 1000);
   };
   const choose = useCallback(
     (m: BraceletMode) => {
@@ -642,7 +642,7 @@ function StateCarousel({
         snapToInterval={step}
         decelerationRate="fast"
         disableIntervalMomentum
-        contentContainerStyle={{ paddingHorizontal: side, gap: CARD_GAP, paddingVertical: 18 }}
+        contentContainerStyle={{ paddingHorizontal: side, gap: CARD_GAP, paddingVertical: 60 }}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         style={s.carousel}
@@ -734,6 +734,13 @@ function StateCard({
   );
   return (
     <Animated.View style={[{ width, height: d }, anim]}>
+      {/* Bij elke slag een golf naar buiten, zoals rond de cirkel in een
+          lopende State Control-sessie (operator, 16 okt 2026). */}
+      {playing && (
+        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
+          <HapticPulseRings size={d} color={breathWaveLook(meta.color).color} beatSynced />
+        </View>
+      )}
       {/* Indrukken = PressScale, zoals overal in de app. */}
       <PressScale onPress={onPress} scaleTo={0.95} accessibilityRole="button" accessibilityLabel={`${meta.name}, tap to feel it`}>
         {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
@@ -1007,9 +1014,10 @@ const s = StyleSheet.create({
   stepNumTxt: { fontFamily: BrandFonts.semibold, fontSize: 12.5, color: '#ffffff' },
   stepTitle: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff', marginTop: 3 },
   stepTxt: { marginTop: 1, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 20, color: 'rgba(255,255,255,0.62)' },
-  /* paddingVertical 18 + marginTop 6 (was 24): ruimte voor de kloppende
-     cirkel — die schaalt mee met de slag en werd boven/onder afgesneden. */
-  carousel: { flexGrow: 0, marginTop: 6, marginBottom: -18 },
+  /* Ruimte boven en onder (paddingVertical 60) voor de kloppende cirkel én
+     de golven die naar buiten lopen (tot 1,45× de cirkel) — die werden
+     boven/onder afgesneden. Negatieve marges houden de opmaak gelijk. */
+  carousel: { flexGrow: 0, marginTop: -36, marginBottom: -60 },
   stateCircle: { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 18 },
   stateName: { marginTop: 6, fontFamily: BrandFonts.bold, fontSize: 21, color: '#ffffff' },
   stateUse: { fontFamily: BrandFonts.regular, fontSize: 14.5, color: 'rgba(255,255,255,0.62)' },

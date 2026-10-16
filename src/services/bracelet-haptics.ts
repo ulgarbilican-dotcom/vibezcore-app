@@ -807,6 +807,24 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
  *  gekoppeld horloge — wie er een draagt, voelt het meteen op de pols.
  *  Het horloge krijgt exact dezelfde ingekorte curve en stopt zelf na
  *  PREVIEW_MAX_SECONDS. */
+/** Kort proeven in de onboarding (operator, 16 okt 2026: "het ritme moet
+ *  onmiddellijk op eindritme beginnen, en max 5 seconden"): meteen het
+ *  eindtempo van de toestand — geen start bij je hartslag, geen glijden —
+ *  en na `seconds` stil. De echte voorproef (30 s) blijft ongewijzigd. */
+export const TASTE_SECONDS = 5;
+export function playModeTasteHaptic(mode: BraceletMode, seconds = TASTE_SECONDS): void {
+  session = null;
+  play(mode, { holdSec: 0, rampSec: 0 }, 0, seconds);
+  const myGeneration = generation;
+  pendingTimeouts.push(
+    setTimeout(() => {
+      if (myGeneration !== generation) return;
+      generation += 1;
+      clearPending();
+    }, seconds * 1000),
+  );
+}
+
 let previewOnWatch = false;
 export function playModeTrialHaptic(mode: BraceletMode): void {
   playModePreviewHaptic(mode);
