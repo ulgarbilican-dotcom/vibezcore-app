@@ -334,12 +334,11 @@ pace": meten / zelf invullen / gemiddelde).
 
 ### 3.9 Gratis voorproef
 
-- "Try 30 seconds free": **exact de eerste 30 s van een echte sessie**, voor
-  elke toestand, op telefoon en horloge (GEWIJZIGD 17 okt 2026, operator: "1 op
-  1 hetzelfde ritme"). Vroeger glijden Clarity & Relax en Sleep versneld (12 s
-  i.p.v. 2 min); dat is weg. Gevolg: bij die twee voel je in 30 s enkel het
-  begin van de trage glijding (lineair; bij rust 70: Sleep 70 → 65 bpm,
-  Clarity & Relax 70 → ca. 66,5 bpm na 30 s; eindritme 40 / 49 pas na 2 min 10 s).
+- "Try 30 seconds free": hetzelfde begin als een echte sessie (10 s
+  begintempo); Clarity & Relax en Sleep glijden **versneld** (12 s i.p.v.
+  2 min) zodat je binnen 30 s het eindritme voelt — de app zegt dat
+  ("Sped up for the preview"). De andere toestanden zijn exact de eerste
+  30 s van een sessie.
 
 ### 3.10 Horloge
 
