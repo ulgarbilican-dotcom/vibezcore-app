@@ -117,7 +117,7 @@ class StateHapticsModule : Module() {
      *  scherm op slot mag een app een voorgrondservice niet opnieuw starten.
      *  Start/pauze/stop draaien allemaal op de hoofdthread: zo komen ze in
      *  volgorde aan en nooit tegelijk met een stop van de service zelf. */
-    AsyncFunction("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String, sessionTotalSec: Double, sessionElapsedSec: Double ->
+    AsyncFunction("startSession") { timings: List<Double>, amplitudes: List<Int>, title: String, sessionTotalSec: Double, sessionElapsedSec: Double, preview: Boolean ->
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@AsyncFunction
       if (timings.isEmpty() || timings.size != amplitudes.size) return@AsyncFunction
       try {
@@ -128,6 +128,7 @@ class StateHapticsModule : Module() {
           putExtra(StateHapticsService.EXTRA_TITLE, title)
           putExtra(StateHapticsService.EXTRA_SESSION_TOTAL_MS, (sessionTotalSec * 1000).toLong())
           putExtra(StateHapticsService.EXTRA_SESSION_ELAPSED_MS, (sessionElapsedSec * 1000).toLong())
+          putExtra(StateHapticsService.EXTRA_PREVIEW, preview)
         }
         StateHapticsService.pendingPause = false
         StateHapticsService.pendingStop = false

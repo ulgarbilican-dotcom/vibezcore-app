@@ -18,6 +18,7 @@ type StateHapticsNativeModule = {
     title: string,
     sessionTotalSec: number,
     sessionElapsedSec: number,
+    preview: boolean,
   ): Promise<void>;
   pauseSession(): Promise<void>;
   stopSession(): Promise<void>;
@@ -109,9 +110,11 @@ export function startNativeSession(
   title: string,
   sessionTotalSec: number,
   sessionElapsedSec: number,
+  /** Gratis voorproef: zelfde vergrendelscherm, geen "Session complete". */
+  preview = false,
 ): void {
   try {
-    void native?.startSession(timings, amplitudes, title, sessionTotalSec, sessionElapsedSec).catch(() => {});
+    void native?.startSession(timings, amplitudes, title, sessionTotalSec, sessionElapsedSec, preview).catch(() => {});
   } catch {
     /* stil */
   }

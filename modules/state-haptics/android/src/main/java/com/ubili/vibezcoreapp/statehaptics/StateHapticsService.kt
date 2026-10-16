@@ -106,6 +106,9 @@ class StateHapticsService : Service() {
        tijd bij de start van deze curve (de curve zelf = de resterende tijd). */
     const val EXTRA_SESSION_TOTAL_MS = "sessionTotalMs"
     const val EXTRA_SESSION_ELAPSED_MS = "sessionElapsedMs"
+    /** Gratis voorproef (17 okt 2026): zelfde dienst en vergrendelscherm,
+     *  maar geen "Session complete"-melding op het einde. */
+    const val EXTRA_PREVIEW = "preview"
     /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
     const val LATE_SKIP_MS = 150L
     private const val END_MARGIN_MS = 400L
@@ -196,9 +199,10 @@ class StateHapticsService : Service() {
      dit moment bevroren zijn op slot, deze service niet), dan stoppen. De
      app haalt die melding weg zodra ze zelf de afsluiting toont. */
   private val endRunnable = Runnable {
-    postCompletionNotice()
+    if (!isPreview) postCompletionNotice()
     stopSelfCleanly()
   }
+  private var isPreview = false
 
   private fun postCompletionNotice() {
     try {
@@ -441,6 +445,7 @@ class StateHapticsService : Service() {
   fun applySession(intent: Intent?) {
     paused = false
     title = intent?.getStringExtra(EXTRA_TITLE) ?: "State Control"
+    isPreview = intent?.getBooleanExtra(EXTRA_PREVIEW, false) ?: false
     val t = intent?.getLongArrayExtra(EXTRA_TIMINGS) ?: LongArray(0)
     val a = intent?.getIntArrayExtra(EXTRA_AMPLITUDES) ?: IntArray(0)
     timings = t
