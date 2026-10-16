@@ -741,7 +741,7 @@ function StateCard({
       {/* Naam en gebruik staan precies in het midden van de cirkel; het
           icoon zweeft erboven (operator, 16 okt 2026: "iconen meer naar
           boven", "tekst gecentreerd"). */}
-      <View style={{ position: 'absolute', top: Math.round(d * 0.14), left: 0, right: 0, alignItems: 'center' }} pointerEvents="none">
+      <View style={{ position: 'absolute', top: Math.round(d * 0.1), left: 0, right: 0, alignItems: 'center' }} pointerEvents="none">
         <Icon size={Math.round(d * 0.24)} color={meta.color} />
       </View>
       <Text style={s.stateName} numberOfLines={1}>
