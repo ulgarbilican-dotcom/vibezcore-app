@@ -1383,7 +1383,6 @@ function TrialSheet({
   const insets = useSafeAreaInsets();
   const meta = getModeMeta(mode);
   const Icon = MODE_ICONS[mode];
-  const strength = useHapticStrength();
   return (
     <GlassSheet visible={visible} onClose={onClose}>
       <View style={[s.modeModalSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
@@ -1407,35 +1406,6 @@ function TrialSheet({
         </View>
         <BalancedText style={s.quickSheetLine}>30 seconds of this rhythm on your phone and paired watch.</BalancedText>
         <BalancedText style={s.quickSheetNote}>Starts at your resting heart rate, like a real session.</BalancedText>
-        {/* Operator, 16 okt 2026 ("na Try 30 seconds free de keuze voor
-            haptics: zacht, medium, hard"): dezelfde drie standen als in
-            Audio & Haptics, één instelling voor de hele app. Tik = voel het
-            verschil meteen. */}
-        <Text style={[s.avSection, { marginTop: 18 }]}>VIBRATION STRENGTH</Text>
-        <View style={[s.avSeg, { marginBottom: 16 }]}>
-          {(['soft', 'medium', 'strong'] as const).map((k) => {
-            const on = k === strength;
-            return (
-              <Pressable
-                key={k}
-                onPress={() => {
-                  if (on) return;
-                  setHapticStrength(k);
-                  void Haptics.impactAsync(
-                    k === 'soft' ? Haptics.ImpactFeedbackStyle.Light : k === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
-                  );
-                }}
-                style={[s.avSegItem, on && s.avSegItemOn]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-              >
-                <Text style={[s.avSegTxt, on && s.avSegTxtOn]}>
-                  {k === 'soft' ? 'Soft' : k === 'medium' ? 'Medium' : 'Strong'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
         <PressScale style={s.quickSheetCta} haptic scaleTo={0.97} onPress={onStartPreview} accessibilityRole="button">
           <Text style={s.quickSheetCtaTxt}>Start preview</Text>
         </PressScale>
@@ -2791,7 +2761,10 @@ function BraceletHeader({
       ) : (
         <View style={s.headerSide} />
       )}
-      <View style={s.headerTitleRow}>
+      {/* Titel altijd in het midden van het scherm, ongeacht hoeveel knoppen
+          rechts staan (16 okt 2026: met de trilknop erbij schoof hij naar
+          links). Hij ligt over de rij heen en vangt geen tikken. */}
+      <View style={[StyleSheet.absoluteFill, s.headerTitleRow, { marginLeft: 0 }]} pointerEvents="box-none">
         <Text
           style={[s.headerTitle, { flex: undefined, marginLeft: 0 }, dark && { color: '#ffffff' }]}
           numberOfLines={1}
@@ -3909,6 +3882,10 @@ function IdleScreen({
   const pendingAfterRhythm = useRef<(() => void) | null>(null);
   const [quickOpen, setQuickOpen] = useState<'chill' | 'boost' | null>(null);
   const [trialSheetOpen, setTrialSheetOpen] = useState(false);
+  /* Operator, 16 okt 2026 ("een apart in te stellen knop, niet bij het
+     starten van de sessie — anders is dat storend"): trilsterkte e.d. via
+     een eigen knop rechtsboven, hetzelfde blad als in de lopende sessie. */
+  const [hapticsOpen, setHapticsOpen] = useState(false);
   const withRhythm = (action: () => void) => () => {
     if (pulse.decided) {
       action();
@@ -3981,6 +3958,17 @@ function IdleScreen({
               {/* Audit 10 okt 2026 (operator: "akkoord"): dezelfde
                  kalenderknop als rechtsboven in Breathwork — met een plan
                  rechtstreeks naar de agenda, anders eerst je dag bouwen. */}
+              <Pressable
+                onPress={() => {
+                  hapticTap();
+                  setHapticsOpen(true);
+                }}
+                hitSlop={12}
+                style={{ marginRight: 18 }}
+                accessibilityLabel="Audio and haptics, vibration strength"
+              >
+                <Vibrate size={20} color={idleDark ? 'rgba(255,255,255,0.85)' : C.text} strokeWidth={2} />
+              </Pressable>
               <Pressable
                 onPress={() =>
                   router.push((braceletPlan ? '/bracelet-agenda' : '/bracelet-set-day') as never)
@@ -4369,6 +4357,8 @@ function IdleScreen({
           onDismiss={() => setCompletedModeForModal(null)}
         />
       )}
+
+      <AudioHapticsSheet visible={hapticsOpen} onClose={() => setHapticsOpen(false)} />
 
       <TrialSheet
         visible={trialSheetOpen}
