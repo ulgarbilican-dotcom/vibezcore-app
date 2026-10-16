@@ -80,7 +80,7 @@ import { MODE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import TimePickerSheet from '@/components/TimePickerSheet';
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -505,21 +505,6 @@ export default function BraceletSetDayScreen() {
           <Pressable style={s.timeRow} onPress={() => setShowTimePicker(true)}>
             <Text style={s.timeValue}>{fmtTime(draftTime)}</Text>
           </Pressable>
-          {showTimePicker && (
-            <DateTimePicker
-              value={(() => {
-                const d = new Date();
-                d.setHours(Math.floor(draftTime / 60), draftTime % 60, 0, 0);
-                return d;
-              })()}
-              mode="time"
-              display="spinner"
-              onChange={(_, date) => {
-                if (Platform.OS === 'android') setShowTimePicker(false);
-                if (date) setDraftTime(date.getHours() * 60 + date.getMinutes());
-              }}
-            />
-          )}
 
           {/* Operator, 30 september 2026 ("mag nooit aparte states en 2
              zelfde momenten kunnen kiezen, ook rekening houden met de
@@ -538,6 +523,12 @@ export default function BraceletSetDayScreen() {
           )}
         </ScrollView>
 
+        <TimePickerSheet
+          visible={showTimePicker}
+          value={draftTime}
+          onChange={setDraftTime}
+          onClose={() => setShowTimePicker(false)}
+        />
         <View style={[s.ctaFloat, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
           {/* Operator, huisstijl (theme.ts, CTA v4.4): op een donkere
              achtergrond is de CTA altijd wit + donkere tekst — nooit de

@@ -61,7 +61,9 @@ import Constants from 'expo-constants';
 import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  AppState,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -158,6 +160,26 @@ export default function SettingsScreen() {
      naar Settings (operator-feedback "library is content-focused,
      preferences horen hier"). */
   const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
+  /* Operator, iOS-test build 20 ("het moet heel duidelijk zijn hoe je
+     meldingen terug afzet"): bovenaan Settings de stand van de meldingen
+     voor VIBEZCORE, met één tik naar de systeeminstellingen — daar zet je
+     ze helemaal aan of uit (iOS en Android laten een app dat niet zelf
+     doen). De herinneringen per onderdeel staan er verder onder. */
+  const [notifOn, setNotifOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    const check = () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const N = require('expo-notifications');
+      void N.getPermissionsAsync()
+        .then((p: { granted?: boolean }) => setNotifOn(p.granted === true))
+        .catch(() => setNotifOn(null));
+    };
+    check();
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') check();
+    });
+    return () => sub.remove();
+  }, []);
   const [reminders, setReminders] = useSetting('reminders');
   const [planReminders, setPlanReminders] = useSetting('planReminders');
   const [braceletPlanReminders, setBraceletPlanReminders] = useSetting('braceletPlanReminders');
@@ -348,6 +370,24 @@ export default function SettingsScreen() {
             niet iedereen heeft een bracelet, en instellingen voor iets dat je
             niet bezit maken een scherm onbegrijpelijk (operator, 5 augustus
             2026). */}
+        <Text style={s.sectionLabel}>Notifications</Text>
+        <View style={s.card}>
+          <Pressable
+            style={s.row}
+            onPress={() => void Linking.openSettings()}
+            accessibilityRole="button"
+            accessibilityLabel={`Notifications are ${notifOn ? 'on' : 'off'}. Open ${Platform.OS === 'ios' ? 'iPhone' : 'phone'} settings to change`}
+          >
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Allow notifications</Text>
+              <Text style={s.rowSub}>
+                {`Turn all VIBEZCORE notifications on or off in your ${Platform.OS === 'ios' ? 'iPhone' : 'phone'} settings. The reminders below choose what you get.`}
+              </Text>
+            </View>
+            <Text style={s.notifValue}>{notifOn === null ? '' : notifOn ? 'On' : 'Off'}</Text>
+          </Pressable>
+        </View>
+
         <Text style={s.sectionLabel}>Breathwork</Text>
         <Text style={s.subLabel}>Daily reminders</Text>
         <View style={s.card}>
@@ -943,6 +983,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 4,
   },
+  notifValue: { fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.55)', marginLeft: 12 },
   card: {
     backgroundColor: Brand.panel,
     borderColor: Brand.border,
