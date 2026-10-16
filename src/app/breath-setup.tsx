@@ -3411,7 +3411,7 @@ export default function BreathSetupScreen() {
         <>
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
-          <GlassSheet visible={activePicker === 'time'} onClose={() => setActivePicker(null)}>
+          <GlassSheet visible={activePicker === 'time'} onClose={() => { setTimeTouched(true); setActivePicker(null); }}>
               <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
                 <VibezGlass
                   radius={24}
@@ -3522,7 +3522,7 @@ export default function BreathSetupScreen() {
 
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
-          <GlassSheet visible={activePicker === 'state'} onClose={() => setActivePicker(null)}>
+          <GlassSheet visible={activePicker === 'state'} onClose={() => { setStateTouched(true); setActivePicker(null); }}>
               <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
                 <VibezGlass
                   radius={24}
@@ -3712,7 +3712,7 @@ export default function BreathSetupScreen() {
 
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
-          <GlassSheet visible={activePicker === 'duration'} onClose={() => setActivePicker(null)}>
+          <GlassSheet visible={activePicker === 'duration'} onClose={() => { setDurationTouched(true); setActivePicker(null); }}>
               <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
                 <VibezGlass
                   radius={24}
@@ -3822,7 +3822,7 @@ export default function BreathSetupScreen() {
              kiest en sluit meteen, zelfde patroon als State/Technique. */}
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
-          <GlassSheet visible={activePicker === 'horizon'} onClose={() => setActivePicker(null)}>
+          <GlassSheet visible={activePicker === 'horizon'} onClose={() => { setHorizonTouched(true); setActivePicker(null); }}>
               <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
                 <VibezGlass
                   radius={24}
