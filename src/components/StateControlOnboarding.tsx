@@ -738,7 +738,10 @@ function StateCard({
             stijgt het tot bovenaan, en pas dan begint het kloppen. */}
         <LiquidWave size={d} level={playing ? 0.94 : 0.06} riseMs={FILL_MS} {...breathWaveLook(meta.color)} />
       </View>
-      <Icon size={Math.round(d * 0.24)} color={meta.color} />
+      {/* Icoon hoger in de cirkel, tekst blijft op zijn plek (operator, 16 okt 2026). */}
+      <View style={{ transform: [{ translateY: -Math.round(d * 0.07) }] }}>
+        <Icon size={Math.round(d * 0.24)} color={meta.color} />
+      </View>
       <Text style={s.stateName} numberOfLines={1}>
         {meta.name}
       </Text>
