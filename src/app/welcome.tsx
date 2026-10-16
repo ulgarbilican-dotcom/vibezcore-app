@@ -186,7 +186,7 @@ function PillarButton({
           {/* Operator, 7 okt 2026 (eigen ontwerp "start welcome zo doen"):
              groter dun icoon, enkel de titel, pijltje rechts. */}
           <View style={s.pillarIconWrap}>
-            <p.Icon size={24} color="#ffffff" strokeWidth={1.5} />
+            <p.Icon size={21} color="#ffffff" strokeWidth={1.5} />
           </View>
           {/* Operator, 24 september 2026 ("Breathe - Reset Yourself / Feel
              - Instant State Control / Listen - Train Your Mind"): `product`
@@ -195,7 +195,7 @@ function PillarButton({
              elders in de app (bv. "VIBEZCORE AUDIO LIBRARY" op de Library-
              tab-intro). */}
           <Text style={s.pillarTitle}>{p.title}</Text>
-          <ChevronRight size={22} color="rgba(255,255,255,0.85)" strokeWidth={1.6} />
+          <ChevronRight size={19} color="rgba(255,255,255,0.85)" strokeWidth={1.6} />
         </BlurView>
       </AnimatedPressable>
     </Animated.View>
@@ -441,7 +441,7 @@ const s = StyleSheet.create({
      losse capsulevorm met witruimte ertussen"): gap 10→16 voor meer
      lucht tussen de drie knoppen — losse pillen i.p.v. een bijna-
      aaneengeplakt blok. */
-  pillars: { gap: 14 },
+  pillars: { gap: 12 },
   /* Volledige pil-vorm (borderRadius 999) i.p.v. afgeronde rechthoek —
      "eigen losse capsulevorm". */
   pillarWrap: {
@@ -457,9 +457,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    /* Operator, 7 okt 2026 ("knoppen minder hoog"): 68 → 56. */
-    height: 56,
-    paddingHorizontal: 24,
+    /* Operator, 7 okt 2026 ("knoppen minder hoog"): 68 → 56.
+       16 okt 2026 ("te hoog, smaller toont eleganter"): 56 → 48. */
+    height: 48,
+    paddingHorizontal: 20,
     /* Operator, 17 september 2026 ("matglas-effect, 40% doorzichtig"):
        0.22 → 0.55 dekking. Bij 0.22 verdween de knop-rand tegen drukke
        kleding — precies de onrust die opgelost moest worden. Op de nu
@@ -484,7 +485,7 @@ const s = StyleSheet.create({
   pillarTitle: {
     flex: 1,
     fontFamily: BrandFonts.medium,
-    fontSize: 19,
+    fontSize: 17,
     letterSpacing: -0.2,
     color: '#ffffff',
   },
