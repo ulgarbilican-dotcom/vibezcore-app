@@ -90,6 +90,12 @@ import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrengt
 /* Feel & Hear zonder native service (iOS, oud Android): de app speelt het
    hartslaggeluid zelf op elke slag, zolang ze open is. */
 let jsSoundOn = false;
+/** Eindtimers van een herhalende voorproef-golfvorm (zie play()). */
+const nativeEndTimers: ReturnType<typeof setTimeout>[] = [];
+function clearNativeEndTimers(): void {
+  nativeEndTimers.forEach(clearTimeout);
+  nativeEndTimers.length = 0;
+}
 
 const SESSION_HOLD_SECONDS = 10;
 /** Versnelde glijding in de voorproef voor de trage modi (Sleep, Clarity). */
@@ -342,6 +348,9 @@ function scheduleVisual(
   const { cycleMs, dubAt } = beat;
   const beatWallMs = anchorWallMs + (curveSec - offsetSec) * 1000;
   emitPulse({ kind: 'lub', mode, cycleMs, atMs: beatWallMs });
+  /* Voorproef met Haptic + Audio: het hartslaggeluid op dezelfde klok als
+     het beeld (een echte sessie speelt het geluid in de trildienst). */
+  if (jsSoundOn && getStateHear()) heartbeatLub();
   /* Meting synchronisatie met het horloge (13 okt 2026, VZSync op het horloge). */
   if (__DEV__ && syncLogCount < 40) {
     syncLogCount += 1;
@@ -351,7 +360,9 @@ function scheduleVisual(
   const nextWallMs = anchorWallMs + (nextCurveSec - offsetSec) * 1000;
   pendingTimeouts.push(
     setTimeout(() => {
-      if (myGeneration === generation) emitPulse({ kind: 'dub', mode, cycleMs, atMs: beatWallMs + dubAt });
+      if (myGeneration !== generation) return;
+      emitPulse({ kind: 'dub', mode, cycleMs, atMs: beatWallMs + dubAt });
+      if (jsSoundOn && getStateHear()) heartbeatDub();
     }, Math.max(0, beatWallMs + dubAt - Date.now())),
     setTimeout(
       () => scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, nextCurveSec, myGeneration),
@@ -423,6 +434,7 @@ function silence(keepService = false): void {
     stopHeartbeatSound('state-control');
   }
   clearPending();
+  clearNativeEndTimers();
   stopNativeWaveform();
   if (!keepService) endNativeSession();
 }
@@ -476,6 +488,38 @@ function play(
         clock?.totalSec ?? totalSec,
         clock?.elapsedSec ?? 0,
       );
+    } else if (totalSec !== undefined) {
+      /* Voorproef / proeven (operator, 16 okt 2026: "bij geluid luider zetten
+         stopt de haptic"): een eindige golfvorm wordt op Android vervangen
+         door elk systeemtikje (volumeknop, toetsenbord) en komt niet terug.
+         Een HERHALENDE golfvorm laat Android niet onderbreken — dus spelen
+         we de curve herhalend en stoppen we hem zelf na totalSec, met
+         daarna hetzelfde eind-signaal. */
+      const looped = buildWaveform(spec, timing, offsetSec, undefined, canPlayNativeWaveform());
+      playNativeWaveform(
+        looped.timings,
+        silent ? looped.amplitudes.map(() => 0) : looped.amplitudes,
+        looped.repeat,
+      );
+      if (!silent && getStateHear()) {
+        jsSoundOn = true;
+        startHeartbeatSound('state-control');
+      }
+      const myGeneration = generation;
+      const endTimer = setTimeout(() => {
+        if (myGeneration !== generation) return;
+        stopNativeWaveform();
+        if (jsSoundOn) {
+          jsSoundOn = false;
+          stopHeartbeatSound('state-control');
+        }
+        if (!silent) {
+          const amp = canPlayNativeWaveform();
+          const strong = (a: number) => (amp ? a : 255);
+          playNativeWaveform([70, 120, 90, 120, 160], [strong(90), 0, strong(130), 0, strong(180)], -1);
+        }
+      }, (totalSec - 0) * 1000);
+      nativeEndTimers.push(endTimer);
     } else {
       playNativeWaveform(timings, amplitudes, repeat);
     }
@@ -873,7 +917,12 @@ export function stopModePreviewHaptic(): void {
   const endingNaturally = sessionEndsAt !== null && Date.now() >= sessionEndsAt - 1500;
   generation += 1;
   clearPending();
+  if (jsSoundOn) {
+    jsSoundOn = false;
+    stopHeartbeatSound('state-control');
+  }
   if (!endingNaturally) {
+    clearNativeEndTimers();
     stopNativeWaveform();
     endNativeSession();
     /* Enkel als er een echte sessie of een voorproef op het horloge liep.
