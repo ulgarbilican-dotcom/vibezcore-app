@@ -84,7 +84,7 @@ import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './rest
 import { heartbeatDub, heartbeatLub, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
 import { getStateHear } from './state-sound-pref';
 import { getSetting, setSetting } from '@/utils/settings';
-import { AMP_FACTOR, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
+import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 
 
 /* Feel & Hear zonder native service (iOS, oud Android): de app speelt het
@@ -231,8 +231,8 @@ function buildWaveform(
   /* Sterkte (operator, 11 okt 2026): met amplitude-regeling de kracht,
      zonder de tikduur. */
   const st = getHapticStrength();
-  const ampOf = (a: number) => Math.max(1, Math.min(255, Math.round(a * AMP_FACTOR[st])));
-  const msOf = (ms: number) => Math.round(ms * MS_FACTOR[st]);
+  const ampOf = (a: number) => Math.max(1, Math.min(255, Math.round(a * STATE_AMP_FACTOR[st])));
+  const msOf = (ms: number) => Math.round(ms * STATE_MS_FACTOR[st]);
   const lubMs = amplitudeControl ? LUB_MS : msOf(spec.lubMsNoAmp);
   const dubMs = amplitudeControl ? DUB_MS : msOf(spec.dubMsNoAmp);
   const lubAmp = amplitudeControl ? ampOf(spec.lubAmp) : 255;

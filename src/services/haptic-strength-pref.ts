@@ -31,6 +31,14 @@ export const BREATH_AMP: Record<HapticStrength, number> = { soft: 120, medium: 0
 export const WATCH_HAPTIC_LEVEL: Record<HapticStrength, number> = { soft: 155, medium: 205, strong: 255 };
 export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1, strong: 1.35 };
 
+/** State Control op de TELEFOON (operator, 16 okt 2026: "Strong is te
+ *  zwak" — enkel voor State Control, Breathwork blijft op MS_FACTOR):
+ *  Strong duidelijk steviger. Tikduur ×1,8 (A16: Calm 42 → 76 ms) en kracht
+ *  ×3 op toestellen met amplitude-regeling (Calm 24 → 72, Boost 65 → 195).
+ *  Soft en Medium ongewijzigd. Het horloge staat op Strong al op 255 (max). */
+export const STATE_MS_FACTOR: Record<HapticStrength, number> = { ...MS_FACTOR, strong: 1.8 };
+export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR, strong: 3 };
+
 let strength: HapticStrength = 'medium';
 const listeners = new Set<(v: HapticStrength) => void>();
 
