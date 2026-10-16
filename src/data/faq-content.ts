@@ -144,7 +144,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'What makes VIBEZCORE different from other self-improvement platforms?',
     answer:
       "Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on three levels at once — instant, active, and long-term.\n\n" +
-      "**State Control** — in the moment: a rhythm you feel, on your phone or smartwatch, that starts at your own heart rate and guides you toward calm, focus, energy, clarity or sleep. No meditation or conscious effort required.\n\n" +
+      "**State Control** — in the moment: a rhythm you feel, on your phone or smartwatch, that starts at your own heart rate and guides you toward calm, focus, energy, clarity or sleep. No technique to learn and no conscious effort required.\n\n" +
       "**Guided Breathwork** — active practice: 15 techniques across five states, with voice, visuals and haptics carrying every breath.\n\n" +
       "**Audio Library** — long-term growth through ideas drawn from psychology, philosophy and behavioural science, building frameworks, self-awareness and reflective thinking that compound session after session.\n\n" +
       "Three instruments. One direction: growth, success, and freedom.",

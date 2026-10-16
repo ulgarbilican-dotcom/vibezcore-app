@@ -3734,7 +3734,7 @@ export function BreathSession() {
               <View style={s.sheetGrip} />
             </Pressable>
             <Text style={s.modalEyebrow}>{st.eyebrow}</Text>
-            <Text style={s.modalTitle}>End trial?</Text>
+            <Text style={s.modalTitle}>End free session?</Text>
             <BalancedText style={s.modalBody}>
               This is your one free full session. Leaving now ends it — next
               time you'll only get a 30-second preview.
@@ -3757,7 +3757,7 @@ export function BreathSession() {
                 leaveSession();
               }}
             >
-              <Text style={s.modalBtnTxt}>End trial</Text>
+              <Text style={s.modalBtnTxt}>End session</Text>
             </AnimatedPressable>
             <AnimatedPressable
               style={[s.modalSecondary, pressContinueSession.style]}

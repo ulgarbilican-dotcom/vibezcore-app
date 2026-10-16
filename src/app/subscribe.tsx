@@ -1466,7 +1466,7 @@ export default function SubscribeScreen() {
           {linkingAccount
             ? 'Create a free account so this subscription works on all your devices. This step is optional.'
             : mode === 'signup'
-              ? 'Create a free VIBEZCORE account for the fastest checkout and access on all your devices — or continue as a guest below.'
+              ? 'Create a free VIBEZCORE account so your subscription works on all your devices.'
               : 'Enter your existing VIBEZCORE credentials to link this subscription to your account.'}
         </Text>
 
