@@ -25,10 +25,27 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 12 | Breathwork actieve sessie | Minimize-knop opent Audio & Haptics | ⏳ |
 | 13 | Breathwork actieve sessie | De boog met de secondenteller moet ~1 cm lager staan dan de ademanimatie | ⏳ |
 | 14 | Paywall | Geen prijzen in de prijskaarten | ⏳ |
+| 15 | Audio (iPhone) | Geluid slecht van kwaliteit en maximaal volume heel zacht | ⏳ |
+| 16 | Hele app | CTA's lijken dunner (lager/lichter) dan op Android — hoort bij punt 1 | ⏳ |
+| 17 | FAQ, Settings, Support | Inhoud nalopen voor State Control, Breathwork, Audio en Smart Bead Bracelet: klopt alles met de app van nu (prijzen, trial weg → dagpas, 20 s meting, namen, Launching Early 2027)? | ⏳ |
+| 18 | Legal | Terms, Privacy en andere juridische teksten nalopen (o.a. trial → dagpas, Health/hartslag, camera) | ⏳ |
+| 19 | Alle schermen | Elke sluit-, verklein- en terugknop nalopen tegen Apple HIG (plaats, Done/X, veeggebaren, bladen) | ⏳ |
 
 Vermoedelijk dezelfde oorzaak voor 10–12: op iOS liggen de knoppen in de
 sessie anders of zit er een laag over (andere aanraakzones dan op Android).
 Nog te bevestigen in de code — geen gok.
+
+Te controleren bij 1/16 (fonts kleiner): op de A16 kan de tekstgrootte
+van het systeem groter staan dan 100% (Samsung-instelling), terwijl iOS de
+punten 1-op-1 toont; en op iOS kiest een eigen lettertype soms een ander
+gewicht als er ook een fontWeight bij staat. Beide nagaan, niet aannemen.
+
+Te controleren bij 15 (audio zacht): de app zet de audiomodus op drie
+plaatsen (audio-player, session-keepalive, heartbeat-sound). Het
+hartslaggeluid zet `playsInSilentMode: false` / `mixWithOthers`; als die
+modus blijft staan, speelt audio in een andere iOS-categorie. Ook nagaan:
+volume van de speler, de bestanden zelf (bitrate) en of het geluid via de
+oorluidspreker i.p.v. de luidspreker gaat.
 
 ## Beslissing monetisatie (operator, 16 okt 2026)
 
