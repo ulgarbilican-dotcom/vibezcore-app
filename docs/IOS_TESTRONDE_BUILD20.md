@@ -13,9 +13,9 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 |---|-----------|---------------------|--------|
 | 1 | Hele app | Fonts en CTA's lijken kleiner dan op Android | ⏳ |
 | 2 | State Control-onboarding | Hele oude versie ("haptics built on research") — verklaard: build 20 is van vóór het nieuwe werk. Komt mee in de volgende build | 🔍 |
-| 3 | Onboarding | Geen "Skip"-tekst zichtbaar | ⏳ (eerst nakijken in nieuwe versie) |
-| 4 | Na de onboarding | Geen gratis volledige sessie, enkel de 30 s-preview | ⏳ (gratis sessie is nieuw werk, controleren) |
-| 5 | Onboarding | Weggaan alleen met de Back-knop, niet met veeggebaar — correct gedrag? | ⏳ |
+| 3 | Onboarding | Geen "Skip"-tekst zichtbaar | ✅ nieuwe onboarding (15 okt) heeft Skip rechtsboven — te zien in nieuwe build |
+| 4 | Na de onboarding | Geen gratis volledige sessie, enkel de 30 s-preview | ✅ gebouwd 15 okt (T202/T204), zat niet in build 20 — te zien in nieuwe build |
+| 5 | Onboarding | Weggaan alleen met de Back-knop, niet met veeggebaar — correct gedrag? | 🔧 terugvegen per stap (T212) |
 | 6 | Hartslagmeting | Camera-flits gaat niet aan op iPhone | ⏳ |
 | 7 | Breathwork | Geen Breathwork-onboarding meer na de test van de State Control-onboarding | ⏳ |
 | 8 | Settings e.a. | Schuifknoppen (Switch) uitgerekt | ⏳ |

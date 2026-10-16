@@ -66,6 +66,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { scheduleOnRN } from 'react-native-worklets';
 import {
   BackHandler,
+  PanResponder,
+  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -260,6 +262,27 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     stopDemo();
     finish(chosen);
   };
+
+  /* iOS-terugveeg (operator, iOS-test build 20: "weggaan uit pagina enkel
+     met backknop — is dat correct gedrag?"): zoals overal op de iPhone
+     veeg je vanaf de linkerrand terug — hier één stap terug, op stap 1 uit
+     de onboarding (= Back). Android heeft dit al via zijn eigen
+     terug-gebaar (hardwareBackPress hieronder). De systeemveeg van het
+     scherm zelf staat uit, anders sprong je in één keer de hele
+     onboarding uit. */
+  const goBackRef = useRef(goBack);
+  goBackRef.current = goBack;
+  const canBackRef = useRef(false);
+  canBackRef.current = sheet === null && (step > 0 || !!onBack);
+  const edgeSwipe = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) =>
+        canBackRef.current && g.dx > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_e, g) => {
+        if (g.dx > 60 || g.vx > 0.5) goBackRef.current();
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -483,6 +506,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         </View>
         )}
       </SafeAreaView>
+      {Platform.OS === 'ios' && <View style={s.edgeSwipe} {...edgeSwipe.panHandlers} />}
       {includeRestingHr && (
         <RhythmSheet
           visible={sheet !== null}
@@ -832,6 +856,8 @@ function Step({ n, title, text, last = false }: { n: string; title: string; text
 /* Maten/kleuren 1-op-1 uit breath-welcome.tsx (topbar, step*, skip*,
    header/lead, footer, cta*). */
 const s = StyleSheet.create({
+  /* Smalle strook langs de linkerrand voor de iOS-terugveeg. */
+  edgeSwipe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 22 },
   root: { flex: 1, backgroundColor: Brand.bg },
   safeContent: { flex: 1 },
   topbar: {

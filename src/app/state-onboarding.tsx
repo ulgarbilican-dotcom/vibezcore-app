@@ -47,7 +47,8 @@ export default function StateOnboardingScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false, gestureEnabled: !isFirst }} />
+      {/* Terugvegen doet de onboarding zelf (stap per stap), niet de stack. */}
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
       <StateControlOnboarding
         includeRestingHr={hrNext}
         finalLabel={isFirst ? 'Continue' : 'Done'}
