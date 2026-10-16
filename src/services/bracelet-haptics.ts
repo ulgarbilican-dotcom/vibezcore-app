@@ -138,20 +138,25 @@ type ModeHapticSpec = {
   dubStyle: Haptics.ImpactFeedbackStyle;
 };
 
+/* iPhone (operator, 16 okt 2026, build 21: "haptics in Try 30 heel zacht"):
+   lubStyle/dubStyle gelden enkel voor de expo-haptics-weg (iOS); Apple's
+   "Soft" is nauwelijks voelbaar op de Taptic Engine. Elke toestand een
+   trede sterker; de volgorde Sleep < Clarity/Calm < Focus < Boost blijft.
+   Android (eigen golfvorm via amplitude/duur) verandert niet. */
 const SPECS: Record<BraceletMode, ModeHapticSpec> = {
   /* NoAmp-duren: 5 okt 2026 eerst 26–30 ms → op de Galaxy A16 "bijna niet
      voelbaar" (operator). 50 ms (expo Soft) was voelbaar maar mocht
      subtieler → nu ertussen. */
-  [BraceletMode.Delta]: { targetFor: (r) => Math.max(40, Math.round(r * 0.55)), rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Theta]: { targetFor: (r) => Math.max(45, Math.round(r * 0.7)), rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Soft, dubStyle: S.Soft },
+  [BraceletMode.Delta]: { targetFor: (r) => Math.max(40, Math.round(r * 0.55)), rampSec: 120, lubAmp: 18, dubAmp: 13, lubMsNoAmp: 38, dubMsNoAmp: 30, lubStyle: S.Light, dubStyle: S.Soft },
+  [BraceletMode.Theta]: { targetFor: (r) => Math.max(45, Math.round(r * 0.7)), rampSec: 120, lubAmp: 21, dubAmp: 15, lubMsNoAmp: 40, dubMsNoAmp: 32, lubStyle: S.Medium, dubStyle: S.Light },
   /* rampSec 10 = na de basislijn in 10 s naar het eindtempo (vol op 20 s).
      Doppel (−20%) en Valente/Wang (110 bpm) gingen meteen naar hun tempo;
      operator, 5 okt 2026: "geen abrupte overgang, er moet een flow zijn,
      op 20 s bij max". 10 s is vrijwel meteen — binnen het geteste gebied,
      enkel de schok eruit. */
-  [BraceletMode.Alpha]: { targetFor: (r) => Math.max(50, Math.round(r * 0.8)), rampSec: 10, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Soft, dubStyle: S.Soft },
-  [BraceletMode.Beta]: { targetFor: (r) => Math.max(53, Math.round(r * 0.9)), rampSec: 10, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Medium, dubStyle: S.Light },
-  [BraceletMode.Gamma]: { targetFor: () => 110, rampSec: 10, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Heavy, dubStyle: S.Medium },
+  [BraceletMode.Alpha]: { targetFor: (r) => Math.max(50, Math.round(r * 0.8)), rampSec: 10, lubAmp: 24, dubAmp: 17, lubMsNoAmp: 42, dubMsNoAmp: 34, lubStyle: S.Medium, dubStyle: S.Light },
+  [BraceletMode.Beta]: { targetFor: (r) => Math.max(53, Math.round(r * 0.9)), rampSec: 10, lubAmp: 45, dubAmp: 32, lubMsNoAmp: 50, dubMsNoAmp: 40, lubStyle: S.Heavy, dubStyle: S.Medium },
+  [BraceletMode.Gamma]: { targetFor: () => 110, rampSec: 10, lubAmp: 65, dubAmp: 45, lubMsNoAmp: 60, dubMsNoAmp: 46, lubStyle: S.Rigid, dubStyle: S.Heavy },
 };
 
 /** Spec met de tempo's voor één concrete rusthartslag. */

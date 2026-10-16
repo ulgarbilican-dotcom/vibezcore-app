@@ -1383,6 +1383,7 @@ function TrialSheet({
   const insets = useSafeAreaInsets();
   const meta = getModeMeta(mode);
   const Icon = MODE_ICONS[mode];
+  const strength = useHapticStrength();
   return (
     <GlassSheet visible={visible} onClose={onClose}>
       <View style={[s.modeModalSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
@@ -1406,6 +1407,35 @@ function TrialSheet({
         </View>
         <BalancedText style={s.quickSheetLine}>30 seconds of this rhythm on your phone and paired watch.</BalancedText>
         <BalancedText style={s.quickSheetNote}>Starts at your resting heart rate, like a real session.</BalancedText>
+        {/* Operator, 16 okt 2026 ("na Try 30 seconds free de keuze voor
+            haptics: zacht, medium, hard"): dezelfde drie standen als in
+            Audio & Haptics, één instelling voor de hele app. Tik = voel het
+            verschil meteen. */}
+        <Text style={[s.avSection, { marginTop: 18 }]}>VIBRATION STRENGTH</Text>
+        <View style={[s.avSeg, { marginBottom: 16 }]}>
+          {(['soft', 'medium', 'strong'] as const).map((k) => {
+            const on = k === strength;
+            return (
+              <Pressable
+                key={k}
+                onPress={() => {
+                  if (on) return;
+                  setHapticStrength(k);
+                  void Haptics.impactAsync(
+                    k === 'soft' ? Haptics.ImpactFeedbackStyle.Light : k === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
+                  );
+                }}
+                style={[s.avSegItem, on && s.avSegItemOn]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[s.avSegTxt, on && s.avSegTxtOn]}>
+                  {k === 'soft' ? 'Soft' : k === 'medium' ? 'Medium' : 'Strong'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
         <PressScale style={s.quickSheetCta} haptic scaleTo={0.97} onPress={onStartPreview} accessibilityRole="button">
           <Text style={s.quickSheetCtaTxt}>Start preview</Text>
         </PressScale>
@@ -4075,7 +4105,10 @@ function IdleScreen({
                 verandert telkens"). */}
             {trialRunning ? (
               <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-                <HapticPulseRings size={RING_DIAL} color={breathWaveLook(meta.color).color} />
+                {/* Zelfde golf per hartslag als in een lopende sessie en de
+                    onboarding (operator, iOS build 21: "die animatie buitenring
+                    hadden we toch veranderd?") — niet meer de oude ring per tik. */}
+                <HapticPulseRings size={RING_DIAL} color={breathWaveLook(meta.color).color} beatSynced />
               </View>
             ) : null}
             <DurationRing
