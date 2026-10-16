@@ -742,10 +742,24 @@ function StateCard({
         </View>
       )}
       {/* Indrukken = PressScale, zoals overal in de app. */}
-      <PressScale onPress={onPress} scaleTo={0.95} accessibilityRole="button" accessibilityLabel={`${meta.name}, tap to feel it`}>
+      {/* Operator, 16 okt 2026 ("eerste tik is fout, gaat naar binnen"): geen
+          krimp bij het tikken — het kloppen zelf is het antwoord; enkel een
+          lichte dim. En de cirkel staat altijd in hetzelfde vlak, zodat hij
+          niet verspringt wanneer het kloppen begint. */}
+      <PressScale
+        onPress={onPress}
+        scaleTo={1}
+        style={{ width: d, height: d }}
+        accessibilityRole="button"
+        accessibilityLabel={`${meta.name}, tap to feel it`}
+      >
         {/* Klopt op de echte slagen van de voorproef (zelfde klok als de
             trilmotor), zoals de cirkel tijdens een sessie. */}
-        {playing ? <HeartbeatScale size={d}>{circle}</HeartbeatScale> : circle}
+        {playing ? (
+          <HeartbeatScale size={d}>{circle}</HeartbeatScale>
+        ) : (
+          <View style={{ position: 'absolute', width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>{circle}</View>
+        )}
       </PressScale>
     </Animated.View>
   );
