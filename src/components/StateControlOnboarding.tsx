@@ -738,8 +738,10 @@ function StateCard({
             stijgt het tot bovenaan, en pas dan begint het kloppen. */}
         <LiquidWave size={d} level={playing ? 0.94 : 0.06} riseMs={FILL_MS} {...breathWaveLook(meta.color)} />
       </View>
-      {/* Icoon hoger in de cirkel, tekst blijft op zijn plek (operator, 16 okt 2026). */}
-      <View style={{ transform: [{ translateY: -Math.round(d * 0.07) }] }}>
+      {/* Naam en gebruik staan precies in het midden van de cirkel; het
+          icoon zweeft erboven (operator, 16 okt 2026: "iconen meer naar
+          boven", "tekst gecentreerd"). */}
+      <View style={{ position: 'absolute', top: Math.round(d * 0.14), left: 0, right: 0, alignItems: 'center' }} pointerEvents="none">
         <Icon size={Math.round(d * 0.24)} color={meta.color} />
       </View>
       <Text style={s.stateName} numberOfLines={1}>
@@ -1049,7 +1051,7 @@ const s = StyleSheet.create({
      boven/onder afgesneden. Negatieve marges houden de opmaak gelijk. */
   carousel: { flexGrow: 0, marginTop: -36, marginBottom: -60 },
   stateCircle: { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 18 },
-  stateName: { marginTop: 6, fontFamily: BrandFonts.bold, fontSize: 21, color: '#ffffff' },
+  stateName: { fontFamily: BrandFonts.bold, fontSize: 21, color: '#ffffff' },
   stateUse: { fontFamily: BrandFonts.regular, fontSize: 14.5, color: 'rgba(255,255,255,0.62)' },
   dots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 16 },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.25)' },
