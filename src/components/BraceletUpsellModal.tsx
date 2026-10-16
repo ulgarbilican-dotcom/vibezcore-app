@@ -302,6 +302,9 @@ const s = StyleSheet.create({
      beide cards op identieke breedte (maxWidth 360, width 100%,
      gecentreerd) → verticaal volledig uitgelijnd. */
   overlay: {
+    /* Boven de zwevende ademsessie-pill (41), onder de sessie (60). */
+    zIndex: 50,
+    elevation: 50,
     position: 'absolute',
     top: 0,
     left: 0,

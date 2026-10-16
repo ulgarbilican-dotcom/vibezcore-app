@@ -220,6 +220,13 @@ export default function AuthCallback() {
     };
   }, [params.token_hash, params.type]);
 
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (state.phase !== 'loading') return;
+    const t = setTimeout(() => setSlow(true), 12000);
+    return () => clearTimeout(t);
+  }, [state.phase]);
+
   return (
     <SafeAreaView style={s.root}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -229,6 +236,12 @@ export default function AuthCallback() {
             <ActivityIndicator size="large" color={Brand.textDim} />
             <Text style={s.title}>Signing you in…</Text>
             <Text style={s.sub}>One moment — verifying your link.</Text>
+            {/* Hangt het netwerk, dan na 12 s een uitweg (audit 16 okt 2026). */}
+            {slow && (
+              <Pressable onPress={() => goToTab('/account')} hitSlop={12} accessibilityRole="button" style={{ marginTop: 24, paddingVertical: 12 }}>
+                <Text style={[s.sub, { color: '#ffffff' }]}>Cancel</Text>
+              </Pressable>
+            )}
           </>
         )}
         {state.phase === 'success' && (

@@ -47,6 +47,7 @@
    levend overzicht van de 4 keuzes — zelfde cirkel-taal als "Build it
    yourself", nu ook hier. */
 
+import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -62,7 +63,7 @@ import {
 } from '@/utils/settings';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useActivePlan } from '@/utils/plan-store';
 import type { PlanHorizon, PlanSlot } from '@/utils/plan-store';
 import { HORIZON_OPTIONS } from '@/data/plan-horizon-options';
@@ -706,6 +707,17 @@ export default function IntensityScreen() {
      de Times-sheet enkel als het aantal klopt met de gekozen Routine —
      komt het niet overeen, dan een VIBEZCORE-gestileerde melding i.p.v.
      stilzwijgend sluiten met een onvolledige keuze. */
+  /* Wegvegen, ernaast tikken of terug = annuleren (audit 16 okt 2026): de
+     keuze van vóór het openen komt terug, zonder melding. Enkel "Done"
+     controleert of het aantal klopt. */
+  const timesSnapshot = useRef<{ picked: typeof picked; times: typeof times } | null>(null);
+  const cancelTimes = () => {
+    if (timesSnapshot.current) {
+      setPicked(timesSnapshot.current.picked);
+      setTimes(timesSnapshot.current.times);
+    }
+    setActivePicker(null);
+  };
   const closeTimes = () => {
     if (picked.length === count) {
       setActivePicker(null);
@@ -858,7 +870,8 @@ export default function IntensityScreen() {
         {/* Operator, 21 september 2026 ("balk is storend zo laag, zet 'm
            naast de pijl"): terug in de knoppenrij. */}
         <StepIndicator step={4} total={5} color="#ffffff" />
-        <View style={s.back} />
+        {/* Elke stap van de flow kan in één tik weg (audit 16 okt 2026). */}
+        <ProtocolFlowCancel />
       </View>
 
       <ScrollView
@@ -968,6 +981,7 @@ export default function IntensityScreen() {
             isNext={nextField === 'Times'}
             onPress={() => {
               if (timesLocked || count === 0) return;
+              timesSnapshot.current = { picked, times };
               setActivePicker('times');
             }}
           />
@@ -1240,7 +1254,7 @@ export default function IntensityScreen() {
       {/* ── Times-popup ── */}
       {/* Echt glas, ook op Android: in hetzelfde venster als de app
           (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
-      <GlassSheet visible={activePicker === 'times'} onClose={closeTimes}>
+      <GlassSheet visible={activePicker === 'times'} onClose={cancelTimes}>
           <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
             {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
             <VibezGlass
@@ -1328,23 +1342,29 @@ export default function IntensityScreen() {
 
       {/* Sub-popup voor het exacte uur binnen een gekozen dagdeel — bovenop
          de Times-sheet, zelfde patroon als daarvoor. */}
-      <Modal
-        visible={timePicking !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTimePicking(null)}
-      >
-        <Pressable style={s.pickBackdrop} onPress={() => setTimePicking(null)}>
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-            onPress={() => {}}
+      {/* Onderblad bovenop de Times-sheet (16 okt 2026: de bladen zijn een
+          stapel, dus na sluiten komt Times terug). Done rechtsboven. */}
+      <GlassSheet visible={timePicking !== null} onClose={() => setTimePicking(null)}>
+          <View
+            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14, backgroundColor: 'transparent', overflow: 'hidden' }]}
           >
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {timePicking && (
               <>
-                <Text style={s.pickTitle}>
-                  {SLOTS.find((sl) => sl.slot === timePicking)?.label} time
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>
+                    {SLOTS.find((sl) => sl.slot === timePicking)?.label} time
+                  </Text>
+                  <Pressable onPress={() => setTimePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                    <Text style={{ fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 12, paddingLeft: 12 }}>Done</Text>
+                  </Pressable>
+                </View>
                 <View style={s.pickGrid}>
                   {(() => {
                     const window = SLOT_WINDOW[timePicking];
@@ -1373,9 +1393,8 @@ export default function IntensityScreen() {
                 </View>
               </>
             )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+      </GlassSheet>
     </SafeAreaView>
   );
 }

@@ -26,6 +26,9 @@
    stap). Pad A is daardoor 4 stappen i.p.v. 5 (zie `totalSteps`
    hieronder). */
 
+import { GlassSheet } from '@/components/GlassSheetHost';
+import VibezGlass from '@/components/VibezGlass';
+import { rootBlurRef } from '@/utils/root-blur';
 import { BrandDark, BrandLight, BrandFonts, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -411,44 +414,6 @@ export default function PlanReviewScreen() {
     opacity: 1 - (1 - ctaScale.value) * 3.75,
   }));
 
-  const pickBackdropScale = useSharedValue(1);
-  const onPickBackdropPressIn = () => {
-    pickBackdropScale.value = withTiming(0.97, { duration: 80 });
-  };
-  const onPickBackdropPressOut = () => {
-    pickBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const pickBackdropStyle = useAnimatedStyle(() => ({ transform: [{ scale: pickBackdropScale.value }] }));
-
-  const statePickBackdropScale = useSharedValue(1);
-  const onStatePickBackdropPressIn = () => {
-    statePickBackdropScale.value = withTiming(0.97, { duration: 80 });
-  };
-  const onStatePickBackdropPressOut = () => {
-    statePickBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const statePickBackdropStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: statePickBackdropScale.value }],
-  }));
-
-  const whyBackdropScale = useSharedValue(1);
-  const onWhyBackdropPressIn = () => {
-    whyBackdropScale.value = withTiming(0.97, { duration: 80 });
-  };
-  const onWhyBackdropPressOut = () => {
-    whyBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const whyBackdropStyle = useAnimatedStyle(() => ({ transform: [{ scale: whyBackdropScale.value }] }));
-
-  const whyDoneScale = useSharedValue(1);
-  const onWhyDonePressIn = () => {
-    whyDoneScale.value = withTiming(0.95, { duration: 80 });
-  };
-  const onWhyDonePressOut = () => {
-    whyDoneScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
-  };
-  const whyDoneStyle = useAnimatedStyle(() => ({ transform: [{ scale: whyDoneScale.value }] }));
-
   const confirm = async () => {
     if (items.length === 0 || saving) return;
     setSaving(true);
@@ -653,22 +618,16 @@ export default function PlanReviewScreen() {
           verzonnen. Standaard kort (protocol.ts), maar wie meer tijd wil
           mag altijd langer (operator, 13 augustus 2026: "user mag de
           mogelijkheid hebben om langere sessies te doen"). */}
-      <Modal
-        visible={picking !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPicking(null)}
-      >
-        <AnimatedPressable
-          style={[s.pickBackdrop, pickBackdropStyle]}
-          onPress={() => setPicking(null)}
-          onPressIn={onPickBackdropPressIn}
-          onPressOut={onPickBackdropPressOut}
-        >
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-            onPress={() => {}}
+      <GlassSheet visible={picking !== null} onClose={() => setPicking(null)}>
+          <View
+            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14, backgroundColor: 'transparent', overflow: 'hidden' }]}
           >
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {picking !== null && (() => {
               const it = items[picking];
@@ -683,7 +642,12 @@ export default function PlanReviewScreen() {
                   <View
                     style={[s.pickAccent, { backgroundColor: st.accent }]}
                   />
-                  <Text style={s.pickTitle}>{st.eyebrow} duration</Text>
+                  <View style={s.pickHeadRow}>
+                    <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{st.eyebrow} duration</Text>
+                    <Pressable onPress={() => setPicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                      <Text style={s.pickDone}>Done</Text>
+                    </Pressable>
+                  </View>
                   <DurationWheel
                     options={st.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
                     value={it.minutes}
@@ -695,9 +659,8 @@ export default function PlanReviewScreen() {
                 </>
               );
             })()}
-          </Pressable>
-        </AnimatedPressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* ── Staat-kiezer ── operator, 21 september 2026 ("als gebruiker
           niet akkoord is met een state, kan die dan uit alle andere
@@ -706,30 +669,27 @@ export default function PlanReviewScreen() {
           regels bij het VOORSTEL, maar de gebruiker mag hier altijd
           overrulen (zelfde "nooit hard blokkeren"-principe als elders in
           de flow). */}
-      <Modal
-        visible={statePicking !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setStatePicking(null)}
-      >
-        <AnimatedPressable
-          style={[s.pickBackdrop, statePickBackdropStyle]}
-          onPress={() => setStatePicking(null)}
-          onPressIn={onStatePickBackdropPressIn}
-          onPressOut={onStatePickBackdropPressOut}
-        >
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-            onPress={() => {}}
+      <GlassSheet visible={statePicking !== null} onClose={() => setStatePicking(null)}>
+          <View
+            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14, backgroundColor: 'transparent', overflow: 'hidden' }]}
           >
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {statePicking !== null && (() => {
               const it = items[statePicking];
               return (
                 <>
-                  <Text style={s.pickTitle}>
-                    {SLOTS.find((sl) => sl.slot === it.slot)?.label ?? 'Session'} state
-                  </Text>
+                  <View style={s.pickHeadRow}>
+                    <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{SLOTS.find((sl) => sl.slot === it.slot)?.label ?? 'Session'} state</Text>
+                    <Pressable onPress={() => setStatePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                      <Text style={s.pickDone}>Done</Text>
+                    </Pressable>
+                  </View>
                   <View style={s.pickGrid}>
                     {(Object.keys(BREATH_STATES) as BreathStateKey[]).map((key) => (
                       <StateChip
@@ -743,34 +703,32 @@ export default function PlanReviewScreen() {
                 </>
               );
             })()}
-          </Pressable>
-        </AnimatedPressable>
-      </Modal>
+          </View>
+      </GlassSheet>
 
       {/* ── "Why this protocol" ── operator, 21 september 2026: popup i.p.v.
           een vaste kaart, zelfde bottom-sheet-taal als hierboven. */}
-      <Modal
-        visible={whyOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setWhyOpen(false)}
-      >
-        <AnimatedPressable
-          style={[s.pickBackdrop, whyBackdropStyle]}
-          onPress={() => setWhyOpen(false)}
-          onPressIn={onWhyBackdropPressIn}
-          onPressOut={onWhyBackdropPressOut}
-        >
-          <Pressable
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}
-            onPress={() => {}}
+      <GlassSheet visible={whyOpen} onClose={() => setWhyOpen(false)}>
+          <View
+            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14, backgroundColor: 'transparent', overflow: 'hidden' }]}
           >
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
             <View style={s.pickHandle} />
             {/* Operator, 21 september 2026: eerst een expliciet kruisje
                naast de titel ("ik krijg 'm niet dicht") — nu weer weg
                ("kruisje moet weg"), de "Got it"-knop onderaan is de enige
                sluitknop, naast tikken op de achtergrond. */}
-            <Text style={s.pickTitle}>Why this protocol</Text>
+            <View style={s.pickHeadRow}>
+              <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>Why this protocol</Text>
+              <Pressable onPress={() => setWhyOpen(false)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                <Text style={s.pickDone}>Done</Text>
+              </Pressable>
+            </View>
             <Text style={s.whyIntro}>{explanation.intro}</Text>
             <View style={s.whyLines}>
               {explanation.lines.map((l) => (
@@ -779,22 +737,16 @@ export default function PlanReviewScreen() {
                 </Text>
               ))}
             </View>
-            <AnimatedPressable
-              style={[s.whyDoneBtn, whyDoneStyle]}
-              onPress={() => setWhyOpen(false)}
-              onPressIn={onWhyDonePressIn}
-              onPressOut={onWhyDonePressOut}
-            >
-              <Text style={s.whyDoneTxt}>Got it</Text>
-            </AnimatedPressable>
-          </Pressable>
-        </AnimatedPressable>
-      </Modal>
+          </View>
+      </GlassSheet>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
+  /* Onderblad-protocol (16 okt 2026): kiezer/uitleg = Done rechtsboven. */
+  pickHeadRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  pickDone: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 12, paddingLeft: 12 },
   root: { flex: 1, backgroundColor: C.bg },
   bar: {
     flexDirection: 'row',

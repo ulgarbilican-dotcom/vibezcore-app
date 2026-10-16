@@ -377,7 +377,7 @@ export default function BraceletAgendaScreen() {
          iOS-chevron.backward i.p.v. dunne, langgerekte Android-pijl")
          is de app-brede standaard geworden, niet de 22/2.2-variant. */}
       <View style={s.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/bracelet' as never))} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
         </Pressable>
         <Text style={s.barTitle} numberOfLines={1}>

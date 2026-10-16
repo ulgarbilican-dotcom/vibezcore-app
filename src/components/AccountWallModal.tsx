@@ -166,7 +166,7 @@ export function AccountWallModal() {
   return (
     <Animated.View
       pointerEvents={open ? 'auto' : 'none'}
-      style={[StyleSheet.absoluteFill, { opacity }]}
+      style={[StyleSheet.absoluteFill, { opacity, zIndex: 50, elevation: 50 }]}
     >
       {/* Backdrop — tap = dismiss. Full-screen invisible dismiss overlay:
          geen press-scale hier, scalen van de hele achtergrond zou raar

@@ -213,14 +213,17 @@ export default function RhythmSheet({
                 titel meer onder het icoon. */}
             {step === 'choose' ? '' : now ? 'Heart Rate' : 'Resting Heart Rate'}
           </Text>
-          <View />
           {/* Actieblad (protocol): de keuze in State Control heeft onderaan
-              al "Not Now" — geen tweede Cancel bovenaan. */}
+              al "Not Now" — geen tweede Cancel bovenaan. Cancel staat links,
+              zoals in iOS (audit 16 okt 2026); rechts is voor bevestigen. */}
           {step !== 'result' && !(now && step === 'choose') ? (
             <PressScale onPress={guardedClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={s.done}>Cancel</Text>
             </PressScale>
-          ) : null}
+          ) : (
+            <View />
+          )}
+          <View />
         </View>
 
         {step === 'choose' && now && (

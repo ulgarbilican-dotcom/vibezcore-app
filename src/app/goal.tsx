@@ -38,6 +38,7 @@
      is een hoogglanzende capsule, transparant/gedimd zonder keuze en
      licht fel op in de merk-indigo zodra er iets gekozen is. */
 
+import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, CTA } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { GOALS, type Goal } from '@/data/goals';
@@ -408,7 +409,8 @@ export default function GoalScreen() {
            naast de pijl"): terug in de knoppenrij, na een korte poging
            eronder (Apple HIG-full-width) — zie StepIndicator.tsx. */}
         <StepIndicator step={2} total={5} color="#ffffff" />
-        <View style={s.back} />
+        {/* Elke stap van de flow kan in één tik weg (audit 16 okt 2026). */}
+        <ProtocolFlowCancel />
       </View>
 
       <ScrollView

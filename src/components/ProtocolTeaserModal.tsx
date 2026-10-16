@@ -160,7 +160,7 @@ const s = StyleSheet.create({
     padding: 24,
     overflow: 'hidden',
   },
-  close: { position: 'absolute', top: 16, right: 16, zIndex: 2 },
+  close: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 
   /* Huisstijl v4.4: Brand.accent (#3a8fff, Signal Blue) is enkel voor
      haptic-pulse/"nu actief" — nooit badges/tekst. AudioAccent is

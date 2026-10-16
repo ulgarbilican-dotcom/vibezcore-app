@@ -236,8 +236,9 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
-    elevation: 1000,
+    /* Onder een geopende ademsessie (60), boven de pill (41) — audit 16 okt 2026. */
+    zIndex: 55,
+    elevation: 55,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

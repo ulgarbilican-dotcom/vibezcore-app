@@ -119,8 +119,9 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
                   ? 'VIBEZCORE AUDIO LIBRARY'
                   : 'VIBEZCORE BREATHWORK'}
             </Text>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-              <Text style={s.done}>Done</Text>
+            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now">
+              {/* "Not now" i.p.v. "Done": er is niets gedaan om te bevestigen (audit 16 okt 2026). */}
+              <Text style={s.done}>Not now</Text>
             </Pressable>
           </View>
 

@@ -55,7 +55,7 @@ export default function BreathPacerPreview() {
       />
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <AnimatedPressable
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings' as never))}
           onPressIn={onBackPressIn}
           onPressOut={onBackPressOut}
           style={[s.back, backPressStyle]}

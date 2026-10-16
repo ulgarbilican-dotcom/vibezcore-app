@@ -16,6 +16,7 @@
    nu specifiek als bevestiging dat de net-gekozen doelen zijn
    meegenomen, niet als losse styling-tekst. */
 
+import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import BalancedText from '@/components/BalancedText';
 import { BrandDark, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
@@ -113,7 +114,8 @@ export default function RoutineIntroScreen() {
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
         </AnimatedPressable>
         <StepIndicator step={3} total={5} color="#ffffff" />
-        <View style={s.back} />
+        {/* Elke stap van de flow kan in één tik weg (audit 16 okt 2026). */}
+        <ProtocolFlowCancel />
       </View>
 
       <View style={s.content}>
