@@ -79,3 +79,14 @@ audiosessies (zie hieronder). Punt 20 (opstartanimatie) geldt voor beide.
 Nodig van de operator in de stores: product "dagpas" aanmaken in App Store
 Connect en Play Console (non-renewing / consumable); gratis trial en
 intro-aanbiedingen uitzetten; maand- en jaarprijs op €9,99 / €69,99 zetten.
+
+## Stand stores (16 okt 2026)
+
+- **Google Play — klaar:**
+  - maand €9,99: basisabonnement `monthly` actief, intro-12m inactief;
+  - jaar €69,99: actief, aanbiedingen inactief;
+  - dagpas = product met eenmalige betaling `vibezcore_day_pass`, aankoopoptie `day-pass` (Bestellen, werkt met eerdere versies), 174 landen, actief.
+  - Let op: "Prijzen in bulk bewerken" rekent de ingetypte prijs als prijs ZONDER btw (1,29 gaf België €1,59). België moet op €1,29 incl. btw staan.
+- **RevenueCat:** dagpas nog toevoegen, NIET aan het Pro-entitlement koppelen. Een eenmalige aankoop geeft daar anders voor altijd toegang; de app rekent de 24 u vanaf de aankoopdatum.
+- **App Store Connect:** nog te doen (dagpas als non-consumable/consumable, intro-aanbiedingen uit, prijzen).
+
