@@ -19,7 +19,7 @@ Status: ⏳ = open · 🔍 = oorzaak gevonden · ✅ = opgelost én getest.
 | 6 | Hartslagmeting | Camera-flits gaat niet aan op iPhone | ⏳ |
 | 7 | Breathwork | Geen Breathwork-onboarding meer na de test van de State Control-onboarding | ⏳ |
 | 8 | Settings e.a. | Schuifknoppen (Switch) uitgerekt | ⏳ |
-| 9 | Contact support | Opent de website buiten de app — je bent weg uit de app | ⏳ |
+| 9 | Contact support | Opent de website buiten de app — je bent weg uit de app | ✅ in-app browser (T208), iOS nog te zien in nieuwe build |
 | 10 | Breathwork actieve sessie | Knop Audio & Haptics reageert niet | ⏳ |
 | 11 | Breathwork actieve sessie | End session werkt niet | ⏳ |
 | 12 | Breathwork actieve sessie | Minimize-knop opent Audio & Haptics | ⏳ |

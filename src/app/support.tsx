@@ -21,6 +21,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
    actief" — nooit voor CTA's. CTA-regel v4.4 op donker: witte knop-bg +
    donkere tekst (die donkere tekst stond hier al goed). */
 import { Stack, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import {
   Linking,
@@ -43,6 +44,24 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const SUPPORT_URL = 'https://www.vibezcore.com/support';
 
+/* Operator, 16 okt 2026 (iOS-test build 20: "contact support gaat naar
+   website maar dan ben je weg vanuit app"): zoals Apple's eigen apps opent
+   de pagina in een browservenster BINNEN de app (Safari-weergave op iOS,
+   Chrome Custom Tab op Android) met "Done"/sluiten terug naar waar je was.
+   Lukt dat niet, dan de gewone browser als terugval. */
+async function openSupport(): Promise<void> {
+  try {
+    await WebBrowser.openBrowserAsync(SUPPORT_URL, {
+      controlsColor: '#ffffff',
+      toolbarColor: Brand.bg,
+      dismissButtonStyle: 'done',
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+    });
+  } catch {
+    await Linking.openURL(SUPPORT_URL).catch(() => {});
+  }
+}
+
 export default function SupportScreen() {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
@@ -56,20 +75,19 @@ export default function SupportScreen() {
   }));
 
   useEffect(() => {
-    /* Open de centrale support-webpage in de browser. Direct na openen
-       gaan we terug zodat de user op z'n oorspronkelijke scherm terugkomt
-       wanneer hij de browser sluit. Linking.openURL is fire-and-forget;
-       falen wordt door de OS afgehandeld. */
-    void Linking.openURL(SUPPORT_URL).catch(() => {
-      /* swallow — user kan de manual knop hieronder gebruiken */
-    });
-    /* Kleine vertraging zodat de browser kan openen voordat we de
-       app-stack terugrollen. */
-    const t = setTimeout(() => {
+    /* Open de support-pagina in het browservenster binnen de app. Op iOS
+       wacht dit tot "Done"; op Android loopt het meteen door terwijl de
+       Custom Tab bovenop blijft. Daarna rollen we dit tussenscherm terug,
+       zodat sluiten je terugbrengt waar je was. */
+    let alive = true;
+    void openSupport().then(() => {
+      if (!alive) return;
       if (router.canGoBack()) router.back();
       else router.replace('/');
-    }, 300);
-    return () => clearTimeout(t);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   return (
@@ -91,7 +109,7 @@ export default function SupportScreen() {
         <AnimatedPressable
           style={[s.btn, pressStyle]}
           onPress={() => {
-            void Linking.openURL(SUPPORT_URL);
+            void openSupport();
           }}
           onPressIn={onPressIn}
           onPressOut={onPressOut}

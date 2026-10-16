@@ -1638,6 +1638,14 @@ export function BreathSession() {
         n += 1;
         const left = startLeft - n;
         elapsedRef.current += 1;
+        /* Operator, 16 okt 2026 ("trial breathwork mag 30 sec duren niet
+           langer"): de voorproef stopt op exact 30 s, ook middenin een
+           fase — hele cycli afronden gaf tot 38 s (4-7-8). */
+        if (previewRef.current && elapsedRef.current >= BREATH_PREVIEW_SECONDS) {
+          tickRef.current = null;
+          endPreview();
+          return;
+        }
         setSecsLeft(left);
         if (left > 0) {
           tickRef.current = setTimeout(tick, Math.max(0, anchor + (n + 1) * 1000 - Date.now()));
@@ -1875,7 +1883,9 @@ export function BreathSession() {
       /* effectiveRoundsRef, niet roundsRef: bij een preview (zie runPhase
          hierboven) is dit de verlaagde 2-cycli-grens, anders identiek aan
          roundsRef. */
-      const total = effectiveRoundsRef.current * cycle;
+      const total = previewRef.current
+        ? Math.min(BREATH_PREVIEW_SECONDS, effectiveRoundsRef.current * cycle)
+        : effectiveRoundsRef.current * cycle;
       if (trueElapsed >= total) {
         if (previewRef.current) {
           endPreview();
@@ -1952,8 +1962,8 @@ export function BreathSession() {
      de standaard 30s preview) — teruggedraaid, zelfde 30s-grens als elke
      andere preview-sessie in de app. De zachte fade-overgang (`endPreview`
      hieronder) blijft wel instant-specifiek bestaan. */
-  const PREVIEW_SECONDS = 30;
-  const PREVIEW_ROUNDS = Math.max(1, Math.round(PREVIEW_SECONDS / CYCLE_S));
+  /* Genoeg rondes om de 30 s te vullen; de klok hierboven stopt op 30 s. */
+  const PREVIEW_ROUNDS = Math.max(1, Math.ceil(BREATH_PREVIEW_SECONDS / CYCLE_S));
   /* Zachte overgang i.p.v. harde cut (enkel instant-pad, zie hierboven):
      laat de achtergrondscape uitvervagen (bestaande 1,5s-fade) vóór de
      paywall verschijnt, in plaats van `finish()`'s eigen `stopScape(true)`
@@ -5627,6 +5637,9 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
    door aan de sessie-laag en verdwijnt meteen weer; loopt er al een
    sessie, dan wordt die enkel teruggehaald (audit 5 okt 2026: een melding
    tijdens een sessie verving anders de lopende sessie). */
+/** De gratis voorproef van een Premium-ademsessie: nooit langer dan dit. */
+const BREATH_PREVIEW_SECONDS = 30;
+
 export default function BreathSessionRoute() {
   const raw = useLocalSearchParams();
   useEffect(() => {
