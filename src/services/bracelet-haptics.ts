@@ -84,6 +84,10 @@ import {
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
 import { heartbeatDub, heartbeatLub, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
 import { getStateHear } from './state-sound-pref';
+import { endLiveSession, showLiveSession } from '../../modules/live-activity';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { Platform } from 'react-native';
+import { startSessionKeepAlive, stopSessionKeepAlive } from './session-keepalive';
 import { getSetting, setSetting } from '@/utils/settings';
 import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 
@@ -860,6 +864,7 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
       if (!hasNativeWaveform()) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
+      endIosPreviewSurface();
     }, PREVIEW_MAX_SECONDS * 1000),
   );
 }
@@ -888,6 +893,36 @@ export function playModeTasteHaptic(mode: BraceletMode, seconds = TASTE_SECONDS)
 }
 
 let previewOnWatch = false;
+
+/* iPhone (operator, 17 okt 2026: "voor iPhone zelfde aanpassingen"): de
+   voorproef krijgt wat een Premium-sessie op de iPhone heeft — Live Activity
+   met aftellende tijd op het vergrendelscherm, scherm blijft aan, stil
+   audio-anker houdt de app levend (zie bracelet-session-monitor.ts). */
+const PREVIEW_KEEP_AWAKE_TAG = 'state-control-preview';
+let iosPreviewOn = false;
+function startIosPreviewSurface(mode: BraceletMode): void {
+  if (Platform.OS !== 'ios') return;
+  const meta = getModeMeta(mode);
+  showLiveSession({
+    kind: 'state',
+    title: meta.name,
+    subtitle: 'Free preview',
+    colorHex: meta.color.toUpperCase() === '#00A3A3' ? '#4AF0D4' : meta.color,
+    remainingSec: PREVIEW_MAX_SECONDS,
+    totalSec: PREVIEW_MAX_SECONDS,
+    paused: false,
+  });
+  void activateKeepAwakeAsync(PREVIEW_KEEP_AWAKE_TAG).catch(() => {});
+  startSessionKeepAlive(undefined, false);
+  iosPreviewOn = true;
+}
+function endIosPreviewSurface(): void {
+  if (!iosPreviewOn) return;
+  iosPreviewOn = false;
+  endLiveSession();
+  void deactivateKeepAwake(PREVIEW_KEEP_AWAKE_TAG).catch(() => {});
+  stopSessionKeepAlive();
+}
 /** Wekt de horloge-app alvast als State Control of het voorproef-blad
  *  opent (17 okt 2026, gemeten: een door Samsung bevroren app op de Watch4
  *  ontving de voorproef pas ~20 s na de telefoon). Hoogstens om de 15 s,
@@ -903,6 +938,7 @@ export function wakeWatchForStateControl(): void {
 
 export function playModeTrialHaptic(mode: BraceletMode): void {
   playModePreviewHaptic(mode);
+  startIosPreviewSurface(mode);
   if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode);
   const meta = getModeMeta(mode);
@@ -948,6 +984,7 @@ export function stopModePreviewHaptic(): void {
   const endingNaturally = sessionEndsAt !== null && Date.now() >= sessionEndsAt - 1500;
   generation += 1;
   clearPending();
+  endIosPreviewSurface();
   if (jsSoundOn) {
     jsSoundOn = false;
     stopHeartbeatSound('state-control');
