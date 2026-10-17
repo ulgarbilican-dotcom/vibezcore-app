@@ -608,11 +608,11 @@ export default function BraceletSetDayScreen() {
           style={s.planSummaryRow}
           onPress={() => sessions.length > 0 && setPlanPopupOpen(true)}
         >
-          <Text style={s.planSummaryTxt}>
+          <BalancedText style={s.planSummaryTxt}>
             {sessions.length === 0
               ? 'No sessions yet — tap a state above to add one.'
               : `${sessions.length} session${sessions.length === 1 ? '' : 's'} planned`}
-          </Text>
+          </BalancedText>
           {sessions.length > 0 && (
             <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.4} />
           )}
