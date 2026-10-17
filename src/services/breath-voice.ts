@@ -30,7 +30,10 @@ import { getSetting } from '@/utils/settings';
 /* 17 okt 2026 (operator: "geluid op maximum"): luidere kopieën (alle 31 naar
    ~−14 LUFS, enkel versterkt, piek ≤ −1,3 dB) in een NIEUWE map. De oude map
    blijft staan voor de huidige winkelversies; terugzetten = deze regel. */
-const CDN_BASE = 'https://vibezcore-audio.b-cdn.net/Breathwork%20audio%20v2';
+/* v3 (zelfde dag, operator: "ik hoor geruis"): eerst ruis eruit (hoogdoorlaat
+   80 Hz, ruisonderdrukking, zachte poort in de stiltes), dan pas versterken —
+   stilte na de woorden nu < −80 dB i.p.v. −47…−57 dB in v2. */
+const CDN_BASE = 'https://vibezcore-audio.b-cdn.net/Breathwork%20audio%20v3';
 
 /** Breath-cue URLs. Generieke files zeggen 'through your X' (oudere ElevenLabs
  *  takes); Boost-specifieke files zeggen verkort 'through X' (zonder 'your')
