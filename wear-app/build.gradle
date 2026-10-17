@@ -44,8 +44,20 @@ android {
     /* Upload-sleutel voor de Play Console (14 okt 2026): uit
        wear-app/keystore.properties (staat NIET in git) — zie
        docs/WEAR_RELEASE.md. Zonder dat bestand: geen release-handtekening. */
+    /* Of (17 okt 2026): credentials.json van `eas credentials` → "Download
+       credentials from EAS to credentials.json" — dezelfde uploadsleutel als
+       de telefoon-app, zonder wachtwoorden over te typen. Staat NIET in git. */
+    def credFile = rootProject.file('../credentials.json')
     def ksFile = rootProject.file('../wear-app/keystore.properties')
-    if (ksFile.exists()) {
+    if (credFile.exists()) {
+      def k = new groovy.json.JsonSlurper().parse(credFile).android.keystore
+      release {
+        storeFile rootProject.file('../' + k.keystorePath)
+        storePassword k.keystorePassword
+        keyAlias k.keyAlias
+        keyPassword k.keyPassword
+      }
+    } else if (ksFile.exists()) {
       def ks = new Properties()
       ksFile.withInputStream { ks.load(it) }
       release {

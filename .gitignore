@@ -36,6 +36,8 @@ yarn-error.*
 .env.bunny
 
 # SECRETS — credentials & private keys, NOOIT committen
+credentials.json
+credentials/
 docs/OPERATOR_HANDOVER.md
 secrets/
 *.serviceaccount.json
