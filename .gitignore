@@ -107,3 +107,6 @@ wear-app/keystore.properties
 *.jks
 *.keystore
 !android/app/debug.keystore
+
+# Build-uitvoer horloge-app (upload naar Play Console)
+*.aab
