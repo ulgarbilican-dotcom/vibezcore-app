@@ -122,6 +122,16 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 ---
 
+## 4b. To do (goedgekeurd door de operator, nog te bouwen)
+
+- **iPhone zonder Apple Watch — eenmalige melding bij de eerste sessie** (17 okt 2026, operator: "neem op in to do"). Apple laat geen trilling toe op een vergrendelde iPhone; zonder horloge valt de trilling weg zodra je zelf vergrendelt (scherm blijft wel aan tijdens de sessie; Live Activity + geluid bij Haptic + Audio lopen door). Voorstel: korte melding, enkel iPhone, enkel zonder Apple Watch, enkel de eerste keer: "Keep your screen on to feel the rhythm. Locking it? Choose Haptic + Audio to keep hearing it." met knoppen **Haptic + Audio** en **Got it**. Tekst = [OPERATOR] beslist de definitieve woorden.
+- **Set your plan (Activity → State Control): duur via de cirkel i.p.v. het draaiwiel** — half af: `DurationDial` (export uit bracelet-control.tsx, zelfde cirkel als State Control, enkel duur-greep) bestaat maar staat nog niet in bracelet-set-day.tsx. Operator zei "stop even" (17 okt).
+- **Free + dagplan → voorproef van 30 s** gebouwd (T256, `965e26a`), nog te testen op de A16.
+- **Luidheid audiobestanden** (ademstem + Library −19…−21 LUFS) normaliseren naar −16 LUFS — wacht op "ja" + Bunny-upload.
+- **Nagaan welke code in de Play Store staat**: EAS vermeldt bij de productie-build van 15 okt (versiecode 98) commit `3733f99` van 1 okt.
+
+---
+
 ## 5. Backlog (niet nu bouwen tenzij operator het vraagt)
 
 Zie geheugen: day-pass (€0,90/24u), trial-end-melding, Adaptive State Engine, Connected Devices-teaser, horloge fase 3, ademduur per ervaring, release-vloeiendheid meten op release-APK.
