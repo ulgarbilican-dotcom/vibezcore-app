@@ -52,7 +52,7 @@ import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
 import { syncBraceletPlanReminder, MAX_BRACELET_SESSIONS } from '@/services/reminders';
-import { DurationRing, DurationWheel } from '@/components/DurationRingPicker';
+import { DurationDial } from '@/app/bracelet-control';
 import {
   buildBraceletPlanFromTemplate,
   dayKey,
@@ -480,31 +480,11 @@ export default function BraceletSetDayScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={[s.sectionLabel, { textAlign: 'center' }]}>DURATION</Text>
+          {/* Operator, 17 okt 2026 ("Set your plan: ook via de cirkel
+              instellen, consistent"): exact de cirkel van State Control —
+              met je vinger over de rand slepen, geen draaiwiel meer. */}
           <View style={s.ringWrap}>
-            <DurationRing
-              min={addingMeta.minMinutes}
-              max={addingMeta.maxMinutes}
-              value={draftDuration}
-              color={addingMeta.color}
-              label={addingMeta.name}
-              size={190}
-              dark
-            />
-          </View>
-          {/* Vaste 266px-breedte — exact zoals bracelet-control.tsx, de
-             pil/"Recommended"-positionering binnen DurationWheel is
-             daarop afgestemd. Buiten die breedte (bv. de volle-breedte
-             sheet van hiervoor) staat de pil te breed en overlapt het
-             label. */}
-          <View style={s.wheelOuter}>
-            <DurationWheel
-              options={durationOptions}
-              value={draftDuration}
-              onChange={setDraftDuration}
-              accent={addingMeta.color}
-              trackColor="rgba(255,255,255,0.4)"
-              recommendedValue={addingMeta.defaultMinutes}
-            />
+            <DurationDial mode={addingMode!} value={draftDuration} onChange={setDraftDuration} />
           </View>
 
           <Text style={[s.sectionLabel, { marginTop: 28 }]}>STARTS AT</Text>

@@ -26,7 +26,8 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
-import WatchHapticsRow from '@/components/WatchHapticsRow';
+import WatchHapticsRow, { useWatchStatus } from '@/components/WatchHapticsRow';
+import AsyncStorageLockNotice from '@react-native-async-storage/async-storage';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
@@ -1368,6 +1369,70 @@ function ModeDetailModal({
 /* ── TrialSheet — gratis voorproef: uitleg + Start preview / Unlock / Back
    (operator, 7 okt 2026: "de tekst 'Feel it on your phone…' in een popup
    bij aantikken van de CTA, nu staat alles opgepropt"). */
+/* ── iPhone zonder Apple Watch: eenmalige uitleg (operator, 17 okt 2026,
+   to-do "neem op") ─────────────────────────────────────────────────────
+   Apple laat geen trilling toe op een vergrendelde iPhone. Zonder horloge
+   valt de trilling dus weg zodra je zelf vergrendelt; het scherm blijft
+   tijdens een sessie wel aan, en met Haptic + Audio loopt het ritme door
+   via het geluid. Eén keer tonen, de eerste keer State Control op iOS. */
+const IOS_LOCK_NOTICE_KEY = 'vz.iosLockNoticeSeen';
+function IosLockNotice() {
+  const insets = useSafeAreaInsets();
+  const watch = useWatchStatus();
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !watch || watch.status === 'ready') return;
+    let alive = true;
+    void AsyncStorageLockNotice.getItem(IOS_LOCK_NOTICE_KEY)
+      .then((v) => {
+        if (alive && v !== '1') setVisible(true);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [watch]);
+  const close = () => {
+    setVisible(false);
+    void AsyncStorageLockNotice.setItem(IOS_LOCK_NOTICE_KEY, '1').catch(() => {});
+  };
+  if (Platform.OS !== 'ios') return null;
+  return (
+    <GlassSheet visible={visible} onClose={close}>
+      <View style={[s.modeModalSheet, { paddingBottom: Math.max(insets.bottom, 12) + 20 }]}>
+        <VibezGlass
+          radius={24}
+          level="sheet"
+          blurTarget={rootBlurRef}
+          style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+        />
+        <Pressable onPress={close} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+          <View style={s.modeModalHandle} />
+        </Pressable>
+        <Text style={s.trialSheetEyebrow}>ON IPHONE</Text>
+        <Text style={s.modeModalName}>Keep your screen on</Text>
+        <BalancedText style={s.quickSheetLine}>Keep your screen on to feel the rhythm.</BalancedText>
+        <BalancedText style={s.quickSheetNote}>Locking it? Choose Haptic + Audio to keep hearing it.</BalancedText>
+        <PressScale
+          style={s.quickSheetCta}
+          haptic
+          scaleTo={0.97}
+          onPress={() => {
+            setStateHear(true);
+            close();
+          }}
+          accessibilityRole="button"
+        >
+          <Text style={s.quickSheetCtaTxt}>Haptic + Audio</Text>
+        </PressScale>
+        <PressScale onPress={close} style={s.quickSheetBack} accessibilityRole="button">
+          <Text style={s.quickSheetBackTxt}>Got it</Text>
+        </PressScale>
+      </View>
+    </GlassSheet>
+  );
+}
+
 function TrialSheet({
   visible,
   mode,
@@ -4441,6 +4506,7 @@ function IdleScreen({
       )}
 
       <AudioHapticsSheet visible={hapticsOpen} onClose={() => setHapticsOpen(false)} />
+      <IosLockNotice />
 
       <TrialSheet
         visible={trialSheetOpen}
