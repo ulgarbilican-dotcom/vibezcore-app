@@ -128,7 +128,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 - **Set your plan (Activity → State Control): duur via de cirkel i.p.v. het draaiwiel** — half af: `DurationDial` (export uit bracelet-control.tsx, zelfde cirkel als State Control, enkel duur-greep) bestaat maar staat nog niet in bracelet-set-day.tsx. Operator zei "stop even" (17 okt).
 - **Free + dagplan → voorproef van 30 s** gebouwd (T256, `965e26a`), nog te testen op de A16.
 - **Luidheid audiobestanden** (ademstem + Library −19…−21 LUFS) normaliseren naar −16 LUFS — wacht op "ja" + Bunny-upload.
-- **Nagaan welke code in de Play Store staat**: EAS vermeldt bij de productie-build van 15 okt (versiecode 98) commit `3733f99` van 1 okt.
+- **Play Store-stand (nagekeken 17 okt):** laatste Android-productiebuild = 2 okt 2026, versiecode 98, commit `3733f99` (1 okt). Alles van daarna (dagpas, nieuwe onboarding, horloge, …) staat nog NIET in de winkel.
 
 ---
 
