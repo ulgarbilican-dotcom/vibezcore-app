@@ -314,7 +314,7 @@ export default function PlayerScreen() {
        CTA in account.tsx:379. Copy zei "Add Audio Library" maar knop
        ging vroeger naar homepage-pricing → mismatch. */
     if (isBraceletOwner && !realIsPro && !isBundleUser) {
-      router.navigate('/subscribe' as never);
+      router.navigate('/subscribe?returnTo=audio' as never);
       return;
     }
     requestScrollTo('pricing');

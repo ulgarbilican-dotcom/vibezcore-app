@@ -1180,15 +1180,30 @@ export default function SubscribeScreen() {
           ? '/'
           : planJustBuilt
             ? '/plan'
-            : '/';
+            : null; /* geen context: terug naar waar je was (17 okt 2026) */
     const doneCtaLabel =
       params.returnTo === 'breathwork'
         ? 'Start breathing'
         : params.returnTo === 'state-control'
           ? 'Start your session'
+          : params.returnTo === 'audio'
+          ? 'Start listening'
           : planJustBuilt
           ? 'View your plan'
-          : 'Start listening';
+          : /* Operator, 17 okt 2026 ("Start listening klopt niet"): zonder
+               duidelijke context (Premium-knop, Profile) geen audio-knop. */
+            'Continue';
+    const perkState = 'State Control: all five states, any duration';
+    const perkBreath = 'Breathwork: all 64 guided sessions';
+    const perkAudio = `Audio Library: ${TOTAL_SESSION_COUNT} sessions across 4 pillars`;
+    const donePerks = [
+      ...(params.returnTo === 'breathwork'
+        ? [perkBreath, perkState, perkAudio]
+        : params.returnTo === 'audio'
+          ? [perkAudio, perkState, perkBreath]
+          : [perkState, perkBreath, perkAudio]),
+      ...(doneIsDayPass ? [] : ['New sessions added regularly']),
+    ];
     return (
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -1213,43 +1228,28 @@ export default function SubscribeScreen() {
                 : 'Thank you for subscribing.'}
           </Text>
 
+          {/* Operator, 17 okt 2026 ("de hele uitleg nakijken, dit klopt niet
+              meer"): drie producten, zelfde volgorde en woorden als de
+              paywall; het product waar je vandaan kwam staat bovenaan. */}
           <View style={s.donePerks}>
-            {doneIsDayPass ? (
-              <>
-                <Text style={s.donePerkTitle}>For 24 hours, you have access to:</Text>
-                {params.returnTo === 'state-control' && (
-                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
-                )}
-                {/* Operator, 1 okt 2026: "49" was fout — correct: 64. */}
-                <BalancedText style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</BalancedText>
-                {params.returnTo !== 'state-control' && (
-                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
-                )}
-                <Text style={s.donePerkLine}>
-                  · {TOTAL_SESSION_COUNT} Audio Library sessions to stream
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={s.donePerkTitle}>One membership, you now have access to:</Text>
-                {params.returnTo === 'state-control' && (
-                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
-                )}
-                <BalancedText style={s.donePerkLine}>· All 64 guided sessions — every state, every rhythm</BalancedText>
-                {params.returnTo !== 'state-control' && (
-                  <BalancedText style={s.donePerkLine}>· Every State Control session — all five states</BalancedText>
-                )}
-                <Text style={s.donePerkLine}>
-                  · {TOTAL_SESSION_COUNT} Audio Library sessions across 4 pillars of growth
-                </Text>
-                <Text style={s.donePerkLine}>· New sessions added regularly</Text>
-              </>
-            )}
+            <Text style={s.donePerkTitle}>
+              {doneIsDayPass ? 'For the next 24 hours:' : 'Everything is now unlocked:'}
+            </Text>
+            {donePerks.map((line) => (
+              <BalancedText key={line} style={s.donePerkLine}>
+                {`· ${line}`}
+              </BalancedText>
+            ))}
           </View>
 
           <AnimatedPressable
             style={[s.doneCta, doneCtaPress.pressStyle]}
-            onPress={() => (doneDestination === '/plan' ? router.replace('/plan' as never) : goToTab(doneDestination))}
+            onPress={() => {
+              if (doneDestination === '/plan') router.replace('/plan' as never);
+              else if (doneDestination) goToTab(doneDestination);
+              else if (router.canGoBack()) router.back();
+              else goToTab('/bracelet');
+            }}
             onPressIn={doneCtaPress.onPressIn}
             onPressOut={doneCtaPress.onPressOut}
             accessibilityLabel={doneCtaLabel}
@@ -1282,7 +1282,7 @@ export default function SubscribeScreen() {
               accessibilityLabel="Create an account to sync this subscription across your devices"
             >
               <BalancedText style={s.linkText}>
-                Create your free account to stream the Audio Library and use Premium on all your devices
+                Create a free account to keep Premium on all your devices
               </BalancedText>
             </AnimatedPressable>
           )}
