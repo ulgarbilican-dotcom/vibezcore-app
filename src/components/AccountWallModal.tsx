@@ -189,8 +189,8 @@ export function AccountWallModal() {
           <Text style={s.subline}>
             {lastSessionTitle ? (
               <>
-                <Text style={s.subQuote}>“{lastSessionTitle}”</Text> unlocks
-                with your {trialName}.
+                <Text style={s.subQuote}>“{lastSessionTitle}”</Text> is part of
+                VIBEZCORE Premium.
               </>
             ) : (
               `You've explored all ${FREE_SESSION_COUNT} free sessions.`
@@ -198,10 +198,10 @@ export function AccountWallModal() {
           </Text>
 
           <View style={s.bullets}>
-            <Bullet text="Full Breathwork and State Control from day one" />
-            <Bullet
-              text={`${TRIAL_SESSION_COUNT} audio sessions during your trial, all ${TOTAL_SESSION_COUNT} after`}
-            />
+            {/* 17 okt 2026: geen trial meer — zelfde drie producten als de
+                paywall. */}
+            <Bullet text="State Control and Breathwork, every state" />
+            <Bullet text={`All ${TOTAL_SESSION_COUNT} Audio Library sessions`} />
             <Bullet text={`Cancel anytime in ${storeName}`} />
           </View>
 

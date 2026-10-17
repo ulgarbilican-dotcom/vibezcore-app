@@ -219,7 +219,7 @@ export default function ActivateBraceletScreen() {
       const freshToken = await getToken();
       if (!freshToken) {
         setErrMsg(
-          'Account created, but sign-in did not persist. Please sign in from the Account tab and activate again.',
+          'Account created, but sign-in did not persist. Please sign in from the Profile tab and activate again.',
         );
         setPhase('form');
         return;
@@ -504,7 +504,7 @@ export default function ActivateBraceletScreen() {
         <Text style={s.legal}>
           You'll find your activation code in the shipping confirmation
           email. If you can't find it, check your spam folder or contact
-          support via your Account tab.
+          support via the Profile tab.
         </Text>
       </KeyboardAwareScrollView>
     </SafeAreaView>

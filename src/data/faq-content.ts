@@ -13,6 +13,11 @@
    - Geen HTML-tags
    ─────────────────────────────────────────────────────────────────── */
 
+import { SESSIONS } from '@/data/audio-library-data';
+import { getEffectiveTier } from '@/utils/access-tier';
+
+const FREE_AUDIO_COUNT = SESSIONS.filter((x) => getEffectiveTier(x) === 'public').length;
+
 export type FaqCategory =
   | 'overview'
   | 'stateControl'
@@ -509,6 +514,17 @@ export const FAQ_ITEMS: FaqItem[] = [
       "Choose Monthly or Yearly, or try everything for 24 hours with a one-time Day Pass. Pricing and terms are shown in full before you buy.",
   },
   {
+    /* 17 okt 2026 (eigen nazicht na de trial-afschaffing): nergens stond nog
+       wat je gratis kan doen. Aantal gratis audio telt mee met de lijst. */
+    id: 'membership-free',
+    category: 'membership',
+    question: 'What can I try for free?',
+    answer:
+      `**Audio Library** — ${FREE_AUDIO_COUNT} sessions are free to listen to, anytime. Every other session plays a short preview.\n\n` +
+      "**State Control and Breathwork** — every state has a free 30-second preview, and after the intro you get one full session free.\n\n" +
+      "Everything else is part of VIBEZCORE Premium: Monthly, Yearly or a 24-hour Day Pass.",
+  },
+  {
     /* Operator, 16 okt 2026: de 7-dagen-trial vervalt, de dagpas komt in
        de plaats (losse aankoop, verlengt niet, geen downloads). */
     id: 'membership-day-pass',
@@ -528,7 +544,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'membership',
     question: 'How do I cancel my membership?',
     answer:
-      "Open the Account tab and tap Manage Subscription — this takes you straight to your device's subscription settings (Apple ID → Subscriptions on iOS, or the Play Store's Subscriptions page on Android), since Apple and Google require cancellations to go through their own systems for in-app purchases.\n\n" +
+      "Open the Profile tab and, under Membership, tap Manage next to VIBEZCORE Premium — this takes you straight to your device's subscription settings (Apple ID → Subscriptions on iOS, or the Play Store's Subscriptions page on Android), since Apple and Google require cancellations to go through their own systems for in-app purchases.\n\n" +
       "Cancellation takes effect at the end of your current billing period — you keep full access until then. Need help finding it? Contact us via the Support Center.",
   },
   {
@@ -541,7 +557,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'membership',
     question: 'Can I pause my membership instead of canceling?',
     answer:
-      "**On Android** — yes. Open your Play Store subscription settings (reachable from the Account tab) and choose Pause instead of Cancel. Your plan picks up again when the pause ends.\n\n" +
+      "**On Android** — yes. Open your Play Store subscription settings (reachable from the Profile tab, under Membership) and choose Pause instead of Cancel. Your plan picks up again when the pause ends.\n\n" +
       "**On iOS** — Apple doesn't offer a native pause option. You can cancel and resubscribe later.",
   },
   {
