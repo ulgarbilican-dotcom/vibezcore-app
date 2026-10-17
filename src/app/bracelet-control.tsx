@@ -3762,6 +3762,10 @@ type IdleScreenProps = {
   /** Premium/bracelet: alles open — Quick Chill/Boost starten met één tik,
    *  zonder infoblad (operator, 16 okt 2026). */
   fullAccess?: boolean;
+  /** Free + dagplan (operator, 17 okt 2026): een tik op een toestand in het
+   *  plan start meteen de voorproef van 30 s i.p.v. de paywall. Elke nieuwe
+   *  waarde = één voorproef. */
+  autoTrialToken?: string | null;
   onPaywall?: () => void;
   /** Einde van de gratis voorproef → paywall. */
   onTrialEnd: () => void;
@@ -3807,6 +3811,7 @@ function IdleScreen({
   freeSession = false,
   isModeLocked,
   fullAccess = false,
+  autoTrialToken = null,
   onPaywall,
   onTrialEnd,
   busy,
@@ -3878,6 +3883,14 @@ function IdleScreen({
   };
   /* Andere toestand, ander scherm of weg: voorproef stopt. */
   useEffect(() => () => stopTrial(false), [selectedMode, stopTrial]);
+  const lastAutoTrialRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!autoTrialToken || lastAutoTrialRef.current === autoTrialToken) return;
+    lastAutoTrialRef.current = autoTrialToken;
+    if (trialTimer.current) return;
+    withRhythm(startTrial)();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTrialToken]);
   const trialRunning = trialLeft !== null;
   const condensedMinutes = previewCondensedRampMinutes(selectedMode);
 
@@ -5247,6 +5260,7 @@ function BraceletControlScreen({
   const freeSessionAvailable = freeFor(selectedMode);
   const sessionsLocked = premiumLocked && !freeSessionAvailable;
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [autoTrialToken, setAutoTrialToken] = useState<string | null>(null);
 
   const autoStartFiredRef = useRef(false);
   /* De link-intentie bij mount vasthouden: de effect kan later pas lopen
@@ -5318,7 +5332,13 @@ function BraceletControlScreen({
       lastLinkTokenRef.current = token;
       startedLinkTokens.add(token);
       if (sessionsLocked) {
-        setPaywallOpen(true);
+        /* Free (operator, 17 okt 2026): niet de paywall, maar de toestand uit
+           het plan klaarzetten en meteen de voorproef van 30 s — daarna volgt
+           de paywall zoals bij "Try 30 seconds free". */
+        const fm = modeNum as BraceletMode;
+        setSelectedMode(fm);
+        setDuration(Number(params.duration) || getModeMeta(fm).defaultMinutes);
+        setAutoTrialToken(token);
         return;
       }
       const m = modeNum as BraceletMode;
@@ -5907,6 +5927,7 @@ function BraceletControlScreen({
         freeSession={freeSessionAvailable}
         isModeLocked={(m: BraceletMode) => premiumLocked && !freeFor(m)}
         fullAccess={!premiumLocked}
+        autoTrialToken={autoTrialToken}
         onPaywall={() => setPaywallOpen(true)}
         onTrialEnd={() => setPaywallOpen(true)}
         busy={busy}
