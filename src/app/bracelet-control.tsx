@@ -1514,13 +1514,55 @@ const DialProgressContext = createContext<{
   dragging: SharedValue<boolean>;
 } | null>(null);
 
+/** Duur kiezen met exact dezelfde cirkel als State Control — met je vinger
+ *  over de rand slepen (operator, 17 okt 2026: "Set your plan: ook via de
+ *  cirkel instellen, consistent"). */
+export function DurationDial({
+  mode,
+  value,
+  onChange,
+}: {
+  mode: BraceletMode;
+  value: number;
+  onChange: (minutes: number) => void;
+}) {
+  const meta = getModeMeta(mode);
+  return (
+    <ModeSwipeRing
+      mode={mode}
+      onChange={() => {}}
+      onTap={() => {}}
+      swipe={false}
+      dial={{ size: RING_DIAL, min: meta.minMinutes, max: meta.maxMinutes, value, onChange }}
+    >
+      <DurationRing
+        key={mode}
+        min={meta.minMinutes}
+        max={meta.maxMinutes}
+        value={value}
+        color={meta.color}
+        label={meta.name}
+        size={RING_DIAL}
+        dialHandle
+        dark
+        recommended={value === DURATION_PRESETS[mode].find((p) => p.recommended)?.value}
+        zone={ZONE_NAME[zoneFor(mode, value)]}
+      />
+    </ModeSwipeRing>
+  );
+}
+
 function ModeSwipeRing({
   mode,
   onChange,
   onTap,
   dial,
+  swipe = true,
   children,
 }: {
+  /** false = enkel de duur-greep (Set your plan): geen toestand wisselen,
+   *  geen tik-uitleg (17 okt 2026). */
+  swipe?: boolean;
   mode: BraceletMode;
   onChange: (next: BraceletMode) => void;
   onTap: () => void;
@@ -1630,6 +1672,7 @@ function ModeSwipeRing({
     });
 
   const pan = Gesture.Pan()
+    .enabled(swipe)
     .activeOffsetX([-10, 10])
     .failOffsetY([-16, 16])
     .onUpdate((e) => {
@@ -1651,6 +1694,7 @@ function ModeSwipeRing({
       });
     });
   const tap = Gesture.Tap()
+    .enabled(swipe)
     .maxDistance(10)
     .onEnd((_e, success) => {
       if (success) runOnJS(tapJS)();
