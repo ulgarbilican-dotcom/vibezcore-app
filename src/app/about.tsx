@@ -162,7 +162,7 @@ export default function AboutScreen() {
         </P>
         <P>
           Real change requires both: a way to shift your state in the
-          moment, and a way to rewire how you think over time. VIBEZCORE
+          moment, and a way to reshape how you think over time. VIBEZCORE
           is built around that pairing.
         </P>
         <P>

@@ -797,9 +797,9 @@ export default function SettingsScreen() {
         <PressFeedback
           style={s.backLink}
           onPress={() => router.back()}
-          accessibilityLabel="Go back to account"
+          accessibilityLabel="Go back to Profile"
         >
-          <Text style={s.backLinkText}>← Back to Account</Text>
+          <Text style={s.backLinkText}>← Back to Profile</Text>
         </PressFeedback>
       </ScrollView>
     </SafeAreaView>

@@ -13,6 +13,7 @@
    - Geen HTML-tags
    ─────────────────────────────────────────────────────────────────── */
 
+import { Platform } from 'react-native';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getEffectiveTier } from '@/utils/access-tier';
 
@@ -35,6 +36,9 @@ export type FaqItem = {
   category: FaqCategory;
   question: string;
   answer: string;
+  /** Enkel tonen op dit platform (17 okt 2026: batterij-optimalisatie bestaat
+   *  niet op de iPhone). */
+  platform?: 'android' | 'ios';
 };
 
 /* Herzien (operator, 11 augustus 2026: "breathwork en audio in faq moet
@@ -73,7 +77,7 @@ export const FAQ_CATEGORY_ORDER: FaqCategory[] = [
   'privacy',
 ];
 
-export const FAQ_ITEMS: FaqItem[] = [
+const ALL_FAQ_ITEMS: FaqItem[] = [
   /* ── PRODUCT OVERVIEW ─────────────────────────────────────────── */
   {
     id: 'overview-what-is-vibezcore',
@@ -227,6 +231,7 @@ export const FAQ_ITEMS: FaqItem[] = [
        wegklikte en later opnieuw tegen het probleem aanloopt. */
     id: 'breathwork-lock-screen-battery',
     category: 'breathwork',
+    platform: 'android',
     question: 'Why does VIBEZCORE ask to run in the background / ignore battery optimization?',
     answer:
       "On Android, your phone can pause apps running in the background to save battery. If that happens partway through a breathwork session, the voice guidance and vibration can stop as soon as you lock your screen — even though the timer is still running.\n\n" +
@@ -592,3 +597,5 @@ export const FAQ_ITEMS: FaqItem[] = [
       "You have the right to request full deletion of your personal data at any time. Submit your request through the Support Center and our team will process it in accordance with applicable data protection law (GDPR and CCPA where applicable) within 30 days.",
   },
 ];
+
+export const FAQ_ITEMS: FaqItem[] = ALL_FAQ_ITEMS.filter((x) => !x.platform || x.platform === Platform.OS);

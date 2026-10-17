@@ -97,7 +97,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Users agree to access and use the platform only for lawful purposes and in a manner that does not infringe the rights of others or interfere with the operation of the website.',
+      text: 'Users agree to access and use the platform only for lawful purposes and in a manner that does not infringe the rights of others or interfere with the operation of the platform.',
     },
     { kind: 'h3', text: 'Users must not:' },
     {
@@ -220,7 +220,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Additional refund conditions are described in the [Shipping & Refund Policy](https://www.vibezcore.com/shipping-policy).',
+      text: 'Additional refund conditions are described in our [Refund & Returns Policy](https://www.vibezcore.com/refund-policy).',
     },
     { kind: 'h3', text: 'VIBEZCORE Premium (subscription)' },
     {
@@ -234,6 +234,7 @@ export const TERMS: LegalDoc = {
         'The subscription renews automatically at the end of each period unless you cancel at least 24 hours before it ends',
         `You can manage or cancel your subscription at any time in your ${STORE_ACCOUNT} settings. Deleting the app or your VIBEZCORE account does not cancel it`,
         'Purchases can be restored on a new device with Restore Purchases in the app',
+        'No VIBEZCORE account is needed to purchase. An optional account lets you use Premium on your other devices',
       ],
     },
     { kind: 'h3', text: 'Day Pass (one-time purchase)' },
@@ -255,14 +256,14 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'highlight',
-      text: 'For digital content not supplied on a tangible medium — such as downloads, streaming, or digital courses — the right of withdrawal is lost once the performance has begun. By clicking "Purchase" or "Access", you expressly consent to this and acknowledge that you waive your statutory right of withdrawal.',
+      text: `For digital content not supplied on a tangible medium — such as downloads, streaming, or digital courses — the right of withdrawal is lost once the performance has begun. By confirming the purchase in ${STORE}, you expressly consent to this and acknowledge that you waive your statutory right of withdrawal.`,
     },
 
     /* ── 10. Third-Party Services ── */
     { kind: 'h2', text: 'Third-Party Services' },
     {
       kind: 'p',
-      text: 'The VIBEZCORE website may contain links to external websites or services operated by third parties. VIBEZCORE does not control and is not responsible for the content, policies, or practices of third-party services.',
+      text: 'The VIBEZCORE app and website may contain links to external websites or services operated by third parties. VIBEZCORE does not control and is not responsible for the content, policies, or practices of third-party services.',
     },
     {
       kind: 'p',
@@ -273,7 +274,7 @@ export const TERMS: LegalDoc = {
     { kind: 'h2', text: 'Platform Availability' },
     {
       kind: 'p',
-      text: 'While VIBEZCORE aims to maintain continuous availability of the platform, we do not guarantee uninterrupted access. The website or services may occasionally be unavailable due to maintenance, technical issues, or external circumstances.',
+      text: 'While VIBEZCORE aims to maintain continuous availability of the platform, we do not guarantee uninterrupted access. The app, website or services may occasionally be unavailable due to maintenance, technical issues, or external circumstances.',
     },
     {
       kind: 'p',
@@ -415,7 +416,7 @@ export const PRIVACY: LegalDoc = {
     { kind: 'h3', text: 'Mobile App Data' },
     {
       kind: 'p',
-      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens and subscription receipts are transmitted to our servers.',
+      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts and (if you allow it) crash reports are transmitted to our servers or processors.',
     },
     {
       kind: 'tags',
@@ -541,7 +542,7 @@ export const PRIVACY: LegalDoc = {
         { title: 'Bunny CDN (EU)',   text: 'Audio content delivery — based in the European Union' },
         { title: 'RevenueCat',       text: `Verifies ${IOS ? 'App Store' : 'Google Play'} receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details` },
         { title: 'Google / Apple sign-in', text: 'Optional — only if you choose to sign in with Google or Apple. We receive your email address and a sign-in token' },
-        { title: 'Sentry (EU)',      text: 'Crash reports — when the app crashes or hits an error, we receive a technical report (error, app version, device model and operating system) so we can fix it. No name, email address, IP address, heart rate or session content — hosted in the European Union. You can turn this off anytime in Settings → Privacy → Share crash reports' },
+        { title: 'Sentry (EU)',      text: 'Crash reports — when the app crashes or hits an error, we receive a technical report (error, app version, device model and operating system) so we can fix it. No name, email address, IP address, heart rate or session content — hosted in the European Union. You can turn this off anytime in Profile → Settings → Privacy → Share crash reports' },
       ],
     },
     {
@@ -562,7 +563,7 @@ export const PRIVACY: LegalDoc = {
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
         { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
-        { title: 'Smartwatch',     text: 'Optional — if you pair a Wear OS watch or Apple Watch, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch.' },
+        { title: 'Smartwatch',     text: 'Optional — if you pair a Wear OS watch or Apple Watch, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch. (Your resting heart rate is only read through Apple Health or Health Connect, if you turn that on.)' },
         { title: 'Apple Health / Health Connect', text: 'Optional — only if you turn it on in Settings. Writes your sessions as mindful minutes and reads your resting heart rate to set your rhythm. Never leaves your device or the health app.' },
         { title: 'Camera & flash', text: 'Optional — only when you choose to read your pulse from your fingertip in State Control. Frames are analysed live on your device and never recorded, saved or uploaded. You can always enter your resting heart rate yourself instead.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
@@ -739,6 +740,14 @@ export const ACCESSIBILITY: LegalDoc = {
     },
 
     /* ── 02. Accessibility Adjustments on This Site ── */
+    /* 17 okt 2026: het document ging enkel over de website. */
+    { kind: 'h2', text: 'In the App' },
+    {
+      kind: 'p',
+      text: IOS
+        ? 'The VIBEZCORE app works with VoiceOver, follows your text size (Dynamic Type) and respects Reduce Motion. Sessions combine voice, visuals and vibration, so each can be followed on its own.'
+        : 'The VIBEZCORE app works with TalkBack, follows your font size and respects Remove animations. Sessions combine voice, visuals and vibration, so each can be followed on its own.',
+    },
     { kind: 'h2', text: 'Accessibility Adjustments on This Site' },
     {
       kind: 'p',
@@ -1000,7 +1009,7 @@ export const REFUND: LegalDoc = {
        sec-num "—" = ongenummerd). */
     {
       kind: 'p',
-      text: 'This policy explains the conditions under which VIBEZCORE accepts returns, cancellations, and refunds for products or services purchased through the VIBEZCORE website. It applies to all customers worldwide and is designed to comply with applicable consumer protection laws, including EU regulations.',
+      text: `This policy explains the conditions under which VIBEZCORE accepts returns, cancellations, and refunds for products or services purchased through the VIBEZCORE app (via ${STORE}) or the VIBEZCORE website. It applies to all customers worldwide and is designed to comply with applicable consumer protection laws, including EU regulations.`,
     },
     {
       kind: 'p',
@@ -1010,7 +1019,7 @@ export const REFUND: LegalDoc = {
       kind: 'ul',
       items: [
         '**Physical Products** — such as the VIBEZCORE Smart Bead Bracelet',
-        '**Digital Content or Services** — such as the VIBEZCORE Premium subscription (Breathwork, State Control and the Audio Library), Digital Materials, or memberships',
+        '**Digital Content or Services** — such as VIBEZCORE Premium — a monthly or yearly subscription or a Day Pass (Breathwork, State Control and the Audio Library), Digital Materials, or memberships',
       ],
     },
 
@@ -1104,7 +1113,7 @@ export const REFUND: LegalDoc = {
     },
     {
       kind: 'highlight',
-      text: 'By completing your purchase, you expressly consent to the immediate delivery of the digital content and acknowledge that you lose your right of withdrawal once access begins. This is confirmed during checkout.',
+      text: `By completing your purchase, you expressly consent to the immediate delivery of the digital content and acknowledge that you lose your right of withdrawal once access begins. In-app purchases are billed by ${STORE}, so refund requests for them go through ${STORE}.`,
     },
 
     /* ── 07. Refund Processing ── */
@@ -1139,7 +1148,7 @@ export const REFUND: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Digital purchases cannot be canceled once access has been granted.',
+      text: `You can cancel a subscription at any time in your ${STORE_ACCOUNT} settings; access continues until the end of the paid period. A Day Pass cannot be cancelled once purchased.`,
     },
 
     /* ── 10. Contact ── */
@@ -1184,7 +1193,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. State Control session history is stored entirely on your device.',
+      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. Breathwork and State Control session history is stored entirely on your device.',
     },
 
     /* ── 02. What We Store ── */
@@ -1196,19 +1205,19 @@ export const COOKIES: LegalDoc = {
       items: [
         '**Session token** — keeps you logged in',
         '**Listening progress** — remembers where you stopped in each session',
-        '**Play history** — your Your Journey stats and streak',
+        '**Play history** — your journey stats and streak',
         '**Session status** — fully-listened vs. partly-listened flags',
         '**Favourites and follows** — series you have saved or are following',
       ],
     },
     {
       kind: 'p',
-      text: 'All of the above are stored locally on your device. They are not transmitted to our servers unless cross-device sync is enabled.',
+      text: 'All of the above are stored locally on your device. They are not transmitted to our servers unless you sign in to use Premium across devices.',
     },
-    { kind: 'h3', text: 'Third-party — only at payment' },
+    { kind: 'h3', text: 'Third-party — payments and crash reports' },
     {
       kind: 'p',
-      text: (IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app subscription payments. Receipt verification and renewal are managed by its systems and follow its privacy policy — out of our control.",
+      text: (IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app purchases (subscriptions and the Day Pass). RevenueCat verifies the receipts, and Sentry receives technical crash reports if you allow it. Each follows its own privacy policy.",
     },
     {
       kind: 'highlight',
@@ -1254,7 +1263,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'State Control session history is stored **entirely locally** and never leaves your device.',
+      text: 'Breathwork and State Control session history is stored **entirely locally** and never leaves your device.',
     },
 
     /* ── 06. Do Not Track ── */
@@ -1316,12 +1325,10 @@ export const HEALTH: LegalDoc = {
     {
       kind: 'tags',
       items: [
-        'Mindset',
-        'Resilience',
-        'Social mastery',
-        'Personal growth',
-        'Self-awareness',
-        'Intentional living',
+        'Psychological Resilience',
+        'Inner Sovereignty',
+        'Social Mastery',
+        'Strategic Execution & Wealth',
       ],
     },
     {
@@ -1408,7 +1415,7 @@ export const HEALTH: LegalDoc = {
       kind: 'p',
       text: 'The VIBEZCORE Smart Bead Bracelet delivers gentle haptic stimulation (subtle vibration) to the wrist. It is a personal wellness accessory, **not a medical device** and not intended to diagnose, treat, cure, or prevent any condition. Please read the safety notices below before first use.',
     },
-    { kind: 'h3', text: '5.1 Consult Your Doctor Before Use If You…' },
+    { kind: 'h3', text: '6.1 Consult Your Doctor Before Use If You…' },
     {
       kind: 'p',
       text: 'The bracelet uses small vibration motors against the skin. While the energy levels are low, please consult a licensed physician before wearing it if any of the following applies to you:',
@@ -1432,7 +1439,7 @@ export const HEALTH: LegalDoc = {
       kind: 'p',
       text: 'If you are unsure whether the bracelet is right for you, **do not use it before discussing with a qualified healthcare professional**.',
     },
-    { kind: 'h3', text: '5.2 Stop Using and Seek Medical Advice If…' },
+    { kind: 'h3', text: '6.2 Stop Using and Seek Medical Advice If…' },
     {
       kind: 'p',
       text: 'Remove the bracelet immediately and consult a doctor if you experience any of the following during or after use:',
@@ -1449,10 +1456,10 @@ export const HEALTH: LegalDoc = {
     },
     {
       kind: 'danger',
-      title: '5.3 Children & Choking Hazard',
+      title: '6.3 Children & Choking Hazard',
       text: 'The Smart Bead Bracelet contains **small beads** that present a serious **choking hazard** for children under 3 years of age. **Keep the bracelet out of reach of infants and young children at all times.** The product is designed and tested for adults only and is not a toy. Do not allow children to handle, wear, or play with the bracelet, charging cable, or any component. If a bead becomes detached or the bracelet is damaged, stop using it and contact support — **never** allow loose beads or small parts near children. If a child swallows a bead, contact poison control or emergency services immediately.',
     },
-    { kind: 'h3', text: '5.4 Skin & Allergies' },
+    { kind: 'h3', text: '6.4 Skin & Allergies' },
     {
       kind: 'p',
       text: 'The bracelet is in continuous contact with your skin. Even hypoallergenic materials can cause reactions in sensitive individuals.',
@@ -1467,7 +1474,7 @@ export const HEALTH: LegalDoc = {
         'Give your skin daily rest periods — do not wear continuously for more than 12 hours at a time',
       ],
     },
-    { kind: 'h3', text: '5.5 Battery & Charging Safety' },
+    { kind: 'h3', text: '6.5 Battery & Charging Safety' },
     {
       kind: 'p',
       text: 'The bracelet contains a small rechargeable lithium-ion battery. Lithium batteries can pose a risk if damaged, overheated, or charged improperly.',
@@ -1475,7 +1482,7 @@ export const HEALTH: LegalDoc = {
     {
       kind: 'ul',
       items: [
-        'Use **only the included pogo pin charger** — the magnetic contact pads on the bracelet are designed exclusively for this charger',
+        'Use **only the included pogo pin charger** — its pogo-pin contacts are designed exclusively for this bracelet',
         'Do **not** charge while wearing the bracelet',
         'Do **not** expose the battery or device to high temperatures, fire, or direct sunlight for extended periods',
         'Do **not** disassemble, puncture, crush, or attempt to repair the bracelet',
@@ -1484,7 +1491,7 @@ export const HEALTH: LegalDoc = {
         'Dispose of the bracelet through proper electronic waste recycling — never in regular household trash or fire',
       ],
     },
-    { kind: 'h3', text: '5.6 Water, Environment & General Care' },
+    { kind: 'h3', text: '6.6 Water, Environment & General Care' },
     {
       kind: 'ul',
       items: [
@@ -1495,7 +1502,7 @@ export const HEALTH: LegalDoc = {
         'Operating temperature: avoid use below 0 °C or above 40 °C',
       ],
     },
-    { kind: 'h3', text: '5.7 Use as Intended' },
+    { kind: 'h3', text: '6.7 Use as Intended' },
     {
       kind: 'p',
       text: 'Use the bracelet only as described in the app and product documentation. **Do not use the bracelet to treat or manage any medical, psychological, or sleep condition without professional guidance.** Stop a session at any time if it feels uncomfortable.',
@@ -1503,7 +1510,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: '6. Children & Teenagers' },
     {
       kind: 'p',
-      text: 'Both VIBEZCORE products are designed and intended for **adults aged 18 and over**. Some audio content discusses topics such as identity, betrayal, discipline, and resilience that may not be appropriate for younger audiences. The bracelet is not designed or sized for children\'s wrists and contains small parts that pose a choking hazard (see section 5.3). Parents and guardians are responsible for deciding what is suitable for minors in their care.',
+      text: 'The VIBEZCORE app and the Smart Bead Bracelet are designed and intended for **adults aged 18 and over**. Some audio content discusses topics such as identity, betrayal, discipline, and resilience that may not be appropriate for younger audiences. The bracelet is not designed or sized for children\'s wrists and contains small parts that pose a choking hazard (see section 6.3). Parents and guardians are responsible for deciding what is suitable for minors in their care.',
     },
     { kind: 'h2', text: '7. Professional Help' },
     {
@@ -1571,7 +1578,7 @@ export const AUDIO_SESSIONS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Our audio sessions may reference publicly available research, scientific findings, or the work of thought leaders, researchers, academics, and public figures in the fields of neuroscience, psychology, philosophy, and personal development.',
+      text: 'Our audio sessions may reference publicly available research, scientific findings, or the work of thought leaders, researchers, academics, and public figures in the fields of psychology, philosophy, research and personal development.',
     },
     {
       kind: 'p',
