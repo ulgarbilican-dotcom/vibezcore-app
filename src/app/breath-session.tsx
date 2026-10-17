@@ -74,7 +74,7 @@ import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
 } from '@/services/session-keepalive';
-import { phaseHapticPattern, playPhaseHaptic, watchBreathAmplitude } from '@/services/breath-haptics';
+import { phaseHapticPattern, playPhaseHaptic, stopPhaseHaptic, watchBreathAmplitude } from '@/services/breath-haptics';
 import { ensurePermission as ensureNotificationPermission } from '@/services/reminders';
 import { addBreathSession, useBreathHistory } from '@/utils/breath-history';
 import { getSetting, setSetting, useSetting } from '@/utils/settings';
@@ -1437,7 +1437,7 @@ export function BreathSession() {
 
   const stopAll = useCallback(() => {
     clearTimers();
-    Vibration.cancel();
+    stopPhaseHaptic();
     stopVoice();
     cancelAnimation(arc);
     arc.value = 0;
@@ -1714,7 +1714,7 @@ export function BreathSession() {
     if (!runningRef.current || pausedRef.current) return;
     hapticPress();
     clearTimers();
-    Vibration.cancel();
+    stopPhaseHaptic();
     stopVoice();
     /* Annuleren, niet resetten: `breath`/`arc` blijven op hun huidige
        tussenwaarde staan, zodat `runPhase` er bij hervatten naadloos vanaf
@@ -2185,7 +2185,11 @@ export function BreathSession() {
           clearTimeout(keepAliveStopRef.current);
           keepAliveStopRef.current = null;
         }
-        startSessionKeepAlive({ title: st.eyebrow, subtitle: tech.name });
+        /* iPhone (operator, 17 okt 2026: "vergrendelscherm moet
+           professioneler"): enkel de Live Activity hierboven — geen tweede
+           muziekspeler-kaart van het stille anker (0:00/0:01). Het anker
+           houdt de app levend, ook zonder die kaart. */
+        startSessionKeepAlive({ title: st.eyebrow, subtitle: tech.name }, false);
         if (voiceRef.current) preloadCompletionCue(st.key as BreathKey);
       } catch {
         /* Zelfde reden als de try/catch verderop in deze functie: het

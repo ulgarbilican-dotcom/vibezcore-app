@@ -110,6 +110,9 @@ export type SessionKeepAliveMeta = { title: string; subtitle?: string };
  *  voor het stille anker, zodat de HELE sessie (stem, timer, haptiek —
  *  die draaien allemaal op hetzelfde JS-proces dat dit anker levend
  *  houdt) blijft doorlopen met het scherm op slot. */
+/** Toont het anker een eigen kaart op het vergrendelscherm? (17 okt 2026) */
+let lockScreenInfoOn = true;
+
 export function startSessionKeepAlive(
   meta?: SessionKeepAliveMeta,
   /** Operator, 17 september 2026 (bracelet-sessies): bracelet gebruikt dit
@@ -147,6 +150,7 @@ export function startSessionKeepAlive(
       p.loop = true;
       p.volume = 1; /* het bestand ÍS stilte — volume verlagen is dubbelop */
       p.play();
+      lockScreenInfoOn = showLockScreenInfo;
       if (showLockScreenInfo) {
         try {
           p.setActiveForLockScreen(
@@ -173,7 +177,7 @@ export function startSessionKeepAlive(
  *  dus dit is de enige manier om de weergegeven tekst te laten meelopen
  *  met een aftellende sessie. Geen-op als er nog geen anker draait. */
 export function updateSessionKeepAliveMeta(meta: SessionKeepAliveMeta): void {
-  if (!anchor) return;
+  if (!anchor || !lockScreenInfoOn) return;
   try {
     anchor.setActiveForLockScreen(
       true,

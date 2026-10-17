@@ -22,6 +22,7 @@
    Na afloop: soft-paywall met "Continue with Premium" of "Not yet".
    ───────────────────────────────────────────────────────────────────────── */
 
+import { stopPhaseHaptic, vibrateCompat } from '@/services/breath-haptics';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import GuidanceSelector, {
@@ -191,7 +192,7 @@ export default function BreathSampleScreen() {
   const clearAll = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (phaseTimeoutRef.current) clearTimeout(phaseTimeoutRef.current);
-    Vibration.cancel();
+    stopPhaseHaptic();
     stopVoice();
   };
 
@@ -202,7 +203,7 @@ export default function BreathSampleScreen() {
     /* Bracelet-routing komt hier zodra BREATH_PATTERN_START in de
        firmware zit. */
     try {
-      Vibration.vibrate(ms);
+      vibrateCompat(ms);
     } catch {}
   };
 

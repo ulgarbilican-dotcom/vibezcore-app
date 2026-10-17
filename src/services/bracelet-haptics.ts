@@ -385,10 +385,14 @@ function scheduleVisual(
 const STYLE_LADDER = [S.Soft, S.Light, S.Medium, S.Heavy, S.Rigid];
 function strengthStyle(style: Haptics.ImpactFeedbackStyle): Haptics.ImpactFeedbackStyle {
   const st = getHapticStrength();
+  /* Operator, 17 okt 2026 ("de hardste is nog altijd wat zacht — zet hard op
+     max"): Strong = Apple's sterkste tik (Heavy) voor elke slag, in elke
+     toestand. Soft en Medium blijven zoals ze waren. */
+  if (st === 'strong') return S.Heavy;
   if (st === 'medium') return style;
   const i = STYLE_LADDER.indexOf(style);
   if (i < 0) return style;
-  return STYLE_LADDER[Math.max(0, Math.min(STYLE_LADDER.length - 1, i + (st === 'strong' ? 1 : -1)))];
+  return STYLE_LADDER[Math.max(0, Math.min(STYLE_LADDER.length - 1, i - 1))];
 }
 
 function fire(style: Haptics.ImpactFeedbackStyle): void {

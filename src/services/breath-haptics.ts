@@ -45,7 +45,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import type { PhaseKey } from '@/data/breath-states';
-import { Vibration } from 'react-native';
+import { Platform, Vibration } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { BREATH_AMP, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 import { canPlayNativeWaveform, playNativeWaveform } from '../../modules/state-haptics';
 
@@ -180,7 +181,101 @@ export function watchBreathAmplitude(): number {
   return WATCH_HAPTIC_LEVEL[getHapticStrength()];
 }
 
+/* ── iPhone (operator, 17 okt 2026: "bij breathwork voel ik enkel een tik
+   bij inhale, exhale of hold doet niets") ───────────────────────────────
+   Vibration.vibrate(patroon) speelt op iOS per stap een vaste systeemtril
+   van ~0,4 s en laat elke stap vallen die binnen die tijd komt — dus enkel
+   de eerste tik van inademen kwam aan, de korrel van uitademen en de tikken
+   van vasthouden niet. Hier dezelfde taal met Apple's eigen haptiek
+   (UIImpactFeedbackGenerator), op een JS-klok die per fase herstart:
+     inademen   dichte, gelijkmatige tikken (110 ms) = "doorlopend"
+     uitademen  grovere tikken (270 ms), een trede zachter = "wegstromen"
+     vasthouden één stevige tik per seconde
+   Sterkte: Soft = Light, Medium = Medium, Strong = Heavy (maximum). */
+const iosTimers: ReturnType<typeof setTimeout>[] = [];
+function clearIosTimers(): void {
+  iosTimers.forEach(clearTimeout);
+  iosTimers.length = 0;
+}
+const S = Haptics.ImpactFeedbackStyle;
+function iosStyles(): { flow: Haptics.ImpactFeedbackStyle; ripple: Haptics.ImpactFeedbackStyle; tick: Haptics.ImpactFeedbackStyle } {
+  const st = getHapticStrength();
+  if (st === 'soft') return { flow: S.Light, ripple: S.Soft, tick: S.Medium };
+  if (st === 'strong') return { flow: S.Heavy, ripple: S.Heavy, tick: S.Heavy };
+  return { flow: S.Medium, ripple: S.Light, tick: S.Heavy };
+}
+function playPhaseHapticIos(phase: PhaseKey, secs: number): void {
+  clearIosTimers();
+  const st = iosStyles();
+  const span = Math.max(400, Math.round(secs * 1000 * FILL));
+  const fire = (style: Haptics.ImpactFeedbackStyle) => {
+    Haptics.impactAsync(style).catch(() => {});
+  };
+  let step: number;
+  let style: Haptics.ImpactFeedbackStyle;
+  if (phase === 'inhale' || phase === 'inhale-2') {
+    step = 110;
+    style = st.flow;
+  } else if (phase === 'exhale' || phase === 'exhale-2') {
+    step = 270;
+    style = st.ripple;
+  } else {
+    step = 1000;
+    style = st.tick;
+  }
+  const count = phase.startsWith('inhale') || phase.startsWith('exhale') ? Math.max(1, Math.floor(span / step)) : Math.max(1, Math.round(secs));
+  for (let i = 0; i < count; i += 1) {
+    if (i === 0) fire(style);
+    else iosTimers.push(setTimeout(() => fire(style), i * step));
+  }
+}
+
+/** Vibration.vibrate(...) dat ook op de iPhone werkt (17 okt 2026): op
+ *  Android ongewijzigd; op iOS een tik bij de start van elk "aan"-stuk, en
+ *  langere stukken als dichte tikken (110 ms) zodat ze aanhouden. */
+export function vibrateCompat(pattern: number | number[]): void {
+  if (Platform.OS !== 'ios') {
+    try {
+      if (typeof pattern === 'number') Vibration.vibrate(pattern);
+      else Vibration.vibrate(pattern, false);
+    } catch {
+      /* stil */
+    }
+    return;
+  }
+  clearIosTimers();
+  const st = iosStyles();
+  const segs = typeof pattern === 'number' ? [0, pattern] : pattern;
+  let t = 0;
+  for (let i = 0; i < segs.length; i += 1) {
+    const d = segs[i];
+    if (i % 2 === 1) {
+      for (let x = 0; x < Math.max(1, Math.floor(d / 110)); x += 1) {
+        const at = t + x * 110;
+        const style = d >= 150 ? st.flow : st.tick;
+        if (at === 0) Haptics.impactAsync(style).catch(() => {});
+        else iosTimers.push(setTimeout(() => Haptics.impactAsync(style).catch(() => {}), at));
+      }
+    }
+    t += d;
+  }
+}
+
+/** Stopt elke lopende fase-haptiek (pauze, einde, verlaten). */
+export function stopPhaseHaptic(): void {
+  clearIosTimers();
+  try {
+    Vibration.cancel();
+  } catch {
+    /* stil */
+  }
+}
+
 export function playPhaseHaptic(phase: PhaseKey, secs: number): void {
+  if (Platform.OS === 'ios') {
+    playPhaseHapticIos(phase, secs);
+    return;
+  }
   try {
     /* Eerst STOPPEN, dan starten (operator, 5 augustus 2026: de haptiek moet
        het beeld en de stem exact volgen). Android vervangt een lopend patroon

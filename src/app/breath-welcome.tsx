@@ -31,6 +31,7 @@
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { vibrateCompat } from '@/services/breath-haptics';
 import BalancedText from '@/components/BalancedText';
 import GradientText, {
   SUB_COLORS,
@@ -602,7 +603,7 @@ export default function BreathWelcomeScreen() {
     );
   };
   const onBlockedTap = () => {
-    Vibration.vibrate(20);
+    vibrateCompat(20);
     shake(ctaShakeX);
     if (slide === 3 && experience !== null && !safetyAck) {
       shake(safetyShakeX);
@@ -1057,10 +1058,7 @@ export default function BreathWelcomeScreen() {
     const wantsVoice = m === 'voice' || m === 'both';
 
     if (wantsHaptic) {
-      Vibration.vibrate(
-        [0, 60, 90, 90, 90, 130, 90, 180, 90, 230, 90, 180, 90, 130],
-        false,
-      );
+      vibrateCompat([0, 60, 90, 90, 90, 130, 90, 180, 90, 230, 90, 180, 90, 130]);
     }
 
     /* De keuze wordt nu BEWAARD, niet alleen toegepast (3 augustus 2026).
@@ -1133,7 +1131,7 @@ export default function BreathWelcomeScreen() {
      Wat blijft is de trilling op AANRAKING hieronder. Die vraagt de bezoeker
      zelf, en dan is het een antwoord in plaats van een onderbreking. */
   const feelOrb = () => {
-    Vibration.vibrate(SIGNATURE_PULSE, false);
+    vibrateCompat(SIGNATURE_PULSE);
   };
 
   /* Operator, 11 september 2026: "Audio Library →" op de bracelet-stap was
