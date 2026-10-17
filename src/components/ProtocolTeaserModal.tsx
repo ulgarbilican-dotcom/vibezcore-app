@@ -9,6 +9,7 @@
    (PremiumPaywallModal) open. Twee stappen, geen verrassing.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Crown, RefreshCw, Sparkles, X } from 'lucide-react-native';
@@ -118,7 +119,7 @@ export default function ProtocolTeaserModal({
                geverifieerde telling: 15 technieken (5 states × 3 niveaus)
                × hun benoemde duur-varianten = 64, zie de toelichting bij
                "guided sessions" elders in de app/marketing-copy. */}
-            <Text style={s.rowTxt}>Full access to all 64 guided sessions</Text>
+            <Text style={s.rowTxt}>{`Full access to all ${BREATH_SESSION_COUNT} guided sessions`}</Text>
           </View>
 
           <AnimatedPressable

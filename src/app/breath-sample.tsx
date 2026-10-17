@@ -22,6 +22,7 @@
    Na afloop: soft-paywall met "Continue with Premium" of "Not yet".
    ───────────────────────────────────────────────────────────────────────── */
 
+import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import GuidanceSelector, {
   GUIDANCE_MODES,
@@ -38,7 +39,8 @@ import {
   stopVoice,
 } from '@/services/breath-voice';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+
 import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -441,8 +443,8 @@ export default function BreathSampleScreen() {
               {/* Operator, 1 okt 2026: "49" was fout — correct: 64 (15
                  technieken × hun benoemde duur-varianten). */}
               {isPro
-                ? 'That was a taste. All 64 guided sessions are already unlocked in your account.'
-                : 'That was a taste. Continue with VIBEZCORE Premium to unlock all 64 guided sessions and the complete audio library.'}
+                ? `That was a taste. All ${BREATH_SESSION_COUNT} guided sessions are already unlocked in your account.`
+                : `That was a taste. Continue with VIBEZCORE Premium to unlock all ${BREATH_SESSION_COUNT} guided sessions and the complete audio library.`}
             </Text>
 
             {isPro ? (

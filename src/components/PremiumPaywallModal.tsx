@@ -17,6 +17,7 @@
    Na de knop slaat /subscribe de plankeuze over (tier zit in de link).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
@@ -53,7 +54,7 @@ function benefitLines(context: PaywallContext): string[] {
     'Keeps running with your screen locked',
   ];
   const breathwork = [
-    'All 64 guided sessions — five states, every rhythm and duration',
+    `All ${BREATH_SESSION_COUNT} guided sessions — five states, every rhythm and duration`,
     'Voice, haptic and visual guidance',
     'Soundscapes, goals and your daily plan',
   ];

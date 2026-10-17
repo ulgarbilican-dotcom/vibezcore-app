@@ -949,3 +949,11 @@ export const nextPhase = (x: HasPhases, k: PhaseKey) => {
  *  Minstens één ronde, want een sessie van nul rondes is geen sessie. */
 export const roundsFor = (x: HasPhases, minutes: number) =>
   Math.max(1, Math.round((minutes * 60) / cycleSeconds(x)));
+
+/** Aantal begeleide ademsessies = elke techniek × zijn duurvarianten (17 okt
+ *  2026, operator: "doe 49"). Uitgerekend, zodat het getal in paywall en
+ *  bevestiging altijd klopt als er technieken of duren bijkomen. */
+export const BREATH_SESSION_COUNT = Object.values(BREATH_STATES).reduce(
+  (n, st) => n + st.techniques.reduce((m, t) => m + (t.durations ?? st.durations ?? []).length, 0),
+  0,
+);

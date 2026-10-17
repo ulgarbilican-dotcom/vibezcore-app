@@ -25,6 +25,7 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import { usePreventRemove } from '@react-navigation/native';
 import { requestScrollTo } from '@/utils/scroll-intent';
@@ -1194,7 +1195,7 @@ export default function SubscribeScreen() {
                duidelijke context (Premium-knop, Profile) geen audio-knop. */
             'Continue';
     const perkState = 'State Control: all five states, any duration';
-    const perkBreath = 'Breathwork: all 64 guided sessions';
+    const perkBreath = `Breathwork: all ${BREATH_SESSION_COUNT} guided sessions`;
     const perkAudio = `Audio Library: ${TOTAL_SESSION_COUNT} sessions across 4 pillars`;
     const donePerks = [
       ...(params.returnTo === 'breathwork'
