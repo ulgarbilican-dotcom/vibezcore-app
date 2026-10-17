@@ -120,7 +120,7 @@ export const TERMS: LegalDoc = {
     { kind: 'h2', text: 'Eligibility' },
     {
       kind: 'p',
-      text: 'By using the VIBEZCORE website or services, you confirm that you are at least 16 years old or meet the minimum age requirement under the laws applicable in your jurisdiction.',
+      text: 'By using the VIBEZCORE app, website or services, you confirm that you are at least 13 years old. If you are under 18, you may use VIBEZCORE only with the permission of a parent or legal guardian, who is responsible for your use and any purchases.',
     },
     {
       kind: 'p',
@@ -840,7 +840,7 @@ export const SHIPPING: LegalDoc = {
     /* Intro vóór sectie 01. */
     {
       kind: 'p',
-      text: 'This Shipping Policy applies to all physical product orders placed through the VIBEZCORE website. VIBEZCORE ships worldwide, subject to carrier availability and local regulations.',
+      text: 'The Smart Bead Bracelet launches on Kickstarter in Early 2027. Backer rewards follow the Kickstarter terms; this policy applies to orders placed with VIBEZCORE directly. This Shipping Policy applies to all physical product orders placed through the VIBEZCORE website. VIBEZCORE ships worldwide, subject to carrier availability and local regulations.',
     },
 
     /* ── 01. Order Processing ── */
@@ -917,7 +917,7 @@ export const SHIPPING: LegalDoc = {
     { kind: 'h3', text: 'Country-specific notes' },
     {
       kind: 'p',
-      text: '**United States:** Import duties typically apply to orders above $800 USD. Most VIBEZCORE orders fall below this threshold.',
+      text: '**United States:** Import duties and fees may apply to all US orders, regardless of value.',
     },
     {
       kind: 'p',
@@ -1495,7 +1495,7 @@ export const HEALTH: LegalDoc = {
     {
       kind: 'ul',
       items: [
-        'The bracelet is **splash-resistant**, not waterproof — do not submerge, swim, shower, or bathe with it on',
+        'Water resistance will be confirmed before launch — until then, do not submerge, swim, shower, or bathe with it on',
         'Remove before sauna, steam rooms, or high-humidity environments',
         'Avoid contact with chemicals, perfumes, lotions, or cosmetics on the wrist area',
         'Keep away from strong magnetic fields',
@@ -1510,7 +1510,7 @@ export const HEALTH: LegalDoc = {
     { kind: 'h2', text: '6. Children & Teenagers' },
     {
       kind: 'p',
-      text: 'The VIBEZCORE app and the Smart Bead Bracelet are designed and intended for **adults aged 18 and over**. Some audio content discusses topics such as identity, betrayal, discipline, and resilience that may not be appropriate for younger audiences. The bracelet is not designed or sized for children\'s wrists and contains small parts that pose a choking hazard (see section 6.3). Parents and guardians are responsible for deciding what is suitable for minors in their care.',
+      text: 'The VIBEZCORE app can be used from **age 13**; users under 18 should use it with the permission and guidance of a parent or guardian. Breathwork and State Control are gentle and suitable for teenagers, for example to calm down when stressed. Some audio content discusses topics such as identity, betrayal, discipline, and resilience that may not be appropriate for younger audiences. The bracelet is not designed or sized for children\'s wrists and contains small parts that pose a choking hazard (see section 6.3). Parents and guardians are responsible for deciding what is suitable for minors in their care.',
     },
     { kind: 'h2', text: '7. Professional Help' },
     {

@@ -296,7 +296,7 @@ export default function AboutScreen() {
           for everyone who refuses to live on autopilot.
         </P>
         <BalancedText style={s.smallNote}>
-          The platform is intended for users aged 18 and older.
+          VIBEZCORE is for ages 13 and up; under 18 with a parent or guardian's permission.
         </BalancedText>
 
         {/* ── Closing — Mission ── */}
