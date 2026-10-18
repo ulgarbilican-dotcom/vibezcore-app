@@ -864,12 +864,17 @@ export async function deleteAccount(): Promise<{ ok: true } | { ok: false; error
 export async function loginWithApple(
   idToken: string,
   nonce?: string,
+  /** Eenmalige code van Apple: de backend ruilt hem in zodat hij het
+   *  Apple-token kan intrekken als het account verwijderd wordt (App Review
+   *  5.1.1(v), 18 okt 2026). */
+  authorizationCode?: string | null,
 ): Promise<AuthResult> {
   if (!idToken) return { ok: false, error: 'Missing Apple identity token' };
   try {
     const { ok, data } = await postToAuthProxy('apple', {
       id_token: idToken,
       ...(nonce ? { nonce } : {}),
+      ...(authorizationCode ? { authorization_code: authorizationCode } : {}),
     });
     if (!ok || !data.access_token) {
       const msg =

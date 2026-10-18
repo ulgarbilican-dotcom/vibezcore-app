@@ -249,7 +249,7 @@ export async function signInWithApple(): Promise<SocialAuthResult> {
         error: 'Apple did not return an identity token. Please try again.',
       };
     }
-    const auth = await loginWithApple(idToken);
+    const auth = await loginWithApple(idToken, undefined, credential.authorizationCode);
     if (!auth.ok) {
       return {
         ok: false,
