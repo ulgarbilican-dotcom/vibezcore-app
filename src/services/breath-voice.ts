@@ -33,7 +33,12 @@ import { getSetting } from '@/utils/settings';
 /* v3 (zelfde dag, operator: "ik hoor geruis"): eerst ruis eruit (hoogdoorlaat
    80 Hz, ruisonderdrukking, zachte poort in de stiltes), dan pas versterken —
    stilte na de woorden nu < −80 dB i.p.v. −47…−57 dB in v2. */
-const CDN_BASE = 'https://vibezcore-audio.b-cdn.net/Breathwork%20audio%20v3';
+/* v4 (18 okt 2026, operator: "stem klinkt als een oude radiostem"): de
+   ruisonderdrukking van v3 maakte de stem dun. Nu GEEN ruisfilter: enkel
+   < 60 Hz weg en een poort die pas ver onder het stemniveau dichtgaat (zachte
+   in-/uitloop), dan dezelfde versterking naar ~−14 LUFS. Stem onaangeroerd,
+   stiltes even stil als in v3. */
+const CDN_BASE = 'https://vibezcore-audio.b-cdn.net/Breathwork%20audio%20v4';
 
 /** Breath-cue URLs. Generieke files zeggen 'through your X' (oudere ElevenLabs
  *  takes); Boost-specifieke files zeggen verkort 'through X' (zonder 'your')
