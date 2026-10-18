@@ -245,43 +245,6 @@ export const SESSIONS: Session[] = [
   { title:'From Goal To Mission', series:'Purpose & Mission', subseries:'', free:false, desc:'Goals end. Missions continue.', num:'05', url:'https://vibezcore-audio.b-cdn.net/audio-new/2.%20Purpose%20%26%20Mission%2005.%20From%20Goal%20To%20Mission.mp3', added:'2026-06-13', accessTier:'pro' },
 ];
 
-export const SERIES_PHOTO: Record<string,string> = {
-  'Master Mental Clarity': 'https://vibezcore-audio.b-cdn.net/images/confident-man-with-beard-mustache-smiling-generated-by-ai.jpg',
-  'Beast Mode': 'https://vibezcore-audio.b-cdn.net/images/beast-mode.jpg',
-  'The Inner Blueprint': 'https://vibezcore-audio.b-cdn.net/images/the-inner-blueprint.jpg',
-  'Daily Affirmations Power': 'https://vibezcore-audio.b-cdn.net/images/daily-affirmations-power.jpg',
-  'Meaning Over Comfort': 'https://vibezcore-audio.b-cdn.net/images/meaning-over-comfort.jpg',
-  'Journey to Success': 'https://vibezcore-audio.b-cdn.net/images/journey-to-success.jpg',
-  'Life After Betrayal': 'https://vibezcore-audio.b-cdn.net/images/life-after-betrayal.jpg',
-  'Identity & Wealth': 'https://vibezcore-audio.b-cdn.net/images/identity-and-wealth.jpg',
-  'The Freedom Formula': 'https://vibezcore-audio.b-cdn.net/images/the-freedom-formula.jpg',
-  'The Stoic Mind': 'https://vibezcore-audio.b-cdn.net/images/the-stoic-fortress.jpg',
-  'Fight Or Flight': 'https://vibezcore-audio.b-cdn.net/images/end-fight-or-flight.jpg',
-  'Soundscapes': 'https://vibezcore-audio.b-cdn.net/images/theta-and-alpha-frequency.jpg',
-  /* iter 9dq v137 (operator 2026-06-15): 13 nieuwe series-photos (Bunny CDN)
-     aangeleverd door operator. Gegroepeerd per pijler voor leesbaarheid.
-     Iron Discipline toegevoegd in v144 (2026-06-15).
-     ⚠ Purpose & Mission URL bevat operator-typo "puprose" (filename op CDN)
-     — bewust niet gecorrigeerd, anders 404. */
-  /* — Pillar: Psychological Resilience — */
-  'The Father Wound':          'https://vibezcore-audio.b-cdn.net/images/father%20wound.jpg',
-  'The Mother Wound':          'https://vibezcore-audio.b-cdn.net/images/mother%20wound.jpg',
-  /* — Pillar: Inner Sovereignty — */
-  'Time, Death & Legacy':      'https://vibezcore-audio.b-cdn.net/images/time%20en%20death.jpg',
-  'Become Who You Are':        'https://vibezcore-audio.b-cdn.net/images/become%20who%20you%20are.jpg',
-  'Meaning Through Suffering': 'https://vibezcore-audio.b-cdn.net/images/meaning%20through%20suffering.jpg',
-  'The Way Of Wu Wei':         'https://vibezcore-audio.b-cdn.net/images/wu%20wei.jpg',
-  /* — Pillar: Social Mastery — */
-  'Power & Human Nature':      'https://vibezcore-audio.b-cdn.net/images/machiavelli.jpg',
-  'Attachment':                'https://vibezcore-audio.b-cdn.net/images/attachment.jpg',
-  'Dignity':                   'https://vibezcore-audio.b-cdn.net/images/Dignity.jpg',
-  'Daily Discipline':          'https://vibezcore-audio.b-cdn.net/images/Jim%20Rohn.png',
-  /* — Pillar: Strategic Execution & Wealth — */
-  'Wealth Psychology':         'https://vibezcore-audio.b-cdn.net/images/wealth%20psychology.jpg',
-  'Discipline':           'https://vibezcore-audio.b-cdn.net/images/Iron%20Discipline%20new.jpg',
-  'Purpose & Mission':         'https://vibezcore-audio.b-cdn.net/images/puprose%20and%20mission.jpg',
-};
-
 /* iter 9dq v137 (operator 2026-06-15): focal-point shift per serie voor
    library-cards (libCard 200px hoog). React Native heeft geen object-
    position prop, dus we gebruiken transform [scale + translateY] in
@@ -418,6 +381,16 @@ export const SERIES_PILLAR: Record<string, Pillar> = {
   'Daily Affirmations Power': 'tools',
   'Soundscapes':              'tools',
 };
+
+/* Foto per reeks = de foto van zijn pijler. De oude losse reeks-foto's
+   zijn volledig verwijderd (operator, 18 okt 2026: "dat mag op geen enkele
+   manier terugkomen") — speler, mini-player, lockscreen, zoeken,
+   geschiedenis en welkom-terug-popup lezen allemaal deze ene bron. */
+export const SERIES_PHOTO: Record<string, string> = Object.fromEntries(
+  Object.entries(SERIES_PILLAR)
+    .map(([series, pillar]) => [series, PILLAR_META[pillar]?.img])
+    .filter((e): e is [string, string] => !!e[1])
+);
 
 /* Volgorde van series binnen elke pijler. Gecureerd, niet alfabetisch. */
 /* Volgorde EXACT zoals op vibezcore.com audio-library widget (2026-06-14). */

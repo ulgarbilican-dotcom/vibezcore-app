@@ -450,10 +450,8 @@ const s = StyleSheet.create({
   pillarWrap: {
     borderRadius: 999,
     overflow: 'hidden',
-    /* Rand op de buitenste vorm, niet op de BlurView: op Android tekende
-       die enkel boven- en onderlijn, de ronde zijkanten vielen weg. */
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
+    /* Geen rand meer (operator, 18 okt 2026: "de omlijning van de 3
+       pillen weg") — het matglas tekent de capsule zelf. */
   },
   pillarPressed: { opacity: 0.7 },
   pillarBlur: {

@@ -55,9 +55,18 @@
 
 import { getCachedSubscription } from '@/hooks/useSubscription';
 import {
+  PILLAR_META,
   SERIES_PHOTO,
+  SERIES_PILLAR,
   SERIES_SUBTITLE,
 } from '@/data/audio-library-data';
+
+/* Lockscreen-foto = dezelfde pijler-foto als de speler en mini-player
+   (operator, 18 okt 2026: "bij lockscreen zie ik oude foute foto's").
+   De oude reeks-foto (SERIES_PHOTO) blijft enkel de terugval. */
+function lockArtwork(series: string): string | undefined {
+  return PILLAR_META[SERIES_PILLAR[series]]?.img ?? SERIES_PHOTO[series];
+}
 import { getSignedAudioUrl, SignedUrlError } from '@/utils/audio-url';
 import { getDevUserOverride } from '@/utils/dev-user-override';
 import {
@@ -394,7 +403,7 @@ function onStatus(st: AudioStatus): void {
         title: s.title,
         artist: SERIES_SUBTITLE[s.series] ?? s.series,
         albumTitle: s.series,
-        artworkUrl: SERIES_PHOTO[s.series],
+        artworkUrl: lockArtwork(s.series),
       });
     } catch {
       /* swallow — niet kritiek, alleen visueel op de OS-UI */
@@ -618,7 +627,7 @@ function activateLockScreen(session: SessionInfo): void {
      Optimizer ($9.5/mo) maar handmatig 1024×1024 source-jpgs uploaden
      in Bunny Storage. Geen runtime transform nodig dan, source is al
      groot genoeg voor lockscreen-widget. */
-  const artworkUrl = SERIES_PHOTO[session.series];
+  const artworkUrl = lockArtwork(session.series);
   const artist = SERIES_SUBTITLE[session.series] ?? session.series;
   try {
     player.setActiveForLockScreen(true, {
