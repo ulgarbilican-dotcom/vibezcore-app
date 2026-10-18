@@ -53,14 +53,6 @@ export type LiveSession = {
 
 let last: (LiveSession & { endMs: number }) | null = null;
 
-/* Eén wachtrij voor alle native aanroepen (iPhone-nakijkronde 18 okt 2026):
-   show/end zijn losse async-taken in Swift zonder vaste volgorde — een
-   end() vlak vóór een show() (preview stopt, sessie start) kon de nieuwe
-   activity alsnog afsluiten. Nu wacht elke aanroep op de vorige. */
-let queue: Promise<unknown> = Promise.resolve();
-function enqueue(task: () => Promise<unknown>): void {
-  queue = queue.then(task, task).catch(() => {});
-}
 
 /** Start of werk de Live Activity bij. */
 export function showLiveSession(s: LiveSession): void {
@@ -68,9 +60,7 @@ export function showLiveSession(s: LiveSession): void {
   const remaining = Math.max(0, Math.round(s.remainingSec));
   const endMs = Date.now() + remaining * 1000;
   last = { ...s, remainingSec: remaining, endMs };
-  const n = native;
-  const rec = { ...s, remainingSec: remaining, endMs };
-  enqueue(() => n.show(rec));
+  native.show({ ...s, remainingSec: remaining, endMs }).catch(() => {});
 }
 
 /** Pauze: de resterende tijd bevriezen op wat de activity nu toont. */
@@ -89,8 +79,7 @@ export function resumeLiveSession(): void {
 export function endLiveSession(): void {
   last = null;
   if (!native) return;
-  const n = native;
-  enqueue(() => n.end());
+  native.end().catch(() => {});
 }
 
 /* ── De pauze/hervat-knop op het vergrendelscherm (iOS 17+) ──

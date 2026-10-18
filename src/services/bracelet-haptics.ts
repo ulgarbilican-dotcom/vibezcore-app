@@ -445,6 +445,11 @@ function fire(style: Haptics.ImpactFeedbackStyle): void {
    Android zonder dienst) de JS-weg: wachten tot het moment en dan tik,
    geluid en beeld. */
 const BEAT_AHEAD_MS = 250;
+/** De klank begint 10–14 ms ná de start van het bestand (piek 14–23 ms) en de
+ *  luidspreker heeft nog uitvoervertraging; de tik is meteen voelbaar. Het
+ *  geluid start daarom zoveel vóór de tik, zodat beide samenvallen (gemeten
+ *  op de bestanden, 18 okt 2026). */
+const SOUND_LEAD_MS = 25;
 
 /** Apple-tikstijl → Core Haptics-tik (sterkte, scherpte). Heavy = volle kracht. */
 function tapFor(style: Haptics.ImpactFeedbackStyle): { intensity: number; sharpness: number } {
@@ -489,9 +494,12 @@ function scheduleBeat(
     const volume = hp ? HEARTBEAT_VOLUME.headphones : HEARTBEAT_VOLUME.speaker;
     const lub = tapFor(strengthStyle(spec.lubStyle));
     const dub = tapFor(strengthStyle(spec.dubStyle));
-    scheduleEngineBeat(at, [
-      { t: 0, ...lub, sound: withSound ? (hp ? 'headphonesLub' : 'speakerLub') : '', volume },
-      { t: dubAt, ...dub, sound: withSound ? (hp ? 'headphonesDub' : 'speakerDub') : '', volume },
+    const L = SOUND_LEAD_MS;
+    scheduleEngineBeat(at - L, [
+      { t: 0, intensity: 0, sharpness: 0, sound: withSound ? (hp ? 'headphonesLub' : 'speakerLub') : '', volume },
+      { t: L, ...lub, sound: '', volume },
+      { t: dubAt, intensity: 0, sharpness: 0, sound: withSound ? (hp ? 'headphonesDub' : 'speakerDub') : '', volume },
+      { t: dubAt + L, ...dub, sound: '', volume },
     ]);
     /* Cirkel en drukgolf wachten op exact dit moment. */
     emitPulse({ kind: 'lub', mode, cycleMs, atMs: at, ahead: true });
@@ -1041,6 +1049,12 @@ function endIosPreviewSurface(): void {
  *  ontving de voorproef pas ~20 s na de telefoon). Hoogstens om de 15 s,
  *  enkel als het horloge mee mag trillen. */
 let lastWakeAt = 0;
+/** iPhone: de BeatEngine al opwarmen als State Control opent, zodat ook de
+ *  eerste slagen van een sessie via de strakke weg lopen. */
+export function warmUpBeatEngine(): void {
+  if (Platform.OS === 'ios') void prepareBeatEngine();
+}
+
 export function wakeWatchForStateControl(): void {
   if (!getSetting('watchHaptics')) return;
   const now = Date.now();

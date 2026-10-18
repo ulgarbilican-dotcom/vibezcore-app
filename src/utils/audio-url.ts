@@ -32,7 +32,6 @@
      anders → SIGN_FAILED
    ─────────────────────────────────────────────────────────────────────── */
 
-import { playbackAudioUrl } from '@/data/audio-remaster';
 import { apiCall, ApiError } from './api';
 
 const ENDPOINT_PATH = '/api/audio-url';
@@ -107,7 +106,7 @@ export async function getSignedAudioUrl(
      - PRO gating werkt NU NIET — elke user kan alle content afspelen
      ════════════════════════════════════════════════════════════════════════ */
   if (/^https?:\/\/vibezcore-audio\.b-cdn\.net\//.test(rawUrl)) {
-    return playbackAudioUrl(rawUrl);
+    return rawUrl;
   }
 
   /* Cache-lookup: hit en nog geldig (met safety margin) → return direct,

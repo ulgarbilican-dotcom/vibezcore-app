@@ -52,6 +52,7 @@ import {
   isWatchPlayingRhythm,
   setWatchHapticsEnabled,
   wakeWatchForStateControl,
+  warmUpBeatEngine,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
@@ -4028,6 +4029,7 @@ function IdleScreen({
   useFocusEffect(
     useCallback(() => {
       wakeWatchForStateControl();
+      warmUpBeatEngine();
     }, []),
   );
   useEffect(() => {

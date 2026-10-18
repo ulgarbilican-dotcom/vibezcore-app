@@ -23,8 +23,35 @@ import {
   setAudioModeAsync,
   type AudioPlayer,
 } from 'expo-audio';
+import { AppState, Platform } from 'react-native';
 
 let anchor: AudioPlayer | null = null;
+
+/** iPhone: achtergrond-audio afdwingen (zie startSessionKeepAlive). */
+function forceBackgroundAudioMode(): void {
+  void setAudioModeAsync({
+    playsInSilentMode: true,
+    shouldPlayInBackground: true,
+    interruptionMode: 'mixWithOthers',
+  })
+    .then(() => {
+      modeSet = true;
+    })
+    .catch(() => {});
+}
+
+/** Loopt er een sessie die de app levend moet houden? */
+export function isKeepAliveActive(): boolean {
+  return owners.size > 0;
+}
+
+/* iPhone: vlak vóór het vergrendelen ('inactive' komt vóór 'background')
+   nog eens de achtergrondmodus zetten zolang een sessie loopt. */
+if (Platform.OS === 'ios') {
+  AppState.addEventListener('change', (next) => {
+    if (next !== 'active' && owners.size > 0) forceBackgroundAudioMode();
+  });
+}
 /* Wie heeft het anker nodig? (iPhone-nakijkronde 18 okt 2026) Eén gedeeld
    anker voor Breathwork, State Control en de proefsessie; zonder eigenaars
    stopte bv. het openen van het State Control-scherm het anker van een
@@ -136,6 +163,13 @@ export function startSessionKeepAlive(
   owner: KeepAliveOwner = 'breath',
 ): void {
   owners.add(owner);
+  /* iPhone (operator, build 25: "bij lockscreen niets — zie, hoor of voel
+     niets"): expo-audio pauzeert bij naar-de-achtergrond ALLE spelers als de
+     LAATST gezette modus geen achtergrond toelaat — het anker, de stem, de
+     hartslag — en iOS legt de app dan stil. De modus kon intussen door een
+     ander scherm (hartslagpagina) overschreven zijn terwijl `modeSet` nog
+     true zei. Daarom op iOS bij ELKE sessiestart opnieuw, zonder cache. */
+  if (Platform.OS === 'ios') forceBackgroundAudioMode();
   if (anchor) return;
   void (async () => {
     try {

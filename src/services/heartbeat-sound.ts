@@ -37,7 +37,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 import { Platform } from 'react-native';
 import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
-import { invalidateAudioModeSet } from './session-keepalive';
+import { invalidateAudioModeSet, isKeepAliveActive } from './session-keepalive';
 import { isHeadphonesOutput } from '../../modules/audio-route';
 
 const VOLUME_SPEAKER = 1; // operator, 9 okt 2026: "op de telefoon mag het luider"
@@ -174,7 +174,9 @@ export function startHeartbeatSound(owner: HeartbeatOwner): void {
      iOS bevroor de app. Voor een sessie dus playback + achtergrond, nog
      altijd mengend met muziek van de gebruiker. Hartslagpagina en meting
      blijven zoals ze waren. */
-  const sessionOnIos = owner === 'state-control' && Platform.OS === 'ios';
+  /* Ook nooit de achtergrond uitzetten zolang er een sessie loopt (bv. de
+     hartslagpagina openen tijdens een geminimaliseerde ademsessie). */
+  const sessionOnIos = Platform.OS === 'ios' && (owner === 'state-control' || isKeepAliveActive());
   void setAudioModeAsync({
     playsInSilentMode: sessionOnIos,
     shouldPlayInBackground: sessionOnIos,
