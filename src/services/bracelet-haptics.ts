@@ -401,28 +401,48 @@ function fire(style: Haptics.ImpactFeedbackStyle): void {
   });
 }
 
+/* iPhone-ritme (operator, 18 okt 2026: "bij Boost is de ring rond de cirkel
+   niet altijd correct"): elke slag werd gepland als "cycleMs na de vorige" —
+   elke late timer (bv. terwijl het scherm de aftelling hertekent) schoof dan
+   ALLE volgende slagen mee op; bij Boost (±545 ms per slag) voel en zie je
+   dat als een hink. Nu, zoals de Android-dienst en het horloge: elke slag
+   op zijn vaste plek op de klok (vorige geplande slag + cycleMs), dus een
+   late timer verschuift enkel die ene slag, niets stapelt op. Na een lange
+   pauze van JS (scherm op slot) springen we stil naar de slag van nu. */
 function scheduleBeat(
   mode: BraceletMode,
   spec: ResolvedSpec,
   curveStartedAt: number,
   timing: Timing,
   myGeneration: number,
+  plannedAt?: number,
 ): void {
   if (myGeneration !== generation) return;
   pendingTimeouts.length = 0;
-  const { cycleMs, dubAt } = beatAt(spec, (Date.now() - curveStartedAt) / 1000, timing);
+  const now = Date.now();
+  let at = plannedAt ?? now;
+  let { cycleMs, dubAt } = beatAt(spec, (at - curveStartedAt) / 1000, timing);
+  while (now - at > cycleMs) {
+    at += cycleMs;
+    ({ cycleMs, dubAt } = beatAt(spec, (at - curveStartedAt) / 1000, timing));
+  }
   fire(spec.lubStyle);
   if (jsSoundOn && getStateHear()) heartbeatLub();
+  /* Beeld op het moment dat de tik echt viel. */
   const lubAt = Date.now();
   emitPulse({ kind: 'lub', mode, cycleMs, atMs: lubAt });
+  const nextAt = at + cycleMs;
   pendingTimeouts.push(
     setTimeout(() => {
       if (myGeneration !== generation) return;
       fire(spec.dubStyle);
       if (jsSoundOn && getStateHear()) heartbeatDub();
-      emitPulse({ kind: 'dub', mode, cycleMs, atMs: lubAt + dubAt });
-    }, dubAt),
-    setTimeout(() => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration), cycleMs),
+      emitPulse({ kind: 'dub', mode, cycleMs, atMs: Date.now() });
+    }, Math.max(0, at + dubAt - Date.now())),
+    setTimeout(
+      () => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration, nextAt),
+      Math.max(0, nextAt - Date.now()),
+    ),
   );
 }
 

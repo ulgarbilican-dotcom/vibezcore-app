@@ -4063,7 +4063,9 @@ function IdleScreen({
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
-        title="State Control"
+        /* Tijdens de 30 s-preview de toestand bovenaan, zoals een lopende
+           Premium-sessie ("● Boost") — operator, 18 okt 2026. */
+        title={trialRunning ? meta.name : 'State Control'}
         /* In de State Control-tab: terug naar het intro (zelfde als de
            chevron/terugknop elders, 5 okt 2026). `onDisconnect` liet de tab
            anders op "Connecting…" hangen (stil verbinden gebeurt één keer). */
