@@ -84,6 +84,17 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     route(userInfo)
   }
 
+  /* Catalogus als bestand (18 okt 2026): te groot voor een bericht. Het
+     bestand verdwijnt na deze functie — dus hier meteen lezen. */
+  func session(_ session: WCSession, didReceive file: WCSessionFile) {
+    guard (file.metadata?["type"] as? String) == "catalog",
+      let json = try? String(contentsOf: file.fileURL, encoding: .utf8)
+    else { return }
+    DispatchQueue.main.async {
+      WatchCatalog.shared.load(json)
+    }
+  }
+
   private func route(_ message: [String: Any]) {
     DispatchQueue.main.async {
       let type = message["type"] as? String ?? "start"

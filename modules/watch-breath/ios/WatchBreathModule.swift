@@ -137,16 +137,22 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     guard session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
     if !force && json == sentCatalog { return }
     sentCatalog = json
+    /* 18 okt 2026 (operator: "werkt niet"): de catalogus is groter dan wat
+       WatchConnectivity per bericht toelaat (±64 KB) en werd stil geweigerd.
+       Nu als BESTAND (geen grootte-limiet, ook op de achtergrond afgeleverd),
+       en enkel als hij klein genoeg is ook live als bericht. */
     for transfer in session.outstandingUserInfoTransfers {
       if (transfer.userInfo["type"] as? String) == "catalog" { transfer.cancel() }
     }
-    let message: [String: Any] = ["type": "catalog", "json": json]
-    if session.isReachable {
-      session.sendMessage(message, replyHandler: nil) { _ in
-        session.transferUserInfo(message)
-      }
-    } else {
-      session.transferUserInfo(message)
+    for transfer in session.outstandingFileTransfers {
+      if (transfer.file.metadata?["type"] as? String) == "catalog" { transfer.cancel() }
+    }
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("vz-catalog-\(Int(Date().timeIntervalSince1970 * 1000)).json")
+    if (try? json.write(to: url, atomically: true, encoding: .utf8)) != nil {
+      session.transferFile(url, metadata: ["type": "catalog"])
+    }
+    if session.isReachable, json.utf8.count < 50_000 {
+      session.sendMessage(["type": "catalog", "json": json], replyHandler: nil, errorHandler: nil)
     }
   }
 
