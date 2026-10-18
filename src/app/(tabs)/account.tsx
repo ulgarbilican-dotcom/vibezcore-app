@@ -138,7 +138,8 @@ import {
    Single source of truth binnen dit bestand — bij wijziging hoeven we
    maar 1 plek aan te passen. KS-launch: Fall 2026 (operator 2026-07-14
    — sep-datum weg, geen concrete datum meer). */
-const APP_LINK_URL = 'https://www.vibezcore.com/app';
+/* Operator, 18 okt 2026: naar de website zelf. */
+const APP_LINK_URL = 'https://www.vibezcore.com/';
 /* Breathwork voorop, bracelet als "komt eraan", audio library als
    inbegrepen extra (operator, 11 augustus 2026: bracelet is het
    toekomstige hoofdproduct — uniek, maar nog niet beschikbaar; breathwork
@@ -148,10 +149,12 @@ const APP_LINK_URL = 'https://www.vibezcore.com/app';
    klopte nog steeds (geen aparte titel), maar één regel "inclusief"
    ontbrak. Toestand-taal, geen claims; de gratis kennismakingssessie is
    wat een genodigde werkelijk krijgt. */
+/* Operator, 18 okt 2026 (eigen tekst, "is dit beter voor invite a friend?"). */
 const BRAND_PITCH =
-  'Control Your Body. Direct Your Mind. Become The Architect Of Your Life.\n\n' +
-  'VIBEZCORE combines State Control — a heartbeat rhythm on your phone or smartwatch — guided breathwork and a premium Audio Library, with the Smart Bead Bracelet launching Early 2027, to help you feel calmer, think clearer, perform better and grow with intention.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\nStart free:\n${APP_LINK_URL}`;
+  'Control Your Body. Direct Your Mind. Become the Architect of Your Life.\n\n' +
+  'VIBEZCORE combines research-based haptic patterns, guided breathwork and a premium Audio Library to help you build focus, regulate your state and grow with intention.\n\n' +
+  'Explore VIBEZCORE and start for free. The Smart Bead Bracelet launches in Early 2027.';
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\n${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {

@@ -377,7 +377,7 @@ export default function PlayerScreen() {
      (science/philosophy/psychology + bracelet) + Play Store install. */
   const onShare = async () => {
     if (!session) return;
-    const url = 'https://www.vibezcore.com/app';
+    const url = 'https://www.vibezcore.com/';
     const pitch =
       "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
       'Launching Early 2027 — Smart Bead Bracelet for instant state control.';
