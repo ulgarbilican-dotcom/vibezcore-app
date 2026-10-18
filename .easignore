@@ -1,3 +1,9 @@
+# 19 okt 2026: ALLE mappen hieronder met een leidende / = enkel in de
+# projectroot. Zonder / ("ios/", "android/") sloot dit sinds 4 okt ook
+# modules/*/ios en modules/*/android uit: geen enkele eigen native module
+# (Apple Watch-koppeling, Live Activity, BeatEngine, trildienst, Wear) zat in
+# de EAS-builds. NOOIT een map-regel zonder / toevoegen voor ios/android.
+
 # EAS Build archive-uitsluitingen. Valt normaal terug op .gitignore, maar
 # LOSSE (niet-getrackte) bestanden/mappen in de projectroot tellen daar niet
 # in mee — die glippen er dus doorheen tenzij ze hier ook expliciet staan.
@@ -6,25 +12,25 @@
 # ~360MB, nooit gecommit) het build-archief op tot 709MB, wat de upload
 # enorm vertraagde.
 
-node_modules/
-.expo/
-.git/
-.claude/
-.build-logs/
-android/
-ios/
-docs/
-screenshots/
-scratchpad/
+/node_modules/
+/.expo/
+/.git/
+/.claude/
+/.build-logs/
+/android/
+/ios/
+/docs/
+/screenshots/
+/scratchpad/
 *.tsbuildinfo
 
 # Losse werkmappen die hier niet thuishoren, mochten ze terugkomen.
-frames/
-frames2/
-frames3/
-framesF/
-framesG/
-scratch/
+/frames/
+/frames2/
+/frames3/
+/framesF/
+/framesG/
+/scratch/
 
 # Nooit mee in het build-archief (18 okt 2026): .easignore VERVANGT
 # .gitignore, dus alles wat daar staat moet hier ook staan.
@@ -39,5 +45,5 @@ wear-app/keystore.properties
 wear-app/build/
 wear-app/.gradle/
 modules/*/android/build/
-scratchpad/
+/scratchpad/
 FONT_AUDIT_voor_google_docs.txt
