@@ -138,6 +138,18 @@ export function DurationWheel({
     options.findIndex((o) => o.value === value),
   );
   const scrollY = useSharedValue(settledIndex * DURATION_WHEEL_ITEM_H);
+  /* Startpositie één keer vastleggen (iPhone-nakijkronde 18 okt 2026): iOS
+     past de `contentOffset`-prop bij ELKE wijziging opnieuw toe — na elke
+     keuze sprong het wiel dan terug of blokkeerde het tijdens het scrollen.
+     Android leest hem enkel bij het monteren; zo werkt het nu overal. */
+  const initialOffset = useRef({ x: 0, y: settledIndex * DURATION_WHEEL_ITEM_H }).current;
+  /* Traag loslaten zonder vaart: iOS stuurt dan geen momentum-einde, dus de
+     keuze werd nooit vastgelegd. Na het loslaten even wachten; komt er geen
+     uitloop, dan zelf vastleggen. */
+  const dragEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (dragEndTimer.current) clearTimeout(dragEndTimer.current);
+  }, []);
 
   useEffect(() => {
     listRef.current?.scrollTo({ y: settledIndex * DURATION_WHEEL_ITEM_H, animated: false });
@@ -233,7 +245,7 @@ export function DurationWheel({
            scrollTo bij het monteren kwam op Android soms vóór de layout en
            werd genegeerd. Startpositie meegeven. (Een extra scrollTo in
            onLayout zette het wiel tijdens het draaien steeds terug — weg.) */
-        contentOffset={{ x: 0, y: settledIndex * DURATION_WHEEL_ITEM_H }}
+        contentOffset={initialOffset}
         showsVerticalScrollIndicator={false}
         snapToInterval={DURATION_WHEEL_ITEM_H}
         /* "normal" (15 okt 2026): met "fast" stopte een harde veeg na een
@@ -242,6 +254,19 @@ export function DurationWheel({
         contentContainerStyle={{ paddingVertical: DURATION_WHEEL_ITEM_H }}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        onScrollEndDrag={(e) => {
+          const y = e.nativeEvent.contentOffset.y;
+          if (dragEndTimer.current) clearTimeout(dragEndTimer.current);
+          dragEndTimer.current = setTimeout(() => {
+            dragEndTimer.current = null;
+            userScrolling.value = false;
+            commit(y);
+          }, 150);
+        }}
+        onMomentumScrollBegin={() => {
+          if (dragEndTimer.current) clearTimeout(dragEndTimer.current);
+          dragEndTimer.current = null;
+        }}
         onMomentumScrollEnd={(e) => commit(e.nativeEvent.contentOffset.y)}
       >
         {options.map((o, i) => (

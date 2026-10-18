@@ -647,6 +647,13 @@ function TimeWheel({
      BUITEN" (digitale invoer/AM-PM-knoppen — die moeten wél syncen). */
   const internalChange = useRef(false);
   const skipFirstValueSync = useRef(true);
+  /* Traag loslaten zonder vaart (iPhone, 18 okt 2026): geen momentum-einde,
+     dus geen commit — pas vastleggen als er na het loslaten geen uitloop
+     start (NIET meteen bij loslaten: dat doodde op Android de uitloop). */
+  const dragEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (dragEndTimer.current) clearTimeout(dragEndTimer.current);
+  }, []);
   useEffect(() => {
     if (skipFirstValueSync.current) {
       skipFirstValueSync.current = false;
@@ -696,6 +703,18 @@ function TimeWheel({
         snapToInterval={WHEEL_ITEM_H}
         decelerationRate="fast"
         contentContainerStyle={{ paddingVertical: WHEEL_ITEM_H }}
+        onScrollEndDrag={(e) => {
+          const y = e.nativeEvent.contentOffset.y;
+          if (dragEndTimer.current) clearTimeout(dragEndTimer.current);
+          dragEndTimer.current = setTimeout(() => {
+            dragEndTimer.current = null;
+            commit(y);
+          }, 150);
+        }}
+        onMomentumScrollBegin={() => {
+          if (dragEndTimer.current) clearTimeout(dragEndTimer.current);
+          dragEndTimer.current = null;
+        }}
         onMomentumScrollEnd={(e) => commit(e.nativeEvent.contentOffset.y)}
       >
         {options.map((mins) => {
