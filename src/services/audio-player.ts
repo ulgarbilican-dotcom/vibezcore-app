@@ -64,6 +64,9 @@ import {
 /* Lockscreen-foto = dezelfde pijler-foto als de speler en mini-player
    (operator, 18 okt 2026: "bij lockscreen zie ik oude foute foto's").
    De oude reeks-foto (SERIES_PHOTO) blijft enkel de terugval. */
+/** Audio heeft het vergrendelscherm afgestaan aan een sessie (zie releaseAudioForSession). */
+let lockReleased = false;
+
 function lockArtwork(series: string): string | undefined {
   return PILLAR_META[SERIES_PILLAR[series]]?.img ?? SERIES_PHOTO[series];
 }
@@ -396,7 +399,7 @@ function onStatus(st: AudioStatus): void {
      status-tick (4/sec bij updateInterval 250ms) onze waarden door te
      zetten, winnen we elke race tegen native ID3-syncs. Idempotent op
      visueel niveau (zelfde strings), minimale native-call overhead. */
-  if (state.session && player) {
+  if (state.session && player && !lockReleased) {
     const s = state.session;
     try {
       player.updateLockScreenMetadata({
@@ -627,6 +630,7 @@ function activateLockScreen(session: SessionInfo): void {
      Optimizer ($9.5/mo) maar handmatig 1024×1024 source-jpgs uploaden
      in Bunny Storage. Geen runtime transform nodig dan, source is al
      groot genoeg voor lockscreen-widget. */
+  lockReleased = false;
   const artworkUrl = lockArtwork(session.series);
   const artist = SERIES_SUBTITLE[session.series] ?? session.series;
   try {
@@ -651,6 +655,25 @@ function activateLockScreen(session: SessionInfo): void {
 export function reactivateLockScreen(): void {
   if (!state.session || !player) return;
   activateLockScreen(state.session);
+}
+
+/* Een Breathwork- of State Control-sessie start (operator, 18 okt 2026:
+   "alles voor iPhone nakijken"). Een geladen audiosessie — ook gepauzeerd —
+   bleef de "Now Playing"-speler: op de iPhone toonde het vergrendelscherm
+   dan de audiokaart i.p.v. de Live Activity van de sessie, en speelde de
+   audio er gewoon onder door. Nu pauzeert de audio en geeft het
+   vergrendelscherm vrij; de mini-player blijft staan, opnieuw afspelen
+   neemt het vergrendelscherm terug. */
+export function releaseAudioForSession(): void {
+  if (!player) return;
+  loadedWithAutoStart = false;
+  try {
+    player.pause();
+  } catch {}
+  try {
+    player.setActiveForLockScreen(false);
+  } catch {}
+  lockReleased = true;
 }
 
 /* ── Public API ─────────────────────────────────────────────────────────── */
@@ -847,6 +870,7 @@ export async function resumeAudio(): Promise<void> {
   /* Opnieuw afspelen na "Session complete" (bv. vanuit de mini-player):
      het afsluitpaneel hoort dan weg (audit 8 okt 2026). */
   if (state.endedPanel) setState({ endedPanel: null });
+  if (lockReleased && state.session) activateLockScreen(state.session);
   try {
     player.play();
   } catch {}

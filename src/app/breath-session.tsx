@@ -203,6 +203,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { releaseAudioForSession } from '@/services/audio-player';
 
 /* Gedeelde druk-schaal-animatie voor ELK tikbaar element op dit scherm
    (kaarten, CTA's, icoon-only knoppen) — zelfde recept als `StartCard` in
@@ -2165,6 +2166,8 @@ export function BreathSession() {
        bron van de verwarrende dubbele/foutieve lockscreen-widget. iOS
        heeft nog geen eigen achtergrond-cyclus (geen wake lock-equivalent
        hier), dus blijft op dit anker leunen. */
+    /* Audio pauzeert en geeft het vergrendelscherm vrij (18 okt 2026). */
+    releaseAudioForSession();
     if (Platform.OS !== 'android') {
       /* iPhone: de ademsessie als Live Activity op het vergrendelscherm en in
          het Dynamic Island (6 okt 2026). Begint gepauzeerd als de sessie op

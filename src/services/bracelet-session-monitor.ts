@@ -44,6 +44,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { endLiveSession, onLiveToggle, showLiveSession } from '../../modules/live-activity';
 import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
+import { releaseAudioForSession } from '@/services/audio-player';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
 import { subscribeHapticStrength } from './haptic-strength-pref';
@@ -788,6 +789,8 @@ export async function startStateControlNow(
   opts: { quick?: boolean } = {},
 ): Promise<boolean> {
   if (state) return false;
+  /* Audio pauzeert en geeft het vergrendelscherm vrij (18 okt 2026). */
+  releaseAudioForSession();
   const meta = getModeMeta(mode);
   /* Snelle sessie (Quick Chill/Boost, 5 min): onder het modus-minimum mag
      hier — de telefoon/het horloge bewaakt zelf het einde. */

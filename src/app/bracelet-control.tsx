@@ -196,6 +196,7 @@ import {
 } from '@/utils/dev-user-override';
 import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
 import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
+import { releaseAudioForSession } from '@/services/audio-player';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -3974,6 +3975,7 @@ function IdleScreen({
   }, []);
   const startTrial = () => {
     hapticPress();
+    releaseAudioForSession();
     playModeTrialHaptic(selectedMode);
     const started = Date.now();
     setTrialLeft(PREVIEW_MAX_SECONDS);
