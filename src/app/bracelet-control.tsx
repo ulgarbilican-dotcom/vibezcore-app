@@ -4112,12 +4112,19 @@ function IdleScreen({
               >
                 <Vibrate size={20} color={idleDark ? 'rgba(255,255,255,0.85)' : C.text} strokeWidth={2} />
               </Pressable>
+              {/* Niet tijdens de preview (18 okt 2026): de agenda opende een
+                 scherm bovenop terwijl de preview doorliep, en een tik op een
+                 toestand daar start zelf een preview. Zoals een lopende
+                 Premium-sessie: geen agenda. Plaats blijft, niets verschuift. */}
               <Pressable
                 onPress={() =>
                   router.push((braceletPlan ? '/bracelet-agenda' : '/bracelet-set-day') as never)
                 }
+                disabled={trialRunning}
                 hitSlop={12}
-                style={{ marginRight: 14 }}
+                style={{ marginRight: 14, opacity: trialRunning ? 0 : 1 }}
+                accessibilityElementsHidden={trialRunning}
+                importantForAccessibility={trialRunning ? 'no-hide-descendants' : 'auto'}
                 accessibilityLabel="Your daily plan"
               >
                 <CalendarDays
@@ -4215,18 +4222,22 @@ function IdleScreen({
           ) : null}
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
-          {MODES.findIndex((m) => m.mode === selectedMode) > 0 && (
+          {/* Tijdens de preview niet vegen (operator, 18 okt 2026: "waarom is
+              er een scrollmogelijkheid bij state control active?") — zoals een
+              lopende Premium-sessie: geen pijltjes, geen veeg, geen bolletjes. */}
+          {!trialRunning && MODES.findIndex((m) => m.mode === selectedMode) > 0 && (
             <View pointerEvents="none" style={[s.swipeHint, { left: 6 }]}>
               <ChevronLeft size={22} color="rgba(255,255,255,0.22)" strokeWidth={2} />
             </View>
           )}
-          {MODES.findIndex((m) => m.mode === selectedMode) < MODES.length - 1 && (
+          {!trialRunning && MODES.findIndex((m) => m.mode === selectedMode) < MODES.length - 1 && (
             <View pointerEvents="none" style={[s.swipeHint, { right: 6 }]}>
               <ChevronRight size={22} color="rgba(255,255,255,0.22)" strokeWidth={2} />
             </View>
           )}
           <ModeSwipeRing
             mode={selectedMode}
+            swipe={!trialRunning}
             onChange={(next) => {
               hapticTap();
               pickMode(next);
@@ -4281,7 +4292,7 @@ function IdleScreen({
         {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
             zijn, en een tik springt meteen naar die modus (5 okt 2026 —
             vervangt de rij met vijf knoppen). */}
-        <View style={s.modeDots}>
+        <View style={[s.modeDots, trialRunning && { opacity: 0 }]} pointerEvents={trialRunning ? 'none' : 'auto'}>
           {MODES.map((m: ModeMeta) => {
             const active = m.mode === selectedMode;
             return (
