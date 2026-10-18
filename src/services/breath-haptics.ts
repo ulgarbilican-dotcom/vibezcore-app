@@ -49,6 +49,7 @@ import { Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BREATH_AMP, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 import { canPlayNativeWaveform, playNativeWaveform } from '../../modules/state-haptics';
+import { isBeatEngineReady, prepareBeatEngine, scheduleBeat, stopBeatEngine } from '../../modules/beat-engine';
 
 /* De trilling vult de fase niet helemaal: de laatste tiende blijft stil.
    Die stilte is functioneel — ze kondigt de wissel aan, en zonder haar loopt
@@ -204,13 +205,52 @@ function iosStyles(): { flow: Haptics.ImpactFeedbackStyle; ripple: Haptics.Impac
   if (st === 'strong') return { flow: S.Heavy, ripple: S.Heavy, tick: S.Heavy };
   return { flow: S.Medium, ripple: S.Light, tick: S.Heavy };
 }
-function playPhaseHapticIos(phase: PhaseKey, secs: number): void {
+
+/* iPhone via Core Haptics (operator, build 26: "bij onboarding voice +
+   haptics werkt haptics niet en gewone haptics ook niet"). Sinds de
+   BeatEngine (Core Haptics) bestaat, kwamen de losse Apple-tikken
+   (UIImpactFeedbackGenerator) niet meer door. Nu speelt de BeatEngine ook
+   deze tikken: één patroon per fase/demo, Apple speelt het strak af. Is de
+   motor niet klaar (oudere build, toestel zonder Core Haptics), dan de oude
+   weg met losse tikken. */
+function tapOf(style: Haptics.ImpactFeedbackStyle): { intensity: number; sharpness: number } {
+  switch (style) {
+    case S.Soft:
+      return { intensity: 0.45, sharpness: 0.15 };
+    case S.Light:
+      return { intensity: 0.6, sharpness: 0.4 };
+    case S.Heavy:
+      return { intensity: 1, sharpness: 0.45 };
+    case S.Rigid:
+      return { intensity: 1, sharpness: 0.85 };
+    default:
+      return { intensity: 0.8, sharpness: 0.5 };
+  }
+}
+if (Platform.OS === 'ios') void prepareBeatEngine();
+
+/** Speelt tikken (ms vanaf nu, stijl) — via Core Haptics als dat kan. */
+function playIosTaps(taps: { at: number; style: Haptics.ImpactFeedbackStyle }[]): void {
   clearIosTimers();
+  if (taps.length === 0) return;
+  if (isBeatEngineReady()) {
+    const start = Date.now() + 15;
+    scheduleBeat(
+      start,
+      taps.map((t) => ({ t: t.at, ...tapOf(t.style), sound: '', volume: 0 })),
+    );
+    return;
+  }
+  void prepareBeatEngine();
+  for (const t of taps) {
+    if (t.at <= 0) Haptics.impactAsync(t.style).catch(() => {});
+    else iosTimers.push(setTimeout(() => Haptics.impactAsync(t.style).catch(() => {}), t.at));
+  }
+}
+
+function playPhaseHapticIos(phase: PhaseKey, secs: number): void {
   const st = iosStyles();
   const span = Math.max(400, Math.round(secs * 1000 * FILL));
-  const fire = (style: Haptics.ImpactFeedbackStyle) => {
-    Haptics.impactAsync(style).catch(() => {});
-  };
   let step: number;
   let style: Haptics.ImpactFeedbackStyle;
   if (phase === 'inhale' || phase === 'inhale-2') {
@@ -224,10 +264,10 @@ function playPhaseHapticIos(phase: PhaseKey, secs: number): void {
     style = st.tick;
   }
   const count = phase.startsWith('inhale') || phase.startsWith('exhale') ? Math.max(1, Math.floor(span / step)) : Math.max(1, Math.round(secs));
-  for (let i = 0; i < count; i += 1) {
-    if (i === 0) fire(style);
-    else iosTimers.push(setTimeout(() => fire(style), i * step));
-  }
+  const taps: { at: number; style: Haptics.ImpactFeedbackStyle }[] = [];
+  for (let i = 0; i < count; i += 1) taps.push({ at: i * step, style });
+  stopBeatEngine();
+  playIosTaps(taps);
 }
 
 /** Vibration.vibrate(...) dat ook op de iPhone werkt (17 okt 2026): op
@@ -243,27 +283,27 @@ export function vibrateCompat(pattern: number | number[]): void {
     }
     return;
   }
-  clearIosTimers();
   const st = iosStyles();
   const segs = typeof pattern === 'number' ? [0, pattern] : pattern;
+  const taps: { at: number; style: Haptics.ImpactFeedbackStyle }[] = [];
   let t = 0;
   for (let i = 0; i < segs.length; i += 1) {
     const d = segs[i];
     if (i % 2 === 1) {
       for (let x = 0; x < Math.max(1, Math.floor(d / 110)); x += 1) {
-        const at = t + x * 110;
-        const style = d >= 150 ? st.flow : st.tick;
-        if (at === 0) Haptics.impactAsync(style).catch(() => {});
-        else iosTimers.push(setTimeout(() => Haptics.impactAsync(style).catch(() => {}), at));
+        taps.push({ at: t + x * 110, style: d >= 150 ? st.flow : st.tick });
       }
     }
     t += d;
   }
+  stopBeatEngine();
+  playIosTaps(taps);
 }
 
 /** Stopt elke lopende fase-haptiek (pauze, einde, verlaten). */
 export function stopPhaseHaptic(): void {
   clearIosTimers();
+  if (Platform.OS === 'ios') stopBeatEngine();
   try {
     Vibration.cancel();
   } catch {

@@ -816,7 +816,17 @@ export default function BreathWelcomeScreen() {
        de sessie die beloofd werd. Zelfde isPro-vertakking als
        breath-quiz.tsx had. */
     if (isPro) {
-      router.replace('/breath' as never);
+      /* Premium (operator, build 26: "na onboarding moet ik naar de gekozen
+         sessie gaan"): ook Premium start meteen de sessie die de onboarding
+         aanbeveelt — zonder gratis-sessie-vlag, het is gewoon een sessie. */
+      router.replace(
+        `/breath-session?${new URLSearchParams({
+          mode: recommendedState,
+          technique: selectedPlan.technique,
+          minutes: String(recommendedMinutes),
+          autostart: '1',
+        }).toString()}` as never,
+      );
     } else {
       /* Operator, 7 september 2026: "mag maar 1 keer werken" — check EN
          markering gebeuren op het moment van de knop-tik zelf (gewone

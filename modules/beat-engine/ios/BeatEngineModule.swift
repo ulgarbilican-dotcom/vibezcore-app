@@ -108,7 +108,10 @@ public class BeatEngineModule: Module {
       do {
         let e = try CHHapticEngine(audioSession: AVAudioSession.sharedInstance())
         e.playsHapticsOnly = false
-        e.isAutoShutdownEnabled = false
+        // Zelf uit als hij niets speelt, en vanzelf weer aan bij een volgend
+        // patroon: de motor mag de gewone Apple-tikken in de rest van de app
+        // nooit blokkeren (operator, build 26: onboarding-tikken weg).
+        e.isAutoShutdownEnabled = true
         e.stoppedHandler = { [weak self] _ in
           self?.queue.async {
             self?.running = false

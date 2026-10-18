@@ -45,6 +45,7 @@ import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -322,6 +323,18 @@ export default function BraceletScreen() {
     void ensureSettingsLoaded().then(() => setSettingsLoaded(true));
   }, []);
   const needsOnboarding = settingsLoaded && onboardedAt === null;
+  /* Elke ingang die het intro overslaat (`open`-token: na een aankoop, een
+     herinnering, een plan) sloeg ook de onboarding over (operator, build 26:
+     "waarom is na de onboarding van breathwork die van State Control weg?").
+     Wie State Control nog nooit zag, krijgt ze nu altijd eerst — behalve als
+     er al een sessie loopt. */
+  const onbPushed = useRef(false);
+  useEffect(() => {
+    if (!focused || showIntro || !needsOnboarding || onbPushed.current) return;
+    if (getBraceletSessionSnapshot().active) return;
+    onbPushed.current = true;
+    router.push({ pathname: '/state-onboarding', params: { first: '1', hr: pulse.decided ? '0' : '1' } } as never);
+  }, [focused, showIntro, needsOnboarding, pulse.decided]);
   const showHrPage = !showIntro && pulseLoaded && !pulse.decided;
 
   useEffect(() => {
