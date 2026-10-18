@@ -44,7 +44,6 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { endLiveSession, onLiveToggle, showLiveSession } from '../../modules/live-activity';
 import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
-import { releaseAudioForSession } from '@/services/audio-player';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
 import { subscribeHapticStrength } from './haptic-strength-pref';
@@ -558,9 +557,6 @@ export function startBraceletSessionMonitor(opts: {
       normaal 0 bij een echte nieuwe start). */
   elapsedSec?: number;
 }): void {
-  /* Elke State Control-start (Start, Quick, plan, Restart): audio pauzeert
-     en geeft het vergrendelscherm vrij (iPhone-nakijkronde 18 okt 2026). */
-  releaseAudioForSession();
   clearTimers();
   state = {
     mode: opts.mode,

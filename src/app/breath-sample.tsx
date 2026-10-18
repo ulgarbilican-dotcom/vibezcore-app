@@ -63,7 +63,6 @@ import ReanimatedView, {
   withTiming,
 } from 'react-native-reanimated';
 import VibezGlass from '@/components/VibezGlass';
-import { releaseAudioForSession } from '@/services/audio-player';
 
 const AnimatedPressable = ReanimatedView.createAnimatedComponent(Pressable);
 
@@ -124,10 +123,6 @@ type ModeKey = GuidanceMode;
 const MODES = GUIDANCE_MODES;
 
 export default function BreathSampleScreen() {
-  /* Proefsessie: audio pauzeert en geeft het vergrendelscherm vrij. */
-  useEffect(() => {
-    releaseAudioForSession();
-  }, []);
   const sub = useSubscription();
   /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
   const isPro = sub.isPro;
