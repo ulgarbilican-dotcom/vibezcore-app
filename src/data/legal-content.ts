@@ -712,7 +712,7 @@ export const ACCESSIBILITY: LegalDoc = {
   title: 'Accessibility Statement',
   subtitle:
     'VIBEZCORE is committed to ensuring digital accessibility for everyone, regardless of technology, ability, or circumstances.',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Accessibility',
   blocks: [
     /* Intro vóór sectie 01 — geen h2 dus geen sectie-nummer. */
@@ -834,7 +834,7 @@ export const SHIPPING: LegalDoc = {
   title: 'Shipping Policy',
   subtitle:
     'Everything you need to know about how VIBEZCORE processes and delivers your order — wherever you are in the world.',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Shipping',
   blocks: [
     /* Intro vóór sectie 01. */
@@ -1561,7 +1561,7 @@ export const AUDIO_SESSIONS: LegalDoc = {
   title: 'Audio Sessions',
   subtitle:
     'Our sessions are designed to deliver real insights for real-life challenges — built to be applied, not just heard. Please read the following carefully before you begin.',
-  lastUpdated: 'March 2026',
+  lastUpdated: 'October 2026',
   short: 'Audio',
   blocks: [
     /* Top notice — yellow warning op de website, hier als highlight
