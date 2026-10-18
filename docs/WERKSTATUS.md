@@ -115,6 +115,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 
 - 15 okt 2026: iOS-build (TestFlight) — Apple-profielen vernieuwd (interactieve login, sms-code); build 15 en 16 faalden op "Configure Xcode project": Watch-target heette ook "VIBEZCORE" en Live Activity "VIBEZCORE Live" (spatie) → nu VIBEZCOREWatch / VIBEZCORELive (T192), build 17 loopt (`--auto-submit`). Horloge: END = 0,8 s vasthouden (een losse aanraking stopte een sessie, T190), Galaxy + Apple Watch; Wear-debug-APK gebouwd, installeren na de lopende testsessie. Geschiedenis leeg = horloge niet verbonden met de telefoon (T191).
 - 18 okt 2026: Audio Library v2 (T269, 39 bestanden luider/zachter enkel via versterking, nieuwe Bunny-map, speler wijst ernaar), oude reeks-foto's volledig weg (T270, ook iPhone-lockscreen), welkomstpillen zonder rand (T271). Volgende: na A16-check de iPhone-build (T264–T271).
+- 18 okt 2026 (middag): iOS build 24 (T264–T278) en build 25 (T279–T287, o.a. BeatEngine, achtergrondaudio State Control, stem v4, audio blijft spelen bij een sessie, preview zonder vegen/agenda, geminimaliseerde sessie in de cirkel) gebouwd en op TestFlight gezet. BeatEngine compileerde zonder fouten. Volgende: operator test build 25 (sync tik/klank/cirkel, vergrendelen, stem); daarna Android-build met dezelfde ronde.
 
 ## 4. Wacht op de operator (niet zelf beslissen)
 
