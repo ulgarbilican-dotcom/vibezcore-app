@@ -41,7 +41,7 @@ private let pillFill = Color(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 25
 private let rowFill = Color.white.opacity(36 / 255)
 private let dim = Color.white.opacity(140 / 255)
 
-private func tint(_ hex: String) -> Color { Color(hex: hex) ?? .teal }
+private func vzColor(_ hex: String) -> Color { Color(hex: hex) ?? .teal }
 
 enum WatchRoute: Hashable {
   case modes(Bool) // true = State Control, false = Breathwork
@@ -307,23 +307,26 @@ struct ModesView: View {
   @ObservedObject private var catalog = WatchCatalog.shared
   @State private var selection: String = ""
 
+  static func minutesText(_ st: CatalogState) -> String {
+    "\(Last.minutes(st.mode) ?? st.defaultMinutes):00"
+  }
+
   var body: some View {
     TabView(selection: $selection) {
       if isState {
-        ForEach(catalog.states) { st in
-          let minutes = Last.minutes(st.mode) ?? st.defaultMinutes
+        ForEach(catalog.states) { (st: CatalogState) in
           ModePage(
-            eyebrow: "State Control", name: st.name, use: st.use, color: tint(st.colorHex), locked: st.locked,
-            visual: AnyView(WaterBall(color: tint(st.colorHex), text: "\(minutes):00", size: 104))
+            eyebrow: "State Control", name: st.name, use: st.use, color: vzColor(st.colorHex), locked: st.locked,
+            visual: AnyView(WaterBall(color: vzColor(st.colorHex), text: Self.minutesText(st), size: 104))
           )
           .tag("s\(st.mode)")
           .onTapGesture { path.append(.state(st.mode)) }
         }
       } else {
-        ForEach(catalog.breath) { b in
+        ForEach(catalog.breath) { (b: CatalogBreath) in
           ModePage(
-            eyebrow: "Breathwork", name: b.name, use: b.use, color: tint(b.colorHex), locked: !catalog.breathAllowed(b),
-            visual: AnyView(BreathingOrb(color: tint(b.colorHex), size: 100))
+            eyebrow: "Breathwork", name: b.name, use: b.use, color: vzColor(b.colorHex), locked: !catalog.breathAllowed(b),
+            visual: AnyView(BreathingOrb(color: vzColor(b.colorHex), size: 100))
           )
           .tag("b\(b.key)")
           .onTapGesture { path.append(.breath(b.key)) }
@@ -410,7 +413,7 @@ struct StateSetupView: View {
   @Binding var path: [WatchRoute]
 
   var body: some View {
-    let c = tint(entry.colorHex)
+    let c = vzColor(entry.colorHex)
     let minutes = min(max(Last.minutes(entry.mode) ?? entry.defaultMinutes, entry.minMinutes), entry.maxMinutes)
     ScrollView {
       VStack(spacing: 0) {
@@ -454,7 +457,7 @@ struct BreathSetupView: View {
   }
 
   var body: some View {
-    let c = tint(entry.colorHex)
+    let c = vzColor(entry.colorHex)
     let ti = techIdx()
     let tech = entry.techniques[ti]
     let di = min(max(0, Last.dur(tech.key) ?? tech.defaultIdx), tech.durations.count - 1)
@@ -527,13 +530,13 @@ struct StateDurationView: View {
   let entry: CatalogState
   @Environment(\.dismiss) private var dismiss
   var body: some View {
-    let c = tint(entry.colorHex)
+    let c = vzColor(entry.colorHex)
     let cur = Last.minutes(entry.mode) ?? entry.defaultMinutes
     ScrollViewReader { proxy in
       ScrollView {
         VStack(spacing: 6) {
           Text(entry.name).font(.system(size: 13, weight: .bold)).foregroundColor(c)
-          ForEach(entry.minMinutes...max(entry.minMinutes, entry.maxMinutes), id: \.self) { m in
+          ForEach(entry.minMinutes...max(entry.minMinutes, entry.maxMinutes), id: \.self) { (m: Int) in
             PickRow(
               title: "\(m) min", sub: m == entry.defaultMinutes ? "Recommended" : nil, subColor: c,
               current: m == cur, color: c
@@ -555,17 +558,26 @@ struct StateDurationView: View {
 struct TechniqueView: View {
   let entry: CatalogBreath
   @Environment(\.dismiss) private var dismiss
+
+  private func tag(for t: CatalogTechnique, curKey: String) -> String? {
+    if t.id == entry.recommendedIdx { return "Recommended" }
+    return t.key == curKey ? "Last used" : nil
+  }
+
+  private func sub(for t: CatalogTechnique, curKey: String) -> String? {
+    if let tag = tag(for: t, curKey: curKey) { return tag }
+    return t.level.isEmpty ? nil : t.level.capitalized
+  }
   var body: some View {
-    let c = tint(entry.colorHex)
+    let c = vzColor(entry.colorHex)
     let curKey = Last.tech(entry.key) ?? entry.techniques[min(entry.selectedIdx, entry.techniques.count - 1)].key
     ScrollView {
       VStack(spacing: 6) {
         Text(entry.name).font(.system(size: 13, weight: .bold)).foregroundColor(c)
-        ForEach(entry.techniques) { t in
-          let tag: String? = t.id == entry.recommendedIdx ? "Recommended" : (t.key == curKey ? "Last used" : nil)
+        ForEach(entry.techniques) { (t: CatalogTechnique) in
           PickRow(
-            title: t.name, sub: tag ?? (t.level.isEmpty ? nil : t.level.capitalized),
-            subColor: tag != nil ? c : dim, current: t.key == curKey, color: c
+            title: t.name, sub: sub(for: t, curKey: curKey),
+            subColor: tag(for: t, curKey: curKey) != nil ? c : dim, current: t.key == curKey, color: c
           ) {
             Last.setTech(entry.key, t.key)
             dismiss()
@@ -582,7 +594,7 @@ struct BreathDurationView: View {
   let entry: CatalogBreath
   @Environment(\.dismiss) private var dismiss
   var body: some View {
-    let c = tint(entry.colorHex)
+    let c = vzColor(entry.colorHex)
     let techKey = Last.tech(entry.key) ?? entry.techniques[min(entry.selectedIdx, entry.techniques.count - 1)].key
     let tech = entry.techniques.first(where: { $0.key == techKey }) ?? entry.techniques[0]
     let cur = min(max(0, Last.dur(tech.key) ?? tech.defaultIdx), tech.durations.count - 1)
@@ -590,7 +602,7 @@ struct BreathDurationView: View {
       ScrollView {
         VStack(spacing: 6) {
           Text(tech.name).font(.system(size: 12, weight: .bold)).foregroundColor(c).multilineTextAlignment(.center)
-          ForEach(tech.durations) { d in
+          ForEach(tech.durations) { (d: CatalogDuration) in
             PickRow(
               title: d.label, sub: d.id == tech.defaultIdx ? "Recommended" : nil, subColor: c,
               current: d.id == cur, color: c
