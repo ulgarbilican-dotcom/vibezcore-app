@@ -154,7 +154,10 @@ export async function playScape(key: string | null): Promise<void> {
   if (playingKey !== scape.key) return;
 
   try {
-    const p = createAudioPlayer({ uri: src });
+    /* keepAudioSessionActive (iPhone, 19 okt 2026): anders zet expo-audio bij
+       het pauzeren/stoppen van de soundscape de geluidssessie van de hele app
+       uit — midden in een ademsessie viel dan ook de stem even weg. */
+    const p = createAudioPlayer({ uri: src }, { keepAudioSessionActive: true });
     p.loop = true;
     p.volume = 0;
     p.play();

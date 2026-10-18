@@ -154,6 +154,13 @@ export function isHeartbeatSoundOn(owner: HeartbeatOwner): boolean {
   return owners.has(owner);
 }
 
+/** Mag het hartslaggeluid nu klinken? Niet als er al een ademsessie of de
+ *  audiobibliotheek speelt (ook gepauzeerd) — zelfde regel als start()
+ *  hieronder; de iPhone-geluidsmotor (bracelet-haptics.ts) volgt ze. */
+export function heartbeatSoundAllowed(): boolean {
+  return !getBreathSession().isRunning && getSnapshot().session === null;
+}
+
 export function startHeartbeatSound(owner: HeartbeatOwner): void {
   if (owners.has(owner)) return;
   if (getBreathSession().isRunning || getSnapshot().session !== null) {

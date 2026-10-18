@@ -43,6 +43,7 @@ Alles hieronder zit in de code op de werkbranch, maar is **nog niet in een store
 Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/maand).
 
 **Afgerond in deze ronde (op dev build getest door operator, tenzij anders vermeld):**
+- 19 okt 2026 (T304–T305): **.easignore-fout** — sinds 4 okt sloten de regels `ios/` en `android/` ook modules/*/ios en modules/*/android uit: GEEN eigen native module (Apple Watch-koppeling, Live Activity, BeatEngine, trildienst, audioroute) zat in een EAS-build (iOS 17–35, Android 99). Gefixt (`a04f330`, regels met leidende /). iOS-build 36 bevat ze (pod-log nagekeken) en staat op TestFlight. **Android-build 99 NIET uploaden** — nieuwe Android-build nodig. **Nieuwe iPhone-geluidsmotor** (modules/session-audio, AVAudioEngine): krijgt het hele State Control-plan en plant elke slag zelf op de geluidsklok (ook vergrendeld), stem-zinnen en tikken via dezelfde motor, houdt de app levend i.p.v. de stille expo-audio-lus; BeatEngine verwijderd. Oorzaak haperen/holle stem: expo-audio zet na elke gestopte speler de geluidssessie van de hele app uit. NIET op toestel getest (Windows) — eerst build 36 testen (vergrendelscherm + Watch), dan build 37 met de motor + Profiel-plan/Manage-blad.
 - Free tiers: 10 gratis sessies; proef = 27 sessies + Breathwork + State Control; betaald = alles.
 - Mini-player in de tabbalk gedokt; glazen bottom sheets met vast sluitprotocol (geheugen: `feedback-sheet-close-protocol.md`).
 - Breathwork-onboarding: één keer, skip-bevestiging per stap, replay via Settings.

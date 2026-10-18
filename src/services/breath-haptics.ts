@@ -49,7 +49,7 @@ import { Platform, Vibration } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BREATH_AMP, MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
 import { canPlayNativeWaveform, playNativeWaveform } from '../../modules/state-haptics';
-import { isBeatEngineReady, prepareBeatEngine, scheduleBeat, stopBeatEngine } from '../../modules/beat-engine';
+import { playSessionTaps, stopSessionTaps } from '../../modules/session-audio';
 
 /* De trilling vult de fase niet helemaal: de laatste tiende blijft stil.
    Die stilte is functioneel — ze kondigt de wissel aan, en zonder haar loopt
@@ -227,21 +227,13 @@ function tapOf(style: Haptics.ImpactFeedbackStyle): { intensity: number; sharpne
       return { intensity: 0.8, sharpness: 0.5 };
   }
 }
-if (Platform.OS === 'ios') void prepareBeatEngine();
-
 /** Speelt tikken (ms vanaf nu, stijl) — via Core Haptics als dat kan. */
 function playIosTaps(taps: { at: number; style: Haptics.ImpactFeedbackStyle }[]): void {
   clearIosTimers();
   if (taps.length === 0) return;
-  if (isBeatEngineReady()) {
-    const start = Date.now() + 15;
-    scheduleBeat(
-      start,
-      taps.map((t) => ({ t: t.at, ...tapOf(t.style), sound: '', volume: 0 })),
-    );
-    return;
-  }
-  void prepareBeatEngine();
+  /* Via de iPhone-geluidsmotor (19 okt 2026): één patroon, Core Haptics
+     speelt het strak af. Zonder de motor (oudere build) losse tikken. */
+  if (playSessionTaps(Date.now() + 15, taps.map((t) => ({ t: t.at, ...tapOf(t.style) })))) return;
   for (const t of taps) {
     if (t.at <= 0) Haptics.impactAsync(t.style).catch(() => {});
     else iosTimers.push(setTimeout(() => Haptics.impactAsync(t.style).catch(() => {}), t.at));
@@ -266,7 +258,7 @@ function playPhaseHapticIos(phase: PhaseKey, secs: number): void {
   const count = phase.startsWith('inhale') || phase.startsWith('exhale') ? Math.max(1, Math.floor(span / step)) : Math.max(1, Math.round(secs));
   const taps: { at: number; style: Haptics.ImpactFeedbackStyle }[] = [];
   for (let i = 0; i < count; i += 1) taps.push({ at: i * step, style });
-  stopBeatEngine();
+  stopSessionTaps();
   playIosTaps(taps);
 }
 
@@ -296,14 +288,14 @@ export function vibrateCompat(pattern: number | number[]): void {
     }
     t += d;
   }
-  stopBeatEngine();
+  stopSessionTaps();
   playIosTaps(taps);
 }
 
 /** Stopt elke lopende fase-haptiek (pauze, einde, verlaten). */
 export function stopPhaseHaptic(): void {
   clearIosTimers();
-  if (Platform.OS === 'ios') stopBeatEngine();
+  if (Platform.OS === 'ios') stopSessionTaps();
   try {
     Vibration.cancel();
   } catch {

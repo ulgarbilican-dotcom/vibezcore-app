@@ -1,0 +1,8 @@
+{
+  "name": "session-audio",
+  "version": "1.0.0",
+  "description": "VIBEZCORE — iPhone: één geluidsmotor voor sessies (hartslag, stem, tikken), op de milliseconde gepland, ook met vergrendeld scherm.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

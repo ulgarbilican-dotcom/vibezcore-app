@@ -22,7 +22,14 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { Platform } from 'react-native';
 import { assetUri } from '@/services/asset-cache';
+import {
+  isSessionAudioAvailable,
+  loadVoice,
+  playVoiceNow,
+  stopSessionVoice,
+} from '../../modules/session-audio';
 import { getSetting } from '@/utils/settings';
 
 /* ── Asset URLs op Bunny CDN ───────────────────────────────────────── */
@@ -440,6 +447,10 @@ export function preloadCompletionCue(key: BreathKey): void {
   if (!voiceEnabled) return;
   const url = COMPLETION_URLS[key];
   if (!url) return;
+  if (nativeVoice()) {
+    void loadVoice(url, assetUri(url));
+    return;
+  }
   try {
     const player = getOrCreatePlayer(url);
     player.volume = 0;
@@ -470,6 +481,14 @@ export function preloadBreathCues(): void {
      tussen elke player door weer even ademt en het scherm interactief
      blijft. Geen enkele individuele wachttijd toegevoegd — enkel de reeks
      uit elkaar getrokken. */
+  if (nativeVoice()) {
+    /* iPhone: de motor laadt en decodeert de bestanden zelf (buiten de
+       JS-thread); Ujjayi- en welkomstzin meteen mee. */
+    [...Object.values(activeCueUrls()), activeUjjayiStartUrl(), activeEnjoySessionUrl()].forEach((url) => {
+      void loadVoice(url, assetUri(url));
+    });
+    return;
+  }
   Object.values(activeCueUrls()).forEach((url, i) => {
     setTimeout(() => {
       try {
@@ -502,6 +521,10 @@ export function preloadBreathCues(): void {
 /** Stop alle ongoing voice playback. Call bij session-cleanup,
  *  voice-toggle-off, of bij tab-unmount. */
 export function stopVoice(): void {
+  if (nativeVoice()) {
+    nativeVoiceRequest += 1;
+    stopSessionVoice();
+  }
   if (activePlayer) {
     try {
       activePlayer.pause();
@@ -561,7 +584,30 @@ function hasAudibleProgress(p: AudioPlayer): boolean {
   }
 }
 
+/* iPhone (19 okt 2026, operator: "stem klinkt heel hol"): de stem via de
+   geluidsmotor (modules/session-audio) i.p.v. expo-audio-spelers. Elke
+   expo-audio-speler die stopte, zette de geluidssessie van de hele app uit
+   en weer aan; de stem klonk daardoor hol en de hartslag haperde. Sleutel =
+   de CDN-URL; het bestand komt lokaal uit de offline-laag als het er staat. */
+const nativeVoice = (): boolean => Platform.OS === 'ios' && isSessionAudioAvailable();
+let nativeVoiceRequest = 0;
+
+function playUrlNative(url: string): void {
+  const req = ++nativeVoiceRequest;
+  if (playVoiceNow(url)) return;
+  const askedAt = Date.now();
+  void loadVoice(url, assetUri(url)).then((ok) => {
+    /* Nog altijd de laatst gevraagde zin, en niet te laat (anders valt hij
+       over de volgende fase heen). */
+    if (ok && req === nativeVoiceRequest && Date.now() - askedAt < 1500) playVoiceNow(url);
+  });
+}
+
 function playUrl(url: string): void {
+  if (nativeVoice()) {
+    playUrlNative(url);
+    return;
+  }
   /* Stop een eventueel andere lopende cue zodat ze niet overlappen
      (overlappen = onverstaanbaar bij snel volgende phase-cues). Alleen
      onderbreken wat ECHT hoorbaar aan het spelen was (`hasAudibleProgress`,

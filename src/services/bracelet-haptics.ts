@@ -86,17 +86,16 @@ import {
   HEARTBEAT_VOLUME,
   heartbeatDub,
   heartbeatLub,
-  isHeartbeatSoundOn,
+  heartbeatSoundAllowed,
   startHeartbeatSound,
   stopHeartbeatSound,
 } from './heartbeat-sound';
 import {
-  isBeatEngineReady,
-  prepareBeatEngine,
-  scheduleBeat as scheduleEngineBeat,
-  stopBeatEngine,
-} from '../../modules/beat-engine';
-import { isHeadphonesOutput } from '../../modules/audio-route';
+  isSessionAudioAvailable,
+  prepareHeartbeatSounds,
+  startSessionBeats,
+  stopSessionBeats,
+} from '../../modules/session-audio';
 import { getStateHear } from './state-sound-pref';
 import { endLiveSession, showLiveSession } from '../../modules/live-activity';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -344,8 +343,8 @@ const pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
 function clearPending(): void {
   pendingTimeouts.forEach(clearTimeout);
   pendingTimeouts.length = 0;
-  /* iPhone: ook de slagen die de BeatEngine al vooraf gepland had. */
-  stopBeatEngine();
+  /* iPhone: ook de slagen die de geluidsmotor al vooraf gepland had. */
+  if (Platform.OS === 'ios') stopSessionBeats();
 }
 
 /** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
@@ -434,26 +433,19 @@ function fire(style: Haptics.ImpactFeedbackStyle): void {
   });
 }
 
-/* iPhone-ritme (operator, 18 okt 2026: "bij Boost is de ring rond de cirkel
-   niet altijd correct"): elke slag op zijn vaste plek op de klok (vorige
-   geplande slag + cycleMs), zoals de Android-dienst en het horloge — een late
-   timer verschuift enkel die ene slag, niets stapelt op. Na een lange pauze
-   van JS (scherm op slot) springen we stil naar de slag van nu.
-
-   BeatEngine (18 okt 2026, operator: "synchroniteit van heartbeat en haptic
-   animatie moet perfect"): deze functie draait BEAT_AHEAD_MS vóór elke slag.
-   Is de iPhone-module klaar en de app in beeld, dan plant Core Haptics tik
-   én geluid als één patroon op het exacte moment, en krijgt de cirkel
-   datzelfde moment vooraf (HapticPulse.ahead) — beeld, tik en geluid op één
-   klok, los van JS en de hoofdthread. Anders (vergrendeld, oudere build,
-   Android zonder dienst) de JS-weg: wachten tot het moment en dan tik,
-   geluid en beeld. */
+/* JS-weg (enkel nog zonder de iPhone-geluidsmotor, bv. een oudere build):
+   elke slag op zijn vaste plek op de klok (vorige geplande slag + cycleMs);
+   een late timer verschuift enkel die ene slag. Na een lange pauze van JS
+   springen we stil naar de slag van nu. */
 const BEAT_AHEAD_MS = 250;
-/** De klank begint 10–14 ms ná de start van het bestand (piek 14–23 ms) en de
- *  luidspreker heeft nog uitvoervertraging; de tik is meteen voelbaar. Het
- *  geluid start daarom zoveel vóór de tik, zodat beide samenvallen (gemeten
- *  op de bestanden, 18 okt 2026). */
+/** De klank begint 10–14 ms ná de start van het bestand (piek 14–23 ms); de
+ *  tik is meteen voelbaar. Het geluid start daarom zoveel vóór de tik, zodat
+ *  beide samenvallen (gemeten op de bestanden, 18 okt 2026). De iPhone-
+ *  geluidsmotor telt er zelf de uitvoervertraging van luidspreker/oortjes bij. */
 const SOUND_LEAD_MS = 25;
+/** iPhone: de eerste slag valt zoveel na de start, zodat de motor hem nog
+ *  kan inplannen (hij plant ~1,5 s vooruit). */
+const IOS_FIRST_BEAT_MS = 120;
 
 /** Apple-tikstijl → Core Haptics-tik (sterkte, scherpte). Heavy = volle kracht. */
 function tapFor(style: Haptics.ImpactFeedbackStyle): { intensity: number; sharpness: number } {
@@ -483,8 +475,7 @@ function scheduleBeat(
   if (myGeneration !== generation) return;
   pendingTimeouts.length = 0;
   const now = Date.now();
-  const useEngine = Platform.OS === 'ios' && isBeatEngineReady() && AppState.currentState === 'active';
-  let at = plannedAt ?? now + (useEngine ? 60 : 0);
+  let at = plannedAt ?? now;
   let { cycleMs, dubAt } = beatAt(spec, (at - curveStartedAt) / 1000, timing);
   while (now - at > cycleMs) {
     at += cycleMs;
@@ -492,57 +483,80 @@ function scheduleBeat(
   }
   const nextAt = at + cycleMs;
   const hear = jsSoundOn && getStateHear();
-  if (useEngine) {
-    const withSound = hear && isHeartbeatSoundOn('state-control');
-    const hp = withSound && isHeadphonesOutput();
-    const volume = hp ? HEARTBEAT_VOLUME.headphones : HEARTBEAT_VOLUME.speaker;
-    const lub = tapFor(strengthStyle(spec.lubStyle));
-    const dub = tapFor(strengthStyle(spec.dubStyle));
-    const L = SOUND_LEAD_MS;
-    scheduleEngineBeat(at - L, [
-      { t: 0, intensity: 0, sharpness: 0, sound: withSound ? (hp ? 'headphonesLub' : 'speakerLub') : '', volume },
-      { t: L, ...lub, sound: '', volume },
-      { t: dubAt, intensity: 0, sharpness: 0, sound: withSound ? (hp ? 'headphonesDub' : 'speakerDub') : '', volume },
-      { t: dubAt + L, ...dub, sound: '', volume },
-    ]);
-    /* Cirkel en drukgolf wachten op exact dit moment. */
-    emitPulse({ kind: 'lub', mode, cycleMs, atMs: at, ahead: true });
-    pendingTimeouts.push(
-      /* Losse ringen (en dubbel-check) krijgen het gewone event op het moment zelf. */
-      setTimeout(() => {
-        if (myGeneration !== generation) return;
-        emitPulse({ kind: 'lub', mode, cycleMs, atMs: at });
-      }, Math.max(0, at - Date.now())),
-      setTimeout(() => {
-        if (myGeneration !== generation) return;
-        emitPulse({ kind: 'dub', mode, cycleMs, atMs: at + dubAt });
-      }, Math.max(0, at + dubAt - Date.now())),
-    );
-  } else {
-    const fireLub = () => {
+  const fireLub = () => {
+    if (myGeneration !== generation) return;
+    fire(spec.lubStyle);
+    if (hear) heartbeatLub();
+    /* Beeld op het moment dat de tik echt viel. */
+    emitPulse({ kind: 'lub', mode, cycleMs, atMs: Date.now() });
+  };
+  if (at - now > 2) pendingTimeouts.push(setTimeout(fireLub, at - now));
+  else fireLub();
+  pendingTimeouts.push(
+    setTimeout(() => {
       if (myGeneration !== generation) return;
-      fire(spec.lubStyle);
-      if (hear) heartbeatLub();
-      /* Beeld op het moment dat de tik echt viel. */
-      emitPulse({ kind: 'lub', mode, cycleMs, atMs: Date.now() });
-    };
-    if (at - now > 2) pendingTimeouts.push(setTimeout(fireLub, at - now));
-    else fireLub();
-    pendingTimeouts.push(
-      setTimeout(() => {
-        if (myGeneration !== generation) return;
-        fire(spec.dubStyle);
-        if (jsSoundOn && getStateHear()) heartbeatDub();
-        emitPulse({ kind: 'dub', mode, cycleMs, atMs: Date.now() });
-      }, Math.max(0, at + dubAt - Date.now())),
-    );
-  }
+      fire(spec.dubStyle);
+      if (jsSoundOn && getStateHear()) heartbeatDub();
+      emitPulse({ kind: 'dub', mode, cycleMs, atMs: Date.now() });
+    }, Math.max(0, at + dubAt - Date.now())),
+  );
   pendingTimeouts.push(
     setTimeout(
       () => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration, nextAt),
       Math.max(0, nextAt - BEAT_AHEAD_MS - Date.now()),
     ),
   );
+}
+
+/** iPhone (19 okt 2026, operator: "hartslag moet stabiel klinken bij
+ *  lockscreen … stop met lapmiddelen"): het HELE plan in één keer naar de
+ *  geluidsmotor (modules/session-audio). Die plant elke slag zelf op de
+ *  geluidsklok — ook met vergrendeld scherm — en tikt mee zolang de app in
+ *  beeld is. Het beeld krijgt exact hetzelfde rooster (scheduleVisual).
+ *  `silent` (het horloge trilt): enkel geluid, zoals op Android. */
+function playIos(
+  mode: BraceletMode,
+  spec: ResolvedSpec,
+  timing: Timing,
+  offsetSec: number,
+  totalSec: number | undefined,
+  clock: SessionClock | undefined,
+  silent: boolean,
+): void {
+  const withSound = !!clock && getStateHear() && heartbeatSoundAllowed();
+  const firstAt = Date.now() + IOS_FIRST_BEAT_MS;
+  lastAnchorWallMs = firstAt;
+  const lub = tapFor(strengthStyle(spec.lubStyle));
+  const dub = tapFor(strengthStyle(spec.dubStyle));
+  const plan = {
+    firstBeatAtMs: firstAt,
+    firstCurveSec: offsetSec,
+    startBpm: spec.startBpm,
+    targetBpm: spec.targetBpm,
+    holdSec: timing.holdSec,
+    rampSec: timing.rampSec,
+    endAtMs: totalSec !== undefined ? firstAt + totalSec * 1000 : 0,
+    sound: withSound,
+    speakerVolume: HEARTBEAT_VOLUME.speaker,
+    headphonesVolume: HEARTBEAT_VOLUME.headphones,
+    soundLeadMs: SOUND_LEAD_MS,
+    haptics: !silent,
+    lubIntensity: lub.intensity,
+    lubSharpness: lub.sharpness,
+    dubIntensity: dub.intensity,
+    dubSharpness: dub.sharpness,
+  };
+  const myGeneration = generation;
+  if (withSound) {
+    /* Geluiden nog niet geladen: de motor start iets later, maar op
+       hetzelfde rooster (hij slaat de slagen over die al voorbij zijn). */
+    void prepareHeartbeatSounds().then(() => {
+      if (myGeneration === generation) startSessionBeats(plan);
+    });
+  } else if (!silent) {
+    startSessionBeats(plan);
+  }
+  scheduleVisual(mode, spec, timing, firstAt, offsetSec, offsetSec, generation);
 }
 
 /* ── Gemeenschappelijk ───────────────────────────────────────────────── */
@@ -661,13 +675,13 @@ function play(
       playNativeWaveform(timings, amplitudes, repeat);
     }
     scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation);
+  } else if (Platform.OS === 'ios' && isSessionAudioAvailable()) {
+    playIos(mode, spec, timing, offsetSec, totalSec, clock, silent);
   } else if (!silent) {
     if (clock) {
       jsSoundOn = true;
       startHeartbeatSound('state-control');
     }
-    /* iPhone: BeatEngine opwarmen; tot hij klaar is loopt de JS-weg. */
-    void prepareBeatEngine();
     scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);
   }
 }
@@ -826,7 +840,10 @@ function relayToWatch(
     remainingSec: Math.round(remainingSec),
     ...watchStrength(spec),
     /* = het moment dat slag 0 van deze curve op de telefoon voelbaar is */
-    sentAtMs: Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0),
+    sentAtMs:
+      Platform.OS === 'ios' && isSessionAudioAvailable() && lastAnchorWallMs > 0
+        ? lastAnchorWallMs
+        : Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0),
   };
   sendWearState(start);
   sendAppleState(start);
@@ -1053,10 +1070,10 @@ function endIosPreviewSurface(): void {
  *  ontving de voorproef pas ~20 s na de telefoon). Hoogstens om de 15 s,
  *  enkel als het horloge mee mag trillen. */
 let lastWakeAt = 0;
-/** iPhone: de BeatEngine al opwarmen als State Control opent, zodat ook de
- *  eerste slagen van een sessie via de strakke weg lopen. */
+/** iPhone: de hartslaggeluiden al in de geluidsmotor laden als State
+ *  Control opent, zodat ook de eerste slag van een sessie klinkt. */
 export function warmUpBeatEngine(): void {
-  if (Platform.OS === 'ios') void prepareBeatEngine();
+  if (Platform.OS === 'ios') void prepareHeartbeatSounds();
 }
 
 export function wakeWatchForStateControl(): void {
@@ -1090,7 +1107,10 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
        ~150 ms achter op de telefoon. */
     /* De voorproef loopt nu via de dienst, net als Premium: het anker
        bevat de gemeten opstarttijd van de dienst al (NATIVE_START_LAG_MS). */
-    sentAtMs: hasNativeWaveform() && lastAnchorWallMs > 0 ? lastAnchorWallMs : Date.now(),
+    sentAtMs:
+      (hasNativeWaveform() || (Platform.OS === 'ios' && isSessionAudioAvailable())) && lastAnchorWallMs > 0
+        ? lastAnchorWallMs
+        : Date.now(),
   };
   sendWearState(start);
   sendAppleState(start);

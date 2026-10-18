@@ -1,8 +1,0 @@
-{
-  "name": "beat-engine",
-  "version": "1.0.0",
-  "description": "VIBEZCORE — iPhone: speelt de State Control-hartslag (tik en geluid samen) op exact geplande momenten via Core Haptics.",
-  "main": "index.ts",
-  "license": "UNLICENSED",
-  "private": true
-}

@@ -26,6 +26,13 @@ import {
 import { AppState, Platform } from 'react-native';
 import { onLiveActivityFailed, type LiveSession } from '../../modules/live-activity';
 import { reportError } from './crash-reporting';
+import { beginSessionAudio, endSessionAudio, isSessionAudioAvailable } from '../../modules/session-audio';
+
+/* iPhone (19 okt 2026): de geluidsmotor (modules/session-audio) houdt de app
+   levend tijdens een sessie, niet langer een stille expo-audio-lus. expo-audio
+   zet na het stoppen van elke speler de geluidssessie van de hele app uit; de
+   motor beheert haar zelf en herstelt zich als dat toch gebeurt. */
+const nativeKeepAlive = (): boolean => Platform.OS === 'ios' && isSessionAudioAvailable();
 
 let anchor: AudioPlayer | null = null;
 
@@ -141,7 +148,9 @@ export function ensureAudioModeSet(): Promise<void> {
   modeSetPromise = setAudioModeAsync({
     playsInSilentMode: true,
     shouldPlayInBackground: true,
-    interruptionMode: 'doNotMix',
+    /* iPhone met de geluidsmotor: dezelfde instelling als de motor, zodat
+       een sessiestart de geluidssessie niet omgooit. */
+    interruptionMode: nativeKeepAlive() ? 'mixWithOthers' : 'doNotMix',
   })
     .then(() => {
       modeSet = true;
@@ -200,6 +209,13 @@ export function startSessionKeepAlive(
      hartslag — en iOS legt de app dan stil. De modus kon intussen door een
      ander scherm (hartslagpagina) overschreven zijn terwijl `modeSet` nog
      true zei. Daarom op iOS bij ELKE sessiestart opnieuw, zonder cache. */
+  if (nativeKeepAlive()) {
+    beginSessionAudio(owner);
+    /* expo-audio moet weten dat zijn spelers (soundscape) op de achtergrond
+       mogen doorspelen — zelfde instelling als de motor, dus geen wissel. */
+    forceBackgroundAudioMode();
+    return;
+  }
   if (Platform.OS === 'ios') forceBackgroundAudioMode();
   if (anchor) return;
   void (async () => {
@@ -267,6 +283,10 @@ export function updateSessionKeepAliveMeta(meta: SessionKeepAliveMeta): void {
 
 /** Stop en ruim op. Veilig om vaker aan te roepen dan nodig. */
 export function stopSessionKeepAlive(owner: KeepAliveOwner | 'all' = 'breath'): void {
+  if (nativeKeepAlive()) {
+    if (owner === 'all') (['breath', 'state', 'preview'] as const).forEach(endSessionAudio);
+    else endSessionAudio(owner);
+  }
   if (owner === 'all') owners.clear();
   else owners.delete(owner);
   if (owners.size > 0) return;
