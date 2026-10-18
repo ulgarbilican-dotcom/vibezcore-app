@@ -85,9 +85,32 @@ type WatchBreathNativeModule = {
   pauseStateSession(): void;
   stopStateSession(): void;
   watchStatus?(): Promise<{ status: 'none' | 'noApp' | 'ready'; name: string }>;
+  syncCatalog?(json: string): void;
   addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): Subscription;
   addListener(eventName: 'onStateAck', listener: () => void): Subscription;
+  addListener(eventName: 'onWatchLog', listener: (event: { record: string }) => void): Subscription;
 };
+
+/** Catalogus voor zelf starten op de Apple Watch (18 okt 2026) — zelfde JSON
+ *  als voor Wear OS (watch-catalog.ts). Oudere build zonder de functie: no-op. */
+export function syncAppleWatchCatalog(json: string): void {
+  try {
+    native?.syncCatalog?.(json);
+  } catch {
+    /* stil */
+  }
+}
+
+/** Een sessie die op de Apple Watch zelf liep (JSON-record), voor de
+ *  geschiedenis. Retourneert cleanup. */
+export function onAppleWatchLog(cb: (record: string) => void): () => void {
+  try {
+    const sub = native?.addListener('onWatchLog', (e) => cb(e.record));
+    return () => sub?.remove();
+  } catch {
+    return () => {};
+  }
+}
 
 let native: WatchBreathNativeModule | null = null;
 try {

@@ -65,17 +65,8 @@ struct ContentView: View {
           onEnd: { controller.requestStop() }
         )
       } else {
-        VStack(spacing: 8) {
-          Text("VIBEZCORE")
-            .font(.system(size: 11, weight: .bold))
-            .tracking(1.6)
-            .foregroundColor(.gray)
-          Text("Start a session in the VIBEZCORE App")
-            .font(.system(size: 14))
-            .multilineTextAlignment(.center)
-            .foregroundColor(.white)
-        }
-        .padding(.horizontal, 12)
+        /* Zelf starten op het horloge (18 okt 2026) — zie HomeView.swift. */
+        HomeView()
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

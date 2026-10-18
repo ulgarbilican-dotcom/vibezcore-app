@@ -57,10 +57,34 @@ final class BreathSessionController: NSObject, ObservableObject {
   private var phaseTimer: Timer?
   private var tickTimer: Timer?
   private var generation = 0
+  /** Huidige fase-index (voor hervatten van een lokale sessie). */
+  private var currentIdx = 0
+
+  /* ── Op het horloge zelf gestart (18 okt 2026) ─────────────────────────
+     Het horloge is dan de bron van waarheid: pauze, hervatten en stop
+     gebeuren hier; "pause"/"stop" van de iPhone raken zo'n sessie niet. Na
+     afloop een `watch_log` naar de iPhone (geschiedenis). */
+  private var localKey: String?
+  private var localTechKey = ""
+  private var localStarted = Date()
+  private var localActiveSec: Double = 0
+  private var localSegmentStart: Date?
+  private var localCompleted = false
+  private var localWasFree = false
+  private var pausedRound = 1
+  private var pausedIdx = 0
+  private var pausedRemainingMs = 0
+  var isLocal: Bool { localKey != nil }
 
   /** Altijd op main aanroepen (PhoneConnector doet dat). */
   func apply(_ message: [String: Any]) {
     let type = message["type"] as? String ?? "start"
+    let fromPhone = message["local"] as? Bool != true
+    if fromPhone && isLocal {
+      /* De iPhone start zelf een sessie: die wint, de lokale wordt gelogd. */
+      if type != "start" { return }
+      finishLocal(completed: false)
+    }
     if type == "stop" {
       stop()
       return
@@ -115,10 +139,12 @@ final class BreathSessionController: NSObject, ObservableObject {
   private func runPhase(gen: Int, round: Int, idx: Int, start: Date, duration: TimeInterval, silentStart: Bool = false) {
     guard gen == generation else { return }
     guard round <= totalRounds else {
+      if isLocal { localCompleted = true }
       stop()
       return
     }
     let phase = phases[idx]
+    currentIdx = idx
     phaseLabel = displayLabel(for: phase.key)
     via = phase.via
     self.round = round
@@ -197,15 +223,90 @@ final class BreathSessionController: NSObject, ObservableObject {
   // bevestigt daarna. Hervatten kan enkel via de iPhone: die stuurt de
   // sessie terug vanaf de juiste plek.
 
+  /** Start een ademsessie op het horloge zelf (catalogus). */
+  func startLocal(_ entry: CatalogBreath, technique: CatalogTechnique, duration: CatalogDuration, free: Bool) {
+    if isLocal { finishLocal(completed: false) }
+    localKey = entry.key
+    localTechKey = technique.key
+    localStarted = Date()
+    localActiveSec = 0
+    localSegmentStart = Date()
+    localCompleted = false
+    localWasFree = free
+    apply([
+      "type": "start",
+      "local": true,
+      "phases": technique.phases,
+      "rounds": duration.rounds,
+      "modeName": entry.name,
+      "colorHex": entry.colorHex,
+    ])
+  }
+
+  private func closeSegment() {
+    if let seg = localSegmentStart {
+      localActiveSec += Date().timeIntervalSince(seg)
+      localSegmentStart = nil
+    }
+  }
+
+  private func finishLocal(completed: Bool) {
+    guard let key = localKey else { return }
+    closeSegment()
+    localKey = nil
+    if localWasFree && localActiveSec >= 10 { WatchCatalog.shared.markFreeUsed() }
+    WatchSessionLog.send([
+      "state": key,
+      "techniqueKey": localTechKey,
+      "durSec": localActiveSec.rounded(),
+      "rounds": max(1, completed ? totalRounds : max(1, round - 1)),
+      "completed": completed,
+      "endedAt": Date().timeIntervalSince1970 * 1000,
+    ])
+  }
+
   func requestPauseOrResume() {
+    if isLocal {
+      if paused {
+        localSegmentStart = Date()
+        resumeLocal()
+      } else {
+        closeSegment()
+        let remaining = max(0, phaseEnd.timeIntervalSinceNow)
+        pausedRound = max(1, round)
+        pausedIdx = currentIdx
+        pausedRemainingMs = Int(remaining * 1000)
+        pauseLocally()
+      }
+      return
+    }
     let action = paused ? "resume" : "pause"
     PhoneConnector.shared.send(["type": "watch_action", "action": action, "kind": "breath"])
     if action == "pause" { pauseLocally() }
   }
 
   func requestStop() {
+    if isLocal {
+      stop()
+      return
+    }
     PhoneConnector.shared.send(["type": "watch_action", "action": "stop", "kind": "breath"])
     stop()
+  }
+
+  private func resumeLocal() {
+    guard paused, !phases.isEmpty else { return }
+    apply([
+      "type": "start",
+      "local": true,
+      "phases": phases.map { p -> [String: Any] in ["key": p.key, "secs": p.secs, "via": p.via] },
+      "rounds": totalRounds,
+      "modeName": modeName,
+      "colorHex": colorHex,
+      "startRound": pausedRound,
+      "startPhase": pausedIdx,
+      "phaseRemainingMs": pausedRemainingMs,
+    ])
   }
 
   func pauseLocally() {
@@ -226,6 +327,8 @@ final class BreathSessionController: NSObject, ObservableObject {
   }
 
   func stop() {
+    if isLocal { finishLocal(completed: localCompleted) }
+    localCompleted = false
     generation += 1
     phaseTimer?.invalidate()
     tickTimer?.invalidate()

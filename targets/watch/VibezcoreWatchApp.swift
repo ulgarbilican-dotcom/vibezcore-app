@@ -9,6 +9,7 @@ struct VibezcoreWatchApp: App {
        vastligt vóór er berichten binnenkomen. */
     _ = BreathSessionController.shared
     _ = StateSessionController.shared
+    _ = WatchCatalog.shared
     PhoneConnector.shared.activate()
   }
 

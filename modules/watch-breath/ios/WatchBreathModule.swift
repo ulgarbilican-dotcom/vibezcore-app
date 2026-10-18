@@ -29,7 +29,7 @@ public class WatchBreathModule: Module {
   public func definition() -> ModuleDefinition {
     Name("WatchBreath")
 
-    Events("onWatchAction", "onStateAck")
+    Events("onWatchAction", "onStateAck", "onWatchLog")
 
     OnCreate {
       WatchBridge.shared.activate()
@@ -38,6 +38,9 @@ public class WatchBreathModule: Module {
       }
       WatchBridge.shared.onStateAck = { [weak self] in
         self?.sendEvent("onStateAck", ["playing": true])
+      }
+      WatchBridge.shared.onLog = { [weak self] record in
+        self?.sendEvent("onWatchLog", ["record": record])
       }
     }
 
@@ -93,6 +96,12 @@ public class WatchBreathModule: Module {
     Function("stopStateSession") {
       WatchBridge.shared.sendStateStop()
     }
+
+    /* Catalogus voor zelf starten op het horloge (18 okt 2026), zelfde JSON
+       als voor Wear OS (watch-catalog.ts). */
+    Function("syncCatalog") { (json: String) in
+      WatchBridge.shared.sendCatalog(json)
+    }
   }
 }
 
@@ -103,6 +112,34 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   var onAction: ((String, String) -> Void)?
   /** De Watch speelt het State Control-ritme echt (`state_ack`). */
   var onStateAck: (() -> Void)?
+  /** Een sessie die op het horloge zelf liep (JSON-record). */
+  var onLog: ((String) -> Void)?
+  private var lastCatalog = ""
+
+  /* Catalogus: live als bereikbaar, anders via de FIFO-wachtrij; een
+     nieuwere catalogus annuleert een nog niet afgeleverde oudere. Niet via
+     de application context — die is van breathwork. */
+  func sendCatalog(_ json: String) {
+    guard WCSession.isSupported() else { return }
+    let session = WCSession.default
+    guard session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else {
+      lastCatalog = json
+      return
+    }
+    if json == lastCatalog && session.outstandingUserInfoTransfers.isEmpty { return }
+    lastCatalog = json
+    for transfer in session.outstandingUserInfoTransfers {
+      if (transfer.userInfo["type"] as? String) == "catalog" { transfer.cancel() }
+    }
+    let message: [String: Any] = ["type": "catalog", "json": json]
+    if session.isReachable {
+      session.sendMessage(message, replyHandler: nil) { _ in
+        session.transferUserInfo(message)
+      }
+    } else {
+      session.transferUserInfo(message)
+    }
+  }
 
   private let stampLock = NSLock()
   private var lastStateStampMs: Double = 0
@@ -269,6 +306,12 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   }
 
   private func handleFromWatch(_ message: [String: Any]) {
+    if (message["type"] as? String) == "watch_log", let record = message["record"] as? String {
+      DispatchQueue.main.async { [weak self] in
+        self?.onLog?(record)
+      }
+      return
+    }
     if (message["type"] as? String) == "state_ack" {
       /* Enkel `playing: true` telt (protocol). De Watch stuurt `false` als
          hij het ritme onverwacht kwijt is (runtime-sessie verlopen); daar

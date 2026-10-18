@@ -133,6 +133,19 @@ final class StateSessionController: ObservableObject {
   /** Ack al verstuurd voor de huidige start? */
   private var ackedCurrentStart = false
 
+  /* ── Op het horloge zelf gestart (18 okt 2026) ─────────────────────────
+     Dan is het HORLOGE de bron van waarheid: pauze/stop gebeuren hier, de
+     iPhone krijgt geen acks (er loopt daar geen sessie) en na afloop een
+     `watch_log` voor de geschiedenis. Berichten van de iPhone die geen
+     nieuwe start zijn, raken zo'n sessie niet. */
+  private var localMode: Int?
+  private var localStartedAt: Date?
+  private var localPlannedSec: Double = 0
+  private var localActiveSec: Double = 0
+  private var localSegmentStart: Date?
+  private var localCompleted = false
+  var isLocal: Bool { localMode != nil }
+
   init() {
     RuntimeSessionManager.shared.onRunningChanged = { [weak self] running in
       self?.runtimeChanged(running)
@@ -152,11 +165,14 @@ final class StateSessionController: ObservableObject {
     }
     switch type {
     case "state_start":
+      if isLocal { finishLocal(completed: false) }
       start(message, sentAtMs: stamp)
     case "state_pause":
-      pause()
+      if !isLocal { pause() }
+      return
     case "state_stop":
-      stop()
+      if !isLocal { stop() }
+      return
     default:
       break
     }
@@ -238,7 +254,53 @@ final class StateSessionController: ObservableObject {
     paused = true
   }
 
+  /** Start een State Control-sessie op het horloge zelf (catalogus). */
+  func startLocal(_ entry: CatalogState, minutes: Int) {
+    if isLocal { finishLocal(completed: false) }
+    var message = entry.params
+    message["title"] = entry.name
+    message["colorHex"] = entry.colorHex
+    message["curveOffsetSec"] = 0
+    message["remainingSec"] = Double(max(1, minutes) * 60)
+    localMode = entry.mode
+    localStartedAt = Date()
+    localPlannedSec = Double(max(1, minutes) * 60)
+    localActiveSec = 0
+    localSegmentStart = Date()
+    localCompleted = false
+    start(message, sentAtMs: nil)
+    if !active {
+      /* Ongeldige parameters (oude catalogus): niets loggen. */
+      localMode = nil
+    }
+  }
+
+  private func closeSegment() {
+    if let seg = localSegmentStart {
+      localActiveSec += Date().timeIntervalSince(seg)
+      localSegmentStart = nil
+    }
+  }
+
+  /** Logt en vergeet de lokale sessie (stopt het ritme NIET zelf). */
+  private func finishLocal(completed: Bool) {
+    guard let mode = localMode, let startedAt = localStartedAt else { return }
+    closeSegment()
+    localMode = nil
+    WatchSessionLog.send([
+      "kind": "state",
+      "mode": mode,
+      "startedAt": startedAt.timeIntervalSince1970 * 1000,
+      "endedAt": Date().timeIntervalSince1970 * 1000,
+      "activeSec": localActiveSec.rounded(),
+      "plannedSec": localPlannedSec,
+      "completed": completed,
+    ])
+  }
+
   func stop() {
+    if isLocal { finishLocal(completed: localCompleted) }
+    localCompleted = false
     cancelTimers()
     generation += 1
     params = nil
@@ -255,6 +317,16 @@ final class StateSessionController: ObservableObject {
   // MARK: Knoppen op het horloge — telefoon is de bron van waarheid
 
   func requestPauseOrResume() {
+    if isLocal {
+      if paused {
+        localSegmentStart = Date()
+        resumeLocally()
+      } else {
+        closeSegment()
+        pause()
+      }
+      return
+    }
     let action = paused ? "resume" : "pause"
     PhoneConnector.shared.send(
       ["type": "watch_action", "action": action, "kind": "bracelet"],
@@ -269,6 +341,10 @@ final class StateSessionController: ObservableObject {
   }
 
   func requestStop() {
+    if isLocal {
+      stop()
+      return
+    }
     PhoneConnector.shared.send(
       ["type": "watch_action", "action": "stop", "kind": "bracelet"],
       onUndeliverable: { [weak self] in self?.stop() }
@@ -348,6 +424,7 @@ final class StateSessionController: ObservableObject {
     endTimers.append(schedule(at: doneAt) { [weak self] in
       guard let self = self, gen == self.generation else { return }
       /* Natuurlijk einde: de telefoon stuurt geen stop (protocol). */
+      self.localCompleted = true
       self.stop()
     })
   }
@@ -378,7 +455,7 @@ final class StateSessionController: ObservableObject {
    *  zijn eigen trilling stilleggen terwijl het horloge bij de eerste
    *  pols-omlaag geschorst wordt — en dan voelt niemand nog iets. */
   private func ackIfRuntimeRunning() {
-    guard active, !paused, !ackedCurrentStart, RuntimeSessionManager.shared.isRunning else { return }
+    guard !isLocal, active, !paused, !ackedCurrentStart, RuntimeSessionManager.shared.isRunning else { return }
     ackedCurrentStart = true
     PhoneConnector.shared.send(["type": "state_ack", "playing": true])
   }
@@ -389,7 +466,7 @@ final class StateSessionController: ObservableObject {
   private func startAckLoop() {
     ackTimer?.invalidate()
     let timer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
-      guard let self = self, self.active, !self.paused, self.ackedCurrentStart,
+      guard let self = self, !self.isLocal, self.active, !self.paused, self.ackedCurrentStart,
         RuntimeSessionManager.shared.isRunning else { return }
       PhoneConnector.shared.send(["type": "state_ack", "playing": true])
     }

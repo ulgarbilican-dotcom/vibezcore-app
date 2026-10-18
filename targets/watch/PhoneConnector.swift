@@ -85,6 +85,9 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
         StateSessionController.shared.apply(type: type, message: message)
       case "start", "stop", "pause":
         BreathSessionController.shared.apply(message)
+      case "catalog":
+        /* Catalogus voor zelf starten op het horloge (18 okt 2026). */
+        if let json = message["json"] as? String { WatchCatalog.shared.load(json) }
       default:
         break
       }

@@ -30,6 +30,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { onWatchSessionLogged, syncWatchCatalog, takeWatchSessions } from '../../modules/wear-breath';
+import { onAppleWatchLog, syncAppleWatchCatalog } from '../../modules/watch-breath';
 
 const ORDER: BreathStateKey[] = ['boost', 'focus', 'calm', 'clarity', 'rest'];
 
@@ -172,7 +173,17 @@ async function importWatchSessions(): Promise<void> {
 }
 
 async function importWatchSessionsOnce(): Promise<void> {
-  const items = await takeWatchSessions();
+  await importWatchRecords(await takeWatchSessions());
+}
+
+/* Apple Watch (18 okt 2026): elk record komt los binnen; één tegelijk
+   verwerken, zodat de "al gezien"-lijst nooit door elkaar loopt. */
+let appleQueue: Promise<void> = Promise.resolve();
+function importAppleWatchRecord(raw: string): void {
+  appleQueue = appleQueue.then(() => importWatchRecords([raw])).catch(() => {});
+}
+
+async function importWatchRecords(items: string[]): Promise<void> {
   if (items.length === 0) return;
   let seen: string[] = [];
   try {
@@ -246,7 +257,8 @@ export function useWatchCatalogSync(): void {
   useEffect(() => subscribeRestingPulse((p) => setRestingBpm(p.bpm)), []);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    /* Android (Wear OS) én iPhone (Apple Watch, 18 okt 2026): dezelfde
+       catalogus, zodat ook de Apple Watch zelf sessies kan starten. */
     /* 14 okt 2026 (audit): pas doorsturen als het abonnement geladen is —
        anders kon een gratis gebruiker State Control open krijgen op het
        horloge (en bleef dat zo als de app daarna sloot). */
@@ -254,10 +266,13 @@ export function useWatchCatalogSync(): void {
     const locked = !sub.isPro && !!freeUsedAt;
     /* zelfde regel als het State Control-scherm (bracelet-control.tsx) */
     const stateLocked = !sub.isPro && !ownsBracelet;
-    syncWatchCatalog(buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt));
+    const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt);
+    if (Platform.OS === 'android') syncWatchCatalog(json);
+    else if (Platform.OS === 'ios') syncAppleWatchCatalog(json);
   }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, strength, experience, history.length, techByState, restingBpm]);
 
   useEffect(() => {
+    if (Platform.OS === 'ios') return onAppleWatchLog(importAppleWatchRecord);
     if (Platform.OS !== 'android') return;
     void importWatchSessions();
     const s = AppState.addEventListener('change', (st) => {
