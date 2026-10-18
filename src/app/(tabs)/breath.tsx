@@ -26,6 +26,7 @@
    eindigt in een volledige gratis sessie.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { iosFont } from '@/utils/ios-text-scale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import SessionArt, {
@@ -1878,7 +1879,9 @@ const s = StyleSheet.create({
      geselecteerd, medium niet). */
   thumbName: {
     marginTop: 8,
-    height: 30,
+    /* Twee volle regels (iPhone-nakijkronde 18 okt 2026: met de iPhone-
+       tekstschaal werd de tweede regel van "Sharp Focus" e.a. afgesneden). */
+    height: Math.ceil(2 * iosFont(16)) + 2,
     fontSize: 14,
     lineHeight: 16,
     letterSpacing: 0,

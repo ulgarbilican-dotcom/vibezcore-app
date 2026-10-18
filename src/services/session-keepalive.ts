@@ -25,6 +25,14 @@ import {
 } from 'expo-audio';
 
 let anchor: AudioPlayer | null = null;
+/* Wie heeft het anker nodig? (iPhone-nakijkronde 18 okt 2026) Eén gedeeld
+   anker voor Breathwork, State Control en de proefsessie; zonder eigenaars
+   stopte bv. het openen van het State Control-scherm het anker van een
+   geminimaliseerde ademsessie — met het scherm op slot viel die dan stil.
+   Nu stopt elk onderdeel enkel zijn eigen deel; het anker gaat pas uit als
+   niemand het nog nodig heeft. */
+export type KeepAliveOwner = 'breath' | 'state' | 'preview';
+const owners = new Set<KeepAliveOwner>();
 let modeSet = false;
 
 /** Enkel de audiomodus zetten, zonder het stilte-anker te starten.
@@ -125,7 +133,9 @@ export function startSessionKeepAlive(
    *  keepalive-werking zelf te raken. Default `true` = ongewijzigd
    *  gedrag voor bestaande aanroepers (breathwork). */
   showLockScreenInfo: boolean = true,
+  owner: KeepAliveOwner = 'breath',
 ): void {
+  owners.add(owner);
   if (anchor) return;
   void (async () => {
     try {
@@ -144,7 +154,7 @@ export function startSessionKeepAlive(
         });
         modeSet = true;
       }
-      if (anchor) return;
+      if (anchor || owners.size === 0) return;
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const p = createAudioPlayer(require('../../assets/silence.wav'));
       p.loop = true;
@@ -190,7 +200,10 @@ export function updateSessionKeepAliveMeta(meta: SessionKeepAliveMeta): void {
 }
 
 /** Stop en ruim op. Veilig om vaker aan te roepen dan nodig. */
-export function stopSessionKeepAlive(): void {
+export function stopSessionKeepAlive(owner: KeepAliveOwner | 'all' = 'breath'): void {
+  if (owner === 'all') owners.clear();
+  else owners.delete(owner);
+  if (owners.size > 0) return;
   const p = anchor;
   anchor = null;
   if (!p) return;

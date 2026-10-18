@@ -558,6 +558,9 @@ export function startBraceletSessionMonitor(opts: {
       normaal 0 bij een echte nieuwe start). */
   elapsedSec?: number;
 }): void {
+  /* Elke State Control-start (Start, Quick, plan, Restart): audio pauzeert
+     en geeft het vergrendelscherm vrij (iPhone-nakijkronde 18 okt 2026). */
+  releaseAudioForSession();
   clearTimers();
   state = {
     mode: opts.mode,
@@ -789,8 +792,6 @@ export async function startStateControlNow(
   opts: { quick?: boolean } = {},
 ): Promise<boolean> {
   if (state) return false;
-  /* Audio pauzeert en geeft het vergrendelscherm vrij (18 okt 2026). */
-  releaseAudioForSession();
   const meta = getModeMeta(mode);
   /* Snelle sessie (Quick Chill/Boost, 5 min): onder het modus-minimum mag
      hier — de telefoon/het horloge bewaakt zelf het einde. */

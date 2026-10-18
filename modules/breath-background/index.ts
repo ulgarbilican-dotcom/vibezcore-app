@@ -22,6 +22,7 @@
    precies zoals vóór deze module bestond. */
 
 import { requireNativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 export type BreathBackgroundPhase = {
   key: 'inhale' | 'hold-in' | 'exhale' | 'hold-out';
@@ -89,6 +90,12 @@ try {
 export function startBackgroundBreathSession(
   options: StartBreathBackgroundOptions,
 ): void {
+  /* iPhone (nakijkronde 18 okt 2026): niet gebruiken. iOS bevriest de JS-
+     lus niet — het stille anker (session-keepalive) houdt de sessie levend —
+     terwijl de native lus hier vanaf fase 1 herstartte (dubbele, verschoven
+     stem bij elk vergrendelen) en bij stop de audiosessie van de hele app
+     uitzette (anker, stem, soundscape). Enkel Android heeft hem nodig (Doze). */
+  if (Platform.OS === 'ios') return;
   try {
     native?.startBackgroundBreathSession(options);
   } catch {
@@ -101,6 +108,7 @@ export function startBackgroundBreathSession(
  *  cleanup, ook als er nooit succesvol gestart is (dubbel-stoppen is
  *  onschadelijk aan de native kant). */
 export function stopBackgroundBreathSession(): void {
+  if (Platform.OS === 'ios') return; /* zie startBackgroundBreathSession */
   try {
     native?.stopBackgroundBreathSession();
   } catch {

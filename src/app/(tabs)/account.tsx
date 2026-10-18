@@ -1200,7 +1200,7 @@ export default function AccountScreen() {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('@/services/soundscape').stopScape(true);
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('@/services/session-keepalive').stopSessionKeepAlive();
+      require('@/services/session-keepalive').stopSessionKeepAlive('all');
     } catch { /* non-fatal */ }
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports

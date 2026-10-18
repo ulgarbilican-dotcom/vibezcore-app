@@ -1289,6 +1289,9 @@ export function BreathSession() {
   }, [voiceOn]);
   useEffect(() => {
     hapticRef.current = hapticsOn;
+    /* Uitzetten = meteen stil, ook de rest van de lopende fase (iPhone tikt
+       op een JS-klok per fase). */
+    if (!hapticsOn) stopPhaseHaptic();
   }, [hapticsOn]);
   useEffect(() => {
     roundsRef.current = rounds;
@@ -1440,6 +1443,9 @@ export function BreathSession() {
     clearTimers();
     stopPhaseHaptic();
     stopVoice();
+    /* Ook de native achtergrond-lus (Android): een sessie die eindigt of
+       stopt terwijl het scherm op slot staat, mag niet verder spreken. */
+    stopBackgroundBreathSession();
     cancelAnimation(arc);
     arc.value = 0;
     /* Geen sessie meer bezig — de AppState-listener mag native niet meer

@@ -5760,10 +5760,10 @@ function BraceletControlScreen({
        Start, en ving de knoppen van oordopjes op (audit 5 okt 2026). */
     if (Platform.OS === 'android' && hasNativeWaveform()) return;
     if (!sessionActive && !isPaused) {
-      stopSessionKeepAlive();
+      stopSessionKeepAlive('state');
       return;
     }
-    startSessionKeepAlive(undefined, false);
+    startSessionKeepAlive(undefined, false, 'state');
   }, [sessionActive, isPaused]);
 
   /* Operator, 17 september 2026 ("als iemand uit de sessie is en

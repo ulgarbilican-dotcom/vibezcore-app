@@ -917,7 +917,7 @@ function startIosPreviewSurface(mode: BraceletMode): void {
     paused: false,
   });
   void activateKeepAwakeAsync(PREVIEW_KEEP_AWAKE_TAG).catch(() => {});
-  startSessionKeepAlive(undefined, false);
+  startSessionKeepAlive(undefined, false, 'preview');
   iosPreviewOn = true;
 }
 function endIosPreviewSurface(): void {
@@ -925,7 +925,7 @@ function endIosPreviewSurface(): void {
   iosPreviewOn = false;
   endLiveSession();
   void deactivateKeepAwake(PREVIEW_KEEP_AWAKE_TAG).catch(() => {});
-  stopSessionKeepAlive();
+  stopSessionKeepAlive('preview');
 }
 /** Wekt de horloge-app alvast als State Control of het voorproef-blad
  *  opent (17 okt 2026, gemeten: een door Samsung bevroren app op de Watch4
