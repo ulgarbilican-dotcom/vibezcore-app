@@ -30,6 +30,7 @@ import Animated, {
   useSharedValue,
   withSequence,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 /* Standaard Signal Blue. In een lopende sessie krijgen de ringen de kleur
@@ -172,22 +173,51 @@ const WAVE_HALO_STROKE = 10;
 const WAVE_HALO_OPACITY = 0.22;
 const WAVE_PEAK_OPACITY = 0.8;
 
+/* Een lub voor de beelden die op het geplande moment wachten (18 okt 2026):
+   ligt hij nog in de toekomst (vooraankondiging), dan in de wachtplaats —
+   de frame-callback neemt hem over op het moment zelf, zonder de lopende
+   golf af te breken. Ligt hij al voorbij (laat event, iPhone-weg), dan
+   meteen. Dubbel (vooraankondiging + het gewone event) telt één keer. */
+function takeLub(
+  pulse: HapticPulse,
+  lubAt: SharedValue<number>,
+  cycle: SharedValue<number>,
+  nextAt: SharedValue<number>,
+  nextCycle: SharedValue<number>,
+): void {
+  if (pulse.kind !== 'lub') return;
+  const at = pulse.atMs;
+  if (Math.abs(at - lubAt.value) < 3 || Math.abs(at - nextAt.value) < 3) return;
+  if (at > Date.now()) {
+    nextAt.value = at;
+    nextCycle.value = pulse.cycleMs;
+  } else {
+    lubAt.value = at;
+    cycle.value = pulse.cycleMs;
+    if (nextAt.value >= 0 && nextAt.value <= at) nextAt.value = -1;
+  }
+}
+
 function PressureWaves({ size, color }: { size: number; color: string }) {
   const reduced = useReducedMotion();
   const lubAt = useSharedValue(-1);
   const cycle = useSharedValue(800);
+  const nextAt = useSharedValue(-1);
+  const nextCycle = useSharedValue(800);
   const p = useSharedValue(-1);
   const box = Math.ceil(size * (WAVE_END + 0.06));
   useEffect(() => {
     if (reduced) return;
-    return subscribeHapticPulse((pulse) => {
-      if (pulse.kind !== 'lub') return;
-      lubAt.value = pulse.atMs;
-      cycle.value = pulse.cycleMs;
-    });
-  }, [reduced, lubAt, cycle]);
+    return subscribeHapticPulse((pulse) => takeLub(pulse, lubAt, cycle, nextAt, nextCycle));
+  }, [reduced, lubAt, cycle, nextAt, nextCycle]);
   useFrameCallback(() => {
-    p.value = lubAt.value < 0 ? -1 : waveProgress(Date.now() - lubAt.value, cycle.value);
+    const now = Date.now();
+    if (nextAt.value >= 0 && now >= nextAt.value) {
+      lubAt.value = nextAt.value;
+      cycle.value = nextCycle.value;
+      nextAt.value = -1;
+    }
+    p.value = lubAt.value < 0 ? -1 : waveProgress(now - lubAt.value, cycle.value);
   }, !reduced);
   const r0 = size / 2;
   const r = useDerivedValue(() => r0 * (WAVE_START + (WAVE_END - WAVE_START) * Math.max(0, p.value)));
@@ -227,6 +257,7 @@ function ClassicRings({ size, color }: { size: number; color: string }) {
 
   useEffect(() => {
     return subscribeHapticPulse((pulse) => {
+      if (pulse.ahead) return;
       const ring = rings.current[next.current];
       next.current = (next.current + 1) % POOL_SIZE;
       ring?.fire(lookFor(pulse), reduced);
@@ -282,21 +313,28 @@ export function HeartbeatScale({
   const scale = useSharedValue(1);
   const lubAt = useSharedValue(-1);
   const cycle = useSharedValue(800);
+  const nextAt = useSharedValue(-1);
+  const nextCycle = useSharedValue(800);
   useEffect(() => {
-    if (!enabled) lubAt.value = -1;
-  }, [enabled, lubAt]);
+    if (!enabled) {
+      lubAt.value = -1;
+      nextAt.value = -1;
+    }
+  }, [enabled, lubAt, nextAt]);
   useEffect(() => {
     if (reduced || !enabled) return;
     /* Eén doorlopende curve per hartslag (lub op, dip, dub op, uitzakken,
        rust) — vanaf het GEPLANDE slagmoment (zie "Vaste slagklok"). */
-    return subscribeHapticPulse((pulse) => {
-      if (pulse.kind !== 'lub') return;
-      lubAt.value = pulse.atMs;
-      cycle.value = pulse.cycleMs;
-    });
-  }, [reduced, enabled, lubAt, cycle]);
+    return subscribeHapticPulse((pulse) => takeLub(pulse, lubAt, cycle, nextAt, nextCycle));
+  }, [reduced, enabled, lubAt, cycle, nextAt, nextCycle]);
   useFrameCallback(() => {
-    scale.value = lubAt.value < 0 ? 1 : beatCurve(Date.now() - lubAt.value, cycle.value);
+    const now = Date.now();
+    if (nextAt.value >= 0 && now >= nextAt.value) {
+      lubAt.value = nextAt.value;
+      cycle.value = nextCycle.value;
+      nextAt.value = -1;
+    }
+    scale.value = lubAt.value < 0 ? 1 : beatCurve(now - lubAt.value, cycle.value);
   }, !reduced);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   /* Eigen vlak van exact de cirkelgrootte, absoluut en gecentreerd zoals

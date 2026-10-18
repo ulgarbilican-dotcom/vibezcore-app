@@ -296,6 +296,12 @@ export type HapticPulse = {
    *  event afvuurt liep tot ±150 ms naast de slag (logs [sync]); het beeld
    *  rekent daarom vanaf DIT moment, zoals het horloge (vaste klok). */
   atMs: number;
+  /** Vooraankondiging van een KOMENDE lub (18 okt 2026, gemeten op de A16
+   *  bij Boost: de motor liep tot op 4 ms op de geplande slag, maar het
+   *  event kwam 10–160 ms te laat — de cirkel/golf misten dan hun begin en
+   *  sprongen halverwege de slag in). Enkel voor de beelden die op `atMs`
+   *  wachten (HeartbeatScale, drukgolf); losse ringen negeren dit. */
+  ahead?: boolean;
 };
 
 type PulseListener = (pulse: HapticPulse) => void;
@@ -336,6 +342,8 @@ const NATIVE_START_LAG_MS = 160;
  *  opbouwen van de golfvorm genoteerd, ~128 ms te laat → horloge ~150 ms
  *  achter in de voorproef, gemeten op de Watch4). */
 let lastAnchorWallMs = 0;
+/** Zoveel ms vóór een slag krijgen de beelden hem al aangekondigd. */
+const PULSE_AHEAD_MS = 250;
 let syncLogCount = 0;
 function scheduleVisual(
   mode: BraceletMode,
@@ -368,7 +376,12 @@ function scheduleVisual(
   }
   const nextCurveSec = curveSec + cycleMs / 1000;
   const nextWallMs = anchorWallMs + (nextCurveSec - offsetSec) * 1000;
+  const nextCycleMs = beatAt(spec, nextCurveSec, timing).cycleMs;
   pendingTimeouts.push(
+    setTimeout(() => {
+      if (myGeneration !== generation) return;
+      emitPulse({ kind: 'lub', mode, cycleMs: nextCycleMs, atMs: nextWallMs, ahead: true });
+    }, Math.max(0, nextWallMs - PULSE_AHEAD_MS - Date.now())),
     setTimeout(() => {
       if (myGeneration !== generation) return;
       emitPulse({ kind: 'dub', mode, cycleMs, atMs: beatWallMs + dubAt });
