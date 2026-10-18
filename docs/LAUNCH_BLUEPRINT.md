@@ -43,8 +43,8 @@
 | A2.1 | Backend: code inruilen + bewaren (auth-proxy), intrekken bij verwijderen (delete-account), `netlify/lib/apple-siwa.js` | ik | ✅ live (inactief tot A2.4) |
 | A2.2 | App stuurt `authorizationCode` mee | ik | ✅ code (in build 29) |
 | A2.3 | Apple-sleutel aanmaken (Keys → + → Sign in with Apple → VIBEZCORE) | jij | ✅ Key ID 3VS353U3RM |
-| A2.4 | Netlify → Site configuration → Environment variables → `APPLE_SIWA_PRIVATE_KEY` = volledige inhoud .p8 → Deploys → Trigger deploy | jij | ⏳ |
-| A2.5 | Supabase → SQL Editor → `supabase/migrations/20261018000001_apple_tokens.sql` uitvoeren | jij | ⏳ |
+| A2.4 | Netlify → Site configuration → Environment variables → `APPLE_SIWA_PRIVATE_KEY` (secret, enkel Production) → Deploys → Trigger deploy | jij | ✅ 18 okt |
+| A2.5 | Supabase → SQL Editor → `supabase/migrations/20261018000001_apple_tokens.sql` uitvoeren | jij | ✅ 18 okt |
 | A2.6 | Test: Apple-login → account verwijderen → Apple ID-instellingen → "Inloggen met Apple": VIBEZCORE is weg | jij | ⏳ |
 
 ### A3. App Store Connect (afwijzing 17 juli opgevolgd)
@@ -83,7 +83,7 @@
 | # | Stap | Wie | Status |
 |---|---|---|---|
 | C1 | Veiligheid: delete-account + cancel-subscription controleren token bij Supabase (vals token → 401) | ik | ✅ live getest |
-| C2 | Supabase → Authentication → URL Configuration → Site URL `https://account.vibezcore.com/auth.html` | jij | ⏳ |
+| C2 | Supabase → Authentication → URL Configuration → Site URL `https://account.vibezcore.com/auth.html` (+ redirect `https://account.vibezcore.com/**` en vibezcoreapp://-links) | jij | ✅ nagekeken 18 okt |
 | C3 | Accountpagina: knoppen "Get the app" naar echte store-links (na lancering) | ik (websitewijziging, jouw OK) | ⏳ |
 | C4 | RevenueCat: maand/jaar/dagpas in beide stores aan "VIBEZCORE Pro"/dagpas gekoppeld | ik controleer | ⏳ |
 | C5 | Na lancering: website-badges, crashrapporten eerste dagen opvolgen | ik | ⏳ |
@@ -112,4 +112,5 @@
 
 ## F. Logboek
 
-- 18 okt 2026: blauwdruk gestart; C1 live; A2.1–A2.3 klaar; builds 24–28 op TestFlight.
+- 18 okt 2026: blauwdruk gestart; C1 live; A2.1–A2.5 klaar (sleutel in Netlify, tabel apple_tokens, backend live); C2 nagekeken; builds 24–28 op TestFlight; build 29 gestart.
+- Sleutels (privé, OneDrive "VIBEZCORE Apple Sign in sleutel"): `AuthKey_3VS353U3RM.p8` (Sign in with Apple → Netlify) en `Apple SubscriptionKey_YA2FB7JR7D.p8` (In-App Purchase → RevenueCat).
