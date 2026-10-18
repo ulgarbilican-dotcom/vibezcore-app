@@ -82,11 +82,25 @@ import {
 } from '../../modules/watch-breath';
 
 import { clearLiveStartPulse, getRestingPulse, getSessionStartBpm } from './resting-pulse';
-import { heartbeatDub, heartbeatLub, startHeartbeatSound, stopHeartbeatSound } from './heartbeat-sound';
+import {
+  HEARTBEAT_VOLUME,
+  heartbeatDub,
+  heartbeatLub,
+  isHeartbeatSoundOn,
+  startHeartbeatSound,
+  stopHeartbeatSound,
+} from './heartbeat-sound';
+import {
+  isBeatEngineReady,
+  prepareBeatEngine,
+  scheduleBeat as scheduleEngineBeat,
+  stopBeatEngine,
+} from '../../modules/beat-engine';
+import { isHeadphonesOutput } from '../../modules/audio-route';
 import { getStateHear } from './state-sound-pref';
 import { endLiveSession, showLiveSession } from '../../modules/live-activity';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { startSessionKeepAlive, stopSessionKeepAlive } from './session-keepalive';
 import { getSetting, setSetting } from '@/utils/settings';
 import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
@@ -330,6 +344,8 @@ const pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
 function clearPending(): void {
   pendingTimeouts.forEach(clearTimeout);
   pendingTimeouts.length = 0;
+  /* iPhone: ook de slagen die de BeatEngine al vooraf gepland had. */
+  stopBeatEngine();
 }
 
 /** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
@@ -415,13 +431,38 @@ function fire(style: Haptics.ImpactFeedbackStyle): void {
 }
 
 /* iPhone-ritme (operator, 18 okt 2026: "bij Boost is de ring rond de cirkel
-   niet altijd correct"): elke slag werd gepland als "cycleMs na de vorige" —
-   elke late timer (bv. terwijl het scherm de aftelling hertekent) schoof dan
-   ALLE volgende slagen mee op; bij Boost (±545 ms per slag) voel en zie je
-   dat als een hink. Nu, zoals de Android-dienst en het horloge: elke slag
-   op zijn vaste plek op de klok (vorige geplande slag + cycleMs), dus een
-   late timer verschuift enkel die ene slag, niets stapelt op. Na een lange
-   pauze van JS (scherm op slot) springen we stil naar de slag van nu. */
+   niet altijd correct"): elke slag op zijn vaste plek op de klok (vorige
+   geplande slag + cycleMs), zoals de Android-dienst en het horloge — een late
+   timer verschuift enkel die ene slag, niets stapelt op. Na een lange pauze
+   van JS (scherm op slot) springen we stil naar de slag van nu.
+
+   BeatEngine (18 okt 2026, operator: "synchroniteit van heartbeat en haptic
+   animatie moet perfect"): deze functie draait BEAT_AHEAD_MS vóór elke slag.
+   Is de iPhone-module klaar en de app in beeld, dan plant Core Haptics tik
+   én geluid als één patroon op het exacte moment, en krijgt de cirkel
+   datzelfde moment vooraf (HapticPulse.ahead) — beeld, tik en geluid op één
+   klok, los van JS en de hoofdthread. Anders (vergrendeld, oudere build,
+   Android zonder dienst) de JS-weg: wachten tot het moment en dan tik,
+   geluid en beeld. */
+const BEAT_AHEAD_MS = 250;
+
+/** Apple-tikstijl → Core Haptics-tik (sterkte, scherpte). Heavy = volle kracht. */
+function tapFor(style: Haptics.ImpactFeedbackStyle): { intensity: number; sharpness: number } {
+  switch (style) {
+    case S.Soft:
+      return { intensity: 0.5, sharpness: 0.15 };
+    case S.Light:
+      return { intensity: 0.6, sharpness: 0.45 };
+    case S.Heavy:
+      return { intensity: 1, sharpness: 0.4 };
+    case S.Rigid:
+      return { intensity: 1, sharpness: 0.85 };
+    case S.Medium:
+    default:
+      return { intensity: 0.78, sharpness: 0.5 };
+  }
+}
+
 function scheduleBeat(
   mode: BraceletMode,
   spec: ResolvedSpec,
@@ -433,28 +474,61 @@ function scheduleBeat(
   if (myGeneration !== generation) return;
   pendingTimeouts.length = 0;
   const now = Date.now();
-  let at = plannedAt ?? now;
+  const useEngine = Platform.OS === 'ios' && isBeatEngineReady() && AppState.currentState === 'active';
+  let at = plannedAt ?? now + (useEngine ? 60 : 0);
   let { cycleMs, dubAt } = beatAt(spec, (at - curveStartedAt) / 1000, timing);
   while (now - at > cycleMs) {
     at += cycleMs;
     ({ cycleMs, dubAt } = beatAt(spec, (at - curveStartedAt) / 1000, timing));
   }
-  fire(spec.lubStyle);
-  if (jsSoundOn && getStateHear()) heartbeatLub();
-  /* Beeld op het moment dat de tik echt viel. */
-  const lubAt = Date.now();
-  emitPulse({ kind: 'lub', mode, cycleMs, atMs: lubAt });
   const nextAt = at + cycleMs;
-  pendingTimeouts.push(
-    setTimeout(() => {
+  const hear = jsSoundOn && getStateHear();
+  if (useEngine) {
+    const withSound = hear && isHeartbeatSoundOn('state-control');
+    const hp = withSound && isHeadphonesOutput();
+    const volume = hp ? HEARTBEAT_VOLUME.headphones : HEARTBEAT_VOLUME.speaker;
+    const lub = tapFor(strengthStyle(spec.lubStyle));
+    const dub = tapFor(strengthStyle(spec.dubStyle));
+    scheduleEngineBeat(at, [
+      { t: 0, ...lub, sound: withSound ? (hp ? 'headphonesLub' : 'speakerLub') : '', volume },
+      { t: dubAt, ...dub, sound: withSound ? (hp ? 'headphonesDub' : 'speakerDub') : '', volume },
+    ]);
+    /* Cirkel en drukgolf wachten op exact dit moment. */
+    emitPulse({ kind: 'lub', mode, cycleMs, atMs: at, ahead: true });
+    pendingTimeouts.push(
+      /* Losse ringen (en dubbel-check) krijgen het gewone event op het moment zelf. */
+      setTimeout(() => {
+        if (myGeneration !== generation) return;
+        emitPulse({ kind: 'lub', mode, cycleMs, atMs: at });
+      }, Math.max(0, at - Date.now())),
+      setTimeout(() => {
+        if (myGeneration !== generation) return;
+        emitPulse({ kind: 'dub', mode, cycleMs, atMs: at + dubAt });
+      }, Math.max(0, at + dubAt - Date.now())),
+    );
+  } else {
+    const fireLub = () => {
       if (myGeneration !== generation) return;
-      fire(spec.dubStyle);
-      if (jsSoundOn && getStateHear()) heartbeatDub();
-      emitPulse({ kind: 'dub', mode, cycleMs, atMs: Date.now() });
-    }, Math.max(0, at + dubAt - Date.now())),
+      fire(spec.lubStyle);
+      if (hear) heartbeatLub();
+      /* Beeld op het moment dat de tik echt viel. */
+      emitPulse({ kind: 'lub', mode, cycleMs, atMs: Date.now() });
+    };
+    if (at - now > 2) pendingTimeouts.push(setTimeout(fireLub, at - now));
+    else fireLub();
+    pendingTimeouts.push(
+      setTimeout(() => {
+        if (myGeneration !== generation) return;
+        fire(spec.dubStyle);
+        if (jsSoundOn && getStateHear()) heartbeatDub();
+        emitPulse({ kind: 'dub', mode, cycleMs, atMs: Date.now() });
+      }, Math.max(0, at + dubAt - Date.now())),
+    );
+  }
+  pendingTimeouts.push(
     setTimeout(
       () => scheduleBeat(mode, spec, curveStartedAt, timing, myGeneration, nextAt),
-      Math.max(0, nextAt - Date.now()),
+      Math.max(0, nextAt - BEAT_AHEAD_MS - Date.now()),
     ),
   );
 }
@@ -580,6 +654,8 @@ function play(
       jsSoundOn = true;
       startHeartbeatSound('state-control');
     }
+    /* iPhone: BeatEngine opwarmen; tot hij klaar is loopt de JS-weg. */
+    void prepareBeatEngine();
     scheduleBeat(mode, spec, Date.now() - offsetSec * 1000, timing, generation);
   }
 }

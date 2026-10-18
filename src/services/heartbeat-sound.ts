@@ -42,6 +42,8 @@ import { isHeadphonesOutput } from '../../modules/audio-route';
 
 const VOLUME_SPEAKER = 1; // operator, 9 okt 2026: "op de telefoon mag het luider"
 const VOLUME_HEADPHONES = 0.3; // operator, 9 okt 2026: 100% → 70% → 50% bleef "veel te luid en onzuiver" bij vol telefoonvolume → 30%
+/** Zelfde volumes voor de iPhone-BeatEngine (bracelet-haptics.ts). */
+export const HEARTBEAT_VOLUME = { speaker: VOLUME_SPEAKER, headphones: VOLUME_HEADPHONES } as const;
 
 let speaker: AudioPlayer | null = null;
 let headphones: AudioPlayer | null = null;
@@ -144,6 +146,12 @@ function ensurePlayers(_fresh = false): void {
 /** Laden zonder te spelen (de pagina roept dit aan bij het openen). */
 export function preloadHeartbeatSound(): void {
   ensurePlayers();
+}
+
+/** Klinkt de hartslag nu voor deze eigenaar? (start() slaat over als er al
+ *  een ademsessie of audiobibliotheek speelt — de BeatEngine volgt dat.) */
+export function isHeartbeatSoundOn(owner: HeartbeatOwner): boolean {
+  return owners.has(owner);
 }
 
 export function startHeartbeatSound(owner: HeartbeatOwner): void {
