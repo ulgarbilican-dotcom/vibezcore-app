@@ -3956,6 +3956,14 @@ function IdleScreen({
   const [runSnap, setRunSnap] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setRunSnap), []);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
+  /* Geminimaliseerde sessie, en je kijkt naar DIE toestand (operator, 18 okt
+     2026: "ja"): de cirkel toont de lopende sessie — echte resterende tijd,
+     geen duur-greep, tik = terug naar de sessie. Andere toestanden
+     bekijken en wisselen (met bevestiging, 5 okt 2026) blijft zoals het was. */
+  const viewingRunning = sessionRunning && runSnap.mode === selectedMode;
+  const runRem = Math.max(0, Math.floor(runSnap.remainingSec));
+  /* Altijd de tijd; "Paused" staat al in het balkje eronder. */
+  const runClock = `${Math.floor(runRem / 60)}:${String(runRem % 60).padStart(2, '0')}`;
 
   /* ── "Try 30 seconds free" (operator, 7 okt 2026) ──
      Zonder abonnement was alles op slot en zat de gratis voorproef ver-
@@ -4242,9 +4250,9 @@ function IdleScreen({
               hapticTap();
               pickMode(next);
             }}
-            onTap={() => setDetailModeForModal(selectedMode)}
+            onTap={() => (viewingRunning ? onReturnToSession() : setDetailModeForModal(selectedMode))}
             dial={
-              trialRunning
+              trialRunning || viewingRunning
                 ? undefined
                 : { size: RING_DIAL, min: meta.minMinutes, max: meta.maxMinutes, value: duration, onChange: setDuration }
             }
@@ -4269,7 +4277,13 @@ function IdleScreen({
               <HeartbeatScale size={RING_DIAL} enabled={trialRunning}>
                 <DurationRing
                   key={selectedMode}
-                  clockOverride={trialRunning ? `0:${String(trialLeft).padStart(2, '0')}` : undefined}
+                  clockOverride={
+                    trialRunning
+                      ? `0:${String(trialLeft).padStart(2, '0')}`
+                      : viewingRunning
+                        ? runClock
+                        : undefined
+                  }
                   fillOnMount={modeChangedRef.current}
                   min={meta.minMinutes}
                   max={meta.maxMinutes}
@@ -4277,7 +4291,7 @@ function IdleScreen({
                   color={meta.color}
                   label={meta.name}
                   size={RING_DIAL}
-                  dialHandle={!trialRunning}
+                  dialHandle={!trialRunning && !viewingRunning}
                   dark={idleDark}
                   recommended={
                     duration === DURATION_PRESETS[selectedMode].find((p) => p.recommended)?.value
