@@ -28,7 +28,7 @@ type NativeRecord = {
 type NativeModule = {
   addListener(event: 'onLiveAction', cb: (e: { action: 'toggle' }) => void): EventSubscription;
   isSupported(): boolean;
-  show(record: NativeRecord): Promise<void>;
+  show(record: NativeRecord): Promise<string>;
   end(): Promise<void>;
 };
 
@@ -53,6 +53,15 @@ export type LiveSession = {
 
 let last: (LiveSession & { endMs: number }) | null = null;
 
+/* Lukt de Live Activity niet (18 okt 2026: op de iPhone verscheen geen kaart),
+   dan krijgt de app de reden en de sessie, zodat ze terugvalt op de
+   mediakaart van het stille anker en de reden meldt. */
+type LiveFailHandler = (reason: string, s: LiveSession | null) => void;
+let failHandler: LiveFailHandler | null = null;
+export function onLiveActivityFailed(cb: LiveFailHandler): void {
+  failHandler = cb;
+}
+
 
 /** Start of werk de Live Activity bij. */
 export function showLiveSession(s: LiveSession): void {
@@ -60,7 +69,12 @@ export function showLiveSession(s: LiveSession): void {
   const remaining = Math.max(0, Math.round(s.remainingSec));
   const endMs = Date.now() + remaining * 1000;
   last = { ...s, remainingSec: remaining, endMs };
-  native.show({ ...s, remainingSec: remaining, endMs }).catch(() => {});
+  native
+    .show({ ...s, remainingSec: remaining, endMs })
+    .then((r) => {
+      if (r !== 'created' && r !== 'updated') failHandler?.(String(r), last);
+    })
+    .catch((e) => failHandler?.(`throw: ${String(e)}`, last));
 }
 
 /** Pauze: de resterende tijd bevriezen op wat de activity nu toont. */

@@ -189,6 +189,9 @@ public class BeatEngineModule: Module {
       let pattern = try CHHapticPattern(events: events, parameters: [])
       let player = try e.makePlayer(with: pattern)
       let nowMs = Date().timeIntervalSince1970 * 1000
+      // Te laat (JS of de motor haperde): de slag overslaan i.p.v. naast het
+      // ritme spelen (operator, build 26: "hartslag volgt soms het ritme niet").
+      if beat.atMs < nowMs - 30 { return }
       let delay = max(0, (beat.atMs - nowMs) / 1000)
       try player.start(atTime: e.currentTime + delay)
       players.append(player)

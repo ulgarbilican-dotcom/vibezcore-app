@@ -104,10 +104,14 @@ public class LiveActivityModule: Module {
       return false
     }
 
-    AsyncFunction("show") { (record: LiveSessionRecord) in
+    /// Geeft terug wat er gebeurde ("created", "updated", of een reden waarom
+    /// niet) — de app valt bij een fout terug op de mediakaart en meldt de
+    /// reden (18 okt 2026: op de iPhone verscheen geen enkele kaart).
+    AsyncFunction("show") { (record: LiveSessionRecord) -> String in
       if #available(iOS 16.2, *) {
-        await LiveSessionController.show(record)
+        return await LiveSessionController.show(record)
       }
+      return "unsupported-os"
     }
 
     AsyncFunction("end") { () in
@@ -120,7 +124,7 @@ public class LiveActivityModule: Module {
 
 @available(iOS 16.2, *)
 enum LiveSessionController {
-  static func show(_ r: LiveSessionRecord) async {
+  static func show(_ r: LiveSessionRecord) async -> String {
     let state = VibezSessionAttributes.ContentState(
       title: r.title,
       subtitle: r.subtitle,
@@ -142,20 +146,22 @@ enum LiveSessionController {
     if let current = Activity<VibezSessionAttributes>.activities.first {
       if current.attributes.kind == r.kind {
         await current.update(content)
-        return
+        return "updated"
       }
       await current.end(nil, dismissalPolicy: .immediate)
     }
 
-    guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+    guard ActivityAuthorizationInfo().areActivitiesEnabled else { return "disabled" }
     do {
       _ = try Activity.request(
         attributes: VibezSessionAttributes(kind: r.kind),
         content: content,
         pushType: nil
       )
+      return "created"
     } catch {
       // Geen toestemming of limiet bereikt — de sessie zelf loopt gewoon door.
+      return "error: \(error.localizedDescription)"
     }
   }
 

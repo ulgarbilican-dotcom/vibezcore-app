@@ -425,6 +425,10 @@ function strengthStyle(style: Haptics.ImpactFeedbackStyle): Haptics.ImpactFeedba
 }
 
 function fire(style: Haptics.ImpactFeedbackStyle): void {
+  /* iPhone op slot/achtergrond: iOS laat daar geen tikken toe — wat er toch
+     doorsijpelt komt onregelmatig ("haptics haperen", build 26). Dan enkel
+     geluid, zoals Apple het bedoelt. */
+  if (Platform.OS === 'ios' && AppState.currentState !== 'active') return;
   Haptics.impactAsync(strengthStyle(style)).catch(() => {
     /* toestel/emulator zonder trilmotor mag niets breken */
   });

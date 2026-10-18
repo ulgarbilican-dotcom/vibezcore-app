@@ -24,6 +24,8 @@ import {
   type AudioPlayer,
 } from 'expo-audio';
 import { AppState, Platform } from 'react-native';
+import { onLiveActivityFailed, type LiveSession } from '../../modules/live-activity';
+import { reportError } from './crash-reporting';
 
 let anchor: AudioPlayer | null = null;
 
@@ -39,6 +41,35 @@ function forceBackgroundAudioMode(): void {
     })
     .catch(() => {});
 }
+
+/* iPhone: geen Live Activity → de mediakaart van het anker toont de sessie. */
+let fallbackMeta: SessionKeepAliveMeta | null = null;
+let liveFailReported = false;
+function applyFallback(): void {
+  if (!anchor || !fallbackMeta) return;
+  lockScreenInfoOn = true;
+  try {
+    anchor.setActiveForLockScreen(
+      true,
+      { title: fallbackMeta.title, artist: fallbackMeta.subtitle },
+      { showSeekForward: false, showSeekBackward: false },
+    );
+  } catch {
+    /* cosmetisch */
+  }
+}
+onLiveActivityFailed((reason: string, s: LiveSession | null) => {
+  if (!liveFailReported) {
+    liveFailReported = true;
+    reportError(new Error(`Live Activity not shown: ${reason}`), { kind: s?.kind });
+  }
+  if (!s) return;
+  fallbackMeta = {
+    title: s.title,
+    subtitle: s.kind === 'breath' ? `Breathwork · ${s.subtitle}` : 'State Control',
+  };
+  applyFallback();
+});
 
 /** Loopt er een sessie die de app levend moet houden? */
 export function isKeepAliveActive(): boolean {
@@ -208,6 +239,7 @@ export function startSessionKeepAlive(
         }
       }
       anchor = p;
+      applyFallback();
     } catch {
       /* Geen anker is geen ramp: met scherm aan werkt alles gewoon. */
       anchor = null;
@@ -238,6 +270,7 @@ export function stopSessionKeepAlive(owner: KeepAliveOwner | 'all' = 'breath'): 
   if (owner === 'all') owners.clear();
   else owners.delete(owner);
   if (owners.size > 0) return;
+  fallbackMeta = null;
   const p = anchor;
   anchor = null;
   if (!p) return;
