@@ -34,6 +34,7 @@
    opnieuw zetten (vergrendelscherm-flow is goedgekeurd 🔒). */
 
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import { Platform } from 'react-native';
 import { getSnapshot, invalidateAudioMode } from './audio-player';
 import { getBreathSession } from './breath-session-state';
 import { invalidateAudioModeSet } from './session-keepalive';
@@ -157,10 +158,18 @@ export function startHeartbeatSound(owner: HeartbeatOwner): void {
   if (wasActive) return;
   invalidateAudioMode();
   invalidateAudioModeSet();
-  /* Niet wachten: de modus wordt gezet terwijl de eerste slag al kan klinken. */
+  /* Niet wachten: de modus wordt gezet terwijl de eerste slag al kan klinken.
+     iPhone + State Control-sessie (operator, iPhone build 24: "bij lockscreen
+     stopt gewoon alles"): de modus is voor de HELE app. "Niet op de
+     achtergrond / stil bij stille modus" (ambient) legde een lopende sessie
+     stil zodra je vergrendelde — het stille anker mocht niet meer spelen en
+     iOS bevroor de app. Voor een sessie dus playback + achtergrond, nog
+     altijd mengend met muziek van de gebruiker. Hartslagpagina en meting
+     blijven zoals ze waren. */
+  const sessionOnIos = owner === 'state-control' && Platform.OS === 'ios';
   void setAudioModeAsync({
-    playsInSilentMode: false,
-    shouldPlayInBackground: false,
+    playsInSilentMode: sessionOnIos,
+    shouldPlayInBackground: sessionOnIos,
     interruptionMode: 'mixWithOthers',
   }).catch(() => {});
   ensurePlayers(true);
