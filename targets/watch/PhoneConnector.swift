@@ -63,7 +63,14 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     _ session: WCSession,
     activationDidCompleteWith activationState: WCSessionActivationState,
     error: Error?
-  ) {}
+  ) {
+    /* Bij het openen de catalogus vragen (18 okt 2026): zo krijgt het
+       horloge de lijst ook als de iPhone hem nog niet kon sturen. */
+    guard activationState == .activated else { return }
+    DispatchQueue.main.async {
+      self.send(["type": "catalog_request"])
+    }
+  }
 
   func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
     route(message)

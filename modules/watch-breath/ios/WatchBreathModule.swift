@@ -115,19 +115,28 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   /** Een sessie die op het horloge zelf liep (JSON-record). */
   var onLog: ((String) -> Void)?
   private var lastCatalog = ""
+  /** Laatst verstuurde catalogus (om dubbels te vermijden). */
+  private var sentCatalog = ""
 
   /* Catalogus: live als bereikbaar, anders via de FIFO-wachtrij; een
      nieuwere catalogus annuleert een nog niet afgeleverde oudere. Niet via
-     de application context — die is van breathwork. */
+     de application context — die is van breathwork.
+     18 okt 2026 (operator: "app geopend maar watch gebeurt niets"): de JS
+     stuurt de catalogus bij het opstarten, vóór WCSession geactiveerd is.
+     Die werd toen enkel onthouden en nooit verstuurd — nu opnieuw zodra de
+     sessie actief wordt, de Watch-app geïnstalleerd raakt of bereikbaar is. */
   func sendCatalog(_ json: String) {
-    guard WCSession.isSupported() else { return }
-    let session = WCSession.default
-    guard session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else {
-      lastCatalog = json
-      return
-    }
-    if json == lastCatalog && session.outstandingUserInfoTransfers.isEmpty { return }
     lastCatalog = json
+    flushCatalog(force: false)
+  }
+
+  func flushCatalog(force: Bool) {
+    guard WCSession.isSupported(), !lastCatalog.isEmpty else { return }
+    let json = lastCatalog
+    let session = WCSession.default
+    guard session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
+    if !force && json == sentCatalog { return }
+    sentCatalog = json
     for transfer in session.outstandingUserInfoTransfers {
       if (transfer.userInfo["type"] as? String) == "catalog" { transfer.cancel() }
     }
@@ -284,7 +293,21 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     _ session: WCSession,
     activationDidCompleteWith activationState: WCSessionActivationState,
     error: Error?
-  ) {}
+  ) {
+    if activationState == .activated {
+      DispatchQueue.main.async { [weak self] in self?.flushCatalog(force: true) }
+    }
+  }
+
+  /* Watch-app net geïnstalleerd / gekoppeld, of het horloge opent de app. */
+  func sessionWatchStateDidChange(_ session: WCSession) {
+    DispatchQueue.main.async { [weak self] in self?.flushCatalog(force: true) }
+  }
+
+  func sessionReachabilityDidChange(_ session: WCSession) {
+    guard session.isReachable else { return }
+    DispatchQueue.main.async { [weak self] in self?.flushCatalog(force: true) }
+  }
 
   func sessionDidBecomeInactive(_ session: WCSession) {}
 
@@ -306,6 +329,10 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   }
 
   private func handleFromWatch(_ message: [String: Any]) {
+    if (message["type"] as? String) == "catalog_request" {
+      DispatchQueue.main.async { [weak self] in self?.flushCatalog(force: true) }
+      return
+    }
     if (message["type"] as? String) == "watch_log", let record = message["record"] as? String {
       DispatchQueue.main.async { [weak self] in
         self?.onLog?(record)
