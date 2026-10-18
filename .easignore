@@ -25,3 +25,19 @@ frames3/
 framesF/
 framesG/
 scratch/
+
+# Nooit mee in het build-archief (18 okt 2026): .easignore VERVANGT
+# .gitignore, dus alles wat daar staat moet hier ook staan.
+*.aab
+*.apk
+*.jks
+*.keystore
+credentials.json
+credentials/
+.env*
+wear-app/keystore.properties
+wear-app/build/
+wear-app/.gradle/
+modules/*/android/build/
+scratchpad/
+FONT_AUDIT_voor_google_docs.txt
