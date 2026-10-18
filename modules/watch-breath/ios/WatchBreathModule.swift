@@ -53,11 +53,15 @@ public class WatchBreathModule: Module {
        "noApp" = wel een Watch maar zonder VIBEZCORE, "ready" = alles klaar.
        WatchConnectivity geeft de naam van de Watch niet prijs. */
     AsyncFunction("watchStatus") { () -> [String: String] in
-      guard WCSession.isSupported() else { return ["status": "none", "name": ""] }
+      guard WCSession.isSupported() else { return ["status": "none", "name": "", "diag": "unsupported"] }
+      /* 18 okt 2026 (operator: geen Smartwatch-regel, niets op de Watch):
+         was de sessie nooit actief, dan hier opnieuw activeren. */
+      WatchBridge.shared.ensureActive()
       let s = WCSession.default
-      if s.activationState != .activated || !s.isPaired { return ["status": "none", "name": ""] }
-      if !s.isWatchAppInstalled { return ["status": "noApp", "name": "Apple Watch"] }
-      return ["status": "ready", "name": "Apple Watch"]
+      let diag = "act=\(s.activationState.rawValue) paired=\(s.isPaired) app=\(s.isWatchAppInstalled) reach=\(s.isReachable) err=\(WatchBridge.shared.lastError)"
+      if s.activationState != .activated || !s.isPaired { return ["status": "none", "name": "", "diag": diag] }
+      if !s.isWatchAppInstalled { return ["status": "noApp", "name": "Apple Watch", "diag": diag] }
+      return ["status": "ready", "name": "Apple Watch", "diag": diag]
     }
 
     Function("sendBreathSession") { (session: [String: Any]) in
@@ -126,6 +130,7 @@ final class WatchBridge: NSObject, WCSessionDelegate {
      Die werd toen enkel onthouden en nooit verstuurd — nu opnieuw zodra de
      sessie actief wordt, de Watch-app geïnstalleerd raakt of bereikbaar is. */
   func sendCatalog(_ json: String) {
+    ensureActive()
     lastCatalog = json
     flushCatalog(force: false)
   }
@@ -159,11 +164,21 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   private let stampLock = NSLock()
   private var lastStateStampMs: Double = 0
 
+  var lastError = "none"
+
   func activate() {
     guard WCSession.isSupported() else { return }
     let session = WCSession.default
     session.delegate = self
     session.activate()
+  }
+
+  /** Delegate kwijt of nooit geactiveerd → opnieuw (18 okt 2026). */
+  func ensureActive() {
+    guard WCSession.isSupported() else { return }
+    let session = WCSession.default
+    if session.delegate !== self { session.delegate = self }
+    if session.activationState != .activated { session.activate() }
   }
 
   func sendSession(_ payload: [String: Any]) {
@@ -300,6 +315,7 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     activationDidCompleteWith activationState: WCSessionActivationState,
     error: Error?
   ) {
+    lastError = error.map { "\($0.localizedDescription)" } ?? "none"
     if activationState == .activated {
       DispatchQueue.main.async { [weak self] in self?.flushCatalog(force: true) }
     }

@@ -84,7 +84,7 @@ type WatchBreathNativeModule = {
   sendStateSession(start: StateSessionStart): void;
   pauseStateSession(): void;
   stopStateSession(): void;
-  watchStatus?(): Promise<{ status: 'none' | 'noApp' | 'ready'; name: string }>;
+  watchStatus?(): Promise<{ status: 'none' | 'noApp' | 'ready'; name: string; diag?: string }>;
   syncCatalog?(json: string): void;
   addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): Subscription;
   addListener(eventName: 'onStateAck', listener: () => void): Subscription;
@@ -120,7 +120,7 @@ try {
 }
 
 /** Status van de gekoppelde Apple Watch (zie WatchBreathModule.swift). */
-export async function getAppleWatchStatus(): Promise<{ status: 'none' | 'noApp' | 'ready'; name: string }> {
+export async function getAppleWatchStatus(): Promise<{ status: 'none' | 'noApp' | 'ready'; name: string; diag?: string }> {
   try {
     return (await native?.watchStatus?.()) ?? { status: 'none', name: '' };
   } catch {

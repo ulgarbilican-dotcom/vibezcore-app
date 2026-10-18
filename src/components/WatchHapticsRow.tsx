@@ -28,8 +28,8 @@ import { getWatchStatus, openStoreOnWatch, type WatchAppStatus } from '../../mod
 const SEEN_KEY = 'vz_watch_seen_v1';
 
 /** Status van het gekoppelde horloge, elke 10 s ververst. */
-export function useWatchStatus(): { status: WatchAppStatus; name: string; seen: boolean } | null {
-  const [st, setSt] = useState<{ status: WatchAppStatus; name: string } | null>(null);
+export function useWatchStatus(): { status: WatchAppStatus; name: string; seen: boolean; diag?: string } | null {
+  const [st, setSt] = useState<{ status: WatchAppStatus; name: string; diag?: string } | null>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
     if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
@@ -71,7 +71,9 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
   const w = useWatchStatus();
   const [on] = useSetting('watchHaptics');
   if (!w) return null;
-  if (w.status === 'none' && !w.seen) return null;
+  /* iPhone (18 okt 2026, Apple Watch-diagnose): ook zonder verbinding de
+     regel tonen, met wat WatchConnectivity ziet. */
+  if (w.status === 'none' && !w.seen && Platform.OS !== 'ios') return null;
 
   const name = w.name || 'Your watch';
   const sub =
@@ -94,6 +96,11 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
           <Text style={s.sub} numberOfLines={1}>
             {sub}
           </Text>
+          {Platform.OS === 'ios' && w.status !== 'ready' && w.diag ? (
+            <Text style={[s.sub, { fontSize: 10, opacity: 0.6 }]} numberOfLines={2}>
+              {w.diag}
+            </Text>
+          ) : null}
         </View>
         {w.status === 'ready' ? (
           <Switch

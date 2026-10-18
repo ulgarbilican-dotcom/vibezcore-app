@@ -30,6 +30,20 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     WCSession.default.activate()
   }
 
+  private var lastError = "none"
+  private var lastReceived = "none"
+
+  func diagnostics() -> String {
+    guard WCSession.isSupported() else { return "unsupported" }
+    let s = WCSession.default
+    return "act=\(s.activationState.rawValue) iphoneApp=\(s.isCompanionAppInstalled) reach=\(s.isReachable) last=\(lastReceived) err=\(lastError)"
+  }
+
+  func requestCatalog() {
+    if WCSession.default.activationState != .activated { WCSession.default.activate() }
+    send(["type": "catalog_request"])
+  }
+
   // MARK: Watch → telefoon
 
   /** Live als de iPhone bereikbaar is, anders (of bij een fout) via de
@@ -64,6 +78,7 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     activationDidCompleteWith activationState: WCSessionActivationState,
     error: Error?
   ) {
+    lastError = error.map { "\($0.localizedDescription)" } ?? "none"
     /* Bij het openen de catalogus vragen (18 okt 2026): zo krijgt het
        horloge de lijst ook als de iPhone hem nog niet kon sturen. */
     guard activationState == .activated else { return }
@@ -90,12 +105,14 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     guard (file.metadata?["type"] as? String) == "catalog",
       let json = try? String(contentsOf: file.fileURL, encoding: .utf8)
     else { return }
+    lastReceived = "catalog-file"
     DispatchQueue.main.async {
       WatchCatalog.shared.load(json)
     }
   }
 
   private func route(_ message: [String: Any]) {
+    lastReceived = message["type"] as? String ?? "start"
     DispatchQueue.main.async {
       let type = message["type"] as? String ?? "start"
       switch type {

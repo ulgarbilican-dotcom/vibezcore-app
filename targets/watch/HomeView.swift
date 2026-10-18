@@ -64,12 +64,21 @@ struct HomeView: View {
     NavigationStack(path: $path) {
       Group {
         if !catalog.hasCatalog {
-          Text("Open VIBEZCORE on your phone once to set up your watch")
-            .font(.system(size: 15))
-            .foregroundColor(Color(white: 0xF4 / 255))
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+          VStack(spacing: 8) {
+            Text("Open VIBEZCORE on your phone once to set up your watch")
+              .font(.system(size: 15))
+              .foregroundColor(Color(white: 0xF4 / 255))
+              .multilineTextAlignment(.center)
+            /* Diagnose (18 okt 2026): wat het horloge van de iPhone ziet. */
+            Text(PhoneConnector.shared.diagnostics())
+              .font(.system(size: 9))
+              .foregroundColor(.gray)
+              .multilineTextAlignment(.center)
+            Button("Retry") { PhoneConnector.shared.requestCatalog() }
+              .font(.system(size: 13, weight: .semibold))
+          }
+          .padding(.horizontal, 14)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
           ScrollView {
             VStack(spacing: 0) {
