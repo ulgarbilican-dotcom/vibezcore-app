@@ -6,7 +6,13 @@
    Eén echte lub-dub, met per uitgang een eigen versie (operator, 9 okt 2026:
    "zonder koptelefoon goed, met niet goed"):
      - speaker (assets/heartbeat-speaker.wav): Pixabay "freesound_community
-       heartbeat 6396", tweede slag op 1,04 s, klank onaangeroerd;
+       heartbeat 6396", tweede slag op 1,04 s. Luidsprekerversie (operator,
+       18 okt 2026: "geluid op max" — piek stond al op −0,4 dB, maar bijna
+       alle klank zat < 150 Hz, wat een telefoonluidspreker amper speelt):
+       < 140 Hz eruit, de slag als boventonen naar 300–800 Hz + lichte
+       middenboost → ±7 dB luider in het luidsprekerbereik, piek −0,5 dB,
+       lub/dub-verhouding gelijk. Zelfde bestanden in de Android-dienst
+       (modules/state-haptics/.../res/raw/heartbeat_speaker_*.wav);
      - koptelefoon/oortjes (assets/heartbeat-headphones.wav): Pixabay
        "liecio heartbeat 297400" (operator: "de beste"; 6396, 549797,
        21649, 493995, 493999, 584627 en 5857 ook getest → "niet goed"),
