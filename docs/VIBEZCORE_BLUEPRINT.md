@@ -3,6 +3,8 @@
 > A-tot-Z technical blueprint van het VIBEZCORE-platform: native app, backend, webapp, infrastructuur, datacontracten en operationele procedures. Geschreven zodat een onbekende developer of operator dit document kan oppakken en het volledige systeem identiek kan herbouwen, exploiteren en debuggen zonder verdere context.
 >
 > Versie: 2026-05-20 · Status: living document, blijft synchroon lopen met de codebase.
+>
+> **Lancering iPhone + Android (okt 2026): zie `docs/LAUNCH_BLUEPRINT.md`** — alle stappen A tot Z met status.
 
 > **Recente iteraties (2026-05, samengevat — details onderaan in Bijlage C):**
 > - Audio Library-tab consolidatie: search-bar met Spotify-stijl autocomplete (Series / Sessions / Inspirators), New/Favorites/Free-nav-knoppen, Your Journey-card.
@@ -314,6 +316,9 @@ Te zetten in Netlify dashboard → Site settings → Environment variables:
 | `GUMROAD_SELLER_ID` | optional | Voor LEGACY webhook signature-check |
 | `STRIPE_SECRET_KEY` | toekomst | Voor bracelet-checkout (post-KS) |
 | `STRIPE_WEBHOOK_SECRET` | toekomst | Stripe webhook verificatie |
+| `APPLE_SIWA_PRIVATE_KEY` | ja (Apple-login intrekken, App Review 5.1.1(v)) | Volledige inhoud van het .p8-bestand van de sleutel "VIBEZCORE Sign in with Apple" (18 okt 2026) |
+| `APPLE_SIWA_KEY_ID` | optional | Default `3VS353U3RM` (Key ID van die sleutel, geen geheim) |
+| `APPLE_TEAM_ID` / `APPLE_CLIENT_ID` | optional | Defaults `88AL3UW7L7` / `com.ubili.vibezcoreapp` |
 
 Zet zowel op `Production` als `Deploy Previews` als je wil dat preview-deploys ook werken.
 
