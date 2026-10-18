@@ -10,6 +10,7 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { friendlyError } from '@/utils/friendly-error';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel, resetRestingPulse } from '@/services/resting-pulse';
 import { setSetting } from '@/utils/settings';
@@ -85,9 +86,9 @@ import {
   subscribeScrollIntent,
 } from '@/utils/scroll-intent';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Children, useEffect, useRef, useState, type ComponentProps, type ComponentType, type ReactNode } from 'react';
+import { Children, useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentType, type ReactNode } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -871,7 +872,7 @@ export default function AccountScreen() {
       const r = await signInWithGoogle();
       if (!r.ok) {
         if (r.reason === 'cancelled') return;
-        setMsg(r.error);
+        setMsg(friendlyError(r.error));
         return;
       }
       setEmail(r.email || 'Signed in');
@@ -916,7 +917,7 @@ export default function AccountScreen() {
       const r = await signInWithApple();
       if (!r.ok) {
         if (r.reason === 'cancelled') return;
-        setMsg(r.error);
+        setMsg(friendlyError(r.error));
         return;
       }
       setEmail(r.email || 'Signed in');
@@ -977,11 +978,11 @@ export default function AccountScreen() {
         void showVibezAlert({
           title: 'Nothing to restore',
           message:
-            'No active subscriptions were found for this Apple ID or Google account. If you believe this is wrong, contact support.',
+            `No active subscriptions were found for this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google account'}. If you believe this is wrong, contact support.`,
         });
       }
     } else {
-      void showVibezAlert({ title: 'Could not restore', message: result.error });
+      void showVibezAlert({ title: 'Could not restore', message: friendlyError(result.error) });
     }
   };
   const [busy, setBusy] = useState(false);
@@ -1018,6 +1019,18 @@ export default function AccountScreen() {
     })();
   }, []);
 
+  /* Elke keer dat Profile in beeld komt: is de sessie intussen elders
+     ingetrokken (wachtwoord gewijzigd, account verwijderd), dan niet langer
+     "ingelogd" tonen (audit 18 okt 2026). */
+  useFocusEffect(
+    useCallback(() => {
+      void (async () => {
+        const t = (await getToken()) || ((await hasStoredSession()) ? 'stored' : null);
+        if (!t) setEmail(null);
+      })();
+    }, []),
+  );
+
   const onSubmit = async () => {
     setMsg(null);
     setMsgIsInfo(false);
@@ -1044,7 +1057,7 @@ export default function AccountScreen() {
     /* Operator, 7 okt 2026 (account-audit): zelfde regel als Subscribe. */
     if (mode === 'signup' && pwInput.length < 8) {
       setMsgIsInfo(false);
-      setMsg('Use at least 8 characters for your password.');
+      setMsg('Password must be at least 8 characters.');
       return;
     }
     if (busy) return;
@@ -1157,7 +1170,13 @@ export default function AccountScreen() {
              met BraceletCard (Activation required) of subscription-card,
              en kan vandaaruit de juiste eerstvolgende stap nemen
              (bracelet activeren / audio upgraden). */
-          /* no redirect — gewoon de huidige view re-renderen */
+          /* no redirect — gewoon de huidige view re-renderen. Wel een korte
+             bevestiging (audit 18 okt 2026: de view wisselde zonder iets te
+             zeggen). */
+          void showVibezAlert({
+            title: 'Account created',
+            message: "You're signed in. Your progress and purchases are now linked to your account.",
+          });
         } else if (isBraceletPro && !isAudioPro) {
           /* Bracelet-only owner → direct naar Bracelet tab. */
           setTimeout(() => router.replace('/bracelet' as never), 50);
@@ -1183,7 +1202,7 @@ export default function AccountScreen() {
         setMsgIsInfo(true);
         setMsg('You already have an account with this email. Sign in with your password.');
       } else {
-        setMsg(r.error);
+        setMsg(friendlyError(r.error));
       }
     } finally {
       setBusy(false);
@@ -1230,7 +1249,7 @@ export default function AccountScreen() {
     void showVibezAlert({
       title: 'Sign out?',
       message:
-        'You will stay signed in on this device unless you sign out. After signing out, you will need to enter your password again next time.',
+        'You can sign in again anytime with your email and password. Your purchases stay linked to your account.',
       buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1383,7 +1402,7 @@ export default function AccountScreen() {
                     } else {
                       void showVibezAlert({
                         title: 'Could not delete account',
-                        message: r.error,
+                        message: friendlyError(r.error),
                       });
                     }
                   },
@@ -1602,13 +1621,21 @@ export default function AccountScreen() {
           {/* Forgot password VOOR de Sign In-knop, niet erna (operator-
               mockup, 11 augustus 2026: "forgot password staat klein
               rechtsboven de sign in"). */}
-          <PressScale
-            style={s.forgotLink}
-            onPress={() => router.navigate('/forgot-password' as never)}
-            accessibilityLabel="Reset your password"
-          >
-            <Text style={s.forgotLinkText}>Forgot password?</Text>
-          </PressScale>
+          {/* Enkel bij Sign in — bij Create account is er nog niets te vergeten
+              (audit 18 okt 2026). Bij Create account staat hier de regel. */}
+          {mode === 'login' ? (
+            <PressScale
+              style={s.forgotLink}
+              onPress={() => router.navigate('/forgot-password' as never)}
+              accessibilityLabel="Reset your password"
+            >
+              <Text style={s.forgotLinkText}>Forgot password?</Text>
+            </PressScale>
+          ) : (
+            <Text style={[s.forgotLinkText, { alignSelf: 'flex-start', opacity: 0.6, marginTop: 8, marginBottom: 4 }]}>
+              Password must be at least 8 characters.
+            </Text>
+          )}
 
           <PressScale
             style={[s.primaryBtn, busy && s.btnDisabled]}

@@ -592,8 +592,17 @@ async function doRefresh(): Promise<string | null> {
          doet vanzelf weer een refresh-poging. Vorige iteratie wiste op
          iedere non-2xx response → user moest na elke transient bug
          opnieuw inloggen (bug-fix 2026-05-25). */
-      if (status === 401) {
-        if (__DEV__) console.warn('[auth] refresh-token rejected by backend (401) → clearing session');
+      /* Supabase weigert een ingetrokken refresh-token met 400 invalid_grant /
+         refresh_token_not_found (wachtwoord elders gewijzigd, account
+         verwijderd) — ook dat is uitgelogd, geen tijdelijke fout (audit 18 okt). */
+      const revoked =
+        status === 401 ||
+        (status === 400 &&
+          /invalid_grant|refresh_token_not_found|invalid refresh token|refresh token not found/i.test(
+            `${data.error ?? ''} ${data.error_description ?? ''} ${data.msg ?? ''}`,
+          ));
+      if (revoked) {
+        if (__DEV__) console.warn(`[auth] refresh-token rejected by backend (${status}) → clearing session`);
         await clearSession();
       } else if (__DEV__) {
         console.warn(
@@ -670,9 +679,9 @@ export async function login(
       let msg =
         data.error_description || data.msg || data.error || 'Login failed';
       if (/invalid login credentials/i.test(msg))
-        msg = 'Wrong email or password';
+        msg = 'Email or password is incorrect.';
       else if (/email not confirmed/i.test(msg))
-        msg = 'Please confirm your email first (check your inbox)';
+        msg = 'Please confirm your email first — check your inbox.';
       return { ok: false, error: msg };
     }
 

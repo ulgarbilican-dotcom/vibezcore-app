@@ -209,8 +209,8 @@ export default function ForgotPassword() {
           <Text style={s.title}>Check your inbox</Text>
           <BalancedText style={s.sub}>
             If an account matches that email, a reset link is on its
-            way. The link opens directly in this app and is valid for
-            1 hour.
+            way. It opens a secure page where you choose a new password
+            (valid for 1 hour) — then sign in here with it.
           </BalancedText>
           <AnimatedPressable
             style={[s.btnSecondary, backToSignInPressStyle]}
