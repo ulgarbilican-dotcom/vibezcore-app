@@ -48,7 +48,9 @@ private enum Rhythm {
   static let endSilenceMs = 600.0
   /** Protocol: 70 ms tik · 120 ms stilte · 90 ms tik · 120 ms stilte · 160 ms tik. */
   static let endTapOffsetsMs: [Double] = [0, 190, 400]
-  static let endTapTypes: [WKHapticType] = [.click, .directionUp, .success]
+  /* 19 okt 2026: geen .directionUp/.success meer — die spelen een toon
+     (operator: "pling-geluid"). Drie gewone tikken. */
+  static let endTapTypes: [WKHapticType] = [.click, .click, .click]
   /** Na de laatste eind-tik even laten uitklinken voor het opruimen. */
   static let endTailMs = 700.0
   /** Lokaal hervatten (telefoon onbereikbaar): binnen 2 min loopt de curve

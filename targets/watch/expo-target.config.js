@@ -37,6 +37,17 @@ module.exports = {
   colors: {
     $accent: '#00A3A3',
   },
+  /* 19 okt 2026 (operator: "bij breathwork moeten we de figuren krijgen,
+     niet de cirkels"): dezelfde ademfiguren als de app en de Galaxy Watch
+     (breath-states.ts `art`), vooraf bijgesneden tot het onderwerp — zie
+     trimmedArt() in wear-app/CatalogStore.kt. Pad = vanaf deze map. */
+  images: {
+    vzArtSun: '../../assets/watch-art/vz_art_sun.png',
+    vzArtFlower: '../../assets/watch-art/vz_art_flower.png',
+    vzArtLotus: '../../assets/watch-art/vz_art_lotus.png',
+    vzArtClarity: '../../assets/watch-art/vz_art_clarity.png',
+    vzArtTree: '../../assets/watch-art/vz_art_tree.png',
+  },
   /* Geen App Group (6 okt 2026): werd nergens gebruikt — telefoon en Watch
      praten via WatchConnectivity — en vroeg wel een extra registratie bij
      Apple die de build kon laten falen. */

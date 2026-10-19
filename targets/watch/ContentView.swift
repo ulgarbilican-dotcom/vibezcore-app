@@ -3,18 +3,22 @@ import SwiftUI
 import WatchKit
 
 /* ─────────────────────────────────────────────────────────────────────────
-   VIBEZCORE op de Apple Watch — één scherm voor State Control en
-   breathwork, in de look van de app en de website-mockup (6 okt 2026):
-   naam met kleurstip, de sessiecirkel (donkere schijf, golf in twee lagen,
-   dunne rand in de kleur van de toestand, een ring per tik), een ronde
-   pauzeknop met END eronder.
+   VIBEZCORE op de Apple Watch — de sessieschermen, opgebouwd zoals de
+   Galaxy Watch (wear-app MainActivity + SessionRingView). 19 okt 2026,
+   operator: "interface klopt niet … bij breathwork moeten we de figuren
+   krijgen, niet de cirkels".
 
-   Pols omlaag (always-on, `isLuminanceReduced`): enkel rand en tijd,
-   gedimd — geen golf, geen ringen, geen knoppen (Apple's regel: het scherm
-   mag dan bijna niet bewegen).
+   State Control: de cirkel VULT het scherm (zoals Apple's Workout), met de
+   naam bovenaan en pauze + END onderaan BINNEN de cirkel; de schijf klopt
+   mee met elke slag, een ring per lub, water dat zakt met de resterende tijd.
 
-   Eén sessie, twee bedieningen: de knoppen vragen het de iPhone (bron van
-   waarheid); pauze en stop gebeuren hier meteen ook al. */
+   Breathwork: geen cirkel — de ademfiguur van de toestand (zon, bloem,
+   lotus, oog, boom) ademt mee (schaal 0,70 → 1,00, gloed erachter), een
+   halve boog bovenaan telt de fase af, links de seconden, onder de figuur
+   "Inhale  Nose" en "m:ss left". Tik op de figuur = pauze/hervatten.
+
+   Pols omlaag (always-on, `isLuminanceReduced`): enkel tijd/fase, gedimd,
+   niets beweegt (Apple's regel). END = vasthouden (HoldToEnd). */
 
 struct ContentView: View {
   @ObservedObject var controller = BreathSessionController.shared
@@ -23,47 +27,9 @@ struct ContentView: View {
   var body: some View {
     Group {
       if state.active {
-        SessionScreen(
-          title: state.title,
-          colorHex: nil,
-          color: state.color,
-          paused: state.paused,
-          center: { now in
-            let sec = state.paused ? state.pausedRemainingSec : max(0, state.endDate?.timeIntervalSince(now) ?? 0)
-            return clock(sec)
-          },
-          sub: "",
-          level: { now in
-            let sec = state.paused ? state.pausedRemainingSec : max(0, state.endDate?.timeIntervalSince(now) ?? 0)
-            return state.totalSec > 0 ? sec / state.totalSec : 0.5
-          },
-          pausedLabel: state.paused,
-          beatClock: { (state.lastLubDate, state.lastCycleMs) },
-          beats: state.beats.eraseToAnyPublisher(),
-          onPause: { state.requestPauseOrResume() },
-          onEnd: { state.requestStop() }
-        )
+        StateSessionScreen(state: state)
       } else if controller.running || controller.paused {
-        SessionScreen(
-          title: controller.modeName,
-          colorHex: controller.colorHex,
-          color: nil,
-          paused: controller.paused,
-          center: { _ in controller.phaseLabel },
-          sub: [controller.paused ? "" : controller.via, controller.totalRounds > 0 ? "\(controller.round) / \(controller.totalRounds)" : ""]
-            .filter { !$0.isEmpty }.joined(separator: " · "),
-          level: { now in
-            let span = max(0.001, controller.phaseEnd.timeIntervalSince(controller.phaseStart))
-            let k = min(1, max(0, now.timeIntervalSince(controller.phaseStart) / span))
-            let e = k * k * (3 - 2 * k) // zacht in en uit, zoals een adem
-            return controller.levelFrom + (controller.levelTo - controller.levelFrom) * e
-          },
-          pausedLabel: false,
-          beatClock: nil,
-          beats: controller.beats.eraseToAnyPublisher(),
-          onPause: { controller.requestPauseOrResume() },
-          onEnd: { controller.requestStop() }
-        )
+        BreathSessionScreen(controller: controller)
       } else {
         /* Zelf starten op het horloge (18 okt 2026) — zie HomeView.swift. */
         HomeView()
@@ -72,213 +38,212 @@ struct ContentView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color.black)
   }
+}
 
-  private func clock(_ sec: Double) -> String {
-    let s = max(0, Int(sec.rounded(.up)))
-    return String(format: "%d:%02d", s / 60, s % 60)
+// MARK: - Gedeeld
+
+func clockText(_ sec: Double) -> String {
+  let s = max(0, Int(sec.rounded(.up)))
+  return String(format: "%d:%02d", s / 60, s % 60)
+}
+
+/// Sleep (#00A3A3) in het lichte teal, zoals de ring in de app.
+func sessionTint(_ hex: String) -> Color {
+  let up = hex.uppercased()
+  if up == "#00A3A3" { return Color(hex: "#4AF0D4") ?? .teal }
+  return Color(hex: hex) ?? .teal
+}
+
+/// Ademfiguur per toestand (breath-states.ts `art`), zelfde als de Galaxy Watch.
+func breathArtName(_ hex: String) -> String {
+  switch hex.uppercased() {
+  case "#F5A524": return "vzArtSun"
+  case "#3E9BFF": return "vzArtFlower"
+  case "#B478FF": return "vzArtLotus"
+  case "#FFFFFF": return "vzArtClarity"
+  case "#00A3A3", "#4AF0D4": return "vzArtTree"
+  default: return "vzArtLotus"
   }
 }
 
-private struct SessionScreen: View {
-  let title: String
-  let colorHex: String?
-  let color: Color?
-  let paused: Bool
-  let center: (Date) -> String
-  let sub: String
-  let level: (Date) -> Double
-  /** State Control: "PAUSED" boven de naam (zoals de Galaxy Watch). */
-  let pausedLabel: Bool
-  /** State Control: laatste lub + slagduur, voor kloppende cirkel en ring. */
-  let beatClock: (() -> (Date?, Double))?
-  let beats: AnyPublisher<Bool, Never>
-  let onPause: () -> Void
-  let onEnd: () -> Void
+/// Optische correctie: de bloem oogt groter, de zon en het oog kleiner
+/// (artOpticalScale in wear-app/CatalogStore.kt).
+func breathArtOptical(_ hex: String) -> CGFloat {
+  switch hex.uppercased() {
+  case "#3E9BFF": return 0.86
+  case "#F5A524": return 1.12
+  case "#FFFFFF": return 1.18
+  default: return 1
+  }
+}
 
+/// Naam met kleurstip (bovenaan beide sessieschermen).
+private struct NameRow: View {
+  let title: String
+  let dot: Color
+  let size: CGFloat
+  var body: some View {
+    HStack(spacing: 5) {
+      Circle().fill(dot).frame(width: 6, height: 6)
+      Text(title)
+        .font(.system(size: size, weight: .bold))
+        .foregroundColor(Color(white: 0.96))
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
+  }
+}
+
+/// Ronde pauze/play-knop (State Control), zoals de Galaxy Watch.
+private struct PauseButton: View {
+  let paused: Bool
+  let tint: Color
+  let action: () -> Void
+  var body: some View {
+    Button(action: action) {
+      ZStack {
+        Circle().fill(tint.opacity(0.2))
+        Circle().stroke(Color.white.opacity(0.15), lineWidth: 1.5)
+        Image(systemName: paused ? "play.fill" : "pause.fill")
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(.white)
+      }
+      .frame(width: 36, height: 36)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(paused ? "Resume" : "Pause")
+  }
+}
+
+// MARK: - State Control
+
+private struct StateSessionScreen: View {
+  @ObservedObject var state: StateSessionController
   @Environment(\.isLuminanceReduced) private var ambient
   @State private var pulses: [RingPulse] = []
 
-  /// Sleep (#00A3A3) in het lichte teal, met sterkere golf — zoals de app.
-  private var sleepLike: Bool {
-    guard let hex = colorHex?.uppercased() else { return false }
-    return hex == "#00A3A3" || hex == "#4AF0D4"
-  }
-
-  private var tint: Color {
-    if let color = color { return color }
-    if sleepLike { return Color(hex: "#4AF0D4") ?? .teal }
-    return Color(hex: colorHex ?? "#00A3A3") ?? .teal
-  }
-
-  private var dotColor: Color {
-    if let color = color { return color }
-    return Color(hex: colorHex ?? "#00A3A3") ?? .teal
-  }
-
   var body: some View {
-    VStack(spacing: 4) {
-      if pausedLabel && !ambient {
-        Text("PAUSED")
-          .font(.system(size: 10, weight: .semibold))
-          .tracking(1.8)
-          .foregroundColor(Color.white.opacity(0.65))
-      }
-      HStack(spacing: 6) {
-        Circle().fill(dotColor).frame(width: 7, height: 7)
-        Text(title)
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundColor(.white)
-          .lineLimit(1)
-      }
-      .opacity(ambient ? 0.6 : 1)
-
-      TimelineView(.animation(minimumInterval: 1.0 / 30, paused: ambient || (paused && pulses.isEmpty))) { ctx in
-        ZStack {
-          RingCanvas(
-            date: ctx.date,
-            tint: tint,
-            back: sleepLike ? 0.20 : 0.10,
-            front: sleepLike ? 0.30 : 0.15,
-            level: level(ctx.date),
-            flowing: !paused && !ambient,
-            pulses: ambient ? [] : pulses,
-            ambient: ambient,
-            beat: beatClock?()
-          )
-          VStack(spacing: 2) {
-            Text(center(ctx.date))
-              .font(.system(size: center(ctx.date).count > 6 ? 18 : 30, weight: ambient ? .medium : .bold).monospacedDigit())
-              .foregroundColor(ambient ? Color(white: 0.74) : .white)
-              .shadow(color: .black.opacity(0.5), radius: 3)
-              .lineLimit(1)
-              .minimumScaleFactor(0.6)
-            if !sub.isEmpty && !ambient {
-              Text(sub)
-                .font(.system(size: 10))
-                .foregroundColor(Color.white.opacity(0.65))
-            }
-          }
-          .padding(.horizontal, 22)
-        }
-      }
-
-      if !ambient {
-        Button(action: onPause) {
-          ZStack {
-            Circle().fill(dotColor.opacity(0.2))
-            Circle().stroke(Color.white.opacity(0.15), lineWidth: 1.5)
-            Image(systemName: paused ? "play.fill" : "pause.fill")
-              .font(.system(size: 14, weight: .semibold))
-              .foregroundColor(.white)
-          }
-          .frame(width: 38, height: 38)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(paused ? "Resume" : "Pause")
-
-        HoldToEndButton(onEnd: onEnd)
-      }
+    GeometryReader { geo in
+      StateSessionLayout(state: state, size: geo.size, pulses: pulses, ambient: ambient)
     }
-    .onReceive(beats) { strong in
+    .ignoresSafeArea(edges: .bottom)
+    .onReceive(state.beats) { strong in
       let now = Date()
       pulses.removeAll { now.timeIntervalSince($0.start) > 3 }
-      if beatClock != nil {
-        /* State Control: een ring per hartslag, 80 ms na de lub (waar de
-           kloppende cirkel op zijn grootst is), zoals de Galaxy Watch. */
-        if strong { pulses.append(RingPulse(start: now.addingTimeInterval(0.08), strong: true)) }
-      } else {
-        pulses.append(RingPulse(start: now, strong: strong))
-      }
+      /* Eén ring per hartslag, 80 ms na de lub (waar de kloppende schijf op
+         zijn grootst is), zoals de Galaxy Watch. */
+      if strong { pulses.append(RingPulse(start: now.addingTimeInterval(0.08))) }
     }
   }
 }
 
-/// END vasthouden in plaats van tikken (15 okt 2026, zoals HoldToEnd.kt op de
-/// Galaxy Watch): een losse aanraking stopte daar een sessie. 0,8 s vasthouden,
-/// het vlak loopt van links naar rechts vol; loslaten vóór het vol is = niets,
-/// een korte tik toont "HOLD TO END". VoiceOver: dubbeltik beëindigt meteen.
-private struct HoldToEndButton: View {
-  let onEnd: () -> Void
-  @State private var progress: CGFloat = 0
-  @State private var pressStart: Date?
-  @State private var hint = false
+private struct StateSessionLayout: View {
+  @ObservedObject var state: StateSessionController
+  let size: CGSize
+  let pulses: [RingPulse]
+  let ambient: Bool
+
+  private var w: CGFloat { size.width }
+  private var h: CGFloat { size.height }
+  /// De cirkel zo groot als de breedte toelaat (ringen dijen uit tot 1,11×).
+  private var r: CGFloat { min(w, h) / 2 / 1.12 }
+  private var cy: CGFloat { h / 2 }
 
   var body: some View {
-    Text(hint ? "HOLD TO END" : "END")
-      .font(.system(size: 10, weight: .semibold))
-      .tracking(1.6)
-      .foregroundColor(Color.white.opacity(0.72))
-      .padding(.vertical, 4)
-      .padding(.horizontal, 14)
-      .background(
-        GeometryReader { geo in
-          ZStack(alignment: .leading) {
-            Capsule().fill(Color.white.opacity(progress > 0 ? 0.12 : 0))
-            Capsule().fill(Color.white.opacity(0.35))
-              .frame(width: geo.size.width * progress)
-          }
-          .clipShape(Capsule())
+    ZStack {
+      TimelineView(.animation(minimumInterval: 1.0 / 30, paused: ambient || (state.paused && pulses.isEmpty))) { ctx in
+        StateFace(state: state, now: ctx.date, size: size, r: r, pulses: pulses, ambient: ambient)
+      }
+
+      /* Naam bovenaan, binnen de cirkel; PAUSED erboven. */
+      VStack(spacing: 2) {
+        if state.paused && !ambient {
+          Text("PAUSED")
+            .font(.system(size: 9, weight: .semibold))
+            .tracking(1.6)
+            .foregroundColor(Color.white.opacity(0.65))
         }
+        NameRow(title: state.title, dot: state.color, size: 13)
+      }
+      .opacity(ambient ? 0.6 : 1)
+      .frame(maxWidth: r * 1.3)
+      .position(x: w / 2, y: cy - r * 0.56)
+
+      /* Pauze + END onderaan, binnen de cirkel. */
+      if !ambient {
+        VStack(spacing: 2) {
+          PauseButton(paused: state.paused, tint: state.color) { state.requestPauseOrResume() }
+          HoldToEndButton { state.requestStop() }
+        }
+        .position(x: w / 2, y: cy + r * 0.58)
+      }
+    }
+    .frame(width: w, height: h)
+  }
+}
+
+private struct StateFace: View {
+  @ObservedObject var state: StateSessionController
+  let now: Date
+  let size: CGSize
+  let r: CGFloat
+  let pulses: [RingPulse]
+  let ambient: Bool
+
+  private var remaining: Double {
+    state.paused ? state.pausedRemainingSec : max(0, state.endDate?.timeIntervalSince(now) ?? 0)
+  }
+
+  var body: some View {
+    ZStack {
+      StateRingCanvas(
+        date: now,
+        tint: state.color,
+        level: state.totalSec > 0 ? remaining / state.totalSec : 0.5,
+        flowing: !state.paused && !ambient,
+        pulses: ambient ? [] : pulses,
+        ambient: ambient,
+        lub: state.lastLubDate,
+        cycleMs: state.lastCycleMs,
+        baseR: r
       )
-      .contentShape(Capsule())
-      .onLongPressGesture(minimumDuration: 0.8, perform: {
-        WKInterfaceDevice.current().play(.click)
-        progress = 0
-        onEnd()
-      }, onPressingChanged: { pressing in
-        if pressing {
-          hint = false
-          pressStart = Date()
-          withAnimation(.linear(duration: 0.8)) { progress = 1 }
-        } else {
-          let short = pressStart.map { Date().timeIntervalSince($0) < 0.3 } ?? false
-          pressStart = nil
-          withAnimation(.easeOut(duration: 0.18)) { progress = 0 }
-          if short {
-            hint = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { hint = false }
-          }
-        }
-      })
-      .accessibilityLabel("End session")
-      .accessibilityAddTraits(.isButton)
-      .accessibilityAction { onEnd() }
+      Text(clockText(remaining))
+        .font(.system(size: r * 0.42, weight: ambient ? .medium : .bold).monospacedDigit())
+        .foregroundColor(ambient ? Color(white: 0.74) : .white)
+        .shadow(color: .black.opacity(0.5), radius: 3)
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .position(x: size.width / 2, y: size.height / 2 - r * 0.04)
+    }
+    .frame(width: size.width, height: size.height)
   }
 }
 
 private struct RingPulse: Identifiable {
   let id = UUID()
   let start: Date
-  let strong: Bool
 }
 
-/// De cirkel zelf — zelfde vorm en tempo's als components/LiquidWave.tsx.
-private struct RingCanvas: View {
+/// De cirkel — zelfde vorm en tempo's als SessionRingView (Galaxy Watch) en
+/// components/LiquidWave.tsx (telefoon).
+private struct StateRingCanvas: View {
   let date: Date
   let tint: Color
-  let back: Double
-  let front: Double
   let level: Double
   let flowing: Bool
   let pulses: [RingPulse]
   let ambient: Bool
-  /** State Control: (laatste lub, slagduur ms); nil = Breathwork. */
-  let beat: (Date?, Double)?
+  let lub: Date?
+  let cycleMs: Double
+  let baseR: CGFloat
 
   var body: some View {
     Canvas { context, size in
-      let s = min(size.width, size.height)
-      let synced = beat != nil
-      /* State Control (15 okt 2026): zelfde beweging als de telefoon en de
-         Galaxy Watch. De schijf klopt (lub op, dip, dub op, uitzakken) en de
-         ring blijft vlak rond de rand (1,07 tot 1,11). Breathwork houdt de
-         bredere ringen. */
-      let base = synced ? s / 2 / 1.14 : s / 2 / 1.36
       var scale = 1.0
-      if let b = beat, let lub = b.0, !ambient {
-        scale = beatCurve(el: date.timeIntervalSince(lub) * 1000, c: max(300, b.1))
+      if let l = lub, !ambient {
+        scale = beatCurve(el: date.timeIntervalSince(l) * 1000, c: max(300, cycleMs))
       }
-      let r = base * CGFloat(scale)
+      let r = baseR * CGFloat(scale)
       let c = CGPoint(x: size.width / 2, y: size.height / 2)
       let disc = CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
       let d = 2 * r
@@ -289,50 +254,37 @@ private struct RingCanvas: View {
         let lv = min(1, max(0.08, level))
         let emptyY = disc.minY + d * 0.86
         let fullY = disc.minY + d * 0.04
-        let waterY = emptyY - (emptyY - fullY) * lv
+        let waterY = emptyY - (emptyY - fullY) * CGFloat(lv)
         let t = flowing ? date.timeIntervalSinceReferenceDate : 0
         context.drawLayer { layer in
           layer.clip(to: Path(ellipseIn: disc))
           layer.fill(wave(left: disc.minX, size: d, baseY: waterY + d * 0.027, amp: d * 0.040, t: t, dur: 5.2),
-                     with: .color(tint.opacity(back)))
+                     with: .color(tint.opacity(0.10)))
           layer.fill(wave(left: disc.minX, size: d, baseY: waterY - d * 0.018, amp: d * 0.031, t: t, dur: 3.6),
-                     with: .color(tint.opacity(front)))
+                     with: .color(tint.opacity(0.15)))
         }
       }
 
       context.stroke(Path(ellipseIn: disc), with: .color(tint.opacity(ambient ? 0.45 : 1)), lineWidth: 2)
 
+      /* Ring per hartslag: duur = 1,5 slag (0,5–2,6 s), ease-out cubic, in
+         90 ms op volle sterkte en dan uitdoven (= SessionRingView). */
       for p in pulses {
-        if synced, let b = beat {
-          /* duur = 1,5 slag (0,5 tot 2,6 s), ease-out cubic, in 90 ms op
-             volle sterkte en dan uitdoven: = SessionRingView op de Galaxy Watch */
-          let el = date.timeIntervalSince(p.start) * 1000
-          let dur = min(2600, max(500, b.1 * 1.5))
-          guard el >= 0, el < dur else { continue }
-          let k = el / dur
-          let ease = 1 - (1 - k) * (1 - k) * (1 - k)
-          let alpha = el < 90
-            ? 0.95 * (1 - (1 - el / 90) * (1 - el / 90))
-            : 0.95 * (1 - ((el - 90) / (dur - 90)) * ((el - 90) / (dur - 90)))
-          let rr = base * CGFloat(1.07 + 0.04 * ease)
-          let rect = CGRect(x: c.x - rr, y: c.y - rr, width: 2 * rr, height: 2 * rr)
-          context.stroke(Path(ellipseIn: rect), with: .color(tint.opacity(alpha)), lineWidth: 3)
-          continue
-        }
-        let dur = p.strong ? 1.4 : 0.9
-        let k = date.timeIntervalSince(p.start) / dur
-        guard k >= 0, k < 1 else { continue }
-        let ease = 1 - (1 - k) * (1 - k)
-        let rr = r * (1 + (p.strong ? 0.32 : 0.14) * ease)
-        let alpha = (p.strong ? 0.7 : 0.32) * (1 - k)
+        let el = date.timeIntervalSince(p.start) * 1000
+        let dur = min(2600, max(500, cycleMs * 1.5))
+        guard el >= 0, el < dur else { continue }
+        let k = el / dur
+        let ease = 1 - (1 - k) * (1 - k) * (1 - k)
+        let q = (el - 90) / (dur - 90)
+        let alpha = el < 90 ? 0.95 * (1 - (1 - el / 90) * (1 - el / 90)) : 0.95 * (1 - q * q)
+        let rr = baseR * CGFloat(1.07 + 0.04 * ease)
         let rect = CGRect(x: c.x - rr, y: c.y - rr, width: 2 * rr, height: 2 * rr)
-        context.stroke(Path(ellipseIn: rect), with: .color(tint.opacity(alpha)), lineWidth: 2.2)
+        context.stroke(Path(ellipseIn: rect), with: .color(tint.opacity(alpha)), lineWidth: 3.5)
       }
     }
   }
 
-  /// Hartslagcurve = HeartbeatScale (telefoon) = SessionRingView (Galaxy Watch):
-  /// in 80 ms op naar 1,07, dip naar 1,015, dub op naar 1,04, zacht terug.
+  /// Hartslagcurve = HeartbeatScale (telefoon) = SessionRingView (Galaxy Watch).
   private func beatCurve(el: Double, c: Double) -> Double {
     if el < 0 { return 1 }
     let dubAt = min(c * 0.3, 350).rounded()
@@ -347,21 +299,308 @@ private struct RingCanvas: View {
     return 1
   }
 
-  /// Periode = halve breedte; schuift één breedte per `dur` seconden.
+  /// Zelfde pad als de telefoon (LiquidWave.tsx): vier S-bochten (kubisch)
+  /// over twee breedtes, schuift één breedte per `dur` seconden.
   private func wave(left: CGFloat, size: CGFloat, baseY: CGFloat, amp: CGFloat, t: TimeInterval, dur: Double) -> Path {
     let shift = CGFloat(t.truncatingRemainder(dividingBy: dur) / dur) * size
-    let period = size / 2
+    let p = size
+    let x0 = left - shift
     var path = Path()
-    path.move(to: CGPoint(x: left, y: baseY + size))
-    var x: CGFloat = 0
-    let step = max(2, size / 50)
-    while x <= size + step {
-      let y = baseY + amp * CGFloat(sin(2 * Double.pi * Double((x + shift) / period)))
-      path.addLine(to: CGPoint(x: left + x, y: y))
-      x += step
+    path.move(to: CGPoint(x: x0, y: baseY))
+    for i in 0..<4 {
+      let sx = x0 + p * 0.5 * CGFloat(i)
+      path.addCurve(
+        to: CGPoint(x: sx + p * 0.5, y: baseY),
+        control1: CGPoint(x: sx + p * 0.25, y: baseY - amp),
+        control2: CGPoint(x: sx + p * 0.25, y: baseY + amp)
+      )
     }
-    path.addLine(to: CGPoint(x: left + size + step, y: baseY + size))
+    path.addLine(to: CGPoint(x: x0 + p * 2, y: baseY + size + 2))
+    path.addLine(to: CGPoint(x: x0, y: baseY + size + 2))
     path.closeSubpath()
     return path
+  }
+}
+
+// MARK: - Breathwork
+
+private struct BreathSessionScreen: View {
+  @ObservedObject var controller: BreathSessionController
+  @Environment(\.isLuminanceReduced) private var ambient
+
+  var body: some View {
+    GeometryReader { geo in
+      BreathSessionLayout(controller: controller, size: geo.size, ambient: ambient)
+    }
+    .ignoresSafeArea(edges: .bottom)
+  }
+}
+
+private struct BreathSessionLayout: View {
+  @ObservedObject var controller: BreathSessionController
+  let size: CGSize
+  let ambient: Bool
+
+  private var w: CGFloat { size.width }
+  private var h: CGFloat { size.height }
+  private var r: CGFloat { min(w, h) / 2 / 1.10 }
+  private var cy: CGFloat { h / 2 }
+  private var paused: Bool { controller.paused }
+  private var tint: Color { sessionTint(controller.colorHex) }
+  /// Figuur groot en centraal, iets hoger dan het midden (tekst eronder).
+  private var acy: CGFloat { cy - r * (paused ? 0.02 : 0.16) }
+
+  var body: some View {
+    ZStack {
+      TimelineView(.animation(minimumInterval: 1.0 / 30, paused: ambient || paused)) { ctx in
+        BreathFace(controller: controller, now: ctx.date, size: size, r: r, acy: acy, ambient: ambient)
+      }
+
+      /* gepauzeerd: wit rondje met donker play-teken (CTA-stijl) en de naam */
+      if paused && !ambient {
+        ZStack {
+          Circle().fill(Color.white)
+          Image(systemName: "play.fill")
+            .font(.system(size: r * 0.14, weight: .bold))
+            .foregroundColor(Color(white: 0.04))
+            .offset(x: r * 0.012)
+        }
+        .frame(width: r * 0.34, height: r * 0.34)
+        .position(x: w / 2, y: acy)
+        .allowsHitTesting(false)
+
+        NameRow(title: controller.modeName, dot: Color(hex: controller.colorHex) ?? tint, size: 12)
+          .frame(maxWidth: r * 1.4)
+          .position(x: w / 2, y: cy - r * 0.62)
+      }
+
+      /* Tik op de figuur = pauze / hervatten (het grootste doel op een
+         horlogescherm, zoals de Galaxy Watch). */
+      Color.clear
+        .contentShape(Rectangle())
+        .frame(width: r * 1.3, height: r * 1.1)
+        .position(x: w / 2, y: acy)
+        .onTapGesture { controller.requestPauseOrResume() }
+        .accessibilityLabel(paused ? "Resume" : "Pause")
+        .accessibilityAddTraits(.isButton)
+
+      if !ambient {
+        HoldToEndButton { controller.requestStop() }
+          .position(x: w / 2, y: h - 14)
+      }
+    }
+    .frame(width: w, height: h)
+  }
+}
+
+private struct BreathFace: View {
+  @ObservedObject var controller: BreathSessionController
+  let now: Date
+  let size: CGSize
+  let r: CGFloat
+  let acy: CGFloat
+  let ambient: Bool
+
+  private var w: CGFloat { size.width }
+  private var cy: CGFloat { size.height / 2 }
+  private var paused: Bool { controller.paused }
+  private var hex: String { controller.colorHex }
+  private var tint: Color { sessionTint(hex) }
+
+  /// Adem-niveau 0…1 (0,18 uitgeademd … 0,85 ingeademd).
+  private var b: Double {
+    if ambient { return 0.5 }
+    let span = max(0.001, controller.phaseEnd.timeIntervalSince(controller.phaseStart))
+    let k = min(1, max(0, now.timeIntervalSince(controller.phaseStart) / span))
+    let e = k * k * (3 - 2 * k) // zacht in en uit, zoals een adem
+    let level = controller.levelFrom + (controller.levelTo - controller.levelFrom) * e
+    return min(1, max(0, (level - 0.18) / 0.67))
+  }
+
+  private var phaseProgress: Double {
+    if paused { return controller.pausedPhaseProgress }
+    let span = max(0.001, controller.phaseEnd.timeIntervalSince(controller.phaseStart))
+    return min(1, max(0, now.timeIntervalSince(controller.phaseStart) / span))
+  }
+
+  /// Nooit "0": bij de overgang staat de volgende fase al klaar.
+  private var phaseSecondsLeft: Int {
+    let left = paused ? controller.pausedPhaseLeftSec : controller.phaseEnd.timeIntervalSince(now)
+    return max(1, Int(left.rounded(.up)))
+  }
+
+  private var sessionLeft: Double {
+    paused ? controller.pausedSessionLeftSec : max(0, controller.sessionEnd.timeIntervalSince(now))
+  }
+
+  private var glowR: CGFloat { r * 0.56 * CGFloat(0.7 + 0.44 * b) }
+  private var figureSide: CGFloat { r * 1.8 * 0.53 * breathArtOptical(hex) * CGFloat(0.7 + 0.3 * b) }
+  /// Los uitgeschreven (type-checker): ademend, gedimd bij pauze en pols omlaag.
+  private var figureOpacity: Double {
+    let base: Double = 0.74 + 0.26 * b
+    let pauseDim: Double = paused ? 0.4 : 1
+    let ambientDim: Double = ambient ? 0.6 : 1
+    return base * pauseDim * ambientDim
+  }
+
+  var body: some View {
+    ZStack {
+      /* gloed in de kleur van de toestand, zwelt mee */
+      Circle()
+        .fill(RadialGradient(
+          colors: [tint, tint.opacity(0.85), tint.opacity(0)],
+          center: .center, startRadius: 0, endRadius: glowR
+        ))
+        .frame(width: 2 * glowR, height: 2 * glowR)
+        .opacity(ambient ? 0.08 : 0.10 + 0.34 * b)
+        .position(x: w / 2, y: acy)
+
+      /* de figuur */
+      Image(breathArtName(hex))
+        .resizable()
+        .scaledToFit()
+        .frame(width: figureSide, height: figureSide)
+        .opacity(figureOpacity)
+        .position(x: w / 2, y: acy)
+
+      if !ambient {
+        /* halve boog bovenaan: de fase telt af, van links naar rechts */
+        PhaseArc(progress: phaseProgress, tint: tint, dim: paused)
+          .frame(width: 2 * r * 1.04, height: 2 * r * 1.04)
+          .position(x: w / 2, y: cy)
+
+        /* seconden van de fase, links */
+        Text("\(phaseSecondsLeft)")
+          .font(.system(size: 17, weight: .bold).monospacedDigit())
+          .foregroundColor(Color.white.opacity(paused ? 0.5 : 0.94))
+          .position(x: w / 2 - r * 0.92, y: cy - r * 0.05)
+      }
+
+      /* "Inhale  Nose" + "4:12 left" */
+      VStack(spacing: 1) {
+        HStack(spacing: 5) {
+          Text(controller.phaseLabel)
+            .font(.system(size: paused ? 16 : 15, weight: .bold))
+            .foregroundColor(ambient ? Color(white: 0.74) : .white)
+          if !paused && !controller.via.isEmpty {
+            Text(controller.via)
+              .font(.system(size: 13))
+              .foregroundColor(Color.white.opacity(0.65))
+          }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        if !paused && !ambient {
+          Text(clockText(sessionLeft) + " left")
+            .font(.system(size: 11).monospacedDigit())
+            .foregroundColor(Color.white.opacity(0.59))
+        }
+      }
+      .position(x: w / 2, y: cy + r * (paused ? 0.42 : 0.56))
+    }
+    .frame(width: size.width, height: size.height)
+  }
+}
+
+/// Halve boog langs de bovenkant: dun spoor, de kleur loopt over de fase vol.
+private struct PhaseArc: View {
+  let progress: Double
+  let tint: Color
+  let dim: Bool
+  var body: some View {
+    ZStack {
+      Circle()
+        .trim(from: 0.5, to: 1)
+        .stroke(Color.white.opacity(0.14), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+      Circle()
+        .trim(from: 0.5, to: 0.5 + 0.5 * min(1, max(0, progress)))
+        .stroke(tint.opacity(dim ? 0.45 : 1), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+    }
+  }
+}
+
+// MARK: - END vasthouden
+
+/// END vasthouden in plaats van tikken (zoals HoldToEnd.kt op de Galaxy
+/// Watch): 0,8 s, het vlak loopt van links naar rechts vol; loslaten vóór
+/// het vol is = niets; een korte tik toont "HOLD TO END".
+/// 19 okt 2026 (operator: "hold to end werkt niet altijd"): onLongPressGesture
+/// brak af zodra de vinger een paar punten verschoof. Nu een eigen
+/// aanraking die beweging verdraagt (tot 40 pt) en een vaste timer.
+struct HoldToEndButton: View {
+  let onEnd: () -> Void
+  @State private var progress: CGFloat = 0
+  @State private var pressStart: Date?
+  @State private var hint = false
+  @State private var fireWork: DispatchWorkItem?
+
+  private static let holdSec = 0.8
+
+  var body: some View {
+    Text(hint ? "HOLD TO END" : "END")
+      .font(.system(size: 11, weight: .bold))
+      .tracking(1.8)
+      .foregroundColor(Color.white.opacity(0.85))
+      .lineLimit(1)
+      .fixedSize()
+      .padding(.vertical, 6)
+      .padding(.horizontal, 20)
+      .background(
+        GeometryReader { geo in
+          ZStack(alignment: .leading) {
+            Capsule().fill(Color.white.opacity(progress > 0 ? 0.12 : 0))
+            Capsule().fill(Color.white.opacity(0.35))
+              .frame(width: geo.size.width * progress)
+          }
+          .clipShape(Capsule())
+        }
+      )
+      .contentShape(Rectangle().inset(by: -8))
+      .gesture(
+        DragGesture(minimumDistance: 0)
+          .onChanged { value in
+            if pressStart == nil {
+              begin()
+            } else if abs(value.translation.width) > 40 || abs(value.translation.height) > 40 {
+              cancel(short: false)
+            }
+          }
+          .onEnded { _ in
+            if pressStart != nil {
+              let short = pressStart.map { Date().timeIntervalSince($0) < 0.3 } ?? false
+              cancel(short: short)
+            }
+          }
+      )
+      .accessibilityLabel("End session")
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction { onEnd() }
+  }
+
+  private func begin() {
+    hint = false
+    pressStart = Date()
+    withAnimation(.linear(duration: Self.holdSec)) { progress = 1 }
+    let work = DispatchWorkItem {
+      guard pressStart != nil else { return }
+      pressStart = nil
+      fireWork = nil
+      WKInterfaceDevice.current().play(.click)
+      progress = 0
+      onEnd()
+    }
+    fireWork = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.holdSec, execute: work)
+  }
+
+  private func cancel(short: Bool) {
+    fireWork?.cancel()
+    fireWork = nil
+    pressStart = nil
+    withAnimation(.easeOut(duration: 0.18)) { progress = 0 }
+    if short {
+      hint = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { hint = false }
+    }
   }
 }

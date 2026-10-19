@@ -49,6 +49,12 @@ final class BreathSessionController: NSObject, ObservableObject {
   @Published var levelTo: Double = 0.3
   @Published var phaseStart = Date()
   @Published var phaseEnd = Date()
+  /// Gepland einde van de hele sessie ("10:08 left" onder de figuur).
+  @Published var sessionEnd = Date()
+  /// Bij pauze: hoe ver de fase was (boog) en wat er nog over was.
+  @Published var pausedPhaseProgress: Double = 0
+  @Published var pausedPhaseLeftSec: Double = 0
+  @Published var pausedSessionLeftSec: Double = 0
   /// Elke fasewissel = een tik op de pols, voor het scherm.
   let beats = PassthroughSubject<Bool, Never>()
   private var level: Double = 0.3
@@ -165,6 +171,10 @@ final class BreathSessionController: NSObject, ObservableObject {
     phaseStart = start
     phaseEnd = start.addingTimeInterval(duration)
     level = target
+    /* Rest van deze ronde na deze fase + de volgende rondes. */
+    let cycle = phases.reduce(0) { $0 + $1.secs }
+    let restOfRound = phases.suffix(from: idx + 1).reduce(0) { $0 + $1.secs }
+    sessionEnd = phaseEnd.addingTimeInterval(TimeInterval(restOfRound + max(0, totalRounds - round) * cycle))
 
     let nextIdx = (idx + 1) % phases.count
     let nextRound = nextIdx == 0 ? round + 1 : round
@@ -191,9 +201,12 @@ final class BreathSessionController: NSObject, ObservableObject {
   private func playHaptics(for key: String, secs: Int) {
     switch key {
     case "inhale", "inhale-2":
-      scheduleTicks(type: .directionUp, interval: 0.3, duration: secs)
+      /* 19 okt 2026 (operator: "ik hoor een pling-geluid bij breathwork"):
+         .directionUp/.directionDown spelen op watchOS een toon mee. Enkel
+         .click (geen toon): inademen dicht, uitademen trager. */
+      scheduleTicks(type: .click, interval: 0.3, duration: secs)
     case "exhale", "exhale-2":
-      scheduleTicks(type: .directionDown, interval: 0.45, duration: secs)
+      scheduleTicks(type: .click, interval: 0.45, duration: secs)
     default:
       /* Exact dezelfde telling als TICK_PERIOD in breath-haptics.ts — hier
          wél 1-op-1 reproduceerbaar, want "vasthouden" was op de telefoon al
@@ -314,6 +327,11 @@ final class BreathSessionController: NSObject, ObservableObject {
     generation += 1
     phaseTimer?.invalidate()
     tickTimer?.invalidate()
+    let now = Date()
+    let span0 = max(0.001, phaseEnd.timeIntervalSince(phaseStart))
+    pausedPhaseProgress = min(1, max(0, now.timeIntervalSince(phaseStart) / span0))
+    pausedPhaseLeftSec = max(0, phaseEnd.timeIntervalSince(now))
+    pausedSessionLeftSec = max(0, sessionEnd.timeIntervalSince(now))
     running = false
     paused = true
     phaseLabel = "Paused"

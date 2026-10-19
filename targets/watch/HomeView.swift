@@ -82,7 +82,7 @@ struct HomeView: View {
         } else {
           ScrollView {
             VStack(spacing: 0) {
-              VMark().frame(width: 17, height: 16).padding(.bottom, 4)
+              VMark().frame(width: 18, height: 17.4).padding(.bottom, 4)
               Text(greeting())
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
@@ -147,23 +147,35 @@ struct HomeView: View {
   }
 }
 
-/** Het V-teken (vereenvoudigd, zoals vz_vmark op de Galaxy Watch). */
+/** Het VIBEZCORE V-merkteken — exact dezelfde twee polygonen als de app
+ *  (welcome.tsx) en de Galaxy Watch (vz_vmark.xml, viewport 71,4 × 68,85).
+ *  19 okt 2026 (operator: "de V lijkt niet het correcte logo"): de vorige
+ *  versie was een vereenvoudigde eigen tekening. */
 private struct VMark: View {
   var body: some View {
     GeometryReader { g in
-      Path { p in
-        let w = g.size.width, h = g.size.height
-        p.move(to: CGPoint(x: 0, y: 0))
-        p.addLine(to: CGPoint(x: w * 0.30, y: 0))
-        p.addLine(to: CGPoint(x: w * 0.55, y: h * 0.62))
-        p.addLine(to: CGPoint(x: w * 0.78, y: 0))
-        p.addLine(to: CGPoint(x: w, y: 0))
-        p.addLine(to: CGPoint(x: w * 0.62, y: h))
-        p.addLine(to: CGPoint(x: w * 0.42, y: h))
-        p.closeSubpath()
-      }
-      .fill(Color.white)
+      VMarkShape().fill(Color.white).frame(width: g.size.width, height: g.size.height)
     }
+  }
+}
+
+private struct VMarkShape: Shape {
+  func path(in rect: CGRect) -> Path {
+    let sx = rect.width / 71.4
+    let sy = rect.height / 68.85
+    func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * sx, y: rect.minY + y * sy) }
+    var p = Path()
+    p.move(to: pt(0, 0))
+    p.addLine(to: pt(16.8, 0))
+    p.addLine(to: pt(42.8, 68.85))
+    p.addLine(to: pt(26, 68.85))
+    p.closeSubpath()
+    p.move(to: pt(54.6, 0))
+    p.addLine(to: pt(71.4, 0))
+    p.addLine(to: pt(49.89, 56.95))
+    p.addLine(to: pt(41.49, 34.71))
+    p.closeSubpath()
+    return p
   }
 }
 
@@ -174,9 +186,10 @@ private struct HomePill: View {
   var body: some View {
     Button(action: action) {
       HStack(spacing: 8) {
+        /* Bio-Teal, de accentkleur van VIBEZCORE (operator, 19 okt 2026). */
         Image(systemName: icon)
           .font(.system(size: 15))
-          .foregroundColor(.white)
+          .foregroundColor(Color(red: 0, green: 0xA3 / 255, blue: 0xA3 / 255))
           .frame(width: 24, height: 24)
         Text(label)
           .font(.system(size: 12.5, weight: .bold))
@@ -249,20 +262,27 @@ private struct WaterBall: View {
   }
 }
 
-/** Ademende bol voor Breathwork (de Galaxy Watch toont daar de ademfiguur). */
-private struct BreathingOrb: View {
-  let color: Color
+/** Breathwork: de ademfiguur van de toestand (zoals de Galaxy Watch en de
+ *  app), traag ademend (6 s per adem), met een zachte gloed erachter —
+ *  19 okt 2026 (operator: "de figuren, niet de cirkels"). */
+private struct BreathFigurePreview: View {
+  let hex: String
   let size: CGFloat
   @State private var grow = false
+  private var side: CGFloat { size * breathArtOptical(hex) }
+  private var tint: Color { sessionTint(hex) }
+  private var isTree: Bool { breathArtName(hex) == "vzArtTree" }
   var body: some View {
     ZStack {
-      Circle()
-        .fill(RadialGradient(colors: [color.opacity(0.35), .clear], center: .center, startRadius: 0, endRadius: size * 0.7))
-        .frame(width: size * 1.3, height: size * 1.3)
-      Circle()
-        .fill(color.opacity(0.22))
-        .overlay(Circle().stroke(color, lineWidth: 1.6))
-        .frame(width: size * 0.8, height: size * 0.8)
+      if !isTree {
+        Circle()
+          .fill(RadialGradient(colors: [tint.opacity(0.36), tint.opacity(0.14), .clear], center: .center, startRadius: 0, endRadius: size * 0.75))
+          .frame(width: size * 1.5, height: size * 1.5)
+      }
+      Image(breathArtName(hex))
+        .resizable()
+        .scaledToFit()
+        .frame(width: side, height: side)
         .scaleEffect(grow ? 1 : 0.9)
         .opacity(grow ? 1 : 0.8)
     }
@@ -335,7 +355,7 @@ struct ModesView: View {
         ForEach(catalog.breath) { (b: CatalogBreath) in
           ModePage(
             eyebrow: "Breathwork", name: b.name, use: b.use, color: vzColor(b.colorHex), locked: !catalog.breathAllowed(b),
-            visual: AnyView(BreathingOrb(color: vzColor(b.colorHex), size: 100))
+            visual: AnyView(BreathFigurePreview(hex: b.colorHex, size: 104))
           )
           .tag("b\(b.key)")
           .onTapGesture { path.append(.breath(b.key)) }
