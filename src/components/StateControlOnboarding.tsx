@@ -45,6 +45,7 @@ import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { HeartbeatHero } from '@/components/RestingHeartRatePage';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import PressScale from '@/components/PressScale';
+import ConfirmCard from '@/components/ConfirmCard';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { STATE_USAGE } from '@/data/state-usage';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
@@ -170,7 +171,6 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const pageIn = dir > 0 ? FadeInRight.duration(320) : FadeInLeft.duration(320);
   /* Met hartslag: 4 stappen — 3 kiezen, 4 meten (operator: "stap 3 en 4").
      Kies je niet "meten", dan eindigt de onboarding na stap 3. */
-  const totalSteps = includeRestingHr ? 4 : 2;
   const lastStep = includeRestingHr ? 2 : 1;
   /* Stap 4: resultaat van de meting. */
   const [measured, setMeasured] = useState<number | null>(null);
@@ -179,6 +179,10 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   /* "Keep my current" weg (operator: "staat dubbel" — wie zijn waarde wil
      houden, tikt Skip). */
   const [hrChoice, setHrChoice] = useState<HrChoice>('measure');
+  /* 19 okt 2026 (audit): "OF 4" enkel als er gemeten wordt — wie het gemiddelde
+     of een eigen waarde kiest, eindigt na stap 3 en ziet "OF 3". */
+  const totalSteps = includeRestingHr ? (step === 3 || hrChoice === 'measure' ? 4 : 3) : 2;
+  const [skipAsk, setSkipAsk] = useState(false);
   /* Hartslaggeluid op stap 3, enkel zolang ze echt in beeld is. */
   const [focused, setFocused] = useState(true);
   useFocusEffect(
@@ -278,8 +282,16 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     if (step > 0) setStep((step - 1) as StepIdx);
     else onBack?.();
   }, [step, onBack, stopDemo]);
+  /* Skip vraagt eerst, zoals de Breathwork-onboarding (19 okt 2026, audit).
+     Nog geen rusthartslag gekozen → het gemiddelde, anders kwam er meteen een
+     tweede hartslagscherm; aanpassen kan later in Profile → Your rhythm. */
   const skip = () => {
     stopDemo();
+    setSkipAsk(true);
+  };
+  const confirmSkip = () => {
+    setSkipAsk(false);
+    if (includeRestingHr && !getRestingPulse().decided) chooseAverageRestingPulse();
     finish(chosen);
   };
 
@@ -586,6 +598,15 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           }}
         />
       )}
+      <ConfirmCard
+        visible={skipAsk}
+        title="Skip the introduction?"
+        body="You can watch it again anytime in Settings."
+        confirmLabel="Skip"
+        cancelLabel="Keep Going"
+        onCancel={() => setSkipAsk(false)}
+        onConfirm={confirmSkip}
+      />
     </View>
   );
 }

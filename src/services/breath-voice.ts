@@ -105,7 +105,9 @@ const MALE_CUE_URLS = {
   hold:               `${CDN_BASE}/Marius%20Hold%20male.mp3`,
   exhaleNose:         `${CDN_BASE}/Marius%20Exhale%20through%20your%20nose%20male.mp3`,
   exhaleMouth:        `${CDN_BASE}/Marius%20Exhale%20through%20your%20mouth%20male.mp3`,
-  boostInhaleNose:    `${CDN_BASE}/Marius%20Boost%20%20inhale%20through%20nose.mp3`,
+  /* Operator, 19 okt 2026: ook bij Boost "Inhale through your nose" (de
+     volledige zin), niet de korte Boost-opname "inhale through nose". */
+  boostInhaleNose:    `${CDN_BASE}/Marius%20Inhale%20through%20your%20nose.mp3`,
   boostExhaleMouth:   `${CDN_BASE}/Marius%20Boost%20exhale%20through%20mouth.mp3`,
   inhaleLeftNostril:  `${CDN_BASE}/Marius%20Inhale%20left%20nostril%20male.mp3`,
   inhaleRightNostril: `${CDN_BASE}/Marius%20Inhale%20right%20nostril%20male.mp3`,
@@ -473,7 +475,11 @@ export function preloadCompletionCue(key: BreathKey): void {
  *  één enkele tik hoor je gewoon niets.
  *
  *  Aanroepen bij het openen van zo'n scherm; daarna is de eerste tik hoorbaar. */
-export function preloadBreathCues(): void {
+/** `both` (onboarding, 19 okt 2026): de demo laat de vrouwen- én de
+ *  mannenstem horen, ongeacht de opgeslagen keuze. */
+export function preloadBreathCues(which: 'active' | 'both' = 'active'): void {
+  const cueUrls =
+    which === 'both' ? [...Object.values(FEMALE_CUE_URLS), ...Object.values(MALE_CUE_URLS)] : Object.values(activeCueUrls());
   /* Operator, 25 september 2026 ("knop reageert traag, ~3 sec vertraging"):
      dit liep voorheen als ÉÉN synchrone lus over alle 11 bestanden —
      `createAudioPlayer()` is een native bridge-call, en 11 ervan
@@ -488,12 +494,12 @@ export function preloadBreathCues(): void {
   if (nativeVoice()) {
     /* iPhone: de motor laadt en decodeert de bestanden zelf (buiten de
        JS-thread); Ujjayi- en welkomstzin meteen mee. */
-    [...Object.values(activeCueUrls()), activeUjjayiStartUrl(), activeEnjoySessionUrl()].forEach((url) => {
+    [...cueUrls, activeUjjayiStartUrl(), activeEnjoySessionUrl()].forEach((url) => {
       void loadVoice(url, assetUri(url));
     });
     return;
   }
-  Object.values(activeCueUrls()).forEach((url, i) => {
+  cueUrls.forEach((url, i) => {
     setTimeout(() => {
       try {
         const player = getOrCreatePlayer(url);

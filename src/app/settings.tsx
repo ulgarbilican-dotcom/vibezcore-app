@@ -527,7 +527,7 @@ export default function SettingsScreen() {
           >
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Watch the intro again</Text>
-              <BalancedText style={s.rowSub}>How State Control works, in two screens.</BalancedText>
+              <BalancedText style={s.rowSub}>How State Control works, step by step.</BalancedText>
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>

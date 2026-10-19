@@ -711,12 +711,11 @@ export default function BreathWelcomeScreen() {
   /* Standaard alvast het moment van NU geselecteerd — de rest kies je zelf.
      Blijft nodig zodat "Start your first session" altijd een concreet
      plan-item heeft, ook als de gebruiker nooit zelf tikt. */
-  const [selectedPlanIdx, setSelectedPlanIdx] = useState(() =>
-    Math.max(
-      0,
-      dayPlan.findIndex((p) => p.slot === currentSlot),
-    ),
-  );
+  /* 19 okt 2026 (audit): de standaard werd één keer bij het openen berekend,
+     toen het plan nog enkel het huidige moment had (index 0). Nu volgt hij
+     het plan zoals het op stap 5 staat, tot de gebruiker zelf tikt. */
+  const [tappedPlanIdx, setSelectedPlanIdx] = useState<number | null>(null);
+  const selectedPlanIdx = tappedPlanIdx ?? Math.max(0, dayPlan.findIndex((p) => p.slot === currentSlot));
   /* Operator, 24 september 2026 ("bij teruggaan van stap 5 moet binnenkant
      ring terug leeg tot er weer getikt wordt"): puur visuele vlag, los van
      `selectedPlanIdx` hierboven — die moet een zinnig default HOUDEN (voor
@@ -751,7 +750,7 @@ export default function BreathWelcomeScreen() {
      en een speler die het bestand nog niet heeft blijft stil — in een sessie
      merk je dat niet omdat de tweede cue het wél doet. */
   useEffect(() => {
-    preloadBreathCues();
+    preloadBreathCues('both');
   }, []);
 
   const finish = () => setSetting('breathOnboardingCompletedAt', Date.now());
@@ -1160,7 +1159,7 @@ export default function BreathWelcomeScreen() {
      dit eigen label; stap 2/3 blijven "Next". */
   const ctaLabel = isLast
     ? isPro
-      ? 'Enter Breath'
+      ? 'Start My Session'
       : 'Start My First Session'
     : slide === 0
       ? 'Personalize My First Session'
