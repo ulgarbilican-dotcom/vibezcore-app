@@ -205,6 +205,15 @@ private struct StateFace: View {
   let pulses: [RingPulse]
   let ambient: Bool
 
+  /* 19 okt 2026 (operator: "pols omlaag: de tijd blijft staan"): in Always On
+     tekent watchOS zelf een aftellende teller — onze eigen klok staat dan stil. */
+  private var timerText: Text {
+    if ambient, !state.paused, let end = state.endDate, end > now {
+      return Text(timerInterval: now...end, countsDown: true)
+    }
+    return Text(clockText(remaining, roundUp: false))
+  }
+
   private var remaining: Double {
     state.paused ? state.pausedRemainingSec : max(0, state.endDate?.timeIntervalSince(now) ?? 0)
   }
@@ -225,7 +234,7 @@ private struct StateFace: View {
       /* 19 okt 2026 (operator, build 38): teller iets groter (0,42 → 0,47 r)
          en iets hoger, zodat hij vrij blijft van de pauzeknop; naar beneden
          afgerond, zoals de telefoon. */
-      Text(clockText(remaining, roundUp: false))
+      timerText
         .font(.system(size: r * 0.47, weight: ambient ? .medium : .bold).monospacedDigit())
         .foregroundColor(ambient ? Color(white: 0.74) : .white)
         .shadow(color: .black.opacity(0.5), radius: 3)
@@ -277,9 +286,9 @@ private struct StateRingCanvas: View {
         context.drawLayer { layer in
           layer.clip(to: Path(ellipseIn: disc))
           layer.fill(wave(left: disc.minX, size: d, baseY: waterY + d * 0.027, amp: d * 0.040, t: t, dur: 5.2),
-                     with: .color(tint.opacity(0.10)))
+                     with: .color(tint.opacity(0.07)))
           layer.fill(wave(left: disc.minX, size: d, baseY: waterY - d * 0.018, amp: d * 0.031, t: t, dur: 3.6),
-                     with: .color(tint.opacity(0.15)))
+                     with: .color(tint.opacity(0.10)))
         }
       }
 
@@ -516,10 +525,11 @@ private struct BreathFace: View {
       /* "Inhale  Nose" + "4:12 left" */
       VStack(spacing: 1) {
         HStack(spacing: 5) {
-          Text(controller.phaseLabel)
+          /* pols omlaag: de fase zou stil blijven staan — dan de naam */
+          Text(ambient && !paused ? controller.modeName : controller.phaseLabel)
             .font(.system(size: paused ? 16 : 15, weight: .bold))
             .foregroundColor(ambient ? Color(white: 0.74) : .white)
-          if !paused && !controller.via.isEmpty {
+          if !paused && !ambient && !controller.via.isEmpty {
             Text(controller.via)
               .font(.system(size: 13))
               .foregroundColor(Color.white.opacity(0.65))
@@ -527,6 +537,12 @@ private struct BreathFace: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.7)
+        if !paused && ambient && controller.sessionEnd > now {
+          /* Always On: aftellen door watchOS zelf (19 okt 2026) */
+          Text(timerInterval: now...controller.sessionEnd, countsDown: true)
+            .font(.system(size: 13, weight: .medium).monospacedDigit())
+            .foregroundColor(Color.white.opacity(0.59))
+        }
         if !paused && !ambient {
           /* 19 okt 2026 (operator, build 38): 11 → 13 pt */
           Text(clockText(sessionLeft) + " left")
