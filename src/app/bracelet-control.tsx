@@ -58,6 +58,7 @@ import {
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -3182,8 +3183,16 @@ function FaultScreen({
   onConnect,
   setStatus,
 }: FaultScreenProps) {
+  /* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en de
+     fotos etc full screen?" → "ja"): in de State Control-tab zweeft de
+     doorzichtige tabbalk over dit scherm — knop erboven houden. Los
+     scherm (geen tabbalk) = gewoon de onderste veilige zone. */
+  const tabInset = useTabBarInset();
   return (
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[s.root, tabInset > 0 && { paddingBottom: tabInset }]}
+      edges={tabInset > 0 ? ['top'] : ['top', 'bottom']}
+    >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
         title="Bracelet error"
@@ -3242,8 +3251,16 @@ function ChargingScreen({
   batteryColor,
   sim,
 }: ChargingScreenProps) {
+  /* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en de
+     fotos etc full screen?" → "ja"): in de State Control-tab zweeft de
+     doorzichtige tabbalk over dit scherm — knop erboven houden. Los
+     scherm (geen tabbalk) = gewoon de onderste veilige zone. */
+  const tabInset = useTabBarInset();
   return (
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[s.root, tabInset > 0 && { paddingBottom: tabInset }]}
+      edges={tabInset > 0 ? ['top'] : ['top', 'bottom']}
+    >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
         title="Bracelet charging"

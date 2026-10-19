@@ -55,6 +55,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -133,11 +134,16 @@ export default function ActivityScreen() {
   const flashFor = (id: string) => (flash?.id === id ? flash.n : undefined);
   const pulse = useRestingPulse();
   const [rhythmOpen, setRhythmOpen] = useState(false);
+  const tabInset = useTabBarInset();
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
+      {/* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en
+          de fotos etc full screen?" → "ja"): de doorzichtige tabbalk zweeft
+          over de lijst — zijn hoogte bij de onderste ruimte, zodat de
+          laatste kaart volledig boven de balk kan scrollen. */}
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: 24 + tabInset }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Operator, 29 september 2026 ("i.p.v. de foto moet een apple

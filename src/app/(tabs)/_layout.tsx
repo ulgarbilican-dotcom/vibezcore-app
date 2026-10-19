@@ -53,8 +53,10 @@ import {
   Wind,
   type LucideIcon,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Animated as RNAnimated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { setTabBarOverlayHeight, TAB_BAR_CONTENT_HEIGHT } from '@/utils/tab-bar-inset';
 
 type TabPath = '/' | '/breath' | '/bracelet' | '/activity' | '/account';
 
@@ -116,11 +118,12 @@ function TabButton({
         justifyContent: 'center',
       }}
       /* Operator ("bij aanklikken moet het donkerder highlighten nu niet
-         duidelijk"): stond nog op wit-op-wit (rgba(255,255,255,0.06)) —
-         dat paste bij de oude donkere balk, is op de huidige witte balk
-         vrijwel onzichtbaar. Donkere ripple, zelfde donkere tint als de
-         rest van de app op lichte vlakken. */
-      android_ripple={{ color: 'rgba(10,10,12,0.12)', borderless: true }}
+         duidelijk"): op de witte balk was dit een donkere ripple.
+         19 okt 2026 (operator: "kunnen wij onderaan transparant maken en de
+         fotos etc full screen?" → "ja"): de balk ligt nu doorzichtig op een
+         donkere scrim — een donkere ripple is daar onzichtbaar, dus terug
+         een lichte (wit-op-donker), net sterk genoeg om de tik te zien. */
+      android_ripple={{ color: 'rgba(255,255,255,0.14)', borderless: true }}
     >
       {children}
     </Pressable>
@@ -156,8 +159,16 @@ function TabButton({
    chrome (`text` / `text-muted` uit het design-system: `#1D1D1F` /
    `#8E8E93`), exact zoals Apple's eigen tab bar (donkergrijs = geselecteerd,
    middengrijs = niet-geselecteerd, nooit halftransparant). */
-const TAB_ACTIVE_COLOR = '#1D1D1F';
-const TAB_INACTIVE_COLOR = '#8E8E93';
+/* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en de
+   fotos etc full screen?" → "ja"): de balk is niet meer wit maar
+   doorzichtig op een donkere scrim (dark-only app). Het donkere paar
+   hierboven verdween daarop — terug naar licht-op-donker, nog steeds twee
+   vaste kleuren (geen opacity-truc): actief label wit, inactief icoon+label
+   in de gedimde tekstkleur van het merk-palet, maar iets lichter dan
+   `#8a8a8a` (rgba-wit 0,6) zodat het ook over een lichte foto leesbaar
+   blijft. Het actieve ICOON blijft Bio-Teal (`AudioAccent`, 10 okt). */
+const TAB_ACTIVE_COLOR = '#ffffff';
+const TAB_INACTIVE_COLOR = 'rgba(255,255,255,0.6)';
 
 /* Operator, 10 okt 2026 ("gebruik deze iconen voor de tabbladen" —
    website-sectie "Three tools. One system."; vervolg: "iconen zonder
@@ -254,9 +265,12 @@ export default function TabLayout() {
     /* Operator, 25 september 2026, derde ronde: de balk is terug een GEWONE
        (niet-absolute) balk — reserveert zijn eigen ruimte automatisch in de
        flex-flow, zoals Apple's eigen tab bar ook gewoon deel is van de
-       layout i.p.v. een zwevend overlay. Deze `backgroundColor` is enkel
-       nog een fallback voor het ene frame vóór een scherm zijn eigen
-       achtergrond tekent. */
+       layout i.p.v. een zwevend overlay.
+       19 okt 2026 (operator: "kunnen wij onderaan transparant maken en de
+       fotos etc full screen?" → "ja"): VERVANGEN — de balk zweeft weer,
+       doorzichtig, over schermen die tot de onderrand doorlopen (zie de
+       `tabBar` hieronder). Deze `backgroundColor` is enkel een fallback
+       voor het ene frame vóór een scherm zijn eigen achtergrond tekent. */
     <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
       <Tabs
         /* Terug gaat naar de BEGINROUTE, niet naar het vorige tabblad dat je
@@ -266,16 +280,44 @@ export default function TabLayout() {
         backBehavior="initialRoute"
         /* Operator, 8 okt 2026 ("die player blijft overal in de weg staan
            voor CTA's — hoe zou Apple dat doen"): de mini-speler hoort bij
-           de tab-bar, als één blok onderaan (Apple Music). Het scherm erboven
-           wordt korter i.p.v. een zwevende laag erover. Verborgen tab-bar
-           (lopende State Control-sessie) = ook geen mini-speler. */
+           de tab-bar, als één blok onderaan (Apple Music). Verborgen tab-bar
+           (lopende State Control-sessie) = ook geen mini-speler.
+           Sinds 19 okt 2026 zweeft dat blok over het scherm (doorzichtige
+           balk); het scherm houdt zijn knoppen erboven via useTabBarInset —
+           op dezelfde plek als toen het scherm korter werd. */
         tabBar={(props) => {
           const focused = props.state.routes[props.state.index];
           const opts = props.descriptors[focused.key]?.options;
           const style = opts?.tabBarStyle as { display?: string } | undefined;
           const hidden = style?.display === 'none';
+          /* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en
+             de fotos etc full screen?" → "ja"): het hele blok (pills,
+             mini-speler, balk) ZWEEFT nu absoluut over de schermen, die tot
+             de onderrand doorlopen — foto's randloos achter balk en Android-
+             navigatieknoppen. Het scherm wordt dus niet meer korter: de
+             gemeten hoogte van dit blok gaat naar utils/tab-bar-inset.ts,
+             waarmee elk tabscherm zijn knoppen/laatste rij erboven houdt.
+             `box-none`: een tik op de doorzichtige zone gaat naar het scherm
+             eronder, enkel de pills/knoppen zelf vangen hem op. */
           return (
-            <View>
+            <View
+              style={styles.barDock}
+              pointerEvents="box-none"
+              onLayout={(e) => setTabBarOverlayHeight(e.nativeEvent.layout.height)}
+            >
+              {/* Zachte scrim: doorzichtig bovenaan → donker onderaan, over de
+                  balk én ~60pt erboven, zodat witte iconen/labels leesbaar
+                  blijven boven een lichte foto. Hier i.p.v. in
+                  `tabBarBackground`: die laag zit BINNEN de balk en zou
+                  (laatst getekend) over de gedokte pills heen vallen. */}
+              {!hidden && (
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.45)', 'rgba(10,10,10,0.75)']}
+                  locations={[0, 0.45, 1]}
+                  style={styles.barScrim}
+                />
+              )}
               {/* Lopende sessies (State Control, geminimaliseerde ademsessie)
                   net boven de tabbalk, zoals Apple Music (10 okt 2026). */}
               {!hidden && <BraceletMiniIndicator docked />}
@@ -299,47 +341,38 @@ export default function TabLayout() {
           headerShown: false,
           /* Operator, 25 september 2026: eerst een echte `BlurView`-Material
              geprobeerd, operator vond matglas niet mooi — "kunnen we het
-             transparant maken". Geen `tabBarBackground`-laag meer, geen
-             getinte overlay: de balk zelf heeft nu GEEN achtergrond, enkel
-             de iconen/labels zweven op wat eronder staat. */
+             transparant maken". Daarna (derde ronde, toen de app nog licht
+             was) een vlakke, ondoorzichtig WITTE balk à la Apple's
+             `UITabBar`, gewoon in de flex-layout met een haarlijn bovenaan.
+             19 okt 2026 (operator, dark-only app: "kunnen wij onderaan
+             transparant maken en de fotos etc full screen?" → "ja"): terug
+             DOORZICHTIG — geen matglas, geen wit vlak, geen haarlijn. De balk
+             zweeft (zie `styles.barDock` in de `tabBar` hierboven) over de
+             schermen; leesbaarheid komt van de zachte donkere scrim
+             daaronder. Daarom is er weer een compensatie in de tabschermen
+             nodig (vroeger `tabBarFootprint`, nu utils/tab-bar-inset.ts). */
           tabBarStyle: {
-            /* Operator, 25 september 2026, derde ronde ("onderste band wit
-               maken, moet totaal doorlopen van links naar rechts, hoe zou
-               Apple dit doen"): terug naar Apple's eigen `UITabBar`-patroon
-               — GEEN zwevende kaart met marges meer (dat was een eigen
-               ontwerpkeuze van eerdere iteraties, geen Apple-standaard).
-               Apple's tab bar is vlak, ondoorzichtig wit, loopt volledig
-               van links tot rechts door, plakt tegen de onderrand, en heeft
-               enkel een haarlijn-scheiding bovenaan — geen ronding, geen
-               marge, geen schaduw. Terug een GEWONE (niet-absolute) balk:
-               daarmee reserveert de flex-layout automatisch zijn ruimte, dus
-               geen `tabBarFootprint`-compensatie meer nodig in de
-               tabschermen (die is hier elders weer verwijderd) — exact
-               hoe deze balk vóór de "zwevende kaart"-periode ook al werkte. */
             /* Operator, 2 okt 2026 ("staat vrij hoog, hoe zou Apple dat
                doen"): Apple's eigen `UITabBar` content-hoogte is 49pt
                (zonder safe-area) — 62 lag daar ver boven. Terug naar
                Apple's maat, met net genoeg marge (2px) voor de dalende
                "p" in "Profile" die de vorige 56 liet afsnijden; 51 geeft
                diezelfde veiligheid zonder de overmaat van 62. */
-            height: 51 + insets.bottom,
+            height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
             borderRadius: 0,
-            backgroundColor: '#ffffff',
-            /* Apple se eigen separator-kleur (`separator` in de HIG),
-               niet zwart — een zachte grijze haarlijn, geen "fucking lijn"
-               in de zin van de eerdere klacht (die ging over een ONGEWENSTE
-               schaduw/rand op de vorige DONKERE balk; hier is de haarlijn
-               bewust, exact zoals Apple 'm zelf tekent). */
-            borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: 'rgba(60,60,67,0.29)',
+            backgroundColor: 'transparent',
+            borderTopWidth: 0,
             borderWidth: 0,
+            /* Geen Android-schaduw / iOS-schaduw onder een doorzichtige balk. */
+            elevation: 0,
+            shadowOpacity: 0,
             paddingTop: 4,
-            /* GEEN `paddingBottom: 0` meer — @react-navigation/bottom-tabs
-               plakt intern zelf `paddingBottom: insets.bottom` bovenop deze
-               stijl (zie BottomTabBar.js), en dat is nu precies gewenst:
-               een balk die vast tegen de onderrand plakt hoort de safe-area
-               zelf als binnenpadding te dragen — exact hoe Apple's eigen
-               tab bar (49pt + safe-area-inset) is opgebouwd. */
+            /* GEEN `paddingBottom` — @react-navigation/bottom-tabs plakt
+               intern zelf `paddingBottom: insets.bottom` bovenop deze stijl
+               (zie BottomTabBar.js): de iconen blijven zo boven de Android-
+               navigatieknoppen / iOS-home-indicator, de scrim loopt er wel
+               achter door tot de onderrand. De balk zelf is NIET absoluut:
+               het omhullende blok (`styles.barDock`) is dat al. */
           },
         }}
       >
@@ -456,3 +489,21 @@ export default function TabLayout() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  /* Zwevend blok onderaan (19 okt 2026) — zie de `tabBar` hierboven. */
+  barDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  /* Scrim: volle blokhoogte + 60pt erboven, tot de onderrand. */
+  barScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: -60,
+    bottom: 0,
+  },
+});

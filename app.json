@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon/icon_1024.png",
     "scheme": "vibezcoreapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0a0a",
     "ios": {
       "icon": "./assets/icon/ios_1024.png",
       "bundleIdentifier": "com.ubili.vibezcoreapp",

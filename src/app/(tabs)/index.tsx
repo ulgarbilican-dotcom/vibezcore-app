@@ -87,6 +87,7 @@ import {
    Iter 9dq v64: Gumroad-checkout vervangen door /subscribe (IAP). Indien
    ooit terug nodig (bv. een externe info-pagina openen): re-import. */
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   Easing,
   FadeInDown,
@@ -1162,6 +1163,8 @@ function AudioScreen({
   /* Iter 9bbb: safe-area inset voor pillar-modal bottom (home-indicator
      iOS / gesture-bar Android moeten ruimte krijgen). */
   const safeInsets = useSafeAreaInsets();
+  /* Ruimte voor de zwevende, doorzichtige tabbalk (19 okt 2026). */
+  const tabInset = useTabBarInset();
 
   /* (verwijderd: storeName per platform — operator wil beide platforms
      tonen voor vertrouwen ongeacht device). */
@@ -1487,7 +1490,11 @@ function AudioScreen({
                  sessie loopt — zelfde fix als de hoofd-ScrollView
                  hieronder al had (zie MINI_PLAYER_HEIGHT-gebruik verderop
                  in dit bestand). */
+              /* 19 okt 2026: + `tabInset` — de doorzichtige tabbalk
+                 zweeft nu over dit scherm i.p.v. het korter te maken;
+                 zo blijven de links op exact dezelfde plek. */
               paddingBottom:
+                tabInset +
                 TAB_BAR_HEIGHT +
                 safeInsets.bottom +
                 64,
@@ -1603,7 +1610,11 @@ function AudioScreen({
               resizeMode="cover"
             />
           </Animated.View>
-          <View style={s.introTextWrap}>
+          {/* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken
+              en de fotos etc full screen?" → "ja"): de foto loopt tot de
+              onderrand achter de doorzichtige tabbalk; tekst en knop
+              blijven op dezelfde plek — 34 + de balkhoogte. */}
+          <View style={[s.introTextWrap, { paddingBottom: 34 + tabInset }]}>
             <Animated.Text style={[s.introEyebrow, introEyebrowStyle]}>
               VIBEZCORE AUDIO LIBRARY
             </Animated.Text>
@@ -1689,7 +1700,12 @@ function AudioScreen({
                sinds 25 september een gewone balk die zijn eigen plek inneemt
                — hier nog eens 64 + inset reserveren was dubbel. Enkel de
                mini-speler (zweeft boven de balk) krijgt nog ruimte. */
-            paddingBottom: 28,
+            /* 19 okt 2026 (operator: "kunnen wij onderaan transparant
+               maken en de fotos etc full screen?" → "ja"): de balk zweeft
+               nu weer doorzichtig over de lijst — zijn hoogte (incl.
+               mini-speler en veilige zone) terug bij de 28, zodat de
+               laatste rij volledig boven de balk kan scrollen. */
+            paddingBottom: 28 + tabInset,
           },
         ]}
         showsVerticalScrollIndicator={false}

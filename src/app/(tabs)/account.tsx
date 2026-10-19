@@ -166,6 +166,7 @@ async function shareInvite(): Promise<void> {
 import { showVibezAlert } from '@/components/VibezAlert';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import {
     clearSession,
@@ -860,6 +861,11 @@ export default function AccountScreen() {
      (64px) eronder was 't praktisch ok, maar 't was niet future-proof.
      Nu dynamisch zodat content altijd boven safe-zone blijft. */
   const safeInsets = useSafeAreaInsets();
+  /* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en de
+     fotos etc full screen?" → "ja"): de doorzichtige tabbalk zweeft over
+     de lijst — `tabInset` erbij, zodat de laatste rij volledig boven de
+     balk kan scrollen. */
+  const tabInset = useTabBarInset();
 
   /* Iter 9dq v110 (2026-06-04): scroll-ref voor signed-out KeyboardAware-
      ScrollView. Listent op scroll-intent 'account-top' (gefired vanuit
@@ -1524,7 +1530,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
         <KeyboardAwareScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(safeInsets.bottom + 24, 72) }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: tabInset + Math.max(safeInsets.bottom + 24, 72) }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}
@@ -1579,7 +1585,7 @@ export default function AccountScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <KeyboardAwareScrollView
         ref={signedOutScrollRef}
-        contentContainerStyle={[s.scroll, { paddingBottom: 48 + safeInsets.bottom }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: tabInset + 48 + safeInsets.bottom }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}

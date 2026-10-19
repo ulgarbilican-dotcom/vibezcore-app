@@ -80,6 +80,7 @@ import {
   InteractionManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -446,6 +447,7 @@ function GoalButton({ onPress }: { onPress: () => void }) {
 }
 
 export default function BreathScreen() {
+  const tabInset = useTabBarInset();
   /* Operator, 26 september 2026 ("cta niet bereikbaar, mini-player staat
      erover op de welcome-pagina van breath"): nodig voor `introWrap`
      hieronder om ruimte te reserveren voor de mini-player. */
@@ -996,6 +998,11 @@ export default function BreathScreen() {
         <View
           style={[
             s.introWrap,
+            /* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken
+               en de fotos etc full screen?" → "ja"): de foto loopt nu tot de
+               onderrand, achter de doorzichtige tabbalk — tekst en knoppen
+               blijven op exact dezelfde plek: 34 + de balkhoogte. */
+            { paddingBottom: 34 + tabInset },
           ]}
         >
           {/* Operator, 8 september 2026: "verwijder mandala... tekst breathe
@@ -1128,7 +1135,11 @@ export default function BreathScreen() {
           er tussen de rij van vijf en die regel een leeg vlak van een derde
           scherm — en een keuzepagina die halfleeg staat leest als een pagina
           waar nog iets bij moet. */}
-      <View style={s.body}>
+      {/* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en
+          de fotos etc full screen?" → "ja"): de achtergrondfoto loopt tot de
+          onderrand achter de doorzichtige tabbalk; dit blok blijft
+          gecentreerd in exact dezelfde ruimte als vroeger (boven de balk). */}
+      <View style={[s.body, { marginBottom: tabInset }]}>
       {/* ── Onzichtbare veeglaag ── Operator, 8 september 2026 (mockup 1):
           de grote afgeronde foto-kaart die hier stond is weg — de
           achtergrondfoto draagt het beeld nu, en de mockup toont hier geen

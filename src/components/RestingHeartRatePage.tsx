@@ -41,6 +41,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 
 /* Lucide-hart (24×24), zelfde vorm als de iconen elders in de app. */
 const HEART_D =
@@ -93,6 +94,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     return () => sub.remove();
   }, [onBack]);
   const insets = useSafeAreaInsets();
+  const tabInset = useTabBarInset();
   /* Operator, 9 okt 2026 ("alle tekst op elkaar"): het beeld schaalt mee
      met de schermhoogte i.p.v. vaste 260 pt. */
   const { height, width } = useWindowDimensions();
@@ -134,7 +136,11 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
 
       {/* Verborgen zolang het meetblad open is: anders schemert de witte
           knop als grijze band door het glas achter de meetring. */}
-      <View style={[s.actions, { paddingBottom: Math.max(insets.bottom, 12) + 4, opacity: sheet ? 0 : 1 }]}>
+      {/* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken en
+          de fotos etc full screen?" → "ja"): de tabbalk zweeft nu
+          doorzichtig over dit scherm — zijn hoogte erbij, zodat de knoppen
+          op dezelfde plek blijven. */}
+      <View style={[s.actions, { paddingBottom: tabInset + Math.max(insets.bottom, 12) + 4, opacity: sheet ? 0 : 1 }]}>
         <PressScale style={s.cta} haptic scaleTo={0.97} onPress={() => setSheet('measure')} accessibilityRole="button">
           <Text style={s.ctaTxt}>Measure Now</Text>
         </PressScale>

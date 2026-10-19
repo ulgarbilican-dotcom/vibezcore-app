@@ -66,6 +66,7 @@ import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import { hapticPress } from '@/utils/haptics';
+import { useTabBarInset } from '@/utils/tab-bar-inset';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
 /* Operator, 5 okt 2026: terug naar de eerste foto. */
@@ -125,6 +126,7 @@ function photoFrame(w: number, h: number, textTop: number | null) {
 }
 
 function StateControlIntro({ onDone }: { onDone: () => void }) {
+  const tabInset = useTabBarInset();
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const [textTop, setTextTop] = useState<number | null>(null);
   const ctaScale = useSharedValue(1);
@@ -179,7 +181,11 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
           {box && (
             <Image
               source={{ uri: BG_IMG }}
-              style={photoFrame(box.w, box.h, textTop)}
+              /* Kadrering op de hoogte BOVEN de tabbalk (19 okt 2026):
+                 sinds de balk doorzichtig over dit scherm zweeft is het
+                 vak `tabInset` hoger — zonder aftrek zou de foto merkbaar
+                 inzoomen. Zo blijft de uitsnede exact zoals goedgekeurd. */
+              style={photoFrame(box.w, box.h - tabInset, textTop)}
               resizeMode="cover"
             />
           )}
@@ -198,8 +204,13 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
       </View>
       {/* Zelfde plaatsing als het Audio Library-intro ((tabs)/index.tsx
           `introTextWrap`): 34 boven de tabbalk, géén extra onderste
-          veilige zone — die zit al in de tabbalk (operator, 5 okt 2026). */}
-      <View style={s.introWrap}>
+          veilige zone — die zit al in de tabbalk (operator, 5 okt 2026).
+          19 okt 2026 (operator: "kunnen wij onderaan transparant maken en
+          de fotos etc full screen?" → "ja"): de balk zweeft nu doorzichtig
+          over dit scherm, dat tot de onderrand doorloopt — dus de hoogte
+          van de balk (incl. veilige zone) hier zelf bij de 34 optellen,
+          zodat titel en knop op exact dezelfde plek blijven. */}
+      <View style={[s.introWrap, { paddingBottom: 34 + tabInset }]}>
         <View
           style={s.stackTitle}
           onLayout={(e) => {
