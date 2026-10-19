@@ -1623,13 +1623,17 @@ export function BreathSession() {
          meteen zichtbaar bij de overgang en remt pas af richting het
          hoogste/laagste punt — dat volgt het moment waarop de fase
          WERKELIJK begint, in plaats van er een fractie achteraan te lopen. */
-      if (k === 'inhale' || k === 'exhale') {
+      /* 19 okt 2026 (operator: "Sharp Focus, inhale right nostril / exhale
+         left nostril — de animatie bevriest"): ook de tweede in- en
+         uitademing ('inhale-2'/'exhale-2') van Alternate Nostril en de
+         Physiological Sigh bewegen de figuur. */
+      if (k.startsWith('inhale') || k.startsWith('exhale')) {
         /* Bij hervatten staat `breath` al bevroren op zijn tussenwaarde
            (pauzeSession annuleert de animatie zonder te resetten) —
            `withTiming` bouwt vanaf die HUIDIGE waarde verder naar hetzelfde
            doel, dus dit blijft naadloos zonder een aparte tussenwaarde te
            moeten uitrekenen. */
-        breath.value = withTiming(k === 'inhale' ? 1 : 0, {
+        breath.value = withTiming(k.startsWith('inhale') ? 1 : 0, {
           duration: Math.max(0, endAt - Date.now()),
           easing: Easing.out(Easing.sin),
         });
