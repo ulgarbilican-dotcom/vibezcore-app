@@ -45,7 +45,6 @@ import { BrandFonts } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -65,6 +64,7 @@ import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroVisible } from '@/utils/state-control-ui';
+import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import { hapticPress } from '@/utils/haptics';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
@@ -272,13 +272,22 @@ export default function BraceletScreen() {
   const { open } = useLocalSearchParams<{ open?: string }>();
   const consumedOpen = useRef<string | undefined>(open);
   const [showIntro, setShowIntro] = useState(!open);
+  /* 19 okt 2026 (operator, punt 24, "nooit onderbreken"): kwam je via zo'n
+     directe weg binnen, dan ook niet het rusthartslag-scherm ertussen — de
+     sessie rekent dan met het gemiddelde tot je zelf kiest. Weer uit zodra
+     het intro terugkomt (ander tabblad, minimaliseren). */
+  const [directEntry, setDirectEntry] = useState(!!open);
 
   useEffect(() => {
     if (open && open !== consumedOpen.current) {
       consumedOpen.current = open;
       setShowIntro(false);
+      setDirectEntry(true);
     }
   }, [open]);
+  useEffect(() => {
+    if (showIntro) setDirectEntry(false);
+  }, [showIntro]);
 
   /* Test 10 okt 2026: enkel terug naar het intro als je naar een ANDER
      TABBLAD gaat — niet als er een scherm bovenop komt (Set your plan,
@@ -322,20 +331,22 @@ export default function BraceletScreen() {
   useEffect(() => {
     void ensureSettingsLoaded().then(() => setSettingsLoaded(true));
   }, []);
+  /* 19 okt 2026 (operator, punt 24 — vervangt de regel van build 26
+     hieronder): de onboarding verschijnt enkel na "Explore State Control",
+     dus wanneer de gebruiker de tab ZELF opent. Eén keer; "Not Now"
+     (terug/terugvegen op stap 1) = nog één keer bij een volgende app-start,
+     daarna nooit meer vanzelf; nooit terwijl er een sessie loopt. Alle
+     regels: utils/onboarding-gate.ts — beslist op het moment van de tik
+     (uitstel en lopende sessie zijn geen React-state). */
   const needsOnboarding = settingsLoaded && onboardedAt === null;
-  /* Elke ingang die het intro overslaat (`open`-token: na een aankoop, een
-     herinnering, een plan) sloeg ook de onboarding over (operator, build 26:
-     "waarom is na de onboarding van breathwork die van State Control weg?").
-     Wie State Control nog nooit zag, krijgt ze nu altijd eerst — behalve als
-     er al een sessie loopt. */
-  const onbPushed = useRef(false);
-  useEffect(() => {
-    if (!focused || showIntro || !needsOnboarding || onbPushed.current) return;
-    if (getBraceletSessionSnapshot().active) return;
-    onbPushed.current = true;
-    router.push({ pathname: '/state-onboarding', params: { first: '1', hr: pulse.decided ? '0' : '1' } } as never);
-  }, [focused, showIntro, needsOnboarding, pulse.decided]);
-  const showHrPage = !showIntro && pulseLoaded && !pulse.decided;
+  /* [VERVANGEN 19 okt 2026, punt 24] Elke ingang die het intro overslaat
+     (`open`-token: na een aankoop, een herinnering, een plan) sloeg ook de
+     onboarding over (operator, build 26: "waarom is na de onboarding van
+     breathwork die van State Control weg?") — toen kreeg wie State Control
+     nog nooit zag ze daar altijd eerst. Nu niet meer: zo'n ingang gaat
+     meteen naar de bestemming (nooit onderbreken); de onboarding komt de
+     volgende keer dat de gebruiker zelf op "Explore State Control" tikt. */
+  const showHrPage = !showIntro && !directEntry && pulseLoaded && !pulse.decided;
 
   useEffect(() => {
     setStateControlIntroVisible(focused && (showIntro || showHrPage));
@@ -351,7 +362,7 @@ export default function BraceletScreen() {
     return (
       <StateControlIntro
         onDone={() => {
-          if (needsOnboarding) {
+          if (needsOnboarding && mayAutoShowOnboarding('state')) {
             /* Het intro blijft eronder staan: Back in de onboarding komt
                hier terug; na afloop opent /state-onboarding deze tab met een
                `open`-token (geen intro meer). */

@@ -26,7 +26,8 @@
    proefversie. De vijf states leven op de Breath-tab zelf, niet hier —
    anders zeg je hetzelfde twee keer.
 
-   Wordt geopend door (tabs)/breath.tsx bij first-run. Setting-vlag
+   Wordt geopend door (tabs)/breath.tsx bij first-run (wanneer precies:
+   utils/onboarding-gate.ts, 19 okt 2026). Setting-vlag
    `breathOnboardingCompletedAt` voorkomt herhaling; Settings →
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
@@ -41,6 +42,7 @@ import {
   claimFreeSessionParam,
   skipBreathOnboardingRedirectOnce,
 } from '@/utils/breath-entry';
+import { deferOnboarding } from '@/utils/onboarding-gate';
 import {
   GUIDANCE_MODES,
   ModeGlyph,
@@ -225,6 +227,13 @@ const EXP_CARD_H = Math.floor((SCREEN_H - EXP_RESERVED - EXP_GAP * 2) / 3);
 const EXP_SQUARE = TILE;
 const EXP_PANO_H = TILE;
 const EXP_BLOCK_W = GRID_W;
+/* 19 okt 2026 (punt 24): alles op stap 4 behalve de twee kaartrijen en de
+   lucht boven de disclaimer — bovenmarge, kop + tweeregelige subkop, kier
+   boven en tussen de kaarten, disclaimer (3 regels) en 16 vrij boven de
+   knop, ruim geschat. */
+const EXP_NON_GAP_H = 4 + 112 + 16 + ROW_GAP + 52 + 16;
+const SAFETY_GAP_MIN = 16;
+const SAFETY_GAP_MAX = 52;
 
 /* De signatuur-puls: kort tikje, korte stilte, vollere tik. Twee tikken
    lezen als iets bedoelds; één tik leest als een notificatie. */
@@ -798,6 +807,9 @@ export default function BreathWelcomeScreen() {
   }));
 
   const goBack = () => setSlide((n) => Math.max(0, n - 1));
+  /* Echte hoogte tussen de bovenbalk en de knop (19 okt 2026, punt 24) —
+     stap 3/4 schalen daarop i.p.v. op een schatting van de schermhoogte. */
+  const [areaH, setAreaH] = useState(0);
 
   const goNext = () => {
     if (!isLast) {
@@ -960,13 +972,26 @@ export default function BreathWelcomeScreen() {
      ook de terugknop op een scherm ERBOVEN nog op. */
   /* 19 okt 2026 (operator: "ik kan hier niet weg zonder skip — wat als ik
      eerst andere zaken wil bekijken?"): op stap 1 is er een uitgang zonder
-     iets te beslissen. "Not Now" gaat naar de Audio Library (tabbalk
-     zichtbaar) en markeert de onboarding NIET als gezien — de volgende keer
-     dat je Breath opent, staat ze er weer. Skip blijft "nooit meer tonen". */
+     iets te beslissen. "Not Now" markeert de onboarding NIET als gezien.
+     Skip blijft "nooit meer tonen". */
+  /* 19 okt 2026 (operator, punt 24 — vervangt de Audio Library hierboven):
+     "Not Now" gaat naar de gewone Breathwork-pagina (het welkomstbeeld met
+     "Explore modes"), en telt als uitstel: deze app-run niet meer, bij een
+     volgende start nog één keer, daarna nooit meer vanzelf (zie
+     utils/onboarding-gate.ts). `skipBreathOnboardingRedirectOnce()` sluit
+     de lus uit — de Breath-tab stuurt niet meteen terug hierheen. Via
+     Settings opnieuw geopend: gewoon terug, zoals Skip daar doet. */
   const notNow = useCallback(() => {
     setSkipAsk(false);
-    router.replace('/' as never);
-  }, []);
+    if (isReplay) {
+      onSkip(false);
+      return;
+    }
+    deferOnboarding('breath');
+    skipBreathOnboardingRedirectOnce();
+    router.replace('/breath' as never);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReplay]);
   const edgeBackRef = useRef<() => void>(() => {});
   edgeBackRef.current = () => {
     if (skipAsk) setSkipAsk(false);
@@ -1221,7 +1246,8 @@ export default function BreathWelcomeScreen() {
     <View style={[s.root, light && s.rootLight, { flex: 1 }]}>
       {/* iOS (audit 16 okt 2026): de systeemveeg popte de HELE onboarding
           en sloeg Skip en de vlaggen over. Nu veegt de rand stap per stap
-          terug (stap 1 = Skip), net als Android's terugknop hierboven. */}
+          terug (stap 1 = Not Now, 19 okt 2026: uitstel, nooit Skip), net
+          als Android's terugknop hierboven. */}
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
       {Platform.OS === 'ios' && <View style={s.edgeSwipe} {...edgeSwipe.panHandlers} />}
 
@@ -1346,18 +1372,36 @@ export default function BreathWelcomeScreen() {
           />
         </ScrollView>
       ) : (
-        <View
-          style={[
+        /* 19 okt 2026 (operator, punt 24: "niets mag achter of tegen de CTA
+           staan, ook niet op iPhone SE / A16"): stap 1-4 passen normaal
+           zonder scrollen (regel van 10 augustus blijft: de maten hieronder
+           krimpen eerst mee met de echte beschikbare hoogte, `areaH`). Past
+           het tóch niet (kleiner scherm, grotere systeemletters), dan
+           scrollt de inhoud i.p.v. onder de knop te verdwijnen. Past het
+           wel, dan staat alles exact zoals voorheen (`flexGrow`, geen
+           veer-effect). Onderaan minstens 16 vrij boven de knop — behalve
+           op stap 2, waar de bracelet-teaser die marge zelf meerekent
+           (TEASER_NEEDS). */
+        <ScrollView
+          /* Elke stap begint bovenaan, niet op de scrollpositie van de vorige. */
+          key={slide}
+          style={s.slideScroll}
+          contentContainerStyle={[
             s.slideArea,
+            s.slideAreaGrow,
             slide >= 1 && slide <= 4 && s.slideAreaTop,
+            slide !== 1 && s.slideAreaClear,
           ]}
+          alwaysBounceVertical={false}
+          showsVerticalScrollIndicator={false}
+          onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}
         >
           {slide === 0 ? (
             <SlideIntro onTapOrb={feelOrb} light />
           ) : slide === 1 ? (
             <SlideGuidance onPick={onPickMode} chosenMode={chosenMode} light={light} />
           ) : slide === 2 ? (
-            <SlideChangeGoals selected={changeGoals} onToggle={toggleChangeGoal} />
+            <SlideChangeGoals selected={changeGoals} onToggle={toggleChangeGoal} availH={areaH} />
           ) : (
             <SlideExperience
               selected={experience}
@@ -1365,9 +1409,10 @@ export default function BreathWelcomeScreen() {
               safetyAck={safetyAck}
               onToggleSafetyAck={() => setSafetyAck((v) => !v)}
               safetyShakeX={safetyShakeX}
+              availH={areaH}
             />
           )}
-        </View>
+        </ScrollView>
       )}
 
       {/* Operator, 7 september 2026: "foto moet doorlopen tot onderkant
@@ -1920,6 +1965,7 @@ function SlideGuidance({
      niet uit de flow geraken"): een in-scherm `Modal` i.p.v. `router.push`
      naar de Bracelet-tab — de onboarding-flow blijft actief eronder. */
   const [braceletInfo, setBraceletInfo] = useState(false);
+  const [teaserRoom, setTeaserRoom] = useState(0);
   const handlePress = (key: GuidanceMode) => {
     onPick(key);
     setPlaying(key);
@@ -1948,7 +1994,11 @@ function SlideGuidance({
   }));
 
   return (
-    <View style={s.slide}>
+    /* flexGrow i.p.v. flex (19 okt 2026, punt 24): in de ScrollView telt de
+       inhoud dan mee, zodat kop + kaarten op een te klein scherm scrollen
+       i.p.v. onder de knop te schuiven. Past het, dan vult hij de ruimte
+       zoals voorheen (de teaser-ruimte hieronder blijft dezelfde). */
+    <View style={[s.slide, { flexGrow: 1 }]}>
       {/* Operator, 23 september 2026 ("de lichtbron op de achtergrond mag
          weg in onboarding"): de `AuroraGlow`-achtergrondgloed (kleurde mee
          met de gekozen modus zolang die speelde) is weg — de rand-gloed +
@@ -2002,7 +2052,16 @@ function SlideGuidance({
          vertical kaart met de bracelet in"): 5e, volle-breedte kaart onder
          het 2×2-raster — geen 5e "modus" (dat blijft de 4 hierboven), maar
          een teaser die naar een infopopup leidt i.p.v. een keuze te zijn. */}
-      <BraceletTeaserCard onPress={() => setBraceletInfo(true)} />
+      {/* 19 okt 2026 (operator: "bracelet staat tegen de CTA, dat mag
+         niet"): de teaser vult enkel de ruimte die er ECHT is tussen de
+         kaarten en de knop. Te weinig ruimte (kleiner scherm, A16) → geen
+         teaser, i.p.v. eronder schuiven. */}
+      <View
+        style={{ alignSelf: 'stretch', flex: 1, minHeight: 0 }}
+        onLayout={(e) => setTeaserRoom(e.nativeEvent.layout.height)}
+      >
+        {teaserRoom >= TEASER_NEEDS && <BraceletTeaserCard onPress={() => setBraceletInfo(true)} />}
+      </View>
       <BraceletInfoModal
         visible={braceletInfo}
         onClose={() => setBraceletInfo(false)}
@@ -2023,6 +2082,8 @@ const BRACELET_TEASER_SRC_H = 1536;
    afgesneden"): 150 → 164, iets meer verticale ruimte zodat de armband
    onderaan niet zo krap wordt afgesneden. */
 const BRACELET_TEASER_CARD_H = 164;
+/** Marge boven (braceletTeaser.marginTop) + kaart + minstens 16 vrij boven de knop. */
+const TEASER_NEEDS = 30 + BRACELET_TEASER_CARD_H + 16;
 
 function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
   const IMG = useAssetUri(BRACELET_TEASER_IMG);
@@ -2279,13 +2340,33 @@ function ModeCard({
    Nieuwe stap (operator, 6 september 2026), 1:1 op onze vijf echte
    ademtoestanden — geen zesde kaart die de app niet waarmaakt. Tot twee
    kaarten aan te vinken, zelfde opslag als de latere breath-quiz. */
+/* 19 okt 2026 (operator, punt 24 — iPhone SE / A16): alles wat op stap 3
+   níét tegel is (bovenmarge, kop + subkop, kier boven het raster, twee
+   rijkieren, 16 vrij boven de knop), ruim geschat. Wat overblijft gedeeld
+   door drie rijen = tegelhoogte, tussen 104 (icoon + naam passen nog) en
+   de vertrouwde 140. Grote schermen zien dus niets veranderen. */
+const GOALS_NON_TILE_H = 150;
+const GOAL_TILE_MIN_H = 104;
+const GOAL_TILE_MAX_H = 140;
+
 function SlideChangeGoals({
   selected,
   onToggle,
+  availH,
 }: {
   selected: string[];
   onToggle: (goalKey: string) => void;
+  /** Echte hoogte van het stapvlak (0 = nog niet gemeten). */
+  availH: number;
 }) {
+  const rows = Math.ceil(GOALS.length / 2);
+  const tileH =
+    availH > 0
+      ? Math.max(
+          GOAL_TILE_MIN_H,
+          Math.min(GOAL_TILE_MAX_H, Math.floor((availH - GOALS_NON_TILE_H) / rows)),
+        )
+      : GOAL_TILE_MAX_H;
   return (
     <View style={s.slide}>
       {/* Operator, 23 september 2026 ("de lichtbron op de achtergrond mag
@@ -2313,6 +2394,7 @@ function SlideChangeGoals({
             <ChangeTile
               key={g.key}
               g={g}
+              tileH={tileH}
               rank={rank}
               dimmed={selected.length > 0 && rank === 0}
               onPress={() => onToggle(g.key)}
@@ -2331,11 +2413,13 @@ function SlideChangeGoals({
    hier niet. */
 function ChangeTile({
   g,
+  tileH,
   rank,
   dimmed,
   onPress,
 }: {
   g: Goal;
+  tileH: number;
   rank: number;
   dimmed: boolean;
   onPress: () => void;
@@ -2389,7 +2473,7 @@ function ChangeTile({
       onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
-      style={[s.changeTile, on && s.changeTileOn, pressStyle]}
+      style={[s.changeTile, { minHeight: tileH }, on && s.changeTileOn, pressStyle]}
     >
       <BlurView
         intensity={40}
@@ -2449,16 +2533,30 @@ function SlideExperience({
   safetyAck,
   onToggleSafetyAck,
   safetyShakeX,
+  availH,
 }: {
   selected: ExperienceLevel | null;
   onPick: (key: ExperienceLevel) => void;
   safetyAck: boolean;
   onToggleSafetyAck: () => void;
   safetyShakeX: SharedValue<number>;
+  /** Echte hoogte van het stapvlak (0 = nog niet gemeten). */
+  availH: number;
 }) {
   const safetyShakeStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: safetyShakeX.value }],
   }));
+  /* 19 okt 2026 (operator, punt 24 — iPhone SE): op 667pt stond de
+     disclaimer tegen de knop. De kaarten blijven even groot (zelfde TILE
+     als stap 2); enkel de lucht boven de disclaimer krimpt mee, van de
+     vertrouwde 52 tot minstens 16. */
+  const safetyGap =
+    availH > 0
+      ? Math.max(
+          SAFETY_GAP_MIN,
+          Math.min(SAFETY_GAP_MAX, Math.floor(availH - EXP_NON_GAP_H - 2 * EXP_SQUARE)),
+        )
+      : SAFETY_GAP_MAX;
   return (
     <View style={s.slide}>
       <View style={s.changeHeader}>
@@ -2513,7 +2611,7 @@ function SlideExperience({
       <Animated.View style={safetyShakeStyle}>
       <Pressable
         onPress={onToggleSafetyAck}
-        style={s.safetyRow}
+        style={[s.safetyRow, { marginTop: safetyGap }]}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: safetyAck }}
       >
@@ -3369,7 +3467,8 @@ const s = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 26,
     paddingTop: 4,
-    paddingBottom: 8,
+    /* 8 → 16 (19 okt 2026, punt 24): minstens 16 vrij boven de knop. */
+    paddingBottom: 16,
   },
   slideArea: {
     flex: 1,
@@ -3377,6 +3476,12 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  /* 19 okt 2026 (punt 24): stap 1-4 in een ScrollView — de buitenkant vult
+     de ruimte, de inhoud groeit tot minstens die hoogte (`flex` werkt niet
+     in een contentContainer, `flexGrow` wel). */
+  slideScroll: { flex: 1 },
+  slideAreaGrow: { flex: 0, flexGrow: 1 },
+  slideAreaClear: { paddingBottom: 16 },
   slide: { alignItems: 'center', width: '100%' },
   /* Scherm 2 begint bovenaan i.p.v. gecentreerd: met vier grote kaarten is
      er onderaan toch geen ruimte over, en de kop hoort bovenaan te staan. */

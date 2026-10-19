@@ -243,6 +243,15 @@ export type Settings = {
    *  gezien → de State Control-tab toont ze na de foto-intro. Settings →
    *  "Watch the State Control intro again" toont ze opnieuw. */
   stateOnboardingCompletedAt: number | null;
+  /** 19 okt 2026 (operator, punt 24: "Not Now = nog één keer, bij de
+   *  volgende start, daarna nooit meer vanzelf"): hoe vaak iemand de
+   *  Breathwork- resp. State Control-onboarding wegklikte zonder ze af te
+   *  ronden of te skippen. 0 = nooit; 1 = één keer uitgesteld → bij een
+   *  volgende app-start toont de tab ze nog één keer; 2+ = nooit meer
+   *  automatisch (Settings → "Watch the intro again" blijft werken). Zie
+   *  `utils/onboarding-gate.ts`, de enige plek die dit interpreteert. */
+  breathOnboardingDeferredCount: number;
+  stateOnboardingDeferredCount: number;
   /** 15 okt 2026 (operator: "op basis van gekozen state 1 sessie volledig
    *  gratis in te stellen en gebruiken"): één volledige State Control-
    *  sessie zonder Premium, zoals `breathFreeSessionUsedAt` bij Breathwork.
@@ -298,6 +307,8 @@ const defaults: Settings = {
   voiceGender: 'female',
   braceletOnboardingCompletedAt: null,
   stateOnboardingCompletedAt: null,
+  breathOnboardingDeferredCount: 0,
+  stateOnboardingDeferredCount: 0,
   stateFreeSessionUsedAt: null,
   stateFreeMode: null,
   instantDurationBias: 0,
@@ -481,6 +492,12 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.stateOnboardingCompletedAt === 'number' ||
             obj.stateOnboardingCompletedAt === null
               ? { stateOnboardingCompletedAt: obj.stateOnboardingCompletedAt }
+              : {}),
+            ...(typeof obj.breathOnboardingDeferredCount === 'number'
+              ? { breathOnboardingDeferredCount: obj.breathOnboardingDeferredCount }
+              : {}),
+            ...(typeof obj.stateOnboardingDeferredCount === 'number'
+              ? { stateOnboardingDeferredCount: obj.stateOnboardingDeferredCount }
               : {}),
             ...(typeof obj.instantDurationBias === 'number'
               ? { instantDurationBias: obj.instantDurationBias }

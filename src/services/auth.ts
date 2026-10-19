@@ -456,6 +456,9 @@ export async function clearSession(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { setSetting } = require('@/utils/settings');
     await setSetting('breathOnboardingCompletedAt', null);
+    /* 19 okt 2026 (punt 24): het "Not Now"-uitstel hoort bij dezelfde
+       gebruiker — de volgende op dit toestel begint opnieuw. */
+    await setSetting('breathOnboardingDeferredCount', 0);
   } catch {
     /* swallow */
   }

@@ -22,8 +22,9 @@
    kleur op de keuzepagina niet meer afwijken van die in de sessie, want het
    is dezelfde regel.
 
-   De eerste keer opent nog steeds de onboarding (`breath-welcome`); die
-   eindigt in een volledige gratis sessie.
+   De eerste keer dat je deze tab zelf opent, verschijnt de onboarding
+   (`breath-welcome`); die eindigt in een volledige gratis sessie. Wanneer
+   precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
 import { iosFont } from '@/utils/ios-text-scale';
@@ -49,11 +50,16 @@ import {
   type BreathStateKey,
 } from '@/data/breath-states';
 import { ensureBreathHistoryLoaded, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
-import { ensureSettingsLoaded, getSetting, useSetting } from '@/utils/settings';
+import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import {
   consumeBreathIntroSkip,
   consumeBreathOnboardingRedirectSkip,
 } from '@/utils/breath-entry';
+import {
+  consumeTabOpenedByUser,
+  mayAutoShowOnboarding,
+  subscribeTabOpenedByUser,
+} from '@/utils/onboarding-gate';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, ChevronRight, Info } from 'lucide-react-native';
@@ -711,28 +717,55 @@ export default function BreathScreen() {
       });
     });
   };
-  const onbFirstFocusRef = useRef(true);
+  /* 19 okt 2026 (operator, punt 24 — vervangt "terug op dit tabblad na
+     rondkijken: onboarding opnieuw tonen" en de beslissing bij het
+     monteren): de onboarding verschijnt enkel als de gebruiker deze tab
+     ZELF opent (tik op het tabblad), nooit bij het opstarten (laatste tab
+     terugzetten), een deeplink/melding/planlink, de pill, na een aankoop of
+     terwijl er een sessie loopt. Eén keer; "Not Now" = nog één keer bij een
+     volgende app-start. Alle regels: utils/onboarding-gate.ts. */
+  const onbWantRef = useRef(false);
+  const onbReadyRef = useRef(false);
+  const onbFocusedRef = useRef(false);
+  const decideOnboarding = () => {
+    const want = onbWantRef.current;
+    onbWantRef.current = false;
+    if (
+      want &&
+      mayAutoShowOnboarding('breath') &&
+      getBreathHistory().length === 0
+    ) {
+      goToOnboarding();
+      return;
+    }
+    setOnbGate('show');
+  };
+  const decideRef = useRef(decideOnboarding);
+  decideRef.current = decideOnboarding;
   useFocusEffect(
     useCallback(() => {
-      /* Terug op dit tabblad na rondkijken (onboarding weggeveegd, niet
-         geskipt): onboarding opnieuw tonen. De eerste focus = mount, die
-         beslist de effect hieronder al. */
-      if (onbFirstFocusRef.current) {
-        onbFirstFocusRef.current = false;
-      } else if (
-        getSetting('breathOnboardingCompletedAt') === null &&
-        getBreathHistory().length === 0
-      ) {
-        goToOnboarding();
-        return;
-      }
-      setOnbGate((g) => {
-        if (g === 'show') return g;
-        if (getSetting('breathOnboardingCompletedAt') !== null) return 'show';
-        if (getBreathHistory().length > 0) return 'show';
-        return g;
-      });
+      onbFocusedRef.current = true;
+      if (consumeTabOpenedByUser('breath')) onbWantRef.current = true;
+      /* De eerste focus = mount: die beslist het effect hieronder, zodra
+         instellingen en historiek ingelezen zijn. */
+      if (onbReadyRef.current) decideRef.current();
+      return () => {
+        onbFocusedRef.current = false;
+      };
     }, []),
+  );
+  /* Tik op het tabblad terwijl deze tab al in beeld stond (bv. na het
+     opstarten hier geland): geen nieuwe focus, dus hier beslissen. */
+  useEffect(
+    () =>
+      subscribeTabOpenedByUser('breath', () => {
+        if (!onbFocusedRef.current || !onbReadyRef.current) return;
+        if (consumeTabOpenedByUser('breath')) {
+          onbWantRef.current = true;
+          decideRef.current();
+        }
+      }),
+    [],
   );
   const flagRef = useRef(onboardingDoneAt);
   flagRef.current = onboardingDoneAt;
@@ -744,10 +777,11 @@ export default function BreathScreen() {
        (operator, 11 augustus 2026: "maybe later gaat nu terug naar
        welcome breathwork"). Synchroon, geen AsyncStorage, dus geen race
        met de vlag hieronder mogelijk — wie hier met deze vlag aankomt mag
-       nooit terug de intro in, punt uit. */
+       nooit terug de intro in, punt uit. Sinds 19 okt 2026 zet ook "Not
+       Now" hem (naar deze tab i.p.v. de Audio Library). */
     if (consumeBreathOnboardingRedirectSkip()) {
+      onbWantRef.current = false;
       setOnbGate('show');
-      return;
     }
     /* Operator, 8 okt 2026 ("eerst gewoon breathwork, daarna onboarding"):
        was een vaste wachttijd van 700 ms terwijl dit scherm al zichtbaar
@@ -756,16 +790,12 @@ export default function BreathScreen() {
     let alive = true;
     Promise.all([ensureSettingsLoaded(), ensureBreathHistoryLoaded()]).then(() => {
       if (!alive) return;
-      if (getSetting('breathOnboardingCompletedAt') === null && getBreathHistory().length === 0) {
-        goToOnboarding();
-      } else {
-        setOnbGate('show');
-      }
+      onbReadyRef.current = true;
+      decideRef.current();
     });
     return () => {
       alive = false;
     };
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   /* De figuur ademt ook hier, rustig en zonder patroon. Dit is een

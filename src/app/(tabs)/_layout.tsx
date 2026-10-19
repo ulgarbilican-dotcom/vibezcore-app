@@ -32,6 +32,7 @@ import { PremiumPill } from '@/components/PremiumPill';
 import { AUDIO_ENABLED } from '@/constants/features';
 import { BrandFonts, AudioAccent } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
+import { markTabOpenedByUser } from '@/utils/onboarding-gate';
 import {
   isActiveSessionVisible,
   isChooseScreenVisible,
@@ -91,6 +92,13 @@ function TabButton({
            (geen focus-effect-misuse). */
         if (path === '/') {
           requestLibraryReset();
+        }
+        /* 19 okt 2026 (operator, punt 24): enkel een tik op het tabblad zelf
+           mag de Breathwork-onboarding de eerste keer tonen — niet een
+           deeplink, de pill of het terugzetten van de laatste tab bij het
+           opstarten. Zie utils/onboarding-gate.ts. */
+        if (path === '/breath') {
+          markTabOpenedByUser('breath');
         }
         /* `as never`: expo-router genereert zijn routetypes uit de mappen,
            en een net toegevoegd scherm staat pas in dat bestand na de

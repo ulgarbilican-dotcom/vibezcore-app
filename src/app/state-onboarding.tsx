@@ -8,12 +8,14 @@
      (operator, 15 okt 2026: "bekijk dat als bezoeker" — dat knopje lag
      over "STEP 1 OF 3"). `hr=1`: het rusthartslag-scherm volgt nog als
      stap 3 (in de tab). Na afloop of Skip: gezien, en de tab opent zonder
-     intro (`open`-token).
+     intro (`open`-token). Terug op stap 1 = "Not Now" (19 okt 2026, zie
+     utils/onboarding-gate.ts).
    - zonder parameters — Settings → "Watch the intro again" (operator: "zorg
      ook voor herbekijken onboarding knop in settings"). "Done" gaat terug.
    ───────────────────────────────────────────────────────────────────────── */
 
 import StateControlOnboarding from '@/components/StateControlOnboarding';
+import { deferOnboarding } from '@/utils/onboarding-gate';
 import { setSetting } from '@/utils/settings';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 
@@ -31,6 +33,11 @@ export default function StateOnboardingScreen() {
   void hr;
 
   const back = () => {
+    /* 19 okt 2026 (operator, punt 24): de eerste keer zonder af te ronden
+       weggaan (Back / Android-terug / terugvegen op stap 1) = "Not Now":
+       deze app-run niet meer, bij een volgende start nog één keer, daarna
+       nooit meer vanzelf. Skip blijft "nooit meer" (zie done). */
+    if (isFirst) deferOnboarding('state');
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/bracelet' as never);
   };

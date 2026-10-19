@@ -1380,6 +1380,9 @@ export default function AccountScreen() {
                 await setSetting('stateFreeSessionUsedAt', null);
                 await setSetting('breathOnboardingCompletedAt', null);
                 await setSetting('breathFreeSessionUsedAt', null);
+                /* 19 okt 2026 (punt 24): ook het "Not Now"-uitstel terug. */
+                await setSetting('breathOnboardingDeferredCount', 0);
+                await setSetting('stateOnboardingDeferredCount', 0);
                 resetRestingPulse();
               });
             }

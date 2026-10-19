@@ -183,6 +183,10 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
      of een eigen waarde kiest, eindigt na stap 3 en ziet "OF 3". */
   const totalSteps = includeRestingHr ? (step === 3 || hrChoice === 'measure' ? 4 : 3) : 2;
   const [skipAsk, setSkipAsk] = useState(false);
+  /* Echte hoogte van het stapvlak en van de hartruimte op stap 3 (19 okt
+     2026, punt 24) — 0 = nog niet gemeten. */
+  const [areaH, setAreaH] = useState(0);
+  const [heroArea, setHeroArea] = useState(0);
   /* Hartslaggeluid op stap 3, enkel zolang ze echt in beeld is. */
   const [focused, setFocused] = useState(true);
   useFocusEffect(
@@ -387,7 +391,22 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           </View>
         </View>
 
-        <View style={s.slideArea}>
+        {/* 19 okt 2026 (operator, punt 24: "niets mag achter of tegen de CTA
+            staan — iPhone SE / A16"): de stappen krimpen eerst mee met de
+            echte hoogte (`areaH`: de cirkels op stap 2, het hart op stap 3);
+            past het dan nog niet (meetscherm, grote systeemletters), dan
+            scrollt de inhoud i.p.v. onder de knop te schuiven. Past het wel,
+            dan staat alles zoals voorheen (geen veer-effect). */}
+        <ScrollView
+          /* Elke stap begint bovenaan, niet op de scrollpositie van de vorige. */
+          key={step}
+          style={s.slideArea}
+          contentContainerStyle={s.slideContent}
+          alwaysBounceVertical={false}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}
+        >
           {step === 0 ? (
             <Animated.View key="s0" entering={pageIn} style={s.slide}>
               <Animated.View entering={enter(0)} style={s.pad}>
@@ -448,7 +467,13 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 <Text style={s.lead}>Swipe, then tap to feel it</Text>
               </Animated.View>
               <Animated.View entering={enter(1)}>
-                <StateCarousel chosen={chosen} playing={playing} onChoose={choose} onPlay={play} />
+                <StateCarousel
+                  chosen={chosen}
+                  playing={playing}
+                  onChoose={choose}
+                  onPlay={play}
+                  maxD={areaH > 0 ? Math.max(CIRCLE_MIN_D, areaH - STEP2_NON_CIRCLE_H) : undefined}
+                />
               </Animated.View>
               {/* Tekst en kaarten zakken (operator): lucht tussen scroll en info. */}
               <View style={{ flex: 1, minHeight: 20 }} />
@@ -490,8 +515,18 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               </Animated.View>
               {/* Zelfde kloppende hart + hartlijn + hartslaggeluid als "Your
                   Resting Heart Rate" (operator). */}
-              <Animated.View entering={enter(1)} style={s.heroWrap}>
-                <HeartbeatHero stage={273} sound={focused && appActive && sheet === null} />
+              {/* 19 okt 2026 (punt 24): het hart krijgt de ruimte die er is
+                  (zoals op "Your Resting Heart Rate"), hoogstens de vertrouwde
+                  273 — op een iPhone SE schoof het anders over de keuzes. */}
+              <Animated.View
+                entering={enter(1)}
+                style={s.heroWrap}
+                onLayout={(e) => setHeroArea(e.nativeEvent.layout.height)}
+              >
+                <HeartbeatHero
+                  stage={heroArea > 0 ? Math.max(HERO_MIN, Math.min(HERO_MAX, Math.floor(heroArea - 8))) : HERO_MAX}
+                  sound={focused && appActive && sheet === null}
+                />
               </Animated.View>
               <Animated.View entering={enter(2)} style={s.optionsTight}>
                 <HrOption
@@ -515,7 +550,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               </Animated.View>
             </Animated.View>
           )}
-        </View>
+        </ScrollView>
 
         {step === 3 ? (
           <View style={s.footer}>
@@ -618,22 +653,36 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
 /* ── Pagina 2: horizontale scroll met de vijf toestanden ───────────────── */
 
 const CARD_GAP = 12;
+/* 19 okt 2026 (punt 24): alles op stap 2 behalve de cirkel — kop, de
+   golfruimte van de carrousel, de puntjes, minimale lucht en de uitleg met
+   twee feitenkaarten (op zijn langst), ruim geschat. Wat overblijft is de
+   grootste cirkel; nooit kleiner dan CIRCLE_MIN_D (de naam moet erin). */
+const STEP2_NON_CIRCLE_H = 335;
+const CIRCLE_MIN_D = 180;
+/* Stap 3: het kloppende hart tussen deze grenzen. */
+const HERO_MIN = 120;
+const HERO_MAX = 273;
 
 function StateCarousel({
   chosen,
   playing,
   onChoose,
   onPlay,
+  maxD,
 }: {
   chosen: BraceletMode;
   playing: BraceletMode | null;
   onChoose: (m: BraceletMode) => void;
   onPlay: (m: BraceletMode) => void;
+  /** Grootste cirkel die verticaal past (19 okt 2026, punt 24). */
+  maxD?: number;
 }) {
   const { width } = useWindowDimensions();
   /* Cirkels (operator: "wel in cirkel werken"), zoals de cirkel in State
-     Control zelf; de buren piepen links en rechts in beeld. */
-  const cardW = Math.round(width * 0.6);
+     Control zelf; de buren piepen links en rechts in beeld. Op een laag
+     scherm (iPhone SE) kleiner, zodat de uitleg eronder niet tegen de knop
+     komt (19 okt 2026, punt 24). */
+  const cardW = Math.round(Math.min(width * 0.6, maxD ?? Infinity));
   const side = Math.round((width - cardW) / 2);
   const step = cardW + CARD_GAP;
   const ref = useRef<Animated.ScrollView>(null);
@@ -772,10 +821,12 @@ function StateCard({
       <View style={{ position: 'absolute', top: Math.round(d * 0.1), left: 0, right: 0, alignItems: 'center' }} pointerEvents="none">
         <Icon size={Math.round(d * 0.24)} color={meta.color} />
       </View>
-      <Text style={s.stateName} numberOfLines={1}>
+      {/* Kleinere cirkel (iPhone SE, 19 okt 2026): de naam krimpt licht
+          i.p.v. af te breken ("Clarity & Relax"). */}
+      <Text style={s.stateName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
         {meta.name}
       </Text>
-      <Text style={s.stateUse} numberOfLines={1}>
+      <Text style={s.stateUse} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
         {playing ? 'Feel it now' : STATE_USAGE[mode]}
       </Text>
     </View>
@@ -1041,8 +1092,14 @@ const s = StyleSheet.create({
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: { color: Brand.textDim, fontFamily: BrandFonts.medium, fontSize: 14 },
   skipTxtSecondary: { color: 'rgba(255,255,255,0.92)', fontFamily: BrandFonts.semibold, fontSize: 15 },
-  slideArea: { flex: 1, paddingTop: 4 },
-  slide: { flex: 1, width: '100%' },
+  /* 19 okt 2026 (punt 24): ScrollView — paddingTop verhuisde naar de inhoud;
+     onderaan 4 extra, samen met de 12 van de footer minstens 16 vrij boven
+     de knop. `slide` groeit (flexGrow) i.p.v. `flex: 1`, zodat zijn inhoud
+     meetelt voor het scrollen; de vulvlakken erin verdelen de rest zoals
+     voorheen. */
+  slideArea: { flex: 1 },
+  slideContent: { flexGrow: 1, paddingTop: 4, paddingBottom: 4 },
+  slide: { flexGrow: 1, width: '100%' },
   pad: { paddingHorizontal: 26 },
   header: { marginTop: 4, ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
   lead: { marginTop: 6, ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.55)' },
@@ -1114,10 +1171,14 @@ const s = StyleSheet.create({
   },
   options: { marginTop: 22, gap: 10 },
   optionsTight: { marginTop: 4, marginBottom: 28, gap: 10 },
-  meterWrap: { flex: 1, justifyContent: 'center' },
+  /* Groeit, maar krimpt nooit onder de meter zelf (19 okt 2026, punt 24):
+     te weinig plaats → scrollen i.p.v. over de kop/knop te schuiven. */
+  meterWrap: { flexGrow: 1, justifyContent: 'center' },
   secondaryBtn: { height: 44, marginTop: 6, alignItems: 'center', justifyContent: 'center' },
   secondaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: 'rgba(255,255,255,0.85)' },
-  heroWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  /* minHeight = kleinste hart + marge, zodat het hart (dat zich naar deze
+     hoogte schikt) nooit over de kop of de keuzes uitsteekt (punt 24). */
+  heroWrap: { flex: 1, minHeight: HERO_MIN + 8, alignItems: 'center', justifyContent: 'center' },
   option: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -119,10 +119,15 @@ const SPRITE_ZOOM = 1.16;
    (linksboven) kreeg een klein zetje richting links, Haptics (rechtsboven)
    richting rechts (negatieve x = venster naar links = icoon zelf naar
    rechts, het spiegelbeeld van de `both`-fix hierboven). */
+/* 19 okt 2026 (operator: "staat niet gecentreerd met het symbool"): gemeten
+   op de sprite zelf (begrenzingskader van elke tekening in zijn cel × de
+   zoom van 1,16), zodat elk symbool exact in het midden van zijn ring staat.
+   Vorige, op het oog gekozen waarden staken tot 2,6 px naast het midden. */
 const SPRITE_NUDGE: Partial<Record<GuidanceMode, { x?: number; y?: number }>> = {
-  voice: { x: 0.06, y: 0.11 },
-  haptic: { x: -0.06, y: 0.11 },
-  both: { x: 0.09 },
+  voice: { x: 0.032, y: 0.114 },
+  haptic: { x: -0.023, y: 0.152 },
+  both: { x: 0.059, y: 0.039 },
+  silent: { x: -0.018, y: 0.036 },
 };
 
 export function ModeGlyph({
