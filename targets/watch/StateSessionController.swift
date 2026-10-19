@@ -146,6 +146,8 @@ final class StateSessionController: ObservableObject {
   private var localActiveSec: Double = 0
   private var localSegmentStart: Date?
   private var localCompleted = false
+  /// Voorproef van 30 s (19 okt 2026): telt niet mee in de geschiedenis.
+  private var localIsPreview = false
   var isLocal: Bool { localMode != nil }
 
   init() {
@@ -267,16 +269,22 @@ final class StateSessionController: ObservableObject {
   }
 
   /** Start een State Control-sessie op het horloge zelf (catalogus). */
-  func startLocal(_ entry: CatalogState, minutes: Int) {
+  func startLocal(_ entry: CatalogState, minutes: Int, previewSec: Int = 0) {
     if isLocal { finishLocal(completed: false) }
     var message = entry.params
     message["title"] = entry.name
     message["colorHex"] = entry.colorHex
     message["curveOffsetSec"] = 0
-    message["remainingSec"] = Double(max(1, minutes) * 60)
+    /* Voorproef: 30 s, het glijden ingekort tot 12 s zoals op de telefoon
+       (bracelet-haptics.ts previewTiming), zodat je het eindritme voelt. */
+    let total = previewSec > 0 ? Double(previewSec) : Double(max(1, minutes) * 60)
+    if previewSec > 0, let ramp = message["rampSec"] as? Double { message["rampSec"] = min(ramp, 12) }
+    if previewSec > 0, let ramp = message["rampSec"] as? Int { message["rampSec"] = min(ramp, 12) }
+    message["remainingSec"] = total
+    localIsPreview = previewSec > 0
     localMode = entry.mode
     localStartedAt = Date()
-    localPlannedSec = Double(max(1, minutes) * 60)
+    localPlannedSec = total
     localActiveSec = 0
     localSegmentStart = Date()
     localCompleted = false
@@ -299,6 +307,10 @@ final class StateSessionController: ObservableObject {
     guard let mode = localMode, let startedAt = localStartedAt else { return }
     closeSegment()
     localMode = nil
+    if localIsPreview {
+      localIsPreview = false
+      return
+    }
     WatchSessionLog.send([
       "kind": "state",
       "mode": mode,

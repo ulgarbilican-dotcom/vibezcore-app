@@ -420,6 +420,23 @@ private struct StartPill: View {
   }
 }
 
+/** Voorproef op het horloge (19 okt 2026, operator: "ook de preview zoals op
+ *  de telefoon"): 30 seconden proeven, daarna Premium op de telefoon. */
+private struct TryPill: View {
+  let action: () -> Void
+  var body: some View {
+    Button(action: action) {
+      Text("Try 30 seconds")
+        .font(.system(size: 15, weight: .bold))
+        .foregroundColor(Color(white: 0x0A / 255))
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
+    }
+    .buttonStyle(.plain)
+    .padding(.top, 6)
+  }
+}
+
 private struct LockedLine: View {
   var body: some View {
     Text("Unlock with Premium on your phone")
@@ -460,6 +477,10 @@ struct StateSetupView: View {
           tappable: true
         ) { path.append(.stateDuration(entry.mode)) }
         if entry.locked {
+          TryPill {
+            path.removeAll()
+            StateSessionController.shared.startLocal(entry, minutes: minutes, previewSec: 30)
+          }
           LockedLine()
         } else {
           StartPill {
@@ -508,6 +529,10 @@ struct BreathSetupView: View {
           path.append(.breathDuration(entry.key))
         }
         if !catalog.breathAllowed(entry) {
+          TryPill {
+            path.removeAll()
+            BreathSessionController.shared.startPreview(entry, technique: tech)
+          }
           LockedLine()
         } else {
           StartPill {

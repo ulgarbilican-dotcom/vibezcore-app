@@ -235,8 +235,20 @@ final class BreathSessionController: NSObject, ObservableObject {
   // sessie terug vanaf de juiste plek.
 
   /** Start een ademsessie op het horloge zelf (catalogus). */
+  /// Voorproef van 30 s (19 okt 2026): telt niet mee in de geschiedenis.
+  private var localIsPreview = false
+
+  /** Voorproef: dezelfde techniek, zoveel rondes als in ~30 s passen. */
+  func startPreview(_ entry: CatalogBreath, technique: CatalogTechnique) {
+    let cycle = technique.phases.reduce(0) { $0 + ((($1["secs"] as? Int) ?? 4)) }
+    let rounds = max(1, Int((30.0 / Double(max(1, cycle))).rounded(.up)))
+    startLocal(entry, technique: technique, duration: CatalogDuration(id: -1, label: "Preview", minutes: 0, rounds: rounds), free: false)
+    localIsPreview = true
+  }
+
   func startLocal(_ entry: CatalogBreath, technique: CatalogTechnique, duration: CatalogDuration, free: Bool) {
     if isLocal { finishLocal(completed: false) }
+    localIsPreview = false
     localKey = entry.key
     localTechKey = technique.key
     localStarted = Date()
@@ -265,6 +277,10 @@ final class BreathSessionController: NSObject, ObservableObject {
     guard let key = localKey else { return }
     closeSegment()
     localKey = nil
+    if localIsPreview {
+      localIsPreview = false
+      return
+    }
     if localWasFree && localActiveSec >= 10 { WatchCatalog.shared.markFreeUsed() }
     WatchSessionLog.send([
       "state": key,
