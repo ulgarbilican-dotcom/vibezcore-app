@@ -1369,7 +1369,7 @@ export function BreathSession() {
   const CUE_LEAD_MS = 400;
 
   const speak = useCallback(
-    (p: { key: PhaseKey; via: PhaseDef['via'] }) => {
+    (p: { key: PhaseKey; via: PhaseDef['via']; secs?: number }) => {
       if (!voiceRef.current) return;
       /* Was hard `'calm'` voor elke niet-boost toestand (gevonden bij
          audit, operator, 11 augustus 2026: "haptics en stem nakijken voor
@@ -1391,6 +1391,10 @@ export function BreathSession() {
         st.key,
         'breath',
         p.via,
+        /* Tijd tot de volgende zin = de duur van deze fase: past de zin
+           er niet in (Boost: 2 s uitademen), dan slaat de stem vooraan
+           stilte over i.p.v. afgebroken te worden (19 okt 2026). */
+        p.secs,
       );
     },
     [st.key],

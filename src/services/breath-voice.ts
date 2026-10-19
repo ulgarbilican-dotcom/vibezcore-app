@@ -24,6 +24,7 @@
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { assetUri } from '@/services/asset-cache';
+import { VOICE_CUE_SPEECH } from '@/data/voice-cue-timing';
 import {
   isSessionAudioAvailable,
   loadVoice,
@@ -366,6 +367,9 @@ export function playBreathCue(
   key?: BreathKey,
   source?: VoiceSource,
   via?: CueVia,
+  /** Tijd tot de volgende zin (s) — past de zin er niet in, dan vooraan
+   *  stilte overslaan (19 okt 2026). */
+  windowSec?: number,
 ): void {
   /* Er is GEEN ontsnapping meer (3 augustus 2026). Hier zat een `force`-vlag
      waarmee een scherm langs de voorkeur van de gebruiker kon spelen. Die
@@ -385,7 +389,7 @@ export function playBreathCue(
   }
   if (via !== undefined) {
     if (phase === 'inhale' || phase === 'inhale-2' || phase === 'exhale' || phase === 'exhale-2' || phase === 'hold-in' || phase === 'hold-out') {
-      playUrl(urlForPhase(phase, via, key));
+      playUrl(urlForPhase(phase, via, key), windowSec);
     }
     return;
   }
@@ -398,7 +402,7 @@ export function playBreathCue(
   } else if (phase === 'exhale' || phase === 'exhale-2') {
     url = uris.exhale;
   } else return;
-  playUrl(url);
+  playUrl(url, windowSec);
 }
 
 /** Ujjayi Breathing's keelklank-herinnering — ÉÉN keer bij sessiestart,
@@ -592,20 +596,35 @@ function hasAudibleProgress(p: AudioPlayer): boolean {
 const nativeVoice = (): boolean => Platform.OS === 'ios' && isSessionAudioAvailable();
 let nativeVoiceRequest = 0;
 
-function playUrlNative(url: string): void {
+/** Zoveel seconden vooraan overslaan zodat de zin volledig in `windowSec`
+ *  past (operator, 19 okt 2026: "bij Boost wordt exhale through your nose
+ *  niet volledig uitgesproken" — 2 s uitademen, zin 0,63 s stilte + 1,5 s
+ *  stem). Nooit meer dan de stilte vooraan: de stem zelf blijft heel en op
+ *  zijn eigen tempo. */
+function startOffsetFor(url: string, windowSec?: number): number {
+  if (!windowSec || windowSec <= 0) return 0;
+  const t = VOICE_CUE_SPEECH[url.split('/').pop() ?? ''];
+  if (!t) return 0;
+  const [speechStart, speechEnd] = t;
+  if (speechEnd <= windowSec - 0.05) return 0;
+  return Math.max(0, Math.min(speechStart, speechEnd - windowSec + 0.1));
+}
+
+function playUrlNative(url: string, offsetSec = 0): void {
   const req = ++nativeVoiceRequest;
-  if (playVoiceNow(url)) return;
+  if (playVoiceNow(url, 1, offsetSec)) return;
   const askedAt = Date.now();
   void loadVoice(url, assetUri(url)).then((ok) => {
     /* Nog altijd de laatst gevraagde zin, en niet te laat (anders valt hij
        over de volgende fase heen). */
-    if (ok && req === nativeVoiceRequest && Date.now() - askedAt < 1500) playVoiceNow(url);
+    if (ok && req === nativeVoiceRequest && Date.now() - askedAt < 1500) playVoiceNow(url, 1, offsetSec);
   });
 }
 
-function playUrl(url: string): void {
+function playUrl(url: string, windowSec?: number): void {
+  const offsetSec = startOffsetFor(url, windowSec);
   if (nativeVoice()) {
-    playUrlNative(url);
+    playUrlNative(url, offsetSec);
     return;
   }
   /* Stop een eventueel andere lopende cue zodat ze niet overlappen
@@ -654,7 +673,7 @@ function playUrl(url: string): void {
     const attempt = async () => {
       if (activePlayer !== player) return;
       try {
-        await player.seekTo(0);
+        await player.seekTo(offsetSec);
       } catch {
         /* swallow */
       }

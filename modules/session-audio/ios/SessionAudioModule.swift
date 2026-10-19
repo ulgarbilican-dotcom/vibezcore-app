@@ -414,9 +414,12 @@ final class SessionAudioEngine {
 
   // MARK: - Stem
 
-  func playVoice(key: String, volume: Float) -> Bool {
+  func playVoice(key: String, volume: Float, offsetSec: Double = 0) -> Bool {
     return q.sync { () -> Bool in
-      guard let buf = buffers[key] else { return false }
+      guard let full = buffers[key] else { return false }
+      /* Vooraan stilte overslaan als de zin anders niet in een korte fase
+         past (19 okt 2026, zie src/data/voice-cue-timing.ts). */
+      let buf = tail(of: full, fromSec: offsetSec) ?? full
       let durMs = Double(buf.frameLength) / format.sampleRate * 1000
       voiceActiveUntil = nowMs() + durMs + 500
       guard ensureEngine() else { return false }
@@ -426,6 +429,24 @@ final class SessionAudioEngine {
       voiceNode.play()
       return true
     }
+  }
+
+  /// Het stuk van de buffer vanaf fromSec (nil = vanaf het begin houden).
+  private func tail(of buf: AVAudioPCMBuffer, fromSec: Double) -> AVAudioPCMBuffer? {
+    guard fromSec > 0.01 else { return nil }
+    let start = AVAudioFrameCount(fromSec * format.sampleRate)
+    guard start < buf.frameLength else { return nil }
+    let count = buf.frameLength - start
+    guard
+      let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: count),
+      let src = buf.floatChannelData,
+      let dst = out.floatChannelData
+    else { return nil }
+    for ch in 0..<Int(format.channelCount) {
+      dst[ch].update(from: src[ch].advanced(by: Int(start)), count: Int(count))
+    }
+    out.frameLength = count
+    return out
   }
 
   func stopVoice() {
@@ -689,8 +710,8 @@ public class SessionAudioModule: Module {
       }
     }
 
-    Function("playVoice") { (key: String, volume: Double) -> Bool in
-      return SessionAudioEngine.shared.playVoice(key: key, volume: Float(volume))
+    Function("playVoice") { (key: String, volume: Double, offsetSec: Double) -> Bool in
+      return SessionAudioEngine.shared.playVoice(key: key, volume: Float(volume), offsetSec: offsetSec)
     }
 
     Function("stopVoice") { () in

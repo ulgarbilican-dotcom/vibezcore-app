@@ -39,7 +39,7 @@ type NativeModule = {
   end(owner: string): void;
   hasSound(key: string): boolean;
   loadSound(key: string, uri: string): Promise<boolean>;
-  playVoice(key: string, volume: number): boolean;
+  playVoice(key: string, volume: number, offsetSec: number): boolean;
   stopVoice(): void;
   startBeats(plan: BeatPlan): void;
   stopBeats(): void;
@@ -156,10 +156,11 @@ export function loadVoice(key: string, uri: string): Promise<boolean> {
   return p;
 }
 
-/** Speelt meteen (true) of niet (false: nog niet geladen). */
-export function playVoiceNow(key: string, volume = 1): boolean {
+/** Speelt meteen (true) of niet (false: nog niet geladen). offsetSec =
+ *  zoveel seconden vooraan overslaan (stilte). */
+export function playVoiceNow(key: string, volume = 1, offsetSec = 0): boolean {
   try {
-    return native?.playVoice(key, volume) ?? false;
+    return native?.playVoice(key, volume, offsetSec) ?? false;
   } catch {
     return false;
   }
