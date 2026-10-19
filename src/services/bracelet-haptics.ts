@@ -1120,6 +1120,11 @@ export function playModePreviewHaptic(mode: BraceletMode, fromSec = 0): void {
    nieuwe sterkte — telefoon én horloge. Een echte sessie doet dit via
    bracelet-session-monitor.ts. */
 let previewRun: { mode: BraceletMode; startedAt: number } | null = null;
+/** Loopt de 30 s-voorproef nu? (19 okt 2026: de Day Pass-kaart wacht dan —
+ *  components/SalesNudgeHost.tsx.) */
+export function isModePreviewRunning(): boolean {
+  return previewRun !== null;
+}
 subscribeHapticStrength(() => {
   const run = previewRun;
   if (!run || session) return;

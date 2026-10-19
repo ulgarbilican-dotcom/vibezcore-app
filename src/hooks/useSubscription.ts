@@ -603,6 +603,9 @@ export function useSubscription() {
        gebruiker, geen trial, dus override forceert dit NIET naar true. */
     isTrialing: status?.isTrialing === true,
     tier: status?.tier,
+    /* 19 okt 2026 (punt 23b): e-mail van het account achter deze status —
+       Welcome Back koppelt het bewaarde 'wasPro'-einde aan hetzelfde account. */
+    email: status?.email,
     validUntil: status?.validUntil,
     willRenew: status?.willRenew,
     /* Iter v222 (2026-07-07): bracelet-ownership uit backend. Wordt

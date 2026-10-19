@@ -19,6 +19,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { Linking } from 'react-native';
+import { markSalesCardShown } from '@/services/sales-nudges';
 
 /* Operator, 7 okt 2026: "de links van de bracelet moeten naar de website
    gaan". Elke ingang (Library-kaart, State Control-intro, Profile,
@@ -59,6 +60,8 @@ function notify(): void {
 export function showBraceletUpsell(): void {
   if (visible) return;
   visible = true;
+  /* 19 okt 2026 (punt 22): ook een saleskaart — Day Pass houdt afstand. */
+  markSalesCardShown();
   notify();
 }
 

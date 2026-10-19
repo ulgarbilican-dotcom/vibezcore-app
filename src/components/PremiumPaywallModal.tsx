@@ -18,7 +18,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -30,6 +30,7 @@ import { GlassSheet, afterGlassSheetClosed } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { restorePurchases } from '@/services/restore-purchases';
+import { markSalesCardShown, recordPlansDismissed } from '@/services/sales-nudges';
 
 type Props = {
   visible: boolean;
@@ -73,6 +74,19 @@ function benefitLines(context: PaywallContext): string[] {
 export default function PremiumPaywallModal({ visible, onClose, context = 'breathwork', onBeforeContinue }: Props) {
   const insets = useSafeAreaInsets();
   const [restoring, setRestoring] = useState(false);
+  /* 19 okt 2026 (punt 22): de Day Pass-kaart houdt ~2 min afstand na deze
+     paywall, en komt terug na twee keer wegtikken zonder kopen. "Not now",
+     vegen, achtergrond of terug = weggetikt; doorgaan naar de plannen niet. */
+  const continuingRef = useRef(false);
+  useEffect(() => {
+    if (!visible) return;
+    continuingRef.current = false;
+    markSalesCardShown();
+  }, [visible]);
+  const dismiss = () => {
+    if (visible && !continuingRef.current) recordPlansDismissed();
+    onClose();
+  };
 
   const restore = async () => {
     if (restoring) return;
@@ -101,7 +115,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
   return (
     /* In hetzelfde venster als de app (GlassSheetHost), zodat het glas op
        Android echt vervaagt wat erachter ligt — een Modal kan dat niet. */
-    <GlassSheet visible={visible} onClose={onClose}>
+    <GlassSheet visible={visible} onClose={dismiss}>
         {/* Operator, 19 okt 2026: helemaal onderaan zaten Terms of Use /
             Privacy te dicht tegen de rand — de ruimte zit nu ONDERAAN de
             scrollinhoud: systeemrand + 24 (vaste app-marge). */}
@@ -112,7 +126,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
             blurTarget={rootBlurRef}
             style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
           />
-          <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+          <Pressable onPress={dismiss} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
             <View style={s.grip} />
           </Pressable>
           <View style={s.head}>
@@ -123,7 +137,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
                   ? 'VIBEZCORE AUDIO LIBRARY'
                   : 'VIBEZCORE BREATHWORK'}
             </Text>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now">
+            <Pressable onPress={dismiss} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now">
               {/* "Not now" i.p.v. "Done": er is niets gedaan om te bevestigen (audit 16 okt 2026). */}
               <Text style={s.done}>Not now</Text>
             </Pressable>
@@ -151,6 +165,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
               showHero={false}
               onContinue={(plan) => {
                 onBeforeContinue?.();
+                continuingRef.current = true;
                 onClose();
                 /* Eerst de kaart echt dicht, dán naar de plannen — zo brengt
                    Back je terug waar je was, nooit naar een tweede kaart

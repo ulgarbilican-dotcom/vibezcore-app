@@ -64,6 +64,11 @@ type QueueEntry = VibezAlertConfig & { resolve: (idx: number) => void };
 let queue: QueueEntry[] = [];
 let listener: ((entry: QueueEntry | null) => void) | null = null;
 
+/** Staat er nu een melding open? (19 okt 2026: geen saleskaart erbovenop.) */
+export function isVibezAlertOpen(): boolean {
+  return queue.length > 0;
+}
+
 /** Show a VIBEZCORE-styled alert. API mirrors Alert.alert but no native popup. */
 export function showVibezAlert(config: VibezAlertConfig): Promise<number> {
   return new Promise((resolve) => {

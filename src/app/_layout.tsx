@@ -39,6 +39,7 @@ import { initCrashReporting } from '@/services/crash-reporting';
 initCrashReporting();
 import { VibezAlertHost } from '@/components/VibezAlert';
 import { ConfirmMomentHost } from '@/components/ConfirmMoment';
+import { SalesNudgeHost } from '@/components/SalesNudgeHost';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
@@ -989,6 +990,9 @@ export default function RootLayout() {
       <VibezAlertHost />
       {/* Punt 25 (operator, 19 okt 2026): bevestigingsmoment "het is gelukt". */}
       <ConfirmMomentHost />
+      {/* Punten 22 + 23b (operator, 19 okt 2026): Day Pass-kaart en Welcome
+          Back — tekent zelf niets, opent een GlassSheet op een rustig moment. */}
+      <SalesNudgeHost />
       <LaunchReveal />
       </View>
     </ErrorBoundary>

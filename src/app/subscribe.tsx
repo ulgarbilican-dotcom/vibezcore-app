@@ -38,7 +38,7 @@ import { getSetting } from '@/utils/settings';
 import { getActivePlan, reloadActivePlan, saveActivePlan } from '@/utils/plan-store';
 import { generateProtocol } from '@/utils/protocol';
 import { useIAP } from '@/hooks/useIAP';
-import { refreshSubscription, setProSubscribedStatus, useSubscription } from '@/hooks/useSubscription';
+import { getCachedSubscription, refreshSubscription, setProSubscribedStatus, useSubscription } from '@/hooks/useSubscription';
 import { getIAP } from '@/services/iap';
 import {
   queuePendingVerify,
@@ -90,6 +90,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { hapticPress } from '@/utils/haptics';
+import { markSalesCardShown, recordPlansDismissed, recordPurchase } from '@/services/sales-nudges';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -145,6 +146,10 @@ export default function SubscribeScreen() {
        geen duidelijke context), dan valt de 'done'-routing terug op de
        plan-check en daarna de bestaande Audio Library-standaard. */
     returnTo?: 'breathwork' | 'audio' | 'state-control';
+    /* 19 okt 2026 (punt 22): 'nudge' = geopend vanuit de Day Pass-kaart /
+       Welcome Back. Dan telt weggaan zonder kopen niet als "plannen
+       weggetikt" — de kaart zelf was het aanbod al. */
+    from?: string;
   }>();
   /* Iter v167 (2026-06-28): plan-picker step. Voorheen defaultten we naar
      'yearly' wanneer er geen ?tier= query param was — operator-feedback:
@@ -194,6 +199,29 @@ export default function SubscribeScreen() {
      pijl) — anders liep een betaalde aankoop zonder bevestiging af. */
   const busyLocked = phase === 'verifying' || phase === 'creating-account';
   usePreventRemove(busyLocked, () => {});
+  /* 19 okt 2026 (punt 22): Day Pass-kaart-boekhouding (services/sales-
+     nudges.ts). Dit scherm telt als saleskaart (~2 min afstand); een
+     aankoop die door de store ging = "vlak na een aankoop"; weggaan zonder
+     aankoop telt als één keer de plannen wegtikken. */
+  const paidRef = useRef(false);
+  useEffect(() => {
+    if (phase === 'verifying' && !paidRef.current) {
+      paidRef.current = true;
+      recordPurchase();
+    } else if (phase === 'done') {
+      paidRef.current = true;
+    }
+  }, [phase]);
+  const fromNudge = params.from === 'nudge';
+  useEffect(() => {
+    markSalesCardShown();
+    return () => {
+      if (!paidRef.current && !fromNudge && getCachedSubscription()?.active !== true) {
+        recordPlansDismissed();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /* Operator, 10 september 2026: "bij succesvolle aankoop, als er al
      goals+intensity opgeslagen staan en er nog geen ActivePlan bestaat,
      roep dan gewoon buildPlanFromTemplate()/saveActivePlan() aan" — zie

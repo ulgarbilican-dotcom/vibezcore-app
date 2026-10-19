@@ -16,6 +16,7 @@ import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getEffectiveTier } from '@/utils/access-tier';
 import { useIAP } from '@/hooks/useIAP';
+import { markSalesCardShown, recordPlansDismissed } from '@/services/sales-nudges';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -77,6 +78,9 @@ export function showAccountWall(sessionTitle?: string): void {
   lastSessionTitle = sessionTitle ?? null;
   if (currentlyOpen) return;
   currentlyOpen = true;
+  /* 19 okt 2026 (punt 22): telt als saleskaart — de Day Pass-kaart houdt
+     daarna ~2 min afstand. */
+  markSalesCardShown();
   setTimeout(() => { listeners.forEach((cb) => cb(true)); }, 0);
 }
 
@@ -84,6 +88,20 @@ export function hideAccountWall(): void {
   if (!currentlyOpen) return;
   currentlyOpen = false;
   setTimeout(() => { listeners.forEach((cb) => cb(false)); }, 0);
+}
+
+/** Weggetikt zonder naar de plannen te gaan ("Maybe later", achtergrond,
+ *  Android-terug) — telt mee voor het opnieuw aanbieden van de Day Pass-
+ *  kaart (19 okt 2026, punt 22). "See plans" gebruikt hideAccountWall. */
+function dismissAccountWall(): void {
+  if (!currentlyOpen) return;
+  recordPlansDismissed();
+  hideAccountWall();
+}
+
+/** Staat de account-wall nu open? (Voor SalesNudgeHost.) */
+export function isAccountWallOpen(): boolean {
+  return currentlyOpen;
 }
 
 /* ── Modal component (gemount in _layout.tsx als sibling van Stack) ── */
@@ -133,7 +151,7 @@ export function AccountWallModal() {
   useEffect(() => {
     if (!open) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      hideAccountWall();
+      dismissAccountWall();
       return true;
     });
     return () => sub.remove();
@@ -172,7 +190,7 @@ export function AccountWallModal() {
          geen press-scale hier, scalen van de hele achtergrond zou raar
          ogen (operator-taak "press-scale overal" — expliciete uitzondering
          voor full-screen backdrops). */}
-      <Pressable style={s.backdrop} onPress={hideAccountWall} />
+      <Pressable style={s.backdrop} onPress={dismissAccountWall} />
 
       <View style={s.cardWrap} pointerEvents="box-none">
         <View style={s.card}>
@@ -216,7 +234,7 @@ export function AccountWallModal() {
 
           <AnimatedPressable
             style={[s.btnSecondary, secondaryPressStyle]}
-            onPress={hideAccountWall}
+            onPress={dismissAccountWall}
             onPressIn={onSecondaryPressIn}
             onPressOut={onSecondaryPressOut}
           >

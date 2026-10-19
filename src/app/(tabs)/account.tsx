@@ -19,6 +19,7 @@ import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
+import BalancedText from '@/components/BalancedText';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { BraceletMode } from '@/services/ble-contract';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
@@ -505,7 +506,7 @@ function ProfileHeader({ email }: { email: string }) {
  *  Account is nooit nodig om dit te zien: het plan komt uit de store. */
 function PlanCard() {
   const { isPro, tier, isLoading, braceletModel, isBraceletOwner, label, renewLine, dayPass } = useMembershipStatus();
-  const { willRenew } = useSubscription();
+  const { willRenew, validUntil } = useSubscription();
   const { getProduct } = useIAP();
   const monthly = getProduct('monthly');
   const yearly = getProduct('yearly');
@@ -539,6 +540,12 @@ function PlanCard() {
     cta = { label: 'Keep full access', onPress: () => router.navigate('/subscribe' as never) };
     note = savePercent ? `Yearly saves ${savePercent}% compared to monthly.` : null;
   } else if (cancelled) {
+    /* Punt 23a (operator, 19 okt 2026): opgezegd maar nog actief → zeggen
+       wat er blijft, niet enkel wanneer het stopt. */
+    const ends = fmtDate(validUntil);
+    line = ends
+      ? `Your plan ends on ${ends}. Your progress, plan and history stay saved.`
+      : 'Your progress, plan and history stay saved.';
     cta = { label: 'Turn renewal back on', onPress: () => void openManageSubscriptions() };
   } else if (tier === 'monthly') {
     cta = {
@@ -564,7 +571,7 @@ function PlanCard() {
           {title}
         </Text>
       </View>
-      {line ? <Text style={pc.line}>{line}</Text> : null}
+      {line ? <BalancedText style={pc.line}>{line}</BalancedText> : null}
       {cta ? (
         <PressScale
           style={pc.cta}
