@@ -18,7 +18,7 @@ import { phaseHapticPattern, watchBreathAmplitude } from '@/services/breath-hapt
 import { watchStateParams } from '@/services/bracelet-haptics';
 import { MODES } from '@/services/ble-contract';
 import { BREATH_STATE_MODE, STATE_USAGE } from '@/data/state-usage';
-import { useHapticStrength } from '@/services/haptic-strength-pref';
+import { getHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import { getRestingPulse, subscribeRestingPulse } from '@/services/resting-pulse';
 import { recordSession } from '@/utils/bracelet-history';
 import { useBraceletOwner } from '@/utils/dev-user-override';
@@ -131,7 +131,7 @@ export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFr
     locked: stateLocked,
     params: watchStateParams(m.mode),
   }));
-  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce });
+  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, strength: getHapticStrength() });
 }
 
 /** Een State Control-sessie die op het horloge zelf liep (13 okt 2026). */

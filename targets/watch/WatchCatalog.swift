@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import WatchKit
 
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Catalogus op de Apple Watch (18 okt 2026)
@@ -160,6 +161,7 @@ final class WatchCatalog: ObservableObject {
     states = parsedStates
     breath = parsedBreath
     breathFreeOnce = root["breathFreeOnce"] as? Bool ?? false
+    if let st = root["strength"] as? String { WatchSettings.shared.adoptFromPhone(st) }
     return true
   }
 
@@ -183,4 +185,42 @@ enum WatchSessionLog {
     else { return }
     PhoneConnector.shared.send(["type": "watch_log", "record": json])
   }
+}
+
+/* Trilsterkte op het horloge (19 okt 2026, operator: "wat als iemand enkel de
+   watch wil gebruiken? … sterkste stand moet echt het maximum zijn").
+   Eén waarde voor telefoon en horloge: de telefoon stuurt ze mee (catalogus,
+   sessiestart); wijzig je ze hier, dan gaat ze naar de telefoon en geldt ze
+   daar ook. watchOS laat geen vrije sterkte toe, enkel vaste trilsoorten:
+     Soft   = zachte tik, enkel de eerste slag van de hartslag
+     Medium = zachte tik, beide slagen
+     Strong = de krachtigste tik die watchOS toelaat (.start, zoals Workout) —
+              speelt een kort toontje mee tenzij het horloge op stil staat. */
+final class WatchSettings: ObservableObject {
+  static let shared = WatchSettings()
+  static let levels = ["soft", "medium", "strong"]
+
+  @Published private(set) var strength: String
+  private let key = "vz_watch_strength_v1"
+
+  init() {
+    strength = UserDefaults.standard.string(forKey: key) ?? "medium"
+  }
+
+  func adoptFromPhone(_ s: String) {
+    guard WatchSettings.levels.contains(s), s != strength else { return }
+    strength = s
+    UserDefaults.standard.set(s, forKey: key)
+  }
+
+  func setFromWatch(_ s: String) {
+    guard WatchSettings.levels.contains(s) else { return }
+    adoptFromPhone(s)
+    PhoneConnector.shared.send(["type": "watch_action", "action": "strength:\(s)", "kind": "settings"])
+  }
+
+  /// Eerste slag van de hartslag en het begin van een ademfase.
+  var accentType: WKHapticType { strength == "strong" ? .start : .click }
+  /// Tweede slag van de hartslag (Soft: geen).
+  var playsDub: Bool { strength != "soft" }
 }

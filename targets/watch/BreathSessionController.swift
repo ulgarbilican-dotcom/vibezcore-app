@@ -99,6 +99,7 @@ final class BreathSessionController: NSObject, ObservableObject {
       pauseLocally()
       return
     }
+    if let st = message["strength"] as? String { WatchSettings.shared.adoptFromPhone(st) }
     guard let phasesRaw = message["phases"] as? [[String: Any]] else { return }
     let parsed: [WatchPhase] = phasesRaw.compactMap { p in
       guard let key = p["key"] as? String, let secs = p["secs"] as? Int, secs > 0 else { return nil }
@@ -218,7 +219,9 @@ final class BreathSessionController: NSObject, ObservableObject {
   private func scheduleTicks(type: WKHapticType, interval: TimeInterval, duration: Int) {
     tickTimer?.invalidate()
     let device = WKInterfaceDevice.current()
-    device.play(type)
+    /* Begin van de fase: de trilsterkte van het horloge (Strong = de
+       krachtigste tik), daarna de gewone tikken (19 okt 2026). */
+    device.play(WatchSettings.shared.accentType)
     var elapsed: TimeInterval = 0
     tickTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { timer in
       elapsed += interval

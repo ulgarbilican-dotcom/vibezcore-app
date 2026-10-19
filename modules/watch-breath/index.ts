@@ -21,6 +21,8 @@ export type WatchBreathPhase = {
 };
 
 export type WatchBreathSession = {
+  /** Trilsterkte van de telefoon (19 okt 2026). */
+  strength?: string;
   phases: WatchBreathPhase[];
   rounds: number;
   modeName: string;

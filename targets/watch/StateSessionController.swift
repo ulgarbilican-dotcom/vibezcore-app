@@ -167,6 +167,7 @@ final class StateSessionController: ObservableObject {
     }
     switch type {
     case "state_start":
+      if let st = message["strength"] as? String { WatchSettings.shared.adoptFromPhone(st) }
       if isLocal { finishLocal(completed: false) }
       start(message, sentAtMs: stamp)
     case "state_pause":
@@ -405,11 +406,12 @@ final class StateSessionController: ObservableObject {
       beat = p.beatAt(nextBeatT)
     }
     let beatDate = wallDate(forCurve: nextBeatT)
-    WKInterfaceDevice.current().play(.click)
+    /* Trilsterkte van het horloge (19 okt 2026, WatchSettings). */
+    WKInterfaceDevice.current().play(WatchSettings.shared.accentType)
     lastLubDate = beatDate
     lastCycleMs = beat.cycleMs
     beats.send(true)
-    if playDub {
+    if playDub && WatchSettings.shared.playsDub {
       dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000)) { [weak self] in
         guard let self = self, gen == self.generation else { return }
         WKInterfaceDevice.current().play(.click)

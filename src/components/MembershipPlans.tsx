@@ -114,7 +114,9 @@ export default function MembershipPlans({
   const day = getProduct('day');
   /* Wie al een lopende dagpas heeft, krijgt geen tweede aangeboden. */
   const sub = useSubscription();
-  const showDay = !(sub.isPro && sub.tier === 'day');
+  /* 19 okt 2026: wie al Premium heeft (dagpas OF abonnement) krijgt geen
+     dagpas aangeboden — die zou niets toevoegen. */
+  const showDay = !sub.isPro;
   const dayPrice = day?.localizedPrice ?? '—';
 
   /* Operator, 7 okt 2026 (account-audit, WYSIWYG): enkel de prijs die de

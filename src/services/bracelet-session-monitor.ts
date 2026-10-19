@@ -46,7 +46,7 @@ import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
-import { subscribeHapticStrength } from './haptic-strength-pref';
+import { setHapticStrength, subscribeHapticStrength, type HapticStrength } from './haptic-strength-pref';
 import {
   addRemoteControlListener,
   dismissCompletionNotice,
@@ -783,6 +783,12 @@ async function remoteStop(): Promise<void> {
 /* Knoppen op het horloge (Wear OS én Apple Watch) — zie
    docs/WATCH_PROTOCOL.md. `bracelet` = State Control. */
 const onWatchStateAction = (e: { action: string; kind: string }) => {
+  /* Trilsterkte gewijzigd op het horloge (19 okt 2026): geldt ook hier. */
+  if (e.kind === 'settings' && e.action.startsWith('strength:')) {
+    const v = e.action.slice('strength:'.length);
+    if (v === 'soft' || v === 'medium' || v === 'strong') setHapticStrength(v as HapticStrength);
+    return;
+  }
   if (e.kind !== 'bracelet') return;
   if (e.action === 'pause') void remotePause();
   else if (e.action === 'resume') void remoteResume();

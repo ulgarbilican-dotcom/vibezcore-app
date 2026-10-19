@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /* ─────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Startscherm + instellen op de Apple Watch (18 okt 2026)
@@ -50,6 +51,7 @@ enum WatchRoute: Hashable {
   case stateDuration(Int)
   case technique(String)
   case breathDuration(String)
+  case settings
 }
 
 struct HomeView: View {
@@ -92,6 +94,8 @@ struct HomeView: View {
                 if !catalog.breath.isEmpty {
                   HomePill(icon: "wind", label: "Breathwork") { path.append(.modes(false)) }
                 }
+                /* 19 okt 2026: instellingen op het horloge zelf. */
+                HomePill(icon: "gearshape", label: "Settings") { path.append(.settings) }
               }
             }
             .padding(.horizontal, 12)
@@ -127,6 +131,8 @@ struct HomeView: View {
       if let b = catalog.breath.first(where: { $0.key == key }) {
         TechniqueView(entry: b)
       }
+    case .settings:
+      WatchSettingsView()
     case .breathDuration(let key):
       if let b = catalog.breath.first(where: { $0.key == key }) {
         BreathDurationView(entry: b)
@@ -547,6 +553,50 @@ private struct PickRow: View {
       )
     }
     .buttonStyle(.plain)
+  }
+}
+
+/** Instellingen op het horloge (19 okt 2026): trilsterkte. Geldt ook op de
+ *  telefoon (WatchSettings stuurt de keuze door). */
+struct WatchSettingsView: View {
+  @ObservedObject private var settings = WatchSettings.shared
+  private let teal = Color(red: 0, green: 0xA3 / 255, blue: 0xA3 / 255)
+
+  private func label(_ s: String) -> String {
+    switch s {
+    case "soft": return "Soft"
+    case "strong": return "Strong"
+    default: return "Medium"
+    }
+  }
+
+  private func sub(_ s: String) -> String? {
+    s == "strong" ? "Strongest tap · silent mode mutes its tone" : nil
+  }
+
+  var body: some View {
+    ScrollView {
+      VStack(spacing: 6) {
+        Eyebrow(text: "Settings").padding(.bottom, 2)
+        Text("Haptic strength")
+          .font(.system(size: 14, weight: .bold))
+          .foregroundColor(.white)
+          .padding(.bottom, 4)
+        ForEach(WatchSettings.levels, id: \.self) { (lv: String) in
+          PickRow(title: label(lv), sub: sub(lv), subColor: dim, current: lv == settings.strength, color: teal) {
+            settings.setFromWatch(lv)
+            WKInterfaceDevice.current().play(lv == "strong" ? .start : .click)
+          }
+        }
+        Text("Also changes the setting on your iPhone.")
+          .font(.system(size: 10))
+          .foregroundColor(dim)
+          .multilineTextAlignment(.center)
+          .padding(.top, 4)
+      }
+      .padding(.horizontal, 8)
+    }
+    .background(Color.black)
   }
 }
 

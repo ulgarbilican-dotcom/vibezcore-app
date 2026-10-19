@@ -813,6 +813,7 @@ export function watchStateParams(mode: BraceletMode) {
     holdSec: SESSION_HOLD_SECONDS,
     rampSec: spec.rampSec,
     ...watchStrength(spec),
+    strength: getHapticStrength(),
   };
 }
 
@@ -851,6 +852,7 @@ function relayToWatch(
     curveOffsetSec,
     remainingSec: Math.round(remainingAtSent * 10) / 10,
     ...watchStrength(spec),
+    strength: getHapticStrength(),
     sentAtMs,
   };
   sendWearState(start);
@@ -1116,6 +1118,7 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     curveOffsetSec: 0,
     remainingSec: PREVIEW_MAX_SECONDS,
     ...watchStrength(spec),
+    strength: getHapticStrength(),
     /* Het moment dat de eerste tik op de telefoon voelbaar is. De
        voorproef start de trilmotor rechtstreeks (geen voorgrondservice):
        gemeten 17 okt 2026 op de A16, 6 voorproeven: 7–21 ms na dit

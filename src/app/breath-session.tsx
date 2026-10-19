@@ -41,7 +41,7 @@
 
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
-import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+import { getHapticStrength, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
@@ -2144,6 +2144,7 @@ export function BreathSession() {
           modeName: name,
           colorHex,
           ...(at ?? {}),
+          strength: getHapticStrength(),
           sentAtMs: Date.now(),
           amp: watchBreathAmplitude(),
         });
@@ -2153,6 +2154,7 @@ export function BreathSession() {
           modeName: name,
           colorHex,
           ...(at ?? {}),
+          strength: getHapticStrength(),
           sentAtMs: Date.now(),
         });
       } catch {
