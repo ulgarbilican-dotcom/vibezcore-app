@@ -4468,7 +4468,10 @@ export function BreathSession() {
                verdwijnt toch zodra de gebruiker verdergaat. */}
             {/* Audit 12 okt 2026: "How do you feel now?" na elke gewone
                 sessie; een Instant-sessie houdt haar eigen afstemvraag. */}
-            {!isInstantSession && (
+            {/* 19 okt 2026 (operator: "How do you feel now is een gesloten
+                vraag — wat als de klant zich hetzelfde of slechter voelt?"):
+                weg na een ademsessie. */}
+            {false && !isInstantSession && (
               <View style={{ marginBottom: 22 }}>
                 <FeelCheck session={{ kind: 'breath', key: st.key, technique: tech.key }} />
               </View>
