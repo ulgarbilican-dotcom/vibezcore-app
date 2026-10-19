@@ -463,7 +463,7 @@ export const PRIVACY: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'See our [Cookie Policy](https://www.vibezcore.com/legal/cookies) for full details on what we store and why.',
+      text: 'See our [Cookie Policy](https://www.vibezcore.com/cookie-policy) for full details on what we store and why.',
     },
 
     /* ── 02. How We Collect Information ── */

@@ -45,8 +45,8 @@ One membership unlocks Breathwork, State Control and the full Audio Library.
 
 Payment is charged to your Apple ID when you confirm the purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period; renewal is charged within 24 hours before the period ends. Manage or cancel anytime in your App Store account settings. Prices may vary by country.
 
-Terms of Use: https://www.vibezcore.com/terms
-Privacy Policy: https://www.vibezcore.com/privacy
+Terms of Use: https://www.vibezcore.com/terms-and-conditions
+Privacy Policy: https://www.vibezcore.com/privacy-policy
 ```
 
 ### App Review Notes
