@@ -226,6 +226,50 @@ let trackingActive = false;
    verschijnt Continue-prompt voor sessie die user nooit explicit
    geopend heeft. */
 let loadedWithAutoStart = false;
+/* 19 okt 2026 (operator, build 38): "sessie volledig doorgespoeld en niet
+   echt beluisterd — komt in history als 'listened 1 minute' en als
+   volledig". Luistertijd = enkel ECHT afgespeelde audio. Per status-tick
+   (250 ms) tellen we de positie-stap mee, maar alleen als die past bij de
+   verstreken wandkloktijd × snelheid (gewoon doorspelen, ook na een
+   achtergrond-pauze van de JS-ticks). Een sprong door tikken op de balk of
+   ±15 s-knoppen is groter dan de verstreken tijd toelaat → telt niet.
+   - pendingListenSec: luister-seconden (wandklok-equivalent, dus /rate)
+     sinds de laatste history-flush → gaat als `playedSec` naar history.
+   - loadPlayedContentSec: afgespeelde audio-seconden in deze load → bepaalt
+     samen met loadResumeCreditSec of het einde als "volledig" telt. */
+let lastTickPosSec: number | null = null;
+let lastTickWallMs = 0;
+let pendingListenSec = 0;
+let loadPlayedContentSec = 0;
+let loadResumeCreditSec = 0;
+/** Deel van de sessie dat echt afgespeeld moet zijn voor "Fully listened".
+ *  Ruim genoeg voor wie het laatste stuk of een intro overslaat, maar een
+ *  doorgespoelde sessie haalt het nooit. */
+const FULL_LISTEN_MIN_FRACTION = 0.8;
+/** Marge (sec) bovenop wandklok × snelheid voor gewone tick-jitter. */
+const TICK_SLACK_SEC = 0.75;
+
+function takePendingListenSec(): number {
+  const v = pendingListenSec;
+  pendingListenSec = 0;
+  return v;
+}
+
+function resetListenMeter(): void {
+  lastTickPosSec = null;
+  lastTickWallMs = 0;
+  pendingListenSec = 0;
+  loadPlayedContentSec = 0;
+  loadResumeCreditSec = 0;
+}
+
+/** Telt het einde als "volledig beluisterd"? Echt afgespeelde audio in deze
+ *  load + krediet voor eerder beluisterd deel (bij hervatten) moet minstens
+ *  FULL_LISTEN_MIN_FRACTION van de duur zijn. Onbekende duur → oude gedrag. */
+function reachedEndByListening(durSec: number): boolean {
+  if (!(durSec > 0)) return true;
+  return loadPlayedContentSec + loadResumeCreditSec >= durSec * FULL_LISTEN_MIN_FRACTION;
+}
 /* Iter v175 (2026-06-30): Sleep timer volledig verwijderd. Iters v171-v174
    probeerden progressief betere fallback-strategieën (dual-track → unload →
    quad-track met AppState listener) maar geen enkele werkte betrouwbaar in
@@ -505,6 +549,20 @@ function onStatus(st: AudioStatus): void {
      waarom "Fully listened" niet verscheen in Audio PRO override-mode.
      Productie: __DEV__=false → overridePretendsPro=false → gedrag
      ongewijzigd. Alleen dev-flow krijgt nu correcte history. */
+  /* 19 okt 2026 (operator, build 38): echte luistertijd meten — zie
+     toelichting bij lastTickPosSec bovenaan. Enkel een stap die past bij
+     de verstreken tijd telt; spoelen/skippen niet. */
+  const nowMs = Date.now();
+  if (isPlayingNow && trackingActive && lastTickPosSec !== null) {
+    const deltaSec = posSec - lastTickPosSec;
+    const wallSec = Math.max(0, (nowMs - lastTickWallMs) / 1000);
+    const rate = state.rate > 0 ? state.rate : 1;
+    if (deltaSec > 0 && deltaSec <= wallSec * rate * 1.25 + TICK_SLACK_SEC) {
+      loadPlayedContentSec += deltaSec;
+      pendingListenSec += deltaSec / rate;
+    }
+  }
+
   if (!state.preview || overridePretendsPro) {
     /* Iter 9dq v119 (2026-06-04): voor auto-played sessies skippen we
        startListen tot user expliciet interacteert. Voorkomt phantom
@@ -524,7 +582,7 @@ function onStatus(st: AudioStatus): void {
       trackingActive = true;
     }
     if (!isPlayingNow && playingRef && trackingActive) {
-      pauseListen();
+      pauseListen(takePendingListenSec());
     }
 
     /* Saved position — alleen bij echte pauze (niet bij einde).
@@ -536,12 +594,22 @@ function onStatus(st: AudioStatus): void {
   }
 
   playingRef = isPlayingNow;
+  /* Referentiepunt voor de volgende tick — enkel tijdens getrackt spelen. */
+  lastTickPosSec = isPlayingNow && trackingActive ? posSec : null;
+  lastTickWallMs = nowMs;
 
   /* Ended → full=true via endListen, vzp wissen, dan beslis: auto-play
      volgende sessie OF panel-state zetten. Preview-mode komt hier nooit
-     aan (cap pauzeert vóór einde). */
+     aan (cap pauzeert vóór einde).
+     19 okt 2026 (operator, build 38): "volledig" enkel wanneer het grootste
+     deel echt afgespeeld is (reachedEndByListening). Doorgespoeld tot het
+     einde → enkel de echt gespeelde seconden, als "Partly listened". */
   if (st.didJustFinish) {
-    if (trackingActive) endListen();
+    if (trackingActive) {
+      if (reachedEndByListening(durSec)) endListen(takePendingListenSec());
+      else pauseListen(takePendingListenSec());
+    }
+    lastTickPosSec = null;
     const finishedSession = state.session;
     if (finishedSession) clearSavedPosition(finishedSession.url);
     /* Sessie voltooid → Continue-card moet 'm niet meer aanbieden. */
@@ -730,6 +798,14 @@ export async function loadSession(
   loadedWithAutoStart = !!opts.autoStart;
   const savedSec = opts.autoStart ? 0 : getSavedPosition(session.url);
   const shouldShowResume = !opts.autoStart && savedSec > 4;
+  /* 19 okt 2026 (operator, build 38): hervatten telt het eerder beluisterde
+     deel mee voor "volledig" — maar nooit meer dan de eerder ECHT
+     beluisterde tijd (history `dur`, max. 2× snelheid). Een vorige keer
+     doorgespoelde positie levert zo geen gratis "Fully listened" op. */
+  resetListenMeter();
+  if (shouldShowResume && historyEntry) {
+    loadResumeCreditSec = Math.min(savedSec, Math.max(0, historyEntry.dur) * 2);
+  }
 
   setState({
     session,
@@ -751,6 +827,9 @@ export async function loadSession(
   });
 
   try {
+    /* 19 okt 2026: de iPhone-sessiemotor kan de geluidssessie intussen op
+       "mengen" gezet hebben — bij elke nieuwe audiosessie opnieuw zetten. */
+    audioModeConfigured = false;
     await ensureAudioMode();
     if (myGen !== loadGeneration) return;
     /* Notification-permission fire-and-forget; UI niet blokkeren. Eerste
@@ -936,10 +1015,18 @@ export async function setRate(rate: number): Promise<void> {
  *  nooit heeft gespeeld. Aangeroepen door `loadSession()` zelf zodra er
  *  een geldige saved position is (automatisch hervatten, geen gate meer). */
 async function warmSeekTo(target: number): Promise<void> {
-  if (!player) return;
-  let originalVolume = 1;
+  /* 19 okt 2026 (operator, build 38: "zeer zacht op max op iPhone"):
+     de speler LOKAAL vasthouden. Voorheen werkte deze reeks op de globale
+     `player`; werd intussen een andere sessie geladen (snel wisselen, Play
+     next), dan zette de oude reeks het volume van de NIEUWE speler op 0 en
+     seekte die naar de oude positie — en las de nieuwe reeks dat volume 0
+     als "origineel" in. Nu: eigen speler, stoppen zodra hij niet meer de
+     actieve is, en het volume altijd terug op het volle niveau (1). */
+  const p = player;
+  if (!p) return;
+  const stillActive = () => player === p;
+  const originalVolume = 1;
   try {
-    originalVolume = player.volume ?? 1;
 
     /* WAAROM DEZE SEQUENCE — bug-deep-dive 2026-05-25:
        expo-audio's onderliggende ExoPlayer (Android) verwerkt seekTo
@@ -962,29 +1049,33 @@ async function warmSeekTo(target: number): Promise<void> {
          7. play()    — start vanaf de geseekte positie
          8. Unmute (volume = originalVolume)
        Totale audible-stilte: ~200ms. Acceptabel — niemand merkt 200ms. */
-    player.volume = 0;
+    p.volume = 0;
 
-    player.play();
+    p.play();
     await new Promise<void>((resolve) => setTimeout(resolve, 150));
+    if (!stillActive()) return;
 
-    player.pause();
+    p.pause();
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    if (!stillActive()) return;
 
-    await player.seekTo(target);
+    await p.seekTo(target);
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    if (!stillActive()) return;
 
-    player.play();
+    p.play();
     /* Korte tick voor we unmuten zodat de eerste audio-samples al van
        de juiste positie komen — niet vanaf wat-er-toevallig-in-de-
        buffer-zat-pre-seek. */
     await new Promise<void>((resolve) => setTimeout(resolve, 30));
 
-    player.volume = originalVolume;
   } catch {
-    /* Defensief: als iets faalt, herstel volume zodat er niet stil
-       verder gespeeld wordt. */
+    /* Defensief — zie finally. */
+  } finally {
+    /* Altijd het volume herstellen, ook bij een vroege return of fout,
+       zodat er nooit stil of zacht verder gespeeld wordt. */
     try {
-      if (player) player.volume = originalVolume;
+      p.volume = originalVolume;
     } catch {}
   }
 }
@@ -1040,7 +1131,7 @@ export async function unload(opts: { skipSave?: boolean } = {}): Promise<void> {
   if (!opts.skipSave && (!state.preview || overridePretendsPro)) {
     saveCurrentPositionIfWorthwhile();
     if (trackingActive) {
-      pauseListen();
+      pauseListen(takePendingListenSec());
       trackingActive = false;
     }
   } else {
@@ -1049,6 +1140,7 @@ export async function unload(opts: { skipSave?: boolean } = {}): Promise<void> {
     trackingActive = false;
   }
   playingRef = false;
+  resetListenMeter();
 
   if (statusSubscription) {
     try {

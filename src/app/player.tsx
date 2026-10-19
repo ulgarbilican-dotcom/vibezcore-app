@@ -56,10 +56,12 @@ import {
   Pressable,
   Share,
   StyleSheet,
+  Switch,
   Text,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { useSetting } from '@/utils/settings';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { needsPreview } from '@/utils/access-tier';
@@ -270,6 +272,8 @@ export default function PlayerScreen() {
 
   /* Favorites */
   const { has: hasFav, toggle: toggleFav } = useFavorites();
+  /* 19 okt 2026 (operator, build 38): auto-play-schakelaar in de speler. */
+  const [autoPlayNext, setAutoPlayNext] = useSetting('autoPlayNext');
   const isFav = session ? hasFav(session.url) : false;
 
   /* Progress-bar layout voor tap-to-seek */
@@ -842,6 +846,31 @@ export default function PlayerScreen() {
           >
             <MoreHorizontal size={24} color={C.text} strokeWidth={2} />
           </Pressable>
+        </View>
+
+        {/* 19 okt 2026 (operator, build 38): "wij hebben een systeem voor
+            play next, ik zie de knop autoplay aan/uit niet meer". De
+            schakelaar stond enkel in de inline pijler-lijst van de Audio-
+            tab (control-row bij activePillarFilter). Sinds 1 okt 2026
+            (3733f99) opent een pijler-kaart een eigen scherm
+            (/library/pillar/[key]) zonder die rij → de schakelaar was
+            enkel nog via Profile → Settings te vinden. Nu staat hij in de
+            speler zelf, waar je hem nodig hebt: zelfde instelling
+            (settings.autoPlayNext), Bio-Teal als aan-kleur, rustig en
+            ondergeschikt aan de afspeelknoppen. */}
+        <View style={s.autoPlayRow}>
+          <Text style={s.autoPlayLabel} allowFontScaling={false}>
+            Auto-play next session
+          </Text>
+          <Switch
+            value={autoPlayNext}
+            onValueChange={setAutoPlayNext}
+            trackColor={{ false: 'rgba(244,244,244,0.18)', true: C.accent }}
+            ios_backgroundColor="rgba(244,244,244,0.18)"
+            thumbColor="#ffffff"
+            style={s.autoPlaySwitch}
+            accessibilityLabel="Auto-play next session"
+          />
         </View>
 
         </Animated.View>
@@ -1479,6 +1508,22 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   moreBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  /* 19 okt 2026 (operator, build 38): auto-play-schakelaar onder de
+     afspeelknoppen — klein, gecentreerd, gedempt label. */
+  autoPlayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: -2,
+  },
+  autoPlayLabel: {
+    color: C.dim,
+    fontSize: 12,
+    fontFamily: BrandFonts.semibold,
+    letterSpacing: 0.2,
+  },
+  autoPlaySwitch: { transform: [{ scale: 0.8 }] },
   /* FIX 14 (5e poging — react-native-svg). Container 48×48,
      position:'relative' zodat de absoluut-gepositioneerde SVG en Text
      centreren op de container-bounds. */

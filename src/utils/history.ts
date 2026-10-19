@@ -166,13 +166,23 @@ export function startListen(url: string, title: string, series: string): void {
    (typisch volgorde: status isPlaying:false  →  didJustFinish:true). We
    honoreren dan nog steeds `full` — markeren entry full + fc++ — zonder
    nogmaals dur op te tellen. */
-function flushListen(full: boolean): void {
+/* 19 okt 2026 (operator, build 38): "sessie volledig doorgespoeld, niet
+   echt beluisterd — komt in history als 'listened 1 minute'". De wandklok
+   (Date.now() - tStart) telde ook de tijd mee waarin je met de balk door
+   de sessie sprong. audio-player.ts meet nu zelf de ECHT afgespeelde
+   seconden (positie-sprongen door spoelen/skippen tellen niet) en geeft
+   die mee als `playedSec`. Zonder `playedSec` blijft de oude wandklok-
+   meting de terugval. */
+function flushListen(full: boolean, playedSec?: number): void {
   if (!curUrl) {
     tStart = 0;
     return;
   }
   let listenedSec = 0;
-  if (tStart > 0) {
+  if (typeof playedSec === 'number' && Number.isFinite(playedSec)) {
+    listenedSec = Math.max(0, playedSec);
+    tStart = 0;
+  } else if (tStart > 0) {
     listenedSec = (Date.now() - tStart) / 1000;
     tStart = 0;
   }
@@ -231,12 +241,14 @@ function flushListen(full: boolean): void {
   });
 }
 
-export function pauseListen(): void {
-  flushListen(false);
+/** `playedSec` = echt afgespeelde seconden sinds de vorige flush (zie
+ *  flushListen, 19 okt 2026). Weggelaten → wandklok-terugval. */
+export function pauseListen(playedSec?: number): void {
+  flushListen(false, playedSec);
 }
 
-export function endListen(): void {
-  flushListen(true);
+export function endListen(playedSec?: number): void {
+  flushListen(true, playedSec);
 }
 
 export async function clearHistory(): Promise<void> {
