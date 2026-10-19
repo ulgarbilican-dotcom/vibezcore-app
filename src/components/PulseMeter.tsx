@@ -128,6 +128,9 @@ type Props = {
   onManual: () => void;
   /** Foutscherm aan/uit — het blad verbergt dan zijn meetuitleg. */
   onErrorChange?: (isError: boolean) => void;
+  /** false = camera en zaklamp uit (scherm niet in beeld, blad of kaart
+   *  erboven). 19 okt 2026: de zaklamp bleef aan na de onboarding. */
+  active?: boolean;
 };
 
 /* Operator, 9 okt 2026 ("pieken onderaan zoals op de vorige pagina"):
@@ -457,7 +460,10 @@ function CalcArc() {
   );
 }
 
-export default function PulseMeter({ onResult, onElevated, onManual, onErrorChange, purpose = 'baseline' }: Props) {
+export default function PulseMeter({ onResult, onElevated, onManual, onErrorChange, purpose = 'baseline', active = true }: Props) {
+  /* Meting klaar (resultaat of fout): camera en zaklamp meteen uit — de
+     metingen worden toch niet meer gebruikt (19 okt 2026). */
+  const [captureDone, setCaptureDone] = useState(false);
   const permission = useCameraPermission();
   const [status, setStatus] = useState<Status>('placing');
   const [progress, setProgress] = useState(0);
@@ -767,6 +773,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
         const okSession = purpose === 'session' && !!res && res.bpm >= 45 && res.bpm <= 180 && res.confidence >= 0.35;
         if (high && res) {
           finished.current = true;
+          setCaptureDone(true);
           setCalculating(true);
           resultTimer.current = setTimeout(() => {
             setCalculating(false);
@@ -781,6 +788,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
           }, 1200);
         } else if ((ok || okSession) && res) {
           finished.current = true;
+          setCaptureDone(true);
           /* Operator, 9 okt 2026 ("de pagina springt direct verder"): eerst
              even het eindgetal tonen, met een tik, dan pas door. */
           /* Vervolg (operator: "op het einde een wachtsymbool terwijl het
@@ -800,6 +808,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
           }, 1200);
         } else if (elapsed >= MAX_MS) {
           finished.current = true;
+          setCaptureDone(true);
           setCalculating(false);
           /* Brandde de flits? Met flits is het beeld door de vinger fel rood
              (r ≈ 200+); zonder flits, op omgevingslicht, veel zwakker. */
@@ -920,6 +929,8 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
   const cameraOn =
     permission.hasPermission &&
     appActive &&
+    active &&
+    !captureDone &&
     !reviving &&
     (status === 'placing' || status === 'settling' || status === 'measuring');
   /* Zaklamp pas aan als de camera echt draait: eerder vraagt Android hem
@@ -949,12 +960,14 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
       failures.current += 1;
       if (failures.current >= 3) {
         finished.current = true;
+        setCaptureDone(true);
         setStatus('camera-error');
       }
     },
   });
 
   const retry = () => {
+    setCaptureDone(false);
     setFlashWasOff(false);
     setElevated(false);
     setTorchFailed(false);

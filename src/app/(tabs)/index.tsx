@@ -3401,10 +3401,10 @@ function AudioScreen({
               router.navigate('/account');
             }}
             hitSlop={12}
-            accessibilityLabel="Already a member, sign in"
+            accessibilityLabel="Sign in or create an account"
           >
             <Text style={s.signInFooterText}>
-              Already a member? <Text style={s.signInFooterTextAccent}>Sign in</Text>
+              <Text style={s.signInFooterTextAccent}>Sign In</Text> or <Text style={s.signInFooterTextAccent}>Create Account</Text>
             </Text>
           </Pressable>
         )}

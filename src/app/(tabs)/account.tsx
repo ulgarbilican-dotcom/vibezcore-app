@@ -149,12 +149,10 @@ const APP_LINK_URL = 'https://www.vibezcore.com/';
    klopte nog steeds (geen aparte titel), maar één regel "inclusief"
    ontbrak. Toestand-taal, geen claims; de gratis kennismakingssessie is
    wat een genodigde werkelijk krijgt. */
-/* Operator, 18 okt 2026 (eigen tekst, "is dit beter voor invite a friend?"). */
-const BRAND_PITCH =
-  'Control Your Body. Direct Your Mind. Become the Architect of Your Life.\n\n' +
-  'VIBEZCORE combines research-based haptic patterns, guided breathwork and a premium Audio Library to help you build focus, regulate your state and grow with intention.\n\n' +
-  'Explore VIBEZCORE and start for free. The Smart Bead Bracelet launches in Early 2027.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\n${APP_LINK_URL}`;
+/* Operator, 19 okt 2026 (akkoord): kort. De kop = de drie knoppen van het
+   welkomstscherm; de uitleg staat al in het voorbeeldkaartje van de site. */
+const BRAND_PITCH = 'Reset Yourself. Control Your State. Train Your Mind.';
+const INVITE_MESSAGE = `${BRAND_PITCH}\n\nTry VIBEZCORE for free: ${APP_LINK_URL}`;
 
 async function shareInvite(): Promise<void> {
   try {
@@ -484,7 +482,7 @@ function ProfileHeader({ email }: { email: string }) {
         <Text style={g.avatarTxt}>{initial}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={g.headerEmail} numberOfLines={1}>
+        <Text style={g.headerEmail} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
           {email}
         </Text>
         <Text style={[g.headerStatus, isPro && { color: STATUS }]}>{label}</Text>
@@ -544,7 +542,12 @@ function PlanCard() {
   } else if (tier === 'monthly') {
     cta = {
       label: savePercent ? `Switch to Yearly · save ${savePercent}%` : 'Switch to Yearly',
-      onPress: () => void openManageSubscriptions(),
+      /* Android: de plannen in de app (de Play Store kan niet wisselen
+         tussen twee abonnementen); iPhone: Apple's eigen beheerblad. */
+      onPress: () =>
+        Platform.OS === 'android'
+          ? router.navigate('/subscribe' as never)
+          : void openManageSubscriptions(),
     };
     manage = true;
   } else {
@@ -1538,7 +1541,8 @@ export default function AccountScreen() {
           <ProductsGroup />
           <RhythmGroup />
           <Group title="Account">
-            <Row icon={Mail} title="Email" value={email} />
+            {/* Volledig adres onder de titel i.p.v. afgekapt rechts (operator 19 okt 2026). */}
+            <Row icon={Mail} title="Email" subtitle={email} />
             {provider === 'google' || provider === 'apple' ? null : (
               <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
             )}
@@ -1585,7 +1589,7 @@ export default function AccountScreen() {
         <Group>
           <Row
             icon={CircleUserRound}
-            title={mode === 'login' ? 'Sign in' : 'Create account'}
+            title={authOpen ? (mode === 'login' ? 'Sign In' : 'Create Account') : 'Sign In or Create Account'}
             subtitle={
               isProForActions
                 ? 'Optional · Use your plan on all your devices'
@@ -1593,7 +1597,7 @@ export default function AccountScreen() {
             }
             onPress={() => setAuthOpen((o) => !o)}
             open={authOpen}
-            accessibilityLabel="Sign in to VIBEZCORE"
+            accessibilityLabel="Sign in or create a VIBEZCORE account"
           />
         </Group>
         {authOpen ? (

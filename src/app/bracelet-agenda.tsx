@@ -77,7 +77,6 @@
 
 import BalancedText from '@/components/BalancedText';
 import { openStateControl } from '@/utils/state-control-ui';
-import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
 import { planItemStatuses } from '@/utils/plan-status';
@@ -359,7 +358,7 @@ export default function BraceletAgendaScreen() {
      en opent dan State Control — vroeger een link met start-parameters die
      het al geopende scherm soms negeerde (moduskeuze + verdwaalde
      terugknop). Zie hooks/useStartStateControl.ts. */
-  const { start: startNow, paywallOpen, closePaywall } = useStartStateControl();
+  const { start: startNow } = useStartStateControl();
   const tryItem = (mode: BraceletMode, durationMinutes: number) => {
     startNow(mode, durationMinutes);
   };
@@ -634,7 +633,6 @@ export default function BraceletAgendaScreen() {
         }}
       />
 
-      <PremiumPaywallModal visible={paywallOpen} onClose={closePaywall} context="state-control" />
 
       {/* Actie-schermpje voor een aangetikt bolletje op de ring — "Try
          it" (volledige sessie in de bracelet-control-simulatie) en

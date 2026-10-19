@@ -38,6 +38,7 @@ import Purchases, {
   PurchasesPackage,
   PurchasesStoreTransaction,
   PURCHASES_ERROR_CODE,
+  STORE_REPLACEMENT_MODE,
 } from 'react-native-purchases';
 
 import {
@@ -416,8 +417,31 @@ export class RealIAPProvider implements IAPProvider {
       };
     }
 
+    /* Android, Monthly -> Yearly (operator 19 okt 2026: "bij Switch to Yearly
+       kan ik in de Play Store niets doen"): op Google Play zijn het twee
+       aparte abonnementen; wisselen kan enkel als vervanging vanuit de app.
+       Het lopende abonnement wordt dan meteen vervangen en de resterende
+       tijd verrekend. Op iPhone regelt Apple dat zelf (zelfde groep). */
+    let productChangeInfo: { oldProductIdentifier: string; replacementMode: STORE_REPLACEMENT_MODE } | null = null;
+    if (Platform.OS === 'android' && tier !== 'day') {
+      try {
+        const info = await Purchases.getCustomerInfo();
+        const current = info.activeSubscriptions
+          .map((id) => id.split(':')[0])
+          .find((id) => (id === PRODUCT_IDS.monthly || id === PRODUCT_IDS.yearly) && id !== targetSku);
+        if (current) {
+          productChangeInfo = {
+            oldProductIdentifier: current,
+            replacementMode: STORE_REPLACEMENT_MODE.WITH_TIME_PRORATION,
+          };
+        }
+      } catch {
+        /* zonder info: gewone aankoop */
+      }
+    }
+
     try {
-      const result = await Purchases.purchasePackage(pkg);
+      const result = await Purchases.purchasePackage(pkg, null, productChangeInfo);
       const customerInfo = result.customerInfo;
       const transaction = (result as { transaction?: PurchasesStoreTransaction })
         .transaction;

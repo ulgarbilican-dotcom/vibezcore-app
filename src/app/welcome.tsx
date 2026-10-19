@@ -399,7 +399,8 @@ export default function WelcomeScreen() {
             style={[s.bottomLinkRow, signInStyle]}
           >
             <Text style={s.bottomLinkText}>
-              Already a member? <Text style={s.bottomLinkAction}>Sign in</Text>
+              {/* Operator 19 okt 2026: ook voor wie nog geen account heeft. */}
+              <Text style={s.bottomLinkAction}>Sign In</Text> or <Text style={s.bottomLinkAction}>Create Account</Text>
             </Text>
             <ChevronRight size={15} color="#ffffff" strokeWidth={2} />
           </AnimatedPressable>

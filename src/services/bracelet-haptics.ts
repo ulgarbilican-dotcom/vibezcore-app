@@ -102,7 +102,13 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { AppState, Platform } from 'react-native';
 import { startSessionKeepAlive, stopSessionKeepAlive } from './session-keepalive';
 import { getSetting, setSetting } from '@/utils/settings';
-import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength } from './haptic-strength-pref';
+import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength, type HapticStrength } from './haptic-strength-pref';
+
+/** Sterkte voor de curve die NU speelt. De onboarding-proef speelt altijd
+ *  Strong (operator 19 okt 2026: te zacht), zonder de keuze van de
+ *  gebruiker te wijzigen; al het andere volgt de instelling. */
+let strengthOverride: HapticStrength | null = null;
+const curStrength = (): HapticStrength => strengthOverride ?? getHapticStrength();
 
 
 /* Feel & Hear zonder native service (iOS, oud Android): de app speelt het
@@ -254,7 +260,7 @@ function buildWaveform(
 
   /* Sterkte (operator, 11 okt 2026): met amplitude-regeling de kracht,
      zonder de tikduur. */
-  const st = getHapticStrength();
+  const st = curStrength();
   const ampOf = (a: number) => Math.max(1, Math.min(255, Math.round(a * STATE_AMP_FACTOR[st])));
   const msOf = (ms: number) => Math.round(ms * STATE_MS_FACTOR[st]);
   const lubMs = amplitudeControl ? LUB_MS : msOf(spec.lubMsNoAmp);
@@ -380,6 +386,9 @@ function scheduleVisual(
   offsetSec: number,
   curveSec: number,
   myGeneration: number,
+  /** Einde van een eindige proef: geen slag meer aankondigen die de motor
+   *  niet speelt (19 okt 2026). */
+  endWallMs: number = Infinity,
 ): void {
   if (myGeneration !== generation) return;
   pendingTimeouts.length = 0;
@@ -407,24 +416,29 @@ function scheduleVisual(
   pendingTimeouts.push(
     setTimeout(() => {
       if (myGeneration !== generation) return;
-      emitPulse({ kind: 'lub', mode, cycleMs: nextCycleMs, atMs: nextWallMs, ahead: true });
-    }, Math.max(0, nextWallMs - PULSE_AHEAD_MS - Date.now())),
-    setTimeout(() => {
-      if (myGeneration !== generation) return;
       emitPulse({ kind: 'dub', mode, cycleMs, atMs: beatWallMs + dubAt });
       if (jsSoundOn && getStateHear()) heartbeatDub();
     }, Math.max(0, beatWallMs + dubAt - Date.now())),
-    setTimeout(
-      () => scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, nextCurveSec, myGeneration),
-      Math.max(0, nextWallMs - Date.now()),
-    ),
   );
+  /* Volgt er nog een volledige slag? Anders niets meer aankondigen. */
+  if (nextWallMs + cycleMs * 0.5 <= endWallMs) {
+    pendingTimeouts.push(
+      setTimeout(() => {
+        if (myGeneration !== generation) return;
+        emitPulse({ kind: 'lub', mode, cycleMs: nextCycleMs, atMs: nextWallMs, ahead: true });
+      }, Math.max(0, nextWallMs - PULSE_AHEAD_MS - Date.now())),
+      setTimeout(
+        () => scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, nextCurveSec, myGeneration, endWallMs),
+        Math.max(0, nextWallMs - Date.now()),
+      ),
+    );
+  }
 }
 
 /* JS-weg (iOS / zonder eigen golfvorm): de stijl schuift één trede. */
 const STYLE_LADDER = [S.Soft, S.Light, S.Medium, S.Heavy, S.Rigid];
 function strengthStyle(style: Haptics.ImpactFeedbackStyle): Haptics.ImpactFeedbackStyle {
-  const st = getHapticStrength();
+  const st = curStrength();
   /* Operator, 17 okt 2026 ("de hardste is nog altijd wat zacht — zet hard op
      max"): Strong = Apple's sterkste tik (Heavy) voor elke slag, in elke
      toestand. Soft en Medium blijven zoals ze waren. */
@@ -568,7 +582,10 @@ function playIos(
   } else if (!silent) {
     startSessionBeats(plan);
   }
-  scheduleVisual(mode, spec, timing, firstAt, offsetSec, offsetSec, generation);
+  scheduleVisual(
+    mode, spec, timing, firstAt, offsetSec, offsetSec, generation,
+    !clock && totalSec !== undefined ? firstAt + totalSec * 1000 : Infinity,
+  );
 }
 
 /* ── Gemeenschappelijk ───────────────────────────────────────────────── */
@@ -613,8 +630,10 @@ function play(
   silent = false,
   restingBpm: number = getRestingPulse().bpm,
   startBpm: number = getSessionStartBpm(),
+  strength?: HapticStrength,
 ): void {
   silence(!!clock && hasNativeWaveform());
+  strengthOverride = strength ?? null;
   const spec = resolveSpec(mode, restingBpm, startBpm);
   syncLogCount = 0;
   if (hasNativeWaveform()) {
@@ -659,11 +678,18 @@ function play(
          we de curve herhalend en stoppen we hem zelf na totalSec, met
          daarna hetzelfde eind-signaal. */
       const looped = buildWaveform(spec, timing, offsetSec, undefined, canPlayNativeWaveform());
+      /* 19 okt 2026 (operator: de slag moet superconsistent zijn): stoppen
+         midden in de rust na de laatste VOLLEDIGE slag (nooit een lub zonder
+         dub), en native, dus niet afhankelijk van een JS-timer. Geen
+         eind-signaal meer: de proef duurt maar enkele slagen, en iPhone
+         heeft er ook geen. */
+      const rest = looped.timings[looped.repeat + 3] ?? 0;
+      const stopMs = Math.max(1, Math.round(totalSec * 1000 - rest / 2));
       playNativeWaveform(
         looped.timings,
         silent ? looped.amplitudes.map(() => 0) : looped.amplitudes,
         looped.repeat,
-        (totalSec + 3) * 1000,
+        stopMs,
       );
       if (!silent && getStateHear()) {
         jsSoundOn = true;
@@ -677,17 +703,15 @@ function play(
           jsSoundOn = false;
           stopHeartbeatSound('state-control');
         }
-        if (!silent) {
-          const amp = canPlayNativeWaveform();
-          const strong = (a: number) => (amp ? a : 255);
-          playNativeWaveform([70, 120, 90, 120, 160], [strong(90), 0, strong(130), 0, strong(180)], -1);
-        }
-      }, (totalSec - 0) * 1000);
+      }, stopMs);
       nativeEndTimers.push(endTimer);
     } else {
       playNativeWaveform(timings, amplitudes, repeat);
     }
-    scheduleVisual(mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation);
+    scheduleVisual(
+      mode, spec, timing, anchorWallMs, offsetSec, offsetSec, generation,
+      !clock && totalSec !== undefined ? anchorWallMs + totalSec * 1000 : Infinity,
+    );
   } else if (Platform.OS === 'ios' && isSessionAudioAvailable()) {
     playIos(mode, spec, timing, offsetSec, totalSec, clock, silent);
   } else if (!silent) {
@@ -1048,17 +1072,24 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
  *  eindtempo van de toestand — geen start bij je hartslag, geen glijden —
  *  en na `seconds` stil. De echte voorproef (30 s) blijft ongewijzigd. */
 export const TASTE_SECONDS = 5;
+/** Proefduur afgerond op hele slagen van het eindtempo (19 okt 2026: nooit
+ *  een halve slag op het einde). */
+export function tasteDurationMs(mode: BraceletMode, seconds = TASTE_SECONDS): number {
+  const cycle = Math.round(60000 / resolveSpec(mode).targetBpm);
+  return Math.max(1, Math.round((seconds * 1000) / cycle)) * cycle;
+}
 export function playModeTasteHaptic(mode: BraceletMode, seconds = TASTE_SECONDS): void {
   endIosPreviewSurface(); /* zie playModeSessionHaptic */
   session = null;
-  play(mode, { holdSec: 0, rampSec: 0 }, 0, seconds);
+  const ms = tasteDurationMs(mode, seconds);
+  play(mode, { holdSec: 0, rampSec: 0 }, 0, ms / 1000, undefined, false, undefined, undefined, 'strong');
   const myGeneration = generation;
   pendingTimeouts.push(
     setTimeout(() => {
       if (myGeneration !== generation) return;
       generation += 1;
       clearPending();
-    }, seconds * 1000),
+    }, ms + (Platform.OS === 'ios' ? IOS_FIRST_BEAT_MS : 0) + 50),
   );
 }
 

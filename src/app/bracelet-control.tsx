@@ -5470,7 +5470,9 @@ function BraceletControlScreen({
       if (subscription.isLoading) return; // wachten, de effect loopt opnieuw
       lastLinkTokenRef.current = token;
       startedLinkTokens.add(token);
-      if (sessionsLocked) {
+      /* Beslissen op de toestand uit het plan, niet op de geselecteerde
+         (19 okt 2026): de gratis volledige sessie geldt per toestand. */
+      if (premiumLocked && !freeFor(modeNum as BraceletMode)) {
         /* Free (operator, 17 okt 2026): niet de paywall, maar de toestand uit
            het plan klaarzetten en meteen de voorproef van 30 s — daarna volgt
            de paywall zoals bij "Try 30 seconds free". */

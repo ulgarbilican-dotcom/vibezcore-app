@@ -413,7 +413,24 @@ export function playBreathCue(
  *  `voiceEnabled`-instelling. */
 export function playUjjayiStartCue(): void {
   if (!voiceEnabled) return;
-  playUrl(activeUjjayiStartUrl());
+  if (nativeVoice()) {
+    playUrl(activeUjjayiStartUrl());
+    return;
+  }
+  /* Android (operator 19 okt 2026: "bij Ujjayi hoor ik niets"): deze zin
+     speelt als enige al bij het openen, terwijl de audiomodus net wordt
+     gezet — eerst die afwachten, dan pas spelen. */
+  const url = activeUjjayiStartUrl();
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    void (require('./session-keepalive') as typeof import('./session-keepalive'))
+      .ensureAudioModeSet()
+      .finally(() => {
+        if (voiceEnabled) playUrl(url);
+      });
+  } catch {
+    playUrl(url);
+  }
 }
 
 /** De rustige intro-overlay vóór een sessie start ("Enjoy your session",
@@ -499,7 +516,9 @@ export function preloadBreathCues(which: 'active' | 'both' = 'active'): void {
     });
     return;
   }
-  cueUrls.forEach((url, i) => {
+  /* Android: ook de Ujjayi- en welkomstzin vooraf laden (19 okt 2026) — een
+     nooit geladen speler bleef bij de eerste keer stil. */
+  [...cueUrls, activeUjjayiStartUrl(), activeEnjoySessionUrl()].forEach((url, i) => {
     setTimeout(() => {
       try {
         const player = getOrCreatePlayer(url);

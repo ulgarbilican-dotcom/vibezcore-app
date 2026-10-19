@@ -50,7 +50,7 @@ import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { STATE_USAGE } from '@/data/state-usage';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
 import {
-  TASTE_SECONDS,
+  tasteDurationMs,
   playModeTasteHaptic,
   rhythmFor,
   stopModePreviewHaptic,
@@ -237,7 +237,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
       startTimer.current = null;
       playModeTasteHaptic(m);
     }, FILL_MS);
-    stopTimer.current = setTimeout(() => setPlaying(null), FILL_MS + TASTE_SECONDS * 1000);
+    stopTimer.current = setTimeout(() => setPlaying(null), FILL_MS + tasteDurationMs(m));
   };
   const choose = useCallback(
     (m: BraceletMode) => {
@@ -477,6 +477,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                     setElevated(true);
                   }}
                   onManual={() => setSheet('manual')}
+                  active={focused && appActive && sheet === null && !skipAsk}
                 />
               </View>
               <BalancedText style={s.footnote}>For wellness only, not a medical measurement.</BalancedText>

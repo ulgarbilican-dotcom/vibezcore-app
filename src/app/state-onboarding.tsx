@@ -40,7 +40,9 @@ export default function StateOnboardingScreen() {
      volgende stap"; vroeger ging herbekijken terug naar Settings). */
   const done = (mode: number) => {
     if (!isFirst) {
-      router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
+      /* Terug naar de tabs i.p.v. er een tweede bovenop te zetten: zo verdwijnt
+       de onboarding (en haar camera/zaklamp) echt (19 okt 2026). */
+    router.dismissTo({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
       return;
     }
     void setSetting('stateOnboardingCompletedAt', Date.now());
@@ -51,7 +53,9 @@ export default function StateOnboardingScreen() {
     void setSetting('stateFreeMode', -1);
     /* De gekozen toestand staat klaar in State Control (en daar is één
        volledige sessie gratis, zie bracelet-control.tsx). */
-    router.navigate({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
+    /* Terug naar de tabs i.p.v. er een tweede bovenop te zetten: zo verdwijnt
+       de onboarding (en haar camera/zaklamp) echt (19 okt 2026). */
+    router.dismissTo({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
   };
 
   return (
