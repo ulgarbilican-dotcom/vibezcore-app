@@ -393,7 +393,7 @@ private struct BreathSessionLayout: View {
            en binnen de boog, zodat niets over de figuur ligt. */
         NameRow(title: controller.modeName, dot: Color(hex: controller.colorHex) ?? tint, size: 12)
           .frame(maxWidth: r * 1.1)
-          .position(x: w / 2, y: cy - r * 0.80)
+          .position(x: w / 2, y: cy - r * 0.66)
       }
 
       /* Tik op de figuur = pauze / hervatten (het grootste doel op een
@@ -408,7 +408,7 @@ private struct BreathSessionLayout: View {
 
       if !ambient {
         HoldToEndButton { controller.requestStop() }
-          .position(x: w / 2, y: h - 14)
+          .position(x: w / 2, y: h - 30)
       }
     }
     .frame(width: w, height: h)
@@ -461,7 +461,10 @@ private struct BreathFace: View {
   private var figureSide: CGFloat { r * 1.8 * 0.62 * breathArtOptical(hex) * CGFloat(0.7 + 0.3 * b) }
   /// Middelpunt van de faseboog, iets boven het schermmidden (19 okt 2026,
   /// operator, build 38: "boog iets hoger").
-  private var arcCy: CGFloat { cy - r * 0.04 }
+  /* 19 okt 2026 (operator, build 42: "boog te hoog, minder breed zodat er
+     links en rechts ademruimte is"): smaller (0,86 r) en lager. */
+  private var arcR: CGFloat { r * 0.86 }
+  private var arcCy: CGFloat { cy + r * 0.02 }
   /// Los uitgeschreven (type-checker): ademend, gedimd bij pauze en pols omlaag.
   private var figureOpacity: Double {
     let base: Double = 0.74 + 0.26 * b
@@ -495,7 +498,7 @@ private struct BreathFace: View {
       if !ambient {
         /* halve boog bovenaan: de fase telt af, van links naar rechts */
         PhaseArc(progress: phaseProgress, tint: tint, dim: paused)
-          .frame(width: 2 * r * 1.04, height: 2 * r * 1.04)
+          .frame(width: 2 * arcR, height: 2 * arcR)
           .position(x: w / 2, y: arcCy)
 
         /* seconden van de fase, links (19 okt 2026, operator, build 38:
@@ -503,7 +506,7 @@ private struct BreathFace: View {
         Text("\(phaseSecondsLeft)")
           .font(.system(size: 20, weight: .bold).monospacedDigit())
           .foregroundColor(Color.white.opacity(paused ? 0.5 : 0.94))
-          .position(x: w / 2 - r * 0.90, y: arcCy - r * 0.05)
+          .position(x: w / 2 - arcR + r * 0.02, y: arcCy + r * 0.12)
       }
 
       /* "Inhale  Nose" + "4:12 left" */
