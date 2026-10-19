@@ -47,7 +47,7 @@ let level: number = SCAPE_LEVELS.medium;
 export function setScapeLevel(l: ScapeLevel): void {
   level = SCAPE_LEVELS[l];
   const p = player;
-  if (p) rampTo(p, Math.min(1, level * (currentGain || 1)), 300);
+  if (p && !libMuted) rampTo(p, Math.min(1, level * (currentGain || 1)), 300);
 }
 let currentGain = 1;
 const FADE_IN_MS = 2000;
@@ -57,6 +57,43 @@ const STEP_MS = 60;
 let player: AudioPlayer | null = null;
 let playingKey: string | null = null;
 let fade: ReturnType<typeof setInterval> | null = null;
+
+/* Audio-voorrang (19 okt 2026, operator: "de soundscape in Breathwork zoals
+   de stem: uit zolang de Audio Library speelt"). De gekozen soundscape blijft
+   gekozen; enkel het geluid wacht en komt zacht terug zodra de bibliotheek
+   pauzeert of stopt. Inline require: geen audio-player in de statische
+   importketen van deze speler. */
+let libMuted = false;
+let libHooked = false;
+function hookLibrary(): void {
+  if (libHooked) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const lp = require('./library-priority') as typeof import('./library-priority');
+    libHooked = true;
+    libMuted = lp.isLibraryPlaying();
+    lp.subscribeLibraryPlaying((playing) => {
+      libMuted = playing;
+      const p = player;
+      if (!p || scapePaused) return;
+      if (playing) {
+        rampTo(p, 0, 500, () => {
+          if (!libMuted || player !== p) return;
+          try {
+            p.pause();
+          } catch {}
+        });
+      } else {
+        try {
+          p.play();
+        } catch {}
+        rampTo(p, Math.min(1, level * (currentGain || 1)), 900);
+      }
+    });
+  } catch {
+    /* geen voorrang mogelijk: soundscape speelt zoals vroeger */
+  }
+}
 
 const stopFade = () => {
   if (fade) clearInterval(fade);
@@ -116,6 +153,7 @@ async function localOrRemote(key: string, url: string): Promise<string> {
  *  Wisselen tijdens het spelen doet de oude eerst wegvagen; twee
  *  achtergrondgeluiden die elkaar overlappen is nooit de bedoeling. */
 export async function playScape(key: string | null): Promise<void> {
+  hookLibrary();
   if (key === playingKey) return;
   const scape = soundscapeByKey(key);
   if (!scape) {
@@ -160,8 +198,10 @@ export async function playScape(key: string | null): Promise<void> {
     const p = createAudioPlayer({ uri: src }, { keepAudioSessionActive: true });
     p.loop = true;
     p.volume = 0;
-    p.play();
     player = p;
+    /* Speelt de Audio Library: klaarzetten, niet spelen (zie hookLibrary). */
+    if (libMuted) return;
+    p.play();
     /* Doelsterkte = het gekozen niveau maal de correctie van dít bestand.
        De dertien opnames komen van dertien makers en staan niet op gelijk
        niveau; zonder die correctie klopt geen enkele instelling voor alle
@@ -195,6 +235,7 @@ export function resumeScape(): void {
   const p = player;
   if (!p || !scapePaused) return;
   scapePaused = false;
+  if (libMuted) return;
   try {
     p.play();
   } catch {}

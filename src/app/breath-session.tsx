@@ -123,6 +123,7 @@ import {
   startBackgroundBreathSession,
   stopBackgroundBreathSession,
 } from '../../modules/breath-background';
+import { isLibraryPlaying, useLibraryPlaying } from '@/services/library-priority';
 import {
   onWatchAction as onAppleWatchAction,
   pauseBreathSessionOnWatch,
@@ -1144,6 +1145,10 @@ export function BreathSession() {
     [setVoiceGlobal, setHapticGlobal, setVoiceGenderSetting, setPrefs, prefs, st.key],
   );
   const [voiceOn, setVoiceOnLocal] = useState(voiceDefault);
+  /* Audio-voorrang (19 okt 2026, operator): speelt de Audio Library, dan
+     zwijgen stem en soundscape (breath-voice.ts / soundscape.ts); hier enkel
+     de korte melding. De opgeslagen stem-voorkeur blijft ongemoeid. */
+  const libraryPlaying = useLibraryPlaying();
   /* Één keer overnemen zodra de opgeslagen waarde binnen is; daarna niet meer,
      anders overschrijft een late lading je keuze van dit moment. */
   const tookVoice = useRef(false);
@@ -1905,9 +1910,11 @@ export function BreathSession() {
             secs: p.secs,
           })),
           rounds: effectiveRoundsRef.current,
-          inhaleCueUri: bgUris.inhale,
-          holdCueUri: bgUris.hold,
-          exhaleCueUri: bgUris.exhale,
+          /* Audio-voorrang (19 okt 2026): speelt de Audio Library bij het
+             vergrendelen, dan op slot geen stem — lege URI = stille cue. */
+          inhaleCueUri: isLibraryPlaying() ? '' : bgUris.inhale,
+          holdCueUri: isLibraryPlaying() ? '' : bgUris.hold,
+          exhaleCueUri: isLibraryPlaying() ? '' : bgUris.exhale,
           cueLeadMs: CUE_LEAD_MS,
           startPhaseIdx: idx,
           startRound: roundNow,
@@ -3344,6 +3351,11 @@ export function BreathSession() {
            `audioHapticsStyle`/`audioHapticsVisible`): zichtbaar in de
            wachtstand en tijdens pauze, onzichtbaar tijdens het actieve
            ademen. */}
+        {libraryPlaying && (voiceOn || !!scapeKey) && !done ? (
+          <Text style={s.libraryNote} accessibilityLiveRegion="polite">
+            Voice off while the Audio Library plays
+          </Text>
+        ) : null}
         <Animated.View
           style={[audioHapticsStyle, { alignItems: 'center', marginBottom: 14 }]}
           pointerEvents={!running || paused ? 'auto' : 'none'}
@@ -4992,6 +5004,14 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     fontFamily: BrandFonts.semibold,
     fontSize: 13.5,
     color: 'rgba(255,255,255,0.75)',
+  },
+  /* Audio-voorrang (19 okt 2026): één stille regel, geen waarschuwing. */
+  libraryNote: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   channelRow: {
     flexDirection: 'row',

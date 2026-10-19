@@ -42,6 +42,29 @@ export function isGlassSheetOpen(): boolean {
   return stack.length > 0;
 }
 
+/** Na het sluiten van een blad pas verder (19 okt 2026, operator: "Back op
+ *  /subscribe toonde dezelfde saleskaart opnieuw"). Een blad verdwijnt pas
+ *  in een effect NA de volgende render van zijn scherm — navigeer je meteen,
+ *  dan bevriest dat scherm (achtergrond) vóór het blad weg is, en staat de
+ *  kaart er bij Back nog. Dus: wachten tot het blad echt uit de stapel is
+ *  en de uitgaande animatie (220 ms) voorbij is; vangnet na 500 ms. */
+export function afterGlassSheetClosed(cb: () => void): void {
+  const startLen = stack.length;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    listeners.delete(onEmit);
+    clearTimeout(fallback);
+    setTimeout(cb, 240);
+  };
+  const onEmit = () => {
+    if (stack.length < startLen) finish();
+  };
+  listeners.add(onEmit);
+  const fallback = setTimeout(finish, 500);
+}
+
 /** Toon `children` als sheet zolang `visible` waar is. */
 export function GlassSheet({
   visible,

@@ -119,6 +119,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { hapticTap } from '@/utils/haptics';
+import { useStateFreeStart } from '@/hooks/useStateFreeStart';
+import { FREE_COPY } from '@/constants/free-session-copy';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -253,6 +255,8 @@ function StateCard({
 
 export default function BraceletAgendaScreen() {
   const insets = useSafeAreaInsets();
+  /* Free (operator, 19 okt 2026): de knop zegt vooraf wat er start. */
+  const startKindFor = useStateFreeStart();
   const { plan } = useActiveBraceletPlan();
   const [selected, setSelected] = useState(() => new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -687,8 +691,19 @@ export default function BraceletAgendaScreen() {
                      heet dit overal "Start session", nooit "Try". Dit
                      start bovendien de ECHTE geplande sessie, geen korte
                      proef — "Try" was dus ook inhoudelijk misleidend. */}
-                  <Text style={s.actionPlayTxt}>Start session</Text>
+                  <Text style={s.actionPlayTxt}>
+                    {startKindFor(item.mode) === 'preview'
+                      ? FREE_COPY.previewCta
+                      : startKindFor(item.mode) === 'free-full'
+                        ? FREE_COPY.freeCta
+                        : 'Start session'}
+                  </Text>
                 </Pressable>
+                {startKindFor(item.mode) !== 'full' ? (
+                  <Text style={s.actionFreeNote}>
+                    {startKindFor(item.mode) === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
+                  </Text>
+                ) : null}
                 <Pressable
                   style={s.actionEditBtn}
                   onPress={() => {
@@ -972,6 +987,14 @@ const s = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   actionPlayTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
+  /* Free (19 okt 2026): één kleine regel onder de startknop. */
+  actionFreeNote: {
+    marginTop: 10,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
   actionRemoveBtn: { alignItems: 'center', paddingVertical: 16 },
   actionEditBtn: { alignItems: 'center', paddingVertical: 16 },
   actionEditTxt: { fontFamily: BrandFonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.55)' },

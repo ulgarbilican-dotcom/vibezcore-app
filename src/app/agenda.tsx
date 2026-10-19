@@ -13,6 +13,8 @@
 
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
+import { useBreathFreeStart } from '@/hooks/useBreathFreeStart';
+import { FREE_COPY } from '@/constants/free-session-copy';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { calculateStreak, useBreathHistory, useBreathTotals } from '@/utils/breath-history';
 import { dayKey } from '@/utils/bracelet-history';
@@ -237,6 +239,8 @@ function MonthCell({
 
 export default function AgendaScreen() {
   const insets = useSafeAreaInsets();
+  /* Free (operator, 19 okt 2026): de knop zegt vooraf wat er start. */
+  const startKind = useBreathFreeStart();
   const { onboarding, fromBreathWelcome } = useLocalSearchParams<{
     onboarding?: string;
     fromBreathWelcome?: string;
@@ -1062,8 +1066,19 @@ export default function AgendaScreen() {
                         });
                     }}
                   >
-                    <Text style={s.actionPlayTxt}>Start session</Text>
+                    <Text style={s.actionPlayTxt}>
+                      {startKind === 'preview'
+                        ? FREE_COPY.previewCta
+                        : startKind === 'free-full'
+                          ? FREE_COPY.freeCta
+                          : 'Start session'}
+                    </Text>
                   </AnimatedPressable>
+                  {startKind !== 'full' ? (
+                    <Text style={s.actionFreeNote}>
+                      {startKind === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
+                    </Text>
+                  ) : null}
                   <Pressable
                     style={s.actionEditBtn}
                     onPress={() => {
@@ -1323,6 +1338,14 @@ const s = StyleSheet.create({
   },
   actionPlayTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
   actionEditBtn: { alignItems: 'center', paddingVertical: 16 },
+  /* Free (19 okt 2026): één kleine regel onder de startknop. */
+  actionFreeNote: {
+    marginTop: 10,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
   actionEditTxt: { fontFamily: BrandFonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.55)' },
 
   /* Operator, 20 september 2026 ("grootte pills Edit times en Change

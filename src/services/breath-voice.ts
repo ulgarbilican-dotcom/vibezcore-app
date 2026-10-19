@@ -231,6 +231,30 @@ export type CueVia = 'Nose' | 'Mouth' | 'Left Nostril' | 'Right Nostril' | null;
 
 let voiceEnabled = true;
 
+/* Audio-voorrang (19 okt 2026, operator: "speelt de Audio Library, dan start
+   Breathwork ZONDER stem; start je de bibliotheek tijdens een sessie, dan
+   zwijgt de stem zolang zij speelt"). De voorkeur (`voiceEnabled`) blijft
+   onaangeroerd: stopt de bibliotheek, dan klinkt de volgende zin gewoon.
+   Inline require: audio-player hoort niet in de statische importketen van
+   deze dienst (zie playUrl). */
+let libraryHooked = false;
+function libraryBlocksVoice(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const lp = require('./library-priority') as typeof import('./library-priority');
+    if (!libraryHooked) {
+      libraryHooked = true;
+      /* Start de bibliotheek midden in een zin: die zin meteen stil. */
+      lp.subscribeLibraryPlaying((playing) => {
+        if (playing) stopVoice();
+      });
+    }
+    return lp.isLibraryPlaying();
+  } catch {
+    return false;
+  }
+}
+
 /* Iter v170 (2026-06-28): voice-source ownership. Voorkomt dubbele cues
    wanneer breath-tab sessie loopt EN bracelet active sessie breathwork
    tegelijk activeert. Wie als laatste claimVoiceSource() aanroept "wint"
@@ -382,6 +406,7 @@ export function playBreathCue(
      en in de onboarding. Daarmee valt er niets meer te omzeilen, en zonder
      vlag kan niemand het per ongeluk opnieuw invoeren. */
   if (!voiceEnabled) return;
+  if (libraryBlocksVoice()) return;
   /* Iter v170: silently no-op als er een andere source de voice claimt.
      Voorkomt dat breath-tab cues door bracelet active heen spelen of
      vice versa. Calls zonder source parameter blijven backwards-compat
@@ -413,6 +438,7 @@ export function playBreathCue(
  *  `voiceEnabled`-instelling. */
 export function playUjjayiStartCue(): void {
   if (!voiceEnabled) return;
+  if (libraryBlocksVoice()) return;
   if (nativeVoice()) {
     playUrl(activeUjjayiStartUrl());
     return;
@@ -426,7 +452,7 @@ export function playUjjayiStartCue(): void {
     void (require('./session-keepalive') as typeof import('./session-keepalive'))
       .ensureAudioModeSet()
       .finally(() => {
-        if (voiceEnabled) playUrl(url);
+        if (voiceEnabled && !libraryBlocksVoice()) playUrl(url);
       });
   } catch {
     playUrl(url);
@@ -438,6 +464,7 @@ export function playUjjayiStartCue(): void {
  *  uit die er al stond. Respecteert dezelfde `voiceEnabled`-instelling. */
 export function playEnjoySessionCue(): void {
   if (!voiceEnabled) return;
+  if (libraryBlocksVoice()) return;
   playUrl(activeEnjoySessionUrl());
 }
 
@@ -456,6 +483,7 @@ export function playEnjoySessionCue(): void {
  *  playBreathCue hierboven. */
 export function playCompletionCue(key: BreathKey): void {
   if (!voiceEnabled) return;
+  if (libraryBlocksVoice()) return;
   const url = COMPLETION_URLS[key];
   if (!url) return;
   playUrl(url);

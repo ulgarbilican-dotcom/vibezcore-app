@@ -76,7 +76,8 @@ import {
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { GOALS, MAX_GOALS, type Goal } from '@/data/goals';
 import { bestSlotsForCount, pickStatesForDay, reasonForPick, slotForHour } from '@/utils/day-plan';
-import { getSetting, setSetting, type ExperienceLevel } from '@/utils/settings';
+import { getSetting, setSetting, useSetting, type ExperienceLevel } from '@/utils/settings';
+import { FREE_COPY } from '@/constants/free-session-copy';
 import { levelForTechnique, personalRecommendedMinutes } from '@/utils/breath-level';
 import RhythmRing, { type RhythmRingItem } from '@/components/RhythmRing';
 import { SLOTS } from '@/services/reminders';
@@ -448,6 +449,10 @@ export default function BreathWelcomeScreen() {
   const sub = useSubscription();
   /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
   const isPro = sub.isPro;
+  /* Free (operator, 19 okt 2026): de laatste knop zegt vooraf wat er start —
+     de ene gratis volledige sessie, of (al gebruikt, bv. "Watch the intro
+     again") de preview van 30 s. */
+  const [freeSessionUsedAt] = useSetting('breathFreeSessionUsedAt');
 
   /* Zeven stappen, niet acht (operator, 7 september 2026): Bracelet-intro
      en "How it works" zijn samengevoegd tot ÉÉN lichte pagina (mockup) —
@@ -1209,7 +1214,9 @@ export default function BreathWelcomeScreen() {
   const ctaLabel = isLast
     ? isPro
       ? 'Start My Session'
-      : 'Start My First Session'
+      : freeSessionUsedAt
+        ? FREE_COPY.previewCta
+        : FREE_COPY.freeCta
     : slide === 0
       ? 'Personalize My First Session'
       : slide === TOTAL - 2
@@ -1542,6 +1549,11 @@ export default function BreathWelcomeScreen() {
           )}
         </Pressable>
         </Animated.View>
+        {isLast && !isPro ? (
+          <Text style={s.ctaFreeNote}>
+            {freeSessionUsedAt ? FREE_COPY.previewLine : FREE_COPY.freeLine}
+          </Text>
+        ) : null}
       </View>
       </SafeAreaView>
 
@@ -4522,6 +4534,15 @@ const s = StyleSheet.create({
      oude lichte-achtergrond-thema — nu de foto donker en full-bleed is,
      gaf die band juist een storende witte streep. Weg. */
   ctaWrap: { borderRadius: 14, overflow: 'hidden' },
+  /* Free (19 okt 2026): één kleine regel onder de laatste knop. De footer
+     heeft al gap 18 — met -8 staat hij dicht bij de knop. */
+  ctaFreeNote: {
+    marginTop: -8,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+  },
   /* Operator, 22 september 2026 ("shimmer werkt slecht, kijk naar welcome
      in breathwork, exact hetzelfde doen"): miste `flexDirection: 'row'`
      (RN's default is 'column') — dat verschil met (tabs)/breath.tsx se

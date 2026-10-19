@@ -67,6 +67,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { useBreathFreeStart } from '@/hooks/useBreathFreeStart';
+import { FREE_COPY } from '@/constants/free-session-copy';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -93,6 +95,8 @@ export default function BreathQuizScreen() {
   const sub = useSubscription();
   /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
   const isPro = sub.isPro;
+  /* Free (operator, 19 okt 2026): de laatste knop zegt vooraf wat er start. */
+  const startKind = useBreathFreeStart();
 
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useSetting('profile');
@@ -435,9 +439,20 @@ export default function BreathQuizScreen() {
           android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
         >
           <Text style={s.ctaTxt}>
-            {isResult ? 'START YOUR FIRST SESSION' : 'CONTINUE'}
+            {isResult
+              ? isPro || startKind === 'full'
+                ? 'START YOUR FIRST SESSION'
+                : startKind === 'preview'
+                  ? FREE_COPY.previewCta
+                  : FREE_COPY.freeCta
+              : 'CONTINUE'}
           </Text>
         </AnimatedPressable>
+        {isResult && !isPro && startKind !== 'full' ? (
+          <Text style={s.ctaFreeNote}>
+            {startKind === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
+          </Text>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -647,5 +662,13 @@ const s = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 1.2,
     color: '#0a0a0a',
+  },
+  /* Free (19 okt 2026): één kleine regel onder de knop. */
+  ctaFreeNote: {
+    marginTop: 10,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
   },
 });

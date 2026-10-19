@@ -317,10 +317,11 @@ export default function PlayerScreen() {
        naar /subscribe (tier picker) — consistent met "Add Audio Library"
        CTA in account.tsx:379. Copy zei "Add Audio Library" maar knop
        ging vroeger naar homepage-pricing → mismatch. */
-    if (isBraceletOwner && !realIsPro && !isBundleUser) {
-      router.navigate('/subscribe?returnTo=audio' as never);
-      return;
-    }
+    /* Operator, 19 okt 2026 ("Back op /subscribe toonde dezelfde saleskaart
+       opnieuw"): ook voor bracelet-eigenaars eerst de speler (met de kaart)
+       sluiten en via de Library naar /subscribe — zoals hieronder — i.p.v.
+       /subscribe bovenop de speler waar de kaart nog openstond. Zelfde
+       bestemming (/subscribe?returnTo=audio, zie (tabs)/index.tsx 'pricing'). */
     requestScrollTo('pricing');
     /* Deze knop wil altijd de Audio Library-pricing tonen, ongeacht
        vanaf welk scherm je in de player kwam — dismissTo blijft hier dus

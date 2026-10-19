@@ -1187,6 +1187,16 @@ export function getSnapshot(): PlayerState {
   return state;
 }
 
+/** Non-React luisteraar op elke state-wijziging (zelfde tik als de hook).
+ *  19 okt 2026 (operator, audio-voorrang): library-priority.ts volgt hiermee
+ *  of de bibliotheek speelt. Returnt een afmeld-functie. */
+export function subscribePlayerState(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 /**
  * Subscribe op session-finish-events (didJustFinish van expo-audio).
  * Callback ontvangt de SessionInfo van de zojuist afgespeelde track.

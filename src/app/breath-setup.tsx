@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { FREE_COPY } from '@/constants/free-session-copy';
 import BalancedText from '@/components/BalancedText';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -1380,6 +1381,10 @@ export default function BreathSetupScreen() {
   const [freeSessionUsedAt] = useSetting('breathFreeSessionUsedAt');
   const [testFullSessions] = useSetting('testFullSessions');
   const locked = !sub.isPro && !!freeSessionUsedAt && !(__DEV__ && testFullSessions);
+  /* Operator, 19 okt 2026 ("free kondigt de preview ALTIJD vooraf aan"): nog
+     geen gratis sessie gebruikt → de start hieronder claimt de ene gratis
+     volledige sessie (claimFreeSessionParam), en dat zeggen we vooraf. */
+  const freeFullAvailable = !sub.isPro && !sub.isLoading && !freeSessionUsedAt && !(__DEV__ && testFullSessions);
 
   const [techIdx, setTechIdx] = useState(() => {
     if (params.technique) {
@@ -3187,10 +3192,17 @@ export default function BreathSetupScreen() {
             {isAddToDay
               ? `Add to ${SLOT_LABEL[slotForTime]}`
               : locked
-                ? 'Try 30 seconds free'
-                : 'Start session'}
+                ? FREE_COPY.previewCta
+                : freeFullAvailable
+                  ? FREE_COPY.freeCta
+                  : 'Start session'}
           </Text>
         </AnimatedPressable>
+        {!isAddToDay && (locked || freeFullAvailable) ? (
+          <Text style={[s.ctaNote, light && { color: 'rgba(29,29,31,0.6)' }]}>
+            {locked ? FREE_COPY.previewLine : FREE_COPY.freeLine}
+          </Text>
+        ) : null}
       </View>
 
       {/* Operator, 24 september 2026 (pasted Apple sheets-referentie, zelfde
@@ -4835,6 +4847,14 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     justifyContent: 'center',
   },
   ctaDisabled: CTA.disabled,
+  /* Free (19 okt 2026): één kleine regel onder de knop. */
+  ctaNote: {
+    marginTop: 10,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
   /* Operator, 11 september 2026: exacte specificatie — 16px (was 14px). */
   ctaTxt: {
     fontFamily: BrandFonts.semibold,

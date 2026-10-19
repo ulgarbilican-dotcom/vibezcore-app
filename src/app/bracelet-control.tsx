@@ -40,6 +40,8 @@ import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings'
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 import { setStateHear, useStateHear } from '@/services/state-sound-pref';
+import { useLibraryPlaying } from '@/services/library-priority';
+import { FREE_COPY } from '@/constants/free-session-copy';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
@@ -1474,8 +1476,10 @@ function TrialSheet({
         <BalancedText style={s.quickSheetLine}>30 seconds of this rhythm on your phone and paired watch.</BalancedText>
         <BalancedText style={s.quickSheetNote}>Starts at your resting heart rate, like a real session.</BalancedText>
         <PressScale style={s.quickSheetCta} haptic scaleTo={0.97} onPress={onStartPreview} accessibilityRole="button">
-          <Text style={s.quickSheetCtaTxt}>Start preview</Text>
+          <Text style={s.quickSheetCtaTxt}>{FREE_COPY.previewCta}</Text>
         </PressScale>
+        {/* Free (operator, 19 okt 2026): één regel onder de knop. */}
+        <Text style={s.freeCtaNote}>{FREE_COPY.previewLine}</Text>
         <PressScale onPress={onUnlock} style={s.quickSheetBack} accessibilityRole="button">
           <Text style={s.quickSheetBackTxt}>Unlock all sessions</Text>
         </PressScale>
@@ -1502,10 +1506,13 @@ function QuickSessionSheet({
   which,
   onClose,
   onStart,
+  isFreeFull,
 }: {
   which: 'chill' | 'boost' | null;
   onClose: () => void;
   onStart: (q: (typeof QUICK_SESSIONS)[number]) => void;
+  /** Is dit de ene gratis volledige sessie (Free)? (19 okt 2026) */
+  isFreeFull?: (m: BraceletMode) => boolean;
 }) {
   const insets = useSafeAreaInsets();
   /* Laatste inhoud vasthouden tijdens de uitschuif-animatie. */
@@ -1545,8 +1552,9 @@ function QuickSessionSheet({
           accessibilityRole="button"
           accessibilityLabel={`Start ${q.label}`}
         >
-          <Text style={s.quickSheetCtaTxt}>Start</Text>
+          <Text style={s.quickSheetCtaTxt}>{isFreeFull?.(q.mode) ? FREE_COPY.freeCta : 'Start'}</Text>
         </PressScale>
+        {isFreeFull?.(q.mode) ? <Text style={s.freeCtaNote}>{FREE_COPY.freeLine}</Text> : null}
         {/* Actieblad → geen "Back" (protocol, 9 okt 2026). */}
       </View>
     </GlassSheet>
@@ -2188,13 +2196,20 @@ function DrainingCircle({
      toestand, i.p.v. een bijna volle kleurvulling. Het zakkende peil blijft
      zichtbaar door de twee lagen en de rand. */
   const look = breathWaveLook(color);
+  /* Operator, 19 okt 2026 ("buitenring niet overal gelijk", Boost): de rand
+     zat IN de geknipte cirkel (overflow hidden + borderRadius) — Android
+     knipt zonder anti-aliasing, dus de rand werd op de schuine stukken
+     hoekig en dunner. Nu de rand als eigen laag BOVEN de geknipte vulling;
+     samen in één vak van size×size, zodat HeartbeatScale beide meeschaalt. */
   return (
-    <View style={[s.drainOuter, { width: size, height: size, borderRadius: size / 2 }]}>
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { borderRadius: size / 2, backgroundColor: '#0a0a0a' }]}
-      />
-      <LiquidWave size={size} level={1 - clamped} motion="drain" {...look} />
+    <View pointerEvents="box-none" style={{ position: 'absolute', width: size, height: size }}>
+      <View style={[s.drainOuter, { top: 0, left: 0, width: size, height: size, borderRadius: size / 2 }]}>
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { borderRadius: size / 2, backgroundColor: '#0a0a0a' }]}
+        />
+        <LiquidWave size={size} level={1 - clamped} motion="drain" {...look} />
+      </View>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill} pointerEvents="none">
         <Circle
           cx={size / 2}
@@ -2220,6 +2235,11 @@ function DrainingCircle({
    SlowAmbientPulse (de losse ronddraaiende boog om de ring) is volledig
    verwijderd — DrainingCircle's eigen outline-stroke (zie die component)
    markeert de rand nu, geen tweede, roterend element meer nodig. */
+/* Operator, 19 okt 2026 ("de onderkant van de ring ziet er anders uit"):
+   Android `elevation` tekent een schaduw die naar ONDER valt — de gloed was
+   daardoor onderaan zwaarder dan bovenaan. De schaduw-gloed nu enkel op iOS
+   (rondom gelijk); Android houdt het egale, zachte kleurvlak zonder
+   elevation. */
 function RingAmbientGlow({ color, size }: { color: string; size: number }) {
   return (
     <View
@@ -2231,11 +2251,14 @@ function RingAmbientGlow({ color, size }: { color: string; size: number }) {
         borderRadius: size / 2,
         backgroundColor: color,
         opacity: 0.28,
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
-        shadowRadius: 50,
-        elevation: 14,
+        ...(Platform.OS === 'ios'
+          ? {
+              shadowColor: color,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.9,
+              shadowRadius: 50,
+            }
+          : null),
       }}
     />
   );
@@ -2475,7 +2498,16 @@ function DurationRing({
      verschil is dat HERO_SIZE/HERO_STROKE daar module-constanten zijn,
      hier de `size`/`stroke`-props van deze herbruikbare component. */
   const shimmer = useSharedValue(-1);
+  /* Operator, 19 okt 2026 (Boost, in de preview: "de buitenring is niet
+     overal gelijk"): tijdens een preview of lopende sessie (teller in de
+     ring) GEEN flits-sweep — de ring blijft overal egaal. */
+  const sweepOff = !!clockOverride;
   useEffect(() => {
+    if (sweepOff) {
+      cancelAnimation(shimmer);
+      shimmer.value = -1;
+      return undefined;
+    }
     shimmer.value = withRepeat(
       withSequence(
         withTiming(-1, { duration: 0 }),
@@ -2486,7 +2518,8 @@ function DurationRing({
       false,
     );
     return () => cancelAnimation(shimmer);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sweepOff]);
   const shineStyle = useAnimatedStyle(() => ({
     opacity: interpolate(shimmer.value, [-1, -0.85, 0.55, 1], [0, 1, 1, 0], Extrapolation.CLAMP),
     transform: [{ translateX: shimmer.value * size * 0.75 }, { rotate: '45deg' }],
@@ -2532,14 +2565,16 @@ function DurationRing({
          bij `shimmer`. MOET vóór de golf-vulling komen: anders tekent de
          effen punch-cirkel bovenop de golven en verdwijnen die. */}
       <View style={shineMaskStyle} pointerEvents="none">
-        <ReanimatedAnimated.View style={[shineStripStyle, shineStyle]}>
-          <LinearGradient
-            colors={['#ffffff00', dark ? '#EAF2FF99' : '#E5F0FFCC', '#ffffff00']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </ReanimatedAnimated.View>
+        {sweepOff ? null : (
+          <ReanimatedAnimated.View style={[shineStripStyle, shineStyle]}>
+            <LinearGradient
+              colors={['#ffffff00', dark ? '#EAF2FF99' : '#E5F0FFCC', '#ffffff00']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </ReanimatedAnimated.View>
+        )}
         <View style={shinePunchStyle} />
       </View>
       {/* Golf-vulling — los van de ring-rand, binnenin, altijd rond
@@ -3290,6 +3325,8 @@ function ActiveSessionScreen({
   onMinimize,
 }: ActiveSessionScreenProps) {
   const [avOpen, setAvOpen] = useState(false);
+  const sessionLibraryPlaying = useLibraryPlaying();
+  const sessionHear = useStateHear();
   const isPushedRoute = usePathname() === '/bracelet-control';
   /* Volledig scherm, geen tabbalk (operator, 5 okt 2026) — de tab-indeling
      leest dit via utils/state-control-ui.ts. */
@@ -3622,6 +3659,13 @@ function ActiveSessionScreen({
            SESSION als rustige tekst eronder (een stop is onomkeerbaar, dus
            niet de knop die opvalt). Wat de knoppen doen is ongewijzigd. */}
         <View style={s.sessionControlColumn}>
+          {/* Audio-voorrang (19 okt 2026, operator): speelt de Audio Library,
+              dan geen hartslaggeluid — haptiek en beeld lopen door. */}
+          {sessionLibraryPlaying && sessionHear ? (
+            <Text style={s.libraryNote} accessibilityLiveRegion="polite">
+              Sound off while the Audio Library plays
+            </Text>
+          ) : null}
           {/* Operator, 10 okt 2026: zelfde protocol als de ademsessie — één
               pil boven de play-knop, opent een glazen blad met de keuze
               Haptic / Haptic + Audio. */}
@@ -3961,6 +4005,10 @@ function IdleScreen({
      geen duur-greep, tik = terug naar de sessie. Andere toestanden
      bekijken en wisselen (met bevestiging, 5 okt 2026) blijft zoals het was. */
   const viewingRunning = sessionRunning && runSnap.mode === selectedMode;
+  /* Audio-voorrang (19 okt 2026): melding in de preview als de Audio Library
+     het hartslaggeluid stil houdt. */
+  const libraryPlaying = useLibraryPlaying();
+  const hear = useStateHear();
   const runRem = Math.max(0, Math.floor(runSnap.remainingSec));
   /* Altijd de tijd; "Paused" staat al in het balkje eronder. */
   const runClock = `${Math.floor(runRem / 60)}:${String(runRem % 60).padStart(2, '0')}`;
@@ -4109,13 +4157,19 @@ function IdleScreen({
               {/* Audit 10 okt 2026 (operator: "akkoord"): dezelfde
                  kalenderknop als rechtsboven in Breathwork — met een plan
                  rechtstreeks naar de agenda, anders eerst je dag bouwen. */}
+              {/* Tijdens de preview zit Audio & Haptics als pil boven "End
+                  Preview" (operator, 19 okt 2026) — hier dan niet dubbel.
+                  Plaats blijft, niets verschuift. */}
               <Pressable
                 onPress={() => {
                   hapticTap();
                   setHapticsOpen(true);
                 }}
+                disabled={trialRunning}
                 hitSlop={12}
-                style={{ marginRight: 18 }}
+                style={{ marginRight: 18, opacity: trialRunning ? 0 : 1 }}
+                accessibilityElementsHidden={trialRunning}
+                importantForAccessibility={trialRunning ? 'no-hide-descendants' : 'auto'}
                 accessibilityLabel="Audio and haptics, vibration strength"
               >
                 <Vibrate size={20} color={idleDark ? 'rgba(255,255,255,0.85)' : C.text} strokeWidth={2} />
@@ -4412,6 +4466,34 @@ function IdleScreen({
            kleur). `PrimaryCtaButton` = dezelfde haptiek+press-scale-
            wrapper als het Connect/Retry-scherm hierboven in dit bestand,
            voor consistentie binnen bracelet-control.tsx zelf. */}
+        {/* Preview (operator, 19 okt 2026): zoals een lopende sessie de pil
+            "Audio & Haptics" direct BOVEN de enige knop "End Preview" — geen
+            pauze. Wisselen werkt meteen in de lopende preview (sterkte:
+            bracelet-haptics.ts, geluid: state-sound-pref.ts). */}
+        {trialRunning && startLocked && !sessionRunning ? (
+          <View style={{ alignItems: 'center' }}>
+            {libraryPlaying && hear ? (
+              <Text style={s.libraryNote} accessibilityLiveRegion="polite">
+                Sound off while the Audio Library plays
+              </Text>
+            ) : null}
+            <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={s.avBar}>
+              <Pressable
+                onPress={() => {
+                  hapticTap();
+                  setHapticsOpen(true);
+                }}
+                style={({ pressed }) => [s.avBarInner, pressed && { opacity: 0.7 }]}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Audio and haptics"
+              >
+                <SlidersHorizontal size={16} color="rgba(255,255,255,0.75)" strokeWidth={2} />
+                <Text style={s.avBarTxt}>Audio & Haptics</Text>
+              </Pressable>
+            </BlurView>
+          </View>
+        ) : null}
         {sessionRunning && runSnap.mode === selectedMode ? (
           <RunningSessionBar onPress={onReturnToSession} />
         ) : sessionRunning ? (
@@ -4436,25 +4518,31 @@ function IdleScreen({
             accessibilityLabel={
               startLocked
                 ? trialRunning
-                  ? 'Stop the preview'
-                  : `Try ${meta.name} free for 30 seconds`
-                : `Start ${meta.name} session`
+                  ? 'End the preview'
+                  : `Start a 30-second preview of ${meta.name}`
+                : freeSession
+                  ? `Start your free ${meta.name} session`
+                  : `Start ${meta.name} session`
             }
           >
             {busy ? (
               <ActivityIndicator color="#1D1D1F" />
             ) : startLocked ? (
               <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>
-                {trialRunning ? 'Stop preview' : 'Try 30 seconds free'}
+                {trialRunning ? 'End Preview' : FREE_COPY.previewCta}
               </Text>
+            ) : freeSession ? (
+              <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>{FREE_COPY.freeCta}</Text>
             ) : (
               <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Start {meta.name}</Text>
             )}
           </PrimaryCtaButton>
         )}
+        {/* Free (operator, 19 okt 2026): vóór de start altijd zeggen wat er
+            volgt — de ene gratis volledige sessie, of de preview van 30 s. */}
         {freeSession && !sessionRunning ? (
           <View style={s.trialInfo}>
-            <Text style={s.trialInfoTxt}>Your first full session is free</Text>
+            <Text style={s.trialInfoTxt}>{FREE_COPY.freeLine}</Text>
           </View>
         ) : null}
         {/* Gratis (operator, 7 okt 2026: "alles opgepropt"): de uitleg en
@@ -4465,6 +4553,8 @@ function IdleScreen({
           <View style={s.trialInfo}>
             {trialRunning && condensedMinutes !== null ? (
               <Text style={s.trialInfoTxt}>{'Sped up for the preview.\nA full session slows down gradually.'}</Text>
+            ) : !trialRunning ? (
+              <Text style={s.trialInfoTxt}>{FREE_COPY.previewLine}</Text>
             ) : null}
           </View>
         ) : null}
@@ -4554,6 +4644,7 @@ function IdleScreen({
       <QuickSessionSheet
         which={quickOpen}
         onClose={() => setQuickOpen(null)}
+        isFreeFull={(m) => !fullAccess && !startLocked && !(isModeLocked?.(m) ?? false)}
         onStart={(q) => {
           setQuickOpen(null);
           if (startLocked) {
@@ -6537,6 +6628,22 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   avBarTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: 'rgba(255,255,255,0.75)' },
+  /* Free (19 okt 2026): één kleine regel onder de knop in een blad. */
+  freeCtaNote: {
+    marginTop: 10,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
+  /* Audio-voorrang (19 okt 2026): één stille regel boven de pil. */
+  libraryNote: {
+    fontFamily: BrandFonts.medium,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   avSheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

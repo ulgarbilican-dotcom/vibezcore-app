@@ -31,7 +31,8 @@ import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { Brand, BrandFonts } from '@/constants/theme';
-import { claimFreeSessionParam } from '@/utils/breath-entry';
+import { useSubscription } from '@/hooks/useSubscription';
+import { FREE_COPY } from '@/constants/free-session-copy';
 import {
   INSTANT_SITUATIONS,
   pickInstantDuration,
@@ -132,6 +133,10 @@ export default function FeelNowScreen() {
      zelf leest. */
   const [infoFor, setInfoFor] = useState<InstantSituation | null>(null);
   const insets = useSafeAreaInsets();
+  /* Free (operator, 19 okt 2026): een Instant Session is voor Free altijd
+     de preview van 30 s — vooraf gezegd, onder de keuzes. */
+  const sub = useSubscription();
+  const showFreeLine = !sub.isLoading && !sub.isPro;
 
   const closeScale = useSharedValue(1);
   const closeStyle = useAnimatedStyle(() => ({ transform: [{ scale: closeScale.value }] }));
@@ -149,8 +154,12 @@ export default function FeelNowScreen() {
       const technique = pickInstantTechnique(st, situation);
       const duration = pickInstantDuration(st, technique, situation);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      /* Operator, 19 okt 2026: Instant Sessions verbruiken de ENE gratis
+         volledige ademsessie niet meer (was `...claimFreeSessionParam()`) —
+         die blijft voor de eerste sessie van de Breathwork-onboarding. Free
+         krijgt hier dus altijd de preview (instant=1 → 30 s, zachte pauze,
+         paywall; zie breath-session.tsx). */
       openBreathSession({
-          ...claimFreeSessionParam(),
           state: st.key,
           technique: technique.key,
           minutes: String(duration.minutes),
@@ -238,6 +247,7 @@ export default function FeelNowScreen() {
               );
             })}
           </View>
+          {showFreeLine ? <Text style={s.freeLine}>{FREE_COPY.feelNowLine}</Text> : null}
           <BalancedText style={s.hint}>Long press any option to see why it helps</BalancedText>
         </ScrollView>
       )}
@@ -486,6 +496,14 @@ const s = StyleSheet.create({
     color: '#ffffff',
   },
   listSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 50 },
+  /* Free (19 okt 2026): één kleine regel onder de keuzes. */
+  freeLine: {
+    marginTop: 16,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
   hint: {
     marginTop: 14,
     fontFamily: BrandFonts.medium,

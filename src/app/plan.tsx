@@ -55,6 +55,8 @@ import {
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { openBreathSession } from '@/services/breath-session-host';
 import { claimFreeSessionParam, skipBreathIntroOnce } from '@/utils/breath-entry';
+import { useBreathFreeStart } from '@/hooks/useBreathFreeStart';
+import { FREE_COPY } from '@/constants/free-session-copy';
 import { BlurView } from 'expo-blur';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -170,6 +172,9 @@ export default function PlanScreen() {
      Een vaste marge onderaan werkt niet — die is op het ene toestel te klein
      en op het andere een gat. */
   const insets = useSafeAreaInsets();
+  /* Free (operator, 19 okt 2026): vooraf zeggen wat een tik op een kaart
+     start — de ene gratis volledige sessie, of de preview van 30 s. */
+  const startKind = useBreathFreeStart();
   const { onboarding, fromBreathWelcome } = useLocalSearchParams<{
     onboarding?: string;
     fromBreathWelcome?: string;
@@ -698,6 +703,11 @@ export default function PlanScreen() {
             fmtTime={fmtTime}
           />
         ))}
+        {items.length > 0 && startKind !== 'full' ? (
+          <Text style={s.freeNote}>
+            {startKind === 'preview' ? FREE_COPY.feelNowLine : FREE_COPY.freeLine}
+          </Text>
+        ) : null}
 
         {/* "Explore all modes" alleen buiten de protocol-flow (operator, 13
             augustus 2026: "op deze pagina hoeft er geen knop met alle modes
@@ -1460,6 +1470,15 @@ const s = StyleSheet.create({
     borderColor: 'rgba(110,133,196,0.35)',
     backgroundColor: 'rgba(110,133,196,0.10)',
     marginBottom: 14,
+  },
+  /* Free (19 okt 2026): één kleine regel onder de kaarten. */
+  freeNote: {
+    marginTop: 4,
+    marginBottom: 8,
+    fontFamily: BrandFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
   },
   confirmTxt: {
     fontFamily: BrandFonts.semibold,

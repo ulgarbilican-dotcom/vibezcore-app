@@ -1379,8 +1379,10 @@ export default function SubscribeScreen() {
           headerLeft: () => <HeaderBackButton />,
         }}
       />
+      {/* Operator, 19 okt 2026: ook hier onderaan systeemrand + 24, zoals
+          de plankeuze hierboven. */}
       <KeyboardAwareScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPadding }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}

@@ -95,14 +95,23 @@ import {
   prepareHeartbeatSounds,
   startSessionBeats,
   stopSessionBeats,
+  type BeatPlan,
 } from '../../modules/session-audio';
-import { getStateHear } from './state-sound-pref';
+import { getStateHear, getStateHearNow, subscribeStateHear } from './state-sound-pref';
+import { isLibraryPlaying, subscribeLibraryPlaying } from './library-priority';
 import { endLiveSession, showLiveSession } from '../../modules/live-activity';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { AppState, Platform } from 'react-native';
 import { startSessionKeepAlive, stopSessionKeepAlive } from './session-keepalive';
 import { getSetting, setSetting } from '@/utils/settings';
-import { STATE_AMP_FACTOR, STATE_MS_FACTOR, WATCH_HAPTIC_LEVEL, getHapticStrength, type HapticStrength } from './haptic-strength-pref';
+import {
+  STATE_AMP_FACTOR,
+  STATE_MS_FACTOR,
+  WATCH_HAPTIC_LEVEL,
+  getHapticStrength,
+  subscribeHapticStrength,
+  type HapticStrength,
+} from './haptic-strength-pref';
 
 /** Sterkte voor de curve die NU speelt. De onboarding-proef speelt altijd
  *  Strong (operator 19 okt 2026: te zacht), zonder de keuze van de
@@ -549,7 +558,9 @@ function playIos(
   clock: SessionClock | undefined,
   silent: boolean,
 ): void {
-  const withSound = !!clock && getStateHear() && heartbeatSoundAllowed();
+  /* Audio-voorrang (19 okt 2026): speelt de Audio Library, dan geen
+     hartslaggeluid — haptiek en beeld lopen gewoon. */
+  const withSound = !!clock && getStateHear() && heartbeatSoundAllowed() && !isLibraryPlaying();
   const firstAt = Date.now() + IOS_FIRST_BEAT_MS;
   lastAnchorWallMs = firstAt;
   const lub = tapFor(strengthStyle(spec.lubStyle));
@@ -573,6 +584,7 @@ function playIos(
     dubSharpness: dub.sharpness,
   };
   const myGeneration = generation;
+  lastIosPlan = { plan, generation: myGeneration, clocked: !!clock };
   if (withSound) {
     /* Geluiden nog niet geladen: de motor start iets later, maar op
        hetzelfde rooster (hij slaat de slagen over die al voorbij zijn). */
@@ -587,6 +599,40 @@ function playIos(
     !clock && totalSec !== undefined ? firstAt + totalSec * 1000 : Infinity,
   );
 }
+
+/* iPhone: het laatst aan de geluidsmotor gegeven plan (19 okt 2026). De motor
+   kent geen "geluid aan/uit" midden in een plan; hetzelfde plan opnieuw geven
+   met een andere `sound` herrekent vanaf de eerste slag die nog moet komen,
+   op hetzelfde rooster — geen sprong in ritme of beeld. */
+let lastIosPlan: { plan: BeatPlan; generation: number; clocked: boolean } | null = null;
+
+/** Audio-voorrang + Haptic/Haptic + Audio live (19 okt 2026, operator: "start
+ *  je de Audio Library tijdens een sessie, dan zwijgt de hartslag; wisselen in
+ *  Audio & Haptics werkt meteen"): het lopende iPhone-plan met de juiste
+ *  geluidsstand opnieuw inplannen. Android regelt dit in de trildienst
+ *  (state-sound-pref.ts), de JS-weg in heartbeat-sound.ts. */
+function refreshIosBeatSound(): void {
+  if (Platform.OS !== 'ios' || !lastIosPlan) return;
+  const cur = lastIosPlan;
+  if (cur.generation !== generation) return;
+  if (cur.plan.endAtMs > 0 && Date.now() >= cur.plan.endAtMs) return;
+  const want = cur.clocked && getStateHearNow() && heartbeatSoundAllowed();
+  if (want === cur.plan.sound) return;
+  const next: BeatPlan = { ...cur.plan, sound: want };
+  lastIosPlan = { ...cur, plan: next };
+  if (want) {
+    void prepareHeartbeatSounds().then(() => {
+      if (cur.generation === generation) startSessionBeats(next);
+    });
+  } else if (next.haptics) {
+    startSessionBeats(next);
+  } else {
+    /* Het horloge trilt (stil plan): zonder geluid valt er niets te spelen. */
+    stopSessionBeats();
+  }
+}
+subscribeLibraryPlaying(() => refreshIosBeatSound());
+subscribeStateHear(() => refreshIosBeatSound());
 
 /* ── Gemeenschappelijk ───────────────────────────────────────────────── */
 
@@ -661,7 +707,9 @@ function play(
          Hear: de service speelt het hartslaggeluid zelf, op elke tik. */
       /* Ook als het horloge de trilling overneemt (silent): het geluid blijft
          hier (13 okt 2026, zie watchStrength). */
-      setNativeSessionSound(getStateHear());
+      /* Audio-voorrang (19 okt 2026): niet terwijl de Audio Library speelt;
+         state-sound-pref.ts zet het weer aan zodra ze stopt. */
+      setNativeSessionSound(getStateHearNow());
       startNativeSession(
         timings,
         amplitudes,
@@ -750,6 +798,7 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
      die opruiming slaat over zodra er intussen iets anders speelt (19 okt 2026).
      De Live Activity niet weghalen: die is nu van de sessie. */
   endIosPreviewKeepers();
+  previewRun = null;
   const now = Date.now();
   if (!session || session.mode !== mode || elapsedSec < session.curveZeroSec) {
     session = {
@@ -1039,12 +1088,15 @@ export function previewCondensedRampMinutes(mode: BraceletMode): number | null {
 }
 
 /** "Feel it"-preview: zelfde verloop, ingekort tot PREVIEW_MAX_SECONDS. */
-export function playModePreviewHaptic(mode: BraceletMode): void {
+export function playModePreviewHaptic(mode: BraceletMode, fromSec = 0): void {
   session = null;
+  const from = Math.max(0, Math.min(PREVIEW_MAX_SECONDS, fromSec));
+  const left = PREVIEW_MAX_SECONDS - from;
   /* Via de trildienst, net als een echte sessie (operator, 17 okt 2026:
      "op het vergrendelscherm zie ik niets"): media-kaart met naam en
      aftellende tijd, loopt door op slot, geluid op elke slag in de dienst. */
-  play(mode, previewTiming(mode), 0, PREVIEW_MAX_SECONDS, { elapsedSec: 0, totalSec: PREVIEW_MAX_SECONDS, preview: true });
+  play(mode, previewTiming(mode), from, left, { elapsedSec: from, totalSec: PREVIEW_MAX_SECONDS, preview: true });
+  previewRun = { mode, startedAt: Date.now() - from * 1000 };
   /* Eindig: na de voorproef stopt ook het beeld (en op toestellen zonder
      native module de JS-tikken). De native curve is zelf al eindig en
      speelt nog het eind-signaal uit. */
@@ -1054,13 +1106,28 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
       if (myGeneration !== generation) return;
       generation += 1;
       clearPending();
+      previewRun = null;
       if (!hasNativeWaveform()) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
       endIosPreviewSurface();
-    }, PREVIEW_MAX_SECONDS * 1000),
+    }, left * 1000),
   );
 }
+
+/* Sterkte gewijzigd tijdens de 30 s-voorproef (19 okt 2026, operator: "Audio
+   & Haptics tijdens de preview past meteen toe"): zelfde plek in de curve,
+   nieuwe sterkte — telefoon én horloge. Een echte sessie doet dit via
+   bracelet-session-monitor.ts. */
+let previewRun: { mode: BraceletMode; startedAt: number } | null = null;
+subscribeHapticStrength(() => {
+  const run = previewRun;
+  if (!run || session) return;
+  const elapsed = (Date.now() - run.startedAt) / 1000;
+  if (elapsed >= PREVIEW_MAX_SECONDS - 1) return;
+  playModePreviewHaptic(run.mode, elapsed);
+  if (previewOnWatch) sendPreviewToWatch(run.mode, elapsed);
+});
 
 /** "Try 30 seconds free" op het State Control-keuzescherm (operator, 7 okt
  *  2026): dezelfde ingekorte voorproef als "Feel it", maar ook op een
@@ -1161,6 +1228,12 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
   }
   playModePreviewHaptic(mode);
   startIosPreviewSurface(mode);
+  sendPreviewToWatch(mode, 0);
+}
+
+/** De voorproef naar een gekoppeld horloge, vanaf `offsetSec` in de curve
+ *  (0 = begin; > 0 = herstart na een sterktewissel, 19 okt 2026). */
+function sendPreviewToWatch(mode: BraceletMode, offsetSec: number): void {
   if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode);
   const meta = getModeMeta(mode);
@@ -1171,8 +1244,8 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
     targetBpm: spec.targetBpm,
     holdSec: previewTiming(mode).holdSec,
     rampSec: previewTiming(mode).rampSec,
-    curveOffsetSec: 0,
-    remainingSec: PREVIEW_MAX_SECONDS,
+    curveOffsetSec: Math.round(offsetSec * 10) / 10,
+    remainingSec: Math.round((PREVIEW_MAX_SECONDS - offsetSec) * 10) / 10,
     ...watchStrength(spec),
     strength: getHapticStrength(),
     /* Het moment dat de eerste tik op de telefoon voelbaar is. De
@@ -1211,6 +1284,7 @@ export function stopModePreviewHaptic(): void {
   generation += 1;
   clearPending();
   endIosPreviewSurface();
+  previewRun = null;
   if (jsSoundOn) {
     jsSoundOn = false;
     stopHeartbeatSound('state-control');

@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
 import MembershipPlans from '@/components/MembershipPlans';
 import VibezGlass from '@/components/VibezGlass';
-import { GlassSheet } from '@/components/GlassSheetHost';
+import { GlassSheet, afterGlassSheetClosed } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { restorePurchases } from '@/services/restore-purchases';
@@ -102,7 +102,10 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
     /* In hetzelfde venster als de app (GlassSheetHost), zodat het glas op
        Android echt vervaagt wat erachter ligt — een Modal kan dat niet. */
     <GlassSheet visible={visible} onClose={onClose}>
-        <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+        {/* Operator, 19 okt 2026: helemaal onderaan zaten Terms of Use /
+            Privacy te dicht tegen de rand — de ruimte zit nu ONDERAAN de
+            scrollinhoud: systeemrand + 24 (vaste app-marge). */}
+        <View style={s.sheet}>
           <VibezGlass
             radius={24}
             level="sheet"
@@ -126,7 +129,12 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
             </Pressable>
           </View>
 
-          <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} bounces={false}>
+          <ScrollView
+            style={s.scroll}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             <Text style={s.title}>Unlock every session</Text>
             <View style={s.list}>
               {benefitLines(context).map((line) => (
@@ -144,7 +152,12 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
               onContinue={(plan) => {
                 onBeforeContinue?.();
                 onClose();
-                router.push(`/subscribe?tier=${plan}&returnTo=${context}` as never);
+                /* Eerst de kaart echt dicht, dán naar de plannen — zo brengt
+                   Back je terug waar je was, nooit naar een tweede kaart
+                   (operator, 19 okt 2026). */
+                afterGlassSheetClosed(() => {
+                  router.push(`/subscribe?tier=${plan}&returnTo=${context}` as never);
+                });
               }}
               onRestore={() => void restore()}
             />

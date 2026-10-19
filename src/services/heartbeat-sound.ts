@@ -204,9 +204,15 @@ export function heartbeatTick(): void {
   playFromStart(isHeadphonesOutput() ? headphones : speaker);
 }
 
+/* Audio-voorrang (19 okt 2026, operator): speelt de Audio Library, dan geen
+   State Control-hartslag over haar heen — ook niet als het geluid al liep
+   vóór de bibliotheek startte. Volgende slag na het stoppen klinkt weer. */
+const libraryPlaying = (): boolean => getSnapshot().playing;
+
 /** State Control: de eerste slag. */
 export function heartbeatLub(): void {
   if (owners.size === 0) return;
+  if (libraryPlaying()) return;
   if (!speakerLub || !headphonesLub || broken) ensurePlayers(true);
   playFromStart(isHeadphonesOutput() ? headphonesLub : speakerLub);
 }
@@ -214,6 +220,7 @@ export function heartbeatLub(): void {
 /** State Control: de tweede slag, op het moment van de tweede tik. */
 export function heartbeatDub(): void {
   if (owners.size === 0) return;
+  if (libraryPlaying()) return;
   if (!speakerDub || !headphonesDub || broken) ensurePlayers(true);
   playFromStart(isHeadphonesOutput() ? headphonesDub : speakerDub);
 }
