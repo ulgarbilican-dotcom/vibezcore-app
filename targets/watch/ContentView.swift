@@ -159,7 +159,9 @@ private struct StateSessionLayout: View {
   private var w: CGFloat { size.width }
   private var h: CGFloat { size.height }
   /// De cirkel zo groot als de breedte toelaat (ringen dijen uit tot 1,11×).
-  private var r: CGFloat { min(w, h) / 2 / 1.12 }
+  /* 19 okt 2026 (operator, build 42: "ring mag beetje kleiner"): kleiner, zodat
+     de pulsring naar buiten kan uitdijen zoals op de telefoon (tot 1,26×). */
+  private var r: CGFloat { min(w, h) / 2 / 1.32 }
   private var cy: CGFloat { h / 2 }
 
   var body: some View {
@@ -287,15 +289,17 @@ private struct StateRingCanvas: View {
          90 ms op volle sterkte en dan uitdoven (= SessionRingView). */
       for p in pulses {
         let el = date.timeIntervalSince(p.start) * 1000
-        let dur = min(2600, max(500, cycleMs * 1.5))
+        let dur = min(2200, max(500, cycleMs * 1.2))
         guard el >= 0, el < dur else { continue }
         let k = el / dur
         let ease = 1 - (1 - k) * (1 - k) * (1 - k)
         let q = (el - 90) / (dur - 90)
-        let alpha = el < 90 ? 0.95 * (1 - (1 - el / 90) * (1 - el / 90)) : 0.95 * (1 - q * q)
-        let rr = baseR * CGFloat(1.07 + 0.04 * ease)
+        /* zoals HapticPulseRings op de telefoon: uitdijen tot 1,26× en uitdoven
+           (operator: "het moet een buitenwaartse puls geven") */
+        let alpha = el < 90 ? 0.6 * (el / 90) : 0.6 * (1 - q) * (1 - q)
+        let rr = baseR * CGFloat(1.02 + 0.24 * ease)
         let rect = CGRect(x: c.x - rr, y: c.y - rr, width: 2 * rr, height: 2 * rr)
-        context.stroke(Path(ellipseIn: rect), with: .color(tint.opacity(alpha)), lineWidth: 3.5)
+        context.stroke(Path(ellipseIn: rect), with: .color(tint.opacity(alpha)), lineWidth: 2.5)
       }
     }
   }
