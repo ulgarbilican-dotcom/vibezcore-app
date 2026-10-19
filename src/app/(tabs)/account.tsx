@@ -1589,7 +1589,7 @@ export default function AccountScreen() {
             subtitle={
               isProForActions
                 ? 'Optional · Use your plan on all your devices'
-                : 'Sync your progress and unlock what you own'
+                : 'Unlock what you already own'
             }
             onPress={() => setAuthOpen((o) => !o)}
             open={authOpen}
