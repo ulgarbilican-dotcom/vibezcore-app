@@ -272,22 +272,13 @@ export default function BraceletScreen() {
   const { open } = useLocalSearchParams<{ open?: string }>();
   const consumedOpen = useRef<string | undefined>(open);
   const [showIntro, setShowIntro] = useState(!open);
-  /* 19 okt 2026 (operator, punt 24, "nooit onderbreken"): kwam je via zo'n
-     directe weg binnen, dan ook niet het rusthartslag-scherm ertussen — de
-     sessie rekent dan met het gemiddelde tot je zelf kiest. Weer uit zodra
-     het intro terugkomt (ander tabblad, minimaliseren). */
-  const [directEntry, setDirectEntry] = useState(!!open);
 
   useEffect(() => {
     if (open && open !== consumedOpen.current) {
       consumedOpen.current = open;
       setShowIntro(false);
-      setDirectEntry(true);
     }
   }, [open]);
-  useEffect(() => {
-    if (showIntro) setDirectEntry(false);
-  }, [showIntro]);
 
   /* Test 10 okt 2026: enkel terug naar het intro als je naar een ANDER
      TABBLAD gaat — niet als er een scherm bovenop komt (Set your plan,
@@ -346,7 +337,10 @@ export default function BraceletScreen() {
      nog nooit zag ze daar altijd eerst. Nu niet meer: zo'n ingang gaat
      meteen naar de bestemming (nooit onderbreken); de onboarding komt de
      volgende keer dat de gebruiker zelf op "Explore State Control" tikt. */
-  const showHrPage = !showIntro && !directEntry && pulseLoaded && !pulse.decided;
+  /* Hartslagkeuze: de eerste keer zonder ingestelde hartslag OOK via een
+     melding of plan (operator 19 okt 2026: "de eerste keer wel de hartslag
+     vragen, de gebruiker kiest zelf" — gemiddelde is één tik). */
+  const showHrPage = !showIntro && pulseLoaded && !pulse.decided;
 
   useEffect(() => {
     setStateControlIntroVisible(focused && (showIntro || showHrPage));
