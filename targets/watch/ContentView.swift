@@ -112,10 +112,10 @@ private struct PauseButton: View {
         Circle().fill(tint.opacity(0.2))
         Circle().stroke(Color.white.opacity(0.15), lineWidth: 1.5)
         Image(systemName: paused ? "play.fill" : "pause.fill")
-          .font(.system(size: 14, weight: .semibold))
+          .font(.system(size: 12, weight: .semibold))
           .foregroundColor(.white)
       }
-      .frame(width: 36, height: 36)
+      .frame(width: 30, height: 30) // operator: pauzeknop iets kleiner
     }
     .buttonStyle(.plain)
     .accessibilityLabel(paused ? "Resume" : "Pause")
@@ -493,11 +493,12 @@ private struct BreathFace: View {
          (0,85 → 0,45 halfweg) en minder dekking (0,10 + 0,34 b → 0,06 + 0,20 b). */
       Circle()
         .fill(RadialGradient(
-          colors: [tint.opacity(0.9), tint.opacity(0.45), tint.opacity(0)],
+          colors: [tint, tint.opacity(0.6), tint.opacity(0)],
           center: .center, startRadius: 0, endRadius: glowR
         ))
         .frame(width: 2 * glowR, height: 2 * glowR)
-        .opacity(ambient ? 0.05 : 0.06 + 0.20 * b)
+        /* operator, 19 okt 13:05: "gloed niet zichtbaar" → weer zichtbaar, zachter dan het origineel */
+        .opacity(ambient ? 0.06 : 0.16 + 0.30 * b)
         .position(x: w / 2, y: acy)
 
       /* de figuur */
