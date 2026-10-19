@@ -193,6 +193,16 @@ final class SessionAudioEngine {
     return !owners.isEmpty || plan != nil || nowMs() < voiceActiveUntil
   }
 
+  /// Moet er echt geluid (en dus een draaiende motor + geluidssessie) zijn?
+  /// Een plan met enkel tikken (onboarding-proef, geluid uit) heeft enkel de
+  /// klok nodig: Core Haptics speelt zonder geluidssessie (playsHapticsOnly).
+  /// 19 okt 2026: nooit andermans muziek storen voor enkel trillingen.
+  private var wantsAudio: Bool {
+    return !owners.isEmpty || (plan?.sound ?? false) || nowMs() < voiceActiveUntil
+  }
+  /// Heeft deze motor de geluidssessie aangezet? Enkel dan teruggeven.
+  private var sessionActivated = false
+
   private func configureSession() {
     let s = AVAudioSession.sharedInstance()
     /* Afspelen, ook met de stille-schakelaar aan en op de achtergrond;
@@ -201,6 +211,7 @@ final class SessionAudioEngine {
       try? s.setCategory(.playback, mode: .default, options: [.mixWithOthers])
     }
     try? s.setActive(true)
+    sessionActivated = true
   }
 
   @discardableResult
@@ -242,14 +253,17 @@ final class SessionAudioEngine {
        Operator 19 okt 2026: YouTube haperde na een sessie. */
     if releaseWhenIdle {
       releaseWhenIdle = false
-      try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+      if sessionActivated {
+        sessionActivated = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+      }
     }
   }
 
   /// Motor viel weg (sessie uitgezet, telefoontje, routewissel): herstarten
   /// en de slagen opnieuw inplannen vanaf de slag van nu.
   private func recover() {
-    guard needsEngine else { return }
+    guard wantsAudio else { return }
     if engine.isRunning, !beatNodes.isEmpty, beatNodes[0].isPlaying { return }
     let now = nowMs()
     if now - lastRecoverMs < 1000 { return }
@@ -281,7 +295,12 @@ final class SessionAudioEngine {
     nextBeatNode = 0
     attached = false
     beatHapticPlayers = []
-    guard needsEngine, ensureEngine() else { return }
+    if !needsEngine { return }
+    if wantsAudio {
+      guard ensureEngine() else { return }
+    } else {
+      startTimer()
+    }
     if plan != nil {
       resetIteration()
       pump()
@@ -310,7 +329,7 @@ final class SessionAudioEngine {
       return
     }
     /* Waakhond: een andere speler kan de geluidssessie uitgezet hebben. */
-    if !engine.isRunning || (!beatNodes.isEmpty && !beatNodes[0].isPlaying) {
+    if wantsAudio && (!engine.isRunning || (!beatNodes.isEmpty && !beatNodes[0].isPlaying)) {
       recover()
       return
     }
@@ -528,7 +547,11 @@ final class SessionAudioEngine {
       self.clearBeats()
       self.plan = p
       self.resetIteration()
-      guard self.ensureEngine() else { return }
+      if self.wantsAudio {
+        guard self.ensureEngine() else { return }
+      } else {
+        self.startTimer()
+      }
       if p.haptics { _ = self.ensureHaptic() }
       self.pump()
     }

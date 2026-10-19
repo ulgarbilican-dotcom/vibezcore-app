@@ -173,7 +173,7 @@ export async function playScape(key: string | null): Promise<void> {
 }
 
 export function isScapePlaying(): boolean {
-  return playingKey !== null;
+  return playingKey !== null && !scapePaused;
 }
 
 /** Pauze van de sessie (operator, 9 okt 2026: "bij pauze moet de soundscape

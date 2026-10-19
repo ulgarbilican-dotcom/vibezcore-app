@@ -195,6 +195,11 @@ class StateHapticsService : Service() {
     }
   }
   private var wakeLock: PowerManager.WakeLock? = null
+  /* Vergeten pauze (19 okt 2026, "nooit het toestel van een gebruiker
+     verstoren"): na 60 min stopt de dienst zelf — melding, mediasessie en
+     dienst weg, ook als de app intussen bevroren of gesloten is. Zelfde grens
+     als het horloge (WearStateSessionService) en de app (monitor). */
+  private val pauseExpiryRunnable = Runnable { if (paused && !stopping) stopSelfCleanly() }
   /* Natuurlijk einde: eerst de "Session complete"-melding (de app kan op
      dit moment bevroren zijn op slot, deze service niet), dan stoppen. De
      app haalt die melding weg zodra ze zelf de afsluiting toont. */
@@ -545,6 +550,8 @@ class StateHapticsService : Service() {
     } catch (_: Exception) {
     }
     releaseWakeLock()
+    handler.removeCallbacks(pauseExpiryRunnable)
+    handler.postDelayed(pauseExpiryRunnable, 60L * 60L * 1000L)
     updateNotification()
   }
 
@@ -554,6 +561,7 @@ class StateHapticsService : Service() {
   private fun leavePaused() {
     if (!paused) return
     paused = false
+    handler.removeCallbacks(pauseExpiryRunnable)
     sessionElapsedAtStartMs = pausedSessionElapsedMs
     startRealtime = SystemClock.elapsedRealtime()
     startUptime = SystemClock.uptimeMillis() - pausedCurveElapsedMs

@@ -70,10 +70,11 @@ import { stopModePreviewHaptic } from '@/services/bracelet-haptics';
 import { stopHeartbeatSound } from '@/services/heartbeat-sound';
 import VibezGlass from '@/components/VibezGlass';
 import { goToTab } from '@/utils/state-control-ui';
-import { useKeepAwake } from 'expo-keep-awake';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { endLiveSession, onLiveToggle, pauseLiveSession, resumeLiveSession, showLiveSession, updateLivePhase } from '../../modules/live-activity';
 import {
   ensureAudioModeSet,
+  invalidateAudioModeSet,
   startSessionKeepAlive,
   stopSessionKeepAlive,
 } from '@/services/session-keepalive';
@@ -992,6 +993,16 @@ export function BreathSession() {
   }, []);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  /* Mengmodus al bij het openen zetten, ruim vóór de eerste klank op Play
+     (19 okt 2026: nooit andermans muziek stoppen). */
+  useEffect(() => {
+    /* Niet terwijl de audiobibliotheek speelt: die heeft haar eigen modus
+       nodig voor de bediening op het vergrendelscherm. */
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    if ((require('@/services/audio-player') as typeof import('@/services/audio-player')).getSnapshot().playing) return;
+    invalidateAudioModeSet();
+    void ensureAudioModeSet();
+  }, []);
   /* Operator, 4 okt 2026 (smoothness-audit: "betrouwbaarheid bij
      aantikken, geen freeze"): de START-knop had geen enkele dubbeltik-
      bescherming — `running` (React state) update niet synchroon, dus een
@@ -1019,7 +1030,16 @@ export function BreathSession() {
      je er niet naar hóéft te kijken en de telefoon niet hoeft vast te houden
      — kijk je toch, dan staat het er. Een scherm dat halverwege uitvalt zou
      dat juist onmogelijk maken. */
-  useKeepAwake('breath-session');
+  /* Enkel zolang de sessie echt loopt (19 okt 2026): gepauzeerd of
+     wachtend op Play mag het scherm gewoon op slot (batterij). */
+  const keepScreenOn = running && !paused;
+  useEffect(() => {
+    if (!keepScreenOn) return;
+    void activateKeepAwakeAsync('breath-session').catch(() => {});
+    return () => {
+      void deactivateKeepAwake('breath-session').catch(() => {});
+    };
+  }, [keepScreenOn]);
 
   const sub = useSubscription();
   const isPro = sub.isPro;
@@ -1747,6 +1767,14 @@ export function BreathSession() {
     setPaused(true);
     pauseScape();
     pauseLiveSession();
+    /* iPhone (19 okt 2026, nooit het toestel verstoren): tijdens een pauze de
+       geluidsmotor vrijgeven — anders bleef hij de geluidssessie vasthouden
+       (YouTube hapert, batterij). Na de fade van de soundscape. */
+    if (Platform.OS === 'ios') {
+      setTimeout(() => {
+        if (runningRef.current && pausedRef.current) stopSessionKeepAlive();
+      }, 800);
+    }
     /* Eén sessie, twee bedieningen (6 okt 2026): de pols pauzeert mee. */
     pauseBreathSessionOnWear();
     pauseBreathSessionOnWatch();
@@ -1760,6 +1788,7 @@ export function BreathSession() {
       pausedAtWallRef.current = 0;
     }
     setPaused(false);
+    if (Platform.OS === 'ios') startSessionKeepAlive(undefined, false);
     resumeScape();
     resumeLiveSession();
     /* Operator, 24 september 2026 (10de melding, de echte oorzaak): bij de
@@ -2184,7 +2213,11 @@ export function BreathSession() {
        Geen await/`.then()`-wrapping meer rond de audio-aanroepen verderop
        (operator, 24 september 2026, 9de melding) — dat bleek de
        allereerste `speak()`-aanroep te laten verdwijnen (zie daar). De
-       retry-lus in `playUrl()` vangt op als de modus nog niet actief was. */
+       retry-lus in `playUrl()` vangt op als de modus nog niet actief was.
+       Opnieuw zetten (19 okt 2026): de audiobibliotheek zet intussen haar
+       eigen 'doNotMix', en dan zou de ademsessie Spotify van de gebruiker
+       stoppen. */
+    invalidateAudioModeSet();
     ensureAudioModeSet();
     /* Het audio-anker: een lus van stilte die het proces levend houdt als
        het scherm op slot gaat (operator, 8 augustus 2026: "als ik scherm
@@ -2224,7 +2257,9 @@ export function BreathSession() {
            professioneler"): enkel de Live Activity hierboven — geen tweede
            muziekspeler-kaart van het stille anker (0:00/0:01). Het anker
            houdt de app levend, ook zonder die kaart. */
-        startSessionKeepAlive({ title: st.eyebrow, subtitle: tech.name }, false);
+        /* Wacht de sessie op Play, dan pas bij die eerste hervatting
+           (19 okt 2026: geen motor zolang er niets speelt). */
+        if (!startPaused) startSessionKeepAlive({ title: st.eyebrow, subtitle: tech.name }, false);
         if (voiceRef.current) preloadCompletionCue(st.key as BreathKey);
       } catch {
         /* Zelfde reden als de try/catch verderop in deze functie: het

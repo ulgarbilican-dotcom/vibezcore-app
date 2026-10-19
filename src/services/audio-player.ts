@@ -389,6 +389,12 @@ async function ensureAudioMode(): Promise<void> {
       interruptionMode: 'doNotMix',
     });
     audioModeConfigured = true;
+    /* De ademsessie/stem-demo's moeten hun mengmodus daarna opnieuw zetten
+       (19 okt 2026: anders stopten ze de muziek van de gebruiker). */
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      (require('./session-keepalive') as typeof import('./session-keepalive')).invalidateAudioModeSet();
+    } catch {}
   } catch (e) {
     /* Niet-fataal — meeste platforms zullen sane defaults gebruiken.
        Log alleen voor diagnostiek. */

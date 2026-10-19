@@ -344,7 +344,19 @@ function clearPending(): void {
   pendingTimeouts.forEach(clearTimeout);
   pendingTimeouts.length = 0;
   /* iPhone: ook de slagen die de geluidsmotor al vooraf gepland had. */
-  if (Platform.OS === 'ios') stopSessionBeats();
+  if (Platform.OS === 'ios') {
+    stopSessionBeats();
+    releaseIosAudioIfIdle();
+  }
+}
+
+/** Buiten een sessie (onboarding-proef, voorproef-einde) de geluidssessie
+ *  teruggeven aan andere apps (19 okt 2026). */
+function releaseIosAudioIfIdle(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('./session-keepalive') as typeof import('./session-keepalive')).releaseSessionAudioIfIdle();
+  } catch {}
 }
 
 /** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
@@ -651,6 +663,7 @@ function play(
         looped.timings,
         silent ? looped.amplitudes.map(() => 0) : looped.amplitudes,
         looped.repeat,
+        (totalSec + 3) * 1000,
       );
       if (!silent && getStateHear()) {
         jsSoundOn = true;
@@ -709,6 +722,10 @@ let sessionEndsAt: number | null = null;
  *  nu, `remainingSec` maakt de native curve eindig. Na een pauze langer dan
  *  2 min begint de curve opnieuw met de basislijn. */
 export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, remainingSec: number): void {
+  /* Een lopende voorproef-weergave (iPhone) ruimt zichzelf op na 30 s, maar
+     die opruiming slaat over zodra er intussen iets anders speelt (19 okt 2026).
+     De Live Activity niet weghalen: die is nu van de sessie. */
+  endIosPreviewKeepers();
   const now = Date.now();
   if (!session || session.mode !== mode || elapsedSec < session.curveZeroSec) {
     session = {
@@ -1032,6 +1049,7 @@ export function playModePreviewHaptic(mode: BraceletMode): void {
  *  en na `seconds` stil. De echte voorproef (30 s) blijft ongewijzigd. */
 export const TASTE_SECONDS = 5;
 export function playModeTasteHaptic(mode: BraceletMode, seconds = TASTE_SECONDS): void {
+  endIosPreviewSurface(); /* zie playModeSessionHaptic */
   session = null;
   play(mode, { holdSec: 0, rampSec: 0 }, 0, seconds);
   const myGeneration = generation;
@@ -1067,6 +1085,13 @@ function startIosPreviewSurface(mode: BraceletMode): void {
   void activateKeepAwakeAsync(PREVIEW_KEEP_AWAKE_TAG).catch(() => {});
   startSessionKeepAlive(undefined, false, 'preview');
   iosPreviewOn = true;
+}
+/** Enkel scherm-aan en geluidsmotor van de voorproef vrijgeven. */
+function endIosPreviewKeepers(): void {
+  if (!iosPreviewOn) return;
+  iosPreviewOn = false;
+  void deactivateKeepAwake(PREVIEW_KEEP_AWAKE_TAG).catch(() => {});
+  stopSessionKeepAlive('preview');
 }
 function endIosPreviewSurface(): void {
   if (!iosPreviewOn) return;

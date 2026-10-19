@@ -5786,7 +5786,10 @@ function BraceletControlScreen({
        nodig en stopte bovendien de muziek van de gebruiker (Spotify) bij
        Start, en ving de knoppen van oordopjes op (audit 5 okt 2026). */
     if (Platform.OS === 'android' && hasNativeWaveform()) return;
-    if (!sessionActive && !isPaused) {
+    /* Ook tijdens een pauze vrijgeven (19 okt 2026): een gepauzeerde sessie
+       hield anders de geluidsmotor en -sessie vast (andere apps haperen,
+       batterij). Hervatten neemt hem opnieuw. */
+    if (!sessionActive || isPaused) {
       stopSessionKeepAlive('state');
       return;
     }

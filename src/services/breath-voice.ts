@@ -623,14 +623,28 @@ function startOffsetFor(url: string, windowSec?: number): number {
   return Math.max(0, speechStart - 0.05);
 }
 
+/** Stem buiten een sessie (welkom-demo, voorbeeld): na de zin de
+ *  geluidssessie teruggeven (19 okt 2026). Tijdens een sessie doet dit niets. */
+function releaseAfterVoice(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('./session-keepalive') as typeof import('./session-keepalive')).releaseSessionAudioIfIdle();
+  } catch {}
+}
+
 function playUrlNative(url: string, offsetSec = 0): void {
   const req = ++nativeVoiceRequest;
-  if (playVoiceNow(url, 1, offsetSec)) return;
+  if (playVoiceNow(url, 1, offsetSec)) {
+    releaseAfterVoice();
+    return;
+  }
   const askedAt = Date.now();
   void loadVoice(url, assetUri(url)).then((ok) => {
     /* Nog altijd de laatst gevraagde zin, en niet te laat (anders valt hij
        over de volgende fase heen). */
-    if (ok && req === nativeVoiceRequest && Date.now() - askedAt < 1500) playVoiceNow(url, 1, offsetSec);
+    if (ok && req === nativeVoiceRequest && Date.now() - askedAt < 1500 && playVoiceNow(url, 1, offsetSec)) {
+      releaseAfterVoice();
+    }
   });
 }
 
@@ -640,6 +654,16 @@ function playUrl(url: string, windowSec?: number): void {
     playUrlNative(url, offsetSec);
     return;
   }
+  /* Android: mengmodus vóór de cue (ook buiten een sessie, bv. de demo op
+     het welkomstscherm) — nooit de muziek van de gebruiker stoppen. Niet
+     terwijl de audiobibliotheek speelt (die heeft haar eigen modus). */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    if (!(require('./audio-player') as typeof import('./audio-player')).getSnapshot().playing) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      void (require('./session-keepalive') as typeof import('./session-keepalive')).ensureAudioModeSet();
+    }
+  } catch {}
   /* Stop een eventueel andere lopende cue zodat ze niet overlappen
      (overlappen = onverstaanbaar bij snel volgende phase-cues). Alleen
      onderbreken wat ECHT hoorbaar aan het spelen was (`hasAudibleProgress`,

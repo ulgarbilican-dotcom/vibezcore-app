@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 type StateHapticsNativeModule = {
   setSessionSound?(on: boolean): void;
   hasAmplitudeControl(): boolean;
-  play(timings: number[], amplitudes: number[], repeat: number): void;
+  play(timings: number[], amplitudes: number[], repeat: number, maxMs: number): void;
   stop(): void;
   startSession(
     timings: number[],
@@ -85,9 +85,11 @@ export function canPlayNativeWaveform(): boolean {
   }
 }
 
-export function playNativeWaveform(timings: number[], amplitudes: number[], repeat: number): void {
+/** `maxMs`: een herhalend patroon stopt native uiterlijk na deze tijd, ook
+ *  als JavaScript intussen stilvalt (0 = geen grens). */
+export function playNativeWaveform(timings: number[], amplitudes: number[], repeat: number, maxMs = 0): void {
   try {
-    native?.play(timings, amplitudes, repeat);
+    native?.play(timings, amplitudes, repeat, maxMs);
   } catch {
     /* stil */
   }

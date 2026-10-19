@@ -17,6 +17,8 @@ package com.ubili.vibezcoreapp.statehaptics
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -30,6 +32,7 @@ private const val RATIONALE_ACTION = "androidx.health.ACTION_SHOW_PERMISSIONS_RA
 private const val VIEW_PERMISSION_USAGE_ACTION = "android.intent.action.VIEW_PERMISSION_USAGE"
 
 class StateHapticsModule : Module() {
+  private val safety = Handler(Looper.getMainLooper())
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
 
@@ -72,6 +75,13 @@ class StateHapticsModule : Module() {
 
     OnDestroy {
       StateHapticsService.remoteListener = null
+      /* Een herhalende proef-trilling mag niet doorlopen als de app wegvalt
+         (19 okt 2026). Een lopende sessie zit in de service, niet hier. */
+      safety.removeCallbacksAndMessages(null)
+      try {
+        vibrator()?.cancel()
+      } catch (_: Exception) {
+      }
     }
 
     /* Zonder amplitude-sturing rondt Android elke niet-nul amplitude af
@@ -88,12 +98,23 @@ class StateHapticsModule : Module() {
 
     /** timings in ms, amplitudes 0–255 (zelfde lengte), repeat = index om
      *  vanaf te herhalen of -1 voor eenmalig. */
-    Function("play") { timings: List<Double>, amplitudes: List<Int>, repeat: Int ->
+    Function("play") { timings: List<Double>, amplitudes: List<Int>, repeat: Int, maxMs: Double ->
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@Function
       if (timings.isEmpty() || timings.size != amplitudes.size) return@Function
       try {
         val v = vibrator() ?: return@Function
+        safety.removeCallbacksAndMessages(null)
         v.cancel()
+        /* Herhalend patroon: de app stopt het zelf, maar valt JavaScript stil
+           (herladen, vastgelopen), dan stopt het hier toch (19 okt 2026). */
+        if (repeat >= 0 && maxMs > 0) {
+          safety.postDelayed({
+            try {
+              v.cancel()
+            } catch (_: Exception) {
+            }
+          }, maxMs.toLong())
+        }
         val t = LongArray(timings.size) { timings[it].toLong() }
         val a = IntArray(amplitudes.size) { amplitudes[it].coerceIn(0, 255) }
         val r = if (repeat in t.indices) repeat else -1
@@ -104,6 +125,7 @@ class StateHapticsModule : Module() {
     }
 
     Function("stop") {
+      safety.removeCallbacksAndMessages(null)
       try {
         vibrator()?.cancel()
       } catch (_: Exception) {

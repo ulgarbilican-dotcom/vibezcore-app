@@ -164,7 +164,28 @@ type MonitorState = {
   elapsedBeforeRunSec: number;
   /** Echte startmoment van de sessie (voor de geschiedenis). */
   startedAtIso: string;
+  /** Sinds wanneer gepauzeerd (wandklok). Na MAX_PAUSE_MS eindigt de sessie
+   *  vanzelf, zodat een vergeten pauze geen melding/Live Activity/motor
+   *  blijft vasthouden (19 okt 2026; zelfde grens als het horloge). */
+  pausedAtMs?: number;
 };
+
+const MAX_PAUSE_MS = 60 * 60 * 1000;
+function pauseExpired(s: MonitorState): boolean {
+  return s.paused && typeof s.pausedAtMs === 'number' && Date.now() - s.pausedAtMs > MAX_PAUSE_MS;
+}
+
+/** iPhone: de geluidsmotor (via het audio-anker) enkel vasthouden terwijl de
+ *  sessie echt loopt — ook als het State Control-scherm dicht is. */
+function syncIosKeepAlive(): void {
+  if (Platform.OS !== 'ios') return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const k = require('./session-keepalive') as typeof import('./session-keepalive');
+    if (state && !state.paused) k.startSessionKeepAlive(undefined, false, 'state');
+    else k.stopSessionKeepAlive('state');
+  } catch {}
+}
 
 /* ── Natuurlijk einde — ÉÉN bron van waarheid (5 okt 2026) ─────────────
    Audit: het scherm besliste over "afgelopen" op basis van de bracelet-
@@ -340,6 +361,9 @@ async function ensureChannel(): Promise<void> {
  *  NOTIF_UPDATE_MS verstreken is sinds de vorige keer, TENZIJ `force`
  *  (state-transitie zoals start/pause/resume/stop — die MOET meteen
  *  zichtbaar zijn, niet pas bij de volgende minuut-tick). */
+/** Staat onze eigen (JS-)melding mogelijk nog op het scherm? */
+let ownNotifShown = true;
+
 async function publish(force: boolean): Promise<void> {
   if (!state) return;
   const meta = getModeMeta(state.mode);
@@ -368,13 +392,18 @@ async function publish(force: boolean): Promise<void> {
      als de service (nog) niet draait — bv. gepauzeerd vóór de eerste
      Play — toont deze melding de sessie. */
   if (Platform.OS === 'android' && hasNativeWaveform() && isNativeSessionAlive()) {
-    try {
-      await Notifications.dismissNotificationAsync(NOTIF_ID);
-    } catch {
-      /* cosmetisch */
+    /* Eén keer weghalen, niet elke seconde (19 okt 2026, batterij). */
+    if (ownNotifShown || force) {
+      ownNotifShown = false;
+      try {
+        await Notifications.dismissNotificationAsync(NOTIF_ID);
+      } catch {
+        /* cosmetisch */
+      }
     }
     return;
   }
+  ownNotifShown = true;
   const now = Date.now();
   if (!force && now - lastNotifPushAt < NOTIF_UPDATE_MS) return;
   lastNotifPushAt = now;
@@ -467,6 +496,16 @@ async function restoreFromStorage(): Promise<void> {
   } catch {
     saved = null;
   }
+  if (!saved && !state && Platform.OS === 'ios') {
+    /* Geen State Control-sessie om te herstellen, en een ademsessie overleeft
+       het sluiten van de app niet: een achtergebleven kaart op het
+       vergrendelscherm weghalen (19 okt 2026). */
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const host = require('./breath-session-host') as typeof import('./breath-session-host');
+      if (!host.getBreathHost() && !host.getRunningBreathStatus()) endLiveSession();
+    } catch {}
+  }
   if (!saved || state) return;
   const native = Platform.OS === 'android' && hasNativeWaveform() ? getNativeSessionStatus() : 'none';
   const elapsedNow =
@@ -480,6 +519,11 @@ async function restoreFromStorage(): Promise<void> {
     state = { ...saved, paused: native === 'paused' || (native === 'none' && saved.paused) };
     if (state.paused && !saved.paused) {
       state = { ...state, elapsedBeforeRunSec: Math.min(saved.totalSec, elapsedNow), runStartedAt: null };
+    }
+    if (state.paused && typeof state.pausedAtMs !== 'number') state = { ...state, pausedAtMs: Date.now() };
+    if (pauseExpired(state)) {
+      void expirePausedSession();
+      return;
     }
     /* Audit 8 okt 2026: stond de sessie op pauze maar hervatte de service
        zelf (bv. "Resume" op het vergrendelscherm terwijl de app dicht was),
@@ -506,7 +550,7 @@ async function restoreFromStorage(): Promise<void> {
   }
   /* De app (en dus de service) werd midden in de sessie beëindigd: als
      gepauzeerd terugzetten, zodat de gebruiker kan hervatten of afsluiten. */
-  state = { ...saved, paused: true, runStartedAt: null, elapsedBeforeRunSec: elapsedNow };
+  state = { ...saved, paused: true, runStartedAt: null, elapsedBeforeRunSec: elapsedNow, pausedAtMs: Date.now() };
   startTimers();
   void publish(true);
   persist();
@@ -518,6 +562,10 @@ void restoreFromStorage();
 
 function tick(): void {
   if (!state) return;
+  if (pauseExpired(state)) {
+    void expirePausedSession();
+    return;
+  }
   if (!state.paused && currentRemainingSec() <= 0) {
     void completeNaturally();
     return;
@@ -607,6 +655,7 @@ export function startBraceletSessionMonitor(opts: {
    herstartte de curve. */
 function syncHaptics(): void {
   syncIosKeepAwake();
+  syncIosKeepAlive();
   syncLiveActivity();
   void scheduleIosDone();
   if (!state) {
@@ -639,6 +688,7 @@ export function pauseBraceletSessionMonitor(): void {
        ertussen lieten een verse 18-min-sessie op 17:59 staan. */
     elapsedBeforeRunSec: state.elapsedBeforeRunSec === 0 && elapsed < 1 ? 0 : elapsed,
     runStartedAt: null,
+    pausedAtMs: Date.now(),
   };
   persist();
   syncHaptics();
@@ -648,7 +698,7 @@ export function pauseBraceletSessionMonitor(): void {
 /** Aanroepen vanuit onResume. Hervat de projectie vanaf het pauze-moment. */
 export function resumeBraceletSessionMonitor(): void {
   if (!state) return;
-  state = { ...state, paused: false, runStartedAt: Date.now() };
+  state = { ...state, paused: false, runStartedAt: Date.now(), pausedAtMs: undefined };
   persist();
   syncHaptics();
   void publish(true);
@@ -765,6 +815,32 @@ onLiveToggle('state', () => {
  *  als 'stopped') — gebruikt als er een ademsessie start (19 okt 2026). */
 export function endStateControlSession(): Promise<void> {
   return remoteStop();
+}
+
+/** Vergeten pauze (> 60 min): afsluiten. Enkel in de geschiedenis als er
+ *  echt geoefend werd (minstens een minuut). */
+async function expirePausedSession(): Promise<void> {
+  if (!state) return;
+  if (remoteListeners.size > 0) {
+    notifyRemote({ action: 'stop', remainingSec: currentRemainingSec() });
+    return;
+  }
+  const s = state;
+  const activeSec = Math.max(0, s.totalSec - currentRemainingSec());
+  if (activeSec >= 60) {
+    void recordSession({
+      mode: s.mode,
+      startedAt: s.startedAtIso,
+      endedAt: new Date().toISOString(),
+      durationMin: Math.round(activeSec / 60),
+      plannedMin: Math.max(1, Math.round(s.totalSec / 60)),
+      status: 'stopped',
+    });
+  }
+  await stopBraceletSessionMonitor();
+  try {
+    await getBracelet().sendCommand({ mode: s.mode, duration: 0, command: BleCommand.Stop });
+  } catch {}
 }
 
 async function remoteStop(): Promise<void> {

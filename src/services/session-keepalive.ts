@@ -153,9 +153,14 @@ export function ensureAudioModeSet(): Promise<void> {
   modeSetPromise = setAudioModeAsync({
     playsInSilentMode: true,
     shouldPlayInBackground: true,
-    /* iPhone met de geluidsmotor: dezelfde instelling als de motor, zodat
-       een sessiestart de geluidssessie niet omgooit. */
-    interruptionMode: nativeKeepAlive() ? 'mixWithOthers' : 'doNotMix',
+    /* Altijd mengen (operator, 19 okt 2026: "niets wat wij doen mag de
+       telefoon van een gebruiker verslechteren"). 'doNotMix' vroeg op
+       Android audiofocus voor de hele ademsessie: Spotify/YouTube van de
+       gebruiker pauzeerde, en speelde die weer, dan vielen onze stem en
+       soundscape stil. Mengen vraagt geen focus, dus ook geen wedstrijd
+       tussen soundscape en eerste stem-cue (de reden voor doNotMix op
+       24 sept). iPhone met de geluidsmotor: dezelfde instelling als de motor. */
+    interruptionMode: 'mixWithOthers',
   })
     .then(() => {
       modeSet = true;
@@ -206,6 +211,13 @@ function otherAppAudioPlaying(): boolean {
   return false;
 }
 
+/** iPhone: de geluidsmotor speelde iets buiten een sessie (stem-demo,
+ *  proef): geef de geluidssessie terug zodra hij stilvalt, als er geen sessie
+ *  loopt en niets anders in de app speelt (19 okt 2026). */
+export function releaseSessionAudioIfIdle(): void {
+  if (nativeKeepAlive() && owners.size === 0 && !otherAppAudioPlaying()) releaseSessionAudio();
+}
+
 export function startSessionKeepAlive(
   meta?: SessionKeepAliveMeta,
   /** Operator, 17 september 2026 (bracelet-sessies): bracelet gebruikt dit
@@ -249,7 +261,7 @@ export function startSessionKeepAlive(
         await setAudioModeAsync({
           playsInSilentMode: true,
           shouldPlayInBackground: true,
-          interruptionMode: 'doNotMix',
+          interruptionMode: 'mixWithOthers', /* zie ensureAudioModeSet */
         });
         modeSet = true;
       }
