@@ -194,7 +194,7 @@ enum WatchSessionLog {
    daar ook. watchOS laat geen vrije sterkte toe, enkel vaste trilsoorten:
      Soft   = zachte tik, enkel de eerste slag van de hartslag
      Medium = zachte tik, beide slagen
-     Strong = drie stille tikken vlak na elkaar (geen toon; .start gaf een bel)
+     Soft 1 · Medium 2 · Strong 4 stille tikken per slag (geen toon; .start gaf een bel)
      */
 final class WatchSettings: ObservableObject {
   static let shared = WatchSettings()
@@ -222,12 +222,17 @@ final class WatchSettings: ObservableObject {
   /// Eén tik op de pols. Soft/Medium: één stille tik. Strong: drie stille
   /// tikken vlak na elkaar — voelt duidelijk sterker en speelt GEEN toon
   /// (operator, build 50: ".start gaf een bel bij elke slag").
+  /// 19 okt 2026 (operator, build 52: "stijl is goed, kan het nog harder
+  /// voor maximum?"): Soft 1 tik · Medium 2 · Strong 4 stille tikken vlak na
+  /// elkaar (40 ms) — de sterkste stille puls die watchOS toelaat.
   func tap() {
     let d = WKInterfaceDevice.current()
     d.play(.click)
-    guard strength == "strong" else { return }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { d.play(.click) }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { d.play(.click) }
+    let extra = strength == "strong" ? 3 : (strength == "medium" ? 1 : 0)
+    guard extra > 0 else { return }
+    for i in 1...extra {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.04 * Double(i)) { d.play(.click) }
+    }
   }
   /// Tweede slag van de hartslag (Soft: geen).
   var playsDub: Bool { strength != "soft" }
