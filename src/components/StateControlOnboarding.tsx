@@ -861,8 +861,10 @@ function GlassChip({ mode, label, on, onPress }: { mode: BraceletMode; label: st
   }, [on, k, pop]);
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: pop.value }],
-    borderColor: `rgba(255,255,255,${0.1 + k.value * 0.5})`,
-    backgroundColor: `rgba(255,255,255,${0.06 + k.value * 0.08})`,
+    /* 19 okt 2026 (operator: "pills niet zo hard omlijnen"): de rand blijft
+       subtiel (max 16 % wit), de keuze leest via het lichtere glas. */
+    borderColor: `rgba(255,255,255,${0.06 + k.value * 0.1})`,
+    backgroundColor: `rgba(255,255,255,${0.06 + k.value * 0.1})`,
   }));
   return (
     <PressScale onPress={onPress} scaleTo={0.92} accessibilityRole="button" accessibilityState={{ selected: on }}>
