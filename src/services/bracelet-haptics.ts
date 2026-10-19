@@ -1093,6 +1093,14 @@ export function wakeWatchForStateControl(): void {
 }
 
 export function playModeTrialHaptic(mode: BraceletMode): void {
+  /* Eén sessie tegelijk (19 okt 2026): een lopende ademsessie stopt.
+     Inline require: breath-session-host → bracelet-session-monitor → hier. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('./breath-session-host') as typeof import('./breath-session-host')).endRunningBreathSession();
+  } catch {
+    /* nooit de voorproef blokkeren */
+  }
   playModePreviewHaptic(mode);
   startIosPreviewSurface(mode);
   if (!getSetting('watchHaptics')) return;

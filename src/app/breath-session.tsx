@@ -65,6 +65,9 @@ import {
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import { endStateControlSession, isBraceletSessionMonitorActive } from '@/services/bracelet-session-monitor';
+import { stopModePreviewHaptic } from '@/services/bracelet-haptics';
+import { stopHeartbeatSound } from '@/services/heartbeat-sound';
 import VibezGlass from '@/components/VibezGlass';
 import { goToTab } from '@/utils/state-control-ui';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -2162,6 +2165,14 @@ export function BreathSession() {
   const start = useCallback((preview = false, startPaused = false) => {
     if (startingRef.current) return;
     startingRef.current = true;
+    /* Eén sessie tegelijk (operator, 19 okt 2026: "na de onboarding hoor ik
+       de hartslag van State Control"): een lopende State Control-sessie,
+       -voorproef of het hartslaggeluid stopt zodra je ademsessie start. De
+       Audio Library mag blijven spelen. */
+    if (isBraceletSessionMonitorActive()) void endStateControlSession();
+    else stopModePreviewHaptic();
+    stopHeartbeatSound('page');
+    stopHeartbeatSound('measure');
     previewRef.current = preview;
     effectiveRoundsRef.current = preview
       ? Math.min(roundsRef.current, PREVIEW_ROUNDS)
