@@ -459,6 +459,12 @@ export async function clearSession(): Promise<void> {
     /* 19 okt 2026 (punt 24): het "Not Now"-uitstel hoort bij dezelfde
        gebruiker — de volgende op dit toestel begint opnieuw. */
     await setSetting('breathOnboardingDeferredCount', 0);
+    /* 19 okt 2026 (operator: "na account verwijderen krijg ik wel de
+       Breathwork-onboarding maar niet die van State Control"): ook State
+       Control begint opnieuw voor de volgende gebruiker. De gratis sessies
+       (…FreeSessionUsedAt) blijven bewust staan: één per toestel. */
+    await setSetting('stateOnboardingCompletedAt', null);
+    await setSetting('stateOnboardingDeferredCount', 0);
   } catch {
     /* swallow */
   }
