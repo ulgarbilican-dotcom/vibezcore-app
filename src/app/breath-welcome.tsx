@@ -958,11 +958,20 @@ export default function BreathWelcomeScreen() {
      standaardgedrag. `useFocusEffect` i.p.v. een kale `useEffect`: de
      listener moet weg zodra dit scherm niet meer focust, anders vangt hij
      ook de terugknop op een scherm ERBOVEN nog op. */
+  /* 19 okt 2026 (operator: "ik kan hier niet weg zonder skip — wat als ik
+     eerst andere zaken wil bekijken?"): op stap 1 is er een uitgang zonder
+     iets te beslissen. "Not Now" gaat naar de Audio Library (tabbalk
+     zichtbaar) en markeert de onboarding NIET als gezien — de volgende keer
+     dat je Breath opent, staat ze er weer. Skip blijft "nooit meer tonen". */
+  const notNow = useCallback(() => {
+    setSkipAsk(false);
+    router.replace('/' as never);
+  }, []);
   const edgeBackRef = useRef<() => void>(() => {});
   edgeBackRef.current = () => {
     if (skipAsk) setSkipAsk(false);
     else if (slide > 0) goBack();
-    else askSkip();
+    else notNow();
   };
   const edgeSwipe = useRef(
     PanResponder.create({
@@ -982,7 +991,7 @@ export default function BreathWelcomeScreen() {
         } else if (slide > 0) {
           goBack();
         } else {
-          askSkip();
+          notNow();
         }
         return true;
       });
@@ -1268,10 +1277,15 @@ export default function BreathWelcomeScreen() {
            opnieuw beginnen. Onzichtbaar (niet enkel disabled) op stap 1:
            er is nergens naartoe terug. */}
         <View style={s.backWrap}>
-          {slide > 0 && (
+          {slide > 0 ? (
             <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
               <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
               <Text style={s.skipTxt}>Back</Text>
+            </Pressable>
+          ) : (
+            <Pressable onPress={notNow} hitSlop={14} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Not now, look around first">
+              <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
+              <Text style={s.skipTxt}>Not Now</Text>
             </Pressable>
           )}
         </View>
