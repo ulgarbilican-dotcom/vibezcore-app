@@ -4,11 +4,11 @@
     "slug": "vibezcore-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/vibezcore_icon.png",
+    "icon": "./assets/icon/icon_1024.png",
     "scheme": "vibezcoreapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/vibezcore_icon_ios_1024.png",
+      "icon": "./assets/icon/ios_1024.png",
       "bundleIdentifier": "com.ubili.vibezcoreapp",
       "appleTeamId": "88AL3UW7L7",
       "supportsTablet": false,
@@ -77,11 +77,12 @@
       }
     },
     "android": {
-      "icon": "./assets/vibezcore_icon.png",
+      "icon": "./assets/icon/icon_1024.png",
       "adaptiveIcon": {
-        "backgroundColor": "#0a0a0a",
-        "foregroundImage": "./assets/vibezcore_icon.png",
-        "monochromeImage": "./assets/vibezcore_icon.png"
+        "backgroundColor": "#00A3A3",
+        "foregroundImage": "./assets/icon/android_fg.png",
+        "backgroundImage": "./assets/icon/android_bg.png",
+        "monochromeImage": "./assets/icon/android_mono.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.ubili.vibezcoreapp",
@@ -108,7 +109,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0a0a0a",
+          "backgroundColor": "#00A3A3",
           "image": "./assets/splash_blank.png",
           "imageWidth": 76,
           "android": {
