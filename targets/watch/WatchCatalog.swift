@@ -194,8 +194,8 @@ enum WatchSessionLog {
    daar ook. watchOS laat geen vrije sterkte toe, enkel vaste trilsoorten:
      Soft   = zachte tik, enkel de eerste slag van de hartslag
      Medium = zachte tik, beide slagen
-     Strong = de krachtigste tik die watchOS toelaat (.start, zoals Workout) —
-              speelt een kort toontje mee tenzij het horloge op stil staat. */
+     Strong = drie stille tikken vlak na elkaar (geen toon; .start gaf een bel)
+     */
 final class WatchSettings: ObservableObject {
   static let shared = WatchSettings()
   static let levels = ["soft", "medium", "strong"]
@@ -219,8 +219,16 @@ final class WatchSettings: ObservableObject {
     PhoneConnector.shared.send(["type": "watch_action", "action": "strength:\(s)", "kind": "settings"])
   }
 
-  /// Eerste slag van de hartslag en het begin van een ademfase.
-  var accentType: WKHapticType { strength == "strong" ? .start : .click }
+  /// Eén tik op de pols. Soft/Medium: één stille tik. Strong: drie stille
+  /// tikken vlak na elkaar — voelt duidelijk sterker en speelt GEEN toon
+  /// (operator, build 50: ".start gaf een bel bij elke slag").
+  func tap() {
+    let d = WKInterfaceDevice.current()
+    d.play(.click)
+    guard strength == "strong" else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { d.play(.click) }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { d.play(.click) }
+  }
   /// Tweede slag van de hartslag (Soft: geen).
   var playsDub: Bool { strength != "soft" }
 }

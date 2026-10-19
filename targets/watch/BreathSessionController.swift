@@ -199,37 +199,32 @@ final class BreathSessionController: NSObject, ObservableObject {
     }
   }
 
+  /* 19 okt 2026 (operator: "in, uit en hold moeten elk een eigen tik hebben —
+     de gebruiker moet zonder kijken weten wat hij doet"). Elke fase een eigen,
+     herkenbaar patroon, enkel stille tikken (geen toon):
+       inademen  = doorlopend tikken zolang je inademt
+       vasthouden = één tik bij de start, dan stilte
+       uitademen = dubbele tik bij de start, dan stilte
+     Strong maakt elke tik sterker (WatchSettings.tap). */
   private func playHaptics(for key: String, secs: Int) {
-    switch key {
-    case "inhale", "inhale-2":
-      /* 19 okt 2026 (operator: "ik hoor een pling-geluid bij breathwork"):
-         .directionUp/.directionDown spelen op watchOS een toon mee. Enkel
-         .click (geen toon): inademen dicht, uitademen trager. */
-      scheduleTicks(type: .click, interval: 0.3, duration: secs)
-    case "exhale", "exhale-2":
-      scheduleTicks(type: .click, interval: 0.45, duration: secs)
-    default:
-      /* Exact dezelfde telling als TICK_PERIOD in breath-haptics.ts — hier
-         wél 1-op-1 reproduceerbaar, want "vasthouden" was op de telefoon al
-         een losse tik per seconde, geen continue textuur. */
-      scheduleTicks(type: .click, interval: 1.0, duration: secs)
-    }
-  }
-
-  private func scheduleTicks(type: WKHapticType, interval: TimeInterval, duration: Int) {
     tickTimer?.invalidate()
-    let device = WKInterfaceDevice.current()
-    /* Begin van de fase: de trilsterkte van het horloge (Strong = de
-       krachtigste tik), daarna de gewone tikken (19 okt 2026). */
-    device.play(WatchSettings.shared.accentType)
-    var elapsed: TimeInterval = 0
-    tickTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { timer in
-      elapsed += interval
-      guard elapsed < TimeInterval(duration) else {
-        timer.invalidate()
-        return
+    let s = WatchSettings.shared
+    s.tap()
+    if key.hasPrefix("inhale") {
+      var elapsed: TimeInterval = 0
+      let interval: TimeInterval = 0.35
+      tickTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { timer in
+        elapsed += interval
+        guard elapsed < TimeInterval(secs) - 0.25 else {
+          timer.invalidate()
+          return
+        }
+        s.tap()
       }
-      device.play(type)
+    } else if key.hasPrefix("exhale") {
+      tickTimer = Timer.scheduledTimer(withTimeInterval: 0.22, repeats: false) { _ in
+        s.tap()
+      }
     }
   }
 

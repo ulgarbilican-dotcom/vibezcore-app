@@ -571,7 +571,7 @@ struct WatchSettingsView: View {
   }
 
   private func sub(_ s: String) -> String? {
-    s == "strong" ? "Strongest tap · silent mode mutes its tone" : nil
+    s == "strong" ? "Strongest taps" : nil
   }
 
   var body: some View {
@@ -585,7 +585,7 @@ struct WatchSettingsView: View {
         ForEach(WatchSettings.levels, id: \.self) { (lv: String) in
           PickRow(title: label(lv), sub: sub(lv), subColor: dim, current: lv == settings.strength, color: teal) {
             settings.setFromWatch(lv)
-            WKInterfaceDevice.current().play(lv == "strong" ? .start : .click)
+            settings.tap()
           }
         }
         Text("Also changes the setting on your iPhone.")

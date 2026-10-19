@@ -166,8 +166,16 @@ private struct StateSessionLayout: View {
 
   var body: some View {
     ZStack {
-      TimelineView(.animation(minimumInterval: 1.0 / 30, paused: ambient || (state.paused && pulses.isEmpty))) { ctx in
-        StateFace(state: state, now: ctx.date, size: size, r: r, pulses: pulses, ambient: ambient)
+      /* Pols omlaag: watchOS verbergt seconden ("21:--") — dan minuten,
+         elke minuut bijgewerkt (19 okt 2026). */
+      if ambient {
+        TimelineView(.everyMinute) { ctx in
+          StateFace(state: state, now: ctx.date, size: size, r: r, pulses: pulses, ambient: ambient)
+        }
+      } else {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: state.paused && pulses.isEmpty)) { ctx in
+          StateFace(state: state, now: ctx.date, size: size, r: r, pulses: pulses, ambient: ambient)
+        }
       }
 
       /* Naam bovenaan, binnen de cirkel; PAUSED erboven. */
@@ -208,8 +216,8 @@ private struct StateFace: View {
   /* 19 okt 2026 (operator: "pols omlaag: de tijd blijft staan"): in Always On
      tekent watchOS zelf een aftellende teller — onze eigen klok staat dan stil. */
   private var timerText: Text {
-    if ambient, !state.paused, let end = state.endDate, end > now {
-      return Text(timerInterval: now...end, countsDown: true)
+    if ambient && !state.paused {
+      return Text("\(max(1, Int((remaining / 60).rounded(.up)))) min")
     }
     return Text(clockText(remaining, roundUp: false))
   }
@@ -385,8 +393,14 @@ private struct BreathSessionLayout: View {
 
   var body: some View {
     ZStack {
-      TimelineView(.animation(minimumInterval: 1.0 / 30, paused: ambient || paused)) { ctx in
-        BreathFace(controller: controller, now: ctx.date, size: size, r: r, acy: acy, ambient: ambient)
+      if ambient {
+        TimelineView(.everyMinute) { ctx in
+          BreathFace(controller: controller, now: ctx.date, size: size, r: r, acy: acy, ambient: ambient)
+        }
+      } else {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: paused)) { ctx in
+          BreathFace(controller: controller, now: ctx.date, size: size, r: r, acy: acy, ambient: ambient)
+        }
       }
 
       /* gepauzeerd: wit rondje met donker play-teken (CTA-stijl) en de naam */
@@ -402,11 +416,6 @@ private struct BreathSessionLayout: View {
         .position(x: w / 2, y: acy)
         .allowsHitTesting(false)
 
-        /* 19 okt 2026 (operator, build 38): naam boven de (grotere) figuur
-           en binnen de boog, zodat niets over de figuur ligt. */
-        NameRow(title: controller.modeName, dot: Color(hex: controller.colorHex) ?? tint, size: 12)
-          .frame(maxWidth: r * 1.1)
-          .position(x: w / 2, y: cy - r * 0.66)
       }
 
       /* Tik op de figuur = pauze / hervatten (het grootste doel op een
@@ -527,8 +536,9 @@ private struct BreathFace: View {
       VStack(spacing: 1) {
         HStack(spacing: 5) {
           /* pols omlaag: de fase zou stil blijven staan — dan de naam */
-          Text(ambient && !paused ? controller.modeName : controller.phaseLabel)
-            .font(.system(size: paused ? 16 : 15, weight: .bold))
+          /* bij pauze ook de naam (onder de figuur, niet over de boog) */
+          Text(ambient || paused ? controller.modeName : controller.phaseLabel)
+            .font(.system(size: 15, weight: .bold))
             .foregroundColor(ambient ? Color(white: 0.74) : .white)
           if !paused && !ambient && !controller.via.isEmpty {
             Text(controller.via)
@@ -538,10 +548,15 @@ private struct BreathFace: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.7)
-        if !paused && ambient && controller.sessionEnd > now {
-          /* Always On: aftellen door watchOS zelf (19 okt 2026) */
-          Text(timerInterval: now...controller.sessionEnd, countsDown: true)
-            .font(.system(size: 13, weight: .medium).monospacedDigit())
+        if paused {
+          Text("Paused")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(Color.white.opacity(0.6))
+        }
+        if !paused && ambient {
+          /* Always On: minuten, elke minuut bijgewerkt (19 okt 2026) */
+          Text("\(max(1, Int((sessionLeft / 60).rounded(.up)))) min left")
+            .font(.system(size: 13, weight: .medium))
             .foregroundColor(Color.white.opacity(0.59))
         }
         if !paused && !ambient {
@@ -595,8 +610,8 @@ struct HoldToEndButton: View {
 
   var body: some View {
     Text(hint ? "HOLD TO END" : "END")
-      .font(.system(size: 11, weight: .bold))
-      .tracking(1.8)
+      .font(.system(size: hint ? 9 : 11, weight: .bold))
+      .tracking(hint ? 0.8 : 1.8)
       .foregroundColor(Color.white.opacity(0.85))
       .lineLimit(1)
       .fixedSize()

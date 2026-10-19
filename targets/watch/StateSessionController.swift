@@ -407,7 +407,7 @@ final class StateSessionController: ObservableObject {
     }
     let beatDate = wallDate(forCurve: nextBeatT)
     /* Trilsterkte van het horloge (19 okt 2026, WatchSettings). */
-    WKInterfaceDevice.current().play(WatchSettings.shared.accentType)
+    WatchSettings.shared.tap()
     lastLubDate = beatDate
     lastCycleMs = beat.cycleMs
     beats.send(true)
