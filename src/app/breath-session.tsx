@@ -68,7 +68,7 @@ import PremiumPaywallModal from '@/components/PremiumPaywallModal';
 import VibezGlass from '@/components/VibezGlass';
 import { goToTab } from '@/utils/state-control-ui';
 import { useKeepAwake } from 'expo-keep-awake';
-import { endLiveSession, onLiveToggle, pauseLiveSession, resumeLiveSession, showLiveSession } from '../../modules/live-activity';
+import { endLiveSession, onLiveToggle, pauseLiveSession, resumeLiveSession, showLiveSession, updateLivePhase } from '../../modules/live-activity';
 import {
   ensureAudioModeSet,
   startSessionKeepAlive,
@@ -1568,6 +1568,11 @@ export function BreathSession() {
       nextAnchorRef.current = endAt;
       setPhase(k);
       setSecsLeft(startLeft);
+      /* iPhone: de fase ook op het vergrendelscherm (19 okt 2026). */
+      if (Platform.OS === 'ios') {
+        const name = def.label.charAt(0) + def.label.slice(1).toLowerCase();
+        updateLivePhase(def.via ? `${name} · ${def.via}` : name, startLeft);
+      }
 
       /* Bij bracelet en privé zwijgt de telefoon: het ritme zit dan op de
          pols en twee bronnen tegelijk is geen begeleiding maar ruis. */

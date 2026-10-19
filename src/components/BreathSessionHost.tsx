@@ -45,7 +45,23 @@ export function BreathSessionHost() {
 
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
 
-  if (!host) return null;
+  /* De vraag kan ook komen zonder ademlaag: State Control loopt en er
+     start een ademsessie (19 okt 2026). */
+  const confirm = (
+    <ConfirmCard
+      visible={pending !== null}
+      title="End current session?"
+      body={
+        pending?.kind === 'state'
+          ? `Your ${pending.label} session ends. Your time is saved.`
+          : `Your ${pending?.label ?? 'Breathwork'} session ends. The time you breathed is saved.`
+      }
+      confirmLabel="End & Start New"
+      onCancel={cancelPendingBreathOpen}
+      onConfirm={confirmPendingBreathOpen}
+    />
+  );
+  if (!host) return confirm;
   return (
     <>
       <Animated.View
@@ -56,14 +72,7 @@ export function BreathSessionHost() {
           <BreathSession key={host.id} />
         </BreathHostContext.Provider>
       </Animated.View>
-      <ConfirmCard
-        visible={pending !== null}
-        title="End current session?"
-        body={`Your ${pending?.label ?? 'Breathwork'} session ends. The time you breathed is saved.`}
-        confirmLabel="End & Start New"
-        onCancel={cancelPendingBreathOpen}
-        onConfirm={confirmPendingBreathOpen}
-      />
+      {confirm}
     </>
   );
 }

@@ -22,6 +22,10 @@ struct VibezSessionAttributes: ActivityAttributes {
     var paused: Bool
     var remainingSec: Int
     var totalSec: Int
+    /// Ademsessie: "Inhale · Nose" en het einde van die fase (19 okt 2026).
+    /// Optioneel, zodat een oudere kaart nog leest.
+    var phase: String?
+    var phaseEndDate: Date?
   }
 
   /// "state" (State Control) of "breath".
@@ -131,6 +135,35 @@ private struct ProgressLine: View {
   }
 }
 
+/// Onder de naam: bij een ademsessie de fase ("Inhale · Nose") met de
+/// seconden die het systeem zelf aftelt; anders de techniek; bij pauze
+/// "Paused" (19 okt 2026, operator: "enkel voortgangsbalk, geen breathe in,
+/// out of hold?").
+private struct SubtitleLine: View {
+  let state: VibezSessionAttributes.ContentState
+  var body: some View {
+    if state.paused {
+      Text("Paused")
+        .font(.system(size: 13))
+        .foregroundColor(Color.white.opacity(0.6))
+    } else if let phase = state.phase, let end = state.phaseEndDate, end > Date() {
+      HStack(spacing: 6) {
+        Text(phase)
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(.white)
+        Text(end, style: .timer)
+          .font(.system(size: 14, weight: .semibold).monospacedDigit())
+          .foregroundColor(Color(vzHex: state.colorHex))
+      }
+      .lineLimit(1)
+    } else {
+      Text(state.subtitle)
+        .font(.system(size: 13))
+        .foregroundColor(Color.white.opacity(0.6))
+    }
+  }
+}
+
 private struct LockScreenView: View {
   let state: VibezSessionAttributes.ContentState
   var body: some View {
@@ -147,9 +180,7 @@ private struct LockScreenView: View {
               .font(.system(size: 17, weight: .semibold))
               .foregroundColor(.white)
           }
-          Text(state.paused ? "Paused" : state.subtitle)
-            .font(.system(size: 13))
-            .foregroundColor(Color.white.opacity(0.6))
+          SubtitleLine(state: state)
         }
         Spacer()
         TimerLabel(state: state)
@@ -196,9 +227,7 @@ struct VibezSessionLiveActivity: Widget {
         DynamicIslandExpandedRegion(.bottom) {
           HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-              Text(context.state.paused ? "Paused" : context.state.subtitle)
-                .font(.system(size: 13))
-                .foregroundColor(Color.white.opacity(0.6))
+              SubtitleLine(state: context.state)
               ProgressLine(state: context.state)
             }
             ToggleButton(state: context.state, size: 36)

@@ -21,6 +21,10 @@ struct VibezSessionAttributes: ActivityAttributes {
     var paused: Bool
     var remainingSec: Int
     var totalSec: Int
+    /// Ademsessie: "Inhale · Nose" en het einde van die fase (19 okt 2026).
+    /// Optioneel, zodat een oudere kaart nog leest.
+    var phase: String?
+    var phaseEndDate: Date?
   }
 
   var kind: String
@@ -35,6 +39,8 @@ struct LiveSessionRecord: Record {
   @Field var paused: Bool = false
   @Field var remainingSec: Int = 0
   @Field var totalSec: Int = 0
+  @Field var phase: String = ""
+  @Field var phaseEndMs: Double = 0
 }
 
 /// Darwin-signaal van de pauze/hervat-knop in de Live Activity.
@@ -132,7 +138,9 @@ enum LiveSessionController {
       endDate: Date(timeIntervalSince1970: r.endMs / 1000),
       paused: r.paused,
       remainingSec: r.remainingSec,
-      totalSec: r.totalSec
+      totalSec: r.totalSec,
+      phase: r.phase.isEmpty ? nil : r.phase,
+      phaseEndDate: r.phaseEndMs > 0 ? Date(timeIntervalSince1970: r.phaseEndMs / 1000) : nil
     )
     // Een minuut na het geplande einde is de weergave verouderd (de app
     // beëindigt hem normaal zelf; dit is enkel het vangnet).

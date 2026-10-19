@@ -23,6 +23,8 @@ type NativeRecord = {
   paused: boolean;
   remainingSec: number;
   totalSec: number;
+  phase?: string;
+  phaseEndMs?: number;
 };
 
 type NativeModule = {
@@ -75,6 +77,18 @@ export function showLiveSession(s: LiveSession): void {
       if (r !== 'created' && r !== 'updated') failHandler?.(String(r), last);
     })
     .catch((e) => failHandler?.(`throw: ${String(e)}`, last));
+}
+
+/** Ademsessie (19 okt 2026, operator: "op het vergrendelscherm enkel een
+ *  voortgangsbalk, geen breathe in, out of hold?"): de lopende fase
+ *  ("Inhale · Nose") met haar einde; het systeem telt de seconden zelf af.
+ *  Het einde van de sessie blijft wat het was. */
+export function updateLivePhase(phase: string, phaseSecs: number): void {
+  if (!native || !last || last.paused || last.kind !== 'breath') return;
+  const remaining = Math.max(0, Math.round((last.endMs - Date.now()) / 1000));
+  native
+    .show({ ...last, remainingSec: remaining, phase, phaseEndMs: Date.now() + Math.max(0, phaseSecs) * 1000 })
+    .catch(() => {});
 }
 
 /** Pauze: de resterende tijd bevriezen op wat de activity nu toont. */

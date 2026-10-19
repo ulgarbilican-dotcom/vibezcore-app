@@ -557,6 +557,15 @@ export function startBraceletSessionMonitor(opts: {
       normaal 0 bij een echte nieuwe start). */
   elapsedSec?: number;
 }): void {
+  /* Eén sessie tegelijk (19 okt 2026, operator: "breathwork en state
+     control lopen allebei"): een lopende ademsessie eerst afsluiten.
+     Inline require: breath-session-host importeert deze module. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('./breath-session-host') as typeof import('./breath-session-host')).endRunningBreathSession();
+  } catch {
+    /* nooit de start blokkeren */
+  }
   clearTimers();
   state = {
     mode: opts.mode,
@@ -740,6 +749,12 @@ onLiveToggle('state', () => {
    zoals de End-knop (opslaan als 'stopped', bracelet stoppen, weergave).
    Staat het niet open, dan doet de monitor het zelf — zo wordt een sessie
    nooit dubbel of helemaal niet bewaard. */
+/** Een lopende State Control-sessie afsluiten zoals de End-knop (bewaard
+ *  als 'stopped') — gebruikt als er een ademsessie start (19 okt 2026). */
+export function endStateControlSession(): Promise<void> {
+  return remoteStop();
+}
+
 async function remoteStop(): Promise<void> {
   if (!state) return;
   const remSec = currentRemainingSec();

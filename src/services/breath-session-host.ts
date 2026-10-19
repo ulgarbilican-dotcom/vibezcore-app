@@ -10,7 +10,19 @@
    De pill (BreathMiniControl) haalt ze terug.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { getModeMeta } from './ble-contract';
+import { endStateControlSession, getBraceletMonitorSession } from './bracelet-session-monitor';
+
 export type BreathSessionParams = Record<string, string | undefined>;
+
+/* 19 okt 2026 (operator: "als ik breathwork en state control na elkaar start,
+   lopen beide — dat is niet de bedoeling"): één sessie tegelijk, over beide
+   soorten heen. Loopt er State Control, dan dezelfde vraag als bij een
+   tweede ademsessie ("End current session?"). */
+function runningStateLabel(): string | null {
+  const st = getBraceletMonitorSession();
+  return st ? getModeMeta(st.mode).name : null;
+}
 
 type HostState = {
   /** Nieuwe id per geopende sessie — de host monteert dan een verse sessie. */
@@ -57,7 +69,7 @@ export function registerRunningBreathSession(r: RunningSession): () => void {
 
 /** Opent een ademsessie. Loopt er al een, dan eerst bevestigen. */
 export function openBreathSession(params: BreathSessionParams): void {
-  if (host && running?.isActive()) {
+  if ((host && running?.isActive()) || runningStateLabel() !== null) {
     pendingOpen = params;
     notify();
     return;
@@ -76,8 +88,11 @@ export function getRunningBreathStatus(): { paused: boolean; remainingSec: numbe
   }
 }
 
-export function getPendingBreathOpen(): { label: string } | null {
-  return pendingOpen ? { label: running?.label() ?? 'Breathwork' } : null;
+export function getPendingBreathOpen(): { label: string; kind: 'breath' | 'state' } | null {
+  if (!pendingOpen) return null;
+  const state = runningStateLabel();
+  if (state !== null) return { label: state, kind: 'state' };
+  return { label: running?.label() ?? 'Breathwork', kind: 'breath' };
 }
 
 /** "End & Start": de lopende sessie afsluiten (bewaart de geademde tijd),
@@ -86,8 +101,9 @@ export function confirmPendingBreathOpen(): void {
   const params = pendingOpen;
   pendingOpen = null;
   if (!params) return;
+  if (runningStateLabel() !== null) void endStateControlSession();
   try {
-    running?.end();
+    if (running?.isActive()) running.end();
   } catch {
     /* afsluiten mag het openen van de nieuwe sessie nooit blokkeren */
   }
@@ -98,6 +114,21 @@ export function confirmPendingBreathOpen(): void {
 export function cancelPendingBreathOpen(): void {
   if (!pendingOpen) return;
   pendingOpen = null;
+  notify();
+}
+
+/** State Control start terwijl er een ademsessie loopt (19 okt 2026): de
+ *  ademsessie netjes afsluiten (geademde tijd bewaard, horloge gestopt) en
+ *  de laag sluiten — één sessie tegelijk. */
+export function endRunningBreathSession(): void {
+  if (!running?.isActive()) return;
+  try {
+    running.end();
+  } catch {
+    /* afsluiten mag de nieuwe sessie nooit blokkeren */
+  }
+  pendingOpen = null;
+  host = null;
   notify();
 }
 
