@@ -47,3 +47,5 @@ wear-app/.gradle/
 modules/*/android/build/
 /scratchpad/
 FONT_AUDIT_voor_google_docs.txt
+/store-screenshots/
+/release-android/

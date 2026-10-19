@@ -202,7 +202,10 @@ let lockScreenInfoOn = true;
 function otherAppAudioPlaying(): boolean {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    if (require('./audio-player').getSnapshot().playing) return true;
+    /* Ook een gepauzeerde, nog geladen track (bediening op het
+       vergrendelscherm) niet storen (pre-build review 19 okt 2026). */
+    const snap = require('./audio-player').getSnapshot();
+    if (snap.playing || snap.session !== null) return true;
   } catch {}
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
