@@ -121,9 +121,11 @@ export function cancelPendingBreathOpen(): void {
  *  ademsessie netjes afsluiten (geademde tijd bewaard, horloge gestopt) en
  *  de laag sluiten — één sessie tegelijk. */
 export function endRunningBreathSession(): void {
-  if (!running?.isActive()) return;
+  /* Ook een GEPAUZEERDE of geminimaliseerde sessie (isActive() is dan
+     false) — operator, build 38: "de vorige sessie bleef geminimaliseerd". */
+  if (!host && !running) return;
   try {
-    running.end();
+    running?.end();
   } catch {
     /* afsluiten mag de nieuwe sessie nooit blokkeren */
   }

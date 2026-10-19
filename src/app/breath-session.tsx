@@ -1573,10 +1573,10 @@ export function BreathSession() {
       setPhase(k);
       setSecsLeft(startLeft);
       /* iPhone: de fase ook op het vergrendelscherm (19 okt 2026). */
-      if (Platform.OS === 'ios') {
-        const name = def.label.charAt(0) + def.label.slice(1).toLowerCase();
-        updateLivePhase(def.via ? `${name} · ${def.via}` : name, startLeft);
-      }
+      /* Uitgezet voor build 41 (operator, build 38: de kaart bleef op
+         "Inhale" staan — iOS past updates op de achtergrond niet elke fase
+         toe). Liever de techniek dan een fase die niet klopt. */
+      void updateLivePhase;
 
       /* Bij bracelet en privé zwijgt de telefoon: het ritme zit dan op de
          pols en twee bronnen tegelijk is geen begeleiding maar ruis. */
