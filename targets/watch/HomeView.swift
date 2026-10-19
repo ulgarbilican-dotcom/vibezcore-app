@@ -618,6 +618,14 @@ struct WatchSettingsView: View {
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
           .padding(.top, 4)
+        /* Timing van de laatste sessie (19 okt 2026) */
+        if let t = WatchTiming.shared.lastSummary {
+          Eyebrow(text: "Last session timing").padding(.top, 10)
+          Text(t)
+            .font(.system(size: 11).monospacedDigit())
+            .foregroundColor(.white.opacity(0.75))
+            .multilineTextAlignment(.center)
+        }
       }
       .padding(.horizontal, 8)
     }

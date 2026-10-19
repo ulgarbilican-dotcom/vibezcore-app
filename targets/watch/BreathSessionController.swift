@@ -156,6 +156,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     via = phase.via
     self.round = round
     if !silentStart {
+      WatchTiming.shared.record(planned: start)
       playHaptics(for: phase.key, secs: phase.secs)
       beats.send(true)
     }
@@ -373,6 +374,7 @@ final class BreathSessionController: NSObject, ObservableObject {
   }
 
   func stop() {
+    WatchTiming.shared.commit()
     if isLocal { finishLocal(completed: localCompleted) }
     localCompleted = false
     generation += 1

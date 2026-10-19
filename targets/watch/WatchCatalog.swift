@@ -249,3 +249,40 @@ final class WatchSettings: ObservableObject {
   /// Tweede slag van de hartslag (Soft: geen).
   var playsDub: Bool { strength != "soft" }
 }
+
+/* Meetinstrument voor de timing (19 okt 2026, operator: "geen gokwerk — een
+   professioneel product dat perfect werkt"). Bij elke hartslag en elke
+   ademfase: hoeveel ms de tik later viel dan gepland. Na de sessie staat de
+   samenvatting in Settings op het horloge — zo zijn "gedimd scherm", "lange
+   sessie" en "onderbreking" objectief te testen. */
+final class WatchTiming {
+  static let shared = WatchTiming()
+  private let key = "vz_watch_timing_last_v1"
+  private var count = 0
+  private var sumMs = 0.0
+  private var maxMs = 0.0
+  private var late = 0
+
+  /// Eén signaal: gepland moment → nu.
+  func record(planned: Date) {
+    let ms = max(0, Date().timeIntervalSince(planned) * 1000)
+    count += 1
+    sumMs += ms
+    if ms > maxMs { maxMs = ms }
+    if ms > 100 { late += 1 }
+  }
+
+  /// Einde van de sessie: samenvatting bewaren en opnieuw beginnen.
+  func commit() {
+    guard count > 0 else { return }
+    let avg = Int((sumMs / Double(count)).rounded())
+    let text = "\(count) signals · avg \(avg) ms · max \(Int(maxMs.rounded())) ms · \(late) late"
+    UserDefaults.standard.set(text, forKey: key)
+    count = 0
+    sumMs = 0
+    maxMs = 0
+    late = 0
+  }
+
+  var lastSummary: String? { UserDefaults.standard.string(forKey: key) }
+}

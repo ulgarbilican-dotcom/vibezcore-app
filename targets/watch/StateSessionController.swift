@@ -323,6 +323,7 @@ final class StateSessionController: ObservableObject {
   }
 
   func stop() {
+    WatchTiming.shared.commit()
     if isLocal { finishLocal(completed: localCompleted) }
     localCompleted = false
     cancelTimers()
@@ -418,6 +419,7 @@ final class StateSessionController: ObservableObject {
       beat = p.beatAt(nextBeatT)
     }
     let beatDate = wallDate(forCurve: nextBeatT)
+    WatchTiming.shared.record(planned: beatDate)
     /* Trilsterkte van het horloge (19 okt 2026, WatchSettings). */
     WatchSettings.shared.play(.beat)
     lastLubDate = beatDate
