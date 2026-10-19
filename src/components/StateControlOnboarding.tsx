@@ -373,8 +373,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           <View style={s.backWrap}>
             {(step > 0 || onBack) && (
               <Pressable onPress={goBack} hitSlop={14} style={s.backBtn} accessibilityRole="button">
-                <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
-                <Text style={s.skipTxt}>Back</Text>
+                {/* Stap 1: "Not Now", zoals bij Breathwork (19 okt 2026). */}
+                {step > 0 && <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />}
+                <Text style={s.skipTxt}>{step > 0 ? 'Back' : 'Not Now'}</Text>
               </Pressable>
             )}
           </View>
