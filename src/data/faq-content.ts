@@ -308,10 +308,11 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     answer:
       (IOS
         ? "Apple Watch dims its screen after about 15 seconds without a touch, even while you look at it. Your session keeps running: VIBEZCORE stays on screen, the taps on your wrist continue, and the dimmed screen still shows your state and the minutes left.\n\n" +
-          "To keep the screen bright longer, open Settings on your watch → Display & Brightness → Wake Duration → Wake for 70 Seconds.\n\n"
-        : "Your watch dims its screen after a short time without a touch. Your session keeps running and the taps on your wrist continue.\n\n" +
-          "To keep the screen on longer, open Settings on your watch → Display → Screen timeout.\n\n") +
-      "You don't need to look: inhale is a continuous series of taps, hold is a single tap, exhale is a double tap.",
+          "To keep the screen bright longer, open Settings on your watch → Display & Brightness → Wake Duration → Wake for 70 Seconds.\n\n" +
+          "You don't need to look: each phase has its own tap. Inhale is a rising tap followed by soft taps, hold is a single tap, exhale is a falling tap."
+        : "Your watch dims its screen after a short time without a touch. Your session keeps running and the vibration on your wrist continues.\n\n" +
+          "To keep the screen on longer, open Settings on your watch → Display → Screen timeout.\n\n" +
+          "You don't need to look: inhale, hold and exhale each have their own vibration pattern."),
   },
   {
     id: 'watch-install',

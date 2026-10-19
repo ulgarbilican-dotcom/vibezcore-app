@@ -114,6 +114,12 @@ final class SessionAudioEngine {
   private var owners = Set<String>()
   private var voiceActiveUntil: Double = 0
   private var timer: DispatchSourceTimer?
+  /// JS meldt dat niets anders in de app nog speelt: bij stilstand de
+  /// geluidssessie teruggeven aan andere apps (YouTube, muziek).
+  private var releaseWhenIdle = false
+  /// Rem op herstarten: nooit vaker dan eens per seconde, anders vecht de
+  /// motor met een andere app om de geluidssessie (haperend geluid).
+  private var lastRecoverMs: Double = 0
 
   // Slagen
   private var plan: BeatPlan?
@@ -231,8 +237,13 @@ final class SessionAudioEngine {
       for n in beatNodes { n.stop() }
     }
     if engine.isRunning { engine.stop() }
-    /* Geluidssessie bewust NIET uitzetten: de audiobibliotheek of een
-       soundscape kan nog spelen; expo-audio regelt zijn eigen sessie. */
+    /* Enkel uitzetten als JS meldde dat niets anders in de app speelt
+       (audiobibliotheek/soundscape gebruiken dezelfde geluidssessie).
+       Operator 19 okt 2026: YouTube haperde na een sessie. */
+    if releaseWhenIdle {
+      releaseWhenIdle = false
+      try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+    }
   }
 
   /// Motor viel weg (sessie uitgezet, telefoontje, routewissel): herstarten
@@ -240,6 +251,9 @@ final class SessionAudioEngine {
   private func recover() {
     guard needsEngine else { return }
     if engine.isRunning, !beatNodes.isEmpty, beatNodes[0].isPlaying { return }
+    let now = nowMs()
+    if now - lastRecoverMs < 1000 { return }
+    lastRecoverMs = now
     if attached {
       for n in beatNodes { n.stop() }
       voiceNode.stop()
@@ -307,6 +321,7 @@ final class SessionAudioEngine {
 
   func begin(_ owner: String) {
     q.async {
+      self.releaseWhenIdle = false
       self.owners.insert(owner)
       self.ensureEngine()
     }
@@ -316,6 +331,15 @@ final class SessionAudioEngine {
     q.async {
       self.owners.remove(owner)
       self.stopEngineIfIdle()
+    }
+  }
+
+  /// Geef de geluidssessie terug zodra de motor stilvalt (nu, of na de
+  /// laatste stem-cue via tick()).
+  func releaseSession() {
+    q.async {
+      self.releaseWhenIdle = true
+      if self.needsEngine { self.startTimer() } else { self.stopEngineIfIdle() }
     }
   }
 
@@ -719,6 +743,10 @@ public class SessionAudioModule: Module {
 
     Function("end") { (owner: String) in
       SessionAudioEngine.shared.end(owner)
+    }
+
+    Function("releaseSession") { () in
+      SessionAudioEngine.shared.releaseSession()
     }
 
     Function("hasSound") { (key: String) -> Bool in

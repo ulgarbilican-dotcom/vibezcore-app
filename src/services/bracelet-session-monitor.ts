@@ -560,9 +560,12 @@ export function startBraceletSessionMonitor(opts: {
   /* Eén sessie tegelijk (19 okt 2026, operator: "breathwork en state
      control lopen allebei"): een lopende ademsessie eerst afsluiten.
      Inline require: breath-session-host importeert deze module. */
+  let endedBreath = false;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    (require('./breath-session-host') as typeof import('./breath-session-host')).endRunningBreathSession();
+    const host = require('./breath-session-host') as typeof import('./breath-session-host');
+    endedBreath = host.getBreathHost() !== null || host.getRunningBreathStatus() !== null;
+    host.endRunningBreathSession();
   } catch {
     /* nooit de start blokkeren */
   }
@@ -594,7 +597,9 @@ export function startBraceletSessionMonitor(opts: {
   persist();
   /* onStart pauzeert meteen ("sessie start pas na Play", 27 sept) — pas
      na die synchrone pauze beslissen of er haptiek moet spelen. */
-  setTimeout(syncHaptics, 0);
+  /* Net een ademsessie afgesloten: haar opruimen (Vibration.cancel op
+     Android) mag de nieuwe trilling niet meteen weer stoppen. */
+  setTimeout(syncHaptics, endedBreath ? 400 : 0);
 }
 
 /* Haptiek hangt aan de SESSIE (deze mount-onafhankelijke monitor), niet
@@ -667,6 +672,13 @@ export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): 
     void cancelIosDone();
   }
   clearBraceletSession();
+  /* Het sessiescherm geeft zijn audio-anker enkel vrij als het open is; eindigt
+     de sessie geminimaliseerd, dan bleef de iPhone-geluidsmotor draaien en
+     haperde YouTube (operator 19 okt 2026). */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('./session-keepalive').stopSessionKeepAlive('state');
+  } catch {}
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID);
   } catch {

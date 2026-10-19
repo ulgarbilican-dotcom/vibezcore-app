@@ -586,9 +586,13 @@ function getOrCreatePlayer(remote: string): AudioPlayer {
  *  leunde daar blind op en loste dus niets structureels op. `currentTime`
  *  is de betrouwbare graadmeter: die blijft op 0 staan tot er ECHT audio
  *  gerenderd wordt, en loopt daarna op. */
+/** Startpunt per speler (cue die later in het bestand begint): pas voorbij
+ *  dat punt is er echt geluid. */
+const startOffsets = new WeakMap<AudioPlayer, number>();
 function hasAudibleProgress(p: AudioPlayer): boolean {
   try {
-    return p.currentTime > 0;
+    const from = startOffsets.get(p) ?? 0;
+    return from > 0 ? p.currentTime > from + 0.05 : p.currentTime > 0;
   } catch {
     return false;
   }
@@ -658,6 +662,7 @@ function playUrl(url: string, windowSec?: number): void {
   try {
     const player = getOrCreatePlayer(url);
     activePlayer = player;
+    startOffsets.set(player, offsetSec);
     /* Operator, 24 september 2026 (vervolg op de preload-fix hierboven):
        `preloadBreathCues()` laat de player nu bewust op `volume = 0` staan
        (geen pauze/reset meer die de buffer kon verstoren) — dus MOET hier

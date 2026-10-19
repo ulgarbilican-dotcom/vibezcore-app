@@ -537,7 +537,7 @@ function PlanCard() {
     title = 'Full Bundle';
     line = 'Premium is included with your bracelet.';
   } else if (dayPass) {
-    cta = { label: 'Keep full access', onPress: () => router.navigate('/subscribe?tier=yearly' as never) };
+    cta = { label: 'Keep full access', onPress: () => router.navigate('/subscribe' as never) };
     note = savePercent ? `Yearly saves ${savePercent}% compared to monthly.` : null;
   } else if (cancelled) {
     cta = { label: 'Turn renewal back on', onPress: () => void openManageSubscriptions() };

@@ -26,7 +26,12 @@ import {
 import { AppState, Platform } from 'react-native';
 import { onLiveActivityFailed, type LiveSession } from '../../modules/live-activity';
 import { reportError } from './crash-reporting';
-import { beginSessionAudio, endSessionAudio, isSessionAudioAvailable } from '../../modules/session-audio';
+import {
+  beginSessionAudio,
+  endSessionAudio,
+  isSessionAudioAvailable,
+  releaseSessionAudio,
+} from '../../modules/session-audio';
 
 /* iPhone (19 okt 2026): de geluidsmotor (modules/session-audio) houdt de app
    levend tijdens een sessie, niet langer een stille expo-audio-lus. expo-audio
@@ -188,6 +193,19 @@ export type SessionKeepAliveMeta = { title: string; subtitle?: string };
 /** Toont het anker een eigen kaart op het vergrendelscherm? (17 okt 2026) */
 let lockScreenInfoOn = true;
 
+/** Speelt de audiobibliotheek of een soundscape nog? Lui geladen (kringloop). */
+function otherAppAudioPlaying(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    if (require('./audio-player').getSnapshot().playing) return true;
+  } catch {}
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    if (require('./soundscape').isScapePlaying()) return true;
+  } catch {}
+  return false;
+}
+
 export function startSessionKeepAlive(
   meta?: SessionKeepAliveMeta,
   /** Operator, 17 september 2026 (bracelet-sessies): bracelet gebruikt dit
@@ -290,6 +308,9 @@ export function stopSessionKeepAlive(owner: KeepAliveOwner | 'all' = 'breath'): 
   if (owner === 'all') owners.clear();
   else owners.delete(owner);
   if (owners.size > 0) return;
+  /* iPhone (operator 19 okt 2026: "nu glitcht het bij youtube"): speelt
+     niets anders meer in de app, dan de geluidssessie teruggeven. */
+  if (nativeKeepAlive() && !otherAppAudioPlaying()) releaseSessionAudio();
   fallbackMeta = null;
   const p = anchor;
   anchor = null;

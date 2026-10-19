@@ -52,7 +52,7 @@ android {
     if (credFile.exists()) {
       def k = new groovy.json.JsonSlurper().parse(credFile).android.keystore
       release {
-        storeFile rootProject.file('../' + k.keystorePath)
+        storeFile(new File(k.keystorePath).isAbsolute() ? new File(k.keystorePath) : rootProject.file('../' + k.keystorePath))
         storePassword k.keystorePassword
         keyAlias k.keyAlias
         keyPassword k.keyPassword

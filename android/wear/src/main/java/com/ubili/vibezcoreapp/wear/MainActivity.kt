@@ -523,6 +523,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
        symbolen in de app en gebruik dezelfde"): Radio en Wind */
     fun glyph(res: Int) = android.widget.ImageView(this).apply {
       setImageResource(res)
+      // Bio-Teal, de accentkleur van VIBEZCORE (operator, 19 okt 2026)
+      setColorFilter(Color.parseColor("#00A3A3"))
       scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
       setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO

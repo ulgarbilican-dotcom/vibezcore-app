@@ -37,6 +37,7 @@ type NativeModule = {
   hapticsSupported(): boolean;
   begin(owner: string): void;
   end(owner: string): void;
+  releaseSession?(): void;
   hasSound(key: string): boolean;
   loadSound(key: string, uri: string): Promise<boolean>;
   playVoice(key: string, volume: number, offsetSec: number): boolean;
@@ -74,6 +75,16 @@ export function beginSessionAudio(owner: string): void {
 export function endSessionAudio(owner: string): void {
   try {
     native?.end(owner);
+  } catch {
+    /* stil */
+  }
+}
+
+/** Niets in de app speelt nog: geef de geluidssessie terug aan andere apps
+ *  (YouTube, muziek) zodra de motor stilvalt. */
+export function releaseSessionAudio(): void {
+  try {
+    native?.releaseSession?.();
   } catch {
     /* stil */
   }

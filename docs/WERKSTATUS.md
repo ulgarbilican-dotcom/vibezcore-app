@@ -6,7 +6,7 @@
 > verderzetten zonder vragen"). Een nieuwe sessie leest dit als eerste na
 > `CLAUDE.md`, daarna `git log -20`, `docs/TEST_LOG.md` en het geheugen.
 >
-> Laatst bijgewerkt: 15 oktober 2026.
+> Laatst bijgewerkt: 19 oktober 2026 — iOS build 56 (YouTube-geluidsfix T314) en Android build 101 (T315–T317) in aanmaak; Galaxy Watch-aab in release-android/.
 
 ---
 

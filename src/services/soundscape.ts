@@ -172,6 +172,10 @@ export async function playScape(key: string | null): Promise<void> {
   }
 }
 
+export function isScapePlaying(): boolean {
+  return playingKey !== null;
+}
+
 /** Pauze van de sessie (operator, 9 okt 2026: "bij pauze moet de soundscape
  *  ook pauzeren"): zacht naar stil en dan echt pauzeren; `resumeScape`
  *  speelt verder op dezelfde plek en vaagt terug op. */
