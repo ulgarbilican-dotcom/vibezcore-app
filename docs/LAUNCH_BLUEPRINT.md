@@ -57,7 +57,7 @@
 | A3.5 | 4 / 2.1(a) | Native Apple-knop + werkende Apple-login | ✅ in app |
 | A3.6 | 5.1.1(v) | Kopen zonder account | ✅ in app |
 | A3.7 | — | Leeftijdsclassificatie 9+ → **13+** | ⏳ |
-| A3.8 | — | App-privacy: gezondheid (hartslag, enkel op toestel), crashrapporten, aankopen, e-mail | ⏳ |
+| A3.8 | — | App-privacy: crashrapporten, aankopen, e-mail — **geen gezondheidsgegevens** (geen Apple Health bij de lancering, 19 okt; rusthartslag blijft op het toestel) | ⏳ |
 | A3.9 | — | App Review-informatie: nieuwe notes + screenshot huidige betaalmuur (tekst: ik) | ⏳ |
 | A3.10 | — | Exportcompliance: geen eigen versleuteling | ⏳ |
 | A3.11 | — | Versie-release: **"Automatisch vrijgeven na goedkeuring"** | ⏳ |
@@ -72,7 +72,7 @@
 | B1 | Android-productiebuild (versionCode 100) met alle fixes sinds 99 + Wear OS-bundel | ik | ⏳ |
 | B2 | Release-versie volledig testen op de A16 | ik | ⏳ |
 | B3 | Play Console: .aab + Wear OS-bundel uploaden | jij | ⏳ |
-| B4 | Gezondheidsgegevens-formulier, Gegevensveiligheid, leeftijd 13+ | jij (tekst: ik) | ⏳ |
+| B4 | Gegevensveiligheid, leeftijd 13+. **Geen Health Connect** bij de lancering (19 okt): geen health-toestemmingen in de build, dus geen Health Connect-toestemmingsverklaring; vraagt Play Console naar gezondheidsfuncties, dan: geen Health Connect, geen gezondheidsgegevens verzameld | jij (tekst: ik) | ⏳ |
 | B5 | Store-screenshots huidige app | jij + ik | ⏳ |
 | B6 | Release naar productie, **100%** uitrol | jij | ⏳ |
 

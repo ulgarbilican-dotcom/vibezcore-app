@@ -26,7 +26,7 @@ Eerst: app verwijderen → build 38 installeren via TestFlight.
 ## App Store Connect (A3)
 1. **App Information → Support URL:** `https://www.vibezcore.com/support`
 2. **Leeftijdsclassificatie:** 13+ (vragenlijst opnieuw doorlopen).
-3. **App Privacy:** gezondheid (hartslag — enkel op het toestel, niet gekoppeld aan identiteit), crashgegevens, aankopen, e-mailadres (account).
+3. **App Privacy:** crashgegevens, aankopen, e-mailadres (account). **Geen gezondheidsgegevens** (19 okt: geen Apple Health-koppeling bij de lancering; de rusthartslag uit camerameting of zelf ingeven blijft op het toestel en geldt voor Apple niet als "verzameld"). Geen HealthKit-entitlement of Health-teksten in de build.
 4. **Versie → In-App Purchases and Subscriptions:** Monthly, Yearly én Day Pass aanvinken.
 5. **Screenshots** iPhone 6,9" en 6,5" uit de huidige app (geen Google Play-elementen).
 6. **Beschrijving:** onderaan het blok hieronder toevoegen (bestaande marketingtekst blijft).

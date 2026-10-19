@@ -23,3 +23,18 @@
  *  gratis breathwork-sessie stuurt nu naar de Breath-tab, en de user moet
  *  daar ook naar de Audio Library kunnen — dat kan alleen via de tabbalk. */
 export const AUDIO_ENABLED = true;
+
+/** Apple Health (iPhone) / Health Connect (Android).
+ *
+ *  UIT sinds 19 oktober 2026 (operator): bij de lancering meet VIBEZCORE de
+ *  rusthartslag zelf (camerameting, zelf ingeven of het gemiddelde). Eén
+ *  helder verhaal, minder toestemmingsvensters, geen HealthKit-review, geen
+ *  Health-apps-verklaring in Play, geen gezondheidslabels in de stores.
+ *
+ *  De code (services/health-sync.ts, components/HealthSyncSetting.tsx)
+ *  blijft staan. Terug aanzetten = deze waarde op `true` ÉN de
+ *  build-instellingen terugzetten (app.json: health-permissies + de config-
+ *  plugins react-native-health-connect / @kingstinct/react-native-healthkit;
+ *  react-native.config.js: iOS-uitsluiting van HealthKit weghalen) ÉN de
+ *  privacyverklaring/FAQ weer aanvullen (zie commit 9a20275). */
+export const HEALTH_INTEGRATION_ENABLED = false;

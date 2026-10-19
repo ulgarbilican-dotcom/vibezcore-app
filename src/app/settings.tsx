@@ -27,7 +27,7 @@ import BalancedText from '@/components/BalancedText';
 import { getCrashReportsEnabled, setCrashReportsEnabled } from '@/services/crash-reporting';
 import HealthSyncSetting from '@/components/HealthSyncSetting';
 import { resetRestingPulse } from '@/services/resting-pulse';
-import { AUDIO_ENABLED } from '@/constants/features';
+import { AUDIO_ENABLED, HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
 import * as Haptics from 'expo-haptics';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -533,15 +533,18 @@ export default function SettingsScreen() {
           </PressFeedback>
         </View>
 
-        {/* ── HEALTH (12 okt 2026) — Apple Health / Health Connect. */}
-        <HealthSyncSetting
-          cardStyle={s.card}
-          rowStyle={s.row}
-          rowTextStyle={s.rowText}
-          titleStyle={s.rowTitle}
-          subStyle={s.rowSub}
-          labelStyle={s.sectionLabel}
-        />
+        {/* ── HEALTH (12 okt 2026) — Apple Health / Health Connect.
+            UIT bij de lancering (19 okt 2026, HEALTH_INTEGRATION_ENABLED). */}
+        {HEALTH_INTEGRATION_ENABLED ? (
+          <HealthSyncSetting
+            cardStyle={s.card}
+            rowStyle={s.row}
+            rowTextStyle={s.rowText}
+            titleStyle={s.rowTitle}
+            subStyle={s.rowSub}
+            labelStyle={s.sectionLabel}
+          />
+        ) : null}
 
         {/* ── SMART BEAD BRACELET ──────────────────────────────────────
             Verschijnt alleen voor wie er een heeft. Een gast ziet de etalage

@@ -22,7 +22,6 @@ const FREE_AUDIO_COUNT = SESSIONS.filter((x) => getEffectiveTier(x) === 'public'
 /* App Review 2.3.10: de iPhone-app noemt geen andere platforms (zelfde
    aanpak als legal-content.ts). Op Android blijft de tekst Android. */
 const IOS = Platform.OS === 'ios';
-const HEALTH_APP = IOS ? 'Apple Health' : 'Health Connect';
 
 export type FaqCategory =
   | 'overview'
@@ -186,7 +185,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'stateControl',
     question: "Why does State Control use my resting heart rate?",
     answer:
-      `Your rhythm starts where your body is. VIBEZCORE uses your resting heart rate as the starting tempo — measured in the app, entered by you, or read from ${HEALTH_APP} if you turn that on — and then slowly moves toward the tempo of the state you chose.`,
+      "Your rhythm starts where your body is. VIBEZCORE uses your resting heart rate as the starting tempo — measured in the app with your phone's camera, or entered by you — and then slowly moves toward the tempo of the state you chose. Until you measure, it uses an average resting heart rate.",
   },
   {
     id: 'state-sound',
@@ -335,7 +334,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'smartwatch',
     question: "Does VIBEZCORE use my watch's heart rate?",
     answer:
-      `Not live during a session. If you turn on ${HEALTH_APP} in Settings, VIBEZCORE uses the resting heart rate your watch has saved there to set the starting rhythm of State Control. You can also measure or enter your resting heart rate in the app.`,
+      "No. VIBEZCORE doesn't read heart rate from your watch. You measure your resting heart rate in the app with your phone's camera, or enter it yourself — for example the resting heart rate your watch shows. It sets the starting rhythm of State Control and stays on your device.",
   },
 
   /* ── SMART BRACELET & TECHNOLOGY ──────────────────────────────── */
@@ -380,12 +379,12 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'Does the Smart Bead Bracelet track personal data?',
     answer:
       "No. The Smart Bead Bracelet is designed without health sensors: it won't monitor heart rate, sleep or other health metrics. Its only job is to deliver the rhythm.\n\n" +
-      `If you choose, the VIBEZCORE app can read your resting heart rate from ${HEALTH_APP} to personalise State Control — only with your permission.`,
+      "State Control is personalised with your resting heart rate, which you measure with your phone's camera or enter yourself in the VIBEZCORE app. It stays on your device.",
   },
   {
     id: 'bracelet-needs-smartphone',
     category: 'bracelet',
-    question: 'Does VIBEZCORE require a smartphone?',
+    question: 'Does the Smart Bead Bracelet require a smartphone?',
     answer:
       "Yes. The bracelet will be set up and controlled with the VIBEZCORE app on your phone, where you choose your state and session. Once a session starts, the bracelet runs it on its own — your phone doesn't need to stay nearby.",
   },
@@ -613,7 +612,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'What data does VIBEZCORE collect?',
     answer:
       "VIBEZCORE collects only what is necessary to provide our services — including account information, purchase details, and usage data to improve the platform. No health or biometric data reaches our servers.\n\n" +
-      `If you turn on ${HEALTH_APP}, VIBEZCORE reads your resting heart rate and saves your sessions as mindful minutes — only on your device and in the health app. Your session history and progress are stored on your device only; sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.`,
+      "If you measure or enter your resting heart rate, it is used only to set your State Control rhythm and stays on your device. Your session history and progress are stored on your device only; sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.",
   },
   {
     id: 'privacy-deletion',

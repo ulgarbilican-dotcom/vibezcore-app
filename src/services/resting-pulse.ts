@@ -12,6 +12,7 @@
    ook in de privacyverklaring. Geen medische meting: enkel om het ritme
    in te stellen. */
 
+import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** Gemiddelde rusthartslag van een volwassene — voor wie overslaat. */
@@ -167,7 +168,14 @@ export async function loadRestingPulse(): Promise<RestingPulse> {
     if (raw) {
       const p = JSON.parse(raw) as Partial<Stored>;
       stored = {
-        readings: Array.isArray(p.readings) ? p.readings.filter((r) => r && r.bpm > 0 && r.at > 0) : [],
+        /* Health-koppeling uit (19 okt 2026): waarden die ooit uit Apple
+           Health / Health Connect kwamen tellen niet meer mee — enkel de
+           eigen meting, zelf ingeven of het gemiddelde. */
+        readings: Array.isArray(p.readings)
+          ? p.readings.filter(
+              (r) => r && r.bpm > 0 && r.at > 0 && (HEALTH_INTEGRATION_ENABLED || r.src !== 'health'),
+            )
+          : [],
         manual: p.manual && p.manual.bpm > 0 ? p.manual : null,
         average: !!p.average,
         decided: !!p.decided,
@@ -228,6 +236,7 @@ export function chooseAverageRestingPulse(): void {
  *  Telt als gewone, gedateerde waarde: de nieuwste waarde wint, zoals
  *  altijd (operator, 10 okt 2026). Geen dubbels, niets van vóór "Clear". */
 export function importHealthRestingPulse(bpm: number, at: number): boolean {
+  if (!HEALTH_INTEGRATION_ENABLED) return false;
   if (!(bpm >= MIN_RESTING_BPM) || bpm > MAX_RESTING_BPM) return false;
   if (stored.clearedAt && at <= stored.clearedAt) return false;
   if (stored.readings.some((r) => r.src === 'health' && r.at === at)) return false;

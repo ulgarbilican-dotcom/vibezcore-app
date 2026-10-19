@@ -209,10 +209,10 @@ Commits `b50e51d` → `9783a78`. Typecheck ✅ na elk blok.
 | 145 | Breathwork Audio & Haptics: soundscapes per groep op één rij, horizontaal scrollen als ze niet passen (tot de rand van het blad) | A16 | ⏳ |
 | 146 | Sentry (EU, project react-native): na nieuwe build een testfout → verschijnt in Sentry Issues, zonder e-mail/IP; dev build stuurt niets | echte build | ⏳ |
 | 147 | Session history (State Control + Breathwork): bij elk bezoek enkel vandaag open, alle vorige dagen ingeklapt | A16 | ⏳ |
-| 148 | Settings → Health → Health Connect aan: systeemvenster (schrijven Mindfulness, lezen rusthartslag); geweigerd → uitleg; uit → niets meer | A16 + Galaxy Watch4 (nieuwe build) | ⏳ |
-| 149 | Breathwork- en State Control-sessie ≥ 1 min verschijnt in Health Connect / Apple Health (begin, einde, titel); < 1 min niet | A16 / iPhone (nieuwe build) | ⏳ |
-| 150 | Rusthartslag van het horloge verschijnt op Heart Rate ("From Health Connect", horloge-icoon) als nieuwste waarde; na Clear Heart Rate Data komt een oudere waarde niet terug | A16 + Watch4 (nieuwe build) | ⏳ |
-| 151 | Health Connect → toestemmingsscherm → "privacybeleid" opent VIBEZCORE op de Privacy Policy (koud en terwijl de app draait) | A16 (nieuwe build) | ⏳ |
+| 148 | Settings → Health → Health Connect aan: systeemvenster (schrijven Mindfulness, lezen rusthartslag); geweigerd → uitleg; uit → niets meer | A16 + Galaxy Watch4 (nieuwe build) | ✖ vervallen — Health-koppeling uit bij de lancering (19 okt 2026) |
+| 149 | Breathwork- en State Control-sessie ≥ 1 min verschijnt in Health Connect / Apple Health (begin, einde, titel); < 1 min niet | A16 / iPhone (nieuwe build) | ✖ vervallen — Health-koppeling uit bij de lancering (19 okt 2026) |
+| 150 | Rusthartslag van het horloge verschijnt op Heart Rate ("From Health Connect", horloge-icoon) als nieuwste waarde; na Clear Heart Rate Data komt een oudere waarde niet terug | A16 + Watch4 (nieuwe build) | ✖ vervallen — Health-koppeling uit bij de lancering (19 okt 2026) |
+| 151 | Health Connect → toestemmingsscherm → "privacybeleid" opent VIBEZCORE op de Privacy Policy (koud en terwijl de app draait) | A16 (nieuwe build) | ✖ vervallen — Health-koppeling uit bij de lancering (19 okt 2026) |
 
 **Bewust NIET gedaan (wacht op operator / toestel / backend):** audio-signing-bypass (backend-tabel), account-muur-tekst, FAQ/About/Privacy/Terms-teksten (meditation, neuroscience, energy, camera, leeftijd), BLE v2.4 pauze/hervat + sub-minimum duren (contract), dubbele begeleiding op de achtergrond (native, toestel), iOS-ademhaptiek (iOS-build), Signal Blue in Library (huisstijl, visuele review), Library-hertekenen 4×/s (prestaties).
 

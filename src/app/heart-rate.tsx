@@ -9,7 +9,13 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
-import { connectHealth, healthAppName, isHealthModulePresent, useHealthSync } from '@/services/health-sync';
+import {
+  connectHealth,
+  HEALTH_INTEGRATION_ENABLED,
+  healthAppName,
+  isHealthModulePresent,
+  useHealthSync,
+} from '@/services/health-sync';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HistoryGroup, HistoryRow, HistorySectionLabel } from '@/components/HistoryList';
 import PressScale from '@/components/PressScale';
@@ -90,8 +96,9 @@ export default function HeartRateScreen() {
         </View>
 
         {/* 12 okt 2026: rusthartslag van je horloge/ring via Apple Health /
-            Health Connect — enkel tonen zolang dat nog niet gekoppeld is. */}
-        {isHealthModulePresent() && !healthOn ? (
+            Health Connect — enkel tonen zolang dat nog niet gekoppeld is.
+            UIT bij de lancering (19 okt 2026, HEALTH_INTEGRATION_ENABLED). */}
+        {HEALTH_INTEGRATION_ENABLED && isHealthModulePresent() && !healthOn ? (
           <Pressable
             style={({ pressed }) => [s.watchRow, pressed && { opacity: 0.7 }]}
             onPress={() => void connectHealth()}

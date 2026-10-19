@@ -232,7 +232,7 @@ hart" het best onderbouwd. De sporter-grens is een randgeval.
 | Meting met de camera | vinger op de achtercamera + flits, vast 30 s | ✔ gebouwd (Android getest, iOS nog niet) |
 | Zelf invullen | draaiwiel 40–100 | ✔ gebouwd |
 | Gemiddelde | 70 bpm (gemiddelde volwassene) | ✔ standaard voor wie overslaat |
-| Horloge | Apple Health / Health Connect rusthartslag (≤ 7 dagen oud, 40–100) | ✔ gebouwd 12 okt 2026 (vraagt nieuwe build; telt als gedateerde waarde, nieuwste wint) |
+| Horloge | Apple Health / Health Connect rusthartslag (≤ 7 dagen oud, 40–100) | ✖ UIT bij de lancering (operator, 19 okt 2026: "VIBEZCORE meet zelf"). Gebouwd 12 okt 2026, code blijft (`HEALTH_INTEGRATION_ENABLED = false` in constants/features.ts); geen Health-toestemmingen in de build. Waarden die ooit uit Health kwamen tellen niet meer mee. R komt enkel uit camerameting, zelf invullen of het gemiddelde |
 
 **Regels (⚪):**
 - **Plafond op het doel** (⚪ eigen keuze, 10 okt 2026): het eindtempo wordt op R berekend, maar nooit hoger dan bij R = 80 (bovenkant van de gangbare rust 60–80 bpm). Plafonds: Calm Control 64, Clarity & Relax 56, Sleep 44, Sharp Focus 72; Boost vast 110. Reden: een basis gemeten na inspanning (bv. 97 i.p.v. 70) zou anders elk doel te hoog zetten (Sleep 53 i.p.v. 40) en nooit onder je echte rust brengen. Het BEGIN blijft R of de meting van nu.
@@ -432,7 +432,8 @@ pace": meten / zelf invullen / gemiddelde).
 - ⏳ **iPhone:** camerameting nog nooit getest (iOS-build nodig).
 - ⏳ **Fase 3:** rusthartslag + hartslag van nu van het horloge
   (Apple Health / Health Connect) — dan start elke sessie automatisch op
-  je hartslag van dat moment.
+  je hartslag van dat moment. GEPARKEERD: bij de lancering geen Health-
+  koppeling (operator, 19 okt 2026), zie §3.5.
 - ⏳ **Bracelet:** begintempo en korte sessies vragen een contract- en
   firmwarewijziging.
 - ⏳ **Eigen studie** (35–40 personen, echt ritme vs andere vibratie):

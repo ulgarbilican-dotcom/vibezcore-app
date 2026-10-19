@@ -18,12 +18,20 @@
 
    De native modules bestaan pas vanaf de volgende build; tot dan (en op
    toestellen zonder Health) doet alles hier stil niets.
+
+   UIT SINDS 19 OKT 2026 (operator): HEALTH_INTEGRATION_ENABLED = false in
+   constants/features.ts. Dan is elke publieke functie hier een no-op /
+   'unavailable', wordt bij het opstarten niets gelezen en hangt er geen
+   AppState-luisteraar. De code blijft voor later.
    ───────────────────────────────────────────────────────────────────────── */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
+import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
 import { importHealthRestingPulse } from './resting-pulse';
+
+export { HEALTH_INTEGRATION_ENABLED };
 
 const KEY = 'vz_health_sync_v1';
 /** Kortere sessies schrijven we niet weg — dat is een vergissing, geen sessie. */
@@ -34,44 +42,45 @@ const RESTING_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 let enabled = false;
 const listeners = new Set<(on: boolean) => void>();
 
-void AsyncStorage.getItem(KEY)
-  .then((v) => {
-    if (v === '1' && !enabled) {
-      enabled = true;
-      listeners.forEach((l) => l(true));
-    }
-  })
-  .catch(() => {});
+if (HEALTH_INTEGRATION_ENABLED) {
+  void AsyncStorage.getItem(KEY)
+    .then((v) => {
+      if (v === '1' && !enabled) {
+        enabled = true;
+        listeners.forEach((l) => l(true));
+      }
+    })
+    .catch(() => {});
+}
 
 function setEnabled(on: boolean): void {
+  if (!HEALTH_INTEGRATION_ENABLED) on = false;
   enabled = on;
   listeners.forEach((l) => l(on));
   void AsyncStorage.setItem(KEY, on ? '1' : '0').catch(() => {});
 }
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+/* De pakketten @kingstinct/react-native-healthkit en react-native-health-connect
+   zijn bij de lancering VERWIJDERD (operator, 19 okt 2026), zodat er geen
+   Health-code in de app zit. Terug aanzetten: beide pakketten opnieuw
+   installeren, de require hieronder terugzetten (zie git 9a20275) en
+   HEALTH_INTEGRATION_ENABLED op true. */
 function healthKit(): any | null {
-  if (Platform.OS !== 'ios') return null;
-  try {
-    return require('@kingstinct/react-native-healthkit');
-  } catch {
-    return null;
-  }
+  if (!HEALTH_INTEGRATION_ENABLED || Platform.OS !== 'ios') return null;
+  return null;
 }
 
 function healthConnect(): any | null {
-  if (Platform.OS !== 'android') return null;
-  try {
-    return require('react-native-health-connect');
-  } catch {
-    return null;
-  }
+  if (!HEALTH_INTEGRATION_ENABLED || Platform.OS !== 'android') return null;
+  return null;
 }
 /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
 /** Is de native koppeling in deze build aanwezig? (Bepaalt of de
  *  instelling getoond wordt — vóór de nieuwe build: nee.) */
 export function isHealthModulePresent(): boolean {
+  if (!HEALTH_INTEGRATION_ENABLED) return false;
   return Platform.OS === 'ios' ? healthKit() !== null : healthConnect() !== null;
 }
 
@@ -105,6 +114,7 @@ function initHealthConnect(): Promise<boolean> {
 
 /** Kan dit toestel het (module gelinkt + gezondheidsapp aanwezig)? */
 export async function isHealthAvailable(): Promise<boolean> {
+  if (!HEALTH_INTEGRATION_ENABLED) return false;
   try {
     if (Platform.OS === 'ios') {
       const hk = healthKit();
@@ -121,6 +131,7 @@ export type ConnectResult = 'connected' | 'denied' | 'unavailable';
 
 /** Toestemming vragen (systeemscherm van Apple/Google) en de koppeling aanzetten. */
 export async function connectHealth(): Promise<ConnectResult> {
+  if (!HEALTH_INTEGRATION_ENABLED) return 'unavailable';
   try {
     if (Platform.OS === 'ios') {
       const hk = healthKit();
@@ -165,6 +176,7 @@ export function disconnectHealth(): void {
 }
 
 export function openHealthSettings(): void {
+  if (!HEALTH_INTEGRATION_ENABLED) return;
   try {
     if (Platform.OS === 'android') healthConnect()?.openHealthConnectSettings();
   } catch {
@@ -194,7 +206,7 @@ export async function saveSessionToHealth(opts: {
   startMs: number;
   endMs: number;
 }): Promise<void> {
-  if (!enabled) return;
+  if (!HEALTH_INTEGRATION_ENABLED || !enabled) return;
   if (!(opts.endMs - opts.startMs >= MIN_SESSION_SEC * 1000)) return;
   try {
     if (Platform.OS === 'ios') {
@@ -231,7 +243,7 @@ export async function saveSessionToHealth(opts: {
 
 /** De meest recente rusthartslag uit de gezondheidsapp (≤ 7 dagen oud). */
 export async function readLatestRestingHeartRate(): Promise<{ bpm: number; at: number } | null> {
-  if (!enabled) return null;
+  if (!HEALTH_INTEGRATION_ENABLED || !enabled) return null;
   try {
     if (Platform.OS === 'ios') {
       const hk = healthKit();
@@ -269,7 +281,7 @@ function fresh(bpm: number, at: number): { bpm: number; at: number } | null {
 /** De rusthartslag van het horloge overnemen als die nieuwer is dan wat er
  *  staat (resting-pulse beslist: nieuwste wint, niets van vóór "Clear"). */
 export async function syncRestingFromHealth(): Promise<void> {
-  if (!enabled) return;
+  if (!HEALTH_INTEGRATION_ENABLED || !enabled) return;
   const r = await readLatestRestingHeartRate();
   if (r) importHealthRestingPulse(r.bpm, r.at);
 }
@@ -282,9 +294,11 @@ function syncSoon(): void {
   lastSync = Date.now();
   void syncRestingFromHealth();
 }
-listeners.add((on) => {
-  if (on) syncSoon();
-});
-AppState.addEventListener('change', (st) => {
-  if (st === 'active') syncSoon();
-});
+if (HEALTH_INTEGRATION_ENABLED) {
+  listeners.add((on) => {
+    if (on) syncSoon();
+  });
+  AppState.addEventListener('change', (st) => {
+    if (st === 'active') syncSoon();
+  });
+}

@@ -430,22 +430,11 @@ export const PRIVACY: LegalDoc = {
         'Session history (Breathwork & State Control)',
         'Reminder schedule',
         'Resting heart rate (optional, State Control — entered or read with the camera)',
-        IOS ? 'Apple Health (optional — see below)' : 'Health Connect (optional — see below)',
       ],
     },
     {
       kind: 'highlight',
       text: 'We do not collect your IMEI, MAC address or biometric identifiers, and no health information reaches our servers — not from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting heart rate for State Control, or read it with your phone\'s camera and flash on your fingertip, the number is used only to set the pace of your rhythm and never leaves your device. Camera frames are analysed live and are never recorded, saved or uploaded. Session history, reminders, your heart rate readings and smartwatch settings stay on your device. You can remove your heart rate readings anytime in Activity → Resting Heart Rate.',
-    },
-
-    { kind: 'h3', text: IOS ? 'Apple Health' : 'Health Connect' },
-    {
-      kind: 'p',
-      text: `If you turn on ${IOS ? 'Apple Health' : 'Health Connect'} in Settings, and only after you allow it in the system permission screen, VIBEZCORE: (1) saves your completed Breathwork and State Control sessions — start time, end time and type only — as mindful minutes / mindfulness sessions; and (2) reads your most recent resting heart rate, recorded by your watch or ring, only to set the starting pace of your State Control rhythm.`,
-    },
-    {
-      kind: 'highlight',
-      text: (IOS ? 'Health data read from or written to Apple Health stays between your device and the Health app.' : 'Health data read from or written to Health Connect stays between your device and Health Connect.') + ' It is never sent to our servers or to any third party, never sold, and never used for advertising, marketing or data mining. It is not included in crash reports.' + (IOS ? ' You can turn this off anytime in Settings → Health, and revoke access in the Health app.' : ' Use of information received from Health Connect adheres to the Health Connect Permissions policy, including the Limited Use requirements. You can turn this off anytime in Settings → Health, and revoke access in Health Connect.'),
     },
 
     { kind: 'h3', text: 'Cookies & Local Storage' },
@@ -563,8 +552,7 @@ export const PRIVACY: LegalDoc = {
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
         { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
-        { title: 'Smartwatch',     text: `Optional — if you pair ${IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch. (Your resting heart rate is only read through ${IOS ? 'Apple Health' : 'Health Connect'}, if you turn that on.)` },
-        { title: IOS ? 'Apple Health' : 'Health Connect', text: 'Optional — only if you turn it on in Settings. Writes your sessions as mindful minutes and reads your resting heart rate to set your rhythm. Never leaves your device or the health app.' },
+        { title: 'Smartwatch',     text: `Optional — if you pair ${IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch.` },
         { title: 'Camera & flash', text: 'Optional — only when you choose to read your pulse from your fingertip in State Control. Frames are analysed live on your device and never recorded, saved or uploaded. You can always enter your resting heart rate yourself instead.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
       ],
@@ -572,7 +560,7 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'highlight',
       title: 'What we do NOT request',
-      text: 'VIBEZCORE does not request access to your microphone, location, contacts, calendar or photos. The camera is used only for the optional fingertip pulse reading, and ' + (IOS ? 'Apple Health' : 'Health Connect') + ' only for the optional features described above (your sessions and your resting heart rate — nothing else). The Smart Bead Bracelet does not collect biometric or health information.',
+      text: `VIBEZCORE does not request access to your microphone, location, contacts, calendar, photos or ${IOS ? 'Apple Health' : 'Health Connect'}. The camera is used only for the optional fingertip pulse reading. The Smart Bead Bracelet does not collect biometric or health information.`,
     },
 
     /* ── 07. International Data Transfers ── */

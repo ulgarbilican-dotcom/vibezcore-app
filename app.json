@@ -88,15 +88,15 @@
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.health.WRITE_MINDFULNESS",
-        "android.permission.health.READ_RESTING_HEART_RATE"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.health.WRITE_MINDFULNESS",
+        "android.permission.health.READ_RESTING_HEART_RATE"
       ]
     },
     "web": {
@@ -170,15 +170,6 @@
           "organization": "ulgar-bilican",
           "project": "react-native",
           "url": "https://sentry.io/"
-        }
-      ],
-      "react-native-health-connect",
-      [
-        "@kingstinct/react-native-healthkit",
-        {
-          "NSHealthShareUsageDescription": "VIBEZCORE reads the resting heart rate from Apple Health, only to set the pace of your State Control rhythm. It stays on your device.",
-          "NSHealthUpdateUsageDescription": "VIBEZCORE saves your Breathwork and State Control sessions to Apple Health as mindful minutes.",
-          "background": false
         }
       ]
     ],

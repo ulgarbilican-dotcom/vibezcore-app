@@ -84,6 +84,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { bootDecided, markBootDecided } from '@/utils/boot';
 import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
+import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
 import { AccessibilityInfo, AppState, Image, Platform, Text as RNText, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -307,8 +308,11 @@ export default function RootLayout() {
 
   /* Health Connect (12 okt 2026): geopend via "privacybeleid" in het
      toestemmingsscherm van Health Connect → meteen de privacyverklaring
-     (Google-vereiste). Wacht tot de opstartroute gekozen is. */
+     (Google-vereiste). Wacht tot de opstartroute gekozen is.
+     UIT bij de lancering (19 okt 2026, HEALTH_INTEGRATION_ENABLED): zonder
+     de manifest-ingangen komt deze actie ook niet meer binnen. */
   useEffect(() => {
+    if (!HEALTH_INTEGRATION_ENABLED) return;
     const open = () => router.push({ pathname: '/legal/[doc]', params: { doc: 'privacy' } } as never);
     let timer: ReturnType<typeof setInterval> | null = null;
     if (launchedForHealthRationale()) {
