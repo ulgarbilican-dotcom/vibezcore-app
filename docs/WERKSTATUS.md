@@ -153,3 +153,15 @@ Zie geheugen: day-pass (€0,90/24u), trial-end-melding, Adaptive State Engine, 
   `curl -s -o NUL "http://localhost:8081/index.bundle?platform=android&dev=true&minify=false"`.
 - Na Reanimated-wijzigingen: `adb shell am force-stop com.ubili.vibezcoreapp` + herstart (Fast Refresh mengt animaties).
 - Typecheck: `npx tsc --noEmit -p .` (moet leeg zijn). `npx eslint src --quiet` heeft 37 bestaande fouten — niet nieuw toevoegen.
+
+## Testronde Android 102 — stand 19 okt 2026 (avond)
+
+Gebouwd: Android 102 (interne test) + iOS 58 (TestFlight); Galaxy Watch-bundel 26101917 in Wear OS-interne test (Wear OS-vormfactor toegevoegd).
+Getest ✅: Day Pass, upgrade Monthly, account e-mail aanmaken/inloggen/verwijderen, Restore (T320–T322).
+
+In code, nog NIET gebouwd (gepusht): 1 zaklamp, 3/4 proef-haptiek Strong + hele slagen, 5 symbolen gecentreerd, 6 Ujjayi-stem, 9 Not Now → Breathwork, 15 State Control-plan start, Monthly→Yearly Android, 17 Sign In or Create Account, 18 volledig e-mail, 19 invite-tekst, 20/21 geen Health + FAQ, 24 onboarding-regels + kleine schermen, hartslagkeuze ook via melding.
+Bezig: 25 bevestigingsmoment (ring + vinkje + ping; denkende ring bij plan maken) — agent.
+Goedgekeurd, nog te bouwen: 16 overal vooraf "Start 30-Second Preview" (+10 Instant Sessions), 22 Day Pass-kaart na 1 min rondkijken (max 1×/7 d, 3× totaal), 23 win-back (einddatum + Welcome back-kaart).
+Wacht op akkoord operator: 11 voorproef State Control (Audio & Haptics, enkel End Preview), 12 legal-marge saleskaart, 13 geen dubbele saleskaart bij Terug, 14 bibliotheek pauzeert bij sessie met stem/hartslaggeluid.
+Open: 2 buitenste ring Boost (oorzaak: rand in afgeknipte view + Android elevation-gloed; vraag: voorproef of echte sessie?), 7 Galaxy Watch-installatie nagaan, Play-winkelvermelding (teksten docs/PLAY_STORE_TEKSTEN.md, functieafbeelding store-screenshots/play), screenshots-selectie (1 welkom 0699, 3 ademsessie 0736 vast), privacyverklaring website zonder Health.
+Regel: pas bouwen als de operator "klaar" zegt; één build per platform.
