@@ -1588,7 +1588,7 @@ export default function AccountScreen() {
             title={mode === 'login' ? 'Sign in' : 'Create account'}
             subtitle={
               isProForActions
-                ? 'Optional · Keep your plan and progress on all your devices'
+                ? 'Optional · Use your plan on all your devices'
                 : 'Sync your progress and unlock what you own'
             }
             onPress={() => setAuthOpen((o) => !o)}
