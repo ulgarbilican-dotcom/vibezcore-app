@@ -69,12 +69,7 @@ struct HomeView: View {
               .font(.system(size: 15))
               .foregroundColor(Color(white: 0xF4 / 255))
               .multilineTextAlignment(.center)
-            /* Diagnose (18 okt 2026): wat het horloge van de iPhone ziet. */
-            Text(PhoneConnector.shared.diagnostics())
-              .font(.system(size: 9))
-              .foregroundColor(.gray)
-              .multilineTextAlignment(.center)
-            Button("Retry") { PhoneConnector.shared.requestCatalog() }
+            Button("Try Again") { PhoneConnector.shared.requestCatalog() }
               .font(.system(size: 13, weight: .semibold))
           }
           .padding(.horizontal, 14)

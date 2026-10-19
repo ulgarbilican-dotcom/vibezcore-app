@@ -73,7 +73,9 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
   if (!w) return null;
   /* iPhone (18 okt 2026, Apple Watch-diagnose): ook zonder verbinding de
      regel tonen, met wat WatchConnectivity ziet. */
-  if (w.status === 'none' && !w.seen && Platform.OS !== 'ios') return null;
+  /* 19 okt 2026 (indiening): diagnose weg — geen horloge gekoppeld en nooit
+     gezien = geen regel, op beide platformen. */
+  if (w.status === 'none' && !w.seen) return null;
 
   const name = w.name || 'Your watch';
   const sub =
@@ -96,11 +98,6 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
           <Text style={s.sub} numberOfLines={1}>
             {sub}
           </Text>
-          {Platform.OS === 'ios' && w.status !== 'ready' && w.diag ? (
-            <Text style={[s.sub, { fontSize: 10, opacity: 0.6 }]} numberOfLines={2}>
-              {w.diag}
-            </Text>
-          ) : null}
         </View>
         {w.status === 'ready' ? (
           <Switch
