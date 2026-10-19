@@ -606,8 +606,11 @@ function startOffsetFor(url: string, windowSec?: number): number {
   const t = VOICE_CUE_SPEECH[url.split('/').pop() ?? ''];
   if (!t) return 0;
   const [speechStart, speechEnd] = t;
-  if (speechEnd <= windowSec - 0.05) return 0;
-  return Math.max(0, Math.min(speechStart, speechEnd - windowSec + 0.1));
+  /* Marge voor de opstarttijd van de speler (Android/expo-audio tot ~0,3 s,
+     gemeten 19 okt 2026: met 0,1 s marge werd "nose" nog afgebroken). Past
+     de zin niet ruim, dan de stilte vooraan helemaal overslaan. */
+  if (speechEnd <= windowSec - 0.35) return 0;
+  return Math.max(0, speechStart - 0.05);
 }
 
 function playUrlNative(url: string, offsetSec = 0): void {

@@ -73,9 +73,8 @@ import {
   useDevBraceletActivated,
   useDevUserOverride,
 } from '@/utils/dev-user-override';
-import {
-  storeSubscriptionsUrl,
-} from '@/services/subscription-actions';
+import { openManageSubscriptions } from '@/services/subscription-actions';
+import { useIAP } from '@/hooks/useIAP';
 import { restorePurchases, silentRestoreAfterLogin } from '@/services/restore-purchases';
 import { clearSignedUrlCache } from '@/utils/audio-url';
 import { clearLastPlayed } from '@/utils/last-played';
@@ -494,65 +493,152 @@ function ProfileHeader({ email }: { email: string }) {
   );
 }
 
-function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; restoring: boolean }) {
-  const { isPro, tier, isLoading, braceletModel, isBraceletOwner, renewLine, dayPass } = useMembershipStatus();
+/** "Your plan" bovenaan Profiel (19 okt 2026, operator: "ik weet eigenlijk
+ *  niet of ik premium ben … hoe stimuleren we dagpas/maand om te upgraden?
+ *  denk aan alle scenario's, met de gebruiker in gedachte"). Eén kaart die
+ *  per situatie zegt wat je hebt en de ene logische volgende stap geeft:
+ *    Free           → See plans
+ *    Day Pass       → Keep full access (jaarplan voorgeselecteerd)
+ *    Monthly        → Switch to Yearly · save X% (Apple/Google-beheer)
+ *    Opgezegd       → Turn renewal back on
+ *    Yearly         → enkel "Manage subscription"
+ *    Bundle         → inbegrepen bij de bracelet, niets te beheren
+ *  Account is nooit nodig om dit te zien: het plan komt uit de store. */
+function PlanCard() {
+  const { isPro, tier, isLoading, braceletModel, isBraceletOwner, label, renewLine, dayPass } = useMembershipStatus();
+  const { willRenew } = useSubscription();
+  const { getProduct } = useIAP();
+  const monthly = getProduct('monthly');
+  const yearly = getProduct('yearly');
+  const savePercent = (() => {
+    if (!monthly?.priceAmountMicros || !yearly?.priceAmountMicros) return null;
+    const m = monthly.priceAmountMicros / 1_000_000;
+    const y = yearly.priceAmountMicros / 12 / 1_000_000;
+    const p = Math.round((1 - y / m) * 100);
+    return m > 0 && p > 0 ? p : null;
+  })();
+  const bundle = braceletModel === 'bundle';
+  const cancelled = isPro && !dayPass && !bundle && willRenew === false;
+
+  let title = label;
+  let line: string | null = renewLine;
+  let cta: { label: string; onPress: () => void } | null = null;
+  let note: string | null = null;
+  let manage = false;
+
+  if (isLoading) {
+    title = 'Checking your plan…';
+    line = null;
+  } else if (!isPro) {
+    title = isBraceletOwner ? 'Bracelet' : 'Free';
+    line = 'Unlock Breathwork, State Control and the full Audio Library.';
+    cta = { label: 'See plans', onPress: () => router.navigate('/subscribe' as never) };
+  } else if (bundle) {
+    title = 'Full Bundle';
+    line = 'Premium is included with your bracelet.';
+  } else if (dayPass) {
+    cta = { label: 'Keep full access', onPress: () => router.navigate('/subscribe?tier=yearly' as never) };
+    note = savePercent ? `Yearly saves ${savePercent}% compared to monthly.` : null;
+  } else if (cancelled) {
+    cta = { label: 'Turn renewal back on', onPress: () => void openManageSubscriptions() };
+  } else if (tier === 'monthly') {
+    cta = {
+      label: savePercent ? `Switch to Yearly · save ${savePercent}%` : 'Switch to Yearly',
+      onPress: () => void openManageSubscriptions(),
+    };
+    manage = true;
+  } else {
+    manage = true;
+  }
+
   return (
-    <Group title="Membership">
-      {dayPass ? (
-        /* Dagpas = geen abonnement: niets te beheren in de store, wel de
-           stap naar een maand- of jaarabonnement. */
-        <Row
-          icon={Crown}
-          title="VIBEZCORE Premium · Day Pass"
-          subtitle={renewLine ?? 'Full access for 24 hours'}
-          value="See plans"
-          onPress={() => router.navigate('/subscribe' as never)}
-          accessibilityLabel="See Premium plans"
-        />
-      ) : isPro ? (
-        <Row
-          icon={Crown}
-          title="VIBEZCORE Premium"
-          subtitle={
-            braceletModel === 'bundle'
-              ? 'Included with your bracelet'
-              : renewLine ?? 'Breathwork, State Control and the Audio Library'
-          }
-          /* Bundle (activatiecode) heeft geen store-abonnement — "Manage"
-             opende een lege store-lijst (audit 8 okt 2026). */
-          value={braceletModel === 'bundle' ? undefined : 'Manage'}
-          onPress={braceletModel === 'bundle' ? undefined : () => openExternal(storeSubscriptionsUrl(tier))}
-          accessibilityLabel={`Manage your subscription in ${Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}`}
-        />
-      ) : (
-        <Row
-          icon={Crown}
-          title="VIBEZCORE Premium"
-          subtitle={
-            isBraceletOwner
-              ? 'Add Breathwork, State Control and the Audio Library'
-              : 'Breathwork, State Control and the Audio Library'
-          }
-          onPress={() => router.navigate('/subscribe' as never)}
-          accessibilityLabel="Go Premium — unlock Breathwork, State Control and the Audio Library"
-        />
-      )}
-      {!isLoading && isPro && tier === 'monthly' && braceletModel !== 'bundle' ? (
-        <Row
-          icon={Repeat}
-          title="Switch to Yearly"
-          subtitle={`Change your plan in the ${Platform.OS === 'ios' ? 'App Store' : 'Play Store'}`}
-          onPress={() => openExternal(storeSubscriptionsUrl('yearly'))}
-        />
+    <View style={pc.card}>
+      <Text style={pc.eyebrow}>Your plan</Text>
+      <View style={pc.titleRow}>
+        {isPro ? <Crown size={18} color={STATUS} strokeWidth={2.2} /> : null}
+        <Text style={[pc.title, isPro && { color: STATUS }]} numberOfLines={1}>
+          {title}
+        </Text>
+      </View>
+      {line ? <Text style={pc.line}>{line}</Text> : null}
+      {cta ? (
+        <PressScale
+          style={pc.cta}
+          onPress={() => {
+            hapticPress();
+            cta?.onPress();
+          }}
+          scaleTo={0.97}
+          accessibilityRole="button"
+          accessibilityLabel={cta.label}
+        >
+          <Text style={pc.ctaText}>{cta.label}</Text>
+        </PressScale>
       ) : null}
-      <Row
-        icon={RotateCcw}
-        title={restoring ? 'Restoring…' : 'Restore Purchases'}
-        onPress={onRestore}
-        busy={restoring}
-        accessibilityLabel="Restore previous purchases"
-      />
-    </Group>
+      {note ? <Text style={pc.note}>{note}</Text> : null}
+      {manage ? (
+        <PressScale
+          style={pc.link}
+          onPress={() => void openManageSubscriptions()}
+          scaleTo={0.97}
+          accessibilityRole="button"
+          accessibilityLabel={`Manage your subscription in ${Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}`}
+        >
+          <Text style={pc.linkText}>Manage subscription</Text>
+        </PressScale>
+      ) : null}
+    </View>
+  );
+}
+
+const pc = StyleSheet.create({
+  card: { backgroundColor: '#1C1C1E', borderRadius: 14, padding: 18, marginBottom: 26 },
+  eyebrow: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { color: '#ffffff', fontFamily: BrandFonts.bold, fontSize: 22, letterSpacing: -0.3, flexShrink: 1 },
+  line: { color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.regular, fontSize: 14, lineHeight: 19, marginTop: 4 },
+  cta: {
+    marginTop: 16,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 16 },
+  note: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: BrandFonts.regular,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  link: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 12, marginTop: 6 },
+  linkText: { color: 'rgba(255,255,255,0.75)', fontFamily: BrandFonts.medium, fontSize: 15 },
+});
+
+/** Onder de plan-kaart enkel nog herstellen (Apple 3.1.1 eist die knop). */
+function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; restoring: boolean }) {
+  return (
+    <>
+      <PlanCard />
+      <Group>
+        <Row
+          icon={RotateCcw}
+          title={restoring ? 'Restoring…' : 'Restore Purchases'}
+          onPress={onRestore}
+          busy={restoring}
+          accessibilityLabel="Restore previous purchases"
+        />
+      </Group>
+    </>
   );
 }
 
@@ -1493,11 +1579,18 @@ export default function AccountScreen() {
         enableAutomaticScroll={true}
       >
         <Text style={g.title}>Profile</Text>
+        {/* 19 okt 2026: eerst je plan (ook zonder account), dan pas het
+            optionele account. */}
+        <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
         <Group>
           <Row
             icon={CircleUserRound}
             title={mode === 'login' ? 'Sign in' : 'Create account'}
-            subtitle="Sync your progress and unlock what you own"
+            subtitle={
+              isProForActions
+                ? 'Optional · Keep your plan and progress on all your devices'
+                : 'Sync your progress and unlock what you own'
+            }
             onPress={() => setAuthOpen((o) => !o)}
             open={authOpen}
             accessibilityLabel="Sign in to VIBEZCORE"
@@ -1735,7 +1828,6 @@ export default function AccountScreen() {
 
         </View>
         ) : null}
-        <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
         <ProductsGroup />
         <RhythmGroup />
         <SupportGroup />

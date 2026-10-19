@@ -14,7 +14,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 /** Platform-specifieke subscription-management URL. Apple en Google EISEN
  *  dat een app een in-app-toegankelijke link biedt naar de subscription-
@@ -44,4 +44,28 @@ export function storeSubscriptionsUrl(_tier?: 'monthly' | 'yearly' | 'day'): str
     return 'itms-apps://apps.apple.com/account/subscriptions';
   }
   return 'https://play.google.com/store/account/subscriptions';
+}
+
+/** Abonnement beheren (19 okt 2026, operator: "ik kom op het verkeerde
+ *  scherm met Available Plans"). iPhone: Apple's eigen beheerblad IN de app
+ *  (StoreKit via RevenueCat) — geen "Openen in App Store?"-vraag, toont het
+ *  eigen plan, verlengdatum, wisselen en opzeggen, ook in TestFlight. Lukt
+ *  dat niet (oude iOS, RevenueCat niet klaar), dan de App Store-pagina.
+ *  Android: de abonnementenlijst van Google Play. */
+export async function openManageSubscriptions(): Promise<void> {
+  if (Platform.OS === 'ios') {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Purchases = require('react-native-purchases').default as typeof import('react-native-purchases').default;
+      await Purchases.showManageSubscriptions();
+      return;
+    } catch {
+      /* terugval hieronder */
+    }
+  }
+  try {
+    await Linking.openURL(storeSubscriptionsUrl());
+  } catch {
+    /* geen store-app — niets te doen */
+  }
 }
