@@ -2009,7 +2009,10 @@ export function BreathSession() {
      paywall-staat: sluiten laat de sessie gewoon doorlopen (de sessie-
      paywall hierboven beëindigt de sessie bij sluiten). */
   const [scapePaywall, setScapePaywall] = useState(false);
-  const scapeLocked = (k: string) => !isPro && !FREE_SOUNDSCAPES.has(k);
+  /* 19 okt 2026 (operator, build 38): de gratis eerste sessie na de
+     onboarding is een volledige proef — ook alle soundscapes vrij. */
+  const scapesOpen = isPro || isFreeOnboardingSession;
+  const scapeLocked = (k: string) => !scapesOpen && !FREE_SOUNDSCAPES.has(k);
   const pickScapeGated = (k: string | null) => {
     if (k && scapeLocked(k)) {
       hapticTap();
@@ -4125,7 +4128,7 @@ export function BreathSession() {
               </AnimatedPressable>
               {(() => {
                 const inGroup = SOUNDSCAPES.filter((x) => x.group === scapeTab);
-                const list = isPro
+                const list = scapesOpen
                   ? inGroup
                   : [...inGroup.filter((x) => FREE_SOUNDSCAPES.has(x.key)), ...inGroup.filter((x) => !FREE_SOUNDSCAPES.has(x.key))];
                 return list.map((x) => {

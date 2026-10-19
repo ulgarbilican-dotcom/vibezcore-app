@@ -160,7 +160,11 @@ final class SessionAudioEngine {
       self?.q.async { [weak self] in self?.rebuildAfterReset() }
     }
     DispatchQueue.main.async { [weak self] in
-      let active = UIApplication.shared.applicationState == .active
+      /* 19 okt 2026 (operator, build 38: "onboarding stap 2 geen haptics"):
+         bij het opstarten is de app nog "inactive" en de didBecomeActive-
+         melding kan al voorbij zijn — dan bleef appActive voor altijd false
+         en speelde geen enkele tik. Enkel "background" telt als niet in beeld. */
+      let active = UIApplication.shared.applicationState != .background
       self?.q.async { [weak self] in self?.appActive = active }
     }
   }
@@ -333,6 +337,9 @@ final class SessionAudioEngine {
     if url.isFileURL {
       loadQ.async {
         let buf = self.decode(url)
+        /* 19 okt 2026 (operator, build 38: "hartslaggeluid op max is zacht"):
+           de luidsprekerversie zachtjes verzadigd luider (geen hard clippen). */
+        if key.hasPrefix("speaker"), let b = buf { self.loudenSoftly(b, drive: 2.2) }
         self.q.async {
           if let b = buf { self.buffers[key] = b }
           done(buf != nil)
@@ -374,6 +381,20 @@ final class SessionAudioEngine {
     for b in uri.utf8 { h = (h &* 33) &+ UInt64(b) }
     let name = String(h, radix: 36) + (ext.isEmpty ? "" : "." + ext)
     return dir.appendingPathComponent(name)
+  }
+
+  /// Luider zonder hard te clippen: y = tanh(d·x) / tanh(d). Pieken blijven
+  /// onder 0 dBFS, de klank zelf wordt voller op de luidspreker.
+  private func loudenSoftly(_ buf: AVAudioPCMBuffer, drive: Float) {
+    guard let data = buf.floatChannelData else { return }
+    let norm = tanhf(drive)
+    let n = Int(buf.frameLength)
+    for ch in 0..<Int(buf.format.channelCount) {
+      let p = data[ch]
+      for i in 0..<n {
+        p[i] = tanhf(drive * p[i]) / norm
+      }
+    }
   }
 
   /// Bestand → buffer in het vaste formaat van de motor (44,1 kHz mono).

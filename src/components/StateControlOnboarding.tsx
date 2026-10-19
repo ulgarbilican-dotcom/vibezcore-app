@@ -561,7 +561,10 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           <PressScale onPress={goNext} haptic scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button">
             {/* Zelfde knop als de Breathwork-onboarding (operator, 16 okt
                 2026): stap 1 = matglas met lichtflits, daarna wit. */}
-            {step === 0 ? (
+            {/* 19 okt 2026 (operator, build 38: "CTA kleur en stijl zelfde als
+                breathwork"): op de zwarte achtergrond oogde het matglas grijs.
+                Nu overal de witte knop, zoals Breathwork zodra je verder kunt. */}
+            {false ? (
               <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
                 <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.22)' }]} />
