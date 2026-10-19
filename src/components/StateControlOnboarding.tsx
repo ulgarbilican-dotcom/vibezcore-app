@@ -609,8 +609,11 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 2026): stap 1 = matglas met lichtflits, daarna wit. */}
             {/* 19 okt 2026 (operator, build 38: "CTA kleur en stijl zelfde als
                 breathwork"): op de zwarte achtergrond oogde het matglas grijs.
-                Nu overal de witte knop, zoals Breathwork zodra je verder kunt. */}
-            {false ? (
+                Nu overal de witte knop, zoals Breathwork zodra je verder kunt.
+                Vervolg 19 okt avond (operator: "Breathwork is transparant"):
+                exact zoals de Breathwork-onboarding — stap 1 matglas met
+                lichtflits, de volgende stappen wit. */}
+            {step === 0 ? (
               <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
                 <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.22)' }]} />
