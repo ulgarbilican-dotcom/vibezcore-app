@@ -4,9 +4,9 @@
 | Wanneer | Wat | Wie |
 |---|---|---|
 | nu – 12:00 | Build 38 testen (testscript hieronder) | operator |
-| ± 11:45 | Build 40 op TestFlight (= 38 + "Not Now" in de Breathwork-onboarding + geen horloge-diagnosecodes) | ik |
-| 12:00 – 12:15 | Build 40: korte controle (Not Now, Profiel, één sessie) | operator |
-| 12:15 – 13:30 | App Store Connect invullen (A3) en build 40 indienen | operator, teksten van mij |
+| 15:30 | Build 53 op TestFlight = indienbuild (alle fixes van 19 okt) | ik |
+| daarna | Build 53: korte controle (horloge-tikken, Strong, Try 30 seconds, Profiel) | operator |
+| daarna | App Store Connect invullen (checklist hieronder) en build 53 indienen | operator |
 
 ## Testscript build 38 (iPhone, als gratis gebruiker)
 Eerst: app verwijderen → build 38 installeren via TestFlight.
@@ -33,7 +33,7 @@ Eerst: app verwijderen → build 38 installeren via TestFlight.
 7. **App Review Information → Notes:** tekst hieronder + screenshot van de betaalpagina.
 8. **Export compliance:** geen eigen versleuteling (enkel standaard HTTPS).
 9. **Version Release:** "Automatically release this version".
-10. **Build:** build 40 kiezen → Add for Review → Submit.
+10. **Build:** build 53 kiezen → Add for Review → Submit.
 
 ### Blok voor de beschrijving
 ```
