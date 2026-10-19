@@ -219,21 +219,33 @@ final class WatchSettings: ObservableObject {
     PhoneConnector.shared.send(["type": "watch_action", "action": "strength:\(s)", "kind": "settings"])
   }
 
-  /// Eén tik op de pols. Soft/Medium: één stille tik. Strong: drie stille
-  /// tikken vlak na elkaar — voelt duidelijk sterker en speelt GEEN toon
-  /// (operator, build 50: ".start gaf een bel bij elke slag").
-  /// 19 okt 2026 (operator, build 52: "stijl is goed, kan het nog harder
-  /// voor maximum?"): Soft 1 tik · Medium 2 · Strong 4 stille tikken vlak na
-  /// elkaar (40 ms) — de sterkste stille puls die watchOS toelaat.
-  func tap() {
+  /* 19 okt 2026 (operator, build 53: "amper voelbaar, bij uitademen geen
+     haptic, met gedimd scherm niet stabiel"). watchOS laat tikken die vlak na
+     elkaar komen (de reeksen van 40 ms) grotendeels vallen — daarom nu elke
+     tik los. De enige stille tik (.click) is ook de zwakste; Apple's sterkere
+     tikken spelen een toontje mee, tenzij het horloge in stille modus staat
+     (de trilling blijft dan volledig). Dus:
+       Soft   = enkel stille tikken (.click)
+       Medium = Apple's fase-tikken: omhoog (in), omlaag (uit); hartslag .click
+       Strong = idem, en de hartslag en "vasthouden" met de krachtigste tik (.start) */
+  enum Tap { case beat, inhale, hold, exhale, tick }
+
+  func play(_ t: Tap) {
     let d = WKInterfaceDevice.current()
-    d.play(.click)
-    let extra = strength == "strong" ? 3 : (strength == "medium" ? 1 : 0)
-    guard extra > 0 else { return }
-    for i in 1...extra {
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.04 * Double(i)) { d.play(.click) }
+    if strength == "soft" {
+      d.play(.click)
+      return
+    }
+    let strong = strength == "strong"
+    switch t {
+    case .beat: d.play(strong ? .start : .click)
+    case .inhale: d.play(.directionUp)
+    case .exhale: d.play(.directionDown)
+    case .hold: d.play(strong ? .start : .click)
+    case .tick: d.play(.click)
     }
   }
+
   /// Tweede slag van de hartslag (Soft: geen).
   var playsDub: Bool { strength != "soft" }
 }

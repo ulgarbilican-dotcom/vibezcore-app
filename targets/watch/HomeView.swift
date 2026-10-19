@@ -596,7 +596,7 @@ struct WatchSettingsView: View {
   }
 
   private func sub(_ s: String) -> String? {
-    s == "strong" ? "Strongest taps" : nil
+    s == "soft" ? "Silent taps" : (s == "strong" ? "Strongest taps" : "Stronger taps")
   }
 
   var body: some View {
@@ -610,10 +610,10 @@ struct WatchSettingsView: View {
         ForEach(WatchSettings.levels, id: \.self) { (lv: String) in
           PickRow(title: label(lv), sub: sub(lv), subColor: dim, current: lv == settings.strength, color: teal) {
             settings.setFromWatch(lv)
-            settings.tap()
+            settings.play(.beat)
           }
         }
-        Text("Also changes the setting on your iPhone.")
+        Text("Medium and Strong use stronger taps. Turn on Silent Mode to feel them without a tone. Also changes the setting on your iPhone.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)

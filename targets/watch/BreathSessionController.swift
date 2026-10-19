@@ -206,25 +206,39 @@ final class BreathSessionController: NSObject, ObservableObject {
        vasthouden = één tik bij de start, dan stilte
        uitademen = dubbele tik bij de start, dan stilte
      Strong maakt elke tik sterker (WatchSettings.tap). */
+  /* Elke fase een eigen, voelbaar patroon (zie WatchSettings.play). Tikken
+     minstens 0,5 s uit elkaar (watchOS laat snellere vallen) en timers
+     zonder speling in .common, zodat het ritme ook met gedimd scherm klopt. */
   private func playHaptics(for key: String, secs: Int) {
     tickTimer?.invalidate()
     let s = WatchSettings.shared
-    s.tap()
     if key.hasPrefix("inhale") {
+      s.play(.inhale)
+      /* zolang je inademt: rustige tikken, de laatste ruim vóór de volgende fase */
       var elapsed: TimeInterval = 0
-      let interval: TimeInterval = 0.35
-      tickTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { timer in
+      let interval: TimeInterval = 0.7
+      let t = Timer(timeInterval: interval, repeats: true) { timer in
         elapsed += interval
-        guard elapsed < TimeInterval(secs) - 0.25 else {
+        guard elapsed < TimeInterval(secs) - 0.6 else {
           timer.invalidate()
           return
         }
-        s.tap()
+        s.play(.tick)
       }
+      t.tolerance = 0
+      RunLoop.main.add(t, forMode: .common)
+      tickTimer = t
     } else if key.hasPrefix("exhale") {
-      tickTimer = Timer.scheduledTimer(withTimeInterval: 0.22, repeats: false) { _ in
-        s.tap()
+      s.play(.exhale)
+      if s.strength == "soft" {
+        /* stil en zwak: uitademen = dubbele tik, ruim uit elkaar */
+        let t = Timer(timeInterval: 0.5, repeats: false) { _ in s.play(.tick) }
+        t.tolerance = 0
+        RunLoop.main.add(t, forMode: .common)
+        tickTimer = t
       }
+    } else {
+      s.play(.hold)
     }
   }
 
