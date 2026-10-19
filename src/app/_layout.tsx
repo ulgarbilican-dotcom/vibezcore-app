@@ -38,6 +38,7 @@ import { initCrashReporting } from '@/services/crash-reporting';
 /* Audit 12 okt 2026: zo vroeg mogelijk, vóór de eerste render. */
 initCrashReporting();
 import { VibezAlertHost } from '@/components/VibezAlert';
+import { ConfirmMomentHost } from '@/components/ConfirmMoment';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
@@ -986,6 +987,8 @@ export default function RootLayout() {
       </BlurTargetView>
       <GlassSheetHost />
       <VibezAlertHost />
+      {/* Punt 25 (operator, 19 okt 2026): bevestigingsmoment "het is gelukt". */}
+      <ConfirmMomentHost />
       <LaunchReveal />
       </View>
     </ErrorBoundary>

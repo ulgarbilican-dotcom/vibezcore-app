@@ -65,9 +65,12 @@ export default function PlanSuccessScreen() {
   /* Operator, 7 september 2026: laatste schakel in de keten die
      `onboarding` doorgeeft tot en met agenda.tsx — zie plan.tsx/
      plan-summary.tsx voor de toelichting. */
-  const { onboarding, fromBreathWelcome } = useLocalSearchParams<{
+  const { onboarding, fromBreathWelcome, confirmed } = useLocalSearchParams<{
     onboarding?: string;
     fromBreathWelcome?: string;
+    /** Punt 25 (19 okt 2026): het bevestigingsmoment (ConfirmMoment) heeft
+     *  het denken al getoond → geen tweede draaiende fase hier. */
+    confirmed?: string;
   }>();
   const history = useBreathHistory();
   const sessionsToday = plan
@@ -91,9 +94,17 @@ export default function PlanSuccessScreen() {
      dus puur een moment van rust/anticipatie, geen echt wachten op werk.
      Vaste, korte duur (900ms) i.p.v. aan een echte taak gekoppeld, want
      er ís geen taak meer om op te wachten. */
-  const [building, setBuilding] = useState(true);
+  const [building, setBuilding] = useState(confirmed !== '1');
   useEffect(() => {
     const t = setTimeout(() => setBuilding(false), 900);
+    return () => clearTimeout(t);
+  }, []);
+  /* Punt 25: zonder denkfase toch pas na 900 ms de herinneringen (en hun
+     toestemmingsvraag) — zelfde reden als hieronder (19 sept): nooit een
+     systeemdialoog in dezelfde tik als het invliegen van dit scherm. */
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 900);
     return () => clearTimeout(t);
   }, []);
 
@@ -113,10 +124,10 @@ export default function PlanSuccessScreen() {
      vuurt nu pas ná de "building"-fase, als het scherm al volledig
      settled is. */
   useEffect(() => {
-    if (building || !plan) return;
+    if (building || !settled || !plan) return;
     void syncPlanReminders(plan);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [building, plan]);
+  }, [building, settled, plan]);
 
   const scale = useSharedValue(0.6);
   const opacity = useSharedValue(0);

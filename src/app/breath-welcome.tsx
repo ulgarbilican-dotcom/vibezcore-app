@@ -33,6 +33,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { vibrateCompat } from '@/services/breath-haptics';
+import { showConfirmMoment } from '@/components/ConfirmMoment';
 import BalancedText from '@/components/BalancedText';
 import GradientText, {
   SUB_COLORS,
@@ -812,6 +813,20 @@ export default function BreathWelcomeScreen() {
   const [areaH, setAreaH] = useState(0);
 
   const goNext = () => {
+    /* Punt 25 (operator, 19 okt 2026: "een moment dat zegt: het is
+       gelukt"): "Build My Session" bouwt de sessie — eerst het korte
+       bevestigingsmoment (denken → klaar), dan pas de slotstap. De tweede
+       keer dezelfde dag zonder de denkfase. */
+    if (slide === TOTAL - 2) {
+      showConfirmMoment({
+        kind: 'breath-plan',
+        thinking: ['Building your session…', 'Matching your level…'],
+        title: 'All set!',
+        subtitle: 'Your session is ready',
+        onDone: () => setSlide(TOTAL - 1),
+      });
+      return;
+    }
     if (!isLast) {
       setSlide((n) => n + 1);
       return;

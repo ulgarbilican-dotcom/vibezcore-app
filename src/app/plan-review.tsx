@@ -26,6 +26,7 @@
    stap). Pad A is daardoor 4 stappen i.p.v. 5 (zie `totalSteps`
    hieronder). */
 
+import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
@@ -444,17 +445,32 @@ export default function PlanReviewScreen() {
        plan-success.tsx se eigen `useEffect`, ná de overgang, zodat de
        permissie-vraag rustig op een al gemount scherm gebeurt — zelfde
        moment als waarop plan.tsx 'm origineel ook pas deed. */
-    router.push({
-      pathname: '/plan-success' as never,
-      params: {
-        onboarding: '1',
-        ...(fromBreathWelcome ? { fromBreathWelcome } : {}),
+    /* Punt 25 (operator, 19 okt 2026: "een moment dat zegt: het is
+       gelukt"): het protocol staat opgeslagen — eerst het korte
+       bevestigingsmoment (denken → klaar), dan dezelfde navigatie als
+       voorheen. `confirmed=1`: plan-success.tsx slaat dan zijn eigen
+       draaiende "Building your agenda…"-fase over (anders twee keer
+       denken na elkaar). De tweede keer dezelfde dag zonder denkfase. */
+    showConfirmMoment({
+      kind: 'routine',
+      thinking: ['Building your routine…', 'Matching your level…'],
+      title: 'All set!',
+      subtitle: 'Your routine is ready',
+      onDone: () => {
+        router.push({
+          pathname: '/plan-success' as never,
+          params: {
+            onboarding: '1',
+            confirmed: '1',
+            ...(fromBreathWelcome ? { fromBreathWelcome } : {}),
+          },
+        });
+        /* Dit scherm blijft ONDER in de stack bestaan (zelfde reden als
+           voorheen op plan-duration.tsx: per ongeluk teruggeklikt mag niet
+           voor altijd "vastzitten" met een uitgeschakelde knop). */
+        setSaving(false);
       },
     });
-    /* Dit scherm blijft ONDER in de stack bestaan (zelfde reden als
-       voorheen op plan-duration.tsx: per ongeluk teruggeklikt mag niet
-       voor altijd "vastzitten" met een uitgeschakelde knop). */
-    setSaving(false);
   };
 
   /* Vegen/Android-terug = dezelfde weg als de terugpijl (audit 16 okt 2026). */

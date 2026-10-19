@@ -16,6 +16,7 @@
    Teksten: voorstel, operator beslist (welzijnstaal, geen meet-claim).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { confirmRhythmSet } from '@/components/ConfirmMoment';
 import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import PressScale from '@/components/PressScale';
 import RhythmSheet from '@/components/RhythmSheet';
@@ -150,7 +151,10 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
           style={s.link}
           onPress={() => {
             chooseAverageRestingPulse();
-            onDone();
+            /* Punt 25 (operator, 19 okt 2026): kort "het is gelukt"-moment
+               vóór State Control. Het moment leeft in de root-host: deze
+               pagina verdwijnt vanzelf zodra de keuze bewaard is. */
+            confirmRhythmSet(onDone);
           }}
           accessibilityRole="button"
         >
@@ -170,7 +174,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
         onClose={() => setSheet(null)}
         onDone={() => {
           setSheet(null);
-          onDone();
+          confirmRhythmSet(onDone);
         }}
       />
     </View>

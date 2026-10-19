@@ -48,6 +48,7 @@
    als breathwork's dagplan, leest VANDAAG's items uit het plan.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { showConfirmMoment } from '@/components/ConfirmMoment';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
@@ -453,7 +454,18 @@ export default function BraceletSetDayScreen() {
        scherm — anders zou terugnavigeren zonder op te slaan de
        onboarding-stap stilzwijgend als "gedaan" markeren. */
     await setSetting('braceletOnboardingCompletedAt', Date.now());
-    finish();
+    /* Punt 25 (operator, 19 okt 2026: "een moment dat zegt: het is
+       gelukt"): het plan staat opgeslagen — eerst het korte
+       bevestigingsmoment (denken → klaar), dan pas naar de agenda, met
+       dezelfde navigatie als voorheen. De tweede keer dezelfde dag zonder
+       de denkfase. */
+    showConfirmMoment({
+      kind: 'state-plan',
+      thinking: ['Building your plan…', 'Matching your rhythm…'],
+      title: 'All set!',
+      subtitle: 'Your plan is saved',
+      onDone: finish,
+    });
   };
 
   const addingMeta = addingMode !== null ? getModeMeta(addingMode) : null;

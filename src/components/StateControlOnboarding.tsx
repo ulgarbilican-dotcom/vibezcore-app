@@ -43,6 +43,7 @@ import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
 import { MODE_GLYPH_ICONS } from '@/components/ModeGlyph';
 import { HeartbeatHero } from '@/components/RestingHeartRatePage';
+import { confirmRhythmSet } from '@/components/ConfirmMoment';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import PressScale from '@/components/PressScale';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -65,7 +66,6 @@ import {
   setLiveStartPulse,
 } from '@/services/resting-pulse';
 import PulseMeter from '@/components/PulseMeter';
-import * as Haptics from 'expo-haptics';
 import { hapticTap, hapticTick } from '@/utils/haptics';
 import { stopHeartbeatSound } from '@/services/heartbeat-sound';
 import { Check, ChevronLeft } from 'lucide-react-native';
@@ -258,6 +258,15 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     stopHeartbeatSound('measure');
     onDone(m);
   };
+  /* Punt 25 (operator, 19 okt 2026: "een moment dat zegt: het is gelukt"):
+     wie hier echt een hartslag kiest (meten, invullen, gemiddelde), krijgt
+     eerst het korte bevestigingsmoment; de navigatie (onDone) volgt erna.
+     Skip blijft zonder moment. */
+  const finishConfirmed = (m: BraceletMode) => {
+    stopHeartbeatSound('page');
+    stopHeartbeatSound('measure');
+    confirmRhythmSet(() => onDone(m));
+  };
 
   const goNext = () => {
     stopDemo();
@@ -268,7 +277,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     if (includeRestingHr) {
       if (hrChoice === 'average') {
         chooseAverageRestingPulse();
-        finish(chosen);
+        finishConfirmed(chosen);
       } else if (hrChoice === 'measure') {
         setMeasured(null);
         setElevated(false);
@@ -569,8 +578,8 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                       if (!getRestingDecided()) chooseAverageRestingPulse();
                     }
                     setLiveStartPulse(measured);
-                    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    finish(chosen);
+                    /* De Success-tik zit nu in het bevestigingsmoment. */
+                    finishConfirmed(chosen);
                   }}
                   style={s.ctaWrap}
                   accessibilityRole="button"
@@ -634,7 +643,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           onClose={() => setSheet(null)}
           onDone={() => {
             setSheet(null);
-            finish(chosen);
+            finishConfirmed(chosen);
           }}
         />
       )}

@@ -8,6 +8,7 @@
    dit scherm wijzigt niets, het rondt af.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts } from '@/constants/theme';
@@ -15,7 +16,7 @@ import { BREATH_STATES } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
 import { dayKey } from '@/utils/bracelet-history';
 import { useActivePlan } from '@/utils/plan-store';
-import * as Haptics from 'expo-haptics';
+import { useRef } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -90,19 +91,35 @@ export default function PlanSummaryScreen() {
     transform: [{ scale: ctaScale.value }],
   }));
 
+  /* Punt 25 (operator, 19 okt 2026: "een moment dat zegt: het is
+     gelukt"): eerst het korte bevestigingsmoment (denken → klaar, met de
+     Success-tik en het ping), dan dezelfde navigatie als voorheen.
+     `confirmed=1`: plan-success.tsx slaat zijn eigen denkfase over. */
+  const confirmingRef = useRef(false);
   const confirm = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace(
-      onboarding
-        ? ({
-            pathname: '/plan-success',
-            params: {
-              onboarding: '1',
-              ...(fromBreathWelcome ? { fromBreathWelcome } : {}),
-            },
-          } as never)
-        : ('/plan-success' as never),
-    );
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    showConfirmMoment({
+      kind: 'routine',
+      thinking: ['Building your routine…', 'Matching your level…'],
+      title: 'All set!',
+      subtitle: 'Your routine is ready',
+      onDone: () => {
+        confirmingRef.current = false;
+        router.replace(
+          onboarding
+            ? ({
+                pathname: '/plan-success',
+                params: {
+                  onboarding: '1',
+                  confirmed: '1',
+                  ...(fromBreathWelcome ? { fromBreathWelcome } : {}),
+                },
+              } as never)
+            : ({ pathname: '/plan-success', params: { confirmed: '1' } } as never),
+        );
+      },
+    });
   };
 
   /* Vegen/Android-terug = dezelfde weg als de terugpijl (audit 16 okt 2026). */
